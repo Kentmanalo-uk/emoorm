@@ -28,27 +28,24 @@ router.get('/', (req, res) => {
 
 // Feature routes
 const authRoutes = require('./auth.routes');
+const municipalityRoutes = require('./municipality.routes');
+const categoryRoutes = require('./category.routes');
+const storeRoutes = require('./store.routes');
+const productRoutes = require('./product.routes');
+const orderRoutes = require('./order.routes');
+const reviewRoutes = require('./review.routes');
+const reportRoutes = require('./report.routes');
+const notificationRoutes = require('./notification.routes');
 
 // Mount routes
 router.use('/auth', authRoutes);
-
-// TODO: Mount additional feature routes as they are created
-// const productRoutes = require('./product.routes');
-// const orderRoutes = require('./order.routes');
-// const storeRoutes = require('./store.routes');
-// const categoryRoutes = require('./category.routes');
-// const municipalityRoutes = require('./municipality.routes');
-// const reviewRoutes = require('./review.routes');
-// const reportRoutes = require('./report.routes');
-// const notificationRoutes = require('./notification.routes');
-
-// router.use('/products', productRoutes);
-// router.use('/orders', orderRoutes);
-// router.use('/stores', storeRoutes);
-// router.use('/categories', categoryRoutes);
-// router.use('/municipalities', municipalityRoutes);
-// router.use('/reviews', reviewRoutes);
-// router.use('/reports', reportRoutes);
-// router.use('/notifications', notificationRoutes);
+router.use('/municipalities', municipalityRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/stores', storeRoutes);
+router.use('/products', productRoutes);
+router.use('/orders', orderRoutes);
+router.use('/reviews', reviewRoutes);
+router.use('/reports', reportRoutes);
+router.use('/notifications', notificationRoutes);
 
 module.exports = router;

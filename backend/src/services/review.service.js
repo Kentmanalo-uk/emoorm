@@ -1,0 +1,201 @@
+const reviewRepository = require('../repositories/review.repository');
+const productRepository = require('../repositories/product.repository');
+const orderRepository = require('../repositories/order.repository');
+const { ApiError } = require('../middleware/errorHandler');
+
+/**
+ * Review Service
+ * Contains business logic for review operations
+ */
+
+/**
+ * Check if buyer has purchased the product
+ * @param {String} buyerId - Buyer ID
+ * @param {String} productId - Product ID
+ * @returns {Promise<Boolean>} True if purchased
+ */
+const hasPurchasedProduct = async (buyerId, productId) => {
+  const orders = await orderRepository.findAll({
+    buyerId,
+    status: 'COMPLETED',
+  });
+
+  for (const order of orders.orders) {
+    const hasProduct = order.items.some((item) => item.productId === productId);
+    if (hasProduct) return true;
+  }
+
+  return false;
+};
+
+/**
+ * Create review
+ * @param {String} userId - Buyer user ID
+ * @param {Object} data - Review data
+ * @returns {Promise<Object>} Created review
+ */
+const createReview = async (userId, data) => {
+  const { productId, rating, comment } = data;
+
+  // Validate product exists
+  const product = await productRepository.findById(productId);
+  if (!product || product.deletedAt) {
+    throw new ApiError('Product not found', 404);
+  }
+
+  // Check if user already reviewed this product
+  const existingReview = await reviewRepository.findByBuyerAndProduct(
+    userId,
+    productId
+  );
+
+  if (existingReview && !existingReview.deletedAt) {
+    throw new ApiError('You have already reviewed this product', 409);
+  }
+
+  // Check if user has purchased this product
+  const purchased = await hasPurchasedProduct(userId, productId);
+  if (!purchased) {
+    throw new ApiError('You can only review products you have purchased', 403);
+  }
+
+  // Validate rating
+  if (rating < 1 || rating > 5) {
+    throw new ApiError('Rating must be between 1 and 5', 400);
+  }
+
+  // Create review
+  const review = await reviewRepository.createReview({
+    buyerId: userId,
+    productId,
+    rating,
+    comment: comment || null,
+  });
+
+  return review;
+};
+
+/**
+ * Get review by ID
+ * @param {String} id - Review ID
+ * @returns {Promise<Object>} Review
+ */
+const getReviewById = async (id) => {
+  const review = await reviewRepository.findById(id);
+
+  if (!review || review.deletedAt) {
+    throw new ApiError('Review not found', 404);
+  }
+
+  return review;
+};
+
+/**
+ * Get reviews with filters
+ * @param {Object} options - Query options
+ * @returns {Promise<Object>} Reviews and pagination
+ */
+const getReviews = async (options) => {
+  return reviewRepository.findAll(options);
+};
+
+/**
+ * Get product reviews
+ * @param {String} productId - Product ID
+ * @param {Object} options - Query options
+ * @returns {Promise<Object>} Reviews and rating stats
+ */
+const getProductReviews = async (productId, options) => {
+  // Verify product exists
+  const product = await productRepository.findById(productId);
+  if (!product || product.deletedAt) {
+    throw new ApiError('Product not found', 404);
+  }
+
+  const [reviewsData, ratingStats] = await Promise.all([
+    reviewRepository.findAll({ ...options, productId }),
+    reviewRepository.getProductRatingStats(productId),
+  ]);
+
+  return {
+    ...reviewsData,
+    ratingStats,
+  };
+};
+
+/**
+ * Get my reviews (buyer)
+ * @param {String} userId - Buyer user ID
+ * @param {Object} options - Query options
+ * @returns {Promise<Object>} Reviews and pagination
+ */
+const getMyReviews = async (userId, options) => {
+  return reviewRepository.findAll({ ...options, buyerId: userId });
+};
+
+/**
+ * Update review (Owner only)
+ * @param {String} reviewId - Review ID
+ * @param {String} userId - User ID
+ * @param {Object} data - Update data
+ * @returns {Promise<Object>} Updated review
+ */
+const updateReview = async (reviewId, userId, data) => {
+  const review = await reviewRepository.findById(reviewId);
+
+  if (!review || review.deletedAt) {
+    throw new ApiError('Review not found', 404);
+  }
+
+  // Check ownership
+  if (review.buyerId !== userId) {
+    throw new ApiError('You can only update your own reviews', 403);
+  }
+
+  // Validate rating if provided
+  if (data.rating && (data.rating < 1 || data.rating > 5)) {
+    throw new ApiError('Rating must be between 1 and 5', 400);
+  }
+
+  // Filter allowed fields
+  const updateData = {};
+  if (data.rating !== undefined) updateData.rating = data.rating;
+  if (data.comment !== undefined) updateData.comment = data.comment;
+
+  return reviewRepository.updateReview(reviewId, updateData);
+};
+
+/**
+ * Delete review (Owner or Admin)
+ * @param {String} reviewId - Review ID
+ * @param {String} userId - User ID
+ * @param {String} userRole - User role
+ * @returns {Promise<void>}
+ */
+const deleteReview = async (reviewId, userId, userRole) => {
+  const review = await reviewRepository.findById(reviewId);
+
+  if (!review || review.deletedAt) {
+    throw new ApiError('Review not found', 404);
+  }
+
+  // Check authorization
+  const isOwner = review.buyerId === userId;
+  const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'MUNICIPAL_ADMIN';
+
+  if (!isOwner && !isAdmin) {
+    throw new ApiError('You do not have permission to delete this review', 403);
+  }
+
+  await reviewRepository.softDeleteReview(reviewId);
+};
+
+module.exports = {
+  createReview,
+  getReviewById,
+  getReviews,
+  getProductReviews,
+  getMyReviews,
+  updateReview,
+  deleteReview,
+};

@@ -16,15 +16,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/adapter-mariadb": "^7.9.1",
-    "@prisma/client": "^7.9.1",
+    "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
-    "mariadb": "^3.5.3",
+    "mysql2": "^3.23.2",
     "uuid": "^14.0.1"
   },
   "devDependencies": {
@@ -34,6 +33,6 @@
     "@types/uuid": "^10.0.0",
     "axios": "^1.19.0",
     "nodemon": "^3.1.14",
-    "prisma": "^7.9.1"
+    "prisma": "^5.22.0"
   }
 }

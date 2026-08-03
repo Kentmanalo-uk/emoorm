@@ -145,7 +145,7 @@ const checkMunicipalityAccess = (municipalityIdParam = 'municipalityId') => {
  */
 const checkStoreOwnership = async (req, res, next) => {
   try {
-    const storeId = req.params.storeId || req.body.storeId;
+    const storeId = req.params.id || req.params.storeId || req.body.storeId;
     
     if (!storeId) {
       return res.status(400).json({
