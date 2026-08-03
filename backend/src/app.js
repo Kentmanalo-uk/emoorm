@@ -1,56 +1,78 @@
 const express = require('express');
+const cors = require('cors');
+const config = require('./config/env');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const apiRoutes = require('./routes/index');
 
 const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ============================================
+// SECURITY & GENERAL MIDDLEWARE
+// ============================================
 
-// CORS middleware (if needed for web/mobile frontend)
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  
-  next();
-});
+// Trust proxy (if behind a reverse proxy like Nginx)
+app.set('trust proxy', 1);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    message: 'Server is running',
-    timestamp: new Date().toISOString()
+// CORS configuration
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (config.cors.allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Body parsers
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Static files (for uploaded files)
+app.use('/uploads', express.static(config.upload.uploadDir));
+
+// ============================================
+// REQUEST LOGGING (Development)
+// ============================================
+
+if (config.nodeEnv === 'development') {
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
+}
+
+// ============================================
+// API ROUTES
+// ============================================
+
+// Mount API routes with prefix
+app.use(config.apiPrefix, apiRoutes);
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'E-MOORM Backend API',
+    version: '1.0.0',
+    documentation: `${config.apiPrefix}/`,
   });
 });
 
-// API routes
-app.get('/api', (req, res) => {
-  res.json({ 
-    message: 'Welcome to EmoORM API',
-    version: '1.0.0'
-  });
-});
+// ============================================
+// ERROR HANDLING
+// ============================================
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ 
-    error: 'Not Found',
-    message: `Route ${req.method} ${req.url} not found`
-  });
-});
+// 404 handler - must be after all routes
+app.use(notFoundHandler);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
+// Global error handler - must be last
+app.use(errorHandler);
 
 module.exports = app;
