@@ -9,6 +9,19 @@ const { authenticate, authorize, checkStoreOwnership } = require('../middleware/
 
 // Public routes
 router.get(
+  '/slug/:slug',
+  storeController.getStoreBySlug
+);
+
+// Seller-only static route — must come before /:id
+router.get(
+  '/my/store',
+  authenticate,
+  authorize('SELLER'),
+  storeController.getMyStore
+);
+
+router.get(
   '/',
   storeController.getStores
 );
@@ -18,24 +31,12 @@ router.get(
   storeController.getStoreById
 );
 
-router.get(
-  '/slug/:slug',
-  storeController.getStoreBySlug
-);
-
 // Seller routes
 router.post(
   '/',
   authenticate,
   authorize('SELLER'),
   storeController.createStore
-);
-
-router.get(
-  '/my/store',
-  authenticate,
-  authorize('SELLER'),
-  storeController.getMyStore
 );
 
 router.put(

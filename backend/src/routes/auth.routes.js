@@ -8,6 +8,8 @@ const {
   loginValidation,
   refreshTokenValidation,
   changePasswordValidation,
+  forgotPasswordValidation,
+  resetPasswordValidation,
 } = require('../validators/auth.validator');
 
 /**
@@ -34,6 +36,20 @@ router.post(
   refreshTokenValidation,
   validate,
   authController.refreshToken
+);
+
+router.post(
+  '/forgot-password',
+  forgotPasswordValidation,
+  validate,
+  authController.forgotPassword
+);
+
+router.post(
+  '/reset-password',
+  resetPasswordValidation,
+  validate,
+  authController.resetPassword
 );
 
 // Protected routes (require authentication)
@@ -118,6 +134,13 @@ router.delete(
   authenticate,
   authorize('SUPER_ADMIN'),
   authController.deleteUser
+);
+
+router.post(
+  '/users/:id/set-role',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  authController.setUserRole
 );
 
 module.exports = router;

@@ -13,8 +13,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * @access Public
  */
 const getAllMunicipalities = asyncHandler(async (req, res) => {
-  const municipalities = await municipalityService.getAllMunicipalities();
-
+  const { includeInactive } = req.query;
+  const municipalities = await municipalityService.getAllMunicipalities(includeInactive === 'true');
   successResponse(res, municipalities, 'Municipalities retrieved successfully');
 });
 
@@ -62,10 +62,16 @@ const seedMunicipalities = asyncHandler(async (req, res) => {
   successResponse(res, result, 'Municipalities seeded successfully');
 });
 
+const updateMunicipality = asyncHandler(async (req, res) => {
+  const municipality = await municipalityService.updateMunicipality(req.params.id, req.body);
+  successResponse(res, municipality, 'Municipality updated successfully');
+});
+
 module.exports = {
   getAllMunicipalities,
   getMunicipalityById,
   getMunicipalityByCode,
   createMunicipality,
+  updateMunicipality,
   seedMunicipalities,
 };

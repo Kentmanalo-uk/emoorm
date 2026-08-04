@@ -1,122 +1,166 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Profile from './pages/Profile';
+import Products from './pages/Products';
+import ProductDetails from './pages/ProductDetails';
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import Orders from './pages/Orders';
+import Addresses from './pages/Addresses';
+import Sell from './pages/Sell';
+import SellerApply from './pages/SellerApply';
+import SellerLayout from './components/layout/SellerLayout';
+import SellerDashboard from './pages/SellerDashboard';
+import SellerStore from './pages/SellerStore';
+import SellerProducts from './pages/SellerProducts';
+import SellerOrders from './pages/SellerOrders';
+import SellerMessages from './pages/SellerMessages';
+import SellerReviews from './pages/SellerReviews';
+import SellerAnalytics from './pages/SellerAnalytics';
+import SellerFinance from './pages/SellerFinance';
+import Stores from './pages/Stores';
+import StoreDetail from './pages/StoreDetail';
+import Wishlist from './pages/Wishlist';
+import Notifications from './pages/Notifications';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminSellers from './pages/AdminSellers';
+import AdminProducts from './pages/AdminProducts';
+import AdminReports from './pages/AdminReports';
+import AdminUsers from './pages/AdminUsers';
+import AdminCategories from './pages/AdminCategories';
+import AdminMunicipalities from './pages/AdminMunicipalities';
+import AdminAnalytics from './pages/AdminAnalytics';
+import ProfileLayout from './components/layout/ProfileLayout';
+import ProfileReviews from './pages/ProfileReviews';
+import ProfileFollowedStores from './pages/ProfileFollowedStores';
+import ProfileMessages from './pages/ProfileMessages';
+import ProfileSettings from './pages/ProfileSettings';
+import HelpCenter from './pages/HelpCenter';
+import { WishlistContent } from './pages/Wishlist';
+import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
+import RoleGate from './components/RoleGate';
+import './App.css';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#fff',
+              color: '#374151',
+              padding: '16px',
+              borderRadius: '0px',
+              border: '1px solid #e5e7eb',
+              fontSize: '14px',
+            },
+            success: {
+              iconTheme: {
+                primary: '#059669',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+        <RoleGate>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/product/:slug" element={<ProductDetails />} />
+            <Route path="/stores" element={<Stores />} />
+            <Route path="/store/:slug" element={<StoreDetail />} />
+            <Route path="/sell" element={<Sell />} />
 
-      <div className="ticks"></div>
+            {/* Protected routes — require login */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfileLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Profile />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="addresses" element={<Addresses />} />
+              <Route path="reviews" element={<ProfileReviews />} />
+              <Route path="wishlist" element={<WishlistContent hideBreadcrumbs />} />
+              <Route path="followed-stores" element={<ProfileFollowedStores />} />
+              <Route path="messages" element={<ProfileMessages />} />
+              <Route path="notifications" element={<Notifications bare />} />
+              <Route path="settings" element={<ProfileSettings />} />
+            </Route>
+            <Route path="/help" element={<HelpCenter />} />
+            <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+            <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+            <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+            {/* Seller onboarding */}
+            <Route path="/seller/apply" element={<SellerApply />} />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+            {/* Seller Center — SELLER role only (guarded inside SellerLayout) */}
+            <Route path="/seller" element={<SellerLayout />}>
+              <Route index element={<SellerDashboard />} />
+              <Route path="orders" element={<SellerOrders />} />
+              <Route path="messages" element={<SellerMessages />} />
+              <Route path="products" element={<SellerProducts />} />
+              <Route path="products/new" element={<SellerProducts />} />
+              <Route path="reviews" element={<SellerReviews />} />
+              <Route path="analytics" element={<SellerAnalytics />} />
+              <Route path="finance" element={<SellerFinance />} />
+              <Route path="store" element={<SellerStore />} />
+            </Route>
+            {/* Admin — MUNICIPAL_ADMIN / SUPER_ADMIN only */}
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/sellers" element={<AdminRoute><AdminSellers /></AdminRoute>} />
+            <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+            <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+            <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
+            <Route path="/admin/municipalities" element={<AdminRoute><AdminMunicipalities /></AdminRoute>} />
+            <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+
+            {/* Catch-all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </RoleGate>
+      </Router>
+    </QueryClientProvider>
+  );
 }
 
-export default App
+export default App;

@@ -126,6 +126,8 @@ const findAll = async (options = {}) => {
     categoryId,
     municipalityId,
     status,
+    storeIsActive,
+    storeIsSuspended,
     minPrice,
     maxPrice,
     search,
@@ -141,6 +143,12 @@ const findAll = async (options = {}) => {
   if (categoryId) where.categoryId = categoryId;
   if (municipalityId) where.municipalityId = municipalityId;
   if (status) where.status = status;
+
+  if (storeIsActive !== undefined || storeIsSuspended !== undefined) {
+    where.store = {};
+    if (storeIsActive !== undefined) where.store.isActive = storeIsActive;
+    if (storeIsSuspended !== undefined) where.store.isSuspended = storeIsSuspended;
+  }
 
   if (minPrice !== undefined || maxPrice !== undefined) {
     where.price = {};

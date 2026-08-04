@@ -102,7 +102,17 @@ const changePassword = asyncHandler(async (req, res) => {
  * @access Private (BUYER only)
  */
 const applyForSeller = asyncHandler(async (req, res) => {
-  const user = await authService.applyForSeller(req.user.id);
+  const { shopName, shopDescription, shopAddress, idType, idFrontUrl, idBackUrl, selfieUrl } = req.body;
+
+  const user = await authService.applyForSeller(req.user.id, {
+    shopName,
+    shopDescription,
+    shopAddress,
+    idType,
+    idFrontUrl,
+    idBackUrl,
+    selfieUrl,
+  });
 
   successResponse(
     res,
@@ -135,6 +145,7 @@ const getUsers = asyncHandler(async (req, res) => {
     municipalityId,
     isActive,
     search,
+    sellerApplicationStatus,
   } = req.query;
 
   const options = {
@@ -144,6 +155,7 @@ const getUsers = asyncHandler(async (req, res) => {
     municipalityId,
     isActive: isActive !== undefined ? isActive === 'true' : undefined,
     search,
+    sellerApplicationStatus,
   };
 
   const result = await authService.getUsers(options);
@@ -206,6 +218,42 @@ const deleteUser = asyncHandler(async (req, res) => {
   noContentResponse(res);
 });
 
+/**
+ * @route POST /api/auth/forgot-password
+ * @access Public
+ */
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const resetToken = await authService.forgotPassword(email);
+
+  // In production, send the token via email. Here we return it for dev/testing.
+  successResponse(res, 200, 'If that email is registered, a reset link has been sent.', {
+    ...(process.env.NODE_ENV !== 'production' && resetToken ? { resetToken } : {}),
+  });
+});
+
+/**
+ * @route POST /api/auth/reset-password
+ * @access Public
+ */
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = req.body;
+
+  await authService.resetPassword(token, password);
+
+  successResponse(res, 200, 'Password has been reset successfully.');
+});
+
+const setUserRole = asyncHandler(async (req, res) => {
+  const { role } = req.body;
+  const ALLOWED = ['BUYER', 'SELLER', 'MUNICIPAL_ADMIN'];
+  if (!ALLOWED.includes(role)) {
+    return res.status(400).json({ success: false, message: 'Invalid role' });
+  }
+  const user = await authService.setUserRole(req.params.id, role);
+  successResponse(res, user, `User role updated to ${role}`);
+});
+
 module.exports = {
   register,
   login,
@@ -214,6 +262,8 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
+  forgotPassword,
+  resetPassword,
   applyForSeller,
   getUserById,
   getUsers,
@@ -222,4 +272,5 @@ module.exports = {
   suspendUser,
   activateUser,
   deleteUser,
+  setUserRole,
 };

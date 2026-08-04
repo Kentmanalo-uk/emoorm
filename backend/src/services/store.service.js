@@ -21,7 +21,7 @@ const generateSlug = async (name) => {
   // Check if slug exists and add number if needed
   let counter = 1;
   let uniqueSlug = slug;
-  
+
   while (await storeRepository.slugExists(uniqueSlug)) {
     uniqueSlug = `${slug}-${counter}`;
     counter++;
@@ -39,7 +39,7 @@ const generateSlug = async (name) => {
 const createStore = async (userId, data) => {
   // Check if user is a seller
   const user = await userRepository.findById(userId);
-  
+
   if (!user) {
     throw new ApiError('User not found', 404);
   }
@@ -233,4 +233,5 @@ module.exports = {
   deleteStore,
   suspendStore,
   unsuspendStore,
+  generateSlug,
 };

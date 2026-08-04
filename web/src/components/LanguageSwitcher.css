@@ -1,0 +1,177 @@
+/* Language dropdown — shared between buyer topbar, Seller Center, and Admin Center. */
+
+.lang-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lang-switch__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  transition: opacity 0.15s ease;
+}
+
+.lang-switch__trigger:hover {
+  opacity: 0.75;
+}
+
+.lang-switch__label {
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.lang-switch__caret {
+  transition: transform 0.15s ease;
+}
+
+.lang-switch__caret.is-open {
+  transform: rotate(180deg);
+}
+
+/* ─── Menu ───────────────────────────────────────────── */
+
+.lang-switch__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 32px -8px rgba(15, 23, 42, 0.18);
+  z-index: 1000;
+  animation: langSwitchIn 0.12s ease-out;
+}
+
+@keyframes langSwitchIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lang-switch__option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #1f2937;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+
+.lang-switch__option:hover {
+  background: #f3f4f6;
+}
+
+.lang-switch__option.is-active {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.lang-switch__option-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.lang-switch__option-code {
+  font-size: 11px;
+  color: #9ca3af;
+  letter-spacing: 0.4px;
+}
+
+.lang-switch__option.is-active .lang-switch__option-code {
+  color: #059669;
+}
+
+.lang-switch__tick {
+  color: #059669;
+}
+
+/* ─── Variant: buyer topbar (small, matches ENGLISH placeholder) ─── */
+
+.lang-switch--topbar .lang-switch__trigger {
+  font-size: 12px;
+  color: #000;
+  text-transform: uppercase;
+}
+
+/* ─── Variant: shell (Seller Center / Admin Center) ─── */
+
+.lang-switch--shell .lang-switch__trigger {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.lang-switch--shell .lang-switch__trigger:hover {
+  border-color: #d1d5db;
+  opacity: 1;
+  background: #f9fafb;
+}
+
+/* ─── Hide Google Translate chrome ───────────────────── */
+
+.goog-te-banner-frame.skiptranslate,
+.goog-te-gadget-simple,
+.goog-tooltip,
+.goog-tooltip:hover,
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+}
+
+body {
+  top: 0 !important;
+}
+
+body>.skiptranslate {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background: transparent !important;
+  box-shadow: none !important;
+  box-sizing: border-box;
+}
+
+#google_translate_element {
+  position: fixed !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  visibility: hidden !important;
+}
+
+/* Prevent flicker on font-family swap Google Translate can trigger */
+font {
+  font-family: inherit !important;
+  color: inherit !important;
+  background: transparent !important;
+}

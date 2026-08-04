@@ -7,23 +7,21 @@ const { authenticate, authorize } = require('../middleware/auth');
  * Product Routes
  */
 
-// Public routes
-router.get(
-  '/',
-  productController.getProducts
-);
-
-router.get(
-  '/:id',
-  productController.getProductById
-);
-
+// Static public routes — must come before /:id
 router.get(
   '/slug/:slug',
   productController.getProductBySlug
 );
 
-// Seller routes
+// Seller-only static route — must come before /:id
+router.get(
+  '/my/products',
+  authenticate,
+  authorize('SELLER'),
+  productController.getMyProducts
+);
+
+// Admin/seller routes with static prefix — must come before /:id
 router.post(
   '/',
   authenticate,
@@ -31,11 +29,16 @@ router.post(
   productController.createProduct
 );
 
+// Public list route
 router.get(
-  '/my/products',
-  authenticate,
-  authorize('SELLER'),
-  productController.getMyProducts
+  '/',
+  productController.getProducts
+);
+
+// Dynamic :id routes last
+router.get(
+  '/:id',
+  productController.getProductById
 );
 
 router.put(

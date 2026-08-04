@@ -76,27 +76,38 @@ model User {
   fullName      String    @map("full_name")
   contactNumber String?   @map("contact_number")
   profilePhoto  String?   @map("profile_photo")
-  
+
   // Location
   municipalityId String   @map("municipality_id")
   municipality   Municipality @relation(fields: [municipalityId], references: [id])
   barangay      String?
   address       String?   @db.Text
-  
+
   // Role and Status
   role          UserRole  @default(BUYER)
   isActive      Boolean   @default(true) @map("is_active")
   isVerified    Boolean   @default(false) @map("is_verified")
-  
+
   // Seller Application
-  sellerApplicationStatus String? @map("seller_application_status")
+  sellerApplicationStatus String?   @map("seller_application_status")
   sellerApplicationDate   DateTime? @map("seller_application_date")
-  
+  shopName                String?   @map("shop_name")
+  shopDescription         String?   @map("shop_description") @db.Text
+  shopAddress             String?   @map("shop_address")
+  idType                  String?   @map("id_type")
+  idFrontUrl              String?   @map("id_front_url")
+  idBackUrl               String?   @map("id_back_url")
+  selfieUrl               String?   @map("selfie_url")
+
+  // Password Reset
+  passwordResetToken  String?   @map("password_reset_token")
+  passwordResetExpiry DateTime? @map("password_reset_expiry")
+
   // Timestamps
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
-  
+
   // Relations
   store         Store?
   orders        Order[]
@@ -106,7 +117,7 @@ model User {
   notifications Notification[]
   reports       Report[]
   managedMunicipality Municipality? @relation("MunicipalAdmin")
-  
+
   @@map("users")
 }
 
@@ -115,20 +126,20 @@ model Municipality {
   name      String   @unique
   code      String   @unique
   isActive  Boolean  @default(true) @map("is_active")
-  
+
   // Admin Assignment
   adminId   String?  @unique @map("admin_id")
   admin     User?    @relation("MunicipalAdmin", fields: [adminId], references: [id])
-  
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   // Relations
   users     User[]
   stores    Store[]
   products  Product[]
   reports   Report[]
-  
+
   @@map("municipalities")
 }
 
@@ -140,27 +151,27 @@ model Store {
   logo          String?
   coverImage    String?  @map("cover_image")
   businessHours String?  @db.Text @map("business_hours")
-  
+
   // Owner
   ownerId       String   @unique @map("owner_id")
   owner         User     @relation(fields: [ownerId], references: [id])
-  
+
   // Location
   municipalityId String  @map("municipality_id")
   municipality   Municipality @relation(fields: [municipalityId], references: [id])
-  
+
   // Status
   isActive      Boolean  @default(true) @map("is_active")
   isSuspended   Boolean  @default(false) @map("is_suspended")
-  
+
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
-  
+
   // Relations
   products      Product[]
   orders        Order[]
-  
+
   @@map("stores")
 }
 
@@ -171,13 +182,13 @@ model Category {
   description String?   @db.Text
   icon        String?
   isActive    Boolean   @default(true) @map("is_active")
-  
+
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  
+
   // Relations
   products    Product[]
-  
+
   @@map("categories")
 }
 
@@ -189,198 +200,198 @@ model Product {
   price       Decimal       @db.Decimal(10, 2)
   stock       Int           @default(0)
   images      Json          // Array of image URLs
-  
+
   // Ownership
   storeId     String        @map("store_id")
   store       Store         @relation(fields: [storeId], references: [id])
-  
+
   // Category
   categoryId  String        @map("category_id")
   category    Category      @relation(fields: [categoryId], references: [id])
-  
+
   // Location
   municipalityId String     @map("municipality_id")
   municipality   Municipality @relation(fields: [municipalityId], references: [id])
-  
+
   // Status
   status      ProductStatus @default(PENDING)
-  
+
   // Soft Delete
   deletedAt   DateTime?     @map("deleted_at")
-  
+
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
-  
+
   // Relations
   orderItems  OrderItem[]
   reviews     Review[]
   wishlistItems WishlistItem[]
   cartItems   CartItem[]
   reports     Report[]
-  
+
   @@map("products")
 }
 
 model Order {
   id              String      @id @default(uuid())
   orderNumber     String      @unique @map("order_number")
-  
+
   // Buyer
   buyerId         String      @map("buyer_id")
   buyer           User        @relation(fields: [buyerId], references: [id])
-  
+
   // Store
   storeId         String      @map("store_id")
   store           Store       @relation(fields: [storeId], references: [id])
-  
+
   // Totals
   subtotal        Decimal     @db.Decimal(10, 2)
   deliveryFee     Decimal     @default(0) @db.Decimal(10, 2) @map("delivery_fee")
   total           Decimal     @db.Decimal(10, 2)
-  
+
   // Status
   status          OrderStatus @default(PENDING)
-  
+
   // Delivery Information
   deliveryAddress String      @db.Text @map("delivery_address")
   deliveryNotes   String?     @db.Text @map("delivery_notes")
   contactNumber   String      @map("contact_number")
-  
+
   // Timestamps
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
   completedAt     DateTime?   @map("completed_at")
   cancelledAt     DateTime?   @map("cancelled_at")
-  
+
   // Relations
   items           OrderItem[]
-  
+
   @@map("orders")
 }
 
 model OrderItem {
   id            String   @id @default(uuid())
-  
+
   orderId       String   @map("order_id")
   order         Order    @relation(fields: [orderId], references: [id])
-  
+
   productId     String   @map("product_id")
   product       Product  @relation(fields: [productId], references: [id])
-  
+
   // Price Snapshot (never changes)
   productName   String   @map("product_name")
   price         Decimal  @db.Decimal(10, 2)
   quantity      Int
   subtotal      Decimal  @db.Decimal(10, 2)
-  
+
   createdAt     DateTime @default(now()) @map("created_at")
-  
+
   @@map("order_items")
 }
 
 model CartItem {
   id        String   @id @default(uuid())
-  
+
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
-  
+
   productId String   @map("product_id")
   product   Product  @relation(fields: [productId], references: [id])
-  
+
   quantity  Int      @default(1)
-  
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   @@unique([userId, productId])
   @@map("cart_items")
 }
 
 model WishlistItem {
   id        String   @id @default(uuid())
-  
+
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
-  
+
   productId String   @map("product_id")
   product   Product  @relation(fields: [productId], references: [id])
-  
+
   createdAt DateTime @default(now()) @map("created_at")
-  
+
   @@unique([userId, productId])
   @@map("wishlist_items")
 }
 
 model Review {
   id        String   @id @default(uuid())
-  
+
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
-  
+
   productId String   @map("product_id")
   product   Product  @relation(fields: [productId], references: [id])
-  
+
   rating    Int      // 1-5
   comment   String?  @db.Text
-  
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
-  
+
   @@map("reviews")
 }
 
 model Report {
   id            String       @id @default(uuid())
-  
+
   // Reporter
   reporterId    String       @map("reporter_id")
   reporter      User         @relation(fields: [reporterId], references: [id])
-  
+
   // Type and Target
   type          ReportType
   productId     String?      @map("product_id")
   product       Product?     @relation(fields: [productId], references: [id])
   reportedSellerId String?   @map("reported_seller_id")
-  
+
   // Content
   reason        String       @db.Text
   description   String?      @db.Text
   evidence      Json?        // Array of evidence URLs
-  
+
   // Status
   status        ReportStatus @default(PENDING)
-  
+
   // Municipality Routing
   municipalityId String      @map("municipality_id")
   municipality   Municipality @relation(fields: [municipalityId], references: [id])
-  
+
   // Resolution
   resolutionNotes String?    @db.Text @map("resolution_notes")
   resolvedAt      DateTime?  @map("resolved_at")
-  
+
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
-  
+
   @@map("reports")
 }
 
 model Notification {
   id        String           @id @default(uuid())
-  
+
   userId    String           @map("user_id")
   user      User             @relation(fields: [userId], references: [id])
-  
+
   type      NotificationType
   title     String
   message   String           @db.Text
   data      Json?            // Additional data payload
-  
+
   isRead    Boolean          @default(false) @map("is_read")
   readAt    DateTime?        @map("read_at")
-  
+
   createdAt DateTime         @default(now()) @map("created_at")
-  
+
   @@map("notifications")
 }
 
@@ -390,19 +401,19 @@ model Notification {
 
 model AuditLog {
   id        String   @id @default(uuid())
-  
+
   userId    String?  @map("user_id")
   userEmail String?  @map("user_email")
-  
+
   action    String   // e.g., "CREATE_PRODUCT", "APPROVE_SELLER"
   entity    String   // e.g., "Product", "User"
   entityId  String?  @map("entity_id")
-  
+
   details   Json?    // Additional context
   ipAddress String?  @map("ip_address")
   userAgent String?  @db.Text @map("user_agent")
-  
+
   createdAt DateTime @default(now()) @map("created_at")
-  
+
   @@map("audit_logs")
 }

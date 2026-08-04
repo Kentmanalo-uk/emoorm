@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const orderRepository = require('../repositories/order.repository');
 const productRepository = require('../repositories/product.repository');
 const storeRepository = require('../repositories/store.repository');
@@ -9,6 +10,12 @@ const { ApiError } = require('../middleware/errorHandler');
  * Contains business logic for order operations
  */
 
+const generateOrderNumber = () => {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `EM-${ts}-${rand}`;
+};
+
 /**
  * Create order (checkout)
  * @param {String} userId - Buyer user ID
@@ -16,12 +23,20 @@ const { ApiError } = require('../middleware/errorHandler');
  * @returns {Promise<Object>} Created order
  */
 const createOrder = async (userId, data) => {
-  const { storeId, items, deliveryAddress, notes } = data;
+  const { storeId, items, deliveryAddress, deliveryNotes, contactNumber } = data;
 
   // Validate buyer
   const buyer = await userRepository.findById(userId);
   if (!buyer) {
     throw new ApiError('Buyer not found', 404);
+  }
+
+  if (!deliveryAddress) {
+    throw new ApiError('Delivery address is required', 400);
+  }
+
+  if (!contactNumber) {
+    throw new ApiError('Contact number is required', 400);
   }
 
   // Validate store
@@ -68,15 +83,20 @@ const createOrder = async (userId, data) => {
     });
   }
 
+  const DELIVERY_FEE = totalAmount >= 500 ? 0 : 50;
+
   // Create order with items
   const order = await orderRepository.createOrderWithItems(
     {
+      orderNumber: generateOrderNumber(),
       buyerId: userId,
       storeId,
-      municipalityId: buyer.municipalityId,
-      totalAmount,
+      subtotal: totalAmount,
+      deliveryFee: DELIVERY_FEE,
+      total: totalAmount + DELIVERY_FEE,
       deliveryAddress,
-      notes: notes || null,
+      deliveryNotes: deliveryNotes || null,
+      contactNumber,
       status: 'PENDING',
     },
     orderItems
@@ -132,7 +152,7 @@ const getMyOrders = async (userId, options) => {
  */
 const getStoreOrders = async (userId, options) => {
   const store = await storeRepository.findByOwnerId(userId);
-  
+
   if (!store) {
     throw new ApiError('You do not have a store', 404);
   }

@@ -10,8 +10,8 @@ const { ApiError } = require('../middleware/errorHandler');
  * Get all municipalities
  * @returns {Promise<Array>} List of municipalities
  */
-const getAllMunicipalities = async () => {
-  return municipalityRepository.findAll();
+const getAllMunicipalities = async (includeInactive = false) => {
+  return municipalityRepository.findAll(includeInactive);
 };
 
 /**
@@ -96,5 +96,10 @@ module.exports = {
   getMunicipalityById,
   getMunicipalityByCode,
   createMunicipality,
+  updateMunicipality,
   seedMunicipalities,
 };
+
+function updateMunicipality(id, data) {
+  return municipalityRepository.updateMunicipality(id, data);
+}

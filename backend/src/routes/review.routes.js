@@ -13,6 +13,14 @@ router.get(
   reviewController.getProductReviews
 );
 
+// Buyer static route — must come before /:id
+router.get(
+  '/my/reviews',
+  authenticate,
+  authorize('BUYER', 'SELLER'),
+  reviewController.getMyReviews
+);
+
 router.get(
   '/:id',
   reviewController.getReviewById
@@ -24,13 +32,6 @@ router.post(
   authenticate,
   authorize('BUYER', 'SELLER'),
   reviewController.createReview
-);
-
-router.get(
-  '/my/reviews',
-  authenticate,
-  authorize('BUYER', 'SELLER'),
-  reviewController.getMyReviews
 );
 
 router.put(

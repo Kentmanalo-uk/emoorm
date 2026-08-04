@@ -193,6 +193,7 @@ const findAll = async (options = {}) => {
     municipalityId,
     isActive,
     search,
+    sellerApplicationStatus,
   } = options;
 
   const where = {
@@ -202,6 +203,7 @@ const findAll = async (options = {}) => {
   if (role) where.role = role;
   if (municipalityId) where.municipalityId = municipalityId;
   if (isActive !== undefined) where.isActive = isActive;
+  if (sellerApplicationStatus) where.sellerApplicationStatus = sellerApplicationStatus;
   if (search) {
     where.OR = [
       { fullName: { contains: search } },
@@ -229,6 +231,15 @@ const findAll = async (options = {}) => {
         role: true,
         isActive: true,
         isVerified: true,
+        sellerApplicationStatus: true,
+        sellerApplicationDate: true,
+        shopName: true,
+        shopDescription: true,
+        shopAddress: true,
+        idType: true,
+        idFrontUrl: true,
+        idBackUrl: true,
+        selfieUrl: true,
         createdAt: true,
       },
       skip: (page - 1) * pageSize,
@@ -251,12 +262,19 @@ const findAll = async (options = {}) => {
  * @param {String} userId - User ID
  * @returns {Promise<Object>} Updated user
  */
-const applyForSeller = async (userId) => {
+const applyForSeller = async (userId, data = {}) => {
   return prisma.user.update({
     where: { id: userId },
     data: {
       sellerApplicationStatus: 'PENDING',
       sellerApplicationDate: new Date(),
+      ...(data.shopName && { shopName: data.shopName }),
+      ...(data.shopDescription && { shopDescription: data.shopDescription }),
+      ...(data.shopAddress && { shopAddress: data.shopAddress }),
+      ...(data.idType && { idType: data.idType }),
+      ...(data.idFrontUrl && { idFrontUrl: data.idFrontUrl }),
+      ...(data.idBackUrl && { idBackUrl: data.idBackUrl }),
+      ...(data.selfieUrl && { selfieUrl: data.selfieUrl }),
     },
   });
 };
@@ -273,6 +291,20 @@ const approveSeller = async (userId) => {
       role: 'SELLER',
       sellerApplicationStatus: 'APPROVED',
     },
+  });
+};
+
+/**
+ * Promote user to SELLER role without changing application status.
+ * Used when a user applies — role becomes SELLER immediately, but their
+ * store stays inactive until an admin approves the pending application.
+ * @param {String} userId - User ID
+ * @returns {Promise<Object>} Updated user
+ */
+const promoteToSeller = async (userId) => {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { role: 'SELLER' },
   });
 };
 
@@ -300,6 +332,36 @@ const findByMunicipality = async (municipalityId, options = {}) => {
   return findAll({ ...options, municipalityId });
 };
 
+const setPasswordResetToken = async (userId, hashedToken, expiry) => {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordResetToken: hashedToken,
+      passwordResetExpiry: expiry,
+    },
+  });
+};
+
+const findByResetToken = async (hashedToken) => {
+  return prisma.user.findFirst({
+    where: {
+      passwordResetToken: hashedToken,
+      passwordResetExpiry: { gt: new Date() },
+      deletedAt: null,
+    },
+  });
+};
+
+const clearPasswordResetToken = async (userId) => {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordResetToken: null,
+      passwordResetExpiry: null,
+    },
+  });
+};
+
 module.exports = {
   createUser,
   findByEmail,
@@ -310,6 +372,10 @@ module.exports = {
   findAll,
   applyForSeller,
   approveSeller,
+  promoteToSeller,
   rejectSeller,
   findByMunicipality,
+  setPasswordResetToken,
+  findByResetToken,
+  clearPasswordResetToken,
 };

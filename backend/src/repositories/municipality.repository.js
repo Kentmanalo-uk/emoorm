@@ -18,9 +18,15 @@ const createMunicipality = async (data) => {
  * Find all municipalities
  * @returns {Promise<Array>} List of municipalities
  */
-const findAll = async () => {
+const findAll = async (includeInactive = false) => {
+  const where = includeInactive ? {} : { isActive: true };
+
   return prisma.municipality.findMany({
-    where: { isActive: true },
+    where,
+    include: {
+      admin: { select: { id: true, fullName: true, email: true } },
+      _count: { select: { users: true, stores: true } },
+    },
     orderBy: { name: 'asc' },
   });
 };
@@ -54,7 +60,7 @@ const findByCode = async (code) => {
  */
 const seedMunicipalities = async (municipalities) => {
   let count = 0;
-  
+
   for (const mun of municipalities) {
     const existing = await findByCode(mun.code);
     if (!existing) {
@@ -62,8 +68,18 @@ const seedMunicipalities = async (municipalities) => {
       count++;
     }
   }
-  
+
   return count;
+};
+
+const updateMunicipality = async (id, data) => {
+  return prisma.municipality.update({
+    where: { id },
+    data,
+    include: {
+      admin: { select: { id: true, fullName: true, email: true } },
+    },
+  });
 };
 
 module.exports = {
@@ -71,5 +87,6 @@ module.exports = {
   findAll,
   findById,
   findByCode,
+  updateMunicipality,
   seedMunicipalities,
 };

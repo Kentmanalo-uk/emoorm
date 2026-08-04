@@ -1,0 +1,59 @@
+/* AdminAnalytics.css */
+
+.admin-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.analytics-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.analytics-status-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 20px;
+  min-width: 100px;
+}
+
+.analytics-status-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.analytics-revenue-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: #f0fdf4;
+  border-color: #a7f3d0;
+  color: #059669;
+}
+
+.analytics-revenue-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 2px;
+  color: #64748b;
+}
+
+.analytics-revenue-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #059669;
+  margin: 0;
+}

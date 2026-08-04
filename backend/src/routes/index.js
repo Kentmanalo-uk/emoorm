@@ -36,6 +36,7 @@ const orderRoutes = require('./order.routes');
 const reviewRoutes = require('./review.routes');
 const reportRoutes = require('./report.routes');
 const notificationRoutes = require('./notification.routes');
+const uploadRoutes = require('./upload.routes');
 
 // Mount routes
 router.use('/auth', authRoutes);
@@ -47,5 +48,6 @@ router.use('/orders', orderRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/reports', reportRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/upload', uploadRoutes);
 
 module.exports = router;

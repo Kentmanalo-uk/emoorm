@@ -22,7 +22,7 @@ const generateSlug = async (name) => {
   // Check if slug exists and add number if needed
   let counter = 1;
   let uniqueSlug = slug;
-  
+
   while (await productRepository.slugExists(uniqueSlug)) {
     uniqueSlug = `${slug}-${counter}`;
     counter++;
@@ -40,7 +40,7 @@ const generateSlug = async (name) => {
 const createProduct = async (userId, data) => {
   // Get seller's store
   const store = await storeRepository.findByOwnerId(userId);
-  
+
   if (!store) {
     throw new ApiError('You must have a store to create products', 403);
   }
@@ -111,9 +111,11 @@ const getProductBySlug = async (slug) => {
  * @returns {Promise<Object>} Products and pagination
  */
 const getProducts = async (options) => {
-  // If not admin, only show approved products
+  // If not admin, only show approved products from active, non-suspended stores.
   if (!options.isAdmin) {
     options.status = 'APPROVED';
+    options.storeIsActive = true;
+    options.storeIsSuspended = false;
   }
 
   return productRepository.findAll(options);
@@ -127,7 +129,7 @@ const getProducts = async (options) => {
  */
 const getMyProducts = async (userId, options) => {
   const store = await storeRepository.findByOwnerId(userId);
-  
+
   if (!store) {
     throw new ApiError('You do not have a store', 404);
   }
@@ -151,7 +153,7 @@ const updateProduct = async (productId, userId, data) => {
 
   // Get seller's store
   const store = await storeRepository.findByOwnerId(userId);
-  
+
   if (!store || product.storeId !== store.id) {
     throw new ApiError('You can only update your own products', 403);
   }
@@ -210,7 +212,7 @@ const deleteProduct = async (productId, userId) => {
 
   // Get seller's store
   const store = await storeRepository.findByOwnerId(userId);
-  
+
   if (!store || product.storeId !== store.id) {
     throw new ApiError('You can only delete your own products', 403);
   }

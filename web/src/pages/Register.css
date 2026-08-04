@@ -1,0 +1,475 @@
+/* Register Page - Reuses Login styles with modifications */
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f9fafb;
+}
+
+/* Header */
+.register-header {
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 16px 0;
+}
+
+.register-header-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.register-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.register-logo-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.register-logo-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #15803d;
+  letter-spacing: -0.02em;
+}
+
+.register-header-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.register-header-link:hover {
+  color: #111827;
+}
+
+/* Main Content */
+.register-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #047857 0%, #059669 50%, #10b981 100%);
+}
+
+.register-container {
+  width: 100%;
+  max-width: 1100px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+/* Left Side - Hero */
+.register-hero {
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.register-hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.register-hero-icon {
+  width: 48px;
+  height: 48px;
+  background-color: white;
+  border-radius: 50%;
+  padding: 8px;
+}
+
+.register-hero-text {
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+}
+
+.register-hero-title {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.register-hero-title-highlight {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.register-hero-stats {
+  display: flex;
+  gap: 60px;
+}
+
+.register-hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.register-hero-stat-number {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  color: white;
+}
+
+.register-hero-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.1em;
+}
+
+/* Right Side - Form */
+.register-form-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.register-form-card {
+  background-color: white;
+  border-radius: 0;
+  padding: 40px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.register-form-header {
+  margin-bottom: 28px;
+}
+
+.register-form-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.register-form-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Form */
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.register-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.register-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.register-form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.register-form-optional {
+  font-size: 13px;
+  font-weight: 400;
+  color: #9ca3af;
+}
+
+.register-form-input-wrapper {
+  position: relative;
+}
+
+.register-form-input {
+  width: 100%;
+  padding: 11px 15px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 0;
+  background-color: white;
+  color: #111827;
+  transition: all 0.2s;
+}
+
+.register-form-input::placeholder {
+  color: #9ca3af;
+}
+
+.register-form-input:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+select.register-form-input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+select.register-form-input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.register-form-input-error {
+  border-color: #ef4444;
+}
+
+.register-form-input-error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.register-form-toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.register-form-toggle-password:hover {
+  color: #111827;
+}
+
+.register-form-error {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 2px;
+}
+
+.register-form-submit {
+  width: 100%;
+  padding: 13px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  background-color: #059669;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 4px;
+}
+
+.register-form-submit:hover {
+  background-color: #047857;
+}
+
+.register-form-submit:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.register-form-error-message {
+  padding: 12px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  color: #ef4444;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Divider */
+.register-form-divider {
+  position: relative;
+  text-align: center;
+  margin: 4px 0;
+}
+
+.register-form-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+  background-color: #e5e7eb;
+}
+
+.register-form-divider-text {
+  position: relative;
+  display: inline-block;
+  padding: 0 16px;
+  background-color: white;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9ca3af;
+  letter-spacing: 0.05em;
+}
+
+/* Google Button */
+.register-form-google {
+  width: 100%;
+  padding: 11px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.2s;
+}
+
+.register-form-google:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.register-form-google:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Footer */
+.register-form-footer {
+  text-align: center;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.register-form-footer-text {
+  color: #6b7280;
+}
+
+.register-form-footer-link {
+  color: #059669;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.register-form-footer-link:hover {
+  color: #047857;
+  text-decoration: underline;
+}
+
+/* Terms */
+.register-form-terms {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  line-height: 1.5;
+  margin-top: 12px;
+}
+
+.register-form-terms-link {
+  color: #059669;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.register-form-terms-link:hover {
+  color: #047857;
+  text-decoration: underline;
+}
+
+/* Help Link */
+.register-help-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.register-help-link:hover {
+  opacity: 0.8;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .register-container {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    max-width: 520px;
+  }
+
+  .register-hero {
+    display: none;
+  }
+
+  .register-form-container {
+    align-items: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .register-header-container {
+    padding: 0 16px;
+  }
+
+  .register-content {
+    padding: 20px 16px;
+  }
+
+  .register-form-card {
+    padding: 28px 24px;
+  }
+
+  .register-hero-title {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .register-form-card {
+    padding: 24px 20px;
+  }
+
+  .register-form-title {
+    font-size: 24px;
+  }
+
+  .register-form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}

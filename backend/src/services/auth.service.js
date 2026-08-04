@@ -1,4 +1,7 @@
+const crypto = require('crypto');
 const userRepository = require('../repositories/user.repository');
+const storeRepository = require('../repositories/store.repository');
+const storeService = require('./store.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateTokens, verifyRefreshToken } = require('../utils/jwt');
 const { ApiError } = require('../middleware/errorHandler');
@@ -209,24 +212,47 @@ const changePassword = async (userId, currentPassword, newPassword) => {
  * @param {String} userId - User ID
  * @returns {Promise<Object>} Updated user
  */
-const applyForSeller = async (userId) => {
+const applyForSeller = async (userId, data = {}) => {
   const user = await userRepository.findById(userId);
 
   if (!user) {
     throw new ApiError('User not found', 404);
   }
 
-  // Check if user is already a seller
   if (user.role === 'SELLER') {
     throw new ApiError('You are already a seller', 400);
   }
 
-  // Check if user has pending application
   if (user.sellerApplicationStatus === 'PENDING') {
     throw new ApiError('You already have a pending seller application', 400);
   }
 
-  const updatedUser = await userRepository.applyForSeller(userId);
+  // Save application data + mark as pending
+  await userRepository.applyForSeller(userId, data);
+
+  // Immediately promote to SELLER so they can access the dashboard.
+  // The store below stays inactive until an admin approves it, so the
+  // profile and any products they add remain hidden from the public.
+  const updatedUser = await userRepository.promoteToSeller(userId);
+
+  // Create an inactive store from the application data so the seller can
+  // immediately start adding products (kept hidden until admin activates).
+  const existingStore = await storeRepository.findByOwnerId(userId);
+  if (!existingStore && data.shopName) {
+    const slug = await storeService.generateSlug(data.shopName);
+    await storeRepository.createStore({
+      name: data.shopName,
+      slug,
+      description: data.shopDescription || null,
+      logo: null,
+      coverImage: null,
+      businessHours: null,
+      ownerId: userId,
+      municipalityId: updatedUser.municipalityId,
+      isActive: false,
+      isSuspended: false,
+    });
+  }
 
   return updatedUser;
 };
@@ -272,6 +298,12 @@ const approveSeller = async (userId) => {
   }
 
   const updatedUser = await userRepository.approveSeller(userId);
+
+  // Activate the seller's store so it and its approved products become public.
+  const store = await storeRepository.findByOwnerId(userId);
+  if (store) {
+    await storeRepository.updateStore(store.id, { isActive: true });
+  }
 
   // TODO: Send notification to user
 
@@ -336,6 +368,46 @@ const deleteUser = async (userId) => {
   await userRepository.softDeleteUser(userId);
 };
 
+/**
+ * Initiate password reset — generates a token valid for 1 hour
+ * @param {String} email
+ * @returns {Promise<String>} resetToken (returned so dev/test can use it without email)
+ */
+const forgotPassword = async (email) => {
+  const user = await userRepository.findByEmail(email);
+
+  // Always respond the same way to prevent email enumeration
+  if (!user || user.deletedAt) return null;
+
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await userRepository.setPasswordResetToken(user.id, hashedToken, expiry);
+
+  return resetToken;
+};
+
+/**
+ * Reset password using the token issued by forgotPassword
+ * @param {String} token - Plain reset token from email link
+ * @param {String} newPassword
+ */
+const resetPassword = async (token, newPassword) => {
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await userRepository.findByResetToken(hashedToken);
+
+  if (!user) {
+    throw new ApiError('Invalid or expired password reset token', 400);
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+
+  await userRepository.updateUser(user.id, { password: hashedPassword });
+  await userRepository.clearPasswordResetToken(user.id);
+};
+
 module.exports = {
   register,
   login,
@@ -343,6 +415,8 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
+  forgotPassword,
+  resetPassword,
   applyForSeller,
   getUserById,
   getUsers,
@@ -351,4 +425,11 @@ module.exports = {
   suspendUser,
   activateUser,
   deleteUser,
+  setUserRole,
 };
+
+async function setUserRole(userId, role) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new (require('../middleware/errorHandler').ApiError)('User not found', 404);
+  return userRepository.updateUser(userId, { role });
+}

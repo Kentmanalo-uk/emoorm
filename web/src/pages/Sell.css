@@ -1,0 +1,856 @@
+﻿/* ── Sell Page — redesigned ────────────────────────────────────── */
+
+.sell-page {
+  min-height: 100vh;
+  background: #fff;
+  font-family: 'Inter', sans-serif;
+  color: #111;
+}
+
+/* ─── Sticky header ─────────────────────────────────────────────── */
+.sell-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  will-change: transform;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Topbar */
+.sell-topbar {
+  height: 40px;
+  background: #29a366;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+/* Nav header */
+.sell-header {
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.sell-header-inner {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 0 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Logo */
+.sell-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.sell-logo-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.sell-logo-text {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: #29a366;
+}
+
+/* Nav links */
+.sell-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.sell-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #555;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sell-nav-link:hover,
+.sell-nav-link--active {
+  background: #f2f2f0;
+  color: #111;
+}
+
+/* Header actions */
+.sell-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.sell-nav-btn-ghost {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .sell-nav-btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 20px;
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    font-size: 14px;
+    font-weight: 600;
+    color: #111;
+    background: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .sell-nav-btn-ghost:hover {
+    background: #f2f2f0;
+  }
+}
+
+.sell-nav-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: #29a366;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sell-nav-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.sell-nav-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sell-mobile-toggle {
+  display: none;
+  padding: 6px;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #555;
+  transition: background 0.15s;
+}
+
+.sell-mobile-toggle:hover {
+  background: #f2f2f0;
+}
+
+/* ─── Auth hover dropdown ───────────────────────────────────────── */
+.sell-auth-wrap {
+  position: relative;
+  padding: 6px 4px;
+  margin: -6px -4px;
+}
+
+.sell-auth-drop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 320px;
+  z-index: 60;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.sell-auth-drop--open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.sell-auth-drop-head {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.sell-auth-drop-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 2px;
+}
+
+.sell-auth-drop-sub {
+  font-size: 12px;
+  color: #666;
+  margin: 0;
+}
+
+.sell-auth-drop-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+}
+
+.sell-auth-drop-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  text-decoration: none;
+  transition: background 0.12s;
+}
+
+.sell-auth-drop-item:hover {
+  background: #f2f2f0;
+}
+
+.sell-auth-drop-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #29a366;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sell-auth-drop-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+}
+
+.sell-auth-drop-arrow {
+  color: #999;
+  transition: color 0.12s, transform 0.12s;
+}
+
+.sell-auth-drop-item:hover .sell-auth-drop-arrow {
+  color: #29a366;
+  transform: translateX(2px);
+}
+
+.sell-auth-drop-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 44px;
+  background: #29a366;
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sell-auth-drop-cta:hover {
+  opacity: 0.9;
+}
+
+/* ─── Mega dropdown ─────────────────────────────────────────────── */
+.sell-mega-wrap {
+  display: grid;
+  transition: grid-template-rows 220ms ease;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.sell-mega-inner {
+  overflow: hidden;
+}
+
+.sell-mega-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px 32px;
+}
+
+.sell-mega-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #bbb;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 12px 4px;
+}
+
+.sell-mega-how-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.sell-mega-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: background 0.12s;
+}
+
+.sell-mega-item:hover {
+  background: #f2f2f0;
+}
+
+.sell-mega-n {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  color: #29a366;
+  opacity: 0.22;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sell-mega-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  margin: 0 0 2px;
+}
+
+.sell-mega-item-desc {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.sell-mega-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.sell-mega-item--plain {
+  align-items: flex-start;
+}
+
+.sell-mega-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sell-mega-chip {
+  display: inline-block;
+  background: #f2f2f0;
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+}
+
+.sell-mega-chip:hover {
+  background: rgba(41, 163, 102, 0.1);
+  color: #29a366;
+}
+
+/* ─── Mobile menu ───────────────────────────────────────────────── */
+.sell-mobile-menu {
+  display: none;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 12px 16px;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 40;
+}
+
+.sell-mobile-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.sell-mobile-link:hover {
+  background: #f2f2f0;
+}
+
+/* ─── Shared container ──────────────────────────────────────────── */
+.sell-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.sell-container--narrow {
+  max-width: 960px;
+}
+
+.sell-container--center {
+  text-align: center;
+}
+
+/* ─── Sections ──────────────────────────────────────────────────── */
+.sell-section {
+  padding: 56px 0;
+}
+
+.sell-section--gray {
+  background: #f9fafb;
+}
+
+.sell-section-head {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.sell-section-head h2 {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 600;
+  color: #111;
+  margin: 0 0 6px;
+}
+
+.sell-section-head p {
+  font-size: 13px;
+  color: #999;
+  margin: 0;
+}
+
+/* ─── Hero ──────────────────────────────────────────────────────── */
+.sell-hero {
+  padding: 56px 0 64px;
+}
+
+.sell-hero-layout {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+}
+
+.sell-hero-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.sell-hero-h1 {
+  font-size: clamp(40px, 6vw, 64px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: #111;
+  margin: 0 0 16px;
+}
+
+.sell-hero-accent {
+  color: #29a366;
+}
+
+.sell-hero-sub {
+  font-size: 15px;
+  color: #666;
+  line-height: 1.6;
+  margin: 0 0 28px;
+  max-width: 400px;
+}
+
+.sell-hero-btns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sell-hero-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 40px;
+  border-radius: 9999px;
+  background: #29a366;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sell-hero-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.sell-hero-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sell-hero-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 40px;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  color: #555;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sell-hero-btn-ghost:hover {
+  background: #f2f2f0;
+}
+
+.sell-hero-pending {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: #f59e0b;
+}
+
+/* Hero images */
+.sell-hero-imgs {
+  width: 400px;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 10px;
+  height: 360px;
+}
+
+.sell-hero-img-main,
+.sell-hero-img-side {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.sell-hero-img-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sell-hero-img-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.sell-hero-img-side img {
+  width: 100%;
+  flex: 1;
+  object-fit: cover;
+  border-radius: 16px;
+  display: block;
+  min-height: 0;
+}
+
+/* ─── Benefits ──────────────────────────────────────────────────── */
+.sell-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.sell-benefit-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.sell-benefit-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.sell-benefit-desc {
+  font-size: 13px;
+  color: #888;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ─── How it works ──────────────────────────────────────────────── */
+.sell-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sell-step-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+
+.sell-step-n {
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+  color: #29a366;
+  opacity: 0.2;
+  width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sell-step-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+.sell-step-desc {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+}
+
+/* ─── Categories ────────────────────────────────────────────────── */
+.sell-cat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sell-cat-chip {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 9999px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+}
+
+/* ─── Final CTA ─────────────────────────────────────────────────── */
+.sell-final-cta {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  padding: 80px 0;
+}
+
+.sell-final-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.sell-final-cta h2 {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.sell-final-cta p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 16px;
+}
+
+.sell-final-btns {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sell-final-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 32px;
+  border-radius: 10px;
+  background: #fff;
+  color: #065f46;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.sell-final-btn:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+.sell-final-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.sell-final-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 32px;
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sell-final-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.sell-final-login {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 8px 0 0;
+}
+
+.sell-final-login button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+.sell-final-login button:hover {
+  color: #fff;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .sell-benefits-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sell-hero-layout {
+    flex-direction: column;
+  }
+
+  .sell-hero-imgs {
+    width: 100%;
+    max-width: 480px;
+    height: 280px;
+  }
+
+  .sell-mega-how-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sell-mega-benefits-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .sell-header-inner {
+    padding: 0 16px;
+  }
+
+  .sell-nav-links {
+    display: none;
+  }
+
+  .sell-mobile-toggle {
+    display: flex;
+  }
+
+  .sell-mobile-menu {
+    display: flex;
+  }
+
+  .sell-container {
+    padding: 0 16px;
+  }
+
+  .sell-mega-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sell-benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sell-hero-btns {
+    flex-direction: column;
+  }
+
+  .sell-hero-btn-primary,
+  .sell-hero-btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
+}

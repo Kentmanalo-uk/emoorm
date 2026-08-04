@@ -31,6 +31,13 @@ router.post(
   municipalityController.createMunicipality
 );
 
+router.put(
+  '/:id',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  municipalityController.updateMunicipality
+);
+
 router.post(
   '/seed',
   authenticate,

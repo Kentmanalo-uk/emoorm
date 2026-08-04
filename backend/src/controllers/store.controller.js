@@ -38,12 +38,16 @@ const getStores = asyncHandler(async (req, res) => {
     search,
   } = req.query;
 
+  const isAdmin = req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN');
+
   const options = {
     page: parseInt(page),
     pageSize: parseInt(pageSize),
     municipalityId,
-    isActive: isActive !== undefined ? isActive === 'true' : undefined,
-    isSuspended: isSuspended !== undefined ? isSuspended === 'true' : undefined,
+    // Non-admin callers only see active, non-suspended stores. Admins can
+    // pass explicit filters to review pending/inactive stores.
+    isActive: isAdmin ? (isActive !== undefined ? isActive === 'true' : undefined) : true,
+    isSuspended: isAdmin ? (isSuspended !== undefined ? isSuspended === 'true' : undefined) : false,
     search,
   };
 
@@ -66,6 +70,11 @@ const getStores = asyncHandler(async (req, res) => {
  */
 const getStoreById = asyncHandler(async (req, res) => {
   const store = await storeService.getStoreById(req.params.id);
+  const isAdmin = req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN');
+  const isOwner = req.user && store.ownerId === req.user.id;
+  if (!isAdmin && !isOwner && (!store.isActive || store.isSuspended)) {
+    return res.status(404).json({ success: false, message: 'Store not found' });
+  }
 
   successResponse(res, store, 'Store retrieved successfully');
 });
@@ -77,6 +86,11 @@ const getStoreById = asyncHandler(async (req, res) => {
  */
 const getStoreBySlug = asyncHandler(async (req, res) => {
   const store = await storeService.getStoreBySlug(req.params.slug);
+  const isAdmin = req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN');
+  const isOwner = req.user && store.ownerId === req.user.id;
+  if (!isAdmin && !isOwner && (!store.isActive || store.isSuspended)) {
+    return res.status(404).json({ success: false, message: 'Store not found' });
+  }
 
   successResponse(res, store, 'Store retrieved successfully');
 });

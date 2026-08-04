@@ -1,0 +1,8 @@
+﻿git : fatal: path 'web/src/pages/SellerDashboard.css' does not exist in 'HEAD'
+At line:1 char:1
++ git show HEAD:web/src/pages/SellerDashboard.css 2>&1 | Out-File -Enco ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (fatal: path 'we...exist in 'HEAD' 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
