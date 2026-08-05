@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Package, Clock, Truck, CheckCircle, XCircle,
-  Store, MapPin, Eye, MessageSquare, RotateCcw, Star
+  Package, MapPin, Eye, MessageSquare, RotateCcw, Star, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import useAuthStore from '../store/authStore';
 import './Orders.css';
 
@@ -24,13 +24,13 @@ const Orders = () => {
   const [reviewTarget, setReviewTarget] = useState(null); // { product, orderId }
 
   const orderTabs = [
-    { key: 'all', label: 'All', icon: Package },
-    { key: 'PENDING', label: 'To Pay', icon: Clock },
-    { key: 'CONFIRMED', label: 'To Ship', icon: Package },
-    { key: 'PREPARING', label: 'Preparing', icon: Store },
-    { key: 'READY', label: 'Ready', icon: CheckCircle },
-    { key: 'COMPLETED', label: 'Completed', icon: CheckCircle },
-    { key: 'CANCELLED', label: 'Cancelled', icon: XCircle },
+    { key: 'all', label: 'All' },
+    { key: 'PENDING', label: 'To Pay' },
+    { key: 'CONFIRMED', label: 'To Ship' },
+    { key: 'PREPARING', label: 'Preparing' },
+    { key: 'READY', label: 'Ready' },
+    { key: 'COMPLETED', label: 'Completed' },
+    { key: 'CANCELLED', label: 'Cancelled' },
   ];
 
   useEffect(() => {
@@ -101,14 +101,14 @@ const Orders = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      PENDING: { label: 'Pending Payment', color: '#f59e0b', bg: '#fef3c7' },
-      CONFIRMED: { label: 'Confirmed', color: '#3b82f6', bg: '#dbeafe' },
-      PREPARING: { label: 'Preparing', color: '#8b5cf6', bg: '#ede9fe' },
-      READY: { label: 'Ready for Pickup', color: '#f97316', bg: '#ffedd5' },
-      COMPLETED: { label: 'Completed', color: '#10b981', bg: '#d1fae5' },
-      CANCELLED: { label: 'Cancelled', color: '#ef4444', bg: '#fee2e2' },
+      PENDING: { label: 'Pending Payment', tone: 'neutral' },
+      CONFIRMED: { label: 'Confirmed', tone: 'neutral' },
+      PREPARING: { label: 'Preparing', tone: 'neutral' },
+      READY: { label: 'Ready for Pickup', tone: 'accent' },
+      COMPLETED: { label: 'Completed', tone: 'success' },
+      CANCELLED: { label: 'Cancelled', tone: 'danger' },
     };
-    return badges[status] || { label: status, color: '#6b7280', bg: '#f3f4f6' };
+    return badges[status] || { label: status, tone: 'neutral' };
   };
 
   const getOrderTimeline = (order) => {
@@ -169,180 +169,165 @@ const Orders = () => {
     return (
       <div className="orders-loading">
         <div className="loading-spinner"></div>
-        <p>Loading orders...</p>
+        <p>Loading orders…</p>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="profile-section">
-        <h1 className="orders-title">My Orders</h1>
+    <div className="profile-page-wrap">
+      <header className="profile-page-header">
+        <h1 className="profile-page-title">My Orders</h1>
+      </header>
 
-        {/* Order Tabs */}
-        <div className="orders-tabs">
-          {orderTabs.map((tab) => {
-            const Icon = tab.icon;
-            const count = tab.key === 'all'
-              ? orders.length
-              : orders.filter(o => o.status === tab.key).length;
+      <div className="orders-tabs" role="tablist">
+        {orderTabs.map((tab) => {
+          const count = tab.key === 'all'
+            ? orders.length
+            : orders.filter(o => o.status === tab.key).length;
+
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`order-tab ${activeTab === tab.key ? 'active' : ''}`}
+              role="tab"
+            >
+              <span>{tab.label}</span>
+              {count > 0 && <span className="order-tab-count">{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {filteredOrders.length === 0 ? (
+        <div className="profile-section">
+          <div className="empty-state">
+            <Package size={40} strokeWidth={1.5} />
+            <p className="empty-state-text">No orders found</p>
+            <p className="empty-state-hint">
+              You haven't placed any orders in this category yet.
+            </p>
+            <Link to="/products" className="empty-state-button">Browse Products</Link>
+          </div>
+        </div>
+      ) : (
+        <div className="orders-list">
+          {filteredOrders.map((order) => {
+            const statusBadge = getStatusBadge(order.status);
 
             return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`order-tab ${activeTab === tab.key ? 'active' : ''}`}
-              >
-                <Icon size={18} />
-                <span>{tab.label}</span>
-                {count > 0 && <span className="order-tab-count">{count}</span>}
-              </button>
-            );
-          })}
-        </div>
+              <div key={order.id} className="order-card">
+                <div className="order-card-header">
+                  <Link
+                    to={`/store/${order.store?.slug}`}
+                    className="order-store-name"
+                  >
+                    {order.store?.name || 'Store'}
+                  </Link>
+                  <span className={`order-status-badge status-${statusBadge.tone}`}>
+                    {statusBadge.label}
+                  </span>
+                </div>
 
-        {/* Orders List */}
-        {filteredOrders.length === 0 ? (
-          <div className="orders-empty">
-            <Package size={64} />
-            <h3>No orders found</h3>
-            <p>You haven't placed any orders yet</p>
-            <Link to="/products" className="btn-browse-products">
-              Browse Products
-            </Link>
-          </div>
-        ) : (
-          <div className="orders-list">
-            {filteredOrders.map((order) => {
-              const statusBadge = getStatusBadge(order.status);
+                <div className="order-card-body">
+                  <div className="order-items">
+                    {order.items?.slice(0, 3).map((item, index) => (
+                      <div key={index} className="order-item">
+                        <img
+                          src={resolveImg(item.product?.images?.[0]) || '/placeholder-product.png'}
+                          alt={item.productName}
+                          className="order-item-image"
+                          onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
+                        />
+                        <div className="order-item-details">
+                          <p className="order-item-name">{item.productName}</p>
+                          <p className="order-item-quantity">Qty: {item.quantity}</p>
+                        </div>
+                        <div className="order-item-price">
+                          ₱{parseFloat(item.price).toFixed(2)}
+                        </div>
+                      </div>
+                    ))}
+                    {order.items?.length > 3 && (
+                      <p className="order-items-more">
+                        +{order.items.length - 3} more item{order.items.length - 3 > 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
 
-              return (
-                <div key={order.id} className="order-card">
-                  <div className="order-card-header">
-                    <div className="order-card-header-left">
-                      <Store size={18} />
-                      <Link
-                        to={`/store/${order.store?.slug}`}
-                        className="order-store-name"
-                      >
-                        {order.store?.name || 'Store'}
-                      </Link>
+                  <div className="order-info">
+                    <div className="order-info-item">
+                      <span className="order-info-label">Order number</span>
+                      <span className="order-info-value">{order.orderNumber}</span>
                     </div>
-                    <div className="order-card-header-right">
-                      <span
-                        className="order-status-badge"
-                        style={{
-                          color: statusBadge.color,
-                          backgroundColor: statusBadge.bg
-                        }}
-                      >
-                        {statusBadge.label}
+                    <div className="order-info-item">
+                      <span className="order-info-label">Order date</span>
+                      <span className="order-info-value">
+                        {new Date(order.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                    <div className="order-info-item">
+                      <span className="order-info-label">Total amount</span>
+                      <span className="order-info-value order-total">
+                        ₱{parseFloat(order.total).toFixed(2)}
                       </span>
                     </div>
                   </div>
-
-                  <div className="order-card-body">
-                    {/* Order Items */}
-                    <div className="order-items">
-                      {order.items?.slice(0, 3).map((item, index) => (
-                        <div key={index} className="order-item">
-                          <img
-                            src={item.product?.images?.[0] || '/placeholder-product.png'}
-                            alt={item.productName}
-                            className="order-item-image"
-                          />
-                          <div className="order-item-details">
-                            <p className="order-item-name">{item.productName}</p>
-                            <p className="order-item-quantity">x{item.quantity}</p>
-                          </div>
-                          <div className="order-item-price">
-                            ₱{parseFloat(item.price).toFixed(2)}
-                          </div>
-                        </div>
-                      ))}
-                      {order.items?.length > 3 && (
-                        <p className="order-items-more">
-                          +{order.items.length - 3} more items
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Order Info */}
-                    <div className="order-info">
-                      <div className="order-info-item">
-                        <span className="order-info-label">Order Number:</span>
-                        <span className="order-info-value">{order.orderNumber}</span>
-                      </div>
-                      <div className="order-info-item">
-                        <span className="order-info-label">Order Date:</span>
-                        <span className="order-info-value">
-                          {new Date(order.createdAt).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                      <div className="order-info-item">
-                        <span className="order-info-label">Total Amount:</span>
-                        <span className="order-info-value order-total">
-                          ₱{parseFloat(order.total).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Order Actions */}
-                  <div className="order-card-actions">
-                    <button
-                      onClick={() => handleViewOrder(order)}
-                      className="order-action-btn btn-view"
-                    >
-                      <Eye size={16} />
-                      View Details
-                    </button>
-
-                    {order.status === 'PENDING' && (
-                      <button
-                        onClick={() => handleCancelOrder(order.id)}
-                        className="order-action-btn btn-cancel"
-                      >
-                        <XCircle size={16} />
-                        Cancel Order
-                      </button>
-                    )}
-
-                    {order.status === 'COMPLETED' && (
-                      <button
-                        onClick={() => handleReorder(order)}
-                        className="order-action-btn btn-reorder"
-                      >
-                        <RotateCcw size={16} />
-                        Buy Again
-                      </button>
-                    )}
-
-                    {order.status === 'COMPLETED' && order.items?.length > 0 && (
-                      <button
-                        onClick={() => setReviewTarget({ product: order.items[0].product || { id: order.items[0].productId, name: order.items[0].productName, images: [order.items[0].product?.images?.[0]] }, orderId: order.id })}
-                        className="order-action-btn btn-review"
-                      >
-                        <Star size={16} />
-                        Write Review
-                      </button>
-                    )}
-
-                    <button className="order-action-btn btn-message">
-                      <MessageSquare size={16} />
-                      Contact Seller
-                    </button>
-                  </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+                <div className="order-card-actions">
+                  <button
+                    onClick={() => handleViewOrder(order)}
+                    className="order-action-btn"
+                  >
+                    <Eye size={16} />
+                    View details
+                  </button>
+
+                  {order.status === 'PENDING' && (
+                    <button
+                      onClick={() => handleCancelOrder(order.id)}
+                      className="order-action-btn is-danger"
+                    >
+                      Cancel order
+                    </button>
+                  )}
+
+                  {order.status === 'COMPLETED' && (
+                    <button
+                      onClick={() => handleReorder(order)}
+                      className="order-action-btn is-primary"
+                    >
+                      <RotateCcw size={16} />
+                      Buy again
+                    </button>
+                  )}
+
+                  {order.status === 'COMPLETED' && order.items?.length > 0 && (
+                    <button
+                      onClick={() => setReviewTarget({ product: order.items[0].product || { id: order.items[0].productId, name: order.items[0].productName, images: [order.items[0].product?.images?.[0]] }, orderId: order.id })}
+                      className="order-action-btn"
+                    >
+                      <Star size={16} />
+                      Write review
+                    </button>
+                  )}
+
+                  <button className="order-action-btn">
+                    <MessageSquare size={16} />
+                    Contact seller
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Order Details Modal */}
       {showOrderDetails && selectedOrder && (
@@ -353,8 +338,9 @@ const Orders = () => {
               <button
                 onClick={() => setShowOrderDetails(false)}
                 className="modal-close"
+                aria-label="Close"
               >
-                ×
+                <X size={20} />
               </button>
             </div>
 
@@ -373,13 +359,7 @@ const Orders = () => {
                     })}
                   </p>
                 </div>
-                <span
-                  className="order-status-badge"
-                  style={{
-                    color: getStatusBadge(selectedOrder.status).color,
-                    backgroundColor: getStatusBadge(selectedOrder.status).bg
-                  }}
-                >
+                <span className={`order-status-badge status-${getStatusBadge(selectedOrder.status).tone}`}>
                   {getStatusBadge(selectedOrder.status).label}
                 </span>
               </div>
@@ -437,8 +417,9 @@ const Orders = () => {
                   {selectedOrder.items?.map((item, index) => (
                     <div key={index} className="order-details-item">
                       <img
-                        src={item.product?.images?.[0] || '/placeholder-product.png'}
+                        src={resolveImg(item.product?.images?.[0]) || '/placeholder-product.png'}
                         alt={item.productName}
+                        onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
                       />
                       <div className="order-details-item-info">
                         <p className="item-name">{item.productName}</p>
@@ -503,7 +484,7 @@ const Orders = () => {
           onSuccess={fetchOrders}
         />
       )}
-    </>
+    </div>
   );
 };
 

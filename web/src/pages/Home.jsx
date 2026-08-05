@@ -4,6 +4,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, ShoppingCart, Star } from 'lucid
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import './Home.css';
 
@@ -202,7 +203,7 @@ const Home = () => {
                 className="category-card"
               >
                 <div className="category-image">
-                  <img src={cat.image || `/categories/${cat.slug}.png`} alt={cat.name} />
+                  <img src={resolveImg(cat.image) || `/categories/${cat.slug}.png`} alt={cat.name} />
                 </div>
                 <span className="category-name">{cat.name}</span>
               </Link>
@@ -224,8 +225,9 @@ const Home = () => {
                 <Link key={product.id} to={`/product/${product.slug}`} className="product-card">
                   <div className="product-image">
                     <img
-                      src={product.images?.[0] || '/placeholder.png'}
+                      src={resolveImg(product.images?.[0]) || '/placeholder.png'}
                       alt={product.name}
+                      onError={(e) => { e.currentTarget.src = '/placeholder.png'; }}
                     />
                     <button
                       type="button"

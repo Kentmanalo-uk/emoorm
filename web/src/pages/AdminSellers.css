@@ -96,11 +96,9 @@
 }
 
 .admin-detail-section h4 {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #334155;
   margin: 0 0 12px;
   display: flex;
   align-items: center;
@@ -118,11 +116,9 @@
 }
 
 .admin-detail-grid label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: #64748b;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -150,10 +146,9 @@
 }
 
 .admin-id-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #64748b;
-  text-transform: uppercase;
 }
 
 .admin-id-photo img {

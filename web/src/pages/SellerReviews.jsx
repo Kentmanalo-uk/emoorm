@@ -63,11 +63,9 @@ export default function SellerReviews() {
             <p className="seller-welcome">Feedback left by your buyers</p>
           </div>
           {reviews.length > 0 && (
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#0f172a' }}>
-                {avgRating.toFixed(1)}
-              </div>
-              <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <div className="reviews-summary">
+              <div className="reviews-avg">{avgRating.toFixed(1)}</div>
+              <div className="reviews-stars">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
                     key={i}
@@ -77,7 +75,7 @@ export default function SellerReviews() {
                   />
                 ))}
               </div>
-              <span style={{ fontSize: 12, color: '#64748b' }}>
+              <span className="reviews-count">
                 {reviews.length} review{reviews.length === 1 ? '' : 's'}
               </span>
             </div>
@@ -90,25 +88,17 @@ export default function SellerReviews() {
               <Skeleton.List rows={4} />
             </div>
           ) : reviews.length === 0 ? (
-            <div className="seller-empty" style={{ padding: '48px 16px' }}>
+            <div className="seller-empty">
               <MessageSquare size={36} />
               <p>No reviews yet.</p>
             </div>
           ) : (
-            <ul style={{
-              listStyle: 'none', padding: 16, margin: 0,
-              display: 'flex', flexDirection: 'column', gap: 12,
-            }}>
+            <ul className="reviews-list">
               {reviews.map((r) => {
                 const product = r.product || productMap[r.productId];
                 return (
-                  <li key={r.id} style={{
-                    padding: 14,
-                    border: '1px solid #f1f5f9',
-                    borderRadius: 10,
-                    background: '#fff',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <li key={r.id} className="reviews-item">
+                    <div className="reviews-item-head">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star
                           key={i}
@@ -117,23 +107,17 @@ export default function SellerReviews() {
                           stroke={i < (r.rating || 0) ? '#f59e0b' : '#cbd5e1'}
                         />
                       ))}
-                      <strong style={{ fontSize: 13, marginLeft: 6 }}>
+                      <strong className="reviews-item-name">
                         {r.buyer?.fullName || r.user?.fullName || 'Buyer'}
                       </strong>
-                      <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 'auto' }}>
+                      <span className="reviews-item-date">
                         {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
                       </span>
                     </div>
                     {product?.name && (
-                      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
-                        on {product.name}
-                      </div>
+                      <div className="reviews-item-product">on {product.name}</div>
                     )}
-                    {r.comment && (
-                      <p style={{ margin: 0, fontSize: 13.5, color: '#334155' }}>
-                        {r.comment}
-                      </p>
-                    )}
+                    {r.comment && <p className="reviews-item-comment">{r.comment}</p>}
                   </li>
                 );
               })}

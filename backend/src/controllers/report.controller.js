@@ -1,4 +1,5 @@
 const reportService = require('../services/report.service');
+const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
   createdResponse,
@@ -113,13 +114,24 @@ const getReportById = asyncHandler(async (req, res) => {
  * @access Private (Admin only)
  */
 const updateReportStatus = asyncHandler(async (req, res) => {
-  const { status, adminNotes } = req.body;
+  const { status, resolutionNotes, adminNotes } = req.body;
+  const notes = resolutionNotes ?? adminNotes;
 
   const report = await reportService.updateReportStatus(
     req.params.id,
     status,
-    adminNotes
+    notes,
+    req.user
   );
+
+  await auditLog.record({
+    actor: req.user,
+    action: `REPORT_${status}`,
+    entity: 'Report',
+    entityId: req.params.id,
+    details: notes ? { resolutionNotes: notes } : null,
+    req,
+  });
 
   successResponse(res, report, 'Report status updated successfully');
 });

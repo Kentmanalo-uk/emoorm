@@ -1,4 +1,5 @@
 const productService = require('../services/product.service');
+const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
   createdResponse,
@@ -20,7 +21,11 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const createProduct = asyncHandler(async (req, res) => {
   const product = await productService.createProduct(req.user.id, req.body);
 
-  createdResponse(res, product, 'Product created successfully. Pending admin approval.');
+  const message = product.status === 'APPROVED'
+    ? 'Product created successfully and is now live.'
+    : 'Product created successfully. Pending admin approval.';
+
+  createdResponse(res, product, message);
 });
 
 /**
@@ -166,7 +171,15 @@ const deleteProduct = asyncHandler(async (req, res) => {
  * @access Private (Admin only)
  */
 const approveProduct = asyncHandler(async (req, res) => {
-  const product = await productService.approveProduct(req.params.id);
+  const product = await productService.approveProduct(req.params.id, req.user.id, req.user);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'APPROVE_PRODUCT',
+    entity: 'Product',
+    entityId: req.params.id,
+    req,
+  });
 
   successResponse(res, product, 'Product approved successfully');
 });
@@ -177,7 +190,16 @@ const approveProduct = asyncHandler(async (req, res) => {
  * @access Private (Admin only)
  */
 const suspendProduct = asyncHandler(async (req, res) => {
-  const product = await productService.suspendProduct(req.params.id);
+  const product = await productService.suspendProduct(req.params.id, req.user);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'SUSPEND_PRODUCT',
+    entity: 'Product',
+    entityId: req.params.id,
+    details: req.body?.reason ? { reason: req.body.reason } : null,
+    req,
+  });
 
   successResponse(res, product, 'Product suspended successfully');
 });
@@ -188,7 +210,15 @@ const suspendProduct = asyncHandler(async (req, res) => {
  * @access Private (Admin only)
  */
 const archiveProduct = asyncHandler(async (req, res) => {
-  const product = await productService.archiveProduct(req.params.id);
+  const product = await productService.archiveProduct(req.params.id, req.user);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'ARCHIVE_PRODUCT',
+    entity: 'Product',
+    entityId: req.params.id,
+    req,
+  });
 
   successResponse(res, product, 'Product archived successfully');
 });

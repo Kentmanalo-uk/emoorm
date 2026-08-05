@@ -53,6 +53,25 @@ const createOrder = async (data) => {
  */
 const createOrderWithItems = async (orderData, itemsData) => {
   return prisma.$transaction(async (tx) => {
+    // Atomically decrement stock; fails if stock is insufficient
+    for (const item of itemsData) {
+      const result = await tx.product.updateMany({
+        where: {
+          id: item.productId,
+          stock: { gte: item.quantity },
+        },
+        data: {
+          stock: { decrement: item.quantity },
+        },
+      });
+
+      if (result.count === 0) {
+        const err = new Error(`Insufficient stock for product ${item.productId}`);
+        err.code = 'INSUFFICIENT_STOCK';
+        throw err;
+      }
+    }
+
     // Create order
     const order = await tx.order.create({
       data: orderData,
@@ -129,6 +148,7 @@ const findById = async (id) => {
           id: true,
           name: true,
           slug: true,
+          ownerId: true,
           owner: {
             select: {
               id: true,
@@ -227,9 +247,13 @@ const findAll = async (options = {}) => {
  * @returns {Promise<Object>} Updated order
  */
 const updateStatus = async (id, status) => {
+  const data = { status };
+  if (status === 'COMPLETED') data.completedAt = new Date();
+  if (status === 'CANCELLED') data.cancelledAt = new Date();
+
   return prisma.order.update({
     where: { id },
-    data: { status },
+    data,
   });
 };
 
@@ -247,14 +271,28 @@ const updateOrder = async (id, data) => {
 };
 
 /**
- * Cancel order
+ * Cancel order and restore product stock (transaction)
  * @param {String} id - Order ID
  * @returns {Promise<Object>} Cancelled order
  */
 const cancelOrder = async (id) => {
-  return prisma.order.update({
-    where: { id },
-    data: { status: 'CANCELLED' },
+  return prisma.$transaction(async (tx) => {
+    const items = await tx.orderItem.findMany({
+      where: { orderId: id },
+      select: { productId: true, quantity: true },
+    });
+
+    for (const item of items) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+
+    return tx.order.update({
+      where: { id },
+      data: { status: 'CANCELLED', cancelledAt: new Date() },
+    });
   });
 };
 

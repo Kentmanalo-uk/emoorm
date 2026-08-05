@@ -69,17 +69,23 @@ export default function AdminSellers() {
   };
 
   const handleReject = async (userId) => {
+    const reason = (rejectReason || '').trim();
+    if (!reason) {
+      setShowRejectInput(true);
+      toast.error('Please provide a reason for rejection');
+      return;
+    }
     if (!window.confirm('Reject this seller application? The applicant will be notified.')) return;
     setProcessing(userId);
     try {
-      await axios.post(`/auth/users/${userId}/reject-seller`);
+      await axios.post(`/auth/users/${userId}/reject-seller`, { reason });
       toast.success('Application rejected');
       setSelected(null);
       setShowRejectInput(false);
       setRejectReason('');
       fetchApplicants();
     } catch (err) {
-      toast.error(err.message || 'Failed to reject');
+      toast.error(err?.response?.data?.message || err.message || 'Failed to reject');
     } finally {
       setProcessing(null);
     }
@@ -95,7 +101,6 @@ export default function AdminSellers() {
     <AdminLayout>
       <div className="admin-page-header">
         <h1 className="admin-page-title">Seller Applications</h1>
-        <p className="admin-page-sub">Review and approve / reject seller registrations</p>
       </div>
 
       <div className="admin-card">
@@ -192,7 +197,7 @@ export default function AdminSellers() {
                               <button
                                 className="admin-btn admin-btn-red"
                                 disabled={processing === u.id}
-                                onClick={() => handleReject(u.id)}
+                                onClick={() => { setSelected(u); setShowRejectInput(true); setRejectReason(''); }}
                               >
                                 <XCircle size={13} /> Reject
                               </button>
@@ -274,21 +279,43 @@ export default function AdminSellers() {
             </div>
 
             {selected.sellerApplicationStatus === 'PENDING' && (
-              <div className="admin-detail-footer">
-                <button
-                  className="admin-btn admin-btn-green"
-                  disabled={processing === selected.id}
-                  onClick={() => handleApprove(selected.id)}
-                >
-                  <CheckCircle size={15} /> Approve Seller
-                </button>
-                <button
-                  className="admin-btn admin-btn-red"
-                  disabled={processing === selected.id}
-                  onClick={() => handleReject(selected.id)}
-                >
-                  <XCircle size={15} /> Reject Application
-                </button>
+              <div className="admin-detail-footer" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+                {showRejectInput && (
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Reason for rejection (visible to the applicant)…"
+                    rows={3}
+                    className="admin-input"
+                    autoFocus
+                  />
+                )}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button
+                    className="admin-btn admin-btn-green"
+                    disabled={processing === selected.id}
+                    onClick={() => handleApprove(selected.id)}
+                  >
+                    <CheckCircle size={15} /> Approve Seller
+                  </button>
+                  {!showRejectInput ? (
+                    <button
+                      className="admin-btn admin-btn-red"
+                      disabled={processing === selected.id}
+                      onClick={() => setShowRejectInput(true)}
+                    >
+                      <XCircle size={15} /> Reject…
+                    </button>
+                  ) : (
+                    <button
+                      className="admin-btn admin-btn-red"
+                      disabled={processing === selected.id || !rejectReason.trim()}
+                      onClick={() => handleReject(selected.id)}
+                    >
+                      <XCircle size={15} /> Confirm Rejection
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

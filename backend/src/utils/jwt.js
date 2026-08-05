@@ -70,10 +70,32 @@ const generateTokens = (user) => {
   };
 };
 
+/**
+ * Short-lived JWT used to bind a partially authenticated user to a
+ * follow-up MFA step. `type` is one of 'mfa-verify' | 'mfa-setup'.
+ */
+const generateMfaToken = (user, type) => {
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role, type },
+    config.jwt.secret,
+    { expiresIn: '10m' }
+  );
+};
+
+const verifyMfaToken = (token, expectedType) => {
+  const decoded = jwt.verify(token, config.jwt.secret);
+  if (!decoded?.type || (expectedType && decoded.type !== expectedType)) {
+    throw new Error('Invalid MFA token');
+  }
+  return decoded;
+};
+
 module.exports = {
   generateAccessToken,
   generateRefreshToken,
   verifyAccessToken,
   verifyRefreshToken,
   generateTokens,
+  generateMfaToken,
+  verifyMfaToken,
 };

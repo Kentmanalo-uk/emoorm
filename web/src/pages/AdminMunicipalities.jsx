@@ -101,7 +101,6 @@ export default function AdminMunicipalities() {
     <AdminLayout>
       <div className="admin-page-header">
         <h1 className="admin-page-title">Municipality Management</h1>
-        <p className="admin-page-sub">Manage Oriental Mindoro municipalities and assign junior admins</p>
       </div>
 
       <div className="admin-card">

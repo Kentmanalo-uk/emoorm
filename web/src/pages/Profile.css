@@ -61,13 +61,13 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  padding: var(--spacing-3);
-  color: #6b7280;
+  padding: 11px 12px;
+  color: #4b5563;
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
   border-radius: 0;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .profile-nav-item:hover {
@@ -77,7 +77,8 @@
 
 .profile-nav-item-active {
   background-color: #dcfce7;
-  color: #7e8180;
+  color: #047857;
+  font-weight: 600;
 }
 
 /* Main Content */
@@ -85,6 +86,84 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
+}
+
+/* Shared page header (used by all /profile/* pages) */
+.profile-page-header {
+  margin-bottom: 4px;
+}
+
+.profile-page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+
+.profile-page-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.profile-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Header variant with trailing actions (Notifications / Wishlist) */
+.wishlist-page-header,
+.notif-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Help Center — matches profile pattern */
+.help-topics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.help-topic-card {
+  background: #fff;
+  padding: 22px 24px;
+}
+
+.help-topic-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 12px;
+}
+
+.help-topic-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.help-topic-link {
+  display: inline-block;
+  padding: 4px 0;
+  font-size: 14px;
+  color: #047857;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.help-topic-link:hover {
+  color: #065f46;
+  text-decoration: underline;
 }
 
 /* Profile Header Card */
@@ -136,8 +215,8 @@
 }
 
 .profile-name {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   color: #111827;
   margin: 0;
 }
@@ -168,10 +247,8 @@
 }
 
 .profile-stat-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .profile-edit-button {
@@ -179,19 +256,17 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-3) var(--spacing-5);
-  background-color: white;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  background-color: #f3f4f6;
+  color: #111827;
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
   border-radius: 0;
-  transition: all 0.2s;
+  transition: background 0.15s;
 }
 
 .profile-edit-button:hover {
-  background-color: #f9fafb;
-  border-color: #9ca3af;
+  background-color: #e5e7eb;
 }
 
 /* Section */
@@ -210,7 +285,7 @@
 
 .profile-section-title {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   color: #111827;
   margin: 0;
 }
@@ -241,15 +316,14 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-5);
-  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
   border-radius: 0;
   text-decoration: none;
-  transition: all 0.2s;
+  transition: background 0.15s;
 }
 
 .purchase-status-item:hover {
-  background-color: #f9fafb;
-  border-color: #059669;
+  background-color: #f0fdf4;
 }
 
 .purchase-status-icon {
@@ -315,23 +389,38 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-10);
-  gap: var(--spacing-4);
+  padding: 48px 24px;
+  gap: 12px;
   color: #9ca3af;
+  text-align: center;
+}
+
+.empty-state svg {
+  color: #d1d5db;
 }
 
 .empty-state-text {
-  font-size: 14px;
-  color: #6b7280;
+  font-size: 16px;
+  color: #374151;
+  font-weight: 600;
   margin: 0;
 }
 
+.empty-state-hint {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  max-width: 420px;
+  line-height: 1.5;
+}
+
 .empty-state-button {
-  padding: var(--spacing-3) var(--spacing-6);
+  margin-top: 8px;
+  padding: 10px 22px;
   background-color: #059669;
   color: white;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
   border-radius: 0;
   transition: background-color 0.2s;
@@ -354,15 +443,14 @@
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
-  border: 1px solid #e5e7eb;
+  background: #f9fafb;
   border-radius: 0;
   text-decoration: none;
-  transition: all 0.2s;
+  transition: background 0.15s;
 }
 
 .followed-store-card:hover {
-  border-color: #059669;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background: #f0fdf4;
 }
 
 .followed-store-image {

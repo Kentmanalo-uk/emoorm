@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingCart, Trash2, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
+import { resolveImg } from '../lib/media';
 import useWishlistStore from '../store/wishlistStore';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
@@ -40,7 +41,7 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
   };
 
   return (
-    <div className={hideBreadcrumbs ? 'profile-section' : 'wishlist-page'}>
+    <div className={hideBreadcrumbs ? 'profile-page-wrap' : 'wishlist-page'}>
       <div className={hideBreadcrumbs ? '' : 'wishlist-container'}>
 
         {!hideBreadcrumbs && (
@@ -50,27 +51,51 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
           </div>
         )}
 
-        <div className="wishlist-header">
-          <div>
-            <h1>My Wishlist</h1>
-            <p>{items.length} saved item{items.length !== 1 ? 's' : ''}</p>
+        {hideBreadcrumbs ? (
+          <header className="profile-page-header wishlist-page-header">
+            <h1 className="profile-page-title">My Wishlist</h1>
+            {items.length > 0 && (
+              <button className="wishlist-clear-btn" onClick={handleClearAll}>
+                <Trash2 size={14} /> Clear all
+              </button>
+            )}
+          </header>
+        ) : (
+          <div className="wishlist-header">
+            <div>
+              <h1>My Wishlist</h1>
+              <p>{items.length} saved item{items.length !== 1 ? 's' : ''}</p>
+            </div>
+            {items.length > 0 && (
+              <button className="wishlist-clear-btn" onClick={handleClearAll}>
+                <Trash2 size={14} /> Clear all
+              </button>
+            )}
           </div>
-          {items.length > 0 && (
-            <button className="wishlist-clear-btn" onClick={handleClearAll}>
-              <Trash2 size={14} /> Clear all
-            </button>
-          )}
-        </div>
+        )}
 
         {items.length === 0 ? (
-          <div className="wishlist-empty">
-            <Heart size={56} />
-            <h2>Your wishlist is empty</h2>
-            <p>Save products you love and come back to them anytime.</p>
-            <Link to="/products" className="wishlist-shop-btn">
-              Browse Products
-            </Link>
-          </div>
+          hideBreadcrumbs ? (
+            <div className="profile-section">
+              <div className="empty-state">
+                <Heart size={40} strokeWidth={1.5} />
+                <p className="empty-state-text">Your wishlist is empty</p>
+                <p className="empty-state-hint">
+                  Save products you love and come back to them anytime.
+                </p>
+                <Link to="/products" className="empty-state-button">Browse Products</Link>
+              </div>
+            </div>
+          ) : (
+            <div className="wishlist-empty">
+              <Heart size={56} />
+              <h2>Your wishlist is empty</h2>
+              <p>Save products you love and come back to them anytime.</p>
+              <Link to="/products" className="wishlist-shop-btn">
+                Browse Products
+              </Link>
+            </div>
+          )
         ) : (
           <div className="wishlist-grid">
             {items.map((product) => (
@@ -100,7 +125,7 @@ function WishlistCard({ product, onAddToCart, onRemove }) {
     <div className="wishlist-card">
       <Link to={`/product/${product.slug}`} className="wishlist-card-img-wrap">
         {images[0]
-          ? <img src={images[0]} alt={product.name} />
+          ? <img src={resolveImg(images[0]) || images[0]} alt={product.name} />
           : <div className="wishlist-card-no-img"><Package size={28} /></div>}
         {discount && <span className="wishlist-card-discount">-{discount}%</span>}
       </Link>

@@ -316,7 +316,6 @@ export default function Sell() {
         <div className="sell-container sell-container--narrow">
           <div className="sell-section-head">
             <h2>Why sell on Emoorm?</h2>
-            <p>Built for local sellers in Oriental Mindoro.</p>
           </div>
           <div className="sell-benefits-grid">
             {BENEFITS.map(b => (

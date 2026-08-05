@@ -38,32 +38,52 @@ export default function SellerDashboard() {
     let cancelled = false;
     (async () => {
       setIsLoading(true);
-      const [ordersRes, productsRes] = await Promise.allSettled([
-        axios.get('/orders/store/orders', { params: { pageSize: 50 } }),
+      const [analyticsRes, ordersRes, productsRes] = await Promise.allSettled([
+        axios.get('/analytics/seller'),
+        axios.get('/orders/store/orders', { params: { pageSize: 5 } }),
         axios.get('/products/my/products', { params: { pageSize: 100 } }),
       ]);
       if (cancelled) return;
 
+      const analytics = analyticsRes.status === 'fulfilled' ? analyticsRes.value.data : null;
       const orders = ordersRes.status === 'fulfilled' ? (ordersRes.value.data || []) : [];
       const products = productsRes.status === 'fulfilled' ? (productsRes.value.data || []) : [];
 
-      const completedOrders = orders.filter((o) => o.status === 'COMPLETED');
-      const totalSales = completedOrders.reduce(
-        (sum, o) => sum + Number(o.total || 0), 0,
-      );
-
       setRecentOrders(orders.slice(0, 5));
-      setStats({
-        totalSales,
-        ordersCount: orders.length,
-        productsCount: products.length,
-        completed: completedOrders.length,
-      });
 
-      const top = [...products]
-        .sort((a, b) => (Number(b.averageRating) || 0) - (Number(a.averageRating) || 0))
-        .slice(0, 3);
-      setTopProducts(top);
+      if (analytics) {
+        setStats({
+          totalSales: analytics.totalRevenue,
+          ordersCount: analytics.totalOrders,
+          productsCount: analytics.totalProducts,
+          completed: analytics.completedOrders,
+        });
+      } else {
+        // Fallback if the analytics endpoint is unavailable
+        const completedOrders = orders.filter((o) => o.status === 'COMPLETED');
+        setStats({
+          totalSales: completedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0),
+          ordersCount: orders.length,
+          productsCount: products.length,
+          completed: completedOrders.length,
+        });
+      }
+
+      // Prefer best sellers from analytics, fall back to rating sort
+      if (analytics?.topProducts?.length) {
+        const byId = Object.fromEntries(products.map((p) => [p.id, p]));
+        setTopProducts(
+          analytics.topProducts
+            .slice(0, 3)
+            .map(({ product }) => byId[product.id] || product)
+        );
+      } else {
+        setTopProducts(
+          [...products]
+            .sort((a, b) => (Number(b.averageRating) || 0) - (Number(a.averageRating) || 0))
+            .slice(0, 3)
+        );
+      }
 
       setIsLoading(false);
     })();
@@ -73,31 +93,35 @@ export default function SellerDashboard() {
   const shopName = store?.name || (user?.fullName ? `${user.fullName}'s Shop` : 'Your Shop');
 
   return (
-    <div className="sd">
-      {/* Header card */}
-      <div className="sd-header-card">
-        <div>
-          <h1 className="sd-title">Seller Dashboard</h1>
-          <p className="sd-subtitle">Overview of {shopName}</p>
+    <div className="seller-dashboard">
+      <div className="seller-container">
+        <div className="seller-header">
+          <div>
+            <h1>Seller Dashboard</h1>
+            <p className="seller-welcome">Overview of {shopName}</p>
+          </div>
+          <div className="seller-header-actions">
+            <Link to="/seller/products/new" className="btn-seller-primary">
+              <Plus size={16} /> Add Product
+            </Link>
+          </div>
         </div>
-        <Link to="/seller/products/new" className="sd-add-btn">
-          <Plus size={16} /> Add Product
-        </Link>
-      </div>
 
-      {/* Pending-review banner */}
-      {store && !store.isActive && (
-        <div className="sd-review-banner">
-          <Clock size={16} />
-          <span>
-            Your seller application is <strong>awaiting admin approval</strong>.
-            You can add products now — they stay hidden from buyers until your store is approved.
-          </span>
-        </div>
-      )}
+        {/* Pending-review banner */}
+        {store && !store.isActive && (
+          <div className="sd-review-banner">
+            <Clock size={16} />
+            <span>
+              Your seller application is <strong>awaiting admin approval</strong>.
+              You can add products now — they stay hidden from buyers until your store is approved.
+            </span>
+          </div>
+        )}
 
-      {/* Stats grid */}
-      <div className="sd-stats">
+        <div className="sd">
+
+        {/* Stats grid */}
+        <div className="sd-stats">
         <StatCard label="Total Sales" value={`₱${formatNumber(stats.totalSales)}`} big />
         <StatCard label="Orders" value={stats.ordersCount} />
         <StatCard label="Products" value={stats.productsCount} />
@@ -192,6 +216,8 @@ export default function SellerDashboard() {
             </ul>
           </section>
         </aside>
+      </div>
+        </div>
       </div>
     </div>
   );

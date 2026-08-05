@@ -216,10 +216,9 @@
   gap: 14px;
   padding: 16px;
   background: #fff;
-  border: 1px solid #e5e7eb;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
   position: relative;
 }
 
@@ -229,7 +228,6 @@
 
 .notif-item.unread {
   background: #f0fdf4;
-  border-color: #bbf7d0;
 }
 
 .notif-item.unread:hover {

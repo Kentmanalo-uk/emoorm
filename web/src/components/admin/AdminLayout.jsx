@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutGrid, Users, Package, Flag, Tag, MapPin, BarChart2,
-  ChevronDown, ChevronRight, Bell, LogOut, Shield, Store as StoreIcon,
+  LayoutGrid, Users, Package, Flag, Tag, MapPin, PieChart,
+  ChevronDown, ChevronRight, ChevronLeft, Bell, LogOut, Store as StoreIcon,
+  Megaphone, FileText, Settings as SettingsIcon,
 } from 'lucide-react';
 import axios from '../../lib/axios';
+import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
+import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import LanguageSwitcher from '../LanguageSwitcher';
 import './AdminLayout.css';
 
@@ -20,6 +23,7 @@ export default function AdminLayout({ children }) {
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
+  const [collapsed, toggleCollapsed] = useSidebarCollapse();
   const [reviewsOpen, setReviewsOpen] = useState(
     location.pathname.startsWith('/admin/sellers') ||
     location.pathname.startsWith('/admin/products') ||
@@ -60,31 +64,41 @@ export default function AdminLayout({ children }) {
   const crumbs = buildCrumbs(location.pathname);
 
   return (
-    <div className="ac-shell">
+    <div className={`ac-shell ${collapsed ? 'is-collapsed' : ''}`}>
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside className="ac-sidebar">
         <div className="ac-sidebar-inner">
-          <Link to="/admin" className="ac-brand">
-            <span className="ac-brand-mark">
-              <Shield size={18} />
-            </span>
-            <span className="ac-brand-text">
-              <strong>Emoorm</strong>
-              <span>{centerTitle}</span>
-            </span>
-          </Link>
+          <div className="ac-brand-row">
+            <Link to="/admin" className="ac-brand">
+              <img src="/brand-icon.png" alt="Emoorm" className="ac-brand-logo" />
+              <span className="ac-brand-text">
+                <strong>Emoorm</strong>
+                <span>{centerTitle}</span>
+              </span>
+            </Link>
+            <button
+              type="button"
+              className="ac-collapse-btn"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
+          </div>
 
           <nav className="ac-nav">
-            <NavLink to="/admin" end className={navCls}>
+            <NavLink to="/admin" end className={navCls} title="Dashboard">
               <LayoutGrid size={17} /> <span>Dashboard</span>
             </NavLink>
 
             {/* Reviews group */}
             <button
               type="button"
-              className={`ac-nav-item ac-nav-group ${reviewsOpen ? 'is-open' : ''}`}
-              onClick={() => setReviewsOpen((v) => !v)}
-              aria-expanded={reviewsOpen}
+              className={`ac-nav-item ac-nav-group ${reviewsOpen && !collapsed ? 'is-open' : ''}`}
+              onClick={() => collapsed ? navigate('/admin/sellers') : setReviewsOpen((v) => !v)}
+              aria-expanded={reviewsOpen && !collapsed}
+              title="Approvals"
             >
               <Flag size={17} />
               <span>Approvals</span>
@@ -104,14 +118,19 @@ export default function AdminLayout({ children }) {
               </div>
             )}
 
+            <NavLink to="/admin/announcements" className={navCls} title="Announcements">
+              <Megaphone size={17} /> <span>Announcements</span>
+            </NavLink>
+
             {isSuperAdmin && (
               <>
                 {/* System group */}
                 <button
                   type="button"
-                  className={`ac-nav-item ac-nav-group ${systemOpen ? 'is-open' : ''}`}
-                  onClick={() => setSystemOpen((v) => !v)}
-                  aria-expanded={systemOpen}
+                  className={`ac-nav-item ac-nav-group ${systemOpen && !collapsed ? 'is-open' : ''}`}
+                  onClick={() => collapsed ? navigate('/admin/users') : setSystemOpen((v) => !v)}
+                  aria-expanded={systemOpen && !collapsed}
+                  title="System"
                 >
                   <StoreIcon size={17} />
                   <span>System</span>
@@ -128,19 +147,30 @@ export default function AdminLayout({ children }) {
                     <NavLink to="/admin/municipalities" className={subNavCls}>
                       Municipalities
                     </NavLink>
+                    <NavLink to="/admin/junior-admins" className={subNavCls}>
+                      Municipal Admins
+                    </NavLink>
                   </div>
                 )}
 
-                <NavLink to="/admin/analytics" className={navCls}>
-                  <BarChart2 size={17} /> <span>Analytics</span>
+                <NavLink to="/admin/analytics" className={navCls} title="Analytics">
+                  <PieChart size={17} /> <span>Analytics</span>
+                </NavLink>
+
+                <NavLink to="/admin/audit-logs" className={navCls} title="Audit Logs">
+                  <FileText size={17} /> <span>Audit Logs</span>
                 </NavLink>
               </>
             )}
+
+            <NavLink to="/admin/settings" className={navCls} title="Settings">
+              <SettingsIcon size={17} /> <span>Settings</span>
+            </NavLink>
           </nav>
 
           <Link to="/profile" className="ac-user-card" title="View profile">
             {user?.profilePhoto ? (
-              <img src={user.profilePhoto} alt="" className="ac-user-avatar" />
+              <img src={resolveImg(user.profilePhoto)} alt="" className="ac-user-avatar" />
             ) : (
               <span className="ac-user-avatar ac-user-avatar--fallback">{initial}</span>
             )}
@@ -213,6 +243,9 @@ const LABELS = {
   '/admin/categories': 'Categories',
   '/admin/municipalities': 'Municipalities',
   '/admin/analytics': 'Analytics',
+  '/admin/announcements': 'Announcements',
+  '/admin/junior-admins': 'Municipal Admins',
+  '/admin/audit-logs': 'Audit Logs',
 };
 
 function buildCrumbs(pathname) {

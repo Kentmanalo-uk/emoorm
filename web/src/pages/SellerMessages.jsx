@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare } from 'lucide-react';
+import Messenger from '../components/messenger/Messenger';
 import './SellerDashboard.css';
 
 export default function SellerMessages() {
@@ -12,14 +12,8 @@ export default function SellerMessages() {
             <p className="seller-welcome">Conversations with your buyers</p>
           </div>
         </div>
-        <div className="seller-card">
-          <div className="seller-empty" style={{ padding: '48px 16px' }}>
-            <MessageSquare size={36} />
-            <p>No messages yet.</p>
-            <span style={{ color: '#94a3b8', fontSize: 12 }}>
-              Buyers can reach you through order chat once conversations are enabled.
-            </span>
-          </div>
+        <div className="seller-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <Messenger role="seller" />
         </div>
       </div>
     </div>

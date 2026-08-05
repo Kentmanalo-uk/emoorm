@@ -4,6 +4,7 @@ import { MapPin, Package, CreditCard, CheckCircle, ChevronLeft } from 'lucide-re
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import './Checkout.css';
@@ -261,7 +262,11 @@ const Checkout = () => {
                     <h3>Order Items ({items.length})</h3>
                     {items.map((item) => (
                       <div key={item.id} className="review-item">
-                        <img src={item.image || item.images?.[0] || '/placeholder.png'} alt={item.name} />
+                        <img
+                          src={resolveImg(item.image || item.images?.[0]) || '/placeholder.png'}
+                          alt={item.name}
+                          onError={(e) => { e.currentTarget.src = '/placeholder.png'; }}
+                        />
                         <div className="review-item-details">
                           <p className="review-item-name">{item.name}</p>
                           <p className="review-item-quantity">Qty: {item.quantity}</p>

@@ -1,5 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const config = require('./config/env');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const apiRoutes = require('./routes/index');
@@ -13,12 +16,39 @@ const app = express();
 // Trust proxy (if behind a reverse proxy like Nginx)
 app.set('trust proxy', 1);
 
+// Helmet — sensible security headers. Disable CSP because API returns JSON and
+// the uploaded images are served from /uploads.
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
+// gzip responses
+app.use(compression());
+
+// Global light rate limit
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Too many requests, slow down' },
+  })
+);
+
+// Stricter limit on auth endpoints (login/register/forgot-password)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many auth attempts, try again later' },
+});
+
 // CORS configuration
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
+
     if (config.cors.allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -53,6 +83,9 @@ if (config.nodeEnv === 'development') {
 // ============================================
 
 // Mount API routes with prefix
+app.use(`${config.apiPrefix}/auth/login`, authLimiter);
+app.use(`${config.apiPrefix}/auth/register`, authLimiter);
+app.use(`${config.apiPrefix}/auth/forgot-password`, authLimiter);
 app.use(config.apiPrefix, apiRoutes);
 
 // Root endpoint
@@ -65,11 +98,20 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check endpoint (bypasses database)
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server is running',
+// Health check endpoint (includes database ping)
+app.get('/health', async (req, res) => {
+  const prisma = require('./config/database');
+  let db = 'unknown';
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    db = 'up';
+  } catch {
+    db = 'down';
+  }
+  res.status(db === 'up' ? 200 : 503).json({
+    success: db === 'up',
+    message: db === 'up' ? 'Server is healthy' : 'Database unreachable',
+    database: db,
     timestamp: new Date().toISOString(),
   });
 });

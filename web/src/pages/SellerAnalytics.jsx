@@ -1,39 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart2, TrendingUp, ShoppingBag, Package, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BarChart2, TrendingUp, ShoppingBag, Package } from 'lucide-react';
 import axios from '../lib/axios';
 import './SellerDashboard.css';
 
 export default function SellerAnalytics() {
-  const [metrics, setMetrics] = useState({
-    revenue7d: 0,
-    revenue30d: 0,
-    ordersTotal: 0,
-    completionRate: 0,
-    uniqueBuyers: 0,
-    avgOrderValue: 0,
-  });
+  const [analytics, setAnalytics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await axios.get('/orders/store/orders', { params: { pageSize: 200 } });
-        const orders = res.data || [];
-        const now = Date.now();
-        const in7d = orders.filter((o) => now - new Date(o.createdAt).getTime() <= 7 * 864e5);
-        const in30d = orders.filter((o) => now - new Date(o.createdAt).getTime() <= 30 * 864e5);
-        const completed = orders.filter((o) => o.status === 'COMPLETED');
-        const sum = (arr) => arr.reduce((s, o) => s + Number(o.total || 0), 0);
-        if (cancelled) return;
-        setMetrics({
-          revenue7d: sum(in7d.filter((o) => o.status === 'COMPLETED')),
-          revenue30d: sum(in30d.filter((o) => o.status === 'COMPLETED')),
-          ordersTotal: orders.length,
-          completionRate: orders.length ? Math.round((completed.length / orders.length) * 100) : 0,
-          uniqueBuyers: new Set(orders.map((o) => o.buyerId)).size,
-          avgOrderValue: completed.length ? Math.round(sum(completed) / completed.length) : 0,
-        });
+        const res = await axios.get('/analytics/seller');
+        if (!cancelled) setAnalytics(res.data);
       } catch {
         /* ignore */
       } finally {
@@ -45,14 +25,26 @@ export default function SellerAnalytics() {
 
   const fmt = (n) => Number(n || 0).toLocaleString('en-PH', { maximumFractionDigits: 0 });
 
+  const totalRevenue = analytics?.totalRevenue || 0;
+  const totalOrders = analytics?.totalOrders || 0;
+  const completedOrders = analytics?.completedOrders || 0;
+  const revenue30d = (analytics?.salesByDay || []).reduce((s, d) => s + Number(d.total || 0), 0);
+  const completionRate = totalOrders ? Math.round((completedOrders / totalOrders) * 100) : 0;
+  const avgOrderValue = completedOrders ? Math.round(totalRevenue / completedOrders) : 0;
+
   const tiles = [
-    { label: 'Revenue (7d)', value: `₱${fmt(metrics.revenue7d)}`, Icon: TrendingUp, tint: 'sc-tint-green' },
-    { label: 'Revenue (30d)', value: `₱${fmt(metrics.revenue30d)}`, Icon: BarChart2, tint: 'sc-tint-blue' },
-    { label: 'Total Orders', value: fmt(metrics.ordersTotal), Icon: ShoppingBag, tint: 'sc-tint-amber' },
-    { label: 'Completion Rate', value: `${metrics.completionRate}%`, Icon: Package, tint: 'sc-tint-green' },
-    { label: 'Unique Buyers', value: fmt(metrics.uniqueBuyers), Icon: Users, tint: 'sc-tint-blue' },
-    { label: 'Avg. Order', value: `₱${fmt(metrics.avgOrderValue)}`, Icon: TrendingUp, tint: 'sc-tint-amber' },
+    { label: 'Revenue (30d)', value: `₱${fmt(revenue30d)}`, Icon: BarChart2, tint: 'sc-tint-blue' },
+    { label: 'Total Revenue', value: `₱${fmt(totalRevenue)}`, Icon: TrendingUp, tint: 'sc-tint-green' },
+    { label: 'Total Orders', value: fmt(totalOrders), Icon: ShoppingBag, tint: 'sc-tint-amber' },
+    { label: 'Completion Rate', value: `${completionRate}%`, Icon: Package, tint: 'sc-tint-green' },
+    { label: 'Avg. Order', value: `₱${fmt(avgOrderValue)}`, Icon: TrendingUp, tint: 'sc-tint-amber' },
+    { label: 'Live Products', value: fmt(analytics?.productCounts?.APPROVED), Icon: Package, tint: 'sc-tint-blue' },
   ];
+
+  const salesByDay = analytics?.salesByDay || [];
+  const maxDay = Math.max(...salesByDay.map((d) => Number(d.total)), 1);
+  const topProducts = analytics?.topProducts || [];
+  const lowStock = analytics?.lowStockProducts || [];
 
   return (
     <div className="seller-dashboard">
@@ -64,15 +56,15 @@ export default function SellerAnalytics() {
           </div>
         </div>
 
-        <div className="sd-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 16 }}>
+        <div className="sd-stats sd-stats--3" style={{ marginBottom: 16 }}>
           {tiles.map(({ label, value, Icon, tint }) => (
-            <div key={label} className="sd-stat" style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <span className={`sd-order-icon ${tint}`} style={{ width: 40, height: 40 }}>
+            <div key={label} className="sd-stat seller-stat-inline">
+              <span className={`seller-stat-icon ${tint}`}>
                 <Icon size={18} />
               </span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div>
                 <span className="sd-stat-label">{label}</span>
-                <span className="sd-stat-value" style={{ fontSize: 18 }}>
+                <span className="sd-stat-value">
                   {isLoading ? '…' : value}
                 </span>
               </div>
@@ -80,13 +72,75 @@ export default function SellerAnalytics() {
           ))}
         </div>
 
-        <div className="seller-card">
+        {/* 30-day sales trend */}
+        <div className="seller-card" style={{ marginBottom: 16 }}>
           <div className="seller-card-header">
-            <h2><BarChart2 size={16} /> Trend chart</h2>
+            <h2>Sales — last 30 days</h2>
           </div>
-          <div className="seller-empty" style={{ padding: '48px 16px' }}>
-            <BarChart2 size={36} />
-            <p>Charts coming soon.</p>
+          {salesByDay.length === 0 ? (
+            <div className="seller-empty">
+              <BarChart2 size={36} />
+              <p>No completed sales in the last 30 days.</p>
+            </div>
+          ) : (
+            <div className="seller-chart">
+              {salesByDay.map((d) => (
+                <div
+                  key={d.date}
+                  title={`${d.date}: ₱${fmt(d.total)}`}
+                  className="seller-chart-bar"
+                  style={{ height: `${Math.max((Number(d.total) / maxDay) * 100, 4)}%` }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="seller-grid-2">
+          {/* Top products */}
+          <div className="seller-card">
+            <div className="seller-card-header">
+              <h2>Top Products</h2>
+            </div>
+            {topProducts.length === 0 ? (
+              <div className="seller-empty">
+                <Package size={28} />
+                <p>No sales yet.</p>
+              </div>
+            ) : (
+              <ul className="seller-list">
+                {topProducts.map(({ product, quantitySold, revenue }) => (
+                  <li key={product.id} className="seller-list-row">
+                    <span>{product.name || 'Unknown product'}</span>
+                    <span className="seller-list-meta">{quantitySold} sold · ₱{fmt(revenue)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Low stock */}
+          <div className="seller-card">
+            <div className="seller-card-header">
+              <h2>Low Stock</h2>
+            </div>
+            {lowStock.length === 0 ? (
+              <div className="seller-empty">
+                <Package size={28} />
+                <p>All products are well stocked.</p>
+              </div>
+            ) : (
+              <ul className="seller-list">
+                {lowStock.map((p) => (
+                  <li key={p.id} className="seller-list-row">
+                    <Link to="/seller/products">{p.name}</Link>
+                    <span className={p.stock === 0 ? 'seller-stock-out' : 'seller-stock-warn'}>
+                      {p.stock === 0 ? 'Out of stock' : `${p.stock} left`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>

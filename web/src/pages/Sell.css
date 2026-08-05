@@ -37,7 +37,7 @@
 }
 
 .sell-header-inner {
-  height: 64px;
+  height: 80px;
   display: flex;
   align-items: center;
   gap: 32px;
@@ -50,7 +50,7 @@
 .sell-logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
   text-decoration: none;
   flex-shrink: 0;
 }
@@ -58,7 +58,6 @@
 .sell-logo-img {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
   object-fit: contain;
 }
 
@@ -66,7 +65,7 @@
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.04em;
-  color: #29a366;
+  color: #008341;
 }
 
 /* Nav links */
@@ -82,8 +81,8 @@
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 15px;
+  border-radius: 30px;
+  font-size: 16px;
   font-weight: 500;
   color: #555;
   text-decoration: none;
@@ -428,7 +427,7 @@
 }
 
 .sell-container--narrow {
-  max-width: 960px;
+  max-width: 1280px;
 }
 
 .sell-container--center {
@@ -438,6 +437,7 @@
 /* ─── Sections ──────────────────────────────────────────────────── */
 .sell-section {
   padding: 56px 0;
+
 }
 
 .sell-section--gray {
@@ -447,6 +447,8 @@
 .sell-section-head {
   text-align: center;
   margin-bottom: 36px;
+  letter-spacing: 0.001em;
+
 }
 
 .sell-section-head h2 {
@@ -476,6 +478,7 @@
 .sell-hero-copy {
   flex: 1;
   min-width: 0;
+  padding-top: 8px;
 }
 
 .sell-hero-h1 {
@@ -604,7 +607,6 @@
 
 .sell-benefit-card {
   background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 16px;
   padding: 20px;
 }
@@ -724,19 +726,16 @@
   gap: 6px;
   height: 48px;
   padding: 0 32px;
-  border-radius: 10px;
+  border-radius: 30px;
   background: #fff;
   color: #065f46;
   font-size: 14px;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  transition: box-shadow 0.15s, transform 0.15s;
 }
 
 .sell-final-btn:hover {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   transform: translateY(-1px);
 }
 
@@ -752,7 +751,7 @@
   gap: 6px;
   height: 48px;
   padding: 0 32px;
-  border-radius: 10px;
+  border-radius: 30px;
   background: transparent;
   color: #fff;
   font-size: 14px;

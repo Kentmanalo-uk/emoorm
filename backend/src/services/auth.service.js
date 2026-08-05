@@ -4,7 +4,7 @@ const storeRepository = require('../repositories/store.repository');
 const storeService = require('./store.service');
 const notificationService = require('./notification.service');
 const { hashPassword, comparePassword } = require('../utils/password');
-const { generateTokens, verifyRefreshToken } = require('../utils/jwt');
+const { generateTokens, verifyRefreshToken, generateMfaToken } = require('../utils/jwt');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -83,6 +83,24 @@ const login = async (email, password) => {
   const isPasswordValid = await comparePassword(password, user.password);
   if (!isPasswordValid) {
     throw new ApiError('Invalid email or password', 401);
+  }
+
+  // Admin accounts must clear a second factor before a full session is issued.
+  const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'MUNICIPAL_ADMIN';
+  if (isAdmin) {
+    if (user.mfaEnabled) {
+      return {
+        requiresMfa: true,
+        mfaToken: generateMfaToken(user, 'mfa-verify'),
+        email: user.email,
+      };
+    }
+    // Admin has no MFA yet — force enrolment before finishing login.
+    return {
+      requiresMfaSetup: true,
+      mfaToken: generateMfaToken(user, 'mfa-setup'),
+      email: user.email,
+    };
   }
 
   // Generate tokens
@@ -285,13 +303,18 @@ const getUsers = async (options) => {
 /**
  * Approve seller application (admin use)
  * @param {String} userId - User ID
+ * @param {Object} [actor] - The acting admin for municipality scope enforcement
  * @returns {Promise<Object>} Updated user
  */
-const approveSeller = async (userId) => {
+const approveSeller = async (userId, actor) => {
   const user = await userRepository.findById(userId);
 
   if (!user) {
     throw new ApiError('User not found', 404);
+  }
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && user.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only manage sellers in your assigned municipality', 403);
   }
 
   if (user.sellerApplicationStatus !== 'PENDING') {
@@ -319,13 +342,19 @@ const approveSeller = async (userId) => {
 /**
  * Reject seller application (admin use)
  * @param {String} userId - User ID
+ * @param {Object} [actor] - The acting admin for municipality scope enforcement
+ * @param {String} [reason] - Rejection reason (passed to notification)
  * @returns {Promise<Object>} Updated user
  */
-const rejectSeller = async (userId) => {
+const rejectSeller = async (userId, actor, reason) => {
   const user = await userRepository.findById(userId);
 
   if (!user) {
     throw new ApiError('User not found', 404);
+  }
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && user.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only manage sellers in your assigned municipality', 403);
   }
 
   if (user.sellerApplicationStatus !== 'PENDING') {
@@ -335,7 +364,7 @@ const rejectSeller = async (userId) => {
   const updatedUser = await userRepository.rejectSeller(userId);
 
   try {
-    await notificationService.notifySellerRejected(userId);
+    await notificationService.notifySellerRejected(userId, reason);
   } catch (err) {
     console.error('[rejectSeller] notification failed:', err.message);
   }
@@ -346,9 +375,23 @@ const rejectSeller = async (userId) => {
 /**
  * Suspend user account (admin use)
  * @param {String} userId - User ID
+ * @param {Object} [actor] - Acting admin for scope enforcement
  * @returns {Promise<Object>} Updated user
  */
-const suspendUser = async (userId) => {
+const suspendUser = async (userId, actor) => {
+  const target = await userRepository.findById(userId);
+  if (!target) throw new ApiError('User not found', 404);
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && target.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only manage users in your assigned municipality', 403);
+  }
+  if (target.role === 'SUPER_ADMIN') {
+    throw new ApiError('Super admins cannot be suspended', 403);
+  }
+  if (actor?.role === 'MUNICIPAL_ADMIN' && target.role === 'MUNICIPAL_ADMIN') {
+    throw new ApiError('Only a super admin can suspend a municipal admin', 403);
+  }
+
   const user = await userRepository.updateUser(userId, {
     isActive: false,
   });
@@ -359,9 +402,17 @@ const suspendUser = async (userId) => {
 /**
  * Activate user account (admin use)
  * @param {String} userId - User ID
+ * @param {Object} [actor] - Acting admin for scope enforcement
  * @returns {Promise<Object>} Updated user
  */
-const activateUser = async (userId) => {
+const activateUser = async (userId, actor) => {
+  const target = await userRepository.findById(userId);
+  if (!target) throw new ApiError('User not found', 404);
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && target.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only manage users in your assigned municipality', 403);
+  }
+
   const user = await userRepository.updateUser(userId, {
     isActive: true,
   });
@@ -438,8 +489,26 @@ module.exports = {
   setUserRole,
 };
 
-async function setUserRole(userId, role) {
+async function setUserRole(userId, role, opts = {}) {
+  const { ApiError } = require('../middleware/errorHandler');
   const user = await userRepository.findById(userId);
-  if (!user) throw new (require('../middleware/errorHandler').ApiError)('User not found', 404);
-  return userRepository.updateUser(userId, { role });
+  if (!user) throw new ApiError('User not found', 404);
+
+  const actor = opts.actor;
+  // Only SUPER_ADMIN can promote to admin roles
+  if ((role === 'MUNICIPAL_ADMIN' || role === 'SUPER_ADMIN') && actor?.role !== 'SUPER_ADMIN') {
+    throw new ApiError('Only a super admin can assign admin roles', 403);
+  }
+
+  // Promoting to MUNICIPAL_ADMIN requires a municipalityId
+  const update = { role };
+  if (role === 'MUNICIPAL_ADMIN') {
+    const municipalityId = opts.municipalityId || user.municipalityId;
+    if (!municipalityId) {
+      throw new ApiError('municipalityId is required when assigning MUNICIPAL_ADMIN', 400);
+    }
+    update.municipalityId = municipalityId;
+  }
+
+  return userRepository.updateUser(userId, update);
 }

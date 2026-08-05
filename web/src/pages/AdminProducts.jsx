@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -23,7 +24,7 @@ export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('PENDING');
+  const [statusFilter, setStatusFilter] = useState('APPROVED');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [selected, setSelected] = useState(null);
@@ -100,7 +101,6 @@ export default function AdminProducts() {
     <AdminLayout>
       <div className="admin-page-header">
         <h1 className="admin-page-title">Product Approvals</h1>
-        <p className="admin-page-sub">Review and approve new products before they go live</p>
       </div>
 
       <div className="admin-card">
@@ -129,8 +129,8 @@ export default function AdminProducts() {
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             >
-              <option value="PENDING">Pending</option>
               <option value="APPROVED">Approved</option>
+              <option value="PENDING">Pending</option>
               <option value="SUSPENDED">Suspended</option>
               <option value="">All</option>
             </select>
@@ -167,7 +167,7 @@ export default function AdminProducts() {
                         <td>
                           <div className="admin-product-cell">
                             {img
-                              ? <img src={img} alt={p.name} className="admin-product-thumb" />
+                              ? <img src={resolveImg(img) || img} alt={p.name} className="admin-product-thumb" />
                               : <div className="admin-product-thumb-placeholder"><Package size={16} /></div>}
                             <span className="admin-product-name">{p.name}</span>
                           </div>
@@ -242,7 +242,7 @@ export default function AdminProducts() {
               {images(selected).length > 0 && (
                 <div className="admin-product-images">
                   {images(selected).map((img, i) => (
-                    <img key={i} src={img} alt={`product ${i}`} className="admin-product-detail-img" />
+                    <img key={i} src={resolveImg(img) || img} alt={`product ${i}`} className="admin-product-detail-img" />
                   ))}
                 </div>
               )}

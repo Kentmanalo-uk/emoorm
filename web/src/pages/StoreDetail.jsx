@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   Store, MapPin, Phone, Package, Star, Heart,
-  ShoppingCart, ChevronLeft, ChevronRight, Flag, AlertTriangle
+  ShoppingCart, ChevronLeft, ChevronRight, Flag, AlertTriangle,
+  MessageCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import ReportModal from '../components/ReportModal';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import useWishlistStore from '../store/wishlistStore';
 import useAuthStore from '../store/authStore';
@@ -110,8 +112,8 @@ export default function StoreDetail() {
 
             <div className="store-detail-header">
               <div className="store-detail-avatar">
-                {store.logoUrl
-                  ? <img src={store.logoUrl} alt={store.name} />
+                {store.logoUrl || store.logo
+                  ? <img src={resolveImg(store.logoUrl || store.logo)} alt={store.name} />
                   : <span>{initials}</span>}
               </div>
 
@@ -146,6 +148,25 @@ export default function StoreDetail() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Chat button — floats near actions */}
+        <div className="store-detail-container" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -8 }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (!isAuthenticated) { toast.error('Please login to chat'); return; }
+              navigate(`/messages?store=${store.id}`);
+            }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: '#059669', color: '#fff', border: 'none',
+              padding: '8px 14px', borderRadius: 8, fontWeight: 600,
+              fontSize: 13, cursor: 'pointer',
+            }}
+          >
+            <MessageCircle size={14} /> Chat with store
+          </button>
         </div>
 
         {/* Products section */}
@@ -237,7 +258,7 @@ function ProductCard({ product, onAddToCart, onWishlist, wishlisted }) {
     <div className="store-product-card">
       <Link to={`/product/${product.slug}`} className="store-product-img-wrap">
         {image
-          ? <img src={image} alt={product.name} />
+          ? <img src={resolveImg(image) || image} alt={product.name} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           : <div className="store-product-img-placeholder"><Package size={32} /></div>}
         {discount && <span className="store-product-discount">-{discount}%</span>}
       </Link>

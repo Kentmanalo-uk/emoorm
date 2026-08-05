@@ -103,6 +103,13 @@ model User {
   passwordResetToken  String?   @map("password_reset_token")
   passwordResetExpiry DateTime? @map("password_reset_expiry")
 
+  // MFA / TOTP (enforced for admins)
+  mfaEnabled       Boolean   @default(false) @map("mfa_enabled")
+  mfaSecret        String?   @map("mfa_secret") @db.Text
+  mfaEnabledAt     DateTime? @map("mfa_enabled_at")
+  mfaBackupCodes   String?   @map("mfa_backup_codes") @db.Text
+  mfaLastVerifiedAt DateTime? @map("mfa_last_verified_at")
+
   // Timestamps
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -117,6 +124,8 @@ model User {
   notifications Notification[]
   reports       Report[]
   managedMunicipality Municipality? @relation("MunicipalAdmin")
+  buyerConversations Conversation[] @relation("BuyerConversations")
+  sentMessages  Message[]      @relation("MessageSender")
 
   @@map("users")
 }
@@ -171,6 +180,7 @@ model Store {
   // Relations
   products      Product[]
   orders        Order[]
+  conversations Conversation[]
 
   @@map("stores")
 }
@@ -215,6 +225,10 @@ model Product {
 
   // Status
   status      ProductStatus @default(PENDING)
+
+  // Approval Audit
+  approvedById String?      @map("approved_by_id")
+  approvedAt   DateTime?    @map("approved_at")
 
   // Soft Delete
   deletedAt   DateTime?     @map("deleted_at")
@@ -265,6 +279,7 @@ model Order {
 
   // Relations
   items           OrderItem[]
+  messages        Message[]
 
   @@map("orders")
 }
@@ -386,11 +401,13 @@ model Notification {
   title     String
   message   String           @db.Text
   data      Json?            // Additional data payload
+  relatedId String?          @map("related_id")
 
   isRead    Boolean          @default(false) @map("is_read")
   readAt    DateTime?        @map("read_at")
 
   createdAt DateTime         @default(now()) @map("created_at")
+  deletedAt DateTime?        @map("deleted_at")
 
   @@map("notifications")
 }
@@ -416,4 +433,53 @@ model AuditLog {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("audit_logs")
+}
+
+// ============================================
+// MESSAGING (buyer <-> store)
+// ============================================
+
+model Conversation {
+  id        String   @id @default(uuid())
+
+  buyerId   String   @map("buyer_id")
+  buyer     User     @relation("BuyerConversations", fields: [buyerId], references: [id])
+
+  storeId   String   @map("store_id")
+  store     Store    @relation(fields: [storeId], references: [id])
+
+  lastMessageAt    DateTime? @map("last_message_at")
+  buyerLastReadAt  DateTime? @map("buyer_last_read_at")
+  sellerLastReadAt DateTime? @map("seller_last_read_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages  Message[]
+
+  @@unique([buyerId, storeId])
+  @@index([storeId, lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId  String   @map("sender_id")
+  sender    User     @relation("MessageSender", fields: [senderId], references: [id])
+
+  body      String   @db.Text
+
+  // Optional link to an order this message references (used for auto-pinned order cards)
+  orderId   String?  @map("order_id")
+  order     Order?   @relation(fields: [orderId], references: [id])
+
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }

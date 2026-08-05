@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutGrid, ShoppingBag, MessageSquare, Package, Star, BarChart2,
-  Wallet, Store as StoreIcon, ChevronDown, ChevronRight, Bell, LogOut,
+  LayoutGrid, ShoppingBag, MessageSquare, Package, Star, PieChart,
+  Wallet, Store as StoreIcon, ChevronDown, ChevronRight, ChevronLeft, Bell, LogOut,
 } from 'lucide-react';
 import axios from '../../lib/axios';
+import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
+import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import LanguageSwitcher from '../LanguageSwitcher';
 import './SellerLayout.css';
 
@@ -19,6 +21,7 @@ export default function SellerLayout() {
   const navigate = useNavigate();
 
   const [store, setStore] = useState(null);
+  const [collapsed, toggleCollapsed] = useSidebarCollapse();
   const [productsOpen, setProductsOpen] = useState(
     location.pathname.startsWith('/seller/products')
   );
@@ -67,37 +70,47 @@ export default function SellerLayout() {
   const crumbs = buildCrumbs(location.pathname);
 
   return (
-    <div className="sc-shell">
+    <div className={`sc-shell ${collapsed ? 'is-collapsed' : ''}`}>
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside className="sc-sidebar">
         <div className="sc-sidebar-inner">
-          <Link to="/seller" className="sc-brand">
-            <span className="sc-brand-mark">
-              <StoreIcon size={18} />
-            </span>
-            <span className="sc-brand-text">
-              <strong>Emoorm</strong>
-              <span>Seller Center</span>
-            </span>
-          </Link>
+          <div className="sc-brand-row">
+            <Link to="/seller" className="sc-brand">
+              <img src="/brand-icon.png" alt="Emoorm" className="sc-brand-logo" />
+              <span className="sc-brand-text">
+                <strong>Emoorm</strong>
+                <span>Seller Center</span>
+              </span>
+            </Link>
+            <button
+              type="button"
+              className="sc-collapse-btn"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
+          </div>
 
           <nav className="sc-nav">
-            <NavLink to="/seller" end className={navCls}>
+            <NavLink to="/seller" end className={navCls} title="Dashboard">
               <LayoutGrid size={17} /> <span>Dashboard</span>
             </NavLink>
-            <NavLink to="/seller/orders" className={navCls}>
+            <NavLink to="/seller/orders" className={navCls} title="My Orders">
               <ShoppingBag size={17} /> <span>My Orders</span>
             </NavLink>
-            <NavLink to="/seller/messages" className={navCls}>
+            <NavLink to="/seller/messages" className={navCls} title="Messages">
               <MessageSquare size={17} /> <span>Messages</span>
             </NavLink>
 
             {/* Products group */}
             <button
               type="button"
-              className={`sc-nav-item sc-nav-group ${productsOpen ? 'is-open' : ''}`}
-              onClick={() => setProductsOpen((v) => !v)}
-              aria-expanded={productsOpen}
+              className={`sc-nav-item sc-nav-group ${productsOpen && !collapsed ? 'is-open' : ''}`}
+              onClick={() => collapsed ? navigate('/seller/products') : setProductsOpen((v) => !v)}
+              aria-expanded={productsOpen && !collapsed}
+              title="Products"
             >
               <Package size={17} />
               <span>Products</span>
@@ -114,22 +127,23 @@ export default function SellerLayout() {
               </div>
             )}
 
-            <NavLink to="/seller/reviews" className={navCls}>
+            <NavLink to="/seller/reviews" className={navCls} title="Reviews">
               <Star size={17} /> <span>Reviews</span>
             </NavLink>
-            <NavLink to="/seller/analytics" className={navCls}>
-              <BarChart2 size={17} /> <span>Analytics</span>
+            <NavLink to="/seller/analytics" className={navCls} title="Analytics">
+              <PieChart size={17} /> <span>Analytics</span>
             </NavLink>
-            <NavLink to="/seller/finance" className={navCls}>
+            <NavLink to="/seller/finance" className={navCls} title="Finance">
               <Wallet size={17} /> <span>Finance</span>
             </NavLink>
 
             {/* Shop group */}
             <button
               type="button"
-              className={`sc-nav-item sc-nav-group ${shopOpen ? 'is-open' : ''}`}
-              onClick={() => setShopOpen((v) => !v)}
-              aria-expanded={shopOpen}
+              className={`sc-nav-item sc-nav-group ${shopOpen && !collapsed ? 'is-open' : ''}`}
+              onClick={() => collapsed ? navigate('/seller/store') : setShopOpen((v) => !v)}
+              aria-expanded={shopOpen && !collapsed}
+              title="My Shop"
             >
               <StoreIcon size={17} />
               <span>My Shop</span>
@@ -156,7 +170,7 @@ export default function SellerLayout() {
 
           <Link to="/profile" className="sc-user-card" title="View profile">
             {user?.profilePhoto ? (
-              <img src={user.profilePhoto} alt="" className="sc-user-avatar" />
+              <img src={resolveImg(user.profilePhoto)} alt="" className="sc-user-avatar" />
             ) : (
               <span className="sc-user-avatar sc-user-avatar--fallback">{initial}</span>
             )}

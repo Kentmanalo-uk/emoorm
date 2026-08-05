@@ -3,6 +3,7 @@ const orderRepository = require('../repositories/order.repository');
 const productRepository = require('../repositories/product.repository');
 const storeRepository = require('../repositories/store.repository');
 const userRepository = require('../repositories/user.repository');
+const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -77,6 +78,7 @@ const createOrder = async (userId, data) => {
 
     orderItems.push({
       productId: product.id,
+      productName: product.name,
       quantity: item.quantity,
       price: product.price,
       subtotal: itemTotal,
@@ -85,25 +87,39 @@ const createOrder = async (userId, data) => {
 
   const DELIVERY_FEE = totalAmount >= 500 ? 0 : 50;
 
-  // Create order with items
-  const order = await orderRepository.createOrderWithItems(
-    {
-      orderNumber: generateOrderNumber(),
-      buyerId: userId,
-      storeId,
-      subtotal: totalAmount,
-      deliveryFee: DELIVERY_FEE,
-      total: totalAmount + DELIVERY_FEE,
-      deliveryAddress,
-      deliveryNotes: deliveryNotes || null,
-      contactNumber,
-      status: 'PENDING',
-    },
-    orderItems
-  );
+  // Create order with items (stock is decremented atomically in the transaction)
+  let order;
+  try {
+    order = await orderRepository.createOrderWithItems(
+      {
+        orderNumber: generateOrderNumber(),
+        buyerId: userId,
+        storeId,
+        subtotal: totalAmount,
+        deliveryFee: DELIVERY_FEE,
+        total: totalAmount + DELIVERY_FEE,
+        deliveryAddress,
+        deliveryNotes: deliveryNotes || null,
+        contactNumber,
+        status: 'PENDING',
+      },
+      orderItems
+    );
+  } catch (err) {
+    if (err.code === 'INSUFFICIENT_STOCK') {
+      throw new ApiError('One or more items no longer have sufficient stock', 400);
+    }
+    throw err;
+  }
 
-  // TODO: Reduce product stock (will implement in transaction)
-  // TODO: Send notification to seller
+  // Notify the seller (non-blocking on failure)
+  try {
+    if (store.ownerId) {
+      await notificationService.notifyOrderCreated(store.ownerId, order.id, buyer.fullName);
+    }
+  } catch (err) {
+    console.error('[createOrder] notification failed:', err.message);
+  }
 
   return order;
 };
@@ -202,7 +218,19 @@ const updateOrderStatus = async (orderId, userId, newStatus) => {
     throw new ApiError(`Cannot transition from ${order.status} to ${newStatus}`, 400);
   }
 
-  return orderRepository.updateStatus(orderId, newStatus);
+  // Cancellation restores product stock
+  const updated = newStatus === 'CANCELLED'
+    ? await orderRepository.cancelOrder(orderId)
+    : await orderRepository.updateStatus(orderId, newStatus);
+
+  // Notify the buyer (non-blocking on failure)
+  try {
+    await notificationService.notifyOrderUpdated(order.buyerId, orderId, newStatus);
+  } catch (err) {
+    console.error('[updateOrderStatus] notification failed:', err.message);
+  }
+
+  return updated;
 };
 
 /**
@@ -228,7 +256,24 @@ const cancelOrder = async (orderId, userId) => {
     throw new ApiError('Order cannot be cancelled at this stage', 400);
   }
 
-  return orderRepository.cancelOrder(orderId);
+  const cancelled = await orderRepository.cancelOrder(orderId);
+
+  // Notify the seller that the buyer cancelled (non-blocking on failure)
+  try {
+    if (order.store?.owner?.id || order.store?.ownerId) {
+      await notificationService.createNotification({
+        userId: order.store.owner?.id || order.store.ownerId,
+        type: 'ORDER_CANCELLED',
+        title: 'Order Cancelled',
+        message: `Order ${order.orderNumber} was cancelled by the buyer`,
+        relatedId: orderId,
+      });
+    }
+  } catch (err) {
+    console.error('[cancelOrder] notification failed:', err.message);
+  }
+
+  return cancelled;
 };
 
 module.exports = {

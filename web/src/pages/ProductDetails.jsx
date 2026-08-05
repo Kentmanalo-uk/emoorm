@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
-  ShoppingCart, Heart, Share2, Store, MapPin, ShieldCheck,
+  Heart, Share2, Store, MapPin, ShieldCheck,
   Star, ChevronLeft, ChevronRight, Minus, Plus, Package, Truck,
   ChevronRight as ChevronRightSm, MessageCircle, RotateCcw, CheckCircle2,
 } from 'lucide-react';
@@ -10,6 +10,8 @@ import Layout from '../components/layout/Layout';
 import ReportModal from '../components/ReportModal';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
+import { formatRelativeTime } from '../lib/time';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import useWishlistStore from '../store/wishlistStore';
@@ -132,6 +134,7 @@ const ProductDetails = () => {
         storeName: product.store?.name,
         stock: product.stock,
         slug: product.slug,
+        categoryId: product.categoryId,
       }, quantity);
       toast.success('Added to cart');
     } catch (error) {
@@ -184,6 +187,48 @@ const ProductDetails = () => {
     // Backend may return orderCount or _count.orderItems depending on include shape.
     return product?.orderCount ?? product?._count?.orderItems ?? 0;
   }, [product]);
+
+  // Realtime-ish store presence: derive live "Active X ago" indicator from
+  // the store's last known activity timestamp. Not a hardcoded string.
+  const storeActivity = useMemo(() => {
+    const store = product?.store;
+    if (!store) return null;
+    if (store.isSuspended) return { online: false, label: 'Store suspended' };
+    if (store.isActive === false) return { online: false, label: 'Store inactive' };
+
+    // Pick the most recent activity signal available on the store payload.
+    const stamps = [
+      store.lastActiveAt,
+      store.updatedAt,
+      store.owner?.updatedAt,
+      product?.updatedAt,
+    ].filter(Boolean).map((v) => new Date(v).getTime()).filter((t) => !Number.isNaN(t));
+    const last = stamps.length ? new Date(Math.max(...stamps)) : null;
+    if (!last) return { online: true, label: 'Active' };
+
+    const diffMs = Date.now() - last.getTime();
+    // Under 15m = green "Active now" bubble
+    if (diffMs < 15 * 60 * 1000) return { online: true, label: 'Active now' };
+    return { online: false, label: `Active ${formatRelativeTime(last)}` };
+  }, [product]);
+
+  // Poll the store endpoint every 45s so the "Active" badge stays fresh
+  // without a full-page refresh. Silent failures are fine.
+  useEffect(() => {
+    const storeSlug = product?.store?.slug;
+    if (!storeSlug) return undefined;
+    const iv = setInterval(async () => {
+      try {
+        const res = await axios.get(`/stores/slug/${storeSlug}`);
+        if (res?.data) {
+          setProduct((prev) => (prev ? { ...prev, store: { ...prev.store, ...res.data } } : prev));
+        }
+      } catch {
+        // ignore transient errors
+      }
+    }, 45000);
+    return () => clearInterval(iv);
+  }, [product?.store?.slug]);
 
   if (isLoading) {
     return (
@@ -393,7 +438,12 @@ const ProductDetails = () => {
                 onMouseMove={handleZoomMove}
                 onMouseLeave={handleZoomLeave}
               >
-                <img src={gallery[selectedImage]} alt={product.name} className="pdp-gallery-image" />
+                <img
+                  src={resolveImg(gallery[selectedImage]) || gallery[selectedImage]}
+                  alt={product.name}
+                  className="pdp-gallery-image"
+                  onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
+                />
                 {gallery.length > 1 && (
                   <>
                     <button onClick={prevImage} className="pdp-gallery-nav pdp-gallery-nav-prev" aria-label="Previous image">
@@ -417,7 +467,7 @@ const ProductDetails = () => {
                     className={`pdp-thumb ${selectedImage === i ? 'is-active' : ''}`}
                     aria-label={`View image ${i + 1}`}
                   >
-                    <img src={img} alt={`${product.name} ${i + 1}`} />
+                    <img src={resolveImg(img) || img} alt={`${product.name} ${i + 1}`} onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }} />
                   </button>
                 ))}
               </div>
@@ -429,7 +479,7 @@ const ProductDetails = () => {
                 <div
                   className="pdp-zoom-preview"
                   style={{
-                    backgroundImage: `url(${gallery[selectedImage]})`,
+                    backgroundImage: `url(${resolveImg(gallery[selectedImage]) || gallery[selectedImage]})`,
                     backgroundPosition: `${zoom.x}% ${zoom.y}%`,
                   }}
                   aria-hidden="true"
@@ -548,7 +598,7 @@ const ProductDetails = () => {
                   disabled={isOutOfStock || isAddingToCart}
                   className="pdp-btn pdp-btn-primary"
                 >
-                  <ShoppingCart size={18} /> {isAddingToCart ? 'Adding…' : 'Add to Cart'}
+                  {isAddingToCart ? 'Adding…' : 'Add to Cart'}
                 </button>
                 <button
                   type="button"
@@ -582,8 +632,8 @@ const ProductDetails = () => {
             <div className="pdp-store-card">
               <div className="pdp-store-left">
                 <div className="pdp-store-avatar">
-                  {product.store.logoUrl
-                    ? <img src={product.store.logoUrl} alt={product.store.name} />
+                  {product.store.logoUrl || product.store.logo
+                    ? <img src={resolveImg(product.store.logoUrl || product.store.logo)} alt={product.store.name} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     : <Store size={22} />}
                 </div>
                 <div>
@@ -592,6 +642,11 @@ const ProductDetails = () => {
                     {product.store.isVerified && <span className="pdp-store-verified" title="Verified"><ShieldCheck size={14} /></span>}
                   </div>
                   <div className="pdp-store-meta">
+                    {storeActivity && (
+                      <span className={`pdp-store-active ${storeActivity.online ? 'is-online' : 'is-offline'}`}>
+                        <span className="pdp-store-active-dot" /> {storeActivity.label}
+                      </span>
+                    )}
                     {product.store.municipality?.name && (
                       <span><MapPin size={12} /> {product.store.municipality.name}</span>
                     )}

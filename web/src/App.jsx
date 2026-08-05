@@ -13,6 +13,7 @@ import ProductDetails from './pages/ProductDetails';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
+import Messages from './pages/Messages';
 import Addresses from './pages/Addresses';
 import Sell from './pages/Sell';
 import SellerApply from './pages/SellerApply';
@@ -37,6 +38,10 @@ import AdminUsers from './pages/AdminUsers';
 import AdminCategories from './pages/AdminCategories';
 import AdminMunicipalities from './pages/AdminMunicipalities';
 import AdminAnalytics from './pages/AdminAnalytics';
+import AdminAnnouncements from './pages/AdminAnnouncements';
+import AdminJuniorAdmins from './pages/AdminJuniorAdmins';
+import AdminAuditLogs from './pages/AdminAuditLogs';
+import AdminSettings from './pages/AdminSettings';
 import ProfileLayout from './components/layout/ProfileLayout';
 import ProfileReviews from './pages/ProfileReviews';
 import ProfileFollowedStores from './pages/ProfileFollowedStores';
@@ -126,6 +131,7 @@ function App() {
             <Route path="/help" element={<HelpCenter />} />
             <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
 
@@ -153,6 +159,10 @@ function App() {
             <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
             <Route path="/admin/municipalities" element={<AdminRoute><AdminMunicipalities /></AdminRoute>} />
             <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+            <Route path="/admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
+            <Route path="/admin/junior-admins" element={<AdminRoute><AdminJuniorAdmins /></AdminRoute>} />
+            <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogs /></AdminRoute>} />
+            <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -75,7 +75,6 @@ export default function AdminReports() {
     <AdminLayout>
       <div className="admin-page-header">
         <h1 className="admin-page-title">Reports</h1>
-        <p className="admin-page-sub">Manage user-submitted reports on products and sellers</p>
       </div>
 
       <div className="admin-card">

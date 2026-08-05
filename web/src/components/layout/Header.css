@@ -4,6 +4,15 @@
   padding: 0;
   font-size: 12px;
   /* Base font size */
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height);
+  z-index: 101;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 
 .topbar-container {
@@ -570,15 +579,28 @@
   gap: 3px;
 }
 
+/* Spacer to offset the fixed header stack */
+.header-spacer {
+  height: calc(var(--topbar-height) + var(--header-height));
+}
+
 /* Main Header */
 .header {
   background-color: white;
   border-bottom: 1px solid #e5e7eb;
-  padding: 20px 0;
-  position: sticky;
-  top: 0;
+  padding: 0;
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: var(--header-height);
   z-index: 100;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  /* Offset from viewport top by the topbar height; hidden by sliding up */
+  --header-hide-offset: var(--topbar-height);
+  top: var(--topbar-height);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 
 .header-container {
@@ -590,6 +612,7 @@
   justify-content: space-between;
   gap: 32px;
   position: relative;
+  height: 100%;
 }
 
 /* Logo */
@@ -813,6 +836,19 @@
 @media (max-width: 768px) {
   .topbar {
     display: none;
+  }
+
+  /* With the topbar hidden on mobile, the header sits at the viewport top
+     and should slide fully off-screen when hidden. */
+  .header {
+    --topbar-height: 0;
+    --header-hide-offset: 100%;
+    top: 0;
+    height: var(--header-height);
+  }
+
+  .header-spacer {
+    height: var(--header-height);
   }
 
   .header-container {

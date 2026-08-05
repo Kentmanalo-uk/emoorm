@@ -65,6 +65,7 @@ const findByEmail = async (email, includePassword = false) => {
     isVerified: true,
     sellerApplicationStatus: true,
     sellerApplicationDate: true,
+    mfaEnabled: true,
     createdAt: true,
     updatedAt: true,
     deletedAt: true,

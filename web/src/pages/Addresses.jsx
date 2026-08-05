@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, Edit, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -82,10 +82,10 @@ const Addresses = () => {
 
   if (isLoading) {
     return (
-      <div className="profile-section">
-        <div className="addresses-header">
-          <Skeleton height={20} width={160} />
-        </div>
+      <div className="profile-page-wrap">
+        <header className="profile-page-header">
+          <h1 className="profile-page-title">My Address</h1>
+        </header>
         <div className="address-card">
           <Skeleton.Text lines={3} height={13} />
           <div style={{ height: 12 }} />
@@ -96,10 +96,10 @@ const Addresses = () => {
   }
 
   return (
-    <div className="profile-section">
-      <div className="addresses-header">
-        <h1 className="addresses-title">My Address</h1>
-      </div>
+    <div className="profile-page-wrap">
+      <header className="profile-page-header">
+        <h1 className="profile-page-title">My Address</h1>
+      </header>
 
       {!editing ? (
         <div className="address-card">
@@ -118,7 +118,7 @@ const Addresses = () => {
           </div>
           <div className="address-card-actions">
             <button onClick={() => setEditing(true)} className="address-action-btn">
-              <Edit size={16} /> Edit
+              Edit address
             </button>
           </div>
         </div>

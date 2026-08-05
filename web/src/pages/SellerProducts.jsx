@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Package, Plus, Edit2, Trash2, Eye,
-  Search, AlertCircle, CheckCircle, Clock, Save, X
+  Search, AlertCircle, CheckCircle, Clock, Save, X, Upload, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
+import { uploadImage } from '../lib/upload';
+import { resolveImg } from '../lib/media';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerProducts.css';
@@ -17,7 +19,7 @@ const EMPTY_FORM = {
   price: '',
   stock: '',
   categoryId: '',
-  images: '',
+  images: [],
 };
 
 const STATUS_LABELS = {
@@ -95,7 +97,7 @@ export default function SellerProducts() {
       price: String(Number(product.price) || ''),
       stock: String(product.stock ?? ''),
       categoryId: product.categoryId || product.category?.id || '',
-      images: (product.images || []).join(', '),
+      images: Array.isArray(product.images) ? product.images : [],
     });
     setFormErrors({});
     setShowForm(true);
@@ -130,9 +132,7 @@ export default function SellerProducts() {
         price: parseFloat(form.price),
         stock: form.stock !== '' ? parseInt(form.stock) : 0,
         categoryId: form.categoryId,
-        images: form.images
-          ? form.images.split(',').map(s => s.trim()).filter(Boolean)
-          : [],
+        images: Array.isArray(form.images) ? form.images.filter(Boolean) : [],
       };
 
       if (editingId) {
@@ -256,15 +256,12 @@ export default function SellerProducts() {
               </div>
 
               <div className="form-group">
-                <label>Image URLs</label>
-                <input
-                  type="text"
-                  value={form.images}
-                  onChange={e => setForm(p => ({ ...p, images: e.target.value }))}
-                  placeholder="https://... , https://... (comma-separated)"
-                  className="form-input"
+                <label>Product Images</label>
+                <ProductImageUploader
+                  images={form.images}
+                  onChange={(imgs) => setForm(p => ({ ...p, images: imgs }))}
                 />
-                <span className="form-hint">Separate multiple image URLs with commas.</span>
+                <span className="form-hint">Upload up to 10 photos (JPEG, PNG, WebP — max 5 MB each). The first image is the cover.</span>
               </div>
 
               <div className="form-actions">
@@ -324,7 +321,7 @@ export default function SellerProducts() {
                         <td>
                           <div className="product-cell">
                             {thumb ? (
-                              <img src={thumb} alt={product.name} className="product-thumb" />
+                              <img src={resolveImg(thumb) || thumb} alt={product.name} className="product-thumb" />
                             ) : (
                               <div className="product-thumb product-thumb--placeholder">
                                 <Package size={16} />
@@ -397,6 +394,92 @@ export default function SellerProducts() {
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const MAX_IMAGES = 10;
+
+function ProductImageUploader({ images, onChange }) {
+  const inputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const list = Array.isArray(images) ? images : [];
+
+  const pickFiles = () => inputRef.current?.click();
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const remaining = MAX_IMAGES - list.length;
+    if (remaining <= 0) {
+      toast.error(`You can upload up to ${MAX_IMAGES} images`);
+      return;
+    }
+    const chosen = files.slice(0, remaining);
+    if (files.length > remaining) {
+      toast(`Only ${remaining} more image(s) can be added`);
+    }
+
+    setUploading(true);
+    const uploaded = [];
+    for (const file of chosen) {
+      try {
+        const res = await uploadImage(file);
+        uploaded.push(res.url);
+      } catch (err) {
+        toast.error(err.message || 'Upload failed');
+      }
+    }
+    if (uploaded.length) {
+      onChange([...list, ...uploaded]);
+      toast.success(`${uploaded.length} image(s) uploaded`);
+    }
+    setUploading(false);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  const removeAt = (idx) => {
+    onChange(list.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div className="product-image-uploader">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/webp"
+        multiple
+        onChange={handleFiles}
+        style={{ display: 'none' }}
+      />
+      <div className="product-image-grid">
+        {list.map((src, idx) => (
+          <div key={src + idx} className="product-image-tile">
+            <img src={resolveImg(src) || src} alt={`Product image ${idx + 1}`} />
+            <button
+              type="button"
+              className="product-image-remove"
+              onClick={() => removeAt(idx)}
+              aria-label="Remove image"
+            >
+              <X size={14} />
+            </button>
+            {idx === 0 && <span className="product-image-cover-badge">Cover</span>}
+          </div>
+        ))}
+        {list.length < MAX_IMAGES && (
+          <button
+            type="button"
+            className="product-image-add"
+            onClick={pickFiles}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 size={18} className="spin" /> : <Upload size={18} />}
+            <span>{uploading ? 'Uploading…' : 'Add photo'}</span>
+          </button>
+        )}
       </div>
     </div>
   );

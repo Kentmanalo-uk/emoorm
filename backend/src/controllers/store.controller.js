@@ -1,4 +1,5 @@
 const storeService = require('../services/store.service');
+const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
   createdResponse,
@@ -138,7 +139,16 @@ const deleteStore = asyncHandler(async (req, res) => {
  * @access Private (Admin only)
  */
 const suspendStore = asyncHandler(async (req, res) => {
-  const store = await storeService.suspendStore(req.params.id);
+  const store = await storeService.suspendStore(req.params.id, req.user);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'SUSPEND_STORE',
+    entity: 'Store',
+    entityId: req.params.id,
+    details: req.body?.reason ? { reason: req.body.reason } : null,
+    req,
+  });
 
   successResponse(res, store, 'Store suspended successfully');
 });
@@ -149,7 +159,15 @@ const suspendStore = asyncHandler(async (req, res) => {
  * @access Private (Admin only)
  */
 const unsuspendStore = asyncHandler(async (req, res) => {
-  const store = await storeService.unsuspendStore(req.params.id);
+  const store = await storeService.unsuspendStore(req.params.id, req.user);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'UNSUSPEND_STORE',
+    entity: 'Store',
+    entityId: req.params.id,
+    req,
+  });
 
   successResponse(res, store, 'Store unsuspended successfully');
 });

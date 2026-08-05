@@ -92,7 +92,6 @@ export default function AdminCategories() {
     <AdminLayout>
       <div className="admin-page-header">
         <h1 className="admin-page-title">Category Management</h1>
-        <p className="admin-page-sub">Create and manage product categories</p>
       </div>
 
       <div className="admin-card">

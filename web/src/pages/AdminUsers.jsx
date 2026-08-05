@@ -96,7 +96,6 @@ export default function AdminUsers() {
     <AdminLayout>
       <div className="admin-page-header">
         <h1 className="admin-page-title">User Management</h1>
-        <p className="admin-page-sub">Suspend accounts, assign roles, view all platform users</p>
       </div>
 
       <div className="admin-card">

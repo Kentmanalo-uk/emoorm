@@ -5,6 +5,7 @@ import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 
@@ -322,8 +323,9 @@ const Products = () => {
                     >
                       <div className="product-image">
                         <img
-                          src={product.images?.[0] || '/placeholder-product.png'}
+                          src={resolveImg(product.images?.[0]) || '/placeholder-product.png'}
                           alt={product.name}
+                          onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
                         />
                         {product.stock === 0 && (
                           <div className="product-badge out-of-stock">Out of Stock</div>

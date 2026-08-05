@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import './ReviewModal.css';
 
 export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
@@ -44,7 +45,7 @@ export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
 
         <div className="review-product-row">
           {product.images?.[0] && (
-            <img src={product.images[0]} alt={product.name} className="review-product-img" />
+            <img src={resolveImg(product.images[0]) || product.images[0]} alt={product.name} className="review-product-img" />
           )}
           <span className="review-product-name">{product.name}</span>
         </div>

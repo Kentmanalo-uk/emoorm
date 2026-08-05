@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, ShoppingCart, BellOff, Menu, X,
@@ -7,6 +7,7 @@ import {
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
 import axios from '../../lib/axios';
+import { resolveImg } from '../../lib/media';
 import LanguageSwitcher from '../LanguageSwitcher';
 import './Header.css';
 
@@ -48,8 +49,40 @@ const Header = () => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifs, setRecentNotifs] = useState([]);
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const lastScrollY = useRef(window.scrollY);
 
   const cartCount = getItemCount();
+
+  // Hide-on-scroll header. Forces both bars visible near the top, hides them on
+  // downward scroll after a 6px delta, reveals on upward scroll after 6px delta.
+  useEffect(() => {
+    let ticking = false;
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+
+      window.requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const delta = y - lastScrollY.current;
+        lastScrollY.current = y;
+
+        if (y < 40) {
+          setHeaderHidden(false);
+        } else if (delta > 6) {
+          setHeaderHidden(true);
+        } else if (delta < -6) {
+          setHeaderHidden(false);
+        }
+
+        ticking = false;
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Poll unread count + recent notifications when authenticated
   useEffect(() => {
@@ -88,7 +121,10 @@ const Header = () => {
   return (
     <>
       {/* Top Bar */}
-      <div className="topbar">
+      <div
+        className="topbar"
+        style={{ transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)' }}
+      >
         <div className="topbar-container">
           <div className="topbar-left">
             <Link to="/feedback" className="topbar-link topbar-link-feedback">FEEDBACK</Link>
@@ -192,7 +228,7 @@ const Header = () => {
               {isAuthenticated ? (
                 <Link to="/profile" className="topbar-link account-trigger account-trigger-user">
                   {user?.profilePhoto ? (
-                    <img src={user.profilePhoto} alt="" className="account-avatar" />
+                    <img src={resolveImg(user.profilePhoto)} alt="" className="account-avatar" />
                   ) : (
                     <span className="account-avatar account-avatar-fallback">
                       {(user?.fullName || 'U').charAt(0).toUpperCase()}
@@ -283,7 +319,15 @@ const Header = () => {
       </div>
 
       {/* Main Header */}
-      <header className="header">
+      <header
+        className="header"
+        style={{
+          transform: headerHidden
+            ? 'translateY(calc(-1 * var(--header-hide-offset)))'
+            : 'translateY(0)',
+          top: 'var(--topbar-height)',
+        }}
+      >
         <div className="header-container">
           {/* Logo */}
           <Link to="/" className="header-logo">
@@ -328,6 +372,9 @@ const Header = () => {
           </button>
         </div>
       </header>
+
+      {/* Spacer to offset fixed header */}
+      <div className="header-spacer" />
 
       {/* Mobile Menu */}
       {showMobileMenu && (

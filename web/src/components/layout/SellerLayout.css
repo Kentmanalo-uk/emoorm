@@ -29,25 +29,49 @@
   padding: 18px 12px 12px;
 }
 
+.sc-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 14px 8px;
+}
+
 .sc-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 8px 18px;
+  flex: 1;
+  min-width: 0;
   text-decoration: none;
   color: inherit;
 }
 
-.sc-brand-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #059669, #047857);
-  color: #fff;
+.sc-collapse-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px -4px rgba(5, 150, 105, 0.5);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color .12s, color .12s, border-color .12s;
+}
+
+.sc-collapse-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+.sc-brand-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
 }
 
@@ -126,6 +150,28 @@
 .sc-nav-item svg {
   flex-shrink: 0;
   color: currentColor;
+}
+
+/* Solid filled icons (no outline) */
+.sc-nav-item > svg:not(.sc-nav-chevron) {
+  stroke: none;
+}
+
+.sc-nav-item > svg:not(.sc-nav-chevron) path,
+.sc-nav-item > svg:not(.sc-nav-chevron) rect,
+.sc-nav-item > svg:not(.sc-nav-chevron) circle,
+.sc-nav-item > svg:not(.sc-nav-chevron) polygon,
+.sc-nav-item > svg:not(.sc-nav-chevron) ellipse {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Line/polyline shapes have no fill area — keep them stroked so the icon still shows */
+.sc-nav-item > svg:not(.sc-nav-chevron) line,
+.sc-nav-item > svg:not(.sc-nav-chevron) polyline {
+  stroke: currentColor;
+  stroke-width: 2.25;
+  fill: none;
 }
 
 .sc-nav-group .sc-nav-chevron {
@@ -358,3 +404,142 @@
     padding: 0 16px;
   }
 }
+
+/* ── Collapsed sidebar (animated) ─────────────────────────── */
+
+.sc-shell {
+  transition: grid-template-columns 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sc-sidebar-inner {
+  transition: padding 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sc-brand-row {
+  transition: padding 220ms cubic-bezier(0.4, 0, 0.2, 1),
+              gap 180ms ease;
+}
+
+.sc-brand {
+  transition: gap 180ms ease;
+}
+
+/* Elements that collapse: fade + shrink instead of display:none for smooth motion */
+.sc-brand-text,
+.sc-nav-item > span:not(.sc-nav-chevron),
+.sc-user-meta {
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 200px;
+  opacity: 1;
+  transition: max-width 220ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 140ms ease,
+              margin 180ms ease;
+}
+
+.sc-nav-chevron,
+.sc-user-caret {
+  opacity: 1;
+  transition: opacity 140ms ease, transform 180ms ease;
+}
+
+.sc-subnav {
+  overflow: hidden;
+  max-height: 400px;
+  opacity: 1;
+  transition: max-height 220ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 160ms ease;
+}
+
+.sc-nav-item {
+  transition: background-color .12s, color .12s,
+              gap 180ms ease, padding 180ms ease, justify-content 180ms ease;
+}
+
+.sc-user-card {
+  transition: background-color .12s,
+              gap 180ms ease, padding 180ms ease;
+}
+
+/* Collapsed state */
+.sc-shell.is-collapsed {
+  grid-template-columns: 68px 1fr;
+}
+
+.sc-shell.is-collapsed .sc-sidebar-inner {
+  padding: 14px 8px 10px;
+}
+
+.sc-shell.is-collapsed .sc-brand-row {
+  padding: 2px 2px 12px 2px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sc-shell.is-collapsed .sc-brand {
+  justify-content: center;
+  gap: 0;
+}
+
+.sc-shell.is-collapsed .sc-brand-text,
+.sc-shell.is-collapsed .sc-nav-item > span:not(.sc-nav-chevron),
+.sc-shell.is-collapsed .sc-user-meta {
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
+}
+
+.sc-shell.is-collapsed .sc-nav-chevron,
+.sc-shell.is-collapsed .sc-user-caret {
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+}
+
+.sc-shell.is-collapsed .sc-subnav {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.sc-shell.is-collapsed .sc-nav-item {
+  justify-content: center;
+  gap: 0;
+  padding: 10px 0;
+}
+
+/* Kill margin-left:auto so chevron doesn't shove the icon off-center */
+.sc-shell.is-collapsed .sc-nav-chevron,
+.sc-shell.is-collapsed .sc-user-caret {
+  margin: 0 !important;
+  width: 0;
+}
+
+.sc-shell.is-collapsed .sc-nav-item > svg:not(.sc-nav-chevron) {
+  margin: 0 auto;
+}
+
+.sc-shell.is-collapsed .sc-user-card {
+  justify-content: center;
+  gap: 0;
+  padding: 10px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-shell,
+  .sc-sidebar-inner,
+  .sc-brand-row,
+  .sc-brand,
+  .sc-brand-text,
+  .sc-nav-item,
+  .sc-nav-item > span,
+  .sc-nav-chevron,
+  .sc-user-meta,
+  .sc-user-caret,
+  .sc-subnav,
+  .sc-user-card {
+    transition: none !important;
+  }
+}
+

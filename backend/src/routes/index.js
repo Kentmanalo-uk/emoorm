@@ -37,6 +37,12 @@ const reviewRoutes = require('./review.routes');
 const reportRoutes = require('./report.routes');
 const notificationRoutes = require('./notification.routes');
 const uploadRoutes = require('./upload.routes');
+const analyticsRoutes = require('./analytics.routes');
+const auditLogRoutes = require('./auditLog.routes');
+const announcementRoutes = require('./announcement.routes');
+const adminRoutes = require('./admin.routes');
+const mfaRoutes = require('./mfa.routes');
+const messageRoutes = require('./message.routes');
 
 // Mount routes
 router.use('/auth', authRoutes);
@@ -49,5 +55,11 @@ router.use('/reviews', reviewRoutes);
 router.use('/reports', reportRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/audit-logs', auditLogRoutes);
+router.use('/announcements', announcementRoutes);
+router.use('/admin', adminRoutes);
+router.use('/auth/mfa', mfaRoutes);
+router.use('/messages', messageRoutes);
 
 module.exports = router;

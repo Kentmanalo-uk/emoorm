@@ -1,8 +1,10 @@
 const authService = require('../services/auth.service');
+const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
   createdResponse,
   noContentResponse,
+  paginatedResponse,
 } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -166,7 +168,14 @@ const getUsers = asyncHandler(async (req, res) => {
 
   const result = await authService.getUsers(options);
 
-  successResponse(res, result, 'Users retrieved successfully');
+  paginatedResponse(
+    res,
+    result.users,
+    result.total,
+    result.page,
+    result.pageSize,
+    'Users retrieved successfully'
+  );
 });
 
 /**
@@ -175,7 +184,15 @@ const getUsers = asyncHandler(async (req, res) => {
  * @access Private (ADMIN only)
  */
 const approveSeller = asyncHandler(async (req, res) => {
-  const user = await authService.approveSeller(req.params.id);
+  const user = await authService.approveSeller(req.params.id, req.user);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'APPROVE_SELLER',
+    entity: 'User',
+    entityId: req.params.id,
+    req,
+  });
 
   successResponse(res, user, 'Seller application approved successfully');
 });
@@ -186,7 +203,17 @@ const approveSeller = asyncHandler(async (req, res) => {
  * @access Private (ADMIN only)
  */
 const rejectSeller = asyncHandler(async (req, res) => {
-  const user = await authService.rejectSeller(req.params.id);
+  const { reason } = req.body || {};
+  const user = await authService.rejectSeller(req.params.id, req.user, reason);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'REJECT_SELLER',
+    entity: 'User',
+    entityId: req.params.id,
+    details: reason ? { reason } : null,
+    req,
+  });
 
   successResponse(res, user, 'Seller application rejected');
 });
@@ -197,7 +224,15 @@ const rejectSeller = asyncHandler(async (req, res) => {
  * @access Private (ADMIN only)
  */
 const suspendUser = asyncHandler(async (req, res) => {
-  const user = await authService.suspendUser(req.params.id);
+  const user = await authService.suspendUser(req.params.id, req.user);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'SUSPEND_USER',
+    entity: 'User',
+    entityId: req.params.id,
+    req,
+  });
 
   successResponse(res, user, 'User suspended successfully');
 });
@@ -208,7 +243,15 @@ const suspendUser = asyncHandler(async (req, res) => {
  * @access Private (ADMIN only)
  */
 const activateUser = asyncHandler(async (req, res) => {
-  const user = await authService.activateUser(req.params.id);
+  const user = await authService.activateUser(req.params.id, req.user);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'ACTIVATE_USER',
+    entity: 'User',
+    entityId: req.params.id,
+    req,
+  });
 
   successResponse(res, user, 'User activated successfully');
 });
@@ -251,12 +294,26 @@ const resetPassword = asyncHandler(async (req, res) => {
 });
 
 const setUserRole = asyncHandler(async (req, res) => {
-  const { role } = req.body;
-  const ALLOWED = ['BUYER', 'SELLER', 'MUNICIPAL_ADMIN'];
+  const { role, municipalityId } = req.body;
+  const ALLOWED = ['BUYER', 'SELLER', 'MUNICIPAL_ADMIN', 'SUPER_ADMIN'];
   if (!ALLOWED.includes(role)) {
     return res.status(400).json({ success: false, message: 'Invalid role' });
   }
-  const user = await authService.setUserRole(req.params.id, role);
+
+  const user = await authService.setUserRole(req.params.id, role, {
+    actor: req.user,
+    municipalityId,
+  });
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'SET_USER_ROLE',
+    entity: 'User',
+    entityId: req.params.id,
+    details: { role, municipalityId },
+    req,
+  });
+
   successResponse(res, user, `User role updated to ${role}`);
 });
 

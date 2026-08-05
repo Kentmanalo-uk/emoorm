@@ -3,6 +3,10 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+
+  /* Fixed header dimensions shared by Header.jsx inline styles */
+  --topbar-height: 36px;
+  --header-height: 90px;
 }
 
 .layout-main {

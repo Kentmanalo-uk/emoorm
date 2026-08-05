@@ -198,11 +198,15 @@ const deleteStore = async (storeId, userId) => {
  * @param {String} storeId - Store ID
  * @returns {Promise<Object>} Updated store
  */
-const suspendStore = async (storeId) => {
+const suspendStore = async (storeId, actor = null) => {
   const store = await storeRepository.findById(storeId);
 
   if (!store || store.deletedAt) {
     throw new ApiError('Store not found', 404);
+  }
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && store.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only moderate stores in your assigned municipality', 403);
   }
 
   return storeRepository.suspendStore(storeId);
@@ -213,11 +217,15 @@ const suspendStore = async (storeId) => {
  * @param {String} storeId - Store ID
  * @returns {Promise<Object>} Updated store
  */
-const unsuspendStore = async (storeId) => {
+const unsuspendStore = async (storeId, actor = null) => {
   const store = await storeRepository.findById(storeId);
 
   if (!store || store.deletedAt) {
     throw new ApiError('Store not found', 404);
+  }
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && store.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only moderate stores in your assigned municipality', 403);
   }
 
   return storeRepository.unsuspendStore(storeId);

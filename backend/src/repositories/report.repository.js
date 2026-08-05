@@ -2,112 +2,73 @@ const prisma = require('../config/database');
 
 /**
  * Report Repository
- * Handles all database operations related to reports
+ * Matches Prisma schema: type, productId, reportedSellerId, reason, description,
+ * status, municipalityId, resolutionNotes, resolvedAt
  */
 
-/**
- * Create a report
- * @param {Object} data - Report data
- * @returns {Promise<Object>} Created report
- */
+const REPORT_INCLUDE_LIST = {
+  reporter: {
+    select: { id: true, fullName: true, email: true },
+  },
+  product: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      store: { select: { id: true, name: true, slug: true } },
+    },
+  },
+  municipality: { select: { id: true, name: true, code: true } },
+};
+
+const REPORT_INCLUDE_DETAIL = {
+  reporter: {
+    select: { id: true, fullName: true, email: true, contactNumber: true },
+  },
+  product: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      images: true,
+      store: {
+        select: { id: true, name: true, slug: true, ownerId: true },
+      },
+    },
+  },
+  municipality: { select: { id: true, name: true, code: true } },
+};
+
 const createReport = async (data) => {
   return prisma.report.create({
     data,
-    include: {
-      reporter: {
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-        },
-      },
-      product: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-        },
-      },
-      store: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-        },
-      },
-    },
+    include: REPORT_INCLUDE_LIST,
   });
 };
 
-/**
- * Find report by ID
- * @param {String} id - Report ID
- * @returns {Promise<Object|null>} Report or null
- */
 const findById = async (id) => {
   return prisma.report.findUnique({
     where: { id },
-    include: {
-      reporter: {
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          contactNumber: true,
-        },
-      },
-      product: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          store: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-      store: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          owner: {
-            select: {
-              id: true,
-              fullName: true,
-            },
-          },
-        },
-      },
-    },
+    include: REPORT_INCLUDE_DETAIL,
   });
 };
 
-/**
- * Find all reports with filters
- * @param {Object} options - Query options
- * @returns {Promise<Object>} Reports and pagination
- */
 const findAll = async (options = {}) => {
   const {
     page = 1,
     pageSize = 20,
     reporterId,
     productId,
-    storeId,
+    reportedSellerId,
     type,
     status,
     municipalityId,
   } = options;
 
   const where = {};
-
   if (reporterId) where.reporterId = reporterId;
   if (productId) where.productId = productId;
-  if (storeId) where.storeId = storeId;
+  if (reportedSellerId) where.reportedSellerId = reportedSellerId;
   if (type) where.type = type;
   if (status) where.status = status;
   if (municipalityId) where.municipalityId = municipalityId;
@@ -115,28 +76,7 @@ const findAll = async (options = {}) => {
   const [reports, total] = await Promise.all([
     prisma.report.findMany({
       where,
-      include: {
-        reporter: {
-          select: {
-            id: true,
-            fullName: true,
-          },
-        },
-        product: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-        store: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-      },
+      include: REPORT_INCLUDE_LIST,
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { createdAt: 'desc' },
@@ -144,43 +84,26 @@ const findAll = async (options = {}) => {
     prisma.report.count({ where }),
   ]);
 
-  return {
-    reports,
-    total,
-    page,
-    pageSize,
-  };
+  return { reports, total, page, pageSize };
 };
 
-/**
- * Update report status
- * @param {String} id - Report ID
- * @param {String} status - New status
- * @param {String} adminNotes - Admin notes
- * @returns {Promise<Object>} Updated report
- */
-const updateStatus = async (id, status, adminNotes = null) => {
-  return prisma.report.update({
-    where: { id },
-    data: {
-      status,
-      adminNotes,
-      resolvedAt: status === 'RESOLVED' ? new Date() : null,
-    },
-  });
-};
-
-/**
- * Update report
- * @param {String} id - Report ID
- * @param {Object} data - Update data
- * @returns {Promise<Object>} Updated report
- */
-const updateReport = async (id, data) => {
+const updateStatus = async (id, status, resolutionNotes = null) => {
+  const data = { status };
+  if (resolutionNotes !== null && resolutionNotes !== undefined) {
+    data.resolutionNotes = resolutionNotes;
+  }
+  if (status === 'RESOLVED' || status === 'DISMISSED') {
+    data.resolvedAt = new Date();
+  }
   return prisma.report.update({
     where: { id },
     data,
+    include: REPORT_INCLUDE_LIST,
   });
+};
+
+const updateReport = async (id, data) => {
+  return prisma.report.update({ where: { id }, data });
 };
 
 module.exports = {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import './Login.css';
@@ -17,6 +17,14 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+
+  // MFA challenge state — 'credentials' | 'verify' | 'setup'
+  const [mfaStage, setMfaStage] = useState('credentials');
+  const [mfaToken, setMfaToken] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaEmail, setMfaEmail] = useState('');
+  const [setupData, setSetupData] = useState(null); // { qrDataUrl, secret }
+  const [backupCodes, setBackupCodes] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -72,34 +80,44 @@ const Login = () => {
         password: formData.password,
       });
 
-      console.log('Login successful:', response);
-
       // Response structure: { success, message, data: { user, accessToken, refreshToken } }
-      const token = response.data.accessToken;
-      const refreshToken = response.data.refreshToken;
-      const userData = response.data.user;
+      // OR when admin MFA is required: { data: { requiresMfa | requiresMfaSetup, mfaToken, email } }
+      const data = response.data;
+
+      if (data.requiresMfa) {
+        setMfaToken(data.mfaToken);
+        setMfaEmail(data.email);
+        setMfaStage('verify');
+        setIsLoading(false);
+        return;
+      }
+      if (data.requiresMfaSetup) {
+        setMfaToken(data.mfaToken);
+        setMfaEmail(data.email);
+        setIsLoading(true);
+        // Fetch QR immediately so admin can enrol
+        try {
+          const setupRes = await axios.post('/auth/mfa/setup/begin-login', { mfaToken: data.mfaToken });
+          setSetupData(setupRes.data);
+          setMfaStage('setup');
+        } catch (err) {
+          setApiError(err.message || 'Failed to start MFA setup');
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const token = data.accessToken;
+      const refreshToken = data.refreshToken;
+      const userData = data.user;
 
       if (token && userData) {
-        storeLogin(userData, token, refreshToken);
-
-        // Role-based landing: admins & sellers get their own dashboards.
-        const role = userData?.role;
-        let target;
-        if (role === 'SUPER_ADMIN' || role === 'MUNICIPAL_ADMIN') {
-          target = '/admin';
-        } else if (role === 'SELLER') {
-          target = '/seller';
-        } else {
-          target = location.state?.from?.pathname || '/';
-        }
-        navigate(target, { replace: true });
+        finishLogin(userData, token, refreshToken);
       } else {
         throw new Error('Invalid response format from server');
       }
     } catch (error) {
-      console.error('Login error:', error);
-
-      // Handle different error response formats
       let errorMessage = 'Login failed. Please try again.';
 
       if (error.response?.data?.message) {
@@ -114,6 +132,85 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const finishLogin = (userData, token, refreshToken) => {
+    storeLogin(userData, token, refreshToken);
+    const role = userData?.role;
+    let target;
+    if (role === 'SUPER_ADMIN' || role === 'MUNICIPAL_ADMIN') {
+      target = '/admin';
+    } else if (role === 'SELLER') {
+      target = '/seller';
+    } else {
+      target = location.state?.from?.pathname || '/';
+    }
+    navigate(target, { replace: true });
+  };
+
+  const handleVerifyMfa = async (e) => {
+    e.preventDefault();
+    setApiError('');
+    if (!mfaCode.trim()) {
+      setApiError('Enter your 6-digit code or a backup code');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await axios.post('/auth/mfa/verify-login', {
+        mfaToken,
+        code: mfaCode.trim(),
+      });
+      const { user, accessToken, refreshToken, usedBackupCode } = res.data;
+      if (usedBackupCode) {
+        // Non-blocking hint — the user should re-enroll or regenerate codes.
+        console.info('Backup code consumed.');
+      }
+      finishLogin(user, accessToken, refreshToken);
+    } catch (error) {
+      setApiError(error.message || 'Invalid verification code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCompleteSetup = async (e) => {
+    e.preventDefault();
+    setApiError('');
+    if (!/^\d{6}$/.test(mfaCode.trim())) {
+      setApiError('Enter the 6-digit code from your authenticator');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await axios.post('/auth/mfa/setup/complete-login', {
+        mfaToken,
+        code: mfaCode.trim(),
+      });
+      const { user, accessToken, refreshToken, backupCodes: codes } = res.data;
+      setBackupCodes(codes);
+      // Stash tokens so the user can proceed after they've saved the codes.
+      setSetupData((prev) => ({ ...prev, user, accessToken, refreshToken }));
+    } catch (error) {
+      setApiError(error.message || 'Invalid code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleContinueAfterSetup = () => {
+    if (setupData?.user && setupData?.accessToken) {
+      finishLogin(setupData.user, setupData.accessToken, setupData.refreshToken);
+    }
+  };
+
+  const handleCancelMfa = () => {
+    setMfaStage('credentials');
+    setMfaCode('');
+    setMfaToken('');
+    setSetupData(null);
+    setBackupCodes(null);
+    setApiError('');
   };
 
   const handleGoogleLogin = () => {
@@ -166,6 +263,33 @@ const Login = () => {
           {/* Right Side - Form */}
           <div className="login-form-container">
             <div className="login-form-card">
+              {mfaStage === 'verify' && (
+                <MfaVerify
+                  email={mfaEmail}
+                  code={mfaCode}
+                  onCodeChange={setMfaCode}
+                  onSubmit={handleVerifyMfa}
+                  onCancel={handleCancelMfa}
+                  isLoading={isLoading}
+                  apiError={apiError}
+                />
+              )}
+              {mfaStage === 'setup' && (
+                <MfaSetup
+                  email={mfaEmail}
+                  qrDataUrl={setupData?.qrDataUrl}
+                  secret={setupData?.secret}
+                  code={mfaCode}
+                  onCodeChange={setMfaCode}
+                  onSubmit={handleCompleteSetup}
+                  onCancel={handleCancelMfa}
+                  onContinue={handleContinueAfterSetup}
+                  backupCodes={backupCodes}
+                  isLoading={isLoading}
+                  apiError={apiError}
+                />
+              )}
+              {mfaStage === 'credentials' && (<>
               <div className="login-form-header">
                 <h2 className="login-form-title">Sign In</h2>
               </div>
@@ -277,6 +401,7 @@ const Login = () => {
                   <Link to="/privacy" className="login-form-terms-link">Privacy Policy</Link>
                 </p>
               </form>
+              </>)}
             </div>
 
             {/* Need Help */}
@@ -291,3 +416,105 @@ const Login = () => {
 };
 
 export default Login;
+
+// ─── MFA sub-views ──────────────────────────────────────────────
+
+function MfaVerify({ email, code, onCodeChange, onSubmit, onCancel, isLoading, apiError }) {
+  return (
+    <form onSubmit={onSubmit} className="login-form">
+      <div className="login-mfa-icon"><ShieldCheck size={28} /></div>
+      <h2 className="login-form-title">Two-factor verification</h2>
+      <p className="login-mfa-hint">
+        Enter the 6-digit code from your authenticator app for
+        {' '}<strong>{email}</strong>. You can also use a backup code.
+      </p>
+      <div className="login-form-group">
+        <label htmlFor="mfa-code" className="login-form-label">Verification code</label>
+        <input
+          id="mfa-code"
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          autoFocus
+          maxLength={12}
+          value={code}
+          onChange={(e) => onCodeChange(e.target.value)}
+          className="login-form-input login-mfa-input"
+          placeholder="123 456"
+        />
+      </div>
+      <button type="submit" className="login-form-submit" disabled={isLoading}>
+        {isLoading ? 'Verifying…' : 'Verify & continue'}
+      </button>
+      {apiError && <div className="login-form-error-message">{apiError}</div>}
+      <button type="button" className="login-mfa-link" onClick={onCancel}>
+        Use a different account
+      </button>
+    </form>
+  );
+}
+
+function MfaSetup({
+  email, qrDataUrl, secret, code, onCodeChange, onSubmit, onCancel,
+  onContinue, backupCodes, isLoading, apiError,
+}) {
+  if (backupCodes) {
+    return (
+      <div className="login-form">
+        <div className="login-mfa-icon"><ShieldCheck size={28} /></div>
+        <h2 className="login-form-title">Save your backup codes</h2>
+        <p className="login-mfa-hint">
+          Store these in a safe place. Each can be used once if you lose access to your authenticator.
+        </p>
+        <ul className="login-mfa-backup">
+          {backupCodes.map((c) => <li key={c}><code>{c}</code></li>)}
+        </ul>
+        <button type="button" className="login-form-submit" onClick={onContinue}>
+          I've saved them — continue
+        </button>
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={onSubmit} className="login-form">
+      <div className="login-mfa-icon"><ShieldCheck size={28} /></div>
+      <h2 className="login-form-title">Set up two-factor auth</h2>
+      <p className="login-mfa-hint">
+        Admin accounts require an authenticator app. Scan the QR with Google
+        Authenticator, Authy, or 1Password, then enter the 6-digit code.
+      </p>
+      {qrDataUrl
+        ? <img src={qrDataUrl} alt="MFA QR code" className="login-mfa-qr" />
+        : <div className="login-mfa-qr login-mfa-qr-placeholder">Loading QR…</div>}
+      {secret && (
+        <div className="login-mfa-secret">
+          <span className="login-mfa-secret-label">Or enter this key manually</span>
+          <code>{secret}</code>
+        </div>
+      )}
+      <div className="login-form-group">
+        <label htmlFor="mfa-setup-code" className="login-form-label">6-digit code</label>
+        <input
+          id="mfa-setup-code"
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          autoFocus
+          maxLength={6}
+          value={code}
+          onChange={(e) => onCodeChange(e.target.value)}
+          className="login-form-input login-mfa-input"
+          placeholder="123456"
+        />
+      </div>
+      <button type="submit" className="login-form-submit" disabled={isLoading}>
+        {isLoading ? 'Verifying…' : 'Enable & continue'}
+      </button>
+      {apiError && <div className="login-form-error-message">{apiError}</div>}
+      <p className="login-mfa-hint" style={{ marginTop: 8 }}>Signed in as <strong>{email}</strong>.</p>
+      <button type="button" className="login-mfa-link" onClick={onCancel}>
+        Cancel
+      </button>
+    </form>
+  );
+}

@@ -55,7 +55,7 @@ function UploadBox({ label, hint, value, onChange, required }) {
       <input ref={ref} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
       {value ? (
         <div className="upload-preview">
-          <img src={value.startsWith("/uploads") ? `http://localhost:3000${value}` : value} alt={label} />
+          <img src={value.startsWith("/uploads") ? `${(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000')}${value}` : value} alt={label} />
           <button
             type="button"
             className="upload-remove"

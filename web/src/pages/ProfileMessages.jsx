@@ -1,16 +1,12 @@
 import React from 'react';
-import { MessageSquare } from 'lucide-react';
+import Messenger from '../components/messenger/Messenger';
 
 const ProfileMessages = () => (
-  <div className="profile-section">
-    <h3 className="profile-section-title">Messages</h3>
-    <div className="empty-state">
-      <MessageSquare size={48} />
-      <p className="empty-state-text">No messages yet.</p>
-      <p className="empty-state-hint">
-        When you contact a store, your conversations will appear here.
-      </p>
-    </div>
+  <div className="profile-page-wrap">
+    <header className="profile-page-header">
+      <h1 className="profile-page-title">Messages</h1>
+    </header>
+    <Messenger role="buyer" className="msgr-shell-flat" />
   </div>
 );
 

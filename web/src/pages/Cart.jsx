@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Trash2, Plus, Minus, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { ShoppingBag, Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
+import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import './Cart.css';
 
 const Cart = () => {
@@ -18,6 +20,53 @@ const Cart = () => {
     removeItem,
     clearCart
   } = useCartStore();
+
+  // "You may also like" — products from similar categories as cart items
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchSuggestions = async () => {
+      if (items.length === 0) {
+        setSuggestions([]);
+        return;
+      }
+      setSuggestionsLoading(true);
+      try {
+        const cartIds = items.map((i) => i.id);
+        const categoryIds = [...new Set(items.map((i) => i.categoryId).filter(Boolean))];
+
+        let fetched = [];
+        if (categoryIds.length > 0) {
+          // Fetch products for each category in the cart, cap for performance.
+          const limit = 4 - Math.min(4, cartIds.length);
+          const results = await Promise.all(
+            categoryIds.slice(0, 2).map((catId) =>
+              axios.get('/products', { params: { categoryId: catId, pageSize: 8 } })
+            )
+          );
+          fetched = results.flatMap((r) => r.data || []);
+        }
+
+        const unique = new Map();
+        fetched.forEach((p) => {
+          if (!cartIds.includes(p.id)) unique.set(p.id, p);
+        });
+        const list = [...unique.values()].slice(0, limit);
+
+        if (!cancelled) setSuggestions(list);
+      } catch (error) {
+        console.error('Failed to fetch suggestions:', error);
+        if (!cancelled) setSuggestions([]);
+      } finally {
+        if (!cancelled) setSuggestionsLoading(false);
+      }
+    };
+
+    fetchSuggestions();
+    return () => { cancelled = true; };
+  }, [items]);
 
   const itemCount = getItemCount();
   const subtotal = getTotalPrice();
@@ -127,7 +176,11 @@ const Cart = () => {
                           to={`/product/${item.slug || item.id}`}
                           className="cart-item-image"
                         >
-                          <img src={item.image} alt={item.name} />
+                          <img
+                            src={resolveImg(item.image) || item.image || '/placeholder-product.png'}
+                            alt={item.name}
+                            onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
+                          />
                         </Link>
 
                         <div className="cart-item-details">
@@ -276,6 +329,61 @@ const Cart = () => {
               </div>
             </div>
           </div>
+
+          {/* You may also like suggestions */}
+          {(suggestions.length > 0 || suggestionsLoading) && (
+            <div className="cart-suggestions">
+              <div className="cart-suggestions-head">
+                <h2 className="cart-suggestions-title">You may also like</h2>
+                <Link to="/products" className="cart-suggestions-more">See more</Link>
+              </div>
+              {suggestionsLoading ? (
+                <div className="cart-suggestions-grid">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="cart-suggestion-card cart-suggestion-skel">
+                      <div className="cart-suggestion-skel-img" />
+                      <div className="cart-suggestion-skel-line" />
+                      <div className="cart-suggestion-skel-line short" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="cart-suggestions-grid">
+                  {suggestions.map((product) => (
+                    <Link
+                      key={product.id}
+                      to={`/product/${product.slug}`}
+                      className="cart-suggestion-card"
+                    >
+                      <div className="cart-suggestion-image">
+                        <img
+                          src={resolveImg(product.images?.[0]) || '/placeholder-product.png'}
+                          alt={product.name}
+                          onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
+                        />
+                      </div>
+                      <div className="cart-suggestion-info">
+                        <h3 className="cart-suggestion-name">{product.name}</h3>
+                        <span className="cart-suggestion-price">
+                          ₱{Number(product.price).toFixed(2)}
+                        </span>
+                        <div className="cart-suggestion-rating">
+                          <div className="cart-suggestion-stars">
+                            {[0, 1, 2, 3, 4].map((i) => (
+                              <Star key={i} size={11} fill="#f59e0b" strokeWidth={0} />
+                            ))}
+                          </div>
+                          <span className="cart-suggestion-review-count">
+                            ({product.reviewCount ?? 0})
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Layout>

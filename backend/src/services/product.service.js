@@ -59,6 +59,10 @@ const createProduct = async (userId, data) => {
   // Generate unique slug
   const slug = await generateSlug(data.name);
 
+  // If the seller's shop is already approved (active + not suspended), products go live immediately.
+  // Admins can still suspend or hide them later.
+  const initialStatus = store.isActive && !store.isSuspended ? 'APPROVED' : 'PENDING';
+
   // Create product
   const product = await productRepository.createProduct({
     name: data.name,
@@ -70,7 +74,7 @@ const createProduct = async (userId, data) => {
     storeId: store.id,
     categoryId: data.categoryId,
     municipalityId: store.municipalityId,
-    status: 'PENDING', // Requires admin approval
+    status: initialStatus,
   });
 
   return product;
@@ -224,20 +228,30 @@ const deleteProduct = async (productId, userId) => {
 /**
  * Approve product (Admin only)
  * @param {String} productId - Product ID
+ * @param {String} adminId - Approving admin user ID
+ * @param {Object} [actor] - The acting admin (for municipality scope)
  * @returns {Promise<Object>} Updated product
  */
-const approveProduct = async (productId) => {
+const approveProduct = async (productId, adminId, actor) => {
   const product = await productRepository.findById(productId);
 
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);
   }
 
+  if (actor?.role === 'MUNICIPAL_ADMIN' && product.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only moderate products in your assigned municipality', 403);
+  }
+
   if (product.status !== 'PENDING') {
     throw new ApiError('Only pending products can be approved', 400);
   }
 
-  const updated = await productRepository.updateStatus(productId, 'APPROVED');
+  const updated = await productRepository.updateProduct(productId, {
+    status: 'APPROVED',
+    approvedById: adminId || null,
+    approvedAt: new Date(),
+  });
 
   try {
     const store = await storeRepository.findById(product.storeId);
@@ -254,13 +268,18 @@ const approveProduct = async (productId) => {
 /**
  * Suspend product (Admin only)
  * @param {String} productId - Product ID
+ * @param {Object} [actor] - The acting admin (for municipality scope)
  * @returns {Promise<Object>} Updated product
  */
-const suspendProduct = async (productId) => {
+const suspendProduct = async (productId, actor) => {
   const product = await productRepository.findById(productId);
 
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);
+  }
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && product.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only moderate products in your assigned municipality', 403);
   }
 
   const updated = await productRepository.updateStatus(productId, 'SUSPENDED');
@@ -280,13 +299,18 @@ const suspendProduct = async (productId) => {
 /**
  * Archive product (Admin only)
  * @param {String} productId - Product ID
+ * @param {Object} [actor] - The acting admin (for municipality scope)
  * @returns {Promise<Object>} Updated product
  */
-const archiveProduct = async (productId) => {
+const archiveProduct = async (productId, actor) => {
   const product = await productRepository.findById(productId);
 
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);
+  }
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && product.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only moderate products in your assigned municipality', 403);
   }
 
   return productRepository.updateStatus(productId, 'ARCHIVED');

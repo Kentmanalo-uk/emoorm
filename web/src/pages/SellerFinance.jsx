@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Wallet, TrendingUp, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import './SellerDashboard.css';
@@ -63,12 +63,9 @@ export default function SellerFinance() {
           </div>
         </div>
 
-        <div className="sd-stats" style={{ marginBottom: 16, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="sd-stats sd-stats--3" style={{ marginBottom: 16 }}>
           <div className="sd-stat">
-            <span className="sd-stat-label">
-              <Wallet size={12} style={{ marginRight: 4, verticalAlign: -1 }} />
-              Available Balance
-            </span>
+            <span className="sd-stat-label">Available Balance</span>
             <span className="sd-stat-value sd-stat-value--big">
               {isLoading ? '…' : fmt(summary.balance)}
             </span>
@@ -89,14 +86,14 @@ export default function SellerFinance() {
 
         <div className="seller-card">
           <div className="seller-card-header">
-            <h2><TrendingUp size={16} /> Recent Transactions</h2>
+            <h2>Recent Transactions</h2>
           </div>
           {isLoading ? (
             <div style={{ padding: 16 }}>
               <Skeleton.Table cols={3} rows={5} showHeader={false} />
             </div>
           ) : transactions.length === 0 ? (
-            <div className="seller-empty" style={{ padding: '48px 16px' }}>
+            <div className="seller-empty">
               <Wallet size={36} />
               <p>No transactions yet.</p>
             </div>
@@ -114,13 +111,7 @@ export default function SellerFinance() {
                   <tr key={t.id}>
                     <td>{t.date ? new Date(t.date).toLocaleDateString() : ''}</td>
                     <td>{t.desc}</td>
-                    <td style={{ textAlign: 'right', color: t.type === 'credit' ? '#047857' : '#b91c1c', fontWeight: 600 }}>
-                      {t.type === 'credit' ? (
-                        <ArrowUpRight size={12} style={{ verticalAlign: -1 }} />
-                      ) : (
-                        <ArrowDownRight size={12} style={{ verticalAlign: -1 }} />
-                      )}
-                      {' '}
+                    <td className={t.type === 'credit' ? 'txn-credit' : 'txn-debit'}>
                       {fmt(t.amount)}
                     </td>
                   </tr>

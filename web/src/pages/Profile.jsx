@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Edit, Package, Heart, MessageSquare, Bell, Store,
-  ShoppingBag, Clock, Truck, CheckCircle,
+  ShoppingBag, Clock, Truck, CheckCircle, Settings,
 } from 'lucide-react';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import useAuthStore from '../store/authStore';
 import './Profile.css';
 
@@ -92,8 +93,8 @@ const Profile = () => {
       <div className="profile-header-card">
         <div className="profile-header-left">
           <div className="profile-avatar">
-            {profile?.avatarUrl ? (
-              <img src={profile.avatarUrl} alt={profile.fullName} />
+            {profile?.profilePhoto ? (
+              <img src={resolveImg(profile.profilePhoto)} alt={profile.fullName} />
             ) : (
               <div className="profile-avatar-placeholder">
                 {profile?.fullName?.charAt(0)?.toUpperCase() || 'U'}
@@ -119,7 +120,7 @@ const Profile = () => {
             </div>
           </div>
         </div>
-        <Link to="/profile/edit" className="profile-edit-button">
+        <Link to="/profile/settings" className="profile-edit-button">
           <Edit size={18} />
           Edit Profile
         </Link>
@@ -195,15 +196,11 @@ const Profile = () => {
             </div>
             <span className="service-label">Wishlist</span>
           </Link>
-          <Link to="/vouchers" className="service-item">
+          <Link to="/profile/settings" className="service-item">
             <div className="service-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="2" y="7" width="20" height="10" rx="2" />
-                <path d="M2 12h20" />
-                <circle cx="12" cy="12" r="1" />
-              </svg>
+              <Settings size={24} />
             </div>
-            <span className="service-label">Vouchers</span>
+            <span className="service-label">Settings</span>
           </Link>
         </div>
       </div>

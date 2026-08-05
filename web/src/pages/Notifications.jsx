@@ -125,7 +125,7 @@ export default function Notifications({ bare = false } = {}) {
   };
 
   const inner = (
-    <div className={bare ? 'profile-section' : 'notif-page'}>
+    <div className={bare ? 'profile-page-wrap' : 'notif-page'}>
       <div className={bare ? '' : 'notif-container'}>
 
         {!bare && (
@@ -136,26 +136,44 @@ export default function Notifications({ bare = false } = {}) {
         )}
 
         {/* Header */}
-        <div className="notif-header">
-          <div className="notif-header-left">
-            <h1>Notifications</h1>
-            {unreadCount > 0 && (
-              <span className="notif-unread-badge">{unreadCount} unread</span>
-            )}
+        {bare ? (
+          <header className="profile-page-header notif-page-header">
+            <h1 className="profile-page-title">Notifications</h1>
+            <div className="notif-header-actions">
+              {unreadCount > 0 && (
+                <button className="notif-action-btn" onClick={handleMarkAllRead}>
+                  <CheckCheck size={15} /> Mark all read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll}>
+                  <Trash2 size={15} /> Clear all
+                </button>
+              )}
+            </div>
+          </header>
+        ) : (
+          <div className="notif-header">
+            <div className="notif-header-left">
+              <h1>Notifications</h1>
+              {unreadCount > 0 && (
+                <span className="notif-unread-badge">{unreadCount} unread</span>
+              )}
+            </div>
+            <div className="notif-header-actions">
+              {unreadCount > 0 && (
+                <button className="notif-action-btn" onClick={handleMarkAllRead}>
+                  <CheckCheck size={15} /> Mark all read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll}>
+                  <Trash2 size={15} /> Clear all
+                </button>
+              )}
+            </div>
           </div>
-          <div className="notif-header-actions">
-            {unreadCount > 0 && (
-              <button className="notif-action-btn" onClick={handleMarkAllRead}>
-                <CheckCheck size={15} /> Mark all read
-              </button>
-            )}
-            {notifications.length > 0 && (
-              <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll}>
-                <Trash2 size={15} /> Clear all
-              </button>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Filters */}
         <div className="notif-filters">

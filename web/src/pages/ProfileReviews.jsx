@@ -3,14 +3,20 @@ import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
 
 const ProfileReviews = () => (
-  <div className="profile-section">
-    <h3 className="profile-section-title">My Reviews</h3>
-    <div className="empty-state">
-      <Star size={48} />
-      <p className="empty-state-text">You haven't written any reviews yet.</p>
-      <Link to="/profile/orders" className="empty-state-button">
-        Review a Purchase
-      </Link>
+  <div className="profile-page-wrap">
+    <header className="profile-page-header">
+      <h1 className="profile-page-title">My Reviews</h1>
+    </header>
+
+    <div className="profile-section">
+      <div className="empty-state">
+        <Star size={40} strokeWidth={1.5} />
+        <p className="empty-state-text">No reviews yet</p>
+        <p className="empty-state-hint">
+          Once your order is completed you can rate the product and leave a review.
+        </p>
+        <Link to="/profile/orders" className="empty-state-button">Review a Purchase</Link>
+      </div>
     </div>
   </div>
 );
