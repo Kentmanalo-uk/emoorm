@@ -273,12 +273,23 @@ const deleteUser = asyncHandler(async (req, res) => {
  */
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  const resetToken = await authService.forgotPassword(email);
+  const result = await authService.forgotPassword(email);
 
-  // In production, send the token via email. Here we return it for dev/testing.
-  successResponse(res, 200, 'If that email is registered, a reset link has been sent.', {
-    ...(process.env.NODE_ENV !== 'production' && resetToken ? { resetToken } : {}),
-  });
+  const isDev = process.env.NODE_ENV !== 'production';
+  const payload = {};
+  if (isDev && result?.resetToken) {
+    // Dev/test only — lets QA and this smoke-test flow skip a real inbox.
+    payload.resetToken = result.resetToken;
+    if (result.resetUrl) payload.resetUrl = result.resetUrl;
+    if (result.transport) payload.transport = result.transport;
+    payload.delivered = result.delivered;
+  }
+
+  successResponse(
+    res,
+    payload,
+    'If that email is registered, a reset link has been sent.',
+  );
 });
 
 /**
@@ -290,7 +301,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   await authService.resetPassword(token, password);
 
-  successResponse(res, 200, 'Password has been reset successfully.');
+  successResponse(res, null, 'Password has been reset successfully.');
 });
 
 const setUserRole = asyncHandler(async (req, res) => {

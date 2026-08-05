@@ -120,103 +120,103 @@ export default function SellerDashboard() {
 
         <div className="sd">
 
-        {/* Stats grid */}
-        <div className="sd-stats">
-        <StatCard label="Total Sales" value={`₱${formatNumber(stats.totalSales)}`} big />
-        <StatCard label="Orders" value={stats.ordersCount} />
-        <StatCard label="Products" value={stats.productsCount} />
-        <StatCard label="Completed" value={stats.completed} />
-      </div>
+          {/* Stats grid */}
+          <div className="sd-stats">
+            <StatCard label="Total Sales" value={`₱${formatNumber(stats.totalSales)}`} big />
+            <StatCard label="Orders" value={stats.ordersCount} />
+            <StatCard label="Products" value={stats.productsCount} />
+            <StatCard label="Completed" value={stats.completed} />
+          </div>
 
-      {/* Body grid */}
-      <div className="sd-body">
-        <section className="sd-card sd-orders">
-          <header className="sd-card-header">
-            <h2>Recent Orders</h2>
-            <Link to="/seller/orders" className="sd-view-all">View All</Link>
-          </header>
+          {/* Body grid */}
+          <div className="sd-body">
+            <section className="sd-card sd-orders">
+              <header className="sd-card-header">
+                <h2>Recent Orders</h2>
+                <Link to="/seller/orders" className="sd-view-all">View All</Link>
+              </header>
 
-          {isLoading ? (
-            <Skeleton.OrderList rows={4} />
-          ) : recentOrders.length === 0 ? (
-            <div className="sd-empty">
-              <ShoppingBag size={28} />
-              <p>No orders yet.</p>
-            </div>
-          ) : (
-            <ul className="sd-order-list">
-              {recentOrders.map((o) => (
-                <OrderRow
-                  key={o.id}
-                  order={o}
-                  onClick={() => navigate(`/seller/orders?id=${o.id}`)}
-                />
-              ))}
-            </ul>
-          )}
-        </section>
+              {isLoading ? (
+                <Skeleton.OrderList rows={4} />
+              ) : recentOrders.length === 0 ? (
+                <div className="sd-empty">
+                  <ShoppingBag size={28} />
+                  <p>No orders yet.</p>
+                </div>
+              ) : (
+                <ul className="sd-order-list">
+                  {recentOrders.map((o) => (
+                    <OrderRow
+                      key={o.id}
+                      order={o}
+                      onClick={() => navigate(`/seller/orders?id=${o.id}`)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
 
-        <aside className="sd-right">
-          <section className="sd-card sd-topprod">
-            <header className="sd-card-header">
-              <h2>Top Products</h2>
-              <TrendingUp size={15} className="sd-header-icon" />
-            </header>
-            {topProducts.length === 0 ? (
-              <div className="sd-empty sd-empty--sm">
-                <Package size={22} />
-                <p>No products yet.</p>
-              </div>
-            ) : (
-              <ol className="sd-top-list">
-                {topProducts.map((p, i) => (
-                  <li key={p.id} className="sd-top-item">
-                    <span className="sd-top-rank">{i + 1}</span>
-                    <div className="sd-top-info">
-                      <strong>{p.name}</strong>
-                      <span className="sd-top-meta">
-                        ₱{formatNumber(p.price)} · Stock: {p.stock ?? 0}
-                      </span>
-                      <span className="sd-top-rating">
-                        <Star size={11} fill="#f59e0b" stroke="#f59e0b" />
-                        {p.averageRating != null ? Number(p.averageRating).toFixed(0) : '—'}
-                      </span>
-                    </div>
+            <aside className="sd-right">
+              <section className="sd-card sd-topprod">
+                <header className="sd-card-header">
+                  <h2>Top Products</h2>
+                  <TrendingUp size={15} className="sd-header-icon" />
+                </header>
+                {topProducts.length === 0 ? (
+                  <div className="sd-empty sd-empty--sm">
+                    <Package size={22} />
+                    <p>No products yet.</p>
+                  </div>
+                ) : (
+                  <ol className="sd-top-list">
+                    {topProducts.map((p, i) => (
+                      <li key={p.id} className="sd-top-item">
+                        <span className="sd-top-rank">{i + 1}</span>
+                        <div className="sd-top-info">
+                          <strong>{p.name}</strong>
+                          <span className="sd-top-meta">
+                            ₱{formatNumber(p.price)} · Stock: {p.stock ?? 0}
+                          </span>
+                          <span className="sd-top-rating">
+                            <Star size={11} fill="#f59e0b" stroke="#f59e0b" />
+                            {p.averageRating != null ? Number(p.averageRating).toFixed(0) : '—'}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </section>
+
+              <section className="sd-card sd-quick">
+                <header className="sd-card-header sd-card-header--slim">
+                  <h2>Quick Actions</h2>
+                </header>
+                <ul className="sd-quick-list">
+                  <li>
+                    <Link to="/seller/products">
+                      <Package size={15} /> Manage Products
+                    </Link>
                   </li>
-                ))}
-              </ol>
-            )}
-          </section>
-
-          <section className="sd-card sd-quick">
-            <header className="sd-card-header sd-card-header--slim">
-              <h2>Quick Actions</h2>
-            </header>
-            <ul className="sd-quick-list">
-              <li>
-                <Link to="/seller/products">
-                  <Package size={15} /> Manage Products
-                </Link>
-              </li>
-              <li>
-                <Link to="/seller/orders">
-                  <ShoppingBag size={15} /> View Orders
-                </Link>
-              </li>
-              <li>
-                <Link to="/seller/analytics">
-                  <BarChart2 size={15} /> Analytics
-                </Link>
-              </li>
-              <li>
-                <Link to="/seller/store">
-                  <User size={15} /> Shop Profile
-                </Link>
-              </li>
-            </ul>
-          </section>
-        </aside>
-      </div>
+                  <li>
+                    <Link to="/seller/orders">
+                      <ShoppingBag size={15} /> View Orders
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/seller/analytics">
+                      <BarChart2 size={15} /> Analytics
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/seller/store">
+                      <User size={15} /> Shop Profile
+                    </Link>
+                  </li>
+                </ul>
+              </section>
+            </aside>
+          </div>
         </div>
       </div>
     </div>

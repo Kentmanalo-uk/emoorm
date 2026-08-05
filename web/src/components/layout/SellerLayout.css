@@ -153,22 +153,22 @@
 }
 
 /* Solid filled icons (no outline) */
-.sc-nav-item > svg:not(.sc-nav-chevron) {
+.sc-nav-item>svg:not(.sc-nav-chevron) {
   stroke: none;
 }
 
-.sc-nav-item > svg:not(.sc-nav-chevron) path,
-.sc-nav-item > svg:not(.sc-nav-chevron) rect,
-.sc-nav-item > svg:not(.sc-nav-chevron) circle,
-.sc-nav-item > svg:not(.sc-nav-chevron) polygon,
-.sc-nav-item > svg:not(.sc-nav-chevron) ellipse {
+.sc-nav-item>svg:not(.sc-nav-chevron) path,
+.sc-nav-item>svg:not(.sc-nav-chevron) rect,
+.sc-nav-item>svg:not(.sc-nav-chevron) circle,
+.sc-nav-item>svg:not(.sc-nav-chevron) polygon,
+.sc-nav-item>svg:not(.sc-nav-chevron) ellipse {
   fill: currentColor;
   stroke: none;
 }
 
 /* Line/polyline shapes have no fill area — keep them stroked so the icon still shows */
-.sc-nav-item > svg:not(.sc-nav-chevron) line,
-.sc-nav-item > svg:not(.sc-nav-chevron) polyline {
+.sc-nav-item>svg:not(.sc-nav-chevron) line,
+.sc-nav-item>svg:not(.sc-nav-chevron) polyline {
   stroke: currentColor;
   stroke-width: 2.25;
   fill: none;
@@ -417,7 +417,7 @@
 
 .sc-brand-row {
   transition: padding 220ms cubic-bezier(0.4, 0, 0.2, 1),
-              gap 180ms ease;
+    gap 180ms ease;
 }
 
 .sc-brand {
@@ -426,15 +426,15 @@
 
 /* Elements that collapse: fade + shrink instead of display:none for smooth motion */
 .sc-brand-text,
-.sc-nav-item > span:not(.sc-nav-chevron),
+.sc-nav-item>span:not(.sc-nav-chevron),
 .sc-user-meta {
   overflow: hidden;
   white-space: nowrap;
   max-width: 200px;
   opacity: 1;
   transition: max-width 220ms cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 140ms ease,
-              margin 180ms ease;
+    opacity 140ms ease,
+    margin 180ms ease;
 }
 
 .sc-nav-chevron,
@@ -448,17 +448,17 @@
   max-height: 400px;
   opacity: 1;
   transition: max-height 220ms cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 160ms ease;
+    opacity 160ms ease;
 }
 
 .sc-nav-item {
   transition: background-color .12s, color .12s,
-              gap 180ms ease, padding 180ms ease, justify-content 180ms ease;
+    gap 180ms ease, padding 180ms ease, justify-content 180ms ease;
 }
 
 .sc-user-card {
   transition: background-color .12s,
-              gap 180ms ease, padding 180ms ease;
+    gap 180ms ease, padding 180ms ease;
 }
 
 /* Collapsed state */
@@ -482,7 +482,7 @@
 }
 
 .sc-shell.is-collapsed .sc-brand-text,
-.sc-shell.is-collapsed .sc-nav-item > span:not(.sc-nav-chevron),
+.sc-shell.is-collapsed .sc-nav-item>span:not(.sc-nav-chevron),
 .sc-shell.is-collapsed .sc-user-meta {
   max-width: 0;
   opacity: 0;
@@ -516,7 +516,7 @@
   width: 0;
 }
 
-.sc-shell.is-collapsed .sc-nav-item > svg:not(.sc-nav-chevron) {
+.sc-shell.is-collapsed .sc-nav-item>svg:not(.sc-nav-chevron) {
   margin: 0 auto;
 }
 
@@ -527,13 +527,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .sc-shell,
   .sc-sidebar-inner,
   .sc-brand-row,
   .sc-brand,
   .sc-brand-text,
   .sc-nav-item,
-  .sc-nav-item > span,
+  .sc-nav-item>span,
   .sc-nav-chevron,
   .sc-user-meta,
   .sc-user-caret,
@@ -542,4 +543,3 @@
     transition: none !important;
   }
 }
-

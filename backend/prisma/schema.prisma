@@ -210,6 +210,7 @@ model Product {
   price       Decimal       @db.Decimal(10, 2)
   stock       Int           @default(0)
   images      Json          // Array of image URLs
+  imageHash   String?       @map("image_hash") @db.VarChar(16)
 
   // Ownership
   storeId     String        @map("store_id")

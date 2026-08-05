@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   Send, MessageSquare, Store as StoreIcon, User as UserIcon,
-  Package, Pin, RefreshCw, Loader2, Paperclip,
+  Package, Pin, RefreshCw, Loader2,
 } from 'lucide-react';
 import axiosInstance from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
@@ -100,39 +100,47 @@ function ConversationListItem({ item, active, currentUserId, onClick }) {
 
 function PinnedOrderCard({ order, onAttach }) {
   const style = ORDER_STATUS_STYLES[order.status] || { label: order.status, tone: 'gray' };
+  const firstItem = order.items?.[0];
+  const thumb = firstItem?.image;
+  const extra = Math.max(0, (order.itemCount || 0) - (firstItem?.quantity || 0));
+  const dateLabel = new Date(order.createdAt).toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+  });
+
   return (
     <div className="msgr-pin-card">
-      <div className="msgr-pin-head">
-        <Pin size={13} />
-        <span className="msgr-pin-title">Order #{order.orderNumber}</span>
-        <span className={`msgr-pin-status is-${style.tone}`}>{style.label}</span>
+      <div className="msgr-pin-thumb">
+        {thumb ? (
+          <img src={thumb} alt="" />
+        ) : (
+          <Package size={18} strokeWidth={1.6} />
+        )}
       </div>
-      <div className="msgr-pin-meta">
-        <span>{order.itemCount} item{order.itemCount === 1 ? '' : 's'}</span>
-        <span className="msgr-dot" />
-        <span>{formatMoney(order.total)}</span>
-        <span className="msgr-dot" />
-        <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+      <div className="msgr-pin-body">
+        <div className="msgr-pin-row-top">
+          <span className="msgr-pin-num">#{order.orderNumber}</span>
+          <span className={`msgr-pin-status is-${style.tone}`}>{style.label}</span>
+        </div>
+        <div className="msgr-pin-name" title={firstItem?.productName}>
+          {firstItem?.productName || 'Order items'}
+          {extra > 0 && <span className="msgr-pin-more"> +{extra} more</span>}
+        </div>
+        <div className="msgr-pin-row-bottom">
+          <span className="msgr-pin-total">{formatMoney(order.total)}</span>
+          <span className="msgr-pin-date">{dateLabel}</span>
+          {onAttach && (
+            <button
+              type="button"
+              className="msgr-pin-attach"
+              onClick={() => onAttach(order)}
+              title="Reference this order in your next message"
+            >
+              Reference
+            </button>
+          )}
+        </div>
       </div>
-      {order.items?.length > 0 && (
-        <ul className="msgr-pin-items">
-          {order.items.map((it) => (
-            <li key={it.id}>
-              {it.quantity}× {it.productName}
-            </li>
-          ))}
-        </ul>
-      )}
-      {onAttach && (
-        <button
-          type="button"
-          className="msgr-pin-attach"
-          onClick={() => onAttach(order)}
-          title="Reference this order in your next message"
-        >
-          <Paperclip size={12} /> Reference this order
-        </button>
-      )}
     </div>
   );
 }
@@ -266,7 +274,7 @@ export default function Messenger({ role = 'buyer', className = '' }) {
     fetchConversation(activeId).then((convo) => {
       if (convo) scrollToBottom();
       // mark read
-      axiosInstance.post(`/messages/conversations/${activeId}/read`).catch(() => {});
+      axiosInstance.post(`/messages/conversations/${activeId}/read`).catch(() => { });
     });
   }, [activeId, fetchConversation, scrollToBottom]);
 
@@ -279,7 +287,7 @@ export default function Messenger({ role = 'buyer', className = '' }) {
       const next = await fetchConversation(activeId, { silent: true });
       if (next && (next.messages?.length || 0) > prevCount) {
         scrollToBottom();
-        axiosInstance.post(`/messages/conversations/${activeId}/read`).catch(() => {});
+        axiosInstance.post(`/messages/conversations/${activeId}/read`).catch(() => { });
         fetchConversations();
       }
     }, POLL_INTERVAL_MS);
@@ -431,14 +439,10 @@ export default function Messenger({ role = 'buyer', className = '' }) {
             {activeConvo.pinnedOrders?.length > 0 && (
               <div className="msgr-pins">
                 <div className="msgr-pins-head">
-                  <Pin size={12} />
+                  <Pin size={11} />
                   <span>
-                    Pinned orders ({activeConvo.pinnedOrders.length})
-                  </span>
-                  <span className="msgr-pins-hint">
-                    {activeConvo.role === 'seller'
-                      ? "This buyer's orders with your store"
-                      : 'Your orders with this store'}
+                    {activeConvo.role === 'seller' ? 'Buyer orders' : 'Your orders'}
+                    <span className="msgr-pins-count"> · {activeConvo.pinnedOrders.length}</span>
                   </span>
                 </div>
                 <div className="msgr-pins-track">

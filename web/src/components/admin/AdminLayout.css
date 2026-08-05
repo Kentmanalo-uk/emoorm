@@ -153,22 +153,22 @@
 }
 
 /* Solid filled icons (no outline) */
-.ac-nav-item > svg:not(.ac-nav-chevron) {
+.ac-nav-item>svg:not(.ac-nav-chevron) {
   stroke: none;
 }
 
-.ac-nav-item > svg:not(.ac-nav-chevron) path,
-.ac-nav-item > svg:not(.ac-nav-chevron) rect,
-.ac-nav-item > svg:not(.ac-nav-chevron) circle,
-.ac-nav-item > svg:not(.ac-nav-chevron) polygon,
-.ac-nav-item > svg:not(.ac-nav-chevron) ellipse {
+.ac-nav-item>svg:not(.ac-nav-chevron) path,
+.ac-nav-item>svg:not(.ac-nav-chevron) rect,
+.ac-nav-item>svg:not(.ac-nav-chevron) circle,
+.ac-nav-item>svg:not(.ac-nav-chevron) polygon,
+.ac-nav-item>svg:not(.ac-nav-chevron) ellipse {
   fill: currentColor;
   stroke: none;
 }
 
 /* Line/polyline shapes have no fill area — keep them stroked so the icon still shows */
-.ac-nav-item > svg:not(.ac-nav-chevron) line,
-.ac-nav-item > svg:not(.ac-nav-chevron) polyline {
+.ac-nav-item>svg:not(.ac-nav-chevron) line,
+.ac-nav-item>svg:not(.ac-nav-chevron) polyline {
   stroke: currentColor;
   stroke-width: 2.25;
   fill: none;
@@ -920,7 +920,7 @@
 
 .ac-brand-row {
   transition: padding 220ms cubic-bezier(0.4, 0, 0.2, 1),
-              gap 180ms ease;
+    gap 180ms ease;
 }
 
 .ac-brand {
@@ -928,15 +928,15 @@
 }
 
 .ac-brand-text,
-.ac-nav-item > span:not(.ac-nav-chevron),
+.ac-nav-item>span:not(.ac-nav-chevron),
 .ac-user-meta {
   overflow: hidden;
   white-space: nowrap;
   max-width: 200px;
   opacity: 1;
   transition: max-width 220ms cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 140ms ease,
-              margin 180ms ease;
+    opacity 140ms ease,
+    margin 180ms ease;
 }
 
 .ac-nav-chevron,
@@ -950,17 +950,17 @@
   max-height: 400px;
   opacity: 1;
   transition: max-height 220ms cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 160ms ease;
+    opacity 160ms ease;
 }
 
 .ac-nav-item {
   transition: background-color .12s, color .12s,
-              gap 180ms ease, padding 180ms ease, justify-content 180ms ease;
+    gap 180ms ease, padding 180ms ease, justify-content 180ms ease;
 }
 
 .ac-user-card {
   transition: background-color .12s,
-              gap 180ms ease, padding 180ms ease;
+    gap 180ms ease, padding 180ms ease;
 }
 
 .ac-shell.is-collapsed {
@@ -983,7 +983,7 @@
 }
 
 .ac-shell.is-collapsed .ac-brand-text,
-.ac-shell.is-collapsed .ac-nav-item > span:not(.ac-nav-chevron),
+.ac-shell.is-collapsed .ac-nav-item>span:not(.ac-nav-chevron),
 .ac-shell.is-collapsed .ac-user-meta {
   max-width: 0;
   opacity: 0;
@@ -1017,7 +1017,7 @@
   width: 0;
 }
 
-.ac-shell.is-collapsed .ac-nav-item > svg:not(.ac-nav-chevron) {
+.ac-shell.is-collapsed .ac-nav-item>svg:not(.ac-nav-chevron) {
   margin: 0 auto;
 }
 
@@ -1028,13 +1028,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .ac-shell,
   .ac-sidebar-inner,
   .ac-brand-row,
   .ac-brand,
   .ac-brand-text,
   .ac-nav-item,
-  .ac-nav-item > span,
+  .ac-nav-item>span,
   .ac-nav-chevron,
   .ac-user-meta,
   .ac-user-caret,

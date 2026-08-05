@@ -128,6 +128,9 @@ const findBuyerOrdersForStore = async (buyerId, storeId) =>
           productName: true,
           quantity: true,
           price: true,
+          product: {
+            select: { images: true },
+          },
         },
       },
     },

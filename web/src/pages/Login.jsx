@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import './Login.css';
@@ -290,117 +290,117 @@ const Login = () => {
                 />
               )}
               {mfaStage === 'credentials' && (<>
-              <div className="login-form-header">
-                <h2 className="login-form-title">Sign In</h2>
-              </div>
-
-              <form onSubmit={handleSubmit} className="login-form">
-                {/* Email Field */}
-                <div className="login-form-group">
-                  <label htmlFor="email" className="login-form-label">
-                    Email address
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    className={`login-form-input ${errors.email ? 'login-form-input-error' : ''}`}
-                    placeholder="you@example.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                  />
-                  {errors.email && (
-                    <span className="login-form-error">{errors.email}</span>
-                  )}
+                <div className="login-form-header">
+                  <h2 className="login-form-title">Sign In</h2>
                 </div>
 
-                {/* Password Field */}
-                <div className="login-form-group">
-                  <div className="login-form-label-row">
-                    <label htmlFor="password" className="login-form-label">
-                      Password
+                <form onSubmit={handleSubmit} className="login-form">
+                  {/* Email Field */}
+                  <div className="login-form-group">
+                    <label htmlFor="email" className="login-form-label">
+                      Email address
                     </label>
-                    <Link to="/forgot-password" className="login-form-forgot">
-                      Forgot?
-                    </Link>
-                  </div>
-                  <div className="login-form-input-wrapper">
                     <input
-                      type={showPassword ? 'text' : 'password'}
-                      id="password"
-                      name="password"
-                      className={`login-form-input ${errors.password ? 'login-form-input-error' : ''}`}
-                      placeholder="Enter your password"
-                      value={formData.password}
+                      type="email"
+                      id="email"
+                      name="email"
+                      className={`login-form-input ${errors.email ? 'login-form-input-error' : ''}`}
+                      placeholder="you@example.com"
+                      value={formData.email}
                       onChange={handleChange}
                     />
-                    <button
-                      type="button"
-                      className="login-form-toggle-password"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
+                    {errors.email && (
+                      <span className="login-form-error">{errors.email}</span>
+                    )}
                   </div>
-                  {errors.password && (
-                    <span className="login-form-error">{errors.password}</span>
+
+                  {/* Password Field */}
+                  <div className="login-form-group">
+                    <div className="login-form-label-row">
+                      <label htmlFor="password" className="login-form-label">
+                        Password
+                      </label>
+                      <Link to="/forgot-password" className="login-form-forgot">
+                        Forgot?
+                      </Link>
+                    </div>
+                    <div className="login-form-input-wrapper">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        id="password"
+                        name="password"
+                        className={`login-form-input ${errors.password ? 'login-form-input-error' : ''}`}
+                        placeholder="Enter your password"
+                        value={formData.password}
+                        onChange={handleChange}
+                      />
+                      <button
+                        type="button"
+                        className="login-form-toggle-password"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <span className="login-form-error">{errors.password}</span>
+                    )}
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    className="login-form-submit"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Signing in...' : 'Log in'}
+                  </button>
+
+                  {/* API Error Message */}
+                  {apiError && (
+                    <div className="login-form-error-message">{apiError}</div>
                   )}
-                </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  className="login-form-submit"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Signing in...' : 'Log in'}
-                </button>
+                  {errors.submit && (
+                    <div className="login-form-error-message">{errors.submit}</div>
+                  )}
 
-                {/* API Error Message */}
-                {apiError && (
-                  <div className="login-form-error-message">{apiError}</div>
-                )}
+                  {/* Divider */}
+                  <div className="login-form-divider">
+                    <span className="login-form-divider-text">OR CONTINUE WITH</span>
+                  </div>
 
-                {errors.submit && (
-                  <div className="login-form-error-message">{errors.submit}</div>
-                )}
+                  {/* Google Sign In */}
+                  <button
+                    type="button"
+                    className="login-form-google"
+                    onClick={handleGoogleLogin}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
+                      <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853" />
+                      <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
+                      <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
+                    </svg>
+                    Sign in with Google
+                  </button>
 
-                {/* Divider */}
-                <div className="login-form-divider">
-                  <span className="login-form-divider-text">OR CONTINUE WITH</span>
-                </div>
+                  {/* Sign Up Link */}
+                  <div className="login-form-footer">
+                    <span className="login-form-footer-text">New to Emoorm? </span>
+                    <Link to="/register" className="login-form-footer-link">
+                      Create an account
+                    </Link>
+                  </div>
 
-                {/* Google Sign In */}
-                <button
-                  type="button"
-                  className="login-form-google"
-                  onClick={handleGoogleLogin}
-                >
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
-                    <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853" />
-                    <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
-                    <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
-                  </svg>
-                  Sign in with Google
-                </button>
-
-                {/* Sign Up Link */}
-                <div className="login-form-footer">
-                  <span className="login-form-footer-text">New to Emoorm? </span>
-                  <Link to="/register" className="login-form-footer-link">
-                    Create an account
-                  </Link>
-                </div>
-
-                {/* Terms */}
-                <p className="login-form-terms">
-                  By logging in, you agree to Emoorm's{' '}
-                  <Link to="/terms" className="login-form-terms-link">Terms</Link>
-                  {' & '}
-                  <Link to="/privacy" className="login-form-terms-link">Privacy Policy</Link>
-                </p>
-              </form>
+                  {/* Terms */}
+                  <p className="login-form-terms">
+                    By logging in, you agree to Emoorm's{' '}
+                    <Link to="/terms" className="login-form-terms-link">Terms</Link>
+                    {' & '}
+                    <Link to="/privacy" className="login-form-terms-link">Privacy Policy</Link>
+                  </p>
+                </form>
               </>)}
             </div>
 
@@ -422,7 +422,6 @@ export default Login;
 function MfaVerify({ email, code, onCodeChange, onSubmit, onCancel, isLoading, apiError }) {
   return (
     <form onSubmit={onSubmit} className="login-form">
-      <div className="login-mfa-icon"><ShieldCheck size={28} /></div>
       <h2 className="login-form-title">Two-factor verification</h2>
       <p className="login-mfa-hint">
         Enter the 6-digit code from your authenticator app for
@@ -461,7 +460,6 @@ function MfaSetup({
   if (backupCodes) {
     return (
       <div className="login-form">
-        <div className="login-mfa-icon"><ShieldCheck size={28} /></div>
         <h2 className="login-form-title">Save your backup codes</h2>
         <p className="login-mfa-hint">
           Store these in a safe place. Each can be used once if you lose access to your authenticator.
@@ -477,7 +475,6 @@ function MfaSetup({
   }
   return (
     <form onSubmit={onSubmit} className="login-form">
-      <div className="login-mfa-icon"><ShieldCheck size={28} /></div>
       <h2 className="login-form-title">Set up two-factor auth</h2>
       <p className="login-mfa-hint">
         Admin accounts require an authenticator app. Scan the QR with Google

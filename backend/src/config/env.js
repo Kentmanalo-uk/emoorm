@@ -60,6 +60,9 @@ const config = {
     from: process.env.SMTP_FROM || 'noreply@emoorm.com',
   },
 
+  // Frontend URL (used for links in outgoing emails)
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+
   // Pagination Configuration
   pagination: {
     defaultPageSize: parseInt(process.env.DEFAULT_PAGE_SIZE || '20', 10),

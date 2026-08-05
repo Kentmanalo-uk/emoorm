@@ -13,6 +13,12 @@ const resolveRole = (conversation, userId) => {
   throw new ApiError('You do not have access to this conversation', 403);
 };
 
+const firstImage = (product) => {
+  const imgs = product?.images;
+  if (Array.isArray(imgs) && imgs.length > 0) return imgs[0];
+  return null;
+};
+
 const shapePinnedOrders = (orders) =>
   (orders || []).map((o) => ({
     id: o.id,
@@ -30,6 +36,7 @@ const shapePinnedOrders = (orders) =>
       productName: it.productName,
       quantity: it.quantity,
       price: Number(it.price),
+      image: firstImage(it.product),
     })),
   }));
 
@@ -65,12 +72,12 @@ const shapeConversationSummary = async (conversation, viewerId) => {
     lastMessageAt: conversation.lastMessageAt,
     lastMessage: lastMessage
       ? {
-          id: lastMessage.id,
-          body: lastMessage.body,
-          senderId: lastMessage.senderId,
-          createdAt: lastMessage.createdAt,
-          hasOrder: Boolean(lastMessage.orderId),
-        }
+        id: lastMessage.id,
+        body: lastMessage.body,
+        senderId: lastMessage.senderId,
+        createdAt: lastMessage.createdAt,
+        hasOrder: Boolean(lastMessage.orderId),
+      }
       : null,
     unreadCount,
   };
@@ -170,12 +177,12 @@ const getConversation = async (conversationId, userId) => {
       orderId: m.orderId,
       order: m.order
         ? {
-            id: m.order.id,
-            orderNumber: m.order.orderNumber,
-            status: m.order.status,
-            total: Number(m.order.total),
-            createdAt: m.order.createdAt,
-          }
+          id: m.order.id,
+          orderNumber: m.order.orderNumber,
+          status: m.order.status,
+          total: Number(m.order.total),
+          createdAt: m.order.createdAt,
+        }
         : null,
       createdAt: m.createdAt,
       readAt: m.readAt,
@@ -232,12 +239,12 @@ const sendMessage = async (conversationId, userId, { body, orderId }) => {
     orderId: message.orderId,
     order: message.order
       ? {
-          id: message.order.id,
-          orderNumber: message.order.orderNumber,
-          status: message.order.status,
-          total: Number(message.order.total),
-          createdAt: message.order.createdAt,
-        }
+        id: message.order.id,
+        orderNumber: message.order.orderNumber,
+        status: message.order.status,
+        total: Number(message.order.total),
+        createdAt: message.order.createdAt,
+      }
       : null,
     createdAt: message.createdAt,
     readAt: message.readAt,

@@ -5,6 +5,8 @@ const storeService = require('./store.service');
 const notificationService = require('./notification.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateTokens, verifyRefreshToken, generateMfaToken } = require('../utils/jwt');
+const { sendPasswordResetEmail } = require('../utils/email');
+const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -430,15 +432,19 @@ const deleteUser = async (userId) => {
 };
 
 /**
- * Initiate password reset — generates a token valid for 1 hour
+ * Initiate password reset — generates a token valid for 1 hour and emails
+ * the user a reset link. Always returns the same shape regardless of whether
+ * the email exists to prevent user enumeration.
  * @param {String} email
- * @returns {Promise<String>} resetToken (returned so dev/test can use it without email)
+ * @returns {Promise<{ delivered: boolean, transport: string|null, resetToken: string|null }>}
  */
 const forgotPassword = async (email) => {
   const user = await userRepository.findByEmail(email);
 
-  // Always respond the same way to prevent email enumeration
-  if (!user || user.deletedAt) return null;
+  // Silently succeed for unknown/deleted accounts to avoid leaking membership.
+  if (!user || user.deletedAt) {
+    return { delivered: false, transport: null, resetToken: null };
+  }
 
   const resetToken = crypto.randomBytes(32).toString('hex');
   const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
@@ -446,7 +452,30 @@ const forgotPassword = async (email) => {
 
   await userRepository.setPasswordResetToken(user.id, hashedToken, expiry);
 
-  return resetToken;
+  const resetUrl = `${config.frontendUrl.replace(/\/$/, '')}/reset-password?token=${resetToken}`;
+
+  let delivered = false;
+  let transport = null;
+  try {
+    const info = await sendPasswordResetEmail({
+      user: { email: user.email, fullName: user.fullName },
+      token: resetToken,
+      resetUrl,
+    });
+    delivered = info?.delivered || false;
+    transport = info?.transport || null;
+  } catch (err) {
+    // Do not surface the failure to the caller — respond generically.
+    console.error('[forgotPassword] Failed to send email:', err.message);
+  }
+
+  return {
+    delivered,
+    transport,
+    // Exposed by the controller only when NODE_ENV !== 'production'.
+    resetToken,
+    resetUrl,
+  };
 };
 
 /**

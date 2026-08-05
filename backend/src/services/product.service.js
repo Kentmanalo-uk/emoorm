@@ -3,6 +3,18 @@ const storeRepository = require('../repositories/store.repository');
 const categoryRepository = require('../repositories/category.repository');
 const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
+const { hashFromSource } = require('../utils/imageHash');
+
+const computeImageHashSafe = async (images) => {
+  const first = Array.isArray(images) ? images[0] : null;
+  if (!first) return null;
+  try {
+    return await hashFromSource(first);
+  } catch (err) {
+    console.warn('[imageHash] failed to hash product image:', err.message);
+    return null;
+  }
+};
 
 /**
  * Product Service
@@ -64,6 +76,7 @@ const createProduct = async (userId, data) => {
   const initialStatus = store.isActive && !store.isSuspended ? 'APPROVED' : 'PENDING';
 
   // Create product
+  const imageHash = await computeImageHashSafe(data.images);
   const product = await productRepository.createProduct({
     name: data.name,
     slug,
@@ -71,6 +84,7 @@ const createProduct = async (userId, data) => {
     price: data.price,
     stock: data.stock || 0,
     images: data.images || [],
+    imageHash,
     storeId: store.id,
     categoryId: data.categoryId,
     municipalityId: store.municipalityId,
@@ -197,6 +211,10 @@ const updateProduct = async (productId, userId, data) => {
   // If product was rejected and being updated, reset to pending
   if (product.status === 'SUSPENDED' || product.status === 'ARCHIVED') {
     updateData.status = 'PENDING';
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updateData, 'images')) {
+    updateData.imageHash = await computeImageHashSafe(updateData.images);
   }
 
   return productRepository.updateProduct(productId, updateData);

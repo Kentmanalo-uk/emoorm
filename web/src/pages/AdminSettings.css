@@ -15,7 +15,7 @@
   margin-bottom: 16px;
 }
 
-.admin-settings-card-head > div:nth-child(2) {
+.admin-settings-card-head>div:nth-child(2) {
   flex: 1;
 }
 
@@ -54,11 +54,13 @@
   flex-direction: column;
   gap: 4px;
 }
-.admin-settings-field > span {
+
+.admin-settings-field>span {
   font-size: 12.5px;
   font-weight: 500;
   color: #374151;
 }
+
 .admin-settings-field input {
   padding: 9px 12px;
   border: 1px solid #d1d5db;
@@ -67,11 +69,13 @@
   transition: border-color .12s, box-shadow .12s;
   background: #fff;
 }
+
 .admin-settings-field input:focus {
   outline: none;
   border-color: #059669;
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
 }
+
 .admin-settings-field input:disabled {
   background: #f9fafb;
   color: #6b7280;
@@ -97,29 +101,52 @@
   font-weight: 500;
   transition: background-color .12s, border-color .12s, color .12s;
 }
-.admin-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.admin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .admin-btn-primary {
   background: #059669;
   color: #fff;
   border-color: #059669;
 }
-.admin-btn-primary:hover { background: #047857; border-color: #047857; }
+
+.admin-btn-primary:hover {
+  background: #047857;
+  border-color: #047857;
+}
+
 .admin-btn-outline {
   color: #374151;
   border-color: #d1d5db;
   background: #fff;
 }
-.admin-btn-outline:hover { border-color: #9ca3af; }
+
+.admin-btn-outline:hover {
+  border-color: #9ca3af;
+}
+
 .admin-btn-ghost {
   color: #6b7280;
 }
-.admin-btn-ghost:hover { color: #111827; background: #f3f4f6; }
+
+.admin-btn-ghost:hover {
+  color: #111827;
+  background: #f3f4f6;
+}
+
 .admin-btn-danger {
   background: #dc2626;
   color: #fff;
   border-color: #dc2626;
 }
-.admin-btn-danger:hover { background: #b91c1c; border-color: #b91c1c; }
+
+.admin-btn-danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
 
 .admin-mfa-status {
   align-self: flex-start;
@@ -130,10 +157,12 @@
   letter-spacing: .3px;
   text-transform: uppercase;
 }
+
 .admin-mfa-status.is-on {
   background: #d1fae5;
   color: #065f46;
 }
+
 .admin-mfa-status.is-off {
   background: #fee2e2;
   color: #991b1b;
@@ -152,6 +181,7 @@
   flex-direction: column;
   gap: 12px;
 }
+
 .admin-mfa-qr {
   align-self: center;
   width: 180px;
@@ -161,6 +191,7 @@
   background: #fff;
   padding: 8px;
 }
+
 .admin-mfa-secret {
   display: flex;
   flex-direction: column;
@@ -172,13 +203,15 @@
   border: 1px dashed #d1d5db;
   text-align: center;
 }
-.admin-mfa-secret > span {
+
+.admin-mfa-secret>span {
   font-size: 11.5px;
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: .5px;
 }
-.admin-mfa-secret > code {
+
+.admin-mfa-secret>code {
   font-family: 'Menlo', 'Courier New', monospace;
   font-size: 13px;
   color: #111827;
@@ -190,12 +223,14 @@
   flex-direction: column;
   gap: 8px;
 }
+
 .admin-mfa-manage-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
 }
+
 .admin-mfa-required-note {
   font-size: 12.5px;
   color: #b45309;
@@ -211,12 +246,14 @@
   border: 1px solid #fcd34d;
   margin-bottom: 14px;
 }
+
 .admin-mfa-backup-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 6px;
 }
+
 .admin-mfa-backup-list {
   list-style: none;
   padding: 0;
@@ -225,6 +262,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
+
 .admin-mfa-backup-list code {
   display: block;
   padding: 6px 10px;
@@ -237,5 +275,12 @@
   text-align: center;
 }
 
-.spin { animation: admin-spin 1s linear infinite; }
-@keyframes admin-spin { to { transform: rotate(360deg); } }
+.spin {
+  animation: admin-spin 1s linear infinite;
+}
+
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

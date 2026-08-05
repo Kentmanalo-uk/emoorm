@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, ShieldAlert, KeyRound, User, Save, Loader2, RefreshCcw, Copy } from 'lucide-react';
+import { ShieldCheck, KeyRound, User, Save, Loader2, RefreshCcw, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import '../components/admin/AdminLayout.css';
@@ -255,9 +255,6 @@ export default function AdminSettings() {
         {/* MFA */}
         <section className="admin-card admin-settings-card admin-settings-security">
           <header className="admin-settings-card-head">
-            <div className="admin-settings-icon admin-settings-icon-security">
-              {mfaStatus?.enabled ? <ShieldCheck size={18} /> : <ShieldAlert size={18} />}
-            </div>
             <div>
               <h2 className="admin-card-title">Two-factor authentication</h2>
               <p className="admin-settings-sub">
