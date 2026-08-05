@@ -4,6 +4,30 @@
   padding: 0;
 }
 
+/* Match the header's outer padding so the carousel and the two right-side
+   cards align with the logo / topbar edges. */
+.banner-section>.container {
+  max-width: 1280px;
+  padding: 0 32px;
+}
+
+/* Align every home section below the banner (Shop by Category, Suggested for
+   You, Stores Near You) to the same 1280px / 32px grid used by the header. */
+.categories-section>.container,
+.products-section>.container,
+.stores-section>.container {
+  max-width: 1280px;
+  padding: 0 32px;
+}
+
+@media (max-width: 768px) {
+  .categories-section>.container,
+  .products-section>.container,
+  .stores-section>.container {
+    padding: 0 16px;
+  }
+}
+
 .banner-grid {
   display: grid;
   grid-template-columns: 1fr 300px;
@@ -15,7 +39,7 @@
   position: relative;
   overflow: hidden;
   border-radius: 0;
-  height: 320px;
+  height: 420px;
   background-color: #f3f4f6;
 }
 
@@ -104,7 +128,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  height: 320px;
+  height: 420px;
 }
 
 .banner-card {
@@ -301,7 +325,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 12px;
-  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -764,7 +787,7 @@
   }
 
   .banner-carousel {
-    height: 220px;
+    height: 280px;
   }
 
   .banner-sidebar {
@@ -805,7 +828,7 @@
   }
 
   .banner-carousel {
-    height: 180px;
+    height: 220px;
   }
 
   .banner-sidebar {

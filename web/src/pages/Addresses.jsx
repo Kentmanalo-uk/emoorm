@@ -4,6 +4,7 @@ import { MapPin, Edit, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
+import Skeleton from '../components/ui/Skeleton';
 import './Addresses.css';
 
 /**
@@ -81,7 +82,16 @@ const Addresses = () => {
 
   if (isLoading) {
     return (
-      <div className="addresses-loading"><p>Loading...</p></div>
+      <div className="profile-section">
+        <div className="addresses-header">
+          <Skeleton height={20} width={160} />
+        </div>
+        <div className="address-card">
+          <Skeleton.Text lines={3} height={13} />
+          <div style={{ height: 12 }} />
+          <Skeleton height={36} width={160} radius={8} />
+        </div>
+      </div>
     );
   }
 

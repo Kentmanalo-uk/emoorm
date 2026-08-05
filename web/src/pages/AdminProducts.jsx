@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
@@ -137,7 +138,7 @@ export default function AdminProducts() {
         </div>
 
         {isLoading ? (
-          <div className="admin-loading"><p>Loading…</p></div>
+          <Skeleton.Table cols={6} rows={6} />
         ) : products.length === 0 ? (
           <div className="admin-empty">
             <Package size={36} />

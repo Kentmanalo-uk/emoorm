@@ -4,6 +4,7 @@ import {
   Flag, Star, CheckCircle, Clock, XCircle, BarChart2
 } from 'lucide-react';
 import AdminLayout from '../components/admin/AdminLayout';
+import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
 import './AdminAnalytics.css';
@@ -29,7 +30,7 @@ export default function AdminAnalytics() {
           axios.get('/orders', { params: { pageSize: 10 } }),
           axios.get('/stores', { params: { pageSize: 1 } }),
           axios.get('/reports', { params: { pageSize: 1, status: 'PENDING' } }),
-          axios.get('/products', { params: { pageSize: 5, sort: 'popular' } }),
+          axios.get('/products', { params: { pageSize: 5, sortBy: 'orderCount', sortOrder: 'desc' } }),
         ]);
 
       const v = (r) => (r.status === 'fulfilled' ? r.value : null);
@@ -145,7 +146,7 @@ export default function AdminAnalytics() {
           <h2 className="admin-card-title">Recent Orders</h2>
         </div>
         {isLoading ? (
-          <div className="admin-loading"><p>Loading…</p></div>
+          <Skeleton.Table cols={5} rows={5} />
         ) : recentOrders.length === 0 ? (
           <div className="admin-empty"><ShoppingBag size={36} /><p>No orders yet</p></div>
         ) : (

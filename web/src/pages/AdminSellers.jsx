@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
@@ -68,6 +69,7 @@ export default function AdminSellers() {
   };
 
   const handleReject = async (userId) => {
+    if (!window.confirm('Reject this seller application? The applicant will be notified.')) return;
     setProcessing(userId);
     try {
       await axios.post(`/auth/users/${userId}/reject-seller`);
@@ -124,7 +126,7 @@ export default function AdminSellers() {
         </div>
 
         {isLoading ? (
-          <div className="admin-loading"><p>Loading…</p></div>
+          <Skeleton.Table cols={7} rows={6} />
         ) : applicants.length === 0 ? (
           <div className="admin-empty">
             <Users size={36} />

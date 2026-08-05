@@ -43,12 +43,18 @@ const getProducts = asyncHandler(async (req, res) => {
     sortOrder = 'desc',
   } = req.query;
 
+  // Municipal admins are scoped to their assigned municipality.
+  const scopedMunicipalityId =
+    req.user?.role === 'MUNICIPAL_ADMIN'
+      ? req.user.municipalityId
+      : municipalityId;
+
   const options = {
     page: parseInt(page),
     pageSize: parseInt(pageSize),
     storeId,
     categoryId,
-    municipalityId,
+    municipalityId: scopedMunicipalityId,
     status,
     minPrice: minPrice ? parseFloat(minPrice) : undefined,
     maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Package, Flag, CheckCircle, Clock, TrendingUp, Store, AlertCircle } from 'lucide-react';
 import AdminLayout from '../components/admin/AdminLayout';
+import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
 
@@ -136,7 +137,7 @@ export default function AdminDashboard() {
           <Link to="/admin/reports" className="admin-view-all-link">View all →</Link>
         </div>
         {isLoading ? (
-          <div className="admin-loading"><p>Loading…</p></div>
+          <Skeleton.Table cols={5} rows={5} />
         ) : recentReports.length === 0 ? (
           <div className="admin-empty">
             <CheckCircle size={36} />

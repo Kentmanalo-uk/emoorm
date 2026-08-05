@@ -14,17 +14,20 @@ const { ApiError } = require('../middleware/errorHandler');
 const createNotification = async (data) => {
   const { userId, type, title, message, relatedId } = data;
 
-  // Validate notification type
+  // Must stay in sync with the NotificationType enum in prisma/schema.prisma.
   const validTypes = [
-    'ORDER_CREATED',
-    'ORDER_UPDATED',
+    'ORDER_RECEIVED',
+    'ORDER_CONFIRMED',
+    'ORDER_READY',
     'ORDER_COMPLETED',
+    'ORDER_CANCELLED',
     'PRODUCT_APPROVED',
-    'PRODUCT_REJECTED',
-    'STORE_SUSPENDED',
-    'REVIEW_RECEIVED',
-    'REPORT_UPDATED',
-    'GENERAL',
+    'PRODUCT_SUSPENDED',
+    'SELLER_APPROVED',
+    'SELLER_SUSPENDED',
+    'REPORT_SUBMITTED',
+    'REPORT_RESOLVED',
+    'SYSTEM_ANNOUNCEMENT',
   ];
 
   if (!validTypes.includes(type)) {
@@ -152,7 +155,7 @@ const getUnreadCount = async (userId) => {
 const notifyOrderCreated = async (sellerId, orderId, buyerName) => {
   return createNotification({
     userId: sellerId,
-    type: 'ORDER_CREATED',
+    type: 'ORDER_RECEIVED',
     title: 'New Order Received',
     message: `You have received a new order from ${buyerName}`,
     relatedId: orderId,
@@ -166,9 +169,16 @@ const notifyOrderCreated = async (sellerId, orderId, buyerName) => {
  * @param {String} newStatus - New order status
  */
 const notifyOrderUpdated = async (buyerId, orderId, newStatus) => {
+  const statusMap = {
+    CONFIRMED: 'ORDER_CONFIRMED',
+    READY: 'ORDER_READY',
+    COMPLETED: 'ORDER_COMPLETED',
+    CANCELLED: 'ORDER_CANCELLED',
+  };
+  const type = statusMap[newStatus] || 'ORDER_CONFIRMED';
   return createNotification({
     userId: buyerId,
-    type: 'ORDER_UPDATED',
+    type,
     title: 'Order Status Updated',
     message: `Your order status has been updated to ${newStatus}`,
     relatedId: orderId,
@@ -200,10 +210,51 @@ const notifyProductApproved = async (sellerId, productId, productName) => {
 const notifyProductRejected = async (sellerId, productId, productName) => {
   return createNotification({
     userId: sellerId,
-    type: 'PRODUCT_REJECTED',
+    type: 'PRODUCT_SUSPENDED',
     title: 'Product Suspended',
     message: `Your product "${productName}" has been suspended`,
     relatedId: productId,
+  });
+};
+
+/**
+ * Notify seller application approved
+ */
+const notifySellerApproved = async (userId, shopName) => {
+  return createNotification({
+    userId,
+    type: 'SELLER_APPROVED',
+    title: 'Seller Application Approved',
+    message: shopName
+      ? `Congratulations! Your shop "${shopName}" is now live.`
+      : 'Your seller application has been approved.',
+  });
+};
+
+/**
+ * Notify seller application rejected / shop suspended
+ */
+const notifySellerRejected = async (userId, reason) => {
+  return createNotification({
+    userId,
+    type: 'SELLER_SUSPENDED',
+    title: 'Seller Application Update',
+    message: reason
+      ? `Your seller application was not approved: ${reason}`
+      : 'Your seller application was not approved at this time.',
+  });
+};
+
+/**
+ * Notify order received (seller side)
+ */
+const notifyOrderReceived = async (sellerId, orderId, buyerName) => {
+  return createNotification({
+    userId: sellerId,
+    type: 'ORDER_RECEIVED',
+    title: 'New Order Received',
+    message: `You have received a new order from ${buyerName}`,
+    relatedId: orderId,
   });
 };
 
@@ -218,7 +269,10 @@ module.exports = {
   getUnreadCount,
   // Helper functions
   notifyOrderCreated,
+  notifyOrderReceived,
   notifyOrderUpdated,
   notifyProductApproved,
   notifyProductRejected,
+  notifySellerApproved,
+  notifySellerRejected,
 };

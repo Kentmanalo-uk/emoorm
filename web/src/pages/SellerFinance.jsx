@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Wallet, TrendingUp, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import axios from '../lib/axios';
+import Skeleton from '../components/ui/Skeleton';
 import './SellerDashboard.css';
 
 export default function SellerFinance() {
@@ -91,7 +92,9 @@ export default function SellerFinance() {
             <h2><TrendingUp size={16} /> Recent Transactions</h2>
           </div>
           {isLoading ? (
-            <div className="seller-loading">Loading…</div>
+            <div style={{ padding: 16 }}>
+              <Skeleton.Table cols={3} rows={5} showHeader={false} />
+            </div>
           ) : transactions.length === 0 ? (
             <div className="seller-empty" style={{ padding: '48px 16px' }}>
               <Wallet size={36} />

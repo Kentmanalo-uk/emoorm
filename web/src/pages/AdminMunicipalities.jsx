@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Plus, Pencil, Check, X, UserCog } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
 
@@ -158,7 +159,7 @@ export default function AdminMunicipalities() {
         )}
 
         {isLoading ? (
-          <div className="admin-loading"><p>Loading…</p></div>
+          <Skeleton.Table cols={5} rows={5} />
         ) : municipalities.length === 0 ? (
           <div className="admin-empty"><MapPin size={36} /><p>No municipalities yet</p></div>
         ) : (

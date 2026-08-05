@@ -148,11 +148,17 @@ const getUsers = asyncHandler(async (req, res) => {
     sellerApplicationStatus,
   } = req.query;
 
+  // Municipal admins can only see users in their assigned municipality.
+  const scopedMunicipalityId =
+    req.user?.role === 'MUNICIPAL_ADMIN'
+      ? req.user.municipalityId
+      : municipalityId;
+
   const options = {
     page: parseInt(page),
     pageSize: parseInt(pageSize),
     role,
-    municipalityId,
+    municipalityId: scopedMunicipalityId,
     isActive: isActive !== undefined ? isActive === 'true' : undefined,
     search,
     sellerApplicationStatus,

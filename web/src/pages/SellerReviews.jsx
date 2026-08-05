@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Star, MessageSquare } from 'lucide-react';
 import axios from '../lib/axios';
+import Skeleton from '../components/ui/Skeleton';
 import './SellerDashboard.css';
 
 /**
@@ -85,7 +86,9 @@ export default function SellerReviews() {
 
         <div className="seller-card">
           {isLoading ? (
-            <div className="seller-loading">Loading reviews…</div>
+            <div style={{ padding: 16 }}>
+              <Skeleton.List rows={4} />
+            </div>
           ) : reviews.length === 0 ? (
             <div className="seller-empty" style={{ padding: '48px 16px' }}>
               <MessageSquare size={36} />

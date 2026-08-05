@@ -1,5 +1,26 @@
 const prisma = require('../config/database');
 
+// Some legacy rows stored `images` as a JSON-encoded string; return a real array to callers.
+const normalizeImages = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const withImages = (product) => {
+  if (!product) return product;
+  return { ...product, images: normalizeImages(product.images) };
+};
+
+const withImagesList = (products) => (products || []).map(withImages);
+
 /**
  * Product Repository
  * Handles all database operations related to products
@@ -11,7 +32,7 @@ const prisma = require('../config/database');
  * @returns {Promise<Object>} Created product
  */
 const createProduct = async (data) => {
-  return prisma.product.create({
+  const created = await prisma.product.create({
     data,
     include: {
       store: {
@@ -36,6 +57,7 @@ const createProduct = async (data) => {
       },
     },
   });
+  return withImages(created);
 };
 
 /**
@@ -44,7 +66,7 @@ const createProduct = async (data) => {
  * @returns {Promise<Object|null>} Product or null
  */
 const findById = async (id) => {
-  return prisma.product.findUnique({
+  const p = await prisma.product.findUnique({
     where: { id },
     include: {
       store: {
@@ -78,6 +100,7 @@ const findById = async (id) => {
       },
     },
   });
+  return withImages(p);
 };
 
 /**
@@ -86,7 +109,7 @@ const findById = async (id) => {
  * @returns {Promise<Object|null>} Product or null
  */
 const findBySlug = async (slug) => {
-  return prisma.product.findUnique({
+  const p = await prisma.product.findUnique({
     where: { slug },
     include: {
       store: {
@@ -111,6 +134,7 @@ const findBySlug = async (slug) => {
       },
     },
   });
+  return withImages(p);
 };
 
 /**
@@ -163,8 +187,13 @@ const findAll = async (options = {}) => {
     ];
   }
 
-  const orderBy = {};
-  orderBy[sortBy] = sortOrder;
+  // Sort by aggregate order count (popularity) or a regular column.
+  let orderBy;
+  if (sortBy === 'orderCount') {
+    orderBy = { orderItems: { _count: sortOrder } };
+  } else {
+    orderBy = { [sortBy]: sortOrder };
+  }
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -200,7 +229,7 @@ const findAll = async (options = {}) => {
   ]);
 
   return {
-    products,
+    products: withImagesList(products),
     total,
     page,
     pageSize,
@@ -214,7 +243,7 @@ const findAll = async (options = {}) => {
  * @returns {Promise<Object>} Updated product
  */
 const updateProduct = async (id, data) => {
-  return prisma.product.update({
+  const p = await prisma.product.update({
     where: { id },
     data,
     include: {
@@ -232,6 +261,7 @@ const updateProduct = async (id, data) => {
       },
     },
   });
+  return withImages(p);
 };
 
 /**

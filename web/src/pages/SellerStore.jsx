@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Store, Save, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
+import Skeleton from '../components/ui/Skeleton';
 import './SellerDashboard.css';
 import './SellerStore.css';
 
@@ -81,7 +82,13 @@ export default function SellerStore() {
         </div>
 
         {isLoading ? (
-          <div className="seller-loading">Loading...</div>
+          <div className="seller-card">
+            <Skeleton.Text lines={2} height={14} />
+            <div style={{ height: 12 }} />
+            <Skeleton.Text lines={4} height={12} />
+            <div style={{ height: 12 }} />
+            <Skeleton height={38} width={140} radius={8} />
+          </div>
         ) : (
           <div className="store-form-layout">
             <div className="seller-card">

@@ -5,6 +5,7 @@ import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
+import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 
 const Products = () => {
@@ -289,7 +290,7 @@ const Products = () => {
               {/* Results Info */}
               <div className="products-results-info">
                 {isLoading ? (
-                  <span>Loading...</span>
+                  <Skeleton height={11} width={180} />
                 ) : (
                   <span>
                     Showing {products.length} of {pagination.total} products
@@ -299,10 +300,7 @@ const Products = () => {
 
               {/* Products Grid/List */}
               {isLoading ? (
-                <div className="products-loading">
-                  <div className="loading-spinner"></div>
-                  <p>Loading products...</p>
-                </div>
+                <Skeleton.Cards count={12} />
               ) : products.length === 0 ? (
                 <div className="products-empty">
                   <Package size={64} />

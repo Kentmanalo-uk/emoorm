@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
+import Skeleton from '../components/ui/Skeleton';
 import './SellerDashboard.css';
 
 const STATUS_META = {
@@ -112,7 +113,7 @@ export default function SellerDashboard() {
           </header>
 
           {isLoading ? (
-            <div className="sd-empty">Loading…</div>
+            <Skeleton.OrderList rows={4} />
           ) : recentOrders.length === 0 ? (
             <div className="sd-empty">
               <ShoppingBag size={28} />

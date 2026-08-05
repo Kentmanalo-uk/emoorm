@@ -19,7 +19,10 @@ const TYPE_CONFIG = {
   PRODUCT_APPROVED: { icon: Star, color: '#f59e0b', bg: '#fef3c7', label: 'Product Approved' },
   PRODUCT_SUSPENDED: { icon: AlertCircle, color: '#ef4444', bg: '#fee2e2', label: 'Product Suspended' },
   SELLER_APPROVED: { icon: Star, color: '#059669', bg: '#d1fae5', label: 'Seller Approved' },
-  SELLER_REJECTED: { icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Seller Rejected' },
+  SELLER_SUSPENDED: { icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Seller Suspended' },
+  REPORT_SUBMITTED: { icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', label: 'Report Submitted' },
+  REPORT_RESOLVED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Report Resolved' },
+  SYSTEM_ANNOUNCEMENT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Announcement' },
   DEFAULT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Notification' },
 };
 

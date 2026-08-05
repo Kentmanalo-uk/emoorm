@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/product.controller');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
 
 /**
  * Product Routes
@@ -29,9 +29,10 @@ router.post(
   productController.createProduct
 );
 
-// Public list route
+// Public list route (optionalAuth attaches req.user for scoping when a token is present)
 router.get(
   '/',
+  optionalAuth,
   productController.getProducts
 );
 

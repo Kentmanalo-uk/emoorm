@@ -1,36 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Bell, Menu, X, Heart } from 'lucide-react';
+import {
+  Search, ShoppingCart, BellOff, Menu, X,
+  ShoppingBag, CheckCircle, Package, XCircle, Star, AlertCircle, Info,
+} from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
-import useWishlistStore from '../../store/wishlistStore';
 import axios from '../../lib/axios';
 import LanguageSwitcher from '../LanguageSwitcher';
 import './Header.css';
+
+const NOTIF_TYPE = {
+  ORDER_RECEIVED: { Icon: ShoppingBag, color: '#3b82f6', bg: '#dbeafe', label: 'New order' },
+  ORDER_CONFIRMED: { Icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Order confirmed' },
+  ORDER_READY: { Icon: Package, color: '#f97316', bg: '#ffedd5', label: 'Ready for pickup' },
+  ORDER_COMPLETED: { Icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Order completed' },
+  ORDER_CANCELLED: { Icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Order cancelled' },
+  PRODUCT_APPROVED: { Icon: Star, color: '#f59e0b', bg: '#fef3c7', label: 'Product approved' },
+  PRODUCT_SUSPENDED: { Icon: AlertCircle, color: '#ef4444', bg: '#fee2e2', label: 'Product suspended' },
+  SELLER_APPROVED: { Icon: Star, color: '#059669', bg: '#d1fae5', label: 'Seller approved' },
+  SELLER_SUSPENDED: { Icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Seller suspended' },
+  REPORT_SUBMITTED: { Icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', label: 'Report submitted' },
+  REPORT_RESOLVED: { Icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Report resolved' },
+  SYSTEM_ANNOUNCEMENT: { Icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Announcement' },
+  DEFAULT: { Icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Notification' },
+};
+
+function notifCfg(type) {
+  return NOTIF_TYPE[type] || NOTIF_TYPE.DEFAULT;
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
 
 const Header = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuthStore();
   const { getItemCount } = useCartStore();
-  const { getCount: getWishlistCount } = useWishlistStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [recentNotifs, setRecentNotifs] = useState([]);
 
   const cartCount = getItemCount();
-  const wishlistCount = getWishlistCount();
 
-  // Poll notification unread count when authenticated
+  // Poll unread count + recent notifications when authenticated
   useEffect(() => {
-    if (!isAuthenticated) { setUnreadCount(0); return; }
-    const fetchUnread = async () => {
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      setRecentNotifs([]);
+      return;
+    }
+    const fetchAll = async () => {
       try {
-        const res = await axios.get('/notifications/unread/count');
-        setUnreadCount(res.data?.count ?? 0);
-      } catch { }
+        const [countRes, listRes] = await Promise.all([
+          axios.get('/notifications/unread/count'),
+          axios.get('/notifications', { params: { page: 1, pageSize: 5 } }),
+        ]);
+        setUnreadCount(countRes.data?.count ?? 0);
+        setRecentNotifs(listRes.data || []);
+      } catch { /* silent */ }
     };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 60000);
+    fetchAll();
+    const interval = setInterval(fetchAll, 60000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
@@ -65,21 +104,87 @@ const Header = () => {
             <Link to="/customer-care" className="topbar-link">CUSTOMER CARE</Link>
           </div>
           <div className="topbar-right">
-            <Link to="/wishlist" className="topbar-icon-button" title="Wishlist">
-              <Heart size={16} />
-              {wishlistCount > 0 && <span className="topbar-count-badge">{wishlistCount}</span>}
-            </Link>
-            <span className="topbar-divider">|</span>
-            {isAuthenticated ? (
-              <Link to="/notifications" className="topbar-icon-button" title="Notifications">
-                <Bell size={16} />
-                {unreadCount > 0 && <span className="topbar-count-badge">{unreadCount}</span>}
-              </Link>
-            ) : (
-              <button className="topbar-icon-button">
-                <Bell size={16} />
-              </button>
-            )}
+            <div className="notif-hover">
+              {isAuthenticated ? (
+                <Link to="/notifications" className="topbar-link notif-trigger" title="Notifications">
+                  <span className="notif-trigger-label">NOTIFICATIONS</span>
+                  {unreadCount > 0 && (
+                    <span className="notif-trigger-badge">{unreadCount}</span>
+                  )}
+                </Link>
+              ) : (
+                <Link to="/login" className="topbar-link notif-trigger" title="Notifications">
+                  <span className="notif-trigger-label">NOTIFICATIONS</span>
+                </Link>
+              )}
+
+              <div className="notif-dropdown" role="menu">
+                <div className="notif-dropdown-arrow" aria-hidden="true" />
+                <div className="notif-dropdown-inner">
+                  {isAuthenticated ? (
+                    <>
+                      <div className="notif-dropdown-head">
+                        <h3>Notifications</h3>
+                        {unreadCount > 0 && (
+                          <span className="notif-dropdown-pill">{unreadCount} new</span>
+                        )}
+                      </div>
+
+                      {recentNotifs.length === 0 ? (
+                        <div className="notif-dropdown-empty">
+                          <BellOff size={28} />
+                          <p>You're all caught up.</p>
+                        </div>
+                      ) : (
+                        <ul className="notif-dropdown-list">
+                          {recentNotifs.slice(0, 5).map((n) => {
+                            const cfg = notifCfg(n.type);
+                            const Icon = cfg.Icon;
+                            return (
+                              <li
+                                key={n.id}
+                                className={`notif-dropdown-row ${!n.isRead ? 'is-unread' : ''}`}
+                              >
+                                <span
+                                  className="notif-dropdown-icon"
+                                  style={{ background: cfg.bg, color: cfg.color }}
+                                >
+                                  <Icon size={14} />
+                                </span>
+                                <div className="notif-dropdown-body">
+                                  <p className="notif-dropdown-title">
+                                    {n.title || cfg.label}
+                                  </p>
+                                  {n.message && (
+                                    <p className="notif-dropdown-msg">{n.message}</p>
+                                  )}
+                                  <span className="notif-dropdown-time">
+                                    {timeAgo(n.createdAt)}
+                                  </span>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+
+                      <Link to="/notifications" className="notif-dropdown-viewall">
+                        View all notifications
+                      </Link>
+                    </>
+                  ) : (
+                    <div className="notif-dropdown-guest">
+                      <h3>Stay in the loop</h3>
+                      <p>Sign in to see order updates and important alerts.</p>
+                      <Link to="/login" className="notif-dropdown-signin-btn">Sign in</Link>
+                      <p className="notif-dropdown-newcustomer">
+                        New customer? <Link to="/register">Start here.</Link>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
             <span className="topbar-divider">|</span>
             <LanguageSwitcher variant="topbar" />
             <span className="topbar-divider">|</span>
@@ -127,22 +232,47 @@ const Header = () => {
 
                   <div className="account-dropdown-columns">
                     <div className="account-dropdown-col">
-                      <h4>Your Lists</h4>
-                      <Link to="/wishlist">Wishlist</Link>
-                      <Link to="/products">Browse Products</Link>
+                      <h4>Your Account</h4>
+                      <Link to="/profile">Overview</Link>
+                      <Link to="/profile/orders">My Orders</Link>
+                      <Link to="/profile/addresses">Address</Link>
+                      <Link to="/profile/messages">Messages</Link>
+                      <Link to="/profile/reviews">My Reviews</Link>
+                      <Link to="/notifications">Notifications</Link>
+                      <Link to="/profile/settings">Settings</Link>
                     </div>
                     <div className="account-dropdown-col">
-                      <h4>Your Account</h4>
-                      <Link to="/profile">Account</Link>
-                      <Link to="/orders">Orders</Link>
-                      {isAuthenticated && <Link to="/notifications">Notifications</Link>}
-                      <Link to="/cart">Cart</Link>
+                      <h4>Your Lists</h4>
+                      <Link to="/wishlist">Wishlist</Link>
+                      <Link to="/profile/followed-stores">Followed Stores</Link>
+                      <Link to="/cart">Shopping Cart</Link>
                       {isAuthenticated && user?.role === 'SELLER' && (
-                        <Link to="/seller">Seller Dashboard</Link>
+                        <>
+                          <h4 className="account-dropdown-col-sub">For Sellers</h4>
+                          <Link to="/seller">Seller Center</Link>
+                          <Link to="/seller/products">My Products</Link>
+                          <Link to="/seller/orders">Store Orders</Link>
+                        </>
                       )}
                       {isAuthenticated && (user?.role === 'MUNICIPAL_ADMIN' || user?.role === 'SUPER_ADMIN') && (
-                        <Link to="/admin">Admin Panel</Link>
+                        <>
+                          <h4 className="account-dropdown-col-sub">Administration</h4>
+                          <Link to="/admin">Admin Panel</Link>
+                          <Link to="/admin/sellers">Applications</Link>
+                          <Link to="/admin/reports">Reports</Link>
+                        </>
                       )}
+                    </div>
+                    <div className="account-dropdown-col">
+                      <h4>Explore</h4>
+                      <Link to="/products">Browse Products</Link>
+                      <Link to="/stores">Browse Stores</Link>
+                      {(!isAuthenticated || user?.role === 'BUYER') && (
+                        <Link to="/sell">Sell on Emoorm</Link>
+                      )}
+                      <Link to="/help">Help Center</Link>
+                      <Link to="/customer-care">Customer Care</Link>
+                      <Link to="/feedback">Send Feedback</Link>
                     </div>
                   </div>
                 </div>

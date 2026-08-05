@@ -216,7 +216,7 @@ async function main() {
           description: productData.description,
           price: productData.price,
           stock: productData.stock,
-          images: JSON.stringify(images),
+          images: images,
           storeId: store.id,
           categoryId: category.id,
           municipalityId: municipality.id,

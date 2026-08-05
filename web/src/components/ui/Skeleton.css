@@ -1,0 +1,268 @@
+/* ═════════════════════════════════════════════════════════
+   Skeleton loaders — shared across every role & page.
+   ═════════════════════════════════════════════════════════ */
+
+.sk {
+  display: block;
+  position: relative;
+  background: #eef1f4;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.sk::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.75) 50%,
+      rgba(255, 255, 255, 0) 100%);
+  animation: skShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skShimmer {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk::after {
+    animation: none;
+  }
+
+  .sk {
+    animation: skPulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes skPulse {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.55;
+    }
+  }
+}
+
+/* ─── Text lines ─── */
+
+.sk-text {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* ─── Stat cards row ─── */
+
+.sk-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sk-stat-card {
+  background: #fff;
+  border: 1px solid #eef0f3;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ─── Table ─── */
+
+.sk-table {
+  width: 100%;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.sk-table-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr 0.8fr 0.6fr;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f2f5;
+}
+
+.sk-table-row:last-child {
+  border-bottom: none;
+}
+
+.sk-table-head {
+  background: #f9fafb;
+  padding: 10px 16px;
+}
+
+.sk-table-cell-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sk-table-cell-user>span {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* ─── Card grid (products / stores) ─── */
+
+.sk-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.sk-card {
+  background: #fff;
+  border: 1px solid #eef0f3;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sk-card-media {
+  border-radius: 0 !important;
+}
+
+.sk-card-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sk-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+/* ─── Vertical list (orders / notifications / reviews) ─── */
+
+.sk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sk-list-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 4px;
+  border-bottom: 1px solid #f1f2f5;
+}
+
+.sk-list-row:last-child {
+  border-bottom: none;
+}
+
+.sk-list-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.sk-list-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+/* ─── Compact order list ─── */
+
+.sk-order-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sk-order-row {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 4px;
+  border-bottom: 1px solid #f1f2f5;
+}
+
+.sk-order-row:last-child {
+  border-bottom: none;
+}
+
+.sk-order-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sk-order-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* ─── Page container ─── */
+
+.sk-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0;
+}
+
+/* ─── Responsive: collapse table to fewer cols ─── */
+
+@media (max-width: 900px) {
+  .sk-table-row {
+    grid-template-columns: 1.4fr 1fr 1fr 0.6fr;
+  }
+
+  .sk-table-row>*:nth-child(n+5) {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .sk-table-row {
+    grid-template-columns: 1.4fr 1fr 0.6fr;
+  }
+
+  .sk-table-row>*:nth-child(n+4) {
+    display: none;
+  }
+
+  .sk-cards {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}

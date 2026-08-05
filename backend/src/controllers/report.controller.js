@@ -33,13 +33,21 @@ const getAllReports = asyncHandler(async (req, res) => {
     pageSize = 20,
     type,
     status,
+    municipalityId,
   } = req.query;
+
+  // Municipal admins are scoped to their assigned municipality.
+  const scopedMunicipalityId =
+    req.user?.role === 'MUNICIPAL_ADMIN'
+      ? req.user.municipalityId
+      : municipalityId;
 
   const options = {
     page: parseInt(page),
     pageSize: parseInt(pageSize),
     type,
     status,
+    municipalityId: scopedMunicipalityId,
   };
 
   const result = await reportService.getAllReports(options);

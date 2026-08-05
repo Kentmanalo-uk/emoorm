@@ -100,6 +100,7 @@ const findAll = async (options = {}) => {
     storeId,
     type,
     status,
+    municipalityId,
   } = options;
 
   const where = {};
@@ -109,6 +110,7 @@ const findAll = async (options = {}) => {
   if (storeId) where.storeId = storeId;
   if (type) where.type = type;
   if (status) where.status = status;
+  if (municipalityId) where.municipalityId = municipalityId;
 
   const [reports, total] = await Promise.all([
     prisma.report.findMany({

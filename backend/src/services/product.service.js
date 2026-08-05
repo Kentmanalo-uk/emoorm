@@ -1,6 +1,7 @@
 const productRepository = require('../repositories/product.repository');
 const storeRepository = require('../repositories/store.repository');
 const categoryRepository = require('../repositories/category.repository');
+const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -236,7 +237,18 @@ const approveProduct = async (productId) => {
     throw new ApiError('Only pending products can be approved', 400);
   }
 
-  return productRepository.updateStatus(productId, 'APPROVED');
+  const updated = await productRepository.updateStatus(productId, 'APPROVED');
+
+  try {
+    const store = await storeRepository.findById(product.storeId);
+    if (store?.ownerId) {
+      await notificationService.notifyProductApproved(store.ownerId, product.id, product.name);
+    }
+  } catch (err) {
+    console.error('[approveProduct] notification failed:', err.message);
+  }
+
+  return updated;
 };
 
 /**
@@ -251,7 +263,18 @@ const suspendProduct = async (productId) => {
     throw new ApiError('Product not found', 404);
   }
 
-  return productRepository.updateStatus(productId, 'SUSPENDED');
+  const updated = await productRepository.updateStatus(productId, 'SUSPENDED');
+
+  try {
+    const store = await storeRepository.findById(product.storeId);
+    if (store?.ownerId) {
+      await notificationService.notifyProductRejected(store.ownerId, product.id, product.name);
+    }
+  } catch (err) {
+    console.error('[suspendProduct] notification failed:', err.message);
+  }
+
+  return updated;
 };
 
 /**

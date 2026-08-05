@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
+import Skeleton from '../components/ui/Skeleton';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerProducts.css';
@@ -295,7 +296,7 @@ export default function SellerProducts() {
         {/* Products table */}
         <div className="seller-card">
           {isLoading ? (
-            <div className="seller-loading">Loading products…</div>
+            <Skeleton.Table cols={6} rows={6} />
           ) : products.length === 0 ? (
             <div className="seller-empty">
               <Package size={40} />

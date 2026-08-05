@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const userRepository = require('../repositories/user.repository');
 const storeRepository = require('../repositories/store.repository');
 const storeService = require('./store.service');
+const notificationService = require('./notification.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateTokens, verifyRefreshToken } = require('../utils/jwt');
 const { ApiError } = require('../middleware/errorHandler');
@@ -305,7 +306,12 @@ const approveSeller = async (userId) => {
     await storeRepository.updateStore(store.id, { isActive: true });
   }
 
-  // TODO: Send notification to user
+  // Notify the newly approved seller (non-blocking on failure).
+  try {
+    await notificationService.notifySellerApproved(userId, store?.name || user.shopName);
+  } catch (err) {
+    console.error('[approveSeller] notification failed:', err.message);
+  }
 
   return updatedUser;
 };
@@ -328,7 +334,11 @@ const rejectSeller = async (userId) => {
 
   const updatedUser = await userRepository.rejectSeller(userId);
 
-  // TODO: Send notification to user
+  try {
+    await notificationService.notifySellerRejected(userId);
+  } catch (err) {
+    console.error('[rejectSeller] notification failed:', err.message);
+  }
 
   return updatedUser;
 };

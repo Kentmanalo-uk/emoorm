@@ -6,6 +6,18 @@
   margin-top: 48px;
 }
 
+/* Match header/topbar side padding so footer content aligns with the rest of the page. */
+.footer>.container {
+  max-width: 1280px;
+  padding: 0 32px;
+}
+
+@media (max-width: 768px) {
+  .footer>.container {
+    padding: 0 16px;
+  }
+}
+
 .footer-content {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
