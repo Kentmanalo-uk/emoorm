@@ -190,7 +190,7 @@ model Category {
   name        String    @unique
   slug        String    @unique
   description String?   @db.Text
-  icon        String?
+  image       String?
   isActive    Boolean   @default(true) @map("is_active")
 
   createdAt   DateTime  @default(now()) @map("created_at")

@@ -223,6 +223,27 @@ const archiveProduct = asyncHandler(async (req, res) => {
   successResponse(res, product, 'Product archived successfully');
 });
 
+/**
+ * Search products by uploaded image (perceptual hash)
+ * @route POST /api/products/search-by-image
+ * @access Public
+ */
+const searchByImage = asyncHandler(async (req, res) => {
+  if (!req.file || !req.file.buffer) {
+    return res.status(400).json({ success: false, message: 'Image file is required' });
+  }
+
+  const threshold = Math.min(Math.max(parseInt(req.body?.threshold, 10) || 20, 0), 64);
+  const limit = Math.min(Math.max(parseInt(req.body?.limit, 10) || 24, 1), 100);
+
+  const { queryHash, results } = await productService.searchByImageBuffer(req.file.buffer, {
+    threshold,
+    limit,
+  });
+
+  successResponse(res, { queryHash, results, count: results.length }, 'Image search complete');
+});
+
 module.exports = {
   createProduct,
   getProducts,
@@ -234,4 +255,5 @@ module.exports = {
   approveProduct,
   suspendProduct,
   archiveProduct,
+  searchByImage,
 };

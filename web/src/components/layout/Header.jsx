@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, ShoppingCart, BellOff, Menu, X,
   ShoppingBag, CheckCircle, Package, XCircle, Star, AlertCircle, Info,
+  Clock, TrendingUp,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import LanguageSwitcher from '../LanguageSwitcher';
+import ImageSearchModal from './ImageSearchModal';
 import './Header.css';
 
 const NOTIF_TYPE = {
@@ -41,6 +43,49 @@ function timeAgo(iso) {
   return new Date(iso).toLocaleDateString();
 }
 
+const PLACEHOLDER_SUGGESTIONS = [
+  'Organic Products',
+  'Fresh Vegetables',
+  'Native Delicacies',
+  'Handicrafts',
+  'Local Coffee',
+  'Dried Fish',
+  'Coconut Oil',
+];
+
+const POPULAR_SUGGESTIONS = [
+  'Organic Honey',
+  'Banana Chips',
+  'Calamansi',
+  'Native Bag',
+  'Coconut Oil',
+];
+
+const RECENT_KEY = 'emoorm_recent_searches';
+
+const loadRecent = () => {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveRecent = (query) => {
+  const q = query.trim();
+  if (!q) return [];
+  try {
+    const cur = loadRecent().filter((s) => s.toLowerCase() !== q.toLowerCase());
+    const next = [q, ...cur].slice(0, 8);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    return next;
+  } catch {
+    return [];
+  }
+};
+
 const Header = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -51,6 +96,13 @@ const Header = () => {
   const [recentNotifs, setRecentNotifs] = useState([]);
   const [headerHidden, setHeaderHidden] = useState(false);
   const lastScrollY = useRef(window.scrollY);
+  const searchWrapRef = useRef(null);
+
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [placeholderVisible, setPlaceholderVisible] = useState(true);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [recentSearches, setRecentSearches] = useState(loadRecent);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   const cartCount = getItemCount();
 
@@ -108,15 +160,71 @@ const Header = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-    }
+    const q = searchQuery.trim();
+    if (!q) return;
+    setRecentSearches(saveRecent(q));
+    setSearchFocused(false);
+    navigate(`/search?q=${encodeURIComponent(q)}`);
+  };
+
+  const runSuggestion = (term) => {
+    setSearchQuery(term);
+    setRecentSearches(saveRecent(term));
+    setSearchFocused(false);
+    navigate(`/search?q=${encodeURIComponent(term)}`);
+  };
+
+  const removeRecent = (e, term) => {
+    e.stopPropagation();
+    const next = recentSearches.filter((s) => s !== term);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* silent */ }
+    setRecentSearches(next);
   };
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const handleImageFileSelected = (file) => {
+    setImageModalOpen(false);
+    navigate('/search/image', { state: { file } });
+  };
+
+  // Rotating placeholder — swap every 3s with a small fade.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderVisible(false);
+      setTimeout(() => {
+        setPlaceholderIdx((i) => (i + 1) % PLACEHOLDER_SUGGESTIONS.length);
+        setPlaceholderVisible(true);
+      }, 220);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close suggestions dropdown on outside click.
+  useEffect(() => {
+    if (!searchFocused) return undefined;
+    const onDocClick = (e) => {
+      if (!searchWrapRef.current?.contains(e.target)) {
+        setSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [searchFocused]);
+
+  const filteredRecents = searchQuery.trim()
+    ? recentSearches.filter((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
+    : recentSearches;
+
+  const filteredPopular = searchQuery.trim()
+    ? POPULAR_SUGGESTIONS.filter((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
+    : POPULAR_SUGGESTIONS;
+
+  const showSuggestions =
+    searchFocused && (filteredRecents.length > 0 || filteredPopular.length > 0);
 
   return (
     <>
@@ -337,25 +445,91 @@ const Header = () => {
 
           {/* Search Bar + Cart (Centered) */}
           <div className="header-center">
-            <form onSubmit={handleSearch} className="header-search">
-              <input
-                type="text"
-                placeholder="Organic Products"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="header-search-input"
-              />
-              <button type="button" className="header-search-camera">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                  <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M7 5L8 3H12L13 5" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
-              </button>
-              <button type="submit" className="header-search-button">
-                <Search size={20} />
-              </button>
-            </form>
+            <div className="header-search-wrap" ref={searchWrapRef}>
+              <form onSubmit={handleSearch} className="header-search">
+                <div className="header-search-input-wrap">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    className="header-search-input"
+                  />
+                  {!searchQuery && !searchFocused && (
+                    <span
+                      className={`header-search-placeholder ${placeholderVisible ? 'is-visible' : ''}`}
+                      aria-hidden="true"
+                    >
+                      {PLACEHOLDER_SUGGESTIONS[placeholderIdx]}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="header-search-camera"
+                  onClick={() => setImageModalOpen(true)}
+                  title="Search by image"
+                  aria-label="Search by image"
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                    <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M7 5L8 3H12L13 5" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                </button>
+                <button type="submit" className="header-search-button">
+                  <Search size={20} />
+                </button>
+              </form>
+
+              {showSuggestions && (
+                <div className="header-search-suggest" role="listbox">
+                  {filteredRecents.length > 0 && (
+                    <div className="hss-group">
+                      <div className="hss-group-title">Recent</div>
+                      {filteredRecents.map((term) => (
+                        <button
+                          type="button"
+                          key={`r-${term}`}
+                          className="hss-row"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => runSuggestion(term)}
+                        >
+                          <Clock size={14} className="hss-row-icon" />
+                          <span className="hss-row-text">{term}</span>
+                          <span
+                            className="hss-row-remove"
+                            onClick={(e) => removeRecent(e, term)}
+                            role="button"
+                            tabIndex={-1}
+                            aria-label={`Remove ${term}`}
+                          >
+                            <X size={12} />
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {filteredPopular.length > 0 && (
+                    <div className="hss-group">
+                      <div className="hss-group-title">Popular</div>
+                      {filteredPopular.map((term) => (
+                        <button
+                          type="button"
+                          key={`p-${term}`}
+                          className="hss-row"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => runSuggestion(term)}
+                        >
+                          <TrendingUp size={14} className="hss-row-icon" />
+                          <span className="hss-row-text">{term}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <Link to="/cart" className="header-cart">
               <ShoppingCart size={24} />
@@ -408,6 +582,12 @@ const Header = () => {
           </div>
         </div>
       )}
+
+      <ImageSearchModal
+        open={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        onFile={handleImageFileSelected}
+      />
     </>
   );
 };

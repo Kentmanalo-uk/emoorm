@@ -1,7 +1,17 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const productController = require('../controllers/product.controller');
 const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
+
+const imageSearchUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (/^image\/(jpeg|png|webp|gif|bmp)$/i.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Only image files are allowed'), false);
+  },
+});
 
 /**
  * Product Routes
@@ -11,6 +21,12 @@ const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
 router.get(
   '/slug/:slug',
   productController.getProductBySlug
+);
+
+router.post(
+  '/search-by-image',
+  imageSearchUpload.single('image'),
+  productController.searchByImage
 );
 
 // Seller-only static route — must come before /:id

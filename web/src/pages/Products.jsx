@@ -49,6 +49,15 @@ const Products = () => {
     fetchCategories();
   }, []);
 
+  // Sync local search state whenever the URL query string changes (e.g. header re-search).
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    const cat = searchParams.get('category') || '';
+    setSearchQuery((prev) => (prev === q ? prev : q));
+    setSelectedCategory((prev) => (prev === cat ? prev : cat));
+    setPagination((p) => ({ ...p, page: parseInt(searchParams.get('page')) || 1 }));
+  }, [searchParams]);
+
   useEffect(() => {
     fetchProducts();
   }, [selectedCategory, searchQuery, sortBy, priceRange, pagination.page]);

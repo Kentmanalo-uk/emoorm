@@ -1,0 +1,162 @@
+.sbi-page {
+  padding: 32px 0 64px;
+  background-color: #f5f5f5;
+  min-height: calc(100vh - 200px);
+}
+
+.sbi-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 16px;
+}
+
+.sbi-back:hover {
+  color: var(--color-primary);
+}
+
+.sbi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.sbi-header h1 {
+  font-size: 22px;
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 4px;
+  color: var(--color-text-primary);
+}
+
+.sbi-header p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.sbi-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid var(--color-border-light);
+  border-radius: 2px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.sbi-upload-btn:hover {
+  background: #fafafa;
+}
+
+.sbi-body {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.sbi-preview {
+  position: sticky;
+  top: 120px;
+  background: white;
+  border-radius: 2px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sbi-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sbi-preview-empty {
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 16px;
+}
+
+.sbi-preview-empty p {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.sbi-results {
+  background: white;
+  padding: 20px;
+  border-radius: 2px;
+  min-height: 320px;
+}
+
+.sbi-results-head {
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.sbi-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 240px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.sbi-status-error {
+  color: #dc2626;
+}
+
+.sbi-spin {
+  animation: sbi-spin 0.9s linear infinite;
+}
+
+@keyframes sbi-spin {
+  to { transform: rotate(360deg); }
+}
+
+.sbi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.sbi-match {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(5, 150, 105, 0.92);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .sbi-body {
+    grid-template-columns: 1fr;
+  }
+  .sbi-preview {
+    position: static;
+    max-width: 240px;
+  }
+}

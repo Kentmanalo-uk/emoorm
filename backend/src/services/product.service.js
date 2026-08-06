@@ -1,9 +1,10 @@
+const prisma = require('../config/database');
 const productRepository = require('../repositories/product.repository');
 const storeRepository = require('../repositories/store.repository');
 const categoryRepository = require('../repositories/category.repository');
 const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
-const { hashFromSource } = require('../utils/imageHash');
+const { bufferToDHash, hammingDistance, hashFromSource, HASH_BIT_LENGTH } = require('../utils/imageHash');
 
 const computeImageHashSafe = async (images) => {
   const first = Array.isArray(images) ? images[0] : null;
@@ -334,6 +335,66 @@ const archiveProduct = async (productId, actor) => {
   return productRepository.updateStatus(productId, 'ARCHIVED');
 };
 
+const normalizeImages = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+/**
+ * Search products by an uploaded image buffer using perceptual hashing.
+ * Returns approved products ranked by Hamming distance, filtered to a threshold.
+ */
+const searchByImageBuffer = async (buffer, { threshold = 20, limit = 24 } = {}) => {
+  if (!buffer || !Buffer.isBuffer(buffer)) {
+    throw new ApiError('Image is required', 400);
+  }
+
+  let queryHash;
+  try {
+    queryHash = await bufferToDHash(buffer);
+  } catch (err) {
+    throw new ApiError(`Could not process image: ${err.message}`, 400);
+  }
+
+  const candidates = await prisma.product.findMany({
+    where: {
+      deletedAt: null,
+      status: 'APPROVED',
+      imageHash: { not: null },
+      store: { isActive: true, isSuspended: false },
+    },
+    include: {
+      store: { select: { id: true, name: true, slug: true } },
+      category: { select: { id: true, name: true, slug: true, image: true } },
+      municipality: { select: { id: true, name: true } },
+    },
+  });
+
+  const scored = candidates
+    .map((p) => ({
+      product: { ...p, images: normalizeImages(p.images) },
+      distance: hammingDistance(queryHash, p.imageHash),
+    }))
+    .filter((r) => r.distance <= threshold)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, limit)
+    .map(({ product, distance }) => ({
+      ...product,
+      matchDistance: distance,
+      matchSimilarity: Math.max(0, Math.round(((HASH_BIT_LENGTH - distance) / HASH_BIT_LENGTH) * 100)),
+    }));
+
+  return { queryHash, results: scored };
+};
+
 module.exports = {
   createProduct,
   getProductById,
@@ -345,4 +406,5 @@ module.exports = {
   approveProduct,
   suspendProduct,
   archiveProduct,
+  searchByImageBuffer,
 };

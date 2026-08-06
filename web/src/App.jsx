@@ -48,6 +48,7 @@ import ProfileFollowedStores from './pages/ProfileFollowedStores';
 import ProfileMessages from './pages/ProfileMessages';
 import ProfileSettings from './pages/ProfileSettings';
 import HelpCenter from './pages/HelpCenter';
+import SearchByImage from './pages/SearchByImage';
 import { WishlistContent } from './pages/Wishlist';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
@@ -104,10 +105,12 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/search" element={<Products />} />
             <Route path="/product/:slug" element={<ProductDetails />} />
             <Route path="/stores" element={<Stores />} />
             <Route path="/store/:slug" element={<StoreDetail />} />
             <Route path="/sell" element={<Sell />} />
+            <Route path="/search/image" element={<SearchByImage />} />
 
             {/* Protected routes — require login */}
             <Route

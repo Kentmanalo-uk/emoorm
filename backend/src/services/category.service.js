@@ -6,6 +6,25 @@ const { ApiError } = require('../middleware/errorHandler');
  * Contains business logic for category operations
  */
 
+const slugify = (str) =>
+  String(str || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const generateUniqueSlug = async (name, ignoreId = null) => {
+  const base = slugify(name);
+  if (!base) throw new ApiError('Name is required', 400);
+  let candidate = base;
+  let counter = 1;
+  while (true) {
+    const existing = await categoryRepository.findBySlug(candidate);
+    if (!existing || existing.id === ignoreId) return candidate;
+    candidate = `${base}-${counter++}`;
+  }
+};
+
 /**
  * Get all categories
  * @param {Boolean} activeOnly - Filter by active categories
@@ -51,13 +70,22 @@ const getCategoryBySlug = async (slug) => {
  * @returns {Promise<Object>} Created category
  */
 const createCategory = async (data) => {
-  // Check if slug already exists
-  const existing = await categoryRepository.findBySlug(data.slug);
+  if (!data.name || !String(data.name).trim()) {
+    throw new ApiError('Name is required', 400);
+  }
+
+  const slug = data.slug ? slugify(data.slug) : await generateUniqueSlug(data.name);
+  const existing = await categoryRepository.findBySlug(slug);
   if (existing) {
     throw new ApiError('Category slug already exists', 409);
   }
 
-  return categoryRepository.createCategory(data);
+  return categoryRepository.createCategory({
+    name: data.name.trim(),
+    slug,
+    description: data.description ?? null,
+    image: data.image ?? null,
+  });
 };
 
 /**
@@ -73,15 +101,23 @@ const updateCategory = async (id, data) => {
     throw new ApiError('Category not found', 404);
   }
 
-  // If updating slug, check if new slug exists
+  const update = {};
+  if (data.name !== undefined) update.name = String(data.name).trim();
+  if (data.description !== undefined) update.description = data.description;
+  if (data.image !== undefined) update.image = data.image;
+
   if (data.slug && data.slug !== category.slug) {
-    const existing = await categoryRepository.findBySlug(data.slug);
-    if (existing) {
+    const nextSlug = slugify(data.slug);
+    const existing = await categoryRepository.findBySlug(nextSlug);
+    if (existing && existing.id !== id) {
       throw new ApiError('Category slug already exists', 409);
     }
+    update.slug = nextSlug;
+  } else if (update.name && update.name !== category.name && !data.slug) {
+    update.slug = await generateUniqueSlug(update.name, id);
   }
 
-  return categoryRepository.updateCategory(id, data);
+  return categoryRepository.updateCategory(id, update);
 };
 
 /**
@@ -129,61 +165,61 @@ const seedCategories = async () => {
       name: 'Fruits',
       slug: 'fruits',
       description: 'Fresh fruits from local farmers',
-      icon: '🍎',
+      image: null,
     },
     {
       name: 'Vegetables',
       slug: 'vegetables',
       description: 'Fresh vegetables from local farms',
-      icon: '🥬',
+      image: null,
     },
     {
       name: 'Rice',
       slug: 'rice',
       description: 'Locally grown rice varieties',
-      icon: '🌾',
+      image: null,
     },
     {
       name: 'Livestock',
       slug: 'livestock',
       description: 'Poultry, pork, beef, and other livestock products',
-      icon: '🐄',
+      image: null,
     },
     {
       name: 'Seafood',
       slug: 'seafood',
       description: 'Fresh catch from local waters',
-      icon: '🐟',
+      image: null,
     },
     {
       name: 'Processed Foods',
       slug: 'processed-foods',
       description: 'Locally processed food products',
-      icon: '🥫',
+      image: null,
     },
     {
       name: 'Handicrafts',
       slug: 'handicrafts',
       description: 'Traditional and modern handicrafts',
-      icon: '🎨',
+      image: null,
     },
     {
       name: 'Local Delicacies',
       slug: 'local-delicacies',
       description: 'Traditional local food specialties',
-      icon: '🍰',
+      image: null,
     },
     {
       name: 'Dried Goods',
       slug: 'dried-goods',
       description: 'Dried fish, fruits, and other preserved products',
-      icon: '🌰',
+      image: null,
     },
     {
       name: 'Beverages',
       slug: 'beverages',
       description: 'Local drinks and beverages',
-      icon: '🥤',
+      image: null,
     },
   ];
 

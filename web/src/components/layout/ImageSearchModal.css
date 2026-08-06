@@ -1,0 +1,134 @@
+.ism-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  transition: background-color 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ism-overlay.ism-overlay-in {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.ism-card {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  background: #ffffff;
+  border-radius: 2px;
+  padding: 44px 44px 40px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transform: translateY(24px) scale(0.97);
+  transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ism-card.ism-card-in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.ism-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 24px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.ism-close:hover {
+  color: #111827;
+}
+
+.ism-head {
+  margin-bottom: 28px;
+}
+
+.ism-head h3 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+
+.ism-head p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.ism-drop {
+  border: 1px dashed #d1d5db;
+  border-radius: 2px;
+  padding: 64px 24px;
+  text-align: center;
+  cursor: pointer;
+  background: #fafafa;
+  transition: border-color 0.25s ease, background-color 0.25s ease;
+}
+
+.ism-drop:hover {
+  border-color: #059669;
+  background: #f7fdfa;
+}
+
+.ism-drop-active {
+  border-color: #059669;
+  background: #ecfdf5;
+}
+
+.ism-drop-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #111827;
+  transition: color 0.2s ease;
+}
+
+.ism-drop-hint {
+  margin: 6px 0 22px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.ism-drop-btn {
+  display: inline-block;
+  padding: 10px 22px;
+  background: #111827;
+  color: white;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: background-color 0.2s ease;
+}
+
+.ism-drop:hover .ism-drop-btn {
+  background: #059669;
+}
+
+@media (max-width: 640px) {
+  .ism-card {
+    padding: 32px 24px 28px;
+  }
+  .ism-drop {
+    padding: 44px 16px;
+  }
+}

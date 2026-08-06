@@ -652,6 +652,11 @@
 }
 
 /* Search Bar */
+.header-search-wrap {
+  position: relative;
+  flex: 1;
+}
+
 .header-search {
   display: flex;
   align-items: stretch;
@@ -669,6 +674,13 @@
   background-color: #e5e7eb;
 }
 
+.header-search-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+}
+
 .header-search-input {
   flex: 1;
   border: none;
@@ -678,10 +690,110 @@
   font-family: 'Inter', sans-serif;
   color: #111827;
   background-color: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .header-search-input::placeholder {
   color: #9ca3af;
+}
+
+.header-search-placeholder {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: #9ca3af;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  z-index: 0;
+}
+
+.header-search-placeholder.is-visible {
+  opacity: 1;
+}
+
+.header-search-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  max-height: 360px;
+  overflow-y: auto;
+  z-index: 60;
+  padding: 6px 0;
+}
+
+.hss-group + .hss-group {
+  border-top: 1px solid #f3f4f6;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.hss-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+  padding: 6px 14px 4px;
+}
+
+.hss-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: #111827;
+  transition: background-color 0.12s;
+}
+
+.hss-row:hover {
+  background: #f9fafb;
+}
+
+.hss-row-icon {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.hss-row-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hss-row-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
+  color: #9ca3af;
+  opacity: 0;
+  transition: opacity 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.hss-row:hover .hss-row-remove {
+  opacity: 1;
+}
+
+.hss-row-remove:hover {
+  background: #e5e7eb;
+  color: #111827;
 }
 
 .header-search-camera {

@@ -88,7 +88,7 @@ const findById = async (id) => {
           id: true,
           name: true,
           slug: true,
-          icon: true,
+          image: true,
         },
       },
       municipality: {
@@ -211,7 +211,7 @@ const findAll = async (options = {}) => {
             id: true,
             name: true,
             slug: true,
-            icon: true,
+            image: true,
           },
         },
         municipality: {
