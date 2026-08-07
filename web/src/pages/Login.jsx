@@ -240,24 +240,11 @@ const Login = () => {
               <img src="/brand-icon.png" alt="Emoorm" className="login-hero-icon" />
               <span className="login-hero-text">emoorm</span>
             </div>
-            <h1 className="login-hero-title">
-              Fresh from<br />
-              <span className="login-hero-title-highlight">the island.</span>
+          <h1 className="register-hero-title">
+              Made in Mindoro<br />
+              <span className="register-hero-title-highlight">the place of rich<br />in Agriculture Producers</span>
             </h1>
-            <div className="login-hero-stats">
-              <div className="login-hero-stat">
-                <div className="login-hero-stat-number">15</div>
-                <div className="login-hero-stat-label">MUNICIPALITIES</div>
-              </div>
-              <div className="login-hero-stat">
-                <div className="login-hero-stat-number">100%</div>
-                <div className="login-hero-stat-label">LOCAL SELLERS</div>
-              </div>
-              <div className="login-hero-stat">
-                <div className="login-hero-stat-number">Free</div>
-                <div className="login-hero-stat-label">TO JOIN</div>
-              </div>
-            </div>
+
           </div>
 
           {/* Right Side - Form */}

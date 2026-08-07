@@ -153,15 +153,15 @@ export default function AdminLayout({ children }) {
                   </div>
                 )}
 
-                <NavLink to="/admin/analytics" className={navCls} title="Analytics">
-                  <PieChart size={17} /> <span>Analytics</span>
-                </NavLink>
-
                 <NavLink to="/admin/audit-logs" className={navCls} title="Audit Logs">
                   <FileText size={17} /> <span>Audit Logs</span>
                 </NavLink>
               </>
             )}
+
+            <NavLink to="/admin/analytics" className={navCls} title="Analytics">
+              <PieChart size={17} /> <span>Analytics</span>
+            </NavLink>
 
             <NavLink to="/admin/settings" className={navCls} title="Settings">
               <SettingsIcon size={17} /> <span>Settings</span>

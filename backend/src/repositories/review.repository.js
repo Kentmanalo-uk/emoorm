@@ -14,10 +14,11 @@ const createReview = async (data) => {
   return prisma.review.create({
     data,
     include: {
-      buyer: {
+      user: {
         select: {
           id: true,
           fullName: true,
+          profilePhoto: true,
         },
       },
       product: {
@@ -40,10 +41,11 @@ const findById = async (id) => {
   return prisma.review.findUnique({
     where: { id },
     include: {
-      buyer: {
+      user: {
         select: {
           id: true,
           fullName: true,
+          profilePhoto: true,
         },
       },
       product: {
@@ -58,18 +60,14 @@ const findById = async (id) => {
 };
 
 /**
- * Find review by buyer and product
- * @param {String} buyerId - Buyer ID
- * @param {String} productId - Product ID
- * @returns {Promise<Object|null>} Review or null
+ * Find review by user and product (non-deleted)
  */
-const findByBuyerAndProduct = async (buyerId, productId) => {
-  return prisma.review.findUnique({
+const findByBuyerAndProduct = async (userId, productId) => {
+  return prisma.review.findFirst({
     where: {
-      buyerId_productId: {
-        buyerId,
-        productId,
-      },
+      userId,
+      productId,
+      deletedAt: null,
     },
   });
 };
@@ -93,17 +91,18 @@ const findAll = async (options = {}) => {
   };
 
   if (productId) where.productId = productId;
-  if (buyerId) where.buyerId = buyerId;
+  if (buyerId) where.userId = buyerId;
   if (rating !== undefined) where.rating = parseInt(rating);
 
   const [reviews, total] = await Promise.all([
     prisma.review.findMany({
       where,
       include: {
-        buyer: {
+        user: {
           select: {
             id: true,
             fullName: true,
+            profilePhoto: true,
           },
         },
         product: {
@@ -140,10 +139,11 @@ const updateReview = async (id, data) => {
     where: { id },
     data,
     include: {
-      buyer: {
+      user: {
         select: {
           id: true,
           fullName: true,
+          profilePhoto: true,
         },
       },
       product: {

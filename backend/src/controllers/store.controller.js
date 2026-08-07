@@ -1,4 +1,5 @@
 const storeService = require('../services/store.service');
+const followService = require('../services/storeFollow.service');
 const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
@@ -96,6 +97,27 @@ const getStoreBySlug = asyncHandler(async (req, res) => {
   successResponse(res, store, 'Store retrieved successfully');
 });
 
+// GET /api/stores/slug/:slug/storefront — public shop profile aggregate
+const getStorefront = asyncHandler(async (req, res) => {
+  const store = await storeService.getStorefront(req.params.slug);
+  const isAdmin = req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN');
+  const isOwner = req.user && store.ownerId === req.user.id;
+  if (!isAdmin && !isOwner && (!store.isActive || store.isSuspended)) {
+    return res.status(404).json({ success: false, message: 'Store not found' });
+  }
+  const followStatus = await followService.getFollowStatus(req.user?.id || null, store.id);
+  successResponse(
+    res,
+    {
+      ...store,
+      followerCount: followStatus.followerCount,
+      isFollowing: followStatus.following,
+      notificationsEnabled: followStatus.notificationsEnabled,
+    },
+    'Storefront retrieved successfully'
+  );
+});
+
 /**
  * Get my store
  * @route GET /api/stores/my/store
@@ -172,14 +194,43 @@ const unsuspendStore = asyncHandler(async (req, res) => {
   successResponse(res, store, 'Store unsuspended successfully');
 });
 
+/**
+ * Service Areas
+ */
+const getStoreServiceAreas = asyncHandler(async (req, res) => {
+  const areas = await storeService.getServiceAreas(req.params.id);
+  successResponse(res, areas, 'Service areas retrieved successfully');
+});
+
+const getMyServiceAreas = asyncHandler(async (req, res) => {
+  const areas = await storeService.getMyServiceAreas(req.user.id);
+  successResponse(res, areas, 'Service areas retrieved successfully');
+});
+
+const replaceMyServiceAreas = asyncHandler(async (req, res) => {
+  const areas = await storeService.replaceMyServiceAreas(req.user.id, req.body.areas || []);
+  successResponse(res, areas, 'Service areas updated successfully');
+});
+
+const checkStoreCoverage = asyncHandler(async (req, res) => {
+  const { municipalityId, barangay } = req.query;
+  const result = await storeService.checkCoverage(req.params.id, municipalityId, barangay);
+  successResponse(res, result, 'Coverage check');
+});
+
 module.exports = {
   createStore,
   getStores,
   getStoreById,
   getStoreBySlug,
+  getStorefront,
   getMyStore,
   updateStore,
   deleteStore,
   suspendStore,
   unsuspendStore,
+  getStoreServiceAreas,
+  getMyServiceAreas,
+  replaceMyServiceAreas,
+  checkStoreCoverage,
 };

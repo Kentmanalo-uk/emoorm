@@ -103,6 +103,13 @@ const findBySlug = async (slug) => {
           code: true,
         },
       },
+      _count: {
+        select: {
+          products: {
+            where: { deletedAt: null, status: 'APPROVED' },
+          },
+        },
+      },
     },
   });
 };
@@ -244,6 +251,49 @@ const unsuspendStore = async (id) => {
   });
 };
 
+// ---------- Service Areas ----------
+
+const getServiceAreas = async (storeId) => {
+  return prisma.storeServiceArea.findMany({
+    where: { storeId },
+    include: { municipality: { select: { id: true, name: true, code: true } } },
+    orderBy: [{ municipality: { name: 'asc' } }, { barangay: 'asc' }],
+  });
+};
+
+const replaceServiceAreas = async (storeId, areas) => {
+  // areas: [{ municipalityId, barangay|null }]
+  return prisma.$transaction(async (tx) => {
+    await tx.storeServiceArea.deleteMany({ where: { storeId } });
+    if (!areas.length) return [];
+    const rows = areas.map((a) => ({
+      storeId,
+      municipalityId: a.municipalityId,
+      barangay: a.barangay || null,
+    }));
+    // createMany doesn't return records on MySQL, then re-fetch
+    await tx.storeServiceArea.createMany({ data: rows, skipDuplicates: true });
+    return tx.storeServiceArea.findMany({
+      where: { storeId },
+      include: { municipality: { select: { id: true, name: true, code: true } } },
+      orderBy: [{ municipality: { name: 'asc' } }, { barangay: 'asc' }],
+    });
+  });
+};
+
+const isAreaCovered = async (storeId, municipalityId, barangay) => {
+  const matchBarangay = (barangay || '').trim().toLowerCase();
+  const areas = await prisma.storeServiceArea.findMany({
+    where: { storeId, municipalityId },
+    select: { barangay: true },
+  });
+  if (!areas.length) return false;
+  // If any area for this muni has barangay=null, whole municipality is covered
+  if (areas.some((a) => !a.barangay)) return true;
+  if (!matchBarangay) return false;
+  return areas.some((a) => (a.barangay || '').trim().toLowerCase() === matchBarangay);
+};
+
 module.exports = {
   createStore,
   findById,
@@ -255,4 +305,7 @@ module.exports = {
   slugExists,
   suspendStore,
   unsuspendStore,
+  getServiceAreas,
+  replaceServiceAreas,
+  isAreaCovered,
 };

@@ -196,23 +196,10 @@ const Register = () => {
               <span className="register-hero-text">emoorm</span>
             </div>
             <h1 className="register-hero-title">
-              Fresh from<br />
-              <span className="register-hero-title-highlight">the island.</span>
+              Made in Mindoro<br />
+              <span className="register-hero-title-highlight">the place of rich<br />in Agriculture Producers</span>
             </h1>
-            <div className="register-hero-stats">
-              <div className="register-hero-stat">
-                <div className="register-hero-stat-number">15</div>
-                <div className="register-hero-stat-label">MUNICIPALITIES</div>
-              </div>
-              <div className="register-hero-stat">
-                <div className="register-hero-stat-number">100%</div>
-                <div className="register-hero-stat-label">LOCAL SELLERS</div>
-              </div>
-              <div className="register-hero-stat">
-                <div className="register-hero-stat-number">Free</div>
-                <div className="register-hero-stat-label">TO JOIN</div>
-              </div>
-            </div>
+
           </div>
 
           {/* Right Side - Form */}

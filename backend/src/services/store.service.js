@@ -1,5 +1,6 @@
 const storeRepository = require('../repositories/store.repository');
 const userRepository = require('../repositories/user.repository');
+const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -104,6 +105,66 @@ const getStoreBySlug = async (slug) => {
   return store;
 };
 
+// Aggregated storefront: store + ratings summary + category tabs with counts.
+const getStorefront = async (slug) => {
+  const store = await storeRepository.findBySlug(slug);
+  if (!store || store.deletedAt) {
+    throw new ApiError('Store not found', 404);
+  }
+
+  const productWhere = {
+    storeId: store.id,
+    deletedAt: null,
+    status: 'APPROVED',
+  };
+
+  const [ratingAgg, categoryGroups, categoryRows] = await Promise.all([
+    prisma.review.aggregate({
+      where: {
+        deletedAt: null,
+        product: { storeId: store.id, deletedAt: null },
+      },
+      _avg: { rating: true },
+      _count: { _all: true },
+    }),
+    prisma.product.groupBy({
+      by: ['categoryId'],
+      where: productWhere,
+      _count: { _all: true },
+    }),
+    prisma.category.findMany({
+      where: { id: { in: [] } },
+    }),
+  ]);
+
+  const categoryIds = categoryGroups.map((g) => g.categoryId).filter(Boolean);
+  const categories = categoryIds.length
+    ? await prisma.category.findMany({
+      where: { id: { in: categoryIds } },
+      select: { id: true, name: true, slug: true, image: true },
+    })
+    : [];
+
+  const categoryTabs = categories
+    .map((c) => ({
+      ...c,
+      count: categoryGroups.find((g) => g.categoryId === c.id)?._count?._all || 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    ...store,
+    stats: {
+      productCount: store._count?.products || 0,
+      averageRating: Number(ratingAgg._avg.rating || 0),
+      reviewCount: ratingAgg._count._all || 0,
+    },
+    categories: categoryTabs,
+    // Suppress the raw _count field so response shape stays clean
+    _count: undefined,
+  };
+};
+
 /**
  * Get my store (current seller)
  * @param {String} userId - User ID
@@ -160,6 +221,17 @@ const updateStore = async (storeId, userId, data) => {
     'logo',
     'coverImage',
     'businessHours',
+    'fulfillmentMode',
+    'pickupAddress',
+    'pickupInstructions',
+    'paymentQrImage',
+    'paymentQrType',
+    'paymentInstructions',
+    'acceptsCod',
+    'primaryColor',
+    'secondaryColor',
+    'bannerImage',
+    'isActive',
   ];
 
   const updateData = {};
@@ -231,10 +303,42 @@ const unsuspendStore = async (storeId, actor = null) => {
   return storeRepository.unsuspendStore(storeId);
 };
 
+// ---------- Service Areas ----------
+
+const getServiceAreas = async (storeId) => {
+  return storeRepository.getServiceAreas(storeId);
+};
+
+const getMyServiceAreas = async (userId) => {
+  const store = await storeRepository.findByOwnerId(userId);
+  if (!store) throw new ApiError('You do not have a store', 404);
+  return storeRepository.getServiceAreas(store.id);
+};
+
+const replaceMyServiceAreas = async (userId, areas) => {
+  const store = await storeRepository.findByOwnerId(userId);
+  if (!store) throw new ApiError('You do not have a store', 404);
+  if (!Array.isArray(areas)) throw new ApiError('Areas must be an array', 400);
+  const normalized = areas
+    .filter((a) => a && a.municipalityId)
+    .map((a) => ({
+      municipalityId: String(a.municipalityId),
+      barangay: a.barangay ? String(a.barangay).trim() : null,
+    }));
+  return storeRepository.replaceServiceAreas(store.id, normalized);
+};
+
+const checkCoverage = async (storeId, municipalityId, barangay) => {
+  if (!municipalityId) return { covered: false, reason: 'municipality required' };
+  const covered = await storeRepository.isAreaCovered(storeId, municipalityId, barangay);
+  return { covered };
+};
+
 module.exports = {
   createStore,
   getStoreById,
   getStoreBySlug,
+  getStorefront,
   getMyStore,
   getStores,
   updateStore,
@@ -242,4 +346,8 @@ module.exports = {
   suspendStore,
   unsuspendStore,
   generateSlug,
+  getServiceAreas,
+  getMyServiceAreas,
+  replaceMyServiceAreas,
+  checkCoverage,
 };

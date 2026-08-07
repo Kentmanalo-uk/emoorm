@@ -15,6 +15,13 @@ router.get(
 );
 
 router.get(
+  '/seller/day',
+  authenticate,
+  authorize('SELLER'),
+  analyticsController.getSellerDayDetails
+);
+
+router.get(
   '/municipality',
   authenticate,
   authorize('MUNICIPAL_ADMIN', 'SUPER_ADMIN'),

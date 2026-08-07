@@ -36,6 +36,29 @@ enum OrderStatus {
   READY
   COMPLETED
   CANCELLED
+  TO_SHIP
+  OUT_FOR_DELIVERY
+  DELIVERED
+  READY_FOR_PICKUP
+  PICKED_UP
+}
+
+enum FulfillmentMode {
+  DELIVERY
+  PICKUP
+  BOTH
+}
+
+enum FulfillmentMethod {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  COD
+  GCASH
+  QRPH
+  BANK_TRANSFER
 }
 
 enum ReportType {
@@ -63,6 +86,9 @@ enum NotificationType {
   REPORT_SUBMITTED
   REPORT_RESOLVED
   SYSTEM_ANNOUNCEMENT
+  STORE_NEW_PRODUCT
+  STORE_PROMOTION
+  STORE_ANNOUNCEMENT
 }
 
 // ============================================
@@ -126,6 +152,7 @@ model User {
   managedMunicipality Municipality? @relation("MunicipalAdmin")
   buyerConversations Conversation[] @relation("BuyerConversations")
   sentMessages  Message[]      @relation("MessageSender")
+  followedStores StoreFollow[]
 
   @@map("users")
 }
@@ -148,6 +175,7 @@ model Municipality {
   stores    Store[]
   products  Product[]
   reports   Report[]
+  serviceAreas StoreServiceArea[]
 
   @@map("municipalities")
 }
@@ -169,6 +197,22 @@ model Store {
   municipalityId String  @map("municipality_id")
   municipality   Municipality @relation(fields: [municipalityId], references: [id])
 
+  // Fulfillment settings
+  fulfillmentMode      FulfillmentMode @default(DELIVERY) @map("fulfillment_mode")
+  pickupAddress        String?         @db.Text @map("pickup_address")
+  pickupInstructions   String?         @db.Text @map("pickup_instructions")
+
+  // Payment settings
+  paymentQrImage       String?         @map("payment_qr_image")
+  paymentQrType        String?         @map("payment_qr_type")
+  paymentInstructions  String?         @db.Text @map("payment_instructions")
+  acceptsCod           Boolean         @default(true) @map("accepts_cod")
+
+  // Theme customization
+  primaryColor         String?         @map("primary_color")
+  secondaryColor       String?         @map("secondary_color")
+  bannerImage          String?         @map("banner_image")
+
   // Status
   isActive      Boolean  @default(true) @map("is_active")
   isSuspended   Boolean  @default(false) @map("is_suspended")
@@ -181,8 +225,42 @@ model Store {
   products      Product[]
   orders        Order[]
   conversations Conversation[]
+  serviceAreas  StoreServiceArea[]
+  followers     StoreFollow[]
 
   @@map("stores")
+}
+
+model StoreFollow {
+  id                    String   @id @default(uuid())
+  buyerId               String   @map("buyer_id")
+  storeId               String   @map("store_id")
+  notificationsEnabled  Boolean  @default(true) @map("notifications_enabled")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  buyer User  @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([buyerId, storeId])
+  @@index([storeId])
+  @@index([buyerId])
+  @@map("store_follows")
+}
+
+model StoreServiceArea {
+  id             String   @id @default(uuid())
+  storeId        String   @map("store_id")
+  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  municipalityId String   @map("municipality_id")
+  municipality   Municipality @relation(fields: [municipalityId], references: [id])
+  barangay       String?  // null means "all barangays in this municipality"
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([storeId, municipalityId, barangay])
+  @@index([storeId])
+  @@index([municipalityId])
+  @@map("store_service_areas")
 }
 
 model Category {
@@ -267,10 +345,23 @@ model Order {
   // Status
   status          OrderStatus @default(PENDING)
 
+  // Fulfillment
+  fulfillmentMethod FulfillmentMethod @default(DELIVERY) @map("fulfillment_method")
+  pickupLocation    String?           @db.Text @map("pickup_location")
+
+  // Payment
+  paymentMethod    PaymentMethod @default(COD) @map("payment_method")
+  paymentReference String?       @map("payment_reference")
+  paymentProofUrl  String?       @map("payment_proof_url")
+
   // Delivery Information
   deliveryAddress String      @db.Text @map("delivery_address")
   deliveryNotes   String?     @db.Text @map("delivery_notes")
   contactNumber   String      @map("contact_number")
+
+  // Buyer address parts (for coverage/receipts)
+  buyerMunicipalityId String? @map("buyer_municipality_id")
+  buyerBarangay       String? @map("buyer_barangay")
 
   // Timestamps
   createdAt       DateTime    @default(now()) @map("created_at")
@@ -349,6 +440,9 @@ model Review {
 
   rating    Int      // 1-5
   comment   String?  @db.Text
+
+  images    Json?    // Array of image URLs
+  videoUrl  String?  @map("video_url")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

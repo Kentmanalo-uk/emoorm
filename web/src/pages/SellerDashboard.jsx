@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Plus, Clock, Truck, CheckCircle, Package,
-  ShoppingBag, TrendingUp, Star, BarChart2, User,
+  ShoppingBag, TrendingUp, Star, BarChart2, User, Users,
 } from 'lucide-react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import Skeleton from '../components/ui/Skeleton';
+import { getSellerFollowerStats, subscribeToFollowChanges } from '../lib/follow';
 import './SellerDashboard.css';
 
 const STATUS_META = {
@@ -32,6 +33,7 @@ export default function SellerDashboard() {
     productsCount: 0,
     completed: 0,
   });
+  const [followerStats, setFollowerStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -89,6 +91,25 @@ export default function SellerDashboard() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Load follower stats once we have a store id, and refetch on cross-tab follow changes
+  useEffect(() => {
+    if (!store?.id) return undefined;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await getSellerFollowerStats(store.id);
+        if (!cancelled) setFollowerStats(data);
+      } catch {
+        /* silent */
+      }
+    };
+    load();
+    const unsub = subscribeToFollowChanges((msg) => {
+      if (msg?.storeId === store.id) load();
+    });
+    return () => { cancelled = true; unsub(); };
+  }, [store?.id]);
 
   const shopName = store?.name || (user?.fullName ? `${user.fullName}'s Shop` : 'Your Shop');
 
@@ -157,6 +178,69 @@ export default function SellerDashboard() {
             </section>
 
             <aside className="sd-right">
+              <section className="sd-card sd-followers">
+                <header className="sd-card-header">
+                  <h2>Followers</h2>
+                  <Users size={15} className="sd-header-icon" />
+                </header>
+                {!followerStats ? (
+                  <div className="sd-empty sd-empty--sm">
+                    <Users size={22} />
+                    <p>Loading…</p>
+                  </div>
+                ) : (
+                  <div className="sd-followers-body">
+                    <div className="sd-followers-hero">
+                      <span className="sd-followers-total">{followerStats.total}</span>
+                      <span className="sd-followers-label">total followers</span>
+                    </div>
+                    <div className="sd-followers-metrics">
+                      <div>
+                        <span className="sd-followers-metric-value">+{followerStats.last7Days}</span>
+                        <span className="sd-followers-metric-label">last 7 days</span>
+                      </div>
+                      <div>
+                        <span className="sd-followers-metric-value">+{followerStats.last30Days}</span>
+                        <span className="sd-followers-metric-label">last 30 days</span>
+                      </div>
+                      <div>
+                        <span
+                          className={`sd-followers-metric-value ${followerStats.growthPct >= 0 ? 'is-up' : 'is-down'}`}
+                        >
+                          {followerStats.growthPct >= 0 ? '+' : ''}{followerStats.growthPct}%
+                        </span>
+                        <span className="sd-followers-metric-label">growth</span>
+                      </div>
+                    </div>
+                    {followerStats.recent?.length > 0 && (
+                      <div className="sd-followers-recent">
+                        <span className="sd-followers-recent-label">Recent followers</span>
+                        <div className="sd-followers-avatars">
+                          {followerStats.recent.slice(0, 6).map((r) => (
+                            <div
+                              key={r.buyer.id}
+                              className="sd-followers-avatar"
+                              title={r.buyer.fullName}
+                            >
+                              {r.buyer.profilePhoto ? (
+                                <img src={r.buyer.profilePhoto} alt={r.buyer.fullName} />
+                              ) : (
+                                <span>
+                                  {(r.buyer.fullName || '?').slice(0, 1).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                          {followerStats.recent.length > 6 && (
+                            <span className="sd-followers-more">+{followerStats.recent.length - 6}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+
               <section className="sd-card sd-topprod">
                 <header className="sd-card-header">
                   <h2>Top Products</h2>

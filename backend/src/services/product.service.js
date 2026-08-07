@@ -3,6 +3,7 @@ const productRepository = require('../repositories/product.repository');
 const storeRepository = require('../repositories/store.repository');
 const categoryRepository = require('../repositories/category.repository');
 const notificationService = require('./notification.service');
+const followService = require('./storeFollow.service');
 const { ApiError } = require('../middleware/errorHandler');
 const { bufferToDHash, hammingDistance, hashFromSource, HASH_BIT_LENGTH } = require('../utils/imageHash');
 
@@ -218,7 +219,25 @@ const updateProduct = async (productId, userId, data) => {
     updateData.imageHash = await computeImageHashSafe(updateData.images);
   }
 
-  return productRepository.updateProduct(productId, updateData);
+  const updated = await productRepository.updateProduct(productId, updateData);
+
+  // Restock notification: was 0 (or null), now > 0 while APPROVED
+  try {
+    const wasOutOfStock = (product.stock || 0) === 0;
+    const nowInStock = updateData.stock !== undefined && Number(updateData.stock) > 0;
+    if (wasOutOfStock && nowInStock && updated.status === 'APPROVED') {
+      await followService.notifyFollowers(updated.storeId, {
+        type: 'STORE_NEW_PRODUCT',
+        title: `${store.name} restocked ${updated.name}`,
+        message: `${updated.name} is back in stock at ${store.name}.`,
+        relatedId: updated.id,
+      });
+    }
+  } catch (err) {
+    console.error('[updateProduct] restock notification failed:', err.message);
+  }
+
+  return updated;
 };
 
 /**
@@ -272,13 +291,28 @@ const approveProduct = async (productId, adminId, actor) => {
     approvedAt: new Date(),
   });
 
+  let approvedStore = null;
   try {
-    const store = await storeRepository.findById(product.storeId);
-    if (store?.ownerId) {
-      await notificationService.notifyProductApproved(store.ownerId, product.id, product.name);
+    approvedStore = await storeRepository.findById(product.storeId);
+    if (approvedStore?.ownerId) {
+      await notificationService.notifyProductApproved(approvedStore.ownerId, product.id, product.name);
     }
   } catch (err) {
     console.error('[approveProduct] notification failed:', err.message);
+  }
+
+  // Notify followers that the store added a new product
+  try {
+    if (approvedStore) {
+      await followService.notifyFollowers(product.storeId, {
+        type: 'STORE_NEW_PRODUCT',
+        title: `${approvedStore.name} added a new product`,
+        message: `${product.name} is now available at ${approvedStore.name}.`,
+        relatedId: product.id,
+      });
+    }
+  } catch (err) {
+    console.error('[approveProduct] follower fan-out failed:', err.message);
   }
 
   return updated;

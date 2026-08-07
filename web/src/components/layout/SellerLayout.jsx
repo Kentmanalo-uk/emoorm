@@ -154,6 +154,9 @@ export default function SellerLayout() {
                 <NavLink to="/seller/store" className={subNavCls}>
                   Shop Profile
                 </NavLink>
+                <NavLink to="/seller/fulfillment" className={subNavCls}>
+                  Fulfillment & Payment
+                </NavLink>
                 {store?.slug && (
                   <a
                     href={`/store/${store.slug}`}
@@ -246,6 +249,7 @@ const LABELS = {
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop Profile',
+  '/seller/fulfillment': 'Fulfillment & Payment',
 };
 
 function buildCrumbs(pathname) {

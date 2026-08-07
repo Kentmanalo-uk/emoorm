@@ -24,7 +24,19 @@ const generateOrderNumber = () => {
  * @returns {Promise<Object>} Created order
  */
 const createOrder = async (userId, data) => {
-  const { storeId, items, deliveryAddress, deliveryNotes, contactNumber } = data;
+  const {
+    storeId,
+    items,
+    deliveryAddress,
+    deliveryNotes,
+    contactNumber,
+    fulfillmentMethod = 'DELIVERY',
+    paymentMethod = 'COD',
+    paymentReference,
+    paymentProofUrl,
+    buyerMunicipalityId,
+    buyerBarangay,
+  } = data;
 
   // Validate buyer
   const buyer = await userRepository.findById(userId);
@@ -32,8 +44,8 @@ const createOrder = async (userId, data) => {
     throw new ApiError('Buyer not found', 404);
   }
 
-  if (!deliveryAddress) {
-    throw new ApiError('Delivery address is required', 400);
+  if (!['DELIVERY', 'PICKUP'].includes(fulfillmentMethod)) {
+    throw new ApiError('Invalid fulfillment method', 400);
   }
 
   if (!contactNumber) {
@@ -44,6 +56,36 @@ const createOrder = async (userId, data) => {
   const store = await storeRepository.findById(storeId);
   if (!store || store.deletedAt || store.isSuspended) {
     throw new ApiError('Store not found or suspended', 404);
+  }
+
+  // Fulfillment method must be supported by the store
+  const mode = store.fulfillmentMode || 'DELIVERY';
+  if (fulfillmentMethod === 'DELIVERY' && mode === 'PICKUP') {
+    throw new ApiError('This store does not offer delivery', 400);
+  }
+  if (fulfillmentMethod === 'PICKUP' && mode === 'DELIVERY') {
+    throw new ApiError('This store does not offer pickup', 400);
+  }
+
+  // Payment method must be allowed
+  if (paymentMethod === 'COD' && store.acceptsCod === false) {
+    throw new ApiError('This store does not accept Cash on Delivery', 400);
+  }
+  if ((paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && !store.paymentQrImage) {
+    throw new ApiError('This store has not set up QR payment', 400);
+  }
+
+  // Delivery-only validations
+  if (fulfillmentMethod === 'DELIVERY') {
+    if (!deliveryAddress) {
+      throw new ApiError('Delivery address is required', 400);
+    }
+    const muniForCoverage = buyerMunicipalityId || buyer.municipalityId;
+    const brgyForCoverage = buyerBarangay || buyer.barangay;
+    const covered = await storeRepository.isAreaCovered(storeId, muniForCoverage, brgyForCoverage);
+    if (!covered) {
+      throw new ApiError('Delivery is not available for your address. Please choose Pickup instead.', 400);
+    }
   }
 
   // Validate items and calculate totals
@@ -85,7 +127,7 @@ const createOrder = async (userId, data) => {
     });
   }
 
-  const DELIVERY_FEE = totalAmount >= 500 ? 0 : 50;
+  const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0 : (totalAmount >= 500 ? 0 : 50);
 
   // Create order with items (stock is decremented atomically in the transaction)
   let order;
@@ -98,10 +140,19 @@ const createOrder = async (userId, data) => {
         subtotal: totalAmount,
         deliveryFee: DELIVERY_FEE,
         total: totalAmount + DELIVERY_FEE,
-        deliveryAddress,
+        deliveryAddress: fulfillmentMethod === 'PICKUP'
+          ? (store.pickupAddress || deliveryAddress || 'Store pickup')
+          : deliveryAddress,
         deliveryNotes: deliveryNotes || null,
         contactNumber,
         status: 'PENDING',
+        fulfillmentMethod,
+        pickupLocation: fulfillmentMethod === 'PICKUP' ? (store.pickupAddress || null) : null,
+        paymentMethod,
+        paymentReference: paymentReference || null,
+        paymentProofUrl: paymentProofUrl || null,
+        buyerMunicipalityId: buyerMunicipalityId || buyer.municipalityId || null,
+        buyerBarangay: buyerBarangay || buyer.barangay || null,
       },
       orderItems
     );
@@ -204,15 +255,29 @@ const updateOrderStatus = async (orderId, userId, newStatus) => {
     throw new ApiError('You can only update orders for your store', 403);
   }
 
-  // Validate status transition
-  const validTransitions = {
+  // Validate status transition (fulfillment-aware)
+  const deliveryTransitions = {
     PENDING: ['CONFIRMED', 'CANCELLED'],
-    CONFIRMED: ['PREPARING', 'CANCELLED'],
-    PREPARING: ['READY', 'CANCELLED'],
+    CONFIRMED: ['TO_SHIP', 'PREPARING', 'CANCELLED'],
+    PREPARING: ['TO_SHIP', 'READY', 'CANCELLED'],
+    TO_SHIP: ['OUT_FOR_DELIVERY', 'CANCELLED'],
+    OUT_FOR_DELIVERY: ['DELIVERED', 'CANCELLED'],
+    DELIVERED: ['COMPLETED'],
     READY: ['COMPLETED', 'CANCELLED'],
     COMPLETED: [],
     CANCELLED: [],
   };
+  const pickupTransitions = {
+    PENDING: ['CONFIRMED', 'CANCELLED'],
+    CONFIRMED: ['READY_FOR_PICKUP', 'PREPARING', 'CANCELLED'],
+    PREPARING: ['READY_FOR_PICKUP', 'READY', 'CANCELLED'],
+    READY_FOR_PICKUP: ['PICKED_UP', 'CANCELLED'],
+    PICKED_UP: ['COMPLETED'],
+    READY: ['COMPLETED', 'CANCELLED'],
+    COMPLETED: [],
+    CANCELLED: [],
+  };
+  const validTransitions = order.fulfillmentMethod === 'PICKUP' ? pickupTransitions : deliveryTransitions;
 
   if (!validTransitions[order.status]?.includes(newStatus)) {
     throw new ApiError(`Cannot transition from ${order.status} to ${newStatus}`, 400);

@@ -18,7 +18,19 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * @access Private (Buyer only)
  */
 const createReview = asyncHandler(async (req, res) => {
-  const review = await reviewService.createReview(req.user.id, req.body);
+  const files = req.files || {};
+  const uploadedImages = (files.images || []).map((f) => `/uploads/${f.filename}`);
+  const uploadedVideo = files.video?.[0] ? `/uploads/${files.video[0].filename}` : undefined;
+
+  const payload = {
+    productId: req.body.productId,
+    rating: req.body.rating,
+    comment: req.body.comment,
+    images: uploadedImages,
+    videoUrl: uploadedVideo,
+  };
+
+  const review = await reviewService.createReview(req.user.id, payload);
 
   createdResponse(res, review, 'Review created successfully');
 });

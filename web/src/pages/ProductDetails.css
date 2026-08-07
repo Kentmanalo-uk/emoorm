@@ -1290,3 +1290,42 @@
     padding-top: 0;
   }
 }
+
+
+/* ===== Review media (photos/video) ===== */
+.pdp-review-media {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pdp-review-media-item {
+  display: block;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
+  aspect-ratio: 1 / 1;
+}
+
+.pdp-review-media-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.pdp-review-media-item:hover img {
+  transform: scale(1.05);
+}
+
+.pdp-review-media-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  grid-column: span 2;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}

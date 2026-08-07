@@ -61,5 +61,6 @@ router.use('/announcements', announcementRoutes);
 router.use('/admin', adminRoutes);
 router.use('/auth/mfa', mfaRoutes);
 router.use('/messages', messageRoutes);
+router.use('/follows', require('./storeFollow.routes'));
 
 module.exports = router;

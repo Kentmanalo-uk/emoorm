@@ -1,13 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const storeController = require('../controllers/store.controller');
-const { authenticate, authorize, checkStoreOwnership } = require('../middleware/auth');
+const followController = require('../controllers/storeFollow.controller');
+const { authenticate, authorize, checkStoreOwnership, optionalAuth } = require('../middleware/auth');
 
 /**
  * Store Routes
  */
 
 // Public routes
+router.get(
+  '/slug/:slug/storefront',
+  optionalAuth,
+  storeController.getStorefront
+);
+
 router.get(
   '/slug/:slug',
   storeController.getStoreBySlug
@@ -22,8 +29,32 @@ router.get(
 );
 
 router.get(
+  '/my/service-areas',
+  authenticate,
+  authorize('SELLER'),
+  storeController.getMyServiceAreas
+);
+
+router.put(
+  '/my/service-areas',
+  authenticate,
+  authorize('SELLER'),
+  storeController.replaceMyServiceAreas
+);
+
+router.get(
   '/',
   storeController.getStores
+);
+
+router.get(
+  '/:id/service-areas',
+  storeController.getStoreServiceAreas
+);
+
+router.get(
+  '/:id/coverage',
+  storeController.checkStoreCoverage
 );
 
 router.get(

@@ -28,6 +28,9 @@ const createNotification = async (data) => {
     'REPORT_SUBMITTED',
     'REPORT_RESOLVED',
     'SYSTEM_ANNOUNCEMENT',
+    'STORE_NEW_PRODUCT',
+    'STORE_PROMOTION',
+    'STORE_ANNOUNCEMENT',
   ];
 
   if (!validTypes.includes(type)) {

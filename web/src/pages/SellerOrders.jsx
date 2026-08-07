@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ShoppingBag, Eye, CheckCircle, XCircle,
-  Clock, Package, Truck, ChevronDown
+  Clock, Package, Truck, ChevronDown, FileText, Store as StoreIcon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
+import { resolveImg } from '../lib/media';
 import './SellerDashboard.css';
 import './SellerOrders.css';
 
@@ -14,7 +16,9 @@ const TABS = [
   { key: 'PENDING', label: 'New' },
   { key: 'CONFIRMED', label: 'Confirmed' },
   { key: 'PREPARING', label: 'Preparing' },
-  { key: 'READY', label: 'Ready' },
+  { key: 'TO_SHIP', label: 'To Ship' },
+  { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
+  { key: 'READY_FOR_PICKUP', label: 'Ready for Pickup' },
   { key: 'COMPLETED', label: 'Completed' },
   { key: 'CANCELLED', label: 'Cancelled' },
 ];
@@ -23,23 +27,49 @@ const STATUS_MAP = {
   PENDING: { label: 'New Order', cls: 'status-pending', icon: <Clock size={13} /> },
   CONFIRMED: { label: 'Confirmed', cls: 'status-confirmed', icon: <CheckCircle size={13} /> },
   PREPARING: { label: 'Preparing', cls: 'status-preparing', icon: <Package size={13} /> },
+  TO_SHIP: { label: 'To Ship', cls: 'status-preparing', icon: <Package size={13} /> },
+  OUT_FOR_DELIVERY: { label: 'Out for Delivery', cls: 'status-ready', icon: <Truck size={13} /> },
+  DELIVERED: { label: 'Delivered', cls: 'status-completed', icon: <CheckCircle size={13} /> },
   READY: { label: 'Ready', cls: 'status-ready', icon: <Truck size={13} /> },
+  READY_FOR_PICKUP: { label: 'Ready for Pickup', cls: 'status-ready', icon: <StoreIcon size={13} /> },
+  PICKED_UP: { label: 'Picked Up', cls: 'status-completed', icon: <CheckCircle size={13} /> },
   COMPLETED: { label: 'Completed', cls: 'status-completed', icon: <CheckCircle size={13} /> },
   CANCELLED: { label: 'Cancelled', cls: 'status-cancelled', icon: <XCircle size={13} /> },
 };
 
-// What actions a seller can take from each status
-const NEXT_STATUS = {
+// Fulfillment-aware next-status resolution
+const DELIVERY_FLOW = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['PREPARING', 'CANCELLED'],
-  PREPARING: ['READY'],
-  READY: ['COMPLETED'],
+  CONFIRMED: ['TO_SHIP', 'CANCELLED'],
+  PREPARING: ['TO_SHIP'],
+  TO_SHIP: ['OUT_FOR_DELIVERY'],
+  OUT_FOR_DELIVERY: ['DELIVERED'],
+  DELIVERED: [],
 };
+
+const PICKUP_FLOW = {
+  PENDING: ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['READY_FOR_PICKUP', 'CANCELLED'],
+  PREPARING: ['READY_FOR_PICKUP'],
+  READY: ['PICKED_UP'],
+  READY_FOR_PICKUP: ['PICKED_UP'],
+  PICKED_UP: [],
+};
+
+function getNextStatuses(order) {
+  const flow = order?.fulfillmentMethod === 'PICKUP' ? PICKUP_FLOW : DELIVERY_FLOW;
+  return flow[order?.status] || [];
+}
 
 const ACTION_LABELS = {
   CONFIRMED: { label: 'Confirm Order', cls: 'action-confirm' },
   PREPARING: { label: 'Start Preparing', cls: 'action-prepare' },
+  TO_SHIP: { label: 'Mark Ready to Ship', cls: 'action-prepare' },
+  OUT_FOR_DELIVERY: { label: 'Out for Delivery', cls: 'action-ready' },
+  DELIVERED: { label: 'Mark Delivered', cls: 'action-complete' },
   READY: { label: 'Mark Ready', cls: 'action-ready' },
+  READY_FOR_PICKUP: { label: 'Ready for Pickup', cls: 'action-ready' },
+  PICKED_UP: { label: 'Mark Picked Up', cls: 'action-complete' },
   COMPLETED: { label: 'Complete', cls: 'action-complete' },
   CANCELLED: { label: 'Cancel', cls: 'action-cancel' },
 };
@@ -125,36 +155,94 @@ export default function SellerOrders() {
                 <p>No orders in this category.</p>
               </div>
             ) : (
-              <table className="seller-table">
+              <table className="seller-table so-orders-table">
                 <thead>
                   <tr>
-                    <th>Order #</th>
-                    <th>Buyer</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th style={{ width: 110 }}>Order #</th>
+                    <th>Products</th>
+                    <th style={{ width: 180 }}>Buyer</th>
+                    <th style={{ width: 110 }}>Total</th>
+                    <th style={{ width: 130 }}>Status</th>
+                    <th style={{ width: 110 }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {displayed.map(order => {
                     const s = STATUS_MAP[order.status] || { label: order.status, cls: '' };
-                    const nextStatuses = NEXT_STATUS[order.status] || [];
+                    const nextStatuses = getNextStatuses(order);
                     const isUpdating = updatingId === order.id;
+                    const items = order.items || [];
+                    const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+                    const orderDate = order.createdAt
+                      ? new Date(order.createdAt).toLocaleDateString('en-PH', {
+                        month: 'short', day: 'numeric', year: 'numeric',
+                      })
+                      : '';
                     return (
                       <tr
                         key={order.id}
                         className={selectedOrder?.id === order.id ? 'row-selected' : ''}
                       >
                         <td className="order-num">
-                          #{order.orderNumber || order.id.slice(-6).toUpperCase()}
+                          <div>#{order.orderNumber || order.id.slice(-6).toUpperCase()}</div>
+                          {orderDate && <div className="so-order-date">{orderDate}</div>}
                         </td>
-                        <td>{order.buyer?.fullName || 'Buyer'}</td>
-                        <td>{order.items?.length ?? 0}</td>
+                        <td>
+                          <div className="so-products">
+                            <div className="so-product-thumbs">
+                              {items.slice(0, 3).map((it) => {
+                                const src = resolveImg(it.product?.images?.[0]);
+                                return (
+                                  <div key={it.id} className="so-product-thumb" title={it.product?.name}>
+                                    {src ? (
+                                      <img
+                                        src={src}
+                                        alt={it.product?.name || 'Product'}
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                      />
+                                    ) : (
+                                      <span className="so-product-thumb-fallback">
+                                        <Package size={14} />
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {items.length > 3 && (
+                                <div className="so-product-thumb so-product-more">+{items.length - 3}</div>
+                              )}
+                            </div>
+                            <div className="so-product-summary">
+                              {items.length === 0 ? (
+                                <span className="so-product-name">No items</span>
+                              ) : (
+                                <>
+                                  <span className="so-product-name">
+                                    {items[0].product?.name || 'Product'}
+                                    {items.length > 1 && (
+                                      <span className="so-product-extra"> +{items.length - 1} more</span>
+                                    )}
+                                  </span>
+                                  <span className="so-product-meta">
+                                    {items.length} {items.length === 1 ? 'item' : 'items'} · Qty {totalQty}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="so-buyer">
+                            <span className="so-buyer-name">{order.buyer?.fullName || 'Buyer'}</span>
+                            {order.buyer?.contactNumber && (
+                              <span className="so-buyer-meta">{order.buyer.contactNumber}</span>
+                            )}
+                          </div>
+                        </td>
                         <td>₱{Number(order.total).toFixed(2)}</td>
                         <td>
-                          <span className={`seller-badge ${s.cls}`}>
-                            {s.icon} {s.label}
+                          <span className={`seller-badge seller-badge--solid ${s.cls}`}>
+                            {s.label}
                           </span>
                         </td>
                         <td>
@@ -215,8 +303,7 @@ export default function SellerOrders() {
                 {/* Status */}
                 <div className="detail-row">
                   <span>Status</span>
-                  <span className={`seller-badge ${STATUS_MAP[selectedOrder.status]?.cls}`}>
-                    {STATUS_MAP[selectedOrder.status]?.icon}
+                  <span className={`seller-badge seller-badge--solid ${STATUS_MAP[selectedOrder.status]?.cls}`}>
                     {STATUS_MAP[selectedOrder.status]?.label || selectedOrder.status}
                   </span>
                 </div>
@@ -232,9 +319,41 @@ export default function SellerOrders() {
                   <strong>{selectedOrder.contactNumber || '—'}</strong>
                 </div>
 
+                <div className="detail-row">
+                  <span>Fulfillment</span>
+                  <strong>{selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Store Pickup' : 'Delivery'}</strong>
+                </div>
+
+                <div className="detail-row">
+                  <span>Payment</span>
+                  <strong>
+                    {selectedOrder.paymentMethod || 'COD'}
+                    {selectedOrder.paymentReference && ` — Ref: ${selectedOrder.paymentReference}`}
+                  </strong>
+                </div>
+
+                {selectedOrder.paymentProofUrl && (
+                  <div className="detail-row detail-row--col">
+                    <span>Payment Proof</span>
+                    <a
+                      className="payment-proof"
+                      href={resolveImg(selectedOrder.paymentProofUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Click or hover to preview"
+                    >
+                      <img
+                        src={resolveImg(selectedOrder.paymentProofUrl)}
+                        alt="Payment proof"
+                      />
+                      <span className="payment-proof-zoom">Hover to preview · Click to open</span>
+                    </a>
+                  </div>
+                )}
+
                 {/* Address */}
                 <div className="detail-row detail-row--col">
-                  <span>Delivery Address</span>
+                  <span>{selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Pickup Location' : 'Delivery Address'}</span>
                   <p className="detail-address">{selectedOrder.deliveryAddress || '—'}</p>
                 </div>
 
@@ -274,9 +393,9 @@ export default function SellerOrders() {
                 </div>
 
                 {/* Action buttons */}
-                {NEXT_STATUS[selectedOrder.status]?.length > 0 && (
+                {getNextStatuses(selectedOrder).length > 0 && (
                   <div className="detail-actions">
-                    {NEXT_STATUS[selectedOrder.status].map(ns => {
+                    {getNextStatuses(selectedOrder).map(ns => {
                       const a = ACTION_LABELS[ns];
                       return (
                         <button
@@ -289,6 +408,20 @@ export default function SellerOrders() {
                         </button>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Receipt link */}
+                {['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(selectedOrder.status) && (
+                  <div className="detail-actions">
+                    <Link
+                      to={`/orders/${selectedOrder.id}/receipt`}
+                      className="detail-action-btn action-complete"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <FileText size={14} style={{ marginRight: 6 }} /> View Receipt
+                    </Link>
                   </div>
                 )}
               </div>

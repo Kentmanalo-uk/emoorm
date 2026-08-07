@@ -130,7 +130,9 @@
 }
 
 @keyframes sbi-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sbi-grid {
@@ -155,6 +157,7 @@
   .sbi-body {
     grid-template-columns: 1fr;
   }
+
   .sbi-preview {
     position: static;
     max-width: 240px;

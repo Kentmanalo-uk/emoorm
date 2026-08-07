@@ -12,6 +12,7 @@ import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import OrderReceipt from './pages/OrderReceipt';
 import Orders from './pages/Orders';
 import Messages from './pages/Messages';
 import Addresses from './pages/Addresses';
@@ -26,6 +27,7 @@ import SellerMessages from './pages/SellerMessages';
 import SellerReviews from './pages/SellerReviews';
 import SellerAnalytics from './pages/SellerAnalytics';
 import SellerFinance from './pages/SellerFinance';
+import SellerFulfillment from './pages/SellerFulfillment';
 import Stores from './pages/Stores';
 import StoreDetail from './pages/StoreDetail';
 import Wishlist from './pages/Wishlist';
@@ -134,6 +136,7 @@ function App() {
             <Route path="/help" element={<HelpCenter />} />
             <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+            <Route path="/orders/:id/receipt" element={<ProtectedRoute><OrderReceipt /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
@@ -152,6 +155,7 @@ function App() {
               <Route path="analytics" element={<SellerAnalytics />} />
               <Route path="finance" element={<SellerFinance />} />
               <Route path="store" element={<SellerStore />} />
+              <Route path="fulfillment" element={<SellerFulfillment />} />
             </Route>
             {/* Admin — MUNICIPAL_ADMIN / SUPER_ADMIN only */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

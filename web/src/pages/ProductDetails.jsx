@@ -710,19 +710,40 @@ const ProductDetails = () => {
               <div className="pdp-reviews">
                 {reviews.length === 0 ? (
                   <div className="pdp-empty">No reviews yet. Be the first to review this product.</div>
-                ) : reviews.slice(0, 10).map((r) => (
-                  <div key={r.id} className="pdp-review">
-                    <div className="pdp-review-head">
-                      <div className="pdp-review-avatar">{r.buyer?.fullName?.charAt(0) || 'U'}</div>
-                      <div>
-                        <div className="pdp-review-name">{r.buyer?.fullName || 'Anonymous'}</div>
-                        <div className="pdp-review-stars">{renderStars(r.rating, 12)}</div>
+                ) : reviews.slice(0, 10).map((r) => {
+                  const reviewer = r.user || r.buyer || {};
+                  const mediaImages = Array.isArray(r.images) ? r.images : [];
+                  return (
+                    <div key={r.id} className="pdp-review">
+                      <div className="pdp-review-head">
+                        <div className="pdp-review-avatar">{reviewer.fullName?.charAt(0) || 'U'}</div>
+                        <div>
+                          <div className="pdp-review-name">{reviewer.fullName || 'Anonymous'}</div>
+                          <div className="pdp-review-stars">{renderStars(r.rating, 12)}</div>
+                        </div>
+                        <div className="pdp-review-date">{new Date(r.createdAt).toLocaleDateString()}</div>
                       </div>
-                      <div className="pdp-review-date">{new Date(r.createdAt).toLocaleDateString()}</div>
+                      {r.comment && <p className="pdp-review-comment">{r.comment}</p>}
+                      {(mediaImages.length > 0 || r.videoUrl) && (
+                        <div className="pdp-review-media">
+                          {mediaImages.map((src, i) => (
+                            <a key={i} href={resolveImg(src) || src} target="_blank" rel="noopener noreferrer" className="pdp-review-media-item">
+                              <img src={resolveImg(src) || src} alt={`review media ${i + 1}`} />
+                            </a>
+                          ))}
+                          {r.videoUrl && (
+                            <video
+                              className="pdp-review-media-item pdp-review-media-video"
+                              src={resolveImg(r.videoUrl) || r.videoUrl}
+                              controls
+                              preload="metadata"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className="pdp-review-comment">{r.comment}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

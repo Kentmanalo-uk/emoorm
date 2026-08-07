@@ -30,13 +30,13 @@
 }
 
 .register-logo-icon {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
 }
 
 .register-logo-text {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 400;
   color: #15803d;
   letter-spacing: -0.02em;
 }

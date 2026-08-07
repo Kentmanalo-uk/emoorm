@@ -15,14 +15,14 @@ const { ApiError } = require('../middleware/errorHandler');
  * @returns {Promise<Boolean>} True if purchased
  */
 const hasPurchasedProduct = async (buyerId, productId) => {
-  const orders = await orderRepository.findAll({
-    buyerId,
-    status: 'COMPLETED',
-  });
+  const eligibleStatuses = ['COMPLETED', 'DELIVERED', 'PICKED_UP'];
 
-  for (const order of orders.orders) {
-    const hasProduct = order.items.some((item) => item.productId === productId);
-    if (hasProduct) return true;
+  for (const status of eligibleStatuses) {
+    const result = await orderRepository.findAll({ buyerId, status, pageSize: 100 });
+    for (const order of result.orders) {
+      const hasProduct = order.items.some((item) => item.productId === productId);
+      if (hasProduct) return true;
+    }
   }
 
   return false;
@@ -35,7 +35,7 @@ const hasPurchasedProduct = async (buyerId, productId) => {
  * @returns {Promise<Object>} Created review
  */
 const createReview = async (userId, data) => {
-  const { productId, rating, comment } = data;
+  const { productId, rating, comment, images, videoUrl } = data;
 
   // Validate product exists
   const product = await productRepository.findById(productId);
@@ -60,16 +60,19 @@ const createReview = async (userId, data) => {
   }
 
   // Validate rating
-  if (rating < 1 || rating > 5) {
+  const numericRating = parseInt(rating, 10);
+  if (!numericRating || numericRating < 1 || numericRating > 5) {
     throw new ApiError('Rating must be between 1 and 5', 400);
   }
 
   // Create review
   const review = await reviewRepository.createReview({
-    buyerId: userId,
+    userId,
     productId,
-    rating,
+    rating: numericRating,
     comment: comment || null,
+    images: Array.isArray(images) && images.length ? images : undefined,
+    videoUrl: videoUrl || undefined,
   });
 
   return review;
@@ -148,7 +151,7 @@ const updateReview = async (reviewId, userId, data) => {
   }
 
   // Check ownership
-  if (review.buyerId !== userId) {
+  if (review.userId !== userId) {
     throw new ApiError('You can only update your own reviews', 403);
   }
 
@@ -180,7 +183,7 @@ const deleteReview = async (reviewId, userId, userRole) => {
   }
 
   // Check authorization
-  const isOwner = review.buyerId === userId;
+  const isOwner = review.userId === userId;
   const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'MUNICIPAL_ADMIN';
 
   if (!isOwner && !isAdmin) {

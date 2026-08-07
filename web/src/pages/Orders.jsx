@@ -33,6 +33,23 @@ const Orders = () => {
     { key: 'CANCELLED', label: 'Cancelled' },
   ];
 
+  // Every possible order.status must resolve to exactly one tab above.
+  // Statuses like TO_SHIP/OUT_FOR_DELIVERY/READY_FOR_PICKUP/PICKED_UP/DELIVERED
+  // are grouped under "Ready" (order is in transit / awaiting buyer receipt).
+  const TAB_STATUS_GROUPS = {
+    PENDING: ['PENDING'],
+    CONFIRMED: ['CONFIRMED'],
+    PREPARING: ['PREPARING'],
+    READY: ['READY', 'READY_FOR_PICKUP', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'PICKED_UP', 'DELIVERED'],
+    COMPLETED: ['COMPLETED'],
+    CANCELLED: ['CANCELLED'],
+  };
+
+  const orderMatchesTab = (order, tabKey) => {
+    if (tabKey === 'all') return true;
+    return (TAB_STATUS_GROUPS[tabKey] || [tabKey]).includes(order.status);
+  };
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -68,7 +85,7 @@ const Orders = () => {
     if (activeTab === 'all') {
       setFilteredOrders(orders);
     } else {
-      setFilteredOrders(orders.filter(order => order.status === activeTab));
+      setFilteredOrders(orders.filter((order) => orderMatchesTab(order, activeTab)));
     }
   };
 
@@ -104,7 +121,12 @@ const Orders = () => {
       PENDING: { label: 'Pending Payment', tone: 'neutral' },
       CONFIRMED: { label: 'Confirmed', tone: 'neutral' },
       PREPARING: { label: 'Preparing', tone: 'neutral' },
+      TO_SHIP: { label: 'To Ship', tone: 'accent' },
+      OUT_FOR_DELIVERY: { label: 'Out for Delivery', tone: 'accent' },
+      DELIVERED: { label: 'Delivered', tone: 'accent' },
       READY: { label: 'Ready for Pickup', tone: 'accent' },
+      READY_FOR_PICKUP: { label: 'Ready for Pickup', tone: 'accent' },
+      PICKED_UP: { label: 'Picked Up', tone: 'accent' },
       COMPLETED: { label: 'Completed', tone: 'success' },
       CANCELLED: { label: 'Cancelled', tone: 'danger' },
     };
@@ -112,6 +134,7 @@ const Orders = () => {
   };
 
   const getOrderTimeline = (order) => {
+    const readyStatuses = ['READY', 'READY_FOR_PICKUP', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'PICKED_UP', 'DELIVERED'];
     const timeline = [
       {
         status: 'PENDING',
@@ -123,19 +146,19 @@ const Orders = () => {
         status: 'CONFIRMED',
         label: 'Order Confirmed',
         date: order.confirmedAt,
-        active: ['CONFIRMED', 'PREPARING', 'READY', 'COMPLETED'].includes(order.status)
+        active: ['CONFIRMED', 'PREPARING', ...readyStatuses, 'COMPLETED'].includes(order.status)
       },
       {
         status: 'PREPARING',
         label: 'Preparing',
         date: order.preparingAt,
-        active: ['PREPARING', 'READY', 'COMPLETED'].includes(order.status)
+        active: ['PREPARING', ...readyStatuses, 'COMPLETED'].includes(order.status)
       },
       {
         status: 'READY',
         label: 'Ready for Pickup',
         date: order.readyAt,
-        active: ['READY', 'COMPLETED'].includes(order.status)
+        active: [...readyStatuses, 'COMPLETED'].includes(order.status)
       },
       {
         status: 'COMPLETED',
@@ -184,7 +207,7 @@ const Orders = () => {
         {orderTabs.map((tab) => {
           const count = tab.key === 'all'
             ? orders.length
-            : orders.filter(o => o.status === tab.key).length;
+            : orders.filter((o) => orderMatchesTab(o, tab.key)).length;
 
           return (
             <button
@@ -308,14 +331,41 @@ const Orders = () => {
                     </button>
                   )}
 
-                  {order.status === 'COMPLETED' && order.items?.length > 0 && (
-                    <button
-                      onClick={() => setReviewTarget({ product: order.items[0].product || { id: order.items[0].productId, name: order.items[0].productName, images: [order.items[0].product?.images?.[0]] }, orderId: order.id })}
+                  {['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && (
+                    <Link
+                      to={`/orders/${order.id}/receipt`}
                       className="order-action-btn"
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      <Star size={16} />
-                      Write review
-                    </button>
+                      View receipt
+                    </Link>
+                  )}
+
+                  {['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && order.items?.length > 0 && (
+                    order.items.length === 1 ? (
+                      <button
+                        onClick={() => {
+                          const it = order.items[0];
+                          setReviewTarget({
+                            product: it.product || { id: it.productId, name: it.productName, images: it.product?.images || [] },
+                            orderId: order.id,
+                          });
+                        }}
+                        className="order-action-btn"
+                      >
+                        <Star size={16} />
+                        Write review
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }}
+                        className="order-action-btn"
+                      >
+                        <Star size={16} />
+                        Review items
+                      </button>
+                    )
                   )}
 
                   <button className="order-action-btn">
@@ -430,6 +480,23 @@ const Orders = () => {
                         <p className="item-subtotal">
                           Subtotal: ₱{parseFloat(item.subtotal).toFixed(2)}
                         </p>
+                        {['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(selectedOrder.status) && (
+                          <button
+                            type="button"
+                            className="order-action-btn"
+                            style={{ marginTop: 6 }}
+                            onClick={() => {
+                              setShowOrderDetails(false);
+                              setReviewTarget({
+                                product: item.product || { id: item.productId, name: item.productName, images: item.product?.images || [] },
+                                orderId: selectedOrder.id,
+                              });
+                            }}
+                          >
+                            <Star size={14} />
+                            Review
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

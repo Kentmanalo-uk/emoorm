@@ -87,8 +87,8 @@
 }
 
 .login-hero-icon {
-  width: 48px;
-  height: 48px;
+  width: 70px;
+  height: 70px;
   background-color: white;
   border-radius: 50%;
   padding: 8px;
@@ -106,6 +106,7 @@
   line-height: 1.1;
   margin: 0;
   letter-spacing: -0.02em;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .login-hero-title-highlight {

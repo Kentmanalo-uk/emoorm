@@ -1287,3 +1287,101 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== Followers card ===== */
+.sd-followers { padding-bottom: 4px; }
+
+.sd-followers-body {
+  padding: 6px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sd-followers-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.sd-followers-total {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.sd-followers-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.sd-followers-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.sd-followers-metrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sd-followers-metric-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.sd-followers-metric-value.is-up { color: #059669; }
+.sd-followers-metric-value.is-down { color: #dc2626; }
+
+.sd-followers-metric-label {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.sd-followers-recent { display: flex; flex-direction: column; gap: 6px; }
+
+.sd-followers-recent-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.sd-followers-avatars {
+  display: flex;
+  align-items: center;
+  gap: -6px;
+}
+
+.sd-followers-avatars > * + * { margin-left: -8px; }
+
+.sd-followers-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #059669;
+  color: #fff;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.sd-followers-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.sd-followers-more {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #64748b;
+}

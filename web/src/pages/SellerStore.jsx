@@ -1,21 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Store, Save, AlertCircle } from 'lucide-react';
+import { Store, Save, AlertCircle, Upload, Trash2, Palette, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
+import { uploadImage } from '../lib/upload';
+import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
 import './SellerDashboard.css';
 import './SellerStore.css';
+
+const DEFAULT_PRIMARY = '#059669';
+const DEFAULT_SECONDARY = '#f59e0b';
 
 export default function SellerStore() {
   const [store, setStore] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadingField, setUploadingField] = useState(null);
   const [form, setForm] = useState({
     name: '',
     description: '',
     address: '',
     contactNumber: '',
     isActive: true,
+    logo: '',
+    coverImage: '',
+    bannerImage: '',
+    primaryColor: DEFAULT_PRIMARY,
+    secondaryColor: DEFAULT_SECONDARY,
   });
   const [isNew, setIsNew] = useState(false);
 
@@ -33,9 +44,13 @@ export default function SellerStore() {
         address: res.data.address || '',
         contactNumber: res.data.contactNumber || '',
         isActive: res.data.isActive ?? true,
+        logo: res.data.logo || '',
+        coverImage: res.data.coverImage || '',
+        bannerImage: res.data.bannerImage || '',
+        primaryColor: res.data.primaryColor || DEFAULT_PRIMARY,
+        secondaryColor: res.data.secondaryColor || DEFAULT_SECONDARY,
       });
     } catch (err) {
-      // 404 = no store yet
       if (err.status === 404 || (typeof err.message === 'string' && err.message.includes('404'))) {
         setIsNew(true);
       }
@@ -47,6 +62,20 @@ export default function SellerStore() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const handleUpload = async (field, file) => {
+    if (!file) return;
+    setUploadingField(field);
+    try {
+      const res = await uploadImage(file);
+      setForm((p) => ({ ...p, [field]: res.url }));
+      toast.success('Image uploaded');
+    } catch (err) {
+      toast.error(err.message || 'Upload failed');
+    } finally {
+      setUploadingField(null);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -69,6 +98,10 @@ export default function SellerStore() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const resetColors = () => {
+    setForm((p) => ({ ...p, primaryColor: DEFAULT_PRIMARY, secondaryColor: DEFAULT_SECONDARY }));
   };
 
   return (
@@ -174,6 +207,94 @@ export default function SellerStore() {
               </form>
             </div>
 
+            {/* Branding: logo + banner */}
+            {!isNew && (
+              <div className="seller-card">
+                <div className="seller-card-header">
+                  <h2><ImageIcon size={16} /> Branding</h2>
+                </div>
+                <div className="store-branding-body">
+                  <div className="branding-row">
+                    <div className="branding-label">
+                      <strong>Shop Logo</strong>
+                      <small>Square image, at least 200×200px.</small>
+                    </div>
+                    <ImageUploader
+                      value={form.logo}
+                      onChange={(url) => setForm((p) => ({ ...p, logo: url }))}
+                      onFile={(file) => handleUpload('logo', file)}
+                      uploading={uploadingField === 'logo'}
+                      shape="circle"
+                    />
+                  </div>
+
+                  <div className="branding-divider" />
+
+                  <div className="branding-row">
+                    <div className="branding-label">
+                      <strong>Cover Banner</strong>
+                      <small>Wide image (recommended 1600×400px).</small>
+                    </div>
+                    <ImageUploader
+                      value={form.bannerImage || form.coverImage}
+                      onChange={(url) => setForm((p) => ({ ...p, bannerImage: url }))}
+                      onFile={(file) => handleUpload('bannerImage', file)}
+                      uploading={uploadingField === 'bannerImage'}
+                      shape="banner"
+                    />
+                  </div>
+                </div>
+                <div className="form-actions branding-actions">
+                  <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
+                    <Save size={16} />
+                    {isSaving ? 'Saving…' : 'Save Branding'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Theme colors */}
+            {!isNew && (
+              <div className="seller-card">
+                <div className="seller-card-header">
+                  <h2><Palette size={16} /> Theme Colors</h2>
+                  <button type="button" className="btn-seller-outline" onClick={resetColors}>
+                    Reset defaults
+                  </button>
+                </div>
+                <div className="store-theme-body">
+                  <div className="theme-picker-row">
+                    <ColorPicker
+                      label="Primary color"
+                      hint="Used for buttons, links, and highlights."
+                      value={form.primaryColor}
+                      onChange={(v) => setForm((p) => ({ ...p, primaryColor: v }))}
+                    />
+                    <ColorPicker
+                      label="Accent color"
+                      hint="Used for secondary highlights and badges."
+                      value={form.secondaryColor}
+                      onChange={(v) => setForm((p) => ({ ...p, secondaryColor: v }))}
+                    />
+                  </div>
+
+                  <ThemePreview
+                    name={form.name || 'Your Store'}
+                    logo={form.logo}
+                    banner={form.bannerImage || form.coverImage}
+                    primary={form.primaryColor}
+                    secondary={form.secondaryColor}
+                  />
+                </div>
+                <div className="form-actions branding-actions">
+                  <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
+                    <Save size={16} />
+                    {isSaving ? 'Saving…' : 'Save Theme'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Store slug / link */}
             {store?.slug && (
               <div className="seller-card store-preview-card">
@@ -195,6 +316,118 @@ export default function SellerStore() {
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ImageUploader({ value, onChange, onFile, uploading, shape = 'circle' }) {
+  const src = value ? resolveImg(value) : null;
+  const cls = `img-uploader img-uploader--${shape}`;
+  return (
+    <div className={cls}>
+      {src ? (
+        <>
+          <div className="img-uploader-preview">
+            <img src={src} alt="" />
+          </div>
+          <div className="img-uploader-actions">
+            <label className="btn-seller-outline">
+              <Upload size={14} /> Replace
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => onFile(e.target.files?.[0])}
+                disabled={uploading}
+                hidden
+              />
+            </label>
+            <button
+              type="button"
+              className="btn-seller-outline btn-danger-outline"
+              onClick={() => onChange('')}
+            >
+              <Trash2 size={14} /> Remove
+            </button>
+          </div>
+        </>
+      ) : (
+        <label className="img-uploader-empty">
+          <Upload size={18} />
+          <span>{uploading ? 'Uploading…' : 'Upload image'}</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => onFile(e.target.files?.[0])}
+            disabled={uploading}
+            hidden
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
+function ColorPicker({ label, hint, value, onChange }) {
+  const safe = /^#[0-9a-fA-F]{6}$/.test(value || '') ? value : '#000000';
+  return (
+    <div className="color-picker">
+      <div className="color-picker-head">
+        <div>
+          <strong>{label}</strong>
+          {hint && <small>{hint}</small>}
+        </div>
+        <div
+          className="color-swatch"
+          style={{ background: safe }}
+          aria-hidden
+        />
+      </div>
+      <div className="color-picker-inputs">
+        <input
+          type="color"
+          value={safe}
+          onChange={(e) => onChange(e.target.value)}
+          className="color-input"
+        />
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#059669"
+          className="form-input color-hex"
+          maxLength={7}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ThemePreview({ name, logo, banner, primary, secondary }) {
+  const style = {
+    '--sp-primary': primary || '#059669',
+    '--sp-secondary': secondary || '#f59e0b',
+  };
+  return (
+    <div className="theme-preview" style={style}>
+      <div className="theme-preview-banner">
+        {banner ? <img src={resolveImg(banner)} alt="" /> : <span>Banner</span>}
+      </div>
+      <div className="theme-preview-body">
+        <div className="theme-preview-logo">
+          {logo ? <img src={resolveImg(logo)} alt="" /> : <Store size={22} />}
+        </div>
+        <div className="theme-preview-info">
+          <strong>{name}</strong>
+          <div className="theme-preview-actions">
+            <button type="button" className="tp-btn tp-btn-primary">Follow</button>
+            <button type="button" className="tp-btn tp-btn-ghost">Message</button>
+          </div>
+          <div className="theme-preview-badges">
+            <span className="tp-badge">Featured</span>
+            <span className="tp-badge tp-badge-accent">Best Seller</span>
+          </div>
+        </div>
       </div>
     </div>
   );
