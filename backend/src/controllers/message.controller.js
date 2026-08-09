@@ -30,6 +30,7 @@ const getConversation = asyncHandler(async (req, res) => {
 const sendMessage = asyncHandler(async (req, res) => {
   const message = await messageService.sendMessage(req.params.id, req.user.id, {
     body: req.body?.body,
+    imageUrl: req.body?.imageUrl,
     orderId: req.body?.orderId,
   });
   createdResponse(res, message, 'Message sent');
@@ -40,10 +41,20 @@ const markRead = asyncHandler(async (req, res) => {
   successResponse(res, result, 'Marked as read');
 });
 
+const rateService = asyncHandler(async (req, res) => {
+  const result = await messageService.rateConversationService(
+    req.params.id,
+    req.user.id,
+    req.body?.rating,
+  );
+  successResponse(res, result, 'Thanks for your feedback');
+});
+
 module.exports = {
   listConversations,
   openConversation,
   getConversation,
   sendMessage,
   markRead,
+  rateService,
 };

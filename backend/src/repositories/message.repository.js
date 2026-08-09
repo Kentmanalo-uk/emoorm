@@ -26,6 +26,7 @@ const messageInclude = {
       status: true,
       total: true,
       createdAt: true,
+      items: { select: { productName: true } },
     },
   },
 };
@@ -76,9 +77,9 @@ const listMessages = async (conversationId, { take = 100 } = {}) =>
     take,
   });
 
-const createMessage = async ({ conversationId, senderId, body, orderId = null }) =>
+const createMessage = async ({ conversationId, senderId, body, imageUrl = null, orderId = null }) =>
   prisma.message.create({
-    data: { conversationId, senderId, body, orderId },
+    data: { conversationId, senderId, body, imageUrl, orderId },
     include: messageInclude,
   });
 
@@ -108,9 +109,17 @@ const countUnreadInConversation = async (conversationId, senderIdNot, since) =>
     },
   });
 
+const rateService = async (conversationId, rating, at) =>
+  prisma.conversation.update({
+    where: { id: conversationId },
+    data: { serviceRating: rating, serviceRatingAt: at },
+  });
+
+const FINISHED_ORDER_STATUSES = ['DELIVERED', 'PICKED_UP', 'COMPLETED', 'CANCELLED'];
+
 const findBuyerOrdersForStore = async (buyerId, storeId) =>
   prisma.order.findMany({
-    where: { buyerId, storeId },
+    where: { buyerId, storeId, status: { notIn: FINISHED_ORDER_STATUSES } },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -148,4 +157,5 @@ module.exports = {
   markRead,
   countUnreadInConversation,
   findBuyerOrdersForStore,
+  rateService,
 };

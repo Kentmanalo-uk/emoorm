@@ -12,5 +12,6 @@ router.post('/conversations', messageController.openConversation);
 router.get('/conversations/:id', messageController.getConversation);
 router.post('/conversations/:id/messages', messageController.sendMessage);
 router.post('/conversations/:id/read', messageController.markRead);
+router.post('/conversations/:id/rate-service', messageController.rateService);
 
 module.exports = router;

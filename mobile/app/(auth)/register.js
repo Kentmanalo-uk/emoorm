@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, StyleSheet } from 'react-native';
-import { Link, router } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Button from '../../src/components/Button';
 import TextField from '../../src/components/TextField';
 import Select from '../../src/components/Select';
+import AuthHeader from '../../src/components/AuthHeader';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import toast from '../../src/lib/toast';
@@ -13,6 +15,8 @@ import { colors, spacing, typography } from '../../src/theme';
 const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/;
 
 export default function Register() {
+  const { redirect } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const [form, setForm] = useState({
     fullName: '',
     email: '',
@@ -96,7 +100,8 @@ export default function Register() {
       const { user, accessToken, refreshToken } = res.data;
       await login(user, accessToken, refreshToken);
       toast.success('Account created!', `Welcome, ${user.fullName}`);
-      router.replace('/');
+      const destination = typeof redirect === 'string' && redirect.startsWith('/') && redirect !== '/register' ? redirect : '/';
+      router.replace(destination);
     } catch (error) {
       if (Array.isArray(error.errors) && error.errors.length > 0) {
         setApiError(error.errors[0].message || error.message);
@@ -109,9 +114,8 @@ export default function Register() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Join E-MOORM as a buyer</Text>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}>
+      <AuthHeader title="Create Account" subtitle="Join E-MOORM as a buyer" showBrand />
 
       {apiError ? <Text style={styles.apiError}>{apiError}</Text> : null}
 
@@ -133,7 +137,7 @@ export default function Register() {
 
       <Button title="Create Account" onPress={handleSubmit} loading={isLoading} style={styles.button} />
 
-      <Link href="/(auth)/login" style={styles.link}>Already have an account? Log in</Link>
+      <Link href={{ pathname: '/login', params: typeof redirect === 'string' ? { redirect } : {} }} style={styles.link}>Already have an account? Log in</Link>
     </ScrollView>
   );
 }
@@ -141,12 +145,12 @@ export default function Register() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: spacing.xl,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
     backgroundColor: colors.bgPrimary,
   },
-  title: { ...typography.h1, color: colors.primary, textAlign: 'center' },
-  subtitle: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xl },
   apiError: { ...typography.body, color: colors.error, textAlign: 'center', marginBottom: spacing.md },
   button: { marginTop: spacing.sm },
   link: { ...typography.body, color: colors.primaryDark, textAlign: 'center', marginTop: spacing.xl },

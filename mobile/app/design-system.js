@@ -23,12 +23,12 @@ export default function DesignSystemDemo() {
     <ScrollView contentContainerStyle={styles.container}>
       <Section title="Buttons">
         <View style={styles.row}>
-          <Button title="Primary" onPress={() => {}} style={styles.flexItem} />
-          <Button title="Secondary" variant="secondary" onPress={() => {}} style={styles.flexItem} />
+          <Button title="Primary" onPress={() => { }} style={styles.flexItem} />
+          <Button title="Secondary" variant="secondary" onPress={() => { }} style={styles.flexItem} />
         </View>
         <View style={styles.row}>
-          <Button title="Danger" variant="danger" onPress={() => {}} style={styles.flexItem} />
-          <Button title="Loading" loading onPress={() => {}} style={styles.flexItem} />
+          <Button title="Danger" variant="danger" onPress={() => { }} style={styles.flexItem} />
+          <Button title="Loading" loading onPress={() => { }} style={styles.flexItem} />
         </View>
       </Section>
 
@@ -57,16 +57,16 @@ export default function DesignSystemDemo() {
             price={45}
             rating={4}
             reviewCount={12}
-            onPress={() => {}}
-            onAddToCart={() => {}}
+            onPress={() => { }}
+            onAddToCart={() => { }}
           />
           <ProductCard
             name="Handwoven Nito Bag"
             price={350}
             rating={5}
             reviewCount={3}
-            onPress={() => {}}
-            onAddToCart={() => {}}
+            onPress={() => { }}
+            onAddToCart={() => { }}
           />
         </View>
       </Section>
@@ -78,8 +78,8 @@ export default function DesignSystemDemo() {
           price={220}
           rating={4.5}
           reviewCount={28}
-          onPress={() => {}}
-          onAddToCart={() => {}}
+          onPress={() => { }}
+          onAddToCart={() => { }}
         />
       </Section>
 
@@ -95,7 +95,7 @@ export default function DesignSystemDemo() {
             title="Nothing here yet"
             message="This is what an empty list looks like."
             actionLabel="Refresh"
-            onAction={() => {}}
+            onAction={() => { }}
           />
         </View>
       </Section>
@@ -114,5 +114,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.sm },
   flexItem: { flex: 1 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  emptyStateBox: { height: 220, borderWidth: 1, borderColor: colors.borderLight, borderRadius: 8 },
+  emptyStateBox: { height: 220, borderRadius: 8 },
 });

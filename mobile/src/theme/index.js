@@ -1,9 +1,9 @@
 // Ported from web/src/styles/colors.css + spacing.css so mobile visually matches web.
 export const colors = {
-  primary: '#22c55e',
-  primaryDark: '#16a34a',
-  primaryLight: '#4ade80',
-  primaryLighter: '#bbf7d0',
+  primary: '#16a34a',
+  primaryDark: '#15803d',
+  primaryLight: '#22c55e',
+  primaryLighter: '#dcfce7',
 
   secondary: '#059669',
   secondaryDark: '#047857',
@@ -14,16 +14,16 @@ export const colors = {
 
   white: '#ffffff',
   black: '#000000',
-  gray50: '#f9fafb',
-  gray100: '#f3f4f6',
-  gray200: '#e5e7eb',
-  gray300: '#d1d5db',
-  gray400: '#9ca3af',
-  gray500: '#6b7280',
-  gray600: '#4b5563',
-  gray700: '#374151',
-  gray800: '#1f2937',
-  gray900: '#111827',
+  gray50: '#fafafa',
+  gray100: '#f2f2f7',
+  gray200: '#e5e5ea',
+  gray300: '#d1d1d6',
+  gray400: '#aeaeb2',
+  gray500: '#8e8e93',
+  gray600: '#636366',
+  gray700: '#48484a',
+  gray800: '#2c2c2e',
+  gray900: '#1c1c1e',
 
   success: '#22c55e',
   warning: '#f59e0b',
@@ -31,17 +31,17 @@ export const colors = {
   info: '#3b82f6',
 
   bgPrimary: '#ffffff',
-  bgSecondary: '#f9fafb',
-  bgGreenLight: '#f0fdf4',
+  bgSecondary: '#f2f2f7',
+  bgGreenLight: '#f0f9f3',
 
-  textPrimary: '#111827',
-  textSecondary: '#6b7280',
-  textMuted: '#9ca3af',
+  textPrimary: '#1c1c1e',
+  textSecondary: '#636366',
+  textMuted: '#8e8e93',
   textWhite: '#ffffff',
 
-  borderLight: '#e5e7eb',
-  borderMedium: '#d1d5db',
-  borderDark: '#9ca3af',
+  borderLight: '#e5e5ea',
+  borderMedium: '#d1d1d6',
+  borderDark: '#aeaeb2',
 
   star: '#fbbf24',
 };
@@ -51,8 +51,9 @@ export const spacing = {
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 24,
-  xxl: 32,
+  xl: 20,
+  xxl: 28,
+  xxxl: 40,
 };
 
 export const radius = {
@@ -71,9 +72,25 @@ export const fontFamily = {
 };
 
 export const typography = {
-  h1: { fontSize: 24, fontWeight: '700', fontFamily: fontFamily.bold },
-  h2: { fontSize: 20, fontWeight: '700', fontFamily: fontFamily.bold },
-  h3: { fontSize: 16, fontWeight: '600', fontFamily: fontFamily.semiBold },
-  body: { fontSize: 14, fontWeight: '400', fontFamily: fontFamily.regular },
-  caption: { fontSize: 12, fontWeight: '400', fontFamily: fontFamily.regular },
+  h1: { fontSize: 28, lineHeight: 34, fontWeight: '700', fontFamily: fontFamily.bold },
+  h2: { fontSize: 22, lineHeight: 28, fontWeight: '700', fontFamily: fontFamily.bold },
+  h3: { fontSize: 17, lineHeight: 22, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  body: { fontSize: 15, lineHeight: 20, fontWeight: '400', fontFamily: fontFamily.regular },
+  caption: { fontSize: 13, lineHeight: 17, fontWeight: '400', fontFamily: fontFamily.regular },
+};
+
+export const control = {
+  height: 48,
+  compactHeight: 44,
+  iconSize: 44,
+};
+
+export const shadow = {
+  subtle: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
 };

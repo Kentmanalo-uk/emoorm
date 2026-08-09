@@ -6,27 +6,31 @@ import {
   Image,
   Pressable,
   TextInput,
-  ActivityIndicator,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { ArrowRight, Sparkles, Camera, Search } from 'lucide-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import { resolveImg } from '../../src/lib/media';
 import { toast } from '../../src/lib/toast';
 import ProductCard from '../../src/components/ProductCard';
+import LoadingSkeleton from '../../src/components/LoadingSkeleton';
+import { ProductGridSkeleton } from '../../src/components/SkeletonLayouts';
+import { getCacheEntry, getCachedData, refreshCachedData } from '../../src/lib/dataCache';
 import { colors, fontFamily, radius, spacing, typography } from '../../src/theme';
 
 // Mirrors web's Header.jsx logo + header-search (flat gray bar, camera + search buttons).
 function HomeHeader() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [query, setQuery] = useState('');
 
   const handleSearch = () => {
     if (!query.trim()) return;
-    toast.info('Search', 'Product search lands in Phase 3.');
+    router.push({ pathname: '/products', params: { q: query.trim() } });
   };
 
   return (
@@ -44,7 +48,7 @@ function HomeHeader() {
         />
         <Pressable
           style={styles.searchCameraBtn}
-          onPress={() => toast.info('Image search', 'Search by image lands in a future phase.')}
+          onPress={() => router.push('/search-by-image')}
           hitSlop={8}
         >
           <Camera size={18} color={colors.gray400} />
@@ -67,9 +71,11 @@ const BANNERS = [
 ];
 
 const AUTO_ADVANCE_MS = 5000;
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const HOME_CACHE_KEY = 'home:data';
+const HOME_CACHE_TTL = 2 * 60 * 1000;
 
 function BannerCarousel() {
+  const { width } = useWindowDimensions();
   const scrollRef = useRef(null);
   const [index, setIndex] = useState(0);
 
@@ -77,15 +83,15 @@ function BannerCarousel() {
     const timer = setInterval(() => {
       setIndex((prev) => {
         const next = (prev + 1) % BANNERS.length;
-        scrollRef.current?.scrollTo({ x: next * SCREEN_WIDTH, animated: true });
+        scrollRef.current?.scrollTo({ x: next * width, animated: true });
         return next;
       });
     }, AUTO_ADVANCE_MS);
     return () => clearInterval(timer);
-  }, []);
+  }, [width]);
 
   const onMomentumScrollEnd = (e) => {
-    const next = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    const next = Math.round(e.nativeEvent.contentOffset.x / width);
     setIndex(next);
   };
 
@@ -99,7 +105,7 @@ function BannerCarousel() {
         onMomentumScrollEnd={onMomentumScrollEnd}
       >
         {BANNERS.map((src, i) => (
-          <Image key={i} source={src} style={styles.bannerImage} resizeMode="cover" />
+          <Image key={i} source={src} style={[styles.bannerImage, { width }]} resizeMode="cover" />
         ))}
       </ScrollView>
       <View style={styles.bannerDots}>
@@ -112,19 +118,30 @@ function BannerCarousel() {
 }
 
 export default function Home() {
-  const [categories, setCategories] = useState([]);
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const initialData = getCacheEntry(HOME_CACHE_KEY)?.data;
+  const [categories, setCategories] = useState(initialData?.categories || []);
+  const [featuredProducts, setFeaturedProducts] = useState(initialData?.products || []);
+  const [isLoading, setIsLoading] = useState(!initialData);
 
   const fetchHomeData = useCallback(async () => {
-    setIsLoading(true);
+    const fresh = getCachedData(HOME_CACHE_KEY, HOME_CACHE_TTL);
+    if (fresh) {
+      setCategories(fresh.categories);
+      setFeaturedProducts(fresh.products);
+      setIsLoading(false);
+      return;
+    }
     try {
-      const [catRes, prodRes] = await Promise.all([
-        apiClient.get(ENDPOINTS.CATEGORIES),
-        apiClient.get(ENDPOINTS.PRODUCTS, { params: { pageSize: 8, sortBy: 'createdAt', sortOrder: 'desc' } }),
-      ]);
-      setCategories(catRes.data || []);
-      setFeaturedProducts(prodRes.data || []);
+      const data = await refreshCachedData(HOME_CACHE_KEY, async () => {
+        const [catRes, prodRes] = await Promise.all([
+          apiClient.get(ENDPOINTS.CATEGORIES),
+          apiClient.get(ENDPOINTS.PRODUCTS, { params: { pageSize: 8, sortBy: 'createdAt', sortOrder: 'desc' } }),
+        ]);
+        return { categories: catRes.data || [], products: prodRes.data || [] };
+      });
+      setCategories(data.categories);
+      setFeaturedProducts(data.products);
     } catch (err) {
       toast.error('Failed to load home data', err.message);
     } finally {
@@ -159,7 +176,7 @@ export default function Home() {
         </Pressable>
 
         {isLoading ? (
-          <ActivityIndicator color={colors.primary} style={styles.loader} />
+          <HomeSkeleton />
         ) : (
           <>
             {/* Shop by Category */}
@@ -170,7 +187,7 @@ export default function Home() {
                   <Pressable
                     key={cat.id}
                     style={styles.categoryCard}
-                    onPress={() => toast.info('Browse products', 'Category browsing lands in Phase 3.')}
+                    onPress={() => router.push({ pathname: '/products', params: { category: cat.id } })}
                   >
                     <View style={styles.categoryImageWrap}>
                       {cat.image ? (
@@ -191,7 +208,7 @@ export default function Home() {
                 <Text style={styles.sectionTitle}>Suggested for You</Text>
                 <Pressable
                   style={styles.sectionLinkRow}
-                  onPress={() => toast.info('Browse products', 'Full product browsing lands in Phase 3.')}
+                  onPress={() => router.push('/products')}
                 >
                   <Text style={styles.sectionLink}>View all</Text>
                   <ArrowRight size={14} color={colors.secondary} />
@@ -207,7 +224,7 @@ export default function Home() {
                       price={product.price}
                       imageUrl={resolveImg(product.images?.[0])}
                       reviewCount={product.reviewCount}
-                      onPress={() => toast.info('Product details', 'Product details land in Phase 3.')}
+                      onPress={() => router.push(`/product/${product.slug}`)}
                     />
                   ))}
                 </View>
@@ -222,10 +239,33 @@ export default function Home() {
   );
 }
 
+function HomeSkeleton() {
+  return (
+    <View accessibilityLabel="Loading home content">
+      <View style={styles.section}>
+        <LoadingSkeleton width={152} height={20} style={styles.skeletonTitle} />
+        <View style={styles.categorySkeletons}>
+          {Array.from({ length: 4 }, (_, index) => (
+            <View key={index} style={styles.categorySkeleton}>
+              <LoadingSkeleton width={64} height={64} borderRadius={radius.lg} />
+              <LoadingSkeleton width={56} height={11} />
+            </View>
+          ))}
+        </View>
+      </View>
+      <LoadingSkeleton width={168} height={20} style={styles.productSkeletonTitle} />
+      <ProductGridSkeleton count={4} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { paddingBottom: spacing.xxl },
-  loader: { marginTop: spacing.xxl },
+  skeletonTitle: { marginBottom: spacing.lg },
+  categorySkeletons: { flexDirection: 'row', justifyContent: 'space-between' },
+  categorySkeleton: { width: '22%', alignItems: 'center', gap: spacing.sm },
+  productSkeletonTitle: { marginHorizontal: spacing.lg, marginTop: spacing.sm },
 
   header: {
     flexDirection: 'row',
@@ -234,8 +274,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
   logoIcon: { width: 32, height: 32, borderRadius: radius.base },
   searchBar: {
@@ -264,7 +302,7 @@ const styles = StyleSheet.create({
   },
 
   bannerWrap: { height: 200, backgroundColor: colors.gray100 },
-  bannerImage: { width: SCREEN_WIDTH, height: 200 },
+  bannerImage: { height: 200 },
   bannerDots: {
     position: 'absolute',
     bottom: spacing.sm,
@@ -326,7 +364,7 @@ const styles = StyleSheet.create({
   categoryImageWrap: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: radius.full,
+    borderRadius: radius.lg,
     backgroundColor: colors.bgGreenLight,
     alignItems: 'center',
     justifyContent: 'center',

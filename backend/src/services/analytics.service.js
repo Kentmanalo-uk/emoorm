@@ -108,6 +108,7 @@ const getSellerAnalytics = async (userId, query = {}) => {
       activeProducts: { value: productStatus.counts.APPROVED, previous: null, delta: null },
       totalProducts: { value: productStatus.total, previous: null, delta: null },
       lifetimeRevenue: { value: Number(raw.lifetimeRevenue._sum.total || 0), previous: null, delta: null },
+      unitsSold: { value: Number(raw.lifetimeUnitsSold._sum.quantity || 0), previous: null, delta: null },
       buyers: { value: raw.uniqueBuyers, previous: null, delta: null },
     },
     salesByDay: padDays(raw.salesByDay, raw.window.from, raw.window.to),

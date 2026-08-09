@@ -24,6 +24,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   title: { ...typography.h3, color: colors.textPrimary, textAlign: 'center' },
-  message: { ...typography.body, color: colors.textSecondary, textAlign: 'center' },
-  action: { marginTop: spacing.md, minWidth: 160 },
+  message: { ...typography.body, maxWidth: 300, color: colors.textSecondary, textAlign: 'center' },
+  action: { marginTop: spacing.md, minWidth: 168 },
 });

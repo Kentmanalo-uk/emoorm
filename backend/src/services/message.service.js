@@ -19,10 +19,19 @@ const firstImage = (product) => {
   return null;
 };
 
+// Human-friendly order name built from its items, e.g. "Calamansi + 2 more".
+const orderDisplayName = (items) => {
+  const list = items || [];
+  if (!list.length) return 'Order';
+  const [first, ...rest] = list;
+  return rest.length ? `${first.productName} + ${rest.length} more` : first.productName;
+};
+
 const shapePinnedOrders = (orders) =>
   (orders || []).map((o) => ({
     id: o.id,
     orderNumber: o.orderNumber,
+    name: orderDisplayName(o.items),
     status: o.status,
     total: Number(o.total),
     subtotal: Number(o.subtotal),
@@ -56,7 +65,7 @@ const shapeConversationSummary = async (conversation, viewerId) => {
     where: { conversationId: conversation.id },
     orderBy: { createdAt: 'desc' },
     take: 1,
-    select: { id: true, body: true, senderId: true, createdAt: true, orderId: true },
+    select: { id: true, body: true, imageUrl: true, senderId: true, createdAt: true, orderId: true },
   });
 
   return {
@@ -73,7 +82,7 @@ const shapeConversationSummary = async (conversation, viewerId) => {
     lastMessage: lastMessage
       ? {
         id: lastMessage.id,
-        body: lastMessage.body,
+        body: lastMessage.body || (lastMessage.imageUrl ? 'Photo' : ''),
         senderId: lastMessage.senderId,
         createdAt: lastMessage.createdAt,
         hasOrder: Boolean(lastMessage.orderId),
@@ -168,10 +177,13 @@ const getConversation = async (conversationId, userId) => {
     lastMessageAt: conversation.lastMessageAt,
     buyerLastReadAt: conversation.buyerLastReadAt,
     sellerLastReadAt: conversation.sellerLastReadAt,
+    serviceRating: conversation.serviceRating,
+    serviceRatingAt: conversation.serviceRatingAt,
     pinnedOrders: shapePinnedOrders(orders),
     messages: messages.map((m) => ({
       id: m.id,
       body: m.body,
+      imageUrl: m.imageUrl,
       senderId: m.senderId,
       sender: m.sender,
       orderId: m.orderId,
@@ -179,6 +191,7 @@ const getConversation = async (conversationId, userId) => {
         ? {
           id: m.order.id,
           orderNumber: m.order.orderNumber,
+          name: orderDisplayName(m.order.items),
           status: m.order.status,
           total: Number(m.order.total),
           createdAt: m.order.createdAt,
@@ -193,13 +206,17 @@ const getConversation = async (conversationId, userId) => {
 /**
  * Send a message. Optionally attaches an orderId (must belong to this buyer/store pair).
  */
-const sendMessage = async (conversationId, userId, { body, orderId }) => {
+const sendMessage = async (conversationId, userId, { body, imageUrl, orderId }) => {
   const trimmed = (body || '').trim();
-  if (!trimmed) {
-    throw new ApiError('Message cannot be empty', 400);
+  const trimmedImageUrl = (imageUrl || '').trim();
+  if (!trimmed && !trimmedImageUrl && !orderId) {
+    throw new ApiError('Message, image, or order is required', 400);
   }
   if (trimmed.length > 2000) {
     throw new ApiError('Message is too long (max 2000 characters)', 400);
+  }
+  if (trimmedImageUrl.length > 191) {
+    throw new ApiError('Image URL is too long', 400);
   }
 
   const conversation = await messageRepository.findConversationById(conversationId);
@@ -227,6 +244,7 @@ const sendMessage = async (conversationId, userId, { body, orderId }) => {
     conversationId,
     senderId: userId,
     body: trimmed,
+    imageUrl: trimmedImageUrl || null,
     orderId: orderId || null,
   });
   await messageRepository.touchConversation(conversationId, now);
@@ -234,6 +252,7 @@ const sendMessage = async (conversationId, userId, { body, orderId }) => {
   return {
     id: message.id,
     body: message.body,
+    imageUrl: message.imageUrl,
     senderId: message.senderId,
     sender: message.sender,
     orderId: message.orderId,
@@ -241,6 +260,7 @@ const sendMessage = async (conversationId, userId, { body, orderId }) => {
       ? {
         id: message.order.id,
         orderNumber: message.order.orderNumber,
+        name: orderDisplayName(message.order.items),
         status: message.order.status,
         total: Number(message.order.total),
         createdAt: message.order.createdAt,
@@ -264,10 +284,34 @@ const markConversationRead = async (conversationId, userId) => {
   return { success: true };
 };
 
+/**
+ * Buyer rates the seller's customer service for this conversation (1-5 stars).
+ * Sellers cannot rate their own conversations.
+ */
+const rateConversationService = async (conversationId, userId, rating) => {
+  const numericRating = parseInt(rating, 10);
+  if (!numericRating || numericRating < 1 || numericRating > 5) {
+    throw new ApiError('Rating must be between 1 and 5', 400);
+  }
+
+  const conversation = await messageRepository.findConversationById(conversationId);
+  if (!conversation) {
+    throw new ApiError('Conversation not found', 404);
+  }
+  const role = resolveRole(conversation, userId);
+  if (role !== 'buyer') {
+    throw new ApiError('Only the buyer can rate this conversation', 403);
+  }
+
+  const updated = await messageRepository.rateService(conversationId, numericRating, new Date());
+  return { serviceRating: updated.serviceRating, serviceRatingAt: updated.serviceRatingAt };
+};
+
 module.exports = {
   listMyConversations,
   openConversationWithStore,
   getConversation,
   sendMessage,
   markConversationRead,
+  rateConversationService,
 };

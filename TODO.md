@@ -1,16 +1,51 @@
-# Scroll-Hide Header Animation — Implementation Tasks
+# Mobile Header & Bottom Nav UI Improvements
 
-- [x] Gather context (read Header.jsx, Header.css, Layout.jsx, Layout.css, App.jsx, Home.jsx)
-- [x] Present plan & get approval
-- [x] Add `headerHidden` state + rAF-throttled scroll listener in Header.jsx
-- [x] Bind inline `transform` styles to topbar, header; add spacer div
-- [x] Add CSS variables + fixed positioning + transitions in Header.css / Layout.css
-- [x] Handle mobile breakpoint so topbar hides entirely and header slides fully
-- [x] Verify / test build (vite build succeeded)
+## Plan
 
-# Follow-up tasks
+1. **`mobile/app/(tabs)/messages.js`** — Rebuild header: safe-area top inset, larger padding (horizontal `xl`, bottom `lg`), white bg + bottom border.
+2. **`mobile/app/(tabs)/notifications.js`** — Same header improvements (safe-area top inset, larger padding, white bg + bottom border).
+3. **`mobile/app/(tabs)/products.js`** — Add safe-area top inset to search/filter header.
+4. **`mobile/app/conversation/[id].js`** — Add safe-area top inset to back-button header.
+5. **`mobile/app/(tabs)/_layout.js`** — Add safe-area bottom padding to the bottom tab bar.l
+## Steps
 
-- [x] Make "Why sell on Emoorm?" (Benefits) section use the same general width (960px → 1280px)
-- [x] Reposition the Sell page hero heading (added 8px top padding to `.sell-hero-copy`) without changing text
-- [x] Add "Active 1hr ago" indicator below the store name in Product Details store card
-- [x] Verify build after all changes (vite build succeeded)
+- [x] 1. Explore mobile app structure (tabs, theme, layouts)
+- [x] 2. Confirm plan with user (approved + bottom nav safe area added)
+- [x] 3. Update `messages.js` header (safe-area + spacing)
+- [x] 4. Update `notifications.js` header (safe-area + spacing)
+- [x] 5. Update `products.js` header (safe-area top inset)
+- [x] 6. Update `conversation/[id].js` header (safe-area top inset)
+- [x] 7. Update `(tabs)/_layout.js` bottom tab bar (safe-area bottom padding)
+- [x] 8. Verify changes
+
+# Phase 2: Remove all borders/outlines/dividers from mobile UI
+
+## Plan
+Use spacing, background colors, rounded corners instead of borders.
+
+1. `src/components/Button.js` — remove borderWidth + borderColor; give secondary a light green tint bg.
+2. `src/components/TextField.js` — remove border; use gray background; focus/error via bg color.
+3. `src/components/Select.js` — remove border; use gray bg; remove sheet header + option dividers.
+4. `src/components/ProductCard.js` — remove card border.
+5. `app/design-system.js` — remove emptyStateBox border.
+6. `app/(tabs)/messages.js` — remove header border, list item divider, unreadDot ring.
+7. `app/(tabs)/notifications.js` — remove header border, item border, unread item borderColor.
+8. `app/(tabs)/products.js` — remove header border, priceInput border.
+9. `app/(tabs)/index.js` — remove header border.
+10. `app/(tabs)/profile.js` — remove logout button border.
+11. `app/conversation/[id].js` — remove header border + composer top border.
+
+## Steps
+- [x] 1. Button.js
+- [x] 2. TextField.js
+- [x] 3. Select.js
+- [x] 4. ProductCard.js
+- [x] 5. design-system.js
+- [x] 6. messages.js
+- [x] 7. notifications.js
+- [x] 8. products.js
+- [x] 9. index.js
+- [x] 10. profile.js
+- [x] 11. conversation/[id].js
+- [x] 12. Verify build (all files inspected; no syntax errors)
+

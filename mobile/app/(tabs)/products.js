@@ -10,6 +10,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, SlidersHorizontal, Grid2x2, List, Package, X, Check } from 'lucide-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
@@ -19,7 +20,9 @@ import useCartStore from '../../src/store/cartStore';
 import ProductCard from '../../src/components/ProductCard';
 import EmptyState from '../../src/components/EmptyState';
 import LoadingSkeleton from '../../src/components/LoadingSkeleton';
-import { colors, radius, spacing, typography } from '../../src/theme';
+import { ProductGridSkeleton } from '../../src/components/SkeletonLayouts';
+import { getCacheEntry, getCachedData, refreshCachedData } from '../../src/lib/dataCache';
+import { colors, control, radius, spacing, typography } from '../../src/theme';
 
 const SORT_OPTIONS = [
   { label: 'Newest', value: 'newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -30,15 +33,18 @@ const SORT_OPTIONS = [
   { label: 'Name: Z to A', value: 'name-desc', sortBy: 'name', sortOrder: 'desc' },
 ];
 const PAGE_SIZE = 20;
+const CATEGORIES_CACHE_KEY = 'categories:list';
+const PRODUCTS_CACHE_TTL = 60 * 1000;
 
 // Mirrors web/src/pages/Products.jsx (category/price sidebar filters become a
 // modal + chip row here since there's no room for a persistent sidebar).
 export default function Products() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const addItem = useCartStore((s) => s.addItem);
 
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(getCacheEntry(CATEGORIES_CACHE_KEY)?.data || []);
   const [selectedCategory, setSelectedCategory] = useState(params.category || '');
   const [searchQuery, setSearchQuery] = useState(params.q || '');
   const [inputValue, setInputValue] = useState(params.q || '');
@@ -58,16 +64,24 @@ export default function Products() {
   const hasActiveFilters = Boolean(selectedCategory || searchQuery || priceRange.min || priceRange.max || sortBy !== 'newest');
 
   useEffect(() => {
-    apiClient
-      .get(ENDPOINTS.CATEGORIES)
-      .then((res) => setCategories(res.data || []))
+    const cached = getCachedData(CATEGORIES_CACHE_KEY, 5 * 60 * 1000);
+    if (cached) return;
+    refreshCachedData(CATEGORIES_CACHE_KEY, () => apiClient.get(ENDPOINTS.CATEGORIES).then((res) => res.data || []))
+      .then(setCategories)
       .catch(() => setCategories([]));
   }, []);
+
+  useEffect(() => {
+    const nextQuery = typeof params.q === 'string' ? params.q : '';
+    const nextCategory = typeof params.category === 'string' ? params.category : '';
+    setInputValue(nextQuery);
+    setSearchQuery(nextQuery);
+    setSelectedCategory(nextCategory);
+  }, [params.q, params.category]);
 
   const fetchProducts = useCallback(
     async (targetPage, append) => {
       if (append) setIsLoadingMore(true);
-      else setIsLoading(true);
       try {
         const sort = SORT_OPTIONS.find((s) => s.value === sortBy);
         const query = {
@@ -81,7 +95,31 @@ export default function Products() {
         if (priceRange.min) query.minPrice = priceRange.min;
         if (priceRange.max) query.maxPrice = priceRange.max;
 
-        const res = await apiClient.get(ENDPOINTS.PRODUCTS, { params: query });
+        const cacheKey = `products:${JSON.stringify(query)}`;
+        if (!append) {
+          const cachedEntry = getCacheEntry(cacheKey)?.data;
+          if (cachedEntry) {
+            setProducts(cachedEntry.products);
+            setTotal(cachedEntry.total);
+            setTotalPages(cachedEntry.totalPages);
+            setIsLoading(false);
+          } else {
+            setIsLoading(true);
+          }
+          if (getCachedData(cacheKey, PRODUCTS_CACHE_TTL)) return;
+        }
+
+        const loadPage = async () => {
+          const response = await apiClient.get(ENDPOINTS.PRODUCTS, { params: query });
+          return {
+            response,
+            products: response.data || [],
+            total: response.pagination?.total || 0,
+            totalPages: response.pagination?.totalPages || 0,
+          };
+        };
+        const result = append ? await loadPage() : await refreshCachedData(cacheKey, loadPage);
+        const res = result.response;
         setProducts((prev) => (append ? [...prev, ...(res.data || [])] : res.data || []));
         if (res.pagination) {
           setTotal(res.pagination.total);
@@ -153,7 +191,7 @@ export default function Products() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <View style={styles.searchBar}>
           <Search size={16} color={colors.gray400} />
           <TextInput
@@ -213,7 +251,7 @@ export default function Products() {
       </View>
 
       {isLoading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
+        <ProductGridSkeleton count={6} />
       ) : products.length === 0 ? (
         <EmptyState
           icon={<Package size={48} color={colors.gray400} />}
@@ -249,7 +287,7 @@ export default function Products() {
 
       <Modal visible={filterModalOpen} animationType="slide" transparent onRequestClose={() => setFilterModalOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setFilterModalOpen(false)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Filters</Text>
               <Pressable onPress={() => setFilterModalOpen(false)} hitSlop={8}>
@@ -296,20 +334,27 @@ export default function Products() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bgPrimary },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.white,
+  },
   searchBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    height: 40,
+    height: control.compactHeight,
     paddingHorizontal: spacing.sm,
     backgroundColor: colors.gray100,
     borderRadius: radius.base,
   },
   searchInput: { flex: 1, height: '100%', color: colors.textPrimary, ...typography.body },
-  filterBtn: { width: 40, height: 40, borderRadius: radius.base, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' },
-  viewToggleBtn: { width: 40, height: 40, borderRadius: radius.base, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' },
+  filterBtn: { width: control.iconSize, height: control.iconSize, borderRadius: radius.lg, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' },
+  viewToggleBtn: { width: control.iconSize, height: control.iconSize, borderRadius: radius.lg, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' },
 
   chipRow: { flexGrow: 0 },
   chipRowContent: { paddingHorizontal: spacing.md, gap: spacing.xs },
@@ -334,7 +379,6 @@ const styles = StyleSheet.create({
   resultsText: { ...typography.caption, color: colors.textSecondary },
   clearText: { ...typography.caption, color: colors.secondary, fontWeight: '600' },
 
-  loader: { marginTop: spacing.xxl },
   listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl },
   gridRow: { gap: spacing.sm },
   gridItem: { flex: 1, marginBottom: spacing.sm },
@@ -342,23 +386,22 @@ const styles = StyleSheet.create({
   footerLoader: { marginVertical: spacing.md },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.white, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, maxHeight: '80%' },
+  sheet: { backgroundColor: colors.white, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, maxHeight: '88%' },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   sheetTitle: { ...typography.h3, color: colors.textPrimary },
   sheetSectionTitle: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   priceInput: {
     flex: 1,
-    height: 40,
+    height: control.compactHeight,
     paddingHorizontal: spacing.sm,
     borderRadius: radius.base,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    backgroundColor: colors.gray50,
     color: colors.textPrimary,
   },
   priceDash: { color: colors.textMuted },
   sortOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.sm },
   sortOptionText: { ...typography.body, color: colors.textPrimary },
-  applyBtn: { marginTop: spacing.lg, height: 46, borderRadius: radius.base, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  applyBtn: { marginTop: spacing.lg, height: control.height, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   applyBtnText: { ...typography.body, color: colors.white, fontWeight: '600' },
 });

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "E-MOORM",
+    "slug": "emoorm-marketplace",
     "scheme": "emoorm",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,9 +11,20 @@
       "apiBaseUrl": "http://10.0.2.2:3000/api"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.emoorm.marketplace",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "E-MOORM uses your photos for product images, payment proof, profile photos, and reviews.",
+        "NSCameraUsageDescription": "E-MOORM uses the camera for image search and marketplace uploads."
+      }
     },
     "android": {
+      "package": "com.emoorm.marketplace",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -28,7 +39,17 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-font"
+      "expo-font",
+      "expo-video",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#ffffff",
+          "image": "./assets/brand-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain"
+        }
+      ]
     ]
   }
 }

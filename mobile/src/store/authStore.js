@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../api/client';
+import { clearCachedData } from '../lib/dataCache';
 
 const useAuthStore = create((set) => ({
   user: null,
@@ -22,6 +23,7 @@ const useAuthStore = create((set) => ({
 
   // Called after a successful POST /auth/login or /auth/register response.
   login: async (user, accessToken, refreshToken) => {
+    clearCachedData();
     await AsyncStorage.multiSet([
       [STORAGE_KEYS.ACCESS_TOKEN, accessToken],
       [STORAGE_KEYS.USER, JSON.stringify(user)],
@@ -41,6 +43,7 @@ const useAuthStore = create((set) => ({
       STORAGE_KEYS.REFRESH_TOKEN,
       STORAGE_KEYS.USER,
     ]);
+    clearCachedData();
     set({ user: null, isAuthenticated: false });
   },
 }));

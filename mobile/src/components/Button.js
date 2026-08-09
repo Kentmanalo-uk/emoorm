@@ -1,11 +1,11 @@
 import { Pressable, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { colors, fontFamily, radius, spacing, typography } from '../theme';
+import { colors, control, fontFamily, radius, spacing, typography } from '../theme';
 
 const VARIANT_STYLES = {
-  primary: { bg: colors.primary, text: colors.white, border: colors.primary },
-  secondary: { bg: colors.white, text: colors.primary, border: colors.primary },
-  danger: { bg: colors.error, text: colors.white, border: colors.error },
-  ghost: { bg: 'transparent', text: colors.textPrimary, border: 'transparent' },
+  primary: { bg: colors.primary, text: colors.white },
+  secondary: { bg: colors.bgGreenLight, text: colors.primary },
+  danger: { bg: colors.error, text: colors.white },
+  ghost: { bg: 'transparent', text: colors.textPrimary },
 };
 
 export default function Button({
@@ -20,11 +20,12 @@ export default function Button({
 
   return (
     <Pressable
+      accessibilityRole="button"
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.base,
-        { backgroundColor: v.bg, borderColor: v.border },
+        { backgroundColor: v.bg },
         (disabled || loading) && styles.disabled,
         pressed && !disabled && !loading && styles.pressed,
         style,
@@ -41,14 +42,13 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 44,
+    minHeight: control.height,
     borderRadius: radius.lg,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
   text: { ...typography.body, fontWeight: '600', fontFamily: fontFamily.semiBold },
   disabled: { opacity: 0.5 },
-  pressed: { opacity: 0.85 },
+  pressed: { opacity: 0.72 },
 });

@@ -547,6 +547,10 @@ model Conversation {
   buyerLastReadAt  DateTime? @map("buyer_last_read_at")
   sellerLastReadAt DateTime? @map("seller_last_read_at")
 
+  // Buyer's rating of the seller's customer service for this conversation
+  serviceRating   Int?      @map("service_rating")
+  serviceRatingAt DateTime? @map("service_rating_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -567,6 +571,7 @@ model Message {
   sender    User     @relation("MessageSender", fields: [senderId], references: [id])
 
   body      String   @db.Text
+  imageUrl  String?  @map("image_url")
 
   // Optional link to an order this message references (used for auto-pinned order cards)
   orderId   String?  @map("order_id")

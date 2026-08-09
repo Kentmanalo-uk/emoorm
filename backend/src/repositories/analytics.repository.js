@@ -99,6 +99,7 @@ const getSellerStats = async (storeId, window) => {
     topCategoryRows,
     windowOrders,
     lifetimeRevenue,
+    lifetimeUnitsSold,
     uniqueBuyers,
   ] = await Promise.all([
     prisma.order.groupBy({
@@ -153,6 +154,10 @@ const getSellerStats = async (storeId, window) => {
       _sum: { total: true },
       _count: { _all: true },
     }),
+    prisma.orderItem.aggregate({
+      where: { order: { storeId, status: 'COMPLETED' } },
+      _sum: { quantity: true },
+    }),
     prisma.order.findMany({
       where: { ...orderScope, status: 'COMPLETED' },
       distinct: ['buyerId'],
@@ -206,6 +211,7 @@ const getSellerStats = async (storeId, window) => {
     salesByDay: bucketByDay(windowOrders),
     salesBucketed: bucketBy(windowOrders, granularity),
     lifetimeRevenue,
+    lifetimeUnitsSold,
     topCategories,
     uniqueBuyers: uniqueBuyers.length,
   };

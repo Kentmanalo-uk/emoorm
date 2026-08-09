@@ -14,11 +14,12 @@ export default function ProductCard({
   variant = 'grid',
   onPress,
   onAddToCart,
+  style,
 }) {
   const isList = variant === 'list';
 
   return (
-    <Pressable onPress={onPress} style={[styles.card, isList && styles.cardList]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.card, isList && styles.cardList, pressed && styles.pressed, style]}>
       <View style={[styles.imageWrap, isList && styles.imageWrapList]}>
         {imageUrl ? (
           <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
@@ -28,7 +29,15 @@ export default function ProductCard({
           </View>
         )}
         {onAddToCart ? (
-          <Pressable onPress={onAddToCart} style={styles.fab} hitSlop={8}>
+          <Pressable
+            onPress={(event) => {
+              event.stopPropagation();
+              onAddToCart();
+            }}
+            style={styles.fab}
+            accessibilityRole="button"
+            accessibilityLabel={`Add ${name} to cart`}
+          >
             <ShoppingCart size={16} color={colors.white} />
           </Pressable>
         ) : null}
@@ -51,8 +60,6 @@ const styles = StyleSheet.create({
     width: '48%',
     backgroundColor: colors.white,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
     overflow: 'hidden',
   },
   cardList: {
@@ -79,17 +86,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.xs,
     bottom: spacing.xs,
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
     borderRadius: radius.full,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  info: { padding: spacing.sm, gap: 2 },
+  info: { minHeight: 88, padding: spacing.md, gap: spacing.xs },
   infoList: { flex: 1, justifyContent: 'center' },
   name: { ...typography.body, color: colors.textPrimary, fontWeight: '500', fontFamily: fontFamily.medium },
   price: { ...typography.body, color: colors.primaryDark, fontWeight: '700', fontFamily: fontFamily.bold },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   reviewCount: { ...typography.caption, color: colors.textMuted },
+  pressed: { opacity: 0.72 },
 });

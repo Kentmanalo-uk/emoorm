@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { View, Text, Pressable, Modal, FlatList, StyleSheet } from 'react-native';
 import { ChevronDown, Check, X } from 'lucide-react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, control, fontFamily, radius, spacing, typography } from '../theme';
 
 // Lightweight modal-based picker — RN has no native <select>, and this avoids
 // pulling in @react-native-picker/picker just for one field.
 export default function Select({ label, value, options, onChange, placeholder = 'Select…', error }) {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
 
@@ -13,6 +15,7 @@ export default function Select({ label, value, options, onChange, placeholder = 
     <View style={styles.container}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <Pressable
+        accessibilityRole="button"
         style={[styles.input, error && styles.inputError]}
         onPress={() => setOpen(true)}
       >
@@ -25,7 +28,7 @@ export default function Select({ label, value, options, onChange, placeholder = 
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{label || 'Select an option'}</Text>
               <Pressable onPress={() => setOpen(false)} hitSlop={8}>
@@ -57,39 +60,34 @@ export default function Select({ label, value, options, onChange, placeholder = 
 }
 
 const styles = StyleSheet.create({
-  container: { marginBottom: spacing.md },
-  label: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
+  container: { marginBottom: spacing.lg },
+  label: { ...typography.caption, color: colors.textPrimary, fontFamily: fontFamily.medium, fontWeight: '500', marginBottom: spacing.sm },
   input: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.borderLight,
     borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    backgroundColor: colors.white,
-    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.gray100,
+    minHeight: control.height,
   },
-  inputError: { borderColor: colors.error },
+  inputError: { borderWidth: 1, borderColor: colors.error, backgroundColor: colors.white },
   value: { ...typography.body, color: colors.textPrimary },
   placeholder: { color: colors.textMuted },
   error: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.white,
     borderTopLeftRadius: radius.lg * 2,
     borderTopRightRadius: radius.lg * 2,
     maxHeight: '70%',
-    paddingBottom: spacing.lg,
   },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
   sheetTitle: { ...typography.h3, color: colors.textPrimary },
   list: { paddingHorizontal: spacing.lg },
@@ -97,9 +95,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: control.height,
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   optionText: { ...typography.body, color: colors.textPrimary },
 });
