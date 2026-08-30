@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { ArrowLeft, Check, CheckCircle2, CreditCard, MapPin, Package, Store, Truck, Upload } from 'lucide-react-native';
+import { ArrowLeftIcon as ArrowLeft, CheckIcon as Check, CheckCircleIcon as CheckCircle2, CreditCardIcon as CreditCard, MapPinIcon as MapPin, PackageIcon as Package, StorefrontIcon as Store, TruckIcon as Truck, UploadSimpleIcon as Upload } from 'phosphor-react-native';
 import apiClient from '../src/api/client';
 import { ENDPOINTS } from '../src/api/endpoints';
 import TextField from '../src/components/TextField';
@@ -32,8 +32,12 @@ const peso = (value) => `₱${Number(value || 0).toLocaleString('en-PH', {
 export default function Checkout() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const items = useCartStore((state) => state.items);
-  const clearCart = useCartStore((state) => state.clearCart);
+  const allCartItems = useCartStore((state) => state.items);
+  const selectedProductIds = useCartStore((state) => state.selectedProductIds);
+  const removeSelectedItems = useCartStore((state) => state.removeSelectedItems);
+
+  // Only the cart items the buyer selected (checked) are sent to checkout.
+  const items = useMemo(() => allCartItems.filter((item) => selectedProductIds.includes(item.id)), [allCartItems, selectedProductIds]);
 
   const [step, setStep] = useState(1);
   const [municipalities, setMunicipalities] = useState([]);
@@ -47,6 +51,8 @@ export default function Checkout() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderIds, setOrderIds] = useState([]);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [form, setForm] = useState({
     fullName: user?.fullName || '',
     contactNumber: user?.contactNumber || '',
@@ -76,6 +82,33 @@ export default function Checkout() {
     apiClient.get(ENDPOINTS.MUNICIPALITIES)
       .then((res) => setMunicipalities(res.data || []))
       .catch(() => setMunicipalities([]));
+  }, []);
+
+  const applySavedAddress = (addr) => {
+    setSelectedAddressId(addr.id);
+    setForm((current) => ({
+      ...current,
+      fullName: addr.fullName || '',
+      contactNumber: addr.contactNumber || '',
+      street: addr.street || '',
+      barangay: addr.barangay || '',
+      municipalityId: addr.municipalityId || '',
+    }));
+    setErrors({});
+  };
+
+  const useManualAddress = () => setSelectedAddressId(null);
+
+  useEffect(() => {
+    apiClient.get(ENDPOINTS.ADDRESSES.LIST)
+      .then((res) => {
+        const list = res.data || [];
+        setSavedAddresses(list);
+        const def = list.find((item) => item.isDefault) || list[0];
+        if (def) applySavedAddress(def);
+      })
+      .catch(() => setSavedAddresses([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -245,7 +278,7 @@ export default function Checkout() {
       );
       const ids = responses.map((response) => response.data?.id).filter(Boolean);
       setOrderIds(ids);
-      clearCart();
+      removeSelectedItems();
       toast.success('Order placed successfully');
     } catch (err) {
       toast.error('Failed to place order', err.message);
@@ -276,7 +309,7 @@ export default function Checkout() {
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
-        <Pressable style={styles.iconButton} onPress={() => (step > 1 ? setStep(step - 1) : router.back())}>
+        <Pressable style={styles.iconButton} onPress={() => (step > 1 ? setStep(step - 1) : (router.canGoBack() ? router.back() : router.replace('/')))}>
           <ArrowLeft size={21} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>Checkout</Text>
@@ -306,6 +339,27 @@ export default function Checkout() {
             />
 
             <SectionHeader icon={<MapPin size={21} color={colors.secondary} />} title="Contact & Address" />
+            {fulfillmentMethod === 'DELIVERY' && savedAddresses.length > 0 ? (
+              <View style={styles.savedAddressList}>
+                {savedAddresses.map((addr) => (
+                  <Choice
+                    key={addr.id}
+                    title={`${addr.label ? `${addr.label} — ` : ''}${addr.fullName}${addr.isDefault ? '  •  Default' : ''}`}
+                    description={`${addr.street}, ${addr.barangay}, ${addr.municipality?.name || ''}`}
+                    selected={selectedAddressId === addr.id}
+                    onPress={() => applySavedAddress(addr)}
+                    icon={<MapPin size={19} color={colors.secondary} />}
+                  />
+                ))}
+                <Choice
+                  title="Enter a different address"
+                  description="Use a one-off address for this order"
+                  selected={selectedAddressId === null}
+                  onPress={useManualAddress}
+                  icon={<MapPin size={19} color={colors.secondary} />}
+                />
+              </View>
+            ) : null}
             <TextField label="Full Name" value={form.fullName} onChangeText={(value) => updateForm('fullName', value)} error={errors.fullName} autoCapitalize="words" />
             <TextField label="Contact Number" value={form.contactNumber} onChangeText={(value) => updateForm('contactNumber', value)} error={errors.contactNumber} keyboardType="phone-pad" />
             {fulfillmentMethod === 'DELIVERY' ? (
@@ -471,6 +525,7 @@ const styles = StyleSheet.create({
   choiceText: { flex: 1, gap: 2 },
   choiceTitle: { ...typography.body, color: colors.textPrimary, fontFamily: fontFamily.semiBold, fontWeight: '600' },
   mutedText: { ...typography.caption, color: colors.textSecondary, lineHeight: 17 },
+  savedAddressList: { marginBottom: spacing.sm },
   radio: { width: 19, height: 19, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.borderMedium, alignItems: 'center', justifyContent: 'center' },
   radioSelected: { borderColor: colors.primary },
   radioDot: { width: 9, height: 9, borderRadius: radius.full, backgroundColor: colors.primary },

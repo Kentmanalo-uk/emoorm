@@ -4,7 +4,6 @@ const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
   createdResponse,
-  noContentResponse,
   paginatedResponse,
 } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -145,14 +144,29 @@ const updateStore = asyncHandler(async (req, res) => {
 });
 
 /**
- * Delete store
- * @route DELETE /api/stores/:id
+ * Request store deletion (15-day grace period)
+ * @route POST /api/stores/:id/request-deletion
  * @access Private (Store owner only)
  */
-const deleteStore = asyncHandler(async (req, res) => {
-  await storeService.deleteStore(req.params.id, req.user.id);
+const requestDeletion = asyncHandler(async (req, res) => {
+  const store = await storeService.requestStoreDeletion(req.params.id, req.user.id);
 
-  noContentResponse(res);
+  successResponse(
+    res,
+    store,
+    'Store deletion requested. Your store is hidden from buyers and will be permanently deleted in 15 days unless cancelled.'
+  );
+});
+
+/**
+ * Cancel a pending store deletion request
+ * @route POST /api/stores/:id/cancel-deletion
+ * @access Private (Store owner only)
+ */
+const cancelDeletion = asyncHandler(async (req, res) => {
+  const store = await storeService.cancelStoreDeletion(req.params.id, req.user.id);
+
+  successResponse(res, store, 'Store deletion cancelled. Your store is active again.');
 });
 
 /**
@@ -226,7 +240,8 @@ module.exports = {
   getStorefront,
   getMyStore,
   updateStore,
-  deleteStore,
+  requestDeletion,
+  cancelDeletion,
   suspendStore,
   unsuspendStore,
   getStoreServiceAreas,

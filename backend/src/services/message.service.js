@@ -27,6 +27,17 @@ const orderDisplayName = (items) => {
   return rest.length ? `${first.productName} + ${rest.length} more` : first.productName;
 };
 
+const shapeMessageProduct = (product) =>
+  product
+    ? {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: Number(product.price),
+      image: firstImage(product),
+    }
+    : null;
+
 const shapePinnedOrders = (orders) =>
   (orders || []).map((o) => ({
     id: o.id,
@@ -197,6 +208,8 @@ const getConversation = async (conversationId, userId) => {
           createdAt: m.order.createdAt,
         }
         : null,
+      productId: m.productId,
+      product: shapeMessageProduct(m.product),
       createdAt: m.createdAt,
       readAt: m.readAt,
     })),
@@ -204,13 +217,14 @@ const getConversation = async (conversationId, userId) => {
 };
 
 /**
- * Send a message. Optionally attaches an orderId (must belong to this buyer/store pair).
+ * Send a message. Optionally attaches an orderId (must belong to this buyer/store pair)
+ * and/or a productId (must belong to the conversation's store).
  */
-const sendMessage = async (conversationId, userId, { body, imageUrl, orderId }) => {
+const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, productId }) => {
   const trimmed = (body || '').trim();
   const trimmedImageUrl = (imageUrl || '').trim();
-  if (!trimmed && !trimmedImageUrl && !orderId) {
-    throw new ApiError('Message, image, or order is required', 400);
+  if (!trimmed && !trimmedImageUrl && !orderId && !productId) {
+    throw new ApiError('Message, image, order, or product is required', 400);
   }
   if (trimmed.length > 2000) {
     throw new ApiError('Message is too long (max 2000 characters)', 400);
@@ -239,6 +253,16 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId }) 
     }
   }
 
+  if (productId) {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true, storeId: true },
+    });
+    if (!product || product.storeId !== conversation.storeId) {
+      throw new ApiError('Product does not belong to this conversation', 400);
+    }
+  }
+
   const now = new Date();
   const message = await messageRepository.createMessage({
     conversationId,
@@ -246,6 +270,7 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId }) 
     body: trimmed,
     imageUrl: trimmedImageUrl || null,
     orderId: orderId || null,
+    productId: productId || null,
   });
   await messageRepository.touchConversation(conversationId, now);
 
@@ -266,6 +291,8 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId }) 
         createdAt: message.order.createdAt,
       }
       : null,
+    productId: message.productId,
+    product: shapeMessageProduct(message.product),
     createdAt: message.createdAt,
     readAt: message.readAt,
   };

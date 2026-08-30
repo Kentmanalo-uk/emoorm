@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { MessageCircle, Search, UserRound, X } from 'lucide-react-native';
+import { ChatCircleIcon as MessageCircle, MagnifyingGlassIcon as Search, UserCircleIcon as UserRound, XIcon as X } from 'phosphor-react-native';
 import apiClient from '../api/client';
 import { ENDPOINTS } from '../api/endpoints';
 import { resolveImg } from '../lib/media';
@@ -79,31 +79,31 @@ export default function SellerMessages() {
         {query ? <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={8} onPress={() => setQuery('')}><X size={18} color={colors.textMuted} /></Pressable> : null}
       </View>
       <FlatList
-      style={styles.list}
-      data={filteredConversations}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={filteredConversations.length ? styles.content : styles.empty}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { setIsRefreshing(true); load({ silent: true, force: true }); }} colors={[colors.primary]} />}
-      ListEmptyComponent={<EmptyState icon={<MessageCircle size={44} color={colors.gray400} />} title={normalizedQuery ? 'No customers found' : 'No store messages'} message={normalizedQuery ? 'Try another name or message.' : 'Customer conversations will appear here.'} />}
-      renderItem={({ item }) => {
-        const buyerName = item.buyer?.fullName || 'Customer';
-        return (
-          <Pressable accessibilityRole="button" accessibilityLabel={`Conversation with ${buyerName}`} style={({ pressed }) => [styles.item, pressed && styles.itemPressed]} onPress={() => router.push(`/conversation/${item.id}?storeName=${encodeURIComponent(buyerName)}`)}>
-            <View style={styles.avatarWrap}>
-              {item.buyer?.profilePhoto ? <Image source={{ uri: resolveImg(item.buyer.profilePhoto) }} style={styles.avatar} /> : <View style={styles.avatarPlaceholder}><UserRound size={19} color={colors.secondary} /></View>}
-              {item.unreadCount > 0 ? <View style={styles.unreadDot} /> : null}
-            </View>
-            <View style={styles.itemBody}>
-              <Text style={styles.buyerName} numberOfLines={1}>{buyerName}</Text>
-              <Text style={[styles.preview, item.unreadCount > 0 && styles.previewUnread]} numberOfLines={1}>{item.lastMessage?.body || 'Customer conversation'}</Text>
-            </View>
-            <View style={styles.meta}>
-              <Text style={styles.time}>{timeAgo(item.lastMessageAt)}</Text>
-              {item.unreadCount > 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{item.unreadCount}</Text></View> : null}
-            </View>
-          </Pressable>
-        );
-      }}
+        style={styles.list}
+        data={filteredConversations}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={filteredConversations.length ? styles.content : styles.empty}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { setIsRefreshing(true); load({ silent: true, force: true }); }} colors={[colors.primary]} />}
+        ListEmptyComponent={<EmptyState icon={<MessageCircle size={44} color={colors.gray400} />} title={normalizedQuery ? 'No customers found' : 'No store messages'} message={normalizedQuery ? 'Try another name or message.' : 'Customer conversations will appear here.'} />}
+        renderItem={({ item }) => {
+          const buyerName = item.buyer?.fullName || 'Customer';
+          return (
+            <Pressable accessibilityRole="button" accessibilityLabel={`Conversation with ${buyerName}`} style={({ pressed }) => [styles.item, pressed && styles.itemPressed]} onPress={() => router.push(`/conversation/${item.id}?storeName=${encodeURIComponent(buyerName)}`)}>
+              <View style={styles.avatarWrap}>
+                {item.buyer?.profilePhoto ? <Image source={{ uri: resolveImg(item.buyer.profilePhoto) }} style={styles.avatar} /> : <View style={styles.avatarPlaceholder}><UserRound size={19} color={colors.secondary} /></View>}
+                {item.unreadCount > 0 ? <View style={styles.unreadDot} /> : null}
+              </View>
+              <View style={styles.itemBody}>
+                <Text style={styles.buyerName} numberOfLines={1}>{buyerName}</Text>
+                <Text style={[styles.preview, item.unreadCount > 0 && styles.previewUnread]} numberOfLines={1}>{item.lastMessage?.body || 'Customer conversation'}</Text>
+              </View>
+              <View style={styles.meta}>
+                <Text style={styles.time}>{timeAgo(item.lastMessageAt)}</Text>
+                {item.unreadCount > 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{item.unreadCount}</Text></View> : null}
+              </View>
+            </Pressable>
+          );
+        }}
       />
     </View>
   );

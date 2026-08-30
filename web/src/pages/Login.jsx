@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import './Login.css';
+
+const QR_POLL_INTERVAL_MS = 2000;
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,6 +27,9 @@ const Login = () => {
   const [mfaEmail, setMfaEmail] = useState('');
   const [setupData, setSetupData] = useState(null); // { qrDataUrl, secret }
   const [backupCodes, setBackupCodes] = useState(null);
+
+  // QR code login
+  const [showQrLogin, setShowQrLogin] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -227,7 +232,9 @@ const Login = () => {
             <img src="/brand-icon.png" alt="Emoorm" className="login-logo-icon" />
             <span className="login-logo-text">emoorm</span>
           </Link>
-          <Link to="/register" className="login-header-link">Log In</Link>
+          <div className="login-header-actions">
+            <Link to="/register" className="login-header-link">Log In</Link>
+          </div>
         </div>
       </header>
 
@@ -240,7 +247,7 @@ const Login = () => {
               <img src="/brand-icon.png" alt="Emoorm" className="login-hero-icon" />
               <span className="login-hero-text">emoorm</span>
             </div>
-          <h1 className="register-hero-title">
+            <h1 className="register-hero-title">
               Made in Mindoro<br />
               <span className="register-hero-title-highlight">the place of rich<br />in Agriculture Producers</span>
             </h1>
@@ -276,9 +283,26 @@ const Login = () => {
                   apiError={apiError}
                 />
               )}
-              {mfaStage === 'credentials' && (<>
-                <div className="login-form-header">
+              {mfaStage === 'credentials' && showQrLogin && (
+                <QrLoginPanel
+                  onBack={() => setShowQrLogin(false)}
+                  onApproved={(userData, token, refreshToken) => {
+                    setShowQrLogin(false);
+                    finishLogin(userData, token, refreshToken);
+                  }}
+                />
+              )}
+              {mfaStage === 'credentials' && !showQrLogin && (<>
+                <div className="login-form-header login-form-header-row">
                   <h2 className="login-form-title">Sign In</h2>
+                  <button
+                    type="button"
+                    className="login-header-qr-btn"
+                    onClick={() => setShowQrLogin(true)}
+                  >
+                    <QrCode size={16} />
+                    Login with QR
+                  </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="login-form">
@@ -500,5 +524,174 @@ function MfaSetup({
         Cancel
       </button>
     </form>
+  );
+}
+
+// ─── QR code login (inline, replaces the credentials form within the same card) ──
+
+function QrLoginPanel({ onBack, onApproved }) {
+  const [status, setStatus] = useState('loading'); // loading | pending | scanned | approved | rejected | expired | error
+  const [qrDataUrl, setQrDataUrl] = useState(null);
+  const [token, setToken] = useState(null);
+  const [expiresAt, setExpiresAt] = useState(null);
+  const [secondsLeft, setSecondsLeft] = useState(null);
+
+  const pollRef = useRef(null);
+  const tickRef = useRef(null);
+
+  const clearTimers = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    if (tickRef.current) clearInterval(tickRef.current);
+    pollRef.current = null;
+    tickRef.current = null;
+  };
+
+  const startSession = useCallback(async () => {
+    clearTimers();
+    setStatus('loading');
+    setQrDataUrl(null);
+    setToken(null);
+    try {
+      const res = await axios.post('/auth/qr/create');
+      const { token: newToken, qrDataUrl: dataUrl, expiresAt: expiry } = res.data;
+      setQrDataUrl(dataUrl);
+      setToken(newToken);
+      setExpiresAt(expiry);
+      setStatus('pending');
+    } catch (err) {
+      setStatus('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    startSession();
+    return clearTimers;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Countdown display
+  useEffect(() => {
+    if (!expiresAt || status === 'approved' || status === 'rejected' || status === 'expired') {
+      return undefined;
+    }
+    const update = () => {
+      const secs = Math.max(0, Math.round((new Date(expiresAt).getTime() - Date.now()) / 1000));
+      setSecondsLeft(secs);
+    };
+    update();
+    tickRef.current = setInterval(update, 1000);
+    return () => clearInterval(tickRef.current);
+  }, [expiresAt, status]);
+
+  // Status polling
+  useEffect(() => {
+    if (!token || (status !== 'pending' && status !== 'scanned')) {
+      return undefined;
+    }
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await axios.get(`/auth/qr/status/${token}`);
+        const data = res.data;
+        if (data.status === 'APPROVED') {
+          clearInterval(pollRef.current);
+          setStatus('approved');
+          onApproved(data.user, data.accessToken, data.refreshToken);
+        } else if (data.status === 'REJECTED') {
+          clearInterval(pollRef.current);
+          setStatus('rejected');
+        } else if (data.status === 'EXPIRED') {
+          clearInterval(pollRef.current);
+          setStatus('expired');
+        } else if (data.status === 'SCANNED') {
+          setStatus('scanned');
+        }
+      } catch {
+        // transient network hiccup — keep polling
+      }
+    }, QR_POLL_INTERVAL_MS);
+    return () => clearInterval(pollRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, status]);
+
+  const minutes = secondsLeft != null ? Math.floor(secondsLeft / 60) : null;
+  const seconds = secondsLeft != null ? String(secondsLeft % 60).padStart(2, '0') : null;
+
+  return (
+    <div className="login-qr-panel">
+      <div className="login-form-header login-form-header-row">
+        <h2 className="login-form-title">Log in with QR</h2>
+        <button type="button" className="login-header-qr-btn" onClick={onBack}>
+          <ArrowLeft size={16} />
+          Back to Sign In
+        </button>
+      </div>
+
+      <div className="login-qr-body">
+        {status === 'loading' && (
+          <div className="login-qr-loading">
+            <div className="login-qr-spinner" />
+            <p>Generating your QR code…</p>
+          </div>
+        )}
+
+        {(status === 'pending' || status === 'scanned') && qrDataUrl && (
+          <>
+            <img src={qrDataUrl} alt="QR login code" className="login-qr-image" />
+            {status === 'pending' && (
+              <p className="login-qr-hint">
+                Scan this QR code with your mobile app to log in — no password needed.
+              </p>
+            )}
+            {status === 'scanned' && (
+              <p className="login-qr-hint login-qr-hint-active">
+                <Smartphone size={16} /> Scanned — waiting for approval on your phone…
+              </p>
+            )}
+            {secondsLeft != null && (
+              <p className="login-qr-expiry">
+                <Clock size={13} /> Expires in {minutes}:{seconds}
+              </p>
+            )}
+          </>
+        )}
+
+        {status === 'rejected' && (
+          <div className="login-qr-status">
+            <XCircle size={40} className="login-qr-status-icon login-qr-status-icon-error" />
+            <p>Login request was declined on your phone.</p>
+            <button type="button" className="login-form-submit" onClick={startSession}>
+              Try again
+            </button>
+          </div>
+        )}
+
+        {status === 'expired' && (
+          <div className="login-qr-status">
+            <Clock size={40} className="login-qr-status-icon login-qr-status-icon-muted" />
+            <p>This code expired.</p>
+            <button type="button" className="login-form-submit" onClick={startSession}>
+              Get a new code
+            </button>
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div className="login-qr-status">
+            <XCircle size={40} className="login-qr-status-icon login-qr-status-icon-error" />
+            <p>Couldn't generate a QR code. Please try again.</p>
+            <button type="button" className="login-form-submit" onClick={startSession}>
+              Retry
+            </button>
+          </div>
+        )}
+
+        {status === 'approved' && (
+          <div className="login-qr-status">
+            <CheckCircle2 size={40} className="login-qr-status-icon login-qr-status-icon-success" />
+            <p>Approved! Logging you in…</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

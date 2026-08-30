@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { CheckCircle2, IdCard, Store, Upload } from 'lucide-react-native';
+import { CheckCircleIcon as CheckCircle2, IdentificationCardIcon as IdCard, StorefrontIcon as Store, UploadSimpleIcon as Upload } from 'phosphor-react-native';
 import { useRouter } from 'expo-router';
 import ScreenHeader from '../src/components/ScreenHeader';
 import TextField from '../src/components/TextField';
@@ -10,8 +10,7 @@ import Button from '../src/components/Button';
 import apiClient from '../src/api/client';
 import { ENDPOINTS } from '../src/api/endpoints';
 import useAuthStore from '../src/store/authStore';
-import { resolveImg } from '../src/lib/media';
-import { uploadImage } from '../src/lib/upload';
+import { uploadKycDocument } from '../src/lib/upload';
 import { toast } from '../src/lib/toast';
 import { colors, radius, spacing, typography } from '../src/theme';
 
@@ -22,6 +21,8 @@ export default function SellerApply() {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const [form, setForm] = useState({ shopName: '', shopDescription: '', shopAddress: user?.address || '', idType: '', idFrontUrl: '', idBackUrl: '', selfieUrl: '' });
+  // Local-only preview URIs (device file:// paths) for the ID photos — never sent to the server.
+  const [previews, setPreviews] = useState({ idFrontUrl: '', idBackUrl: '', selfieUrl: '' });
   const [uploading, setUploading] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,7 +39,12 @@ export default function SellerApply() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
     if (result.canceled) return;
     setUploading(field);
-    try { const uploaded = await uploadImage(result.assets[0]); setForm((current) => ({ ...current, [field]: uploaded.url })); }
+    try {
+      const asset = result.assets[0];
+      const uploaded = await uploadKycDocument(asset);
+      setForm((current) => ({ ...current, [field]: uploaded.fileId }));
+      setPreviews((current) => ({ ...current, [field]: asset.uri }));
+    }
     catch (error) { toast.error('Upload failed', error.message); }
     finally { setUploading(''); }
   };
@@ -59,13 +65,13 @@ export default function SellerApply() {
   return <View style={styles.screen}><ScreenHeader title="Start Selling" subtitle="Seller verification" /><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
     <View style={styles.notice}><Store size={20} color={colors.secondary} /><View style={styles.noticeText}><Text style={styles.noticeTitle}>Your shop can be prepared immediately</Text><Text style={styles.noticeBody}>Products and storefront details remain private until admin approval.</Text></View></View>
     <View style={styles.section}><Text style={styles.sectionTitle}>Shop Details</Text><TextField label="Shop name" value={form.shopName} onChangeText={(value) => setForm((current) => ({ ...current, shopName: value }))} autoCapitalize="words" placeholder="Maria's Fresh Farm" /><TextField label="Shop description" value={form.shopDescription} onChangeText={(value) => setForm((current) => ({ ...current, shopDescription: value }))} autoCapitalize="sentences" placeholder="Tell buyers what makes your shop special" multiline /><TextField label="Shop address" value={form.shopAddress} onChangeText={(value) => setForm((current) => ({ ...current, shopAddress: value }))} autoCapitalize="words" placeholder="Barangay, Municipality" /></View>
-    <View style={styles.section}><View style={styles.sectionHeading}><IdCard size={20} color={colors.secondary} /><Text style={styles.sectionTitleInline}>Identity Verification</Text></View><Select label="Government ID type" value={form.idType} onChange={(value) => setForm((current) => ({ ...current, idType: value }))} options={ID_TYPES.map((value) => ({ label: value, value }))} placeholder="Select ID type" /><UploadTile label="Front of ID" value={form.idFrontUrl} loading={uploading === 'idFrontUrl'} onPress={() => chooseImage('idFrontUrl')} /><UploadTile label="Back of ID" value={form.idBackUrl} loading={uploading === 'idBackUrl'} onPress={() => chooseImage('idBackUrl')} /><UploadTile label="Selfie holding ID" value={form.selfieUrl} loading={uploading === 'selfieUrl'} onPress={() => chooseImage('selfieUrl')} /></View>
+    <View style={styles.section}><View style={styles.sectionHeading}><IdCard size={20} color={colors.secondary} /><Text style={styles.sectionTitleInline}>Identity Verification</Text></View><Select label="Government ID type" value={form.idType} onChange={(value) => setForm((current) => ({ ...current, idType: value }))} options={ID_TYPES.map((value) => ({ label: value, value }))} placeholder="Select ID type" /><UploadTile label="Front of ID" value={form.idFrontUrl} previewUri={previews.idFrontUrl} loading={uploading === 'idFrontUrl'} onPress={() => chooseImage('idFrontUrl')} /><UploadTile label="Back of ID" value={form.idBackUrl} previewUri={previews.idBackUrl} loading={uploading === 'idBackUrl'} onPress={() => chooseImage('idBackUrl')} /><UploadTile label="Selfie holding ID" value={form.selfieUrl} previewUri={previews.selfieUrl} loading={uploading === 'selfieUrl'} onPress={() => chooseImage('selfieUrl')} /></View>
     <Button title="Submit Seller Application" onPress={submit} loading={submitting} />
   </ScrollView></View>;
 }
 
-function UploadTile({ label, value, loading, onPress }) {
-  return <Pressable style={styles.uploadTile} onPress={onPress}>{value ? <Image source={{ uri: resolveImg(value) }} style={styles.uploadPreview} /> : <View style={styles.uploadPlaceholder}>{loading ? <ActivityIndicator color={colors.primary} /> : <Upload size={22} color={colors.secondary} />}</View>}<View style={styles.uploadText}><Text style={styles.uploadLabel}>{label}</Text><Text style={styles.uploadHint}>{value ? 'Tap to replace' : 'JPEG, PNG, or WebP'}</Text></View>{value ? <CheckCircle2 size={19} color={colors.primary} /> : null}</Pressable>;
+function UploadTile({ label, value, previewUri, loading, onPress }) {
+  return <Pressable style={styles.uploadTile} onPress={onPress}>{value && previewUri ? <Image source={{ uri: previewUri }} style={styles.uploadPreview} /> : <View style={styles.uploadPlaceholder}>{loading ? <ActivityIndicator color={colors.primary} /> : <Upload size={22} color={colors.secondary} />}</View>}<View style={styles.uploadText}><Text style={styles.uploadLabel}>{label}</Text><Text style={styles.uploadHint}>{value ? 'Tap to replace' : 'JPEG, PNG, or WebP'}</Text></View>{value ? <CheckCircle2 size={19} color={colors.primary} /> : null}</Pressable>;
 }
 
 const styles = StyleSheet.create({

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   ScrollView,
@@ -11,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowRight, Sparkles, Camera, Search } from 'lucide-react-native';
+import { ArrowRightIcon as ArrowRight, SparkleIcon as Sparkles, CameraIcon as Camera, MagnifyingGlassIcon as Search } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import { resolveImg } from '../../src/lib/media';
@@ -73,6 +74,7 @@ const BANNERS = [
 const AUTO_ADVANCE_MS = 5000;
 const HOME_CACHE_KEY = 'home:data';
 const HOME_CACHE_TTL = 2 * 60 * 1000;
+const SUGGESTED_PAGE_SIZE = 8;
 
 function BannerCarousel() {
   const { width } = useWindowDimensions();
@@ -123,12 +125,16 @@ export default function Home() {
   const [categories, setCategories] = useState(initialData?.categories || []);
   const [featuredProducts, setFeaturedProducts] = useState(initialData?.products || []);
   const [isLoading, setIsLoading] = useState(!initialData);
+  const [suggestedPage, setSuggestedPage] = useState(1);
+  const [suggestedTotalPages, setSuggestedTotalPages] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const fetchHomeData = useCallback(async () => {
     const fresh = getCachedData(HOME_CACHE_KEY, HOME_CACHE_TTL);
     if (fresh) {
       setCategories(fresh.categories);
       setFeaturedProducts(fresh.products);
+      setSuggestedTotalPages(fresh.totalPages || 1);
       setIsLoading(false);
       return;
     }
@@ -136,12 +142,14 @@ export default function Home() {
       const data = await refreshCachedData(HOME_CACHE_KEY, async () => {
         const [catRes, prodRes] = await Promise.all([
           apiClient.get(ENDPOINTS.CATEGORIES),
-          apiClient.get(ENDPOINTS.PRODUCTS, { params: { pageSize: 8, sortBy: 'createdAt', sortOrder: 'desc' } }),
+          apiClient.get(ENDPOINTS.PRODUCTS, { params: { pageSize: SUGGESTED_PAGE_SIZE, sortBy: 'createdAt', sortOrder: 'desc' } }),
         ]);
-        return { categories: catRes.data || [], products: prodRes.data || [] };
+        return { categories: catRes.data || [], products: prodRes.data || [], totalPages: prodRes.pagination?.totalPages || 1 };
       });
       setCategories(data.categories);
       setFeaturedProducts(data.products);
+      setSuggestedTotalPages(data.totalPages);
+      setSuggestedPage(1);
     } catch (err) {
       toast.error('Failed to load home data', err.message);
     } finally {
@@ -153,10 +161,37 @@ export default function Home() {
     fetchHomeData();
   }, [fetchHomeData]);
 
+  const loadMoreSuggested = useCallback(async () => {
+    if (isLoading || isLoadingMore || suggestedPage >= suggestedTotalPages) return;
+    const nextPage = suggestedPage + 1;
+    setIsLoadingMore(true);
+    try {
+      const response = await apiClient.get(ENDPOINTS.PRODUCTS, {
+        params: { page: nextPage, pageSize: SUGGESTED_PAGE_SIZE, sortBy: 'createdAt', sortOrder: 'desc' },
+      });
+      setFeaturedProducts((current) => [...current, ...(response.data || [])]);
+      setSuggestedPage(nextPage);
+      setSuggestedTotalPages(response.pagination?.totalPages || suggestedTotalPages);
+    } catch (err) {
+      toast.error('Could not load more products', err.message);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoading, isLoadingMore, suggestedPage, suggestedTotalPages]);
+
   return (
     <View style={styles.screen}>
       <HomeHeader />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        scrollEventThrottle={200}
+        onScroll={({ nativeEvent }) => {
+          const { contentOffset, layoutMeasurement, contentSize } = nativeEvent;
+          if (contentOffset.y + layoutMeasurement.height >= contentSize.height - 300) {
+            loadMoreSuggested();
+          }
+        }}
+      >
         <BannerCarousel />
 
         {/* Seller CTA card — mirrors web's banner-card-seller */}
@@ -203,16 +238,9 @@ export default function Home() {
             </View>
 
             {/* Suggested for You */}
-            <View style={styles.section}>
+            <View style={[styles.section, styles.suggestedSection]}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Suggested for You</Text>
-                <Pressable
-                  style={styles.sectionLinkRow}
-                  onPress={() => router.push('/products')}
-                >
-                  <Text style={styles.sectionLink}>View all</Text>
-                  <ArrowRight size={14} color={colors.secondary} />
-                </Pressable>
               </View>
 
               {featuredProducts.length > 0 ? (
@@ -231,6 +259,11 @@ export default function Home() {
               ) : (
                 <Text style={styles.emptyText}>Browse local products from Oriental Mindoro sellers</Text>
               )}
+
+              {isLoadingMore ? <ActivityIndicator color={colors.primary} style={styles.loadMoreSpinner} /> : null}
+              {!isLoadingMore && featuredProducts.length > 0 && suggestedPage >= suggestedTotalPages ? (
+                <Text style={styles.endText}>You've reached the end</Text>
+              ) : null}
             </View>
           </>
         )}
@@ -349,6 +382,7 @@ const styles = StyleSheet.create({
   sellerButtonText: { ...typography.caption, fontWeight: '700', fontFamily: fontFamily.bold, color: colors.secondary },
 
   section: { padding: spacing.lg },
+  suggestedSection: { backgroundColor: colors.bgSecondary, paddingVertical: spacing.xl },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -356,8 +390,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sectionTitle: { ...typography.h3, color: colors.textPrimary, marginBottom: spacing.md },
-  sectionLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  sectionLink: { ...typography.caption, color: colors.secondary, fontWeight: '600', fontFamily: fontFamily.semiBold },
 
   categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   categoryCard: { width: '22%', alignItems: 'center', gap: spacing.xs },
@@ -375,4 +407,6 @@ const styles = StyleSheet.create({
 
   productsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'space-between' },
   emptyText: { ...typography.body, color: colors.textSecondary, textAlign: 'center' },
+  loadMoreSpinner: { marginTop: spacing.lg },
+  endText: { ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg },
 });

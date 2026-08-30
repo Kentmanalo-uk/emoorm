@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, FlatList } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { ArrowLeft, Camera, ImagePlus, PackageSearch } from 'lucide-react-native';
+import { ArrowLeftIcon as ArrowLeft, CameraIcon as Camera, ImageIcon as ImagePlus, PackageIcon as PackageSearch } from 'phosphor-react-native';
 import { API_BASE_URL } from '../src/lib/config';
 import { ENDPOINTS } from '../src/api/endpoints';
 import ProductCard from '../src/components/ProductCard';
@@ -67,6 +67,8 @@ export default function SearchByImage() {
         slug: product.slug,
         storeId: product.storeId,
         storeName: product.store?.name,
+        storeLogo: product.store?.logo || product.store?.logoUrl,
+        storeSlug: product.store?.slug,
         stock: product.stock,
         categoryId: product.categoryId,
       });
@@ -80,7 +82,7 @@ export default function SearchByImage() {
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
-        <Pressable style={styles.iconButton} onPress={() => router.back()}><ArrowLeft size={21} color={colors.textPrimary} /></Pressable>
+        <Pressable style={styles.iconButton} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}><ArrowLeft size={21} color={colors.textPrimary} /></Pressable>
         <Text style={styles.headerTitle}>Search by Image</Text>
         <View style={styles.iconButton} />
       </View>

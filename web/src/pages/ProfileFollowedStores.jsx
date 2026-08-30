@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, Search, Package, Users, Bell, BellOff, X } from 'lucide-react';
+import { Storefront as Store, MagnifyingGlass as Search, Package, Users, Bell, BellSlash as BellOff, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import {
   listMyFollowing,

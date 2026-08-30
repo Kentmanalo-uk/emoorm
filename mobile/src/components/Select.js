@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, Modal, FlatList, StyleSheet } from 'react-native';
-import { ChevronDown, Check, X } from 'lucide-react-native';
+import { CaretDownIcon as ChevronDown, CheckIcon as Check, XIcon as X } from 'phosphor-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, control, fontFamily, radius, spacing, typography } from '../theme';
 

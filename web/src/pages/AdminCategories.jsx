@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Tag, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X, Check, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Tag, Plus, PencilSimple as Pencil, Trash as Trash2, ToggleLeft, ToggleRight, X, Check, UploadSimple as Upload, Image as ImageIcon, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';

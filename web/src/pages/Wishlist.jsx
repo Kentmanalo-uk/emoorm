@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, ShoppingCart, Trash2, Package } from 'lucide-react';
+import { Heart, ShoppingCart, Trash as Trash2, Package } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import { resolveImg } from '../lib/media';

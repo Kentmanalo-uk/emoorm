@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, ChevronDown, Grid, List, Package, ShoppingCart, Star } from 'lucide-react';
+import { MagnifyingGlass as Search, SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
 import toast from 'react-hot-toast';
@@ -360,8 +360,8 @@ const Products = () => {
                               <Star
                                 key={i}
                                 size={14}
-                                fill="#f59e0b"
-                                strokeWidth={0}
+                                weight="fill"
+                                color="#f59e0b"
                               />
                             ))}
                           </div>

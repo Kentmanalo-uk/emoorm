@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, MapPin, Package, Search, Store as StoreIcon } from 'lucide-react-native';
+import { ArrowLeftIcon as ArrowLeft, MapPinIcon as MapPin, PackageIcon as Package, MagnifyingGlassIcon as Search, StorefrontIcon as StoreIcon } from 'phosphor-react-native';
 import apiClient from '../src/api/client';
 import { ENDPOINTS } from '../src/api/endpoints';
 import EmptyState from '../src/components/EmptyState';
@@ -57,7 +57,7 @@ export default function Stores() {
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
-        <Pressable style={styles.iconButton} onPress={() => router.back()}><ArrowLeft size={21} color={colors.textPrimary} /></Pressable>
+        <Pressable style={styles.iconButton} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}><ArrowLeft size={21} color={colors.textPrimary} /></Pressable>
         <Text style={styles.headerTitle}>Browse Stores</Text>
         <View style={styles.iconButton} />
       </View>

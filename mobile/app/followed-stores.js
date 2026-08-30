@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Bell, BellOff, Store, Users } from 'lucide-react-native';
+import { BellIcon as Bell, BellSlashIcon as BellOff, StorefrontIcon as Store, UsersIcon as Users } from 'phosphor-react-native';
 import ScreenHeader from '../src/components/ScreenHeader';
 import EmptyState from '../src/components/EmptyState';
 import apiClient from '../src/api/client';

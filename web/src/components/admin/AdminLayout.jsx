@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutGrid, Users, Package, Flag, Tag, MapPin, PieChart,
-  ChevronDown, ChevronRight, ChevronLeft, Bell, LogOut, Store as StoreIcon,
-  Megaphone, FileText, Settings as SettingsIcon,
-} from 'lucide-react';
+  SquaresFour as LayoutGrid, Users, Package, Flag, Tag, MapPin, ChartPie as PieChart,
+  CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
+  Megaphone, FileText, Gear as SettingsIcon,
+} from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
@@ -89,7 +89,7 @@ export default function AdminLayout({ children }) {
 
           <nav className="ac-nav">
             <NavLink to="/admin" end className={navCls} title="Dashboard">
-              <LayoutGrid size={17} /> <span>Dashboard</span>
+              <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
 
             {/* Reviews group */}
@@ -100,7 +100,7 @@ export default function AdminLayout({ children }) {
               aria-expanded={reviewsOpen && !collapsed}
               title="Approvals"
             >
-              <Flag size={17} />
+              <Flag size={17} weight="fill" />
               <span>Approvals</span>
               <ChevronDown size={15} className="ac-nav-chevron" />
             </button>
@@ -119,7 +119,7 @@ export default function AdminLayout({ children }) {
             )}
 
             <NavLink to="/admin/announcements" className={navCls} title="Announcements">
-              <Megaphone size={17} /> <span>Announcements</span>
+              <Megaphone size={17} weight="fill" /> <span>Announcements</span>
             </NavLink>
 
             {isSuperAdmin && (
@@ -132,7 +132,7 @@ export default function AdminLayout({ children }) {
                   aria-expanded={systemOpen && !collapsed}
                   title="System"
                 >
-                  <StoreIcon size={17} />
+                  <StoreIcon size={17} weight="fill" />
                   <span>System</span>
                   <ChevronDown size={15} className="ac-nav-chevron" />
                 </button>
@@ -154,17 +154,17 @@ export default function AdminLayout({ children }) {
                 )}
 
                 <NavLink to="/admin/audit-logs" className={navCls} title="Audit Logs">
-                  <FileText size={17} /> <span>Audit Logs</span>
+                  <FileText size={17} weight="fill" /> <span>Audit Logs</span>
                 </NavLink>
               </>
             )}
 
             <NavLink to="/admin/analytics" className={navCls} title="Analytics">
-              <PieChart size={17} /> <span>Analytics</span>
+              <PieChart size={17} weight="fill" /> <span>Analytics</span>
             </NavLink>
 
             <NavLink to="/admin/settings" className={navCls} title="Settings">
-              <SettingsIcon size={17} /> <span>Settings</span>
+              <SettingsIcon size={17} weight="fill" /> <span>Settings</span>
             </NavLink>
           </nav>
 

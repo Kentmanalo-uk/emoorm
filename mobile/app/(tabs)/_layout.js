@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, StyleSheet } from 'react-native';
-import { Home, ShoppingCart, MessageCircle, Bell, User } from 'lucide-react-native';
+import { AppState, Pressable, StyleSheet } from 'react-native';
+import { HouseIcon as Home, ShoppingCartIcon as ShoppingCart, ChatCircleIcon as MessageCircle, BellIcon as Bell, UserIcon as User } from 'phosphor-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fontFamily, spacing } from '../../src/theme';
 import apiClient from '../../src/api/client';
@@ -63,6 +63,7 @@ export default function TabsLayout() {
         tabBarItemStyle: {
           paddingVertical: spacing.xs,
         },
+        tabBarButton: (props) => <Pressable {...props} android_ripple={null} />,
         tabBarStyle: {
           paddingTop: spacing.xs,
           paddingBottom: insets.bottom ? insets.bottom + spacing.xs : spacing.sm,
@@ -79,7 +80,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size, focused }) => <Home color={color} size={size} strokeWidth={1.6} fill={focused ? color : 'none'} />,
+          tabBarIcon: ({ color, size, focused }) => <Home color={color} size={size} weight={focused ? 'fill' : 'regular'} />,
         }}
       />
       <Tabs.Screen
@@ -87,7 +88,7 @@ export default function TabsLayout() {
         options={{
           title: 'Cart',
           tabBarBadge: cartCount || undefined,
-          tabBarIcon: ({ color, size, focused }) => <ShoppingCart color={color} size={size} strokeWidth={1.6} fill={focused ? color : 'none'} />,
+          tabBarIcon: ({ color, size, focused }) => <ShoppingCart color={color} size={size} weight={focused ? 'fill' : 'regular'} />,
         }}
       />
       <Tabs.Screen
@@ -95,7 +96,7 @@ export default function TabsLayout() {
         options={{
           title: 'Messages',
           tabBarBadge: messageCount || undefined,
-          tabBarIcon: ({ color, size, focused }) => <MessageCircle color={color} size={size} strokeWidth={1.6} fill={focused ? color : 'none'} />,
+          tabBarIcon: ({ color, size, focused }) => <MessageCircle color={color} size={size} weight={focused ? 'fill' : 'regular'} />,
         }}
       />
       <Tabs.Screen
@@ -103,14 +104,14 @@ export default function TabsLayout() {
         options={{
           title: 'Notifications',
           tabBarBadge: notificationCount || undefined,
-          tabBarIcon: ({ color, size, focused }) => <Bell color={color} size={size} strokeWidth={1.6} fill={focused ? color : 'none'} />,
+          tabBarIcon: ({ color, size, focused }) => <Bell color={color} size={size} weight={focused ? 'fill' : 'regular'} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size, focused }) => <User color={color} size={size} strokeWidth={1.6} fill={focused ? color : 'none'} />,
+          tabBarIcon: ({ color, size, focused }) => <User color={color} size={size} weight={focused ? 'fill' : 'regular'} />,
         }}
       />
       <Tabs.Screen name="products" options={{ href: null }} />

@@ -1,5 +1,5 @@
 import { Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Heart, Package, ShoppingCart, Trash2 } from 'lucide-react-native';
+import { HeartIcon as Heart, PackageIcon as Package, ShoppingCartIcon as ShoppingCart, TrashIcon as Trash2 } from 'phosphor-react-native';
 import { useRouter } from 'expo-router';
 import ScreenHeader from '../src/components/ScreenHeader';
 import EmptyState from '../src/components/EmptyState';
@@ -20,7 +20,7 @@ export default function Wishlist() {
 
   const addToCart = (product) => {
     try {
-      addItem({ ...product, image: imageOf(product), storeId: product.storeId || product.store?.id, storeName: product.store?.name }, 1);
+      addItem({ ...product, image: imageOf(product), storeId: product.storeId || product.store?.id, storeName: product.store?.name, storeLogo: product.store?.logo || product.store?.logoUrl, storeSlug: product.store?.slug }, 1);
       toast.success('Added to cart');
     } catch (error) { toast.error(error.message || 'Could not add item'); }
   };

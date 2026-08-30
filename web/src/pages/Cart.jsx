@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star } from 'lucide-react';
+import { ShoppingBag, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
@@ -370,7 +370,7 @@ const Cart = () => {
                         <div className="cart-suggestion-rating">
                           <div className="cart-suggestion-stars">
                             {[0, 1, 2, 3, 4].map((i) => (
-                              <Star key={i} size={11} fill="#f59e0b" strokeWidth={0} />
+                              <Star key={i} size={11} weight="fill" color="#f59e0b" />
                             ))}
                           </div>
                           <span className="cart-suggestion-review-count">

@@ -135,6 +135,19 @@ const getUserById = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Stream a user's KYC document (ID front/back or selfie).
+ * Only the document owner or an authorized admin may view it. Files live in
+ * a private, non-statically-served directory — this is the only way to read them.
+ * @route GET /api/auth/users/:id/kyc-photo/:field
+ * @access Private (self or admin)
+ */
+const getKycPhoto = asyncHandler(async (req, res) => {
+  const { absolutePath } = await authService.getKycPhoto(req.params.id, req.params.field, req.user);
+
+  res.sendFile(absolutePath);
+});
+
+/**
  * Get all users (Admin)
  * @route GET /api/auth/users
  * @access Private (ADMIN only)
@@ -340,6 +353,7 @@ module.exports = {
   resetPassword,
   applyForSeller,
   getUserById,
+  getKycPhoto,
   getUsers,
   approveSeller,
   rejectSeller,

@@ -101,6 +101,14 @@ router.get(
   authController.getUserById
 );
 
+// Access control for the specific document is enforced in the service layer
+// (self, or an authorized admin) since both regular users and admins may call this.
+router.get(
+  '/users/:id/kyc-photo/:field',
+  authenticate,
+  authController.getKycPhoto
+);
+
 router.post(
   '/users/:id/approve-seller',
   authenticate,

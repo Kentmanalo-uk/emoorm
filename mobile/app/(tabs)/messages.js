@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, FlatList, Pressable, Image, RefreshControl, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { MessageCircle, Search, Store, X } from 'lucide-react-native';
+import { ChatCircleIcon as MessageCircle, MagnifyingGlassIcon as Search, StorefrontIcon as Store, XIcon as X } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import { resolveImg } from '../../src/lib/media';
@@ -172,6 +172,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.lg,
     backgroundColor: colors.white,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderLight,
   },
   headerTitle: { ...typography.h2, color: colors.textPrimary },
   searchWrap: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: spacing.lg, marginBottom: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.lg, backgroundColor: colors.gray100 },

@@ -8,6 +8,32 @@ const { ApiError } = require('../middleware/errorHandler');
  * Contains business logic for store operations
  */
 
+const DELETION_GRACE_PERIOD_DAYS = 15;
+const GRACE_PERIOD_MS = DELETION_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000;
+
+// Adds deletionScheduledAt/deletionDaysRemaining to a store pending deletion
+const attachDeletionInfo = (store) => {
+  if (!store || !store.deletionRequestedAt || store.deletedAt) return store;
+  const scheduledAt = new Date(store.deletionRequestedAt.getTime() + GRACE_PERIOD_MS);
+  const daysRemaining = Math.max(
+    0,
+    Math.ceil((scheduledAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+  );
+  return { ...store, deletionScheduledAt: scheduledAt, deletionDaysRemaining: daysRemaining };
+};
+
+// Lazily finalizes a pending deletion once the grace period has elapsed
+const finalizeIfExpired = async (store) => {
+  if (!store || store.deletedAt || !store.deletionRequestedAt) return store;
+  const scheduledAt = new Date(store.deletionRequestedAt.getTime() + GRACE_PERIOD_MS);
+  if (Date.now() >= scheduledAt.getTime()) {
+    await storeRepository.softDeleteStore(store.id);
+    return { ...store, deletedAt: new Date() };
+  }
+  return store;
+};
+
+
 /**
  * Generate unique slug from store name
  * @param {String} name - Store name
@@ -81,7 +107,8 @@ const createStore = async (userId, data) => {
  * @returns {Promise<Object>} Store
  */
 const getStoreById = async (id) => {
-  const store = await storeRepository.findById(id);
+  let store = await storeRepository.findById(id);
+  store = await finalizeIfExpired(store);
 
   if (!store || store.deletedAt) {
     throw new ApiError('Store not found', 404);
@@ -96,7 +123,8 @@ const getStoreById = async (id) => {
  * @returns {Promise<Object>} Store
  */
 const getStoreBySlug = async (slug) => {
-  const store = await storeRepository.findBySlug(slug);
+  let store = await storeRepository.findBySlug(slug);
+  store = await finalizeIfExpired(store);
 
   if (!store || store.deletedAt) {
     throw new ApiError('Store not found', 404);
@@ -107,7 +135,8 @@ const getStoreBySlug = async (slug) => {
 
 // Aggregated storefront: store + ratings summary + category tabs with counts.
 const getStorefront = async (slug) => {
-  const store = await storeRepository.findBySlug(slug);
+  let store = await storeRepository.findBySlug(slug);
+  store = await finalizeIfExpired(store);
   if (!store || store.deletedAt) {
     throw new ApiError('Store not found', 404);
   }
@@ -171,13 +200,14 @@ const getStorefront = async (slug) => {
  * @returns {Promise<Object>} Store
  */
 const getMyStore = async (userId) => {
-  const store = await storeRepository.findByOwnerId(userId);
+  let store = await storeRepository.findByOwnerId(userId);
+  store = await finalizeIfExpired(store);
 
   if (!store || store.deletedAt) {
     throw new ApiError('You do not have a store yet', 404);
   }
 
-  return store;
+  return attachDeletionInfo(store);
 };
 
 /**
@@ -245,24 +275,60 @@ const updateStore = async (storeId, userId, data) => {
 };
 
 /**
- * Delete store (Owner only)
+ * Request store deletion (Owner only) — hides the store immediately and
+ * permanently deletes it after a 15-day grace period unless cancelled
  * @param {String} storeId - Store ID
  * @param {String} userId - User ID
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} Updated store with deletion countdown info
  */
-const deleteStore = async (storeId, userId) => {
+const requestStoreDeletion = async (storeId, userId) => {
   const store = await storeRepository.findById(storeId);
 
   if (!store || store.deletedAt) {
     throw new ApiError('Store not found', 404);
   }
 
-  // Check ownership
   if (store.ownerId !== userId) {
     throw new ApiError('You can only delete your own store', 403);
   }
 
-  await storeRepository.softDeleteStore(storeId);
+  if (store.deletionRequestedAt) {
+    throw new ApiError('Store deletion has already been requested', 409);
+  }
+
+  const updated = await storeRepository.updateStore(storeId, {
+    deletionRequestedAt: new Date(),
+    isActive: false,
+  });
+
+  return attachDeletionInfo(updated);
+};
+
+/**
+ * Cancel a pending store deletion request (Owner only)
+ * @param {String} storeId - Store ID
+ * @param {String} userId - User ID
+ * @returns {Promise<Object>} Updated store
+ */
+const cancelStoreDeletion = async (storeId, userId) => {
+  const store = await storeRepository.findById(storeId);
+
+  if (!store || store.deletedAt) {
+    throw new ApiError('Store not found', 404);
+  }
+
+  if (store.ownerId !== userId) {
+    throw new ApiError('You can only manage your own store', 403);
+  }
+
+  if (!store.deletionRequestedAt) {
+    throw new ApiError('There is no pending deletion to cancel', 400);
+  }
+
+  return storeRepository.updateStore(storeId, {
+    deletionRequestedAt: null,
+    isActive: true,
+  });
 };
 
 /**
@@ -342,7 +408,8 @@ module.exports = {
   getMyStore,
   getStores,
   updateStore,
-  deleteStore,
+  requestStoreDeletion,
+  cancelStoreDeletion,
   suspendStore,
   unsuspendStore,
   generateSlug,

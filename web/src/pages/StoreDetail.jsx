@@ -6,15 +6,15 @@ import {
   Package,
   Star,
   ShoppingCart,
-  ChevronLeft,
-  ChevronRight,
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
   Flag,
-  MessageCircle,
-  Search,
+  ChatCircle as MessageCircle,
+  MagnifyingGlass as Search,
   X,
   Heart,
   Users,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import ReportModal from '../components/ReportModal';
@@ -301,7 +301,7 @@ export default function StoreDetail() {
                     onClick={handleToggleFollow}
                     disabled={followBusy}
                   >
-                    <Heart size={14} fill={isFollowing ? 'currentColor' : 'none'} />
+                    <Heart size={14} weight={isFollowing ? 'fill' : 'regular'} />
                     {isFollowing ? 'Following' : 'Follow'}
                   </button>
                 )}
@@ -544,7 +544,7 @@ function ProductCard({ product, onAddToCart }) {
         <div className="product-rating-row">
           <div className="product-stars">
             {[0, 1, 2, 3, 4].map((i) => (
-              <Star key={i} size={11} fill="#f59e0b" strokeWidth={0} />
+              <Star key={i} size={11} weight="fill" color="#f59e0b" />
             ))}
           </div>
           <span className="product-review-count">({product.reviewCount ?? 0})</span>

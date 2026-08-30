@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, Loader2, Save, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Camera, CircleNotch as Loader2, FloppyDisk as Save, Eye, EyeSlash as EyeOff, CheckCircle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';

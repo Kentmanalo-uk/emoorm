@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Plus, Clock, Truck, CheckCircle, Package,
-  ShoppingBag, TrendingUp, Star, BarChart2, User, Users,
-} from 'lucide-react';
+  ShoppingBag, TrendUp as TrendingUp, Star, ChartBar as BarChart2, User, Users, WarningCircle,
+} from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import Skeleton from '../components/ui/Skeleton';
@@ -27,19 +27,25 @@ export default function SellerDashboard() {
 
   const [recentOrders, setRecentOrders] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
+  const [lowStock, setLowStock] = useState([]);
+  const [salesByDay, setSalesByDay] = useState([]);
   const [stats, setStats] = useState({
-    totalSales: 0,
-    ordersCount: 0,
-    productsCount: 0,
-    completed: 0,
+    lifetimeSales: 0,
+    completedOrders: 0,
+    activeProducts: 0,
+    avgOrderValue: 0,
   });
   const [followerStats, setFollowerStats] = useState(null);
+  const [followerStatsLoading, setFollowerStatsLoading] = useState(true);
+  const [followerStatsError, setFollowerStatsError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setIsLoading(true);
+      setLoadError(false);
       const [analyticsRes, ordersRes, productsRes] = await Promise.allSettled([
         axios.get('/analytics/seller'),
         axios.get('/orders/store/orders', { params: { pageSize: 5 } }),
@@ -51,23 +57,30 @@ export default function SellerDashboard() {
       const orders = ordersRes.status === 'fulfilled' ? (ordersRes.value.data || []) : [];
       const products = productsRes.status === 'fulfilled' ? (productsRes.value.data || []) : [];
 
-      setRecentOrders(orders.slice(0, 5));
+      if (analyticsRes.status === 'rejected' && ordersRes.status === 'rejected') {
+        setLoadError(true);
+      }
 
-      if (analytics) {
+      setRecentOrders(orders.slice(0, 5));
+      setLowStock(analytics?.lowStock?.slice(0, 5) || []);
+      setSalesByDay(analytics?.salesByDay?.slice(-14) || []);
+
+      if (analytics?.kpis) {
         setStats({
-          totalSales: analytics.totalRevenue,
-          ordersCount: analytics.totalOrders,
-          productsCount: analytics.totalProducts,
-          completed: analytics.completedOrders,
+          lifetimeSales: analytics.kpis.lifetimeRevenue?.value ?? 0,
+          completedOrders: analytics.kpis.orders?.value ?? 0,
+          activeProducts: analytics.kpis.activeProducts?.value ?? products.length,
+          avgOrderValue: analytics.kpis.avgOrderValue?.value ?? 0,
         });
       } else {
         // Fallback if the analytics endpoint is unavailable
-        const completedOrders = orders.filter((o) => o.status === 'COMPLETED');
+        const completed = orders.filter((o) => o.status === 'COMPLETED');
+        const lifetimeSales = completed.reduce((sum, o) => sum + Number(o.total || 0), 0);
         setStats({
-          totalSales: completedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0),
-          ordersCount: orders.length,
-          productsCount: products.length,
-          completed: completedOrders.length,
+          lifetimeSales,
+          completedOrders: completed.length,
+          activeProducts: products.filter((p) => p.status === 'APPROVED').length,
+          avgOrderValue: completed.length ? lifetimeSales / completed.length : 0,
         });
       }
 
@@ -77,7 +90,7 @@ export default function SellerDashboard() {
         setTopProducts(
           analytics.topProducts
             .slice(0, 3)
-            .map(({ product }) => byId[product.id] || product)
+            .map((tp) => byId[tp.id] || tp)
         );
       } else {
         setTopProducts(
@@ -97,11 +110,15 @@ export default function SellerDashboard() {
     if (!store?.id) return undefined;
     let cancelled = false;
     const load = async () => {
+      setFollowerStatsLoading(true);
+      setFollowerStatsError(false);
       try {
         const data = await getSellerFollowerStats(store.id);
         if (!cancelled) setFollowerStats(data);
       } catch {
-        /* silent */
+        if (!cancelled) setFollowerStatsError(true);
+      } finally {
+        if (!cancelled) setFollowerStatsLoading(false);
       }
     };
     load();
@@ -139,18 +156,39 @@ export default function SellerDashboard() {
           </div>
         )}
 
+        {loadError && (
+          <div className="sd-review-banner sd-error-banner">
+            <WarningCircle size={16} />
+            <span>Some dashboard data couldn't be loaded. Try refreshing the page.</span>
+          </div>
+        )}
+
         <div className="sd">
 
           {/* Stats grid */}
           <div className="sd-stats">
-            <StatCard label="Total Sales" value={`₱${formatNumber(stats.totalSales)}`} big />
-            <StatCard label="Orders" value={stats.ordersCount} />
-            <StatCard label="Products" value={stats.productsCount} />
-            <StatCard label="Completed" value={stats.completed} />
+            {isLoading ? (
+              <>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div className="sd-stat" key={i}>
+                    <Skeleton width="55%" height={11} />
+                    <Skeleton width="70%" height={22} radius={4} />
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                <StatCard label="Total Sales" value={`₱${formatNumber(stats.lifetimeSales)}`} big />
+                <StatCard label="Completed Orders" value={formatNumber(stats.completedOrders)} />
+                <StatCard label="Active Products" value={formatNumber(stats.activeProducts)} />
+                <StatCard label="Avg. Order Value" value={`₱${formatNumber(stats.avgOrderValue)}`} />
+              </>
+            )}
           </div>
 
           {/* Body grid */}
           <div className="sd-body">
+            <div className="sd-main">
             <section className="sd-card sd-orders">
               <header className="sd-card-header">
                 <h2>Recent Orders</h2>
@@ -177,16 +215,58 @@ export default function SellerDashboard() {
               )}
             </section>
 
+            <section className="sd-card sd-sales-trend">
+              <header className="sd-card-header">
+                <h2>Sales Trend (14 days)</h2>
+                <TrendingUp size={15} className="sd-header-icon" />
+              </header>
+              {isLoading ? (
+                <div style={{ padding: 16 }}>
+                  <Skeleton height={120} radius={8} />
+                </div>
+              ) : salesByDay.length === 0 ? (
+                <div className="sd-empty sd-empty--sm">
+                  <BarChart2 size={22} />
+                  <p>No sales data yet.</p>
+                </div>
+              ) : (
+                <div className="sd-chart">
+                  {salesByDay.map((day) => {
+                    const max = Math.max(1, ...salesByDay.map((d) => Number(d.total || 0)));
+                    const pct = Math.max(2, (Number(day.total || 0) / max) * 100);
+                    return (
+                      <div key={day.date} className="sd-chart-col" title={`₱${formatNumber(day.total)} on ${new Date(day.date).toLocaleDateString()}`}>
+                        <div className="sd-chart-bar-wrap">
+                          <div className="sd-chart-bar" style={{ height: `${pct}%` }} />
+                        </div>
+                        <span className="sd-chart-label">{new Date(day.date).getDate()}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+            </div>
+
             <aside className="sd-right">
               <section className="sd-card sd-followers">
                 <header className="sd-card-header">
                   <h2>Followers</h2>
                   <Users size={15} className="sd-header-icon" />
                 </header>
-                {!followerStats ? (
+                {followerStatsLoading ? (
+                  <div className="sd-empty sd-empty--sm">
+                    <Skeleton.Text lines={3} height={12} />
+                  </div>
+                ) : followerStatsError ? (
                   <div className="sd-empty sd-empty--sm">
                     <Users size={22} />
-                    <p>Loading…</p>
+                    <p>Couldn't load follower stats.</p>
+                  </div>
+                ) : !followerStats ? (
+                  <div className="sd-empty sd-empty--sm">
+                    <Users size={22} />
+                    <p>No follower data yet.</p>
                   </div>
                 ) : (
                   <div className="sd-followers-body">
@@ -241,6 +321,26 @@ export default function SellerDashboard() {
                 )}
               </section>
 
+              {lowStock.length > 0 && (
+                <section className="sd-card sd-lowstock">
+                  <header className="sd-card-header">
+                    <h2>Low Stock</h2>
+                    <WarningCircle size={15} className="sd-header-icon sd-header-icon--warn" />
+                  </header>
+                  <ul className="sd-top-list">
+                    {lowStock.map((p) => (
+                      <li key={p.id} className="sd-top-item">
+                        <span className="sd-top-rank sd-top-rank--warn"><WarningCircle size={13} /></span>
+                        <div className="sd-top-info">
+                          <strong>{p.name}</strong>
+                          <span className="sd-top-meta">{p.stock} left in stock</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               <section className="sd-card sd-topprod">
                 <header className="sd-card-header">
                   <h2>Top Products</h2>
@@ -262,8 +362,8 @@ export default function SellerDashboard() {
                             ₱{formatNumber(p.price)} · Stock: {p.stock ?? 0}
                           </span>
                           <span className="sd-top-rating">
-                            <Star size={11} fill="#f59e0b" stroke="#f59e0b" />
-                            {p.averageRating != null ? Number(p.averageRating).toFixed(0) : '—'}
+                            <Star size={11} weight="fill" color="#f59e0b" />
+                            {p.averageRating != null ? Number(p.averageRating).toFixed(1) : '—'}
                           </span>
                         </div>
                       </li>

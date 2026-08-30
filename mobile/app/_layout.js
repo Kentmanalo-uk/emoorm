@@ -17,7 +17,7 @@ import useAuthStore from '../src/store/authStore';
 import { colors, fontFamily } from '../src/theme';
 import { toastConfig } from '../src/lib/toast';
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.preventAutoHideAsync().catch(() => { });
 
 const PROTECTED_PATHS = [
   '/conversation',
@@ -28,9 +28,12 @@ const PROTECTED_PATHS = [
   '/reviews',
   '/followed-stores',
   '/settings',
+  '/edit-profile',
   '/seller-apply',
   '/seller',
   '/design-system',
+  '/qr-scan',
+  '/qr-approve',
 ];
 
 // Apply Inter as the app-wide default so screens/components that don't set
@@ -66,7 +69,7 @@ export default function RootLayout() {
   }, [fontsLoaded, isHydrated, pathname, requiresLogin, router]);
 
   useEffect(() => {
-    if (isHydrated && fontsLoaded && !requiresLogin) SplashScreen.hideAsync().catch(() => {});
+    if (isHydrated && fontsLoaded && !requiresLogin) SplashScreen.hideAsync().catch(() => { });
   }, [fontsLoaded, isHydrated, requiresLogin]);
 
   return (
@@ -84,6 +87,7 @@ export default function RootLayout() {
           <Stack.Screen name="stores" />
           <Stack.Screen name="help-center" />
           <Stack.Screen name="conversation/[id]" />
+          <Stack.Screen name="conversation/select-product" />
           <Stack.Screen name="search-by-image" />
           <Stack.Screen name="checkout" />
           <Stack.Screen name="wishlist" />
@@ -93,6 +97,8 @@ export default function RootLayout() {
           <Stack.Screen name="settings" />
           <Stack.Screen name="seller-apply" />
           <Stack.Screen name="seller" />
+          <Stack.Screen name="qr-scan" />
+          <Stack.Screen name="qr-approve" />
           <Stack.Screen name="design-system" options={{ headerShown: true, title: 'Design System' }} />
           <Stack.Protected guard={!isAuthenticated}>
             <Stack.Screen name="(auth)" />

@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import axios from '../../lib/axios';
 import './Footer.css';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    axios.get('/categories')
+      .then((res) => { if (!cancelled) setCategories((res.data || []).slice(0, 8)); })
+      .catch(() => { /* footer categories are optional */ });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <footer className="footer">
@@ -13,13 +23,13 @@ const Footer = () => {
           <div className="footer-section">
             <h3 className="footer-title">Customer Care</h3>
             <ul className="footer-links">
-              <li><Link to="/help-center">Help Centre</Link></li>
-              <li><Link to="/how-to-buy">How to Buy</Link></li>
-              <li><Link to="/how-to-sell">How to Sell</Link></li>
-              <li><Link to="/returns">Returns & Refunds</Link></li>
-              <li><Link to="/shipping">Shipping & Delivery</Link></li>
-              <li><Link to="/payment">Payment Methods</Link></li>
-              <li><Link to="/contact">Contact Support</Link></li>
+              <li><Link to="/help">Help Centre</Link></li>
+              <li><Link to="/help">How to Buy</Link></li>
+              <li><Link to="/sell">How to Sell</Link></li>
+              <li><Link to="/help">Returns & Refunds</Link></li>
+              <li><Link to="/help">Shipping & Delivery</Link></li>
+              <li><Link to="/help">Payment Methods</Link></li>
+              <li><Link to="/help">Contact Support</Link></li>
             </ul>
           </div>
 
@@ -28,8 +38,8 @@ const Footer = () => {
             <h3 className="footer-title">Emoorm</h3>
             <ul className="footer-links">
               <li><Link to="/about">About Emoorm</Link></li>
-              <li><Link to="/how-it-works">How Emoorm Works</Link></li>
-              <li><Link to="/seller-registration">Seller Registration</Link></li>
+              <li><Link to="/about">How Emoorm Works</Link></li>
+              <li><Link to="/seller/apply">Seller Registration</Link></li>
               <li><Link to="/privacy">Privacy Policy</Link></li>
               <li><Link to="/terms">Terms of Service</Link></li>
             </ul>
@@ -44,7 +54,7 @@ const Footer = () => {
               <li><Link to="/profile">My Profile</Link></li>
               <li><Link to="/wishlist">My Wishlist</Link></li>
               <li><Link to="/notifications">Notifications</Link></li>
-              <li><Link to="/orders">My Orders</Link></li>
+              <li><Link to="/profile/orders">My Orders</Link></li>
             </ul>
           </div>
 
@@ -52,14 +62,13 @@ const Footer = () => {
           <div className="footer-section">
             <h3 className="footer-title">Shop by Category</h3>
             <ul className="footer-links">
-              <li><Link to="/category/vegetables">Vegetables</Link></li>
-              <li><Link to="/category/fruits">Fruits</Link></li>
-              <li><Link to="/category/seafood">Seafood</Link></li>
-              <li><Link to="/category/meat">Meat & Poultry</Link></li>
-              <li><Link to="/category/rice-grains">Rice & Grains</Link></li>
-              <li><Link to="/category/snacks">Snacks</Link></li>
-              <li><Link to="/category/delicacies">Delicacies</Link></li>
-              <li><Link to="/category/handicrafts">Handicrafts</Link></li>
+              {categories.length > 0 ? (
+                categories.map((c) => (
+                  <li key={c.id}><Link to={`/products?category=${c.id}`}>{c.name}</Link></li>
+                ))
+              ) : (
+                <li><Link to="/products">Browse All Products</Link></li>
+              )}
             </ul>
           </div>
 
@@ -77,7 +86,7 @@ const Footer = () => {
               </li>
               <li>
                 <span className="footer-contact-label">Email:</span>
-                <span>support@emoorm@gmail.com</span>
+                <span>support@emoorm.com</span>
               </li>
               <li>
                 <span className="footer-contact-label">Hours:</span>

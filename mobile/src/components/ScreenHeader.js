@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeftIcon as ArrowLeft } from 'phosphor-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, control, spacing, typography } from '../theme';
@@ -8,7 +8,7 @@ export default function ScreenHeader({ title, subtitle, action }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   return <View style={[styles.header, { paddingTop: insets.top, minHeight: 56 + insets.top }]}>
-    <Pressable style={styles.back} onPress={() => router.back()}><ArrowLeft size={21} color={colors.textPrimary} /></Pressable>
+    <Pressable style={styles.back} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}><ArrowLeft size={21} color={colors.textPrimary} /></Pressable>
     <View style={styles.text}><Text style={styles.title} numberOfLines={1}>{title}</Text>{subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}</View>
     <View style={styles.action}>{action}</View>
   </View>;

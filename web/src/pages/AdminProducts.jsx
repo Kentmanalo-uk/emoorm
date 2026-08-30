@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Package, Search, CheckCircle, XCircle, Eye, X,
-  Store, Tag, Archive
-} from 'lucide-react';
+  Package, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
+  Storefront as Store, Tag, Archive
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';

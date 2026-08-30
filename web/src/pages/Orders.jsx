@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Package, MapPin, Eye, MessageSquare, RotateCcw, Star, X,
-} from 'lucide-react';
+  Package, MapPin, Eye, ChatText as MessageSquare, ArrowCounterClockwise as RotateCcw, Star, X,
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
 import axios from '../lib/axios';

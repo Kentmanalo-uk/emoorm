@@ -10,9 +10,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
-  Bell, CheckCheck, Trash2, Package, ShoppingBag,
-  CheckCircle, XCircle, Star, AlertCircle, Info,
-} from 'lucide-react-native';
+  BellIcon as Bell, ChecksIcon as CheckCheck, TrashIcon as Trash2, PackageIcon as Package, ShoppingBagIcon as ShoppingBag,
+  CheckCircleIcon as CheckCircle, XCircleIcon as XCircle, StarIcon as Star, WarningCircleIcon as AlertCircle, InfoIcon as Info,
+} from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import { toast } from '../../src/lib/toast';

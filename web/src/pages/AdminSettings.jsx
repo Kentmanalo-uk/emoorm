@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, KeyRound, User, Save, Loader2, RefreshCcw, Copy } from 'lucide-react';
+import { ShieldCheck, Key as KeyRound, User, FloppyDisk as Save, CircleNotch as Loader2, ArrowsClockwise as RefreshCcw, Copy } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import '../components/admin/AdminLayout.css';

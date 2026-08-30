@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Store, MapPin, Package, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MagnifyingGlass as Search, Storefront as Store, MapPin, Package, CaretLeft as ChevronLeft, CaretRight as ChevronRight } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
 import './Stores.css';

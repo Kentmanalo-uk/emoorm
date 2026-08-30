@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Store, Save, AlertCircle, Upload, Trash2, Palette, Image as ImageIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, Gear as Settings } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import './SellerDashboard.css';
 import './SellerStore.css';
 
 const DEFAULT_PRIMARY = '#059669';
 const DEFAULT_SECONDARY = '#f59e0b';
+const DESCRIPTION_MAX = 500;
+const PH_MOBILE_REGEX = /^(09\d{9}|\+639\d{9})$/;
 
 export default function SellerStore() {
   const [store, setStore] = useState(null);
@@ -28,7 +32,9 @@ export default function SellerStore() {
     primaryColor: DEFAULT_PRIMARY,
     secondaryColor: DEFAULT_SECONDARY,
   });
+  const [savedSnapshot, setSavedSnapshot] = useState(null);
   const [isNew, setIsNew] = useState(false);
+  const [deactivateConfirm, setDeactivateConfirm] = useState(false);
 
   useEffect(() => {
     loadStore();
@@ -38,7 +44,7 @@ export default function SellerStore() {
     try {
       const res = await axios.get('/stores/my/store');
       setStore(res.data);
-      setForm({
+      const next = {
         name: res.data.name || '',
         description: res.data.description || '',
         address: res.data.address || '',
@@ -49,7 +55,9 @@ export default function SellerStore() {
         bannerImage: res.data.bannerImage || '',
         primaryColor: res.data.primaryColor || DEFAULT_PRIMARY,
         secondaryColor: res.data.secondaryColor || DEFAULT_SECONDARY,
-      });
+      };
+      setForm(next);
+      setSavedSnapshot(JSON.stringify(next));
     } catch (err) {
       if (err.status === 404 || (typeof err.message === 'string' && err.message.includes('404'))) {
         setIsNew(true);
@@ -58,6 +66,8 @@ export default function SellerStore() {
       setIsLoading(false);
     }
   };
+
+  const isDirty = savedSnapshot !== null && JSON.stringify(form) !== savedSnapshot;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -78,26 +88,56 @@ export default function SellerStore() {
     }
   };
 
+  const validate = () => {
+    if (!form.name.trim()) {
+      toast.error('Store name is required');
+      return false;
+    }
+    if (form.contactNumber && !PH_MOBILE_REGEX.test(form.contactNumber.trim())) {
+      toast.error('Enter a valid PH mobile number (e.g. 09171234567)');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) { toast.error('Store name is required'); return; }
+    if (!validate()) return;
+    // Deactivating an existing, currently-active store hides it from all buyers — confirm first.
+    if (!isNew && store?.isActive && !form.isActive) {
+      setDeactivateConfirm(true);
+      return;
+    }
+    await saveStore();
+  };
+
+  const saveStore = async () => {
     setIsSaving(true);
     try {
+      let saved;
       if (isNew) {
         const res = await axios.post('/stores', form);
-        setStore(res.data);
+        saved = res.data;
+        setStore(saved);
         setIsNew(false);
         toast.success('Store created successfully!');
       } else {
         const res = await axios.put(`/stores/${store.id}`, form);
-        setStore(res.data);
+        saved = res.data;
+        setStore(saved);
         toast.success('Store updated!');
       }
+      setSavedSnapshot(JSON.stringify(form));
     } catch (err) {
       toast.error(err.message || 'Failed to save store');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const confirmDeactivateAndSave = async () => {
+    setDeactivateConfirm(false);
+    await saveStore();
   };
 
   const resetColors = () => {
@@ -112,6 +152,11 @@ export default function SellerStore() {
             <h1>{isNew ? 'Create Your Store' : 'Store Settings'}</h1>
             <p className="seller-welcome">Your public storefront details</p>
           </div>
+          {!isNew && isDirty && (
+            <span className="store-unsaved-badge">
+              <AlertCircle size={13} /> Unsaved changes
+            </span>
+          )}
         </div>
 
         {isLoading ? (
@@ -123,7 +168,8 @@ export default function SellerStore() {
             <Skeleton height={38} width={140} radius={8} />
           </div>
         ) : (
-          <div className="store-form-layout">
+          <div className="store-settings-grid">
+            <div className="store-settings-main">
             <div className="seller-card">
               <div className="seller-card-header">
                 <h2><Store size={18} /> Store Information</h2>
@@ -150,7 +196,11 @@ export default function SellerStore() {
                     placeholder="Tell buyers about your store and what you sell..."
                     className="form-input form-textarea"
                     rows={4}
+                    maxLength={DESCRIPTION_MAX}
                   />
+                  <span className="form-hint store-char-count">
+                    {form.description.length}/{DESCRIPTION_MAX}
+                  </span>
                 </div>
 
                 <div className="form-group">
@@ -294,7 +344,9 @@ export default function SellerStore() {
                 </div>
               </div>
             )}
+            </div>
 
+            <div className="store-settings-side">
             {/* Store slug / link */}
             {store?.slug && (
               <div className="seller-card store-preview-card">
@@ -314,9 +366,36 @@ export default function SellerStore() {
                 </div>
               </div>
             )}
+
+            {/* Danger zone / account-level shop controls now live on a dedicated Settings page */}
+            {!isNew && (
+              <div className="seller-card store-settings-pointer">
+                <div className="seller-card-header">
+                  <h2><Settings size={16} /> More Shop Controls</h2>
+                </div>
+                <div className="store-settings-pointer-body">
+                  <p>Deleting your shop and other account-level shop settings now live on a dedicated Settings page.</p>
+                  <Link to="/seller/settings" className="btn-seller-outline">
+                    Go to Shop Settings
+                  </Link>
+                </div>
+              </div>
+            )}
+            </div>
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deactivateConfirm}
+        title="Deactivate your store?"
+        message="Buyers won't see your store or any of your products while it's inactive. You can reactivate anytime from this page."
+        confirmLabel="Deactivate & Save"
+        danger
+        loading={isSaving}
+        onConfirm={confirmDeactivateAndSave}
+        onCancel={() => setDeactivateConfirm(false)}
+      />
     </div>
   );
 }

@@ -363,6 +363,25 @@ const clearPasswordResetToken = async (userId) => {
   });
 };
 
+/**
+ * Find the minimal fields needed to authorize and resolve a KYC photo request.
+ * Deliberately excludes everything not needed for that check.
+ * @param {String} id - User ID
+ * @returns {Promise<Object|null>} User or null
+ */
+const findKycRecordById = async (id) => {
+  return prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      municipalityId: true,
+      idFrontUrl: true,
+      idBackUrl: true,
+      selfieUrl: true,
+    },
+  });
+};
+
 module.exports = {
   createUser,
   findByEmail,
@@ -379,4 +398,5 @@ module.exports = {
   setPasswordResetToken,
   findByResetToken,
   clearPasswordResetToken,
+  findKycRecordById,
 };

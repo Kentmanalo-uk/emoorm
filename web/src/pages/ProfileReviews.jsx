@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star } from 'lucide-react';
+import { Star } from '@phosphor-icons/react';
 
 const ProfileReviews = () => (
   <div className="profile-page-wrap">

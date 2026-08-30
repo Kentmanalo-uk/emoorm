@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { X, Star, Image as ImageIcon, Video, Trash2 } from 'lucide-react';
+import { X, Star, Image as ImageIcon, Video, Trash as Trash2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
@@ -119,7 +119,7 @@ export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
                 onMouseLeave={() => setHovered(0)}
                 onClick={() => setRating(n)}
               >
-                <Star size={32} fill={n <= (hovered || rating) ? '#f59e0b' : 'none'} />
+                <Star size={32} weight={n <= (hovered || rating) ? 'fill' : 'regular'} color={n <= (hovered || rating) ? '#f59e0b' : 'currentColor'} />
               </button>
             ))}
           </div>

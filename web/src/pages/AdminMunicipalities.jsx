@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Plus, Pencil, Check, X, UserCog } from 'lucide-react';
+import { MapPin, Plus, PencilSimple as Pencil, Check, X, UserGear as UserCog } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';

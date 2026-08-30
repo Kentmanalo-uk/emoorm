@@ -1,5 +1,5 @@
 import { Pressable, View, Text, Image, StyleSheet } from 'react-native';
-import { ShoppingCart, ImageOff } from 'lucide-react-native';
+import { ShoppingCartIcon as ShoppingCart, ImageBrokenIcon as ImageOff } from 'phosphor-react-native';
 import { colors, fontFamily, radius, spacing, typography } from '../theme';
 import StarRating from './StarRating';
 

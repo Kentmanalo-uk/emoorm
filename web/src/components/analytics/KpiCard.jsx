@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendUp as TrendingUp, TrendDown as TrendingDown, Minus } from '@phosphor-icons/react';
 import './analytics.css';
 
 const KpiCard = ({ label, value, delta = null, hint = null, prefix = '', suffix = '', loading = false }) => {

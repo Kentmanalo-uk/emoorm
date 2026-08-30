@@ -91,6 +91,14 @@ enum NotificationType {
   STORE_ANNOUNCEMENT
 }
 
+enum QrLoginStatus {
+  PENDING
+  SCANNED
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
 // ============================================
 // CORE MODELS
 // ============================================
@@ -153,8 +161,58 @@ model User {
   buyerConversations Conversation[] @relation("BuyerConversations")
   sentMessages  Message[]      @relation("MessageSender")
   followedStores StoreFollow[]
+  addresses     Address[]
+  qrLoginSessions QrLoginSession[]
+  pushTokens    PushToken[]
 
   @@map("users")
+}
+
+model Address {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label         String?
+  fullName      String   @map("full_name")
+  contactNumber String   @map("contact_number")
+
+  municipalityId String  @map("municipality_id")
+  municipality   Municipality @relation(fields: [municipalityId], references: [id])
+  barangay      String
+  street        String   @db.Text
+
+  isDefault     Boolean  @default(false) @map("is_default")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("addresses")
+}
+
+model QrLoginSession {
+  id            String        @id @default(uuid())
+  token         String        @unique
+  status        QrLoginStatus @default(PENDING)
+
+  userId        String?       @map("user_id")
+  user          User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deviceLabel   String?       @map("device_label")
+  userAgent     String?       @map("user_agent") @db.Text
+  ipAddress     String?       @map("ip_address")
+
+  // Populated only once approved; consumed (and the row deleted) on first
+  // successful poll from the web client — never reused.
+  accessToken   String?       @db.Text @map("access_token")
+  refreshToken  String?       @db.Text @map("refresh_token")
+
+  createdAt     DateTime      @default(now()) @map("created_at")
+  expiresAt     DateTime      @map("expires_at")
+  scannedAt     DateTime?     @map("scanned_at")
+  approvedAt    DateTime?     @map("approved_at")
+
+  @@map("qr_login_sessions")
 }
 
 model Municipality {
@@ -176,6 +234,7 @@ model Municipality {
   products  Product[]
   reports   Report[]
   serviceAreas StoreServiceArea[]
+  addresses Address[]
 
   @@map("municipalities")
 }
@@ -216,6 +275,10 @@ model Store {
   // Status
   isActive      Boolean  @default(true) @map("is_active")
   isSuspended   Boolean  @default(false) @map("is_suspended")
+
+  // Deletion grace period — set when the seller requests deletion; store is
+  // hidden immediately and permanently deleted 15 days later unless cancelled
+  deletionRequestedAt DateTime? @map("deletion_requested_at")
 
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -321,6 +384,7 @@ model Product {
   wishlistItems WishlistItem[]
   cartItems   CartItem[]
   reports     Report[]
+  messages    Message[]
 
   @@map("products")
 }
@@ -444,6 +508,9 @@ model Review {
   images    Json?    // Array of image URLs
   videoUrl  String?  @map("video_url")
 
+  sellerReply     String?   @db.Text @map("seller_reply")
+  sellerRepliedAt DateTime? @map("seller_replied_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
@@ -505,6 +572,22 @@ model Notification {
   deletedAt DateTime?        @map("deleted_at")
 
   @@map("notifications")
+}
+
+model PushToken {
+  id        String   @id @default(uuid())
+
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token     String   @unique
+  platform  String?  // 'ios' | 'android' | 'web'
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("push_tokens")
 }
 
 // ============================================
@@ -576,6 +659,10 @@ model Message {
   // Optional link to an order this message references (used for auto-pinned order cards)
   orderId   String?  @map("order_id")
   order     Order?   @relation(fields: [orderId], references: [id])
+
+  // Optional link to a product the buyer is asking about
+  productId String?  @map("product_id")
+  product   Product? @relation(fields: [productId], references: [id])
 
   readAt    DateTime? @map("read_at")
   createdAt DateTime  @default(now()) @map("created_at")

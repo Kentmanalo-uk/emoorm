@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef } from "react";
 import { useNavigate, Navigate, Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CheckCircle, Upload, X, User, Store, ShieldCheck, Eye } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, UploadSimple as Upload, X, User, Storefront as Store, ShieldCheck, Eye } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import axios from "../lib/axios";
 import useAuthStore from "../store/authStore";
@@ -26,23 +26,27 @@ const STEPS = [
   { n: 4, label: "Review", icon: <Eye size={16} /> },
 ];
 
-function UploadBox({ label, hint, value, onChange, required }) {
+function UploadBox({ label, hint, fileId, previewUrl, onChange, required }) {
   const ref = useRef(null);
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Preview locally from the selected file — never round-trips a fetchable
+    // URL to this sensitive document, unlike the old public /uploads path.
+    const localPreview = URL.createObjectURL(file);
     setUploading(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await axios.post("/upload/image", fd, {
+      const res = await axios.post("/upload/kyc", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      onChange(res.data.url);
+      onChange(res.data.fileId, localPreview);
       toast.success("Photo uploaded");
     } catch (err) {
+      URL.revokeObjectURL(localPreview);
       toast.error(err.message || "Upload failed");
     } finally {
       setUploading(false);
@@ -50,16 +54,22 @@ function UploadBox({ label, hint, value, onChange, required }) {
     }
   };
 
+  const handleRemove = (e) => {
+    e.stopPropagation();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    onChange("", null);
+  };
+
   return (
-    <div className="upload-box" onClick={() => !value && ref.current?.click()}>
+    <div className="upload-box" onClick={() => !fileId && ref.current?.click()}>
       <input ref={ref} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
-      {value ? (
+      {fileId ? (
         <div className="upload-preview">
-          <img src={value.startsWith("/uploads") ? `${(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000')}${value}` : value} alt={label} />
+          {previewUrl && <img src={previewUrl} alt={label} />}
           <button
             type="button"
             className="upload-remove"
-            onClick={(e) => { e.stopPropagation(); onChange(""); }}
+            onClick={handleRemove}
           >
             <X size={14} />
           </button>
@@ -99,6 +109,9 @@ export default function SellerApply() {
     selfieUrl: "",
   });
 
+  // Local-only object URLs for the ID photo previews (never sent to the server).
+  const [previews, setPreviews] = useState({ idFrontUrl: null, idBackUrl: null, selfieUrl: null });
+
   const [errors, setErrors] = useState({});
 
   if (!isAuthenticated) return <Navigate to="/login?redirect=/seller/apply" replace />;
@@ -120,6 +133,11 @@ export default function SellerApply() {
   const set = (key, val) => {
     setForm((p) => ({ ...p, [key]: val }));
     if (errors[key]) setErrors((p) => ({ ...p, [key]: "" }));
+  };
+
+  const setUpload = (key, fileId, previewUrl) => {
+    set(key, fileId);
+    setPreviews((p) => ({ ...p, [key]: previewUrl }));
   };
 
   const validateStep = () => {
@@ -314,8 +332,9 @@ export default function SellerApply() {
                   <UploadBox
                     label="Upload front of ID"
                     hint="Clear photo, all corners visible"
-                    value={form.idFrontUrl}
-                    onChange={(v) => set("idFrontUrl", v)}
+                    fileId={form.idFrontUrl}
+                    previewUrl={previews.idFrontUrl}
+                    onChange={(fileId, preview) => setUpload("idFrontUrl", fileId, preview)}
                     required
                   />
                   {errors.idFrontUrl && <span className="field-error">{errors.idFrontUrl}</span>}
@@ -326,8 +345,9 @@ export default function SellerApply() {
                   <UploadBox
                     label="Upload back of ID"
                     hint="Include signature if present"
-                    value={form.idBackUrl}
-                    onChange={(v) => set("idBackUrl", v)}
+                    fileId={form.idBackUrl}
+                    previewUrl={previews.idBackUrl}
+                    onChange={(fileId, preview) => setUpload("idBackUrl", fileId, preview)}
                     required
                   />
                   {errors.idBackUrl && <span className="field-error">{errors.idBackUrl}</span>}
@@ -338,8 +358,9 @@ export default function SellerApply() {
                   <UploadBox
                     label="Upload selfie with ID"
                     hint="Hold ID beside your face — text must be readable"
-                    value={form.selfieUrl}
-                    onChange={(v) => set("selfieUrl", v)}
+                    fileId={form.selfieUrl}
+                    previewUrl={previews.selfieUrl}
+                    onChange={(fileId, preview) => setUpload("selfieUrl", fileId, preview)}
                     required
                   />
                   {errors.selfieUrl && <span className="field-error">{errors.selfieUrl}</span>}
@@ -348,7 +369,7 @@ export default function SellerApply() {
 
               <div className="apply-id-note">
                 <ShieldCheck size={15} />
-                Your ID photos are encrypted and only visible to our admin team for verification purposes.
+                Your ID photos are stored privately and only visible to our admin team for verification purposes.
               </div>
             </div>
 
@@ -408,8 +429,8 @@ export default function SellerApply() {
                   <div className="apply-info-row"><span>ID Type</span><strong>{form.idType}</strong></div>
                   <div className="apply-info-row"><span>Documents</span>
                     <div className="review-thumbs">
-                      {[form.idFrontUrl, form.idBackUrl, form.selfieUrl].filter(Boolean).map((url, i) => (
-                        <img key={i} src={url.startsWith("/uploads") ? `http://localhost:3000${url}` : url} alt="" />
+                      {[previews.idFrontUrl, previews.idBackUrl, previews.selfieUrl].filter(Boolean).map((url, i) => (
+                        <img key={i} src={url} alt="" />
                       ))}
                     </div>
                   </div>

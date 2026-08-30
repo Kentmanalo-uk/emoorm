@@ -13,19 +13,19 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import {
-  ArrowLeft,
-  CheckCircle2,
-  ChevronRight,
-  Heart,
-  MapPin,
-  MessageCircle,
-  Minus,
-  Package,
-  Plus,
-  Share2,
-  ShoppingCart,
-  Store,
-} from 'lucide-react-native';
+  ArrowLeftIcon as ArrowLeft,
+  CheckCircleIcon as CheckCircle2,
+  CaretRightIcon as ChevronRight,
+  HeartIcon as Heart,
+  MapPinIcon as MapPin,
+  ChatCircleIcon as MessageCircle,
+  MinusIcon as Minus,
+  PackageIcon as Package,
+  PlusIcon as Plus,
+  ShareNetworkIcon as Share2,
+  ShoppingCartIcon as ShoppingCart,
+  StorefrontIcon as Store,
+} from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import ProductCard from '../../src/components/ProductCard';
@@ -176,6 +176,8 @@ export default function ProductDetails() {
           image: parseImages(product.images)[0],
           storeId: product.storeId,
           storeName: product.store?.name,
+          storeLogo: product.store?.logo || product.store?.logoUrl,
+          storeSlug: product.store?.slug,
           stock: product.stock,
           slug: product.slug,
           categoryId: product.categoryId,
@@ -248,7 +250,7 @@ export default function ProductDetails() {
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.topBar, { paddingTop: insets.top, minHeight: 56 + insets.top }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.iconButton} onPress={() => router.back()}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.iconButton} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
           <ArrowLeft size={21} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.topBarTitle} numberOfLines={1}>Product Details</Text>
@@ -309,11 +311,11 @@ export default function ProductDetails() {
 
           <View style={styles.deliveryGroup}>
             <View style={styles.infoRow}>
-            <MapPin size={17} color={colors.textSecondary} />
-            <View style={styles.infoTextWrap}>
-              <Text style={styles.infoTitle}>{product.municipality?.name || 'Oriental Mindoro'}</Text>
-              <Text style={styles.infoText}>Standard delivery · Ships within 2–3 business days</Text>
-            </View>
+              <MapPin size={17} color={colors.textSecondary} />
+              <View style={styles.infoTextWrap}>
+                <Text style={styles.infoTitle}>{product.municipality?.name || 'Oriental Mindoro'}</Text>
+                <Text style={styles.infoText}>Standard delivery · Ships within 2–3 business days</Text>
+              </View>
             </View>
             <View style={styles.infoRow}>
               <CheckCircle2 size={17} color={colors.secondary} />
@@ -445,7 +447,7 @@ export default function ProductDetails() {
           style={styles.wishlistButton}
           onPress={handleWishlist}
         >
-          <Heart size={21} color={isWishlisted ? colors.error : colors.textSecondary} fill={isWishlisted ? colors.error : 'transparent'} />
+          <Heart size={21} color={isWishlisted ? colors.error : colors.textSecondary} weight={isWishlisted ? 'fill' : 'regular'} />
         </Pressable>
         <Pressable accessibilityRole="button" style={[styles.cartButton, isOutOfStock && styles.disabled]} disabled={isOutOfStock} onPress={addProductToCart}>
           <ShoppingCart size={18} color={colors.primaryDark} />

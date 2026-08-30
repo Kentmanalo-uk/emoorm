@@ -21,7 +21,7 @@ const createCategory = async (data) => {
  */
 const findAll = async (activeOnly = true) => {
   const where = activeOnly ? { isActive: true } : {};
-  
+
   return prisma.category.findMany({
     where,
     orderBy: { name: 'asc' },
@@ -75,13 +75,24 @@ const deleteCategory = async (id) => {
 };
 
 /**
+ * Count non-deleted products still assigned to a category
+ * @param {String} id - Category ID
+ * @returns {Promise<Number>} Count of active products
+ */
+const countActiveProducts = async (id) => {
+  return prisma.product.count({
+    where: { categoryId: id, deletedAt: null },
+  });
+};
+
+/**
  * Seed categories (for development)
  * @param {Array} categories - Array of category data
  * @returns {Promise<Number>} Count of created categories
  */
 const seedCategories = async (categories) => {
   let count = 0;
-  
+
   for (const cat of categories) {
     const existing = await findBySlug(cat.slug);
     if (!existing) {
@@ -89,7 +100,7 @@ const seedCategories = async (categories) => {
       count++;
     }
   }
-  
+
   return count;
 };
 
@@ -100,5 +111,6 @@ module.exports = {
   findBySlug,
   updateCategory,
   deleteCategory,
+  countActiveProducts,
   seedCategories,
 };

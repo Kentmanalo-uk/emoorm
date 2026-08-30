@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { X, Warning as AlertTriangle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import './ReportModal.css';

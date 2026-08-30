@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, CheckCircle } from 'lucide-react';
+import { PaperPlaneTilt as Send, CheckCircle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';

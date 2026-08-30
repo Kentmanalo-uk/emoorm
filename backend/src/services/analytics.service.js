@@ -102,6 +102,7 @@ const getSellerAnalytics = async (userId, query = {}) => {
     kpis: {
       revenue: kpi(revenue, previousRevenue),
       orders: kpi(completedOrders, previousCompletedOrders),
+      totalOrders: { value: orderStatus.total, previous: null, delta: null },
       avgOrderValue: kpi(avgOrderValue, previousAvg),
       completionRate: { value: Math.round(completionRate), previous: null, delta: null },
       cancelRate: { value: Math.round(cancelRate), previous: null, delta: null },
@@ -189,6 +190,7 @@ const getMunicipalityAnalytics = async (actor, query = {}) => {
     kpis: {
       revenue: kpi(revenue, previousRevenue),
       orders: kpi(completedOrders, previousCompletedOrders),
+      totalOrders: { value: orderStatus.total, previous: null, delta: null },
       avgOrderValue: kpi(avgOrderValue, previousAvg),
       sellers: { value: raw.approvedSellers, previous: null, delta: null },
       activeStores: { value: raw.activeStores, previous: null, delta: null },
@@ -297,6 +299,7 @@ const getPlatformAnalytics = async (query = {}) => {
     kpis: {
       revenue: kpi(revenue, previousRevenue),
       orders: kpi(completedOrders, previousCompletedOrders),
+      totalOrders: { value: orderStatus.total, previous: null, delta: null },
       avgOrderValue: kpi(avgOrderValue, previousAvg),
       buyers: { value: usersByRole.BUYER, previous: null, delta: null },
       sellers: { value: usersByRole.SELLER, previous: null, delta: null },

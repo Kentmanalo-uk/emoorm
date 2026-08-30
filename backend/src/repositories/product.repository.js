@@ -277,6 +277,46 @@ const softDeleteProduct = async (id) => {
 };
 
 /**
+ * Bulk update status for a set of the seller's own products, restricted to
+ * products currently in one of `fromStatuses`.
+ * @param {Array<String>} ids - Product IDs
+ * @param {String} storeId - Owning store ID (ownership guard)
+ * @param {Array<String>} fromStatuses - Only products in these statuses are affected
+ * @param {String} toStatus - New status
+ * @returns {Promise<Number>} Count of updated products
+ */
+const bulkUpdateStatus = async (ids, storeId, fromStatuses, toStatus) => {
+  const result = await prisma.product.updateMany({
+    where: {
+      id: { in: ids },
+      storeId,
+      deletedAt: null,
+      status: { in: fromStatuses },
+    },
+    data: { status: toStatus },
+  });
+  return result.count;
+};
+
+/**
+ * Bulk soft-delete a set of the seller's own products.
+ * @param {Array<String>} ids - Product IDs
+ * @param {String} storeId - Owning store ID (ownership guard)
+ * @returns {Promise<Number>} Count of deleted products
+ */
+const bulkSoftDelete = async (ids, storeId) => {
+  const result = await prisma.product.updateMany({
+    where: {
+      id: { in: ids },
+      storeId,
+      deletedAt: null,
+    },
+    data: { deletedAt: new Date() },
+  });
+  return result.count;
+};
+
+/**
  * Check if slug exists
  * @param {String} slug - Slug to check
  * @param {String} excludeId - Product ID to exclude
@@ -347,4 +387,6 @@ module.exports = {
   findByStore,
   findByCategory,
   findByMunicipality,
+  bulkUpdateStatus,
+  bulkSoftDelete,
 };

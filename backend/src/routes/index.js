@@ -43,6 +43,8 @@ const announcementRoutes = require('./announcement.routes');
 const adminRoutes = require('./admin.routes');
 const mfaRoutes = require('./mfa.routes');
 const messageRoutes = require('./message.routes');
+const addressRoutes = require('./address.routes');
+const qrLoginRoutes = require('./qrLogin.routes');
 
 // Mount routes
 router.use('/auth', authRoutes);
@@ -60,7 +62,9 @@ router.use('/audit-logs', auditLogRoutes);
 router.use('/announcements', announcementRoutes);
 router.use('/admin', adminRoutes);
 router.use('/auth/mfa', mfaRoutes);
+router.use('/auth/qr', qrLoginRoutes);
 router.use('/messages', messageRoutes);
 router.use('/follows', require('./storeFollow.routes'));
+router.use('/addresses', addressRoutes);
 
 module.exports = router;

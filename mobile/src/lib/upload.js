@@ -31,6 +31,39 @@ export async function uploadImage(asset) {
   return json.data;
 }
 
+// Uploads a sensitive KYC document (ID front/back, selfie) to a private,
+// non-public storage location. The returned fileId is an opaque token, not a
+// browsable URL — the document can only be viewed later via the authenticated
+// GET /auth/users/:id/kyc-photo/:field endpoint.
+export async function uploadKycDocument(asset) {
+  if (!asset) throw new Error('No image selected');
+  if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) throw new Error('Image must be under 5 MB');
+  if (asset.mimeType && !/^image\/(jpe?g|png|webp)$/i.test(asset.mimeType)) {
+    throw new Error('Only JPEG, PNG, or WebP images are allowed');
+  }
+
+  const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  const form = new FormData();
+  form.append(
+    'file',
+    asset.file || {
+      uri: asset.uri,
+      name: asset.fileName || `kyc-document-${Date.now()}.jpg`,
+      type: asset.mimeType || 'image/jpeg',
+    }
+  );
+
+  const response = await fetch(`${API_BASE_URL}/upload/kyc`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok || !json?.success) throw new Error(json?.message || `Upload failed (${response.status})`);
+  if (!json?.data?.fileId) throw new Error('Upload succeeded but no file reference was returned');
+  return json.data;
+}
+
 export async function uploadReview({ productId, orderId, rating, comment, images = [], video }) {
   const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   const form = new FormData();

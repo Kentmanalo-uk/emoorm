@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Edit, Package, Heart, MessageSquare, Bell, Store,
-  ShoppingBag, Clock, Truck, CheckCircle, Settings,
-} from 'lucide-react';
+  PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
+  ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings,
+} from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useAuthStore from '../store/authStore';

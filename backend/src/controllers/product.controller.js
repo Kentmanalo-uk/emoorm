@@ -14,6 +14,19 @@ const { asyncHandler } = require('../middleware/errorHandler');
  */
 
 /**
+ * Bulk update seller's own products (hide/unhide/delete)
+ * @route PATCH /api/products/bulk
+ * @access Private (Seller only)
+ */
+const bulkUpdateProducts = asyncHandler(async (req, res) => {
+  const { ids, action } = req.body;
+
+  const result = await productService.bulkUpdateProducts(req.user.id, ids, action);
+
+  successResponse(res, result, `${result.updatedCount} product(s) updated`);
+});
+
+/**
  * Create product
  * @route POST /api/products
  * @access Private (Seller only)
@@ -256,4 +269,5 @@ module.exports = {
   suspendProduct,
   archiveProduct,
   searchByImage,
+  bulkUpdateProducts,
 };

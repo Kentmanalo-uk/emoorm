@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Download, RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { DownloadSimple as Download, ArrowsClockwise as RefreshCw, TrendUp as TrendingUp, TrendDown as TrendingDown, Minus } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import KpiCard from '../components/analytics/KpiCard';
 import BarChart from '../components/analytics/BarChart';
@@ -70,7 +70,7 @@ export default function SellerAnalytics() {
       <div className="seller-container">
         <div className="an-page-header">
           <div>
-            <h1 className="an-page-title">Seller Dashboard</h1>
+            <h1 className="an-page-title">Analytics</h1>
             <p className="an-page-sub">
               {data ? `${shortDate(data.window.from)} — ${shortDate(data.window.to)}` : 'Sales analytics & insights'}
             </p>
@@ -90,8 +90,8 @@ export default function SellerAnalytics() {
 
         {/* Overview cards */}
         <div className="an-kpi-grid">
-          <KpiCard loading={loading && !data} label="Total Sales" value={num(k.orders?.value)} delta={k.orders?.delta} hint="Completed orders in period" />
-          <KpiCard loading={loading && !data} label="Total Orders" value={num((k.orders?.value ?? 0) + (data?.ordersByStatus?.PENDING ?? 0) + (data?.ordersByStatus?.CONFIRMED ?? 0) + (data?.ordersByStatus?.PREPARING ?? 0) + (data?.ordersByStatus?.READY ?? 0))} />
+          <KpiCard loading={loading && !data} label="Completed Orders" value={num(k.orders?.value)} delta={k.orders?.delta} hint="Completed orders in period" />
+          <KpiCard loading={loading && !data} label="Total Orders" value={num(k.totalOrders?.value)} hint="All statuses in period" />
           <KpiCard loading={loading && !data} label="Revenue" value={peso(k.revenue?.value)} delta={k.revenue?.delta} />
           <KpiCard loading={loading && !data} label="Sales Growth" value={`${revenueDelta > 0 ? '+' : ''}${revenueDelta}%`} hint={`vs previous ${range.preset || 'period'}`} />
         </div>

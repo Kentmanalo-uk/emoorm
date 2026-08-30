@@ -49,3 +49,14 @@ Use spacing, background colors, rounded corners instead of borders.
 - [x] 11. conversation/[id].js
 - [x] 12. Verify build (all files inspected; no syntax errors)
 
+# Cart: Select items / stores to checkout
+
+## Plan
+Let users check which cart items (and per-store groups) to include in checkout, so only the selected items are purchased.
+
+## Steps
+- [x] 1. `cartStore.js` — add `selectedProductIds` state + `toggleItem`, `toggleStore`, `toggleAll`, `setSelectedItems`, `removeSelectedItems`; keep `removeItem`/`clearCart` clearing selection.
+- [x] 2. `(tabs)/cart.js` — add checkbox UI (item, store header, select-all), show selected count/subtotal in bottom bar, disable checkout when nothing selected.
+- [x] 3. `checkout.js` — only send selected items to checkout; after order, remove only the purchased (selected) items, leaving unselected items in the cart.
+- [x] 4. Verify logic & syntax across the three files.
+

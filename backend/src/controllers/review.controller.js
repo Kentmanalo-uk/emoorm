@@ -141,6 +141,57 @@ const deleteReview = asyncHandler(async (req, res) => {
   noContentResponse(res);
 });
 
+/**
+ * Get aggregated reviews across all of the seller's products
+ * @route GET /api/reviews/seller/mine
+ * @access Private (Seller only)
+ */
+const getSellerReviews = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    pageSize = 20,
+    rating,
+    unrepliedOnly,
+  } = req.query;
+
+  const options = {
+    page: parseInt(page),
+    pageSize: parseInt(pageSize),
+    rating: rating ? parseInt(rating) : undefined,
+    unrepliedOnly: unrepliedOnly === 'true',
+  };
+
+  const result = await reviewService.getSellerReviews(req.user.id, options);
+
+  res.json({
+    success: true,
+    message: 'Seller reviews retrieved successfully',
+    data: result.reviews,
+    ratingStats: result.ratingStats,
+    pagination: {
+      page: result.page,
+      pageSize: result.pageSize,
+      total: result.total,
+      totalPages: Math.ceil(result.total / result.pageSize),
+    },
+  });
+});
+
+/**
+ * Seller replies to a review
+ * @route POST /api/reviews/:id/reply
+ * @access Private (Seller only, must own the reviewed product)
+ */
+const replyToReview = asyncHandler(async (req, res) => {
+  const review = await reviewService.replyToReview(
+    req.params.id,
+    req.user.id,
+    req.body.reply
+  );
+
+  successResponse(res, review, 'Reply posted successfully');
+});
+
 module.exports = {
   createReview,
   getProductReviews,
@@ -148,4 +199,6 @@ module.exports = {
   getReviewById,
   updateReview,
   deleteReview,
+  getSellerReviews,
+  replyToReview,
 };

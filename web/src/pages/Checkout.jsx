@@ -5,12 +5,12 @@ import {
   Package,
   CreditCard,
   CheckCircle,
-  ChevronLeft,
+  CaretLeft as ChevronLeft,
   Truck,
-  Store as StoreIcon,
-  AlertTriangle,
-  Upload,
-} from 'lucide-react';
+  Storefront as StoreIcon,
+  Warning as AlertTriangle,
+  UploadSimple as Upload,
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
@@ -45,6 +45,11 @@ const Checkout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState(null);
+
+  // Saved delivery addresses
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null); // null = manual entry
+  const [addressesLoaded, setAddressesLoaded] = useState(false);
 
   // Per-store settings + coverage
   const [storeInfo, setStoreInfo] = useState({}); // { [storeId]: { store, covered, checked } }
@@ -85,19 +90,58 @@ const Checkout = () => {
     })();
   }, []);
 
+  const applySavedAddress = (addr) => {
+    setSelectedAddressId(addr.id);
+    setDeliveryForm((prev) => ({
+      ...prev,
+      fullName: addr.fullName || '',
+      contactNumber: addr.contactNumber || '',
+      street: addr.street || '',
+      barangay: addr.barangay || '',
+      municipality: addr.municipality?.name || '',
+      municipalityId: addr.municipalityId || '',
+    }));
+    setDeliveryErrors({});
+  };
+
+  const useManualAddress = () => {
+    setSelectedAddressId(null);
+  };
+
+  // Load saved addresses and prefill from the default one, if any
   useEffect(() => {
-    if (user) {
-      setDeliveryForm((prev) => ({
-        ...prev,
-        fullName: user.fullName || prev.fullName,
-        contactNumber: user.contactNumber || prev.contactNumber,
-        street: user.address || prev.street,
-        barangay: user.barangay || prev.barangay,
-        municipality: user.municipality?.name || prev.municipality,
-        municipalityId: user.municipalityId || prev.municipalityId,
-      }));
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const res = await axios.get('/addresses');
+        const list = res.data || [];
+        setSavedAddresses(list);
+        const def = list.find((a) => a.isDefault) || list[0];
+        if (def) applySavedAddress(def);
+      } catch {
+        // non-fatal — falls back to manual entry prefilled from profile
+      } finally {
+        setAddressesLoaded(true);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!addressesLoaded || savedAddresses.length === 0) {
+      if (user) {
+        setDeliveryForm((prev) => ({
+          ...prev,
+          fullName: user.fullName || prev.fullName,
+          contactNumber: user.contactNumber || prev.contactNumber,
+          street: user.address || prev.street,
+          barangay: user.barangay || prev.barangay,
+          municipality: user.municipality?.name || prev.municipality,
+          municipalityId: user.municipalityId || prev.municipalityId,
+        }));
+      }
     }
-  }, [user]);
+  }, [user, addressesLoaded, savedAddresses.length]);
 
   // Fetch each store's settings once
   useEffect(() => {
@@ -427,6 +471,44 @@ const Checkout = () => {
                     <MapPin size={24} />
                     <h2>{fulfillmentMethod === 'DELIVERY' ? 'Delivery Address' : 'Contact Details'}</h2>
                   </div>
+
+                  {fulfillmentMethod === 'DELIVERY' && savedAddresses.length > 0 && (
+                    <div className="saved-address-picker">
+                      {savedAddresses.map((addr) => (
+                        <label
+                          key={addr.id}
+                          className={`saved-address-option ${selectedAddressId === addr.id ? 'selected' : ''}`}
+                        >
+                          <input
+                            type="radio"
+                            name="savedAddress"
+                            checked={selectedAddressId === addr.id}
+                            onChange={() => applySavedAddress(addr)}
+                          />
+                          <div>
+                            <strong>
+                              {addr.label ? `${addr.label} — ` : ''}{addr.fullName}
+                              {addr.isDefault && <span className="saved-address-default-tag">Default</span>}
+                            </strong>
+                            <p>{addr.street}, {addr.barangay}, {addr.municipality?.name}, Oriental Mindoro</p>
+                            <p className="saved-address-phone">{addr.contactNumber}</p>
+                          </div>
+                        </label>
+                      ))}
+                      <label className={`saved-address-option ${selectedAddressId === null ? 'selected' : ''}`}>
+                        <input
+                          type="radio"
+                          name="savedAddress"
+                          checked={selectedAddressId === null}
+                          onChange={useManualAddress}
+                        />
+                        <div>
+                          <strong>Enter a different address</strong>
+                          <p>Use a one-off address for this order</p>
+                        </div>
+                      </label>
+                    </div>
+                  )}
 
                   <div className="address-form">
                     <div className="form-group">

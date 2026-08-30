@@ -36,6 +36,10 @@ const config = {
   upload: {
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB default
     uploadDir: process.env.UPLOAD_DIR || 'uploads',
+    // Private directory for sensitive KYC documents (ID photos, selfies).
+    // Never served via express.static — only reachable through the authenticated
+    // /auth/users/:id/kyc-photo/:field endpoint.
+    privateUploadDir: process.env.PRIVATE_UPLOAD_DIR || 'uploads-private/kyc',
     allowedFileTypes: process.env.ALLOWED_FILE_TYPES?.split(',') || [
       'image/jpeg',
       'image/jpg',

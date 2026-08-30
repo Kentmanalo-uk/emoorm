@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, Check } from 'lucide-react';
+import { Eye, EyeSlash as EyeOff, Check } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import './ResetPassword.css';
 

@@ -83,7 +83,15 @@ router.delete(
   authenticate,
   authorize('SELLER'),
   checkStoreOwnership,
-  storeController.deleteStore
+  storeController.requestDeletion
+);
+
+router.post(
+  '/:id/cancel-deletion',
+  authenticate,
+  authorize('SELLER'),
+  checkStoreOwnership,
+  storeController.cancelDeletion
 );
 
 // Admin routes

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Flag, Search, Eye, X, CheckCircle, MessageSquare } from 'lucide-react';
+import { Flag, MagnifyingGlass as Search, Eye, X, CheckCircle, ChatText as MessageSquare } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';

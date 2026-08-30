@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Users, Search, ShieldCheck, ShieldOff, UserX, UserCheck,
-  ChevronDown, X, Eye
-} from 'lucide-react';
+  Users, MagnifyingGlass as Search, ShieldCheck, ShieldSlash as ShieldOff, UserMinus as UserX, UserCheck,
+  CaretDown as ChevronDown, X, Eye
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';

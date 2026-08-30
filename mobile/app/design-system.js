@@ -1,5 +1,5 @@
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
-import { Package } from 'lucide-react-native';
+import { PackageIcon as Package } from 'phosphor-react-native';
 import Button from '../src/components/Button';
 import TextField from '../src/components/TextField';
 import ProductCard from '../src/components/ProductCard';

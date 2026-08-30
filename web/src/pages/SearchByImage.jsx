@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Camera, Loader2, ShoppingCart, Star, Upload, ArrowLeft } from 'lucide-react';
+import { Camera, CircleNotch as Loader2, ShoppingCart, Star, UploadSimple as Upload, ArrowLeft } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
@@ -152,7 +152,7 @@ const SearchByImage = () => {
                           <div className="product-rating-row">
                             <div className="product-stars">
                               {[0, 1, 2, 3, 4].map((i) => (
-                                <Star key={i} size={11} fill="#f59e0b" strokeWidth={0} />
+                                <Star key={i} size={11} weight="fill" color="#f59e0b" />
                               ))}
                             </div>
                             <span className="product-review-count">({product.reviewCount ?? 0})</span>

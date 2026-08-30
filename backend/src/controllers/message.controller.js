@@ -32,6 +32,7 @@ const sendMessage = asyncHandler(async (req, res) => {
     body: req.body?.body,
     imageUrl: req.body?.imageUrl,
     orderId: req.body?.orderId,
+    productId: req.body?.productId,
   });
   createdResponse(res, message, 'Message sent');
 });

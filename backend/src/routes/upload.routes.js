@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
-const upload = require('../middleware/upload');
+const { upload, kycUpload } = require('../middleware/upload');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { successResponse } = require('../utils/response');
@@ -25,4 +25,27 @@ router.post(
   })
 );
 
+/**
+ * Upload a sensitive KYC document (ID photo / selfie).
+ * Stored in a private directory that is never served statically. The
+ * returned fileId is an opaque token — it is NOT a browsable URL. Retrieval
+ * only happens through the authenticated GET /auth/users/:id/kyc-photo/:field
+ * endpoint, which enforces that only the owner or an authorized admin can view it.
+ * @route POST /api/upload/kyc
+ * @access Private
+ */
+router.post(
+  '/kyc',
+  authenticate,
+  kycUpload.single('file'),
+  asyncHandler(async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    successResponse(res, { fileId: req.file.filename }, 'File uploaded successfully');
+  })
+);
+
 module.exports = router;
+

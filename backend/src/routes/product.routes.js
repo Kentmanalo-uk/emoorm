@@ -37,6 +37,14 @@ router.get(
   productController.getMyProducts
 );
 
+// Seller-only bulk action route — must come before /:id
+router.patch(
+  '/bulk',
+  authenticate,
+  authorize('SELLER'),
+  productController.bulkUpdateProducts
+);
+
 // Admin/seller routes with static prefix — must come before /:id
 router.post(
   '/',

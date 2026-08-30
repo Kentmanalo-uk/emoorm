@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Users, Search, CheckCircle, XCircle, Eye, X,
+  Users, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
   Phone, MapPin, Calendar, CreditCard
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
@@ -16,7 +16,46 @@ const STATUS_BADGE = {
   REJECTED: 'admin-badge-rejected',
 };
 
-const BACKEND_URL = 'http://localhost:3000';
+// Fetches a KYC document (ID front/back, selfie) through the authenticated
+// endpoint and renders it as an object URL. These files are no longer public
+// under /uploads, so a plain <img src> can't reach them — the request must
+// carry the admin's Bearer token, which only axios (not <img>) can attach.
+function KycPhoto({ userId, field, label }) {
+  const [imgSrc, setImgSrc] = useState(null);
+  const [status, setStatus] = useState('loading'); // loading | ready | error
+
+  useEffect(() => {
+    let objectUrl;
+    let cancelled = false;
+    setStatus('loading');
+    setImgSrc(null);
+
+    axios.get(`/auth/users/${userId}/kyc-photo/${field}`, { responseType: 'blob' })
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setImgSrc(objectUrl);
+        setStatus('ready');
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error');
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [userId, field]);
+
+  if (status === 'loading') return <div className="admin-id-missing">Loading…</div>;
+  if (status === 'error' || !imgSrc) return <div className="admin-id-missing">No photo</div>;
+
+  return (
+    <a href={imgSrc} target="_blank" rel="noopener noreferrer">
+      <img src={imgSrc} alt={label} />
+    </a>
+  );
+}
 
 export default function AdminSellers() {
   const [applicants, setApplicants] = useState([]);
@@ -89,12 +128,6 @@ export default function AdminSellers() {
     } finally {
       setProcessing(null);
     }
-  };
-
-  const imgUrl = (path) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    return `${BACKEND_URL}${path}`;
   };
 
   return (
@@ -261,17 +294,13 @@ export default function AdminSellers() {
                 <h4><CreditCard size={14} /> ID Verification — {selected.idType || 'N/A'}</h4>
                 <div className="admin-id-photos">
                   {[
-                    { label: 'Front', url: imgUrl(selected.idFrontUrl) },
-                    { label: 'Back', url: imgUrl(selected.idBackUrl) },
-                    { label: 'Selfie with ID', url: imgUrl(selected.selfieUrl) },
-                  ].map(({ label, url }) => (
+                    { label: 'Front', field: 'idFront' },
+                    { label: 'Back', field: 'idBack' },
+                    { label: 'Selfie with ID', field: 'selfie' },
+                  ].map(({ label, field }) => (
                     <div key={label} className="admin-id-photo">
                       <span className="admin-id-label">{label}</span>
-                      {url
-                        ? <a href={url} target="_blank" rel="noopener noreferrer">
-                          <img src={url} alt={label} />
-                        </a>
-                        : <div className="admin-id-missing">No photo</div>}
+                      <KycPhoto userId={selected.id} field={field} label={label} />
                     </div>
                   ))}
                 </div>

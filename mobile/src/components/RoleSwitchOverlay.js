@@ -25,11 +25,11 @@ export default function RoleSwitchOverlay({ visible, label, Icon }) {
   }, [visible, beat]);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => { }}>
       <View style={styles.backdrop}>
         <View style={styles.row}>
           <Animated.View style={[styles.iconWrap, { transform: [{ scale: beat }] }]}>
-            {Icon ? <Icon size={30} strokeWidth={1.8} color={colors.white} /> : null}
+            {Icon ? <Icon size={30} color={colors.white} /> : null}
           </Animated.View>
           <Text style={styles.label}>{label}</Text>
         </View>

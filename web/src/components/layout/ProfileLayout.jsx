@@ -1,9 +1,9 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
-  User, MapPin, Star, Package, Heart, Store,
-  MessageSquare, Bell, Settings, HelpCircle,
-} from 'lucide-react';
+  User, MapPin, Star, Package, Heart, Storefront as Store,
+  ChatText as MessageSquare, Bell, Gear as Settings, Question as HelpCircle,
+} from '@phosphor-icons/react';
 import Layout from './Layout';
 import '../../pages/Profile.css';
 

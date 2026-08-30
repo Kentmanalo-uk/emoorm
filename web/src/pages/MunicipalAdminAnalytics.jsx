@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Download, RefreshCw } from 'lucide-react';
+import { DownloadSimple as Download, ArrowsClockwise as RefreshCw } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import AdminLayout from '../components/admin/AdminLayout';
 import KpiCard from '../components/analytics/KpiCard';

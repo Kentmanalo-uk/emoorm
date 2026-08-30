@@ -429,6 +429,50 @@ const searchByImageBuffer = async (buffer, { threshold = 20, limit = 24 } = {}) 
   return { queryHash, results: scored };
 };
 
+const BULK_ACTIONS = {
+  HIDE: { fromStatuses: ['APPROVED'], toStatus: 'HIDDEN' },
+  UNHIDE: { fromStatuses: ['HIDDEN'], toStatus: 'APPROVED' },
+};
+
+/**
+ * Bulk update the seller's own products (hide/unhide/delete)
+ * @param {String} userId - Seller user ID
+ * @param {Array<String>} ids - Product IDs
+ * @param {String} action - 'HIDE' | 'UNHIDE' | 'DELETE'
+ * @returns {Promise<Object>} Count of affected products
+ */
+const bulkUpdateProducts = async (userId, ids, action) => {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new ApiError('No products selected', 400);
+  }
+  if (ids.length > 100) {
+    throw new ApiError('You can only update up to 100 products at a time', 400);
+  }
+
+  const store = await storeRepository.findByOwnerId(userId);
+  if (!store) {
+    throw new ApiError('You do not have a store', 404);
+  }
+
+  if (action === 'DELETE') {
+    const updatedCount = await productRepository.bulkSoftDelete(ids, store.id);
+    return { updatedCount, action };
+  }
+
+  const config = BULK_ACTIONS[action];
+  if (!config) {
+    throw new ApiError('Invalid bulk action', 400);
+  }
+
+  const updatedCount = await productRepository.bulkUpdateStatus(
+    ids,
+    store.id,
+    config.fromStatuses,
+    config.toStatus
+  );
+  return { updatedCount, action };
+};
+
 module.exports = {
   createProduct,
   getProductById,
@@ -441,4 +485,5 @@ module.exports = {
   suspendProduct,
   archiveProduct,
   searchByImageBuffer,
+  bulkUpdateProducts,
 };

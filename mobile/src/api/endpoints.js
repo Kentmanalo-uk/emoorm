@@ -11,6 +11,17 @@ export const ENDPOINTS = {
     PROFILE: '/auth/profile',
   },
   MUNICIPALITIES: '/municipalities',
+  QR_LOGIN: {
+    SCAN: '/auth/qr/scan',
+    APPROVE: '/auth/qr/approve',
+  },
+  ADDRESSES: {
+    LIST: '/addresses',
+    CREATE: '/addresses',
+    UPDATE: (id) => `/addresses/${id}`,
+    DELETE: (id) => `/addresses/${id}`,
+    SET_DEFAULT: (id) => `/addresses/${id}/default`,
+  },
   CATEGORIES: '/categories',
   PRODUCTS: '/products',
   MY_PRODUCTS: '/products/my/products',
@@ -36,6 +47,8 @@ export const ENDPOINTS = {
     CREATE: '/reviews',
     MY_REVIEWS: '/reviews/my/reviews',
     BY_ID: (id) => `/reviews/${id}`,
+    SELLER_MINE: '/reviews/seller/mine',
+    REPLY: (id) => `/reviews/${id}/reply`,
   },
   UPLOAD: {
     IMAGE: '/upload/image',

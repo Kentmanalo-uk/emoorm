@@ -135,6 +135,51 @@
   align-items: start;
 }
 
+.sd-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Sales trend chart */
+.sd-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 130px;
+  padding: 8px 20px 16px;
+}
+
+.sd-chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+}
+
+.sd-chart-bar-wrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.sd-chart-bar {
+  width: 100%;
+  min-height: 3px;
+  background: #059669;
+  border-radius: 3px 3px 0 0;
+}
+
+.sd-chart-label {
+  font-size: 9px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
 .sd-card {
   background: #ffffff;
   border-radius: 12px;
@@ -163,6 +208,20 @@
 
 .sd-header-icon {
   color: #059669;
+}
+
+.sd-header-icon--warn {
+  color: #d97706;
+}
+
+.sd-error-banner {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.sd-error-banner svg {
+  color: #dc2626;
 }
 
 .sd-view-all {
@@ -338,6 +397,12 @@
   align-items: center;
   justify-content: center;
 }
+
+.sd-top-rank--warn {
+  background: #fffbeb;
+  color: #d97706;
+}
+
 
 .sd-top-info {
   display: flex;
@@ -701,6 +766,75 @@
   font-size: 13.5px;
   color: #334155;
   line-height: 1.5;
+}
+
+.reviews-reply-trigger {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #059669;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.reviews-reply-trigger:hover {
+  text-decoration: underline;
+}
+
+.reviews-seller-reply {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+}
+
+.reviews-seller-reply strong {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #047857;
+}
+
+.reviews-seller-reply p {
+  margin: 4px 0 6px;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.reviews-reply-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.reviews-reply-edit:hover {
+  color: #059669;
+}
+
+.reviews-reply-form {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reviews-reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 /* ── Finance page ─────────────────────────────────────────── */
@@ -1290,7 +1424,9 @@
 
 
 /* ===== Followers card ===== */
-.sd-followers { padding-bottom: 4px; }
+.sd-followers {
+  padding-bottom: 4px;
+}
 
 .sd-followers-body {
   padding: 6px 16px 14px;
@@ -1328,7 +1464,7 @@
   background: #fafbfc;
 }
 
-.sd-followers-metrics > div {
+.sd-followers-metrics>div {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1340,15 +1476,24 @@
   color: #0f172a;
 }
 
-.sd-followers-metric-value.is-up { color: #059669; }
-.sd-followers-metric-value.is-down { color: #dc2626; }
+.sd-followers-metric-value.is-up {
+  color: #059669;
+}
+
+.sd-followers-metric-value.is-down {
+  color: #dc2626;
+}
 
 .sd-followers-metric-label {
   font-size: 11px;
   color: #94a3b8;
 }
 
-.sd-followers-recent { display: flex; flex-direction: column; gap: 6px; }
+.sd-followers-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
 .sd-followers-recent-label {
   font-size: 12px;
@@ -1361,7 +1506,9 @@
   gap: -6px;
 }
 
-.sd-followers-avatars > * + * { margin-left: -8px; }
+.sd-followers-avatars>*+* {
+  margin-left: -8px;
+}
 
 .sd-followers-avatar {
   width: 28px;
@@ -1378,7 +1525,11 @@
   overflow: hidden;
 }
 
-.sd-followers-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sd-followers-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 .sd-followers-more {
   margin-left: 8px;

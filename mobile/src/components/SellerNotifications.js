@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import {
-  AlertCircle, CheckCircle, Info, Package, ShoppingBag, Star, Trash2, XCircle,
-} from 'lucide-react-native';
+  WarningCircleIcon as AlertCircle, CheckCircleIcon as CheckCircle, InfoIcon as Info, PackageIcon as Package, ShoppingBagIcon as ShoppingBag, StarIcon as Star, TrashIcon as Trash2, XCircleIcon as XCircle,
+} from 'phosphor-react-native';
 import apiClient from '../api/client';
 import { ENDPOINTS } from '../api/endpoints';
 import { toast } from '../lib/toast';

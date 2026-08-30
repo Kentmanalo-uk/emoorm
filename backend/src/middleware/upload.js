@@ -1,5 +1,6 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const config = require('../config/env');
 
@@ -28,4 +29,28 @@ const upload = multer({
   limits: { fileSize: config.upload.maxFileSize },
 });
 
-module.exports = upload;
+// Ensure the private KYC directory exists (never auto-created by multer/fs).
+fs.mkdirSync(config.upload.privateUploadDir, { recursive: true });
+
+const kycStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, config.upload.privateUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const rand = crypto.randomBytes(16).toString('hex');
+    cb(null, `${Date.now()}-${rand}${ext}`);
+  },
+});
+
+// Uploads sensitive KYC documents (ID photos, selfies) to a private,
+// non-statically-served directory. Files are only retrievable via the
+// authenticated /auth/users/:id/kyc-photo/:field endpoint.
+const kycUpload = multer({
+  storage: kycStorage,
+  fileFilter,
+  limits: { fileSize: config.upload.maxFileSize },
+});
+
+module.exports = { upload, kycUpload };
+

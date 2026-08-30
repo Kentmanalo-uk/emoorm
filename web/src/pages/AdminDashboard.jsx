@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Users, Package, Flag, Store, ShoppingCart, Wallet,
-  CheckCircle, AlertCircle, TrendingUp,
-} from 'lucide-react';
+  Users, Package, Flag, Storefront as Store, ShoppingCart, Wallet,
+  CheckCircle, WarningCircle as AlertCircle, TrendUp as TrendingUp,
+} from '@phosphor-icons/react';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';

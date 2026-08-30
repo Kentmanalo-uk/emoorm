@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, ShoppingCart, Star } from 'lucide-react';
+import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ShoppingCart, Star } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
@@ -244,7 +244,7 @@ const Home = () => {
                     <div className="product-rating-row">
                       <div className="product-stars">
                         {[0, 1, 2, 3, 4].map((i) => (
-                          <Star key={i} size={11} fill="#f59e0b" strokeWidth={0} />
+                          <Star key={i} size={11} weight="fill" color="#f59e0b" />
                         ))}
                       </div>
                       <span className="product-review-count">({product.reviewCount ?? 0})</span>

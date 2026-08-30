@@ -54,6 +54,14 @@ router.get(
   reviewController.getMyReviews
 );
 
+// Seller static route — must come before /:id
+router.get(
+  '/seller/mine',
+  authenticate,
+  authorize('SELLER'),
+  reviewController.getSellerReviews
+);
+
 router.get(
   '/:id',
   reviewController.getReviewById
@@ -79,6 +87,13 @@ router.delete(
   '/:id',
   authenticate,
   reviewController.deleteReview
+);
+
+router.post(
+  '/:id/reply',
+  authenticate,
+  authorize('SELLER'),
+  reviewController.replyToReview
 );
 
 module.exports = router;

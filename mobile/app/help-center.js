@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ChevronDown, ChevronUp, Mail, MessageCircleQuestion } from 'lucide-react-native';
+import { CaretDownIcon as ChevronDown, CaretUpIcon as ChevronUp, EnvelopeIcon as Mail, ChatCircleDotsIcon as MessageCircleQuestion } from 'phosphor-react-native';
 import ScreenHeader from '../src/components/ScreenHeader';
 import { colors, fontFamily, radius, spacing, typography } from '../src/theme';
 

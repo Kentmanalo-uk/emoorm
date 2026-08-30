@@ -132,8 +132,13 @@ const deleteCategory = async (id) => {
     throw new ApiError('Category not found', 404);
   }
 
-  // TODO: Check if category has products, prevent deletion if so
-  // Or cascade delete / set to null
+  const productCount = await categoryRepository.countActiveProducts(id);
+  if (productCount > 0) {
+    throw new ApiError(
+      `Cannot delete category: ${productCount} product${productCount === 1 ? '' : 's'} still assigned to it. Reassign or remove them first.`,
+      409
+    );
+  }
 
   await categoryRepository.deleteCategory(id);
 };

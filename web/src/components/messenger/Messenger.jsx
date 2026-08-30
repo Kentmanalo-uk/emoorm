@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
-  Send, MessageSquare, Store as StoreIcon, User as UserIcon,
-  Package, Pin, RefreshCw, Loader2,
-} from 'lucide-react';
+  PaperPlaneTilt as Send, ChatText as MessageSquare, Storefront as StoreIcon, User as UserIcon,
+  Package, PushPin as Pin, ArrowsClockwise as RefreshCw, CircleNotch as Loader2,
+} from '@phosphor-icons/react';
 import axiosInstance from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
 import './Messenger.css';

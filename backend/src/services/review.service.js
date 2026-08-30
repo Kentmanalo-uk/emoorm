@@ -1,6 +1,7 @@
 const reviewRepository = require('../repositories/review.repository');
 const productRepository = require('../repositories/product.repository');
 const orderRepository = require('../repositories/order.repository');
+const storeRepository = require('../repositories/store.repository');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -193,6 +194,58 @@ const deleteReview = async (reviewId, userId, userRole) => {
   await reviewRepository.softDeleteReview(reviewId);
 };
 
+/**
+ * Get aggregated reviews across all of a seller's products
+ * @param {String} sellerId - Seller (store owner) user ID
+ * @param {Object} options - Query options
+ * @returns {Promise<Object>} Reviews, pagination and rating stats
+ */
+const getSellerReviews = async (sellerId, options) => {
+  const store = await storeRepository.findByOwnerId(sellerId);
+  if (!store) {
+    throw new ApiError('You do not have a store', 404);
+  }
+
+  const [reviewsData, ratingStats] = await Promise.all([
+    reviewRepository.findAllForStore(store.id, options),
+    reviewRepository.getStoreRatingStats(store.id),
+  ]);
+
+  return {
+    ...reviewsData,
+    ratingStats,
+  };
+};
+
+/**
+ * Seller replies to a review left on one of their products
+ * @param {String} reviewId - Review ID
+ * @param {String} sellerId - Seller (store owner) user ID
+ * @param {String} replyText - Reply text
+ * @returns {Promise<Object>} Updated review
+ */
+const replyToReview = async (reviewId, sellerId, replyText) => {
+  const review = await reviewRepository.findById(reviewId);
+  if (!review || review.deletedAt) {
+    throw new ApiError('Review not found', 404);
+  }
+
+  const store = await storeRepository.findByOwnerId(sellerId);
+  if (!store || review.product?.storeId !== store.id) {
+    throw new ApiError('You can only reply to reviews on your own products', 403);
+  }
+
+  const trimmed = String(replyText || '').trim();
+  if (!trimmed) {
+    throw new ApiError('Reply cannot be empty', 400);
+  }
+  if (trimmed.length > 1000) {
+    throw new ApiError('Reply must be 1000 characters or fewer', 400);
+  }
+
+  return reviewRepository.replyToReview(reviewId, trimmed);
+};
+
 module.exports = {
   createReview,
   getReviewById,
@@ -201,4 +254,6 @@ module.exports = {
   getMyReviews,
   updateReview,
   deleteReview,
+  getSellerReviews,
+  replyToReview,
 };

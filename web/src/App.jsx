@@ -28,6 +28,7 @@ import SellerReviews from './pages/SellerReviews';
 import SellerAnalytics from './pages/SellerAnalytics';
 import SellerFinance from './pages/SellerFinance';
 import SellerFulfillment from './pages/SellerFulfillment';
+import SellerSettings from './pages/SellerSettings';
 import Stores from './pages/Stores';
 import StoreDetail from './pages/StoreDetail';
 import Wishlist from './pages/Wishlist';
@@ -50,11 +51,16 @@ import ProfileFollowedStores from './pages/ProfileFollowedStores';
 import ProfileMessages from './pages/ProfileMessages';
 import ProfileSettings from './pages/ProfileSettings';
 import HelpCenter from './pages/HelpCenter';
+import About from './pages/About';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import CookiePolicy from './pages/CookiePolicy';
 import SearchByImage from './pages/SearchByImage';
 import { WishlistContent } from './pages/Wishlist';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import RoleGate from './components/RoleGate';
+import ScrollToTop from './components/ScrollToTop';
 import './App.css';
 
 // Create a client
@@ -72,6 +78,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
+        <ScrollToTop />
         <Toaster
           position="top-right"
           toastOptions={{
@@ -113,6 +120,10 @@ function App() {
             <Route path="/store/:slug" element={<StoreDetail />} />
             <Route path="/sell" element={<Sell />} />
             <Route path="/search/image" element={<SearchByImage />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/cookies" element={<CookiePolicy />} />
 
             {/* Protected routes — require login */}
             <Route
@@ -156,6 +167,7 @@ function App() {
               <Route path="finance" element={<SellerFinance />} />
               <Route path="store" element={<SellerStore />} />
               <Route path="fulfillment" element={<SellerFulfillment />} />
+              <Route path="settings" element={<SellerSettings />} />
             </Route>
             {/* Admin — MUNICIPAL_ADMIN / SUPER_ADMIN only */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

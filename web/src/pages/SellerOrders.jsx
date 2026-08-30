@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ShoppingBag, Eye, CheckCircle, XCircle,
-  Clock, Package, Truck, ChevronDown, FileText, Store as StoreIcon
-} from 'lucide-react';
+  Clock, Package, Truck, CaretDown as ChevronDown, FileText, Storefront as StoreIcon
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { resolveImg } from '../lib/media';
 import './SellerDashboard.css';
 import './SellerOrders.css';
@@ -75,11 +76,16 @@ const ACTION_LABELS = {
 };
 
 export default function SellerOrders() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState(() => {
+    const fromUrl = searchParams.get('status');
+    return TABS.some((t) => t.key === fromUrl) ? fromUrl : 'all';
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [cancelConfirm, setCancelConfirm] = useState(null); // { orderId }
 
   useEffect(() => {
     loadOrders();
@@ -90,7 +96,19 @@ export default function SellerOrders() {
     try {
       const params = activeTab !== 'all' ? { status: activeTab, pageSize: 50 } : { pageSize: 50 };
       const res = await axios.get('/orders/store/orders', { params });
-      setOrders(res.data || []);
+      const loaded = res.data || [];
+      setOrders(loaded);
+      // Deep-link support: /seller/orders?id=<orderId> opens that order's detail panel
+      const targetId = searchParams.get('id');
+      if (targetId) {
+        const match = loaded.find((o) => o.id === targetId);
+        if (match) setSelectedOrder(match);
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('id');
+          return next;
+        }, { replace: true });
+      }
     } catch (err) {
       toast.error('Failed to load orders');
     } finally {
@@ -120,6 +138,20 @@ export default function SellerOrders() {
   const displayed = activeTab === 'all'
     ? orders
     : orders.filter(o => o.status === activeTab);
+
+  const requestStatusChange = (orderId, newStatus) => {
+    if (newStatus === 'CANCELLED') {
+      setCancelConfirm({ orderId });
+      return;
+    }
+    handleStatusChange(orderId, newStatus);
+  };
+
+  const confirmCancelOrder = async () => {
+    if (!cancelConfirm) return;
+    await handleStatusChange(cancelConfirm.orderId, 'CANCELLED');
+    setCancelConfirm(null);
+  };
 
   return (
     <div className="seller-dashboard">
@@ -271,7 +303,7 @@ export default function SellerOrders() {
                                       <button
                                         key={ns}
                                         className={`status-dropdown-item ${a?.cls || ''}`}
-                                        onClick={() => handleStatusChange(order.id, ns)}
+                                        onClick={() => requestStatusChange(order.id, ns)}
                                       >
                                         {a?.label || ns}
                                       </button>
@@ -402,7 +434,7 @@ export default function SellerOrders() {
                           key={ns}
                           className={`detail-action-btn ${a?.cls || ''}`}
                           disabled={updatingId === selectedOrder.id}
-                          onClick={() => handleStatusChange(selectedOrder.id, ns)}
+                          onClick={() => requestStatusChange(selectedOrder.id, ns)}
                         >
                           {a?.label || ns}
                         </button>
@@ -429,6 +461,17 @@ export default function SellerOrders() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!cancelConfirm}
+        title="Cancel this order?"
+        message="The buyer will be notified and any reserved stock will be restored to your inventory. This cannot be undone."
+        confirmLabel="Cancel Order"
+        danger
+        loading={updatingId === cancelConfirm?.orderId}
+        onConfirm={confirmCancelOrder}
+        onCancel={() => setCancelConfirm(null)}
+      />
     </div>
   );
 }

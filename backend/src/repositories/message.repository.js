@@ -29,6 +29,15 @@ const messageInclude = {
       items: { select: { productName: true } },
     },
   },
+  product: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      price: true,
+      images: true,
+    },
+  },
 };
 
 const findConversationById = async (id) =>
@@ -77,9 +86,9 @@ const listMessages = async (conversationId, { take = 100 } = {}) =>
     take,
   });
 
-const createMessage = async ({ conversationId, senderId, body, imageUrl = null, orderId = null }) =>
+const createMessage = async ({ conversationId, senderId, body, imageUrl = null, orderId = null, productId = null }) =>
   prisma.message.create({
-    data: { conversationId, senderId, body, imageUrl, orderId },
+    data: { conversationId, senderId, body, imageUrl, orderId, productId },
     include: messageInclude,
   });
 

@@ -6,8 +6,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // cart endpoints exist), persisted so it survives app restarts while logged in.
 const useCartStore = create(
   persist(
-    (set, get) => ({
+(set, get) => ({
       items: [],
+      selectedProductIds: [],
 
       addItem: (product, quantity = 1) => {
         const items = get().items;
@@ -39,8 +40,11 @@ const useCartStore = create(
         }
       },
 
-      removeItem: (productId) => {
-        set({ items: get().items.filter((item) => item.id !== productId) });
+removeItem: (productId) => {
+        set({
+          items: get().items.filter((item) => item.id !== productId),
+          selectedProductIds: get().selectedProductIds.filter((id) => id !== productId),
+        });
       },
 
       updateQuantity: (productId, quantity) => {
@@ -57,7 +61,45 @@ const useCartStore = create(
         });
       },
 
-      clearCart: () => set({ items: [] }),
+clearCart: () => set({ items: [], selectedProductIds: [] }),
+
+      toggleItem: (productId) => {
+        const { selectedProductIds } = get();
+        set({
+          selectedProductIds: selectedProductIds.includes(productId)
+            ? selectedProductIds.filter((id) => id !== productId)
+            : [...selectedProductIds, productId],
+        });
+      },
+
+      toggleStore: (storeId) => {
+        const { items, selectedProductIds } = get();
+        const storeItemIds = items
+          .filter((item) => (item.storeId || 'unknown') === storeId)
+          .map((item) => item.id);
+        const allSelected = storeItemIds.every((id) => selectedProductIds.includes(id));
+        set({
+          selectedProductIds: allSelected
+            ? selectedProductIds.filter((id) => !storeItemIds.includes(id))
+            : [...new Set([...selectedProductIds, ...storeItemIds])],
+        });
+      },
+
+      toggleAll: () => {
+        const { items, selectedProductIds } = get();
+        const allSelected = items.length > 0 && items.every((item) => selectedProductIds.includes(item.id));
+        set({ selectedProductIds: allSelected ? [] : items.map((item) => item.id) });
+      },
+
+setSelectedItems: (ids) => set({ selectedProductIds: ids }),
+
+      removeSelectedItems: () => {
+        const { items, selectedProductIds } = get();
+        set({
+          items: items.filter((item) => !selectedProductIds.includes(item.id)),
+          selectedProductIds: [],
+        });
+      },
 
       getTotalPrice: () => get().items.reduce((total, item) => total + item.price * item.quantity, 0),
 

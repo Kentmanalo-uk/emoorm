@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Bell, BellOff, CheckCheck, Trash2, Package, ShoppingBag,
-  CheckCircle, XCircle, Star, AlertCircle, Info
-} from 'lucide-react';
+  Bell, BellSlash as BellOff, Checks as CheckCheck, Trash as Trash2, Package, ShoppingBag,
+  CheckCircle, XCircle, Star, WarningCircle as AlertCircle, Info
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, ArrowUpDown, Clock3, Heart, MapPin, MessageCircle, Package, Search, Star, Store as StoreIcon, UserRound, Users } from 'lucide-react-native';
+import { ArrowLeftIcon as ArrowLeft, ArrowsDownUpIcon as ArrowUpDown, ClockIcon as Clock3, HeartIcon as Heart, MapPinIcon as MapPin, ChatCircleIcon as MessageCircle, PackageIcon as Package, MagnifyingGlassIcon as Search, StarIcon as Star, StorefrontIcon as StoreIcon, UserCircleIcon as UserRound, UsersIcon as Users } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import ProductCard from '../../src/components/ProductCard';
@@ -100,7 +100,7 @@ export default function StoreDetail() {
 
   const toggleFollow = async () => {
     if (!store || store.ownerId === user?.id) return;
-    if (!requireAuth(() => {}, `/store/${slug}`)) return;
+    if (!requireAuth(() => { }, `/store/${slug}`)) return;
     setFollowBusy(true);
     try {
       const res = store.isFollowing
@@ -129,6 +129,8 @@ export default function StoreDetail() {
         image: product.images?.[0],
         storeId: product.storeId,
         storeName: store.name,
+        storeLogo: store.logo || store.logoUrl,
+        storeSlug: store.slug,
         stock: product.stock,
         slug: product.slug,
         categoryId: product.categoryId,
@@ -152,7 +154,7 @@ export default function StoreDetail() {
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.header, { paddingTop: insets.top, minHeight: 56 + insets.top }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.iconButton} onPress={() => router.back()}><ArrowLeft size={21} color={colors.textPrimary} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.iconButton} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}><ArrowLeft size={21} color={colors.textPrimary} /></Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>{store.name}</Text>
         <View style={styles.iconButton} />
       </View>
@@ -181,14 +183,14 @@ export default function StoreDetail() {
                 </View>
                 {store.description ? <View style={styles.about}><Text style={styles.sectionEyebrow}>ABOUT</Text><Text style={styles.description}>{store.description}</Text></View> : null}
                 <View style={styles.stats}>
-                  <Stat icon={<Star size={15} color={colors.star} fill={colors.star} />} value={Number(store.stats?.averageRating || 0).toFixed(1)} label={`${store.stats?.reviewCount || 0} reviews`} />
+                  <Stat icon={<Star size={15} color={colors.star} weight="fill" />} value={Number(store.stats?.averageRating || 0).toFixed(1)} label={`${store.stats?.reviewCount || 0} reviews`} />
                   <Stat icon={<Package size={15} color={colors.secondary} />} value={store.stats?.productCount || 0} label="products" />
                   <Stat icon={<Users size={15} color={colors.secondary} />} value={store.followerCount || 0} label="followers" last />
                 </View>
                 <View style={styles.heroActions}>
                   {store.ownerId !== user?.id ? (
                     <Pressable accessibilityRole="button" style={[styles.followButton, store.isFollowing && styles.followingButton]} onPress={toggleFollow} disabled={followBusy}>
-                      {followBusy ? <ActivityIndicator color={store.isFollowing ? colors.secondary : colors.white} /> : <><Heart size={17} color={store.isFollowing ? colors.secondary : colors.white} fill={store.isFollowing ? colors.secondary : 'transparent'} /><Text style={[styles.followText, store.isFollowing && styles.followingText]}>{store.isFollowing ? 'Following' : 'Follow'}</Text></>}
+                      {followBusy ? <ActivityIndicator color={store.isFollowing ? colors.secondary : colors.white} /> : <><Heart size={17} color={store.isFollowing ? colors.secondary : colors.white} weight={store.isFollowing ? 'fill' : 'regular'} /><Text style={[styles.followText, store.isFollowing && styles.followingText]}>{store.isFollowing ? 'Following' : 'Follow'}</Text></>}
                     </Pressable>
                   ) : null}
                   <Pressable accessibilityRole="button" style={styles.messageButton} onPress={messageStore}><MessageCircle size={17} color={colors.secondary} /><Text style={styles.messageText}>Message</Text></Pressable>

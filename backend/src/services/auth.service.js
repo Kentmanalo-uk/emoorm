@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
 const userRepository = require('../repositories/user.repository');
 const storeRepository = require('../repositories/store.repository');
 const storeService = require('./store.service');
@@ -293,6 +295,60 @@ const getUserById = async (userId) => {
   return user;
 };
 
+const KYC_FIELD_COLUMNS = {
+  idFront: 'idFrontUrl',
+  idBack: 'idBackUrl',
+  selfie: 'selfieUrl',
+};
+
+/**
+ * Resolve the on-disk path of a user's KYC document, enforcing that only the
+ * document owner or an authorized admin (super admin, or municipal admin of
+ * the same municipality) can retrieve it.
+ * @param {String} targetUserId - Owner of the KYC document
+ * @param {String} field - One of 'idFront' | 'idBack' | 'selfie'
+ * @param {Object} requester - req.user (authenticated caller)
+ * @returns {Promise<{absolutePath: String}>}
+ */
+const getKycPhoto = async (targetUserId, field, requester) => {
+  const column = KYC_FIELD_COLUMNS[field];
+  if (!column) {
+    throw new ApiError('Invalid document field', 400);
+  }
+
+  const record = await userRepository.findKycRecordById(targetUserId);
+  if (!record) {
+    throw new ApiError('User not found', 404);
+  }
+
+  const isSelf = requester.id === record.id;
+  const isSuperAdmin = requester.role === 'SUPER_ADMIN';
+  const isScopedMunicipalAdmin =
+    requester.role === 'MUNICIPAL_ADMIN' && requester.municipalityId && requester.municipalityId === record.municipalityId;
+
+  if (!isSelf && !isSuperAdmin && !isScopedMunicipalAdmin) {
+    throw new ApiError('You are not authorized to view this document', 403);
+  }
+
+  const storedValue = record[column];
+  if (!storedValue) {
+    throw new ApiError('Document not found', 404);
+  }
+
+  // Strip any directory components so the lookup can never escape the
+  // expected directory (defense against path traversal).
+  const safeFilename = path.basename(storedValue);
+  const isLegacyPublicPath = storedValue.startsWith('/uploads/');
+  const baseDir = isLegacyPublicPath ? config.upload.uploadDir : config.upload.privateUploadDir;
+  const absolutePath = path.resolve(baseDir, safeFilename);
+
+  if (!fs.existsSync(absolutePath)) {
+    throw new ApiError('Document not found', 404);
+  }
+
+  return { absolutePath };
+};
+
 /**
  * Get all users with filters (admin use)
  * @param {Object} options - Query options
@@ -516,6 +572,7 @@ module.exports = {
   activateUser,
   deleteUser,
   setUserRole,
+  getKycPhoto,
 };
 
 async function setUserRole(userId, role, opts = {}) {

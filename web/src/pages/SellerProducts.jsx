@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Package, Plus, Edit2, Trash2, Eye,
-  Search, AlertCircle, CheckCircle, Clock, Save, X, Upload, Loader2
-} from 'lucide-react';
+  Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye,
+  MagnifyingGlass as Search, WarningCircle as AlertCircle, CheckCircle, Clock, FloppyDisk as Save, X, UploadSimple as Upload, CircleNotch as Loader2,
+  EyeSlash as EyeOff, Archive,
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import './SellerDashboard.css';
@@ -24,10 +26,10 @@ const EMPTY_FORM = {
 
 const STATUS_LABELS = {
   PENDING: { label: 'Pending Approval', cls: 'status-pending', icon: <Clock size={12} /> },
-  ACTIVE: { label: 'Active', cls: 'status-confirmed', icon: <CheckCircle size={12} /> },
-  INACTIVE: { label: 'Inactive', cls: 'status-cancelled', icon: <AlertCircle size={12} /> },
+  APPROVED: { label: 'Live', cls: 'status-confirmed', icon: <CheckCircle size={12} /> },
+  HIDDEN: { label: 'Hidden', cls: 'status-pending', icon: <EyeOff size={12} /> },
   SUSPENDED: { label: 'Suspended', cls: 'status-cancelled', icon: <AlertCircle size={12} /> },
-  ARCHIVED: { label: 'Archived', cls: 'status-cancelled', icon: <AlertCircle size={12} /> },
+  ARCHIVED: { label: 'Archived', cls: 'status-cancelled', icon: <Archive size={12} /> },
 };
 
 export default function SellerProducts() {
@@ -46,6 +48,11 @@ export default function SellerProducts() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+
+  // Bulk selection + confirm dialogs
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [confirmState, setConfirmState] = useState(null); // { type: 'delete-one'|'bulk-delete', product?, ids? }
 
   useEffect(() => {
     loadCategories();
@@ -151,14 +158,66 @@ export default function SellerProducts() {
     }
   };
 
-  const handleDelete = async (product) => {
-    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+  const handleDelete = (product) => {
+    setConfirmState({ type: 'delete-one', product });
+  };
+
+  const confirmDeleteOne = async () => {
+    const product = confirmState?.product;
+    if (!product) return;
+    setBulkLoading(true);
     try {
       await axios.delete(`/products/${product.id}`);
       toast.success('Product deleted');
+      setSelectedIds((ids) => ids.filter((id) => id !== product.id));
       loadProducts();
+      setConfirmState(null);
     } catch (err) {
       toast.error(err.message || 'Failed to delete product');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === products.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(products.map((p) => p.id));
+    }
+  };
+
+  const runBulkAction = async (action) => {
+    if (selectedIds.length === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await axios.patch('/products/bulk', { ids: selectedIds, action });
+      toast.success(res.message || `${res.data?.updatedCount ?? 0} product(s) updated`);
+      setSelectedIds([]);
+      setConfirmState(null);
+      loadProducts();
+    } catch (err) {
+      toast.error(err.message || 'Bulk action failed');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleToggleVisibility = async (product) => {
+    setBulkLoading(true);
+    try {
+      const action = product.status === 'HIDDEN' ? 'UNHIDE' : 'HIDE';
+      await axios.patch('/products/bulk', { ids: [product.id], action });
+      toast.success(action === 'HIDE' ? 'Product hidden from buyers' : 'Product is live again');
+      loadProducts();
+    } catch (err) {
+      toast.error(err.message || 'Failed to update product');
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -275,6 +334,31 @@ export default function SellerProducts() {
           </div>
         )}
 
+        {/* Bulk action bar */}
+        {selectedIds.length > 0 && (
+          <div className="seller-card products-bulk-bar">
+            <span className="products-bulk-count">{selectedIds.length} selected</span>
+            <div className="products-bulk-actions">
+              <button className="btn-seller-outline" disabled={bulkLoading} onClick={() => runBulkAction('HIDE')}>
+                <EyeOff size={14} /> Hide
+              </button>
+              <button className="btn-seller-outline" disabled={bulkLoading} onClick={() => runBulkAction('UNHIDE')}>
+                <Eye size={14} /> Unhide
+              </button>
+              <button
+                className="btn-seller-outline btn-danger-outline"
+                disabled={bulkLoading}
+                onClick={() => setConfirmState({ type: 'bulk-delete', ids: selectedIds })}
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+              <button className="seller-icon-btn" onClick={() => setSelectedIds([])} title="Clear selection">
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Search bar */}
         <div className="seller-card products-toolbar">
           <form onSubmit={handleSearchSubmit} className="products-search-form">
@@ -304,6 +388,14 @@ export default function SellerProducts() {
               <table className="seller-table products-table">
                 <thead>
                   <tr>
+                    <th className="products-th-check">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.length === products.length}
+                        onChange={toggleSelectAll}
+                        aria-label="Select all products"
+                      />
+                    </th>
                     <th>Product</th>
                     <th>Category</th>
                     <th>Price</th>
@@ -318,6 +410,14 @@ export default function SellerProducts() {
                     const thumb = product.images?.[0];
                     return (
                       <tr key={product.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(product.id)}
+                            onChange={() => toggleSelect(product.id)}
+                            aria-label={`Select ${product.name}`}
+                          />
+                        </td>
                         <td>
                           <div className="product-cell">
                             {thumb ? (
@@ -347,6 +447,16 @@ export default function SellerProducts() {
                             >
                               <Edit2 size={15} />
                             </button>
+                            {(product.status === 'APPROVED' || product.status === 'HIDDEN') && (
+                              <button
+                                className="seller-icon-btn"
+                                title={product.status === 'HIDDEN' ? 'Unhide (make live again)' : 'Hide from buyers'}
+                                onClick={() => handleToggleVisibility(product)}
+                                disabled={bulkLoading}
+                              >
+                                {product.status === 'HIDDEN' ? <Eye size={15} /> : <EyeOff size={15} />}
+                              </button>
+                            )}
                             <a
                               href={`/product/${product.slug}`}
                               target="_blank"
@@ -395,6 +505,28 @@ export default function SellerProducts() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmState?.type === 'delete-one'}
+        title={`Delete "${confirmState?.product?.name}"?`}
+        message="This product will be permanently removed from your store and cannot be undone."
+        confirmLabel="Delete"
+        danger
+        loading={bulkLoading}
+        onConfirm={confirmDeleteOne}
+        onCancel={() => setConfirmState(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmState?.type === 'bulk-delete'}
+        title={`Delete ${confirmState?.ids?.length || 0} product(s)?`}
+        message="These products will be permanently removed from your store and cannot be undone."
+        confirmLabel="Delete All"
+        danger
+        loading={bulkLoading}
+        onConfirm={() => runBulkAction('DELETE')}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   );
 }

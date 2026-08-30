@@ -6,7 +6,7 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { ImagePlus, MessageCircle, Package, ReceiptText, RotateCcw, Star, Video, X } from 'lucide-react-native';
+import { ImageIcon as ImagePlus, ChatCircleIcon as MessageCircle, PackageIcon as Package, ReceiptIcon as ReceiptText, ArrowCounterClockwiseIcon as RotateCcw, StarIcon as Star, VideoCameraIcon as Video, XIcon as X } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import EmptyState from '../../src/components/EmptyState';
@@ -221,7 +221,7 @@ export default function Orders() {
         <View style={styles.modalBackdrop}><View style={styles.reviewSheet}>
           <View style={styles.sheetHeader}><Text style={styles.sheetTitle}>Review product</Text><Pressable onPress={() => setReviewItem(null)}><X size={20} color={colors.textPrimary} /></Pressable></View>
           <Text style={styles.reviewProduct}>{reviewItem?.productName || reviewItem?.product?.name}</Text>
-          <View style={styles.ratingPicker}>{[1, 2, 3, 4, 5].map((value) => <Pressable key={value} onPress={() => setRating(value)} hitSlop={5}><Star size={32} color={colors.star} fill={value <= rating ? colors.star : 'transparent'} /></Pressable>)}</View>
+          <View style={styles.ratingPicker}>{[1, 2, 3, 4, 5].map((value) => <Pressable key={value} onPress={() => setRating(value)} hitSlop={5}><Star size={32} color={colors.star} weight={value <= rating ? 'fill' : 'regular'} /></Pressable>)}</View>
           <TextInput value={comment} onChangeText={setComment} style={styles.commentInput} placeholder="Share what you liked about this product" placeholderTextColor={colors.textMuted} multiline maxLength={1000} />
           <View style={styles.mediaRow}>
             {reviewImages.map((asset, index) => <Pressable key={`${asset.uri}-${index}`} onPress={() => setReviewImages((current) => current.filter((_, imageIndex) => imageIndex !== index))}><Image source={{ uri: asset.uri }} style={styles.mediaPreview} /><View style={styles.mediaRemove}><X size={11} color={colors.white} /></View></Pressable>)}

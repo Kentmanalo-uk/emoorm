@@ -3,18 +3,19 @@ import {
   Truck,
   MapPin,
   QrCode,
-  Save,
-  Upload,
-  Trash2,
+  FloppyDisk as Save,
+  UploadSimple as Upload,
+  Trash as Trash2,
   X,
-  Store as StoreIcon,
+  Storefront as StoreIcon,
   Info,
   Check,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerFulfillment.css';
@@ -64,6 +65,7 @@ export default function SellerFulfillment() {
   const [uploading, setUploading] = useState(false);
   const [barangayInputs, setBarangayInputs] = useState({});
   const [muniPicker, setMuniPicker] = useState('');
+  const [removeConfirm, setRemoveConfirm] = useState(null); // { municipalityId, municipalityName }
   // PSGC barangay cache: { [municipalityId]: { loading, error, list: [{code, name}] } }
   const [barangayCatalog, setBarangayCatalog] = useState({});
   // PSGC municipality code lookup, keyed by normalized municipality name
@@ -238,6 +240,16 @@ export default function SellerFulfillment() {
       delete next[municipalityId];
       return next;
     });
+  };
+
+  const requestRemoveMunicipality = (municipalityId, municipalityName) => {
+    setRemoveConfirm({ municipalityId, municipalityName });
+  };
+
+  const confirmRemoveMunicipality = () => {
+    if (!removeConfirm) return;
+    removeMunicipality(removeConfirm.municipalityId);
+    setRemoveConfirm(null);
   };
 
   const setWholeMunicipality = (municipalityId, whole) => {
@@ -500,7 +512,7 @@ export default function SellerFulfillment() {
                         <button
                           type="button"
                           className="sf-icon-btn"
-                          onClick={() => removeMunicipality(g.municipalityId)}
+                          onClick={() => requestRemoveMunicipality(g.municipalityId, g.municipalityName)}
                           title="Remove municipality"
                         >
                           <Trash2 size={14} />
@@ -651,6 +663,16 @@ export default function SellerFulfillment() {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!removeConfirm}
+        title={`Remove ${removeConfirm?.municipalityName || 'this municipality'}?`}
+        message="Buyers in this municipality will no longer be able to place delivery orders once you save changes."
+        confirmLabel="Remove"
+        danger
+        onConfirm={confirmRemoveMunicipality}
+        onCancel={() => setRemoveConfirm(null)}
+      />
     </div>
   );
 }

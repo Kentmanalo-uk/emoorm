@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Search, SlidersHorizontal, Grid2x2, List, Package, X, Check } from 'lucide-react-native';
+import { MagnifyingGlassIcon as Search, SlidersHorizontalIcon as SlidersHorizontal, SquaresFourIcon as Grid2x2, ListIcon as List, PackageIcon as Package, XIcon as X, CheckIcon as Check } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import { resolveImg } from '../../src/lib/media';
@@ -157,6 +157,8 @@ export default function Products() {
           image: product.images?.[0],
           storeId: product.storeId,
           storeName: product.store?.name,
+          storeLogo: product.store?.logo || product.store?.logoUrl,
+          storeSlug: product.store?.slug,
           stock: product.stock,
           slug: product.slug,
           categoryId: product.categoryId,

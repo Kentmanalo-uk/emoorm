@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react-native';
+import { StarIcon as Star } from 'phosphor-react-native';
 import { View, StyleSheet } from 'react-native';
 import { colors } from '../theme';
 
@@ -12,8 +12,7 @@ export default function StarRating({ rating = 0, size = 14, max = 5 }) {
           key={i}
           size={size}
           color={colors.star}
-          fill={i < rounded ? colors.star : 'transparent'}
-          strokeWidth={1.5}
+          weight={i < rounded ? 'fill' : 'regular'}
         />
       ))}
     </View>

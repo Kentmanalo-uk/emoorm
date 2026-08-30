@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { UserPlus, X, Search } from 'lucide-react';
+import { UserPlus, X, MagnifyingGlass as Search } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';

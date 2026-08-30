@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, View, Text, TextInput, StyleSheet } from 'react-native';
-import { Eye, EyeOff } from 'lucide-react-native';
+import { EyeIcon as Eye, EyeSlashIcon as EyeOff } from 'phosphor-react-native';
 import { colors, control, fontFamily, radius, spacing, typography } from '../theme';
 
 export default function TextField({

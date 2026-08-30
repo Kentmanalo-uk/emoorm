@@ -53,6 +53,7 @@ const findById = async (id) => {
           id: true,
           name: true,
           slug: true,
+          storeId: true,
         },
       },
     },
@@ -193,12 +194,129 @@ const getProductRatingStats = async (productId) => {
   };
 };
 
+/**
+ * Find all reviews for products belonging to a store (seller aggregate view)
+ * @param {String} storeId - Store ID
+ * @param {Object} options - Query options
+ * @returns {Promise<Object>} Reviews and pagination
+ */
+const findAllForStore = async (storeId, options = {}) => {
+  const {
+    page = 1,
+    pageSize = 20,
+    rating,
+    unrepliedOnly,
+  } = options;
+
+  const where = {
+    deletedAt: null,
+    product: { storeId },
+  };
+
+  if (rating !== undefined) where.rating = parseInt(rating);
+  if (unrepliedOnly) where.sellerReply = null;
+
+  const [reviews, total] = await Promise.all([
+    prisma.review.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            profilePhoto: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.review.count({ where }),
+  ]);
+
+  return {
+    reviews,
+    total,
+    page,
+    pageSize,
+  };
+};
+
+/**
+ * Get average rating and count across an entire store's products
+ * @param {String} storeId - Store ID
+ * @returns {Promise<Object>} Average rating and count
+ */
+const getStoreRatingStats = async (storeId) => {
+  const stats = await prisma.review.aggregate({
+    where: {
+      deletedAt: null,
+      product: { storeId },
+    },
+    _avg: {
+      rating: true,
+    },
+    _count: {
+      id: true,
+    },
+  });
+
+  return {
+    averageRating: stats._avg.rating || 0,
+    totalReviews: stats._count.id,
+  };
+};
+
+/**
+ * Set/update the seller's reply to a review
+ * @param {String} id - Review ID
+ * @param {String} replyText - Reply text (null to clear)
+ * @returns {Promise<Object>} Updated review
+ */
+const replyToReview = async (id, replyText) => {
+  return prisma.review.update({
+    where: { id },
+    data: {
+      sellerReply: replyText,
+      sellerRepliedAt: replyText ? new Date() : null,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          profilePhoto: true,
+        },
+      },
+      product: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          storeId: true,
+        },
+      },
+    },
+  });
+};
+
 module.exports = {
   createReview,
   findById,
   findByBuyerAndProduct,
   findAll,
+  findAllForStore,
   updateReview,
   softDeleteReview,
   getProductRatingStats,
+  getStoreRatingStats,
+  replyToReview,
 };

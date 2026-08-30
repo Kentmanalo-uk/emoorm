@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Store } from 'lucide-react-native';
+import { StorefrontIcon as Store } from 'phosphor-react-native';
 import Button from '../../src/components/Button';
 import TextField from '../../src/components/TextField';
 import AuthHeader from '../../src/components/AuthHeader';
@@ -62,10 +62,9 @@ export default function Login({ sellerMode = false }) {
       const { user, accessToken, refreshToken } = res.data;
       await login(user, accessToken, refreshToken);
       toast.success(`Welcome back, ${user.fullName?.split(' ')[0] || 'there'}!`);
-      const requestedDestination = typeof redirect === 'string' && redirect.startsWith('/') && redirect !== '/login' ? redirect : '/';
       const destination = sellerMode
         ? user.role === 'SELLER' ? '/seller' : '/seller-apply'
-        : requestedDestination === '/seller-apply' && user.role === 'SELLER' ? '/seller' : requestedDestination;
+        : '/';
       router.replace(destination);
     } catch (error) {
       setApiError(error.message || 'Login failed. Please try again.');

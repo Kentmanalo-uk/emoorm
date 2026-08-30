@@ -1,9 +1,9 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import {
-  ArrowRight, Star, Menu, X, ChevronDown,
-  ShoppingBag, Package, Bell, Store, BarChart2,
-} from 'lucide-react';
+  ArrowRight, Star, List as Menu, X, CaretDown as ChevronDown,
+  ShoppingBag, Package, Bell, Storefront as Store, ChartBar as BarChart2,
+} from '@phosphor-icons/react';
 import useAuthStore from '../store/authStore';
 import Footer from '../components/layout/Footer';
 import './Sell.css';
@@ -139,7 +139,7 @@ export default function Sell() {
         style={{ transform: headerVisible ? 'translateY(0)' : 'translateY(-40px)' }}
       >
         <div className="sell-topbar">
-          <Star size={13} fill="white" color="white" />
+          <Star size={13} weight="fill" color="white" />
           Free to join. Built for Oriental Mindoro sellers.
         </div>
 

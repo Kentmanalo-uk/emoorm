@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutGrid, ShoppingBag, MessageSquare, Package, Star, PieChart,
-  Wallet, Store as StoreIcon, ChevronDown, ChevronRight, ChevronLeft, Bell, LogOut,
-} from 'lucide-react';
+  SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
+  Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
+} from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
@@ -26,7 +26,9 @@ export default function SellerLayout() {
     location.pathname.startsWith('/seller/products')
   );
   const [shopOpen, setShopOpen] = useState(
-    location.pathname.startsWith('/seller/store') || location.pathname === '/seller/shop-profile'
+    location.pathname.startsWith('/seller/store')
+    || location.pathname.startsWith('/seller/settings')
+    || location.pathname === '/seller/shop-profile'
   );
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -95,13 +97,13 @@ export default function SellerLayout() {
 
           <nav className="sc-nav">
             <NavLink to="/seller" end className={navCls} title="Dashboard">
-              <LayoutGrid size={17} /> <span>Dashboard</span>
+              <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
             <NavLink to="/seller/orders" className={navCls} title="My Orders">
-              <ShoppingBag size={17} /> <span>My Orders</span>
+              <ShoppingBag size={17} weight="fill" /> <span>My Orders</span>
             </NavLink>
             <NavLink to="/seller/messages" className={navCls} title="Messages">
-              <MessageSquare size={17} /> <span>Messages</span>
+              <MessageSquare size={17} weight="fill" /> <span>Messages</span>
             </NavLink>
 
             {/* Products group */}
@@ -112,7 +114,7 @@ export default function SellerLayout() {
               aria-expanded={productsOpen && !collapsed}
               title="Products"
             >
-              <Package size={17} />
+              <Package size={17} weight="fill" />
               <span>Products</span>
               <ChevronDown size={15} className="sc-nav-chevron" />
             </button>
@@ -128,13 +130,13 @@ export default function SellerLayout() {
             )}
 
             <NavLink to="/seller/reviews" className={navCls} title="Reviews">
-              <Star size={17} /> <span>Reviews</span>
+              <Star size={17} weight="fill" /> <span>Reviews</span>
             </NavLink>
             <NavLink to="/seller/analytics" className={navCls} title="Analytics">
-              <PieChart size={17} /> <span>Analytics</span>
+              <PieChart size={17} weight="fill" /> <span>Analytics</span>
             </NavLink>
             <NavLink to="/seller/finance" className={navCls} title="Finance">
-              <Wallet size={17} /> <span>Finance</span>
+              <Wallet size={17} weight="fill" /> <span>Finance</span>
             </NavLink>
 
             {/* Shop group */}
@@ -145,7 +147,7 @@ export default function SellerLayout() {
               aria-expanded={shopOpen && !collapsed}
               title="My Shop"
             >
-              <StoreIcon size={17} />
+              <StoreIcon size={17} weight="fill" />
               <span>My Shop</span>
               <ChevronDown size={15} className="sc-nav-chevron" />
             </button>
@@ -156,6 +158,9 @@ export default function SellerLayout() {
                 </NavLink>
                 <NavLink to="/seller/fulfillment" className={subNavCls}>
                   Fulfillment & Payment
+                </NavLink>
+                <NavLink to="/seller/settings" className={subNavCls}>
+                  Settings
                 </NavLink>
                 {store?.slug && (
                   <a
@@ -191,7 +196,7 @@ export default function SellerLayout() {
         <header className="sc-topbar">
           <nav className="sc-crumbs" aria-label="Breadcrumb">
             {crumbs.map((c, i) => (
-              <React.Fragment key={c.to}>
+              <React.Fragment key={`${c.to}-${i}`}>
                 {i > 0 && <ChevronRight size={14} className="sc-crumb-sep" />}
                 {i === crumbs.length - 1 ? (
                   <span className="sc-crumb sc-crumb--current">{c.label}</span>
@@ -250,6 +255,7 @@ const LABELS = {
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop Profile',
   '/seller/fulfillment': 'Fulfillment & Payment',
+  '/seller/settings': 'Settings',
 };
 
 function buildCrumbs(pathname) {

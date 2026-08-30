@@ -28,7 +28,6 @@
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
@@ -42,10 +41,16 @@
       "expo-font",
       "expo-video",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "E-MOORM uses the camera to scan QR codes for login and image search."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#ffffff",
-          "image": "./assets/brand-icon.png",
+          "image": "./assets/splash-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain"
         }
