@@ -1,3 +1,10 @@
 backend/node_modules/
 web/node_modules/
 mobile/node_modules/
+
+# Local environment and generated upload files
+**/.env
+**/.env.*
+!**/.env.example
+backend/uploads/
+backend/uploads-private/

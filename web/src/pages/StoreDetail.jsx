@@ -20,6 +20,7 @@ import Layout from '../components/layout/Layout';
 import ReportModal from '../components/ReportModal';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import ProductImage from '../components/ProductImage';
 import {
   followStore as apiFollowStore,
   unfollowStore as apiUnfollowStore,
@@ -524,11 +525,7 @@ function ProductCard({ product, onAddToCart }) {
   return (
     <Link to={`/product/${product.slug}`} className="product-card">
       <div className="product-image">
-        <img
-          src={resolveImg(image) || '/placeholder.png'}
-          alt={product.name}
-          onError={(e) => { e.currentTarget.src = '/placeholder.png'; }}
-        />
+        <ProductImage src={image} alt={product.name} />
         <button
           type="button"
           className="product-cart-fab"

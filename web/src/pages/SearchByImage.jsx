@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Camera, CircleNotch as Loader2, ShoppingCart, Star, UploadSimple as Upload, ArrowLeft } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
+import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
@@ -131,11 +132,7 @@ const SearchByImage = () => {
                         className="product-card"
                       >
                         <div className="product-image">
-                          <img
-                            src={resolveImg(product.images?.[0]) || '/placeholder.png'}
-                            alt={product.name}
-                            onError={(e) => { e.currentTarget.src = '/placeholder.png'; }}
-                          />
+                          <ProductImage src={product.images?.[0]} alt={product.name} />
                           <span className="sbi-match">{product.matchSimilarity}% match</span>
                           <button
                             type="button"

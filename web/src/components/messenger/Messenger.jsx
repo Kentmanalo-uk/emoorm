@@ -3,6 +3,8 @@ import { useSearchParams, Link } from 'react-router-dom';
 import {
   PaperPlaneTilt as Send, ChatText as MessageSquare, Storefront as StoreIcon, User as UserIcon,
   Package, PushPin as Pin, ArrowsClockwise as RefreshCw, CircleNotch as Loader2,
+  MagnifyingGlass, CaretLeft, DotsThreeVertical, Tag as TagIcon, Image as ImageIcon,
+  Check,
 } from '@phosphor-icons/react';
 import axiosInstance from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
@@ -64,7 +66,7 @@ function ConversationListItem({ item, active, currentUserId, onClick }) {
     ? item.lastMessage.senderId === currentUserId
       ? `You: ${item.lastMessage.body}`
       : item.lastMessage.body
-    : 'No messages yet — say hello!';
+    : 'Start the conversation';
 
   const avatar = isSellerView ? item.buyer?.profilePhoto : item.store?.logo;
 
@@ -77,8 +79,10 @@ function ConversationListItem({ item, active, currentUserId, onClick }) {
       <div className="msgr-avatar">
         {avatar ? (
           <img src={avatar} alt={title} />
-        ) : (
+        ) : isSellerView ? (
           <span>{title.slice(0, 1).toUpperCase()}</span>
+        ) : (
+          <StoreIcon size={18} weight="regular" />
         )}
       </div>
       <div className="msgr-convo-body">
@@ -174,7 +178,10 @@ function MessageBubble({ message, isSelf }) {
           </div>
         )}
         {message.body && <p className="msgr-bubble-text">{message.body}</p>}
-        <span className="msgr-bubble-time">{formatFullTime(message.createdAt)}</span>
+        <span className="msgr-bubble-time">
+          {formatFullTime(message.createdAt)}
+          {isSelf && <Check size={12} weight="bold" className="msgr-bubble-check" />}
+        </span>
       </div>
     </div>
   );
@@ -195,6 +202,7 @@ export default function Messenger({ role = 'buyer', className = '' }) {
   const [attachedOrderId, setAttachedOrderId] = useState(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const messagesEndRef = useRef(null);
   const activeIdRef = useRef(activeId);
@@ -295,10 +303,21 @@ export default function Messenger({ role = 'buyer', className = '' }) {
   }, [activeId, activeConvo, fetchConversation, fetchConversations, scrollToBottom]);
 
   const filteredConversations = useMemo(() => {
-    if (role === 'seller') return conversations.filter((c) => c.role === 'seller');
-    if (role === 'buyer') return conversations.filter((c) => c.role === 'buyer');
-    return conversations;
-  }, [conversations, role]);
+    const roleScoped =
+      role === 'seller'
+        ? conversations.filter((c) => c.role === 'seller')
+        : role === 'buyer'
+          ? conversations.filter((c) => c.role === 'buyer')
+          : conversations;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return roleScoped;
+    return roleScoped.filter((c) => {
+      const name = c.role === 'seller'
+        ? (c.buyer?.fullName || '')
+        : (c.store?.name || '');
+      return name.toLowerCase().includes(q);
+    });
+  }, [conversations, role, searchQuery]);
 
   const handleSelect = (id) => {
     setActiveId(id);
@@ -306,6 +325,24 @@ export default function Messenger({ role = 'buyer', className = '' }) {
     setAttachedOrderId(null);
     setSearchParams({ c: id }, { replace: true });
   };
+
+  const handleBackToList = () => {
+    setActiveId(null);
+    setActiveConvo(null);
+    setDraft('');
+    setAttachedOrderId(null);
+    // Keep other params if any but drop the active conversation.
+    const next = new URLSearchParams(searchParams);
+    next.delete('c');
+    setSearchParams(next, { replace: true });
+  };
+
+  // Hide the app's mobile bottom nav while an active chat is open (matches reference).
+  useEffect(() => {
+    if (!activeId) return undefined;
+    document.body.classList.add('messenger-chat-open');
+    return () => document.body.classList.remove('messenger-chat-open');
+  }, [activeId]);
 
   const handleSend = async (e) => {
     e?.preventDefault();
@@ -355,7 +392,7 @@ export default function Messenger({ role = 'buyer', className = '' }) {
   }, [activeConvo]);
 
   return (
-    <div className={`msgr-shell ${className}`}>
+    <div className={`msgr-shell ${activeId ? 'has-active' : ''} ${className}`}>
       <aside className="msgr-list">
         <header className="msgr-list-head">
           <h2>
@@ -371,6 +408,16 @@ export default function Messenger({ role = 'buyer', className = '' }) {
             <RefreshCw size={14} />
           </button>
         </header>
+        <div className="msgr-list-search">
+          <MagnifyingGlass size={16} />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={role === 'seller' ? 'Search buyers' : 'Search stores'}
+            aria-label="Search conversations"
+          />
+        </div>
         <div className="msgr-list-scroll">
           {loadingList ? (
             <div className="msgr-list-empty">
@@ -417,6 +464,14 @@ export default function Messenger({ role = 'buyer', className = '' }) {
         ) : activeConvo ? (
           <>
             <header className="msgr-thread-head">
+              <button
+                type="button"
+                className="msgr-thread-back"
+                onClick={handleBackToList}
+                aria-label="Back to conversations"
+              >
+                <CaretLeft size={22} />
+              </button>
               <div className="msgr-avatar msgr-avatar-lg">
                 {activeHeader?.avatar ? (
                   <img src={activeHeader.avatar} alt={activeHeader.title} />
@@ -434,6 +489,13 @@ export default function Messenger({ role = 'buyer', className = '' }) {
                 </div>
                 <div className="msgr-thread-sub">{activeHeader?.subtitle}</div>
               </div>
+              <button
+                type="button"
+                className="msgr-thread-menu"
+                aria-label="Conversation options"
+              >
+                <DotsThreeVertical size={22} />
+              </button>
             </header>
 
             {activeConvo.pinnedOrders?.length > 0 && (
@@ -496,10 +558,26 @@ export default function Messenger({ role = 'buyer', className = '' }) {
                 </div>
               )}
               <div className="msgr-composer-row">
+                <button
+                  type="button"
+                  className="msgr-composer-icon"
+                  aria-label="Attach product"
+                  title="Attach product"
+                >
+                  <TagIcon size={20} />
+                </button>
+                <button
+                  type="button"
+                  className="msgr-composer-icon"
+                  aria-label="Attach image"
+                  title="Attach image"
+                >
+                  <ImageIcon size={20} />
+                </button>
                 <textarea
                   rows={1}
                   className="msgr-composer-input"
-                  placeholder="Write a message…"
+                  placeholder="Type a message..."
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
@@ -514,13 +592,14 @@ export default function Messenger({ role = 'buyer', className = '' }) {
                   type="submit"
                   className="msgr-composer-send"
                   disabled={!draft.trim() || sending}
+                  aria-label="Send message"
                 >
                   {sending ? (
-                    <Loader2 size={16} className="msgr-spin" />
+                    <Loader2 size={18} className="msgr-spin" />
                   ) : (
-                    <Send size={16} />
+                    <Send size={20} weight="fill" />
                   )}
-                  <span>Send</span>
+                  <span className="msgr-composer-send-label">Send</span>
                 </button>
               </div>
             </form>

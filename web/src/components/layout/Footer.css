@@ -222,4 +222,9 @@
   .footer-content {
     grid-template-columns: 1fr;
   }
+
+  .footer > .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
 }

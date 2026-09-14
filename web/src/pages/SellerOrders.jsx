@@ -45,7 +45,7 @@ const DELIVERY_FLOW = {
   PREPARING: ['TO_SHIP'],
   TO_SHIP: ['OUT_FOR_DELIVERY'],
   OUT_FOR_DELIVERY: ['DELIVERED'],
-  DELIVERED: [],
+  DELIVERED: ['COMPLETED'],
 };
 
 const PICKUP_FLOW = {
@@ -54,7 +54,7 @@ const PICKUP_FLOW = {
   PREPARING: ['READY_FOR_PICKUP'],
   READY: ['PICKED_UP'],
   READY_FOR_PICKUP: ['PICKED_UP'],
-  PICKED_UP: [],
+  PICKED_UP: ['COMPLETED'],
 };
 
 function getNextStatuses(order) {
@@ -401,7 +401,14 @@ export default function SellerOrders() {
                   <p className="detail-items-title">Items</p>
                   {(selectedOrder.items || []).map(item => (
                     <div key={item.id} className="detail-item">
-                      <span>{item.product?.name || item.productId}</span>
+                      <span>
+                        {item.product?.name || item.productName || item.productId}
+                        {item.selectedVariations && Object.keys(item.selectedVariations).length > 0 && (
+                          <small className="detail-item-variations">
+                            {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
+                          </small>
+                        )}
+                      </span>
                       <span>×{item.quantity}</span>
                       <span>₱{(Number(item.price) * item.quantity).toFixed(2)}</span>
                     </div>

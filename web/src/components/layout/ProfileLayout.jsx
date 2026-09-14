@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import {
   User, MapPin, Star, Package, Heart, Storefront as Store,
   ChatText as MessageSquare, Bell, Gear as Settings, Question as HelpCircle,
+  ArrowCounterClockwise as ReturnsIcon,
 } from '@phosphor-icons/react';
 import Layout from './Layout';
 import '../../pages/Profile.css';
@@ -12,6 +13,7 @@ const navItems = [
   { to: '/profile/addresses', label: 'My Addresses', icon: MapPin },
   { to: '/profile/reviews', label: 'My Reviews', icon: Star },
   { to: '/profile/orders', label: 'My Orders', icon: Package },
+  { to: '/profile/returns', label: 'Returns & refunds', icon: ReturnsIcon },
   { to: '/profile/wishlist', label: 'My Wishlist', icon: Heart },
   { to: '/profile/followed-stores', label: 'Followed Stores', icon: Store },
   { to: '/profile/messages', label: 'Messages', icon: MessageSquare },

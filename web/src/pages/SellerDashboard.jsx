@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Plus, Clock, Truck, CheckCircle, Package,
-  ShoppingBag, TrendUp as TrendingUp, Star, ChartBar as BarChart2, User, Users, WarningCircle,
+  ShoppingBag, TrendUp as TrendingUp, Star, ChartBar as BarChart2, User, Users, WarningCircle, X,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -18,6 +18,24 @@ const STATUS_META = {
   COMPLETED: { label: 'Completed', tint: 'sc-tint-green', Icon: CheckCircle },
   CANCELLED: { label: 'Cancelled', tint: 'sc-tint-red', Icon: Clock },
 };
+
+const TOUR_STEPS = [
+  {
+    target: '[data-tour="add-product"]',
+    title: 'List your first product',
+    text: 'Add products here, then manage their stock, photos, and visibility from Products.',
+  },
+  {
+    target: '[data-tour="store-overview"]',
+    title: 'Your store at a glance',
+    text: 'Track sales, completed orders, active products, and average order value here.',
+  },
+  {
+    target: '[data-tour="recent-orders"]',
+    title: 'Keep orders moving',
+    text: 'Open recent orders to confirm them and update each fulfillment status.',
+  },
+];
 
 export default function SellerDashboard() {
   const { user } = useAuthStore();
@@ -40,6 +58,15 @@ export default function SellerDashboard() {
   const [followerStatsError, setFollowerStatsError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [analyticsAvailable, setAnalyticsAvailable] = useState(true);
+  const [showTour, setShowTour] = useState(false);
+
+  useEffect(() => {
+    const key = `emoorm-seller-tour:${user?.id || user?.email || 'seller'}`;
+    if (localStorage.getItem(key)) return undefined;
+    const timer = window.setTimeout(() => setShowTour(true), 500);
+    return () => window.clearTimeout(timer);
+  }, [user?.id, user?.email]);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +87,7 @@ export default function SellerDashboard() {
       if (analyticsRes.status === 'rejected' && ordersRes.status === 'rejected') {
         setLoadError(true);
       }
+      setAnalyticsAvailable(Boolean(analytics?.kpis));
 
       setRecentOrders(orders.slice(0, 5));
       setLowStock(analytics?.lowStock?.slice(0, 5) || []);
@@ -73,18 +101,15 @@ export default function SellerDashboard() {
           avgOrderValue: analytics.kpis.avgOrderValue?.value ?? 0,
         });
       } else {
-        // Fallback if the analytics endpoint is unavailable
-        const completed = orders.filter((o) => o.status === 'COMPLETED');
-        const lifetimeSales = completed.reduce((sum, o) => sum + Number(o.total || 0), 0);
         setStats({
-          lifetimeSales,
-          completedOrders: completed.length,
+          lifetimeSales: 0,
+          completedOrders: 0,
           activeProducts: products.filter((p) => p.status === 'APPROVED').length,
-          avgOrderValue: completed.length ? lifetimeSales / completed.length : 0,
+          avgOrderValue: 0,
         });
       }
 
-      // Prefer best sellers from analytics, fall back to rating sort
+      // Product performance is only meaningful when supplied by seller analytics.
       if (analytics?.topProducts?.length) {
         const byId = Object.fromEntries(products.map((p) => [p.id, p]));
         setTopProducts(
@@ -93,11 +118,7 @@ export default function SellerDashboard() {
             .map((tp) => byId[tp.id] || tp)
         );
       } else {
-        setTopProducts(
-          [...products]
-            .sort((a, b) => (Number(b.averageRating) || 0) - (Number(a.averageRating) || 0))
-            .slice(0, 3)
-        );
+        setTopProducts([]);
       }
 
       setIsLoading(false);
@@ -129,17 +150,21 @@ export default function SellerDashboard() {
   }, [store?.id]);
 
   const shopName = store?.name || (user?.fullName ? `${user.fullName}'s Shop` : 'Your Shop');
+  const recentSales = salesByDay.reduce((sum, day) => sum + Number(day.total || 0), 0);
+  const todayLabel = new Intl.DateTimeFormat('en-PH', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  }).format(new Date());
 
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
         <div className="seller-header">
           <div>
-            <h1>Seller Dashboard</h1>
-            <p className="seller-welcome">Overview of {shopName}</p>
+            <h1>Hi, {user?.fullName?.split(' ')[0] || 'Seller'}</h1>
+            <p className="seller-welcome">Here is an overview of {shopName} as of {todayLabel}.</p>
           </div>
           <div className="seller-header-actions">
-            <Link to="/seller/products/new" className="btn-seller-primary">
+            <Link to="/seller/products/new" className="btn-seller-primary" data-tour="add-product">
               <Plus size={16} /> Add Product
             </Link>
           </div>
@@ -165,23 +190,60 @@ export default function SellerDashboard() {
 
         <div className="sd">
 
-          {/* Stats grid */}
-          <div className="sd-stats">
+          {/* Store overview */}
+          <div className="sd-kpi-layout" data-tour="store-overview">
             {isLoading ? (
               <>
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div className="sd-stat" key={i}>
-                    <Skeleton width="55%" height={11} />
-                    <Skeleton width="70%" height={22} radius={4} />
+                <div className="sd-stat sd-stat--sales" key="sales-loading">
+                  <Skeleton width="45%" height={12} />
+                  <Skeleton width="72%" height={38} radius={4} />
+                  <Skeleton width="100%" height={80} radius={4} />
+                </div>
+                <div className="sd-kpi-side">
+                  <div className="sd-kpi-metrics">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div className="sd-stat sd-stat--compact" key={i}>
+                      <Skeleton width="55%" height={11} />
+                      <Skeleton width="70%" height={22} radius={4} />
+                    </div>
+                  ))}
                   </div>
-                ))}
+                  <div className="sd-stat sd-kpi-quick" aria-label="Quick Actions">
+                    <Skeleton width="55%" height={11} />
+                    <Skeleton width="100%" height={52} radius={4} />
+                  </div>
+                </div>
               </>
             ) : (
               <>
-                <StatCard label="Total Sales" value={`₱${formatNumber(stats.lifetimeSales)}`} big />
-                <StatCard label="Completed Orders" value={formatNumber(stats.completedOrders)} />
-                <StatCard label="Active Products" value={formatNumber(stats.activeProducts)} />
-                <StatCard label="Avg. Order Value" value={`₱${formatNumber(stats.avgOrderValue)}`} />
+                <StatCard
+                  label="Total Sales"
+                  value={analyticsAvailable ? `₱${formatNumber(stats.lifetimeSales)}` : '—'}
+                  big
+                  trend={salesByDay}
+                  featured
+                  meta={[
+                    { label: 'Last 14 days', value: analyticsAvailable ? `₱${formatNumber(recentSales)}` : 'Unavailable' },
+                    { label: 'Low stock', value: analyticsAvailable ? `${formatNumber(lowStock.length)} item${lowStock.length === 1 ? '' : 's'}` : 'Unavailable' },
+                    { label: 'Top product', value: analyticsAvailable ? topProducts[0]?.name || 'No sales yet' : 'Unavailable' },
+                  ]}
+                />
+                <div className="sd-kpi-side">
+                  <div className="sd-kpi-metrics">
+                    <StatCard label="Completed Orders" value={analyticsAvailable ? formatNumber(stats.completedOrders) : '—'} compact />
+                    <StatCard label="Active Products" value={formatNumber(stats.activeProducts)} compact />
+                    <StatCard label="Avg. Order Value" value={analyticsAvailable ? `₱${formatNumber(stats.avgOrderValue)}` : '—'} compact />
+                  </div>
+                  <section className="sd-stat sd-kpi-quick" aria-label="Quick Actions">
+                    <span className="sd-stat-label">Quick Actions</span>
+                    <div className="sd-kpi-quick-actions">
+                      <Link to="/seller/products"><Package size={16} /><span>Products</span></Link>
+                      <Link to="/seller/orders"><ShoppingBag size={16} /><span>Orders</span></Link>
+                      <Link to="/seller/analytics"><BarChart2 size={16} /><span>Analytics</span></Link>
+                      <Link to="/seller/store"><User size={16} /><span>Store</span></Link>
+                    </div>
+                  </section>
+                </div>
               </>
             )}
           </div>
@@ -189,7 +251,7 @@ export default function SellerDashboard() {
           {/* Body grid */}
           <div className="sd-body">
             <div className="sd-main">
-            <section className="sd-card sd-orders">
+            <section className="sd-card sd-orders" data-tour="recent-orders">
               <header className="sd-card-header">
                 <h2>Recent Orders</h2>
                 <Link to="/seller/orders" className="sd-view-all">View All</Link>
@@ -372,46 +434,122 @@ export default function SellerDashboard() {
                 )}
               </section>
 
-              <section className="sd-card sd-quick">
-                <header className="sd-card-header sd-card-header--slim">
-                  <h2>Quick Actions</h2>
-                </header>
-                <ul className="sd-quick-list">
-                  <li>
-                    <Link to="/seller/products">
-                      <Package size={15} /> Manage Products
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/seller/orders">
-                      <ShoppingBag size={15} /> View Orders
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/seller/analytics">
-                      <BarChart2 size={15} /> Analytics
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/seller/store">
-                      <User size={15} /> Shop Profile
-                    </Link>
-                  </li>
-                </ul>
-              </section>
             </aside>
           </div>
+        </div>
+      </div>
+      {showTour && (
+        <DashboardTour
+          steps={TOUR_STEPS}
+          storageKey={`emoorm-seller-tour:${user?.id || user?.email || 'seller'}`}
+          onClose={() => setShowTour(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function DashboardTour({ steps, storageKey, onClose }) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [position, setPosition] = useState(null);
+  const step = steps[stepIndex];
+
+  useEffect(() => {
+    const updatePosition = () => {
+      const target = document.querySelector(step.target);
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      const tooltipWidth = Math.min(320, window.innerWidth - 24);
+      const estimatedHeight = 175;
+      const below = rect.bottom + 14;
+      const top = below + estimatedHeight <= window.innerHeight
+        ? below
+        : Math.max(12, rect.top - estimatedHeight - 14);
+      const left = Math.min(
+        Math.max(12, rect.left),
+        window.innerWidth - tooltipWidth - 12,
+      );
+      setPosition({ rect, top, left, tooltipWidth });
+    };
+
+    const target = document.querySelector(step.target);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const timer = window.setTimeout(updatePosition, 280);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [step]);
+
+  const finish = () => {
+    localStorage.setItem(storageKey, 'completed');
+    onClose();
+  };
+
+  const next = () => {
+    if (stepIndex === steps.length - 1) finish();
+    else setStepIndex((current) => current + 1);
+  };
+
+  if (!position) return null;
+  const { rect, top, left, tooltipWidth } = position;
+
+  return (
+    <div className="sd-tour" role="dialog" aria-modal="true" aria-labelledby="sd-tour-title">
+      <div
+        className="sd-tour-spotlight"
+        style={{
+          top: rect.top - 6,
+          left: rect.left - 6,
+          width: rect.width + 12,
+          height: rect.height + 12,
+        }}
+      />
+      <div className="sd-tour-tooltip" style={{ top, left, width: tooltipWidth }}>
+        <div className="sd-tour-topline">
+          <span>{stepIndex + 1} of {steps.length}</span>
+          <button type="button" onClick={finish} aria-label="Skip dashboard guide"><X size={16} /></button>
+        </div>
+        <h2 id="sd-tour-title">{step.title}</h2>
+        <p>{step.text}</p>
+        <div className="sd-tour-actions">
+          <button type="button" className="sd-tour-skip" onClick={finish}>Skip</button>
+          <button type="button" className="sd-tour-next" onClick={next} autoFocus>
+            {stepIndex === steps.length - 1 ? 'Finish' : 'Next'}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value, big }) {
+function StatCard({ label, value, big, compact, featured, meta = [], trend = [] }) {
+  const trendValues = trend.slice(-10).map((day) => Number(day.total || 0));
+  const maxTrend = Math.max(1, ...trendValues);
+
   return (
-    <div className="sd-stat">
-      <span className="sd-stat-label">{label}</span>
+    <div className={`sd-stat ${featured ? 'sd-stat--sales' : ''} ${compact ? 'sd-stat--compact' : ''}`}>
       <span className={`sd-stat-value ${big ? 'sd-stat-value--big' : ''}`}>{value}</span>
+      <span className="sd-stat-label">{label}</span>
+      {trendValues.length > 0 && (
+        <span className="sd-stat-trend" aria-label={`${label} trend for the last ${trendValues.length} days`}>
+          {trendValues.map((amount, index) => (
+            <span
+              key={`${amount}-${index}`}
+              className="sd-stat-trend-bar"
+              style={{ height: `${Math.max(18, (amount / maxTrend) * 100)}%` }}
+            />
+          ))}
+        </span>
+      )}
+      {meta.length > 0 && (
+        <span className="sd-stat-meta">
+          {meta.map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}
+        </span>
+      )}
     </div>
   );
 }

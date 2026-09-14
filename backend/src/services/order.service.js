@@ -3,6 +3,8 @@ const orderRepository = require('../repositories/order.repository');
 const productRepository = require('../repositories/product.repository');
 const storeRepository = require('../repositories/store.repository');
 const userRepository = require('../repositories/user.repository');
+const voucherRepository = require('../repositories/voucher.repository');
+const voucherService = require('./voucher.service');
 const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -15,6 +17,27 @@ const generateOrderNumber = () => {
   const ts = Date.now().toString(36).toUpperCase();
   const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
   return `EM-${ts}-${rand}`;
+};
+
+const normalizeSelectedVariations = (product, selectedVariations) => {
+  const definitions = Array.isArray(product.variations) ? product.variations : [];
+  if (!definitions.length) return null;
+
+  if (!selectedVariations || typeof selectedVariations !== 'object' || Array.isArray(selectedVariations)) {
+    throw new ApiError(`Please select all options for ${product.name}`, 400);
+  }
+
+  const normalized = {};
+  for (const definition of definitions) {
+    const name = String(definition.name || '').trim();
+    const selected = String(selectedVariations[name] || '').trim();
+    const options = Array.isArray(definition.options) ? definition.options.map(String) : [];
+    if (!selected || !options.includes(selected)) {
+      throw new ApiError(`Please select ${name} for ${product.name}`, 400);
+    }
+    normalized[name] = selected;
+  }
+  return normalized;
 };
 
 /**
@@ -36,12 +59,20 @@ const createOrder = async (userId, data) => {
     paymentProofUrl,
     buyerMunicipalityId,
     buyerBarangay,
+    buyerProvince,
+    checkoutKey,
+    voucherCode,
   } = data;
 
   // Validate buyer
   const buyer = await userRepository.findById(userId);
   if (!buyer) {
     throw new ApiError('Buyer not found', 404);
+  }
+
+  if (checkoutKey) {
+    const existing = await orderRepository.findByCheckoutKey(userId, String(checkoutKey));
+    if (existing) return existing;
   }
 
   if (!['DELIVERY', 'PICKUP'].includes(fulfillmentMethod)) {
@@ -54,8 +85,11 @@ const createOrder = async (userId, data) => {
 
   // Validate store
   const store = await storeRepository.findById(storeId);
-  if (!store || store.deletedAt || store.isSuspended) {
+  if (!store || store.deletedAt || store.isSuspended || !store.isActive || store.deletionRequestedAt) {
     throw new ApiError('Store not found or suspended', 404);
+  }
+  if (store.ownerId === userId) {
+    throw new ApiError('You cannot purchase from your own store', 400);
   }
 
   // Fulfillment method must be supported by the store
@@ -70,6 +104,9 @@ const createOrder = async (userId, data) => {
   // Payment method must be allowed
   if (paymentMethod === 'COD' && store.acceptsCod === false) {
     throw new ApiError('This store does not accept Cash on Delivery', 400);
+  }
+  if (paymentMethod !== 'COD' && (!paymentReference?.trim() || !paymentProofUrl)) {
+    throw new ApiError('Payment reference and proof are required for prepaid orders', 400);
   }
   if ((paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && !store.paymentQrImage) {
     throw new ApiError('This store has not set up QR payment', 400);
@@ -97,6 +134,11 @@ const createOrder = async (userId, data) => {
   const orderItems = [];
 
   for (const item of items) {
+    const quantity = Number(item.quantity);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 9999) {
+      throw new ApiError('Each item quantity must be a whole number between 1 and 9999', 400);
+    }
+
     const product = await productRepository.findById(item.productId);
 
     if (!product || product.deletedAt) {
@@ -111,23 +153,39 @@ const createOrder = async (userId, data) => {
       throw new ApiError(`Product ${product.name} does not belong to this store`, 400);
     }
 
-    if (product.stock < item.quantity) {
+    if (product.stock < quantity) {
       throw new ApiError(`Insufficient stock for ${product.name}`, 400);
     }
 
-    const itemTotal = product.price * item.quantity;
+    const selectedVariations = normalizeSelectedVariations(product, item.selectedVariations);
+
+    const itemTotal = Number(product.price) * quantity;
     totalAmount += itemTotal;
 
     orderItems.push({
       productId: product.id,
       productName: product.name,
-      quantity: item.quantity,
+      quantity,
       price: product.price,
       subtotal: itemTotal,
+      selectedVariations,
+      returnPolicySnapshot: product.returnPolicy || null,
     });
   }
 
   const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0 : (totalAmount >= 500 ? 0 : 50);
+let voucherRecord = null;
+  let discountAmount = 0;
+  if (voucherCode) {
+    const normalized = String(voucherCode).trim().toUpperCase();
+    if (normalized) {
+      voucherRecord = await voucherRepository.findByCode(normalized);
+      await voucherService.assertUsable(voucherRecord, { userId, subtotal: totalAmount });
+      discountAmount = voucherService.computeDiscount(voucherRecord, totalAmount);
+    }
+  }
+
+  const grandTotal = Math.max(0, totalAmount + DELIVERY_FEE - discountAmount);
 
   // Create order with items (stock is decremented atomically in the transaction)
   let order;
@@ -135,11 +193,15 @@ const createOrder = async (userId, data) => {
     order = await orderRepository.createOrderWithItems(
       {
         orderNumber: generateOrderNumber(),
+        checkoutKey: checkoutKey ? String(checkoutKey) : null,
         buyerId: userId,
         storeId,
         subtotal: totalAmount,
         deliveryFee: DELIVERY_FEE,
-        total: totalAmount + DELIVERY_FEE,
+        discountAmount,
+        voucherCode: voucherRecord?.code || null,
+        voucherId: voucherRecord?.id || null,
+        total: grandTotal,
         deliveryAddress: fulfillmentMethod === 'PICKUP'
           ? (store.pickupAddress || deliveryAddress || 'Store pickup')
           : deliveryAddress,
@@ -149,11 +211,15 @@ const createOrder = async (userId, data) => {
         fulfillmentMethod,
         pickupLocation: fulfillmentMethod === 'PICKUP' ? (store.pickupAddress || null) : null,
         paymentMethod,
+        paymentStatus: paymentMethod === 'COD' ? 'PENDING' : 'PENDING_VERIFICATION',
         paymentReference: paymentReference || null,
         paymentProofUrl: paymentProofUrl || null,
         buyerMunicipalityId: buyerMunicipalityId || buyer.municipalityId || null,
         buyerBarangay: buyerBarangay || buyer.barangay || null,
+        buyerProvince: buyerProvince || buyer.province || 'Oriental Mindoro',
       },
+      orderItems,
+      voucherRecord ? { voucherId: voucherRecord.id, userId, discountAmount } : null,
       orderItems
     );
   } catch (err) {
@@ -283,10 +349,16 @@ const updateOrderStatus = async (orderId, userId, newStatus) => {
     throw new ApiError(`Cannot transition from ${order.status} to ${newStatus}`, 400);
   }
 
+  if (order.paymentMethod !== 'COD'
+    && ['PREPARING', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP', 'COMPLETED'].includes(newStatus)
+    && order.paymentStatus !== 'PAID') {
+    throw new ApiError('Payment must be verified before fulfillment can continue', 409);
+  }
+
   // Cancellation restores product stock
   const updated = newStatus === 'CANCELLED'
-    ? await orderRepository.cancelOrder(orderId)
-    : await orderRepository.updateStatus(orderId, newStatus);
+    ? await orderRepository.cancelOrder(orderId, userId)
+    : await orderRepository.updateStatus(orderId, newStatus, order.status, userId);
 
   // Notify the buyer (non-blocking on failure)
   try {
@@ -321,7 +393,15 @@ const cancelOrder = async (orderId, userId) => {
     throw new ApiError('Order cannot be cancelled at this stage', 400);
   }
 
-  const cancelled = await orderRepository.cancelOrder(orderId);
+  let cancelled;
+  try {
+    cancelled = await orderRepository.cancelOrder(orderId, userId);
+  } catch (err) {
+    if (err.code === 'ORDER_NOT_CANCELLABLE') {
+      throw new ApiError('Order cannot be cancelled at this stage', 409);
+    }
+    throw err;
+  }
 
   // Notify the seller that the buyer cancelled (non-blocking on failure)
   try {
@@ -341,6 +421,39 @@ const cancelOrder = async (orderId, userId) => {
   return cancelled;
 };
 
+const verifyPayment = async (orderId, actor, paymentStatus) => {
+  const order = await orderRepository.findById(orderId);
+  if (!order) throw new ApiError('Order not found', 404);
+  const isSeller = actor.role === 'SELLER' && actor.storeId === order.storeId;
+  const isAdmin = actor.role === 'SUPER_ADMIN' || actor.role === 'MUNICIPAL_ADMIN';
+  if (!isSeller && !isAdmin) throw new ApiError('Not authorized to verify this payment', 403);
+  if (!['PAID', 'FAILED'].includes(paymentStatus)) {
+    throw new ApiError('Payment status must be PAID or FAILED', 400);
+  }
+  if (order.paymentMethod === 'COD') {
+    throw new ApiError('COD orders do not require payment verification', 400);
+  }
+  if (order.paymentStatus !== 'PENDING_VERIFICATION') {
+    throw new ApiError('This payment has already been processed', 409);
+  }
+  return orderRepository.updatePaymentStatus(orderId, paymentStatus, actor.id);
+};
+
+const expirePendingOrders = async (ageMinutes = 30) => {
+  const before = new Date(Date.now() - ageMinutes * 60 * 1000);
+  const orders = await orderRepository.findExpiredPending(before);
+  let expired = 0;
+  for (const order of orders) {
+    try {
+      await orderRepository.cancelOrder(order.id, 'SYSTEM_EXPIRY');
+      expired += 1;
+    } catch (err) {
+      if (err.code !== 'ORDER_NOT_CANCELLABLE') throw err;
+    }
+  }
+  return expired;
+};
+
 module.exports = {
   createOrder,
   getOrderById,
@@ -349,4 +462,6 @@ module.exports = {
   getAllOrders,
   updateOrderStatus,
   cancelOrder,
+  verifyPayment,
+  expirePendingOrders,
 };

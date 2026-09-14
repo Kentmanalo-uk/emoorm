@@ -10,7 +10,11 @@ const useCartStore = create(
       // Actions
       addItem: (product, quantity = 1) => {
         const items = get().items;
-        const existingItem = items.find(item => item.id === product.id);
+        const variationKey = product.selectedVariations
+          ? JSON.stringify(product.selectedVariations)
+          : '';
+        const cartKey = product.cartKey || `${product.id}:${variationKey}`;
+        const existingItem = items.find(item => item.id === cartKey);
 
         // Validate stock
         if (product.stock !== undefined && product.stock === 0) {
@@ -27,7 +31,7 @@ const useCartStore = create(
           // Update quantity
           set({
             items: items.map(item =>
-              item.id === product.id
+              item.id === cartKey
                 ? { ...item, quantity: newQuantity, stock: product.stock, price: Number(product.price) }
                 : item
             ),
@@ -40,14 +44,14 @@ const useCartStore = create(
 
           // Add new item — coerce price to Number (Prisma returns Decimal as string)
           set({
-            items: [...items, { ...product, price: Number(product.price), quantity }],
+            items: [...items, { ...product, id: cartKey, productId: product.productId || product.id, price: Number(product.price), quantity }],
           });
         }
       },
 
       removeItem: (productId) => {
         set({
-          items: get().items.filter(item => item.id !== productId),
+          items: get().items.filter(item => item.id !== productId && item.productId !== productId),
         });
       },
 
@@ -108,12 +112,12 @@ const useCartStore = create(
 
       // Check if product is in cart
       isInCart: (productId) => {
-        return get().items.some(item => item.id === productId);
+        return get().items.some(item => item.id === productId || item.productId === productId);
       },
 
       // Get specific item from cart
       getItem: (productId) => {
-        return get().items.find(item => item.id === productId);
+        return get().items.find(item => item.id === productId || item.productId === productId);
       },
     }),
     {

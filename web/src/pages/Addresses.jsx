@@ -5,9 +5,22 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import Skeleton from '../components/ui/Skeleton';
+import PhAddressPicker from '../components/common/PhAddressPicker';
 import './Addresses.css';
 
-const emptyForm = { label: '', fullName: '', contactNumber: '', barangay: '', street: '', municipalityId: '' };
+const emptyForm = {
+  label: '',
+  fullName: '',
+  contactNumber: '',
+  province: 'Oriental Mindoro',
+  provinceCode: '',
+  municipalityId: '',
+  municipalityName: '',
+  municipalityCode: '',
+  barangay: '',
+  barangayCode: '',
+  street: '',
+};
 
 /**
  * Manages the buyer's saved delivery addresses (add / edit / delete / set default)
@@ -60,9 +73,10 @@ const Addresses = () => {
     const errs = {};
     if (!formData.fullName.trim()) errs.fullName = 'Recipient name is required.';
     if (!formData.contactNumber.trim()) errs.contactNumber = 'Contact number is required.';
+    if (!formData.province) errs.province = 'Province is required.';
+    if (!formData.municipalityId) errs.municipalityId = 'City / Municipality is required.';
     if (!formData.barangay.trim()) errs.barangay = 'Barangay is required.';
     if (!formData.street.trim()) errs.street = 'Street / house address is required.';
-    if (!formData.municipalityId) errs.municipalityId = 'Municipality is required.';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -84,9 +98,14 @@ const Addresses = () => {
       label: addr.label || '',
       fullName: addr.fullName || '',
       contactNumber: addr.contactNumber || '',
-      barangay: addr.barangay || '',
-      street: addr.street || '',
+      province: addr.province || 'Oriental Mindoro',
+      provinceCode: '',
       municipalityId: addr.municipalityId || '',
+      municipalityName: addr.municipality?.name || '',
+      municipalityCode: '',
+      barangay: addr.barangay || '',
+      barangayCode: '',
+      street: addr.street || '',
     });
     setFormErrors({});
     setFormOpen(true);
@@ -200,7 +219,7 @@ const Addresses = () => {
                   <div>
                     <p>{addr.street || '—'}</p>
                     <p>{addr.barangay || '—'}</p>
-                    <p>{addr.municipality?.name || '—'}, Oriental Mindoro</p>
+                    <p>{addr.municipality?.name || '—'}, {addr.province || 'Oriental Mindoro'}</p>
                   </div>
                 </div>
               </div>
@@ -270,47 +289,12 @@ const Addresses = () => {
             {formErrors.contactNumber && <span className="form-error">{formErrors.contactNumber}</span>}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Street / House No.</label>
-            <input
-              type="text"
-              name="street"
-              value={formData.street}
-              onChange={handleChange}
-              className={`form-input ${formErrors.street ? 'error' : ''}`}
-              placeholder="123 Rizal St."
-            />
-            {formErrors.street && <span className="form-error">{formErrors.street}</span>}
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Barangay</label>
-            <input
-              type="text"
-              name="barangay"
-              value={formData.barangay}
-              onChange={handleChange}
-              className={`form-input ${formErrors.barangay ? 'error' : ''}`}
-              placeholder="Barangay Poblacion"
-            />
-            {formErrors.barangay && <span className="form-error">{formErrors.barangay}</span>}
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Municipality</label>
-            <select
-              name="municipalityId"
-              value={formData.municipalityId}
-              onChange={handleChange}
-              className={`form-input ${formErrors.municipalityId ? 'error' : ''}`}
-            >
-              <option value="">Select municipality</option>
-              {municipalities.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-            {formErrors.municipalityId && <span className="form-error">{formErrors.municipalityId}</span>}
-          </div>
+          <PhAddressPicker
+            value={formData}
+            onChange={(next) => setFormData((prev) => ({ ...prev, ...next }))}
+            dbMunicipalities={municipalities}
+            errors={formErrors}
+          />
 
           <div className="address-edit-actions">
             <button type="button" onClick={closeForm} className="btn-modal-cancel">Cancel</button>

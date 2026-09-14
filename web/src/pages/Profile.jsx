@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
-  ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings,
+  ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
@@ -89,6 +89,22 @@ const Profile = () => {
 
   return (
     <>
+      <div className="profile-mobile-page-header">
+        <h1>Profile</h1>
+        <div className="profile-mobile-header-actions">
+          <button type="button" className="profile-mobile-header-action" aria-label="QR login">
+            <QrCode size={19} />
+          </button>
+          <Link
+            to="/profile/settings"
+            className="profile-mobile-header-action"
+            aria-label="Profile settings"
+          >
+            <Settings size={19} />
+          </Link>
+        </div>
+      </div>
+
       {/* Profile Header */}
       <div className="profile-header-card">
         <div className="profile-header-left">
@@ -201,6 +217,43 @@ const Profile = () => {
               <Settings size={24} />
             </div>
             <span className="service-label">Settings</span>
+          </Link>
+        </div>
+      </div>
+
+      <div className="profile-mobile-service-section">
+        <h3 className="profile-section-title">Activity</h3>
+        <div className="profile-mobile-service-list">
+          <Link to="/profile/notifications" className="profile-mobile-service-item">
+            <Bell size={20} weight="fill" />
+            <span>Notifications</span>
+            <ChevronRight size={18} />
+          </Link>
+          <Link to="/profile/messages" className="profile-mobile-service-item">
+            <MessageSquare size={20} weight="fill" />
+            <span>Messages</span>
+            <ChevronRight size={18} />
+          </Link>
+          <Link to="/profile/reviews" className="profile-mobile-service-item">
+            <Star size={20} weight="fill" />
+            <span>Reviews</span>
+            <ChevronRight size={18} />
+          </Link>
+        </div>
+      </div>
+
+      <div className="profile-mobile-service-section">
+        <h3 className="profile-section-title">Shopping</h3>
+        <div className="profile-mobile-service-list">
+          <Link to="/profile/wishlist" className="profile-mobile-service-item">
+            <Heart size={20} weight="fill" />
+            <span>Wishlist</span>
+            <ChevronRight size={18} />
+          </Link>
+          <Link to="/profile/followed-stores" className="profile-mobile-service-item">
+            <Store size={20} weight="fill" />
+            <span>Followed Stores</span>
+            <ChevronRight size={18} />
           </Link>
         </div>
       </div>

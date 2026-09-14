@@ -79,6 +79,7 @@ const getProducts = asyncHandler(async (req, res) => {
     search,
     sortBy,
     sortOrder,
+    userId: req.user?.id,
     isAdmin: req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN'),
   };
 
@@ -136,7 +137,7 @@ const getMyProducts = asyncHandler(async (req, res) => {
  * @access Public
  */
 const getProductById = asyncHandler(async (req, res) => {
-  const product = await productService.getProductById(req.params.id);
+  const product = await productService.getProductById(req.params.id, req.user?.id, req.user?.role);
 
   successResponse(res, product, 'Product retrieved successfully');
 });
@@ -147,7 +148,7 @@ const getProductById = asyncHandler(async (req, res) => {
  * @access Public
  */
 const getProductBySlug = asyncHandler(async (req, res) => {
-  const product = await productService.getProductBySlug(req.params.slug);
+  const product = await productService.getProductBySlug(req.params.slug, req.user?.id, req.user?.role);
 
   successResponse(res, product, 'Product retrieved successfully');
 });

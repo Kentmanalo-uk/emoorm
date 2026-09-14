@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
+import { useGoogleLogin } from '@react-oauth/google';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
+import PhAddressPicker from '../components/common/PhAddressPicker';
 import './Register.css';
 
 const Register = () => {
@@ -14,9 +16,14 @@ const Register = () => {
     contactNumber: '',
     password: '',
     confirmPassword: '',
+    province: 'Oriental Mindoro',
+    provinceCode: '',
     municipalityId: '',
+    municipalityName: '',
+    municipalityCode: '',
     barangay: '',
-    address: '',
+    barangayCode: '',
+    street: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -25,6 +32,11 @@ const Register = () => {
   const [apiError, setApiError] = useState('');
   const [municipalities, setMunicipalities] = useState([]);
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(true);
+
+  // Set when the user chose "Continue with Google" and Google confirmed a
+  // brand-new email — the rest of this form is reused to finish creating the
+  // account (instead of hitting /auth/register, we hit /auth/google/complete).
+  const [googleProfile, setGoogleProfile] = useState(null); // { googleToken, email, fullName, profilePhoto }
 
   // Fetch municipalities on component mount
   useEffect(() => {
@@ -119,24 +131,34 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // Register the user
-      const registerResponse = await axios.post('/auth/register', {
-        email: formData.email.toLowerCase().trim(),
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        fullName: formData.fullName.trim(),
-        contactNumber: formData.contactNumber.trim() || undefined,
-        municipalityId: formData.municipalityId,
-        barangay: formData.barangay.trim() || undefined,
-        address: formData.address.trim() || undefined,
-      });
-
-      console.log('Registration successful:', registerResponse);
+      const response = googleProfile
+        ? await axios.post('/auth/google/complete', {
+            googleToken: googleProfile.googleToken,
+            fullName: formData.fullName.trim(),
+            contactNumber: formData.contactNumber.trim() || undefined,
+            province: formData.province || undefined,
+            municipalityId: formData.municipalityId,
+            barangay: formData.barangay.trim() || undefined,
+            address: formData.street.trim() || undefined,
+            password: formData.password,
+            confirmPassword: formData.confirmPassword,
+          })
+        : await axios.post('/auth/register', {
+            email: formData.email.toLowerCase().trim(),
+            password: formData.password,
+            confirmPassword: formData.confirmPassword,
+            fullName: formData.fullName.trim(),
+            contactNumber: formData.contactNumber.trim() || undefined,
+            province: formData.province || undefined,
+            municipalityId: formData.municipalityId,
+            barangay: formData.barangay.trim() || undefined,
+            address: formData.street.trim() || undefined,
+          });
 
       // Response structure: { success, message, data: { user, accessToken, refreshToken } }
-      const token = registerResponse.data.accessToken;
-      const refreshToken = registerResponse.data.refreshToken;
-      const userData = registerResponse.data.user;
+      const token = response.data.accessToken;
+      const refreshToken = response.data.refreshToken;
+      const userData = response.data.user;
 
       if (token && userData) {
         storeLogin(userData, token, refreshToken);
@@ -168,9 +190,59 @@ const Register = () => {
     }
   };
 
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const startGoogleSignup = useGoogleLogin({
+    flow: 'auth-code',
+    onError: () => setApiError('Google sign-up failed. Please try again.'),
+    onNonOAuthError: (err) => {
+      if (err?.type !== 'popup_closed') setApiError('Google sign-up was interrupted.');
+    },
+    onSuccess: async ({ code }) => {
+      if (!code) return;
+      setGoogleLoading(true);
+      setApiError('');
+      try {
+        const res = await axios.post('/auth/google', { code });
+        const data = res.data;
+        if (data?.requiresProfile) {
+          setGoogleProfile(data);
+          setFormData((prev) => ({
+            ...prev,
+            fullName: data.fullName || prev.fullName,
+            email: data.email || prev.email,
+          }));
+          setErrors({});
+          return;
+        }
+        if (data?.requiresMfa || data?.requiresMfaSetup) {
+          setApiError('Admin accounts must sign in with the standard admin flow to complete MFA.');
+          return;
+        }
+        if (!data?.user || !data?.accessToken) {
+          setApiError('Unexpected response from server.');
+          return;
+        }
+        storeLogin(data.user, data.accessToken, data.refreshToken);
+        navigate('/', { replace: true });
+      } catch (err) {
+        setApiError(err?.response?.data?.message || 'Google sign-up failed.');
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+  });
+
   const handleGoogleSignup = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google signup clicked');
+    setApiError('');
+    startGoogleSignup();
+  };
+
+  const handleCancelGoogleProfile = () => {
+    setGoogleProfile(null);
+    setFormData((prev) => ({ ...prev, email: '', password: '', confirmPassword: '' }));
+    setErrors({});
+    setApiError('');
   };
 
   return (
@@ -209,6 +281,15 @@ const Register = () => {
                 <h2 className="register-form-title">Sign Up</h2>
               </div>
 
+              {googleProfile && (
+                <div className="login-mfa-hint" style={{ marginBottom: 16 }}>
+                  Continuing with Google as <strong>{googleProfile.email}</strong>.{' '}
+                  <button type="button" onClick={handleCancelGoogleProfile} className="register-form-google" style={{ display: 'inline', padding: 0, border: 'none', background: 'none', color: '#2563eb', textDecoration: 'underline', width: 'auto' }}>
+                    Use a different account
+                  </button>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="register-form">
                 {/* Full Name Field */}
                 <div className="register-form-group">
@@ -242,35 +323,29 @@ const Register = () => {
                     placeholder="you@example.com"
                     value={formData.email}
                     onChange={handleChange}
+                    disabled={!!googleProfile}
                   />
                   {errors.email && (
                     <span className="register-form-error">{errors.email}</span>
                   )}
                 </div>
 
-                {/* Municipality Field */}
+                {/* Address Picker (Province → City/Municipality → Barangay → Street) */}
                 <div className="register-form-group">
-                  <label htmlFor="municipalityId" className="register-form-label">
-                    Municipality
-                  </label>
-                  <select
-                    id="municipalityId"
-                    name="municipalityId"
-                    className={`register-form-input ${errors.municipalityId ? 'register-form-input-error' : ''}`}
-                    value={formData.municipalityId}
-                    onChange={handleChange}
-                    disabled={loadingMunicipalities}
-                  >
-                    <option value="">Select your municipality</option>
-                    {municipalities.map((municipality) => (
-                      <option key={municipality.id} value={municipality.id}>
-                        {municipality.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.municipalityId && (
-                    <span className="register-form-error">{errors.municipalityId}</span>
-                  )}
+                  <label className="register-form-label">Address</label>
+                  <PhAddressPicker
+                    value={formData}
+                    onChange={(next) => {
+                      setFormData((prev) => ({ ...prev, ...next }));
+                      if (errors.municipalityId && next.municipalityId) {
+                        setErrors((prev) => ({ ...prev, municipalityId: '' }));
+                      }
+                    }}
+                    dbMunicipalities={municipalities}
+                    errors={errors}
+                    streetLabel="Street / House No. (optional)"
+                    streetPlaceholder="123 Rizal St."
+                  />
                 </div>
 
                 {/* Contact Number Field */}
@@ -359,29 +434,33 @@ const Register = () => {
                   className="register-form-submit"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Creating account...' : 'Create account'}
+                  {isLoading ? 'Creating account...' : googleProfile ? 'Create account & continue' : 'Create account'}
                 </button>
 
-                {/* Divider */}
-                <div className="register-form-divider">
-                  <span className="register-form-divider-text">OR CONTINUE WITH</span>
-                </div>
+                {!googleProfile && (
+                  <>
+                    {/* Divider */}
+                    <div className="register-form-divider">
+                      <span className="register-form-divider-text">OR CONTINUE WITH</span>
+                    </div>
 
-                {/* Google Sign Up */}
-                <button
-                  type="button"
-                  className="register-form-google"
-                  onClick={handleGoogleSignup}
-                  disabled={isLoading}
-                >
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
-                    <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853" />
-                    <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
-                    <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
-                  </svg>
-                  Sign up with Google
-                </button>
+                    {/* Google Sign Up */}
+                    <button
+                      type="button"
+                      className="register-form-google"
+                      onClick={handleGoogleSignup}
+                      disabled={isLoading || googleLoading}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
+                        <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853" />
+                        <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
+                        <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
+                      </svg>
+                      {googleLoading ? 'Signing up…' : 'Sign up with Google'}
+                    </button>
+                  </>
+                )}
 
                 {/* Sign In Link */}
                 <div className="register-form-footer">

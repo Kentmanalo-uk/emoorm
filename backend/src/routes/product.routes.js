@@ -3,6 +3,7 @@ const multer = require('multer');
 const router = express.Router();
 const productController = require('../controllers/product.controller');
 const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
+const { imageSearchLimiter } = require('../middleware/security');
 
 const imageSearchUpload = multer({
   storage: multer.memoryStorage(),
@@ -20,11 +21,13 @@ const imageSearchUpload = multer({
 // Static public routes — must come before /:id
 router.get(
   '/slug/:slug',
+  optionalAuth,
   productController.getProductBySlug
 );
 
 router.post(
   '/search-by-image',
+  imageSearchLimiter,
   imageSearchUpload.single('image'),
   productController.searchByImage
 );
@@ -63,6 +66,7 @@ router.get(
 // Dynamic :id routes last
 router.get(
   '/:id',
+  optionalAuth,
   productController.getProductById
 );
 

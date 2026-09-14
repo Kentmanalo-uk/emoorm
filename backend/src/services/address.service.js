@@ -7,7 +7,7 @@ const { ApiError } = require('../middleware/errorHandler');
  * Business logic for a buyer's saved delivery addresses
  */
 
-const ALLOWED_FIELDS = ['label', 'fullName', 'contactNumber', 'municipalityId', 'barangay', 'street'];
+const ALLOWED_FIELDS = ['label', 'fullName', 'contactNumber', 'province', 'municipalityId', 'barangay', 'street'];
 
 const pickAllowed = (data) => {
   const result = {};

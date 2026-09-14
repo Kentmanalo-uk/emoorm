@@ -163,3 +163,32 @@
     max-width: 240px;
   }
 }
+
+@media (max-width: 480px) {
+  .sbi-page,
+  .sbi-body,
+  .sbi-preview,
+  .sbi-results,
+  .sbi-results-grid {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .sbi-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sbi-preview {
+    position: static;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .sbi-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}

@@ -341,9 +341,39 @@ const setUserRole = asyncHandler(async (req, res) => {
   successResponse(res, user, `User role updated to ${role}`);
 });
 
+/**
+ * Continue with Google — verifies the Google ID token and issues E-MOORM JWTs.
+ * @route POST /api/auth/google
+ * @access Public
+ */
+const googleLogin = asyncHandler(async (req, res) => {
+  const { code, idToken } = req.body || {};
+  if (!code && !idToken) {
+    return res.status(400).json({ success: false, message: 'Google authorization code or ID token is required' });
+  }
+  const result = await authService.loginWithGoogle({ code, idToken });
+  successResponse(res, result, 'Google sign-in successful');
+});
+
+/**
+ * Complete a first-time Google sign-in with name/address/contact/password.
+ * @route POST /api/auth/google/complete
+ * @access Public
+ */
+const completeGoogleSignup = asyncHandler(async (req, res) => {
+  const { googleToken, ...profileData } = req.body || {};
+  if (!googleToken) {
+    return res.status(400).json({ success: false, message: 'Google sign-in session is required' });
+  }
+  const result = await authService.completeGoogleSignup(googleToken, profileData);
+  createdResponse(res, result, 'Account created successfully');
+});
+
 module.exports = {
   register,
   login,
+  googleLogin,
+  completeGoogleSignup,
   refreshToken,
   logout,
   getProfile,

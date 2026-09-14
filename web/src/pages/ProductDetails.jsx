@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   Heart, ShareNetwork as Share2, Storefront as Store, MapPin, ShieldCheck,
-  Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck,
-  CaretRight as ChevronRightSm, ChatCircle as MessageCircle, ArrowCounterClockwise as RotateCcw, CheckCircle as CheckCircle2,
+  Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck, Info,
+  CaretRight as ChevronRightSm, ChatCircle as MessageCircle,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import ReportModal from '../components/ReportModal';
 import Skeleton from '../components/ui/Skeleton';
+import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import { formatRelativeTime } from '../lib/time';
@@ -55,6 +56,8 @@ const ProductDetails = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariations, setSelectedVariations] = useState({});
+  const [variationError, setVariationError] = useState('');
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [sameShopProducts, setSameShopProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -83,6 +86,8 @@ const ProductDetails = () => {
       setProduct(res.data);
       setSelectedImage(0);
       setQuantity(1);
+      setSelectedVariations({});
+      setVariationError('');
       if (res.data?.categoryId) fetchRelated(res.data.categoryId, res.data.id);
       if (res.data?.storeId) fetchSameShop(res.data.storeId, res.data.id);
       if (res.data?.id) fetchReviews(res.data.id);
@@ -123,6 +128,13 @@ const ProductDetails = () => {
 
   const handleAddToCart = () => {
     if (!isAuthenticated) { navigate('/login'); return; }
+    const variationDefinitions = Array.isArray(product.variations) ? product.variations : [];
+    const missingVariation = variationDefinitions.find((variation) => !selectedVariations[variation.name]);
+    if (missingVariation) {
+      setVariationError(missingVariation.name);
+      document.querySelector('.pdp-variations-row')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
     setIsAddingToCart(true);
     try {
       addItem({
@@ -132,21 +144,25 @@ const ProductDetails = () => {
         image: parseImages(product.images)[0] || '/placeholder-product.png',
         storeId: product.storeId,
         storeName: product.store?.name,
+        storeLogo: product.store?.logoUrl || product.store?.logo || null,
         stock: product.stock,
         slug: product.slug,
         categoryId: product.categoryId,
+        productId: product.id,
+        selectedVariations: variationDefinitions.length ? selectedVariations : null,
       }, quantity);
       toast.success('Added to cart');
+      return true;
     } catch (error) {
       toast.error(error.message || 'Failed to add to cart');
+      return false;
     } finally {
       setIsAddingToCart(false);
     }
   };
 
   const handleBuyNow = () => {
-    handleAddToCart();
-    setTimeout(() => navigate('/cart'), 250);
+    if (handleAddToCart() !== false) setTimeout(() => navigate('/cart'), 250);
   };
 
   const changeQty = (delta) => {
@@ -544,17 +560,49 @@ const ProductDetails = () => {
                   <div className="pdp-row-label">Return &amp; Warranty:</div>
                   <div className="pdp-row-content">
                     <div className="pdp-row-line">
-                      <CheckCircle2 size={14} className="pdp-row-icon pdp-row-icon-ok" />
-                      <span>100% Authentic</span>
-                      <span className="pdp-row-dot">·</span>
-                      <RotateCcw size={14} className="pdp-row-icon" />
-                      <span>7 Days Free Return</span>
-                      <span className="pdp-row-dot">·</span>
-                      <ShieldCheck size={14} className="pdp-row-icon" />
-                      <span>Damage guarantee</span>
+                      <Info size={14} className="pdp-row-icon" />
+                      <span>{product.returnPolicy ? 'See seller policy below' : 'No seller return policy provided'}</span>
                     </div>
                   </div>
                 </div>
+
+                {product.returnPolicy && (
+                  <div className="pdp-row pdp-return-policy">
+                    <div className="pdp-row-label">Seller return policy:</div>
+                    <div className="pdp-row-content pdp-row-policy-text">{product.returnPolicy}</div>
+                  </div>
+                )}
+
+                {Array.isArray(product.variations) && product.variations.length > 0 && (
+                  <div className={`pdp-row pdp-variations-row ${variationError ? 'is-error' : ''}`}>
+                    <div className="pdp-row-label">Select options:</div>
+                    <div className="pdp-row-content pdp-variation-selectors">
+                      {product.variations.map((variation) => (
+                        <fieldset className={`pdp-variation-field ${variationError === variation.name ? 'is-error' : ''}`} key={variation.name}>
+                          <span>{variation.name}</span>
+                          <div className="pdp-variation-options" role="radiogroup" aria-label={variation.name}>
+                            {(variation.options || []).map((option) => (
+                              <button
+                                type="button"
+                                role="radio"
+                                aria-checked={selectedVariations[variation.name] === option}
+                                className={selectedVariations[variation.name] === option ? 'is-selected' : ''}
+                                onClick={() => {
+                                  setSelectedVariations((current) => ({ ...current, [variation.name]: option }));
+                                  if (variationError === variation.name) setVariationError('');
+                                }}
+                                key={option}
+                              >
+                                {option}
+                              </button>
+                            ))}
+                          </div>
+                          {variationError === variation.name && <small>Please select {variation.name}.</small>}
+                        </fieldset>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="pdp-row">
                   <div className="pdp-row-label">Quantity:</div>
@@ -575,8 +623,8 @@ const ProductDetails = () => {
                         <Plus size={14} />
                       </button>
                     </div>
-                    <span className={`pdp-stock ${isOutOfStock ? 'is-out' : product.stock < 10 ? 'is-low' : ''}`}>
-                      {isOutOfStock ? 'Out of stock' : product.stock < 10 ? `Only ${product.stock} left` : `${product.stock} available`}
+                    <span className={`pdp-stock ${isOutOfStock ? 'is-out' : ''}`} aria-live="polite">
+                      {isOutOfStock ? 'Out of stock' : `${quantity} ${quantity === 1 ? 'item' : 'items'} selected`}
                     </span>
                   </div>
                 </div>
@@ -761,10 +809,7 @@ const ProductDetails = () => {
                 {sameShopProducts.map((p) => (
                   <Link key={p.id} to={`/product/${p.slug}`} className="product-card">
                     <div className="product-image">
-                      <img
-                        src={parseImages(p.images)[0] || '/placeholder-product.png'}
-                        alt={p.name}
-                      />
+                      <ProductImage src={parseImages(p.images)[0]} alt={p.name} />
                     </div>
                     <div className="product-info">
                       <span className="product-name">{p.name}</span>
@@ -797,10 +842,7 @@ const ProductDetails = () => {
                 {relatedProducts.map((p) => (
                   <Link key={p.id} to={`/product/${p.slug}`} className="product-card">
                     <div className="product-image">
-                      <img
-                        src={parseImages(p.images)[0] || '/placeholder-product.png'}
-                        alt={p.name}
-                      />
+                      <ProductImage src={parseImages(p.images)[0]} alt={p.name} />
                     </div>
                     <div className="product-info">
                       <span className="product-name">{p.name}</span>

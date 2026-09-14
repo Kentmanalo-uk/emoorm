@@ -3,12 +3,14 @@ import { NavLink, Link, Outlet, Navigate, useLocation, useNavigate } from 'react
 import {
   SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
+  ArrowCounterClockwise as ReturnsIcon,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import LanguageSwitcher from '../LanguageSwitcher';
+import SellerCenterGuide from '../seller/SellerCenterGuide';
 import './SellerLayout.css';
 
 /**
@@ -101,6 +103,9 @@ export default function SellerLayout() {
             </NavLink>
             <NavLink to="/seller/orders" className={navCls} title="My Orders">
               <ShoppingBag size={17} weight="fill" /> <span>My Orders</span>
+            </NavLink>
+            <NavLink to="/seller/returns" className={navCls} title="Returns & refunds">
+              <ReturnsIcon size={17} weight="fill" /> <span>Returns & refunds</span>
             </NavLink>
             <NavLink to="/seller/messages" className={navCls} title="Messages">
               <MessageSquare size={17} weight="fill" /> <span>Messages</span>
@@ -229,6 +234,7 @@ export default function SellerLayout() {
         <main className="sc-content">
           <Outlet context={{ store, setStore }} />
         </main>
+        <SellerCenterGuide />
       </div>
     </div>
   );
@@ -247,6 +253,7 @@ function subNavCls({ isActive }) {
 const LABELS = {
   '/seller': 'Dashboard',
   '/seller/orders': 'My Orders',
+  '/seller/returns': 'Returns & refunds',
   '/seller/messages': 'Messages',
   '/seller/products': 'Products',
   '/seller/products/new': 'New Product',

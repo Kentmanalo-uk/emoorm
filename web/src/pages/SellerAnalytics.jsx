@@ -43,8 +43,12 @@ export default function SellerAnalytics() {
   const buckets = data?.salesByBucket || [];
   const salesByDay = data?.salesByDay || [];
 
+  const revenueValue = Number(k.revenue?.value || 0);
+  const revenuePrevious = Number(k.revenue?.previous || 0);
+  const hasGrowthData = revenueValue > 0 || revenuePrevious > 0;
   const revenueDelta = k.revenue?.delta ?? 0;
   const growthTrend = revenueDelta > 0 ? 'up' : revenueDelta < 0 ? 'down' : 'flat';
+  const growthLabel = hasGrowthData ? `${revenueDelta > 0 ? '+' : ''}${revenueDelta}%` : '—';
 
   const exportCsv = () => {
     if (!salesByDay.length) return;
@@ -93,7 +97,7 @@ export default function SellerAnalytics() {
           <KpiCard loading={loading && !data} label="Completed Orders" value={num(k.orders?.value)} delta={k.orders?.delta} hint="Completed orders in period" />
           <KpiCard loading={loading && !data} label="Total Orders" value={num(k.totalOrders?.value)} hint="All statuses in period" />
           <KpiCard loading={loading && !data} label="Revenue" value={peso(k.revenue?.value)} delta={k.revenue?.delta} />
-          <KpiCard loading={loading && !data} label="Sales Growth" value={`${revenueDelta > 0 ? '+' : ''}${revenueDelta}%`} hint={`vs previous ${range.preset || 'period'}`} />
+          <KpiCard loading={loading && !data} label="Sales Growth" value={growthLabel} hint={hasGrowthData ? `vs previous ${range.preset || 'period'}` : 'Not enough data yet'} />
         </div>
 
         {/* Sales growth callout */}
@@ -102,11 +106,11 @@ export default function SellerAnalytics() {
             <span>Previous period revenue: <strong>{peso(k.revenue?.previous)}</strong></span>
             <span>Current period revenue: <strong>{peso(k.revenue?.value)}</strong></span>
           </div>
-          <div className={`an-growth-value ${growthTrend}`}>
-            {growthTrend === 'up' && <TrendingUp size={20} />}
-            {growthTrend === 'down' && <TrendingDown size={20} />}
-            {growthTrend === 'flat' && <Minus size={20} />}
-            {revenueDelta > 0 ? '+' : ''}{revenueDelta}%
+          <div className={`an-growth-value ${hasGrowthData ? growthTrend : 'flat'}`}>
+            {hasGrowthData && growthTrend === 'up' && <TrendingUp size={20} />}
+            {hasGrowthData && growthTrend === 'down' && <TrendingDown size={20} />}
+            {hasGrowthData && growthTrend === 'flat' && <Minus size={20} />}
+            {growthLabel}
           </div>
         </div>
 
@@ -198,7 +202,7 @@ export default function SellerAnalytics() {
           <div className="an-card">
             <div className="an-card-head">
               <h2 className="an-card-title">Low stock</h2>
-              <span className="an-card-sub">≤ 5 remaining</span>
+              <span className="an-card-sub">At or below reorder threshold</span>
             </div>
             <TopList
               items={(data?.lowStock || []).map((p) => ({

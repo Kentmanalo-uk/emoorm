@@ -254,6 +254,7 @@ const updateStore = async (storeId, userId, data) => {
     'fulfillmentMode',
     'pickupAddress',
     'pickupInstructions',
+    'province',
     'paymentQrImage',
     'paymentQrType',
     'paymentInstructions',

@@ -85,9 +85,15 @@ const errorHandler = (err, req, res, next) => {
       message = 'Unexpected file field';
     }
   }
+
+  // File-filter and upload validation errors are client input errors.
+  if (err.message?.startsWith('Invalid file type') || err.message?.startsWith('Only image files')) {
+    statusCode = 400;
+    message = err.message;
+  }
   
   // Log error in development
-  if (config.nodeEnv === 'development') {
+  if (config.nodeEnv !== 'production') {
     console.error('Error:', {
       message: err.message,
       statusCode,
@@ -107,7 +113,7 @@ const errorHandler = (err, req, res, next) => {
   }
   
   // Include stack trace in development
-  if (config.nodeEnv === 'development' && err.stack) {
+  if (config.nodeEnv !== 'production' && err.stack) {
     response.stack = err.stack;
   }
   

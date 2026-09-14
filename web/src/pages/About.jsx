@@ -16,7 +16,7 @@ const About = () => (
         directly with the seller of their choice.
       </p>
 
-      <h2>How it works</h2>
+      <h2 id="how-it-works">How it works</h2>
       <p>
         Anyone can register as a buyer and browse products for free. Residents who want to sell
         can <Link to="/seller/apply">apply as a seller</Link>; applications are reviewed by a

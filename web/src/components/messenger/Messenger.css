@@ -2,6 +2,19 @@
    Messenger — shared buyer/seller chat UI
    ========================================================== */
 
+.messages-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+.messages-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 16px;
+}
+
 .msgr-shell {
   display: grid;
   grid-template-columns: minmax(260px, 320px) 1fr;
@@ -680,5 +693,434 @@
 
   .msgr-pin-card {
     width: 220px;
+  }
+}
+
+/* Search bar in the conversation list (hidden by default; shown on mobile). */
+.msgr-list-search {
+  display: none;
+}
+
+/* Mobile thread header controls (hidden by default). */
+.msgr-thread-back,
+.msgr-thread-menu {
+  display: none;
+}
+
+/* Composer icon buttons (leading tag/image; hidden by default). */
+.msgr-composer-icon {
+  display: none;
+}
+
+/* Read-receipt check on self bubbles. */
+.msgr-bubble-check {
+  margin-left: 4px;
+  vertical-align: -1px;
+}
+
+/* ===========================================
+   Pixel-tuned mobile view (matches reference)
+   =========================================== */
+@media (max-width: 480px) {
+  .messages-page {
+    padding: 12px 0 0;
+    max-width: none;
+  }
+
+  .messages-page-title {
+    padding: 0 16px;
+    font-size: 24px;
+    font-weight: 800;
+    margin: 0 0 12px;
+  }
+
+  /* Hide the page-level "Messages" title when a conversation is open (chat fills the screen). */
+  body.messenger-chat-open .messages-page-title {
+    display: none;
+  }
+
+  body.messenger-chat-open .messages-page {
+    padding-top: 0;
+  }
+
+  .msgr-shell {
+    display: block;
+    grid-template-columns: none;
+    grid-template-rows: none;
+    height: auto;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+  }
+
+  .msgr-list {
+    border: 0;
+    background: #fff;
+    display: block;
+  }
+
+  .msgr-list-head {
+    display: none;
+  }
+
+  .msgr-list-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 16px 8px;
+    padding: 10px 12px;
+    background: #f3f4f6;
+    border-radius: 10px;
+    color: #6b7280;
+  }
+
+  .msgr-list-search input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    font-size: 14px;
+    color: #111827;
+    padding: 0;
+  }
+
+  .msgr-list-search input::placeholder {
+    color: #9ca3af;
+  }
+
+  .msgr-list-scroll {
+    padding: 0;
+  }
+
+  .msgr-convo-item {
+    padding: 12px 16px;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .msgr-convo-item .msgr-avatar {
+    width: 44px;
+    height: 44px;
+    background: #dcfce7;
+    color: #059669;
+  }
+
+  .msgr-convo-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .msgr-convo-row {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .msgr-convo-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .msgr-convo-preview {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 2px;
+  }
+
+  .msgr-convo-time {
+    position: absolute;
+    right: 16px;
+    top: 14px;
+    font-size: 12px;
+    color: #9ca3af;
+  }
+
+  .msgr-convo-role {
+    display: none;
+  }
+
+  .msgr-convo-item {
+    position: relative;
+  }
+
+  .msgr-badge {
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+  }
+
+  /* Active chat: hide list, show only thread */
+  .msgr-shell.has-active .msgr-list {
+    display: none;
+  }
+
+  .msgr-thread {
+    background: #fff;
+  }
+
+  .msgr-shell:not(.has-active) .msgr-thread {
+    display: none;
+  }
+
+  /* Chat header */
+  .msgr-thread-head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 12px 12px;
+    background: #fff;
+    border-bottom: 1px solid #eef0f3;
+    gap: 6px;
+  }
+
+  .msgr-thread-back,
+  .msgr-thread-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    color: #111827;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .msgr-thread-back:active,
+  .msgr-thread-menu:active {
+    background: #f3f4f6;
+  }
+
+  .msgr-thread-head .msgr-avatar {
+    display: none;
+  }
+
+  .msgr-thread-title {
+    flex: 1;
+    text-align: center;
+    padding: 0 4px;
+  }
+
+  .msgr-thread-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: #111827;
+    text-align: center;
+  }
+
+  .msgr-thread-sub {
+    display: none;
+  }
+
+  /* Pinned orders — trim to match reference "Your orders" card style */
+  .msgr-pins {
+    padding: 10px 16px;
+    background: #fff;
+    border-bottom: 1px solid #eef0f3;
+  }
+
+  .msgr-pins-head {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: #9ca3af;
+    margin-bottom: 6px;
+  }
+
+  .msgr-pins-head svg {
+    display: none;
+  }
+
+  .msgr-pins-track {
+    padding-bottom: 0;
+  }
+
+  .msgr-pin-card {
+    width: 240px;
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  .msgr-pin-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+  }
+
+  .msgr-pin-num,
+  .msgr-pin-date,
+  .msgr-pin-attach {
+    display: none;
+  }
+
+  .msgr-pin-status {
+    background: transparent !important;
+    padding: 0;
+    color: #059669 !important;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  .msgr-pin-row-top {
+    order: 2;
+    margin-top: 2px;
+  }
+
+  .msgr-pin-name {
+    order: 1;
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .msgr-pin-row-bottom {
+    order: 3;
+    margin-top: 0;
+  }
+
+  .msgr-pin-total {
+    font-size: 12.5px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  /* Messages area */
+  .msgr-messages {
+    padding: 14px 12px;
+    gap: 8px;
+    background: #fff;
+  }
+
+  .msgr-bubble-row {
+    align-items: flex-end;
+  }
+
+  .msgr-bubble-avatar {
+    display: none;
+  }
+
+  .msgr-bubble {
+    max-width: 78%;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 14px;
+    gap: 2px;
+    border: 0;
+    background: #f3f4f6;
+    color: #111827;
+    box-shadow: 0 1px 1px rgba(15, 23, 42, 0.04);
+  }
+
+  .msgr-bubble-row.is-self .msgr-bubble {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #fff;
+  }
+
+  .msgr-bubble-time {
+    font-size: 10.5px;
+    color: rgba(255, 255, 255, 0.85);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .msgr-bubble-row:not(.is-self) .msgr-bubble-time {
+    color: #9ca3af;
+  }
+
+  .msgr-bubble-check {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  /* Composer — pill input with leading icons + trailing send */
+  .msgr-composer {
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #eef0f3;
+    background: #fff;
+    gap: 0;
+  }
+
+  .msgr-composer-row {
+    align-items: center;
+    gap: 6px;
+  }
+
+  .msgr-composer-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: #6b7280;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .msgr-composer-icon:active {
+    background: #f3f4f6;
+  }
+
+  .msgr-composer-input {
+    flex: 1;
+    background: #f3f4f6;
+    border: 0;
+    border-radius: 9999px;
+    padding: 10px 16px;
+    min-height: 40px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .msgr-composer-input:focus {
+    border: 0;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+  }
+
+  .msgr-composer-send {
+    background: transparent;
+    color: #22c55e;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .msgr-composer-send:hover:not(:disabled) {
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  .msgr-composer-send:disabled {
+    background: transparent;
+    color: #d1d5db;
+  }
+
+  .msgr-composer-send-label {
+    display: none;
+  }
+}
+
+/* Hide the app's mobile bottom nav while an active chat is open on mobile. */
+@media (max-width: 480px) {
+  body.messenger-chat-open .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  body.messenger-chat-open .layout-main {
+    padding-bottom: 0 !important;
   }
 }

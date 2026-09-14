@@ -672,3 +672,35 @@
     text-align: left;
   }
 }
+
+@media (max-width: 480px) {
+  .orders-page,
+  .orders-container,
+  .orders-tabs,
+  .order-card,
+  .order-card-header,
+  .order-card-body {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .orders-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+
+  .orders-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .order-tab {
+    flex: 0 0 auto;
+    min-height: 44px;
+  }
+
+  .modal-content {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+}

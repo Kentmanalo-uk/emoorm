@@ -126,6 +126,7 @@ const findAll = async (options = {}) => {
     municipalityId,
     isActive,
     isSuspended,
+    excludeOwnerId,
     search,
   } = options;
 
@@ -136,6 +137,7 @@ const findAll = async (options = {}) => {
   if (municipalityId) where.municipalityId = municipalityId;
   if (isActive !== undefined) where.isActive = isActive;
   if (isSuspended !== undefined) where.isSuspended = isSuspended;
+  if (excludeOwnerId) where.ownerId = { not: excludeOwnerId };
   if (search) {
     where.OR = [
       { name: { contains: search } },

@@ -3,7 +3,7 @@ import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SquaresFour as LayoutGrid, Users, Package, Flag, Tag, MapPin, ChartPie as PieChart,
   CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
-  Megaphone, FileText, Gear as SettingsIcon,
+  Megaphone, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
@@ -153,6 +153,14 @@ export default function AdminLayout({ children }) {
                   </div>
                 )}
 
+                <NavLink to="/admin/banners" className={navCls} title="Banners">
+                  <ImageIcon size={17} weight="fill" /> <span>Banners</span>
+                </NavLink>
+
+                <NavLink to="/admin/vouchers" className={navCls} title="Vouchers">
+                  <Ticket size={17} weight="fill" /> <span>Vouchers</span>
+                </NavLink>
+
                 <NavLink to="/admin/audit-logs" className={navCls} title="Audit Logs">
                   <FileText size={17} weight="fill" /> <span>Audit Logs</span>
                 </NavLink>
@@ -244,8 +252,11 @@ const LABELS = {
   '/admin/municipalities': 'Municipalities',
   '/admin/analytics': 'Analytics',
   '/admin/announcements': 'Announcements',
+  '/admin/banners': 'Banners',
+  '/admin/vouchers': 'Vouchers',
   '/admin/junior-admins': 'Municipal Admins',
   '/admin/audit-logs': 'Audit Logs',
+  '/admin/settings': 'Settings',
 };
 
 function buildCrumbs(pathname) {

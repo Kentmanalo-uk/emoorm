@@ -61,6 +61,56 @@
   overflow: hidden;
 }
 
+@media (max-width: 480px) {
+  .pdp {
+    padding: 8px 0 72px;
+  }
+
+  .pdp-breadcrumbs {
+    padding: 0 4px;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .pdp-breadcrumb-current {
+    max-width: 220px;
+  }
+
+  .pdp-hero {
+    grid-template-columns: 1fr;
+    border-radius: 10px;
+  }
+
+  .pdp-hero-gallery {
+    padding: 10px 10px 8px;
+  }
+
+  .pdp-hero-info {
+    padding: 14px 12px 16px;
+  }
+
+  .pdp-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 9px 0;
+  }
+
+  .pdp-row-label {
+    padding-top: 0;
+    font-size: 12px;
+  }
+
+  .pdp-cta-row {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    margin: 12px -12px -16px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+  }
+}
+
 /* Gallery column */
 .pdp-hero-gallery {
   padding: 20px 20px 16px;
@@ -488,6 +538,83 @@
 
 .pdp-row-link:hover {
   text-decoration: underline;
+}
+
+.pdp-return-policy {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.pdp-row-policy-text {
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.pdp-variation-selectors {
+  gap: 10px;
+}
+
+.pdp-variation-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: #374151;
+  font-weight: 600;
+}
+
+.pdp-variation-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pdp-variation-options button {
+  min-width: 52px;
+  min-height: 38px;
+  padding: 7px 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pdp-variation-options button:hover,
+.pdp-variation-options button.is-selected {
+  border-color: #059669;
+  background: #ecfdf3;
+  color: #047857;
+}
+
+.pdp-variation-options button.is-selected {
+  box-shadow: inset 0 0 0 1px #059669;
+}
+
+.pdp-variations-row.is-error {
+  margin: -8px;
+  padding: 8px;
+  border: 1px solid #ef4444;
+  background: #fff7f7;
+}
+
+.pdp-variation-field.is-error > span,
+.pdp-variation-field.is-error small {
+  color: #dc2626;
+}
+
+.pdp-variation-field.is-error .pdp-variation-options button {
+  border-color: #fca5a5;
+}
+
+.pdp-variation-field small {
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .pdp-row-qty {
@@ -1185,6 +1312,14 @@
 }
 
 @media (max-width: 640px) {
+  .pdp,
+  .pdp-hero,
+  .pdp-hero-gallery,
+  .pdp-hero-info {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .pdp {
     padding: 10px 0 40px;
   }

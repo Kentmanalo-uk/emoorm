@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  MagnifyingGlass as Search, ShoppingCart, BellSlash as BellOff, List as Menu, X,
+  House as HomeIcon, MagnifyingGlass as Search, ShoppingCart, BellSlash as BellOff, List as Menu, X,
+  ChatCircle, Bell, User,
   ShoppingBag, CheckCircle, Package, XCircle, Star, WarningCircle as AlertCircle, Info,
   Clock, TrendUp as TrendingUp,
 } from '@phosphor-icons/react';
@@ -88,6 +89,7 @@ const saveRecent = (query) => {
 
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user, logout } = useAuthStore();
   const { getItemCount } = useCartStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -105,6 +107,12 @@ const Header = () => {
   const [imageModalOpen, setImageModalOpen] = useState(false);
 
   const cartCount = getItemCount();
+  const isCartPage = location.pathname === '/cart';
+
+  useEffect(() => {
+    if (!isCartPage) return;
+    setSearchQuery(new URLSearchParams(location.search).get('cartSearch') || '');
+  }, [isCartPage, location.search]);
 
   // Hide-on-scroll header. Forces both bars visible near the top, hides them on
   // downward scroll after a 6px delta, reveals on upward scroll after 6px delta.
@@ -165,6 +173,23 @@ const Header = () => {
     setRecentSearches(saveRecent(q));
     setSearchFocused(false);
     navigate(`/search?q=${encodeURIComponent(q)}`);
+  };
+
+  const handleCartSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    const params = new URLSearchParams(location.search);
+    if (value.trim()) params.set('cartSearch', value);
+    else params.delete('cartSearch');
+    navigate({ pathname: '/cart', search: params.toString() }, { replace: true });
+  };
+
+  const handleCartSearch = (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams(location.search);
+    if (searchQuery.trim()) params.set('cartSearch', searchQuery.trim());
+    else params.delete('cartSearch');
+    navigate({ pathname: '/cart', search: params.toString() }, { replace: true });
   };
 
   const runSuggestion = (term) => {
@@ -235,7 +260,7 @@ const Header = () => {
       >
         <div className="topbar-container">
           <div className="topbar-left">
-            <Link to="/help" className="topbar-link topbar-link-feedback">FEEDBACK</Link>
+            <Link to="/feedback" className="topbar-link topbar-link-feedback">FEEDBACK</Link>
             <span className="topbar-divider">|</span>
             {isAuthenticated && (user?.role === 'MUNICIPAL_ADMIN' || user?.role === 'SUPER_ADMIN') ? (
               <Link to="/admin" className="topbar-link topbar-link-sell">ADMIN PANEL</Link>
@@ -245,7 +270,7 @@ const Header = () => {
               <Link to="/sell" className="topbar-link topbar-link-sell">SELL ON EMOORM</Link>
             )}
             <span className="topbar-divider">|</span>
-            <Link to="/help" className="topbar-link">CUSTOMER CARE</Link>
+            <Link to="/customer-care" className="topbar-link">CUSTOMER CARE</Link>
           </div>
           <div className="topbar-right">
             <div className="notif-hover">
@@ -415,8 +440,8 @@ const Header = () => {
                         <Link to="/sell">Sell on Emoorm</Link>
                       )}
                       <Link to="/help">Help Center</Link>
-                      <Link to="/help">Customer Care</Link>
-                      <Link to="/help">Send Feedback</Link>
+                      <Link to="/customer-care">Customer Care</Link>
+                      <Link to="/feedback">Send Feedback</Link>
                     </div>
                   </div>
                 </div>
@@ -428,7 +453,7 @@ const Header = () => {
 
       {/* Main Header */}
       <header
-        className="header"
+        className={`header ${location.pathname === '/' ? 'is-home' : ''} ${isCartPage ? 'is-cart' : ''}`}
         style={{
           transform: headerHidden
             ? 'translateY(calc(-1 * var(--header-hide-offset)))'
@@ -437,14 +462,16 @@ const Header = () => {
         }}
       >
         <div className="header-container">
-          {/* Logo */}
-          <Link to="/" className="header-logo">
-            <img src="/brand-icon.png" alt="Emoorm" className="header-logo-icon" />
-            <span className="header-logo-text">emoorm</span>
-          </Link>
+          <div className={isCartPage ? 'cart-header-context' : undefined}>
+            <Link to="/" className="header-logo">
+              <img src="/brand-icon.png" alt="Emoorm" className="header-logo-icon" />
+              <span className="header-logo-text">emoorm</span>
+            </Link>
+            {isCartPage && <><span className="cart-header-divider" /><span className="cart-header-title">Shopping Cart</span></>}
+          </div>
 
           {/* Search Bar + Cart (Centered) */}
-          <div className="header-center">
+          {!isCartPage && <div className="header-center">
             <div className="header-search-wrap" ref={searchWrapRef}>
               <form onSubmit={handleSearch} className="header-search">
                 <div className="header-search-input-wrap">
@@ -535,7 +562,20 @@ const Header = () => {
               <ShoppingCart size={24} />
               {cartCount > 0 && <span className="header-cart-badge">{cartCount}</span>}
             </Link>
-          </div>
+          </div>}
+
+          {isCartPage && (
+            <form className="cart-header-search" onSubmit={handleCartSearch} role="search">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={handleCartSearchChange}
+                placeholder="Search in cart"
+                aria-label="Search in cart"
+              />
+              <button type="submit" aria-label="Search in cart"><Search size={19} /></button>
+            </form>
+          )}
 
           {/* Mobile Menu Toggle */}
           <button
@@ -548,7 +588,7 @@ const Header = () => {
       </header>
 
       {/* Spacer to offset fixed header */}
-      <div className="header-spacer" />
+      <div className={`header-spacer ${location.pathname === '/' ? 'is-home' : ''} ${isCartPage ? 'is-cart' : ''}`} />
 
       {/* Mobile Menu */}
       {showMobileMenu && (
@@ -568,9 +608,9 @@ const Header = () => {
             </form>
           </div>
           <div className="header-mobile-links">
-            <Link to="/help" className="header-mobile-link">Feedback</Link>
+            <Link to="/feedback" className="header-mobile-link">Feedback</Link>
             <Link to="/sell" className="header-mobile-link">Sell on Emoorm</Link>
-            <Link to="/help" className="header-mobile-link">Customer Care</Link>
+            <Link to="/customer-care" className="header-mobile-link">Customer Care</Link>
             {isAuthenticated ? (
               <button onClick={handleLogout} className="header-mobile-link">Sign Out</button>
             ) : (
@@ -582,6 +622,32 @@ const Header = () => {
           </div>
         </div>
       )}
+
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+        <Link className={location.pathname === '/' ? 'is-active' : ''} to="/">
+          <HomeIcon size={21} weight={location.pathname === '/' ? 'fill' : 'regular'} />
+          <span>Home</span>
+        </Link>
+        <Link className={location.pathname === '/cart' ? 'is-active' : ''} to="/cart">
+          <span className="mobile-bottom-icon-wrap">
+            <ShoppingCart size={21} weight={location.pathname === '/cart' ? 'fill' : 'regular'} />
+            {cartCount > 0 && <b>{cartCount > 99 ? '99+' : cartCount}</b>}
+          </span>
+          <span>Cart</span>
+        </Link>
+        <Link className={location.pathname.startsWith('/messages') ? 'is-active' : ''} to="/messages">
+          <ChatCircle size={21} weight={location.pathname.startsWith('/messages') ? 'fill' : 'regular'} />
+          <span>Messages</span>
+        </Link>
+        <Link className={location.pathname.startsWith('/notifications') ? 'is-active' : ''} to="/notifications">
+          <Bell size={21} weight={location.pathname.startsWith('/notifications') ? 'fill' : 'regular'} />
+          <span>Notifications</span>
+        </Link>
+        <Link className={location.pathname.startsWith('/profile') ? 'is-active' : ''} to="/profile">
+          <User size={21} weight={location.pathname.startsWith('/profile') ? 'fill' : 'regular'} />
+          <span>Profile</span>
+        </Link>
+      </nav>
 
       <ImageSearchModal
         open={imageModalOpen}

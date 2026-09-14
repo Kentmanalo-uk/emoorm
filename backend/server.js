@@ -2,6 +2,7 @@ require('dotenv').config();
 const app = require('./src/app');
 const config = require('./src/config/env');
 const prisma = require('./src/config/database');
+const orderService = require('./src/services/order.service');
 
 const PORT = config.port;
 
@@ -31,6 +32,12 @@ const startServer = async () => {
       console.log(`  Port: ${PORT}`);
       console.log(`  API Base: http://localhost:${PORT}${config.apiPrefix}`);
       console.log('================================================');
+      const expiryTimer = setInterval(() => {
+        orderService.expirePendingOrders().catch((error) => {
+          console.error('[order-expiry] failed:', error.message);
+        });
+      }, 5 * 60 * 1000);
+      expiryTimer.unref();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

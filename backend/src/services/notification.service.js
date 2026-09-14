@@ -31,6 +31,14 @@ const createNotification = async (data) => {
     'STORE_NEW_PRODUCT',
     'STORE_PROMOTION',
     'STORE_ANNOUNCEMENT',
+    'RETURN_REQUESTED',
+    'RETURN_APPROVED',
+    'RETURN_REJECTED',
+    'RETURN_AWAITING_SHIPMENT',
+    'RETURN_RECEIVED',
+    'RETURN_REFUNDED',
+    'RETURN_CANCELLED',
+    'RETURN_CLOSED',
   ];
 
   if (!validTypes.includes(type)) {

@@ -44,6 +44,13 @@ router.put(
   orderController.updateOrderStatus
 );
 
+router.patch(
+  '/:id/payment',
+  authenticate,
+  authorize('SELLER', 'SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
+  orderController.verifyPayment
+);
+
 // Admin routes
 router.get(
   '/',

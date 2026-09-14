@@ -314,3 +314,16 @@
     align-items: flex-start;
   }
 }
+
+@media (max-width: 480px) {
+  .profile-settings-page,
+  .profile-settings-card,
+  .profile-settings-form {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .profile-settings-card {
+    padding: 16px;
+  }
+}

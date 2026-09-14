@@ -123,18 +123,17 @@ const getSellerStats = async (storeId, window) => {
       _count: { _all: true },
     }),
     prisma.product.findMany({
-      where: { storeId, deletedAt: null, stock: { lte: 5 } },
-      select: { id: true, name: true, slug: true, images: true, stock: true, status: true },
+      where: { storeId, deletedAt: null },
+      select: { id: true, name: true, slug: true, images: true, stock: true, lowStockThreshold: true, status: true },
       orderBy: { stock: 'asc' },
-      take: 5,
-    }),
+    }).then((products) => products.filter((product) => product.stock <= product.lowStockThreshold).slice(0, 5)),
     prisma.orderItem.groupBy({
       by: ['productId'],
       where: {
         order: { storeId, status: { not: 'CANCELLED' }, createdAt: { gte: w.from, lte: w.to } },
       },
       _sum: { quantity: true, subtotal: true },
-      orderBy: { _sum: { quantity: 'desc' } },
+      orderBy: { _sum: { subtotal: 'desc' } },
       take: 5,
     }),
     prisma.orderItem.groupBy({

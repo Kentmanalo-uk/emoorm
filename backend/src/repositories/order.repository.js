@@ -51,7 +51,7 @@ const createOrder = async (data) => {
  * @param {Array} itemsData - Order items data
  * @returns {Promise<Object>} Created order with items
  */
-const createOrderWithItems = async (orderData, itemsData) => {
+const createOrderWithItems = async (orderData, itemsData, voucherRedemption = null) => {
   return prisma.$transaction(async (tx) => {
     // Atomically decrement stock; fails if stock is insufficient
     for (const item of itemsData) {
@@ -70,6 +70,17 @@ const createOrderWithItems = async (orderData, itemsData) => {
         err.code = 'INSUFFICIENT_STOCK';
         throw err;
       }
+      const product = await tx.product.findUnique({ where: { id: item.productId }, select: { stock: true } });
+      await tx.inventoryMovement.create({
+        data: {
+          productId: item.productId,
+          quantityDelta: -item.quantity,
+          balanceAfter: product.stock,
+          reason: 'SALE',
+          referenceId: orderData.checkoutKey || orderData.orderNumber,
+          actorId: orderData.buyerId,
+        },
+      });
     }
 
     // Create order
@@ -78,7 +89,7 @@ const createOrderWithItems = async (orderData, itemsData) => {
     });
 
     // Create order items
-    const items = await Promise.all(
+    await Promise.all(
       itemsData.map((item) =>
         tx.orderItem.create({
           data: {
@@ -88,6 +99,21 @@ const createOrderWithItems = async (orderData, itemsData) => {
         })
       )
     );
+
+    if (voucherRedemption && voucherRedemption.voucherId) {
+      await tx.voucherRedemption.create({
+        data: {
+          voucherId: voucherRedemption.voucherId,
+          userId: voucherRedemption.userId,
+          orderId: order.id,
+          discountAmount: voucherRedemption.discountAmount,
+        },
+      });
+      await tx.voucher.update({
+        where: { id: voucherRedemption.voucherId },
+        data: { timesUsed: { increment: 1 } },
+      });
+    }
 
     // Return order with items
     return tx.order.findUnique({
@@ -125,6 +151,25 @@ const createOrderWithItems = async (orderData, itemsData) => {
     });
   });
 };
+
+const findByCheckoutKey = async (buyerId, checkoutKey) => {
+  if (!checkoutKey) return null;
+  return prisma.order.findFirst({
+    where: { buyerId, checkoutKey },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      items: true,
+      store: { select: { id: true, name: true, slug: true } },
+    },
+  });
+};
+
+const findExpiredPending = (before) => prisma.order.findMany({
+  where: { status: 'PENDING', createdAt: { lt: before } },
+  select: { id: true },
+  take: 100,
+  orderBy: { createdAt: 'asc' },
+});
 
 /**
  * Find order by ID
@@ -246,14 +291,23 @@ const findAll = async (options = {}) => {
  * @param {String} status - New status
  * @returns {Promise<Object>} Updated order
  */
-const updateStatus = async (id, status) => {
+const updateStatus = async (id, status, expectedStatus = null, actorId = null) => {
   const data = { status };
   if (status === 'COMPLETED') data.completedAt = new Date();
   if (status === 'CANCELLED') data.cancelledAt = new Date();
 
-  return prisma.order.update({
-    where: { id },
-    data,
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.order.findUnique({ where: { id }, select: { status: true } });
+    if (!current || (expectedStatus && current.status !== expectedStatus)) {
+      const error = new Error('Order status changed before this action completed');
+      error.code = 'STALE_ORDER_STATUS';
+      throw error;
+    }
+    const updated = await tx.order.update({ where: { id }, data });
+    await tx.orderStatusHistory.create({
+      data: { orderId: id, fromStatus: current.status, toStatus: status, actorId },
+    });
+    return updated;
   });
 };
 
@@ -270,38 +324,82 @@ const updateOrder = async (id, data) => {
   });
 };
 
+const updatePaymentStatus = async (id, paymentStatus, actorId = null) => {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id }, select: { paymentStatus: true } });
+    if (!order) return null;
+    const updated = await tx.order.update({ where: { id }, data: { paymentStatus } });
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId: id,
+        fromStatus: updated.status,
+        toStatus: updated.status,
+        actorId,
+        note: `Payment status: ${order.paymentStatus} -> ${paymentStatus}`,
+      },
+    });
+    return updated;
+  });
+};
+
 /**
  * Cancel order and restore product stock (transaction)
  * @param {String} id - Order ID
  * @returns {Promise<Object>} Cancelled order
  */
-const cancelOrder = async (id) => {
+const cancelOrder = async (id, actorId = null) => {
   return prisma.$transaction(async (tx) => {
+    const current = await tx.order.findUnique({ where: { id }, select: { status: true } });
+    const changed = await tx.order.updateMany({
+      where: { id, status: { in: ['PENDING', 'CONFIRMED'] } },
+      data: { status: 'CANCELLED', cancelledAt: new Date() },
+    });
+
+    if (changed.count === 0) {
+      const error = new Error('Order is no longer cancellable');
+      error.code = 'ORDER_NOT_CANCELLABLE';
+      throw error;
+    }
+
     const items = await tx.orderItem.findMany({
       where: { orderId: id },
       select: { productId: true, quantity: true },
     });
 
     for (const item of items) {
-      await tx.product.update({
+      const product = await tx.product.update({
         where: { id: item.productId },
         data: { stock: { increment: item.quantity } },
+        select: { stock: true },
+      });
+      await tx.inventoryMovement.create({
+        data: {
+          productId: item.productId,
+          quantityDelta: item.quantity,
+          balanceAfter: product.stock,
+          reason: 'CANCELLATION',
+          referenceId: id,
+        },
       });
     }
 
-    return tx.order.update({
-      where: { id },
-      data: { status: 'CANCELLED', cancelledAt: new Date() },
+    await tx.orderStatusHistory.create({
+      data: { orderId: id, fromStatus: current.status, toStatus: 'CANCELLED', actorId },
     });
+
+    return tx.order.findUnique({ where: { id } });
   });
 };
 
 module.exports = {
   createOrder,
   createOrderWithItems,
+  findByCheckoutKey,
+  findExpiredPending,
   findById,
   findAll,
   updateStatus,
   updateOrder,
+  updatePaymentStatus,
   cancelOrder,
 };

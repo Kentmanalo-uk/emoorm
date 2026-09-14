@@ -22,7 +22,22 @@ const EMPTY_FORM = {
   stock: '',
   categoryId: '',
   images: [],
+  returnPolicy: '',
+  variations: [],
 };
+
+const RETURN_POLICY_PRESETS = [
+  { label: 'No returns', value: 'No returns or refunds accepted unless the item is incorrect or damaged on arrival.' },
+  { label: '7-day issue returns', value: 'Returns or refunds accepted within 7 days for incorrect or damaged items. Buyer must provide proof.' },
+  { label: 'Perishable goods', value: 'For perishable goods, report incorrect or damaged items on delivery with photo proof.' },
+];
+
+const VARIATION_PRESETS = [
+  { label: 'Size', name: 'Size', options: 'Small, Medium, Large' },
+  { label: 'Color', name: 'Color', options: 'Red, Blue, Green' },
+  { label: 'Weight', name: 'Weight', options: '250g, 500g, 1kg' },
+  { label: 'Pack size', name: 'Pack Size', options: '1 piece, 3 pieces, 6 pieces' },
+];
 
 const STATUS_LABELS = {
   PENDING: { label: 'Pending Approval', cls: 'status-pending', icon: <Clock size={12} /> },
@@ -105,6 +120,14 @@ export default function SellerProducts() {
       stock: String(product.stock ?? ''),
       categoryId: product.categoryId || product.category?.id || '',
       images: Array.isArray(product.images) ? product.images : [],
+      returnPolicy: product.returnPolicy || '',
+      variations: Array.isArray(product.variations)
+        ? product.variations.map((variation) => ({
+          name: variation.name || '',
+          options: Array.isArray(variation.options) ? variation.options.join(', ') : '',
+          optionDraft: '',
+        }))
+        : [],
     });
     setFormErrors({});
     setShowForm(true);
@@ -140,6 +163,13 @@ export default function SellerProducts() {
         stock: form.stock !== '' ? parseInt(form.stock) : 0,
         categoryId: form.categoryId,
         images: Array.isArray(form.images) ? form.images.filter(Boolean) : [],
+        returnPolicy: form.returnPolicy.trim() || null,
+        variations: form.variations
+          .map((variation) => ({
+            name: variation.name.trim(),
+            options: variation.options.split(',').map((option) => option.trim()).filter(Boolean),
+          }))
+          .filter((variation) => variation.name && variation.options.length),
       };
 
       if (editingId) {
@@ -221,6 +251,82 @@ export default function SellerProducts() {
     }
   };
 
+  const addVariation = () => {
+    setForm((current) => ({
+      ...current,
+      variations: [...current.variations, { name: '', options: '', optionDraft: '' }],
+    }));
+  };
+
+  const updateVariation = (index, field, value) => {
+    setForm((current) => ({
+      ...current,
+      variations: current.variations.map((variation, rowIndex) => (
+        rowIndex === index ? { ...variation, [field]: value } : variation
+      )),
+    }));
+  };
+
+  const removeVariation = (index) => {
+    setForm((current) => ({
+      ...current,
+      variations: current.variations.filter((_, rowIndex) => rowIndex !== index),
+    }));
+  };
+
+  const addVariationOption = (index) => {
+    setForm((current) => ({
+      ...current,
+      variations: current.variations.map((variation, rowIndex) => {
+        if (rowIndex !== index) return variation;
+        const option = variation.optionDraft.trim();
+        if (!option) return variation;
+        const options = variation.options.split(',').map((item) => item.trim()).filter(Boolean);
+        if (!options.some((item) => item.toLowerCase() === option.toLowerCase())) options.push(option);
+        return { ...variation, options: options.join(', '), optionDraft: '' };
+      }),
+    }));
+  };
+
+  const removeVariationOption = (variationIndex, optionToRemove) => {
+    setForm((current) => ({
+      ...current,
+      variations: current.variations.map((variation, rowIndex) => {
+        if (rowIndex !== variationIndex) return variation;
+        return {
+          ...variation,
+          options: variation.options.split(',').map((item) => item.trim()).filter(
+            (item) => item && item !== optionToRemove
+          ).join(', '),
+        };
+      }),
+    }));
+  };
+
+  const applyReturnPolicyPreset = (value) => {
+    setForm((current) => ({ ...current, returnPolicy: value }));
+  };
+
+  const addVariationPreset = (preset) => {
+    setForm((current) => {
+      const existingIndex = current.variations.findIndex(
+        (variation) => variation.name.trim().toLowerCase() === preset.name.toLowerCase()
+      );
+      if (existingIndex >= 0) {
+        return {
+          ...current,
+          variations: current.variations.map((variation, index) => (
+            index === existingIndex ? { ...variation, options: preset.options } : variation
+          )),
+        };
+      }
+      return {
+        ...current,
+        variations: [...current.variations, { name: preset.name, options: preset.options, optionDraft: '' }],
+      };
+    });
+  };
+
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
@@ -283,6 +389,119 @@ export default function SellerProducts() {
                   className="form-input form-textarea"
                   rows={3}
                 />
+              </div>
+
+              <div className="product-optional-section">
+                <div className="product-optional-heading">
+                  <div>
+                    <h3>Return Policy <span>Optional</span></h3>
+                    <p>Tell buyers what returns or refunds you accept for this product.</p>
+                  </div>
+                </div>
+                <div className="product-preset-row" aria-label="Return policy presets">
+                  {RETURN_POLICY_PRESETS.map((preset) => (
+                    <button
+                      type="button"
+                      key={preset.label}
+                      className={`product-preset-btn ${form.returnPolicy === preset.value ? 'is-selected' : ''}`}
+                      onClick={() => applyReturnPolicyPreset(preset.value)}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <span className="product-custom-hint">Choose a starting point or write your own policy below.</span>
+                <textarea
+                  value={form.returnPolicy}
+                  onChange={(e) => setForm((p) => ({ ...p, returnPolicy: e.target.value }))}
+                  placeholder="Example: Returns accepted within 7 days for damaged or incorrect items."
+                  className="form-input form-textarea"
+                  rows={3}
+                  maxLength={2000}
+                />
+              </div>
+
+              <div className="product-optional-section">
+                <div className="product-optional-heading">
+                  <div>
+                    <h3>Product Variations <span>Optional</span></h3>
+                    <p>Add choices buyers must select, such as Size, Color, or Weight.</p>
+                  </div>
+                  <button type="button" className="btn-seller-outline" onClick={addVariation}>
+                    <Plus size={14} /> Add Variation
+                  </button>
+                </div>
+                <div className="product-preset-row" aria-label="Common variation presets">
+                  {VARIATION_PRESETS.map((preset) => (
+                    <button
+                      type="button"
+                      key={preset.label}
+                      className="product-preset-btn"
+                      onClick={() => addVariationPreset(preset)}
+                    >
+                      <Plus size={12} /> {preset.label}
+                    </button>
+                  ))}
+                </div>
+                {form.variations.length === 0 ? (
+                  <p className="product-variation-empty">No variations added. The product will have one default option.</p>
+                ) : (
+                  <div className="product-variation-list">
+                    {form.variations.map((variation, index) => (
+                      <div className="product-variation-row" key={`variation-${index}`}>
+                        <input
+                          className="form-input"
+                          value={variation.name}
+                          onChange={(e) => updateVariation(index, 'name', e.target.value)}
+                          placeholder="Variation name, e.g. Size"
+                          aria-label="Variation name"
+                        />
+                        <div className="product-option-editor">
+                          <div className="product-option-chips">
+                            {variation.options.split(',').map((option) => option.trim()).filter(Boolean).map((option) => (
+                              <span className="product-option-chip" key={option}>
+                                {option}
+                                <button
+                                  type="button"
+                                  onClick={() => removeVariationOption(index, option)}
+                                  aria-label={`Remove ${option}`}
+                                >
+                                  <X size={11} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          <div className="product-option-add">
+                            <input
+                              className="form-input"
+                              value={variation.optionDraft || ''}
+                              onChange={(e) => updateVariation(index, 'optionDraft', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  addVariationOption(index);
+                                }
+                              }}
+                              placeholder="Add an option"
+                              aria-label="Add variation option"
+                            />
+                            <button type="button" className="product-option-add-btn" onClick={() => addVariationOption(index)}>
+                              <Plus size={13} /> Add
+                            </button>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="seller-icon-btn btn-danger-outline"
+                          onClick={() => removeVariation(index)}
+                          aria-label={`Remove variation ${index + 1}`}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="form-row">

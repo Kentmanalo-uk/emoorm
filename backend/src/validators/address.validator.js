@@ -30,6 +30,12 @@ const addressValidation = [
     .isUUID()
     .withMessage('Invalid municipality ID'),
 
+  body('province')
+    .optional({ nullable: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Province name is too long'),
+
   body('barangay')
     .trim()
     .notEmpty()
@@ -58,6 +64,7 @@ const addressUpdateValidation = [
   body('fullName').optional().trim().notEmpty().withMessage('Recipient name is required').isLength({ max: 100 }).withMessage('Recipient name is too long'),
   body('contactNumber').optional().trim().matches(/^(\+63|0)?[0-9]{10}$/).withMessage('Please provide a valid Philippine contact number'),
   body('municipalityId').optional().isUUID().withMessage('Invalid municipality ID'),
+  body('province').optional({ nullable: true }).trim().isLength({ max: 100 }).withMessage('Province name is too long'),
   body('barangay').optional().trim().notEmpty().withMessage('Barangay is required').isLength({ max: 100 }).withMessage('Barangay name is too long'),
   body('street').optional().trim().notEmpty().withMessage('Street / house address is required').isLength({ max: 500 }).withMessage('Address is too long'),
   body('isDefault').optional().isBoolean().withMessage('isDefault must be true or false'),

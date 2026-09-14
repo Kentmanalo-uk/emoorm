@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MagnifyingGlass as Search, SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
+import ProductImage from '../components/ProductImage';
 import useCartStore from '../store/cartStore';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -331,11 +332,7 @@ const Products = () => {
                       className="product-card"
                     >
                       <div className="product-image">
-                        <img
-                          src={resolveImg(product.images?.[0]) || '/placeholder-product.png'}
-                          alt={product.name}
-                          onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
-                        />
+                        <ProductImage src={product.images?.[0]} alt={product.name} />
                         {product.stock === 0 && (
                           <div className="product-badge out-of-stock">Out of Stock</div>
                         )}

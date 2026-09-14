@@ -157,6 +157,15 @@ const cancelOrder = asyncHandler(async (req, res) => {
   successResponse(res, order, 'Order cancelled successfully');
 });
 
+const verifyPayment = asyncHandler(async (req, res) => {
+  const order = await orderService.verifyPayment(
+    req.params.id,
+    req.user,
+    String(req.body.paymentStatus || '').toUpperCase(),
+  );
+  successResponse(res, order, 'Payment status updated successfully');
+});
+
 module.exports = {
   createOrder,
   getMyOrders,
@@ -165,4 +174,5 @@ module.exports = {
   getOrderById,
   updateOrderStatus,
   cancelOrder,
+  verifyPayment,
 };

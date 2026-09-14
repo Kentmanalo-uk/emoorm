@@ -1,0 +1,77 @@
+.ph-address-picker {
+  display: grid;
+  gap: 12px;
+}
+
+.ph-address-picker.compact {
+  gap: 8px;
+}
+
+.ph-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ph-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.ph-input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  color: #111827;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ph-input:focus {
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.ph-input:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.ph-input.error {
+  border-color: #dc2626;
+}
+
+.ph-input.error:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.ph-error {
+  font-size: 12px;
+  color: #dc2626;
+}
+
+.ph-note {
+  font-size: 12px;
+  color: #b45309;
+}
+
+.ph-toggle-manual {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #2563eb;
+  padding: 0;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.ph-toggle-manual:hover {
+  color: #1d4ed8;
+}

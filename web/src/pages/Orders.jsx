@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import ProductImage from '../components/ProductImage';
 import useAuthStore from '../store/authStore';
 import './Orders.css';
 
@@ -257,12 +258,7 @@ const Orders = () => {
                   <div className="order-items">
                     {order.items?.slice(0, 3).map((item, index) => (
                       <div key={index} className="order-item">
-                        <img
-                          src={resolveImg(item.product?.images?.[0]) || '/placeholder-product.png'}
-                          alt={item.productName}
-                          className="order-item-image"
-                          onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
-                        />
+                        <ProductImage src={item.product?.images?.[0]} alt={item.productName} className="order-item-image" />
                         <div className="order-item-details">
                           <p className="order-item-name">{item.productName}</p>
                           <p className="order-item-quantity">Qty: {item.quantity}</p>
@@ -312,7 +308,7 @@ const Orders = () => {
                     View details
                   </button>
 
-                  {order.status === 'PENDING' && (
+                  {['PENDING', 'CONFIRMED'].includes(order.status) && (
                     <button
                       onClick={() => handleCancelOrder(order.id)}
                       className="order-action-btn is-danger"
@@ -329,6 +325,12 @@ const Orders = () => {
                       <RotateCcw size={16} />
                       Buy again
                     </button>
+                  )}
+
+                  {['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && (
+                    <Link to={`/profile/returns/request?orderId=${order.id}`} className="order-action-btn">
+                      <RotateCcw size={16} /> Request return
+                    </Link>
                   )}
 
                   {['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && (
@@ -466,11 +468,7 @@ const Orders = () => {
                 <div className="order-details-items">
                   {selectedOrder.items?.map((item, index) => (
                     <div key={index} className="order-details-item">
-                      <img
-                        src={resolveImg(item.product?.images?.[0]) || '/placeholder-product.png'}
-                        alt={item.productName}
-                        onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
-                      />
+                      <ProductImage src={item.product?.images?.[0]} alt={item.productName} />
                       <div className="order-details-item-info">
                         <p className="item-name">{item.productName}</p>
                         <p className="item-quantity">Quantity: {item.quantity}</p>
@@ -524,7 +522,7 @@ const Orders = () => {
             </div>
 
             <div className="modal-footer">
-              {selectedOrder.status === 'PENDING' && (
+              {['PENDING', 'CONFIRMED'].includes(selectedOrder.status) && (
                 <button
                   onClick={() => handleCancelOrder(selectedOrder.id)}
                   className="btn-modal-cancel"

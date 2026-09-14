@@ -12,6 +12,7 @@ const initialProfileState = (user) => ({
   contactNumber: user?.contactNumber || '',
   barangay: user?.barangay || '',
   address: user?.address || '',
+  province: user?.province || 'Oriental Mindoro',
   profilePhoto: user?.profilePhoto || '',
 });
 
@@ -80,6 +81,7 @@ export default function ProfileSettings() {
       const payload = {
         fullName: form.fullName.trim(),
         contactNumber: form.contactNumber?.trim() || null,
+        province: form.province?.trim() || null,
         barangay: form.barangay?.trim() || null,
         address: form.address?.trim() || null,
         profilePhoto: form.profilePhoto || null,
@@ -275,6 +277,12 @@ export default function ProfileSettings() {
               className="ps-input"
             />
             <span className="ps-help">Format: 11 digits starting with 09</span>
+          </label>
+
+          <label className="ps-field">
+            <span className="ps-label">Province</span>
+            <input value={form.province || 'Oriental Mindoro'} disabled className="ps-input" />
+            <span className="ps-help">Determined by your municipality.</span>
           </label>
 
           <label className="ps-field">

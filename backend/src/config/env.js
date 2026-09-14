@@ -67,6 +67,12 @@ const config = {
   // Frontend URL (used for links in outgoing emails)
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 
+  // Google OAuth (Continue with Google) — secret is backend-only.
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  },
+
   // Pagination Configuration
   pagination: {
     defaultPageSize: parseInt(process.env.DEFAULT_PAGE_SIZE || '20', 10),
@@ -78,10 +84,18 @@ const config = {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
+
+  bodyLimit: process.env.BODY_LIMIT || '1mb',
 };
 
 // Validate required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
+const requiredEnvVars = [
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'JWT_REFRESH_SECRET',
+  'ALLOWED_ORIGINS',
+  'FRONTEND_URL',
+];
 
 const missingEnvVars = requiredEnvVars.filter(
   (envVar) => !process.env[envVar]
@@ -97,10 +111,14 @@ if (missingEnvVars.length > 0 && config.nodeEnv === 'production') {
 if (
   config.nodeEnv === 'production' &&
   (config.jwt.secret === 'default-secret-change-in-production' ||
-    config.jwt.refreshSecret === 'default-refresh-secret')
+    config.jwt.refreshSecret === 'default-refresh-secret' ||
+    config.jwt.secret.length < 32 ||
+    config.jwt.refreshSecret.length < 32 ||
+    config.cors.allowedOrigins.some((origin) => /localhost|127\.0\.0\.1/.test(origin)) ||
+    /localhost|127\.0\.0\.1/.test(config.frontendUrl))
 ) {
   throw new Error(
-    'JWT_SECRET and JWT_REFRESH_SECRET must be set to strong, unique values in production'
+    'Production secrets, origins, and frontend URL must be strong and non-local'
   );
 }
 

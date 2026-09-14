@@ -17,6 +17,7 @@ router.get(
 
 router.get(
   '/slug/:slug',
+  optionalAuth,
   storeController.getStoreBySlug
 );
 
@@ -44,6 +45,7 @@ router.put(
 
 router.get(
   '/',
+  optionalAuth,
   storeController.getStores
 );
 

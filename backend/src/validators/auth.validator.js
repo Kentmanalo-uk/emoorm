@@ -55,6 +55,12 @@ const registerValidation = [
     .isUUID()
     .withMessage('Invalid municipality ID'),
   
+  body('province')
+    .optional({ nullable: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Province name is too long'),
+  
   body('barangay')
     .optional()
     .trim()
@@ -179,6 +185,76 @@ const changePasswordValidation = [
     }),
 ];
 
+/**
+ * Validation rules for completing a first-time Google sign-in
+ */
+const googleCompleteValidation = [
+  body('googleToken')
+    .notEmpty()
+    .withMessage('Google sign-in session is required'),
+
+  body('fullName')
+    .trim()
+    .notEmpty()
+    .withMessage('Full name is required')
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Full name must be between 2 and 100 characters'),
+
+  body('contactNumber')
+    .optional()
+    .trim()
+    .matches(/^(\+63|0)?[0-9]{10}$/)
+    .withMessage('Please provide a valid Philippine contact number'),
+
+  body('municipalityId')
+    .notEmpty()
+    .withMessage('Municipality is required')
+    .isUUID()
+    .withMessage('Invalid municipality ID'),
+
+  body('province')
+    .optional({ nullable: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Province name is too long'),
+
+  body('barangay')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Barangay name is too long'),
+
+  body('address')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Address is too long'),
+
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/[A-Z]/)
+    .withMessage('Password must contain at least one uppercase letter')
+    .matches(/[a-z]/)
+    .withMessage('Password must contain at least one lowercase letter')
+    .matches(/[0-9]/)
+    .withMessage('Password must contain at least one number')
+    .matches(/[!@#$%^&*(),.?":{}|<>]/)
+    .withMessage('Password must contain at least one special character'),
+
+  body('confirmPassword')
+    .notEmpty()
+    .withMessage('Please confirm your password')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    }),
+];
+
 module.exports = {
   registerValidation,
   loginValidation,
@@ -186,4 +262,5 @@ module.exports = {
   forgotPasswordValidation,
   resetPasswordValidation,
   changePasswordValidation,
+  googleCompleteValidation,
 };

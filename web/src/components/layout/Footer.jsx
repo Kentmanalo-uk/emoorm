@@ -24,12 +24,13 @@ const Footer = () => {
             <h3 className="footer-title">Customer Care</h3>
             <ul className="footer-links">
               <li><Link to="/help">Help Centre</Link></li>
-              <li><Link to="/help">How to Buy</Link></li>
+              <li><Link to="/help?topic=buying">How to Buy</Link></li>
               <li><Link to="/sell">How to Sell</Link></li>
-              <li><Link to="/help">Returns & Refunds</Link></li>
-              <li><Link to="/help">Shipping & Delivery</Link></li>
-              <li><Link to="/help">Payment Methods</Link></li>
-              <li><Link to="/help">Contact Support</Link></li>
+              <li><Link to="/help?topic=returns">Returns & Refunds</Link></li>
+              <li><Link to="/help?topic=delivery">Shipping & Delivery</Link></li>
+              <li><Link to="/help?topic=payments">Payment Methods</Link></li>
+              <li><Link to="/customer-care">Contact Support</Link></li>
+              <li><Link to="/feedback">Feedback</Link></li>
             </ul>
           </div>
 
@@ -38,7 +39,7 @@ const Footer = () => {
             <h3 className="footer-title">Emoorm</h3>
             <ul className="footer-links">
               <li><Link to="/about">About Emoorm</Link></li>
-              <li><Link to="/about">How Emoorm Works</Link></li>
+              <li><Link to="/about#how-it-works">How Emoorm Works</Link></li>
               <li><Link to="/seller/apply">Seller Registration</Link></li>
               <li><Link to="/privacy">Privacy Policy</Link></li>
               <li><Link to="/terms">Terms of Service</Link></li>
@@ -82,11 +83,11 @@ const Footer = () => {
               </li>
               <li>
                 <span className="footer-contact-label">Phone:</span>
-                <span>+63 915 193 1262</span>
+                <a href="tel:+639151931262">+63 915 193 1262</a>
               </li>
               <li>
                 <span className="footer-contact-label">Email:</span>
-                <span>support@emoorm.com</span>
+                <a href="mailto:support@emoorm.com">support@emoorm.com</a>
               </li>
               <li>
                 <span className="footer-contact-label">Hours:</span>

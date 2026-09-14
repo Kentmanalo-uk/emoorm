@@ -90,6 +90,38 @@ const verifyMfaToken = (token, expectedType) => {
   return decoded;
 };
 
+/**
+ * Short-lived JWT that binds a first-time Google sign-in to the follow-up
+ * "complete your profile" step, without persisting the user until they
+ * submit the rest of their details.
+ */
+const generateGoogleProfileToken = (profile) => {
+  return jwt.sign(
+    {
+      googleId: profile.googleId,
+      email: profile.email,
+      fullName: profile.fullName,
+      profilePhoto: profile.profilePhoto,
+      type: 'google-profile',
+    },
+    config.jwt.secret,
+    { expiresIn: '15m' }
+  );
+};
+
+const verifyGoogleProfileToken = (token) => {
+  let decoded;
+  try {
+    decoded = jwt.verify(token, config.jwt.secret);
+  } catch {
+    throw new Error('Invalid or expired Google sign-in session');
+  }
+  if (decoded?.type !== 'google-profile') {
+    throw new Error('Invalid Google sign-in session');
+  }
+  return decoded;
+};
+
 module.exports = {
   generateAccessToken,
   generateRefreshToken,
@@ -98,4 +130,6 @@ module.exports = {
   generateTokens,
   generateMfaToken,
   verifyMfaToken,
+  generateGoogleProfileToken,
+  verifyGoogleProfileToken,
 };

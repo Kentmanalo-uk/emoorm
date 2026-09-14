@@ -5,8 +5,9 @@ const userRepository = require('../repositories/user.repository');
 const storeRepository = require('../repositories/store.repository');
 const storeService = require('./store.service');
 const notificationService = require('./notification.service');
+const googleService = require('./google.service');
 const { hashPassword, comparePassword } = require('../utils/password');
-const { generateTokens, verifyRefreshToken, generateMfaToken } = require('../utils/jwt');
+const { generateTokens, verifyRefreshToken, generateMfaToken, generateGoogleProfileToken, verifyGoogleProfileToken } = require('../utils/jwt');
 const { sendPasswordResetEmail } = require('../utils/email');
 const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
@@ -22,7 +23,7 @@ const { ApiError } = require('../middleware/errorHandler');
  * @returns {Promise<Object>} Created user and tokens
  */
 const register = async (userData) => {
-  const { email, password, fullName, contactNumber, municipalityId, barangay, address } = userData;
+  const { email, password, fullName, contactNumber, municipalityId, barangay, address, province } = userData;
 
   // Check if email already exists
   const existingUser = await userRepository.findByEmail(email);
@@ -40,6 +41,7 @@ const register = async (userData) => {
     fullName,
     contactNumber: contactNumber || null,
     municipalityId,
+    province: province || 'Oriental Mindoro',
     barangay: barangay || null,
     address: address || null,
     role: 'BUYER', // Default role
@@ -176,6 +178,7 @@ const updateProfile = async (userId, updateData) => {
   const allowedFields = [
     'fullName',
     'contactNumber',
+    'province',
     'barangay',
     'address',
     'profilePhoto',
@@ -554,9 +557,149 @@ const resetPassword = async (token, newPassword) => {
   await userRepository.clearPasswordResetToken(user.id);
 };
 
+/**
+ * Continue with Google — verifies the Google credential (either an authorization
+ * code from the popup flow or an ID token), resolves or creates the matching
+ * E-MOORM user, links the Google account, and issues the existing JWTs.
+ */
+const loginWithGoogle = async ({ code, idToken }) => {
+  const profile = code
+    ? await googleService.exchangeCodeForProfile(code)
+    : await googleService.verifyIdToken(idToken);
+
+  // 1) Existing Google-linked account.
+  let user = await userRepository.findByGoogleId(profile.googleId);
+
+  // 2) Fall back to email match, then link Google to that account.
+  if (!user) {
+    const byEmail = await userRepository.findByEmail(profile.email, true);
+    if (byEmail) {
+      if (byEmail.deletedAt) {
+        throw new ApiError('Account has been deleted', 403);
+      }
+      if (!byEmail.isActive) {
+        throw new ApiError('Account is suspended. Please contact support.', 403);
+      }
+      await userRepository.updateUser(byEmail.id, {
+        googleId: profile.googleId,
+        isVerified: true,
+        profilePhoto: byEmail.profilePhoto || profile.profilePhoto || null,
+      });
+      user = await userRepository.findByGoogleId(profile.googleId);
+    }
+  }
+
+  // 3) Brand-new Google user — don't create the account yet. Hand back a
+  // short-lived token so the client can collect name/address/contact/password
+  // via the "complete your profile" step before we persist anything.
+  if (!user) {
+    return {
+      requiresProfile: true,
+      googleToken: generateGoogleProfileToken(profile),
+      email: profile.email,
+      fullName: profile.fullName,
+      profilePhoto: profile.profilePhoto,
+    };
+  }
+
+  if (user.deletedAt) {
+    throw new ApiError('Account has been deleted', 403);
+  }
+  if (!user.isActive) {
+    throw new ApiError('Account is suspended. Please contact support.', 403);
+  }
+
+  // Admin accounts still need MFA — mirror the password login response shape.
+  const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'MUNICIPAL_ADMIN';
+  if (isAdmin) {
+    if (user.mfaEnabled) {
+      return {
+        requiresMfa: true,
+        mfaToken: generateMfaToken(user, 'mfa-verify'),
+        email: user.email,
+      };
+    }
+    return {
+      requiresMfaSetup: true,
+      mfaToken: generateMfaToken(user, 'mfa-setup'),
+      email: user.email,
+    };
+  }
+
+  const tokens = generateTokens(user);
+  return { user, ...tokens };
+};
+
+/**
+ * Complete a first-time Google sign-in — verifies the short-lived profile
+ * token, validates the user-supplied name/address/contact/password, then
+ * creates the E-MOORM account linked to the Google ID and logs them in.
+ */
+const completeGoogleSignup = async (googleToken, data) => {
+  let decoded;
+  try {
+    decoded = verifyGoogleProfileToken(googleToken);
+  } catch (err) {
+    throw new ApiError(err.message || 'Invalid Google sign-in session', 401);
+  }
+
+  const { googleId, email, profilePhoto } = decoded;
+
+  // Guard against a duplicate account being created while the profile form
+  // was open (e.g. registered separately, or completed in another tab).
+  const existingByGoogle = await userRepository.findByGoogleId(googleId);
+  if (existingByGoogle) {
+    throw new ApiError('This Google account is already linked to an E-MOORM account', 409);
+  }
+  const existingByEmail = await userRepository.findByEmail(email);
+  if (existingByEmail) {
+    throw new ApiError('Email already registered', 409);
+  }
+
+  const { fullName, contactNumber, municipalityId, province, barangay, address, password } = data;
+
+  if (!fullName || !String(fullName).trim()) {
+    throw new ApiError('Full name is required', 400);
+  }
+  if (!municipalityId) {
+    throw new ApiError('Municipality is required', 400);
+  }
+  if (!password || String(password).length < 8) {
+    throw new ApiError('Password must be at least 8 characters', 400);
+  }
+
+  const hashedPassword = await hashPassword(password);
+
+  await userRepository.createUser({
+    email,
+    password: hashedPassword,
+    fullName: String(fullName).trim(),
+    contactNumber: contactNumber || null,
+    profilePhoto: profilePhoto || null,
+    googleId,
+    municipalityId,
+    province: province || 'Oriental Mindoro',
+    barangay: barangay || null,
+    address: address || null,
+    role: 'BUYER',
+    isActive: true,
+    isVerified: true,
+  });
+
+  const user = await userRepository.findByGoogleId(googleId);
+  if (!user) {
+    throw new ApiError('Unable to complete Google sign-in', 500);
+  }
+
+  const tokens = generateTokens(user);
+  return { user, ...tokens };
+};
+
 module.exports = {
   register,
   login,
+  loginWithGoogle,
+  completeGoogleSignup,
   refreshToken,
   getProfile,
   updateProfile,

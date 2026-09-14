@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -42,6 +41,8 @@ import AdminCategories from './pages/AdminCategories';
 import AdminMunicipalities from './pages/AdminMunicipalities';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminAnnouncements from './pages/AdminAnnouncements';
+import AdminBanners from './pages/AdminBanners';
+import AdminVouchers from './pages/AdminVouchers';
 import AdminJuniorAdmins from './pages/AdminJuniorAdmins';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import AdminSettings from './pages/AdminSettings';
@@ -56,12 +57,20 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import CookiePolicy from './pages/CookiePolicy';
 import SearchByImage from './pages/SearchByImage';
+import Returns from './pages/Returns';
+import ReturnRequest from './pages/ReturnRequest';
+import ReturnDetail from './pages/ReturnDetail';
+import SellerReturns from './pages/SellerReturns';
+import CustomerCare from './pages/CustomerCare';
+import Feedback from './pages/Feedback';
 import { WishlistContent } from './pages/Wishlist';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import RoleGate from './components/RoleGate';
 import ScrollToTop from './components/ScrollToTop';
+import AppToaster from './components/ui/AppToaster';
 import './App.css';
+import './styles/responsive.css';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -79,32 +88,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <ScrollToTop />
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#fff',
-              color: '#374151',
-              padding: '16px',
-              borderRadius: '0px',
-              border: '1px solid #e5e7eb',
-              fontSize: '14px',
-            },
-            success: {
-              iconTheme: {
-                primary: '#059669',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
-              },
-            },
-          }}
-        />
+        <AppToaster />
         <RoleGate>
           <Routes>
             {/* Public routes */}
@@ -124,6 +108,8 @@ function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/cookies" element={<CookiePolicy />} />
+            <Route path="/customer-care" element={<CustomerCare />} />
+            <Route path="/feedback" element={<Feedback />} />
 
             {/* Protected routes — require login */}
             <Route
@@ -136,6 +122,9 @@ function App() {
             >
               <Route index element={<Profile />} />
               <Route path="orders" element={<Orders />} />
+              <Route path="returns" element={<Returns />} />
+              <Route path="returns/request" element={<ReturnRequest />} />
+              <Route path="returns/:id" element={<ReturnDetail />} />
               <Route path="addresses" element={<Addresses />} />
               <Route path="reviews" element={<ProfileReviews />} />
               <Route path="wishlist" element={<WishlistContent hideBreadcrumbs />} />
@@ -159,6 +148,7 @@ function App() {
             <Route path="/seller" element={<SellerLayout />}>
               <Route index element={<SellerDashboard />} />
               <Route path="orders" element={<SellerOrders />} />
+              <Route path="returns" element={<SellerReturns />} />
               <Route path="messages" element={<SellerMessages />} />
               <Route path="products" element={<SellerProducts />} />
               <Route path="products/new" element={<SellerProducts />} />
@@ -179,6 +169,8 @@ function App() {
             <Route path="/admin/municipalities" element={<AdminRoute><AdminMunicipalities /></AdminRoute>} />
             <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
             <Route path="/admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
+            <Route path="/admin/banners" element={<AdminRoute><AdminBanners /></AdminRoute>} />
+            <Route path="/admin/vouchers" element={<AdminRoute><AdminVouchers /></AdminRoute>} />
             <Route path="/admin/junior-admins" element={<AdminRoute><AdminJuniorAdmins /></AdminRoute>} />
             <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogs /></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />

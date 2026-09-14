@@ -202,6 +202,162 @@
   margin: 0 0 8px 0;
 }
 
+.cached-accounts {
+  margin: -8px 0 24px;
+}
+
+.cached-accounts-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cached-accounts-heading small {
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.cached-accounts-list {
+  display: grid;
+  gap: 7px;
+}
+
+.cached-account {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #111827;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+
+.cached-account:hover {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.cached-account img,
+.cached-account > svg:first-child {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  color: #16a34a;
+}
+
+.cached-account span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  flex: 1;
+}
+
+.cached-account strong,
+.cached-account small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cached-account strong { font-size: 13px; }
+.cached-account small { color: #6b7280; font-size: 11px; }
+.cached-account-remove { color: #9ca3af; flex: 0 0 auto; }
+.cached-account-remove:hover { color: #dc2626; }
+
+.cached-accounts-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  color: #9ca3af;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.cached-accounts-divider::before,
+.cached-accounts-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: #e5e7eb;
+}
+
+.cached-accounts-link {
+  display: block;
+  margin-top: 10px;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.saved-account-card-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 4px 0 2px;
+}
+
+.saved-account-card-avatar img,
+.saved-account-card-avatar > svg {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  object-fit: cover;
+  color: #16a34a;
+}
+
+.saved-account-card-kicker {
+  margin: 15px 0 5px;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.saved-account-card-inline h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 22px;
+}
+
+.saved-account-card-email {
+  margin: 5px 0 22px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.saved-account-secondary,
+.saved-account-signup,
+.saved-account-remove-link {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.saved-account-secondary { margin-top: 12px; color: #15803d; }
+.saved-account-signup { margin-top: 18px; color: #374151; }
+.saved-account-remove-link { margin-top: 22px; color: #9ca3af; font-size: 11px; font-weight: 500; }
+.saved-account-remove-link:hover { color: #dc2626; }
+
 .login-form-subtitle {
   font-size: 14px;
   color: #6b7280;
@@ -489,6 +645,17 @@
 }
 
 @media (max-width: 480px) {
+  .login-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 10px 0;
+  }
+
+  .login-header-container {
+    padding: 0 16px;
+  }
+
   .login-form-card {
     padding: 24px 20px;
   }

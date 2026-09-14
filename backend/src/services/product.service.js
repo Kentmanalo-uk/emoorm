@@ -18,6 +18,31 @@ const computeImageHashSafe = async (images) => {
   }
 };
 
+const normalizeProductOptions = (data) => {
+  const returnPolicy = typeof data.returnPolicy === 'string'
+    ? data.returnPolicy.trim().slice(0, 2000)
+    : null;
+  const rawVariations = Array.isArray(data.variations) ? data.variations : [];
+  const variations = rawVariations
+    .map((variation) => ({
+      name: String(variation?.name || '').trim().slice(0, 80),
+      options: Array.isArray(variation?.options)
+        ? variation.options.map((option) => String(option).trim().slice(0, 80)).filter(Boolean).slice(0, 30)
+        : [],
+    }))
+    .filter((variation) => variation.name && variation.options.length)
+    .slice(0, 10);
+
+  const names = new Set();
+  for (const variation of variations) {
+    const key = variation.name.toLowerCase();
+    if (names.has(key)) throw new ApiError('Variation names must be unique', 400);
+    names.add(key);
+  }
+
+  return { returnPolicy, variations: variations.length ? variations : null };
+};
+
 /**
  * Product Service
  * Contains business logic for product operations
@@ -64,6 +89,19 @@ const createProduct = async (userId, data) => {
     throw new ApiError('Your store is suspended. Cannot create products.', 403);
   }
 
+  const price = Number(data.price);
+  const stock = Number(data.stock ?? 0);
+  const lowStockThreshold = Number(data.lowStockThreshold ?? 5);
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new ApiError('Product price must be greater than zero', 400);
+  }
+  if (!Number.isInteger(stock) || stock < 0) {
+    throw new ApiError('Product stock must be a whole number of zero or more', 400);
+  }
+  if (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) {
+    throw new ApiError('Low-stock threshold must be a whole number of zero or more', 400);
+  }
+
   // Verify category exists
   const category = await categoryRepository.findById(data.categoryId);
   if (!category) {
@@ -79,13 +117,16 @@ const createProduct = async (userId, data) => {
 
   // Create product
   const imageHash = await computeImageHashSafe(data.images);
+  const options = normalizeProductOptions(data);
   const product = await productRepository.createProduct({
     name: data.name,
     slug,
     description: data.description,
-    price: data.price,
-    stock: data.stock || 0,
+    price,
+    stock,
+    lowStockThreshold,
     images: data.images || [],
+    ...options,
     imageHash,
     storeId: store.id,
     categoryId: data.categoryId,
@@ -101,10 +142,14 @@ const createProduct = async (userId, data) => {
  * @param {String} id - Product ID
  * @returns {Promise<Object>} Product
  */
-const getProductById = async (id) => {
+const getProductById = async (id, viewerId = null, viewerRole = null) => {
   const product = await productRepository.findById(id);
 
   if (!product || product.deletedAt) {
+    throw new ApiError('Product not found', 404);
+  }
+  if (viewerId && viewerRole !== 'SUPER_ADMIN' && viewerRole !== 'MUNICIPAL_ADMIN'
+    && product.store?.owner?.id === viewerId) {
     throw new ApiError('Product not found', 404);
   }
 
@@ -116,10 +161,14 @@ const getProductById = async (id) => {
  * @param {String} slug - Product slug
  * @returns {Promise<Object>} Product
  */
-const getProductBySlug = async (slug) => {
+const getProductBySlug = async (slug, viewerId = null, viewerRole = null) => {
   const product = await productRepository.findBySlug(slug);
 
   if (!product || product.deletedAt) {
+    throw new ApiError('Product not found', 404);
+  }
+  if (viewerId && viewerRole !== 'SUPER_ADMIN' && viewerRole !== 'MUNICIPAL_ADMIN'
+    && product.store?.owner?.id === viewerId) {
     throw new ApiError('Product not found', 404);
   }
 
@@ -137,6 +186,7 @@ const getProducts = async (options) => {
     options.status = 'APPROVED';
     options.storeIsActive = true;
     options.storeIsSuspended = false;
+    options.excludeOwnerId = options.userId;
   }
 
   return productRepository.findAll(options);
@@ -196,11 +246,14 @@ const updateProduct = async (productId, userId, data) => {
   const allowedFields = [
     'name',
     'slug',
+    'lowStockThreshold',
     'description',
     'price',
     'stock',
     'images',
     'categoryId',
+    'returnPolicy',
+    'variations',
   ];
 
   const updateData = {};
@@ -208,6 +261,36 @@ const updateProduct = async (productId, userId, data) => {
     if (data[field] !== undefined) {
       updateData[field] = data[field];
     }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updateData, 'price')) {
+    const price = Number(updateData.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new ApiError('Product price must be greater than zero', 400);
+    }
+    updateData.price = price;
+  }
+  if (Object.prototype.hasOwnProperty.call(updateData, 'stock')) {
+    const stock = Number(updateData.stock);
+    if (!Number.isInteger(stock) || stock < 0) {
+      throw new ApiError('Product stock must be a whole number of zero or more', 400);
+    }
+    updateData.stock = stock;
+  }
+  if (Object.prototype.hasOwnProperty.call(updateData, 'lowStockThreshold')) {
+    const lowStockThreshold = Number(updateData.lowStockThreshold);
+    if (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) {
+      throw new ApiError('Low-stock threshold must be a whole number of zero or more', 400);
+    }
+    updateData.lowStockThreshold = lowStockThreshold;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, 'returnPolicy')
+    || Object.prototype.hasOwnProperty.call(data, 'variations')) {
+    Object.assign(updateData, normalizeProductOptions({
+      returnPolicy: data.returnPolicy,
+      variations: data.variations,
+    }));
   }
 
   // If product was rejected and being updated, reset to pending
@@ -268,6 +351,13 @@ const deleteProduct = async (productId, userId) => {
  * @param {String} productId - Product ID
  * @param {String} adminId - Approving admin user ID
  * @param {Object} [actor] - The acting admin (for municipality scope)
+      if (Object.prototype.hasOwnProperty.call(updateData, 'lowStockThreshold')) {
+        const lowStockThreshold = Number(updateData.lowStockThreshold);
+        if (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) {
+          throw new ApiError('Low-stock threshold must be a whole number of zero or more', 400);
+        }
+        updateData.lowStockThreshold = lowStockThreshold;
+      }
  * @returns {Promise<Object>} Updated product
  */
 const approveProduct = async (productId, adminId, actor) => {

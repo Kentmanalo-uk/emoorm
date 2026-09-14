@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+﻿import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   MapPin,
   Package,
@@ -15,15 +15,27 @@ import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import ProductImage from '../components/ProductImage';
 import { uploadImage } from '../lib/upload';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
+import PhAddressPicker from '../components/common/PhAddressPicker';
 import './Checkout.css';
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user } = useAuthStore();
-  const { items, getTotalPrice, clearCart } = useCartStore();
+  const { items: allItems, getTotalPrice, clearCart } = useCartStore();
+
+  // Restrict checkout to the items selected on the Cart page (if provided).
+  const selectedIds = location.state?.selectedIds;
+  const incomingVoucherCode = location.state?.voucherCode || '';
+  const items = useMemo(() => {
+    if (!Array.isArray(selectedIds) || selectedIds.length === 0) return allItems;
+    const allow = new Set(selectedIds);
+    return allItems.filter((it) => allow.has(it.id));
+  }, [allItems, selectedIds]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [deliveryForm, setDeliveryForm] = useState({
@@ -31,8 +43,13 @@ const Checkout = () => {
     contactNumber: '',
     street: '',
     barangay: '',
+    barangayCode: '',
     municipality: '',
     municipalityId: '',
+    municipalityName: '',
+    municipalityCode: '',
+    province: 'Oriental Mindoro',
+    provinceCode: '',
   });
   const [deliveryErrors, setDeliveryErrors] = useState({});
   const [municipalities, setMunicipalities] = useState([]);
@@ -45,6 +62,12 @@ const Checkout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const checkoutIdRef = useRef(null);
+
+  // Voucher state
+  const [voucherInput, setVoucherInput] = useState(incomingVoucherCode);
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [voucherLoading, setVoucherLoading] = useState(false);
 
   // Saved delivery addresses
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -54,7 +77,10 @@ const Checkout = () => {
   // Per-store settings + coverage
   const [storeInfo, setStoreInfo] = useState({}); // { [storeId]: { store, covered, checked } }
 
-  const subtotal = getTotalPrice();
+  const subtotal = useMemo(
+    () => items.reduce((sum, it) => sum + Number(it.price) * it.quantity, 0),
+    [items]
+  );
 
   // Group items by store
   const itemsByStore = useMemo(() => {
@@ -73,10 +99,15 @@ const Checkout = () => {
       navigate('/login?redirect=/checkout');
       return;
     }
+    if (items.length > 0 && storeIds.length > 1 && !orderSuccess) {
+      toast.error('Checkout is limited to one store per order.');
+      navigate('/cart', { replace: true });
+      return;
+    }
     if (items.length === 0 && !orderSuccess) {
       navigate('/cart');
     }
-  }, [isAuthenticated, items, navigate, orderSuccess]);
+  }, [isAuthenticated, items, navigate, orderSuccess, storeIds]);
 
   // Load municipalities + prefill address
   useEffect(() => {
@@ -100,6 +131,8 @@ const Checkout = () => {
       barangay: addr.barangay || '',
       municipality: addr.municipality?.name || '',
       municipalityId: addr.municipalityId || '',
+      municipalityName: addr.municipality?.name || '',
+      province: addr.province || 'Oriental Mindoro',
     }));
     setDeliveryErrors({});
   };
@@ -138,6 +171,8 @@ const Checkout = () => {
           barangay: user.barangay || prev.barangay,
           municipality: user.municipality?.name || prev.municipality,
           municipalityId: user.municipalityId || prev.municipalityId,
+          municipalityName: user.municipality?.name || prev.municipalityName,
+          province: user.province || prev.province || 'Oriental Mindoro',
         }));
       }
     }
@@ -250,7 +285,51 @@ const Checkout = () => {
   );
 
   const shippingFee = fulfillmentMethod === 'PICKUP' ? 0 : subtotal >= 500 ? 0 : 50;
-  const total = subtotal + shippingFee;
+  const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
+  const total = Math.max(0, subtotal + shippingFee - discountAmount);
+
+  const applyVoucher = async (codeOverride) => {
+    const code = String(codeOverride ?? voucherInput ?? '').trim();
+    if (!code) return toast.error('Enter a voucher code');
+    if (subtotal <= 0) return toast.error('No items to apply a voucher to');
+    setVoucherLoading(true);
+    try {
+      const res = await axios.post('/vouchers/validate', { code, subtotal });
+      setAppliedVoucher(res.data);
+      setVoucherInput(res.data.voucher.code);
+      toast.success(`Voucher ${res.data.voucher.code} applied`);
+    } catch (err) {
+      setAppliedVoucher(null);
+      toast.error(err?.response?.data?.message || 'Invalid voucher code');
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
+
+  const removeVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherInput('');
+  };
+
+  useEffect(() => {
+    if (incomingVoucherCode) applyVoucher(incomingVoucherCode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingVoucherCode]);
+
+  useEffect(() => {
+    if (!appliedVoucher) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.post('/vouchers/validate', { code: appliedVoucher.voucher.code, subtotal });
+        if (!cancelled) setAppliedVoucher(res.data);
+      } catch {
+        if (!cancelled) setAppliedVoucher(null);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal]);
 
   const handleDeliveryChange = (e) => {
     const { name, value } = e.target;
@@ -286,16 +365,22 @@ const Checkout = () => {
       }
       setCurrentStep(2);
     } else if (step === 3 && paymentMethod) {
-      if ((paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && !paymentReference.trim()) {
-        toast.error('Please enter your payment reference number.');
-        return;
+      if ((paymentMethod === 'GCASH' || paymentMethod === 'QRPH')) {
+        if (!paymentReference.trim()) {
+          toast.error('Please enter your payment reference number.');
+          return;
+        }
+        if (!paymentProofUrl) {
+          toast.error('Please upload your payment proof screenshot.');
+          return;
+        }
       }
       setCurrentStep(3);
     }
   };
 
   const buildDeliveryAddress = () =>
-    `${deliveryForm.street}, ${deliveryForm.barangay}, ${deliveryForm.municipality}, Oriental Mindoro`;
+    `${deliveryForm.street}, ${deliveryForm.barangay}, ${deliveryForm.municipality}, ${deliveryForm.province || 'Oriental Mindoro'}`;
 
   const handleProofUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -314,32 +399,69 @@ const Checkout = () => {
   };
 
   const handlePlaceOrder = async () => {
+    if (storeIds.length !== 1) {
+      toast.error('Select items from one store before checkout.');
+      navigate('/cart');
+      return;
+    }
+    if (paymentMethod !== 'COD' && (!paymentReference.trim() || !paymentProofUrl)) {
+      toast.error('Please provide a payment reference and upload proof of payment.');
+      setCurrentStep(2);
+      return;
+    }
     setIsSubmitting(true);
+    if (!checkoutIdRef.current) {
+      checkoutIdRef.current = window.crypto?.randomUUID?.()
+        || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+    const checkoutId = checkoutIdRef.current;
     try {
       const orderPromises = Object.entries(itemsByStore).map(([storeId, storeItems]) => {
         const info = storeInfo[storeId];
         const pickupAddr = info?.store?.pickupAddress || '';
         return axios.post('/orders', {
           storeId,
+          checkoutKey: `${checkoutId}:${storeId}`,
           fulfillmentMethod,
           paymentMethod,
           paymentReference: paymentReference || undefined,
           paymentProofUrl: paymentProofUrl || undefined,
+          voucherCode: appliedVoucher?.voucher?.code || undefined,
           deliveryAddress:
             fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
           contactNumber: deliveryForm.contactNumber,
           deliveryNotes: notes || undefined,
           buyerMunicipalityId: deliveryForm.municipalityId || undefined,
           buyerBarangay: deliveryForm.barangay || undefined,
+          buyerProvince: deliveryForm.province || undefined,
           items: storeItems.map((item) => ({
-            productId: item.id,
+            productId: item.productId || item.id,
             quantity: item.quantity,
+            selectedVariations: item.selectedVariations || undefined,
           })),
         });
       });
 
-      const responses = await Promise.all(orderPromises);
-      clearCart();
+      const settled = await Promise.allSettled(orderPromises);
+      const responses = settled
+        .filter((result) => result.status === 'fulfilled')
+        .map((result) => result.value);
+      const failed = settled.find((result) => result.status === 'rejected');
+      if (failed) {
+        await Promise.allSettled(
+          responses
+            .map((response) => response.data?.id)
+            .filter(Boolean)
+            .map((id) => axios.post(`/orders/${id}/cancel`)),
+        );
+        throw failed.reason;
+      }
+      // Only remove the items that were part of this order — leave any unselected items in the cart.
+      if (Array.isArray(selectedIds) && selectedIds.length > 0) {
+        selectedIds.forEach((id) => useCartStore.getState().removeItem(id));
+      } else {
+        clearCart();
+      }
 
       const firstOrder = responses[0]?.data;
       if (firstOrder?.id) setOrderId(firstOrder.id);
@@ -347,7 +469,8 @@ const Checkout = () => {
       setOrderSuccess(true);
       toast.success('Order placed successfully!');
     } catch (error) {
-      toast.error(error.message || 'Failed to place order. Please try again.');
+      const backendMsg = error?.response?.data?.message;
+      toast.error(backendMsg || error?.message || 'Failed to place order. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -370,7 +493,10 @@ const Checkout = () => {
                 </div>
               )}
               <div className="order-success-actions">
-                <Link to="/profile/orders" className="btn-view-orders">View My Orders</Link>
+                {orderId && (
+                  <Link to={`/orders/${orderId}/receipt`} className="btn-view-orders">View Receipt</Link>
+                )}
+                <Link to="/profile/orders" className="btn-view-orders">My Orders</Link>
                 <Link to="/products" className="btn-continue-shopping-success">Continue Shopping</Link>
               </div>
             </div>
@@ -490,7 +616,7 @@ const Checkout = () => {
                               {addr.label ? `${addr.label} — ` : ''}{addr.fullName}
                               {addr.isDefault && <span className="saved-address-default-tag">Default</span>}
                             </strong>
-                            <p>{addr.street}, {addr.barangay}, {addr.municipality?.name}, Oriental Mindoro</p>
+                            <p>{addr.street}, {addr.barangay}, {addr.municipality?.name}, {addr.province || 'Oriental Mindoro'}</p>
                             <p className="saved-address-phone">{addr.contactNumber}</p>
                           </div>
                         </label>
@@ -537,47 +663,41 @@ const Checkout = () => {
                     </div>
 
                     {fulfillmentMethod === 'DELIVERY' && (
-                      <>
-                        <div className="form-group">
-                          <label className="form-label">Street / House No.</label>
-                          <input
-                            type="text"
-                            name="street"
-                            className={`form-input ${deliveryErrors.street ? 'form-input-error' : ''}`}
-                            placeholder="123 Rizal St."
-                            value={deliveryForm.street}
-                            onChange={handleDeliveryChange}
-                          />
-                          {deliveryErrors.street && <span className="form-error">{deliveryErrors.street}</span>}
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Barangay</label>
-                          <input
-                            type="text"
-                            name="barangay"
-                            className={`form-input ${deliveryErrors.barangay ? 'form-input-error' : ''}`}
-                            placeholder="Barangay Poblacion"
-                            value={deliveryForm.barangay}
-                            onChange={handleDeliveryChange}
-                          />
-                          {deliveryErrors.barangay && <span className="form-error">{deliveryErrors.barangay}</span>}
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Municipality</label>
-                          <select
-                            name="municipality"
-                            className={`form-input ${deliveryErrors.municipality ? 'form-input-error' : ''}`}
-                            value={deliveryForm.municipality}
-                            onChange={handleDeliveryChange}
-                          >
-                            <option value="">Select municipality</option>
-                            {municipalities.map((m) => (
-                              <option key={m.id} value={m.name}>{m.name}</option>
-                            ))}
-                          </select>
-                          {deliveryErrors.municipality && <span className="form-error">{deliveryErrors.municipality}</span>}
-                        </div>
-                      </>
+                      <PhAddressPicker
+                        value={{
+                          province: deliveryForm.province,
+                          provinceCode: deliveryForm.provinceCode,
+                          municipalityId: deliveryForm.municipalityId,
+                          municipalityName: deliveryForm.municipality || deliveryForm.municipalityName,
+                          municipalityCode: deliveryForm.municipalityCode,
+                          barangay: deliveryForm.barangay,
+                          barangayCode: deliveryForm.barangayCode,
+                          street: deliveryForm.street,
+                        }}
+                        onChange={(next) => {
+                          setDeliveryForm((prev) => ({
+                            ...prev,
+                            province: next.province ?? prev.province,
+                            provinceCode: next.provinceCode ?? prev.provinceCode,
+                            municipalityId: next.municipalityId ?? prev.municipalityId,
+                            municipalityName: next.municipalityName ?? prev.municipalityName,
+                            municipality: next.municipalityName ?? prev.municipality,
+                            municipalityCode: next.municipalityCode ?? prev.municipalityCode,
+                            barangay: next.barangay ?? prev.barangay,
+                            barangayCode: next.barangayCode ?? prev.barangayCode,
+                            street: next.street ?? prev.street,
+                          }));
+                          setDeliveryErrors((prev) => ({
+                            ...prev,
+                            street: '',
+                            barangay: '',
+                            municipality: '',
+                            municipalityId: '',
+                          }));
+                        }}
+                        dbMunicipalities={municipalities}
+                        errors={deliveryErrors}
+                      />
                     )}
                   </div>
 
@@ -689,7 +809,7 @@ const Checkout = () => {
                           />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Payment proof (optional)</label>
+                          <label className="form-label">Payment proof <span style={{ color: '#dc2626' }}>*</span></label>
                           {paymentProofUrl ? (
                             <div className="proof-preview">
                               <img src={resolveImg(paymentProofUrl)} alt="Payment proof" />
@@ -738,11 +858,7 @@ const Checkout = () => {
                     <h3>Order Items ({items.length})</h3>
                     {items.map((item) => (
                       <div key={item.id} className="review-item">
-                        <img
-                          src={resolveImg(item.image || item.images?.[0]) || '/placeholder.png'}
-                          alt={item.name}
-                          onError={(e) => { e.currentTarget.src = '/placeholder.png'; }}
-                        />
+                        <ProductImage src={item.image || item.images?.[0]} alt={item.name} />
                         <div className="review-item-details">
                           <p className="review-item-name">{item.name}</p>
                           <p className="review-item-quantity">Qty: {item.quantity}</p>
@@ -811,6 +927,12 @@ const Checkout = () => {
                   <span>{fulfillmentMethod === 'PICKUP' ? 'Pickup' : 'Shipping Fee'}</span>
                   <span>{shippingFee === 0 ? <span className="free-text">FREE</span> : `₱${shippingFee.toFixed(2)}`}</span>
                 </div>
+                {appliedVoucher && discountAmount > 0 && (
+                  <div className="summary-row" style={{ color: '#059669' }}>
+                    <span>Voucher ({appliedVoucher.voucher.code})</span>
+                    <span>-₱{discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="summary-divider"></div>
                 <div className="summary-total">
                   <span>Total</span>
@@ -821,6 +943,38 @@ const Checkout = () => {
                     Add ₱{(500 - subtotal).toFixed(2)} more for free shipping
                   </div>
                 )}
+
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Voucher</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      type="text"
+                      value={voucherInput}
+                      onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
+                      placeholder="Enter code"
+                      disabled={voucherLoading || !!appliedVoucher}
+                      style={{ flex: 1, padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
+                    />
+                    {appliedVoucher ? (
+                      <button type="button" onClick={removeVoucher} className="btn-back" style={{ padding: '8px 12px', fontSize: 13 }}>Remove</button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => applyVoucher()}
+                        disabled={voucherLoading || !voucherInput.trim() || subtotal === 0}
+                        className="btn-continue"
+                        style={{ padding: '8px 12px', fontSize: 13, width: 'auto' }}
+                      >
+                        {voucherLoading ? '…' : 'Apply'}
+                      </button>
+                    )}
+                  </div>
+                  {appliedVoucher && (
+                    <p style={{ marginTop: 6, fontSize: 12, color: '#059669' }}>
+                      {appliedVoucher.voucher.description || 'Voucher applied'}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

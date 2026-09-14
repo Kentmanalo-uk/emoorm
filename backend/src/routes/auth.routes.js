@@ -10,6 +10,7 @@ const {
   changePasswordValidation,
   forgotPasswordValidation,
   resetPasswordValidation,
+  googleCompleteValidation,
 } = require('../validators/auth.validator');
 
 /**
@@ -29,6 +30,18 @@ router.post(
   loginValidation,
   validate,
   authController.login
+);
+
+router.post(
+  '/google',
+  authController.googleLogin
+);
+
+router.post(
+  '/google/complete',
+  googleCompleteValidation,
+  validate,
+  authController.completeGoogleSignup
 );
 
 router.post(

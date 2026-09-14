@@ -1,9 +1,10 @@
-﻿import React, { useState, useRef } from "react";
+﻿import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, Navigate, Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle, UploadSimple as Upload, X, User, Storefront as Store, ShieldCheck, Eye } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import axios from "../lib/axios";
 import useAuthStore from "../store/authStore";
+import PhAddressPicker from "../components/common/PhAddressPicker";
 import "./SellerApply.css";
 
 const ID_TYPES = [
@@ -102,12 +103,27 @@ export default function SellerApply() {
     shopName: "",
     shopDescription: "",
     shopAddress: user?.address || "",
+    // Structured address parts (composed into shopAddress on change)
+    province: user?.province || "Oriental Mindoro",
+    provinceCode: "",
+    municipalityId: user?.municipalityId || "",
+    municipalityName: user?.municipality?.name || "",
+    municipalityCode: "",
+    barangay: user?.barangay || "",
+    barangayCode: "",
+    street: user?.address || "",
     // Step 3
     idType: "",
     idFrontUrl: "",
     idBackUrl: "",
     selfieUrl: "",
   });
+
+  // Load DB municipalities for cross-referencing PSGC data.
+  const [dbMunicipalities, setDbMunicipalities] = useState([]);
+  useEffect(() => {
+    axios.get("/municipalities").then((r) => setDbMunicipalities(r.data || [])).catch(() => {});
+  }, []);
 
   // Local-only object URLs for the ID photo previews (never sent to the server).
   const [previews, setPreviews] = useState({ idFrontUrl: null, idBackUrl: null, selfieUrl: null });
@@ -283,12 +299,35 @@ export default function SellerApply() {
 
               <div className="apply-field">
                 <label>Shop Address / Location <span className="req">*</span></label>
-                <input
-                  type="text"
-                  value={form.shopAddress}
-                  onChange={(e) => set("shopAddress", e.target.value)}
-                  placeholder="Barangay, Municipality, Oriental Mindoro"
-                  className={errors.shopAddress ? "input-error" : ""}
+                <PhAddressPicker
+                  value={{
+                    province: form.province,
+                    provinceCode: form.provinceCode,
+                    municipalityId: form.municipalityId,
+                    municipalityName: form.municipalityName,
+                    municipalityCode: form.municipalityCode,
+                    barangay: form.barangay,
+                    barangayCode: form.barangayCode,
+                    street: form.street,
+                  }}
+                  onChange={(next) => {
+                    setForm((prev) => {
+                      const merged = { ...prev, ...next };
+                      const composed = [merged.street, merged.barangay, merged.municipalityName, merged.province]
+                        .map((s) => (s || "").trim())
+                        .filter(Boolean)
+                        .join(", ");
+                      return { ...merged, shopAddress: composed };
+                    });
+                    if (errors.shopAddress) setErrors((prev) => ({ ...prev, shopAddress: "" }));
+                  }}
+                  dbMunicipalities={dbMunicipalities}
+                  errors={{
+                    province: errors.shopAddress,
+                    municipalityId: errors.shopAddress,
+                    barangay: errors.shopAddress,
+                    street: errors.shopAddress,
+                  }}
                 />
                 {errors.shopAddress && <span className="field-error">{errors.shopAddress}</span>}
               </div>

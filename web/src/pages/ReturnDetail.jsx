@@ -1,0 +1,16 @@
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, CheckCircle, Clock, Package } from '@phosphor-icons/react';
+import toast from 'react-hot-toast';
+import axios from '../lib/axios';
+import './Returns.css';
+
+const LABELS = { REQUESTED: 'Request submitted', APPROVED: 'Return approved', AWAITING_SHIPMENT: 'Ship items back', RECEIVED: 'Items received', REFUNDED: 'Refund issued', REJECTED: 'Request rejected', CANCELLED: 'Request cancelled', CLOSED: 'Return closed' };
+export default function ReturnDetail() {
+  const { id } = useParams(); const navigate = useNavigate(); const [item, setItem] = useState(null); const [busy, setBusy] = useState(false);
+  const load = () => axios.get(`/returns/${id}`).then((res) => setItem(res.data)).catch((err) => toast.error(err.message || 'Unable to load return'));
+  useEffect(load, [id]);
+  const action = async (path, message) => { setBusy(true); try { await axios.post(`/returns/${id}/${path}`); toast.success(message); await load(); } catch (err) { toast.error(err.message || 'Action failed'); } finally { setBusy(false); } };
+  if (!item) return <div className="returns-empty">Loading return request...</div>;
+  return <div className="return-detail-page"><Link to="/profile/returns" className="return-back"><ArrowLeft size={18} /> All returns</Link><div className="return-detail-head"><div><p className="returns-eyebrow">{item.requestNumber}</p><h1>Return request</h1><span>Order #{item.order?.orderNumber}</span></div><span className={`return-status status-${item.status.toLowerCase()}`}>{LABELS[item.status] || item.status}</span></div><section className="return-detail-panel"><h2>Progress</h2><div className="return-timeline">{(item.history || []).map((event, index) => <div className="timeline-row" key={`${event.at}-${index}`}><span className="timeline-dot"><CheckCircle size={17} /></span><div><strong>{LABELS[event.status] || event.event || event.status}</strong><small>{event.at ? new Date(event.at).toLocaleString() : ''}</small></div></div>)}</div></section><section className="return-detail-panel"><h2>Items</h2>{item.items?.map((line) => <div className="detail-item" key={line.id}><Package size={20} /><span>{line.orderItem?.product?.name || line.orderItem?.productName}</span><small>Qty {line.quantity}</small><strong>₱{Number(line.subtotal).toFixed(2)}</strong></div>)}<div className="detail-total"><span>{item.status === 'REFUNDED' ? 'Refunded amount' : 'Requested amount'}</span><strong>₱{Number(item.refundedAmount || item.approvedAmount || item.requestedAmount || 0).toFixed(2)}</strong></div></section>{item.sellerNote && <section className="return-note"><strong>Seller note</strong><p>{item.sellerNote}</p></section>}<div className="return-detail-actions">{item.status === 'REQUESTED' && <button disabled={busy} onClick={() => action('cancel', 'Return request cancelled')}>Cancel request</button>}{item.status === 'REFUNDED' && <button className="returns-primary" disabled={busy} onClick={() => action('close', 'Return closed')}>Close return</button>}{item.status === 'AWAITING_SHIPMENT' && <div className="return-hint"><Clock size={18} /> Ship the items back and wait for the seller to confirm receipt.</div>}</div></div>;
+}

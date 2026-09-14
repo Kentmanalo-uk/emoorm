@@ -592,3 +592,17 @@
     justify-content: center;
   }
 }
+
+@media (max-width: 480px) {
+  .apply-page,
+  .apply-card,
+  .apply-form,
+  .apply-step-content {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .apply-card {
+    padding: 20px 16px;
+  }
+}

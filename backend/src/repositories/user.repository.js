@@ -385,6 +385,30 @@ const findKycRecordById = async (id) => {
 module.exports = {
   createUser,
   findByEmail,
+  findByGoogleId: async (googleId) => {
+    return prisma.user.findUnique({
+      where: { googleId },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        contactNumber: true,
+        profilePhoto: true,
+        googleId: true,
+        municipalityId: true,
+        municipality: { select: { id: true, name: true, code: true } },
+        barangay: true,
+        address: true,
+        province: true,
+        role: true,
+        isActive: true,
+        isVerified: true,
+        mfaEnabled: true,
+        deletedAt: true,
+        createdAt: true,
+      },
+    });
+  },
   findById,
   updateUser,
   softDeleteUser,

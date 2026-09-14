@@ -64,6 +64,34 @@ const padDays = (series, from, to) => {
   return days;
 };
 
+const padBuckets = (series, from, to, granularity) => {
+  if (granularity === 'day') return padDays(series, from, to);
+
+  const values = new Map(series.map((item) => [item.date, item]));
+  const buckets = [];
+  const cursor = new Date(from);
+  const end = new Date(to);
+  cursor.setUTCDate(1);
+  cursor.setUTCHours(0, 0, 0, 0);
+  end.setUTCDate(1);
+  end.setUTCHours(0, 0, 0, 0);
+
+  if (granularity === 'year') {
+    cursor.setUTCMonth(0);
+    end.setUTCMonth(0);
+  }
+
+  while (cursor <= end) {
+    const key = granularity === 'year'
+      ? String(cursor.getUTCFullYear())
+      : cursor.toISOString().slice(0, 7);
+    buckets.push(values.get(key) || { date: key, total: 0, orders: 0 });
+    if (granularity === 'year') cursor.setUTCFullYear(cursor.getUTCFullYear() + 1);
+    else cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return buckets;
+};
+
 // ---------- SELLER ----------
 const getSellerAnalytics = async (userId, query = {}) => {
   const store = await storeRepository.findByOwnerId(userId);
@@ -113,7 +141,7 @@ const getSellerAnalytics = async (userId, query = {}) => {
       buyers: { value: raw.uniqueBuyers, previous: null, delta: null },
     },
     salesByDay: padDays(raw.salesByDay, raw.window.from, raw.window.to),
-    salesByBucket: raw.salesBucketed,
+    salesByBucket: padBuckets(raw.salesBucketed, raw.window.from, raw.window.to, raw.granularity),
     granularity: raw.granularity,
     ordersByStatus: orderStatus.counts,
     productsByStatus: productStatus.counts,

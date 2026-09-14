@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle } from '@phosphor-icons/react';
+import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle, UserCircle, X } from '@phosphor-icons/react';
+import { useGoogleLogin } from '@react-oauth/google';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
+import PhAddressPicker from '../components/common/PhAddressPicker';
 import './Login.css';
 
 const QR_POLL_INTERVAL_MS = 2000;
@@ -10,7 +12,7 @@ const QR_POLL_INTERVAL_MS = 2000;
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login: storeLogin } = useAuthStore();
+  const { login: storeLogin, getCachedAccounts, switchCachedAccount, removeCachedAccount } = useAuthStore();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,7 +22,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
-  // MFA challenge state — 'credentials' | 'verify' | 'setup'
+  // MFA challenge state — 'credentials' | 'verify' | 'setup' | 'google-profile'
   const [mfaStage, setMfaStage] = useState('credentials');
   const [mfaToken, setMfaToken] = useState('');
   const [mfaCode, setMfaCode] = useState('');
@@ -28,8 +30,38 @@ const Login = () => {
   const [setupData, setSetupData] = useState(null); // { qrDataUrl, secret }
   const [backupCodes, setBackupCodes] = useState(null);
 
+  // First-time Google sign-in — collect name/address/contact/password before
+  // the account is actually created.
+  const [googleProfile, setGoogleProfile] = useState(null); // { googleToken, email, fullName, profilePhoto }
+  const [municipalities, setMunicipalities] = useState([]);
+  const [googleForm, setGoogleForm] = useState({
+    fullName: '',
+    contactNumber: '',
+    password: '',
+    confirmPassword: '',
+    province: 'Oriental Mindoro',
+    provinceCode: '',
+    municipalityId: '',
+    municipalityName: '',
+    municipalityCode: '',
+    barangay: '',
+    barangayCode: '',
+    street: '',
+  });
+  const [googleFormErrors, setGoogleFormErrors] = useState({});
+  const [showGooglePassword, setShowGooglePassword] = useState(false);
+  const [completingGoogle, setCompletingGoogle] = useState(false);
+
+  useEffect(() => {
+    if (mfaStage === 'google-profile' && municipalities.length === 0) {
+      axios.get('/municipalities').then((res) => setMunicipalities(res.data || [])).catch(() => {});
+    }
+  }, [mfaStage, municipalities.length]);
+
   // QR code login
   const [showQrLogin, setShowQrLogin] = useState(false);
+  const [cachedAccounts, setCachedAccounts] = useState(() => getCachedAccounts());
+  const [showSavedAccountCard, setShowSavedAccountCard] = useState(() => getCachedAccounts().length > 0);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -218,9 +250,128 @@ const Login = () => {
     setApiError('');
   };
 
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const startGoogleLogin = useGoogleLogin({
+    flow: 'auth-code',
+    onError: () => setApiError('Google sign-in failed. Please try again.'),
+    onNonOAuthError: (err) => {
+      if (err?.type !== 'popup_closed') {
+        setApiError('Google sign-in was interrupted.');
+      }
+    },
+    onSuccess: async ({ code }) => {
+      if (!code) return;
+      setGoogleLoading(true);
+      setApiError('');
+      try {
+        const res = await axios.post('/auth/google', { code });
+        const data = res.data;
+        if (data?.requiresProfile) {
+          setGoogleProfile(data);
+          setGoogleForm((prev) => ({ ...prev, fullName: data.fullName || '' }));
+          setGoogleFormErrors({});
+          setMfaStage('google-profile');
+          return;
+        }
+        if (data?.requiresMfa || data?.requiresMfaSetup) {
+          setApiError('Admin accounts must sign in with the standard admin flow to complete MFA.');
+          return;
+        }
+        if (!data?.user || !data?.accessToken) {
+          setApiError('Unexpected response from server.');
+          return;
+        }
+        finishLogin(data.user, data.accessToken, data.refreshToken);
+      } catch (err) {
+        setApiError(err?.response?.data?.message || 'Google sign-in failed.');
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+  });
+
   const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google login clicked');
+    setApiError('');
+    startGoogleLogin();
+  };
+
+  const handleGoogleFormChange = (name, value) => {
+    setGoogleForm((prev) => ({ ...prev, [name]: value }));
+    if (googleFormErrors[name]) setGoogleFormErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  const validateGoogleForm = () => {
+    const errs = {};
+    if (!googleForm.fullName.trim()) errs.fullName = 'Full name is required';
+    if (googleForm.contactNumber && !/^(\+63|0)?[0-9]{10}$/.test(googleForm.contactNumber.replace(/[-\s]/g, ''))) {
+      errs.contactNumber = 'Contact number must be 10 digits';
+    }
+    if (!googleForm.municipalityId) errs.municipalityId = 'Municipality is required';
+    if (!googleForm.password) {
+      errs.password = 'Password is required';
+    } else if (googleForm.password.length < 8) {
+      errs.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/.test(googleForm.password)) {
+      errs.password = 'Password must contain uppercase, lowercase, number, and special character';
+    }
+    if (googleForm.password !== googleForm.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    setGoogleFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleCompleteGoogleProfile = async (e) => {
+    e.preventDefault();
+    setApiError('');
+    if (!validateGoogleForm()) return;
+    setCompletingGoogle(true);
+    try {
+      const res = await axios.post('/auth/google/complete', {
+        googleToken: googleProfile.googleToken,
+        fullName: googleForm.fullName.trim(),
+        contactNumber: googleForm.contactNumber.trim() || undefined,
+        province: googleForm.province || undefined,
+        municipalityId: googleForm.municipalityId,
+        barangay: googleForm.barangay.trim() || undefined,
+        address: googleForm.street.trim() || undefined,
+        password: googleForm.password,
+        confirmPassword: googleForm.confirmPassword,
+      });
+      const data = res.data;
+      if (!data?.user || !data?.accessToken) {
+        setApiError('Unexpected response from server.');
+        return;
+      }
+      finishLogin(data.user, data.accessToken, data.refreshToken);
+    } catch (err) {
+      setApiError(err?.response?.data?.message || 'Failed to complete sign-up.');
+    } finally {
+      setCompletingGoogle(false);
+    }
+  };
+
+  const handleCancelGoogleProfile = () => {
+    setMfaStage('credentials');
+    setGoogleProfile(null);
+    setGoogleForm({
+      fullName: '', contactNumber: '', password: '', confirmPassword: '',
+      province: 'Oriental Mindoro', provinceCode: '', municipalityId: '',
+      municipalityName: '', municipalityCode: '', barangay: '', barangayCode: '', street: '',
+    });
+    setGoogleFormErrors({});
+    setApiError('');
+  };
+
+  const handleCachedAccount = (account) => {
+    if (!switchCachedAccount(account)) return;
+    const role = account.role;
+    navigate(role === 'SELLER' ? '/seller' : role === 'SUPER_ADMIN' || role === 'MUNICIPAL_ADMIN' ? '/admin' : '/');
+  };
+
+  const handleRemoveCachedAccount = (event, email) => {
+    event.stopPropagation();
+    removeCachedAccount(email);
+    setCachedAccounts(getCachedAccounts());
   };
 
   return (
@@ -283,6 +434,22 @@ const Login = () => {
                   apiError={apiError}
                 />
               )}
+              {mfaStage === 'google-profile' && (
+                <GoogleCompleteProfile
+                  profile={googleProfile}
+                  form={googleForm}
+                  errors={googleFormErrors}
+                  onChange={handleGoogleFormChange}
+                  onAddressChange={(next) => setGoogleForm((prev) => ({ ...prev, ...next }))}
+                  municipalities={municipalities}
+                  showPassword={showGooglePassword}
+                  onTogglePassword={() => setShowGooglePassword((v) => !v)}
+                  onSubmit={handleCompleteGoogleProfile}
+                  onCancel={handleCancelGoogleProfile}
+                  isLoading={completingGoogle}
+                  apiError={apiError}
+                />
+              )}
               {mfaStage === 'credentials' && showQrLogin && (
                 <QrLoginPanel
                   onBack={() => setShowQrLogin(false)}
@@ -305,7 +472,14 @@ const Login = () => {
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="login-form">
+                {cachedAccounts.length > 0 && showSavedAccountCard ? (
+                  <SavedAccountCard
+                    account={cachedAccounts[0]}
+                    onContinue={() => handleCachedAccount(cachedAccounts[0])}
+                    onUseAnother={() => setShowSavedAccountCard(false)}
+                    onRemove={(event) => handleRemoveCachedAccount(event, cachedAccounts[0].email)}
+                  />
+                ) : <form onSubmit={handleSubmit} className="login-form">
                   {/* Email Field */}
                   <div className="login-form-group">
                     <label htmlFor="email" className="login-form-label">
@@ -386,6 +560,7 @@ const Login = () => {
                     type="button"
                     className="login-form-google"
                     onClick={handleGoogleLogin}
+                    disabled={googleLoading}
                   >
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                       <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
@@ -393,7 +568,7 @@ const Login = () => {
                       <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
                       <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
                     </svg>
-                    Sign in with Google
+                    {googleLoading ? 'Signing in…' : 'Sign in with Google'}
                   </button>
 
                   {/* Sign Up Link */}
@@ -411,7 +586,7 @@ const Login = () => {
                     {' & '}
                     <Link to="/privacy" className="login-form-terms-link">Privacy Policy</Link>
                   </p>
-                </form>
+                </form>}
               </>)}
             </div>
 
@@ -427,6 +602,115 @@ const Login = () => {
 };
 
 export default Login;
+
+// ─── Google sign-in: first-time profile completion card ──────────
+
+function GoogleCompleteProfile({
+  profile, form, errors, onChange, onAddressChange, municipalities,
+  showPassword, onTogglePassword, onSubmit, onCancel, isLoading, apiError,
+}) {
+  return (
+    <form onSubmit={onSubmit} className="login-form">
+      <h2 className="login-form-title">Complete your account</h2>
+      <p className="login-mfa-hint">
+        You're signing in with <strong>{profile?.email}</strong>. Just a few more
+        details to finish setting up your Emoorm account.
+      </p>
+
+      <div className="login-form-group">
+        <label htmlFor="google-fullName" className="login-form-label">Full name</label>
+        <input
+          id="google-fullName"
+          type="text"
+          className={`login-form-input ${errors.fullName ? 'login-form-input-error' : ''}`}
+          value={form.fullName}
+          onChange={(e) => onChange('fullName', e.target.value)}
+        />
+        {errors.fullName && <span className="login-form-error">{errors.fullName}</span>}
+      </div>
+
+      <div className="login-form-group">
+        <label htmlFor="google-contactNumber" className="login-form-label">Contact number <span className="register-form-optional">(optional)</span></label>
+        <input
+          id="google-contactNumber"
+          type="tel"
+          placeholder="09123456789"
+          className={`login-form-input ${errors.contactNumber ? 'login-form-input-error' : ''}`}
+          value={form.contactNumber}
+          onChange={(e) => onChange('contactNumber', e.target.value)}
+        />
+        {errors.contactNumber && <span className="login-form-error">{errors.contactNumber}</span>}
+      </div>
+
+      <div className="login-form-group">
+        <PhAddressPicker
+          value={form}
+          onChange={onAddressChange}
+          dbMunicipalities={municipalities}
+          errors={errors}
+          streetLabel="Street / House No. (optional)"
+        />
+      </div>
+
+      <div className="login-form-group">
+        <label htmlFor="google-password" className="login-form-label">Password</label>
+        <div className="login-form-input-wrapper">
+          <input
+            id="google-password"
+            type={showPassword ? 'text' : 'password'}
+            className={`login-form-input ${errors.password ? 'login-form-input-error' : ''}`}
+            placeholder="Create a password"
+            value={form.password}
+            onChange={(e) => onChange('password', e.target.value)}
+          />
+          <button type="button" className="login-form-toggle-password" onClick={onTogglePassword}>
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+        {errors.password && <span className="login-form-error">{errors.password}</span>}
+      </div>
+
+      <div className="login-form-group">
+        <label htmlFor="google-confirmPassword" className="login-form-label">Confirm password</label>
+        <input
+          id="google-confirmPassword"
+          type={showPassword ? 'text' : 'password'}
+          className={`login-form-input ${errors.confirmPassword ? 'login-form-input-error' : ''}`}
+          value={form.confirmPassword}
+          onChange={(e) => onChange('confirmPassword', e.target.value)}
+        />
+        {errors.confirmPassword && <span className="login-form-error">{errors.confirmPassword}</span>}
+      </div>
+
+      <button type="submit" className="login-form-submit" disabled={isLoading}>
+        {isLoading ? 'Creating account…' : 'Create account & continue'}
+      </button>
+
+      {apiError && <div className="login-form-error-message">{apiError}</div>}
+
+      <button type="button" className="login-mfa-link" onClick={onCancel}>
+        Use a different account
+      </button>
+    </form>
+  );
+}
+
+function SavedAccountCard({ account, onContinue, onUseAnother, onRemove }) {
+  return (
+    <div className="saved-account-card-inline">
+      <div className="saved-account-card-avatar">
+        {account.profilePhoto ? <img src={account.profilePhoto} alt="" /> : <UserCircle size={58} weight="fill" />}
+      </div>
+      <p className="saved-account-card-kicker">Saved account</p>
+      <h2>{account.fullName || 'Welcome back'}</h2>
+      <p className="saved-account-card-email">{account.email}</p>
+      <button type="button" className="login-form-submit" onClick={onContinue}>Continue as {account.fullName || 'this account'}</button>
+      <button type="button" className="saved-account-secondary" onClick={onUseAnother}>Use another account</button>
+      <Link to="/register" className="saved-account-signup">Sign up</Link>
+      <button type="button" className="saved-account-remove-link" onClick={onRemove}>Remove saved account</button>
+    </div>
+  );
+}
 
 // ─── MFA sub-views ──────────────────────────────────────────────
 

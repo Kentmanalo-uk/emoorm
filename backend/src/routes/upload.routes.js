@@ -5,6 +5,7 @@ const { upload, kycUpload } = require('../middleware/upload');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { successResponse } = require('../utils/response');
+const { uploadLimiter } = require('../middleware/security');
 
 /**
  * Upload a single image file
@@ -14,6 +15,7 @@ const { successResponse } = require('../utils/response');
 router.post(
   '/image',
   authenticate,
+  uploadLimiter,
   upload.single('file'),
   asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -37,6 +39,7 @@ router.post(
 router.post(
   '/kyc',
   authenticate,
+  uploadLimiter,
   kycUpload.single('file'),
   asyncHandler(async (req, res) => {
     if (!req.file) {

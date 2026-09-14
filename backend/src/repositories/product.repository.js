@@ -40,6 +40,7 @@ const createProduct = async (data) => {
           id: true,
           name: true,
           slug: true,
+          owner: { select: { id: true } },
         },
       },
       category: {
@@ -117,6 +118,7 @@ const findBySlug = async (slug) => {
           id: true,
           name: true,
           slug: true,
+          owner: { select: { id: true } },
         },
       },
       category: {
@@ -152,6 +154,7 @@ const findAll = async (options = {}) => {
     status,
     storeIsActive,
     storeIsSuspended,
+    excludeOwnerId,
     minPrice,
     maxPrice,
     search,
@@ -172,6 +175,12 @@ const findAll = async (options = {}) => {
     where.store = {};
     if (storeIsActive !== undefined) where.store.isActive = storeIsActive;
     if (storeIsSuspended !== undefined) where.store.isSuspended = storeIsSuspended;
+  }
+  if (excludeOwnerId) {
+    where.store = {
+      ...(where.store || {}),
+      ownerId: { not: excludeOwnerId },
+    };
   }
 
   if (minPrice !== undefined || maxPrice !== undefined) {

@@ -45,6 +45,9 @@ const mfaRoutes = require('./mfa.routes');
 const messageRoutes = require('./message.routes');
 const addressRoutes = require('./address.routes');
 const qrLoginRoutes = require('./qrLogin.routes');
+const supportRoutes = require('./support.routes');
+const bannerRoutes = require('./banner.routes');
+const voucherRoutes = require('./voucher.routes');
 
 // Mount routes
 router.use('/auth', authRoutes);
@@ -66,5 +69,9 @@ router.use('/auth/qr', qrLoginRoutes);
 router.use('/messages', messageRoutes);
 router.use('/follows', require('./storeFollow.routes'));
 router.use('/addresses', addressRoutes);
+router.use('/returns', require('./return.routes'));
+router.use('/support', supportRoutes);
+router.use('/banners', bannerRoutes);
+router.use('/vouchers', voucherRoutes);
 
 module.exports = router;

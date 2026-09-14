@@ -1,0 +1,16 @@
+ALTER TABLE `orders`
+  ADD COLUMN `payment_status` ENUM('PENDING', 'PENDING_VERIFICATION', 'PAID', 'FAILED', 'EXPIRED', 'REFUNDED', 'PARTIALLY_REFUNDED') NOT NULL DEFAULT 'PENDING';
+
+CREATE TABLE `order_status_history` (
+  `id` VARCHAR(191) NOT NULL,
+  `order_id` VARCHAR(191) NOT NULL,
+  `from_status` ENUM('PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP') NULL,
+  `to_status` ENUM('PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP') NOT NULL,
+  `actor_id` VARCHAR(191) NULL,
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  INDEX `order_status_history_order_id_created_at_idx` (`order_id`, `created_at`),
+  CONSTRAINT `order_status_history_order_id_fkey`
+    FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

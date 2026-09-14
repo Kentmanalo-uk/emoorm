@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star } from '@phosphor-icons/react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import ProductImage from '../components/ProductImage';
 import './Cart.css';
 
 const Cart = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuthStore();
   const {
     items,
@@ -69,9 +71,114 @@ const Cart = () => {
   }, [items]);
 
   const itemCount = getItemCount();
-  const subtotal = getTotalPrice();
-  const shippingFee = subtotal >= 500 ? 0 : 50;
-  const total = subtotal + shippingFee;
+  const cartSearch = (searchParams.get('cartSearch') || '').trim().toLowerCase();
+  const visibleItems = useMemo(() => {
+    if (!cartSearch) return items;
+    return items.filter((item) => [
+      item.name,
+      item.storeName,
+      ...Object.values(item.selectedVariations || {}),
+    ].some((value) => String(value || '').toLowerCase().includes(cartSearch)));
+  }, [items, cartSearch]);
+
+  const [selectedIds, setSelectedIds] = useState(() => items.map((item) => item.id));
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const known = new Set(prev);
+      // Auto-select newly added items so the reference "all checked" default holds.
+      const merged = items.map((item) => item.id).filter((id) => known.has(id));
+      const additions = items.map((item) => item.id).filter((id) => !known.has(id));
+      return [...merged, ...additions];
+    });
+  }, [items]);
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedItems = useMemo(
+    () => items.filter((item) => selectedSet.has(item.id)),
+    [items, selectedSet]
+  );
+  const selectedCount = selectedItems.reduce((count, item) => count + item.quantity, 0);
+  const subtotal = selectedItems.reduce(
+    (sum, item) => sum + Number(item.price) * item.quantity,
+    0
+  );
+  const shippingFee = subtotal === 0 || subtotal >= 500 ? 0 : 50;
+  const [voucherInput, setVoucherInput] = useState('');
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+
+  const applyVoucher = async () => {
+    const code = voucherInput.trim();
+    if (!code) return toast.error('Enter a voucher code');
+    if (subtotal <= 0) return toast.error('Select items before applying a voucher');
+    setVoucherLoading(true);
+    try {
+      const res = await axios.post('/vouchers/validate', { code, subtotal });
+      setAppliedVoucher(res.data);
+      toast.success(`Voucher ${res.data.voucher.code} applied`);
+    } catch (err) {
+      setAppliedVoucher(null);
+      toast.error(err?.response?.data?.message || 'Invalid voucher code');
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
+
+  const clearVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherInput('');
+  };
+
+  // Re-validate voucher when subtotal changes and drop it if it no longer applies.
+  useEffect(() => {
+    if (!appliedVoucher) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.post('/vouchers/validate', {
+          code: appliedVoucher.voucher.code,
+          subtotal,
+        });
+        if (!cancelled) setAppliedVoucher(res.data);
+      } catch {
+        if (!cancelled) setAppliedVoucher(null);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal]);
+
+  const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
+  const total = Math.max(0, subtotal + shippingFee - discountAmount);
+  const allSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedSet.has(item.id));
+  const selectedStoreCount = new Set(selectedItems.map((item) => item.storeId).filter(Boolean)).size;
+  const multiStoreSelected = selectedStoreCount > 1;
+
+  const toggleItemSelected = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const toggleStoreSelected = (storeItems) => {
+    const ids = storeItems.map((item) => item.id);
+    const allOn = ids.every((id) => selectedSet.has(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allOn) ids.forEach((id) => next.delete(id));
+      else ids.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+  };
+
+  const toggleAllSelected = () => {
+    const visibleIds = visibleItems.map((item) => item.id);
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allSelected) visibleIds.forEach((id) => next.delete(id));
+      else visibleIds.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+  };
 
   const handleQuantityChange = (itemId, newQuantity) => {
     if (newQuantity < 1) return;
@@ -100,15 +207,25 @@ const Cart = () => {
       navigate('/login?redirect=/checkout');
       return;
     }
-    navigate('/checkout');
+    if (selectedItems.length === 0) {
+      toast.error('Select at least one item to checkout');
+      return;
+    }
+    const selectedStoreIds = new Set(selectedItems.map((item) => item.storeId).filter(Boolean));
+    if (selectedStoreIds.size > 1) {
+      toast.error('Checkout is limited to one store per order. Select items from one store only.');
+      return;
+    }
+    navigate('/checkout', { state: { selectedIds, voucherCode: appliedVoucher?.voucher?.code || null } });
   };
 
   // Group items by store
-  const itemsByStore = items.reduce((acc, item) => {
+  const itemsByStore = visibleItems.reduce((acc, item) => {
     const storeId = item.storeId || 'unknown';
     if (!acc[storeId]) {
       acc[storeId] = {
         storeName: item.storeName || 'Unknown Store',
+        storeLogo: item.storeLogo || item.store?.logoUrl || item.store?.logo || null,
         items: [],
       };
     }
@@ -150,37 +267,88 @@ const Cart = () => {
           {/* Page Header */}
           <div className="cart-header">
             <h1 className="cart-title">
-              Shopping Cart
+                <span className="cart-title-desktop">Shopping Cart</span>
+                <span className="cart-title-mobile">Cart</span>
               <span className="cart-count">({itemCount} {itemCount === 1 ? 'item' : 'items'})</span>
             </h1>
             <button onClick={handleClearCart} className="btn-clear-cart">
               <Trash2 size={18} />
-              Clear Cart
+                <span className="clear-cart-desktop">Clear Cart</span>
+                <span className="clear-cart-mobile">Clear</span>
+            </button>
+          </div>
+
+          {/* Mobile-only select-all + clear row (matches app cart layout) */}
+          <div className="cart-select-bar">
+            <label className="cart-select-all">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAllSelected}
+                aria-label="Select all items"
+              />
+              <span>Select all</span>
+            </label>
+            <button type="button" onClick={handleClearCart} className="cart-select-clear">
+              <Trash2 size={14} /> Clear
             </button>
           </div>
 
           <div className="cart-layout">
             {/* Cart Items */}
             <div className="cart-items-section">
-              {Object.entries(itemsByStore).map(([storeId, storeData]) => (
+              {cartSearch && visibleItems.length === 0 && (
+                <div className="cart-search-empty">
+                  <Search size={30} />
+                  <h2>No cart items found</h2>
+                  <p>Try another product or store name.</p>
+                </div>
+              )}
+              {Object.entries(itemsByStore).map(([storeId, storeData]) => {
+                const storeAllSelected = storeData.items.every((it) => selectedSet.has(it.id));
+                return (
                 <div key={storeId} className="cart-store-group">
                   <div className="store-group-header">
-                    <ShoppingBag size={18} />
+                    <label className="cart-store-check">
+                      <input
+                        type="checkbox"
+                        checked={storeAllSelected}
+                        onChange={() => toggleStoreSelected(storeData.items)}
+                        aria-label={`Select all items from ${storeData.storeName}`}
+                      />
+                    </label>
+                    <span className="cart-store-avatar">
+                      {storeData.storeLogo ? (
+                        <img
+                          src={resolveImg(storeData.storeLogo)}
+                          alt=""
+                          onError={(event) => {
+                            event.currentTarget.style.display = 'none';
+                            event.currentTarget.nextElementSibling?.classList.add('is-visible');
+                          }}
+                        />
+                      ) : null}
+                      <Storefront className={storeData.storeLogo ? '' : 'is-visible'} size={16} />
+                    </span>
                     <span>{storeData.storeName}</span>
                   </div>
 
                   <div className="cart-items-list">
                     {storeData.items.map((item) => (
                       <div key={item.id} className="cart-item">
+                        <label className="cart-item-check">
+                          <input
+                            type="checkbox"
+                            checked={selectedSet.has(item.id)}
+                            onChange={() => toggleItemSelected(item.id)}
+                            aria-label={`Select ${item.name}`}
+                          />
+                        </label>
                         <Link
                           to={`/product/${item.slug || item.id}`}
                           className="cart-item-image"
                         >
-                          <img
-                            src={resolveImg(item.image) || item.image || '/placeholder-product.png'}
-                            alt={item.name}
-                            onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
-                          />
+                          <ProductImage src={item.image} alt={item.name} />
                         </Link>
 
                         <div className="cart-item-details">
@@ -191,6 +359,11 @@ const Cart = () => {
                             {item.name}
                           </Link>
                           <p className="cart-item-price">₱{Number(item.price).toFixed(2)}</p>
+                          {item.selectedVariations && Object.keys(item.selectedVariations).length > 0 && (
+                            <p className="cart-item-variations">
+                              {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
+                            </p>
+                          )}
                           {item.stock !== undefined && item.stock < 10 && item.stock > 0 && (
                             <span className="cart-item-stock-warning">
                               Only {item.stock} left in stock
@@ -238,7 +411,8 @@ const Cart = () => {
                     ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {/* Continue Shopping */}
               <Link to="/products" className="btn-continue-shopping-link">
@@ -268,6 +442,13 @@ const Cart = () => {
                   </span>
                 </div>
 
+                {appliedVoucher && discountAmount > 0 && (
+                  <div className="summary-row" style={{ color: '#059669' }}>
+                    <span>Voucher ({appliedVoucher.voucher.code})</span>
+                    <span>-₱{discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+
                 {subtotal < 500 && (
                   <div className="shipping-notice">
                     Add ₱{(500 - subtotal).toFixed(2)} more for free shipping
@@ -277,17 +458,27 @@ const Cart = () => {
                 <div className="summary-divider"></div>
 
                 <div className="summary-total">
-                  <span>Total</span>
+                  <span className="summary-total-label-desktop">Total</span>
+                  <span className="summary-total-label-mobile">
+                    {selectedCount} {selectedCount === 1 ? 'item' : 'items'} selected • Total
+                  </span>
                   <span className="total-amount">₱{total.toFixed(2)}</span>
                 </div>
 
                 <button
                   onClick={handleCheckout}
                   className="btn-checkout"
-                  disabled={items.some(item => item.stock === 0)}
+                  disabled={selectedItems.length === 0 || multiStoreSelected || selectedItems.some(item => item.stock === 0)}
                 >
-                  Proceed to Checkout
+                  <span className="btn-checkout-label-desktop">Proceed to Checkout</span>
+                  <span className="btn-checkout-label-mobile">Checkout</span>
                 </button>
+
+                {multiStoreSelected && (
+                  <p className="checkout-warning">
+                    You can only checkout items from one store per order. Please deselect items from other stores.
+                  </p>
+                )}
 
                 {items.some(item => item.stock === 0) && (
                   <p className="checkout-warning">
@@ -315,7 +506,7 @@ const Cart = () => {
                 </div>
               </div>
 
-              {/* Voucher Section (Optional) */}
+              {/* Voucher Section */}
               <div className="voucher-card">
                 <h3 className="voucher-title">Have a voucher?</h3>
                 <div className="voucher-input-group">
@@ -323,9 +514,28 @@ const Cart = () => {
                     type="text"
                     placeholder="Enter voucher code"
                     className="voucher-input"
+                    value={voucherInput}
+                    onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
+                    disabled={voucherLoading || !!appliedVoucher}
                   />
-                  <button className="btn-apply-voucher">Apply</button>
+                  {appliedVoucher ? (
+                    <button className="btn-apply-voucher" onClick={clearVoucher} type="button">Remove</button>
+                  ) : (
+                    <button
+                      className="btn-apply-voucher"
+                      onClick={applyVoucher}
+                      disabled={voucherLoading || !voucherInput.trim() || subtotal === 0}
+                      type="button"
+                    >
+                      {voucherLoading ? 'Checking…' : 'Apply'}
+                    </button>
+                  )}
                 </div>
+                {appliedVoucher && (
+                  <p style={{ marginTop: 8, fontSize: 12, color: '#059669' }}>
+                    {appliedVoucher.voucher.description || `Discount of ₱${discountAmount.toFixed(2)} applied.`}
+                  </p>
+                )}
               </div>
             </div>
           </div>

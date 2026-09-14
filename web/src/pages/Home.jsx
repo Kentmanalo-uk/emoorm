@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ShoppingCart, Star } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
+import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
@@ -13,15 +14,40 @@ const Home = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const transitionRef = useRef(null);
 
-  // Banner images for carousel
-  const banners = [
-    '/assets/banners/banner-qoute.png',
-    '/assets/banners/buy-now-qoute.png',
-    '/assets/banners/discover-mindoro.png',
+  const fallbackBanners = [
+    { id: 'fallback-1', imageUrl: '/assets/banners/banner-qoute.png', linkUrl: null, title: 'Emoorm' },
+    { id: 'fallback-2', imageUrl: '/assets/banners/buy-now-qoute.png', linkUrl: null, title: 'Buy now' },
+    { id: 'fallback-3', imageUrl: '/assets/banners/discover-mindoro.png', linkUrl: null, title: 'Discover Mindoro' },
   ];
+  const [bannerData, setBannerData] = useState(fallbackBanners);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.get('/banners');
+        const list = Array.isArray(res.data) ? res.data : [];
+        if (!cancelled && list.length > 0) {
+          setBannerData(list.map((b) => ({
+            id: b.id,
+            imageUrl: resolveImg(b.imageUrl) || b.imageUrl,
+            linkUrl: b.linkUrl || null,
+            title: b.title || 'Banner',
+          })));
+        }
+      } catch {
+        // keep fallback banners
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const banners = bannerData.map((b) => b.imageUrl);
 
   // Create extended slides array: [last, ...real slides, first]
-  const extendedSlides = [banners[banners.length - 1], ...banners, banners[0]];
+  const extendedSlides = banners.length > 0
+    ? [banners[banners.length - 1], ...banners, banners[0]]
+    : [];
 
   // Auto-advance carousel
   useEffect(() => {
@@ -116,11 +142,26 @@ const Home = () => {
                 }}
                 onTransitionEnd={handleTransitionEnd}
               >
-                {extendedSlides.map((banner, index) => (
-                  <div key={index} className="banner-slide">
-                    <img src={banner} alt={`Banner ${index}`} />
-                  </div>
-                ))}
+                {extendedSlides.map((banner, index) => {
+                  const realIndex = index === 0
+                    ? bannerData.length - 1
+                    : index === extendedSlides.length - 1
+                      ? 0
+                      : index - 1;
+                  const info = bannerData[realIndex] || {};
+                  const img = <img src={banner} alt={info.title || `Banner ${index}`} />;
+                  return (
+                    <div key={`${info.id || 'slide'}-${index}`} className="banner-slide">
+                      {info.linkUrl ? (
+                        info.linkUrl.startsWith('http') ? (
+                          <a href={info.linkUrl} target="_blank" rel="noopener noreferrer">{img}</a>
+                        ) : (
+                          <Link to={info.linkUrl}>{img}</Link>
+                        )
+                      ) : img}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Carousel Controls */}
@@ -160,17 +201,19 @@ const Home = () => {
 
               {/* Mobile App Card */}
               <div className="banner-card banner-card-app">
-                <div className="banner-card-label">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <rect x="4" y="2" width="8" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" />
-                    <circle cx="8" cy="12" r="0.5" fill="currentColor" />
-                  </svg>
-                  MOBILE APP
+                <div className="banner-card-app-copy">
+                  <div className="banner-card-label">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <rect x="4" y="2" width="8" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" />
+                      <circle cx="8" cy="12" r="0.5" fill="currentColor" />
+                    </svg>
+                    MOBILE APP
+                  </div>
+                  <h4 className="banner-card-title-small">
+                    Try Emoorm<br />on mobile.
+                  </h4>
+                  <p className="banner-card-text-small">Scan with your phone camera.</p>
                 </div>
-                <h4 className="banner-card-title-small">
-                  Try Emoorm<br />on mobile.
-                </h4>
-                <p className="banner-card-text-small">Scan the code with your phone camera.</p>
                 <div className="qr-code">
                   <svg viewBox="0 0 100 100" width="72" height="72">
                     <rect width="100" height="100" fill="white" />
@@ -217,18 +260,13 @@ const Home = () => {
         <div className="container">
           <div className="section-header">
             <h2 className="section-title">Suggested for You</h2>
-            <Link to="/products" className="section-link">View all <ArrowRight size={16} /></Link>
           </div>
           {featuredProducts.length > 0 ? (
             <div className="products-grid">
               {featuredProducts.map((product) => (
                 <Link key={product.id} to={`/product/${product.slug}`} className="product-card">
                   <div className="product-image">
-                    <img
-                      src={resolveImg(product.images?.[0]) || '/placeholder.png'}
-                      alt={product.name}
-                      onError={(e) => { e.currentTarget.src = '/placeholder.png'; }}
-                    />
+                    <ProductImage src={product.images?.[0]} alt={product.name} />
                     <button
                       type="button"
                       className="product-cart-fab"
