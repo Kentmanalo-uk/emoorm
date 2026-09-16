@@ -49,6 +49,7 @@ const findByUserId = async (options = {}) => {
     page = 1,
     pageSize = 20,
     isRead,
+    audience,
   } = options;
 
   const where = {
@@ -58,6 +59,9 @@ const findByUserId = async (options = {}) => {
 
   if (isRead !== undefined) {
     where.isRead = isRead;
+  }
+  if (audience) {
+    where.audience = audience;
   }
 
   const [notifications, total, unreadCount] = await Promise.all([
@@ -73,6 +77,7 @@ const findByUserId = async (options = {}) => {
         userId,
         isRead: false,
         deletedAt: null,
+        ...(audience ? { audience } : {}),
       },
     }),
   ]);
@@ -103,12 +108,13 @@ const markAsRead = async (id) => {
  * @param {String} userId - User ID
  * @returns {Promise<Object>} Update count
  */
-const markAllAsRead = async (userId) => {
+const markAllAsRead = async (userId, audience) => {
   return prisma.notification.updateMany({
     where: {
       userId,
       isRead: false,
       deletedAt: null,
+      ...(audience ? { audience } : {}),
     },
     data: { isRead: true },
   });
@@ -146,12 +152,13 @@ const deleteAllForUser = async (userId) => {
  * @param {String} userId - User ID
  * @returns {Promise<Number>} Unread count
  */
-const getUnreadCount = async (userId) => {
+const getUnreadCount = async (userId, audience) => {
   return prisma.notification.count({
     where: {
       userId,
       isRead: false,
       deletedAt: null,
+      ...(audience ? { audience } : {}),
     },
   });
 };

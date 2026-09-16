@@ -6,6 +6,7 @@ import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
+import './AdminBanners.css';
 
 const EMPTY_FORM = {
   id: null,
@@ -13,6 +14,7 @@ const EMPTY_FORM = {
   subtitle: '',
   imageUrl: '',
   linkUrl: '',
+  placement: 'HOME_CAROUSEL',
   sortOrder: 0,
   isActive: true,
 };
@@ -22,6 +24,7 @@ export default function AdminBanners() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
   const [uploading, setUploading] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
@@ -39,8 +42,19 @@ export default function AdminBanners() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => {
-    setForm({ ...EMPTY_FORM, sortOrder: banners.length });
+  const openCreate = (placement = 'HOME_CAROUSEL') => {
+    setForm({
+      ...EMPTY_FORM,
+      placement,
+      title: placement === 'HOME_SIDEBAR_TOP'
+        ? 'Right-side banner 1'
+        : placement === 'HOME_SIDEBAR_BOTTOM'
+          ? 'Right-side banner 2'
+          : placement === 'HOME_POPUP'
+            ? 'Homepage promotion popup'
+            : '',
+      sortOrder: banners.length,
+    });
     setShowForm(true);
   };
 
@@ -51,6 +65,7 @@ export default function AdminBanners() {
       subtitle: banner.subtitle || '',
       imageUrl: banner.imageUrl || '',
       linkUrl: banner.linkUrl || '',
+      placement: banner.placement || 'HOME_CAROUSEL',
       sortOrder: banner.sortOrder ?? 0,
       isActive: banner.isActive !== false,
     });
@@ -78,6 +93,37 @@ export default function AdminBanners() {
     }
   };
 
+  const uploadSideBanner = async (placement, file) => {
+    if (!file) return;
+    const existing = banners.find((banner) => banner.placement === placement);
+    setUploadingSlot(placement);
+    try {
+      const uploaded = await uploadImage(file);
+      if (existing) {
+        await axios.put(`/banners/${existing.id}`, { imageUrl: uploaded.url, isActive: true });
+        toast.success('Side banner image replaced');
+      } else {
+        await axios.post('/banners', {
+          title: placement === 'HOME_SIDEBAR_TOP'
+            ? 'Right-side banner 1'
+            : placement === 'HOME_SIDEBAR_BOTTOM'
+              ? 'Right-side banner 2'
+              : 'Homepage promotion popup',
+          imageUrl: uploaded.url,
+          placement,
+          isActive: true,
+          sortOrder: placement === 'HOME_SIDEBAR_TOP' ? 0 : placement === 'HOME_SIDEBAR_BOTTOM' ? 1 : 0,
+        });
+        toast.success('Side banner image added');
+      }
+      await load();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err.message || 'Failed to upload side banner');
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) return toast.error('Title is required');
@@ -89,6 +135,7 @@ export default function AdminBanners() {
         subtitle: form.subtitle.trim() || null,
         imageUrl: form.imageUrl,
         linkUrl: form.linkUrl.trim() || null,
+        placement: form.placement,
         sortOrder: Number(form.sortOrder) || 0,
         isActive: !!form.isActive,
       };
@@ -137,14 +184,99 @@ export default function AdminBanners() {
     }
   };
 
+  const sideSlots = [
+    { placement: 'HOME_SIDEBAR_TOP', label: 'Right-side banner 1' },
+    { placement: 'HOME_SIDEBAR_BOTTOM', label: 'Right-side banner 2' },
+    { placement: 'HOME_POPUP', label: 'Entry promotion popup' },
+  ];
+  const carouselPreview = banners.find((banner) => banner.placement === 'HOME_CAROUSEL' && banner.isActive)
+    || banners.find((banner) => (banner.placement || 'HOME_CAROUSEL') === 'HOME_CAROUSEL');
+  const topPreview = banners.find((banner) => banner.placement === 'HOME_SIDEBAR_TOP');
+  const bottomPreview = banners.find((banner) => banner.placement === 'HOME_SIDEBAR_BOTTOM');
+  const popupPreview = banners.find((banner) => banner.placement === 'HOME_POPUP');
+
   return (
     <AdminLayout>
       <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 className="admin-page-title">Homepage Banners</h1>
-        <button className="admin-btn admin-btn-primary" onClick={openCreate}>
+        <button className="admin-btn admin-btn-primary" onClick={() => openCreate()}>
           <Plus size={14} /> Add banner
         </button>
       </div>
+
+      <section className="admin-home-banner-preview-section">
+        <div className="admin-side-banner-heading">
+          <h2>Homepage layout preview</h2>
+          <span>This mirrors the main carousel and the two right-side image positions.</span>
+        </div>
+        <div className="admin-home-banner-preview">
+          <BannerLayoutPreview banner={carouselPreview} label="Main carousel" />
+          <div className="admin-home-banner-preview-side">
+            <BannerLayoutPreview banner={topPreview} label="Right-side banner 1" compact />
+            <BannerLayoutPreview banner={bottomPreview} label="Right-side banner 2" compact />
+          </div>
+          {popupPreview && (
+            <div className={`admin-home-popup-preview ${popupPreview.isActive === false ? 'is-hidden' : ''}`}>
+              <img src={resolveImg(popupPreview.imageUrl) || popupPreview.imageUrl} alt={popupPreview.title || 'Promotion popup'} />
+              <span>Entry popup{popupPreview.isActive === false ? ' · Hidden' : ''}</span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="admin-side-banner-section">
+        <div className="admin-side-banner-heading">
+          <h2>Homepage promotional images</h2>
+          <span>Upload the two small side banners and the entry promotion popup.</span>
+        </div>
+        <div className="admin-side-banner-grid">
+          {sideSlots.map((slot) => {
+            const banner = banners.find((item) => item.placement === slot.placement);
+            const busy = uploadingSlot === slot.placement;
+            return (
+              <article className="admin-side-banner-slot" key={slot.placement}>
+                <div className="admin-side-banner-preview">
+                  {banner?.imageUrl ? (
+                    <img src={resolveImg(banner.imageUrl) || banner.imageUrl} alt={slot.label} />
+                  ) : (
+                    <div className="admin-side-banner-empty">
+                      <Upload size={24} />
+                      <span>No image uploaded</span>
+                    </div>
+                  )}
+                  {banner && <span className={`admin-side-banner-status ${banner.isActive ? 'is-active' : ''}`}>{banner.isActive ? 'Active' : 'Hidden'}</span>}
+                </div>
+                <div className="admin-side-banner-meta">
+                  <div>
+                    <strong>{slot.label}</strong>
+                    <span>{banner?.title || 'Homepage image slot'}</span>
+                  </div>
+                  <div className="admin-side-banner-actions">
+                    <label className="admin-btn admin-btn-primary">
+                      <Upload size={14} /> {busy ? 'Uploading…' : banner ? 'Replace image' : 'Upload image'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        hidden
+                        disabled={busy}
+                        onChange={(event) => {
+                          uploadSideBanner(slot.placement, event.target.files?.[0]);
+                          event.target.value = '';
+                        }}
+                      />
+                    </label>
+                    {banner ? (
+                      <button type="button" className="admin-btn" onClick={() => openEdit(banner)}><Edit3 size={13} /> Edit</button>
+                    ) : (
+                      <button type="button" className="admin-btn" onClick={() => openCreate(slot.placement)}><Plus size={13} /> Details</button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
 
       {showForm && (
         <div className="admin-card" style={{ padding: 16, marginBottom: 16 }}>
@@ -194,6 +326,19 @@ export default function AdminBanners() {
                 placeholder="/products or https://…"
               />
             </label>
+            <label style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontWeight: 600, fontSize: 13 }}>Homepage placement</span>
+              <select
+                className="admin-input"
+                value={form.placement}
+                onChange={(e) => setForm({ ...form, placement: e.target.value })}
+              >
+                <option value="HOME_CAROUSEL">Main carousel</option>
+                <option value="HOME_SIDEBAR_TOP">Right-side banner 1</option>
+                <option value="HOME_SIDEBAR_BOTTOM">Right-side banner 2</option>
+                <option value="HOME_POPUP">Entry promotion popup</option>
+              </select>
+            </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <label style={{ display: 'grid', gap: 6 }}>
                 <span style={{ fontWeight: 600, fontSize: 13 }}>Sort order</span>
@@ -234,6 +379,7 @@ export default function AdminBanners() {
               <tr>
                 <th style={{ width: 120 }}>Image</th>
                 <th>Title</th>
+                <th style={{ width: 170 }}>Placement</th>
                 <th style={{ width: 100 }}>Order</th>
                 <th style={{ width: 100 }}>Status</th>
                 <th style={{ width: 220 }}>Actions</th>
@@ -254,6 +400,15 @@ export default function AdminBanners() {
                     {b.subtitle && <div style={{ color: '#64748b', fontSize: 12 }}>{b.subtitle}</div>}
                     {b.linkUrl && <div style={{ color: '#059669', fontSize: 12 }}>{b.linkUrl}</div>}
                   </td>
+                  <td>{
+                    b.placement === 'HOME_SIDEBAR_TOP'
+                      ? 'Right-side banner 1'
+                      : b.placement === 'HOME_SIDEBAR_BOTTOM'
+                        ? 'Right-side banner 2'
+                        : b.placement === 'HOME_POPUP'
+                          ? 'Entry promotion popup'
+                          : 'Main carousel'
+                  }</td>
                   <td>
                     <div style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
                       <button className="admin-btn" onClick={() => changeOrder(b, -1)} title="Move up"><ArrowUp size={12} /></button>
@@ -282,5 +437,21 @@ export default function AdminBanners() {
         )}
       </div>
     </AdminLayout>
+  );
+}
+
+function BannerLayoutPreview({ banner, label, compact = false }) {
+  return (
+    <div className={`admin-home-banner-preview-item ${compact ? 'is-compact' : ''} ${banner?.isActive === false ? 'is-hidden' : ''}`}>
+      {banner?.imageUrl ? (
+        <img src={resolveImg(banner.imageUrl) || banner.imageUrl} alt={banner.title || label} />
+      ) : (
+        <div className="admin-home-banner-preview-empty">
+          <Upload size={compact ? 18 : 24} />
+          <span>{label}</span>
+        </div>
+      )}
+      <span className="admin-home-banner-preview-label">{label}{banner?.isActive === false ? ' · Hidden' : ''}</span>
+    </div>
   );
 }

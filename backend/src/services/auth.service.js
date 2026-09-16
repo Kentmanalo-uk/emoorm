@@ -288,11 +288,19 @@ const applyForSeller = async (userId, data = {}) => {
  * @param {String} userId - User ID
  * @returns {Promise<Object>} User
  */
-const getUserById = async (userId) => {
+const getUserById = async (userId, actor) => {
   const user = await userRepository.findById(userId);
 
   if (!user) {
     throw new ApiError('User not found', 404);
+  }
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && user.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only access users in your assigned municipality', 403);
+  }
+
+  if (actor?.role === 'MUNICIPAL_ADMIN' && !['BUYER', 'SELLER'].includes(user.role)) {
+    throw new ApiError('Municipal admins can only access buyer and seller accounts', 403);
   }
 
   return user;

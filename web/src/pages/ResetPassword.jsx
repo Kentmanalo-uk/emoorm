@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeSlash as EyeOff, Check } from '@phosphor-icons/react';
 import axios from '../lib/axios';
+import AppLogo from '../components/AppLogo';
 import './ResetPassword.css';
 
 const ResetPassword = () => {
@@ -80,7 +81,7 @@ const ResetPassword = () => {
       <header className="rp-header">
         <div className="rp-header-container">
           <Link to="/" className="rp-logo">
-            <img src="/brand-icon.png" alt="Emoorm" className="rp-logo-icon" />
+            <AppLogo className="rp-logo-icon" />
             <span className="rp-logo-text">emoorm</span>
           </Link>
         </div>

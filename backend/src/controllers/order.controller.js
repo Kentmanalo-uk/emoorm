@@ -93,13 +93,21 @@ const getAllOrders = asyncHandler(async (req, res) => {
     pageSize = 20,
     status,
     municipalityId,
+    buyerId,
+    storeId,
   } = req.query;
+
+  const scopedMunicipalityId = req.user.role === 'MUNICIPAL_ADMIN'
+    ? req.user.municipalityId
+    : municipalityId;
 
   const options = {
     page: parseInt(page),
     pageSize: parseInt(pageSize),
     status,
-    municipalityId,
+    municipalityId: scopedMunicipalityId,
+    buyerId,
+    storeId,
   };
 
   const result = await orderService.getAllOrders(options);
@@ -123,7 +131,8 @@ const getOrderById = asyncHandler(async (req, res) => {
   const order = await orderService.getOrderById(
     req.params.id,
     req.user.id,
-    req.user.role
+    req.user.role,
+    req.user.municipalityId
   );
 
   successResponse(res, order, 'Order retrieved successfully');

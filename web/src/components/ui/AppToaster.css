@@ -14,8 +14,16 @@
   transition: opacity .22s cubic-bezier(.16, 1, .3, 1), transform .32s cubic-bezier(.16, 1, .3, 1);
 }
 
-.app-toast.is-visible { opacity: 1; transform: translateY(0) scale(1); }
-.app-toast.is-hidden { opacity: 0; transform: translateY(-6px) scale(.97); transition-duration: .16s; }
+.app-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.app-toast.is-hidden {
+  opacity: 0;
+  transform: translateY(-6px) scale(.97);
+  transition-duration: .16s;
+}
 
 .app-toast-icon {
   display: grid;
@@ -32,9 +40,19 @@
   animation: app-toast-icon-pop .32s cubic-bezier(.34, 1.56, .64, 1);
 }
 
-.app-toast--error .app-toast-icon { background: #fef0ef; color: #dc2626; }
-.app-toast--loading .app-toast-icon { background: #eef4ff; color: #2563eb; }
-.app-toast--loading .app-toast-icon svg { animation: app-toast-spin .8s linear infinite; }
+.app-toast--error .app-toast-icon {
+  background: #fef0ef;
+  color: #dc2626;
+}
+
+.app-toast--loading .app-toast-icon {
+  background: #eef4ff;
+  color: #2563eb;
+}
+
+.app-toast--loading .app-toast-icon svg {
+  animation: app-toast-spin .8s linear infinite;
+}
 
 .app-toast-message {
   flex: 1;
@@ -60,7 +78,10 @@
   transition: background .15s ease, color .15s ease;
 }
 
-.app-toast-close:hover { background: #f1f5f4; color: #475569; }
+.app-toast-close:hover {
+  background: #f1f5f4;
+  color: #475569;
+}
 
 .app-toast-commerce {
   display: flex;
@@ -84,27 +105,75 @@
   transition: opacity .2s cubic-bezier(.16, 1, .3, 1), transform .28s cubic-bezier(.16, 1, .3, 1);
 }
 
-.app-toast-commerce.is-visible { opacity: 1; transform: scale(1); }
-.app-toast-commerce.is-hidden { opacity: 0; transform: scale(.94); transition-duration: .16s; }
-.app-toast-commerce > svg { margin-bottom: 3px; color: #fff; }
-.app-toast-commerce strong { color: #fff; font-size: 15px; line-height: 1.25; }
-.app-toast-commerce span { color: rgba(255,255,255,.82); font-size: 12px; line-height: 1.4; }
+.app-toast-commerce.is-visible {
+  opacity: 1;
+  transform: scale(1);
+}
 
-@keyframes app-toast-spin { to { transform: rotate(360deg); } }
+.app-toast-commerce.is-hidden {
+  opacity: 0;
+  transform: scale(.94);
+  transition-duration: .16s;
+}
+
+.app-toast-commerce>svg {
+  margin-bottom: 3px;
+  color: #fff;
+}
+
+.app-toast-commerce strong {
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.app-toast-commerce span {
+  color: rgba(255, 255, 255, .82);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@keyframes app-toast-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes app-toast-icon-pop {
-  0% { transform: scale(.5); opacity: 0; }
-  60% { transform: scale(1.1); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(.5);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 480px) {
-  .app-toast { width: calc(100vw - 24px); }
-  .app-toast-commerce { width: 168px; min-height: 142px; margin-top: calc(50vh - 110px); }
+  .app-toast {
+    width: calc(100vw - 24px);
+  }
+
+  .app-toast-commerce {
+    width: 168px;
+    min-height: 142px;
+    margin-top: calc(50vh - 110px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .app-toast,
   .app-toast-commerce,
   .app-toast.is-visible .app-toast-icon,
-  .app-toast--loading .app-toast-icon svg { animation: none; transition: none; }
+  .app-toast--loading .app-toast-icon svg {
+    animation: none;
+    transition: none;
+  }
 }

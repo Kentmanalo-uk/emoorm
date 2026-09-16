@@ -63,7 +63,7 @@ const seedMunicipalities = asyncHandler(async (req, res) => {
 });
 
 const updateMunicipality = asyncHandler(async (req, res) => {
-  const municipality = await municipalityService.updateMunicipality(req.params.id, req.body);
+  const municipality = await municipalityService.updateMunicipality(req.params.id, req.body, req.user);
   successResponse(res, municipality, 'Municipality updated successfully');
 });
 

@@ -20,12 +20,14 @@ const getMyNotifications = asyncHandler(async (req, res) => {
     page = 1,
     pageSize = 20,
     isRead,
+    audience,
   } = req.query;
 
   const options = {
     page: parseInt(page),
     pageSize: parseInt(pageSize),
     isRead: isRead !== undefined ? isRead === 'true' : undefined,
+    audience,
   };
 
   const result = await notificationService.getUserNotifications(
@@ -67,7 +69,7 @@ const getNotificationById = asyncHandler(async (req, res) => {
  * @access Private (Authenticated users)
  */
 const getUnreadCount = asyncHandler(async (req, res) => {
-  const count = await notificationService.getUnreadCount(req.user.id);
+  const count = await notificationService.getUnreadCount(req.user.id, req.query.audience);
 
   successResponse(res, { count }, 'Unread count retrieved successfully');
 });
@@ -92,7 +94,7 @@ const markAsRead = asyncHandler(async (req, res) => {
  * @access Private (Authenticated users)
  */
 const markAllAsRead = asyncHandler(async (req, res) => {
-  const result = await notificationService.markAllAsRead(req.user.id);
+  const result = await notificationService.markAllAsRead(req.user.id, req.query.audience);
 
   successResponse(res, result, 'All notifications marked as read');
 });

@@ -76,7 +76,7 @@ export default function AdminSellers() {
   const fetchApplicants = async () => {
     setIsLoading(true);
     try {
-      const params = { pageSize: 20, page };
+      const params = { pageSize: 20, page, role: 'SELLER' };
       if (statusFilter) params.sellerApplicationStatus = statusFilter;
       if (search) params.search = search;
 

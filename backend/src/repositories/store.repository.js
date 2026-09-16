@@ -161,6 +161,29 @@ const findAll = async (options = {}) => {
             name: true,
           },
         },
+        products: {
+          where: {
+            deletedAt: null,
+            status: 'APPROVED',
+          },
+          select: {
+            id: true,
+            name: true,
+            images: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+        },
+        _count: {
+          select: {
+            products: {
+              where: {
+                deletedAt: null,
+                status: 'APPROVED',
+              },
+            },
+          },
+        },
       },
       skip: (page - 1) * pageSize,
       take: pageSize,

@@ -5,10 +5,12 @@ const findById = (id) => prisma.voucher.findUnique({ where: { id } });
 
 const findAll = async ({ page = 1, pageSize = 20, search = '' } = {}) => {
   const where = search
-    ? { OR: [
+    ? {
+      OR: [
         { code: { contains: search } },
         { description: { contains: search } },
-      ] }
+      ]
+    }
     : {};
   const [items, total] = await Promise.all([
     prisma.voucher.findMany({

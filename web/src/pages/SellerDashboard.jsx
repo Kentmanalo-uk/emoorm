@@ -201,12 +201,12 @@ export default function SellerDashboard() {
                 </div>
                 <div className="sd-kpi-side">
                   <div className="sd-kpi-metrics">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div className="sd-stat sd-stat--compact" key={i}>
-                      <Skeleton width="55%" height={11} />
-                      <Skeleton width="70%" height={22} radius={4} />
-                    </div>
-                  ))}
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div className="sd-stat sd-stat--compact" key={i}>
+                        <Skeleton width="55%" height={11} />
+                        <Skeleton width="70%" height={22} radius={4} />
+                      </div>
+                    ))}
                   </div>
                   <div className="sd-stat sd-kpi-quick" aria-label="Quick Actions">
                     <Skeleton width="55%" height={11} />
@@ -251,63 +251,63 @@ export default function SellerDashboard() {
           {/* Body grid */}
           <div className="sd-body">
             <div className="sd-main">
-            <section className="sd-card sd-orders" data-tour="recent-orders">
-              <header className="sd-card-header">
-                <h2>Recent Orders</h2>
-                <Link to="/seller/orders" className="sd-view-all">View All</Link>
-              </header>
+              <section className="sd-card sd-orders" data-tour="recent-orders">
+                <header className="sd-card-header">
+                  <h2>Recent Orders</h2>
+                  <Link to="/seller/orders" className="sd-view-all">View All</Link>
+                </header>
 
-              {isLoading ? (
-                <Skeleton.OrderList rows={4} />
-              ) : recentOrders.length === 0 ? (
-                <div className="sd-empty">
-                  <ShoppingBag size={28} />
-                  <p>No orders yet.</p>
-                </div>
-              ) : (
-                <ul className="sd-order-list">
-                  {recentOrders.map((o) => (
-                    <OrderRow
-                      key={o.id}
-                      order={o}
-                      onClick={() => navigate(`/seller/orders?id=${o.id}`)}
-                    />
-                  ))}
-                </ul>
-              )}
-            </section>
+                {isLoading ? (
+                  <Skeleton.OrderList rows={4} />
+                ) : recentOrders.length === 0 ? (
+                  <div className="sd-empty">
+                    <ShoppingBag size={28} />
+                    <p>No orders yet.</p>
+                  </div>
+                ) : (
+                  <ul className="sd-order-list">
+                    {recentOrders.map((o) => (
+                      <OrderRow
+                        key={o.id}
+                        order={o}
+                        onClick={() => navigate(`/seller/orders?id=${o.id}`)}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </section>
 
-            <section className="sd-card sd-sales-trend">
-              <header className="sd-card-header">
-                <h2>Sales Trend (14 days)</h2>
-                <TrendingUp size={15} className="sd-header-icon" />
-              </header>
-              {isLoading ? (
-                <div style={{ padding: 16 }}>
-                  <Skeleton height={120} radius={8} />
-                </div>
-              ) : salesByDay.length === 0 ? (
-                <div className="sd-empty sd-empty--sm">
-                  <BarChart2 size={22} />
-                  <p>No sales data yet.</p>
-                </div>
-              ) : (
-                <div className="sd-chart">
-                  {salesByDay.map((day) => {
-                    const max = Math.max(1, ...salesByDay.map((d) => Number(d.total || 0)));
-                    const pct = Math.max(2, (Number(day.total || 0) / max) * 100);
-                    return (
-                      <div key={day.date} className="sd-chart-col" title={`₱${formatNumber(day.total)} on ${new Date(day.date).toLocaleDateString()}`}>
-                        <div className="sd-chart-bar-wrap">
-                          <div className="sd-chart-bar" style={{ height: `${pct}%` }} />
+              <section className="sd-card sd-sales-trend">
+                <header className="sd-card-header">
+                  <h2>Sales Trend (14 days)</h2>
+                  <TrendingUp size={15} className="sd-header-icon" />
+                </header>
+                {isLoading ? (
+                  <div style={{ padding: 16 }}>
+                    <Skeleton height={120} radius={8} />
+                  </div>
+                ) : salesByDay.length === 0 ? (
+                  <div className="sd-empty sd-empty--sm">
+                    <BarChart2 size={22} />
+                    <p>No sales data yet.</p>
+                  </div>
+                ) : (
+                  <div className="sd-chart">
+                    {salesByDay.map((day) => {
+                      const max = Math.max(1, ...salesByDay.map((d) => Number(d.total || 0)));
+                      const pct = Math.max(2, (Number(day.total || 0) / max) * 100);
+                      return (
+                        <div key={day.date} className="sd-chart-col" title={`₱${formatNumber(day.total)} on ${new Date(day.date).toLocaleDateString()}`}>
+                          <div className="sd-chart-bar-wrap">
+                            <div className="sd-chart-bar" style={{ height: `${pct}%` }} />
+                          </div>
+                          <span className="sd-chart-label">{new Date(day.date).getDate()}</span>
                         </div>
-                        <span className="sd-chart-label">{new Date(day.date).getDate()}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
             </div>
 
             <aside className="sd-right">

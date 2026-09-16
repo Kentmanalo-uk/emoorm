@@ -11,7 +11,7 @@ const registerValidation = [
     .isEmail()
     .withMessage('Please provide a valid email address')
     .normalizeEmail(),
-  
+
   body('password')
     .notEmpty()
     .withMessage('Password is required')
@@ -25,7 +25,7 @@ const registerValidation = [
     .withMessage('Password must contain at least one number')
     .matches(/[!@#$%^&*(),.?":{}|<>]/)
     .withMessage('Password must contain at least one special character'),
-  
+
   body('confirmPassword')
     .notEmpty()
     .withMessage('Please confirm your password')
@@ -35,38 +35,38 @@ const registerValidation = [
       }
       return true;
     }),
-  
+
   body('fullName')
     .trim()
     .notEmpty()
     .withMessage('Full name is required')
     .isLength({ min: 2, max: 100 })
     .withMessage('Full name must be between 2 and 100 characters'),
-  
+
   body('contactNumber')
     .optional()
     .trim()
     .matches(/^(\+63|0)?[0-9]{10}$/)
     .withMessage('Please provide a valid Philippine contact number'),
-  
+
   body('municipalityId')
     .notEmpty()
     .withMessage('Municipality is required')
     .isUUID()
     .withMessage('Invalid municipality ID'),
-  
+
   body('province')
     .optional({ nullable: true })
     .trim()
     .isLength({ max: 100 })
     .withMessage('Province name is too long'),
-  
+
   body('barangay')
     .optional()
     .trim()
     .isLength({ max: 100 })
     .withMessage('Barangay name is too long'),
-  
+
   body('address')
     .optional()
     .trim()
@@ -85,7 +85,7 @@ const loginValidation = [
     .isEmail()
     .withMessage('Please provide a valid email address')
     .normalizeEmail(),
-  
+
   body('password')
     .notEmpty()
     .withMessage('Password is required'),
@@ -120,7 +120,7 @@ const resetPasswordValidation = [
   body('token')
     .notEmpty()
     .withMessage('Reset token is required'),
-  
+
   body('password')
     .notEmpty()
     .withMessage('Password is required')
@@ -134,7 +134,7 @@ const resetPasswordValidation = [
     .withMessage('Password must contain at least one number')
     .matches(/[!@#$%^&*(),.?":{}|<>]/)
     .withMessage('Password must contain at least one special character'),
-  
+
   body('confirmPassword')
     .notEmpty()
     .withMessage('Please confirm your password')
@@ -153,7 +153,7 @@ const changePasswordValidation = [
   body('currentPassword')
     .notEmpty()
     .withMessage('Current password is required'),
-  
+
   body('newPassword')
     .notEmpty()
     .withMessage('New password is required')
@@ -173,7 +173,7 @@ const changePasswordValidation = [
       }
       return true;
     }),
-  
+
   body('confirmPassword')
     .notEmpty()
     .withMessage('Please confirm your new password')

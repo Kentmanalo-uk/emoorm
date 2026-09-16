@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, Plus, PencilSimple as Pencil, Check, X, UserGear as UserCog } from '@phosphor-icons/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapPin, Plus, PencilSimple as Pencil, Check, X, UserGear as UserCog, Camera } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import { uploadImage } from '../lib/upload';
+import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
 
 export default function AdminMunicipalities() {
@@ -15,6 +17,8 @@ export default function AdminMunicipalities() {
   const [saving, setSaving] = useState(false);
   const [assigningId, setAssigningId] = useState(null); // municipality being assigned
   const [assignUserId, setAssignUserId] = useState('');
+  const [uploadingLogoId, setUploadingLogoId] = useState(null);
+  const logoInputRefs = useRef({});
 
   useEffect(() => {
     fetchData();
@@ -97,6 +101,21 @@ export default function AdminMunicipalities() {
     }
   };
 
+  const handleLogoSelect = async (mun, file) => {
+    if (!file) return;
+    setUploadingLogoId(mun.id);
+    try {
+      const { url } = await uploadImage(file);
+      await axios.put(`/municipalities/${mun.id}`, { logo: url });
+      toast.success('Municipality logo updated');
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload logo');
+    } finally {
+      setUploadingLogoId(null);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="admin-page-header">
@@ -166,6 +185,7 @@ export default function AdminMunicipalities() {
             <table className="admin-table">
               <thead>
                 <tr>
+                  <th>Logo</th>
                   <th>Name</th>
                   <th>Code</th>
                   <th>Users</th>
@@ -179,6 +199,33 @@ export default function AdminMunicipalities() {
                 {municipalities.map((mun) => (
                   <React.Fragment key={mun.id}>
                     <tr>
+                      <td>
+                        <div
+                          className="admin-mun-logo-upload"
+                          onClick={() => logoInputRefs.current[mun.id]?.click()}
+                          title="Upload municipal admin logo"
+                        >
+                          {mun.logo ? (
+                            <img src={resolveImg(mun.logo)} alt={`${mun.name} logo`} />
+                          ) : (
+                            <span className="admin-mun-logo-placeholder">{mun.name.charAt(0)}</span>
+                          )}
+                          <div className="admin-mun-logo-overlay">
+                            {uploadingLogoId === mun.id ? '…' : <Camera size={13} />}
+                          </div>
+                          <input
+                            ref={(el) => { logoInputRefs.current[mun.id] = el; }}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              e.target.value = '';
+                              handleLogoSelect(mun, file);
+                            }}
+                          />
+                        </div>
+                      </td>
                       <td style={{ fontWeight: 600, color: '#0f172a' }}>{mun.name}</td>
                       <td><code style={{ fontSize: 12, color: '#64748b' }}>{mun.code}</code></td>
                       <td>{mun._count?.users ?? 0}</td>
@@ -225,7 +272,7 @@ export default function AdminMunicipalities() {
                     {/* Assign admin row */}
                     {assigningId === mun.id && (
                       <tr>
-                        <td colSpan={7} style={{ background: '#f0fdf4', padding: '12px 16px' }}>
+                        <td colSpan={8} style={{ background: '#f0fdf4', padding: '12px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Select admin for {mun.name}:</span>
                             <select

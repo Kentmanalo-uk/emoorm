@@ -122,7 +122,7 @@ export default function SellerApply() {
   // Load DB municipalities for cross-referencing PSGC data.
   const [dbMunicipalities, setDbMunicipalities] = useState([]);
   useEffect(() => {
-    axios.get("/municipalities").then((r) => setDbMunicipalities(r.data || [])).catch(() => {});
+    axios.get("/municipalities").then((r) => setDbMunicipalities(r.data || [])).catch(() => { });
   }, []);
 
   // Local-only object URLs for the ID photo previews (never sent to the server).

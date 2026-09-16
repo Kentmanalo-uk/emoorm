@@ -10,6 +10,7 @@ import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import LanguageSwitcher from '../LanguageSwitcher';
+import AppLogo from '../AppLogo';
 import './AdminLayout.css';
 
 /**
@@ -19,14 +20,17 @@ import './AdminLayout.css';
 export default function AdminLayout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   const [collapsed, toggleCollapsed] = useSidebarCollapse();
   const [reviewsOpen, setReviewsOpen] = useState(
     location.pathname.startsWith('/admin/sellers') ||
+    location.pathname.startsWith('/admin/all-sellers') ||
+    location.pathname.startsWith('/admin/buyers') ||
     location.pathname.startsWith('/admin/products') ||
+    location.pathname.startsWith('/admin/orders') ||
     location.pathname.startsWith('/admin/reports')
   );
   const [systemOpen, setSystemOpen] = useState(
@@ -35,6 +39,8 @@ export default function AdminLayout({ children }) {
     location.pathname.startsWith('/admin/municipalities')
   );
   const [unreadCount, setUnreadCount] = useState(0);
+  const [municipalityName, setMunicipalityName] = useState(user?.municipality?.name || '');
+  const [municipalityLogo, setMunicipalityLogo] = useState(user?.municipality?.logo || '');
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +55,21 @@ export default function AdminLayout({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    if (isSuperAdmin || !user?.id) return;
+    let cancelled = false;
+    axios.get('/auth/profile')
+      .then((response) => {
+        const profile = response.data;
+        if (cancelled || !profile) return;
+        updateUser(profile);
+        setMunicipalityName(profile.municipality?.name || '');
+        setMunicipalityLogo(profile.municipality?.logo || '');
+      })
+      .catch(() => { });
+    return () => { cancelled = true; };
+  }, [isSuperAdmin, updateUser, user?.id]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -59,7 +80,10 @@ export default function AdminLayout({ children }) {
     ? user.fullName.length > 14 ? user.fullName.slice(0, 14) + '…' : user.fullName
     : 'Admin';
   const roleLabel = isSuperAdmin ? 'Super Admin' : 'Municipal Admin';
-  const centerTitle = isSuperAdmin ? 'Super Admin' : 'Municipal Admin';
+  const assignedMunicipalityName = municipalityName || user?.municipality?.name || '';
+  const centerTitle = isSuperAdmin
+    ? 'Super Admin'
+    : assignedMunicipalityName ? `${assignedMunicipalityName} Admin` : 'Admin';
 
   const crumbs = buildCrumbs(location.pathname);
 
@@ -70,7 +94,20 @@ export default function AdminLayout({ children }) {
         <div className="ac-sidebar-inner">
           <div className="ac-brand-row">
             <Link to="/admin" className="ac-brand">
-              <img src="/brand-icon.png" alt="Emoorm" className="ac-brand-logo" />
+              {!isSuperAdmin ? (
+                <span className="ac-brand-logo-stack">
+                  <AppLogo className="ac-brand-logo ac-brand-logo-base" />
+                  {municipalityLogo ? (
+                    <img src={resolveImg(municipalityLogo)} alt={assignedMunicipalityName} className="ac-brand-logo ac-brand-logo-badge" />
+                  ) : (
+                    <span className="ac-brand-logo-badge ac-brand-logo-placeholder" aria-label={`${assignedMunicipalityName} logo`}>
+                      {assignedMunicipalityName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <AppLogo className="ac-brand-logo" />
+              )}
               <span className="ac-brand-text">
                 <strong>Emoorm</strong>
                 <span>{centerTitle}</span>
@@ -92,30 +129,51 @@ export default function AdminLayout({ children }) {
               <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
 
-            {/* Reviews group */}
-            <button
-              type="button"
-              className={`ac-nav-item ac-nav-group ${reviewsOpen && !collapsed ? 'is-open' : ''}`}
-              onClick={() => collapsed ? navigate('/admin/sellers') : setReviewsOpen((v) => !v)}
-              aria-expanded={reviewsOpen && !collapsed}
-              title="Approvals"
-            >
-              <Flag size={17} weight="fill" />
-              <span>Approvals</span>
-              <ChevronDown size={15} className="ac-nav-chevron" />
-            </button>
-            {reviewsOpen && (
-              <div className="ac-subnav">
-                <NavLink to="/admin/sellers" className={subNavCls}>
-                  Seller Applications
+            {isSuperAdmin ? (
+              <>
+                <button
+                  type="button"
+                  className={`ac-nav-item ac-nav-group ${reviewsOpen && !collapsed ? 'is-open' : ''}`}
+                  onClick={() => collapsed ? navigate('/admin/sellers') : setReviewsOpen((v) => !v)}
+                  aria-expanded={reviewsOpen && !collapsed}
+                  title="Marketplace"
+                >
+                  <Flag size={17} weight="fill" />
+                  <span>Marketplace</span>
+                  <ChevronDown size={15} className="ac-nav-chevron" />
+                </button>
+                {reviewsOpen && (
+                  <div className="ac-subnav">
+                    <NavLink to="/admin/sellers" className={subNavCls}>Seller Applications</NavLink>
+                    <NavLink to="/admin/all-sellers" className={subNavCls}>All Sellers</NavLink>
+                    <NavLink to="/admin/buyers" className={subNavCls}>All Buyers</NavLink>
+                    <NavLink to="/admin/products" className={subNavCls}>Products</NavLink>
+                    <NavLink to="/admin/orders" className={subNavCls}>Orders / Activity</NavLink>
+                    <NavLink to="/admin/reports" className={subNavCls}>Reports / Issues</NavLink>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <NavLink to="/admin/sellers" className={navCls} title="Seller Applications">
+                  <Flag size={17} weight="fill" /> <span>Seller Applications</span>
                 </NavLink>
-                <NavLink to="/admin/products" className={subNavCls}>
-                  Product Approvals
+                <NavLink to="/admin/all-sellers" className={navCls} title="Sellers">
+                  <StoreIcon size={17} weight="fill" /> <span>Sellers</span>
                 </NavLink>
-                <NavLink to="/admin/reports" className={subNavCls}>
-                  Reports
+                <NavLink to="/admin/buyers" className={navCls} title="Buyers">
+                  <Users size={17} weight="fill" /> <span>Buyers</span>
                 </NavLink>
-              </div>
+                <NavLink to="/admin/products" className={navCls} title="Products">
+                  <Package size={17} weight="fill" /> <span>Products</span>
+                </NavLink>
+                <NavLink to="/admin/orders" className={navCls} title="Orders / Activity">
+                  <FileText size={17} weight="fill" /> <span>Orders / Activity</span>
+                </NavLink>
+                <NavLink to="/admin/reports" className={navCls} title="Reports / Issues">
+                  <Flag size={17} weight="fill" /> <span>Reports / Issues</span>
+                </NavLink>
+              </>
             )}
 
             <NavLink to="/admin/announcements" className={navCls} title="Announcements">
@@ -245,8 +303,11 @@ function subNavCls({ isActive }) {
 const LABELS = {
   '/admin': 'Dashboard',
   '/admin/sellers': 'Seller Applications',
-  '/admin/products': 'Product Approvals',
-  '/admin/reports': 'Reports',
+  '/admin/all-sellers': 'All Sellers',
+  '/admin/buyers': 'All Buyers',
+  '/admin/products': 'Products',
+  '/admin/orders': 'Orders / Activity',
+  '/admin/reports': 'Reports / Issues',
   '/admin/users': 'All Users',
   '/admin/categories': 'Categories',
   '/admin/municipalities': 'Municipalities',
@@ -264,8 +325,7 @@ function buildCrumbs(pathname) {
   const crumbs = [{ to: '/admin', label: 'Admin Panel' }];
 
   if (clean === '/admin') {
-    crumbs.push({ to: '/admin', label: 'Dashboard' });
-    return crumbs;
+    return [{ to: '/admin', label: 'Dashboard' }];
   }
 
   const parts = clean.split('/').filter(Boolean);

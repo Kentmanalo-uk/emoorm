@@ -25,10 +25,25 @@ const createUser = async (userData) => {
           id: true,
           name: true,
           code: true,
+          logo: true,
         },
       },
       barangay: true,
       address: true,
+      province: true,
+      store: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          logo: true,
+          pickupAddress: true,
+          isActive: true,
+          isSuspended: true,
+          _count: { select: { products: true, orders: true } },
+        },
+      },
       role: true,
       isActive: true,
       isVerified: true,
@@ -56,6 +71,7 @@ const findByEmail = async (email, includePassword = false) => {
         id: true,
         name: true,
         code: true,
+        logo: true,
       },
     },
     barangay: true,
@@ -101,10 +117,25 @@ const findById = async (id) => {
           id: true,
           name: true,
           code: true,
+          logo: true,
         },
       },
       barangay: true,
       address: true,
+      province: true,
+      store: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          logo: true,
+          pickupAddress: true,
+          isActive: true,
+          isSuspended: true,
+          _count: { select: { products: true, orders: true } },
+        },
+      },
       role: true,
       isActive: true,
       isVerified: true,
@@ -139,6 +170,7 @@ const updateUser = async (id, updateData) => {
           id: true,
           name: true,
           code: true,
+          logo: true,
         },
       },
       barangay: true,
@@ -201,7 +233,8 @@ const findAll = async (options = {}) => {
     deletedAt: null,
   };
 
-  if (role) where.role = role;
+  if (Array.isArray(role)) where.role = { in: role };
+  else if (role) where.role = role;
   if (municipalityId) where.municipalityId = municipalityId;
   if (isActive !== undefined) where.isActive = isActive;
   if (sellerApplicationStatus) where.sellerApplicationStatus = sellerApplicationStatus;
@@ -227,6 +260,23 @@ const findAll = async (options = {}) => {
             id: true,
             name: true,
             code: true,
+            logo: true,
+          },
+        },
+        province: true,
+        barangay: true,
+        address: true,
+        store: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            logo: true,
+            pickupAddress: true,
+            isActive: true,
+            isSuspended: true,
+            _count: { select: { products: true, orders: true } },
           },
         },
         role: true,

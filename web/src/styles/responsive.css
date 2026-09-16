@@ -1,6 +1,7 @@
 /* Shared responsive layer. Desktop styles remain unchanged above 1024px. */
 
 @media (max-width: 1024px) {
+
   .container,
   .container-fluid {
     padding-left: 24px;
@@ -188,11 +189,11 @@
     gap: 8px;
   }
 
-  .seller-header-actions > button,
-  .admin-header-actions > button,
-  .page-header-actions > button,
-  .form-actions > button,
-  .modal-actions > button {
+  .seller-header-actions>button,
+  .admin-header-actions>button,
+  .page-header-actions>button,
+  .form-actions>button,
+  .modal-actions>button {
     min-height: 44px;
   }
 
@@ -400,8 +401,8 @@
     gap: 12px;
   }
 
-  .detail-row > :last-child,
-  .summary-row > :last-child {
+  .detail-row> :last-child,
+  .summary-row> :last-child {
     text-align: right;
     overflow-wrap: anywhere;
   }
@@ -510,6 +511,7 @@
   select {
     font-size: 16px;
   }
+
   .container,
   .container-fluid,
   .sc-content,
@@ -607,11 +609,11 @@
     max-width: 82%;
   }
 
-  .seller-header-actions > button,
-  .admin-header-actions > button,
-  .page-header-actions > button,
-  .form-actions > button,
-  .modal-actions > button {
+  .seller-header-actions>button,
+  .admin-header-actions>button,
+  .page-header-actions>button,
+  .form-actions>button,
+  .modal-actions>button {
     width: 100%;
   }
 
@@ -625,7 +627,7 @@
     gap: 3px;
   }
 
-  .detail-row > :last-child {
+  .detail-row> :last-child {
     text-align: left;
   }
 
@@ -661,6 +663,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .sc-sidebar,
   .ac-sidebar {
     transition: none;

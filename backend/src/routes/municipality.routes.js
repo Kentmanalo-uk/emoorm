@@ -34,7 +34,7 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  authorize('SUPER_ADMIN'),
+  authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
   municipalityController.updateMunicipality
 );
 

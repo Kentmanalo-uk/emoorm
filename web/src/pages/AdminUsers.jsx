@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Users, MagnifyingGlass as Search, ShieldCheck, ShieldSlash as ShieldOff, UserMinus as UserX, UserCheck,
   CaretDown as ChevronDown, X, Eye
@@ -7,6 +8,7 @@ import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import useAuthStore from '../store/authStore';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -19,11 +21,14 @@ const ROLE_BADGE = {
 
 const ROLES = ['BUYER', 'SELLER', 'MUNICIPAL_ADMIN'];
 
-export default function AdminUsers() {
+export default function AdminUsers({ fixedRole = '', title = 'User Management' }) {
+  const navigate = useNavigate();
+  const { user: actor } = useAuthStore();
+  const isSuperAdmin = actor?.role === 'SUPER_ADMIN';
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState(fixedRole);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [processing, setProcessing] = useState(null);
@@ -31,14 +36,14 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers();
-  }, [search, roleFilter, page]);
+  }, [search, roleFilter, page, fixedRole]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
       const params = { page, pageSize: 20 };
       if (search) params.search = search;
-      if (roleFilter) params.role = roleFilter;
+      if (fixedRole || roleFilter) params.role = fixedRole || roleFilter;
 
       const res = await axios.get('/auth/users', { params });
       setUsers(res.data || []);
@@ -92,10 +97,19 @@ export default function AdminUsers() {
     }
   };
 
+  const openDetails = async (userId) => {
+    try {
+      const res = await axios.get(`/auth/users/${userId}`);
+      setSelected(res.data);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Unable to view this user');
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">User Management</h1>
+        <h1 className="admin-page-title">{title}</h1>
       </div>
 
       <div className="admin-card">
@@ -119,16 +133,18 @@ export default function AdminUsers() {
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <select
-              className="admin-select"
-              value={roleFilter}
-              onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-            >
-              <option value="">All Roles</option>
-              {['BUYER', 'SELLER', 'MUNICIPAL_ADMIN', 'SUPER_ADMIN'].map((r) => (
-                <option key={r} value={r}>{r.replace('_', ' ')}</option>
-              ))}
-            </select>
+            {!fixedRole && (
+              <select
+                className="admin-select"
+                value={roleFilter}
+                onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+              >
+                <option value="">All Roles</option>
+                {['BUYER', 'SELLER', 'MUNICIPAL_ADMIN', 'SUPER_ADMIN'].map((r) => (
+                  <option key={r} value={r}>{r.replace('_', ' ')}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
@@ -178,7 +194,7 @@ export default function AdminUsers() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 5 }}>
-                          <button className="admin-btn admin-btn-gray" onClick={() => setSelected(u)}>
+                          <button className="admin-btn admin-btn-gray" onClick={() => openDetails(u.id)}>
                             <Eye size={13} /> Details
                           </button>
                           {u.isActive ? (
@@ -234,13 +250,43 @@ export default function AdminUsers() {
                   <div><label>Email</label><p>{selected.email}</p></div>
                   <div><label>Contact</label><p>{selected.contactNumber || '—'}</p></div>
                   <div><label>Municipality</label><p>{selected.municipality?.name || '—'}</p></div>
+                  <div><label>Barangay</label><p>{selected.barangay || '—'}</p></div>
+                  <div><label>Province</label><p>{selected.province || 'Oriental Mindoro'}</p></div>
+                  <div className="admin-detail-full"><label>Registered Address</label><p>{selected.address || '—'}</p></div>
                   <div><label>Role</label><p><span className={`admin-badge ${ROLE_BADGE[selected.role]}`}>{selected.role.replace('_', ' ')}</span></p></div>
                   <div><label>Status</label><p><span className={`admin-badge ${selected.isActive ? 'admin-badge-approved' : 'admin-badge-rejected'}`}>{selected.isActive ? 'Active' : 'Suspended'}</span></p></div>
                   <div><label>Joined</label><p>{new Date(selected.createdAt).toLocaleDateString('en-PH')}</p></div>
                 </div>
               </div>
 
-              {selected.role !== 'SUPER_ADMIN' && (
+              {selected.store && (
+                <div className="admin-detail-section">
+                  <h4>Store Information</h4>
+                  <div className="admin-detail-grid">
+                    <div><label>Store</label><p>{selected.store.name}</p></div>
+                    <div><label>Status</label><p>{selected.store.isSuspended ? 'Suspended' : selected.store.isActive ? 'Active' : 'Inactive'}</p></div>
+                    <div><label>Products</label><p>{selected.store._count?.products ?? 0}</p></div>
+                    <div><label>Orders</label><p>{selected.store._count?.orders ?? 0}</p></div>
+                    <div className="admin-detail-full"><label>Pickup Address</label><p>{selected.store.pickupAddress || '—'}</p></div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                    <button type="button" className="admin-btn admin-btn-gray" onClick={() => navigate(`/store/${selected.store.slug}`)}>View Store</button>
+                    <button type="button" className="admin-btn admin-btn-gray" onClick={() => navigate(`/admin/products?storeId=${selected.store.id}`)}>View Products</button>
+                    <button type="button" className="admin-btn admin-btn-gray" onClick={() => navigate(`/admin/orders?storeId=${selected.store.id}`)}>View Orders</button>
+                  </div>
+                </div>
+              )}
+
+              {selected.role === 'BUYER' && (
+                <div className="admin-detail-section">
+                  <h4>Buyer Activity</h4>
+                  <button type="button" className="admin-btn admin-btn-gray" onClick={() => navigate(`/admin/orders?buyerId=${selected.id}`)}>
+                    View Orders
+                  </button>
+                </div>
+              )}
+
+              {isSuperAdmin && selected.role !== 'SUPER_ADMIN' && (
                 <div className="admin-detail-section">
                   <h4>Change Role</h4>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

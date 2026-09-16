@@ -12,7 +12,7 @@ const { ApiError } = require('../middleware/errorHandler');
  * @returns {Promise<Object>} Created notification
  */
 const createNotification = async (data) => {
-  const { userId, type, title, message, relatedId } = data;
+  const { userId, type, title, message, relatedId, audience } = data;
 
   // Must stay in sync with the NotificationType enum in prisma/schema.prisma.
   const validTypes = [
@@ -45,11 +45,27 @@ const createNotification = async (data) => {
     throw new ApiError('Invalid notification type', 400);
   }
 
+  const sellerTypes = [
+    'ORDER_RECEIVED',
+    'PRODUCT_APPROVED',
+    'PRODUCT_SUSPENDED',
+    'SELLER_SUSPENDED',
+    'REPORT_SUBMITTED',
+    'RETURN_REQUESTED',
+    'RETURN_RECEIVED',
+    'RETURN_CLOSED',
+  ];
+  const resolvedAudience = audience || (sellerTypes.includes(type) ? 'SELLER' : 'BUYER');
+  if (!['BUYER', 'SELLER'].includes(resolvedAudience)) {
+    throw new ApiError('Invalid notification audience', 400);
+  }
+
   return notificationRepository.createNotification({
     userId,
     type,
     title,
     message,
+    audience: resolvedAudience,
     relatedId: relatedId || null,
     isRead: false,
   });
@@ -62,6 +78,9 @@ const createNotification = async (data) => {
  * @returns {Promise<Object>} Notifications and pagination
  */
 const getUserNotifications = async (userId, options) => {
+  if (options.audience && !['BUYER', 'SELLER'].includes(options.audience)) {
+    throw new ApiError('Invalid notification audience', 400);
+  }
   return notificationRepository.findByUserId({ ...options, userId });
 };
 
@@ -112,8 +131,8 @@ const markAsRead = async (id, userId) => {
  * @param {String} userId - User ID
  * @returns {Promise<Object>} Update count
  */
-const markAllAsRead = async (userId) => {
-  return notificationRepository.markAllAsRead(userId);
+const markAllAsRead = async (userId, audience) => {
+  return notificationRepository.markAllAsRead(userId, audience);
 };
 
 /**
@@ -151,8 +170,8 @@ const deleteAllNotifications = async (userId) => {
  * @param {String} userId - User ID
  * @returns {Promise<Number>} Unread count
  */
-const getUnreadCount = async (userId) => {
-  return notificationRepository.getUnreadCount(userId);
+const getUnreadCount = async (userId, audience) => {
+  return notificationRepository.getUnreadCount(userId, audience);
 };
 
 // Helper functions for creating specific notifications

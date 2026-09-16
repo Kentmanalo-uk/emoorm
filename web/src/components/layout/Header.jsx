@@ -11,6 +11,7 @@ import useCartStore from '../../store/cartStore';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import LanguageSwitcher from '../LanguageSwitcher';
+import AppLogo from '../AppLogo';
 import ImageSearchModal from './ImageSearchModal';
 import './Header.css';
 
@@ -154,8 +155,8 @@ const Header = () => {
     const fetchAll = async () => {
       try {
         const [countRes, listRes] = await Promise.all([
-          axios.get('/notifications/unread/count'),
-          axios.get('/notifications', { params: { page: 1, pageSize: 5 } }),
+          axios.get('/notifications/unread/count', { params: { audience: 'BUYER' } }),
+          axios.get('/notifications', { params: { page: 1, pageSize: 5, audience: 'BUYER' } }),
         ]);
         setUnreadCount(countRes.data?.count ?? 0);
         setRecentNotifs(listRes.data || []);
@@ -464,7 +465,7 @@ const Header = () => {
         <div className="header-container">
           <div className={isCartPage ? 'cart-header-context' : undefined}>
             <Link to="/" className="header-logo">
-              <img src="/brand-icon.png" alt="Emoorm" className="header-logo-icon" />
+              <AppLogo className="header-logo-icon" />
               <span className="header-logo-text">emoorm</span>
             </Link>
             {isCartPage && <><span className="cart-header-divider" /><span className="cart-header-title">Shopping Cart</span></>}

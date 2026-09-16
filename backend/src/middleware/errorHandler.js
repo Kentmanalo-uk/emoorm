@@ -9,7 +9,7 @@ class ApiError extends Error {
     this.statusCode = statusCode;
     this.errors = errors;
     this.isOperational = true;
-    
+
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -21,7 +21,7 @@ const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';
   let errors = err.errors || null;
-  
+
   // Handle Prisma errors
   if (err.code) {
     switch (err.code) {
@@ -34,48 +34,48 @@ const errorHandler = (err, req, res, next) => {
           errors = [`${target.join(', ')} must be unique`];
         }
         break;
-        
+
       case 'P2025':
         // Record not found
         statusCode = 404;
         message = 'Record not found';
         break;
-        
+
       case 'P2003':
         // Foreign key constraint violation
         statusCode = 400;
         message = 'Related record not found';
         break;
-        
+
       case 'P2014':
         // Invalid relation
         statusCode = 400;
         message = 'Invalid relationship between records';
         break;
-        
+
       default:
         statusCode = 500;
         message = 'Database operation failed';
     }
   }
-  
+
   // Handle JWT errors
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;
     message = 'Invalid token';
   }
-  
+
   if (err.name === 'TokenExpiredError') {
     statusCode = 401;
     message = 'Token expired';
   }
-  
+
   // Handle validation errors
   if (err.name === 'ValidationError') {
     statusCode = 422;
     message = 'Validation failed';
   }
-  
+
   // Handle multer errors (file upload)
   if (err.name === 'MulterError') {
     statusCode = 400;
@@ -91,7 +91,7 @@ const errorHandler = (err, req, res, next) => {
     statusCode = 400;
     message = err.message;
   }
-  
+
   // Log error in development
   if (config.nodeEnv !== 'production') {
     console.error('Error:', {
@@ -101,22 +101,22 @@ const errorHandler = (err, req, res, next) => {
       errors,
     });
   }
-  
+
   // Send error response
   const response = {
     success: false,
     message,
   };
-  
+
   if (errors) {
     response.errors = errors;
   }
-  
+
   // Include stack trace in development
   if (config.nodeEnv !== 'production' && err.stack) {
     response.stack = err.stack;
   }
-  
+
   res.status(statusCode).json(response);
 };
 

@@ -267,14 +267,14 @@ const Cart = () => {
           {/* Page Header */}
           <div className="cart-header">
             <h1 className="cart-title">
-                <span className="cart-title-desktop">Shopping Cart</span>
-                <span className="cart-title-mobile">Cart</span>
+              <span className="cart-title-desktop">Shopping Cart</span>
+              <span className="cart-title-mobile">Cart</span>
               <span className="cart-count">({itemCount} {itemCount === 1 ? 'item' : 'items'})</span>
             </h1>
             <button onClick={handleClearCart} className="btn-clear-cart">
               <Trash2 size={18} />
-                <span className="clear-cart-desktop">Clear Cart</span>
-                <span className="clear-cart-mobile">Clear</span>
+              <span className="clear-cart-desktop">Clear Cart</span>
+              <span className="clear-cart-mobile">Clear</span>
             </button>
           </div>
 
@@ -307,110 +307,110 @@ const Cart = () => {
               {Object.entries(itemsByStore).map(([storeId, storeData]) => {
                 const storeAllSelected = storeData.items.every((it) => selectedSet.has(it.id));
                 return (
-                <div key={storeId} className="cart-store-group">
-                  <div className="store-group-header">
-                    <label className="cart-store-check">
-                      <input
-                        type="checkbox"
-                        checked={storeAllSelected}
-                        onChange={() => toggleStoreSelected(storeData.items)}
-                        aria-label={`Select all items from ${storeData.storeName}`}
-                      />
-                    </label>
-                    <span className="cart-store-avatar">
-                      {storeData.storeLogo ? (
-                        <img
-                          src={resolveImg(storeData.storeLogo)}
-                          alt=""
-                          onError={(event) => {
-                            event.currentTarget.style.display = 'none';
-                            event.currentTarget.nextElementSibling?.classList.add('is-visible');
-                          }}
+                  <div key={storeId} className="cart-store-group">
+                    <div className="store-group-header">
+                      <label className="cart-store-check">
+                        <input
+                          type="checkbox"
+                          checked={storeAllSelected}
+                          onChange={() => toggleStoreSelected(storeData.items)}
+                          aria-label={`Select all items from ${storeData.storeName}`}
                         />
-                      ) : null}
-                      <Storefront className={storeData.storeLogo ? '' : 'is-visible'} size={16} />
-                    </span>
-                    <span>{storeData.storeName}</span>
-                  </div>
-
-                  <div className="cart-items-list">
-                    {storeData.items.map((item) => (
-                      <div key={item.id} className="cart-item">
-                        <label className="cart-item-check">
-                          <input
-                            type="checkbox"
-                            checked={selectedSet.has(item.id)}
-                            onChange={() => toggleItemSelected(item.id)}
-                            aria-label={`Select ${item.name}`}
+                      </label>
+                      <span className="cart-store-avatar">
+                        {storeData.storeLogo ? (
+                          <img
+                            src={resolveImg(storeData.storeLogo)}
+                            alt=""
+                            onError={(event) => {
+                              event.currentTarget.style.display = 'none';
+                              event.currentTarget.nextElementSibling?.classList.add('is-visible');
+                            }}
                           />
-                        </label>
-                        <Link
-                          to={`/product/${item.slug || item.id}`}
-                          className="cart-item-image"
-                        >
-                          <ProductImage src={item.image} alt={item.name} />
-                        </Link>
+                        ) : null}
+                        <Storefront className={storeData.storeLogo ? '' : 'is-visible'} size={16} />
+                      </span>
+                      <span>{storeData.storeName}</span>
+                    </div>
 
-                        <div className="cart-item-details">
+                    <div className="cart-items-list">
+                      {storeData.items.map((item) => (
+                        <div key={item.id} className="cart-item">
+                          <label className="cart-item-check">
+                            <input
+                              type="checkbox"
+                              checked={selectedSet.has(item.id)}
+                              onChange={() => toggleItemSelected(item.id)}
+                              aria-label={`Select ${item.name}`}
+                            />
+                          </label>
                           <Link
                             to={`/product/${item.slug || item.id}`}
-                            className="cart-item-name"
+                            className="cart-item-image"
                           >
-                            {item.name}
+                            <ProductImage src={item.image} alt={item.name} />
                           </Link>
-                          <p className="cart-item-price">₱{Number(item.price).toFixed(2)}</p>
-                          {item.selectedVariations && Object.keys(item.selectedVariations).length > 0 && (
-                            <p className="cart-item-variations">
-                              {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
-                            </p>
-                          )}
-                          {item.stock !== undefined && item.stock < 10 && item.stock > 0 && (
-                            <span className="cart-item-stock-warning">
-                              Only {item.stock} left in stock
-                            </span>
-                          )}
-                          {item.stock === 0 && (
-                            <span className="cart-item-out-of-stock">
-                              Out of stock
-                            </span>
-                          )}
-                        </div>
 
-                        <div className="cart-item-actions">
-                          <div className="cart-item-quantity">
-                            <button
-                              onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                              disabled={item.quantity <= 1}
-                              className="quantity-btn"
+                          <div className="cart-item-details">
+                            <Link
+                              to={`/product/${item.slug || item.id}`}
+                              className="cart-item-name"
                             >
-                              <Minus size={16} />
-                            </button>
-                            <span className="quantity-display">{item.quantity}</span>
-                            <button
-                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                              disabled={item.quantity >= (item.stock || 999)}
-                              className="quantity-btn"
-                            >
-                              <Plus size={16} />
-                            </button>
+                              {item.name}
+                            </Link>
+                            <p className="cart-item-price">₱{Number(item.price).toFixed(2)}</p>
+                            {item.selectedVariations && Object.keys(item.selectedVariations).length > 0 && (
+                              <p className="cart-item-variations">
+                                {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
+                              </p>
+                            )}
+                            {item.stock !== undefined && item.stock < 10 && item.stock > 0 && (
+                              <span className="cart-item-stock-warning">
+                                Only {item.stock} left in stock
+                              </span>
+                            )}
+                            {item.stock === 0 && (
+                              <span className="cart-item-out-of-stock">
+                                Out of stock
+                              </span>
+                            )}
                           </div>
 
-                          <div className="cart-item-subtotal">
-                            ₱{(item.price * item.quantity).toFixed(2)}
-                          </div>
+                          <div className="cart-item-actions">
+                            <div className="cart-item-quantity">
+                              <button
+                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                disabled={item.quantity <= 1}
+                                className="quantity-btn"
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <span className="quantity-display">{item.quantity}</span>
+                              <button
+                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                disabled={item.quantity >= (item.stock || 999)}
+                                className="quantity-btn"
+                              >
+                                <Plus size={16} />
+                              </button>
+                            </div>
 
-                          <button
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="btn-remove-item"
-                            title="Remove item"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                            <div className="cart-item-subtotal">
+                              ₱{(item.price * item.quantity).toFixed(2)}
+                            </div>
+
+                            <button
+                              onClick={() => handleRemoveItem(item.id)}
+                              className="btn-remove-item"
+                              title="Remove item"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
                 );
               })}
 

@@ -218,8 +218,8 @@ const PhAddressPicker = ({
             {muniLoading
               ? 'Loading…'
               : !v.provinceCode
-              ? 'Select a province first'
-              : 'Select city / municipality'}
+                ? 'Select a province first'
+                : 'Select city / municipality'}
           </option>
           {municipalities.map((m) => {
             const supported = dbMuniByNormName.has(normalizeName(m.name));
@@ -253,8 +253,8 @@ const PhAddressPicker = ({
               {brgyLoading
                 ? 'Loading barangays…'
                 : !v.municipalityCode
-                ? 'Select a municipality first'
-                : 'Select barangay'}
+                  ? 'Select a municipality first'
+                  : 'Select barangay'}
             </option>
             {barangays.map((b) => (
               <option key={b.code} value={b.code}>{b.name}</option>

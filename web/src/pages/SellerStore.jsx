@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, Gear as Settings } from '@phosphor-icons/react';
+import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, Gear as Settings, MapPin } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import StoreLocationMap from '../components/maps/StoreLocationMap';
 import './SellerDashboard.css';
 import './SellerStore.css';
 
@@ -23,7 +24,9 @@ export default function SellerStore() {
   const [form, setForm] = useState({
     name: '',
     description: '',
-    address: '',
+    pickupAddress: '',
+    latitude: null,
+    longitude: null,
     contactNumber: '',
     isActive: true,
     logo: '',
@@ -47,7 +50,9 @@ export default function SellerStore() {
       const next = {
         name: res.data.name || '',
         description: res.data.description || '',
-        address: res.data.address || '',
+        pickupAddress: res.data.pickupAddress || '',
+        latitude: res.data.latitude ?? null,
+        longitude: res.data.longitude ?? null,
         contactNumber: res.data.contactNumber || '',
         isActive: res.data.isActive ?? true,
         logo: res.data.logo || '',
@@ -170,217 +175,226 @@ export default function SellerStore() {
         ) : (
           <div className="store-settings-grid">
             <div className="store-settings-main">
-            <div className="seller-card">
-              <div className="seller-card-header">
-                <h2><Store size={18} /> Store Information</h2>
+              <div className="seller-card">
+                <div className="seller-card-header">
+                  <h2><Store size={18} /> Store Information</h2>
+                </div>
+                <form onSubmit={handleSubmit} className="store-form">
+                  <div className="form-group">
+                    <label>Store Name <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                      placeholder="e.g. Maria's Fresh Farm"
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Description</label>
+                    <textarea
+                      name="description"
+                      value={form.description}
+                      onChange={handleChange}
+                      placeholder="Tell buyers about your store and what you sell..."
+                      className="form-input form-textarea"
+                      rows={4}
+                      maxLength={DESCRIPTION_MAX}
+                    />
+                    <span className="form-hint store-char-count">
+                      {form.description.length}/{DESCRIPTION_MAX}
+                    </span>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Store / Pickup Address</label>
+                    <input
+                      type="text"
+                      name="pickupAddress"
+                      value={form.pickupAddress}
+                      onChange={handleChange}
+                      placeholder="Street, Barangay, Municipality, Oriental Mindoro"
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label><MapPin size={14} /> Pin Store Location</label>
+                    <StoreLocationMap
+                      value={{ latitude: form.latitude, longitude: form.longitude }}
+                      onChange={({ latitude, longitude }) => setForm((previous) => ({ ...previous, latitude, longitude }))}
+                      height={330}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Contact Number</label>
+                    <input
+                      type="text"
+                      name="contactNumber"
+                      value={form.contactNumber}
+                      onChange={handleChange}
+                      placeholder="09XXXXXXXXX"
+                      className="form-input"
+                    />
+                  </div>
+
+                  {!isNew && (
+                    <div className="form-group form-toggle">
+                      <label className="toggle-label">
+                        <input
+                          type="checkbox"
+                          name="isActive"
+                          checked={form.isActive}
+                          onChange={handleChange}
+                        />
+                        <span className="toggle-text">
+                          Store is <strong>{form.isActive ? 'Active' : 'Inactive'}</strong>
+                          {!form.isActive && (
+                            <span className="toggle-warn">
+                              <AlertCircle size={14} /> Buyers won't see your store or products
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    </div>
+                  )}
+
+                  <div className="form-actions">
+                    <button type="submit" className="btn-seller-primary" disabled={isSaving}>
+                      <Save size={16} />
+                      {isSaving ? 'Saving…' : isNew ? 'Create Store' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
               </div>
-              <form onSubmit={handleSubmit} className="store-form">
-                <div className="form-group">
-                  <label>Store Name <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={form.name}
-                    onChange={handleChange}
-                    placeholder="e.g. Maria's Fresh Farm"
-                    className="form-input"
-                  />
-                </div>
 
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
-                    placeholder="Tell buyers about your store and what you sell..."
-                    className="form-input form-textarea"
-                    rows={4}
-                    maxLength={DESCRIPTION_MAX}
-                  />
-                  <span className="form-hint store-char-count">
-                    {form.description.length}/{DESCRIPTION_MAX}
-                  </span>
-                </div>
-
-                <div className="form-group">
-                  <label>Store Address</label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={form.address}
-                    onChange={handleChange}
-                    placeholder="Barangay, Municipality, Oriental Mindoro"
-                    className="form-input"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Contact Number</label>
-                  <input
-                    type="text"
-                    name="contactNumber"
-                    value={form.contactNumber}
-                    onChange={handleChange}
-                    placeholder="09XXXXXXXXX"
-                    className="form-input"
-                  />
-                </div>
-
-                {!isNew && (
-                  <div className="form-group form-toggle">
-                    <label className="toggle-label">
-                      <input
-                        type="checkbox"
-                        name="isActive"
-                        checked={form.isActive}
-                        onChange={handleChange}
+              {/* Branding: logo + banner */}
+              {!isNew && (
+                <div className="seller-card">
+                  <div className="seller-card-header">
+                    <h2><ImageIcon size={16} /> Branding</h2>
+                  </div>
+                  <div className="store-branding-body">
+                    <div className="branding-row">
+                      <div className="branding-label">
+                        <strong>Shop Logo</strong>
+                        <small>Square image, at least 200×200px.</small>
+                      </div>
+                      <ImageUploader
+                        value={form.logo}
+                        onChange={(url) => setForm((p) => ({ ...p, logo: url }))}
+                        onFile={(file) => handleUpload('logo', file)}
+                        uploading={uploadingField === 'logo'}
+                        shape="circle"
                       />
-                      <span className="toggle-text">
-                        Store is <strong>{form.isActive ? 'Active' : 'Inactive'}</strong>
-                        {!form.isActive && (
-                          <span className="toggle-warn">
-                            <AlertCircle size={14} /> Buyers won't see your store or products
-                          </span>
-                        )}
-                      </span>
-                    </label>
-                  </div>
-                )}
-
-                <div className="form-actions">
-                  <button type="submit" className="btn-seller-primary" disabled={isSaving}>
-                    <Save size={16} />
-                    {isSaving ? 'Saving…' : isNew ? 'Create Store' : 'Save Changes'}
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Branding: logo + banner */}
-            {!isNew && (
-              <div className="seller-card">
-                <div className="seller-card-header">
-                  <h2><ImageIcon size={16} /> Branding</h2>
-                </div>
-                <div className="store-branding-body">
-                  <div className="branding-row">
-                    <div className="branding-label">
-                      <strong>Shop Logo</strong>
-                      <small>Square image, at least 200×200px.</small>
                     </div>
-                    <ImageUploader
-                      value={form.logo}
-                      onChange={(url) => setForm((p) => ({ ...p, logo: url }))}
-                      onFile={(file) => handleUpload('logo', file)}
-                      uploading={uploadingField === 'logo'}
-                      shape="circle"
-                    />
-                  </div>
 
-                  <div className="branding-divider" />
+                    <div className="branding-divider" />
 
-                  <div className="branding-row">
-                    <div className="branding-label">
-                      <strong>Cover Banner</strong>
-                      <small>Wide image (recommended 1600×400px).</small>
+                    <div className="branding-row">
+                      <div className="branding-label">
+                        <strong>Cover Banner</strong>
+                        <small>Wide image (recommended 1600×400px).</small>
+                      </div>
+                      <ImageUploader
+                        value={form.bannerImage || form.coverImage}
+                        onChange={(url) => setForm((p) => ({ ...p, bannerImage: url }))}
+                        onFile={(file) => handleUpload('bannerImage', file)}
+                        uploading={uploadingField === 'bannerImage'}
+                        shape="banner"
+                      />
                     </div>
-                    <ImageUploader
-                      value={form.bannerImage || form.coverImage}
-                      onChange={(url) => setForm((p) => ({ ...p, bannerImage: url }))}
-                      onFile={(file) => handleUpload('bannerImage', file)}
-                      uploading={uploadingField === 'bannerImage'}
-                      shape="banner"
-                    />
+                  </div>
+                  <div className="form-actions branding-actions">
+                    <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
+                      <Save size={16} />
+                      {isSaving ? 'Saving…' : 'Save Branding'}
+                    </button>
                   </div>
                 </div>
-                <div className="form-actions branding-actions">
-                  <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
-                    <Save size={16} />
-                    {isSaving ? 'Saving…' : 'Save Branding'}
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Theme colors */}
-            {!isNew && (
-              <div className="seller-card">
-                <div className="seller-card-header">
-                  <h2><Palette size={16} /> Theme Colors</h2>
-                  <button type="button" className="btn-seller-outline" onClick={resetColors}>
-                    Reset defaults
-                  </button>
-                </div>
-                <div className="store-theme-body">
-                  <div className="theme-picker-row">
-                    <ColorPicker
-                      label="Primary color"
-                      hint="Used for buttons, links, and highlights."
-                      value={form.primaryColor}
-                      onChange={(v) => setForm((p) => ({ ...p, primaryColor: v }))}
-                    />
-                    <ColorPicker
-                      label="Accent color"
-                      hint="Used for secondary highlights and badges."
-                      value={form.secondaryColor}
-                      onChange={(v) => setForm((p) => ({ ...p, secondaryColor: v }))}
+              {/* Theme colors */}
+              {!isNew && (
+                <div className="seller-card">
+                  <div className="seller-card-header">
+                    <h2><Palette size={16} /> Theme Colors</h2>
+                    <button type="button" className="btn-seller-outline" onClick={resetColors}>
+                      Reset defaults
+                    </button>
+                  </div>
+                  <div className="store-theme-body">
+                    <div className="theme-picker-row">
+                      <ColorPicker
+                        label="Primary color"
+                        hint="Used for buttons, links, and highlights."
+                        value={form.primaryColor}
+                        onChange={(v) => setForm((p) => ({ ...p, primaryColor: v }))}
+                      />
+                      <ColorPicker
+                        label="Accent color"
+                        hint="Used for secondary highlights and badges."
+                        value={form.secondaryColor}
+                        onChange={(v) => setForm((p) => ({ ...p, secondaryColor: v }))}
+                      />
+                    </div>
+
+                    <ThemePreview
+                      name={form.name || 'Your Store'}
+                      logo={form.logo}
+                      banner={form.bannerImage || form.coverImage}
+                      primary={form.primaryColor}
+                      secondary={form.secondaryColor}
                     />
                   </div>
-
-                  <ThemePreview
-                    name={form.name || 'Your Store'}
-                    logo={form.logo}
-                    banner={form.bannerImage || form.coverImage}
-                    primary={form.primaryColor}
-                    secondary={form.secondaryColor}
-                  />
+                  <div className="form-actions branding-actions">
+                    <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
+                      <Save size={16} />
+                      {isSaving ? 'Saving…' : 'Save Theme'}
+                    </button>
+                  </div>
                 </div>
-                <div className="form-actions branding-actions">
-                  <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
-                    <Save size={16} />
-                    {isSaving ? 'Saving…' : 'Save Theme'}
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
             </div>
 
             <div className="store-settings-side">
-            {/* Store slug / link */}
-            {store?.slug && (
-              <div className="seller-card store-preview-card">
-                <div className="seller-card-header">
-                  <h2>Public Store Link</h2>
+              {/* Store slug / link */}
+              {store?.slug && (
+                <div className="seller-card store-preview-card">
+                  <div className="seller-card-header">
+                    <h2>Public Store Link</h2>
+                  </div>
+                  <div className="store-slug-info">
+                    <p className="store-slug-label">Your store URL:</p>
+                    <a
+                      href={`/store/${store.slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="store-slug-link"
+                    >
+                      emoorm.app/store/{store.slug}
+                    </a>
+                  </div>
                 </div>
-                <div className="store-slug-info">
-                  <p className="store-slug-label">Your store URL:</p>
-                  <a
-                    href={`/store/${store.slug}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="store-slug-link"
-                  >
-                    emoorm.app/store/{store.slug}
-                  </a>
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Danger zone / account-level shop controls now live on a dedicated Settings page */}
-            {!isNew && (
-              <div className="seller-card store-settings-pointer">
-                <div className="seller-card-header">
-                  <h2><Settings size={16} /> More Shop Controls</h2>
+              {/* Danger zone / account-level shop controls now live on a dedicated Settings page */}
+              {!isNew && (
+                <div className="seller-card store-settings-pointer">
+                  <div className="seller-card-header">
+                    <h2><Settings size={16} /> More Shop Controls</h2>
+                  </div>
+                  <div className="store-settings-pointer-body">
+                    <p>Deleting your shop and other account-level shop settings now live on a dedicated Settings page.</p>
+                    <Link to="/seller/settings" className="btn-seller-outline">
+                      Go to Shop Settings
+                    </Link>
+                  </div>
                 </div>
-                <div className="store-settings-pointer-body">
-                  <p>Deleting your shop and other account-level shop settings now live on a dedicated Settings page.</p>
-                  <Link to="/seller/settings" className="btn-seller-outline">
-                    Go to Shop Settings
-                  </Link>
-                </div>
-              </div>
-            )}
+              )}
             </div>
           </div>
         )}

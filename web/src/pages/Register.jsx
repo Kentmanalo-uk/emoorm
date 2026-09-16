@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
+import AppLogo from '../components/AppLogo';
 import './Register.css';
 
 const Register = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login: storeLogin } = useAuthStore();
+  const requestedRedirect = searchParams.get('redirect');
+  const safeRedirect = requestedRedirect?.startsWith('/') ? requestedRedirect : null;
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -133,27 +137,27 @@ const Register = () => {
     try {
       const response = googleProfile
         ? await axios.post('/auth/google/complete', {
-            googleToken: googleProfile.googleToken,
-            fullName: formData.fullName.trim(),
-            contactNumber: formData.contactNumber.trim() || undefined,
-            province: formData.province || undefined,
-            municipalityId: formData.municipalityId,
-            barangay: formData.barangay.trim() || undefined,
-            address: formData.street.trim() || undefined,
-            password: formData.password,
-            confirmPassword: formData.confirmPassword,
-          })
+          googleToken: googleProfile.googleToken,
+          fullName: formData.fullName.trim(),
+          contactNumber: formData.contactNumber.trim() || undefined,
+          province: formData.province || undefined,
+          municipalityId: formData.municipalityId,
+          barangay: formData.barangay.trim() || undefined,
+          address: formData.street.trim() || undefined,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+        })
         : await axios.post('/auth/register', {
-            email: formData.email.toLowerCase().trim(),
-            password: formData.password,
-            confirmPassword: formData.confirmPassword,
-            fullName: formData.fullName.trim(),
-            contactNumber: formData.contactNumber.trim() || undefined,
-            province: formData.province || undefined,
-            municipalityId: formData.municipalityId,
-            barangay: formData.barangay.trim() || undefined,
-            address: formData.street.trim() || undefined,
-          });
+          email: formData.email.toLowerCase().trim(),
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          fullName: formData.fullName.trim(),
+          contactNumber: formData.contactNumber.trim() || undefined,
+          province: formData.province || undefined,
+          municipalityId: formData.municipalityId,
+          barangay: formData.barangay.trim() || undefined,
+          address: formData.street.trim() || undefined,
+        });
 
       // Response structure: { success, message, data: { user, accessToken, refreshToken } }
       const token = response.data.accessToken;
@@ -162,7 +166,7 @@ const Register = () => {
 
       if (token && userData) {
         storeLogin(userData, token, refreshToken);
-        navigate('/', { replace: true });
+        navigate(userData.role === 'SELLER' ? '/seller' : safeRedirect || '/', { replace: true });
       } else {
         throw new Error('Invalid response format from server');
       }
@@ -224,7 +228,7 @@ const Register = () => {
           return;
         }
         storeLogin(data.user, data.accessToken, data.refreshToken);
-        navigate('/', { replace: true });
+        navigate(data.user.role === 'SELLER' ? '/seller' : safeRedirect || '/', { replace: true });
       } catch (err) {
         setApiError(err?.response?.data?.message || 'Google sign-up failed.');
       } finally {
@@ -251,7 +255,7 @@ const Register = () => {
       <header className="register-header">
         <div className="register-header-container">
           <Link to="/" className="register-logo">
-            <img src="/brand-icon.png" alt="Emoorm" className="register-logo-icon" />
+            <AppLogo className="register-logo-icon" />
             <span className="register-logo-text">emoorm</span>
           </Link>
           <Link to="/login" className="register-header-link">Log In</Link>
@@ -264,7 +268,7 @@ const Register = () => {
           {/* Left Side - Hero */}
           <div className="register-hero">
             <div className="register-hero-brand">
-              <img src="/brand-icon.png" alt="Emoorm" className="register-hero-icon" />
+              <AppLogo className="register-hero-icon" />
               <span className="register-hero-text">emoorm</span>
             </div>
             <h1 className="register-hero-title">

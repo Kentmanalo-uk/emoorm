@@ -174,7 +174,7 @@ const createOrder = async (userId, data) => {
   }
 
   const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0 : (totalAmount >= 500 ? 0 : 50);
-let voucherRecord = null;
+  let voucherRecord = null;
   let discountAmount = 0;
   if (voucherCode) {
     const normalized = String(voucherCode).trim().toUpperCase();
@@ -248,7 +248,7 @@ let voucherRecord = null;
  * @param {String} userRole - User role
  * @returns {Promise<Object>} Order
  */
-const getOrderById = async (id, userId, userRole) => {
+const getOrderById = async (id, userId, userRole, userMunicipalityId) => {
   const order = await orderRepository.findById(id);
 
   if (!order) {
@@ -258,9 +258,12 @@ const getOrderById = async (id, userId, userRole) => {
   // Authorization check
   const isBuyer = order.buyerId === userId;
   const isSeller = order.store.ownerId === userId;
-  const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'MUNICIPAL_ADMIN';
+  const isAdmin = userRole === 'SUPER_ADMIN';
+  const isScopedAdmin = userRole === 'MUNICIPAL_ADMIN'
+    && userMunicipalityId
+    && (order.buyer?.municipalityId === userMunicipalityId || order.store?.municipalityId === userMunicipalityId);
 
-  if (!isBuyer && !isSeller && !isAdmin) {
+  if (!isBuyer && !isSeller && !isAdmin && !isScopedAdmin) {
     throw new ApiError('You do not have permission to view this order', 403);
   }
 
@@ -425,8 +428,11 @@ const verifyPayment = async (orderId, actor, paymentStatus) => {
   const order = await orderRepository.findById(orderId);
   if (!order) throw new ApiError('Order not found', 404);
   const isSeller = actor.role === 'SELLER' && actor.storeId === order.storeId;
-  const isAdmin = actor.role === 'SUPER_ADMIN' || actor.role === 'MUNICIPAL_ADMIN';
-  if (!isSeller && !isAdmin) throw new ApiError('Not authorized to verify this payment', 403);
+  const isAdmin = actor.role === 'SUPER_ADMIN';
+  const isScopedAdmin = actor.role === 'MUNICIPAL_ADMIN'
+    && actor.municipalityId
+    && (order.buyer?.municipalityId === actor.municipalityId || order.store?.municipalityId === actor.municipalityId);
+  if (!isSeller && !isAdmin && !isScopedAdmin) throw new ApiError('Not authorized to verify this payment', 403);
   if (!['PAID', 'FAILED'].includes(paymentStatus)) {
     throw new ApiError('Payment status must be PAID or FAILED', 400);
   }

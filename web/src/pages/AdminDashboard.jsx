@@ -148,14 +148,10 @@ export default function AdminDashboard() {
             <div key={i} className="admin-stat-card"><Skeleton width="60%" /></div>
           ))
           : STAT_CARDS.map((card) => {
-            const Icon = card.icon;
             return (
               <div key={card.label} className="admin-stat-card">
-                <div className="admin-stat-icon">
-                  <Icon size={18} />
-                </div>
-                <div className="admin-stat-label">{card.label}</div>
                 <div className="admin-stat-value">{card.value}</div>
+                <div className="admin-stat-label">{card.label}</div>
                 {card.link !== '#' ? (
                   <Link to={card.link} className="admin-stat-link">{card.linkLabel}</Link>
                 ) : (

@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle, UserCircle, X } from '@phosphor-icons/react';
+import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle, X } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
+import AppLogo from '../components/AppLogo';
 import './Login.css';
 
 const QR_POLL_INTERVAL_MS = 2000;
@@ -12,7 +13,9 @@ const QR_POLL_INTERVAL_MS = 2000;
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login: storeLogin, getCachedAccounts, switchCachedAccount, removeCachedAccount } = useAuthStore();
+  const { login: storeLogin } = useAuthStore();
+  const requestedRedirect = new URLSearchParams(location.search).get('redirect');
+  const safeRedirect = requestedRedirect?.startsWith('/') ? requestedRedirect : null;
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -54,14 +57,12 @@ const Login = () => {
 
   useEffect(() => {
     if (mfaStage === 'google-profile' && municipalities.length === 0) {
-      axios.get('/municipalities').then((res) => setMunicipalities(res.data || [])).catch(() => {});
+      axios.get('/municipalities').then((res) => setMunicipalities(res.data || [])).catch(() => { });
     }
   }, [mfaStage, municipalities.length]);
 
   // QR code login
   const [showQrLogin, setShowQrLogin] = useState(false);
-  const [cachedAccounts, setCachedAccounts] = useState(() => getCachedAccounts());
-  const [showSavedAccountCard, setShowSavedAccountCard] = useState(() => getCachedAccounts().length > 0);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -180,7 +181,7 @@ const Login = () => {
     } else if (role === 'SELLER') {
       target = '/seller';
     } else {
-      target = location.state?.from?.pathname || '/';
+      target = safeRedirect || location.state?.from?.pathname || '/';
     }
     navigate(target, { replace: true });
   };
@@ -362,25 +363,13 @@ const Login = () => {
     setApiError('');
   };
 
-  const handleCachedAccount = (account) => {
-    if (!switchCachedAccount(account)) return;
-    const role = account.role;
-    navigate(role === 'SELLER' ? '/seller' : role === 'SUPER_ADMIN' || role === 'MUNICIPAL_ADMIN' ? '/admin' : '/');
-  };
-
-  const handleRemoveCachedAccount = (event, email) => {
-    event.stopPropagation();
-    removeCachedAccount(email);
-    setCachedAccounts(getCachedAccounts());
-  };
-
   return (
     <div className="login-page">
       {/* Header */}
       <header className="login-header">
         <div className="login-header-container">
           <Link to="/" className="login-logo">
-            <img src="/brand-icon.png" alt="Emoorm" className="login-logo-icon" />
+            <AppLogo className="login-logo-icon" />
             <span className="login-logo-text">emoorm</span>
           </Link>
           <div className="login-header-actions">
@@ -395,7 +384,7 @@ const Login = () => {
           {/* Left Side - Hero */}
           <div className="login-hero">
             <div className="login-hero-brand">
-              <img src="/brand-icon.png" alt="Emoorm" className="login-hero-icon" />
+              <AppLogo className="login-hero-icon" />
               <span className="login-hero-text">emoorm</span>
             </div>
             <h1 className="register-hero-title">
@@ -472,14 +461,7 @@ const Login = () => {
                   </button>
                 </div>
 
-                {cachedAccounts.length > 0 && showSavedAccountCard ? (
-                  <SavedAccountCard
-                    account={cachedAccounts[0]}
-                    onContinue={() => handleCachedAccount(cachedAccounts[0])}
-                    onUseAnother={() => setShowSavedAccountCard(false)}
-                    onRemove={(event) => handleRemoveCachedAccount(event, cachedAccounts[0].email)}
-                  />
-                ) : <form onSubmit={handleSubmit} className="login-form">
+                <form onSubmit={handleSubmit} className="login-form">
                   {/* Email Field */}
                   <div className="login-form-group">
                     <label htmlFor="email" className="login-form-label">
@@ -586,7 +568,7 @@ const Login = () => {
                     {' & '}
                     <Link to="/privacy" className="login-form-terms-link">Privacy Policy</Link>
                   </p>
-                </form>}
+                </form>
               </>)}
             </div>
 
@@ -692,23 +674,6 @@ function GoogleCompleteProfile({
         Use a different account
       </button>
     </form>
-  );
-}
-
-function SavedAccountCard({ account, onContinue, onUseAnother, onRemove }) {
-  return (
-    <div className="saved-account-card-inline">
-      <div className="saved-account-card-avatar">
-        {account.profilePhoto ? <img src={account.profilePhoto} alt="" /> : <UserCircle size={58} weight="fill" />}
-      </div>
-      <p className="saved-account-card-kicker">Saved account</p>
-      <h2>{account.fullName || 'Welcome back'}</h2>
-      <p className="saved-account-card-email">{account.email}</p>
-      <button type="button" className="login-form-submit" onClick={onContinue}>Continue as {account.fullName || 'this account'}</button>
-      <button type="button" className="saved-account-secondary" onClick={onUseAnother}>Use another account</button>
-      <Link to="/register" className="saved-account-signup">Sign up</Link>
-      <button type="button" className="saved-account-remove-link" onClick={onRemove}>Remove saved account</button>
-    </div>
   );
 }
 

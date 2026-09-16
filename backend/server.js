@@ -22,7 +22,7 @@ const startServer = async () => {
   try {
     // Test database connection
     await testDatabaseConnection();
-    
+
     // Start Express server
     app.listen(PORT, () => {
       console.log('================================================');

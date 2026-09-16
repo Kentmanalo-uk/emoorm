@@ -664,6 +664,7 @@
 }
 
 @media (max-width: 480px) {
+
   .checkout-page,
   .checkout-layout,
   .checkout-main,
@@ -985,7 +986,7 @@
     padding: 12px 0 calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
-  .checkout-page > .container {
+  .checkout-page>.container {
     padding-left: 12px;
     padding-right: 12px;
   }

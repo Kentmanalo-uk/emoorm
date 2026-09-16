@@ -30,6 +30,8 @@ import SellerFulfillment from './pages/SellerFulfillment';
 import SellerSettings from './pages/SellerSettings';
 import Stores from './pages/Stores';
 import StoreDetail from './pages/StoreDetail';
+import MunicipalityShowcase from './pages/MunicipalityShowcase';
+import MunicipalityGallery from './pages/MunicipalityGallery';
 import Wishlist from './pages/Wishlist';
 import Notifications from './pages/Notifications';
 import AdminDashboard from './pages/AdminDashboard';
@@ -37,6 +39,7 @@ import AdminSellers from './pages/AdminSellers';
 import AdminProducts from './pages/AdminProducts';
 import AdminReports from './pages/AdminReports';
 import AdminUsers from './pages/AdminUsers';
+import AdminOrders from './pages/AdminOrders';
 import AdminCategories from './pages/AdminCategories';
 import AdminMunicipalities from './pages/AdminMunicipalities';
 import AdminAnalytics from './pages/AdminAnalytics';
@@ -102,6 +105,8 @@ function App() {
             <Route path="/product/:slug" element={<ProductDetails />} />
             <Route path="/stores" element={<Stores />} />
             <Route path="/store/:slug" element={<StoreDetail />} />
+            <Route path="/municipality/:id" element={<MunicipalityShowcase />} />
+            <Route path="/municipality/:id/gallery" element={<MunicipalityGallery />} />
             <Route path="/sell" element={<Sell />} />
             <Route path="/search/image" element={<SearchByImage />} />
             <Route path="/about" element={<About />} />
@@ -150,6 +155,7 @@ function App() {
               <Route path="orders" element={<SellerOrders />} />
               <Route path="returns" element={<SellerReturns />} />
               <Route path="messages" element={<SellerMessages />} />
+              <Route path="notifications" element={<Notifications mode="SELLER" bare />} />
               <Route path="products" element={<SellerProducts />} />
               <Route path="products/new" element={<SellerProducts />} />
               <Route path="reviews" element={<SellerReviews />} />
@@ -162,17 +168,20 @@ function App() {
             {/* Admin — MUNICIPAL_ADMIN / SUPER_ADMIN only */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/sellers" element={<AdminRoute><AdminSellers /></AdminRoute>} />
+            <Route path="/admin/all-sellers" element={<AdminRoute><AdminUsers fixedRole="SELLER" title="All Sellers" /></AdminRoute>} />
+            <Route path="/admin/buyers" element={<AdminRoute><AdminUsers fixedRole="BUYER" title="Buyer Management" /></AdminRoute>} />
             <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+            <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
             <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
-            <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-            <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
-            <Route path="/admin/municipalities" element={<AdminRoute><AdminMunicipalities /></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminUsers /></AdminRoute>} />
+            <Route path="/admin/categories" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCategories /></AdminRoute>} />
+            <Route path="/admin/municipalities" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminMunicipalities /></AdminRoute>} />
             <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
             <Route path="/admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
-            <Route path="/admin/banners" element={<AdminRoute><AdminBanners /></AdminRoute>} />
-            <Route path="/admin/vouchers" element={<AdminRoute><AdminVouchers /></AdminRoute>} />
-            <Route path="/admin/junior-admins" element={<AdminRoute><AdminJuniorAdmins /></AdminRoute>} />
-            <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogs /></AdminRoute>} />
+            <Route path="/admin/banners" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminBanners /></AdminRoute>} />
+            <Route path="/admin/vouchers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminVouchers /></AdminRoute>} />
+            <Route path="/admin/junior-admins" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminJuniorAdmins /></AdminRoute>} />
+            <Route path="/admin/audit-logs" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminAuditLogs /></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
             {/* Catch-all */}

@@ -60,40 +60,40 @@ const HelpCenter = () => {
   const guide = topicGuides[searchParams.get('topic')];
 
   return (
-  <Layout>
-    <div className="container" style={{ padding: '32px 0' }}>
-      <div className="profile-page-wrap">
-        <header className="profile-page-header">
-          <h1 className="profile-page-title">Help Center</h1>
-        </header>
+    <Layout>
+      <div className="container" style={{ padding: '32px 0' }}>
+        <div className="profile-page-wrap">
+          <header className="profile-page-header">
+            <h1 className="profile-page-title">Help Center</h1>
+          </header>
 
-        {guide && (
-          <section className="help-topic-card">
-            <h2 className="help-topic-title">{guide.title}</h2>
-            <p className="profile-page-subtitle">{guide.text}</p>
-            <Link to="/customer-care" className="help-topic-link">Need more help? Contact Support</Link>
-          </section>
-        )}
+          {guide && (
+            <section className="help-topic-card">
+              <h2 className="help-topic-title">{guide.title}</h2>
+              <p className="profile-page-subtitle">{guide.text}</p>
+              <Link to="/customer-care" className="help-topic-link">Need more help? Contact Support</Link>
+            </section>
+          )}
 
-        <div className="help-topics">
-          {topics.map((t) => (
-            <div key={t.title} className="help-topic-card">
-              <h3 className="help-topic-title">{t.title}</h3>
-              <ul className="help-topic-list">
-                {t.items.map((item) => (
-                  <li key={item.label}>
-                    <Link to={item.to} className="help-topic-link">
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div className="help-topics">
+            {topics.map((t) => (
+              <div key={t.title} className="help-topic-card">
+                <h3 className="help-topic-title">{t.title}</h3>
+                <ul className="help-topic-list">
+                  {t.items.map((item) => (
+                    <li key={item.label}>
+                      <Link to={item.to} className="help-topic-link">
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  </Layout>
+    </Layout>
   );
 };
 

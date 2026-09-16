@@ -30,9 +30,11 @@ function getConfig(type) {
   return TYPE_CONFIG[type] || TYPE_CONFIG.DEFAULT;
 }
 
-export default function Notifications({ bare = false } = {}) {
+export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
+  const audience = mode === 'SELLER' ? 'SELLER' : 'BUYER';
+  const notificationsPath = audience === 'SELLER' ? '/seller/notifications' : '/notifications';
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -42,14 +44,14 @@ export default function Notifications({ bare = false } = {}) {
   const [pagination, setPagination] = useState({ totalPages: 0, total: 0 });
 
   useEffect(() => {
-    if (!isAuthenticated) { navigate('/login?redirect=/notifications'); return; }
+    if (!isAuthenticated) { navigate(`/login?redirect=${notificationsPath}`); return; }
     fetchNotifications();
-  }, [isAuthenticated, filter, page]);
+  }, [isAuthenticated, filter, page, audience]);
 
   const fetchNotifications = async () => {
     setIsLoading(true);
     try {
-      const params = { page, pageSize: 20 };
+      const params = { page, pageSize: 20, audience };
       if (filter === 'unread') params.isRead = false;
 
       const response = await axios.get('/notifications', { params });
@@ -79,7 +81,7 @@ export default function Notifications({ bare = false } = {}) {
 
   const handleMarkAllRead = async () => {
     try {
-      await axios.put('/notifications/read-all');
+      await axios.put(`/notifications/read-all?audience=${audience}`);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       toast.success('All notifications marked as read');

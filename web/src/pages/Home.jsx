@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ShoppingCart, Star } from '@phosphor-icons/react';
+import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ShoppingCart, Star, Storefront, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
+import StoreLocationMap from '../components/maps/StoreLocationMap';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
+import useAuthStore from '../store/authStore';
 import './Home.css';
 
 const Home = () => {
   const [currentIndex, setCurrentIndex] = useState(1); // Start at 1 (first real slide)
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const transitionRef = useRef(null);
 
   const fallbackBanners = [
     { id: 'fallback-1', imageUrl: '/assets/banners/banner-qoute.png', linkUrl: null, title: 'Emoorm' },
@@ -20,6 +21,9 @@ const Home = () => {
     { id: 'fallback-3', imageUrl: '/assets/banners/discover-mindoro.png', linkUrl: null, title: 'Discover Mindoro' },
   ];
   const [bannerData, setBannerData] = useState(fallbackBanners);
+  const [sideBanners, setSideBanners] = useState({ top: null, bottom: null });
+  const [promotionPopup, setPromotionPopup] = useState(null);
+  const [popupOpen, setPopupOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,12 +32,29 @@ const Home = () => {
         const res = await axios.get('/banners');
         const list = Array.isArray(res.data) ? res.data : [];
         if (!cancelled && list.length > 0) {
-          setBannerData(list.map((b) => ({
+          const mapBanner = (b) => ({
             id: b.id,
             imageUrl: resolveImg(b.imageUrl) || b.imageUrl,
             linkUrl: b.linkUrl || null,
             title: b.title || 'Banner',
-          })));
+            subtitle: b.subtitle || '',
+            updatedAt: b.updatedAt,
+          });
+          const carousel = list.filter((b) => (b.placement || 'HOME_CAROUSEL') === 'HOME_CAROUSEL');
+          const top = list.find((b) => b.placement === 'HOME_SIDEBAR_TOP');
+          const bottom = list.find((b) => b.placement === 'HOME_SIDEBAR_BOTTOM');
+          const popup = list.find((b) => b.placement === 'HOME_POPUP');
+          if (carousel.length > 0) setBannerData(carousel.map(mapBanner));
+          setSideBanners({ top: top ? mapBanner(top) : null, bottom: bottom ? mapBanner(bottom) : null });
+          if (popup) {
+            const mappedPopup = mapBanner(popup);
+            const sessionKey = `emoorm.promotion-popup.${mappedPopup.id}.${mappedPopup.updatedAt || ''}`;
+            if (sessionStorage.getItem(sessionKey) !== 'seen') {
+              setPromotionPopup(mappedPopup);
+              setPopupOpen(true);
+              sessionStorage.setItem(sessionKey, 'seen');
+            }
+          }
         }
       } catch {
         // keep fallback banners
@@ -42,6 +63,15 @@ const Home = () => {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    if (!popupOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setPopupOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [popupOpen]);
+
   const banners = bannerData.map((b) => b.imageUrl);
 
   // Create extended slides array: [last, ...real slides, first]
@@ -49,13 +79,21 @@ const Home = () => {
     ? [banners[banners.length - 1], ...banners, banners[0]]
     : [];
 
-  // Auto-advance carousel
+  // Restart autoplay from the first real slide whenever the banner set changes.
   useEffect(() => {
-    const timer = setInterval(() => {
-      handleNext();
+    setCurrentIndex(1);
+    setIsTransitioning(false);
+  }, [banners.length]);
+
+  // Auto-advance carousel without depending on the render-scoped click handler.
+  useEffect(() => {
+    if (banners.length <= 1 || isTransitioning) return undefined;
+    const timer = setTimeout(() => {
+      setIsTransitioning(true);
+      setCurrentIndex((previous) => previous + 1);
     }, 5000);
-    return () => clearInterval(timer);
-  }, [currentIndex]);
+    return () => clearTimeout(timer);
+  }, [banners.length, currentIndex, isTransitioning]);
 
   // Handle transition end - reset position without animation
   const handleTransitionEnd = () => {
@@ -97,24 +135,42 @@ const Home = () => {
   };
 
   const { addItem } = useCartStore();
+  const { user } = useAuthStore();
   const [apiCategories, setApiCategories] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [exploreProducts, setExploreProducts] = useState([]);
+  const [nearbyStores, setNearbyStores] = useState([]);
+  const [mappedStores, setMappedStores] = useState([]);
+  const [municipalities, setMunicipalities] = useState([]);
 
   useEffect(() => {
     const fetchHomeData = async () => {
       try {
-        const [catRes, prodRes] = await Promise.all([
+        const [catRes, suggestedRes, exploreRes, storesRes, mappedStoresRes, municipalitiesRes] = await Promise.all([
           axios.get('/categories'),
-          axios.get('/products', { params: { pageSize: 8, sortBy: 'createdAt', sortOrder: 'desc' } }),
+          axios.get('/products', { params: { pageSize: 6, sortBy: 'createdAt', sortOrder: 'desc' } }),
+          axios.get('/products', { params: { pageSize: 100, sortBy: 'createdAt', sortOrder: 'desc' } }),
+          axios.get('/stores', {
+            params: {
+              pageSize: 6,
+              municipalityId: user?.municipalityId || undefined,
+            },
+          }),
+          axios.get('/stores', { params: { pageSize: 100 } }),
+          axios.get('/municipalities'),
         ]);
         setApiCategories(catRes.data || []);
-        setFeaturedProducts(prodRes.data || []);
+        setFeaturedProducts(suggestedRes.data || []);
+        setExploreProducts(exploreRes.data || []);
+        setNearbyStores(storesRes.data || []);
+        setMappedStores((mappedStoresRes.data || []).filter((store) => store.latitude != null && store.longitude != null));
+        setMunicipalities(municipalitiesRes.data || []);
       } catch (err) {
         console.error('Failed to load home data:', err);
       }
     };
     fetchHomeData();
-  }, []);
+  }, [user?.municipalityId]);
 
   const handleAddToCart = (e, product) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
@@ -128,6 +184,9 @@ const Home = () => {
 
   return (
     <Layout>
+      {popupOpen && promotionPopup && (
+        <PromotionPopup banner={promotionPopup} onClose={() => setPopupOpen(false)} />
+      )}
       {/* Banner Section */}
       <section className="banner-section">
         <div className="container">
@@ -186,49 +245,55 @@ const Home = () => {
 
             {/* Right: Two Cards */}
             <div className="banner-sidebar">
-              {/* Seller CTA Card */}
-              <div className="banner-card banner-card-seller">
-                <div className="banner-card-badge-corner">FREE</div>
-                <h3 className="banner-card-title">
-                  Sell on<br />Emoorm.
-                </h3>
-                <p className="banner-card-text">Reach buyers across Oriental Mindoro.</p>
-                <Link to="/sell" className="banner-card-button">
-                  Register
-                  <ArrowRight size={16} />
-                </Link>
-              </div>
+              {sideBanners.top ? (
+                <HomepageSideBanner banner={sideBanners.top} />
+              ) : (
+                <div className="banner-card banner-card-seller">
+                  <div className="banner-card-badge-corner">FREE</div>
+                  <h3 className="banner-card-title">
+                    Sell on<br />Emoorm.
+                  </h3>
+                  <p className="banner-card-text">Reach buyers across Oriental Mindoro.</p>
+                  <Link to="/sell" className="banner-card-button">
+                    Register
+                    <ArrowRight size={16} />
+                  </Link>
+                </div>
+              )}
 
-              {/* Mobile App Card */}
-              <div className="banner-card banner-card-app">
-                <div className="banner-card-app-copy">
-                  <div className="banner-card-label">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="4" y="2" width="8" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" />
-                      <circle cx="8" cy="12" r="0.5" fill="currentColor" />
-                    </svg>
-                    MOBILE APP
+              {sideBanners.bottom ? (
+                <HomepageSideBanner banner={sideBanners.bottom} />
+              ) : (
+                <div className="banner-card banner-card-app">
+                  <div className="banner-card-app-copy">
+                    <div className="banner-card-label">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="4" y="2" width="8" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" />
+                        <circle cx="8" cy="12" r="0.5" fill="currentColor" />
+                      </svg>
+                      MOBILE APP
+                    </div>
+                    <h4 className="banner-card-title-small">
+                      Try Emoorm<br />on mobile.
+                    </h4>
+                    <p className="banner-card-text-small">Scan with your phone camera.</p>
                   </div>
-                  <h4 className="banner-card-title-small">
-                    Try Emoorm<br />on mobile.
-                  </h4>
-                  <p className="banner-card-text-small">Scan with your phone camera.</p>
+                  <div className="qr-code">
+                    <svg viewBox="0 0 100 100" width="72" height="72">
+                      <rect width="100" height="100" fill="white" />
+                      <rect x="10" y="10" width="35" height="35" fill="black" />
+                      <rect x="55" y="10" width="35" height="35" fill="black" />
+                      <rect x="10" y="55" width="35" height="35" fill="black" />
+                      <rect x="15" y="15" width="25" height="25" fill="white" />
+                      <rect x="60" y="15" width="25" height="25" fill="white" />
+                      <rect x="15" y="60" width="25" height="25" fill="white" />
+                      <rect x="20" y="20" width="15" height="15" fill="black" />
+                      <rect x="65" y="20" width="15" height="15" fill="black" />
+                      <rect x="20" y="65" width="15" height="15" fill="black" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="qr-code">
-                  <svg viewBox="0 0 100 100" width="72" height="72">
-                    <rect width="100" height="100" fill="white" />
-                    <rect x="10" y="10" width="35" height="35" fill="black" />
-                    <rect x="55" y="10" width="35" height="35" fill="black" />
-                    <rect x="10" y="55" width="35" height="35" fill="black" />
-                    <rect x="15" y="15" width="25" height="25" fill="white" />
-                    <rect x="60" y="15" width="25" height="25" fill="white" />
-                    <rect x="15" y="60" width="25" height="25" fill="white" />
-                    <rect x="20" y="20" width="15" height="15" fill="black" />
-                    <rect x="65" y="20" width="15" height="15" fill="black" />
-                    <rect x="20" y="65" width="15" height="15" fill="black" />
-                  </svg>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -294,7 +359,7 @@ const Home = () => {
           ) : (
             <div className="products-message">
               <p>Browse local products from Oriental Mindoro sellers</p>
-              <Link to="/products" className="products-link">View all products <ArrowRight size={16} /></Link>
+              <Link to="/products" className="section-arrow-link" aria-label="View all products" title="View all products"><ArrowRight size={19} /></Link>
             </div>
           )}
         </div>
@@ -305,13 +370,75 @@ const Home = () => {
         <div className="container">
           <div className="section-header">
             <h2 className="section-title">Stores Near You</h2>
+            <Link to="/stores" className="section-arrow-link" aria-label="View all stores" title="View all stores"><ArrowRight size={19} /></Link>
           </div>
-          <div className="stores-message">
-            <p>Discover local sellers and shops in your area</p>
-            <Link to="/stores" className="stores-link">
-              Browse all stores <ArrowRight size={16} />
-            </Link>
+          {nearbyStores.length > 0 ? (
+            <div className="home-stores-grid">
+              {nearbyStores.map((store) => <HomeStoreCard key={store.id} store={store} />)}
+            </div>
+          ) : (
+            <div className="stores-message">
+              <p>No active stores are available in this area yet.</p>
+              <Link to="/stores" className="section-arrow-link" aria-label="Browse all stores" title="Browse all stores"><ArrowRight size={19} /></Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Municipality discovery */}
+      <section className="municipalities-section">
+        <div className="container">
+          <div className="section-header">
+            <h2 className="section-title">Explore Municipals</h2>
+            <Link to="/stores" className="section-arrow-link" aria-label="View all municipalities" title="View all municipalities"><ArrowRight size={19} /></Link>
           </div>
+          {municipalities.length > 0 ? (
+            <div className="municipality-rail">
+              {municipalities.map((municipality) => (
+                <Link key={municipality.id} to={`/municipality/${municipality.id}`} className="municipality-tile">
+                  <div className="municipality-tile-logo">
+                    {municipality.logo ? (
+                      <img src={resolveImg(municipality.logo)} alt={`${municipality.name} logo`} />
+                    ) : (
+                      <span>{municipality.name?.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <span>{municipality.name}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="municipalities-empty">Municipality showcases are coming soon.</div>
+          )}
+        </div>
+      </section>
+
+      {/* Discover Stores Map */}
+      <section className="stores-section discover-stores-section">
+        <div className="container">
+          <div className="section-header">
+            <h2 className="section-title">Discover Stores</h2>
+            <Link to="/stores" className="section-arrow-link" aria-label="Browse all stores" title="Browse all stores"><ArrowRight size={19} /></Link>
+          </div>
+          <StoreLocationMap stores={mappedStores} height={440} lockToPhilippines />
+          {mappedStores.length === 0 && (
+            <div className="discover-stores-empty">No sellers have pinned their store location yet.</div>
+          )}
+        </div>
+      </section>
+
+      {/* Explore Products Section */}
+      <section className="products-section home-explore-section">
+        <div className="container">
+          <div className="section-header">
+            <h2 className="section-title">Explore Products</h2>
+            <Link to="/products" className="section-arrow-link" aria-label="View all products" title="View all products"><ArrowRight size={19} /></Link>
+          </div>
+          {exploreProducts.length > 0 && (
+            <div className="products-grid home-explore-grid">
+              {exploreProducts.map((product) => <HomeProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />)}
+            </div>
+          )}
         </div>
       </section>
 
@@ -319,5 +446,90 @@ const Home = () => {
     </Layout>
   );
 };
+
+function HomepageSideBanner({ banner }) {
+  const content = (
+    <div className="banner-card banner-card-image">
+      <img src={banner.imageUrl} alt={banner.title || 'Homepage banner'} />
+    </div>
+  );
+  if (!banner.linkUrl) return content;
+  return banner.linkUrl.startsWith('http')
+    ? <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer" className="banner-card-image-link">{content}</a>
+    : <Link to={banner.linkUrl} className="banner-card-image-link">{content}</Link>;
+}
+
+function PromotionPopup({ banner, onClose }) {
+  const image = <img src={banner.imageUrl} alt={banner.title || 'Promotion'} />;
+  return (
+    <div className="home-promo-backdrop" role="dialog" aria-modal="true" aria-label={banner.title || 'Promotion'} onClick={onClose}>
+      <div className="home-promo-dialog" onClick={(event) => event.stopPropagation()}>
+        <button type="button" className="home-promo-close" onClick={onClose} aria-label="Close promotion"><X size={18} /></button>
+        {banner.linkUrl ? (
+          banner.linkUrl.startsWith('http')
+            ? <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer" onClick={onClose}>{image}</a>
+            : <Link to={banner.linkUrl} onClick={onClose}>{image}</Link>
+        ) : image}
+      </div>
+    </div>
+  );
+}
+
+function HomeProductCard({ product, onAddToCart }) {
+  return (
+    <Link to={`/product/${product.slug}`} className="product-card">
+      <div className="product-image">
+        <ProductImage src={product.images?.[0]} alt={product.name} />
+        <button type="button" className="product-cart-fab" onClick={(e) => onAddToCart(e, product)} aria-label="Add to cart">
+          <ShoppingCart size={16} />
+        </button>
+      </div>
+      <div className="product-info">
+        <span className="product-name">{product.name}</span>
+        <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
+        <div className="product-rating-row">
+          <div className="product-stars">{[0, 1, 2, 3, 4].map((i) => <Star key={i} size={11} weight="fill" color="#f59e0b" />)}</div>
+          <span className="product-review-count">({product.reviewCount ?? 0})</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function HomeStoreCard({ store }) {
+  const initials = store.name?.split(' ').slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
+  const productImages = (store.products || [])
+    .map((product) => {
+      const image = Array.isArray(product.images) ? product.images[0] : product.images;
+      return image ? { id: product.id, name: product.name, src: resolveImg(image) || image } : null;
+    })
+    .filter(Boolean);
+
+  return (
+    <article className="home-store-card">
+      <Link to={`/store/${store.slug}`} className="home-store-main">
+        <div className="home-store-logo">
+          {store.logo ? <img src={resolveImg(store.logo) || store.logo} alt={`${store.name} logo`} /> : <span>{initials}</span>}
+        </div>
+        <div className="home-store-copy">
+          <h3>{store.name}</h3>
+          <p>{[store.pickupAddress, store.municipality?.name].filter(Boolean).join(', ') || 'Oriental Mindoro'}</p>
+        </div>
+      </Link>
+      <div className="home-store-products">
+        <div className="home-store-product-stack" aria-label="Recent products">
+          {productImages.length > 0 ? productImages.map((image) => (
+            <img key={image.id} src={image.src} alt={image.name} />
+          )) : (
+            <span className="home-store-product-empty"><Storefront size={18} /></span>
+          )}
+        </div>
+        <Link to={`/store/${store.slug}`} className="home-store-view-products">
+          View products <ArrowRight size={15} />
+        </Link>
+      </div>
+    </article>
+  );
+}
 
 export default Home;

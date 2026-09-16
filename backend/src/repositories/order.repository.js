@@ -20,6 +20,7 @@ const createOrder = async (data) => {
           fullName: true,
           email: true,
           contactNumber: true,
+          municipalityId: true,
         },
       },
       store: {
@@ -194,6 +195,7 @@ const findById = async (id) => {
           name: true,
           slug: true,
           ownerId: true,
+          municipalityId: true,
           owner: {
             select: {
               id: true,
@@ -240,7 +242,12 @@ const findAll = async (options = {}) => {
   if (buyerId) where.buyerId = buyerId;
   if (storeId) where.storeId = storeId;
   if (status) where.status = status;
-  if (municipalityId) where.municipalityId = municipalityId;
+  if (municipalityId) {
+    where.OR = [
+      { buyer: { municipalityId } },
+      { store: { municipalityId } },
+    ];
+  }
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({

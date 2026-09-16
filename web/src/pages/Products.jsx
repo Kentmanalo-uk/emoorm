@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { MagnifyingGlass as Search, SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star } from '@phosphor-icons/react';
+import { SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import useCartStore from '../store/cartStore';
@@ -13,6 +13,7 @@ import './Products.css';
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
+  const [imageSearchPreview, setImageSearchPreview] = useState('');
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
@@ -32,6 +33,8 @@ const Products = () => {
   // Filters
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const municipalityId = searchParams.get('municipalityId') || '';
+  const imageSearch = searchParams.get('imageSearch') === '1';
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
   const [priceRange, setPriceRange] = useState({
     min: searchParams.get('minPrice') || '',
@@ -60,8 +63,24 @@ const Products = () => {
   }, [searchParams]);
 
   useEffect(() => {
+    if (imageSearch) {
+      try {
+        const stored = JSON.parse(sessionStorage.getItem('emoorm.image-search') || '{}');
+        setProducts(Array.isArray(stored.results) ? stored.results : []);
+        setImageSearchPreview(stored.previewUrl || '');
+        setPagination((prev) => ({ ...prev, total: Array.isArray(stored.results) ? stored.results.length : 0, totalPages: 1 }));
+      } catch {
+        setProducts([]);
+        setImageSearchPreview('');
+      } finally {
+        setIsLoading(false);
+      }
+      return undefined;
+    }
+    setImageSearchPreview('');
     fetchProducts();
-  }, [selectedCategory, searchQuery, sortBy, priceRange, pagination.page]);
+    return undefined;
+  }, [selectedCategory, searchQuery, sortBy, priceRange, pagination.page, municipalityId, imageSearch]);
 
   const fetchCategories = async () => {
     try {
@@ -81,6 +100,7 @@ const Products = () => {
       };
 
       if (selectedCategory) params.categoryId = selectedCategory;
+      if (municipalityId) params.municipalityId = municipalityId;
       if (searchQuery) params.search = searchQuery;
       if (priceRange.min) params.minPrice = priceRange.min;
       if (priceRange.max) params.maxPrice = priceRange.max;
@@ -122,12 +142,6 @@ const Products = () => {
     updateURL({ category: categoryId, page: 1 });
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setPagination(prev => ({ ...prev, page: 1 }));
-    updateURL({ q: searchQuery, page: 1 });
-  };
-
   const handleSortChange = (sort) => {
     setSortBy(sort);
     updateURL({ sort });
@@ -165,6 +179,8 @@ const Products = () => {
     setSearchQuery('');
     setSortBy('newest');
     setPriceRange({ min: '', max: '' });
+    setImageSearchPreview('');
+    sessionStorage.removeItem('emoorm.image-search');
     setPagination(prev => ({ ...prev, page: 1 }));
     setSearchParams({});
   };
@@ -256,16 +272,11 @@ const Products = () => {
             <main className="products-main">
               {/* Search and Controls */}
               <div className="products-controls">
-                <form onSubmit={handleSearch} className="products-search">
-                  <Search size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <button type="submit">Search</button>
-                </form>
+                <div className="products-results-context">
+                  {imageSearch ? (
+                    <span className="products-image-context"><img src={imageSearchPreview} alt="Image search" /> Results matching this image</span>
+                  ) : searchQuery ? <>Results for <strong>“{searchQuery}”</strong></> : 'All products'}
+                </div>
 
                 <div className="products-actions">
                   <select

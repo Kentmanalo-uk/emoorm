@@ -1,3 +1,128 @@
+.municipality-editor-card {
+  grid-column: 1 / -1;
+}
+
+.app-branding-card {
+  margin-bottom: 16px;
+}
+
+.app-branding-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.app-branding-item {
+  min-width: 0;
+}
+
+.app-branding-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #374151;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.app-branding-preview {
+  display: grid;
+  width: 100%;
+  height: 180px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #dbe3dd;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.app-branding-preview-placeholder {
+  background: #f3f4f6;
+}
+
+.app-branding-preview img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+}
+
+.app-branding-preview-placeholder img {
+  width: 95%;
+  height: 95%;
+  opacity: .14;
+}
+
+.app-branding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.app-branding-save {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.municipality-editor-gallery {
+  margin-top: 4px;
+}
+
+.municipality-editor-gallery-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.municipality-editor-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.municipality-editor-gallery-grid>div {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f1f5f9;
+}
+
+.municipality-editor-gallery-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.municipality-editor-gallery-grid button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .7);
+  color: #fff;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .app-branding-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .municipality-editor-gallery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .admin-settings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));

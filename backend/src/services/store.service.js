@@ -11,6 +11,16 @@ const { ApiError } = require('../middleware/errorHandler');
 const DELETION_GRACE_PERIOD_DAYS = 15;
 const GRACE_PERIOD_MS = DELETION_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000;
 
+const normalizeCoordinate = (value, min, max, label) => {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const coordinate = Number(value);
+  if (!Number.isFinite(coordinate) || coordinate < min || coordinate > max) {
+    throw new ApiError(`${label} must be between ${min} and ${max}`, 400);
+  }
+  return coordinate;
+};
+
 // Adds deletionScheduledAt/deletionDaysRemaining to a store pending deletion
 const attachDeletionInfo = (store) => {
   if (!store || !store.deletionRequestedAt || store.deletedAt) return store;
@@ -92,6 +102,9 @@ const createStore = async (userId, data) => {
     logo: data.logo || null,
     coverImage: data.coverImage || null,
     businessHours: data.businessHours || null,
+    pickupAddress: data.pickupAddress || null,
+    latitude: normalizeCoordinate(data.latitude, -90, 90, 'Latitude') ?? null,
+    longitude: normalizeCoordinate(data.longitude, -180, 180, 'Longitude') ?? null,
     ownerId: userId,
     municipalityId: user.municipalityId, // Use owner's municipality
     isActive: true,
@@ -255,6 +268,8 @@ const updateStore = async (storeId, userId, data) => {
     'pickupAddress',
     'pickupInstructions',
     'province',
+    'latitude',
+    'longitude',
     'paymentQrImage',
     'paymentQrType',
     'paymentInstructions',
@@ -268,7 +283,13 @@ const updateStore = async (storeId, userId, data) => {
   const updateData = {};
   for (const field of allowedFields) {
     if (data[field] !== undefined) {
-      updateData[field] = data[field];
+      if (field === 'latitude') {
+        updateData[field] = normalizeCoordinate(data[field], -90, 90, 'Latitude');
+      } else if (field === 'longitude') {
+        updateData[field] = normalizeCoordinate(data[field], -180, 180, 'Longitude');
+      } else {
+        updateData[field] = data[field];
+      }
     }
   }
 

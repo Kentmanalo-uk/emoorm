@@ -326,7 +326,9 @@
 
 
 /* ===== Products column in seller orders table ===== */
-.so-orders-table td { vertical-align: middle; }
+.so-orders-table td {
+  vertical-align: middle;
+}
 
 .so-order-date {
   font-size: 11px;
@@ -348,7 +350,9 @@
   flex-shrink: 0;
 }
 
-.so-product-thumbs > * + * { margin-left: -8px; }
+.so-product-thumbs>*+* {
+  margin-left: -8px;
+}
 
 .so-product-thumb {
   width: 38px;
@@ -431,7 +435,9 @@
 }
 
 @media (max-width: 900px) {
-  .so-product-name { max-width: 160px; }
+  .so-product-name {
+    max-width: 160px;
+  }
 }
 
 
@@ -445,12 +451,29 @@
   border: none;
 }
 
-.seller-badge.seller-badge--solid.status-pending    { background: #f59e0b; }
-.seller-badge.seller-badge--solid.status-confirmed  { background: #2563eb; }
-.seller-badge.seller-badge--solid.status-preparing  { background: #4f46e5; }
-.seller-badge.seller-badge--solid.status-ready      { background: #0891b2; }
-.seller-badge.seller-badge--solid.status-completed  { background: #059669; }
-.seller-badge.seller-badge--solid.status-cancelled  { background: #dc2626; }
+.seller-badge.seller-badge--solid.status-pending {
+  background: #f59e0b;
+}
+
+.seller-badge.seller-badge--solid.status-confirmed {
+  background: #2563eb;
+}
+
+.seller-badge.seller-badge--solid.status-preparing {
+  background: #4f46e5;
+}
+
+.seller-badge.seller-badge--solid.status-ready {
+  background: #0891b2;
+}
+
+.seller-badge.seller-badge--solid.status-completed {
+  background: #059669;
+}
+
+.seller-badge.seller-badge--solid.status-cancelled {
+  background: #dc2626;
+}
 
 /* ===== Payment proof preview ===== */
 .payment-proof {
@@ -489,7 +512,9 @@
   color: #94a3b8;
 }
 
-.payment-proof:hover .payment-proof-zoom { color: #059669; }
+.payment-proof:hover .payment-proof-zoom {
+  color: #059669;
+}
 
 @media (max-width: 768px) {
   .orders-layout {

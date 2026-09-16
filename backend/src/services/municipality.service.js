@@ -100,6 +100,16 @@ module.exports = {
   seedMunicipalities,
 };
 
-function updateMunicipality(id, data) {
-  return municipalityRepository.updateMunicipality(id, data);
+async function updateMunicipality(id, data, actor) {
+  const municipality = await municipalityRepository.findById(id);
+  if (!municipality) throw new ApiError('Municipality not found', 404);
+  if (actor?.role === 'MUNICIPAL_ADMIN' && actor.municipalityId !== id) {
+    throw new ApiError('You can only update your assigned municipality', 403);
+  }
+  const allowed = ['logo', 'tagline', 'description', 'gallery'];
+  const updateData = Object.fromEntries(Object.entries(data || {}).filter(([key]) => allowed.includes(key)));
+  if (updateData.gallery !== undefined && (!Array.isArray(updateData.gallery) || updateData.gallery.length > 12)) {
+    throw new ApiError('Gallery must contain up to 12 images', 400);
+  }
+  return municipalityRepository.updateMunicipality(id, updateData);
 }

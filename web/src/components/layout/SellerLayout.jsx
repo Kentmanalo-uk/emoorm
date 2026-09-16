@@ -10,6 +10,7 @@ import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import LanguageSwitcher from '../LanguageSwitcher';
+import AppLogo from '../AppLogo';
 import SellerCenterGuide from '../seller/SellerCenterGuide';
 import './SellerLayout.css';
 
@@ -49,7 +50,7 @@ export default function SellerLayout() {
         /* no store yet */
       }
       try {
-        const n = await axios.get('/notifications/unread/count');
+        const n = await axios.get('/notifications/unread/count', { params: { audience: 'SELLER' } });
         if (!cancelled) setUnreadCount(n.data?.count ?? 0);
       } catch {
         /* ignore */
@@ -80,7 +81,7 @@ export default function SellerLayout() {
         <div className="sc-sidebar-inner">
           <div className="sc-brand-row">
             <Link to="/seller" className="sc-brand">
-              <img src="/brand-icon.png" alt="Emoorm" className="sc-brand-logo" />
+              <AppLogo className="sc-brand-logo" />
               <span className="sc-brand-text">
                 <strong>Emoorm</strong>
                 <span>Seller Center</span>
@@ -214,7 +215,7 @@ export default function SellerLayout() {
 
           <div className="sc-topbar-actions">
             <LanguageSwitcher variant="shell" />
-            <Link to="/notifications" className="sc-icon-btn" title="Notifications">
+            <Link to="/seller/notifications" className="sc-icon-btn" title="Seller notifications">
               <Bell size={17} />
               {unreadCount > 0 && (
                 <span className="sc-icon-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>

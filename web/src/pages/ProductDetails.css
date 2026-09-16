@@ -603,7 +603,7 @@
   background: #fff7f7;
 }
 
-.pdp-variation-field.is-error > span,
+.pdp-variation-field.is-error>span,
 .pdp-variation-field.is-error small {
   color: #dc2626;
 }
@@ -1312,6 +1312,7 @@
 }
 
 @media (max-width: 640px) {
+
   .pdp,
   .pdp-hero,
   .pdp-hero-gallery,

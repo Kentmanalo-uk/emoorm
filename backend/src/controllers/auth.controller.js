@@ -129,7 +129,7 @@ const applyForSeller = asyncHandler(async (req, res) => {
  * @access Private (ADMIN only)
  */
 const getUserById = asyncHandler(async (req, res) => {
-  const user = await authService.getUserById(req.params.id);
+  const user = await authService.getUserById(req.params.id, req.user);
 
   successResponse(res, user, 'User retrieved successfully');
 });
@@ -169,10 +169,14 @@ const getUsers = asyncHandler(async (req, res) => {
       ? req.user.municipalityId
       : municipalityId;
 
+  if (req.user?.role === 'MUNICIPAL_ADMIN' && role && !['BUYER', 'SELLER'].includes(role)) {
+    return res.status(403).json({ success: false, message: 'Municipal admins can only manage buyers and sellers.' });
+  }
+
   const options = {
     page: parseInt(page),
     pageSize: parseInt(pageSize),
-    role,
+    role: req.user?.role === 'MUNICIPAL_ADMIN' ? (role || ['BUYER', 'SELLER']) : role,
     municipalityId: scopedMunicipalityId,
     isActive: isActive !== undefined ? isActive === 'true' : undefined,
     search,

@@ -309,6 +309,7 @@ img {
 }
 
 @media (max-width: 768px) {
+
   .container,
   .container-fluid {
     padding-left: 16px;
@@ -317,6 +318,7 @@ img {
 }
 
 @media (max-width: 480px) {
+
   .container,
   .container-fluid {
     padding-left: 12px;

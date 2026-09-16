@@ -2,10 +2,10 @@
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import {
   ArrowRight, Star, List as Menu, X, CaretDown as ChevronDown,
-  ShoppingBag, Package, Bell, Storefront as Store, ChartBar as BarChart2,
 } from '@phosphor-icons/react';
 import useAuthStore from '../store/authStore';
 import Footer from '../components/layout/Footer';
+import AppLogo from '../components/AppLogo';
 import './Sell.css';
 
 const BENEFITS = [
@@ -64,24 +64,22 @@ function AuthDropdown({ label, variant, onClick, to, title, subtitle, items }) {
         {label}
       </button>
       <div className={`sell-auth-drop ${open ? 'sell-auth-drop--open' : ''}`}>
-        <div className="sell-auth-drop-head">
-          <p className="sell-auth-drop-title">{title}</p>
-          <p className="sell-auth-drop-sub">{subtitle}</p>
-        </div>
-        <ul className="sell-auth-drop-list">
-          {items.map(item => (
-            <li key={item.label}>
-              <Link to={`${to}?redirect=${encodeURIComponent(item.target)}`} className="sell-auth-drop-item">
-                <span className="sell-auth-drop-icon">{item.icon}</span>
-                <span className="sell-auth-drop-label">{item.label}</span>
-                <ArrowRight size={14} className="sell-auth-drop-arrow" />
+        <div className="sell-auth-drop-pointer" aria-hidden="true" />
+        <div className="sell-auth-drop-inner">
+          <div className="sell-auth-drop-head">
+            <p className="sell-auth-drop-title">{title}</p>
+            <button className="sell-auth-drop-cta" onClick={onClick}>{label}</button>
+            <p className="sell-auth-drop-sub">{subtitle}</p>
+          </div>
+          <div className="sell-auth-drop-links">
+            <h4>{variant === 'primary' ? 'Seller tools' : 'Your account'}</h4>
+            {items.map(item => (
+              <Link key={item.label} to={`${to}?redirect=${encodeURIComponent(item.target)}`}>
+                {item.label}
               </Link>
-            </li>
-          ))}
-        </ul>
-        <button className="sell-auth-drop-cta" onClick={onClick}>
-          {label} <ArrowRight size={14} />
-        </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -146,7 +144,7 @@ export default function Sell() {
         <header className="sell-header" onMouseLeave={() => setActiveNav(null)}>
           <div className="sell-header-inner">
             <Link to="/" className="sell-logo">
-              <img src="/brand-icon.png" alt="Emoorm" className="sell-logo-img" />
+              <AppLogo className="sell-logo-img" />
               <span className="sell-logo-text">emoorm</span>
             </Link>
 
@@ -182,22 +180,22 @@ export default function Sell() {
                     title="Your Emoorm shopper account"
                     subtitle="Sign in to access your account."
                     items={[
-                      { icon: <ShoppingBag size={16} />, label: 'Browse stores', target: '/products' },
-                      { icon: <Package size={16} />, label: 'My orders', target: '/profile/orders' },
-                      { icon: <Bell size={16} />, label: 'Notifications', target: '/profile' },
+                      { label: 'Browse stores', target: '/products' },
+                      { label: 'My orders', target: '/profile/orders' },
+                      { label: 'Notifications', target: '/profile' },
                     ]}
                   />
                   <AuthDropdown
                     label="Start selling"
                     variant="primary"
-                    onClick={handleCTA}
+                    onClick={() => navigate('/register?redirect=/seller/apply')}
                     to="/register"
                     title="Your Emoorm seller account"
                     subtitle="Create an account to open your shop."
                     items={[
-                      { icon: <Store size={16} />, label: 'Set up storefront', target: '/seller/apply' },
-                      { icon: <Package size={16} />, label: 'Manage products', target: '/seller/products' },
-                      { icon: <BarChart2 size={16} />, label: 'Sales & analytics', target: '/seller' },
+                      { label: 'Set up storefront', target: '/seller/apply' },
+                      { label: 'Manage products', target: '/seller/products' },
+                      { label: 'Sales & analytics', target: '/seller' },
                     ]}
                   />
                 </>

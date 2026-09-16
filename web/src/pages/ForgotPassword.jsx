@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../lib/axios';
+import AppLogo from '../components/AppLogo';
 import './ForgotPassword.css';
 
 const ForgotPassword = () => {
@@ -52,7 +53,7 @@ const ForgotPassword = () => {
       <header className="fp-header">
         <div className="fp-header-container">
           <Link to="/" className="fp-logo">
-            <img src="/brand-icon.png" alt="Emoorm" className="fp-logo-icon" />
+            <AppLogo className="fp-logo-icon" />
             <span className="fp-logo-text">emoorm</span>
           </Link>
         </div>

@@ -28,31 +28,7 @@ const initializeAuth = () => {
   };
 };
 
-const CACHED_ACCOUNTS_KEY = 'emoorm-cached-accounts';
-
-const readCachedAccounts = () => {
-  try {
-    const stored = JSON.parse(localStorage.getItem(CACHED_ACCOUNTS_KEY) || '[]');
-    return Array.isArray(stored) ? stored : [];
-  } catch {
-    return [];
-  }
-};
-
-const cacheAccount = (userData, token, refreshToken) => {
-  if (!userData?.email || !token) return;
-  const accounts = readCachedAccounts().filter((account) => account.email !== userData.email);
-  accounts.unshift({
-    email: userData.email,
-    fullName: userData.fullName,
-    role: userData.role,
-    profilePhoto: userData.profilePhoto || null,
-    accessToken: token,
-    refreshToken: refreshToken || null,
-    cachedAt: Date.now(),
-  });
-  localStorage.setItem(CACHED_ACCOUNTS_KEY, JSON.stringify(accounts.slice(0, 5)));
-};
+localStorage.removeItem('emoorm-cached-accounts');
 
 const useAuthStore = create(
   persist(
@@ -77,7 +53,6 @@ const useAuthStore = create(
         if (refreshToken) {
           localStorage.setItem('refreshToken', refreshToken);
         }
-        cacheAccount(userData, token, refreshToken);
       },
 
       logout: () => {
@@ -93,40 +68,6 @@ const useAuthStore = create(
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-      },
-
-      getCachedAccounts: () => readCachedAccounts(),
-
-      switchCachedAccount: (account) => {
-        if (!account?.accessToken || !account?.email) return false;
-        set({
-          user: {
-            email: account.email,
-            fullName: account.fullName,
-            role: account.role,
-            profilePhoto: account.profilePhoto,
-          },
-          accessToken: account.accessToken,
-          refreshToken: account.refreshToken || null,
-          isAuthenticated: true,
-        });
-        localStorage.setItem('token', account.accessToken);
-        localStorage.setItem('accessToken', account.accessToken);
-        localStorage.setItem('user', JSON.stringify({
-          email: account.email,
-          fullName: account.fullName,
-          role: account.role,
-          profilePhoto: account.profilePhoto,
-        }));
-        if (account.refreshToken) localStorage.setItem('refreshToken', account.refreshToken);
-        return true;
-      },
-
-      removeCachedAccount: (email) => {
-        localStorage.setItem(
-          CACHED_ACCOUNTS_KEY,
-          JSON.stringify(readCachedAccounts().filter((account) => account.email !== email))
-        );
       },
 
       updateUser: (userData) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Package, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
   Storefront as Store, Tag, Archive
@@ -21,6 +21,8 @@ const STATUS_BADGE = {
 };
 
 export default function AdminProducts() {
+  const [searchParams] = useSearchParams();
+  const storeId = searchParams.get('storeId') || '';
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -32,7 +34,7 @@ export default function AdminProducts() {
 
   useEffect(() => {
     fetchProducts();
-  }, [statusFilter, search, page]);
+  }, [statusFilter, search, page, storeId]);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -40,6 +42,7 @@ export default function AdminProducts() {
       const params = { pageSize: 20, page };
       if (statusFilter) params.status = statusFilter;
       if (search) params.search = search;
+      if (storeId) params.storeId = storeId;
 
       const res = await axios.get('/products', { params });
       setProducts(res.data || []);

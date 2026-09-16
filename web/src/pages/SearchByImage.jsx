@@ -30,7 +30,17 @@ const SearchByImage = () => {
       const res = await axios.post('/products/search-by-image', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setResults(res.data?.results || []);
+      const imageDataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
+      sessionStorage.setItem('emoorm.image-search', JSON.stringify({
+        results: res.data?.results || [],
+        previewUrl: imageDataUrl,
+      }));
+      navigate('/products?imageSearch=1');
     } catch (err) {
       const msg = err.response?.data?.message || 'Image search failed';
       setError(msg);
@@ -47,6 +57,17 @@ const SearchByImage = () => {
     runSearch(file);
     return () => URL.revokeObjectURL(url);
   }, [file, runSearch]);
+
+  useEffect(() => {
+    const handlePaste = (event) => {
+      const imageItem = Array.from(event.clipboardData?.items || [])
+        .find((item) => item.type.startsWith('image/'));
+      const pastedImage = imageItem?.getAsFile();
+      if (pastedImage) setFile(pastedImage);
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
 
   const handleFileChange = (e) => {
     const f = e.target.files?.[0];

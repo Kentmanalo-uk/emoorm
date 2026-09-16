@@ -505,7 +505,7 @@
   overflow: hidden;
 }
 
-.shop-grid .product-card .product-image img {
+.shop-grid .product-card .product-image > img {
   position: absolute;
   top: 0;
   left: 0;

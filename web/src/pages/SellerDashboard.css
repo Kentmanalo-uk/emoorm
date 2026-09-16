@@ -236,7 +236,7 @@
   border-top: 1px solid #eef3ef;
 }
 
-.sd-stat-meta > span {
+.sd-stat-meta>span {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -246,11 +246,11 @@
 }
 
 .sd-stat--sales .sd-stat-meta,
-.sd-stat--sales .sd-stat-meta > span {
+.sd-stat--sales .sd-stat-meta>span {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.sd-stat-meta > span:first-child {
+.sd-stat-meta>span:first-child {
   padding-left: 0;
   border-left: 0;
 }
@@ -395,8 +395,13 @@
 }
 
 @media (max-width: 600px) {
-  .sd-tour-spotlight { border-radius: 5px; }
-  .sd-tour-tooltip { padding: 16px; }
+  .sd-tour-spotlight {
+    border-radius: 5px;
+  }
+
+  .sd-tour-tooltip {
+    padding: 16px;
+  }
 }
 
 /* Body layout */
@@ -788,9 +793,18 @@
     grid-template-rows: repeat(2, minmax(48px, 1fr));
   }
 
-  .sd-stat--sales { min-height: 210px; padding: 20px; }
-  .sd-stat-value--big { font-size: 34px; }
-  .sd-stat-meta > span { padding: 0 8px; }
+  .sd-stat--sales {
+    min-height: 210px;
+    padding: 20px;
+  }
+
+  .sd-stat-value--big {
+    font-size: 34px;
+  }
+
+  .sd-stat-meta>span {
+    padding: 0 8px;
+  }
 
   .sd-header-card {
     padding: 18px;

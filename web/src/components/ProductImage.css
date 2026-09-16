@@ -8,10 +8,14 @@
   background: #f3f4f6;
 }
 
+.product-image > .product-image-fallback {
+  position: absolute;
+  inset: 0;
+}
+
 .product-image-fallback img {
-  width: 28%;
-  height: auto;
-  max-width: 64px;
-  opacity: 0.2;
+  width: 95%;
+  height: 95%;
+  opacity: 0.14;
   object-fit: contain;
 }

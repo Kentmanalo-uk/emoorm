@@ -247,7 +247,7 @@
 }
 
 .cached-account img,
-.cached-account > svg:first-child {
+.cached-account>svg:first-child {
   width: 30px;
   height: 30px;
   flex: 0 0 30px;
@@ -270,10 +270,23 @@
   white-space: nowrap;
 }
 
-.cached-account strong { font-size: 13px; }
-.cached-account small { color: #6b7280; font-size: 11px; }
-.cached-account-remove { color: #9ca3af; flex: 0 0 auto; }
-.cached-account-remove:hover { color: #dc2626; }
+.cached-account strong {
+  font-size: 13px;
+}
+
+.cached-account small {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.cached-account-remove {
+  color: #9ca3af;
+  flex: 0 0 auto;
+}
+
+.cached-account-remove:hover {
+  color: #dc2626;
+}
 
 .cached-accounts-divider {
   display: flex;
@@ -313,7 +326,7 @@
 }
 
 .saved-account-card-avatar img,
-.saved-account-card-avatar > svg {
+.saved-account-card-avatar>svg {
   width: 58px;
   height: 58px;
   border-radius: 50%;
@@ -353,10 +366,26 @@
   text-decoration: none;
 }
 
-.saved-account-secondary { margin-top: 12px; color: #15803d; }
-.saved-account-signup { margin-top: 18px; color: #374151; }
-.saved-account-remove-link { margin-top: 22px; color: #9ca3af; font-size: 11px; font-weight: 500; }
-.saved-account-remove-link:hover { color: #dc2626; }
+.saved-account-secondary {
+  margin-top: 12px;
+  color: #15803d;
+}
+
+.saved-account-signup {
+  margin-top: 18px;
+  color: #374151;
+}
+
+.saved-account-remove-link {
+  margin-top: 22px;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.saved-account-remove-link:hover {
+  color: #dc2626;
+}
 
 .login-form-subtitle {
   font-size: 14px;

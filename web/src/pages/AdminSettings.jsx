@@ -1,14 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Key as KeyRound, User, FloppyDisk as Save, CircleNotch as Loader2, ArrowsClockwise as RefreshCcw, Copy } from '@phosphor-icons/react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ShieldCheck, Key as KeyRound, User, MapPin, FloppyDisk as Save, CircleNotch as Loader2, ArrowsClockwise as RefreshCcw, Copy, Image as ImageIcon, UploadSimple } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import '../components/admin/AdminLayout.css';
 import axios from '../lib/axios';
+import { uploadImage } from '../lib/upload';
+import { resolveImg } from '../lib/media';
+import useAppSettings, { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS, resolveAppSettingImage } from '../hooks/useAppSettings';
 import useAuthStore from '../store/authStore';
 import './AdminSettings.css';
 
 export default function AdminSettings() {
   const { user, updateUser } = useAuthStore();
+  const queryClient = useQueryClient();
+  const isMunicipalAdmin = user?.role === 'MUNICIPAL_ADMIN';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const { settings: currentAppSettings } = useAppSettings();
+  const [brandingForm, setBrandingForm] = useState(DEFAULT_APP_SETTINGS);
+  const [uploadingBrandField, setUploadingBrandField] = useState('');
+  const [savingBranding, setSavingBranding] = useState(false);
+  const appLogoInputRef = useRef(null);
+  const placeholderInputRef = useRef(null);
+  const [municipalityProfile, setMunicipalityProfile] = useState({ id: '', name: '', tagline: '', description: '', gallery: [] });
+  const [savingMunicipality, setSavingMunicipality] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const galleryInputRef = useRef(null);
   const [profileForm, setProfileForm] = useState({
     fullName: user?.fullName || '',
     contactNumber: user?.contactNumber || '',
@@ -34,6 +51,89 @@ export default function AdminSettings() {
   };
 
   useEffect(() => { loadStatus(); }, []);
+
+  useEffect(() => {
+    setBrandingForm({
+      appLogo: currentAppSettings.appLogo,
+      productPlaceholder: currentAppSettings.productPlaceholder,
+    });
+  }, [currentAppSettings.appLogo, currentAppSettings.productPlaceholder]);
+
+  useEffect(() => {
+    if (!isMunicipalAdmin || !user?.municipalityId) return;
+    axios.get(`/municipalities/${user.municipalityId}`)
+      .then((res) => setMunicipalityProfile({
+        id: res.data?.id || user.municipalityId,
+        name: res.data?.name || '',
+        tagline: res.data?.tagline || '',
+        description: res.data?.description || '',
+        gallery: Array.isArray(res.data?.gallery) ? res.data.gallery : [],
+      }))
+      .catch((err) => toast.error(err.message || 'Failed to load municipality profile'));
+  }, [isMunicipalAdmin, user?.municipalityId]);
+
+  const saveMunicipalityProfile = async () => {
+    setSavingMunicipality(true);
+    try {
+      await axios.put(`/municipalities/${municipalityProfile.id}`, {
+        tagline: municipalityProfile.tagline,
+        description: municipalityProfile.description,
+        gallery: municipalityProfile.gallery,
+      });
+      toast.success('Municipality page updated');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save municipality page');
+    } finally {
+      setSavingMunicipality(false);
+    }
+  };
+
+  const addGalleryImages = async (files) => {
+    if (!files?.length) return;
+    const remaining = Math.max(0, 12 - municipalityProfile.gallery.length);
+    if (remaining === 0) { toast.error('Gallery limit is 12 images'); return; }
+    setUploadingGallery(true);
+    try {
+      const uploaded = [];
+      for (const file of Array.from(files).slice(0, remaining)) {
+        const result = await uploadImage(file);
+        uploaded.push(result.url);
+      }
+      setMunicipalityProfile((profile) => ({ ...profile, gallery: [...profile.gallery, ...uploaded] }));
+      toast.success('Gallery images added. Save the page to publish them.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload gallery image');
+    } finally {
+      setUploadingGallery(false);
+    }
+  };
+
+  const uploadBrandImage = async (field, file) => {
+    if (!file) return;
+    setUploadingBrandField(field);
+    try {
+      const result = await uploadImage(file);
+      setBrandingForm((current) => ({ ...current, [field]: result.url }));
+      toast.success('Image uploaded. Save branding to publish it.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload branding image');
+    } finally {
+      setUploadingBrandField('');
+    }
+  };
+
+  const saveBranding = async () => {
+    setSavingBranding(true);
+    try {
+      const response = await axios.put('/app-settings', brandingForm);
+      queryClient.setQueryData(APP_SETTINGS_QUERY_KEY, response.data);
+      toast.success('App branding updated');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save app branding');
+    } finally {
+      setSavingBranding(false);
+    }
+  };
 
   const handleProfileSave = async (e) => {
     e.preventDefault();
@@ -159,8 +259,77 @@ export default function AdminSettings() {
     <AdminLayout>
       <div className="admin-page-header">
         <h1 className="admin-page-title">Settings</h1>
-        <p className="admin-page-subtitle">Manage your admin profile, password, and security.</p>
+        <p className="admin-page-subtitle">Manage app branding, your admin profile, password, and security.</p>
       </div>
+
+      {isSuperAdmin && (
+        <section className="admin-card admin-settings-card app-branding-card">
+          <header className="admin-settings-card-head">
+            <div className="admin-settings-icon"><ImageIcon size={18} /></div>
+            <div>
+              <h2 className="admin-card-title">App branding</h2>
+              <p className="admin-settings-sub">Manage the Emoorm logo and the image shown when a product has no photo.</p>
+            </div>
+          </header>
+          <div className="app-branding-grid">
+            <div className="app-branding-item">
+              <span className="app-branding-label">General app logo</span>
+              <div className="app-branding-preview">
+                <img src={resolveAppSettingImage(brandingForm.appLogo)} alt="Current app logo" />
+              </div>
+              <div className="app-branding-actions">
+                <button type="button" className="admin-btn admin-btn-outline" onClick={() => appLogoInputRef.current?.click()} disabled={Boolean(uploadingBrandField)}>
+                  {uploadingBrandField === 'appLogo' ? <Loader2 size={14} className="spin" /> : <UploadSimple size={14} />}
+                  {uploadingBrandField === 'appLogo' ? 'Uploading...' : 'Choose logo'}
+                </button>
+                <button type="button" className="admin-btn admin-btn-ghost" onClick={() => setBrandingForm((current) => ({ ...current, appLogo: DEFAULT_APP_SETTINGS.appLogo }))}>Restore default</button>
+                <input ref={appLogoInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { uploadBrandImage('appLogo', event.target.files?.[0]); event.target.value = ''; }} />
+              </div>
+            </div>
+            <div className="app-branding-item">
+              <span className="app-branding-label">No-product-image placeholder</span>
+              <div className="app-branding-preview app-branding-preview-placeholder">
+                <img src={resolveAppSettingImage(brandingForm.productPlaceholder)} alt="Current product placeholder" />
+              </div>
+              <div className="app-branding-actions">
+                <button type="button" className="admin-btn admin-btn-outline" onClick={() => placeholderInputRef.current?.click()} disabled={Boolean(uploadingBrandField)}>
+                  {uploadingBrandField === 'productPlaceholder' ? <Loader2 size={14} className="spin" /> : <UploadSimple size={14} />}
+                  {uploadingBrandField === 'productPlaceholder' ? 'Uploading...' : 'Choose placeholder'}
+                </button>
+                <button type="button" className="admin-btn admin-btn-ghost" onClick={() => setBrandingForm((current) => ({ ...current, productPlaceholder: DEFAULT_APP_SETTINGS.productPlaceholder }))}>Restore default</button>
+                <input ref={placeholderInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { uploadBrandImage('productPlaceholder', event.target.files?.[0]); event.target.value = ''; }} />
+              </div>
+            </div>
+          </div>
+          <div className="admin-settings-actions app-branding-save">
+            <button type="button" className="admin-btn admin-btn-primary" onClick={saveBranding} disabled={savingBranding || Boolean(uploadingBrandField)}>
+              {savingBranding ? <Loader2 size={14} className="spin" /> : <Save size={14} />}
+              {savingBranding ? 'Saving...' : 'Save app branding'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {isMunicipalAdmin && (
+        <section className="admin-card admin-settings-card municipality-editor-card">
+          <header className="admin-settings-card-head">
+            <div className="admin-settings-icon"><MapPin size={18} /></div>
+            <div><h2 className="admin-card-title">Municipality page</h2><p className="admin-settings-sub">Edit the introduction and gallery shown on your public municipality page.</p></div>
+          </header>
+          <div className="admin-settings-form">
+            <label className="admin-settings-field"><span>Municipality</span><input value={municipalityProfile.name} disabled /></label>
+            <label className="admin-settings-field"><span>Showcase tagline</span><input value={municipalityProfile.tagline} onChange={(e) => setMunicipalityProfile((p) => ({ ...p, tagline: e.target.value }))} placeholder={`${municipalityProfile.name || 'Municipality'}, made local.`} maxLength={180} /></label>
+            <label className="admin-settings-field"><span>Short background</span><textarea rows={4} value={municipalityProfile.description} onChange={(e) => setMunicipalityProfile((p) => ({ ...p, description: e.target.value }))} placeholder="Tell visitors what makes this place special…" /></label>
+            <div className="municipality-editor-gallery">
+              <div className="municipality-editor-gallery-head"><span>Gallery ({municipalityProfile.gallery.length}/12)</span><button type="button" className="admin-btn admin-btn-gray" onClick={() => galleryInputRef.current?.click()} disabled={uploadingGallery}>{uploadingGallery ? 'Uploading…' : 'Add images'}</button><input ref={galleryInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { addGalleryImages(e.target.files); e.target.value = ''; }} /></div>
+              <div className="municipality-editor-gallery-grid">
+                {municipalityProfile.gallery.map((image, index) => <div key={`${image}-${index}`}><img src={resolveImg(image)} alt={`Gallery ${index + 1}`} /><button type="button" onClick={() => setMunicipalityProfile((p) => ({ ...p, gallery: p.gallery.filter((_, itemIndex) => itemIndex !== index) }))} aria-label="Remove gallery image">×</button></div>)}
+              </div>
+            </div>
+            <div className="admin-settings-actions"><button type="button" className="admin-btn admin-btn-primary" disabled={savingMunicipality || !municipalityProfile.id} onClick={saveMunicipalityProfile}><Save size={14} /> {savingMunicipality ? 'Saving…' : 'Save municipality page'}</button></div>
+          </div>
+        </section>
+      )}
 
       <div className="admin-settings-grid">
         {/* Profile */}

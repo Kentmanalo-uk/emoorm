@@ -726,6 +726,7 @@
 }
 
 @media (max-width: 480px) {
+
   .account-dropdown,
   .notif-dropdown {
     right: 0;
@@ -791,8 +792,8 @@
     font-weight: 700;
   }
 
-  .mobile-bottom-nav a > svg,
-  .mobile-bottom-icon-wrap > svg {
+  .mobile-bottom-nav a>svg,
+  .mobile-bottom-icon-wrap>svg {
     width: 24px;
     height: 24px;
   }
@@ -1193,6 +1194,7 @@
 }
 
 @media (max-width: 360px) {
+
   .cart-header-context .header-logo-text,
   .cart-header-divider {
     display: none;

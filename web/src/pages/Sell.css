@@ -176,111 +176,105 @@
 
 .sell-auth-drop {
   position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
+  right: -12px;
+  top: 100%;
   width: 320px;
+  padding-top: 10px;
   z-index: 60;
-  background: #fff;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.25);
-  overflow: hidden;
   opacity: 0;
-  transform: translateY(-6px);
+  visibility: hidden;
+  transform: translateY(-4px);
   pointer-events: none;
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition: opacity .15s ease, transform .15s ease, visibility .15s;
 }
 
 .sell-auth-drop--open {
   opacity: 1;
+  visibility: visible;
   transform: translateY(0);
   pointer-events: auto;
 }
 
+.sell-auth-drop-pointer {
+  position: absolute;
+  top: 4px;
+  right: 40px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  transform: rotate(45deg);
+  box-shadow: -1px -1px 0 rgba(0, 0, 0, .06);
+  z-index: 1;
+}
+
+.sell-auth-drop-inner {
+  position: relative;
+  z-index: 2;
+  padding: 16px 18px 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+
 .sell-auth-drop-head {
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #eef2f7;
 }
 
 .sell-auth-drop-title {
   font-size: 13px;
-  font-weight: 700;
-  color: #111;
-  margin: 0 0 2px;
+  font-weight: 500;
+  color: #374151;
+  margin: 0;
 }
 
 .sell-auth-drop-sub {
   font-size: 12px;
-  color: #666;
+  color: #4b5563;
   margin: 0;
 }
 
-.sell-auth-drop-list {
-  list-style: none;
-  margin: 0;
-  padding: 6px 0;
-}
-
-.sell-auth-drop-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  text-decoration: none;
-  transition: background 0.12s;
-}
-
-.sell-auth-drop-item:hover {
-  background: #f2f2f0;
-}
-
-.sell-auth-drop-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #29a366;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.sell-auth-drop-label {
-  flex: 1;
+.sell-auth-drop-links h4 {
+  margin: 0 0 6px;
   font-size: 13px;
-  font-weight: 600;
-  color: #111;
+  font-weight: 700;
+  color: #111827;
 }
 
-.sell-auth-drop-arrow {
-  color: #999;
-  transition: color 0.12s, transform 0.12s;
+.sell-auth-drop-links a {
+  display: block;
+  padding: 3px 0;
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.5;
+  text-decoration: none;
 }
 
-.sell-auth-drop-item:hover .sell-auth-drop-arrow {
-  color: #29a366;
-  transform: translateX(2px);
+.sell-auth-drop-links a:hover {
+  color: #c2410c;
+  text-decoration: underline;
 }
 
 .sell-auth-drop-cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  height: 44px;
-  background: #29a366;
-  color: #fff;
+  display: inline-block;
+  padding: 8px 42px;
   border: none;
+  background: #059669;
+  color: #fff;
   font-size: 13px;
-  font-weight: 700;
+  font-family: inherit;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: background .15s;
 }
 
 .sell-auth-drop-cta:hover {
-  opacity: 0.9;
+  background: #047857;
 }
 
 /* ─── Mega dropdown ─────────────────────────────────────────────── */

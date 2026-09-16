@@ -11,17 +11,19 @@ export default function Stores() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [inputValue, setInputValue] = useState(searchParams.get('q') || '');
+  const municipalityId = searchParams.get('municipalityId') || '';
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
 
   useEffect(() => {
     fetchStores();
-  }, [searchQuery, pagination.page]);
+  }, [searchQuery, pagination.page, municipalityId]);
 
   const fetchStores = async () => {
     setIsLoading(true);
     try {
       const params = { page: pagination.page, pageSize: pagination.pageSize };
       if (searchQuery) params.q = searchQuery;
+      if (municipalityId) params.municipalityId = municipalityId;
 
       const response = await axios.get('/stores', { params });
       setStores(response.data || []);

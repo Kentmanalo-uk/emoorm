@@ -48,6 +48,7 @@ const qrLoginRoutes = require('./qrLogin.routes');
 const supportRoutes = require('./support.routes');
 const bannerRoutes = require('./banner.routes');
 const voucherRoutes = require('./voucher.routes');
+const appSettingRoutes = require('./appSetting.routes');
 
 // Mount routes
 router.use('/auth', authRoutes);
@@ -73,5 +74,6 @@ router.use('/returns', require('./return.routes'));
 router.use('/support', supportRoutes);
 router.use('/banners', bannerRoutes);
 router.use('/vouchers', voucherRoutes);
+router.use('/app-settings', appSettingRoutes);
 
 module.exports = router;
