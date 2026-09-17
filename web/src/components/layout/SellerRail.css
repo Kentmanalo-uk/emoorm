@@ -1,0 +1,444 @@
+/* Seller Center right rail: icon-only language, notifications, sign out */
+.sr-rail {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: start;
+  gap: 6px;
+  height: 100vh;
+  padding: 12px 0;
+  background: #fff;
+  border-left: 1px solid #eef0f3;
+}
+
+.sr-item {
+  position: relative;
+}
+
+.sr-item--end {
+  margin-top: auto;
+}
+
+.sr-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: #9ca3af;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sr-btn:hover,
+.sr-item:not(.sr-item--click):hover .sr-btn,
+.sr-item:not(.sr-item--click):focus-within .sr-btn,
+.sr-item.is-open .sr-btn {
+  color: #4b5563;
+  background: #f3f4f6;
+}
+
+.sr-btn:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 2px;
+}
+
+.sr-badge {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  color: #fff;
+  text-align: center;
+  background: #ef4444;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  box-sizing: content-box;
+}
+
+/* Flyouts open to the left of the rail on hover, with the same grow/shrink
+   motion as the homepage Messages panel. */
+.sr-flyout {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 10px);
+  z-index: 30;
+  padding: 8px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.12);
+  transform-origin: calc(100% + 30px) 20px;
+  transition:
+    transform 0.26s cubic-bezier(0.4, 0, 0.6, 1) 0.06s,
+    opacity 0.18s ease 0.14s,
+    visibility 0s linear 0.32s;
+}
+
+/* Invisible bridge so the pointer can cross the gap to the flyout. */
+.sr-flyout::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -12px;
+  width: 12px;
+  height: 48px;
+}
+
+.sr-item:not(.sr-item--click):hover .sr-flyout,
+.sr-item:not(.sr-item--click):focus-within .sr-flyout,
+.sr-item.is-open .sr-flyout {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.16s ease,
+    visibility 0s;
+}
+
+.sr-flyout > * {
+  opacity: 0;
+  transition: opacity 0.12s ease 0.06s;
+}
+
+.sr-item:not(.sr-item--click):hover .sr-flyout > *,
+.sr-item:not(.sr-item--click):focus-within .sr-flyout > *,
+.sr-item.is-open .sr-flyout > * {
+  opacity: 1;
+  transition: opacity 0.2s ease 0.1s;
+}
+
+.sr-flyout-title {
+  margin: 4px 8px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.sr-flyout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sr-pill {
+  margin-right: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #047857;
+  background: #e9f7f0;
+  border-radius: 999px;
+}
+
+/* Language */
+.sr-flyout--lang {
+  width: 200px;
+}
+
+.sr-lang {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13.5px;
+  color: #111827;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sr-lang:hover {
+  background: #f3f4f6;
+}
+
+.sr-lang span {
+  flex: 1;
+}
+
+.sr-lang small {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.sr-lang.is-active {
+  font-weight: 600;
+  color: #047857;
+}
+
+.sr-lang svg {
+  color: #059669;
+}
+
+/* Notifications */
+.sr-flyout--notif {
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  max-height: min(460px, calc(100vh - 40px));
+}
+
+.sr-notif-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.sr-notif-list a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 10px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.sr-notif-list a:hover {
+  background: #f3f4f6;
+}
+
+.sr-notif-list strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.sr-notif-list li.is-unread strong::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  vertical-align: 1px;
+  background: #059669;
+  border-radius: 50%;
+}
+
+.sr-notif-list span {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #6b7280;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.sr-notif-list small {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.sr-note {
+  margin: 0;
+  padding: 16px 10px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.sr-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 10px;
+  color: #a7f3d0;
+}
+
+.sr-empty p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.sr-viewall {
+  display: block;
+  margin-top: 4px;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #047857;
+  text-align: center;
+  text-decoration: none;
+  border-top: 1px solid #f1f2f4;
+}
+
+.sr-viewall:hover {
+  color: #065f46;
+}
+
+/* Sign-out confirmation: opens on click, anchored to the bottom button. */
+.sr-flyout--logout {
+  top: auto;
+  bottom: 0;
+  width: 280px;
+  padding: 14px;
+  transform-origin: calc(100% + 30px) calc(100% - 20px);
+}
+
+.sr-flyout--logout::after {
+  top: auto;
+  bottom: 0;
+}
+
+.sr-confirm-body {
+  display: flex;
+  gap: 10px;
+}
+
+.sr-confirm-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 50%;
+}
+
+.sr-confirm-body strong {
+  font-size: 14px;
+  color: #111827;
+}
+
+.sr-confirm-body p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
+.sr-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.sr-confirm-actions button {
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.sr-confirm-cancel {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+.sr-confirm-cancel:hover {
+  background: #e5e7eb;
+}
+
+.sr-confirm-ok {
+  color: #fff;
+  background: #dc2626;
+}
+
+.sr-confirm-ok:hover {
+  background: #b91c1c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sr-flyout,
+  .sr-flyout > *,
+  .sr-item:hover .sr-flyout,
+  .sr-item:hover .sr-flyout > * {
+    transition: none;
+  }
+}
+
+/* Icon colours: language blue, notifications pink, sign out red */
+.sr-rail .sr-btn--lang {
+  color: #3b82f6;
+}
+
+.sr-rail .sr-btn--notif {
+  color: #ec4899;
+}
+
+.sr-rail .sr-btn--logout {
+  color: #ef4444;
+}
+
+.sr-rail .sr-item:not(.sr-item--click):hover .sr-btn--lang,
+.sr-rail .sr-btn--lang:hover {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.sr-rail .sr-item:not(.sr-item--click):hover .sr-btn--notif,
+.sr-rail .sr-btn--notif:hover {
+  color: #db2777;
+  background: #fdf2f8;
+}
+
+.sr-rail .sr-btn--logout:hover,
+.sr-rail .sr-item.is-open .sr-btn--logout {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+/* Larger icons; the rail itself stays 56px wide. */
+.sr-rail {
+  gap: 8px;
+}
+
+.sr-rail .sr-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
+.sr-rail .sr-badge {
+  top: 4px;
+  right: 4px;
+}
+
+.sr-rail .sr-flyout {
+  transform-origin: calc(100% + 34px) 24px;
+}
+
+.sr-rail .sr-flyout--logout {
+  transform-origin: calc(100% + 34px) calc(100% - 24px);
+}
+
+.sr-rail .sr-flyout::after {
+  height: 56px;
+}

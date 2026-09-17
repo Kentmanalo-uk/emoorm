@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, Gear as Settings, MapPin } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -18,6 +18,7 @@ const PH_MOBILE_REGEX = /^(09\d{9}|\+639\d{9})$/;
 
 export default function SellerStore() {
   const [store, setStore] = useState(null);
+  const layoutCtx = useOutletContext();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingField, setUploadingField] = useState(null);
@@ -124,12 +125,14 @@ export default function SellerStore() {
         const res = await axios.post('/stores', form);
         saved = res.data;
         setStore(saved);
+        layoutCtx?.setStore?.(saved);
         setIsNew(false);
         toast.success('Store created successfully!');
       } else {
         const res = await axios.put(`/stores/${store.id}`, form);
         saved = res.data;
         setStore(saved);
+        layoutCtx?.setStore?.((prev) => ({ ...prev, ...saved }));
         toast.success('Store updated!');
       }
       setSavedSnapshot(JSON.stringify(form));

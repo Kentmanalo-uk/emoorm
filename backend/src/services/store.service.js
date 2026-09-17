@@ -224,6 +224,29 @@ const getMyStore = async (userId) => {
   return attachDeletionInfo(store);
 };
 
+const GUIDE_KEY = /^[a-z0-9/_-]{1,80}$/;
+
+/**
+ * Marks a Seller Center tutorial as finished for the seller's shop, so it is
+ * not shown again on any device.
+ */
+const completeGuide = async (userId, key) => {
+  const guideKey = String(key || '').trim();
+  if (!GUIDE_KEY.test(guideKey)) throw new ApiError('Invalid guide key', 400);
+
+  const store = await storeRepository.findByOwnerId(userId);
+  if (!store || store.deletedAt) throw new ApiError('You do not have a store yet', 404);
+
+  const current = store.sellerGuides && typeof store.sellerGuides === 'object' && !Array.isArray(store.sellerGuides)
+    ? store.sellerGuides
+    : {};
+  if (current.all || current[guideKey]) return current;
+
+  const next = { ...current, [guideKey]: true };
+  await prisma.store.update({ where: { id: store.id }, data: { sellerGuides: next } });
+  return next;
+};
+
 /**
  * Get all stores with filters
  * @param {Object} options - Query options
@@ -451,6 +474,7 @@ const checkCoverage = async (storeId, municipalityId, barangay) => {
 };
 
 module.exports = {
+  completeGuide,
   createStore,
   getStoreById,
   getStoreBySlug,

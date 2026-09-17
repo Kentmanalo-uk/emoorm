@@ -8,6 +8,9 @@ import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import Skeleton from '../components/ui/Skeleton';
 import { getSellerFollowerStats, subscribeToFollowChanges } from '../lib/follow';
+import { completeGuide, shouldShowGuide } from '../lib/sellerGuides';
+
+const DASHBOARD_GUIDE = 'dashboard';
 import './SellerDashboard.css';
 
 const STATUS_META = {
@@ -41,6 +44,8 @@ export default function SellerDashboard() {
   const { user } = useAuthStore();
   const ctx = useOutletContext();
   const store = ctx?.store;
+  const setStore = ctx?.setStore;
+  const tourEligible = shouldShowGuide(store, DASHBOARD_GUIDE);
   const navigate = useNavigate();
 
   const [recentOrders, setRecentOrders] = useState([]);
@@ -61,12 +66,12 @@ export default function SellerDashboard() {
   const [analyticsAvailable, setAnalyticsAvailable] = useState(true);
   const [showTour, setShowTour] = useState(false);
 
+  // Shown once, only after the shop exists; progress is saved on the shop.
   useEffect(() => {
-    const key = `emoorm-seller-tour:${user?.id || user?.email || 'seller'}`;
-    if (localStorage.getItem(key)) return undefined;
+    if (!tourEligible) return undefined;
     const timer = window.setTimeout(() => setShowTour(true), 500);
     return () => window.clearTimeout(timer);
-  }, [user?.id, user?.email]);
+  }, [tourEligible]);
 
   useEffect(() => {
     let cancelled = false;
@@ -441,7 +446,7 @@ export default function SellerDashboard() {
       {showTour && (
         <DashboardTour
           steps={TOUR_STEPS}
-          storageKey={`emoorm-seller-tour:${user?.id || user?.email || 'seller'}`}
+          onFinish={() => completeGuide(DASHBOARD_GUIDE, setStore)}
           onClose={() => setShowTour(false)}
         />
       )}
@@ -449,7 +454,7 @@ export default function SellerDashboard() {
   );
 }
 
-function DashboardTour({ steps, storageKey, onClose }) {
+function DashboardTour({ steps, onFinish, onClose }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [position, setPosition] = useState(null);
   const step = steps[stepIndex];
@@ -485,7 +490,7 @@ function DashboardTour({ steps, storageKey, onClose }) {
   }, [step]);
 
   const finish = () => {
-    localStorage.setItem(storageKey, 'completed');
+    onFinish();
     onClose();
   };
 

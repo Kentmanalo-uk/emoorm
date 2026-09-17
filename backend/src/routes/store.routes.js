@@ -29,6 +29,13 @@ router.get(
   storeController.getMyStore
 );
 
+router.put(
+  '/my/guides',
+  authenticate,
+  authorize('SELLER'),
+  storeController.completeGuide
+);
+
 router.get(
   '/my/service-areas',
   authenticate,

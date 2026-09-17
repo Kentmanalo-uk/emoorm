@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 import { useLocation } from 'react-router-dom';
-import useAuthStore from '../../store/authStore';
+import { completeGuide, shouldShowGuide } from '../../lib/sellerGuides';
 import './SellerCenterGuide.css';
 
 const GUIDES = {
@@ -64,11 +64,11 @@ const GUIDES = {
   ],
 };
 
-export default function SellerCenterGuide() {
+export default function SellerCenterGuide({ store, setStore }) {
   const location = useLocation();
-  const user = useAuthStore((state) => state.user);
   const steps = useMemo(() => GUIDES[location.pathname] || [], [location.pathname]);
-  const storageKey = `emoorm-seller-guide:${user?.id || user?.email || 'seller'}:${location.pathname}`;
+  const guideKey = location.pathname;
+  const eligible = shouldShowGuide(store, guideKey);
   const [active, setActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [position, setPosition] = useState(null);
@@ -77,10 +77,10 @@ export default function SellerCenterGuide() {
     setActive(false);
     setStepIndex(0);
     setPosition(null);
-    if (!steps.length || localStorage.getItem(storageKey)) return undefined;
+    if (!steps.length || !eligible) return undefined;
     const timer = window.setTimeout(() => setActive(true), 650);
     return () => window.clearTimeout(timer);
-  }, [steps, storageKey]);
+  }, [steps, guideKey, eligible]);
 
   const availableSteps = useMemo(
     () => steps.filter((step) => document.querySelector(step.target)),
@@ -114,8 +114,8 @@ export default function SellerCenterGuide() {
   }, [active, step]);
 
   const finish = () => {
-    localStorage.setItem(storageKey, 'completed');
     setActive(false);
+    completeGuide(guideKey, setStore);
   };
   const next = () => stepIndex >= availableSteps.length - 1 ? finish() : setStepIndex((index) => index + 1);
 

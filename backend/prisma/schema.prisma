@@ -470,6 +470,10 @@ model Store {
   // hidden immediately and permanently deleted 15 days later unless cancelled
   deletionRequestedAt DateTime? @map("deletion_requested_at")
 
+  // Seller Center tutorials the owner has finished, e.g. { "dashboard": true }.
+  // { "all": true } means no tutorials are shown (shops created before tutorials existed).
+  sellerGuides Json? @map("seller_guides")
+
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")

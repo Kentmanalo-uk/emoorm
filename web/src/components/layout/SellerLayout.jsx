@@ -13,6 +13,8 @@ import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import SellerCenterGuide from '../seller/SellerCenterGuide';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import SellerRail from './SellerRail';
 import './SellerLayout.css';
 
 /**
@@ -36,6 +38,7 @@ export default function SellerLayout() {
   );
   const [unreadCount, setUnreadCount] = useState(0);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const accountRef = useRef(null);
   const startAccountSwitch = useAccountSwitchStore((s) => s.start);
   const rememberShop = useAccountSwitchStore((s) => s.setShop);
@@ -89,6 +92,7 @@ export default function SellerLayout() {
   };
 
   const handleLogout = () => {
+    setLogoutOpen(false);
     logout();
     navigate('/login');
   };
@@ -280,6 +284,7 @@ export default function SellerLayout() {
             ))}
           </nav>
 
+          {/* Shown on small screens; the right rail takes over on desktop. */}
           <div className="sc-topbar-actions">
             <LanguageSwitcher variant="shell" />
             <Link to="/seller/notifications" className="sc-icon-btn" title="Seller notifications">
@@ -291,7 +296,7 @@ export default function SellerLayout() {
             <button
               type="button"
               className="sc-icon-btn"
-              onClick={handleLogout}
+              onClick={() => setLogoutOpen(true)}
               title="Sign out"
             >
               <LogOut size={17} />
@@ -302,8 +307,20 @@ export default function SellerLayout() {
         <main className="sc-content">
           <Outlet context={{ store, setStore }} />
         </main>
-        <SellerCenterGuide />
+        <SellerCenterGuide store={store} setStore={setStore} />
       </div>
+
+      <SellerRail unreadCount={unreadCount} onLogout={handleLogout} />
+
+      <ConfirmDialog
+        open={logoutOpen}
+        title="Sign out?"
+        message="You will need to sign in again to manage your shop."
+        confirmLabel="Sign out"
+        danger
+        onConfirm={handleLogout}
+        onCancel={() => setLogoutOpen(false)}
+      />
     </div>
   );
 }

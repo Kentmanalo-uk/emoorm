@@ -136,6 +136,16 @@ const getMyStore = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Mark a Seller Center tutorial as finished
+ * @route PUT /api/stores/my/guides
+ * @access Private (Seller)
+ */
+const completeGuide = asyncHandler(async (req, res) => {
+  const guides = await storeService.completeGuide(req.user.id, req.body?.key);
+  successResponse(res, guides, 'Guide progress saved');
+});
+
+/**
  * Update store
  * @route PUT /api/stores/:id
  * @access Private (Store owner only)
@@ -246,6 +256,7 @@ module.exports = {
   getStoreBySlug,
   getStorefront,
   getMyStore,
+  completeGuide,
   updateStore,
   requestDeletion,
   cancelDeletion,
