@@ -874,3 +874,321 @@
     text-align: center;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .profile-page {
+    background: #f2f2f7;
+    padding: 12px 0 16px;
+  }
+
+  .profile-page .profile-page-wrap {
+    gap: 12px;
+  }
+
+  .profile-page .profile-page-header {
+    gap: 4px;
+    margin-bottom: 0;
+  }
+
+  .profile-page .profile-page-title,
+  .profile-page .profile-mobile-page-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    margin: 0;
+  }
+
+  .profile-page .profile-page-subtitle {
+    font-size: 13px;
+  }
+
+  .profile-page .profile-mobile-page-header {
+    min-height: 44px;
+    margin-bottom: 0;
+  }
+
+  .profile-page .profile-mobile-header-action {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  /* Header card: avatar | name / email / edit link, stats row full width.
+     The wrappers become transparent so all pieces share one grid and the
+     "Edit Profile" link can never sit on top of the name. */
+  .profile-main .profile-header-card {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    column-gap: 14px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .profile-main .profile-header-card .profile-header-left,
+  .profile-main .profile-header-card .profile-header-info {
+    display: contents;
+  }
+
+  .profile-main .profile-header-card .profile-avatar {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    width: 64px;
+    height: 64px;
+    align-self: center;
+  }
+
+  .profile-main .profile-header-card .profile-avatar-placeholder {
+    font-size: 28px;
+  }
+
+  .profile-main .profile-header-card .profile-name {
+    grid-column: 2;
+    grid-row: 1;
+    max-width: 100%;
+    min-width: 0;
+    text-align: left;
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .profile-main .profile-header-card .profile-email {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .profile-main .profile-header-card .profile-edit-button {
+    position: static;
+    grid-column: 2;
+    grid-row: 3;
+    justify-self: start;
+    align-items: center;
+    gap: 5px;
+    width: auto;
+    min-height: 30px;
+    margin-top: 6px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: #e9f7f0;
+    color: #047857;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .profile-main .profile-header-card .profile-edit-button:active {
+    background: #d1fae5;
+  }
+
+  .profile-main .profile-header-card .profile-stats {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+
+  .profile-main .profile-section,
+  .profile-main .profile-mobile-service-section {
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .profile-main .profile-section-header {
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+
+  .profile-main .profile-section-title {
+    font-size: 16px;
+    line-height: 1.3;
+  }
+
+  .profile-main .profile-section-link {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .profile-main .purchase-status-item {
+    min-height: 64px;
+    padding: 6px 2px;
+    border-radius: 10px;
+  }
+
+  .profile-main .purchase-status-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .profile-main .purchase-status-label {
+    font-size: 11.5px;
+    text-align: center;
+  }
+
+  /* Identity card: icon + text on one row, full-width action below. */
+  .profile-main .profile-identity {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 12px 12px;
+    align-items: start;
+  }
+
+  .profile-main .profile-identity-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+
+  .profile-main .profile-identity-status {
+    margin-top: 4px;
+    gap: 4px 8px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .profile-main .profile-identity-badge {
+    border-radius: 999px;
+  }
+
+  .profile-main .profile-identity-button {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 10px;
+  }
+
+  .profile-main .profile-mobile-service-section > .profile-section-title {
+    margin-bottom: 8px;
+  }
+
+  .profile-main .profile-mobile-service-item {
+    min-height: 52px;
+    gap: 12px;
+  }
+
+  .profile-main .profile-mobile-service-item span {
+    font-size: 14px;
+    color: #1f2937;
+  }
+
+  .profile-main .profile-mobile-service-list > :last-child {
+    margin-bottom: -6px;
+  }
+
+  /* Shared empty state used by the profile sub-pages. */
+  .profile-main .empty-state {
+    padding: 32px 16px;
+    gap: 8px;
+  }
+
+  .profile-main .empty-state > svg {
+    width: 64px;
+    height: 64px;
+    color: #a7f3d0;
+  }
+
+  .profile-main .empty-state-text {
+    font-size: 16px;
+  }
+
+  .profile-main .empty-state-hint {
+    font-size: 13px;
+  }
+
+  .profile-main .empty-state-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-top: 8px;
+    padding: 0 22px;
+    border-radius: 10px;
+  }
+
+  /* Help Center (uses this stylesheet; its container has inline 32px 0 padding). */
+  .container:has(> .profile-page-wrap > .help-topics) {
+    padding: 16px 16px 24px !important;
+  }
+
+  .profile-page-wrap:has(> .help-topics) {
+    gap: 12px;
+  }
+
+  .profile-page-wrap:has(> .help-topics) .profile-page-title {
+    font-size: 22px;
+    margin: 0;
+  }
+
+  .help-topics {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .help-topic-card {
+    padding: 14px 16px 8px;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .help-topic-card .profile-page-subtitle {
+    margin-bottom: 4px;
+  }
+
+  .help-topic-title {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .help-topic-list {
+    gap: 0;
+  }
+
+  .help-topic-list li + li {
+    border-top: 1px solid #f0f1f2;
+  }
+
+  .help-topic-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-page > .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .profile-main .profile-header-card,
+  .profile-main .profile-section,
+  .profile-main .profile-mobile-service-section {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .profile-main .profile-mobile-service-list {
+    margin: 0 -14px;
+  }
+
+  .profile-main .profile-mobile-service-item {
+    padding: 0 14px;
+  }
+
+  .container:has(> .profile-page-wrap > .help-topics) {
+    padding: 12px 12px 24px !important;
+  }
+
+  .help-topic-card {
+    padding: 12px 14px 6px;
+  }
+}

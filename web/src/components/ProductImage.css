@@ -19,3 +19,13 @@
   opacity: 0.14;
   object-fit: contain;
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  /* Smaller watermark logo so placeholder tiles look lighter on phones. */
+  .product-image-fallback img {
+    width: 70%;
+    height: 70%;
+    opacity: 0.12;
+  }
+}

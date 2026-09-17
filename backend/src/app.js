@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const config = require('./config/env');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const apiRoutes = require('./routes/index');
-const { csrfOriginGuard } = require('./middleware/security');
+const { csrfOriginGuard, isLocalNetworkOrigin } = require('./middleware/security');
 
 const app = express();
 app.disable('x-powered-by');
@@ -52,7 +52,8 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
-    if (config.cors.allowedOrigins.indexOf(origin) !== -1) {
+    // In development also allow the PC's own LAN address (phone testing).
+    if (config.cors.allowedOrigins.indexOf(origin) !== -1 || isLocalNetworkOrigin(origin)) {
       callback(null, true);
     } else {
       callback(null, false);

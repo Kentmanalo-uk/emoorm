@@ -501,3 +501,208 @@
     align-self: flex-start
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  /* ProfileLayout already provides the side gutters. */
+  .profile-main .return-form-page,
+  .profile-main .return-detail-page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .profile-main .returns-page-header {
+    gap: 4px;
+  }
+
+  .profile-main .returns-page-header .profile-section-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+  }
+
+  .profile-main .return-card-link:hover {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .profile-main .return-card-link .order-info-value.order-total {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .profile-main .return-back {
+    min-height: 40px;
+    margin-bottom: 4px;
+    font-size: 14px;
+  }
+
+  .profile-main .return-form-card,
+  .profile-main .return-detail-panel,
+  .profile-main .return-note {
+    padding: 16px;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .profile-main .returns-eyebrow {
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+
+  .profile-main .return-form-card h1,
+  .profile-main .return-detail-page h1 {
+    font-size: 22px;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  .profile-main .return-muted {
+    margin: 6px 0 0;
+    line-height: 1.5;
+  }
+
+  .profile-main .return-form-card form {
+    margin-top: 16px;
+    gap: 18px;
+  }
+
+  .profile-main .request-order-summary {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding: 12px;
+    border-radius: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-main .request-item {
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 4px 10px;
+    min-height: 48px;
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .profile-main .request-item span {
+    overflow-wrap: anywhere;
+  }
+
+  .profile-main .request-item small {
+    grid-column: 2;
+  }
+
+  .profile-main .reason-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .profile-main .reason-grid button {
+    min-height: 44px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    line-height: 1.25;
+  }
+
+  .profile-main .request-label textarea {
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .profile-main .photo-upload {
+    min-height: 56px;
+    border-radius: 10px;
+  }
+
+  .profile-main .returns-primary {
+    min-height: 46px;
+    border-radius: 10px;
+  }
+
+  .profile-main .returns-submit {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  /* Return detail */
+  .profile-main .return-detail-head {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .profile-main .return-detail-head > div {
+    min-width: 0;
+  }
+
+  .profile-main .return-detail-head .return-status {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    border-radius: 999px;
+    padding: 4px 10px;
+  }
+
+  .profile-main .return-detail-panel {
+    margin-top: 12px;
+  }
+
+  .profile-main .return-detail-panel h2 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .profile-main .detail-item {
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    gap: 4px 10px;
+  }
+
+  .profile-main .detail-item span {
+    overflow-wrap: anywhere;
+  }
+
+  .profile-main .detail-item small {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .profile-main .detail-item strong {
+    grid-column: 3;
+    grid-row: 1;
+    white-space: nowrap;
+  }
+
+  .profile-main .detail-total {
+    padding-top: 12px;
+  }
+
+  .profile-main .return-note {
+    margin-top: 12px;
+  }
+
+  .profile-main .return-detail-actions {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .profile-main .return-detail-actions button {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .profile-main .return-hint {
+    border-radius: 10px;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-main .return-form-card,
+  .profile-main .return-detail-panel,
+  .profile-main .return-note {
+    padding: 14px;
+  }
+}

@@ -675,3 +675,307 @@
     grid-template-columns: 96px minmax(0, 1fr);
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .products-page {
+    padding: 0 0 16px;
+  }
+
+  .products-page .breadcrumbs {
+    padding: 12px 0;
+    font-size: 13px;
+  }
+
+  .products-page .products-layout {
+    gap: 12px;
+  }
+
+  .products-page .products-main {
+    gap: 12px;
+  }
+
+  /* Filters come back on phones as a compact card: category chips that
+     scroll sideways and a single price row. */
+  .products-page .products-sidebar {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .products-page .sidebar-section {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .products-page .sidebar-section:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .products-page .sidebar-section:first-child:not(:has(.clear-filters-btn)) {
+    display: none;
+  }
+
+  .products-page .sidebar-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .products-page .clear-filters-btn {
+    width: auto;
+    min-height: 36px;
+    margin: 0;
+    padding: 0 14px;
+    border-radius: 999px;
+  }
+
+  .products-page .sidebar-section:nth-child(2) .sidebar-section-title {
+    display: none;
+  }
+
+  .products-page .filter-options {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin: 0 -14px;
+    padding: 0 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .products-page .filter-options::-webkit-scrollbar {
+    display: none;
+  }
+
+  .products-page .filter-option {
+    position: relative;
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .products-page .filter-option input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .products-page .filter-option:has(input:checked) {
+    border-color: #059669;
+    background: #e9f7f0;
+    color: #047857;
+    font-weight: 600;
+  }
+
+  .products-page .filter-option:has(input:focus-visible) {
+    outline: 2px solid #059669;
+    outline-offset: 2px;
+  }
+
+  .products-page .sidebar-section:last-child {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .products-page .sidebar-section:last-child .sidebar-section-title {
+    margin: 0;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .products-page .price-range-inputs {
+    gap: 6px;
+    margin: 0;
+    color: #9ca3af;
+  }
+
+  .products-page .price-input {
+    width: 100%;
+    min-width: 0;
+    height: 46px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  .products-page .apply-filter-btn {
+    width: auto;
+    min-height: 46px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  /* Title + sort on one row */
+  .products-page .products-controls {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+  }
+
+  .products-page .products-results-context {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .products-page .products-actions {
+    width: auto;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .products-page .sort-select {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 170px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  .products-page .view-btn {
+    min-height: 38px;
+  }
+
+  .products-page .products-results-info {
+    padding: 0 2px;
+    background: transparent;
+    font-size: 12px;
+  }
+
+  /* Product tiles */
+  .products-page .product-card {
+    min-width: 0;
+    border-radius: 12px;
+  }
+
+  .products-page .products-grid:not(.products-list) .product-info {
+    gap: 3px;
+    padding: 8px 10px 10px;
+  }
+
+  .products-page .products-grid:not(.products-list) .product-name {
+    min-height: calc(13px * 1.35 * 2);
+    font-size: 13px;
+    font-weight: 400;
+    -webkit-line-clamp: 2;
+    overflow-wrap: anywhere;
+  }
+
+  .products-page .product-price {
+    font-size: 15px;
+  }
+
+  .products-page .product-stars svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .products-page .product-badge {
+    top: 6px;
+    right: auto;
+    left: 6px;
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+
+  /* No hover on touch: keep quick add-to-cart visible. */
+  .products-page .product-cart-fab {
+    right: 8px;
+    bottom: 8px;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    opacity: 1;
+    transform: none;
+  }
+
+  .products-page .products-empty {
+    padding: 32px 16px;
+    border-radius: 12px;
+    color: #a7f3d0;
+    text-align: center;
+  }
+
+  .products-page .empty-clear-btn {
+    min-height: 44px;
+    border-radius: 8px;
+  }
+
+  /* Pagination */
+  .products-page .pagination {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .products-page .pagination-pages {
+    gap: 4px;
+  }
+
+  .products-page .pagination-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .products-page {
+    padding: 0 0 12px;
+  }
+
+  .products-page .products-sidebar {
+    padding: 12px;
+  }
+
+  .products-page .filter-options {
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+
+  .products-page .products-controls {
+    padding: 8px 12px;
+  }
+
+  .products-page .sort-select {
+    max-width: 150px;
+  }
+
+  .products-page .products-grid {
+    gap: 8px;
+  }
+
+  .products-page .pagination-btn {
+    padding: 0 10px;
+  }
+}

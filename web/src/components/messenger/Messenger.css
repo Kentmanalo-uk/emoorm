@@ -721,7 +721,7 @@
 /* ===========================================
    Pixel-tuned mobile view (matches reference)
    =========================================== */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .messages-page {
     padding: 12px 0 0;
     max-width: none;
@@ -1115,12 +1115,194 @@
 }
 
 /* Hide the app's mobile bottom nav while an active chat is open on mobile. */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   body.messenger-chat-open .mobile-bottom-nav {
     display: none !important;
   }
 
   body.messenger-chat-open .layout-main {
     padding-bottom: 0 !important;
+  }
+}
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .messages-page-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  /* Flat variant (profile page) sits inside the page gutters as a card. */
+  .msgr-shell.msgr-shell-flat {
+    height: auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .msgr-shell.msgr-shell-flat .msgr-list-search {
+    margin-top: 12px;
+  }
+
+  .msgr-list-search {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
+  .msgr-list-search input,
+  .msgr-list-search input:not([type="checkbox"]) {
+    min-height: 0;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .msgr-list-empty {
+    padding: 28px 16px;
+    text-align: center;
+  }
+
+  .msgr-empty-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+
+  /* Conversation row: keep room on the right for time + unread badge. */
+  .msgr-convo-item {
+    width: 100%;
+    min-height: 68px;
+  }
+
+  .msgr-convo-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-right: 58px;
+  }
+
+  .msgr-convo-row {
+    min-width: 0;
+  }
+
+  .msgr-convo-title,
+  .msgr-convo-preview {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .msgr-convo-time {
+    max-width: 54px;
+    overflow: hidden;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* Open conversation: full-screen chat with a fixed header and composer. */
+  .msgr-shell.has-active,
+  .msgr-shell.msgr-shell-flat.has-active {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .msgr-shell.has-active .msgr-thread {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .msgr-shell.has-active .msgr-thread-head {
+    position: static;
+    flex: 0 0 auto;
+    min-height: 56px;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 8px;
+  }
+
+  .msgr-thread-back,
+  .msgr-thread-menu {
+    width: 40px;
+    height: 40px;
+  }
+
+  .msgr-thread-title {
+    min-width: 0;
+  }
+
+  .msgr-thread-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+  }
+
+  .msgr-shell.has-active .msgr-pins {
+    flex: 0 0 auto;
+  }
+
+  .msgr-pin-card {
+    min-width: 0;
+  }
+
+  .msgr-pin-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .msgr-shell.has-active .msgr-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .msgr-bubble-text {
+    overflow-wrap: anywhere;
+  }
+
+  .msgr-shell.has-active .msgr-composer {
+    flex: 0 0 auto;
+  }
+
+  .msgr-composer-icon,
+  .msgr-composer-send {
+    width: 40px;
+    height: 40px;
+  }
+
+  .msgr-composer-input {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .messages-page-title {
+    padding: 0 12px;
+  }
+
+  .msgr-list-search {
+    margin-left: 12px;
+    margin-right: 12px;
+  }
+
+  .msgr-convo-item {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .msgr-convo-time,
+  .msgr-badge {
+    right: 12px;
   }
 }

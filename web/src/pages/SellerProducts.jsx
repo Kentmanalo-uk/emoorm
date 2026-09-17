@@ -607,7 +607,7 @@ export default function SellerProducts() {
               <table className="seller-table products-table">
                 <thead>
                   <tr>
-                    <th className="products-th-check">
+                    <th className="products-th-check" data-label="Select all">
                       <input
                         type="checkbox"
                         checked={selectedIds.length === products.length}
@@ -651,7 +651,7 @@ export default function SellerProducts() {
                         </td>
                         <td>{product.category?.name || '—'}</td>
                         <td>₱{Number(product.price).toFixed(2)}</td>
-                        <td>{product.stock}</td>
+                        <td data-label="Stock">{product.stock}</td>
                         <td>
                           <span className={`seller-badge ${s.cls}`}>
                             {s.icon} {s.label}

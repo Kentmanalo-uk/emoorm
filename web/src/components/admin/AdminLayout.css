@@ -417,23 +417,6 @@
 }
 
 /* Responsive */
-@media (max-width: 900px) {
-  .ac-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .ac-sidebar {
-    display: none;
-  }
-
-  .ac-content {
-    padding: 16px;
-  }
-
-  .ac-topbar {
-    padding: 0 16px;
-  }
-}
 
 /* ── Shared admin UI primitives ─────────────────────────────── */
 
@@ -590,82 +573,6 @@
 .admin-badge-suspended {
   background: #f1f5f9;
   color: #475569;
-}
-
-@media (max-width: 768px) {
-  .ac-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .ac-sidebar {
-    position: relative;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid #eef0f3;
-  }
-
-  .ac-sidebar-inner {
-    height: auto;
-    padding: 10px 12px;
-  }
-
-  .ac-brand-row {
-    padding: 2px 2px 10px;
-  }
-
-  .ac-nav {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: 6px;
-    padding: 0 0 6px;
-    flex: none;
-    scrollbar-width: none;
-  }
-
-  .ac-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .ac-nav-item {
-    width: auto;
-    flex: 0 0 auto;
-    white-space: nowrap;
-    padding: 8px 10px;
-  }
-
-  .ac-nav-group .ac-nav-chevron {
-    display: none;
-  }
-
-  .ac-subnav {
-    display: contents;
-  }
-
-  .ac-subnav-link {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
-
-  .ac-user-card {
-    display: none;
-  }
-
-  .ac-content {
-    min-width: 0;
-    padding: 18px 16px 28px;
-  }
-}
-
-@media (max-width: 480px) {
-  .ac-content {
-    padding: 14px 12px 24px;
-  }
-
-  .ac-brand-text span {
-    display: none;
-  }
 }
 
 .admin-badge-review {
@@ -1269,4 +1176,336 @@
 /* Sticky sidebar hardening: never stretch past the viewport. */
 .ac-sidebar {
   align-self: start;
+}
+
+/* ── Mobile (≤768px / ≤480px) — admin page content ── */
+@media (max-width: 768px) {
+  /* Page header: title left, actions wrap under it when there is no room. */
+  .ac-content .admin-page-header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px 12px;
+    margin-bottom: 12px;
+  }
+
+  .ac-content .admin-page-header > * {
+    min-width: 0;
+  }
+
+  .ac-content .admin-page-title {
+    flex: 1 1 auto;
+    font-size: 22px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .ac-content .admin-page-sub {
+    margin-top: 2px;
+    font-size: 13px;
+  }
+
+  .ac-content .admin-page-header .admin-btn {
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  /* Buttons: keep the variant colours even if another page redefines .admin-btn. */
+  .ac-content .admin-btn {
+    justify-content: center;
+    min-height: 38px;
+    border-radius: 8px;
+  }
+
+  .ac-content .admin-btn-primary,
+  .ac-content .admin-btn-green {
+    background: #059669;
+    border-color: #059669;
+    color: #fff;
+  }
+
+  .ac-content .admin-btn-gray,
+  .ac-content .admin-btn-blue {
+    background: #f3f4f6;
+    border-color: #f3f4f6;
+    color: #374151;
+  }
+
+  .ac-content .admin-btn-red {
+    background: #fff;
+    border-color: #fecaca;
+    color: #b91c1c;
+  }
+
+  /* Cards: white, 12px radius, no inner padding (sections pad themselves). */
+  .ac-content .admin-card {
+    padding: 0;
+    margin-bottom: 12px;
+    border-radius: 12px;
+  }
+
+  .ac-content .admin-card-header {
+    padding: 14px 16px;
+    gap: 10px 12px;
+  }
+
+  .ac-content .admin-card-title {
+    min-width: 0;
+    font-size: 16px;
+    line-height: 1.3;
+  }
+
+  .ac-content .admin-card-title span {
+    font-size: 13px !important;
+  }
+
+  .ac-content .admin-card-header > .admin-btn {
+    min-height: 40px;
+  }
+
+  /* Filter toolbar: search full width, selects/buttons share the next row. */
+  .ac-content .admin-toolbar {
+    flex: 1 1 100%;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .ac-content .admin-toolbar > div,
+  .ac-content .admin-toolbar > label {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .ac-content .admin-search-input,
+  .ac-content .admin-toolbar .admin-input {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .ac-content .admin-toolbar .admin-select {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .ac-content .admin-toolbar > .admin-btn {
+    flex: 0 0 auto;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .ac-content .admin-card-header > .admin-input,
+  .ac-content .admin-card > .admin-input {
+    max-width: none !important;
+  }
+
+  /* Tables: clean edge-to-edge horizontal scroll inside the card. */
+  .ac-content .admin-table-wrap {
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .ac-content .admin-table {
+    font-size: 13px;
+  }
+
+  .ac-content .admin-table th {
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+
+  .ac-content .admin-table td {
+    padding: 12px;
+  }
+
+  .ac-content .admin-table th:first-child,
+  .ac-content .admin-table td:first-child {
+    padding-left: 16px;
+  }
+
+  .ac-content .admin-table th:last-child,
+  .ac-content .admin-table td:last-child {
+    padding-right: 16px;
+  }
+
+  .ac-content .admin-table .admin-btn {
+    min-height: 36px;
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+
+  /* Pagination */
+  .ac-content .admin-pagination {
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  .ac-content .admin-pagination > span {
+    flex: 1 1 auto;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .ac-content .admin-page-btn {
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  /* Empty state: compact icon */
+  .ac-content .admin-empty {
+    padding: 32px 16px 36px;
+  }
+
+  .ac-content .admin-empty svg {
+    width: 96px;
+    height: 96px;
+    margin-bottom: 12px;
+  }
+
+  .ac-content .admin-empty p {
+    font-size: 15px;
+  }
+
+  /* Stat cards: compact 2-column grid */
+  .ac-content .admin-stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .ac-content .admin-stat-card {
+    min-width: 0;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .ac-content .admin-stat-label {
+    font-size: 12px;
+  }
+
+  .ac-content .admin-stat-value {
+    font-size: 26px;
+  }
+
+  /* Quick actions */
+  .ac-content .admin-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .ac-content .admin-quick-btn {
+    min-height: 44px;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  /* Inline forms (categories / municipalities) */
+  .ac-content .admin-inline-form-header {
+    padding: 12px 16px;
+  }
+
+  .ac-content .admin-inline-form-body {
+    padding: 16px;
+  }
+
+  .ac-content .admin-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ac-content .admin-inline-form .admin-btn {
+    min-height: 44px;
+  }
+
+  .ac-content .admin-input {
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .ac-content textarea.admin-input {
+    min-height: 104px;
+  }
+
+  .ac-content .admin-badge {
+    font-size: 10.5px;
+    padding: 3px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ac-content .admin-card,
+  .ac-content .admin-stat-card {
+    padding: 0;
+  }
+
+  .ac-content .admin-stat-card {
+    padding: 14px;
+  }
+
+  .ac-content .admin-page-title {
+    font-size: 22px;
+  }
+
+  .ac-content .admin-card-header {
+    padding: 14px;
+  }
+
+  .ac-content .admin-table th:first-child,
+  .ac-content .admin-table td:first-child {
+    padding-left: 14px;
+  }
+
+  .ac-content .admin-page-btn {
+    padding: 8px 12px;
+  }
+
+  .ac-content .admin-quick-actions {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Padded form cards (vouchers / banners): header sits flush with the form. */
+  .ac-content .admin-card[style] > .admin-card-header {
+    padding: 0 0 12px;
+    margin-bottom: 12px;
+  }
+
+  /* Multi-column inline form grids collapse to two columns. */
+  .ac-content .admin-card form div[style*="grid-template-columns"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .ac-content .admin-card form label {
+    min-width: 0;
+  }
+
+  .ac-content .admin-card form label > input:not([type="checkbox"]):not([type="radio"]),
+  .ac-content .admin-card form label > select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ac-content .admin-card form .admin-btn {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 340px) {
+  .ac-content .admin-card form div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
 }

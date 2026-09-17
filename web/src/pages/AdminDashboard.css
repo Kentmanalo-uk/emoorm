@@ -643,3 +643,219 @@
 .dash-trend {
   margin-top: 6px;
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .dash {
+    gap: 12px;
+  }
+
+  .dash-header {
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .dash-header > div:first-child {
+    min-width: 0;
+  }
+
+  .dash-header .admin-page-title {
+    font-size: 22px;
+  }
+
+  .dash-controls {
+    width: 100%;
+  }
+
+  .dash-segment {
+    flex: 1;
+    min-width: 0;
+    border-radius: 10px;
+  }
+
+  .dash-segment button {
+    flex: 1;
+    min-height: 38px;
+    padding: 6px 4px;
+    white-space: nowrap;
+    border-radius: 8px;
+  }
+
+  .dash-refresh {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+
+  .dash-custom-range {
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .dash-custom-range label {
+    justify-content: space-between;
+  }
+
+  .dash-custom-range input {
+    flex: 0 1 60%;
+    min-width: 0;
+    min-height: 40px;
+  }
+
+  .dash-attention {
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .dash-attention.is-clear strong {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .dash-attention.is-clear .dash-attention-sub {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .dash-attention-links {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-right: -14px;
+    padding-right: 14px;
+  }
+
+  .dash-attention-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dash-chip {
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    white-space: nowrap;
+  }
+
+  /* KPI tiles: compact 2-column grid */
+  .dash-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .dash-stat {
+    min-width: 0;
+    gap: 2px;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .dash-stat-value {
+    font-size: 24px;
+    overflow-wrap: anywhere;
+  }
+
+  .dash-stat-label {
+    margin-top: 4px;
+    font-size: 13px;
+  }
+
+  .dash-stat-hint {
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  .dash-trend {
+    margin-top: 0;
+    padding: 2px 5px;
+    font-size: 11px;
+  }
+
+  .dash-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dash-card {
+    border-radius: 12px;
+  }
+
+  .dash-card-head {
+    flex-wrap: wrap;
+    padding: 14px 16px 6px;
+  }
+
+  .dash-card-link {
+    min-height: 32px;
+  }
+
+  .dash-list li,
+  .dash-feed li {
+    padding: 10px 16px;
+  }
+
+  .dash-list li {
+    flex-wrap: wrap;
+  }
+
+  .dash-list-main {
+    flex: 1 1 150px;
+  }
+
+  .dash-actions {
+    width: auto;
+    margin-left: auto;
+    padding-left: 0;
+  }
+
+  .dash-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 6px 14px;
+  }
+
+  .dash-chart {
+    height: 120px;
+    padding: 8px 16px 16px;
+  }
+
+  .dash-empty-state {
+    min-height: 0;
+    padding: 18px 16px 22px;
+  }
+
+  .dash-empty-icon svg {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dash-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .dash-stat-value {
+    font-size: 22px;
+  }
+
+  .dash-segment button {
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Keep the number on one line; the trend chip drops below when tight. */
+  .dash-stat-top {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .dash-stat-value {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+}

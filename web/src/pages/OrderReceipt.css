@@ -357,3 +357,151 @@
     gap: 32px;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .receipt-page {
+    min-height: 0;
+    padding: 8px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Back on the left, Print on the right. */
+  .receipt-page .receipt-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .receipt-back {
+    min-height: 44px;
+    padding-right: 8px;
+    font-weight: 500;
+  }
+
+  .receipt-print-btn {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  .receipt-page .receipt-paper {
+    padding: 20px 16px;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .receipt-page .receipt-header {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+  }
+
+  .receipt-title {
+    text-align: left;
+  }
+
+  .receipt-title-main {
+    font-size: 18px;
+    letter-spacing: 1.5px;
+  }
+
+  .receipt-title-sub {
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-parties {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .receipt-parties > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+  }
+
+  .receipt-meta > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-items {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .receipt-items thead th {
+    padding: 8px 4px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .receipt-items tbody td {
+    padding: 10px 4px;
+  }
+
+  .receipt-items .col-qty {
+    width: 36px;
+  }
+
+  .receipt-items .col-price,
+  .receipt-items .col-total {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .item-name {
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-totals {
+    width: 100%;
+  }
+
+  .receipt-proof img {
+    max-width: 100%;
+    border-radius: 8px;
+  }
+
+  .receipt-notes p {
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-signatures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  .receipt-footer {
+    margin-top: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .receipt-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .receipt-page .receipt-paper {
+    padding: 18px 14px;
+  }
+
+  .receipt-brand-name {
+    font-size: 20px;
+  }
+}

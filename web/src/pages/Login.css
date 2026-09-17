@@ -922,3 +922,161 @@
 .login-qr-status-icon-muted {
   color: #9ca3af;
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .login-header {
+    padding: 10px 0;
+  }
+
+  .login-header-container {
+    min-height: 44px;
+    gap: 12px;
+  }
+
+  .login-logo-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .login-logo-text {
+    font-size: 22px;
+  }
+
+  .login-header-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 4px;
+    font-weight: 600;
+    color: #047857;
+  }
+
+  .login-content {
+    align-items: flex-start;
+    padding: 24px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .login-container {
+    gap: 16px;
+    max-width: 440px;
+  }
+
+  .login-form-container {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .login-form-card {
+    max-width: none;
+    padding: 24px 20px;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(4, 47, 32, 0.18);
+  }
+
+  .login-form-header {
+    margin-bottom: 20px;
+  }
+
+  .login-form-header-row {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .login-form-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .login-header-qr-btn {
+    min-height: 36px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #e9f7f0;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .login-form {
+    gap: 16px;
+  }
+
+  .login-form-forgot {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+  }
+
+  .login-form-input {
+    min-height: 48px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .login-form-toggle-password {
+    width: 40px;
+    height: 40px;
+    right: 4px;
+  }
+
+  .login-form-submit,
+  .login-form-google {
+    min-height: 48px;
+    border-radius: 10px;
+  }
+
+  .login-form-divider {
+    margin: 4px 0;
+  }
+
+  .login-form-footer {
+    line-height: 1.5;
+  }
+
+  .login-form-terms {
+    line-height: 1.55;
+  }
+
+  .login-help-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    min-height: 44px;
+  }
+
+  .cached-account {
+    min-height: 56px;
+    border-radius: 12px;
+  }
+
+  .cached-account-remove {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .login-qr-image {
+    width: min(220px, 100%);
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .login-mfa-backup code {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-content {
+    padding: 16px 12px calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .login-form-card {
+    padding: 22px 16px;
+  }
+
+  .login-form-title {
+    font-size: 22px;
+  }
+}

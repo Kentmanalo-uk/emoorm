@@ -755,3 +755,321 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+
+  /* Store profile layout */
+  .sc-content .store-settings-grid {
+    gap: 0;
+  }
+
+  .sc-content .store-settings-main,
+  .sc-content .store-settings-side {
+    gap: 0;
+  }
+
+  .sc-content .store-unsaved-badge {
+    align-self: flex-start;
+  }
+
+  /* Forms: one column, 16px card padding */
+  .sc-content .store-form,
+  .sc-content .product-form {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .sc-content .store-form .form-group,
+  .sc-content .product-form .form-group {
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+  .sc-content .store-form .form-row,
+  .sc-content .product-form .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .sc-content .store-form .form-group label,
+  .sc-content .product-form .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+  }
+
+  .sc-content .store-form .form-input,
+  .sc-content .product-form .form-input,
+  .sc-content .product-form .form-select {
+    width: 100%;
+    min-width: 0;
+    border-radius: 10px;
+  }
+
+  .sc-content .store-form .form-actions {
+    padding-top: 0;
+    border-top: 0;
+    margin-top: 0;
+  }
+
+  .sc-content .store-form .form-actions > button,
+  .sc-content .branding-actions > button {
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+  }
+
+  /* "Store is Active" switch row */
+  .sc-content .store-form .form-toggle .toggle-label {
+    align-items: flex-start;
+    min-height: 44px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f8fafc;
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .sc-content .store-form .toggle-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: #059669;
+  }
+
+  .sc-content .store-form .toggle-text {
+    display: block;
+    min-width: 0;
+    line-height: 20px;
+  }
+
+  .sc-content .store-form .toggle-warn {
+    margin-top: 4px;
+    align-items: flex-start;
+    line-height: 1.4;
+  }
+
+  .sc-content .store-form .toggle-warn svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* Branding */
+  .sc-content .store-branding-body {
+    gap: 4px;
+    padding: 12px 16px;
+  }
+
+  .sc-content .branding-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px 0;
+  }
+
+  .sc-content .branding-actions {
+    padding: 0 16px 16px;
+  }
+
+  .sc-content .img-uploader-empty {
+    justify-content: center;
+    width: 100%;
+    min-height: 56px;
+    border-radius: 12px;
+  }
+
+  .sc-content .img-uploader--banner .img-uploader-empty {
+    max-width: none;
+    min-height: 96px;
+    padding: 24px 16px;
+  }
+
+  .sc-content .img-uploader--banner .img-uploader-preview {
+    max-width: none;
+  }
+
+  .sc-content .img-uploader-actions > * {
+    min-height: 40px;
+  }
+
+  /* Theme colours */
+  .sc-content .store-theme-body {
+    gap: 12px;
+    padding: 12px 16px 16px;
+  }
+
+  .sc-content .theme-picker-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .sc-content .color-picker {
+    padding: 12px 14px;
+    border-color: #eef1f4;
+    border-radius: 12px;
+    background: #f8fafc;
+  }
+
+  .sc-content .color-picker-head > div {
+    min-width: 0;
+  }
+
+  .sc-content .color-swatch {
+    flex-shrink: 0;
+  }
+
+  .sc-content .color-input {
+    flex-shrink: 0;
+    width: 48px;
+    height: 44px;
+  }
+
+  .sc-content .color-hex {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .sc-content .theme-preview {
+    border-color: #eef1f4;
+  }
+
+  .sc-content .theme-preview-body {
+    gap: 12px;
+    padding: 12px 14px 16px;
+    margin-top: -28px;
+  }
+
+  .sc-content .theme-preview-logo {
+    width: 56px;
+    height: 56px;
+  }
+
+  .sc-content .theme-preview-info {
+    min-width: 0;
+    padding-top: 32px;
+  }
+
+  .sc-content .theme-preview-info > strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sc-content .theme-preview-actions,
+  .sc-content .theme-preview-badges {
+    flex-wrap: wrap;
+  }
+
+  .sc-content .store-theme-body .form-actions {
+    margin: 0;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .sc-content .store-theme-body .form-actions > button {
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+  }
+
+  /* Side cards */
+  .sc-content .store-slug-info {
+    padding: 14px 16px;
+  }
+
+  .sc-content .store-slug-link {
+    display: inline-block;
+    padding: 4px 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .store-settings-pointer-body,
+  .sc-content .store-danger-body {
+    align-items: stretch;
+    gap: 12px;
+    padding: 4px 16px 16px;
+  }
+
+  .sc-content .store-settings-pointer-body > .btn-seller-outline,
+  .sc-content .store-settings-pointer-body > a,
+  .sc-content .store-danger-body > button {
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .sc-content .store-settings-pointer-body,
+  .sc-content .store-danger-body {
+    flex-direction: column;
+  }
+
+  .sc-content .store-danger-card {
+    border-color: transparent;
+  }
+
+  /* Product form sections */
+  .sc-content .product-optional-section {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .sc-content .product-optional-heading {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sc-content .product-optional-heading .btn-seller-outline {
+    justify-content: center;
+    width: 100%;
+    background: #fff;
+  }
+
+  .sc-content .product-preset-row {
+    gap: 8px;
+  }
+
+  .sc-content .product-preset-btn {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .sc-content .product-variation-row {
+    grid-template-columns: minmax(0, 1fr) 36px;
+    padding: 10px;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .sc-content .product-variation-row .product-option-editor {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .sc-content .product-variation-row .seller-icon-btn {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .sc-content .product-option-editor {
+    border-color: #eef1f4;
+    background: #f8fafc;
+  }
+
+  .sc-content .product-option-chip button {
+    width: 22px;
+    height: 22px;
+  }
+
+  .sc-content .product-option-add .form-input {
+    min-height: 40px;
+    font-size: 16px;
+  }
+
+  .sc-content .product-option-add-btn {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 12px;
+  }
+}

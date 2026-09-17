@@ -75,3 +75,25 @@
 .ph-toggle-manual:hover {
   color: #1d4ed8;
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .ph-address-picker {
+    min-width: 0;
+  }
+
+  .ph-field {
+    min-width: 0;
+  }
+
+  .ph-input {
+    min-height: 46px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .ph-toggle-manual {
+    min-height: 32px;
+    font-size: 13px;
+  }
+}

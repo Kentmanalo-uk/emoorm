@@ -126,3 +126,42 @@
     justify-content: center;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .not-found {
+    min-height: calc(100dvh - 160px);
+    background: #f2f2f7;
+    padding: 24px 16px;
+  }
+
+  .not-found-card {
+    border: 0;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .not-found-text {
+    overflow-wrap: anywhere;
+  }
+
+  .not-found-btn {
+    min-height: 48px;
+    border-radius: 10px;
+  }
+
+  .not-found-back {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .not-found {
+    padding: 16px 12px;
+  }
+
+  .not-found-card {
+    padding: 28px 18px;
+  }
+}

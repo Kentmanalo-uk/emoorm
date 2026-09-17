@@ -1400,3 +1400,380 @@
     max-width: 320px;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  /* Carousel controls: small round buttons (not stretched by the global
+     44px button min-height) and slim dots. */
+  .banner-control {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.28);
+  }
+
+  .banner-control-prev {
+    left: 8px;
+  }
+
+  .banner-control-next {
+    right: 8px;
+  }
+
+  .banner-dots {
+    bottom: 10px;
+    gap: 6px;
+  }
+
+  .banner-dot {
+    width: 6px;
+    height: 6px;
+    min-height: 6px;
+  }
+
+  .banner-dot-active {
+    width: 18px;
+  }
+
+  /* The two side banners become a compact 2-up row under the carousel. */
+  .banner-sidebar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    height: auto;
+  }
+
+  .banner-section > .container {
+    padding: 0 16px;
+  }
+
+  .banner-sidebar:has(.banner-card-image) {
+    padding: 12px 0;
+  }
+
+  /* Category strip: one scrollable row of tiles. */
+  .banner-section ~ .categories-section .categories-grid {
+    display: flex;
+    gap: 12px;
+    margin: 0 -16px 0 0;
+    padding: 0 16px 2px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .banner-section ~ .categories-section .categories-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .banner-section ~ .categories-section .category-card {
+    flex: 0 0 84px;
+    min-width: 0;
+    background: transparent;
+  }
+
+  .banner-section ~ .categories-section .category-image {
+    width: 84px;
+    height: 84px;
+    padding-top: 0;
+    border-radius: 12px;
+  }
+
+  .banner-section ~ .categories-section .category-name {
+    margin-top: 6px;
+    padding: 0;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .banner-sidebar .banner-card-image-link {
+    min-width: 0;
+  }
+
+  .banner-sidebar .banner-card-image {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .banner-sidebar .banner-card-image img {
+    height: 100%;
+  }
+
+  /* Home sections (scoped to siblings of the home banner). */
+  .banner-section ~ .categories-section,
+  .banner-section ~ .products-section,
+  .banner-section ~ .stores-section,
+  .banner-section ~ .municipalities-section {
+    padding: 20px 0;
+  }
+
+  .banner-section ~ section .section-header {
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .banner-section ~ section .section-title {
+    min-width: 0;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .banner-section ~ .categories-section .section-title {
+    margin-bottom: 12px;
+  }
+
+  .banner-section ~ section .section-arrow-link {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e9f7f0;
+  }
+
+  /* Product tiles */
+  .banner-section ~ .products-section .products-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .banner-section ~ .products-section .product-card {
+    min-width: 0;
+    border-radius: 12px;
+  }
+
+  .banner-section ~ .products-section .product-info {
+    gap: 3px;
+    padding: 8px 10px 10px;
+  }
+
+  .banner-section ~ .products-section .product-name {
+    min-height: calc(13px * 1.35 * 2);
+    font-size: 13px;
+    color: #1f2937;
+    overflow-wrap: anywhere;
+  }
+
+  .banner-section ~ .products-section .product-price {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  /* Touch screens have no hover: keep the quick add-to-cart button visible. */
+  .banner-section ~ .products-section .product-cart-fab {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    right: 8px;
+    bottom: 8px;
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Stores near you */
+  .home-stores-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .home-store-card {
+    min-height: 0;
+    border-radius: 12px;
+  }
+
+  .home-store-main h3 {
+    overflow: hidden;
+    font-size: 16px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .home-store-product-stack img,
+  .home-store-product-empty {
+    width: 36px;
+    height: 36px;
+    margin-left: -10px;
+    border-width: 2px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, .1);
+  }
+
+  /* Hide alt text of product thumbs that fail to load. */
+  .home-store-product-stack img {
+    font-size: 0;
+    color: transparent;
+  }
+
+  .home-store-product-stack {
+    min-height: 36px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .home-store-view-products {
+    min-height: 36px;
+  }
+
+  /* Municipalities rail */
+  .municipality-rail {
+    gap: 12px;
+    padding: 2px 0 4px;
+  }
+
+  .municipality-tile {
+    flex: 0 0 88px;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .municipality-tile-logo {
+    width: 80px;
+    height: 80px;
+    border-width: 2px;
+    font-size: 24px;
+  }
+
+  /* Discover stores map */
+  .discover-stores-section .store-location-map {
+    height: 340px !important;
+  }
+
+  .discover-stores-empty {
+    margin-top: -340px;
+    height: 340px;
+  }
+
+  /* Load more */
+  .home-load-more {
+    margin: 16px 0 0;
+  }
+
+  .home-load-more-btn {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 44px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .banner-carousel {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  .banner-sidebar {
+    display: grid;
+  }
+
+  .banner-section > .container {
+    padding: 0;
+  }
+
+  .banner-sidebar:has(.banner-card-image) {
+    padding: 12px;
+  }
+
+  .banner-section ~ .categories-section,
+  .banner-section ~ .municipalities-section,
+  .banner-section ~ .discover-stores-section {
+    margin-top: 12px;
+    background: #fff;
+  }
+
+  .banner-section ~ .products-section,
+  .banner-section ~ .stores-section:not(.discover-stores-section) {
+    padding: 16px 0 4px;
+    background: transparent;
+  }
+
+  .banner-section ~ .home-explore-section {
+    padding-bottom: 8px;
+  }
+
+  .banner-section ~ .categories-section,
+  .banner-section ~ .municipalities-section,
+  .banner-section ~ .discover-stores-section {
+    padding: 16px 0;
+  }
+
+  .banner-section ~ .categories-section > .container,
+  .banner-section ~ .municipalities-section > .container {
+    padding-left: 12px;
+    padding-right: 0;
+  }
+
+  .banner-section ~ .categories-section .section-title,
+  .banner-section ~ .municipalities-section .section-header {
+    padding-right: 12px;
+  }
+
+  .banner-section ~ section .section-title {
+    font-size: 18px;
+  }
+
+  /* Category strip */
+  .banner-section ~ .categories-section .categories-grid {
+    gap: 10px;
+    margin: 0;
+    padding: 0 12px 2px 0;
+  }
+
+  .banner-section ~ .categories-section .category-card {
+    flex: 0 0 72px;
+  }
+
+  .banner-section ~ .categories-section .category-image {
+    width: 72px;
+    height: 72px;
+  }
+
+  .banner-section ~ .categories-section .category-name {
+    color: #374151;
+  }
+
+  .municipality-rail {
+    padding-right: 12px;
+  }
+
+  /* Store cards: logo + name on top, product thumbs + link below. */
+  .home-store-main {
+    gap: 12px;
+    padding: 14px 14px 6px;
+  }
+
+  .home-store-logo {
+    flex-basis: 52px;
+    width: 52px;
+    height: 52px;
+    font-size: 16px;
+  }
+
+  .home-store-products {
+    gap: 12px;
+    padding: 6px 14px 14px;
+  }
+
+  .home-store-product-stack {
+    padding-left: 10px;
+  }
+
+  .banner-section ~ .products-section .products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}

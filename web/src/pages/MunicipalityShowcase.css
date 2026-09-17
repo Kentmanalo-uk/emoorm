@@ -522,3 +522,235 @@
     grid-row: span 1;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .municipality-showcase {
+    min-height: 0;
+  }
+
+  .municipality-hero::before {
+    background-size: 220px;
+    background-position: right -40px center;
+  }
+
+  .municipality-hero-content {
+    gap: 14px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .municipality-hero-content > div:last-child {
+    min-width: 0;
+  }
+
+  .municipality-hero-logo {
+    width: 64px;
+    height: 64px;
+    flex-basis: 64px;
+    border-width: 2px;
+    font-size: 26px;
+  }
+
+  .municipality-hero h1 {
+    font-size: 28px;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .municipality-hero-location {
+    align-items: flex-start;
+    gap: 5px;
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .municipality-hero-location svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .municipality-showcase-content {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  /* Intro card */
+  .municipality-feature-grid {
+    gap: 16px;
+    margin-bottom: 0;
+    padding: 16px;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .municipality-feature-copy h2 {
+    margin-bottom: 8px;
+    font-size: 22px;
+  }
+
+  .municipality-feature-copy p:not(.municipality-eyebrow) {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .municipality-feature-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .municipality-primary-action,
+  .municipality-secondary-action {
+    justify-content: center;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .municipality-secondary-action {
+    background: #e9f7f0;
+  }
+
+  .municipality-gallery-stack-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .municipality-gallery-stack {
+    width: 100%;
+    height: 210px;
+  }
+
+  .municipality-gallery-stack img {
+    height: 180px;
+    border-width: 4px;
+  }
+
+  .municipality-gallery-stack-link {
+    min-height: 44px;
+  }
+
+  .municipality-gallery-stack-empty {
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    margin: 0;
+    padding: 0 16px;
+    border-radius: 8px;
+  }
+
+  /* Sections */
+  .municipality-content-section {
+    margin-top: 20px;
+  }
+
+  .municipality-showcase .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .municipality-showcase .section-title {
+    min-width: 0;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .municipality-showcase .section-arrow-link {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    margin-left: auto;
+    border-radius: 50%;
+    background: #e9f7f0;
+  }
+
+  .municipality-product-grid {
+    gap: 8px;
+  }
+
+  .municipality-product-card {
+    min-width: 0;
+    border-radius: 12px;
+  }
+
+  .municipality-product-card strong {
+    overflow-wrap: anywhere;
+  }
+
+  .municipality-product-price {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .municipality-store-grid {
+    gap: 8px;
+  }
+
+  .municipality-store-card {
+    gap: 12px;
+    min-height: 72px;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .municipality-store-card > svg {
+    flex-shrink: 0;
+  }
+
+  .municipality-empty,
+  .municipality-loading,
+  .municipality-error {
+    padding: 24px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+
+  .municipality-gallery-grid {
+    gap: 8px;
+  }
+
+  .municipality-gallery-grid img {
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .municipality-hero-content,
+  .municipality-showcase-content {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .municipality-hero h1 {
+    font-size: 26px;
+  }
+
+  .municipality-feature-grid {
+    padding: 14px;
+  }
+
+  .municipality-feature-copy h2 {
+    font-size: 20px;
+  }
+
+  .municipality-primary-action,
+  .municipality-secondary-action {
+    gap: 4px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+}

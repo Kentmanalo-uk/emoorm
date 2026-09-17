@@ -289,3 +289,86 @@
     min-height: 300px;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .store-map-frame {
+    border-radius: 12px;
+    isolation: isolate;
+  }
+
+  .store-location-map {
+    border: 0;
+  }
+
+  /* No hover on touch: the tapped store's card docks to the bottom of the map
+     instead of floating above a pin (where it could be clipped). */
+  .store-map-morph {
+    left: 12px !important;
+    right: 12px;
+    top: auto !important;
+    bottom: 12px;
+    transform: none;
+    filter: drop-shadow(0 6px 16px rgba(15, 23, 42, .2));
+  }
+
+  .store-map-morph .store-map-morph-content {
+    --morph-origin: 50% 50%;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 16px 14px 14px;
+    border-radius: 12px;
+  }
+
+  .store-map-modal-close {
+    top: 4px;
+    right: 4px;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .store-map-modal-avatar {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 8px;
+    border-width: 2px;
+  }
+
+  .store-map-modal h3 {
+    max-width: 100%;
+    padding: 0 28px;
+    overflow: hidden;
+    font-size: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .store-map-modal-address {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .store-map-modal-desc {
+    margin-top: 6px;
+    font-size: 12px;
+    -webkit-line-clamp: 2;
+  }
+
+  .store-map-modal-actions {
+    flex-direction: row;
+    margin-top: 12px;
+  }
+
+  .store-map-modal-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}

@@ -640,3 +640,45 @@
     transition: none;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  /* Float the Messages pill just above the 68px buyer bottom nav. */
+  .cd-root {
+    right: 16px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .cd-bar {
+    height: 44px;
+    min-height: 44px;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.28);
+  }
+
+  .cd-panel,
+  .cd-panel.is-guest {
+    max-width: calc(100vw - 32px);
+    height: min(520px, calc(100dvh - 220px));
+  }
+}
+
+@media (max-width: 480px) {
+  .cd-root {
+    right: 12px;
+    left: 12px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .cd-bar {
+    height: 44px;
+    padding: 0 16px 0 12px;
+    font-size: 13px;
+  }
+
+  .cd-panel,
+  .cd-panel.is-guest {
+    width: 100%;
+    max-width: none;
+    height: min(480px, calc(100dvh - 216px));
+  }
+}

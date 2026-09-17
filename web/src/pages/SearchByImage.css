@@ -193,3 +193,133 @@
     gap: 10px;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .sbi-page {
+    min-height: 0;
+    padding: 4px 0 16px;
+  }
+
+  .sbi-back {
+    min-height: 44px;
+    margin-bottom: 0;
+  }
+
+  .sbi-header {
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .sbi-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .sbi-upload-btn {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    border: 0;
+    border-radius: 12px;
+    background: #fff;
+    color: #047857;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .sbi-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Preview: a short full-width card instead of a big square. */
+  .sbi-page .sbi-preview {
+    position: static;
+    width: 100%;
+    max-width: none;
+    height: 200px;
+    margin: 0;
+    aspect-ratio: auto;
+    border-radius: 12px;
+  }
+
+  .sbi-preview img {
+    object-fit: contain;
+  }
+
+  .sbi-results {
+    min-width: 0;
+    min-height: 0;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  /* With results, let the product tiles sit directly on the page. */
+  .sbi-results:has(.sbi-grid) {
+    padding: 0;
+    background: transparent;
+  }
+
+  .sbi-results-head {
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .sbi-status {
+    min-height: 140px;
+    font-size: 14px;
+  }
+
+  .sbi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .sbi-grid .product-card {
+    min-width: 0;
+    border-radius: 12px;
+  }
+
+  .sbi-grid .product-info {
+    gap: 3px;
+    padding: 8px 10px 10px;
+  }
+
+  .sbi-grid .product-name {
+    min-height: calc(13px * 1.35 * 2);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .sbi-grid .product-price {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .sbi-match {
+    top: 8px;
+    left: 8px;
+    border-radius: 6px;
+    font-size: 10px;
+  }
+
+  /* Touch screens have no hover: keep quick add-to-cart visible. */
+  .sbi-grid .product-cart-fab {
+    right: 8px;
+    bottom: 8px;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .sbi-page .sbi-preview {
+    height: 180px;
+  }
+}

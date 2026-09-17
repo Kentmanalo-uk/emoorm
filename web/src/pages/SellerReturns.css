@@ -262,3 +262,311 @@
     flex-direction: column
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .sc-content .seller-returns {
+    padding: 0;
+  }
+
+  .sc-content .seller-returns-head {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .sc-content .seller-kicker {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #059669;
+  }
+
+  .sc-content .seller-returns h1 {
+    margin: 2px 0 2px;
+    font-size: 22px;
+    line-height: 1.25;
+  }
+
+  .sc-content .seller-returns-head p {
+    font-size: 13px;
+    line-height: 1.45;
+    color: #6b7280;
+  }
+
+  .sc-content .seller-return-stat {
+    grid-template-columns: 40px minmax(0, 1fr);
+    column-gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .sc-content .seller-return-stat svg {
+    box-sizing: content-box;
+    padding: 9px;
+    border-radius: 50%;
+    background: #e9f7f0;
+    color: #059669;
+  }
+
+  .sc-content .seller-return-stat strong {
+    font-size: 20px;
+    line-height: 1.1;
+    color: #0f172a;
+  }
+
+  .sc-content .seller-return-stat span {
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  /* Tabs */
+  .sc-content .seller-return-tabs {
+    flex-wrap: nowrap;
+    gap: 8px;
+    border-bottom: 0;
+  }
+
+  .sc-content .seller-return-tabs button {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .sc-content .seller-return-tabs button.is-active {
+    border-color: #059669;
+    background: #059669;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .sc-content .seller-return-tabs button.is-active b {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+  }
+
+  .sc-content .seller-return-layout {
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  /* Request list */
+  .sc-content .seller-return-list {
+    gap: 10px;
+  }
+
+  .sc-content .seller-return-row {
+    align-items: flex-start;
+    min-height: 72px;
+    padding: 14px;
+    border-radius: 12px;
+    font: inherit;
+  }
+
+  .sc-content .seller-return-row.is-selected {
+    border-color: transparent;
+    box-shadow: inset 0 0 0 2px #059669;
+  }
+
+  .sc-content .seller-return-row > div:first-child {
+    min-width: 0;
+  }
+
+  .sc-content .seller-return-row > div:last-child {
+    flex-shrink: 0;
+  }
+
+  .sc-content .seller-return-row strong {
+    font-size: 14px;
+  }
+
+  .sc-content .seller-return-row span {
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .seller-return-row b {
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
+  .sc-content .seller-status {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .sc-content .seller-status.status-requested {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  .sc-content .seller-status.status-approved,
+  .sc-content .seller-status.status-awaiting_shipment,
+  .sc-content .seller-status.status-received {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .sc-content .seller-status.status-refunded,
+  .sc-content .seller-status.status-closed {
+    background: #d1fae5;
+    color: #047857;
+  }
+
+  .sc-content .seller-status.status-rejected,
+  .sc-content .seller-status.status-cancelled {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .sc-content .seller-return-empty {
+    padding: 36px 16px;
+    border: 0;
+    border-radius: 12px;
+    background: #fff;
+    font-size: 14px;
+  }
+
+  .sc-content .seller-return-empty svg {
+    color: #a7f3d0;
+  }
+
+  /* Request detail */
+  .sc-content .seller-return-detail {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .sc-content .seller-detail-top {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .sc-content .seller-detail-top > div {
+    min-width: 0;
+  }
+
+  .sc-content .seller-detail-top h2 {
+    font-size: 18px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .seller-detail-items {
+    margin: 14px 0;
+    padding: 4px 0;
+  }
+
+  .sc-content .seller-detail-items div {
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+  }
+
+  .sc-content .seller-detail-items span {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .buyer-note {
+    margin: 0 0 14px;
+    border-radius: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .seller-action-form {
+    gap: 14px;
+  }
+
+  .sc-content .seller-action-form > label:not(.seller-check) {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #334155;
+  }
+
+  .sc-content .seller-action-form input:not([type="checkbox"]),
+  .sc-content .seller-action-form select,
+  .sc-content .seller-action-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 400;
+    color: #111827;
+  }
+
+  .sc-content .seller-action-form textarea {
+    min-height: 96px;
+    resize: vertical;
+  }
+
+  .sc-content .seller-action-form input:focus,
+  .sc-content .seller-action-form select:focus,
+  .sc-content .seller-action-form textarea:focus {
+    border-color: #059669;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+  }
+
+  .sc-content .seller-check {
+    gap: 10px;
+    min-height: 44px;
+    font-weight: 500 !important;
+  }
+
+  .sc-content .seller-check input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: #059669;
+  }
+
+  .sc-content .seller-actions {
+    gap: 10px;
+  }
+
+  .sc-content .seller-actions > button {
+    display: flex;
+    flex: 1 1 0;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 46px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .sc-content .seller-actions > button:not(.seller-approve) {
+    border: 1px solid #fca5a5;
+    background: #fff;
+    color: #b91c1c;
+  }
+
+  .sc-content .seller-actions .seller-approve,
+  .sc-content .seller-wide-action {
+    min-height: 46px;
+    border-radius: 10px;
+    background: #059669;
+  }
+}

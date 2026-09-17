@@ -847,3 +847,173 @@
     justify-content: center;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .sell-topbar {
+    height: 36px;
+    padding: 0 16px;
+    font-size: 11.5px;
+    text-align: center;
+  }
+
+  .sell-header-inner {
+    height: 64px;
+    gap: 12px;
+  }
+
+  .sell-logo-img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .sell-logo-text {
+    font-size: 22px;
+  }
+
+  .sell-header-actions {
+    gap: 6px;
+  }
+
+  .sell-nav-btn-primary {
+    min-height: 40px;
+    white-space: nowrap;
+  }
+
+  .sell-mobile-toggle {
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sell-mobile-link {
+    min-height: 44px;
+  }
+
+  .sell-section {
+    padding: 40px 0;
+  }
+
+  .sell-section-head {
+    margin-bottom: 20px;
+  }
+
+  .sell-section-head h2 {
+    font-size: 24px;
+  }
+
+  /* Hero: copy uses the full width, images below. */
+  .sell-hero {
+    padding: 32px 0 36px;
+  }
+
+  .sell-hero-layout {
+    align-items: stretch;
+    gap: 28px;
+  }
+
+  .sell-hero-h1 {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+
+  .sell-hero-sub {
+    margin-bottom: 20px;
+    max-width: none;
+  }
+
+  .sell-hero-imgs {
+    max-width: none;
+    height: 260px;
+    gap: 8px;
+  }
+
+  .sell-hero-img-side {
+    gap: 8px;
+  }
+
+  .sell-benefits-grid,
+  .sell-steps {
+    gap: 8px;
+  }
+
+  .sell-benefit-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .sell-benefit-title {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .sell-step-card {
+    gap: 14px;
+    padding: 16px;
+    border: 0;
+    border-radius: 12px;
+    background: #f9fafb;
+  }
+
+  .sell-section--gray .sell-step-card {
+    background: #fff;
+  }
+
+  .sell-step-n {
+    width: 28px;
+    font-size: 32px;
+  }
+
+  .sell-cat-chips {
+    gap: 8px;
+  }
+
+  .sell-cat-chip {
+    padding: 8px 14px;
+  }
+
+  .sell-final-cta {
+    padding: 48px 0;
+  }
+
+  .sell-final-btns {
+    max-width: 360px;
+    width: 100%;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sell-final-btn,
+  .sell-final-btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .sell-header-inner,
+  .sell-container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .sell-hero-h1 {
+    font-size: 36px;
+  }
+
+  .sell-hero-btn-primary,
+  .sell-hero-btn-ghost {
+    height: 52px;
+    padding: 0 20px;
+  }
+
+  .sell-hero-imgs {
+    height: 220px;
+  }
+
+  .sell-nav-btn-primary {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

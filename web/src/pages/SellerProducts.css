@@ -273,3 +273,300 @@
     transform: rotate(360deg);
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+
+  /* Search bar */
+  .sc-content .products-toolbar {
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .sc-content .products-search-form {
+    flex: 1 1 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .sc-content .products-search-icon {
+    display: none;
+  }
+
+  .sc-content .products-search-input {
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #f8fafc;
+  }
+
+  .sc-content .products-search-btn {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 10px;
+  }
+
+  /* Bulk selection bar */
+  .sc-content .products-bulk-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+
+  .sc-content .products-bulk-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .sc-content .products-bulk-actions .btn-seller-outline {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+  }
+
+  /* Product list: each table row becomes a card */
+  .sc-content .seller-card:has(> .products-table) {
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .sc-content .seller-table.products-table {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .sc-content .products-table thead,
+  .sc-content .products-table tbody {
+    display: block;
+  }
+
+  .sc-content .products-table thead tr {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    margin-bottom: 8px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .sc-content .products-table th {
+    display: none;
+  }
+
+  .sc-content .products-table th.products-th-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .sc-content .products-table th.products-th-check::after {
+    content: attr(data-label);
+  }
+
+  .sc-content .products-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sc-content .products-table tbody tr {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "chk prod prod"
+      ". price status"
+      ". cat stock"
+      "act act act";
+    column-gap: 10px;
+    row-gap: 6px;
+    padding: 14px 14px 0;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .sc-content .products-table td,
+  .sc-content .products-table tr:hover td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+  }
+
+  .sc-content .products-table input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: #059669;
+  }
+
+  .sc-content .products-table tbody td:nth-child(1) {
+    grid-area: chk;
+    align-self: center;
+  }
+
+  .sc-content .products-table tbody td:nth-child(2) {
+    grid-area: prod;
+    margin-bottom: 4px;
+  }
+
+  .sc-content .products-table tbody td:nth-child(3) {
+    grid-area: cat;
+    align-self: center;
+    overflow: hidden;
+    font-size: 12px;
+    color: #6b7280;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sc-content .products-table tbody td:nth-child(4) {
+    grid-area: price;
+    align-self: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .sc-content .products-table tbody td:nth-child(5) {
+    grid-area: stock;
+    align-self: center;
+    font-size: 12px;
+    color: #6b7280;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .sc-content .products-table tbody td:nth-child(5)::before {
+    content: attr(data-label) " ";
+  }
+
+  .sc-content .products-table tbody td:nth-child(6) {
+    grid-area: status;
+    text-align: right;
+  }
+
+  .sc-content .products-table tbody td:nth-child(7) {
+    grid-area: act;
+    margin-top: 8px;
+    padding: 8px 0;
+    border-top: 1px solid #f1f5f9;
+    text-align: right;
+  }
+
+  .sc-content .products-table .product-cell {
+    gap: 12px;
+  }
+
+  .sc-content .products-table .product-thumb {
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 10px;
+    background: #f1f5f9;
+    font-size: 0;
+  }
+
+  .sc-content .products-table .product-cell-name {
+    display: -webkit-box;
+    max-width: none;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .sc-content .products-table .seller-badge {
+    white-space: nowrap;
+  }
+
+  .sc-content .products-table .product-actions {
+    gap: 8px;
+  }
+
+  .sc-content .products-pagination {
+    margin-top: 12px;
+    border-top: 0;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  /* Product form */
+  /* overflow must stay visible so the action bar can stick to the viewport */
+  .sc-content .seller-card.products-form-card {
+    margin-bottom: 12px;
+    overflow: visible;
+  }
+
+  .sc-content .products-form-card > .seller-card-header {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .sc-content .products-form-card .form-group {
+    margin-bottom: 0;
+  }
+
+  .sc-content .product-image-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .sc-content .product-image-tile,
+  .sc-content .product-image-add {
+    border-radius: 10px;
+  }
+
+  .sc-content .product-image-remove {
+    width: 28px;
+    height: 28px;
+  }
+
+  .sc-content .products-form-card .form-actions {
+    position: sticky;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    z-index: 3;
+    flex-wrap: nowrap;
+    width: auto;
+    margin: 4px -16px -16px;
+    padding: 12px 16px;
+    border-top: 1px solid #f1f5f9;
+    border-radius: 0 0 12px 12px;
+    background: #fff;
+  }
+
+  .sc-content .products-form-card .form-actions > button {
+    flex: 1 1 0;
+    justify-content: center;
+    width: auto;
+    min-height: 46px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .sc-content .products-search-btn {
+    padding: 0 14px;
+  }
+}

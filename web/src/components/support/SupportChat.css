@@ -907,3 +907,243 @@
     animation: none;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  /* Conversation list: a borderless rounded card sized from the viewport
+     (fills the space between the page header and the bottom bar; a long
+     list simply grows and the page scrolls). */
+  .sc-chat {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: max(360px, calc(100dvh - 220px));
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .sc-chat:not(.has-active) .sc-list {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .sc-chat:not(.has-active) .sc-list > .sc-empty {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .sc-chat .sc-empty {
+    padding: 32px 16px;
+  }
+
+  .sc-chat .sc-empty svg {
+    color: #a7f3d0;
+  }
+
+  .sc-list-item {
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 12px 14px;
+  }
+
+  .sc-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .sc-list-top strong {
+    min-width: 0;
+  }
+
+  .sc-list-top small {
+    flex-shrink: 0;
+  }
+
+  .sc-list-topic {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sc-filters {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sc-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sc-filter {
+    flex: 1 0 auto;
+    min-height: 44px;
+    padding: 0 10px;
+  }
+
+  .sc-compose {
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  /* Open conversation: full-screen chat. */
+  .sc-chat.has-active {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .sc-chat.has-active .sc-thread {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .sc-thread-head {
+    flex: 0 0 auto;
+    gap: 6px 8px;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 6px;
+  }
+
+  .sc-back {
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .sc-back:active {
+    background: #f3f4f6;
+  }
+
+  .sc-thread-title strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-thread-actions {
+    padding-left: 46px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  .sc-thread-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sc-btn {
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+  }
+
+  .sc-identity-actions .sc-btn {
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .sc-messages {
+    padding: 14px 12px;
+    background: #fff;
+    overscroll-behavior: contain;
+  }
+
+  .sc-message {
+    max-width: 82%;
+    border: 0;
+    background: #f3f4f6;
+  }
+
+  .sc-message p {
+    overflow-wrap: anywhere;
+  }
+
+  .sc-closed-notice {
+    border-radius: 999px;
+  }
+
+  .sc-composer {
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    border-top-color: #eef0f3;
+  }
+
+  .sc-composer textarea {
+    min-height: 42px;
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 21px;
+    background: #f3f4f6;
+    font-size: 16px;
+    line-height: 1.35;
+  }
+
+  .sc-composer textarea:focus {
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+  }
+
+  .sc-composer .sc-send {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+  }
+
+  .sc-quick-toggle {
+    height: 42px;
+    border-radius: 21px;
+  }
+
+  /* Admin "new message" dialog: bottom sheet. */
+  .sc-dialog-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .sc-dialog {
+    max-width: 100%;
+    max-height: 85dvh;
+    border-radius: 16px 16px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .sc-dialog-head button {
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sc-dialog-search {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
+  .sc-dialog-search input {
+    min-height: 0;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .sc-dialog-user {
+    min-height: 52px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sc-filter-count {
+    border-radius: 999px;
+  }
+}

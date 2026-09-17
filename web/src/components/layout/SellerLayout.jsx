@@ -3,19 +3,21 @@ import { NavLink, Link, Outlet, Navigate, useLocation, useNavigate } from 'react
 import {
   SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
-  ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight,
+  ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
+import { useCompactLayout, useMobileNav } from '../../hooks/useMobileNav';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import SellerCenterGuide from '../seller/SellerCenterGuide';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import SellerRail from './SellerRail';
 import './SellerLayout.css';
+import './SellerShellMobile.css';
 
 /**
  * Persistent shell for /seller/* routes.
@@ -27,7 +29,11 @@ export default function SellerLayout() {
   const navigate = useNavigate();
 
   const [store, setStore] = useState(null);
-  const [collapsed, toggleCollapsed] = useSidebarCollapse();
+  const [storedCollapsed, toggleCollapsed] = useSidebarCollapse();
+  const isCompact = useCompactLayout();
+  // The drawer on small screens always shows full labels.
+  const collapsed = storedCollapsed && !isCompact;
+  const mobileNav = useMobileNav(location.pathname);
   const [productsOpen, setProductsOpen] = useState(
     location.pathname.startsWith('/seller/products')
   );
@@ -110,9 +116,10 @@ export default function SellerLayout() {
   const crumbs = buildCrumbs(location.pathname);
 
   return (
-    <div className={`sc-shell ${collapsed ? 'is-collapsed' : ''}`}>
+    <div className={`sc-shell ${collapsed ? 'is-collapsed' : ''}${mobileNav.open ? ' is-nav-open' : ''}`}>
+      <div className="sc-nav-backdrop" onClick={mobileNav.hide} aria-hidden="true" />
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="sc-sidebar">
+      <aside className="sc-sidebar" aria-label="Seller navigation">
         <div className="sc-sidebar-inner">
           <div className="sc-brand-row">
             <Link to="/seller" className="sc-brand">
@@ -130,6 +137,9 @@ export default function SellerLayout() {
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
+            <button type="button" className="sc-drawer-close" onClick={mobileNav.hide} aria-label="Close menu">
+              <X size={18} weight="bold" />
             </button>
           </div>
 
@@ -271,6 +281,16 @@ export default function SellerLayout() {
       {/* ── Main column ─────────────────────────────────────── */}
       <div className="sc-main">
         <header className="sc-topbar">
+          <button
+            type="button"
+            className="sc-menu-btn"
+            onClick={mobileNav.toggle}
+            aria-label="Open menu"
+            aria-expanded={mobileNav.open}
+          >
+            <List size={22} weight="bold" />
+          </button>
+          <span className="sc-mobile-title">{crumbs[crumbs.length - 1]?.label}</span>
           <nav className="sc-crumbs" aria-label="Breadcrumb">
             {crumbs.map((c, i) => (
               <React.Fragment key={`${c.to}-${i}`}>
@@ -312,6 +332,25 @@ export default function SellerLayout() {
 
       <SellerRail unreadCount={unreadCount} onLogout={handleLogout} />
 
+      {/* Phone tab bar */}
+      <nav className="sc-tabbar" aria-label="Seller sections">
+        <NavLink to="/seller" end className={tabCls}>
+          <LayoutGrid size={22} weight="fill" /><span>Dashboard</span>
+        </NavLink>
+        <NavLink to="/seller/orders" className={tabCls}>
+          <ShoppingBag size={22} weight="fill" /><span>Orders</span>
+        </NavLink>
+        <NavLink to="/seller/products" className={tabCls}>
+          <Package size={22} weight="fill" /><span>Products</span>
+        </NavLink>
+        <NavLink to="/seller/messages" className={tabCls}>
+          <MessageSquare size={22} weight="fill" /><span>Messages</span>
+        </NavLink>
+        <button type="button" className={`sc-tab${mobileNav.open ? ' is-active' : ''}`} onClick={mobileNav.toggle}>
+          <List size={22} weight="bold" /><span>Menu</span>
+        </button>
+      </nav>
+
       <ConfirmDialog
         open={logoutOpen}
         title="Sign out?"
@@ -333,6 +372,10 @@ function navCls({ isActive }) {
 
 function subNavCls({ isActive }) {
   return `sc-subnav-link ${isActive ? 'sc-subnav-link--active' : ''}`;
+}
+
+function tabCls({ isActive }) {
+  return `sc-tab${isActive ? ' is-active' : ''}`;
 }
 
 const LABELS = {

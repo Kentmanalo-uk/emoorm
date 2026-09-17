@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import AppLogo from '../AppLogo';
@@ -78,7 +78,11 @@ function LinkList({ items }) {
   );
 }
 
+// App-style pages where phones hide the site footer (the bottom nav is the navigation).
+const APP_PAGE = /^\/(profile|cart|checkout|wishlist|notifications|orders)(\/|$)/;
+
 const Footer = () => {
+  const { pathname } = useLocation();
   const currentYear = new Date().getFullYear();
   const [categories, setCategories] = useState([]);
   const [municipalities, setMunicipalities] = useState([]);
@@ -105,7 +109,7 @@ const Footer = () => {
   }, []);
 
   return (
-    <footer className="footer">
+    <footer className={`footer${APP_PAGE.test(pathname) ? ' footer--app-page' : ''}`}>
       <div className="container">
         {/* Brand band: municipality seals (decorative) and the app mark */}
         <div className="footer-brand-band">

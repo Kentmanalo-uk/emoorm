@@ -232,8 +232,6 @@
   gap: 6px;
   padding: 8px 14px;
   border-radius: 8px;
-  border: 1px solid transparent;
-  background: transparent;
   cursor: pointer;
   font-size: 13.5px;
   font-weight: 500;
@@ -1090,5 +1088,160 @@ textarea.st-input {
 
   .st-logo {
     flex-wrap: wrap;
+  }
+}
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .st {
+    gap: 12px;
+  }
+
+  .st-header .admin-page-title {
+    font-size: 22px;
+  }
+
+  .st-layout {
+    gap: 12px;
+  }
+
+  /* Section tabs: single scrollable row */
+  .st-nav {
+    position: static;
+    flex-direction: row;
+    gap: 4px;
+    padding: 6px;
+    overflow-x: auto;
+    border-radius: 12px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .st-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .st-nav-item {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 44px;
+    gap: 8px;
+    padding: 8px 14px;
+    white-space: nowrap;
+    border-radius: 10px;
+  }
+
+  .st-nav-item small {
+    display: none;
+  }
+
+  .st-panel {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .st-panel-head {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 16px 16px 14px;
+  }
+
+  .st-panel-head > * {
+    min-width: 0;
+  }
+
+  .st-panel-head h2 {
+    font-size: 17px;
+  }
+
+  .st-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .st-row-control {
+    min-width: 0;
+  }
+
+  .st-panel-foot {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  .st-btn {
+    min-height: 44px;
+    justify-content: center;
+    border-radius: 10px;
+  }
+
+  .st-btn-text {
+    min-height: 40px;
+  }
+
+  .st-input {
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .st-inline-actions {
+    flex-wrap: wrap;
+  }
+
+  .st-logo {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .st-gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .st-gallery-item button {
+    opacity: 1;
+  }
+
+  .st-branding-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .st-callout {
+    margin: 16px 16px 0;
+  }
+
+  .st-callout-head {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .st-codes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .st-qr {
+    flex-wrap: wrap;
+  }
+
+  .st-empty {
+    padding: 28px 16px;
+  }
+
+  .municipality-editor-gallery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .municipality-editor-gallery-grid button {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .st-panel-foot .st-btn-primary {
+    flex: 1 1 100%;
   }
 }

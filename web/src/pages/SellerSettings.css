@@ -30,3 +30,36 @@
 .settings-deletion-body .btn-seller-primary {
   margin-top: 6px;
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .sc-content .settings-deletion-pending {
+    border-color: #fde68a;
+  }
+
+  .sc-content .settings-deletion-body {
+    align-items: stretch;
+    gap: 10px;
+    padding: 4px 16px 16px;
+  }
+
+  .sc-content .settings-deletion-body p {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .settings-deletion-body .btn-seller-primary {
+    justify-content: center;
+    min-height: 46px;
+  }
+
+  .sc-content .store-danger-body strong {
+    font-size: 15px;
+  }
+
+  .sc-content .store-danger-body p {
+    max-width: none;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+}

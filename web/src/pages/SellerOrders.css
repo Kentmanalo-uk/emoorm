@@ -605,3 +605,272 @@
 .so-payment-btn--reject:hover:not(:disabled) {
   background: #fef2f2;
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+
+  /* Order list: each table row becomes a card */
+  .sc-content .orders-list-card:has(> .so-orders-table) {
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .sc-content .seller-table.so-orders-table {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .sc-content .so-orders-table thead {
+    display: none;
+  }
+
+  .sc-content .so-orders-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sc-content .so-orders-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "num status"
+      "prod prod"
+      "buyer total"
+      "act act";
+    column-gap: 12px;
+    padding: 14px 14px 0;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .sc-content .so-orders-table tr.row-selected {
+    box-shadow: inset 0 0 0 2px #059669;
+  }
+
+  .sc-content .so-orders-table td,
+  .sc-content .so-orders-table tr:hover td,
+  .sc-content .so-orders-table tr.row-selected td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent !important;
+  }
+
+  .sc-content .so-orders-table td:nth-child(1) {
+    grid-area: num;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .so-orders-table td:nth-child(2) {
+    grid-area: prod;
+    margin: 12px 0;
+    padding: 10px;
+    border-radius: 10px;
+    background: #f8fafc !important;
+  }
+
+  .sc-content .so-orders-table td:nth-child(3) {
+    grid-area: buyer;
+    align-self: center;
+  }
+
+  .sc-content .so-orders-table td:nth-child(4) {
+    grid-area: total;
+    align-self: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+
+  .sc-content .so-orders-table td:nth-child(5) {
+    grid-area: status;
+    text-align: right;
+  }
+
+  .sc-content .so-orders-table td:nth-child(6) {
+    grid-area: act;
+    margin-top: 12px;
+    padding: 8px 0;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .sc-content .so-orders-table .seller-badge--solid {
+    white-space: nowrap;
+  }
+
+  .sc-content .so-product-thumb {
+    width: 44px;
+    height: 44px;
+  }
+
+  .sc-content .so-product-name {
+    display: block;
+    max-width: none;
+    font-size: 14px;
+  }
+
+  .sc-content .so-buyer {
+    min-width: 0;
+  }
+
+  .sc-content .so-buyer-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-content .so-orders-table .order-row-actions {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .sc-content .so-orders-table .status-dropdown-btn {
+    width: 44px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .sc-content .so-orders-table .status-dropdown-menu {
+    top: auto;
+    bottom: calc(100% + 6px);
+    min-width: 200px;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  }
+
+  .sc-content .so-orders-table .status-dropdown-item {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  /* Order detail: bottom sheet above the tab bar */
+  .sc-content .seller-card.order-detail-panel {
+    position: fixed;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 130;
+    width: auto;
+    max-height: 88vh;
+    max-height: 88dvh;
+    margin: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 0 0 100vmax rgba(15, 23, 42, 0.45);
+    animation: soSheetUp 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sc-content .order-detail-panel .seller-card-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 14px 16px;
+    background: #fff;
+  }
+
+  .sc-content .order-detail-panel .seller-card-header h2 {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .order-detail-panel .order-detail-body {
+    gap: 12px;
+    padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .sc-content .order-detail-panel .detail-row:not(.detail-row--col) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .sc-content .order-detail-panel .detail-row:not(.detail-row--col) > :first-child {
+    flex-shrink: 0;
+  }
+
+  .sc-content .order-detail-panel .detail-row:not(.detail-row--col) > :last-child {
+    min-width: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .order-detail-panel .detail-row--col {
+    gap: 4px;
+  }
+
+  .sc-content .detail-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: start;
+    gap: 10px;
+    padding: 8px 0;
+  }
+
+  .sc-content .detail-item span:first-child {
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .detail-item span:not(:first-child) {
+    white-space: nowrap;
+  }
+
+  .sc-content .detail-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    border-radius: 10px;
+    text-decoration: none;
+  }
+
+  .sc-content .so-payment-review {
+    border-radius: 10px;
+  }
+
+  .sc-content .so-payment-btn {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  /* No hover zoom on touch screens; the image opens on tap. */
+  .sc-content .payment-proof:hover img {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .sc-content .payment-proof img {
+    width: 120px;
+    height: 120px;
+  }
+
+  @keyframes soSheetUp {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .sc-content .seller-card.order-detail-panel {
+    animation: none;
+  }
+}

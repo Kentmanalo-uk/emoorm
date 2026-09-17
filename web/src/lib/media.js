@@ -2,8 +2,11 @@
 // Uploaded files are stored on the backend at /uploads/... and served by express.static.
 // The Vite dev server does not proxy /uploads, so we must prefix with the backend origin.
 
-export const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+import { forLocalNetwork } from '../config/runtimeHost';
+
+export const BACKEND_URL = forLocalNetwork(
+  import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000',
+);
 
 export const resolveImg = (path) => {
   if (!path) return null;

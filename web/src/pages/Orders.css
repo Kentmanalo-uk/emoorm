@@ -705,3 +705,282 @@
     max-width: calc(100vw - 24px);
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  /* Tabs: one scrollable row inside a rounded white strip. */
+  .profile-main .orders-tabs {
+    gap: 2px;
+    padding: 0 6px;
+    border-bottom: 0;
+    border-radius: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .profile-main .orders-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .profile-main .order-tab {
+    flex: 0 0 auto;
+    min-height: 46px;
+    padding: 0 12px;
+    margin-bottom: 0;
+    font-size: 13.5px;
+  }
+
+  .profile-main .orders-list {
+    gap: 12px;
+  }
+
+  .profile-main .order-card {
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  /* Store name and status on one line. */
+  .profile-main .order-card-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 4px;
+  }
+
+  .profile-main .order-store-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+  }
+
+  .profile-main .order-status-badge {
+    flex: 0 0 auto;
+    padding: 3px 10px;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+
+  .profile-main .order-card-body {
+    padding: 8px 16px 0;
+  }
+
+  .profile-main .order-items {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f1f2;
+  }
+
+  .profile-main .order-item {
+    gap: 12px;
+    padding: 6px 0;
+  }
+
+  .profile-main .order-item-image {
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+  }
+
+  .profile-main .order-item-details {
+    min-width: 0;
+  }
+
+  .profile-main .order-item-name {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-main .order-item-quantity {
+    font-size: 12px;
+  }
+
+  .profile-main .order-item-price {
+    font-size: 14px;
+  }
+
+  .profile-main .order-items-more {
+    font-size: 12px;
+  }
+
+  /* Order facts as compact label / value rows. */
+  .profile-main .order-info {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 0;
+    padding-bottom: 12px;
+  }
+
+  .profile-main .order-info-item {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .profile-main .order-info-label {
+    flex: 0 0 auto;
+    font-size: 12.5px;
+  }
+
+  .profile-main .order-info-value {
+    min-width: 0;
+    font-size: 13px;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-main .order-info-value.order-total {
+    font-size: 17px;
+    color: #111827;
+  }
+
+  /* Actions: two-column grid, primary action spans the row. */
+  .profile-main .order-card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid #f0f1f2;
+  }
+
+  .profile-main .order-action-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    justify-content: center;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .profile-main .order-action-btn.is-primary {
+    grid-column: 1 / -1;
+    order: -1;
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  /* Odd number of secondary buttons: the last one takes the full row. */
+  .profile-main .order-card-actions:has(> .is-primary) > .order-action-btn:last-child:nth-child(even):not(.is-primary),
+  .profile-main .order-card-actions:not(:has(> .is-primary)) > .order-action-btn:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  /* Order details: bottom sheet. */
+  .modal-overlay:has(> .order-details-modal) {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-content.order-details-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90dvh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .order-details-modal .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 14px 16px;
+    background: #fff;
+  }
+
+  .order-details-modal .modal-header h2 {
+    font-size: 17px;
+  }
+
+  .order-details-modal .modal-close {
+    width: 40px;
+    height: 40px;
+  }
+
+  .order-details-modal .modal-body {
+    padding: 16px;
+  }
+
+  .order-details-modal .order-details-header {
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+  }
+
+  .order-details-modal .order-details-number {
+    font-size: 15px;
+    overflow-wrap: anywhere;
+  }
+
+  .order-details-modal .order-details-date {
+    font-size: 12.5px;
+  }
+
+  .order-details-modal .order-timeline-section {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+  }
+
+  .order-details-modal .order-details-item {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .order-details-modal .order-details-item img {
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    border-radius: 8px;
+  }
+
+  .order-details-modal .order-details-item-info {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .order-details-modal .order-details-item-price {
+    flex: 1 1 100%;
+    padding-left: 68px;
+  }
+
+  .order-details-modal .modal-footer {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: #fff;
+  }
+
+  .order-details-modal .modal-footer > button {
+    flex: 1 1 0;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-main .order-card-header {
+    padding: 14px 14px 4px;
+  }
+
+  .profile-main .order-card-body {
+    padding: 8px 14px 0;
+  }
+
+  .profile-main .order-card-actions {
+    padding: 12px 14px 14px;
+  }
+
+  .modal-content.order-details-modal {
+    width: 100%;
+    max-width: 100%;
+  }
+}

@@ -405,3 +405,192 @@
     justify-content: center;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .sc-content .sf-body {
+    gap: 14px;
+    padding: 12px 16px 16px;
+  }
+
+  .sc-content .sf-mode-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .sc-content .sf-mode-card {
+    min-height: 56px;
+    padding: 12px 44px 12px 14px;
+    border-radius: 12px;
+    background: #f8fafc;
+  }
+
+  .sc-content .sf-mode-card.is-active {
+    background: #f0fdf4;
+  }
+
+  .sc-content .sf-mode-check {
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+  }
+
+  .sc-content .sf-note {
+    display: block;
+    position: relative;
+    padding: 10px 12px 10px 34px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+
+  .sc-content .sf-note svg {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    margin: 0;
+  }
+
+  .sc-content .sf-picker-row {
+    flex-direction: column;
+  }
+
+  .sc-content .sf-picker-row .form-input {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  .sc-content .sf-picker-row .btn-seller-primary {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .sc-content .sf-empty {
+    padding: 24px 16px;
+    border-radius: 12px;
+  }
+
+  .sc-content .sf-area-card {
+    gap: 10px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+  }
+
+  .sc-content .sf-area-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-content .sf-icon-btn {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+  }
+
+  .sc-content .sf-radio {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 44px;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .sc-content .sf-radio input[type='radio'] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .sc-content .sf-brgy-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .sc-content .sf-brgy-toolbar .form-input {
+    flex: 1 1 100%;
+    border-radius: 10px;
+  }
+
+  .sc-content .sf-brgy-toolbar > button {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 40px;
+  }
+
+  .sc-content .sf-brgy-options {
+    gap: 8px;
+    max-height: 220px;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .sc-content .sf-brgy-option {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .sc-content .sf-chip {
+    min-height: 32px;
+    font-size: 12.5px;
+  }
+
+  .sc-content .sf-chip-x {
+    width: 26px;
+    height: 26px;
+  }
+
+  .sc-content .sf-body .toggle-label {
+    align-items: flex-start;
+  }
+
+  .sc-content .sf-body .toggle-label input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: #059669;
+  }
+
+  .sc-content .sf-payment-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .sc-content .sf-body .form-group {
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+  .sc-content .sf-body .form-input {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  .sc-content .sf-qr-uploader {
+    justify-content: center;
+    width: 100%;
+    min-height: 56px;
+    border-radius: 12px;
+  }
+
+  .sc-content .sf-qr-preview {
+    flex-wrap: wrap;
+  }
+
+  .sc-content .sf-qr-preview img {
+    width: 140px;
+    height: 140px;
+  }
+
+  .sc-content .sf-footer-actions {
+    padding: 0;
+  }
+
+  .sc-content .sf-footer-actions > button {
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+  }
+}

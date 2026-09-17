@@ -115,3 +115,82 @@
     aspect-ratio: 4 / 3;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .municipality-gallery-page {
+    min-height: 0;
+  }
+
+  .municipality-gallery-header {
+    padding: 8px 16px 20px;
+  }
+
+  .municipality-gallery-back {
+    min-height: 44px;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .municipality-gallery-back svg {
+    flex-shrink: 0;
+  }
+
+  .municipality-gallery-title-row {
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .municipality-gallery-title-row > div:last-child {
+    min-width: 0;
+  }
+
+  .municipality-gallery-title-logo {
+    width: 56px;
+    height: 56px;
+    flex-basis: 56px;
+    font-size: 22px;
+  }
+
+  .municipality-gallery-title-row h1 {
+    font-size: 24px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .municipality-gallery-title-row p {
+    margin-top: 4px;
+    font-size: 13px;
+  }
+
+  .municipality-gallery-content {
+    padding: 16px 16px 16px;
+  }
+
+  .municipality-gallery-full-grid {
+    gap: 8px;
+  }
+
+  .municipality-gallery-full-grid img {
+    border-radius: 12px;
+  }
+
+  .municipality-gallery-message {
+    padding: 32px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .municipality-gallery-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .municipality-gallery-content {
+    padding: 12px;
+  }
+}

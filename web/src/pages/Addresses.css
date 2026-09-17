@@ -302,3 +302,146 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  /* Title and "Add new address" share one row. */
+  .profile-main .addresses-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 0;
+  }
+
+  .profile-main .addresses-header .profile-page-title {
+    min-width: 0;
+  }
+
+  .profile-main .address-add-btn {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 13px;
+  }
+
+  .profile-main .address-list {
+    gap: 12px;
+  }
+
+  .profile-main .address-card,
+  .profile-main .address-empty,
+  .profile-main .address-edit-form {
+    max-width: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .profile-main .address-card {
+    padding: 16px;
+  }
+
+  .profile-main .address-default-badge {
+    margin-bottom: 10px;
+    border-radius: 999px;
+  }
+
+  .profile-main .address-label-tag {
+    border-radius: 999px;
+  }
+
+  .profile-main .address-card-body {
+    margin-bottom: 12px;
+    min-width: 0;
+  }
+
+  .profile-main .address-name {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-main .address-phone {
+    font-size: 13px;
+  }
+
+  .profile-main .address-location {
+    font-size: 14px;
+    min-width: 0;
+  }
+
+  .profile-main .address-location p {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Actions split the row evenly. */
+  .profile-main .address-card-actions {
+    flex-wrap: wrap;
+    padding-top: 12px;
+  }
+
+  .profile-main .address-action-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 42px;
+    justify-content: center;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .profile-main .address-empty {
+    padding: 32px 16px;
+    gap: 10px;
+  }
+
+  .profile-main .address-empty > svg {
+    width: 64px;
+    height: 64px;
+    color: #a7f3d0;
+  }
+
+  .profile-main .address-empty .address-action-btn {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 18px;
+  }
+
+  .profile-main .address-edit-form {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .profile-main .address-edit-form .form-input {
+    min-height: 46px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .profile-main .address-edit-actions {
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  .profile-main .address-edit-actions > button {
+    flex: 1 1 0;
+    min-height: 46px;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-main .address-card,
+  .profile-main .address-edit-form {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-main .address-edit-form .form-group {
+    gap: 6px;
+    margin-bottom: 0;
+  }
+}

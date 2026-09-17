@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CircleNotch as Loader2, FloppyDisk as Save, Eye, EyeSlash as EyeOff, CheckCircle } from '@phosphor-icons/react';
+import { Camera, CircleNotch as Loader2, FloppyDisk as Save, Eye, EyeSlash as EyeOff, CheckCircle, SignOut } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useAuthStore from '../store/authStore';
 import { API_CONFIG } from '../config/api';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { useNavigate } from 'react-router-dom';
 import './ProfileSettings.css';
 
 const initialProfileState = (user) => ({
@@ -17,7 +19,9 @@ const initialProfileState = (user) => ({
 });
 
 export default function ProfileSettings() {
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const [municipalities, setMunicipalities] = useState([]);
 
   const [form, setForm] = useState(() => initialProfileState(user));
@@ -402,7 +406,23 @@ export default function ProfileSettings() {
             }) : '—'}
           />
         </div>
+
+        <footer className="ps-actions ps-actions-signout">
+          <button type="button" className="ps-btn ps-btn-signout" onClick={() => setSignOutOpen(true)}>
+            <SignOut size={15} weight="bold" /> Sign out
+          </button>
+        </footer>
       </div>
+
+      <ConfirmDialog
+        open={signOutOpen}
+        title="Sign out?"
+        message="You will need to sign in again to place orders and see your account."
+        confirmLabel="Sign out"
+        danger
+        onConfirm={() => { setSignOutOpen(false); logout(); navigate('/login'); }}
+        onCancel={() => setSignOutOpen(false)}
+      />
     </div>
   );
 }

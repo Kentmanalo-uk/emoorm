@@ -1143,3 +1143,380 @@
     border-radius: 8px;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .checkout-page {
+    min-height: 0;
+    padding: 12px 0 16px;
+  }
+
+  /* Title with a compact back link on the same row. */
+  .checkout-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .checkout-title {
+    min-width: 0;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .checkout-page .btn-back-to-cart {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 44px;
+    padding: 0 4px;
+    gap: 4px;
+    border: 0;
+    background: transparent;
+    color: #047857;
+    font-weight: 600;
+  }
+
+  /* Steps stay horizontal. */
+  .checkout-steps {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr) 24px minmax(0, 1fr);
+    flex-direction: row;
+    gap: 0;
+    margin-bottom: 12px;
+    padding: 14px 8px;
+    border-radius: 12px;
+  }
+
+  .checkout-step {
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .step-number {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .step-label {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+  }
+
+  .step-line {
+    width: 100%;
+    height: 2px;
+    margin: 16px 0 0;
+  }
+
+  .checkout-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .checkout-main {
+    gap: 12px;
+  }
+
+  .checkout-sidebar {
+    position: static;
+    width: 100%;
+  }
+
+  .checkout-section,
+  .checkout-summary {
+    width: 100%;
+    min-width: 0;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .checkout-page .section-header {
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  .checkout-page .section-header svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+
+  .checkout-page .section-header h2 {
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  /* Options and form */
+  .fulfillment-picker {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .fulfillment-option,
+  .payment-card,
+  .saved-address-option,
+  .address-card {
+    min-height: 56px;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .fulfillment-option > div,
+  .payment-details,
+  .saved-address-option > div,
+  .address-details {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .fulfillment-option input[type="radio"],
+  .payment-card input[type="radio"],
+  .saved-address-option input[type="radio"] {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    min-height: 0;
+  }
+
+  .payment-details strong {
+    font-size: 15px;
+  }
+
+  .payment-details p {
+    font-size: 13px;
+  }
+
+  .form-input,
+  .order-notes-textarea {
+    width: 100%;
+    min-width: 0;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  .store-status {
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+  }
+
+  .store-status svg {
+    flex-shrink: 0;
+  }
+
+  .qr-payment-panel {
+    grid-template-columns: 1fr;
+    border-radius: 12px;
+  }
+
+  .qr-payment-image img {
+    display: block;
+    max-width: 200px;
+    margin: 0 auto;
+    border-radius: 8px;
+  }
+
+  .proof-uploader {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    border-radius: 8px;
+  }
+
+  .proof-preview img {
+    width: 96px;
+    height: 96px;
+    border-radius: 8px;
+  }
+
+  /* Primary actions: full width; Back + Continue split 50/50. */
+  .checkout-page .checkout-section > .btn-continue {
+    width: 100%;
+  }
+
+  .checkout-section-actions {
+    flex-direction: row;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .btn-back,
+  .btn-continue,
+  .btn-place-order {
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: 8px;
+  }
+
+  .btn-change {
+    min-height: 40px;
+    border-radius: 8px;
+  }
+
+  /* Review */
+  .review-item {
+    align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .review-item img {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    border-radius: 6px;
+  }
+
+  .review-item-details {
+    min-width: 0;
+  }
+
+  .review-item-price {
+    font-size: 14px;
+  }
+
+  .review-address p,
+  .review-payment {
+    overflow-wrap: anywhere;
+  }
+
+  /* Order summary (scoped so the Cart page's bar rules never apply here). */
+  .checkout-summary h3 {
+    margin-bottom: 8px;
+    padding-bottom: 12px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .checkout-summary .summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 14px;
+  }
+
+  .checkout-summary .summary-divider {
+    display: block;
+    margin: 8px 0;
+  }
+
+  .checkout-summary .summary-total {
+    display: flex;
+    flex-direction: row;
+    margin-top: 0;
+    border-top: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 15px;
+    color: #111827;
+  }
+
+  .checkout-summary .summary-total .total-amount {
+    font-size: 22px;
+    font-weight: 700;
+    color: #059669;
+  }
+
+  .shipping-reminder {
+    border-radius: 8px;
+  }
+
+  /* Voucher field has inline 13px text; 16px avoids iOS zoom-on-focus. */
+  .checkout-summary input[type="text"] {
+    min-width: 0;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+  }
+
+  .checkout-summary .btn-continue,
+  .checkout-summary .btn-back {
+    flex: 0 0 auto;
+    min-height: 46px;
+  }
+
+  /* Order success */
+  .order-success-card {
+    margin: 12px 0;
+    padding: 28px 16px;
+    border-radius: 12px;
+  }
+
+  .order-success-card h1 {
+    font-size: 22px;
+  }
+
+  .order-success-card p {
+    font-size: 14px;
+  }
+
+  .order-reference {
+    max-width: 100%;
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+  }
+
+  .order-success-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-view-orders,
+  .btn-continue-shopping-success {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .checkout-page {
+    padding: 8px 0 16px;
+  }
+
+  .checkout-page > .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .checkout-header {
+    padding: 0 2px;
+  }
+
+  .checkout-title {
+    font-size: 22px;
+  }
+
+  .checkout-steps {
+    grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr) 18px minmax(0, 1fr);
+  }
+
+  .step-label {
+    font-size: 11px;
+  }
+
+  .checkout-section,
+  .checkout-summary {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .fulfillment-option,
+  .payment-card,
+  .saved-address-option {
+    border-radius: 12px;
+  }
+}

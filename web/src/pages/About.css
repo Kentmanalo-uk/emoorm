@@ -370,3 +370,95 @@
     text-align: center;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .about-page {
+    padding: 16px 16px 24px;
+  }
+
+  .about-hero {
+    padding: 28px 18px;
+    border-radius: 12px;
+  }
+
+  .about-hero-logo {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 12px;
+  }
+
+  .about-hero h1 {
+    font-size: 24px;
+  }
+
+  .about-lead {
+    margin-top: 10px;
+    font-size: 14.5px;
+  }
+
+  .about-hero-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .about-btn {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .about-section {
+    padding-top: 32px;
+  }
+
+  .about-section h2,
+  .about-cta h2 {
+    margin-bottom: 12px;
+    font-size: 20px;
+  }
+
+  .about-mission p {
+    font-size: 14.5px;
+    line-height: 1.65;
+  }
+
+  .about-steps,
+  .about-features,
+  .about-team {
+    gap: 10px;
+  }
+
+  /* White cards on the grey phone background. */
+  .about-steps li,
+  .about-feature,
+  .about-person,
+  .about-adviser,
+  .about-cta {
+    padding: 16px;
+    border: 0;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .about-towns {
+    gap: 6px;
+  }
+
+  .about-cta {
+    margin-top: 32px;
+    padding: 24px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .about-page {
+    padding: 12px 12px 24px;
+  }
+}

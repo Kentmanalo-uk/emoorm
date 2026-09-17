@@ -4,15 +4,17 @@ import {
   SquaresFour as LayoutGrid, Users, Package, Flag, Tag, MapPin, ChartPie as PieChart,
   CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
   Megaphone, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
-  Star, ArrowCounterClockwise,
+  Star, ArrowCounterClockwise, List, X,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
+import { useCompactLayout, useMobileNav } from '../../hooks/useMobileNav';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import './AdminLayout.css';
+import './AdminShellMobile.css';
 
 /**
  * Persistent shell for /admin/* pages — mirrors SellerLayout look & feel.
@@ -25,7 +27,11 @@ export default function AdminLayout({ children }) {
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
-  const [collapsed, toggleCollapsed] = useSidebarCollapse();
+  const [storedCollapsed, toggleCollapsed] = useSidebarCollapse();
+  const isCompact = useCompactLayout();
+  // The drawer on small screens always shows full labels.
+  const collapsed = storedCollapsed && !isCompact;
+  const mobileNav = useMobileNav(location.pathname);
   const [reviewsOpen, setReviewsOpen] = useState(
     location.pathname.startsWith('/admin/sellers') ||
     location.pathname.startsWith('/admin/all-sellers') ||
@@ -91,9 +97,10 @@ export default function AdminLayout({ children }) {
   const crumbs = buildCrumbs(location.pathname);
 
   return (
-    <div className={`ac-shell ${collapsed ? 'is-collapsed' : ''}`}>
+    <div className={`ac-shell ${collapsed ? 'is-collapsed' : ''}${mobileNav.open ? ' is-nav-open' : ''}`}>
+      <div className="ac-nav-backdrop" onClick={mobileNav.hide} aria-hidden="true" />
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="ac-sidebar">
+      <aside className="ac-sidebar" aria-label="Admin navigation">
         <div className="ac-sidebar-inner">
           <div className="ac-brand-row">
             <Link to="/admin" className="ac-brand">
@@ -124,6 +131,9 @@ export default function AdminLayout({ children }) {
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
+            <button type="button" className="ac-drawer-close" onClick={mobileNav.hide} aria-label="Close menu">
+              <X size={18} weight="bold" />
             </button>
           </div>
 
@@ -267,6 +277,16 @@ export default function AdminLayout({ children }) {
       {/* ── Main column ─────────────────────────────────────── */}
       <div className="ac-main">
         <header className="ac-topbar">
+          <button
+            type="button"
+            className="ac-menu-btn"
+            onClick={mobileNav.toggle}
+            aria-label="Open menu"
+            aria-expanded={mobileNav.open}
+          >
+            <List size={22} weight="bold" />
+          </button>
+          <span className="ac-mobile-title">{crumbs[crumbs.length - 1]?.label}</span>
           <nav className="ac-crumbs" aria-label="Breadcrumb">
             {crumbs.map((c, i) => (
               <React.Fragment key={c.to}>
@@ -301,6 +321,25 @@ export default function AdminLayout({ children }) {
 
         <main className="ac-content">{children}</main>
       </div>
+
+      {/* Phone tab bar */}
+      <nav className="ac-tabbar" aria-label="Admin sections">
+        <NavLink to="/admin" end className={tabCls}>
+          <LayoutGrid size={22} weight="fill" /><span>Dashboard</span>
+        </NavLink>
+        <NavLink to="/admin/products" className={tabCls}>
+          <Package size={22} weight="fill" /><span>Products</span>
+        </NavLink>
+        <NavLink to="/admin/orders" className={tabCls}>
+          <FileText size={22} weight="fill" /><span>Orders</span>
+        </NavLink>
+        <NavLink to="/admin/support" className={tabCls}>
+          <ChatsCircle size={22} weight="fill" /><span>Support</span>
+        </NavLink>
+        <button type="button" className={`ac-tab${mobileNav.open ? ' is-active' : ''}`} onClick={mobileNav.toggle}>
+          <List size={22} weight="bold" /><span>Menu</span>
+        </button>
+      </nav>
     </div>
   );
 }
@@ -313,6 +352,10 @@ function navCls({ isActive }) {
 
 function subNavCls({ isActive }) {
   return `ac-subnav-link ${isActive ? 'ac-subnav-link--active' : ''}`;
+}
+
+function tabCls({ isActive }) {
+  return `ac-tab${isActive ? ' is-active' : ''}`;
 }
 
 const LABELS = {

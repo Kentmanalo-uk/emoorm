@@ -295,3 +295,79 @@
     align-items: center;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  /* Layout already pads for the bottom nav. */
+  .support-page {
+    padding: 16px 0 24px;
+    background: #f2f2f7;
+  }
+
+  .support-intro {
+    gap: 12px;
+  }
+
+  .support-intro > div {
+    min-width: 0;
+  }
+
+  .support-intro h1 {
+    font-size: 22px;
+    line-height: 1.25;
+  }
+
+  .support-intro p {
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .support-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .support-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .support-card {
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .support-card h2 {
+    margin-bottom: 14px;
+    font-size: 17px;
+  }
+
+  .support-form input,
+  .support-form select,
+  .support-form textarea {
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .support-form-footer button {
+    border-radius: 10px;
+  }
+
+  .support-ticket strong {
+    overflow-wrap: anywhere;
+  }
+
+  .support-help-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .support-card {
+    padding: 14px;
+  }
+}

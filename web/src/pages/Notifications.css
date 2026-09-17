@@ -369,3 +369,449 @@
     align-items: flex-start;
   }
 }
+
+/* ── Mobile (≤768px / ≤480px) ── */
+@media (max-width: 768px) {
+  .notif-page {
+    background: #f2f2f7;
+    padding: 12px 0 24px;
+  }
+
+  .notif-page .notif-container {
+    padding: 0 16px;
+  }
+
+  .notif-page .notif-breadcrumbs {
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .notif-page .notif-breadcrumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+  }
+
+  /* Header: title row, then the two actions split 50/50. */
+  .notif-page .notif-header,
+  .profile-main .notif-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .notif-page .notif-header-left h1 {
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .notif-page .notif-unread-badge {
+    padding: 2px 9px;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+
+  .notif-page .notif-header-actions,
+  .profile-main .notif-header-actions {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .notif-page .notif-action-btn,
+  .profile-main .notif-action-btn {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 40px;
+    border-color: transparent;
+    border-radius: 10px;
+    font-size: 13px;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .notif-page .notif-action-danger,
+  .profile-main .notif-action-danger {
+    color: #b91c1c;
+  }
+
+  /* Filters: pill tabs, one row. */
+  .notif-page .notif-filters,
+  .profile-main .notif-filters {
+    gap: 6px;
+    margin-bottom: 12px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .notif-page .notif-filter-btn,
+  .profile-main .notif-filter-btn {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: #fff;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .notif-page .notif-filter-btn.active,
+  .profile-main .notif-filter-btn.active {
+    background: #059669;
+    color: #fff;
+  }
+
+  .notif-page .notif-filter-btn.active .notif-filter-count,
+  .profile-main .notif-filter-btn.active .notif-filter-count {
+    background: #fff;
+    color: #047857;
+  }
+
+  .notif-page .notif-list,
+  .profile-main .notif-list {
+    gap: 8px;
+  }
+
+  .notif-page .notif-item,
+  .profile-main .notif-item {
+    gap: 12px;
+    padding: 14px 8px 14px 14px;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .notif-page .notif-icon-wrap,
+  .profile-main .notif-icon-wrap {
+    width: 36px;
+    height: 36px;
+  }
+
+  .notif-page .notif-type-label,
+  .profile-main .notif-type-label {
+    font-size: 11px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .notif-page .notif-message,
+  .profile-main .notif-message {
+    margin-bottom: 4px;
+    font-size: 13.5px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  /* No hover on touch: keep the item actions visible, stacked on the right. */
+  .notif-page .notif-item-actions,
+  .profile-main .notif-item-actions {
+    flex-direction: column;
+    gap: 2px;
+    margin: -6px 0;
+    opacity: 1;
+  }
+
+  .notif-page .notif-read-btn,
+  .notif-page .notif-del-btn,
+  .profile-main .notif-read-btn,
+  .profile-main .notif-del-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+  }
+
+  .notif-page .notif-del-btn,
+  .profile-main .notif-del-btn {
+    color: #9ca3af;
+  }
+
+  .notif-page .notif-empty,
+  .profile-main .notif-empty {
+    padding: 32px 16px;
+    background: #fff;
+    border-radius: 12px;
+  }
+
+  .notif-page .notif-empty svg,
+  .profile-main .notif-empty svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 12px;
+    color: #a7f3d0;
+    opacity: 1;
+  }
+
+  .notif-page .notif-empty h2,
+  .profile-main .notif-empty h2 {
+    font-size: 16px;
+  }
+
+  .notif-page .notif-empty p,
+  .profile-main .notif-empty p {
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+
+  .notif-page .notif-show-all-btn,
+  .profile-main .notif-show-all-btn {
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .notif-page .notif-pagination,
+  .profile-main .notif-pagination {
+    gap: 10px;
+    margin-top: 16px;
+    font-size: 13px;
+  }
+
+  .notif-page .notif-page-btn,
+  .profile-main .notif-page-btn {
+    min-height: 40px;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notif-page .notif-container {
+    padding: 0 12px;
+  }
+}
+
+/* ── Mobile: match the Profile page (white card, hairline rows) ── */
+@media (max-width: 768px) {
+  .notif-page .notif-breadcrumbs {
+    display: none;
+  }
+
+  .notif-page .notif-container,
+  .profile-main .notif-page-header {
+    padding-top: 0;
+  }
+
+  /* Header: title + unread chip on one line, actions as quiet text buttons. */
+  .notif-page .notif-header,
+  .profile-main .notif-page-header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    margin-bottom: 12px;
+  }
+
+  .notif-page .notif-header-left h1,
+  .profile-main .notif-page-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .notif-page .notif-unread-badge {
+    padding: 3px 9px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #047857;
+    background: #e9f7f0;
+    border-radius: 999px;
+  }
+
+  .notif-page .notif-header-actions,
+  .profile-main .notif-header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+    width: auto;
+    margin-left: auto;
+  }
+
+  .notif-page .notif-action-btn,
+  .profile-main .notif-action-btn {
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #4b5563;
+    background: #fff;
+    border: 0;
+    border-radius: 8px;
+  }
+
+  .notif-page .notif-action-danger,
+  .profile-main .notif-action-danger {
+    color: #b91c1c;
+  }
+
+  /* Filter pills */
+  .notif-page .notif-filters,
+  .profile-main .notif-filters {
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+
+  .notif-page .notif-filter-btn,
+  .profile-main .notif-filter-btn {
+    min-height: 36px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4b5563;
+    background: #fff;
+    border: 0;
+    border-radius: 999px;
+  }
+
+  .notif-page .notif-filter-btn.active,
+  .profile-main .notif-filter-btn.active {
+    color: #fff;
+    background: #059669;
+  }
+
+  /* One white card, rows split by hairlines — like Profile's lists. */
+  .notif-page .notif-list,
+  .profile-main .notif-list {
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+    border-radius: 12px;
+  }
+
+  .notif-page .notif-item,
+  .profile-main .notif-item {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 14px 14px 12px;
+    background: #fff;
+    border-radius: 0;
+  }
+
+  .notif-page .notif-item + .notif-item,
+  .profile-main .notif-item + .notif-item {
+    border-top: 1px solid #f0f1f2;
+  }
+
+  /* Unread: white like the rest, marked by the dot and stronger text. */
+  .notif-page .notif-item.unread,
+  .profile-main .notif-item.unread,
+  .notif-page .notif-item.unread:hover,
+  .profile-main .notif-item.unread:hover {
+    background: #fff;
+  }
+
+  .notif-page .notif-item:active,
+  .profile-main .notif-item:active {
+    background: #f7f8f9;
+  }
+
+  .notif-page .notif-icon-wrap,
+  .profile-main .notif-icon-wrap {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 50%;
+  }
+
+  .notif-page .notif-title-row,
+  .profile-main .notif-title-row {
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+
+  .notif-page .notif-type-label,
+  .profile-main .notif-type-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .notif-page .notif-message,
+  .profile-main .notif-message {
+    font-size: 14px;
+    line-height: 1.45;
+    color: #4b5563;
+  }
+
+  .notif-page .notif-item.unread .notif-message,
+  .profile-main .notif-item.unread .notif-message {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .notif-page .notif-time,
+  .profile-main .notif-time {
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: #9ca3af;
+  }
+
+  /* Row actions: quiet grey icons, stacked at the right. */
+  .notif-page .notif-item-actions,
+  .profile-main .notif-item-actions {
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 4px;
+    opacity: 1;
+  }
+
+  .notif-page .notif-read-btn,
+  .notif-page .notif-del-btn,
+  .profile-main .notif-read-btn,
+  .profile-main .notif-del-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    color: #9ca3af;
+    background: none;
+    border: 0;
+    border-radius: 8px;
+  }
+
+  .notif-page .notif-del-btn:active,
+  .profile-main .notif-del-btn:active {
+    color: #b91c1c;
+    background: #fef2f2;
+  }
+
+  /* Empty state to match the other pages. */
+  .notif-page .notif-empty,
+  .profile-main .notif-empty {
+    padding: 36px 20px 40px;
+    background: #fff;
+    border-radius: 12px;
+  }
+
+  .notif-page .notif-empty h2,
+  .profile-main .notif-empty h2 {
+    font-size: 16px;
+  }
+
+  .notif-page .notif-empty p,
+  .profile-main .notif-empty p {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Actions sit on their own line, compact and right-aligned. */
+  .notif-page .notif-header-actions,
+  .profile-main .notif-header-actions {
+    justify-content: flex-end;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .notif-page .notif-action-btn,
+  .profile-main .notif-action-btn {
+    flex: 0 0 auto;
+    gap: 5px;
+    padding: 0 12px;
+  }
+}
