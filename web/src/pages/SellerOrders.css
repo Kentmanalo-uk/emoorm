@@ -541,3 +541,67 @@
     min-width: 620px;
   }
 }
+
+/* Payment verification (prepaid orders) */
+.so-payment-flag {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.so-payment-review {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: #fffbeb;
+}
+
+.so-payment-review p {
+  margin: 0;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.so-payment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.so-payment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.so-payment-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.so-payment-btn--approve {
+  color: #fff;
+  background: #059669;
+}
+
+.so-payment-btn--approve:hover:not(:disabled) {
+  background: #047857;
+}
+
+.so-payment-btn--reject {
+  color: #b91c1c;
+  background: #fff;
+  border-color: #fca5a5;
+}
+
+.so-payment-btn--reject:hover:not(:disabled) {
+  background: #fef2f2;
+}

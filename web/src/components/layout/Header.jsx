@@ -8,6 +8,7 @@ import {
 } from '@phosphor-icons/react';
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
+import useAccountSwitchStore from '../../store/accountSwitchStore';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import LanguageSwitcher from '../LanguageSwitcher';
@@ -92,6 +93,7 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuthStore();
+  const startAccountSwitch = useAccountSwitchStore((s) => s.start);
   const { getItemCount } = useCartStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -252,6 +254,14 @@ const Header = () => {
   const showSuggestions =
     searchFocused && (filteredRecents.length > 0 || filteredPopular.length > 0);
 
+  // Seller links play the account-switch transition. Modified clicks
+  // (new tab, etc.) keep the browser's default behaviour.
+  const enterSeller = (path) => (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    startAccountSwitch('seller', path);
+  };
+
   return (
     <>
       {/* Top Bar */}
@@ -266,7 +276,7 @@ const Header = () => {
             {isAuthenticated && (user?.role === 'MUNICIPAL_ADMIN' || user?.role === 'SUPER_ADMIN') ? (
               <Link to="/admin" className="topbar-link topbar-link-sell">ADMIN PANEL</Link>
             ) : isAuthenticated && user?.role === 'SELLER' ? (
-              <Link to="/seller" className="topbar-link topbar-link-sell">SELLER DASHBOARD</Link>
+              <Link to="/seller" className="topbar-link topbar-link-sell" onClick={enterSeller('/seller')}>SELLER DASHBOARD</Link>
             ) : (
               <Link to="/sell" className="topbar-link topbar-link-sell">SELL ON EMOORM</Link>
             )}
@@ -302,7 +312,7 @@ const Header = () => {
 
                       {recentNotifs.length === 0 ? (
                         <div className="notif-dropdown-empty">
-                          <BellOff size={28} />
+                          <BellOff size={28} weight="fill" />
                           <p>You're all caught up.</p>
                         </div>
                       ) : (
@@ -419,9 +429,9 @@ const Header = () => {
                       {isAuthenticated && user?.role === 'SELLER' && (
                         <>
                           <h4 className="account-dropdown-col-sub">For Sellers</h4>
-                          <Link to="/seller">Seller Center</Link>
-                          <Link to="/seller/products">My Products</Link>
-                          <Link to="/seller/orders">Store Orders</Link>
+                          <Link to="/seller" onClick={enterSeller('/seller')}>Seller Center</Link>
+                          <Link to="/seller/products" onClick={enterSeller('/seller/products')}>My Products</Link>
+                          <Link to="/seller/orders" onClick={enterSeller('/seller/orders')}>Store Orders</Link>
                         </>
                       )}
                       {isAuthenticated && (user?.role === 'MUNICIPAL_ADMIN' || user?.role === 'SUPER_ADMIN') && (

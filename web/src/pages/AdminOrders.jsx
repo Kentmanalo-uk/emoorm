@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Eye, Package, X, CheckCircle, XCircle } from '@phosphor-icons/react';
+import { Eye, Package, X, CheckCircle, XCircle, DownloadSimple } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import DetailDrawer from '../components/admin/DetailDrawer';
+import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -32,6 +35,7 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -51,6 +55,32 @@ export default function AdminOrders() {
   };
 
   useEffect(() => { load(); }, [page, status, buyerId, storeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = {};
+      if (status) params.status = status;
+      if (buyerId) params.buyerId = buyerId;
+      if (storeId) params.storeId = storeId;
+      const rows = await fetchAllPages('/orders', params);
+      downloadCsv(`orders-${new Date().toISOString().slice(0, 10)}.csv`, [
+        { header: 'Order Number', value: (o) => o.orderNumber },
+        { header: 'Date', value: (o) => csvDate(o.createdAt) },
+        { header: 'Buyer', value: (o) => o.buyer?.fullName },
+        { header: 'Store', value: (o) => o.store?.name },
+        { header: 'Status', value: (o) => o.status },
+        { header: 'Payment Method', value: (o) => o.paymentMethod },
+        { header: 'Payment Status', value: (o) => o.paymentStatus },
+        { header: 'Total', value: (o) => Number(o.total).toFixed(2) },
+      ], rows);
+      toast.success(`Exported ${rows.length} rows`);
+    } catch (err) {
+      toast.error(err.message || 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const viewOrder = async (orderId) => {
     try {
@@ -84,16 +114,21 @@ export default function AdminOrders() {
       <div className="admin-card">
         <div className="admin-card-header">
           <h2 className="admin-card-title">Orders {pagination.total > 0 && <span style={{ fontWeight: 400, color: '#64748b', fontSize: 14 }}>({pagination.total})</span>}</h2>
-          <select className="admin-select" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
-            <option value="">All statuses</option>
-            {STATUSES.map((value) => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}
-          </select>
+          <div className="admin-toolbar">
+            <select className="admin-select" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
+              <option value="">All statuses</option>
+              {STATUSES.map((value) => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}
+            </select>
+            <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
+              <DownloadSimple size={13} /> {exporting ? 'Exporting…' : 'Export CSV'}
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <Skeleton.Table cols={7} rows={7} />
         ) : orders.length === 0 ? (
-          <div className="admin-empty"><Package size={36} /><p>No orders found</p></div>
+          <div className="admin-empty"><Package size={36} weight="fill" /><p>No orders found</p></div>
         ) : (
           <>
             <div className="admin-table-wrap">
@@ -103,7 +138,13 @@ export default function AdminOrders() {
                 </thead>
                 <tbody>
                   {orders.map((order) => (
-                    <tr key={order.id}>
+                    <tr
+                      key={order.id}
+                      className="admin-row-clickable"
+                      tabIndex={0}
+                      onClick={rowOpen(() => viewOrder(order.id))}
+                      onKeyDown={rowKeyOpen(() => viewOrder(order.id))}
+                    >
                       <td><strong>{order.orderNumber}</strong><div style={{ color: '#94a3b8', fontSize: 11 }}>{new Date(order.createdAt).toLocaleDateString('en-PH')}</div></td>
                       <td>{order.buyer?.fullName || '—'}</td>
                       <td>{order.store?.name || '—'}</td>
@@ -127,9 +168,9 @@ export default function AdminOrders() {
         )}
       </div>
 
-      {selected && (
-        <div className="admin-detail-overlay" onClick={() => setSelected(null)}>
-          <div className="admin-detail-panel" onClick={(event) => event.stopPropagation()}>
+      <DetailDrawer item={selected} onClose={() => setSelected(null)}>
+        {(selected) => (
+          <>
             <div className="admin-detail-header"><h3>{selected.orderNumber}</h3><button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button></div>
             <div className="admin-detail-body">
               <div className="admin-detail-section">
@@ -161,9 +202,9 @@ export default function AdminOrders() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </DetailDrawer>
     </AdminLayout>
   );
 }

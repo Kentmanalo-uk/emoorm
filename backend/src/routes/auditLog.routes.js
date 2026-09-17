@@ -6,7 +6,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 router.get(
   '/',
   authenticate,
-  authorize('SUPER_ADMIN'),
+  authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
   auditLogController.getAuditLogs
 );
 

@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
-  ArrowCounterClockwise as ReturnsIcon,
+  ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
+import useAccountSwitchStore from '../../store/accountSwitchStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
@@ -34,6 +35,10 @@ export default function SellerLayout() {
     || location.pathname === '/seller/shop-profile'
   );
   const [unreadCount, setUnreadCount] = useState(0);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
+  const startAccountSwitch = useAccountSwitchStore((s) => s.start);
+  const rememberShop = useAccountSwitchStore((s) => s.setShop);
 
   if (!isAuthenticated) return <Navigate to="/login?redirect=/seller" replace />;
   if (user?.role !== 'SELLER' && user?.role !== 'SUPER_ADMIN') {
@@ -59,18 +64,44 @@ export default function SellerLayout() {
     return () => { cancelled = true; };
   }, []);
 
+  // Keep the switch animation's shop logo in sync (also after profile edits).
+  useEffect(() => {
+    if (store) rememberShop(store);
+  }, [store, rememberShop]);
+
+  useEffect(() => {
+    if (!accountOpen) return undefined;
+    const onDown = (event) => {
+      if (accountRef.current && !accountRef.current.contains(event.target)) setAccountOpen(false);
+    };
+    const onKey = (event) => { if (event.key === 'Escape') setAccountOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [accountOpen]);
+
+  const switchToPersonal = () => {
+    setAccountOpen(false);
+    startAccountSwitch('personal', '/profile');
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const initial = (user?.fullName || user?.email || 'S').trim().charAt(0).toUpperCase();
-  const shortName = user?.fullName
-    ? user.fullName.length > 12 ? user.fullName.slice(0, 12) + '…' : user.fullName
-    : 'Seller';
-  const shortEmail = user?.email
-    ? user.email.length > 18 ? user.email.slice(0, 18) + '…' : user.email
-    : '';
+  const shopName = store?.name || 'My Shop';
+  const shopInitial = shopName.trim().charAt(0).toUpperCase();
+  const personalName = user?.fullName || user?.email || 'Personal account';
+  const personalInitial = personalName.trim().charAt(0).toUpperCase();
+  const shopAvatar = store?.logo ? (
+    <img src={resolveImg(store.logo)} alt="" className="sc-user-avatar" />
+  ) : (
+    <span className="sc-user-avatar sc-user-avatar--fallback">{shopInitial}</span>
+  );
 
   const crumbs = buildCrumbs(location.pathname);
 
@@ -110,6 +141,9 @@ export default function SellerLayout() {
             </NavLink>
             <NavLink to="/seller/messages" className={navCls} title="Messages">
               <MessageSquare size={17} weight="fill" /> <span>Messages</span>
+            </NavLink>
+            <NavLink to="/seller/support" className={navCls} title="Admin messages">
+              <Headset size={17} weight="fill" /> <span>Admin</span>
             </NavLink>
 
             {/* Products group */}
@@ -182,18 +216,51 @@ export default function SellerLayout() {
             )}
           </nav>
 
-          <Link to="/profile" className="sc-user-card" title="View profile">
-            {user?.profilePhoto ? (
-              <img src={resolveImg(user.profilePhoto)} alt="" className="sc-user-avatar" />
-            ) : (
-              <span className="sc-user-avatar sc-user-avatar--fallback">{initial}</span>
-            )}
-            <span className="sc-user-meta">
-              <strong>{shortName}</strong>
-              <span>{shortEmail}</span>
-            </span>
-            <ChevronRight size={14} className="sc-user-caret" />
-          </Link>
+          <div className={`sc-account${accountOpen ? ' is-open' : ''}`} ref={accountRef}>
+            <div className="sc-account-menu" role="menu" aria-label="Account" aria-hidden={!accountOpen}>
+              <div className="sc-account-menu-head">
+                {shopAvatar}
+                <span className="sc-account-menu-meta">
+                  <strong>{shopName}</strong>
+                  <span>Seller account</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                className="sc-account-switch"
+                tabIndex={accountOpen ? 0 : -1}
+                onClick={switchToPersonal}
+              >
+                {user?.profilePhoto ? (
+                  <img src={resolveImg(user.profilePhoto)} alt="" className="sc-account-switch-avatar" />
+                ) : (
+                  <span className="sc-account-switch-avatar sc-account-switch-avatar--fallback">{personalInitial}</span>
+                )}
+                <span className="sc-account-menu-meta">
+                  <strong className="sc-account-switch-label">Switch to Personal Account</strong>
+                  <span>{personalName}</span>
+                </span>
+                <ArrowsLeftRight size={15} weight="bold" className="sc-account-switch-icon" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="sc-user-card"
+              title={shopName}
+              aria-haspopup="menu"
+              aria-expanded={accountOpen}
+              onClick={() => setAccountOpen((open) => !open)}
+            >
+              {shopAvatar}
+              <span className="sc-user-meta">
+                <strong>{shopName}</strong>
+                <span>Seller account</span>
+              </span>
+              <ChevronRight size={14} className="sc-user-caret" />
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -256,6 +323,7 @@ const LABELS = {
   '/seller/orders': 'My Orders',
   '/seller/returns': 'Returns & refunds',
   '/seller/messages': 'Messages',
+  '/seller/support': 'Admin Messages',
   '/seller/products': 'Products',
   '/seller/products/new': 'New Product',
   '/seller/reviews': 'Reviews',

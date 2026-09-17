@@ -14,8 +14,10 @@ const auditLogRepository = require('../repositories/auditLog.repository');
  * @param {String} [params.entityId]
  * @param {Object} [params.details]
  * @param {Object} [params.req] - optional Express req for IP/UA capture
+ * @param {String} [params.municipalityId] - municipality the action concerns;
+ *   defaults to a municipal admin actor's own municipality
  */
-const record = async ({ actor, action, entity, entityId, details, req }) => {
+const record = async ({ actor, action, entity, entityId, details, req, municipalityId }) => {
   try {
     await auditLogRepository.create({
       userId: actor?.id || null,
@@ -26,6 +28,9 @@ const record = async ({ actor, action, entity, entityId, details, req }) => {
       details: details || null,
       ipAddress: req?.ip || req?.headers?.['x-forwarded-for'] || null,
       userAgent: req?.headers?.['user-agent'] || null,
+      municipalityId: municipalityId
+        || (actor?.role === 'MUNICIPAL_ADMIN' ? actor.municipalityId : null)
+        || null,
     });
   } catch (err) {
     console.error('[auditLog] failed:', err.message);

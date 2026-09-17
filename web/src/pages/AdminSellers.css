@@ -258,3 +258,102 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Bulk selection (AdminProducts / AdminSellers) */
+.admin-check-col {
+  width: 36px;
+  text-align: center;
+}
+
+.admin-check-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #059669;
+  cursor: pointer;
+}
+
+.admin-bulk-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #ecfdf5;
+  border-bottom: 1px solid #a7f3d0;
+  font-size: 13px;
+  color: #065f46;
+}
+
+.admin-bulk-bar > span {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+/* Detail drawer: fade the backdrop, slide the panel in from the right. */
+@keyframes admin-drawer-backdrop-in {
+  from { background: rgba(0, 0, 0, 0); }
+}
+
+@keyframes admin-drawer-backdrop-out {
+  to { background: rgba(0, 0, 0, 0); }
+}
+
+@keyframes admin-drawer-panel-in {
+  from {
+    opacity: 0.6;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes admin-drawer-panel-out {
+  to {
+    opacity: 0.6;
+    transform: translateX(100%);
+  }
+}
+
+.admin-detail-overlay {
+  animation: admin-drawer-backdrop-in 0.22s ease-out both;
+}
+
+.admin-detail-overlay .admin-detail-panel {
+  animation: admin-drawer-panel-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.admin-detail-overlay.is-closing {
+  animation: admin-drawer-backdrop-out 0.22s ease-in forwards;
+  pointer-events: none;
+}
+
+.admin-detail-overlay.is-closing .admin-detail-panel {
+  animation: admin-drawer-panel-out 0.22s ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-detail-overlay,
+  .admin-detail-overlay .admin-detail-panel,
+  .admin-detail-overlay.is-closing,
+  .admin-detail-overlay.is-closing .admin-detail-panel {
+    animation-duration: 0.01s;
+  }
+}
+
+/* Clickable table rows open the detail drawer */
+.admin-row-clickable {
+  cursor: pointer;
+}
+
+.admin-row-clickable:hover td {
+  background: #f8faf9;
+}
+
+.admin-row-clickable:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: -2px;
+}
+
+.admin-detail-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

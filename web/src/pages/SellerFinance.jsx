@@ -107,7 +107,7 @@ export default function SellerFinance() {
             </div>
           ) : transactions.length === 0 ? (
             <div className="seller-empty">
-              <Wallet size={36} />
+              <Wallet size={36} weight="fill" />
               <p>No completed orders yet.</p>
             </div>
           ) : (

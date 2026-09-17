@@ -10,7 +10,7 @@ const ProfileReviews = () => (
 
     <div className="profile-section">
       <div className="empty-state">
-        <Star size={40} strokeWidth={1.5} />
+        <Star size={40} strokeWidth={1.5} weight="fill" />
         <p className="empty-state-text">No reviews yet</p>
         <p className="empty-state-hint">
           Once your order is completed you can rate the product and leave a review.

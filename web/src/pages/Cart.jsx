@@ -5,15 +5,19 @@ import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
+import useIdentityGate from '../hooks/useIdentityGate';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
 import './Cart.css';
 
+const SUGGESTION_COUNT = 12;
+
 const Cart = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuthStore();
+  const { requireVerifiedIdentity, identityDialog } = useIdentityGate();
   const {
     items,
     getItemCount,
@@ -27,37 +31,31 @@ const Cart = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
+  // Refetch only when the set of products changes, not on quantity edits.
+  const cartProductKey = [...new Set(items.map((i) => i.productId || i.id))].sort().join(',');
+  const cartCategoryKey = [...new Set(items.map((i) => i.categoryId).filter(Boolean))].sort().join(',');
+
   useEffect(() => {
     let cancelled = false;
     const fetchSuggestions = async () => {
-      if (items.length === 0) {
-        setSuggestions([]);
-        return;
-      }
       setSuggestionsLoading(true);
       try {
-        const cartIds = items.map((i) => i.id);
-        const categoryIds = [...new Set(items.map((i) => i.categoryId).filter(Boolean))];
-
-        let fetched = [];
-        if (categoryIds.length > 0) {
-          // Fetch products for each category in the cart, cap for performance.
-          const limit = 4 - Math.min(4, cartIds.length);
-          const results = await Promise.all(
-            categoryIds.slice(0, 2).map((catId) =>
-              axios.get('/products', { params: { categoryId: catId, pageSize: 8 } })
-            )
-          );
-          fetched = results.flatMap((r) => r.data || []);
-        }
-
+        const inCart = new Set(cartProductKey ? cartProductKey.split(',') : []);
+        const categoryIds = cartCategoryKey ? cartCategoryKey.split(',').slice(0, 2) : [];
+        const requests = [
+          ...categoryIds.map((categoryId) => axios.get('/products', { params: { categoryId, pageSize: SUGGESTION_COUNT } })),
+          // Newest products fill the rest (and cover empty carts).
+          axios.get('/products', { params: { pageSize: SUGGESTION_COUNT + inCart.size, sortBy: 'createdAt', sortOrder: 'desc' } }),
+        ];
+        const results = await Promise.allSettled(requests);
         const unique = new Map();
-        fetched.forEach((p) => {
-          if (!cartIds.includes(p.id)) unique.set(p.id, p);
-        });
-        const list = [...unique.values()].slice(0, limit);
-
-        if (!cancelled) setSuggestions(list);
+        results
+          .filter((r) => r.status === 'fulfilled')
+          .flatMap((r) => r.value.data || [])
+          .forEach((product) => {
+            if (!inCart.has(product.id) && !unique.has(product.id)) unique.set(product.id, product);
+          });
+        if (!cancelled) setSuggestions([...unique.values()].slice(0, SUGGESTION_COUNT));
       } catch (error) {
         console.error('Failed to fetch suggestions:', error);
         if (!cancelled) setSuggestions([]);
@@ -68,7 +66,7 @@ const Cart = () => {
 
     fetchSuggestions();
     return () => { cancelled = true; };
-  }, [items]);
+  }, [cartProductKey, cartCategoryKey]);
 
   const itemCount = getItemCount();
   const cartSearch = (searchParams.get('cartSearch') || '').trim().toLowerCase();
@@ -201,7 +199,7 @@ const Cart = () => {
     }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!isAuthenticated) {
       // Redirect to login with return URL
       navigate('/login?redirect=/checkout');
@@ -216,6 +214,7 @@ const Cart = () => {
       toast.error('Checkout is limited to one store per order. Select items from one store only.');
       return;
     }
+    if (!(await requireVerifiedIdentity())) return;
     navigate('/checkout', { state: { selectedIds, voucherCode: appliedVoucher?.voucher?.code || null } });
   };
 
@@ -233,13 +232,67 @@ const Cart = () => {
     return acc;
   }, {});
 
+  const suggestionsSection = (
+    <>
+      {(suggestions.length > 0 || suggestionsLoading) && (
+        <div className="cart-suggestions">
+          <div className="cart-suggestions-head">
+            <h2 className="cart-suggestions-title">You may also like</h2>
+            <Link to="/products" className="cart-suggestions-more">See more</Link>
+          </div>
+          {suggestionsLoading ? (
+            <div className="cart-suggestions-grid">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="cart-suggestion-card cart-suggestion-skel">
+                  <div className="cart-suggestion-skel-img" />
+                  <div className="cart-suggestion-skel-line" />
+                  <div className="cart-suggestion-skel-line short" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="cart-suggestions-grid">
+              {suggestions.map((product) => (
+                <Link
+                  key={product.id}
+                  to={`/product/${product.slug}`}
+                  className="cart-suggestion-card"
+                >
+                  <div className="cart-suggestion-image">
+                    <ProductImage src={product.images?.[0]} alt={product.name} />
+                  </div>
+                  <div className="cart-suggestion-info">
+                    <h3 className="cart-suggestion-name">{product.name}</h3>
+                    <span className="cart-suggestion-price">
+                      ₱{Number(product.price).toFixed(2)}
+                    </span>
+                    <div className="cart-suggestion-rating">
+                      <div className="cart-suggestion-stars">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                          <Star key={i} size={11} weight="fill" color="#f59e0b" />
+                        ))}
+                      </div>
+                      <span className="cart-suggestion-review-count">
+                        ({product.reviewCount ?? 0})
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+
   if (items.length === 0) {
     return (
       <Layout>
         <div className="cart-page">
           <div className="container">
             <div className="cart-empty">
-              <ShoppingCart size={64} />
+              <ShoppingCart size={64} weight="fill" />
               <h2>Your cart is empty</h2>
               <p>Start shopping to add items to your cart</p>
               <Link to="/products" className="btn-continue-shopping">
@@ -247,6 +300,7 @@ const Cart = () => {
                 Browse Products
               </Link>
             </div>
+            {suggestionsSection}
           </div>
         </div>
       </Layout>
@@ -299,7 +353,7 @@ const Cart = () => {
             <div className="cart-items-section">
               {cartSearch && visibleItems.length === 0 && (
                 <div className="cart-search-empty">
-                  <Search size={30} />
+                  <Search size={30} weight="fill" />
                   <h2>No cart items found</h2>
                   <p>Try another product or store name.</p>
                 </div>
@@ -540,62 +594,10 @@ const Cart = () => {
             </div>
           </div>
 
-          {/* You may also like suggestions */}
-          {(suggestions.length > 0 || suggestionsLoading) && (
-            <div className="cart-suggestions">
-              <div className="cart-suggestions-head">
-                <h2 className="cart-suggestions-title">You may also like</h2>
-                <Link to="/products" className="cart-suggestions-more">See more</Link>
-              </div>
-              {suggestionsLoading ? (
-                <div className="cart-suggestions-grid">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="cart-suggestion-card cart-suggestion-skel">
-                      <div className="cart-suggestion-skel-img" />
-                      <div className="cart-suggestion-skel-line" />
-                      <div className="cart-suggestion-skel-line short" />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="cart-suggestions-grid">
-                  {suggestions.map((product) => (
-                    <Link
-                      key={product.id}
-                      to={`/product/${product.slug}`}
-                      className="cart-suggestion-card"
-                    >
-                      <div className="cart-suggestion-image">
-                        <img
-                          src={resolveImg(product.images?.[0]) || '/placeholder-product.png'}
-                          alt={product.name}
-                          onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
-                        />
-                      </div>
-                      <div className="cart-suggestion-info">
-                        <h3 className="cart-suggestion-name">{product.name}</h3>
-                        <span className="cart-suggestion-price">
-                          ₱{Number(product.price).toFixed(2)}
-                        </span>
-                        <div className="cart-suggestion-rating">
-                          <div className="cart-suggestion-stars">
-                            {[0, 1, 2, 3, 4].map((i) => (
-                              <Star key={i} size={11} weight="fill" color="#f59e0b" />
-                            ))}
-                          </div>
-                          <span className="cart-suggestion-review-count">
-                            ({product.reviewCount ?? 0})
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {suggestionsSection}
         </div>
       </div>
+      {identityDialog}
     </Layout>
   );
 };

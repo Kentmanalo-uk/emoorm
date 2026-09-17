@@ -140,6 +140,10 @@ const getForActor = async (id, actor) => {
   const isSeller = actor.role === 'SELLER' && actor.storeId && actor.storeId === request.storeId;
   const isAdmin = actor.role === 'SUPER_ADMIN' || actor.role === 'MUNICIPAL_ADMIN';
   if (!isBuyer && !isSeller && !isAdmin) throw new ApiError('Not authorized', 403);
+  if (!isBuyer && !isSeller && actor.role === 'MUNICIPAL_ADMIN'
+    && request.store?.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only view return requests in your assigned municipality', 403);
+  }
   return request;
 };
 

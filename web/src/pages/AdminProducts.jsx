@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Package, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
-  Storefront as Store, Tag, Archive
+  Storefront as Store, Tag, Archive, ArrowCounterClockwise,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import DetailDrawer from '../components/admin/DetailDrawer';
+import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import ReasonDialog from '../components/admin/ReasonDialog';
 import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
@@ -31,6 +34,9 @@ export default function AdminProducts() {
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [selected, setSelected] = useState(null);
   const [processing, setProcessing] = useState(null);
+  const [reasonAction, setReasonAction] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -38,6 +44,7 @@ export default function AdminProducts() {
 
   const fetchProducts = async () => {
     setIsLoading(true);
+    setSelectedIds([]);
     try {
       const params = { pageSize: 20, page };
       if (statusFilter) params.status = statusFilter;
@@ -68,33 +75,84 @@ export default function AdminProducts() {
     }
   };
 
-  const handleSuspend = async (productId) => {
-    if (!window.confirm('Suspend this product? It will be hidden from buyers.')) return;
+  // Undo a suspension or archive.
+  const handleRestore = async (productId) => {
     setProcessing(productId);
     try {
-      await axios.post(`/products/${productId}/suspend`);
-      toast.success('Product suspended');
+      await axios.post(`/products/${productId}/restore`);
+      toast.success('Product restored — visible to buyers again');
       setSelected(null);
       fetchProducts();
     } catch (err) {
-      toast.error(err.message || 'Failed to suspend');
+      toast.error(err.message || 'Failed to restore product');
     } finally {
       setProcessing(null);
     }
   };
 
-  const handleArchive = async (productId) => {
-    if (!window.confirm('Archive this product?')) return;
+  // reasonAction: { type: 'suspend' | 'archive' | 'bulk-suspend', productId? }
+  const handleSuspend = (productId) => setReasonAction({ type: 'suspend', productId });
+  const handleArchive = (productId) => setReasonAction({ type: 'archive', productId });
+
+  const summarize = (results, verb) => {
+    const done = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.length - done;
+    const msg = `${verb}: ${done} done, ${failed} failed`;
+    if (failed) toast.error(msg); else toast.success(msg);
+  };
+
+  const handleReasonConfirm = async (reason) => {
+    const action = reasonAction;
+    if (!action) return;
+    const body = reason ? { reason } : {};
+    if (action.type === 'bulk-suspend') {
+      setBulkProcessing(true);
+      try {
+        const targets = products.filter((p) => selectedIds.includes(p.id) && (p.status === 'PENDING' || p.status === 'APPROVED'));
+        const results = await Promise.allSettled(targets.map((p) => axios.post(`/products/${p.id}/suspend`, body)));
+        summarize(results, 'Suspend');
+        setSelectedIds([]);
+        setReasonAction(null);
+        fetchProducts();
+      } finally {
+        setBulkProcessing(false);
+      }
+      return;
+    }
+    const { productId, type } = action;
     setProcessing(productId);
     try {
-      await axios.post(`/products/${productId}/archive`);
-      toast.success('Product archived');
+      await axios.post(`/products/${productId}/${type}`, body);
+      toast.success(type === 'suspend' ? 'Product suspended' : 'Product archived');
+      setReasonAction(null);
       setSelected(null);
       fetchProducts();
     } catch (err) {
-      toast.error(err.message || 'Failed to archive');
+      toast.error(err.message || `Failed to ${type}`);
     } finally {
       setProcessing(null);
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const allSelected = products.length > 0 && products.every((p) => selectedIds.includes(p.id));
+  const toggleSelectAll = () => setSelectedIds(allSelected ? [] : products.map((p) => p.id));
+  const selectedProducts = products.filter((p) => selectedIds.includes(p.id));
+  const selectedPending = selectedProducts.filter((p) => p.status === 'PENDING');
+  const selectedSuspendable = selectedProducts.filter((p) => p.status === 'PENDING' || p.status === 'APPROVED');
+
+  const handleBulkApprove = async () => {
+    if (selectedPending.length === 0) return;
+    setBulkProcessing(true);
+    try {
+      const results = await Promise.allSettled(selectedPending.map((p) => axios.post(`/products/${p.id}/approve`)));
+      summarize(results, 'Approve');
+      setSelectedIds([]);
+      fetchProducts();
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
@@ -144,15 +202,42 @@ export default function AdminProducts() {
           <Skeleton.Table cols={6} rows={6} />
         ) : products.length === 0 ? (
           <div className="admin-empty">
-            <Package size={36} />
+            <Package size={36} weight="fill" />
             <p>No {statusFilter.toLowerCase()} products</p>
           </div>
         ) : (
           <>
+            {selectedIds.length > 0 && (
+              <div className="admin-bulk-bar">
+                <span>{selectedIds.length} selected</span>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-green"
+                  disabled={bulkProcessing || selectedPending.length === 0}
+                  onClick={handleBulkApprove}
+                >
+                  <CheckCircle size={13} /> Approve selected ({selectedPending.length})
+                </button>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-red"
+                  disabled={bulkProcessing || selectedSuspendable.length === 0}
+                  onClick={() => setReasonAction({ type: 'bulk-suspend' })}
+                >
+                  <XCircle size={13} /> Suspend selected ({selectedSuspendable.length})
+                </button>
+                <button type="button" className="admin-btn admin-btn-gray" disabled={bulkProcessing} onClick={() => setSelectedIds([])}>
+                  Clear
+                </button>
+              </div>
+            )}
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
                   <tr>
+                    <th className="admin-check-col">
+                      <input type="checkbox" aria-label="Select all on this page" checked={allSelected} onChange={toggleSelectAll} />
+                    </th>
                     <th>Product</th>
                     <th>Store</th>
                     <th>Category</th>
@@ -166,7 +251,21 @@ export default function AdminProducts() {
                   {products.map((p) => {
                     const img = images(p)[0];
                     return (
-                      <tr key={p.id}>
+                      <tr
+                      key={p.id}
+                      className="admin-row-clickable"
+                      tabIndex={0}
+                      onClick={rowOpen(() => setSelected(p))}
+                      onKeyDown={rowKeyOpen(() => setSelected(p))}
+                    >
+                        <td className="admin-check-col">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${p.name}`}
+                            checked={selectedIds.includes(p.id)}
+                            onChange={() => toggleSelect(p.id)}
+                          />
+                        </td>
                         <td>
                           <div className="admin-product-cell">
                             {img
@@ -211,6 +310,15 @@ export default function AdminProducts() {
                                 <XCircle size={13} /> Suspend
                               </button>
                             )}
+                            {(p.status === 'SUSPENDED' || p.status === 'ARCHIVED') && (
+                              <button
+                                className="admin-btn admin-btn-green"
+                                disabled={processing === p.id}
+                                onClick={() => handleRestore(p.id)}
+                              >
+                                <ArrowCounterClockwise size={13} /> {p.status === 'SUSPENDED' ? 'Unsuspend' : 'Restore'}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -232,9 +340,9 @@ export default function AdminProducts() {
       </div>
 
       {/* Detail panel */}
-      {selected && (
-        <div className="admin-detail-overlay" onClick={() => setSelected(null)}>
-          <div className="admin-detail-panel" onClick={(e) => e.stopPropagation()}>
+      <DetailDrawer item={selected} onClose={() => setSelected(null)}>
+        {(selected) => (
+          <>
             <div className="admin-detail-header">
               <h3>Product Details</h3>
               <button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button>
@@ -263,6 +371,12 @@ export default function AdminProducts() {
                     <label>Description</label>
                     <p style={{ whiteSpace: 'pre-wrap' }}>{selected.description || '—'}</p>
                   </div>
+                  {selected.moderationNote && (
+                    <div className="admin-detail-full">
+                      <label>Moderation Note</label>
+                      <p style={{ whiteSpace: 'pre-wrap' }}>{selected.moderationNote}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -294,9 +408,42 @@ export default function AdminProducts() {
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
+
+            {(selected.status === 'SUSPENDED' || selected.status === 'ARCHIVED') && (
+              <div className="admin-detail-footer">
+                <button
+                  className="admin-btn admin-btn-green"
+                  disabled={processing === selected.id}
+                  onClick={() => handleRestore(selected.id)}
+                >
+                  <ArrowCounterClockwise size={15} />
+                  {selected.status === 'SUSPENDED' ? 'Unsuspend product' : 'Restore product'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </DetailDrawer>
+      <ReasonDialog
+        open={Boolean(reasonAction)}
+        title={
+          reasonAction?.type === 'archive' ? 'Archive product?'
+            : reasonAction?.type === 'bulk-suspend' ? `Suspend ${selectedSuspendable.length} product(s)?`
+              : 'Suspend product?'
+        }
+        message={
+          reasonAction?.type === 'archive'
+            ? 'The product will be archived. You may add an optional note for the seller.'
+            : 'Suspended products are hidden from buyers. The seller will see this reason.'
+        }
+        confirmLabel={reasonAction?.type === 'archive' ? 'Archive' : 'Suspend'}
+        placeholder={reasonAction?.type === 'archive' ? 'Reason (optional)' : 'Reason for suspension'}
+        required={reasonAction?.type !== 'archive'}
+        danger={reasonAction?.type !== 'archive'}
+        loading={bulkProcessing || (reasonAction?.productId != null && processing === reasonAction.productId)}
+        onConfirm={handleReasonConfirm}
+        onCancel={() => setReasonAction(null)}
+      />
     </AdminLayout>
   );
 }

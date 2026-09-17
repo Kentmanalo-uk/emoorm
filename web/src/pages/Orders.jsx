@@ -72,7 +72,7 @@ const Orders = () => {
   const fetchOrders = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get('/orders/my/orders');
+      const response = await axios.get('/orders/my/orders', { params: { pageSize: 100 } });
       setOrders(response.data || []);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
@@ -227,7 +227,7 @@ const Orders = () => {
       {filteredOrders.length === 0 ? (
         <div className="profile-section">
           <div className="empty-state">
-            <Package size={40} strokeWidth={1.5} />
+            <Package size={40} strokeWidth={1.5} weight="fill" />
             <p className="empty-state-text">No orders found</p>
             <p className="empty-state-hint">
               You haven't placed any orders in this category yet.

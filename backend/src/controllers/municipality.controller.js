@@ -1,4 +1,5 @@
 const municipalityService = require('../services/municipality.service');
+const auditLog = require('../services/auditLog.service');
 const { successResponse, createdResponse } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -64,6 +65,15 @@ const seedMunicipalities = asyncHandler(async (req, res) => {
 
 const updateMunicipality = asyncHandler(async (req, res) => {
   const municipality = await municipalityService.updateMunicipality(req.params.id, req.body, req.user);
+  await auditLog.record({
+    actor: req.user,
+    action: 'UPDATE_MUNICIPALITY_PAGE',
+    entity: 'Municipality',
+    entityId: req.params.id,
+    details: { fields: Object.keys(req.body || {}) },
+    municipalityId: req.params.id,
+    req,
+  });
   successResponse(res, municipality, 'Municipality updated successfully');
 });
 

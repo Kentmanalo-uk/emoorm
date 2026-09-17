@@ -599,7 +599,7 @@ export default function SellerProducts() {
             <Skeleton.Table cols={6} rows={6} />
           ) : products.length === 0 ? (
             <div className="seller-empty">
-              <Package size={40} />
+              <Package size={40} weight="fill" />
               <p>No products yet. Click "Add Product" to create your first listing.</p>
             </div>
           ) : (

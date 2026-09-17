@@ -37,17 +37,6 @@ if (config.nodeEnv === 'production') {
 // gzip responses
 app.use(compression());
 
-// Global light rate limit
-app.use(
-  rateLimit({
-    windowMs: 60 * 1000,
-    max: config.rateLimit.maxRequests,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { success: false, message: 'Too many requests, slow down' },
-  })
-);
-
 // Stricter limit on auth endpoints (login/register/forgot-password)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -75,6 +64,19 @@ app.use(cors({
 }));
 
 app.use(csrfOriginGuard);
+
+// Global light rate limit. Registered after CORS so a 429 still carries CORS
+// headers — otherwise browsers report it as a generic "Network Error".
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: config.rateLimit.maxRequests,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.method === 'OPTIONS' || req.path.endsWith('/health'),
+    message: { success: false, message: 'Too many requests, please wait a moment and try again.' },
+  })
+);
 
 // Body parsers
 app.use(express.json({ limit: config.bodyLimit }));

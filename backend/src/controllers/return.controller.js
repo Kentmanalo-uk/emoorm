@@ -15,7 +15,7 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const getOne = asyncHandler(async (req, res) => {
-  let actor = { id: req.user.id, role: req.user.role };
+  let actor = { id: req.user.id, role: req.user.role, municipalityId: req.user.municipalityId };
   if (req.user.role === 'SELLER') {
     const store = await storeRepository.findByOwnerId(req.user.id);
     actor.storeId = store?.id;

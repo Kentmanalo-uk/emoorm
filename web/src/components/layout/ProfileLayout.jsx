@@ -3,13 +3,14 @@ import { NavLink, Outlet } from 'react-router-dom';
 import {
   User, MapPin, Star, Package, Heart, Storefront as Store,
   ChatText as MessageSquare, Bell, Gear as Settings, Question as HelpCircle,
-  ArrowCounterClockwise as ReturnsIcon,
+  ArrowCounterClockwise as ReturnsIcon, ShieldCheck, ChatsCircle,
 } from '@phosphor-icons/react';
 import Layout from './Layout';
 import '../../pages/Profile.css';
 
 const navItems = [
   { to: '/profile', label: 'My Profile', icon: User, end: true },
+  { to: '/profile/verification', label: 'Identity Verification', icon: ShieldCheck },
   { to: '/profile/addresses', label: 'My Addresses', icon: MapPin },
   { to: '/profile/reviews', label: 'My Reviews', icon: Star },
   { to: '/profile/orders', label: 'My Orders', icon: Package },
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/profile/followed-stores', label: 'Followed Stores', icon: Store },
   { to: '/profile/messages', label: 'Messages', icon: MessageSquare },
   { to: '/profile/notifications', label: 'Notifications', icon: Bell },
+  { to: '/profile/support', label: 'Support Messages', icon: ChatsCircle },
   { to: '/profile/settings', label: 'Settings', icon: Settings },
   { to: '/help', label: 'Help Center', icon: HelpCircle },
 ];
@@ -39,7 +41,7 @@ const ProfileLayout = () => {
                       `profile-nav-item${isActive ? ' profile-nav-item-active' : ''}`
                     }
                   >
-                    <Icon size={18} />
+                    <Icon size={18} weight="fill" className="profile-nav-icon" />
                     <span>{label}</span>
                   </NavLink>
                 ))}

@@ -1,5 +1,6 @@
 const authService = require('../services/auth.service');
 const auditLog = require('../services/auditLog.service');
+const identityVerificationService = require('../services/identityVerification.service');
 const {
   successResponse,
   createdResponse,
@@ -80,7 +81,16 @@ const getProfile = asyncHandler(async (req, res) => {
  * @access Private
  */
 const updateProfile = asyncHandler(async (req, res) => {
+  const before = await authService.getProfile(req.user.id);
   const user = await authService.updateProfile(req.user.id, req.body);
+
+  // Identity verification was matched against these fields; changing them revokes it.
+  const changedFields = ['fullName', 'barangay', 'address', 'province'].filter(
+    (field) => (before?.[field] || '') !== (user?.[field] || '')
+  );
+  if (changedFields.length > 0) {
+    await identityVerificationService.invalidateIfVerified(req.user, changedFields, req);
+  }
 
   successResponse(res, user, 'Profile updated successfully');
 });

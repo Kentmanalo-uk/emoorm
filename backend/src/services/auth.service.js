@@ -280,6 +280,13 @@ const applyForSeller = async (userId, data = {}) => {
     });
   }
 
+  await notificationService.notifyMunicipalAdmins(updatedUser.municipalityId, {
+    type: 'SELLER_APPLICATION_SUBMITTED',
+    title: 'New seller application',
+    message: `${updatedUser.fullName} applied to sell as "${data.shopName || 'a new shop'}".`,
+    relatedId: userId,
+  });
+
   return updatedUser;
 };
 

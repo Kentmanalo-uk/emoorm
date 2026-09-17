@@ -5,6 +5,7 @@ const { generateTokens } = require('./src/utils/jwt');
 const BASE_URL = process.env.API_TEST_BASE_URL || 'http://localhost:3000/api';
 const createdUserIds = [];
 const createdReportIds = [];
+const createdReviewIds = [];
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -194,6 +195,49 @@ const run = async () => {
     method: 'PUT',
     body: JSON.stringify({ status: 'UNDER_REVIEW' }),
   }), 403);
+  await check('Municipal Admin views local report', () => request(`/reports/${localReport.id}`, municipalToken), 200);
+  await check('Municipal Admin denied foreign report detail', () => request(`/reports/${foreignReport.id}`, municipalToken), 403);
+  await check('Superadmin views foreign report detail', () => request(`/reports/${foreignReport.id}`, superToken), 200);
+
+  const localProduct = await prisma.product.findFirst({
+    where: { municipalityId: municipalAdmin.municipalityId, deletedAt: null },
+    select: { id: true },
+  });
+  if (localProduct && foreignProduct) {
+    const localReview = await prisma.review.create({
+      data: { userId: sameSeller.id, productId: localProduct.id, rating: 5, comment: 'Temporary municipal scope test' },
+    });
+    const foreignReview = await prisma.review.create({
+      data: { userId: otherBuyer.id, productId: foreignProduct.id, rating: 5, comment: 'Temporary cross-municipality scope test' },
+    });
+    createdReviewIds.push(localReview.id, foreignReview.id);
+    await check('Municipal Admin denied deleting foreign review', () => request(`/reviews/${foreignReview.id}`, municipalToken, { method: 'DELETE' }), 403);
+    await check('Municipal Admin deletes local review', () => request(`/reviews/${localReview.id}`, municipalToken, { method: 'DELETE' }), 204);
+    await check('Superadmin deletes foreign review', () => request(`/reviews/${foreignReview.id}`, superToken, { method: 'DELETE' }), 204);
+  } else {
+    results.push({ name: 'Review deletion tests', status: 'SKIPPED', reason: 'Local and foreign product fixtures are required' });
+  }
+
+  const foreignReturn = await prisma.returnRequest.findFirst({
+    where: { store: { municipalityId: { not: municipalAdmin.municipalityId } } },
+    select: { id: true },
+  });
+  if (foreignReturn) {
+    await check('Municipal Admin denied foreign return detail', () => request(`/returns/${foreignReturn.id}`, municipalToken), 403);
+    await check('Superadmin views foreign return detail', () => request(`/returns/${foreignReturn.id}`, superToken), 200);
+  } else {
+    results.push({ name: 'Foreign return test', status: 'SKIPPED', reason: 'No foreign return request fixture exists' });
+  }
+  const localReturn = await prisma.returnRequest.findFirst({
+    where: { store: { municipalityId: municipalAdmin.municipalityId } },
+    select: { id: true },
+  });
+  if (localReturn) {
+    await check('Municipal Admin views local return detail', () => request(`/returns/${localReturn.id}`, municipalToken), 200);
+  } else {
+    results.push({ name: 'Local return test', status: 'SKIPPED', reason: 'No local return request fixture exists' });
+  }
+
   await check(
     'Municipal Admin report list ignores foreign municipality override',
     () => request(`/reports?municipalityId=${otherMunicipality.id}&pageSize=100`, municipalToken),
@@ -211,6 +255,9 @@ run()
     process.exitCode = 1;
   })
   .finally(async () => {
+    if (createdReviewIds.length > 0) {
+      await prisma.review.deleteMany({ where: { id: { in: createdReviewIds } } });
+    }
     if (createdReportIds.length > 0) {
       await prisma.report.deleteMany({ where: { id: { in: createdReportIds } } });
     }

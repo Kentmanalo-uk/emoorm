@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
+import useAuthStore from '../store/authStore';
+import { ACTION_LABELS, actionLabel } from '../lib/auditActions';
 import '../components/admin/AdminLayout.css';
 
-const ACTIONS = [
-  'APPROVE_SELLER', 'REJECT_SELLER', 'SUSPEND_USER', 'ACTIVATE_USER', 'SET_USER_ROLE',
-  'APPROVE_PRODUCT', 'SUSPEND_PRODUCT', 'ARCHIVE_PRODUCT',
-  'SUSPEND_STORE', 'UNSUSPEND_STORE',
-  'REPORT_RESOLVED', 'REPORT_DISMISSED', 'REPORT_UNDER_REVIEW',
-  'ASSIGN_MUNICIPAL_ADMIN', 'REMOVE_MUNICIPAL_ADMIN',
-  'BROADCAST_ANNOUNCEMENT',
-];
+const ACTIONS = Object.keys(ACTION_LABELS);
 
 export default function AdminAuditLogs() {
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [logs, setLogs] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0 });
-  const [filters, setFilters] = useState({ action: '', entity: '', from: '', to: '' });
+  const [filters, setFilters] = useState({ action: '', entity: '', from: '', to: '', municipalityId: '' });
+  const [municipalities, setMunicipalities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    axios.get('/municipalities')
+      .then((res) => setMunicipalities(Array.isArray(res.data) ? res.data : []))
+      .catch(() => { });
+  }, [isSuperAdmin]);
 
   const load = async (page = 1) => {
     setIsLoading(true);
@@ -26,6 +31,7 @@ export default function AdminAuditLogs() {
       if (filters.entity) params.entity = filters.entity;
       if (filters.from) params.from = filters.from;
       if (filters.to) params.to = filters.to;
+      if (isSuperAdmin && filters.municipalityId) params.municipalityId = filters.municipalityId;
       const res = await axios.get('/audit-logs', { params });
       setLogs(res.data || []);
       setPagination(res.pagination || { page, pageSize: 25, total: 0 });
@@ -43,7 +49,12 @@ export default function AdminAuditLogs() {
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">Audit Logs</h1>
+        <div>
+          <h1 className="admin-page-title">Audit Logs</h1>
+          {!isSuperAdmin && (
+            <p className="admin-page-sub">Actions recorded for your municipality</p>
+          )}
+        </div>
       </div>
 
       <div className="admin-card">
@@ -57,7 +68,7 @@ export default function AdminAuditLogs() {
             className="admin-input"
           >
             <option value="">All actions</option>
-            {ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+            {ACTIONS.map((a) => <option key={a} value={a}>{ACTION_LABELS[a]}</option>)}
           </select>
           <select
             value={filters.entity}
@@ -68,9 +79,21 @@ export default function AdminAuditLogs() {
             <option value="User">User</option>
             <option value="Product">Product</option>
             <option value="Store">Store</option>
+            <option value="Order">Order</option>
             <option value="Report">Report</option>
+            <option value="Municipality">Municipality</option>
             <option value="Announcement">Announcement</option>
           </select>
+          {isSuperAdmin && (
+            <select
+              value={filters.municipalityId}
+              onChange={(e) => setFilters((f) => ({ ...f, municipalityId: e.target.value }))}
+              className="admin-input"
+            >
+              <option value="">All municipalities</option>
+              {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          )}
           <input
             type="date"
             value={filters.from}
@@ -109,26 +132,40 @@ export default function AdminAuditLogs() {
                 </tr>
               </thead>
               <tbody>
-                {logs.map((l) => (
-                  <tr key={l.id}>
-                    <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>
-                      {new Date(l.createdAt).toLocaleString('en-PH')}
-                    </td>
-                    <td style={{ fontSize: 12 }}>{l.userEmail || l.userId || '—'}</td>
-                    <td>
-                      <span className="admin-badge admin-badge-neutral" style={{ fontSize: 11 }}>
-                        {l.action}
-                      </span>
-                    </td>
-                    <td>{l.entity}</td>
-                    <td style={{ fontSize: 11, fontFamily: 'monospace' }}>
-                      {l.entityId ? l.entityId.slice(0, 8) + '…' : '—'}
-                    </td>
-                    <td style={{ fontSize: 11, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {l.details ? JSON.stringify(l.details) : '—'}
-                    </td>
-                  </tr>
-                ))}
+                {logs.map((l) => {
+                  const d = l.details && typeof l.details === 'object' ? l.details : null;
+                  const note = d?.reason || d?.note;
+                  return (
+                    <tr key={l.id}>
+                      <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>
+                        {new Date(l.createdAt).toLocaleString('en-PH')}
+                      </td>
+                      <td style={{ fontSize: 12 }}>{l.userEmail || l.userId || '—'}</td>
+                      <td>
+                        <span className="admin-badge admin-badge-neutral" style={{ fontSize: 11 }} title={l.action}>
+                          {actionLabel(l.action)}
+                        </span>
+                      </td>
+                      <td>{l.entity}</td>
+                      <td style={{ fontSize: 11, fontFamily: 'monospace' }}>
+                        {l.entityId ? l.entityId.slice(0, 8) + '…' : '—'}
+                      </td>
+                      <td style={{ fontSize: 11, maxWidth: 280 }}>
+                        {note && (
+                          <div style={{ fontSize: 12, color: '#0f172a', marginBottom: 2 }}>
+                            <strong>{d.reason ? 'Reason' : 'Note'}:</strong> {String(note)}
+                          </div>
+                        )}
+                        <div
+                          style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#64748b' }}
+                          title={l.details ? JSON.stringify(l.details) : ''}
+                        >
+                          {l.details ? JSON.stringify(l.details) : '—'}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

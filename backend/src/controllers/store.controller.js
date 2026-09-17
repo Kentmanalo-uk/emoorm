@@ -182,7 +182,7 @@ const cancelDeletion = asyncHandler(async (req, res) => {
  * @access Private (Admin only)
  */
 const suspendStore = asyncHandler(async (req, res) => {
-  const store = await storeService.suspendStore(req.params.id, req.user);
+  const store = await storeService.suspendStore(req.params.id, req.user, req.body?.reason);
 
   await auditLog.record({
     actor: req.user,

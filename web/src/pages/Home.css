@@ -1358,3 +1358,45 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
+}
+
+/* Explore Products: load more */
+.home-load-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 32px 0 8px;
+}
+
+.home-load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 220px;
+  padding: 12px 32px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #059669;
+  background: #fff;
+  border: 1px solid #059669;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.home-load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (max-width: 768px) {
+  .home-load-more {
+    margin-top: 24px;
+  }
+
+  .home-load-more-btn {
+    width: 100%;
+    max-width: 320px;
+  }
+}

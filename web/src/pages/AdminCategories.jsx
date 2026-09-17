@@ -242,7 +242,7 @@ export default function AdminCategories() {
         {isLoading ? (
           <Skeleton.Table cols={5} rows={6} />
         ) : categories.length === 0 ? (
-          <div className="admin-empty"><Tag size={36} /><p>No categories yet</p></div>
+          <div className="admin-empty"><Tag size={36} weight="fill" /><p>No categories yet</p></div>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">

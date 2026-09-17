@@ -204,7 +204,7 @@ const approveProduct = asyncHandler(async (req, res) => {
  * @access Private (Admin only)
  */
 const suspendProduct = asyncHandler(async (req, res) => {
-  const product = await productService.suspendProduct(req.params.id, req.user);
+  const product = await productService.suspendProduct(req.params.id, req.user, req.body?.reason);
 
   await auditLog.record({
     actor: req.user,
@@ -224,17 +224,38 @@ const suspendProduct = asyncHandler(async (req, res) => {
  * @access Private (Admin only)
  */
 const archiveProduct = asyncHandler(async (req, res) => {
-  const product = await productService.archiveProduct(req.params.id, req.user);
+  const product = await productService.archiveProduct(req.params.id, req.user, req.body?.reason);
 
   await auditLog.record({
     actor: req.user,
     action: 'ARCHIVE_PRODUCT',
     entity: 'Product',
     entityId: req.params.id,
+    details: req.body?.reason ? { reason: req.body.reason } : null,
     req,
   });
 
   successResponse(res, product, 'Product archived successfully');
+});
+
+/**
+ * Restore a suspended or archived product
+ * @route POST /api/products/:id/restore
+ * @access Private (Admin only)
+ */
+const restoreProduct = asyncHandler(async (req, res) => {
+  const product = await productService.restoreProduct(req.params.id, req.user);
+
+  await auditLog.record({
+    actor: req.user,
+    action: 'RESTORE_PRODUCT',
+    entity: 'Product',
+    entityId: req.params.id,
+    details: { from: product.previousStatus },
+    req,
+  });
+
+  successResponse(res, product, 'Product restored successfully');
 });
 
 /**
@@ -269,6 +290,7 @@ module.exports = {
   approveProduct,
   suspendProduct,
   archiveProduct,
+  restoreProduct,
   searchByImage,
   bulkUpdateProducts,
 };

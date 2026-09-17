@@ -195,7 +195,7 @@ const Addresses = () => {
 
       {addresses.length === 0 && !formOpen && (
         <div className="address-empty">
-          <MapPin size={28} />
+          <MapPin size={28} weight="fill" />
           <p>You have no saved addresses yet.</p>
           <button onClick={openAddForm} className="address-action-btn">
             <Plus size={16} /> Add your first address

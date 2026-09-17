@@ -8,3 +8,4 @@ mobile/node_modules/
 !**/.env.example
 backend/uploads/
 backend/uploads-private/
+.claude/

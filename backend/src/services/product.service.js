@@ -360,6 +360,11 @@ const deleteProduct = async (productId, userId) => {
       }
  * @returns {Promise<Object>} Updated product
  */
+const cleanReason = (reason) => {
+  const text = String(reason || '').trim();
+  return text ? text.slice(0, 500) : null;
+};
+
 const approveProduct = async (productId, adminId, actor) => {
   const product = await productRepository.findById(productId);
 
@@ -379,6 +384,7 @@ const approveProduct = async (productId, adminId, actor) => {
     status: 'APPROVED',
     approvedById: adminId || null,
     approvedAt: new Date(),
+    moderationNote: null,
   });
 
   let approvedStore = null;
@@ -414,7 +420,7 @@ const approveProduct = async (productId, adminId, actor) => {
  * @param {Object} [actor] - The acting admin (for municipality scope)
  * @returns {Promise<Object>} Updated product
  */
-const suspendProduct = async (productId, actor) => {
+const suspendProduct = async (productId, actor, reason) => {
   const product = await productRepository.findById(productId);
 
   if (!product || product.deletedAt) {
@@ -425,12 +431,13 @@ const suspendProduct = async (productId, actor) => {
     throw new ApiError('You can only moderate products in your assigned municipality', 403);
   }
 
-  const updated = await productRepository.updateStatus(productId, 'SUSPENDED');
+  const note = cleanReason(reason);
+  const updated = await productRepository.updateProduct(productId, { status: 'SUSPENDED', moderationNote: note });
 
   try {
     const store = await storeRepository.findById(product.storeId);
     if (store?.ownerId) {
-      await notificationService.notifyProductRejected(store.ownerId, product.id, product.name);
+      await notificationService.notifyProductRejected(store.ownerId, product.id, product.name, { reason: note });
     }
   } catch (err) {
     console.error('[suspendProduct] notification failed:', err.message);
@@ -445,7 +452,7 @@ const suspendProduct = async (productId, actor) => {
  * @param {Object} [actor] - The acting admin (for municipality scope)
  * @returns {Promise<Object>} Updated product
  */
-const archiveProduct = async (productId, actor) => {
+const archiveProduct = async (productId, actor, reason) => {
   const product = await productRepository.findById(productId);
 
   if (!product || product.deletedAt) {
@@ -456,7 +463,58 @@ const archiveProduct = async (productId, actor) => {
     throw new ApiError('You can only moderate products in your assigned municipality', 403);
   }
 
-  return productRepository.updateStatus(productId, 'ARCHIVED');
+  const note = cleanReason(reason);
+  const updated = await productRepository.updateProduct(productId, { status: 'ARCHIVED', moderationNote: note });
+
+  try {
+    const store = await storeRepository.findById(product.storeId);
+    if (store?.ownerId) {
+      await notificationService.notifyProductRejected(store.ownerId, product.id, product.name, { reason: note, archived: true });
+    }
+  } catch (err) {
+    console.error('[archiveProduct] notification failed:', err.message);
+  }
+
+  return updated;
+};
+
+/**
+ * Undo a suspension or archive: the product goes back to APPROVED and the
+ * moderation note is cleared (Admin only).
+ */
+const restoreProduct = async (productId, actor) => {
+  const product = await productRepository.findById(productId);
+  if (!product || product.deletedAt) {
+    throw new ApiError('Product not found', 404);
+  }
+  if (actor?.role === 'MUNICIPAL_ADMIN' && product.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only moderate products in your assigned municipality', 403);
+  }
+  if (!['SUSPENDED', 'ARCHIVED'].includes(product.status)) {
+    throw new ApiError('Only suspended or archived products can be restored', 400);
+  }
+
+  const updated = await productRepository.updateProduct(productId, {
+    status: 'APPROVED',
+    moderationNote: null,
+  });
+
+  try {
+    const store = await storeRepository.findById(product.storeId);
+    if (store?.ownerId) {
+      await notificationService.createNotification({
+        userId: store.ownerId,
+        type: 'PRODUCT_APPROVED',
+        title: 'Product restored',
+        message: `Your product "${product.name}" is visible to buyers again.`,
+        relatedId: product.id,
+      });
+    }
+  } catch (err) {
+    console.error('[restoreProduct] notification failed:', err.message);
+  }
+
+  return { ...updated, previousStatus: product.status };
 };
 
 const normalizeImages = (raw) => {
@@ -574,6 +632,7 @@ module.exports = {
   approveProduct,
   suspendProduct,
   archiveProduct,
+  restoreProduct,
   searchByImageBuffer,
   bulkUpdateProducts,
 };

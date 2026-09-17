@@ -82,10 +82,25 @@ const config = {
   // Rate Limiting Configuration
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+    // Requests per minute per client. Admin pages and chat polling need headroom.
+    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '600', 10),
   },
 
   bodyLimit: process.env.BODY_LIMIT || '1mb',
+
+  // Buyer identity verification (OCR of a government ID before checkout).
+  identity: {
+    // 32-byte key (hex or base64) for encrypting extracted ID data.
+    encryptionKey: process.env.IDENTITY_ENCRYPTION_KEY || '',
+    // Set to "false" only for local testing; checkout is gated by default.
+    requiredForCheckout: process.env.IDENTITY_VERIFICATION_REQUIRED !== 'false',
+    // Daily verification attempts per user; 0 = unlimited.
+    maxAttemptsPerDay: parseInt(process.env.IDENTITY_MAX_ATTEMPTS_PER_DAY || '5', 10),
+    // Directory holding tesseract language data (downloaded on first use).
+    ocrCachePath: process.env.OCR_CACHE_PATH || '.ocr-cache',
+    // Development only: return raw OCR text in the submit response.
+    debugOcr: process.env.IDENTITY_OCR_DEBUG === 'true' && process.env.NODE_ENV !== 'production',
+  },
 };
 
 // Validate required environment variables

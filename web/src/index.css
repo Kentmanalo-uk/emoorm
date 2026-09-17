@@ -27,6 +27,8 @@ body {
   color: var(--color-text-primary);
   background-color: var(--color-bg-primary);
   overflow-x: hidden;
+  /* clip (unlike hidden) never creates a scroll container, so sticky sidebars keep working. */
+  overflow-x: clip;
 }
 
 /* Typography Elements */
@@ -426,4 +428,19 @@ img {
   .lg\:grid-cols-4 {
     grid-template-columns: repeat(4, 1fr);
   }
+}
+
+/* Empty states: large filled icons in faded brand green across the app.
+   ":not(.keep-color)" lifts specificity above page-level ".x svg" rules;
+   add class "keep-color" to an icon to opt out. */
+:is(
+  .address-empty, .admin-empty, .cart-empty, .cart-search-empty, .empty-state,
+  .msgr-list-empty, .msgr-messages-empty, .msgr-thread-empty,
+  .notif-dropdown-empty, .notif-empty, .products-empty, .sc-empty,
+  .sd-empty, .seller-empty, .seller-return-empty, .sf-empty, .shop-empty,
+  .stores-empty, .wishlist-empty, .an-empty, .returns-empty, .pdp-empty,
+  .municipalities-empty, .discover-stores-empty
+) > svg:not(.keep-color) {
+  color: #a7f3d0;
+  fill: #a7f3d0;
 }

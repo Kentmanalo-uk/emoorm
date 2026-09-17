@@ -2,13 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, MagnifyingGlass as Search, ShieldCheck, ShieldSlash as ShieldOff, UserMinus as UserX, UserCheck,
-  CaretDown as ChevronDown, X, Eye
+  CaretDown as ChevronDown, X, Eye, DownloadSimple, Storefront
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import DetailDrawer from '../components/admin/DetailDrawer';
+import MessageUserButton from '../components/admin/MessageUserButton';
+import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
+import ReasonDialog from '../components/admin/ReasonDialog';
+import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -33,6 +38,9 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [processing, setProcessing] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [storeSuspendOpen, setStoreSuspendOpen] = useState(false);
+  const [storeProcessing, setStoreProcessing] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -97,6 +105,63 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = {};
+      if (search) params.search = search;
+      if (fixedRole || roleFilter) params.role = fixedRole || roleFilter;
+      const rows = await fetchAllPages('/auth/users', params);
+      const prefix = fixedRole === 'SELLER' ? 'sellers' : fixedRole === 'BUYER' ? 'buyers' : 'users';
+      downloadCsv(`${prefix}-${new Date().toISOString().slice(0, 10)}.csv`, [
+        { header: 'Name', value: (r) => r.fullName },
+        { header: 'Email', value: (r) => r.email },
+        { header: 'Contact', value: (r) => r.contactNumber },
+        { header: 'Municipality', value: (r) => r.municipality?.name },
+        { header: 'Role', value: (r) => r.role },
+        { header: 'Status', value: (r) => (r.isActive ? 'active' : 'suspended') },
+        { header: 'Seller Application Status', value: (r) => r.sellerApplicationStatus },
+        { header: 'Joined', value: (r) => csvDate(r.createdAt) },
+      ], rows);
+      toast.success(`Exported ${rows.length} rows`);
+    } catch (err) {
+      toast.error(err.message || 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleStoreSuspend = async (reason) => {
+    if (!selected?.store) return;
+    setStoreProcessing(true);
+    try {
+      await axios.post(`/stores/${selected.store.id}/suspend`, { reason });
+      toast.success('Store suspended');
+      setStoreSuspendOpen(false);
+      await openDetails(selected.id);
+      fetchUsers();
+    } catch (err) {
+      toast.error(err.message || 'Failed to suspend store');
+    } finally {
+      setStoreProcessing(false);
+    }
+  };
+
+  const handleStoreRestore = async () => {
+    if (!selected?.store) return;
+    setStoreProcessing(true);
+    try {
+      await axios.post(`/stores/${selected.store.id}/unsuspend`);
+      toast.success('Store restored');
+      await openDetails(selected.id);
+      fetchUsers();
+    } catch (err) {
+      toast.error(err.message || 'Failed to restore store');
+    } finally {
+      setStoreProcessing(false);
+    }
+  };
+
   const openDetails = async (userId) => {
     try {
       const res = await axios.get(`/auth/users/${userId}`);
@@ -145,13 +210,16 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                 ))}
               </select>
             )}
+            <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
+              <DownloadSimple size={13} /> {exporting ? 'Exporting…' : 'Export CSV'}
+            </button>
           </div>
         </div>
 
         {isLoading ? (
           <Skeleton.Table cols={6} rows={7} />
         ) : users.length === 0 ? (
-          <div className="admin-empty"><Users size={36} /><p>No users found</p></div>
+          <div className="admin-empty"><Users size={36} weight="fill" /><p>No users found</p></div>
         ) : (
           <>
             <div className="admin-table-wrap">
@@ -168,7 +236,13 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                 </thead>
                 <tbody>
                   {users.map((u) => (
-                    <tr key={u.id}>
+                    <tr
+                      key={u.id}
+                      className="admin-row-clickable"
+                      tabIndex={0}
+                      onClick={rowOpen(() => openDetails(u.id))}
+                      onKeyDown={rowKeyOpen(() => openDetails(u.id))}
+                    >
                       <td>
                         <div className="admin-user-cell">
                           <div className="admin-avatar">{u.fullName?.[0] || '?'}</div>
@@ -234,12 +308,15 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
       </div>
 
       {/* User detail panel */}
-      {selected && (
-        <div className="admin-detail-overlay" onClick={() => setSelected(null)}>
-          <div className="admin-detail-panel" onClick={(e) => e.stopPropagation()}>
+      <DetailDrawer item={selected} onClose={() => setSelected(null)}>
+        {(selected) => (
+          <>
             <div className="admin-detail-header">
               <h3>User Details</h3>
-              <button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button>
+              <div className="admin-detail-head-actions">
+                <MessageUserButton userId={selected.id} role={selected.role} />
+                <button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button>
+              </div>
             </div>
 
             <div className="admin-detail-body">
@@ -268,11 +345,23 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                     <div><label>Products</label><p>{selected.store._count?.products ?? 0}</p></div>
                     <div><label>Orders</label><p>{selected.store._count?.orders ?? 0}</p></div>
                     <div className="admin-detail-full"><label>Pickup Address</label><p>{selected.store.pickupAddress || '—'}</p></div>
+                    {selected.store.isSuspended && selected.store.suspensionReason && (
+                      <div className="admin-detail-full"><label>Suspension Reason</label><p>{selected.store.suspensionReason}</p></div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
                     <button type="button" className="admin-btn admin-btn-gray" onClick={() => navigate(`/store/${selected.store.slug}`)}>View Store</button>
                     <button type="button" className="admin-btn admin-btn-gray" onClick={() => navigate(`/admin/products?storeId=${selected.store.id}`)}>View Products</button>
                     <button type="button" className="admin-btn admin-btn-gray" onClick={() => navigate(`/admin/orders?storeId=${selected.store.id}`)}>View Orders</button>
+                    {selected.role === 'SELLER' && (selected.store.isSuspended ? (
+                      <button type="button" className="admin-btn admin-btn-green" disabled={storeProcessing} onClick={handleStoreRestore}>
+                        <Storefront size={13} /> Restore store
+                      </button>
+                    ) : (
+                      <button type="button" className="admin-btn admin-btn-red" disabled={storeProcessing} onClick={() => setStoreSuspendOpen(true)}>
+                        <Storefront size={13} /> Suspend store
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
@@ -330,9 +419,21 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </DetailDrawer>
+      <ReasonDialog
+        open={storeSuspendOpen}
+        title="Suspend store?"
+        message="The store and its products will be hidden from buyers until restored."
+        confirmLabel="Suspend store"
+        placeholder="Reason for suspension"
+        required
+        danger
+        loading={storeProcessing}
+        onConfirm={handleStoreSuspend}
+        onCancel={() => setStoreSuspendOpen(false)}
+      />
     </AdminLayout>
   );
 }

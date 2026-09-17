@@ -133,8 +133,14 @@
   padding-top: 10px;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  transform: scale(0.12);
+  /* Grows out of / shrinks into the trigger icon (same motion as the Messages panel).
+     Closing waits briefly so moving the pointer across a small gap doesn't flicker. */
+  transition:
+    transform 0.26s cubic-bezier(0.4, 0, 0.6, 1) 0.06s,
+    opacity 0.18s ease 0.14s,
+    visibility 0s linear 0.32s;
+  will-change: opacity, transform;
   z-index: 1000;
   pointer-events: none;
 }
@@ -143,8 +149,35 @@
 .account-hover:focus-within .account-dropdown {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: none;
   pointer-events: auto;
+  transition:
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.16s ease,
+    visibility 0s linear 0s;
+}
+
+.account-dropdown {
+  transform-origin: calc(100% - 47px) 0;
+}
+
+.notif-dropdown {
+  transform-origin: calc(100% - 37px) 0;
+}
+
+/* Contents settle in just after the panel grows, and leave before it shrinks. */
+.account-dropdown-inner > *,
+.notif-dropdown-inner > * {
+  opacity: 0;
+  transition: opacity 0.12s ease 0.06s;
+}
+
+.account-hover:hover .account-dropdown-inner > *,
+.account-hover:focus-within .account-dropdown-inner > *,
+.notif-hover:hover .notif-dropdown-inner > *,
+.notif-hover:focus-within .notif-dropdown-inner > * {
+  opacity: 1;
+  transition: opacity 0.2s ease 0.1s;
 }
 
 .account-dropdown-arrow {
@@ -306,8 +339,14 @@
   padding-top: 10px;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  transform: scale(0.12);
+  /* Grows out of / shrinks into the trigger icon (same motion as the Messages panel).
+     Closing waits briefly so moving the pointer across a small gap doesn't flicker. */
+  transition:
+    transform 0.26s cubic-bezier(0.4, 0, 0.6, 1) 0.06s,
+    opacity 0.18s ease 0.14s,
+    visibility 0s linear 0.32s;
+  will-change: opacity, transform;
   z-index: 1000;
   pointer-events: none;
 }
@@ -316,8 +355,12 @@
 .notif-hover:focus-within .notif-dropdown {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: none;
   pointer-events: auto;
+  transition:
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.16s ease,
+    visibility 0s linear 0s;
 }
 
 .notif-dropdown-arrow {
@@ -1403,5 +1446,16 @@
   .header-mobile-toggle,
   .header-mobile-menu {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-dropdown,
+  .notif-dropdown,
+  .account-dropdown-inner > *,
+  .notif-dropdown-inner > * {
+    transform: none !important;
+    transition-duration: 0.01s !important;
+    transition-delay: 0s !important;
   }
 }

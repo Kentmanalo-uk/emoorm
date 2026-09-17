@@ -16,6 +16,7 @@ import { formatRelativeTime } from '../lib/time';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import useWishlistStore from '../store/wishlistStore';
+import useIdentityGate from '../hooks/useIdentityGate';
 import './ProductDetails.css';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -51,6 +52,7 @@ const ProductDetails = () => {
   const { isAuthenticated } = useAuthStore();
   const { addItem } = useCartStore();
   const { toggleItem, isInWishlist } = useWishlistStore();
+  const { requireVerifiedIdentity, identityDialog } = useIdentityGate();
 
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -161,7 +163,8 @@ const ProductDetails = () => {
     }
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
+    if (isAuthenticated && !(await requireVerifiedIdentity())) return;
     if (handleAddToCart() !== false) setTimeout(() => navigate('/cart'), 250);
   };
 
@@ -872,6 +875,7 @@ const ProductDetails = () => {
           onClose={() => setShowReport(false)}
         />
       )}
+      {identityDialog}
     </Layout>
   );
 };

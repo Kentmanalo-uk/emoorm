@@ -57,9 +57,26 @@ const PICKUP_FLOW = {
   PICKED_UP: ['COMPLETED'],
 };
 
+const PAYMENT_LABELS = {
+  PENDING: { label: 'Unpaid (COD)', cls: 'status-pending' },
+  PENDING_VERIFICATION: { label: 'Payment to verify', cls: 'status-pending' },
+  PAID: { label: 'Paid', cls: 'status-completed' },
+  FAILED: { label: 'Payment rejected', cls: 'status-cancelled' },
+  EXPIRED: { label: 'Payment expired', cls: 'status-cancelled' },
+  REFUNDED: { label: 'Refunded', cls: 'status-cancelled' },
+  PARTIALLY_REFUNDED: { label: 'Partially refunded', cls: 'status-cancelled' },
+};
+
+// Prepaid orders cannot move past confirmation until the payment is verified
+// (the backend enforces the same rule).
+const isAwaitingPayment = (order) => Boolean(order?.paymentMethod)
+  && order.paymentMethod !== 'COD'
+  && order.paymentStatus !== 'PAID';
+
 function getNextStatuses(order) {
   const flow = order?.fulfillmentMethod === 'PICKUP' ? PICKUP_FLOW : DELIVERY_FLOW;
-  return flow[order?.status] || [];
+  const next = flow[order?.status] || [];
+  return isAwaitingPayment(order) ? next.filter((s) => s === 'CONFIRMED' || s === 'CANCELLED') : next;
 }
 
 const ACTION_LABELS = {
@@ -86,6 +103,8 @@ export default function SellerOrders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
   const [cancelConfirm, setCancelConfirm] = useState(null); // { orderId }
+  const [rejectConfirm, setRejectConfirm] = useState(null); // { orderId }
+  const [verifyingId, setVerifyingId] = useState(null);
 
   useEffect(() => {
     loadOrders();
@@ -119,19 +138,35 @@ export default function SellerOrders() {
   const handleStatusChange = async (orderId, newStatus) => {
     setUpdatingId(orderId);
     try {
-      await axios.put(`/orders/${orderId}/status`, { status: newStatus });
+      const res = await axios.put(`/orders/${orderId}/status`, { status: newStatus });
       toast.success(`Order marked as ${STATUS_MAP[newStatus]?.label || newStatus}`);
-      // Update local state
-      setOrders(prev =>
-        prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
-      );
-      if (selectedOrder?.id === orderId) {
-        setSelectedOrder(prev => ({ ...prev, status: newStatus }));
-      }
+      applyOrderUpdate(orderId, { status: newStatus, paymentStatus: res.data?.paymentStatus });
     } catch (err) {
       toast.error(err.message || 'Failed to update order');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  // Merge server-side changes (status/payment) into the list and detail panel.
+  function applyOrderUpdate(orderId, changes) {
+    const clean = Object.fromEntries(Object.entries(changes).filter(([, v]) => v !== undefined));
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, ...clean } : o)));
+    setSelectedOrder((prev) => (prev?.id === orderId ? { ...prev, ...clean } : prev));
+  }
+
+  const handlePaymentDecision = async (orderId, paymentStatus) => {
+    setVerifyingId(orderId);
+    try {
+      const res = await axios.patch(`/orders/${orderId}/payment`, { paymentStatus });
+      applyOrderUpdate(orderId, { paymentStatus: res.data?.paymentStatus, status: res.data?.status });
+      toast.success(paymentStatus === 'PAID' ? 'Payment verified' : 'Payment rejected and order cancelled');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update payment');
+      loadOrders();
+    } finally {
+      setVerifyingId(null);
+      setRejectConfirm(null);
     }
   };
 
@@ -183,7 +218,7 @@ export default function SellerOrders() {
               <Skeleton.Table cols={6} rows={6} />
             ) : displayed.length === 0 ? (
               <div className="seller-empty">
-                <ShoppingBag size={40} />
+                <ShoppingBag size={40} weight="fill" />
                 <p>No orders in this category.</p>
               </div>
             ) : (
@@ -276,6 +311,9 @@ export default function SellerOrders() {
                           <span className={`seller-badge seller-badge--solid ${s.cls}`}>
                             {s.label}
                           </span>
+                          {order.paymentStatus === 'PENDING_VERIFICATION' && order.status !== 'CANCELLED' && (
+                            <div className="so-payment-flag">Payment to verify</div>
+                          )}
                         </td>
                         <td>
                           <div className="order-row-actions">
@@ -363,6 +401,39 @@ export default function SellerOrders() {
                     {selectedOrder.paymentReference && ` — Ref: ${selectedOrder.paymentReference}`}
                   </strong>
                 </div>
+
+                {selectedOrder.paymentStatus && (
+                  <div className="detail-row">
+                    <span>Payment status</span>
+                    <span className={`seller-badge seller-badge--solid ${PAYMENT_LABELS[selectedOrder.paymentStatus]?.cls || ''}`}>
+                      {PAYMENT_LABELS[selectedOrder.paymentStatus]?.label || selectedOrder.paymentStatus}
+                    </span>
+                  </div>
+                )}
+
+                {selectedOrder.paymentStatus === 'PENDING_VERIFICATION' && selectedOrder.status !== 'CANCELLED' && (
+                  <div className="so-payment-review">
+                    <p>Check the reference number and proof below against your GCash or bank records first.</p>
+                    <div className="so-payment-actions">
+                      <button
+                        type="button"
+                        className="so-payment-btn so-payment-btn--approve"
+                        disabled={verifyingId === selectedOrder.id}
+                        onClick={() => handlePaymentDecision(selectedOrder.id, 'PAID')}
+                      >
+                        <CheckCircle size={16} /> Payment received
+                      </button>
+                      <button
+                        type="button"
+                        className="so-payment-btn so-payment-btn--reject"
+                        disabled={verifyingId === selectedOrder.id}
+                        onClick={() => setRejectConfirm({ orderId: selectedOrder.id })}
+                      >
+                        <XCircle size={16} /> Reject payment
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {selectedOrder.paymentProofUrl && (
                   <div className="detail-row detail-row--col">
@@ -478,6 +549,17 @@ export default function SellerOrders() {
         loading={updatingId === cancelConfirm?.orderId}
         onConfirm={confirmCancelOrder}
         onCancel={() => setCancelConfirm(null)}
+      />
+
+      <ConfirmDialog
+        open={!!rejectConfirm}
+        title="Reject this payment?"
+        message="Only reject if the payment did not arrive or the proof is invalid. The order will be cancelled, stock restored, and the buyer notified."
+        confirmLabel="Reject Payment"
+        danger
+        loading={verifyingId === rejectConfirm?.orderId}
+        onConfirm={() => handlePaymentDecision(rejectConfirm.orderId, 'FAILED')}
+        onCancel={() => setRejectConfirm(null)}
       />
     </div>
   );

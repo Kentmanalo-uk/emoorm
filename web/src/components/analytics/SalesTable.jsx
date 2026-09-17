@@ -1,4 +1,5 @@
-import React from 'react';
+import { Table } from '@phosphor-icons/react';
+import EmptyState from './EmptyState';
 import './analytics.css';
 
 const SalesTable = ({
@@ -9,7 +10,7 @@ const SalesTable = ({
   formatLabel = (v) => v,
   formatValue = (v) => v,
 }) => {
-  if (!rows.length) return <div className="an-empty">{emptyMessage}</div>;
+  if (!rows.length) return <EmptyState icon={Table} title="No sales yet" message={emptyMessage} compact />;
 
   return (
     <div className="an-table-wrap">

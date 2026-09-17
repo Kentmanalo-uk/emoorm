@@ -1,6 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, Key as KeyRound, User, MapPin, FloppyDisk as Save, CircleNotch as Loader2, ArrowsClockwise as RefreshCcw, Copy, Image as ImageIcon, UploadSimple } from '@phosphor-icons/react';
+import {
+  ShieldCheck, Key as KeyRound, User, MapPin, FloppyDisk as Save, CircleNotch as Loader2,
+  ArrowsClockwise as RefreshCcw, Copy, Image as ImageIcon, UploadSimple, Plus, X, ArrowSquareOut, Palette, CheckCircle,
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import '../components/admin/AdminLayout.css';
@@ -10,6 +14,19 @@ import { resolveImg } from '../lib/media';
 import useAppSettings, { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS, resolveAppSettingImage } from '../hooks/useAppSettings';
 import useAuthStore from '../store/authStore';
 import './AdminSettings.css';
+
+// Settings row: label and help on the left, controls on the right.
+function Row({ label, help, children }) {
+  return (
+    <div className="st-row">
+      <div className="st-row-label">
+        <strong>{label}</strong>
+        {help && <span>{help}</span>}
+      </div>
+      <div className="st-row-control">{children}</div>
+    </div>
+  );
+}
 
 export default function AdminSettings() {
   const { user, updateUser } = useAuthStore();
@@ -22,10 +39,15 @@ export default function AdminSettings() {
   const [savingBranding, setSavingBranding] = useState(false);
   const appLogoInputRef = useRef(null);
   const placeholderInputRef = useRef(null);
-  const [municipalityProfile, setMunicipalityProfile] = useState({ id: '', name: '', tagline: '', description: '', gallery: [] });
+  const [municipalityProfile, setMunicipalityProfile] = useState({ id: '', name: '', logo: '', tagline: '', description: '', gallery: [] });
   const [savingMunicipality, setSavingMunicipality] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const galleryInputRef = useRef(null);
+  const [uploadingMuniLogo, setUploadingMuniLogo] = useState(false);
+  // Last saved municipality page, to detect unsaved edits.
+  const [municipalitySnapshot, setMunicipalitySnapshot] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const muniLogoInputRef = useRef(null);
   const [profileForm, setProfileForm] = useState({
     fullName: user?.fullName || '',
     contactNumber: user?.contactNumber || '',
@@ -62,13 +84,18 @@ export default function AdminSettings() {
   useEffect(() => {
     if (!isMunicipalAdmin || !user?.municipalityId) return;
     axios.get(`/municipalities/${user.municipalityId}`)
-      .then((res) => setMunicipalityProfile({
-        id: res.data?.id || user.municipalityId,
-        name: res.data?.name || '',
-        tagline: res.data?.tagline || '',
-        description: res.data?.description || '',
-        gallery: Array.isArray(res.data?.gallery) ? res.data.gallery : [],
-      }))
+      .then((res) => {
+        const loaded = {
+          id: res.data?.id || user.municipalityId,
+          name: res.data?.name || '',
+          logo: res.data?.logo || '',
+          tagline: res.data?.tagline || '',
+          description: res.data?.description || '',
+          gallery: Array.isArray(res.data?.gallery) ? res.data.gallery : [],
+        };
+        setMunicipalityProfile(loaded);
+        setMunicipalitySnapshot(loaded);
+      })
       .catch((err) => toast.error(err.message || 'Failed to load municipality profile'));
   }, [isMunicipalAdmin, user?.municipalityId]);
 
@@ -76,15 +103,31 @@ export default function AdminSettings() {
     setSavingMunicipality(true);
     try {
       await axios.put(`/municipalities/${municipalityProfile.id}`, {
+        logo: municipalityProfile.logo || null,
         tagline: municipalityProfile.tagline,
         description: municipalityProfile.description,
         gallery: municipalityProfile.gallery,
       });
+      setMunicipalitySnapshot(municipalityProfile);
       toast.success('Municipality page updated');
     } catch (err) {
       toast.error(err.message || 'Failed to save municipality page');
     } finally {
       setSavingMunicipality(false);
+    }
+  };
+
+  const uploadMunicipalityLogo = async (file) => {
+    if (!file) return;
+    setUploadingMuniLogo(true);
+    try {
+      const result = await uploadImage(file);
+      setMunicipalityProfile((profile) => ({ ...profile, logo: result.url }));
+      toast.success('Logo uploaded. Save the page to publish it.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload logo');
+    } finally {
+      setUploadingMuniLogo(false);
     }
   };
 
@@ -255,298 +298,366 @@ export default function AdminSettings() {
     }
   };
 
-  return (
-    <AdminLayout>
-      <div className="admin-page-header">
-        <h1 className="admin-page-title">Settings</h1>
-        <p className="admin-page-subtitle">Manage app branding, your admin profile, password, and security.</p>
-      </div>
+  const municipalityDirty = Boolean(municipalitySnapshot) && ['logo', 'tagline', 'description', 'gallery']
+    .some((key) => JSON.stringify(municipalityProfile[key]) !== JSON.stringify(municipalitySnapshot[key]));
 
-      {isSuperAdmin && (
-        <section className="admin-card admin-settings-card app-branding-card">
-          <header className="admin-settings-card-head">
-            <div className="admin-settings-icon"><ImageIcon size={18} /></div>
-            <div>
-              <h2 className="admin-card-title">App branding</h2>
-              <p className="admin-settings-sub">Manage the Emoorm logo and the image shown when a product has no photo.</p>
+  const passwordChecks = [
+    { label: 'At least 8 characters', ok: pwForm.newPassword.length >= 8 },
+    { label: 'Contains a number', ok: /\d/.test(pwForm.newPassword) },
+    { label: 'Contains a symbol', ok: /[^A-Za-z0-9]/.test(pwForm.newPassword) },
+  ];
+  const passwordsMatch = pwForm.confirm.length > 0 && pwForm.confirm === pwForm.newPassword;
+
+  const sections = [
+    isSuperAdmin && { key: 'branding', label: 'App branding', hint: 'Logo and placeholder', icon: Palette },
+    isMunicipalAdmin && { key: 'municipality', label: 'Municipality page', hint: 'Public showcase', icon: MapPin },
+    { key: 'profile', label: 'Profile', hint: 'Name and contact', icon: User },
+    { key: 'password', label: 'Password', hint: 'Change your password', icon: KeyRound },
+    { key: 'security', label: 'Two-factor', hint: mfaStatus?.enabled ? 'Enabled' : 'Not enabled', icon: ShieldCheck },
+  ].filter(Boolean);
+  const requestedTab = searchParams.get('tab');
+  const activeTab = sections.some((sec) => sec.key === requestedTab) ? requestedTab : sections[0].key;
+  const selectTab = (key) => setSearchParams({ tab: key }, { replace: true });
+
+  const brandingPanel = (
+    <section className="st-panel">
+      <header className="st-panel-head">
+        <div>
+          <h2>App branding</h2>
+          <p>The Emoorm logo and the image shown when a product has no photo.</p>
+        </div>
+      </header>
+      <div className="st-branding-grid">
+        {[
+          { field: 'appLogo', label: 'General app logo', ref: appLogoInputRef, className: '' },
+          { field: 'productPlaceholder', label: 'No-product-image placeholder', ref: placeholderInputRef, className: 'is-placeholder' },
+        ].map(({ field, label, ref, className }) => (
+          <div key={field} className="st-branding-item">
+            <strong>{label}</strong>
+            <div className={`st-branding-preview ${className}`}>
+              <img src={resolveAppSettingImage(brandingForm[field])} alt={label} />
             </div>
-          </header>
-          <div className="app-branding-grid">
-            <div className="app-branding-item">
-              <span className="app-branding-label">General app logo</span>
-              <div className="app-branding-preview">
-                <img src={resolveAppSettingImage(brandingForm.appLogo)} alt="Current app logo" />
-              </div>
-              <div className="app-branding-actions">
-                <button type="button" className="admin-btn admin-btn-outline" onClick={() => appLogoInputRef.current?.click()} disabled={Boolean(uploadingBrandField)}>
-                  {uploadingBrandField === 'appLogo' ? <Loader2 size={14} className="spin" /> : <UploadSimple size={14} />}
-                  {uploadingBrandField === 'appLogo' ? 'Uploading...' : 'Choose logo'}
-                </button>
-                <button type="button" className="admin-btn admin-btn-ghost" onClick={() => setBrandingForm((current) => ({ ...current, appLogo: DEFAULT_APP_SETTINGS.appLogo }))}>Restore default</button>
-                <input ref={appLogoInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { uploadBrandImage('appLogo', event.target.files?.[0]); event.target.value = ''; }} />
-              </div>
-            </div>
-            <div className="app-branding-item">
-              <span className="app-branding-label">No-product-image placeholder</span>
-              <div className="app-branding-preview app-branding-preview-placeholder">
-                <img src={resolveAppSettingImage(brandingForm.productPlaceholder)} alt="Current product placeholder" />
-              </div>
-              <div className="app-branding-actions">
-                <button type="button" className="admin-btn admin-btn-outline" onClick={() => placeholderInputRef.current?.click()} disabled={Boolean(uploadingBrandField)}>
-                  {uploadingBrandField === 'productPlaceholder' ? <Loader2 size={14} className="spin" /> : <UploadSimple size={14} />}
-                  {uploadingBrandField === 'productPlaceholder' ? 'Uploading...' : 'Choose placeholder'}
-                </button>
-                <button type="button" className="admin-btn admin-btn-ghost" onClick={() => setBrandingForm((current) => ({ ...current, productPlaceholder: DEFAULT_APP_SETTINGS.productPlaceholder }))}>Restore default</button>
-                <input ref={placeholderInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { uploadBrandImage('productPlaceholder', event.target.files?.[0]); event.target.value = ''; }} />
-              </div>
+            <div className="st-inline-actions">
+              <button type="button" className="st-btn st-btn-soft" onClick={() => ref.current?.click()} disabled={Boolean(uploadingBrandField)}>
+                {uploadingBrandField === field ? <Loader2 size={15} className="spin" /> : <UploadSimple size={15} weight="bold" />}
+                {uploadingBrandField === field ? 'Uploading…' : 'Choose image'}
+              </button>
+              <button type="button" className="st-btn st-btn-text" onClick={() => setBrandingForm((current) => ({ ...current, [field]: DEFAULT_APP_SETTINGS[field] }))}>
+                Restore default
+              </button>
+              <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { uploadBrandImage(field, event.target.files?.[0]); event.target.value = ''; }} />
             </div>
           </div>
-          <div className="admin-settings-actions app-branding-save">
-            <button type="button" className="admin-btn admin-btn-primary" onClick={saveBranding} disabled={savingBranding || Boolean(uploadingBrandField)}>
-              {savingBranding ? <Loader2 size={14} className="spin" /> : <Save size={14} />}
-              {savingBranding ? 'Saving...' : 'Save app branding'}
+        ))}
+      </div>
+      <footer className="st-panel-foot">
+        <button type="button" className="st-btn st-btn-primary" onClick={saveBranding} disabled={savingBranding || Boolean(uploadingBrandField)}>
+          {savingBranding ? <Loader2 size={15} className="spin" /> : <Save size={15} weight="fill" />}
+          {savingBranding ? 'Saving…' : 'Save branding'}
+        </button>
+      </footer>
+    </section>
+  );
+
+  const municipalityPanel = (
+    <section className="st-panel">
+      <header className="st-panel-head">
+        <div>
+          <h2>{municipalityProfile.name ? `${municipalityProfile.name} page` : 'Municipality page'}</h2>
+          <p>What visitors see on your public municipality page.</p>
+        </div>
+        {municipalityProfile.id && (
+          <a className="st-btn st-btn-text" href={`/municipality/${municipalityProfile.id}`} target="_blank" rel="noopener noreferrer">
+            View page <ArrowSquareOut size={15} weight="bold" />
+          </a>
+        )}
+      </header>
+
+      <Row label="Logo" help="Square JPEG, PNG or WebP, up to 5 MB.">
+        <div className="st-logo">
+          <div className="st-logo-preview">
+            {municipalityProfile.logo
+              ? <img src={resolveImg(municipalityProfile.logo)} alt={`${municipalityProfile.name} logo`} />
+              : <ImageIcon size={40} weight="fill" />}
+          </div>
+          <div className="st-inline-actions">
+            <button type="button" className="st-btn st-btn-soft" onClick={() => muniLogoInputRef.current?.click()} disabled={uploadingMuniLogo}>
+              {uploadingMuniLogo ? <Loader2 size={15} className="spin" /> : <UploadSimple size={15} weight="bold" />}
+              {uploadingMuniLogo ? 'Uploading…' : municipalityProfile.logo ? 'Replace' : 'Upload logo'}
+            </button>
+            {municipalityProfile.logo && (
+              <button type="button" className="st-btn st-btn-text" onClick={() => setMunicipalityProfile((p) => ({ ...p, logo: '' }))} disabled={uploadingMuniLogo}>
+                Remove
+              </button>
+            )}
+            <input ref={muniLogoInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { uploadMunicipalityLogo(e.target.files?.[0]); e.target.value = ''; }} />
+          </div>
+        </div>
+      </Row>
+
+      <Row label="Tagline" help="A short line under the municipality name.">
+        <input
+          className="st-input"
+          value={municipalityProfile.tagline}
+          onChange={(e) => setMunicipalityProfile((p) => ({ ...p, tagline: e.target.value }))}
+          placeholder={`${municipalityProfile.name || 'Municipality'}, made local.`}
+          maxLength={180}
+        />
+        <span className="st-counter">{municipalityProfile.tagline.length}/180</span>
+      </Row>
+
+      <Row label="Background" help="Tell visitors what makes this place special.">
+        <textarea
+          className="st-input"
+          rows={5}
+          value={municipalityProfile.description}
+          onChange={(e) => setMunicipalityProfile((p) => ({ ...p, description: e.target.value }))}
+          placeholder="History, local products, festivals, places to visit…"
+        />
+      </Row>
+
+      <Row label="Gallery" help={`${municipalityProfile.gallery.length} of 12 photos. Shown on the page and gallery view.`}>
+        <div className="st-gallery">
+          {municipalityProfile.gallery.map((image, index) => (
+            <div key={`${image}-${index}`} className="st-gallery-item">
+              <img src={resolveImg(image)} alt={`Gallery ${index + 1}`} />
+              <button
+                type="button"
+                onClick={() => setMunicipalityProfile((p) => ({ ...p, gallery: p.gallery.filter((_, i) => i !== index) }))}
+                aria-label={`Remove photo ${index + 1}`}
+              >
+                <X size={12} weight="bold" />
+              </button>
+            </div>
+          ))}
+          {municipalityProfile.gallery.length < 12 && (
+            <button type="button" className="st-gallery-add" onClick={() => galleryInputRef.current?.click()} disabled={uploadingGallery}>
+              {uploadingGallery ? <Loader2 size={22} className="spin" /> : <Plus size={22} weight="bold" />}
+              <span>{uploadingGallery ? 'Uploading…' : 'Add photos'}</span>
+            </button>
+          )}
+          <input ref={galleryInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { addGalleryImages(e.target.files); e.target.value = ''; }} />
+        </div>
+      </Row>
+
+      <footer className="st-panel-foot">
+        {municipalityDirty && <span className="st-dirty">Unsaved changes</span>}
+        {municipalityDirty && (
+          <button type="button" className="st-btn st-btn-text" onClick={() => setMunicipalityProfile(municipalitySnapshot)} disabled={savingMunicipality}>
+            Discard
+          </button>
+        )}
+        <button
+          type="button"
+          className="st-btn st-btn-primary"
+          disabled={!municipalityDirty || savingMunicipality || uploadingMuniLogo || uploadingGallery || !municipalityProfile.id}
+          onClick={saveMunicipalityProfile}
+        >
+          {savingMunicipality ? <Loader2 size={15} className="spin" /> : <Save size={15} weight="fill" />}
+          {savingMunicipality ? 'Saving…' : 'Save page'}
+        </button>
+      </footer>
+    </section>
+  );
+
+  const profilePanel = (
+    <form className="st-panel" onSubmit={handleProfileSave}>
+      <header className="st-panel-head">
+        <div>
+          <h2>Profile</h2>
+          <p>Your name and contact appear in audit logs and support chats.</p>
+        </div>
+      </header>
+      <Row label="Full name">
+        <input className="st-input" type="text" value={profileForm.fullName} onChange={(e) => setProfileForm((p) => ({ ...p, fullName: e.target.value }))} required />
+      </Row>
+      <Row label="Contact number">
+        <input className="st-input" type="tel" value={profileForm.contactNumber} onChange={(e) => setProfileForm((p) => ({ ...p, contactNumber: e.target.value }))} placeholder="+63…" />
+      </Row>
+      <Row label="Email" help="Contact a super admin to change your email.">
+        <input className="st-input" type="email" value={user?.email || ''} disabled />
+      </Row>
+      <footer className="st-panel-foot">
+        <button type="submit" className="st-btn st-btn-primary" disabled={savingProfile}>
+          {savingProfile ? <Loader2 size={15} className="spin" /> : <Save size={15} weight="fill" />}
+          {savingProfile ? 'Saving…' : 'Save profile'}
+        </button>
+      </footer>
+    </form>
+  );
+
+  const passwordPanel = (
+    <form className="st-panel" onSubmit={handlePwSave}>
+      <header className="st-panel-head">
+        <div>
+          <h2>Password</h2>
+          <p>Choose a strong password you don&apos;t use anywhere else.</p>
+        </div>
+      </header>
+      <Row label="Current password">
+        <input className="st-input" type="password" autoComplete="current-password" value={pwForm.currentPassword} onChange={(e) => setPwForm((p) => ({ ...p, currentPassword: e.target.value }))} required />
+      </Row>
+      <Row label="New password">
+        <input className="st-input" type="password" autoComplete="new-password" value={pwForm.newPassword} onChange={(e) => setPwForm((p) => ({ ...p, newPassword: e.target.value }))} required minLength={8} />
+        <ul className="st-checks">
+          {passwordChecks.map((check) => (
+            <li key={check.label} className={check.ok ? 'is-ok' : ''}>
+              <CheckCircle size={15} weight="fill" /> {check.label}
+            </li>
+          ))}
+        </ul>
+      </Row>
+      <Row label="Confirm password">
+        <input className="st-input" type="password" autoComplete="new-password" value={pwForm.confirm} onChange={(e) => setPwForm((p) => ({ ...p, confirm: e.target.value }))} required minLength={8} />
+        {pwForm.confirm && (
+          <span className={`st-match ${passwordsMatch ? 'is-ok' : 'is-bad'}`}>
+            {passwordsMatch ? 'Passwords match' : 'Passwords do not match'}
+          </span>
+        )}
+      </Row>
+      <footer className="st-panel-foot">
+        <button type="submit" className="st-btn st-btn-primary" disabled={savingPw}>
+          {savingPw ? <Loader2 size={15} className="spin" /> : <KeyRound size={15} weight="fill" />}
+          {savingPw ? 'Updating…' : 'Update password'}
+        </button>
+      </footer>
+    </form>
+  );
+
+  const securityPanel = (
+    <section className="st-panel">
+      <header className="st-panel-head">
+        <div>
+          <h2>Two-factor authentication</h2>
+          <p>
+            {mfaStatus?.enabled
+              ? 'Every sign-in asks for a code from your authenticator app.'
+              : 'Admin accounts must use an authenticator app for stronger protection.'}
+          </p>
+        </div>
+        <span className={`st-status ${mfaStatus?.enabled ? 'is-on' : 'is-off'}`}>
+          {mfaStatus?.enabled ? 'Enabled' : 'Not enabled'}
+        </span>
+      </header>
+
+      {newBackupCodes && (
+        <div className="st-callout">
+          <div className="st-callout-head">
+            <strong>Save your backup codes</strong>
+            <button type="button" className="st-btn st-btn-text" onClick={copyCodes}>
+              <Copy size={15} weight="bold" /> Copy all
             </button>
           </div>
-        </section>
+          <p>Each code works once if you lose access to your authenticator. Keep them somewhere safe.</p>
+          <ul className="st-codes">
+            {newBackupCodes.map((c) => <li key={c}><code>{c}</code></li>)}
+          </ul>
+          <button type="button" className="st-btn st-btn-soft" onClick={() => setNewBackupCodes(null)}>
+            I&apos;ve saved them
+          </button>
+        </div>
       )}
 
-      {isMunicipalAdmin && (
-        <section className="admin-card admin-settings-card municipality-editor-card">
-          <header className="admin-settings-card-head">
-            <div className="admin-settings-icon"><MapPin size={18} /></div>
-            <div><h2 className="admin-card-title">Municipality page</h2><p className="admin-settings-sub">Edit the introduction and gallery shown on your public municipality page.</p></div>
-          </header>
-          <div className="admin-settings-form">
-            <label className="admin-settings-field"><span>Municipality</span><input value={municipalityProfile.name} disabled /></label>
-            <label className="admin-settings-field"><span>Showcase tagline</span><input value={municipalityProfile.tagline} onChange={(e) => setMunicipalityProfile((p) => ({ ...p, tagline: e.target.value }))} placeholder={`${municipalityProfile.name || 'Municipality'}, made local.`} maxLength={180} /></label>
-            <label className="admin-settings-field"><span>Short background</span><textarea rows={4} value={municipalityProfile.description} onChange={(e) => setMunicipalityProfile((p) => ({ ...p, description: e.target.value }))} placeholder="Tell visitors what makes this place special…" /></label>
-            <div className="municipality-editor-gallery">
-              <div className="municipality-editor-gallery-head"><span>Gallery ({municipalityProfile.gallery.length}/12)</span><button type="button" className="admin-btn admin-btn-gray" onClick={() => galleryInputRef.current?.click()} disabled={uploadingGallery}>{uploadingGallery ? 'Uploading…' : 'Add images'}</button><input ref={galleryInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { addGalleryImages(e.target.files); e.target.value = ''; }} /></div>
-              <div className="municipality-editor-gallery-grid">
-                {municipalityProfile.gallery.map((image, index) => <div key={`${image}-${index}`}><img src={resolveImg(image)} alt={`Gallery ${index + 1}`} /><button type="button" onClick={() => setMunicipalityProfile((p) => ({ ...p, gallery: p.gallery.filter((_, itemIndex) => itemIndex !== index) }))} aria-label="Remove gallery image">×</button></div>)}
-              </div>
-            </div>
-            <div className="admin-settings-actions"><button type="button" className="admin-btn admin-btn-primary" disabled={savingMunicipality || !municipalityProfile.id} onClick={saveMunicipalityProfile}><Save size={14} /> {savingMunicipality ? 'Saving…' : 'Save municipality page'}</button></div>
-          </div>
-        </section>
+      {!mfaStatus?.enabled && !mfaSetup && (
+        <div className="st-empty">
+          <ShieldCheck size={72} weight="fill" />
+          <strong>Protect your admin account</strong>
+          <span>Use Google Authenticator, Authy or 1Password to generate sign-in codes.</span>
+          <button type="button" className="st-btn st-btn-primary" onClick={beginMfaSetup} disabled={busy}>
+            {busy ? <Loader2 size={15} className="spin" /> : <ShieldCheck size={15} weight="fill" />} Set up two-factor
+          </button>
+        </div>
       )}
 
-      <div className="admin-settings-grid">
-        {/* Profile */}
-        <section className="admin-card admin-settings-card">
-          <header className="admin-settings-card-head">
-            <div className="admin-settings-icon"><User size={18} /></div>
-            <div>
-              <h2 className="admin-card-title">Profile</h2>
-              <p className="admin-settings-sub">Your name and contact used in audit logs.</p>
-            </div>
-          </header>
-          <form onSubmit={handleProfileSave} className="admin-settings-form">
-            <label className="admin-settings-field">
-              <span>Full name</span>
-              <input
-                type="text"
-                value={profileForm.fullName}
-                onChange={(e) => setProfileForm(p => ({ ...p, fullName: e.target.value }))}
-                required
-              />
-            </label>
-            <label className="admin-settings-field">
-              <span>Contact number</span>
-              <input
-                type="tel"
-                value={profileForm.contactNumber}
-                onChange={(e) => setProfileForm(p => ({ ...p, contactNumber: e.target.value }))}
-                placeholder="+63…"
-              />
-            </label>
-            <label className="admin-settings-field">
-              <span>Email</span>
-              <input type="email" value={user?.email || ''} disabled />
-            </label>
-            <div className="admin-settings-actions">
-              <button type="submit" className="admin-btn admin-btn-primary" disabled={savingProfile}>
-                {savingProfile ? <Loader2 size={14} className="spin" /> : <Save size={14} />}
-                {savingProfile ? 'Saving…' : 'Save changes'}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        {/* Password */}
-        <section className="admin-card admin-settings-card">
-          <header className="admin-settings-card-head">
-            <div className="admin-settings-icon"><KeyRound size={18} /></div>
-            <div>
-              <h2 className="admin-card-title">Password</h2>
-              <p className="admin-settings-sub">Use at least 8 characters with a mix of numbers and symbols.</p>
-            </div>
-          </header>
-          <form onSubmit={handlePwSave} className="admin-settings-form">
-            <label className="admin-settings-field">
-              <span>Current password</span>
-              <input
-                type="password"
-                value={pwForm.currentPassword}
-                onChange={(e) => setPwForm(p => ({ ...p, currentPassword: e.target.value }))}
-                required
-              />
-            </label>
-            <label className="admin-settings-field">
-              <span>New password</span>
-              <input
-                type="password"
-                value={pwForm.newPassword}
-                onChange={(e) => setPwForm(p => ({ ...p, newPassword: e.target.value }))}
-                required
-                minLength={8}
-              />
-            </label>
-            <label className="admin-settings-field">
-              <span>Confirm new password</span>
-              <input
-                type="password"
-                value={pwForm.confirm}
-                onChange={(e) => setPwForm(p => ({ ...p, confirm: e.target.value }))}
-                required
-                minLength={8}
-              />
-            </label>
-            <div className="admin-settings-actions">
-              <button type="submit" className="admin-btn admin-btn-primary" disabled={savingPw}>
-                {savingPw ? <Loader2 size={14} className="spin" /> : <Save size={14} />}
-                {savingPw ? 'Updating…' : 'Update password'}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        {/* MFA */}
-        <section className="admin-card admin-settings-card admin-settings-security">
-          <header className="admin-settings-card-head">
-            <div>
-              <h2 className="admin-card-title">Two-factor authentication</h2>
-              <p className="admin-settings-sub">
-                {mfaStatus?.enabled
-                  ? 'MFA is active. Every login requires a code from your authenticator.'
-                  : 'Admin accounts are required to enable MFA for stronger protection.'}
-              </p>
-            </div>
-            <span className={`admin-mfa-status ${mfaStatus?.enabled ? 'is-on' : 'is-off'}`}>
-              {mfaStatus?.enabled ? 'Enabled' : 'Not enabled'}
-            </span>
-          </header>
-
-          {newBackupCodes && (
-            <div className="admin-mfa-backup-box">
-              <div className="admin-mfa-backup-head">
-                <strong>Save your backup codes</strong>
-                <button type="button" className="admin-btn admin-btn-ghost" onClick={copyCodes}>
-                  <Copy size={13} /> Copy all
-                </button>
-              </div>
-              <p className="admin-settings-sub">
-                Each code works once if you lose access to your authenticator. Store them somewhere safe.
-              </p>
-              <ul className="admin-mfa-backup-list">
-                {newBackupCodes.map((c) => <li key={c}><code>{c}</code></li>)}
-              </ul>
-              <button type="button" className="admin-btn admin-btn-outline" onClick={() => setNewBackupCodes(null)}>
-                I've saved them
-              </button>
-            </div>
-          )}
-
-          {!mfaStatus?.enabled && !mfaSetup && (
-            <div className="admin-mfa-actions">
-              <button type="button" className="admin-btn admin-btn-primary" onClick={beginMfaSetup} disabled={busy}>
-                <ShieldCheck size={14} /> Enable MFA
-              </button>
-            </div>
-          )}
-
-          {mfaSetup && (
-            <div className="admin-mfa-setup">
-              <p className="admin-settings-sub">
-                Scan the QR with Google Authenticator, Authy, 1Password, etc. Then enter the 6-digit code.
-              </p>
-              <img src={mfaSetup.qrDataUrl} alt="MFA QR" className="admin-mfa-qr" />
-              <div className="admin-mfa-secret">
-                <span>Manual key</span>
+      {mfaSetup && (
+        <>
+          <Row label="1. Scan the QR code" help="Open your authenticator app and scan this code.">
+            <div className="st-qr">
+              <img src={mfaSetup.qrDataUrl} alt="Authenticator QR code" />
+              <div>
+                <span>Can&apos;t scan? Enter this key:</span>
                 <code>{mfaSetup.secret}</code>
               </div>
-              <div className="admin-settings-field">
-                <span>6-digit code</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={mfaCode}
-                  onChange={(e) => setMfaCode(e.target.value)}
-                  placeholder="123456"
-                />
-              </div>
-              <div className="admin-mfa-actions">
-                <button type="button" className="admin-btn admin-btn-primary" onClick={completeMfaSetup} disabled={busy}>
-                  {busy ? <Loader2 size={14} className="spin" /> : <ShieldCheck size={14} />}
-                  Confirm & enable
-                </button>
-                <button type="button" className="admin-btn admin-btn-ghost" onClick={() => { setMfaSetup(null); setMfaCode(''); }}>
-                  Cancel
-                </button>
-              </div>
             </div>
-          )}
+          </Row>
+          <Row label="2. Enter the code" help="The 6-digit code shown in the app.">
+            <input className="st-input st-code" type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" />
+          </Row>
+          <footer className="st-panel-foot">
+            <button type="button" className="st-btn st-btn-text" onClick={() => { setMfaSetup(null); setMfaCode(''); }}>Cancel</button>
+            <button type="button" className="st-btn st-btn-primary" onClick={completeMfaSetup} disabled={busy}>
+              {busy ? <Loader2 size={15} className="spin" /> : <ShieldCheck size={15} weight="fill" />} Confirm and enable
+            </button>
+          </footer>
+        </>
+      )}
 
-          {mfaStatus?.enabled && (
-            <div className="admin-mfa-manage">
-              <div className="admin-mfa-manage-row">
-                <div>
-                  <strong>Backup codes</strong>
-                  <p className="admin-settings-sub">
-                    {mfaStatus.backupCodesRemaining} unused. Regenerate to invalidate old ones.
-                  </p>
-                </div>
-              </div>
-              <div className="admin-settings-field">
-                <span>Enter a fresh 6-digit code to confirm</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={mfaCode}
-                  onChange={(e) => setMfaCode(e.target.value)}
-                  placeholder="123456"
-                />
-              </div>
-              <div className="admin-mfa-actions">
-                <button type="button" className="admin-btn admin-btn-outline" onClick={regenerateBackupCodes} disabled={busy}>
-                  <RefreshCcw size={14} /> Regenerate backup codes
-                </button>
-                {mfaStatus.required ? (
-                  <span className="admin-mfa-required-note">
-                    MFA is required for admins and cannot be turned off.
-                  </span>
-                ) : confirmDisable ? (
-                  <>
-                    <button type="button" className="admin-btn admin-btn-danger" onClick={disableMfa} disabled={busy}>
-                      Confirm disable
-                    </button>
-                    <button type="button" className="admin-btn admin-btn-ghost" onClick={() => setConfirmDisable(false)}>
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <button type="button" className="admin-btn admin-btn-ghost" onClick={() => setConfirmDisable(true)}>
-                    Disable MFA
-                  </button>
-                )}
-              </div>
+      {mfaStatus?.enabled && (
+        <>
+          <Row label="Backup codes" help={`${mfaStatus.backupCodesRemaining} unused. Regenerating replaces all old codes.`}>
+            <input className="st-input st-code" type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="Current 6-digit code" />
+            <div className="st-inline-actions">
+              <button type="button" className="st-btn st-btn-soft" onClick={regenerateBackupCodes} disabled={busy}>
+                <RefreshCcw size={15} weight="bold" /> Regenerate codes
+              </button>
             </div>
-          )}
-        </section>
+          </Row>
+          <Row label="Turn off" help={mfaStatus.required ? 'Required for admin accounts.' : 'Uses the code entered above.'}>
+            {mfaStatus.required ? (
+              <span className="st-note">Two-factor authentication can&apos;t be turned off for admins.</span>
+            ) : confirmDisable ? (
+              <div className="st-inline-actions">
+                <button type="button" className="st-btn st-btn-danger" onClick={disableMfa} disabled={busy}>Confirm turn off</button>
+                <button type="button" className="st-btn st-btn-text" onClick={() => setConfirmDisable(false)}>Cancel</button>
+              </div>
+            ) : (
+              <div className="st-inline-actions">
+                <button type="button" className="st-btn st-btn-text st-btn-text-danger" onClick={() => setConfirmDisable(true)}>Turn off two-factor</button>
+              </div>
+            )}
+          </Row>
+        </>
+      )}
+    </section>
+  );
+
+  const panels = {
+    branding: brandingPanel,
+    municipality: municipalityPanel,
+    profile: profilePanel,
+    password: passwordPanel,
+    security: securityPanel,
+  };
+
+  return (
+    <AdminLayout>
+      <div className="st">
+        <header className="st-header">
+          <h1 className="admin-page-title">Settings</h1>
+          <p>Manage {isMunicipalAdmin ? 'your municipality page, ' : ''}{isSuperAdmin ? 'app branding, ' : ''}profile and account security.</p>
+        </header>
+
+        <div className="st-layout">
+          <nav className="st-nav" aria-label="Settings sections">
+            {sections.map(({ key, label, hint, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                className={`st-nav-item${activeTab === key ? ' is-active' : ''}`}
+                onClick={() => selectTab(key)}
+                aria-current={activeTab === key ? 'page' : undefined}
+              >
+                <Icon size={20} weight="fill" />
+                <span>
+                  <strong>{label}</strong>
+                  <small>{hint}</small>
+                </span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="st-content">{panels[activeTab]}</div>
+        </div>
       </div>
     </AdminLayout>
   );

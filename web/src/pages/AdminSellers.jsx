@@ -5,8 +5,12 @@ import {
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import DetailDrawer from '../components/admin/DetailDrawer';
+import MessageUserButton from '../components/admin/MessageUserButton';
+import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -68,6 +72,9 @@ export default function AdminSellers() {
   const [processing, setProcessing] = useState(null); // id being processed
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   useEffect(() => {
     fetchApplicants();
@@ -75,6 +82,7 @@ export default function AdminSellers() {
 
   const fetchApplicants = async () => {
     setIsLoading(true);
+    setSelectedIds([]);
     try {
       const params = { pageSize: 20, page, role: 'SELLER' };
       if (statusFilter) params.sellerApplicationStatus = statusFilter;
@@ -130,6 +138,30 @@ export default function AdminSellers() {
     }
   };
 
+  const pendingApplicants = applicants.filter((u) => u.sellerApplicationStatus === 'PENDING');
+  const allPendingSelected = pendingApplicants.length > 0 && pendingApplicants.every((u) => selectedIds.includes(u.id));
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const toggleSelectAll = () => setSelectedIds(allPendingSelected ? [] : pendingApplicants.map((u) => u.id));
+
+  const handleBulkApprove = async () => {
+    const ids = selectedIds.filter((id) => pendingApplicants.some((u) => u.id === id));
+    setBulkProcessing(true);
+    try {
+      const results = await Promise.allSettled(ids.map((id) => axios.post(`/auth/users/${id}/approve-seller`)));
+      const done = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.length - done;
+      const msg = `Approve: ${done} done, ${failed} failed`;
+      if (failed) toast.error(msg); else toast.success(msg);
+      setSelectedIds([]);
+      setBulkConfirmOpen(false);
+      fetchApplicants();
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="admin-page-header">
@@ -167,15 +199,36 @@ export default function AdminSellers() {
           <Skeleton.Table cols={7} rows={6} />
         ) : applicants.length === 0 ? (
           <div className="admin-empty">
-            <Users size={36} />
+            <Users size={36} weight="fill" />
             <p>No {statusFilter.toLowerCase()} applications</p>
           </div>
         ) : (
           <>
+            {selectedIds.length > 0 && (
+              <div className="admin-bulk-bar">
+                <span>{selectedIds.length} selected</span>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-green"
+                  disabled={bulkProcessing}
+                  onClick={() => setBulkConfirmOpen(true)}
+                >
+                  <CheckCircle size={13} /> Approve selected
+                </button>
+                <button type="button" className="admin-btn admin-btn-gray" disabled={bulkProcessing} onClick={() => setSelectedIds([])}>
+                  Clear
+                </button>
+              </div>
+            )}
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
                   <tr>
+                    <th className="admin-check-col">
+                      {pendingApplicants.length > 0 && (
+                        <input type="checkbox" aria-label="Select all pending on this page" checked={allPendingSelected} onChange={toggleSelectAll} />
+                      )}
+                    </th>
                     <th>Applicant</th>
                     <th>Shop Name</th>
                     <th>Location</th>
@@ -187,7 +240,23 @@ export default function AdminSellers() {
                 </thead>
                 <tbody>
                   {applicants.map((u) => (
-                    <tr key={u.id}>
+                    <tr
+                      key={u.id}
+                      className="admin-row-clickable"
+                      tabIndex={0}
+                      onClick={rowOpen(() => { setSelected(u); setShowRejectInput(false); setRejectReason(''); })}
+                      onKeyDown={rowKeyOpen(() => { setSelected(u); setShowRejectInput(false); setRejectReason(''); })}
+                    >
+                      <td className="admin-check-col">
+                        {u.sellerApplicationStatus === 'PENDING' && (
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${u.fullName}`}
+                            checked={selectedIds.includes(u.id)}
+                            onChange={() => toggleSelect(u.id)}
+                          />
+                        )}
+                      </td>
                       <td>
                         <div className="admin-user-cell">
                           <div className="admin-avatar">{u.fullName?.[0] || '?'}</div>
@@ -256,12 +325,15 @@ export default function AdminSellers() {
       </div>
 
       {/* Detail panel */}
-      {selected && (
-        <div className="admin-detail-overlay" onClick={() => setSelected(null)}>
-          <div className="admin-detail-panel" onClick={(e) => e.stopPropagation()}>
+      <DetailDrawer item={selected} onClose={() => setSelected(null)}>
+        {(selected) => (
+          <>
             <div className="admin-detail-header">
               <h3>Application Details</h3>
-              <button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button>
+              <div className="admin-detail-head-actions">
+                <MessageUserButton userId={selected.id} role={selected.role} />
+                <button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button>
+              </div>
             </div>
 
             <div className="admin-detail-body">
@@ -347,9 +419,19 @@ export default function AdminSellers() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </DetailDrawer>
+
+      <ConfirmDialog
+        open={bulkConfirmOpen}
+        title={`Approve ${selectedIds.length} seller application(s)?`}
+        message="Each applicant's store will be activated and they will be notified."
+        confirmLabel="Approve selected"
+        loading={bulkProcessing}
+        onConfirm={handleBulkApprove}
+        onCancel={() => setBulkConfirmOpen(false)}
+      />
     </AdminLayout>
   );
 }

@@ -1,6 +1,7 @@
 const storeRepository = require('../repositories/store.repository');
 const userRepository = require('../repositories/user.repository');
 const prisma = require('../config/database');
+const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -358,7 +359,7 @@ const cancelStoreDeletion = async (storeId, userId) => {
  * @param {String} storeId - Store ID
  * @returns {Promise<Object>} Updated store
  */
-const suspendStore = async (storeId, actor = null) => {
+const suspendStore = async (storeId, actor = null, reason = null) => {
   const store = await storeRepository.findById(storeId);
 
   if (!store || store.deletedAt) {
@@ -369,7 +370,21 @@ const suspendStore = async (storeId, actor = null) => {
     throw new ApiError('You can only moderate stores in your assigned municipality', 403);
   }
 
-  return storeRepository.suspendStore(storeId);
+  const note = String(reason || '').trim().slice(0, 500) || null;
+  const updated = await storeRepository.suspendStore(storeId, note);
+  try {
+    await notificationService.createNotification({
+      userId: store.ownerId,
+      type: 'SELLER_SUSPENDED',
+      title: 'Your store has been suspended',
+      message: `${store.name} is hidden from buyers${note ? `. Reason: ${note}` : ''}. Contact your municipal admin for help.`,
+      relatedId: storeId,
+      audience: 'SELLER',
+    });
+  } catch (err) {
+    console.error('[suspendStore] notification failed:', err.message);
+  }
+  return updated;
 };
 
 /**
@@ -388,7 +403,20 @@ const unsuspendStore = async (storeId, actor = null) => {
     throw new ApiError('You can only moderate stores in your assigned municipality', 403);
   }
 
-  return storeRepository.unsuspendStore(storeId);
+  const updated = await storeRepository.unsuspendStore(storeId);
+  try {
+    await notificationService.createNotification({
+      userId: store.ownerId,
+      type: 'SELLER_APPROVED',
+      title: 'Your store is active again',
+      message: `${store.name} is visible to buyers again.`,
+      relatedId: storeId,
+      audience: 'SELLER',
+    });
+  } catch (err) {
+    console.error('[unsuspendStore] notification failed:', err.message);
+  }
+  return updated;
 };
 
 // ---------- Service Areas ----------

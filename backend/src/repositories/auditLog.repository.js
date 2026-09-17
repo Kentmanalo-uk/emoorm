@@ -18,6 +18,7 @@ const findAll = async (options = {}) => {
     entityId,
     from,
     to,
+    municipalityId,
   } = options;
 
   const where = {};
@@ -25,6 +26,7 @@ const findAll = async (options = {}) => {
   if (action) where.action = action;
   if (entity) where.entity = entity;
   if (entityId) where.entityId = entityId;
+  if (municipalityId) where.municipalityId = municipalityId;
   if (from || to) {
     where.createdAt = {};
     if (from) where.createdAt.gte = new Date(from);

@@ -106,4 +106,11 @@ router.post(
   productController.archiveProduct
 );
 
+router.post(
+  '/:id/restore',
+  authenticate,
+  authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
+  productController.restoreProduct
+);
+
 module.exports = router;

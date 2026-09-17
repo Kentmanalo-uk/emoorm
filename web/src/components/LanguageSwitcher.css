@@ -51,18 +51,46 @@
   border-radius: 10px;
   box-shadow: 0 10px 32px -8px rgba(15, 23, 42, 0.18);
   z-index: 1000;
-  animation: langSwitchIn 0.12s ease-out;
+  transform-origin: calc(100% - 20px) -8px;
+  animation: langSwitchIn 0.34s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.lang-switch__menu > * {
+  animation: langSwitchContentIn 0.3s ease both;
+}
+
+/* Same motion as the Messages panel: grows out of the trigger. */
 @keyframes langSwitchIn {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: scale(0.12);
+  }
+
+  45% {
+    opacity: 1;
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
+  }
+}
+
+@keyframes langSwitchContentIn {
+  0%,
+  33% {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-switch__menu,
+  .lang-switch__menu > * {
+    animation: none;
   }
 }
 

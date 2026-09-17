@@ -85,7 +85,7 @@
 .sc-brand-text strong {
   font-size: 15px;
   font-weight: 700;
-  color: #059669;
+  color: #006927; /* same as the homepage wordmark */
 }
 
 .sc-brand-text span {
@@ -618,4 +618,225 @@
   .sc-brand-text span {
     display: none;
   }
+}
+
+/* Active state matches the buyer profile sidebar: grey highlight, green text,
+   filled icons grey when inactive and green when active. */
+.sc-nav-item--active,
+.sc-nav-item--active:hover {
+  background: #f3f4f6;
+  color: #047857;
+  font-weight: 600;
+}
+
+.sc-nav-item > svg:not(.sc-nav-chevron) {
+  color: #9ca3af;
+}
+
+.sc-nav-item--active > svg:not(.sc-nav-chevron) {
+  color: #059669;
+}
+
+.sc-subnav-link--active,
+.sc-subnav-link--active:hover {
+  background: #f3f4f6;
+  color: #047857;
+  font-weight: 600;
+}
+
+/* ── Account menu (switch to personal) ────────────────────── */
+.sc-account {
+  position: relative;
+  margin-top: auto;
+}
+
+.sc-account .sc-user-card {
+  width: 100%;
+  margin-top: 0;
+  font: inherit;
+  text-align: left;
+  background: none;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  cursor: pointer;
+}
+
+.sc-account .sc-user-card:hover,
+.sc-account.is-open .sc-user-card {
+  background: #f9fafb;
+}
+
+.sc-account.is-open .sc-user-caret {
+  transform: rotate(-90deg);
+}
+
+.sc-account-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  width: 100%;
+  min-width: 220px;
+  padding: 6px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+  opacity: 0;
+  visibility: hidden;
+  /* Grows out of / shrinks into the account card (same motion as the Messages panel). */
+  transform: scale(0.12);
+  transform-origin: 24px calc(100% + 28px);
+  transition:
+    transform 0.26s cubic-bezier(0.4, 0, 0.6, 1),
+    opacity 0.18s ease 0.08s,
+    visibility 0s linear 0.26s;
+}
+
+.sc-account-menu > * {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.sc-account.is-open .sc-account-menu > * {
+  opacity: 1;
+  transition: opacity 0.2s ease 0.1s;
+}
+
+.sc-account.is-open .sc-account-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.16s ease,
+    visibility 0s;
+}
+
+.sc-account-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #f1f2f4;
+}
+
+.sc-account-menu-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.sc-account-menu-meta strong {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sc-account-menu-meta span {
+  font-size: 11.5px;
+  color: #6b7280;
+}
+
+.sc-account-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #047857;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.sc-account-switch:hover,
+.sc-account-switch:focus-visible {
+  background: #f3f4f6;
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-account-menu,
+  .sc-account.is-open .sc-account-menu,
+  .sc-account-menu > *,
+  .sc-account.is-open .sc-account-menu > * {
+    transition: none;
+  }
+}
+
+.sc-account-switch-avatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #e5e7eb;
+}
+
+.sc-account-switch-avatar--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #059669;
+}
+
+.sc-account-switch .sc-account-menu-meta {
+  flex: 1;
+}
+
+.sc-account-switch .sc-account-switch-label {
+  font-size: 13px;
+  color: #047857;
+}
+
+.sc-account-switch .sc-account-menu-meta span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 400;
+}
+
+.sc-account-switch-icon {
+  flex-shrink: 0;
+  color: #9ca3af;
+}
+
+/* ── Sticky sidebar hardening ─────────────────────────────── */
+.sc-sidebar {
+  align-self: start;
+}
+
+/* ── Seller pages: dim page background, borderless cards ─── */
+.sc-content {
+  background: #f5f6f8;
+}
+
+.sc-content :is(
+  .seller-card, .sd-card, .sd-header-card, .sd-stat, .sd-stat--compact, .sd-kpi-quick,
+  .sd-followers-metrics, .reviews-item, .sf-area-card, .sf-note,
+  .seller-return-stat, .seller-return-row, .seller-return-detail,
+  .products-bulk-bar, .product-optional-section, .an-card, .an-kpi, .an-growth
+) {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* Selectable cards keep their border only while hovered or selected. */
+.sc-content .sf-mode-card:not(.is-active):not(:hover) {
+  border-color: transparent;
 }

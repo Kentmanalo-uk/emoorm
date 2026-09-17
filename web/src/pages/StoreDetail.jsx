@@ -443,7 +443,7 @@ export default function StoreDetail() {
             </div>
           ) : products.length === 0 ? (
             <div className="shop-empty">
-              <Package size={40} />
+              <Package size={40} weight="fill" />
               <p>
                 {search
                   ? `No products match “${search}”.`

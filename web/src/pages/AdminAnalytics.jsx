@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { DownloadSimple as Download, ArrowsClockwise as RefreshCw } from '@phosphor-icons/react';
+import { DownloadSimple as Download, ArrowsClockwise as RefreshCw, MapTrifold } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import AdminLayout from '../components/admin/AdminLayout';
 import useAuthStore from '../store/authStore';
@@ -8,6 +8,7 @@ import BarChart from '../components/analytics/BarChart';
 import TopList from '../components/analytics/TopList';
 import StatusDonut from '../components/analytics/StatusDonut';
 import DateRangePicker from '../components/analytics/DateRangePicker';
+import EmptyState from '../components/analytics/EmptyState';
 import { peso, num, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
 import MunicipalAdminAnalytics from './MunicipalAdminAnalytics';
 import '../components/analytics/analytics.css';
@@ -66,7 +67,7 @@ function PlatformAnalytics() {
 
   return (
     <AdminLayout>
-      <div style={{ padding: 16 }}>
+      <div className="an-page">
         <div className="an-page-header">
           <div>
             <h1 className="an-page-title">Platform Analytics</h1>
@@ -191,7 +192,7 @@ function PlatformAnalytics() {
             </thead>
             <tbody>
               {(data?.salesByMunicipality || []).length === 0 && (
-                <tr><td colSpan={4} className="an-empty">No municipality data.</td></tr>
+                <tr><td colSpan={4}><EmptyState icon={MapTrifold} title="No municipality data" message="Sales per municipality will appear here." compact /></td></tr>
               )}
               {(data?.salesByMunicipality || []).map((m) => (
                 <tr key={m.id}>

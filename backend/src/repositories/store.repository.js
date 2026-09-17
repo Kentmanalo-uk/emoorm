@@ -257,10 +257,10 @@ const slugExists = async (slug, excludeId = null) => {
  * @param {String} id - Store ID
  * @returns {Promise<Object>} Updated store
  */
-const suspendStore = async (id) => {
+const suspendStore = async (id, reason = null) => {
   return prisma.store.update({
     where: { id },
-    data: { isSuspended: true },
+    data: { isSuspended: true, suspensionReason: reason },
   });
 };
 
@@ -272,7 +272,7 @@ const suspendStore = async (id) => {
 const unsuspendStore = async (id) => {
   return prisma.store.update({
     where: { id },
-    data: { isSuspended: false },
+    data: { isSuspended: false, suspensionReason: null },
   });
 };
 

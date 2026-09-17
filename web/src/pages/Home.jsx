@@ -5,11 +5,23 @@ import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
+import ChatDock from '../components/chat/ChatDock';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import './Home.css';
+
+const EXPLORE_ROWS = 5;
+const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
+
+// Matches the .home-explore-grid columns in Home.css (6 / 4 / 2).
+const exploreColumns = () => {
+  const width = typeof window === 'undefined' ? 1280 : window.innerWidth;
+  if (width <= 768) return 2;
+  if (width <= 1024) return 4;
+  return 6;
+};
 
 const Home = () => {
   const [currentIndex, setCurrentIndex] = useState(1); // Start at 1 (first real slide)
@@ -139,6 +151,11 @@ const Home = () => {
   const [apiCategories, setApiCategories] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [exploreProducts, setExploreProducts] = useState([]);
+  // One batch fills 5 rows of the grid at the current width; fixed per visit so pages line up.
+  const [exploreBatch] = useState(() => EXPLORE_ROWS * exploreColumns());
+  const [explorePage, setExplorePage] = useState(1);
+  const [exploreHasMore, setExploreHasMore] = useState(false);
+  const [exploreLoading, setExploreLoading] = useState(false);
   const [nearbyStores, setNearbyStores] = useState([]);
   const [mappedStores, setMappedStores] = useState([]);
   const [municipalities, setMunicipalities] = useState([]);
@@ -149,7 +166,7 @@ const Home = () => {
         const [catRes, suggestedRes, exploreRes, storesRes, mappedStoresRes, municipalitiesRes] = await Promise.all([
           axios.get('/categories'),
           axios.get('/products', { params: { pageSize: 6, sortBy: 'createdAt', sortOrder: 'desc' } }),
-          axios.get('/products', { params: { pageSize: 100, sortBy: 'createdAt', sortOrder: 'desc' } }),
+          axios.get('/products', { params: { ...EXPLORE_QUERY, page: 1, pageSize: exploreBatch } }),
           axios.get('/stores', {
             params: {
               pageSize: 6,
@@ -162,6 +179,8 @@ const Home = () => {
         setApiCategories(catRes.data || []);
         setFeaturedProducts(suggestedRes.data || []);
         setExploreProducts(exploreRes.data || []);
+        setExplorePage(1);
+        setExploreHasMore(Boolean(exploreRes.pagination?.hasNext));
         setNearbyStores(storesRes.data || []);
         setMappedStores((mappedStoresRes.data || []).filter((store) => store.latitude != null && store.longitude != null));
         setMunicipalities(municipalitiesRes.data || []);
@@ -170,7 +189,27 @@ const Home = () => {
       }
     };
     fetchHomeData();
-  }, [user?.municipalityId]);
+  }, [user?.municipalityId, exploreBatch]);
+
+  const loadMoreExplore = async () => {
+    setExploreLoading(true);
+    try {
+      const nextPage = explorePage + 1;
+      const res = await axios.get('/products', {
+        params: { ...EXPLORE_QUERY, page: nextPage, pageSize: exploreBatch },
+      });
+      setExploreProducts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...(res.data || []).filter((p) => !seen.has(p.id))];
+      });
+      setExplorePage(nextPage);
+      setExploreHasMore(Boolean(res.pagination?.hasNext));
+    } catch (err) {
+      toast.error(err.message || 'Failed to load more products');
+    } finally {
+      setExploreLoading(false);
+    }
+  };
 
   const handleAddToCart = (e, product) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
@@ -439,10 +478,22 @@ const Home = () => {
               {exploreProducts.map((product) => <HomeProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />)}
             </div>
           )}
+          {exploreHasMore && (
+            <div className="home-load-more">
+              <button
+                type="button"
+                className="home-load-more-btn"
+                onClick={loadMoreExplore}
+                disabled={exploreLoading}
+              >
+                {exploreLoading ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
-
+      <ChatDock />
     </Layout>
   );
 };

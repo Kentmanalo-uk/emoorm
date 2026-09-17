@@ -1,3 +1,4 @@
+const prisma = require('../config/database');
 const notificationRepository = require('../repositories/notification.repository');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -5,6 +6,8 @@ const { ApiError } = require('../middleware/errorHandler');
  * Notification Service
  * Contains business logic for notification operations
  */
+
+const AUDIENCES = ['BUYER', 'SELLER', 'ADMIN'];
 
 /**
  * Create notification
@@ -39,6 +42,9 @@ const createNotification = async (data) => {
     'RETURN_REFUNDED',
     'RETURN_CANCELLED',
     'RETURN_CLOSED',
+    'SUPPORT_MESSAGE',
+    'SELLER_APPLICATION_SUBMITTED',
+    'ADMIN_ALERT',
   ];
 
   if (!validTypes.includes(type)) {
@@ -56,7 +62,7 @@ const createNotification = async (data) => {
     'RETURN_CLOSED',
   ];
   const resolvedAudience = audience || (sellerTypes.includes(type) ? 'SELLER' : 'BUYER');
-  if (!['BUYER', 'SELLER'].includes(resolvedAudience)) {
+  if (!AUDIENCES.includes(resolvedAudience)) {
     throw new ApiError('Invalid notification audience', 400);
   }
 
@@ -78,7 +84,7 @@ const createNotification = async (data) => {
  * @returns {Promise<Object>} Notifications and pagination
  */
 const getUserNotifications = async (userId, options) => {
-  if (options.audience && !['BUYER', 'SELLER'].includes(options.audience)) {
+  if (options.audience && !AUDIENCES.includes(options.audience)) {
     throw new ApiError('Invalid notification audience', 400);
   }
   return notificationRepository.findByUserId({ ...options, userId });
@@ -198,19 +204,34 @@ const notifyOrderCreated = async (sellerId, orderId, buyerName) => {
  * @param {String} orderId - Order ID
  * @param {String} newStatus - New order status
  */
-const notifyOrderUpdated = async (buyerId, orderId, newStatus) => {
-  const statusMap = {
-    CONFIRMED: 'ORDER_CONFIRMED',
-    READY: 'ORDER_READY',
-    COMPLETED: 'ORDER_COMPLETED',
-    CANCELLED: 'ORDER_CANCELLED',
-  };
-  const type = statusMap[newStatus] || 'ORDER_CONFIRMED';
+const ORDER_STATUS_NOTICES = {
+  CONFIRMED: { type: 'ORDER_CONFIRMED', text: 'has been confirmed by the seller' },
+  PREPARING: { type: 'ORDER_CONFIRMED', text: 'is being prepared' },
+  TO_SHIP: { type: 'ORDER_READY', text: 'is packed and ready to ship' },
+  OUT_FOR_DELIVERY: { type: 'ORDER_READY', text: 'is out for delivery' },
+  DELIVERED: { type: 'ORDER_READY', text: 'has been delivered' },
+  READY: { type: 'ORDER_READY', text: 'is ready' },
+  READY_FOR_PICKUP: { type: 'ORDER_READY', text: 'is ready for pickup' },
+  PICKED_UP: { type: 'ORDER_READY', text: 'has been picked up' },
+  COMPLETED: { type: 'ORDER_COMPLETED', text: 'is complete' },
+  CANCELLED: { type: 'ORDER_CANCELLED', text: 'was cancelled by the seller' },
+};
+
+/**
+ * Notify order status updated
+ * @param {String} buyerId - Buyer user ID
+ * @param {String} orderId - Order ID
+ * @param {String} newStatus - New order status
+ * @param {Object} [options] - { orderNumber, refundNote }
+ */
+const notifyOrderUpdated = async (buyerId, orderId, newStatus, { orderNumber, refundNote } = {}) => {
+  const notice = ORDER_STATUS_NOTICES[newStatus] || { type: 'ORDER_CONFIRMED', text: 'was updated' };
+  const refund = refundNote ? ' The seller will arrange a refund of your payment.' : '';
   return createNotification({
     userId: buyerId,
-    type,
+    type: notice.type,
     title: 'Order Status Updated',
-    message: `Your order status has been updated to ${newStatus}`,
+    message: `Your order${orderNumber ? ` ${orderNumber}` : ''} ${notice.text}.${refund}`,
     relatedId: orderId,
   });
 };
@@ -237,12 +258,13 @@ const notifyProductApproved = async (sellerId, productId, productName) => {
  * @param {String} productId - Product ID
  * @param {String} productName - Product name
  */
-const notifyProductRejected = async (sellerId, productId, productName) => {
+const notifyProductRejected = async (sellerId, productId, productName, { reason, archived = false } = {}) => {
+  const action = archived ? 'archived' : 'suspended';
   return createNotification({
     userId: sellerId,
     type: 'PRODUCT_SUSPENDED',
-    title: 'Product Suspended',
-    message: `Your product "${productName}" has been suspended`,
+    title: archived ? 'Product Archived' : 'Product Suspended',
+    message: `Your product "${productName}" has been ${action}${reason ? `. Reason: ${reason}` : ''}`,
     relatedId: productId,
   });
 };
@@ -288,7 +310,49 @@ const notifyOrderReceived = async (sellerId, orderId, buyerName) => {
   });
 };
 
+/**
+ * Admins responsible for a municipality: its active municipal admins
+ * (including unexpired backup admins), or the superadmins when none exist.
+ */
+const findResponsibleAdmins = async (municipalityId) => {
+  const now = new Date();
+  const municipal = municipalityId
+    ? await prisma.user.findMany({
+      where: {
+        role: 'MUNICIPAL_ADMIN',
+        municipalityId,
+        isActive: true,
+        deletedAt: null,
+        OR: [{ adminAccessExpiresAt: null }, { adminAccessExpiresAt: { gt: now } }],
+      },
+      select: { id: true },
+    })
+    : [];
+  if (municipal.length > 0) return municipal.map((u) => u.id);
+  const supers = await prisma.user.findMany({
+    where: { role: 'SUPER_ADMIN', isActive: true, deletedAt: null },
+    select: { id: true },
+  });
+  return supers.map((u) => u.id);
+};
+
+/**
+ * Notify the admins of a municipality (admin audience). Never throws.
+ * @param {String|null} municipalityId
+ * @param {{type: String, title: String, message: String, relatedId?: String}} notice
+ */
+const notifyMunicipalAdmins = async (municipalityId, notice) => {
+  try {
+    const adminIds = await findResponsibleAdmins(municipalityId);
+    await Promise.all(adminIds.map((userId) => createNotification({ ...notice, userId, audience: 'ADMIN' })));
+  } catch (err) {
+    console.error('[notifyMunicipalAdmins] failed:', err.message);
+  }
+};
+
 module.exports = {
+  findResponsibleAdmins,
+  notifyMunicipalAdmins,
   createNotification,
   getUserNotifications,
   getNotificationById,

@@ -120,7 +120,7 @@
 .ac-brand-text strong {
   font-size: 15px;
   font-weight: 700;
-  color: #059669;
+  color: #006927; /* same as the homepage wordmark */
 }
 
 .ac-brand-text span {
@@ -871,8 +871,8 @@
 
 .admin-empty svg {
   display: block;
-  width: 86px;
-  height: 86px;
+  width: 200px;
+  height: 200px;
   padding: 0;
   margin: 0 auto 20px;
   background: transparent;
@@ -1240,4 +1240,33 @@
   .ac-user-card {
     transition: none !important;
   }
+}
+
+/* Active state matches the buyer profile sidebar: grey highlight, green text,
+   filled icons grey when inactive and green when active. */
+.ac-nav-item--active,
+.ac-nav-item--active:hover {
+  background: #f3f4f6;
+  color: #047857;
+  font-weight: 600;
+}
+
+.ac-nav-item > svg:not(.ac-nav-chevron) {
+  color: #9ca3af;
+}
+
+.ac-nav-item--active > svg:not(.ac-nav-chevron) {
+  color: #059669;
+}
+
+.ac-subnav-link--active,
+.ac-subnav-link--active:hover {
+  background: #f3f4f6;
+  color: #047857;
+  font-weight: 600;
+}
+
+/* Sticky sidebar hardening: never stretch past the viewport. */
+.ac-sidebar {
+  align-self: start;
 }

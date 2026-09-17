@@ -8,8 +8,12 @@ const { ApiError } = require('../middleware/errorHandler');
 /**
  * Admin Management Service
  * Super Admin CRUD for MUNICIPAL_ADMIN accounts.
- * Assigning an admin also sets Municipality.adminId in the same transaction.
+ * A municipality has one primary admin (Municipality.adminId) and may have
+ * backup admins with an access end date (User.adminAccessExpiresAt) who
+ * cover leave; they share the same municipality-scoped permissions.
  */
+
+const MAX_BACKUP_DAYS = 90;
 
 const listJuniorAdmins = async (options = {}) => {
   const { page = 1, pageSize = 25, search, municipalityId } = options;
@@ -35,7 +39,8 @@ const listJuniorAdmins = async (options = {}) => {
         email: true,
         contactNumber: true,
         municipalityId: true,
-        municipality: { select: { id: true, name: true, code: true } },
+        municipality: { select: { id: true, name: true, code: true, adminId: true } },
+        adminAccessExpiresAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -46,16 +51,27 @@ const listJuniorAdmins = async (options = {}) => {
     prisma.user.count({ where }),
   ]);
 
-  return { admins, total, page, pageSize };
+  return {
+    admins: admins.map(({ municipality, ...admin }) => ({
+      ...admin,
+      municipality: municipality && { id: municipality.id, name: municipality.name, code: municipality.code },
+      isPrimary: municipality?.adminId === admin.id,
+      isBackup: Boolean(admin.adminAccessExpiresAt),
+    })),
+    total,
+    page,
+    pageSize,
+  };
 };
 
 /**
  * Promote an existing user to MUNICIPAL_ADMIN and pin them to a municipality.
  * Also updates Municipality.adminId (single-admin per municipality).
  */
-const assignJuniorAdmin = async (actor, { userId, municipalityId }) => {
+const assignJuniorAdmin = async (actor, { userId, municipalityId, backup = false, accessExpiresAt } = {}) => {
   if (!userId) throw new ApiError('userId is required', 400);
   if (!municipalityId) throw new ApiError('municipalityId is required', 400);
+  if (backup) return assignBackupAdmin(actor, { userId, municipalityId, accessExpiresAt });
 
   const [user, municipality] = await Promise.all([
     userRepository.findById(userId),
@@ -84,7 +100,7 @@ const assignJuniorAdmin = async (actor, { userId, municipalityId }) => {
     }
     const nextUser = await tx.user.update({
       where: { id: userId },
-      data: { role: 'MUNICIPAL_ADMIN', municipalityId },
+      data: { role: 'MUNICIPAL_ADMIN', municipalityId, adminAccessExpiresAt: null },
       select: {
         id: true,
         fullName: true,
@@ -142,7 +158,7 @@ const removeJuniorAdmin = async (actor, userId) => {
     });
     return tx.user.update({
       where: { id: userId },
-      data: { role: 'BUYER' },
+      data: { role: 'BUYER', adminAccessExpiresAt: null },
       select: { id: true, fullName: true, email: true, role: true },
     });
   });
@@ -156,6 +172,70 @@ const removeJuniorAdmin = async (actor, userId) => {
 
   return updated;
 };
+
+/**
+ * Give a user temporary municipal admin access (e.g. while the primary admin
+ * is on leave). Does not replace the municipality's primary admin.
+ */
+async function assignBackupAdmin(actor, { userId, municipalityId, accessExpiresAt }) {
+  const expiresAt = new Date(accessExpiresAt);
+  const now = Date.now();
+  if (!accessExpiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= now) {
+    throw new ApiError('Backup admins need an end date in the future', 400);
+  }
+  if (expiresAt.getTime() - now > MAX_BACKUP_DAYS * 24 * 60 * 60 * 1000) {
+    throw new ApiError(`Backup access can last at most ${MAX_BACKUP_DAYS} days`, 400);
+  }
+
+  const [user, municipality] = await Promise.all([
+    userRepository.findById(userId),
+    municipalityRepository.findById(municipalityId),
+  ]);
+  if (!user || user.deletedAt) throw new ApiError('User not found', 404);
+  if (!municipality) throw new ApiError('Municipality not found', 404);
+  if (user.role === 'SUPER_ADMIN') throw new ApiError('Super admins already have full access', 400);
+  if (municipality.adminId === userId) throw new ApiError('This user is already the primary admin', 400);
+  if (user.role === 'MUNICIPAL_ADMIN' && user.municipalityId !== municipalityId) {
+    throw new ApiError('This user already administers another municipality', 400);
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { role: 'MUNICIPAL_ADMIN', municipalityId, adminAccessExpiresAt: expiresAt },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      role: true,
+      municipalityId: true,
+      adminAccessExpiresAt: true,
+      municipality: { select: { id: true, name: true, code: true } },
+    },
+  });
+
+  await auditLogService.record({
+    actor,
+    action: 'ASSIGN_BACKUP_ADMIN',
+    entity: 'User',
+    entityId: userId,
+    details: { municipalityId, accessExpiresAt: expiresAt.toISOString() },
+    municipalityId,
+  });
+
+  try {
+    await notificationService.createNotification({
+      userId,
+      type: 'SYSTEM_ANNOUNCEMENT',
+      title: 'Backup admin access granted',
+      message: `You can act as a municipal admin for ${municipality.name} until ${expiresAt.toLocaleDateString('en-PH')}.`,
+      relatedId: municipalityId,
+    });
+  } catch (err) {
+    console.error('[assignBackupAdmin] notify failed:', err.message);
+  }
+
+  return { ...updated, isPrimary: false, isBackup: true };
+}
 
 module.exports = {
   listJuniorAdmins,

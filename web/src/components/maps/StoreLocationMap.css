@@ -59,28 +59,229 @@
   background: #fff;
 }
 
-.store-map-popup {
-  display: grid;
-  min-width: 150px;
-  gap: 5px;
+/* Shop profile pins */
+.store-map-avatar-pin {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 54px;
+  cursor: pointer;
+  filter: drop-shadow(0 3px 6px rgba(15, 23, 42, .3));
+  transition: transform .15s ease;
 }
 
-.store-map-popup strong {
-  color: #17231c;
-  font-size: 13px;
+.store-map-avatar-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  background: #059669;
+  transform: translateX(-50%) rotate(45deg);
 }
 
-.store-map-popup span {
+.store-map-avatar-pin:hover {
+  transform: translateY(-3px) scale(1.06);
+}
+
+.store-map-avatar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 3px solid #059669;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.store-map-avatar b {
+  color: #059669;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.store-map-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #fff;
+}
+
+/* Store details card, overlaid inside the map frame */
+.store-map-frame {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Card that grows out of the hovered pin. The outer element carries the
+   shadow (clip-path would clip it); the inner one is clipped from a circle
+   the size of the pin avatar out to the full card. */
+.store-map-morph {
+  position: absolute;
+  z-index: 1000;
+  transform: translate(-50%, -100%);
+  filter: drop-shadow(0 10px 22px rgba(15, 23, 42, .24));
+}
+
+.store-map-morph .store-map-morph-content {
+  --morph-origin: 50% calc(100% - 30px);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(290px, calc(100vw - 48px));
+  padding: 22px 18px 18px;
+  text-align: center;
+  background: #fff;
+  border-radius: 14px;
+  clip-path: circle(22px at var(--morph-origin));
+  transition: clip-path .32s cubic-bezier(.4, 0, .2, 1);
+}
+
+.store-map-morph.is-expanded .store-map-morph-content {
+  clip-path: circle(160% at var(--morph-origin));
+}
+
+.store-map-morph .store-map-morph-content > * {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.store-map-morph.is-expanded .store-map-morph-content > * {
+  opacity: 1;
+  transform: none;
+  transition-delay: .12s;
+}
+
+/* Pins fade while their card is open. */
+.leaflet-marker-icon.store-map-marker-shell {
+  transition: opacity .2s ease;
+}
+
+.store-map-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  padding: 6px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   color: #64748b;
-  font-size: 11px;
-  line-height: 1.35;
+  cursor: pointer;
 }
 
-.store-map-popup a {
+.store-map-modal-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.store-map-modal-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  margin-bottom: 12px;
+  overflow: hidden;
+  border: 3px solid #059669;
+  border-radius: 50%;
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.store-map-modal-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.store-map-modal h3 {
+  margin: 0 0 6px;
+  color: #17231c;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.store-map-modal-address {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.store-map-modal-address svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.store-map-modal-desc {
+  display: -webkit-box;
+  margin: 10px 0 0;
+  overflow: hidden;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.store-map-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.store-map-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: 1px solid #059669;
+  border-radius: 999px;
+  background: #fff;
   color: #047857;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   text-decoration: none;
+  transition: background-color .2s, color .2s;
+}
+
+.store-map-modal-btn:hover {
+  background: #ecfdf5;
+}
+
+.store-map-modal-btn--primary {
+  background: #059669;
+  color: #fff;
+}
+
+.store-map-modal-btn--primary:hover {
+  background: #047857;
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-map-morph .store-map-morph-content,
+  .store-map-morph .store-map-morph-content > *,
+  .store-map-avatar-pin {
+    transition: none;
+  }
 }
 
 @media (max-width: 640px) {

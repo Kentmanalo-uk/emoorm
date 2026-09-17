@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Flag, MagnifyingGlass as Search, Eye, X, CheckCircle, ChatText as MessageSquare } from '@phosphor-icons/react';
+import { Flag, MagnifyingGlass as Search, Eye, X, CheckCircle, ChatText as MessageSquare, DownloadSimple } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
+import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import AdminLayout from '../components/admin/AdminLayout';
+import DetailDrawer from '../components/admin/DetailDrawer';
+import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
@@ -26,6 +29,7 @@ export default function AdminReports() {
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [selected, setSelected] = useState(null);
   const [processing, setProcessing] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchReports();
@@ -65,6 +69,29 @@ export default function AdminReports() {
   };
 
   const targetName = (r) => r.product?.name || r.store?.name || '—';
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = {};
+      if (typeFilter) params.type = typeFilter;
+      if (statusFilter) params.status = statusFilter;
+      const rows = await fetchAllPages('/reports', params);
+      downloadCsv(`reports-${new Date().toISOString().slice(0, 10)}.csv`, [
+        { header: 'Date', value: (r) => csvDate(r.createdAt) },
+        { header: 'Type', value: (r) => r.type },
+        { header: 'Reason', value: (r) => r.reason },
+        { header: 'Status', value: (r) => r.status },
+        { header: 'Target', value: (r) => r.product?.name || r.store?.name || '' },
+        { header: 'Description', value: (r) => r.description },
+      ], rows);
+      toast.success(`Exported ${rows.length} rows`);
+    } catch (err) {
+      toast.error(err.message || 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const targetLink = (r) => {
     if (r.product?.slug) return `/product/${r.product.slug}`;
     if (r.store?.slug) return `/store/${r.store.slug}`;
@@ -108,6 +135,9 @@ export default function AdminReports() {
               <option value="DISMISSED">Dismissed</option>
               <option value="">All Status</option>
             </select>
+            <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
+              <DownloadSimple size={13} /> {exporting ? 'Exporting…' : 'Export CSV'}
+            </button>
           </div>
         </div>
 
@@ -115,7 +145,7 @@ export default function AdminReports() {
           <Skeleton.Table cols={6} rows={6} />
         ) : reports.length === 0 ? (
           <div className="admin-empty">
-            <CheckCircle size={36} />
+            <CheckCircle size={36} weight="fill" />
             <p>No {statusFilter.toLowerCase().replace('_', ' ')} reports</p>
           </div>
         ) : (
@@ -137,7 +167,13 @@ export default function AdminReports() {
                   {reports.map((r) => {
                     const link = targetLink(r);
                     return (
-                      <tr key={r.id}>
+                      <tr
+                      key={r.id}
+                      className="admin-row-clickable"
+                      tabIndex={0}
+                      onClick={rowOpen(() => setSelected(r))}
+                      onKeyDown={rowKeyOpen(() => setSelected(r))}
+                    >
                         <td><span className="admin-badge admin-badge-pending">{r.type}</span></td>
                         <td>
                           {link
@@ -207,9 +243,9 @@ export default function AdminReports() {
       </div>
 
       {/* Detail panel */}
-      {selected && (
-        <div className="admin-detail-overlay" onClick={() => setSelected(null)}>
-          <div className="admin-detail-panel" onClick={(e) => e.stopPropagation()}>
+      <DetailDrawer item={selected} onClose={() => setSelected(null)}>
+        {(selected) => (
+          <>
             <div className="admin-detail-header">
               <h3>Report Details</h3>
               <button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button>
@@ -295,9 +331,9 @@ export default function AdminReports() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </DetailDrawer>
     </AdminLayout>
   );
 }

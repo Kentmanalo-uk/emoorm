@@ -325,7 +325,7 @@ const Products = () => {
                 <Skeleton.Cards count={12} />
               ) : products.length === 0 ? (
                 <div className="products-empty">
-                  <Package size={64} />
+                  <Package size={64} weight="fill" />
                   <h3>No products found</h3>
                   <p>Try adjusting your filters or search terms</p>
                   {hasActiveFilters && (

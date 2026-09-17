@@ -1,0 +1,354 @@
+.idv-wrap {
+  max-width: 960px;
+}
+
+.idv-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Status banner */
+.idv-status {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: #fff;
+  padding: 20px 24px;
+}
+
+.idv-status-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.idv-status-body strong {
+  display: block;
+  font-size: 16px;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.idv-status-body p {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.idv-status-meta {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.idv-status--pending .idv-status-icon { color: #d97706; }
+.idv-status--success .idv-status-icon { color: #059669; }
+.idv-status--error .idv-status-icon { color: #dc2626; }
+
+/* Form card */
+.idv-card {
+  background: #fff;
+  padding: 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.idv-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.idv-card-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.idv-attempts {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.idv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.idv-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.idv-input {
+  max-width: 420px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 0;
+}
+
+.idv-input:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+}
+
+.idv-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 20px;
+  text-align: center;
+  color: #6b7280;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+}
+
+.idv-drop p {
+  margin: 0;
+  max-width: 440px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.idv-drop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.idv-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.idv-preview img {
+  max-width: 420px;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  background: #f3f4f6;
+}
+
+.idv-rules {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.7;
+}
+
+.idv-rules a,
+.idv-note a {
+  color: #059669;
+  font-weight: 500;
+}
+
+.idv-privacy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.idv-privacy svg {
+  flex-shrink: 0;
+}
+
+.idv-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.idv-note {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Buttons */
+.idv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.idv-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.idv-btn-primary {
+  background: #059669;
+  color: #fff;
+}
+
+.idv-btn-primary:hover:not(:disabled) {
+  background: #047857;
+}
+
+.idv-btn-outline {
+  background: #fff;
+  color: #059669;
+  border-color: #059669;
+}
+
+.idv-btn-outline:hover:not(:disabled) {
+  background: #ecfdf5;
+}
+
+.idv-btn-ghost {
+  background: transparent;
+  color: #374151;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.idv-btn-ghost:hover:not(:disabled) {
+  color: #059669;
+}
+
+.idv-spin {
+  animation: idv-spin 0.9s linear infinite;
+}
+
+@keyframes idv-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Camera */
+.idv-camera {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(17, 24, 39, 0.7);
+}
+
+.idv-camera-panel {
+  width: 100%;
+  max-width: 640px;
+  padding: 16px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.idv-camera-video {
+  width: 100%;
+  max-height: 60vh;
+  background: #111827;
+  object-fit: contain;
+}
+
+.idv-camera-hint,
+.idv-camera-error {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.idv-camera-error {
+  color: #dc2626;
+}
+
+.idv-camera-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .idv-card {
+    padding: 18px 16px;
+  }
+
+  .idv-status {
+    padding: 16px;
+  }
+
+  .idv-drop-actions,
+  .idv-drop-actions .idv-btn,
+  .idv-actions .idv-btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idv-spin {
+    animation: none;
+  }
+}
+
+/* Development-only OCR debug output */
+.idv-debug summary {
+  font-size: 13px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.idv-debug pre {
+  margin: 8px 0 0;
+  padding: 12px;
+  max-height: 260px;
+  overflow: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  background: #f9fafb;
+}
+
+/* Status banner action (e.g. contact support after the daily limit) */
+.idv-status-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.idv-status-action {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+@media (max-width: 768px) {
+  .idv-status {
+    flex-wrap: wrap;
+  }
+
+  .idv-status-action {
+    width: 100%;
+  }
+}

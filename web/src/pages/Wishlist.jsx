@@ -78,7 +78,7 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
           hideBreadcrumbs ? (
             <div className="profile-section">
               <div className="empty-state">
-                <Heart size={40} strokeWidth={1.5} />
+                <Heart size={40} strokeWidth={1.5} weight="fill" />
                 <p className="empty-state-text">Your wishlist is empty</p>
                 <p className="empty-state-hint">
                   Save products you love and come back to them anytime.
@@ -88,7 +88,7 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
             </div>
           ) : (
             <div className="wishlist-empty">
-              <Heart size={56} />
+              <Heart size={56} weight="fill" />
               <h2>Your wishlist is empty</h2>
               <p>Save products you love and come back to them anytime.</p>
               <Link to="/products" className="wishlist-shop-btn">

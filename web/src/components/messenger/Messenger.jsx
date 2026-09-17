@@ -421,12 +421,12 @@ export default function Messenger({ role = 'buyer', className = '' }) {
         <div className="msgr-list-scroll">
           {loadingList ? (
             <div className="msgr-list-empty">
-              <Loader2 size={16} className="msgr-spin" />
+              <Loader2 size={16} className="msgr-spin" weight="fill" />
               <span>Loading conversations…</span>
             </div>
           ) : filteredConversations.length === 0 ? (
             <div className="msgr-list-empty">
-              <MessageSquare size={26} strokeWidth={1.4} />
+              <MessageSquare size={26} strokeWidth={1.4} weight="fill" />
               <p>No conversations yet.</p>
               {role === 'buyer' ? (
                 <Link to="/stores" className="msgr-empty-link">
@@ -453,12 +453,12 @@ export default function Messenger({ role = 'buyer', className = '' }) {
       <section className="msgr-thread">
         {!activeId ? (
           <div className="msgr-thread-empty">
-            <MessageSquare size={40} strokeWidth={1.3} />
+            <MessageSquare size={40} strokeWidth={1.3} weight="fill" />
             <p>Select a conversation to start chatting.</p>
           </div>
         ) : loadingConvo && !activeConvo ? (
           <div className="msgr-thread-empty">
-            <Loader2 size={22} className="msgr-spin" />
+            <Loader2 size={22} className="msgr-spin" weight="fill" />
             <p>Loading conversation…</p>
           </div>
         ) : activeConvo ? (
@@ -524,7 +524,7 @@ export default function Messenger({ role = 'buyer', className = '' }) {
             <div className="msgr-messages">
               {(activeConvo.messages || []).length === 0 ? (
                 <div className="msgr-messages-empty">
-                  <MessageSquare size={22} strokeWidth={1.4} />
+                  <MessageSquare size={22} strokeWidth={1.4} weight="fill" />
                   <p>Say hello to start the conversation.</p>
                 </div>
               ) : (
@@ -606,7 +606,7 @@ export default function Messenger({ role = 'buyer', className = '' }) {
           </>
         ) : (
           <div className="msgr-thread-empty">
-            <Package size={32} strokeWidth={1.3} />
+            <Package size={32} strokeWidth={1.3} weight="fill" />
             <p>{error || 'Conversation not available.'}</p>
           </div>
         )}

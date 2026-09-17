@@ -129,7 +129,7 @@ export default function SellerReviews() {
             </div>
           ) : reviews.length === 0 ? (
             <div className="seller-empty">
-              <MessageSquare size={36} />
+              <MessageSquare size={36} weight="fill" />
               <p>No reviews yet.</p>
             </div>
           ) : (

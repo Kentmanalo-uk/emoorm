@@ -117,11 +117,15 @@ enum NotificationType {
   RETURN_REFUNDED
   RETURN_CANCELLED
   RETURN_CLOSED
+  SUPPORT_MESSAGE
+  SELLER_APPLICATION_SUBMITTED
+  ADMIN_ALERT
 }
 
 enum NotificationAudience {
   BUYER
   SELLER
+  ADMIN
 }
 
 enum ReturnStatus {
@@ -218,6 +222,9 @@ model User {
   mfaBackupCodes   String?   @map("mfa_backup_codes") @db.Text
   mfaLastVerifiedAt DateTime? @map("mfa_last_verified_at")
 
+  // Temporary (backup) municipal admins lose admin access after this time.
+  adminAccessExpiresAt DateTime? @map("admin_access_expires_at")
+
   // Timestamps
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -240,11 +247,46 @@ model User {
   pushTokens    PushToken[]
   returnRequests ReturnRequest[] @relation("BuyerReturns")
   supportTickets SupportTicket[]
+  supportConversations SupportConversation[]
+  supportMessages SupportMessage[]
   bannersCreated Banner[]         @relation("BannerCreator")
   vouchersCreated Voucher[]       @relation("VoucherCreator")
   voucherRedemptions VoucherRedemption[]
+  identityVerification IdentityVerification?
 
   @@map("users")
+}
+
+enum IdentityVerificationStatus {
+  NOT_VERIFIED
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+// Buyer identity verification (OCR of a Philippine government ID).
+// Kept separate from User so it never leaks through profile queries.
+// The ID image itself is never stored; extracted fields are AES-256-GCM
+// encrypted and the ID number is only kept as a keyed hash (reuse check).
+model IdentityVerification {
+  id            String                     @id @default(uuid())
+  userId        String                     @unique @map("user_id")
+  user          User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status        IdentityVerificationStatus @default(NOT_VERIFIED)
+  idType        String?                    @map("id_type")
+  encryptedData String?                    @db.Text @map("encrypted_data")
+  idNumberHash  String?                    @unique @map("id_number_hash")
+  failureReason String?                    @db.Text @map("failure_reason")
+  attemptCount  Int                        @default(0) @map("attempt_count")
+  lastAttemptAt DateTime?                  @map("last_attempt_at")
+  verifiedAt    DateTime?                  @map("verified_at")
+  // Set when an admin verifies/rejects manually (e.g. after an in-person ID check).
+  reviewedById  String?                    @map("reviewed_by_id")
+  reviewNote    String?                    @db.Text @map("review_note")
+  createdAt     DateTime                   @default(now()) @map("created_at")
+  updatedAt     DateTime                   @updatedAt @map("updated_at")
+
+  @@map("identity_verifications")
 }
 
 model SupportTicket {
@@ -263,6 +305,46 @@ model SupportTicket {
   @@index([userId, createdAt])
   @@index([type, status])
   @@map("support_tickets")
+}
+
+// Help chat between a user and their municipality's admin (e.g. identity
+// verification problems). Separate from buyer–store messaging.
+enum SupportConversationStatus {
+  OPEN
+  CLOSED
+}
+
+model SupportConversation {
+  id              String                    @id @default(uuid())
+  userId          String                    @map("user_id")
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  municipalityId  String                    @map("municipality_id")
+  municipality    Municipality              @relation(fields: [municipalityId], references: [id])
+  topic           String                    @default("GENERAL")
+  status          SupportConversationStatus @default(OPEN)
+  lastMessageAt   DateTime?                 @map("last_message_at")
+  userLastReadAt  DateTime?                 @map("user_last_read_at")
+  adminLastReadAt DateTime?                 @map("admin_last_read_at")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+  messages        SupportMessage[]
+
+  @@unique([userId, municipalityId])
+  @@index([municipalityId, lastMessageAt])
+  @@map("support_conversations")
+}
+
+model SupportMessage {
+  id             String              @id @default(uuid())
+  conversationId String              @map("conversation_id")
+  conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String              @map("sender_id")
+  sender         User                @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body           String              @db.Text
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("support_messages")
 }
 
 model Address {
@@ -338,6 +420,7 @@ model Municipality {
   reports   Report[]
   serviceAreas StoreServiceArea[]
   addresses Address[]
+  supportConversations SupportConversation[]
 
   @@map("municipalities")
 }
@@ -381,6 +464,7 @@ model Store {
   // Status
   isActive      Boolean  @default(true) @map("is_active")
   isSuspended   Boolean  @default(false) @map("is_suspended")
+  suspensionReason String? @db.Text @map("suspension_reason")
 
   // Deletion grace period — set when the seller requests deletion; store is
   // hidden immediately and permanently deleted 15 days later unless cancelled
@@ -477,6 +561,7 @@ model Product {
 
   // Status
   status      ProductStatus @default(PENDING)
+  moderationNote String?    @db.Text @map("moderation_note")
 
   // Approval Audit
   approvedById String?      @map("approved_by_id")
@@ -767,6 +852,10 @@ model AuditLog {
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  // Municipality the action belongs to (set for municipal admin actions).
+  municipalityId String? @map("municipality_id")
+
+  @@index([municipalityId, createdAt])
   @@map("audit_logs")
 }
 

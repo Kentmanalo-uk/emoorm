@@ -102,7 +102,8 @@ const getReportById = asyncHandler(async (req, res) => {
   const report = await reportService.getReportById(
     req.params.id,
     req.user.id,
-    req.user.role
+    req.user.role,
+    req.user.municipalityId
   );
 
   successResponse(res, report, 'Report retrieved successfully');

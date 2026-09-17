@@ -20,6 +20,8 @@ import { uploadImage } from '../lib/upload';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
+import useIdentityGate from '../hooks/useIdentityGate';
+import { isIdentityRequiredError } from '../lib/identity';
 import './Checkout.css';
 
 const Checkout = () => {
@@ -27,6 +29,12 @@ const Checkout = () => {
   const location = useLocation();
   const { isAuthenticated, user } = useAuthStore();
   const { items: allItems, getTotalPrice, clearCart } = useCartStore();
+  const { requireVerifiedIdentity, showIdentityRequired, identityDialog } = useIdentityGate();
+
+  // Direct visits to /checkout get the verification prompt straight away.
+  useEffect(() => {
+    if (isAuthenticated) requireVerifiedIdentity();
+  }, [isAuthenticated, requireVerifiedIdentity]);
 
   // Restrict checkout to the items selected on the Cart page (if provided).
   const selectedIds = location.state?.selectedIds;
@@ -409,6 +417,7 @@ const Checkout = () => {
       setCurrentStep(2);
       return;
     }
+    if (!(await requireVerifiedIdentity())) return;
     setIsSubmitting(true);
     if (!checkoutIdRef.current) {
       checkoutIdRef.current = window.crypto?.randomUUID?.()
@@ -469,6 +478,10 @@ const Checkout = () => {
       setOrderSuccess(true);
       toast.success('Order placed successfully!');
     } catch (error) {
+      if (isIdentityRequiredError(error)) {
+        showIdentityRequired();
+        return;
+      }
       const backendMsg = error?.response?.data?.message;
       toast.error(backendMsg || error?.message || 'Failed to place order. Please try again.');
     } finally {
@@ -980,6 +993,7 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+      {identityDialog}
     </Layout>
   );
 };

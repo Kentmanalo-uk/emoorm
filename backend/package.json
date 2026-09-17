@@ -8,6 +8,10 @@
     "dev": "nodemon server.js",
     "seed": "node prisma/seed.js",
     "test:municipal-scope": "node test-municipal-admin-scope.js",
+    "test:identity": "node test-identity-verification.js",
+    "test:orders": "node test-order-workflow.js",
+    "test:support-chat": "node test-support-chat.js",
+    "test:admin-upgrades": "node test-municipal-admin-upgrades.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "prisma": {
@@ -35,6 +39,7 @@
     "qrcode": "^1.5.4",
     "sharp": "^0.35.3",
     "speakeasy": "^2.0.0",
+    "tesseract.js": "^6.0.1",
     "uuid": "^14.0.1"
   },
   "devDependencies": {

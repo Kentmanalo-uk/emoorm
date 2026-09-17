@@ -1,23 +1,145 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../../lib/axios';
+import { resolveImg } from '../../lib/media';
+import AppLogo from '../AppLogo';
 import './Footer.css';
+
+// The footer renders on every page; fetch the municipality list once per session.
+let municipalitiesRequest = null;
+const loadMunicipalities = () => {
+  if (!municipalitiesRequest) {
+    municipalitiesRequest = axios.get('/municipalities')
+      .then((res) => res.data || [])
+      .catch((err) => {
+        municipalitiesRequest = null;
+        throw err;
+      });
+  }
+  return municipalitiesRequest;
+};
+
+let storesRequest = null;
+const loadStores = () => {
+  if (!storesRequest) {
+    storesRequest = axios.get('/stores', { params: { page: 1, pageSize: 12 } })
+      .then((res) => res.data || [])
+      .catch((err) => {
+        storesRequest = null;
+        throw err;
+      });
+  }
+  return storesRequest;
+};
+
+const PAYMENT_OPTIONS = ['Cash on Delivery', 'GCash', 'QR Ph', 'Bank Transfer'];
+const LANGUAGE_NAMES = ['English', 'Tagalog', 'Bisaya'];
+
+const BUYER_GUIDES = [
+  { to: '/help?topic=buying', label: 'How to Buy' },
+  { to: '/help?topic=payments', label: 'Payment Methods' },
+  { to: '/help?topic=delivery', label: 'Shipping & Delivery' },
+  { to: '/help?topic=returns', label: 'Returns & Refunds' },
+  { to: '/profile/verification', label: 'Verify Your Identity' },
+  { to: '/search/image', label: 'Search by Image' },
+];
+
+const SELLER_TOOLS = [
+  { to: '/sell', label: 'Sell on Emoorm' },
+  { to: '/seller/apply', label: 'Seller Application' },
+  { to: '/seller', label: 'Seller Center' },
+  { to: '/seller/fulfillment', label: 'Delivery & Pickup Settings' },
+  { to: '/seller/analytics', label: 'Sales Analytics' },
+  { to: '/seller/finance', label: 'Finance' },
+];
+
+const COMPANY_LINKS = [
+  { to: '/about', label: 'About Emoorm' },
+  { to: '/customer-care', label: 'Customer Care' },
+  { to: '/feedback', label: 'Feedback' },
+  { to: '/privacy', label: 'Privacy Policy' },
+  { to: '/terms', label: 'Terms of Service' },
+  { to: '/cookies', label: 'Cookie Policy' },
+];
+
+const MUNICIPALITY_NAMES = 'Baco, Bansud, Bongabong, Bulalacao, Calapan City, Gloria, Mansalay, Naujan, Pinamalayan, Pola, Puerto Galera, Roxas, San Teodoro, Socorro, Victoria';
+
+/** Comma-separated inline link list, as used in the directory section. */
+function LinkList({ items }) {
+  return (
+    <p className="footer-directory-links">
+      {items.map((item, index) => (
+        <React.Fragment key={item.key || item.to}>
+          {index > 0 && ', '}
+          <Link to={item.to}>{item.label}</Link>
+        </React.Fragment>
+      ))}
+    </p>
+  );
+}
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const [categories, setCategories] = useState([]);
+  const [municipalities, setMunicipalities] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+  const [stores, setStores] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     axios.get('/categories')
-      .then((res) => { if (!cancelled) setCategories((res.data || []).slice(0, 8)); })
+      .then((res) => {
+        if (cancelled) return;
+        const list = (res.data || []).filter((c) => c.isActive !== false);
+        setCategories(list.slice(0, 8));
+        setAllCategories(list);
+      })
       .catch(() => { /* footer categories are optional */ });
+    loadMunicipalities()
+      .then((list) => { if (!cancelled) setMunicipalities(list); })
+      .catch(() => { /* falls back to the plain-text list */ });
+    loadStores()
+      .then((list) => { if (!cancelled) setStores(list); })
+      .catch(() => { /* store list is optional */ });
     return () => { cancelled = true; };
   }, []);
 
   return (
     <footer className="footer">
       <div className="container">
+        {/* Brand band: municipality seals (decorative) and the app mark */}
+        <div className="footer-brand-band">
+          {municipalities.length > 0 ? (
+            <div className="footer-municipalities" aria-label="Municipalities of Oriental Mindoro">
+              {/* Two rows: 7 seals on top, the rest below. */}
+              {[municipalities.slice(0, 7), municipalities.slice(7)].map((row, index) => (
+                row.length > 0 && (
+                  <ul key={index} className="footer-municipality-row">
+                    {row.map((municipality) => (
+                      <li key={municipality.id} className="footer-municipality" title={municipality.name}>
+                        {municipality.logo ? (
+                          <img src={resolveImg(municipality.logo)} alt={municipality.name} loading="lazy" />
+                        ) : (
+                          <span aria-label={municipality.name}>{municipality.name?.charAt(0).toUpperCase()}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )
+              ))}
+            </div>
+          ) : (
+            <p className="footer-categories-text">
+              Calapan City • Puerto Galera • Naujan • Pinamalayan • Bansud • Bongabong • Bulalacao • Gloria • Mansalay • Pola • Roxas • San Teodoro • Socorro • Victoria
+            </p>
+          )}
+
+          <div className="footer-brand">
+            <AppLogo className="footer-brand-logo" alt="" />
+            <span className="footer-brand-name">Emoorm</span>
+          </div>
+        </div>
+
         <div className="footer-content">
           {/* Customer Care */}
           <div className="footer-section">
@@ -98,9 +220,9 @@ const Footer = () => {
             <div className="footer-payment">
               <h4 className="footer-subtitle">Payment Methods</h4>
               <div className="footer-payment-methods">
-                <span className="footer-payment-badge">GCash</span>
-                <span className="footer-payment-badge">Cash on Delivery</span>
-                <span className="footer-payment-badge">Maya</span>
+                {PAYMENT_OPTIONS.map((method) => (
+                  <span key={method} className="footer-payment-badge">{method}</span>
+                ))}
               </div>
             </div>
 
@@ -116,58 +238,150 @@ const Footer = () => {
 
         {/* Footer Bottom */}
         <div className="footer-bottom">
-          <div className="footer-info">
-            <h3 className="footer-info-title">Buy & Sell on Emoorm</h3>
-            <p className="footer-info-text">
-              Emoorm connects buyers with farmers, fishers, artisans, and food producers across Oriental Mindoro.
-              Browse fresh produce, local delicacies, seafood, and handcrafted goods in one place.
-            </p>
-          </div>
+          <section className="footer-directory" aria-label="About Emoorm">
+            <article className="footer-about">
+              <h3 className="footer-about-title">Oriental Mindoro&apos;s Local Online Marketplace</h3>
+              <p>
+                Emoorm is an online marketplace that connects buyers with farmers, fishers, artisans, and
+                food producers across Oriental Mindoro. Instead of travelling between towns or waiting for
+                market day, you can browse fresh produce, dried goods, beverages, local delicacies, and
+                handcrafted products from sellers across the province, all in one place. Anyone can create a
+                buyer account and browse for free.
+              </p>
 
-          <div className="footer-info">
-            <h3 className="footer-info-title">Discover Authentic Products from Every Corner of Oriental Mindoro</h3>
-            <p className="footer-info-text">
-              Shop local across all fifteen municipalities of Oriental Mindoro: Baco, Bansud, Bongabong, Bulalacao, Calapan City, Gloria, Mansalay, Naujan, Pinamalayan, Pola, Puerto Galera, Roxas, San Teodoro, Socorro, and Victoria.
-            </p>
-          </div>
+              <h4>Shop Local, Direct from the Source</h4>
+              <p>
+                Every store on Emoorm is run by a local seller who manages their own listings, stock, orders,
+                and fulfillment from the Seller Center. When you order, you deal directly with the seller, so
+                your purchase supports the people who grow, catch, and make the products.
+              </p>
 
-          <div className="footer-categories">
-            <h3 className="footer-categories-title">Fresh Produce</h3>
-            <p className="footer-categories-text">
-              Vegetables • Fruits • Meat & Poultry • Seafood • Rice & Grains
-            </p>
-          </div>
+              <h4>Reviewed Sellers and Approved Listings</h4>
+              <p>
+                Residents who want to sell submit a seller application that is reviewed by a municipal or
+                platform administrator before their store goes live. New product listings are also checked
+                before they appear to buyers, and administrators can suspend stores or listings that break the
+                rules. If something looks wrong, you can report a product or seller from its page.
+              </p>
 
-          <div className="footer-categories">
-            <h3 className="footer-categories-title">Food & Snacks</h3>
-            <p className="footer-categories-text">
-              Delicacies • Snacks • Beverages • Condiments • Dried Fish
-            </p>
-          </div>
+              <h4>Payment Arranged with the Seller</h4>
+              <p>
+                Emoorm does not process or hold payments. Depending on what each seller accepts, you can pay by
+                Cash on Delivery, GCash, QR Ph, or bank transfer. For online payments, the seller confirms your
+                payment before preparing the order, and you can follow each step from My Orders.
+              </p>
 
-          <div className="footer-categories">
-            <h3 className="footer-categories-title">Lifestyle & Crafts</h3>
-            <p className="footer-categories-text">
-              Handicrafts • Wellness • Natural Products • Woven Items • Bamboo Crafts
-            </p>
-          </div>
+              <h4>Delivery or Store Pickup</h4>
+              <p>
+                Sellers choose whether they deliver, offer pickup, or both, and set the municipalities and
+                barangays they deliver to. At checkout you pick the option that suits you, and you are notified
+                as your order is confirmed, prepared, and ready for pickup or on its way.
+              </p>
 
-          <div className="footer-categories">
-            <h3 className="footer-categories-title">Municipalities</h3>
-            <p className="footer-categories-text">
-              Calapan City • Puerto Galera • Naujan • Pinamalayan • Bansud • Bongabong • Bulalacao • Gloria • Mansalay • Pola • Roxas • San Teodoro • Socorro • Victoria
-            </p>
-          </div>
+              <h4>Safer Checkout with Identity Verification</h4>
+              <p>
+                To protect sellers from fake orders, buyers verify their identity once before checking out by
+                scanning a valid Philippine government ID, such as a PhilSys National ID, driver&apos;s license,
+                UMID, or passport. The ID photo is only used to read your name and address and is not stored. If
+                automatic verification does not work, your municipal admin can help.
+              </p>
+
+              <h4>Returns, Refunds, and Reviews</h4>
+              <p>
+                If an item arrives damaged, incorrect, incomplete, or not as described, you can request a return
+                from your order within 7 days, unless the seller&apos;s return policy says otherwise. After your
+                order is completed, you can rate the product and leave a review to help other buyers.
+              </p>
+
+              <h4>Talk Directly with Sellers and Support</h4>
+              <p>
+                Message a store to ask about a product, stock, or delivery before you buy, and keep the
+                conversation going after you order. For account or verification concerns, the support chat
+                connects you with the administrator of your municipality.
+              </p>
+
+              <h4>Made for Mindoreños</h4>
+              <p>
+                Browse Emoorm in English, Tagalog, or Bisaya, sign in with your email or Google account, find
+                sellers near you on the store map, and search for products using a photo. Sellers can switch
+                between their personal and seller accounts at any time.
+              </p>
+            </article>
+
+            <div className="footer-directory-groups">
+              <h3 className="footer-about-title">Shop, Places, and Guides</h3>
+
+              {allCategories.length > 0 && (
+                <div className="footer-directory-group">
+                  <h4>Shop by Category</h4>
+                  <LinkList items={allCategories.map((c) => ({ key: c.id, to: `/products?category=${c.id}`, label: c.name }))} />
+                </div>
+              )}
+
+              <div className="footer-directory-group">
+                <h4>Municipalities</h4>
+                {municipalities.length > 0 ? (
+                  <LinkList items={municipalities.map((m) => ({ key: m.id, to: `/municipality/${m.id}`, label: m.name }))} />
+                ) : (
+                  <p className="footer-directory-links">{MUNICIPALITY_NAMES}</p>
+                )}
+              </div>
+
+              {stores.length > 0 && (
+                <div className="footer-directory-group">
+                  <h4>Local Stores</h4>
+                  <LinkList
+                    items={[
+                      ...stores.map((store) => ({ key: store.id, to: `/store/${store.slug}`, label: store.name })),
+                      { key: 'all-stores', to: '/stores', label: 'View all stores' },
+                    ]}
+                  />
+                </div>
+              )}
+
+              <div className="footer-directory-group">
+                <h4>Buyer Guides</h4>
+                <LinkList items={BUYER_GUIDES} />
+              </div>
+
+              <div className="footer-directory-group">
+                <h4>Seller Tools</h4>
+                <LinkList items={SELLER_TOOLS} />
+              </div>
+
+              <div className="footer-directory-group">
+                <h4>Payment Options</h4>
+                <p className="footer-directory-links">{PAYMENT_OPTIONS.join(', ')}</p>
+              </div>
+
+              <div className="footer-directory-group">
+                <h4>Fulfillment</h4>
+                <p className="footer-directory-links">Home Delivery, Store Pickup</p>
+              </div>
+
+              <div className="footer-directory-group">
+                <h4>Languages</h4>
+                <p className="footer-directory-links">{LANGUAGE_NAMES.join(', ')}</p>
+              </div>
+
+              <div className="footer-directory-group">
+                <h4>Company</h4>
+                <LinkList items={COMPANY_LINKS} />
+              </div>
+            </div>
+          </section>
 
           <hr className="footer-divider" />
 
           <div className="footer-copyright">
-            <p>&copy; {currentYear} Emoorm. All rights reserved.</p>
+            <p className="footer-copyright-brand">
+              <AppLogo className="footer-copyright-logo" alt="" />
+              <span>&copy; {currentYear} Emoorm. All rights reserved.</span>
+            </p>
             <div className="footer-legal">
+              <Link to="/about">About</Link>
               <Link to="/privacy">Privacy Policy</Link>
-              <span>•</span>
               <Link to="/terms">Terms of Service</Link>
-              <span>•</span>
               <Link to="/cookies">Cookie Policy</Link>
             </div>
           </div>

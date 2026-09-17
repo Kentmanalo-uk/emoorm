@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -23,6 +23,7 @@ import SellerStore from './pages/SellerStore';
 import SellerProducts from './pages/SellerProducts';
 import SellerOrders from './pages/SellerOrders';
 import SellerMessages from './pages/SellerMessages';
+import SellerSupport from './pages/SellerSupport';
 import SellerReviews from './pages/SellerReviews';
 import SellerAnalytics from './pages/SellerAnalytics';
 import SellerFinance from './pages/SellerFinance';
@@ -54,6 +55,13 @@ import ProfileReviews from './pages/ProfileReviews';
 import ProfileFollowedStores from './pages/ProfileFollowedStores';
 import ProfileMessages from './pages/ProfileMessages';
 import ProfileSettings from './pages/ProfileSettings';
+import ProfileVerification from './pages/ProfileVerification';
+import ProfileSupport from './pages/ProfileSupport';
+import AdminSupport from './pages/AdminSupport';
+import AdminNotifications from './pages/AdminNotifications';
+import AdminReviews from './pages/AdminReviews';
+import AdminReturns from './pages/AdminReturns';
+import NotFound from './pages/NotFound';
 import HelpCenter from './pages/HelpCenter';
 import About from './pages/About';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -72,6 +80,7 @@ import AdminRoute from './components/AdminRoute';
 import RoleGate from './components/RoleGate';
 import ScrollToTop from './components/ScrollToTop';
 import AppToaster from './components/ui/AppToaster';
+import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import './App.css';
 import './styles/responsive.css';
 
@@ -92,6 +101,7 @@ function App() {
       <Router>
         <ScrollToTop />
         <AppToaster />
+        <AccountSwitchOverlay />
         <RoleGate>
           <Routes>
             {/* Public routes */}
@@ -137,6 +147,8 @@ function App() {
               <Route path="messages" element={<ProfileMessages />} />
               <Route path="notifications" element={<Notifications bare />} />
               <Route path="settings" element={<ProfileSettings />} />
+              <Route path="verification" element={<ProfileVerification />} />
+              <Route path="support" element={<ProfileSupport />} />
             </Route>
             <Route path="/help" element={<HelpCenter />} />
             <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
@@ -155,6 +167,7 @@ function App() {
               <Route path="orders" element={<SellerOrders />} />
               <Route path="returns" element={<SellerReturns />} />
               <Route path="messages" element={<SellerMessages />} />
+              <Route path="support" element={<SellerSupport />} />
               <Route path="notifications" element={<Notifications mode="SELLER" bare />} />
               <Route path="products" element={<SellerProducts />} />
               <Route path="products/new" element={<SellerProducts />} />
@@ -173,6 +186,7 @@ function App() {
             <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
             <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
             <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+            <Route path="/admin/support" element={<AdminRoute><AdminSupport /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminUsers /></AdminRoute>} />
             <Route path="/admin/categories" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCategories /></AdminRoute>} />
             <Route path="/admin/municipalities" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminMunicipalities /></AdminRoute>} />
@@ -181,11 +195,14 @@ function App() {
             <Route path="/admin/banners" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminBanners /></AdminRoute>} />
             <Route path="/admin/vouchers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminVouchers /></AdminRoute>} />
             <Route path="/admin/junior-admins" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminJuniorAdmins /></AdminRoute>} />
-            <Route path="/admin/audit-logs" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminAuditLogs /></AdminRoute>} />
+            <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogs /></AdminRoute>} />
+            <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />
+            <Route path="/admin/reviews" element={<AdminRoute><AdminReviews /></AdminRoute>} />
+            <Route path="/admin/returns" element={<AdminRoute><AdminReturns /></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
-            {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Catch-all: unknown URLs */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </RoleGate>
       </Router>

@@ -137,7 +137,7 @@ const ProfileFollowedStores = () => {
         </div>
       ) : isEmpty ? (
         <div className="empty-state">
-          <Store size={40} strokeWidth={1.5} />
+          <Store size={40} strokeWidth={1.5} weight="fill" />
           <p className="empty-state-text">
             {hasFilters ? 'No stores match your search' : 'You are not following any stores yet'}
           </p>

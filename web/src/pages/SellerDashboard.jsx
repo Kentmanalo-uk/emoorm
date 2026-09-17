@@ -261,7 +261,7 @@ export default function SellerDashboard() {
                   <Skeleton.OrderList rows={4} />
                 ) : recentOrders.length === 0 ? (
                   <div className="sd-empty">
-                    <ShoppingBag size={28} />
+                    <ShoppingBag size={28} weight="fill" />
                     <p>No orders yet.</p>
                   </div>
                 ) : (
@@ -288,7 +288,7 @@ export default function SellerDashboard() {
                   </div>
                 ) : salesByDay.length === 0 ? (
                   <div className="sd-empty sd-empty--sm">
-                    <BarChart2 size={22} />
+                    <BarChart2 size={22} weight="fill" />
                     <p>No sales data yet.</p>
                   </div>
                 ) : (
@@ -322,12 +322,12 @@ export default function SellerDashboard() {
                   </div>
                 ) : followerStatsError ? (
                   <div className="sd-empty sd-empty--sm">
-                    <Users size={22} />
+                    <Users size={22} weight="fill" />
                     <p>Couldn't load follower stats.</p>
                   </div>
                 ) : !followerStats ? (
                   <div className="sd-empty sd-empty--sm">
-                    <Users size={22} />
+                    <Users size={22} weight="fill" />
                     <p>No follower data yet.</p>
                   </div>
                 ) : (
@@ -410,7 +410,7 @@ export default function SellerDashboard() {
                 </header>
                 {topProducts.length === 0 ? (
                   <div className="sd-empty sd-empty--sm">
-                    <Package size={22} />
+                    <Package size={22} weight="fill" />
                     <p>No products yet.</p>
                   </div>
                 ) : (

@@ -135,7 +135,8 @@ const deleteReview = asyncHandler(async (req, res) => {
   await reviewService.deleteReview(
     req.params.id,
     req.user.id,
-    req.user.role
+    req.user.role,
+    req.user.municipalityId
   );
 
   noContentResponse(res);

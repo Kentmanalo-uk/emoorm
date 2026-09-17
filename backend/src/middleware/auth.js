@@ -33,6 +33,7 @@ const authenticate = async (req, res, next) => {
         municipalityId: true,
         isActive: true,
         deletedAt: true,
+        adminAccessExpiresAt: true,
       },
     });
 
@@ -49,6 +50,26 @@ const authenticate = async (req, res, next) => {
         message: 'Account is suspended. Please contact support.',
       });
     }
+
+    // Temporary (backup) municipal admin whose access has ended → plain buyer again.
+    if (user.role === 'MUNICIPAL_ADMIN' && user.adminAccessExpiresAt && user.adminAccessExpiresAt <= new Date()) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'BUYER', adminAccessExpiresAt: null },
+      });
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          userEmail: user.email,
+          action: 'BACKUP_ADMIN_EXPIRED',
+          entity: 'User',
+          entityId: user.id,
+          municipalityId: user.municipalityId,
+        },
+      }).catch(() => {});
+      user.role = 'BUYER';
+    }
+    delete user.adminAccessExpiresAt;
 
     if (user.role === 'MUNICIPAL_ADMIN' && !user.municipalityId) {
       return res.status(403).json({

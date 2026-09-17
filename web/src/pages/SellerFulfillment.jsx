@@ -494,7 +494,7 @@ export default function SellerFulfillment() {
 
               {groupedAreas.length === 0 ? (
                 <div className="sf-empty">
-                  <MapPin size={22} />
+                  <MapPin size={22} weight="fill" />
                   <p>No service areas yet.</p>
                   <small>
                     Delivery orders will be blocked until you add coverage.

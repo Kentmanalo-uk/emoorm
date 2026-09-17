@@ -167,7 +167,13 @@ const findByCheckoutKey = async (buyerId, checkoutKey) => {
 
 const findExpiredPending = (before) => prisma.order.findMany({
   where: { status: 'PENDING', createdAt: { lt: before } },
-  select: { id: true },
+  select: {
+    id: true,
+    orderNumber: true,
+    buyerId: true,
+    paymentMethod: true,
+    store: { select: { ownerId: true } },
+  },
   take: 100,
   orderBy: { createdAt: 'asc' },
 });
@@ -304,11 +310,19 @@ const updateStatus = async (id, status, expectedStatus = null, actorId = null) =
   if (status === 'CANCELLED') data.cancelledAt = new Date();
 
   return prisma.$transaction(async (tx) => {
-    const current = await tx.order.findUnique({ where: { id }, select: { status: true } });
+    const current = await tx.order.findUnique({
+      where: { id },
+      select: { status: true, paymentMethod: true, paymentStatus: true },
+    });
     if (!current || (expectedStatus && current.status !== expectedStatus)) {
       const error = new Error('Order status changed before this action completed');
       error.code = 'STALE_ORDER_STATUS';
       throw error;
+    }
+    // Cash on delivery is collected when the buyer receives the order.
+    if (current.paymentMethod === 'COD' && current.paymentStatus === 'PENDING'
+      && ['DELIVERED', 'PICKED_UP', 'COMPLETED'].includes(status)) {
+      data.paymentStatus = 'PAID';
     }
     const updated = await tx.order.update({ where: { id }, data });
     await tx.orderStatusHistory.create({
@@ -335,7 +349,17 @@ const updatePaymentStatus = async (id, paymentStatus, actorId = null) => {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id }, select: { paymentStatus: true } });
     if (!order) return null;
-    const updated = await tx.order.update({ where: { id }, data: { paymentStatus } });
+    // Only a payment still awaiting review can be decided (guards double clicks).
+    const changed = await tx.order.updateMany({
+      where: { id, paymentStatus: 'PENDING_VERIFICATION' },
+      data: { paymentStatus },
+    });
+    if (changed.count === 0) {
+      const error = new Error('This payment has already been processed');
+      error.code = 'PAYMENT_ALREADY_PROCESSED';
+      throw error;
+    }
+    const updated = await tx.order.findUnique({ where: { id } });
     await tx.orderStatusHistory.create({
       data: {
         orderId: id,
@@ -350,16 +374,27 @@ const updatePaymentStatus = async (id, paymentStatus, actorId = null) => {
 };
 
 /**
- * Cancel order and restore product stock (transaction)
+ * Cancel order, restore product stock and release its voucher (transaction)
  * @param {String} id - Order ID
+ * @param {String} [actorId]
+ * @param {Object} [options]
+ * @param {String[]} [options.fromStatuses] - statuses the order may be cancelled from
+ * @param {String} [options.paymentStatus] - payment status to record alongside
+ * @param {String} [options.note] - status history note
  * @returns {Promise<Object>} Cancelled order
  */
-const cancelOrder = async (id, actorId = null) => {
+const cancelOrder = async (id, actorId = null, {
+  fromStatuses = ['PENDING', 'CONFIRMED'],
+  paymentStatus,
+  note,
+} = {}) => {
   return prisma.$transaction(async (tx) => {
-    const current = await tx.order.findUnique({ where: { id }, select: { status: true } });
+    const current = await tx.order.findUnique({ where: { id }, select: { status: true, voucherId: true } });
+    const data = { status: 'CANCELLED', cancelledAt: new Date() };
+    if (paymentStatus) data.paymentStatus = paymentStatus;
     const changed = await tx.order.updateMany({
-      where: { id, status: { in: ['PENDING', 'CONFIRMED'] } },
-      data: { status: 'CANCELLED', cancelledAt: new Date() },
+      where: { id, status: { in: fromStatuses } },
+      data,
     });
 
     if (changed.count === 0) {
@@ -390,8 +425,19 @@ const cancelOrder = async (id, actorId = null) => {
       });
     }
 
+    // Give the buyer their voucher use back.
+    if (current.voucherId) {
+      const released = await tx.voucherRedemption.deleteMany({ where: { orderId: id } });
+      if (released.count > 0) {
+        await tx.voucher.updateMany({
+          where: { id: current.voucherId, timesUsed: { gt: 0 } },
+          data: { timesUsed: { decrement: released.count } },
+        });
+      }
+    }
+
     await tx.orderStatusHistory.create({
-      data: { orderId: id, fromStatus: current.status, toStatus: 'CANCELLED', actorId },
+      data: { orderId: id, fromStatus: current.status, toStatus: 'CANCELLED', actorId, note: note || null },
     });
 
     return tx.order.findUnique({ where: { id } });

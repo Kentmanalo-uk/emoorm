@@ -3,7 +3,8 @@ import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SquaresFour as LayoutGrid, Users, Package, Flag, Tag, MapPin, ChartPie as PieChart,
   CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
-  Megaphone, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket,
+  Megaphone, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
+  Star, ArrowCounterClockwise,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
@@ -31,7 +32,9 @@ export default function AdminLayout({ children }) {
     location.pathname.startsWith('/admin/buyers') ||
     location.pathname.startsWith('/admin/products') ||
     location.pathname.startsWith('/admin/orders') ||
-    location.pathname.startsWith('/admin/reports')
+    location.pathname.startsWith('/admin/reports') ||
+    location.pathname.startsWith('/admin/reviews') ||
+    location.pathname.startsWith('/admin/returns')
   );
   const [systemOpen, setSystemOpen] = useState(
     location.pathname.startsWith('/admin/users') ||
@@ -46,7 +49,7 @@ export default function AdminLayout({ children }) {
     let cancelled = false;
     (async () => {
       try {
-        const n = await axios.get('/notifications/unread/count');
+        const n = await axios.get('/notifications/unread/count', { params: { audience: 'ADMIN' } });
         if (!cancelled) setUnreadCount(n.data?.count ?? 0);
       } catch {
         /* ignore */
@@ -148,8 +151,10 @@ export default function AdminLayout({ children }) {
                     <NavLink to="/admin/all-sellers" className={subNavCls}>All Sellers</NavLink>
                     <NavLink to="/admin/buyers" className={subNavCls}>All Buyers</NavLink>
                     <NavLink to="/admin/products" className={subNavCls}>Products</NavLink>
-                    <NavLink to="/admin/orders" className={subNavCls}>Orders / Activity</NavLink>
-                    <NavLink to="/admin/reports" className={subNavCls}>Reports / Issues</NavLink>
+                    <NavLink to="/admin/orders" className={subNavCls}>Orders</NavLink>
+                    <NavLink to="/admin/reports" className={subNavCls}>Reports</NavLink>
+                    <NavLink to="/admin/reviews" className={subNavCls}>Reviews</NavLink>
+                    <NavLink to="/admin/returns" className={subNavCls}>Returns</NavLink>
                   </div>
                 )}
               </>
@@ -167,14 +172,24 @@ export default function AdminLayout({ children }) {
                 <NavLink to="/admin/products" className={navCls} title="Products">
                   <Package size={17} weight="fill" /> <span>Products</span>
                 </NavLink>
-                <NavLink to="/admin/orders" className={navCls} title="Orders / Activity">
-                  <FileText size={17} weight="fill" /> <span>Orders / Activity</span>
+                <NavLink to="/admin/orders" className={navCls} title="Orders">
+                  <FileText size={17} weight="fill" /> <span>Orders</span>
                 </NavLink>
-                <NavLink to="/admin/reports" className={navCls} title="Reports / Issues">
-                  <Flag size={17} weight="fill" /> <span>Reports / Issues</span>
+                <NavLink to="/admin/reports" className={navCls} title="Reports">
+                  <Flag size={17} weight="fill" /> <span>Reports</span>
+                </NavLink>
+                <NavLink to="/admin/reviews" className={navCls} title="Reviews">
+                  <Star size={17} weight="fill" /> <span>Reviews</span>
+                </NavLink>
+                <NavLink to="/admin/returns" className={navCls} title="Returns">
+                  <ArrowCounterClockwise size={17} weight="fill" /> <span>Returns</span>
                 </NavLink>
               </>
             )}
+
+            <NavLink to="/admin/support" className={navCls} title="Support Messages">
+              <ChatsCircle size={17} weight="fill" /> <span>Support Messages</span>
+            </NavLink>
 
             <NavLink to="/admin/announcements" className={navCls} title="Announcements">
               <Megaphone size={17} weight="fill" /> <span>Announcements</span>
@@ -218,12 +233,12 @@ export default function AdminLayout({ children }) {
                 <NavLink to="/admin/vouchers" className={navCls} title="Vouchers">
                   <Ticket size={17} weight="fill" /> <span>Vouchers</span>
                 </NavLink>
-
-                <NavLink to="/admin/audit-logs" className={navCls} title="Audit Logs">
-                  <FileText size={17} weight="fill" /> <span>Audit Logs</span>
-                </NavLink>
               </>
             )}
+
+            <NavLink to="/admin/audit-logs" className={navCls} title="Audit Logs">
+              <FileText size={17} weight="fill" /> <span>Audit Logs</span>
+            </NavLink>
 
             <NavLink to="/admin/analytics" className={navCls} title="Analytics">
               <PieChart size={17} weight="fill" /> <span>Analytics</span>
@@ -267,7 +282,7 @@ export default function AdminLayout({ children }) {
 
           <div className="ac-topbar-actions">
             <LanguageSwitcher variant="shell" />
-            <Link to="/notifications" className="ac-icon-btn" title="Notifications">
+            <Link to="/admin/notifications" className="ac-icon-btn" title="Notifications">
               <Bell size={17} />
               {unreadCount > 0 && (
                 <span className="ac-icon-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
@@ -313,6 +328,10 @@ const LABELS = {
   '/admin/municipalities': 'Municipalities',
   '/admin/analytics': 'Analytics',
   '/admin/announcements': 'Announcements',
+  '/admin/support': 'Support Messages',
+  '/admin/notifications': 'Notifications',
+  '/admin/reviews': 'Reviews',
+  '/admin/returns': 'Returns',
   '/admin/banners': 'Banners',
   '/admin/vouchers': 'Vouchers',
   '/admin/junior-admins': 'Municipal Admins',

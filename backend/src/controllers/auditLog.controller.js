@@ -4,7 +4,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
 
 /**
  * Audit Log Controller
- * SUPER_ADMIN read-only view of audit trail
+ * Read-only audit trail: superadmins see everything, municipal admins only
+ * actions recorded for their municipality.
  */
 
 const getAuditLogs = asyncHandler(async (req, res) => {
@@ -17,17 +18,19 @@ const getAuditLogs = asyncHandler(async (req, res) => {
     entityId,
     from,
     to,
+    municipalityId,
   } = req.query;
 
   const result = await auditLogService.list({
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(100, Math.max(1, parseInt(pageSize, 10) || 25)),
     userId,
     action,
     entity,
     entityId,
     from,
     to,
+    municipalityId: req.user.role === 'MUNICIPAL_ADMIN' ? req.user.municipalityId : municipalityId,
   });
 
   paginatedResponse(

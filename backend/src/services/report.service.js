@@ -86,6 +86,13 @@ const createReport = async (userId, data) => {
     municipalityId,
   });
 
+  await notificationService.notifyMunicipalAdmins(municipalityId, {
+    type: 'REPORT_SUBMITTED',
+    title: `New ${type === 'PRODUCT' ? 'product' : 'seller'} report`,
+    message: `A user reported: ${reason}`,
+    relatedId: report.id,
+  });
+
   // Notify the reporter that we received it
   try {
     await notificationService.createNotification({
@@ -102,7 +109,7 @@ const createReport = async (userId, data) => {
   return report;
 };
 
-const getReportById = async (id, userId, userRole) => {
+const getReportById = async (id, userId, userRole, userMunicipalityId) => {
   const report = await reportRepository.findById(id);
   if (!report) throw new ApiError('Report not found', 404);
 
@@ -110,6 +117,9 @@ const getReportById = async (id, userId, userRole) => {
   const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'MUNICIPAL_ADMIN';
   if (!isReporter && !isAdmin) {
     throw new ApiError('You do not have permission to view this report', 403);
+  }
+  if (!isReporter && userRole === 'MUNICIPAL_ADMIN' && report.municipalityId !== userMunicipalityId) {
+    throw new ApiError('You can only view reports in your assigned municipality', 403);
   }
   return report;
 };

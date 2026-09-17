@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell, BellSlash as BellOff, Checks as CheckCheck, Trash as Trash2, Package, ShoppingBag,
-  CheckCircle, XCircle, Star, WarningCircle as AlertCircle, Info
+  CheckCircle, XCircle, Star, WarningCircle as AlertCircle, Info, ChatCircleDots
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -22,6 +22,7 @@ const TYPE_CONFIG = {
   SELLER_SUSPENDED: { icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Seller Suspended' },
   REPORT_SUBMITTED: { icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', label: 'Report Submitted' },
   REPORT_RESOLVED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Report Resolved' },
+  SUPPORT_MESSAGE: { icon: ChatCircleDots, color: '#059669', bg: '#d1fae5', label: 'Municipal Admin' },
   SYSTEM_ANNOUNCEMENT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Announcement' },
   DEFAULT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Notification' },
 };
@@ -76,6 +77,15 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Admin messages open the conversation so the user can reply.
+  const openNotification = (notif) => {
+    handleMarkRead(notif);
+    if (notif.type === 'SUPPORT_MESSAGE' && notif.relatedId) {
+      const base = audience === 'SELLER' ? '/seller/support' : '/profile/support';
+      navigate(`${base}?c=${notif.relatedId}`);
     }
   };
 
@@ -203,7 +213,7 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
           </div>
         ) : notifications.length === 0 ? (
           <div className="notif-empty">
-            <BellOff size={48} />
+            <BellOff size={48} weight="fill" />
             <h2>{filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}</h2>
             <p>You'll see order updates and important alerts here.</p>
             {filter === 'unread' && (
@@ -221,7 +231,7 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
                 <div
                   key={notif.id}
                   className={`notif-item ${!notif.isRead ? 'unread' : ''}`}
-                  onClick={() => handleMarkRead(notif)}
+                  onClick={() => openNotification(notif)}
                 >
                   <div
                     className="notif-icon-wrap"

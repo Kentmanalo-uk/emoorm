@@ -3,11 +3,20 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
+  ShieldCheck, ShieldWarning,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useAuthStore from '../store/authStore';
+import { fetchIdentityStatus } from '../lib/identity';
 import './Profile.css';
+
+const IDENTITY_META = {
+  NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
+  PENDING: { label: 'Verification in Progress', tone: 'pending', Icon: ShieldWarning, hint: 'We are checking your ID.', action: 'View Status' },
+  VERIFIED: { label: 'Verified', tone: 'success', Icon: ShieldCheck, hint: 'You can check out and place orders.', action: 'View Details' },
+  FAILED: { label: 'Verification Failed', tone: 'error', Icon: ShieldWarning, hint: 'Please retry with a valid ID.', action: 'Retry Verification' },
+};
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -22,6 +31,7 @@ const Profile = () => {
   });
   const [followedStores, setFollowedStores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [identityStatus, setIdentityStatus] = useState('NOT_VERIFIED');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -57,6 +67,13 @@ const Profile = () => {
         toPickupCount: readyCount,
       });
 
+      try {
+        const identity = await fetchIdentityStatus();
+        setIdentityStatus(identity?.status || 'NOT_VERIFIED');
+      } catch {
+        // non-fatal — the section falls back to "Not Verified"
+      }
+
       // TODO: Fetch followed stores when endpoint is available
       setFollowedStores([]);
     } catch (error) {
@@ -77,6 +94,9 @@ const Profile = () => {
     };
     return badges[status] || { label: status, color: '#6b7280', icon: null };
   };
+
+  const identityMeta = IDENTITY_META[identityStatus] || IDENTITY_META.NOT_VERIFIED;
+  const IdentityIcon = identityMeta.Icon;
 
   if (isLoading) {
     return (
@@ -139,6 +159,25 @@ const Profile = () => {
         <Link to="/profile/settings" className="profile-edit-button">
           <Edit size={18} />
           Edit Profile
+        </Link>
+      </div>
+
+      {/* Identity Verification Section */}
+      <div className="profile-section profile-identity">
+        <div className={`profile-identity-icon profile-identity-icon--${identityMeta.tone}`}>
+          <IdentityIcon size={26} weight="fill" />
+        </div>
+        <div className="profile-identity-body">
+          <h3 className="profile-section-title">Identity Verification</h3>
+          <p className="profile-identity-status">
+            <span className={`profile-identity-badge profile-identity-badge--${identityMeta.tone}`}>
+              {identityMeta.label}
+            </span>
+            <span>{identityMeta.hint}</span>
+          </p>
+        </div>
+        <Link to="/profile/verification" className="profile-identity-button">
+          {identityMeta.action}
         </Link>
       </div>
 
@@ -268,7 +307,7 @@ const Profile = () => {
         </div>
         {followedStores.length === 0 ? (
           <div className="empty-state">
-            <Store size={48} />
+            <Store size={48} weight="fill" />
             <p className="empty-state-text">Not following any stores yet</p>
             <Link to="/stores" className="empty-state-button">
               Discover Stores

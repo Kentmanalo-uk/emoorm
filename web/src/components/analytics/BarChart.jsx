@@ -1,4 +1,5 @@
-import React from 'react';
+import { ChartBar } from '@phosphor-icons/react';
+import EmptyState from './EmptyState';
 import './analytics.css';
 
 const BarChart = ({
@@ -10,11 +11,11 @@ const BarChart = ({
   showValues = true,
 }) => {
   if (!data.length) {
-    return <div className="an-empty">No data for this period.</div>;
+    return <EmptyState icon={ChartBar} title="No data yet" message="Nothing was recorded in this period." />;
   }
   const total = data.reduce((sum, item) => sum + Number(item[valueKey] || 0), 0);
   if (total === 0) {
-    return <div className="an-empty">No sales in this period yet.</div>;
+    return <EmptyState icon={ChartBar} title="No sales yet" message="Completed orders in this period will appear here." />;
   }
   const max = Math.max(1, ...data.map((d) => Number(d[valueKey] || 0)));
   const peak = data.reduce((best, item) => Number(item[valueKey] || 0) > Number(best[valueKey] || 0) ? item : best, data[0]);

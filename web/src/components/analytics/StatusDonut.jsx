@@ -1,4 +1,5 @@
-import React from 'react';
+import { ChartDonut } from '@phosphor-icons/react';
+import EmptyState from './EmptyState';
 import './analytics.css';
 
 const DEFAULT_COLORS = {
@@ -14,12 +15,18 @@ const DEFAULT_COLORS = {
   ARCHIVED: '#374151',
 };
 
-const StatusDonut = ({ counts = {}, colors = DEFAULT_COLORS, size = 140 }) => {
+const StatusDonut = ({
+  counts = {},
+  colors = DEFAULT_COLORS,
+  size = 140,
+  emptyTitle = 'No orders yet',
+  emptyMessage = 'Order statuses will be charted here.',
+}) => {
   const entries = Object.entries(counts).filter(([, v]) => v > 0);
   const total = entries.reduce((s, [, v]) => s + v, 0);
 
   if (total === 0) {
-    return <div className="an-empty">No data.</div>;
+    return <EmptyState icon={ChartDonut} title={emptyTitle} message={emptyMessage} compact />;
   }
 
   const radius = size / 2 - 8;

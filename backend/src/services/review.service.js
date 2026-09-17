@@ -176,7 +176,7 @@ const updateReview = async (reviewId, userId, data) => {
  * @param {String} userRole - User role
  * @returns {Promise<void>}
  */
-const deleteReview = async (reviewId, userId, userRole) => {
+const deleteReview = async (reviewId, userId, userRole, userMunicipalityId) => {
   const review = await reviewRepository.findById(reviewId);
 
   if (!review || review.deletedAt) {
@@ -189,6 +189,9 @@ const deleteReview = async (reviewId, userId, userRole) => {
 
   if (!isOwner && !isAdmin) {
     throw new ApiError('You do not have permission to delete this review', 403);
+  }
+  if (!isOwner && userRole === 'MUNICIPAL_ADMIN' && review.product?.municipalityId !== userMunicipalityId) {
+    throw new ApiError('You can only delete reviews in your assigned municipality', 403);
   }
 
   await reviewRepository.softDeleteReview(reviewId);

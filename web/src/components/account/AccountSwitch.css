@@ -1,0 +1,148 @@
+/* Account-switching overlay (personal ⇄ seller) */
+.acs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: acs-fade-in 160ms ease-out both;
+}
+
+.acs-overlay.is-leaving {
+  animation: acs-fade-out 220ms ease-in both;
+  pointer-events: none;
+}
+
+.acs-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 24px;
+  text-align: center;
+  animation: acs-rise 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.acs-overlay.is-leaving .acs-card {
+  animation: acs-sink 220ms ease-in both;
+}
+
+.acs-avatar-wrap {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  margin-bottom: 18px;
+}
+
+.acs-avatar {
+  position: absolute;
+  inset: 10px;
+  width: 108px;
+  height: 108px;
+  object-fit: cover;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+  animation: acs-avatar-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.acs-avatar--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  font-weight: 700;
+  color: #fff;
+  background: #059669;
+}
+
+.acs-avatar-wrap.is-shop .acs-avatar--fallback {
+  color: #fff;
+  background: #006927;
+}
+
+.acs-ring {
+  position: absolute;
+  inset: 0;
+  border: 3px solid #e6f4ec;
+  border-top-color: #059669;
+  border-radius: 50%;
+  animation: acs-spin 0.8s linear infinite;
+}
+
+.acs-name {
+  max-width: min(420px, calc(100vw - 48px));
+  overflow: hidden;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #111827;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.acs-title {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+@keyframes acs-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes acs-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes acs-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes acs-sink {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: scale(0.98); }
+}
+
+@keyframes acs-avatar-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes acs-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .acs-avatar-wrap {
+    width: 108px;
+    height: 108px;
+  }
+
+  .acs-avatar {
+    inset: 9px;
+    width: 90px;
+    height: 90px;
+  }
+
+  .acs-name {
+    font-size: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acs-overlay,
+  .acs-overlay.is-leaving,
+  .acs-card,
+  .acs-overlay.is-leaving .acs-card,
+  .acs-avatar,
+  .acs-ring {
+    animation: none;
+  }
+}

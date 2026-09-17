@@ -1,10 +1,18 @@
 const orderService = require('../services/order.service');
+const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
   createdResponse,
   paginatedResponse,
 } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorHandler');
+const config = require('../config/env');
+
+// Clamp client paging input to sane bounds.
+const paging = (page, pageSize) => ({
+  page: Math.max(1, parseInt(page, 10) || 1),
+  pageSize: Math.min(config.pagination.maxPageSize, Math.max(1, parseInt(pageSize, 10) || 20)),
+});
 
 /**
  * Order Controller
@@ -35,8 +43,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
   } = req.query;
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    ...paging(page, pageSize),
     status,
   };
 
@@ -65,8 +72,7 @@ const getStoreOrders = asyncHandler(async (req, res) => {
   } = req.query;
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    ...paging(page, pageSize),
     status,
   };
 
@@ -102,8 +108,7 @@ const getAllOrders = asyncHandler(async (req, res) => {
     : municipalityId;
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    ...paging(page, pageSize),
     status,
     municipalityId: scopedMunicipalityId,
     buyerId,
@@ -172,6 +177,14 @@ const verifyPayment = asyncHandler(async (req, res) => {
     req.user,
     String(req.body.paymentStatus || '').toUpperCase(),
   );
+  await auditLog.record({
+    actor: req.user,
+    action: order.paymentStatus === 'PAID' ? 'VERIFY_PAYMENT' : 'REJECT_PAYMENT',
+    entity: 'Order',
+    entityId: req.params.id,
+    details: { paymentStatus: order.paymentStatus },
+    req,
+  });
   successResponse(res, order, 'Payment status updated successfully');
 });
 

@@ -107,7 +107,7 @@ export default function Stores() {
             </div>
           ) : stores.length === 0 ? (
             <div className="stores-empty">
-              <Store size={48} />
+              <Store size={48} weight="fill" />
               <p>No stores found</p>
               {searchQuery && (
                 <button

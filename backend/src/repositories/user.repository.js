@@ -41,6 +41,7 @@ const createUser = async (userData) => {
           pickupAddress: true,
           isActive: true,
           isSuspended: true,
+          suspensionReason: true,
           _count: { select: { products: true, orders: true } },
         },
       },
