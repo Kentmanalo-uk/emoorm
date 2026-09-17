@@ -83,6 +83,7 @@ import AppToaster from './components/ui/AppToaster';
 import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import './App.css';
 import './styles/responsive.css';
+import './styles/accent.css';
 
 // Create a client
 const queryClient = new QueryClient({

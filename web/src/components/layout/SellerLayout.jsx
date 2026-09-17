@@ -15,7 +15,7 @@ import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import SellerCenterGuide from '../seller/SellerCenterGuide';
 import ConfirmDialog from '../ui/ConfirmDialog';
-import SellerRail from './SellerRail';
+import AppRail from './AppRail';
 import './SellerLayout.css';
 import './SellerShellMobile.css';
 
@@ -330,7 +330,7 @@ export default function SellerLayout() {
         <SellerCenterGuide store={store} setStore={setStore} />
       </div>
 
-      <SellerRail unreadCount={unreadCount} onLogout={handleLogout} />
+      <AppRail unreadCount={unreadCount} onLogout={handleLogout} />
 
       {/* Phone tab bar */}
       <nav className="sc-tabbar" aria-label="Seller sections">

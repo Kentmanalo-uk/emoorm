@@ -1,0 +1,91 @@
+/* ═══════════════════════════════════════════════════════════════
+   Secondary accent — pink.
+
+   Green stays the primary brand colour (navigation, primary buttons,
+   active states, success). Pink is used sparingly, for "saved / liked"
+   and promotional touches, so the interface is not solid green.
+   Colours only: nothing here changes layout, size or behaviour.
+   ─────────────────────────────────────────────────────────────── */
+
+:root {
+  --color-accent-pink: #ec4899;
+  --color-accent-pink-dark: #db2777;
+  --color-accent-pink-deep: #be185d;
+  --color-accent-pink-soft: #fdf2f8;
+  --color-accent-pink-border: #fbcfe8;
+  --color-accent-pink-text: #9d174d;
+}
+
+/* ── Cart item count (header + phone bottom navigation) ────────── */
+.header-cart-badge,
+.mobile-bottom-icon-wrap b {
+  background-color: var(--color-accent-pink);
+}
+
+/* ── Wishlist / saved items ───────────────────────────────────── */
+/* Faded pink instead of faded green for the "nothing saved yet" heart. */
+.wishlist-page .wishlist-empty > svg:not(.keep-color),
+.profile-main .wishlist-empty > svg:not(.keep-color),
+.wishlist-page .empty-state > svg:not(.keep-color),
+.profile-main .wishlist-content .empty-state > svg:not(.keep-color) {
+  color: var(--color-accent-pink-border);
+}
+
+.wishlist-card-discount {
+  background: var(--color-accent-pink);
+}
+
+.wishlist-clear-btn:hover {
+  color: var(--color-accent-pink-dark);
+  border-color: var(--color-accent-pink-border);
+  background: var(--color-accent-pink-soft);
+}
+
+/* ── Promotional strip on the product page ────────────────────── */
+.pdp-promo {
+  background: linear-gradient(
+    135deg,
+    var(--color-accent-pink-deep) 0%,
+    var(--color-accent-pink-dark) 60%,
+    var(--color-accent-pink) 100%
+  );
+}
+
+/* ── Voucher / discount code ──────────────────────────────────── */
+.voucher-title {
+  color: var(--color-accent-pink-text);
+}
+
+.voucher-input:focus {
+  border-color: var(--color-accent-pink);
+  box-shadow: 0 0 0 3px var(--color-accent-pink-soft);
+}
+
+/* ── Featured product tag ─────────────────────────────────────── */
+.product-badge.featured {
+  background-color: var(--color-accent-pink);
+}
+
+/* ── Home: accent bar on the app banner card ──────────────────── */
+.banner-card-app::before {
+  background: var(--color-accent-pink);
+}
+
+/* ── Count badges: one accent instead of alarm red ────────────── */
+.cd-bar .cd-count,
+.sc-icon-badge,
+.ac-icon-badge,
+.sr-badge,
+.msgr-unread-badge {
+  background: var(--color-accent-pink);
+}
+
+/* Unread count next to the "Unread" filter. */
+.notif-filter-count {
+  background: var(--color-accent-pink);
+}
+
+.notif-filter-btn.active .notif-filter-count {
+  color: var(--color-accent-pink-text);
+  background: #fff;
+}

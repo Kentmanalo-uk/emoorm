@@ -671,7 +671,7 @@ const ProductDetails = () => {
                   }}
                   aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                 >
-                  <Heart size={20} weight={wishlisted ? 'fill' : 'regular'} color={wishlisted ? '#ef4444' : 'currentColor'} />
+                  <Heart size={20} weight={wishlisted ? 'fill' : 'regular'} color={wishlisted ? '#ec4899' : 'currentColor'} />
                   <span>{wishlisted ? 'Saved' : 'Like'}</span>
                 </button>
               </div>

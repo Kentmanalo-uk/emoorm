@@ -5,7 +5,7 @@
 
 .ac-shell {
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: 232px minmax(0, 1fr) 56px;
   min-height: 100vh;
   background: #f5f6f8;
   color: #1f2937;
@@ -1068,7 +1068,7 @@
 }
 
 .ac-shell.is-collapsed {
-  grid-template-columns: 68px 1fr;
+  grid-template-columns: 68px minmax(0, 1fr) 56px;
 }
 
 .ac-shell.is-collapsed .ac-sidebar-inner {
@@ -1507,5 +1507,12 @@
 @media (max-width: 340px) {
   .ac-content .admin-card form div[style*="grid-template-columns"] {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* The right rail replaces the topbar icons on desktop (same as Seller Center). */
+@media (min-width: 1025px) {
+  .ac-topbar-actions {
+    display: none;
   }
 }

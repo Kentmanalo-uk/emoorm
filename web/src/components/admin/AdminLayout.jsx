@@ -13,6 +13,7 @@ import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import { useCompactLayout, useMobileNav } from '../../hooks/useMobileNav';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
+import AppRail from '../layout/AppRail';
 import './AdminLayout.css';
 import './AdminShellMobile.css';
 
@@ -321,6 +322,14 @@ export default function AdminLayout({ children }) {
 
         <main className="ac-content">{children}</main>
       </div>
+
+      <AppRail
+        unreadCount={unreadCount}
+        onLogout={handleLogout}
+        notificationsTo="/admin/notifications"
+        audience="ADMIN"
+        signOutMessage="You will need to sign in again to open the admin panel."
+      />
 
       {/* Phone tab bar */}
       <nav className="ac-tabbar" aria-label="Admin sections">

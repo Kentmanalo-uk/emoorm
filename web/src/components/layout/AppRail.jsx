@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Translate, Bell, SignOut, Check, BellSlash, WarningCircle } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../../lib/googleTranslate';
-import './SellerRail.css';
+import './AppRail.css';
 
 const formatTime = (value) => {
   if (!value) return '';
@@ -17,10 +17,17 @@ const formatTime = (value) => {
 };
 
 /**
- * Slim right-hand rail for the Seller Center: language, notifications and
- * sign out as icon-only buttons. Language and notifications open on hover.
+ * Slim right-hand rail for the Seller Center and the Admin panel: language,
+ * notifications and sign out as icon-only buttons. Language and notifications
+ * open on hover; sign out asks for confirmation.
  */
-export default function SellerRail({ unreadCount = 0, onLogout }) {
+export default function AppRail({
+  unreadCount = 0,
+  onLogout,
+  notificationsTo = '/seller/notifications',
+  audience = 'SELLER',
+  signOutMessage = 'You will need to sign in again to manage your shop.',
+}) {
   const [current] = useState(() => getCurrentLanguage());
   const [notifications, setNotifications] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -41,10 +48,10 @@ export default function SellerRail({ unreadCount = 0, onLogout }) {
   }, [confirmOpen]);
 
   const loadNotifications = useCallback(() => {
-    axios.get('/notifications', { params: { audience: 'SELLER', page: 1, pageSize: 6 } })
+    axios.get('/notifications', { params: { audience, page: 1, pageSize: 6 } })
       .then((res) => setNotifications(res.data || []))
       .catch(() => setNotifications((prev) => prev || []));
-  }, []);
+  }, [audience]);
 
   useEffect(() => {
     loadNotifications();
@@ -80,7 +87,7 @@ export default function SellerRail({ unreadCount = 0, onLogout }) {
       </div>
 
       <div className="sr-item">
-        <Link to="/seller/notifications" className="sr-btn sr-btn--notif" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'}>
+        <Link to={notificationsTo} className="sr-btn sr-btn--notif" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'}>
           <Bell size={26} weight="fill" />
           {unreadCount > 0 && <span className="sr-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
         </Link>
@@ -100,7 +107,7 @@ export default function SellerRail({ unreadCount = 0, onLogout }) {
             <ul className="sr-notif-list">
               {notifications.map((n) => (
                 <li key={n.id} className={n.isRead ? '' : 'is-unread'}>
-                  <Link to="/seller/notifications">
+                  <Link to={notificationsTo}>
                     <strong>{n.title}</strong>
                     {n.message && <span>{n.message}</span>}
                     <small>{formatTime(n.createdAt)}</small>
@@ -109,7 +116,7 @@ export default function SellerRail({ unreadCount = 0, onLogout }) {
               ))}
             </ul>
           )}
-          <Link to="/seller/notifications" className="sr-viewall">View all notifications</Link>
+          <Link to={notificationsTo} className="sr-viewall">View all notifications</Link>
         </div>
       </div>
 
@@ -135,7 +142,7 @@ export default function SellerRail({ unreadCount = 0, onLogout }) {
             <span className="sr-confirm-icon"><WarningCircle size={20} weight="fill" /></span>
             <div>
               <strong>Sign out?</strong>
-              <p>You will need to sign in again to manage your shop.</p>
+              <p>{signOutMessage}</p>
             </div>
           </div>
           <div className="sr-confirm-actions">
