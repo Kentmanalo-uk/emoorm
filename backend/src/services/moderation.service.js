@@ -250,6 +250,9 @@ const reviewIdentity = async (actor, userId, { decision, note } = {}, req = null
         : data.failureReason,
       relatedId: userId,
       audience: 'BUYER',
+      // SYSTEM_ANNOUNCEMENT is also used for real announcements, so this one
+      // says outright where it leads.
+      target: { kind: 'buyer-verification' },
     });
   } catch (err) {
     console.error('[reviewIdentity] notification failed:', err.message);

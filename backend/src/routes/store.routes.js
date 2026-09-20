@@ -1,3 +1,5 @@
+const { publicCache } = require('../middleware/httpCache');
+const config = require('../config/env');
 const express = require('express');
 const router = express.Router();
 const storeController = require('../controllers/store.controller');
@@ -11,22 +13,31 @@ const { authenticate, authorize, checkStoreOwnership, optionalAuth } = require('
 // Public routes
 router.get(
   '/slug/:slug/storefront',
+  publicCache(config.cache.ttl.stores),
   optionalAuth,
   storeController.getStorefront
 );
 
 router.get(
   '/slug/:slug',
+  publicCache(config.cache.ttl.stores),
   optionalAuth,
   storeController.getStoreBySlug
 );
 
-// Seller-only static route — must come before /:id
+// Seller-only static routes — must come before /:id
 router.get(
   '/my/store',
   authenticate,
   authorize('SELLER'),
   storeController.getMyStore
+);
+
+router.get(
+  '/my/attention',
+  authenticate,
+  authorize('SELLER'),
+  storeController.getMyAttention
 );
 
 router.put(
@@ -52,6 +63,7 @@ router.put(
 
 router.get(
   '/',
+  publicCache(config.cache.ttl.stores),
   optionalAuth,
   storeController.getStores
 );

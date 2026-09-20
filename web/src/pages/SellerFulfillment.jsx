@@ -19,6 +19,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerFulfillment.css';
+import { useMunicipalities } from '../hooks/useReferenceData';
 
 const MODES = [
   {
@@ -57,7 +58,7 @@ const normalizeName = (s) =>
 
 export default function SellerFulfillment() {
   const [store, setStore] = useState(null);
-  const [municipalities, setMunicipalities] = useState([]);
+  const { municipalities } = useMunicipalities();
   // areas: [{ municipalityId, municipalityName, barangay: string|null }]
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,14 +85,12 @@ export default function SellerFulfillment() {
   useEffect(() => {
     (async () => {
       try {
-        const [storeRes, muniRes, areasRes] = await Promise.all([
+        const [storeRes, areasRes] = await Promise.all([
           axios.get('/stores/my/store'),
-          axios.get('/municipalities'),
           axios.get('/stores/my/service-areas').catch(() => ({ data: [] })),
         ]);
         const s = storeRes.data;
         setStore(s);
-        setMunicipalities(muniRes.data || []);
         setAreas(
           (areasRes.data || []).map((a) => ({
             municipalityId: a.municipalityId,

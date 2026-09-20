@@ -5,6 +5,8 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
+  Modal,
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +14,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import {
   BellIcon as Bell, ChecksIcon as CheckCheck, TrashIcon as Trash2, PackageIcon as Package, ShoppingBagIcon as ShoppingBag,
   CheckCircleIcon as CheckCircle, XCircleIcon as XCircle, StarIcon as Star, WarningCircleIcon as AlertCircle, InfoIcon as Info,
+  CaretRightIcon as ChevronRight, XIcon as X, ChatCircleDotsIcon as ChatCircleDots,
 } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
@@ -20,6 +23,7 @@ import EmptyState from '../../src/components/EmptyState';
 import useAuthStore from '../../src/store/authStore';
 import { ListSkeleton } from '../../src/components/SkeletonLayouts';
 import { getCacheEntry, setCachedData } from '../../src/lib/dataCache';
+import { notificationRoute, isReadable } from '../../src/lib/notificationLink';
 import { colors, fontFamily, radius, spacing, typography } from '../../src/theme';
 
 const NOTIFICATIONS_CACHE_KEY = 'notifications:list';
@@ -39,6 +43,18 @@ const TYPE_CONFIG = {
   REPORT_SUBMITTED: { Icon: AlertCircle, color: '#f59e0b' },
   REPORT_RESOLVED: { Icon: CheckCircle, color: '#059669' },
   SYSTEM_ANNOUNCEMENT: { Icon: Info, color: '#6b7280' },
+  SUPPORT_MESSAGE: { Icon: ChatCircleDots, color: '#059669' },
+  STORE_NEW_PRODUCT: { Icon: ShoppingBag, color: '#3b82f6' },
+  STORE_PROMOTION: { Icon: Star, color: '#f59e0b' },
+  STORE_ANNOUNCEMENT: { Icon: Info, color: '#6b7280' },
+  RETURN_REQUESTED: { Icon: AlertCircle, color: '#f59e0b' },
+  RETURN_APPROVED: { Icon: CheckCircle, color: '#059669' },
+  RETURN_REJECTED: { Icon: XCircle, color: '#ef4444' },
+  RETURN_AWAITING_SHIPMENT: { Icon: Package, color: '#f97316' },
+  RETURN_RECEIVED: { Icon: Package, color: '#3b82f6' },
+  RETURN_REFUNDED: { Icon: CheckCircle, color: '#059669' },
+  RETURN_CANCELLED: { Icon: XCircle, color: '#6b7280' },
+  RETURN_CLOSED: { Icon: CheckCircle, color: '#6b7280' },
   DEFAULT: { Icon: Info, color: '#6b7280' },
 };
 
@@ -65,6 +81,7 @@ export default function Notifications() {
   const [unreadCount, setUnreadCount] = useState(initialData?.unreadCount || 0);
   const [isLoading, setIsLoading] = useState(!initialData);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [reading, setReading] = useState(null);
 
   const fetchNotifications = useCallback(async ({ silent = false } = {}) => {
     if (!isAuthenticated) {
@@ -112,6 +129,19 @@ export default function Notifications() {
     }
   };
 
+  // Every row now leads somewhere: the order, product or store it is about,
+  // or — for announcements and anything this app has no screen for — the
+  // notification itself, so a clipped message can still be read in full.
+  const openNotification = (notif) => {
+    handleMarkRead(notif);
+    const route = notificationRoute(notif);
+    if (route) {
+      router.push(route);
+      return;
+    }
+    if (isReadable(notif) || notif.message) setReading(notif);
+  };
+
   const handleMarkAllRead = async () => {
     try {
       await apiClient.put(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
@@ -142,10 +172,13 @@ export default function Notifications() {
 
   const renderItem = ({ item }) => {
     const { Icon, color } = getConfig(item.type);
+    const hasRoute = Boolean(notificationRoute(item));
     return (
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}. ${item.message}`}
         style={[styles.item, !item.isRead && styles.itemUnread]}
-        onPress={() => handleMarkRead(item)}
+        onPress={() => openNotification(item)}
       >
         <View style={styles.iconWrap}>
           <Icon size={16} color={!item.isRead ? color : colors.textMuted} />
@@ -158,6 +191,7 @@ export default function Notifications() {
           <Text style={styles.itemTime}>{timeAgo(item.createdAt)}</Text>
         </View>
         {!item.isRead && <View style={styles.unreadDot} />}
+        {hasRoute ? <ChevronRight size={15} color={colors.gray300} style={styles.chevron} /> : null}
         <Pressable onPress={() => handleDelete(item.id)} hitSlop={8} style={styles.deleteBtn}>
           <Trash2 size={16} color={colors.gray300} />
         </Pressable>
@@ -193,6 +227,23 @@ export default function Notifications() {
           />
         }
       />}
+
+      <Modal visible={Boolean(reading)} transparent animationType="slide" onRequestClose={() => setReading(null)}>
+        <View style={styles.sheetBackdrop}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle} numberOfLines={2}>{reading?.title}</Text>
+              <Pressable onPress={() => setReading(null)} hitSlop={8} style={styles.sheetClose}>
+                <X size={18} color={colors.textPrimary} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.sheetBody}>
+              <Text style={styles.sheetTime}>{timeAgo(reading?.createdAt)}</Text>
+              <Text style={styles.sheetMessage}>{reading?.message}</Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -238,6 +289,15 @@ const styles = StyleSheet.create({
   itemMessage: { ...typography.caption, color: colors.textSecondary, lineHeight: 17 },
   itemTime: { ...typography.caption, color: colors.textMuted, fontSize: 11 },
   unreadDot: { width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.primary, marginTop: 4 },
+  chevron: { marginTop: 4 },
   deleteBtn: { padding: spacing.xs },
+  sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15, 23, 42, 0.45)' },
+  sheet: { maxHeight: '70%', backgroundColor: colors.white, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
+  sheetHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+  sheetTitle: { ...typography.h3, flex: 1, color: colors.textPrimary },
+  sheetClose: { padding: spacing.xs },
+  sheetBody: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.sm },
+  sheetTime: { ...typography.caption, color: colors.textMuted },
+  sheetMessage: { ...typography.body, color: colors.textSecondary, lineHeight: 22 },
 });
 

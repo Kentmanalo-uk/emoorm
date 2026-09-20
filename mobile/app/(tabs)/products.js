@@ -23,6 +23,7 @@ import LoadingSkeleton from '../../src/components/LoadingSkeleton';
 import { ProductGridSkeleton } from '../../src/components/SkeletonLayouts';
 import { getCacheEntry, getCachedData, refreshCachedData } from '../../src/lib/dataCache';
 import { colors, control, radius, spacing, typography } from '../../src/theme';
+import { fetchCategories, REFERENCE_KEYS } from '../../src/lib/referenceData';
 
 const SORT_OPTIONS = [
   { label: 'Newest', value: 'newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -33,7 +34,6 @@ const SORT_OPTIONS = [
   { label: 'Name: Z to A', value: 'name-desc', sortBy: 'name', sortOrder: 'desc' },
 ];
 const PAGE_SIZE = 20;
-const CATEGORIES_CACHE_KEY = 'categories:list';
 const PRODUCTS_CACHE_TTL = 60 * 1000;
 
 // Mirrors web/src/pages/Products.jsx (category/price sidebar filters become a
@@ -44,7 +44,9 @@ export default function Products() {
   const insets = useSafeAreaInsets();
   const addItem = useCartStore((s) => s.addItem);
 
-  const [categories, setCategories] = useState(getCacheEntry(CATEGORIES_CACHE_KEY)?.data || []);
+  // Seeded from the shared reference cache so the chips render instantly
+  // when returning to this tab.
+  const [categories, setCategories] = useState(getCacheEntry(REFERENCE_KEYS.categories)?.data || []);
   const [selectedCategory, setSelectedCategory] = useState(params.category || '');
   const [searchQuery, setSearchQuery] = useState(params.q || '');
   const [inputValue, setInputValue] = useState(params.q || '');
@@ -64,9 +66,7 @@ export default function Products() {
   const hasActiveFilters = Boolean(selectedCategory || searchQuery || priceRange.min || priceRange.max || sortBy !== 'newest');
 
   useEffect(() => {
-    const cached = getCachedData(CATEGORIES_CACHE_KEY, 5 * 60 * 1000);
-    if (cached) return;
-    refreshCachedData(CATEGORIES_CACHE_KEY, () => apiClient.get(ENDPOINTS.CATEGORIES).then((res) => res.data || []))
+    fetchCategories()
       .then(setCategories)
       .catch(() => setCategories([]));
   }, []);

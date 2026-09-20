@@ -1,4 +1,5 @@
 const municipalityRepository = require('../repositories/municipality.repository');
+const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -10,9 +11,8 @@ const { ApiError } = require('../middleware/errorHandler');
  * Get all municipalities
  * @returns {Promise<Array>} List of municipalities
  */
-const getAllMunicipalities = async (includeInactive = false) => {
-  return municipalityRepository.findAll(includeInactive);
-};
+const getAllMunicipalities = async (includeInactive = false) =>
+  cached.municipalityList({ includeInactive }, () => municipalityRepository.findAll(includeInactive));
 
 /**
  * Get municipality by ID
@@ -20,7 +20,7 @@ const getAllMunicipalities = async (includeInactive = false) => {
  * @returns {Promise<Object>} Municipality
  */
 const getMunicipalityById = async (id) => {
-  const municipality = await municipalityRepository.findById(id);
+  const municipality = await cached.municipality({ id }, () => municipalityRepository.findById(id));
 
   if (!municipality) {
     throw new ApiError('Municipality not found', 404);
@@ -35,7 +35,7 @@ const getMunicipalityById = async (id) => {
  * @returns {Promise<Object>} Municipality
  */
 const getMunicipalityByCode = async (code) => {
-  const municipality = await municipalityRepository.findByCode(code);
+  const municipality = await cached.municipality({ code }, () => municipalityRepository.findByCode(code));
 
   if (!municipality) {
     throw new ApiError('Municipality not found', 404);
@@ -56,7 +56,9 @@ const createMunicipality = async (data) => {
     throw new ApiError('Municipality code already exists', 409);
   }
 
-  return municipalityRepository.createMunicipality(data);
+  const municipality = await municipalityRepository.createMunicipality(data);
+  await invalidate(TAGS.municipalities);
+  return municipality;
 };
 
 /**
@@ -83,6 +85,7 @@ const seedMunicipalities = async () => {
   ];
 
   const count = await municipalityRepository.seedMunicipalities(municipalities);
+  await invalidate(TAGS.municipalities);
 
   return {
     created: count,
@@ -111,5 +114,8 @@ async function updateMunicipality(id, data, actor) {
   if (updateData.gallery !== undefined && (!Array.isArray(updateData.gallery) || updateData.gallery.length > 12)) {
     throw new ApiError('Gallery must contain up to 12 images', 400);
   }
-  return municipalityRepository.updateMunicipality(id, updateData);
+  const updated = await municipalityRepository.updateMunicipality(id, updateData);
+  // Municipality names are embedded in store and product payloads.
+  await invalidate(TAGS.municipalities, TAGS.stores, TAGS.products);
+  return updated;
 }

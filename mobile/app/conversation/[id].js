@@ -25,6 +25,7 @@ import { uploadImage } from '../../src/lib/upload';
 import { toast } from '../../src/lib/toast';
 import useAuthStore from '../../src/store/authStore';
 import useChatAttachmentStore from '../../src/store/chatAttachmentStore';
+import SafetyNotice from '../../src/components/SafetyNotice';
 import { colors, radius, spacing, typography } from '../../src/theme';
 
 // Thread view for a single conversation — pushed from app/(tabs)/messages.js.
@@ -250,6 +251,7 @@ export default function ConversationThread() {
       )}
 
       <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+        <SafetyNotice />
         {showRatingPrompt ? (
           <View style={styles.ratingPrompt}>
             <Pressable accessibilityRole="button" accessibilityLabel="Dismiss rating prompt" style={styles.ratingClose} onPress={dismissRatingPrompt} hitSlop={8}>

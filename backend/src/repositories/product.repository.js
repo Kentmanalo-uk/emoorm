@@ -1,4 +1,24 @@
 const prisma = require('../config/database');
+const { invalidate, TAGS } = require('../lib/cachePolicy');
+
+/**
+ * Drop the cached copies a product write makes stale. Invalidation lives at
+ * this layer on purpose: every mutation path goes through the repository, so
+ * no controller, service or bulk action can silently skip it.
+ * @param {Object|Object[]} products - The written product(s), or their ids
+ * @returns {Promise<void>}
+ */
+const invalidateProducts = async (products) => {
+  const list = (Array.isArray(products) ? products : [products]).filter(Boolean);
+  const tags = [TAGS.products, TAGS.stores];
+  for (const product of list) {
+    // Detail entries are keyed by id AND by slug, so both need clearing.
+    if (product.id) tags.push(TAGS.product(product.id));
+    if (product.slug) tags.push(TAGS.product(product.slug));
+    if (product.storeId) tags.push(TAGS.store(product.storeId));
+  }
+  await invalidate(tags);
+};
 
 // Some legacy rows stored `images` as a JSON-encoded string; return a real array to callers.
 const normalizeImages = (raw) => {
@@ -58,6 +78,7 @@ const createProduct = async (data) => {
       },
     },
   });
+  await invalidateProducts(created);
   return withImages(created);
 };
 
@@ -270,6 +291,7 @@ const updateProduct = async (id, data) => {
       },
     },
   });
+  await invalidateProducts(p);
   return withImages(p);
 };
 
@@ -279,10 +301,12 @@ const updateProduct = async (id, data) => {
  * @returns {Promise<Object>} Deleted product
  */
 const softDeleteProduct = async (id) => {
-  return prisma.product.update({
+  const deleted = await prisma.product.update({
     where: { id },
     data: { deletedAt: new Date() },
   });
+  await invalidateProducts(deleted);
+  return deleted;
 };
 
 /**
@@ -304,6 +328,9 @@ const bulkUpdateStatus = async (ids, storeId, fromStatuses, toStatus) => {
     },
     data: { status: toStatus },
   });
+  // updateMany returns no rows, so clear by id and let the store tag cover
+  // the lists these products appear in.
+  await invalidateProducts(ids.map((id) => ({ id, storeId })));
   return result.count;
 };
 
@@ -322,6 +349,7 @@ const bulkSoftDelete = async (ids, storeId) => {
     },
     data: { deletedAt: new Date() },
   });
+  await invalidateProducts(ids.map((id) => ({ id, storeId })));
   return result.count;
 };
 
@@ -348,10 +376,12 @@ const slugExists = async (slug, excludeId = null) => {
  * @returns {Promise<Object>} Updated product
  */
 const updateStatus = async (id, status) => {
-  return prisma.product.update({
+  const updated = await prisma.product.update({
     where: { id },
     data: { status },
   });
+  await invalidateProducts(updated);
+  return updated;
 };
 
 /**

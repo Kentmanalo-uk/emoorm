@@ -11,6 +11,7 @@ import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import './Home.css';
+import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 
 const EXPLORE_ROWS = 5;
 const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
@@ -151,7 +152,7 @@ const Home = () => {
 
   const { addItem } = useCartStore();
   const { user } = useAuthStore();
-  const [apiCategories, setApiCategories] = useState([]);
+
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [exploreProducts, setExploreProducts] = useState([]);
   // One batch fills 5 rows of the grid at the current width; fixed per visit so pages line up.
@@ -161,13 +162,13 @@ const Home = () => {
   const [exploreLoading, setExploreLoading] = useState(false);
   const [nearbyStores, setNearbyStores] = useState([]);
   const [mappedStores, setMappedStores] = useState([]);
-  const [municipalities, setMunicipalities] = useState([]);
+  const { municipalities } = useMunicipalities();
+  const { categories: sharedCategories } = useCategories();
 
   useEffect(() => {
     const fetchHomeData = async () => {
       try {
-        const [catRes, suggestedRes, exploreRes, storesRes, mappedStoresRes, municipalitiesRes] = await Promise.all([
-          axios.get('/categories'),
+        const [suggestedRes, exploreRes, storesRes, mappedStoresRes] = await Promise.all([
           axios.get('/products', { params: { pageSize: 6, sortBy: 'createdAt', sortOrder: 'desc' } }),
           axios.get('/products', { params: { ...EXPLORE_QUERY, page: 1, pageSize: exploreBatch } }),
           axios.get('/stores', {
@@ -177,16 +178,13 @@ const Home = () => {
             },
           }),
           axios.get('/stores', { params: { pageSize: 100 } }),
-          axios.get('/municipalities'),
         ]);
-        setApiCategories(catRes.data || []);
         setFeaturedProducts(suggestedRes.data || []);
         setExploreProducts(exploreRes.data || []);
         setExplorePage(1);
         setExploreHasMore(Boolean(exploreRes.pagination?.hasNext));
         setNearbyStores(storesRes.data || []);
         setMappedStores((mappedStoresRes.data || []).filter((store) => store.latitude != null && store.longitude != null));
-        setMunicipalities(municipalitiesRes.data || []);
       } catch (err) {
         console.error('Failed to load home data:', err);
       }
@@ -308,7 +306,7 @@ const Home = () => {
         <div className="container">
           <h2 className="section-title">Shop by Category</h2>
           <div className="categories-grid">
-            {apiCategories.map((cat) => (
+            {sharedCategories.map((cat) => (
               <Link
                 to={`/products?category=${cat.id}`}
                 key={cat.id}

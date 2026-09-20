@@ -1,4 +1,5 @@
 const appSettingRepository = require('../repositories/appSetting.repository');
+const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 
 const DEFAULT_SETTINGS = {
@@ -29,11 +30,15 @@ const sanitize = (input = {}) => {
   return data;
 };
 
-const get = async () => {
+const get = async () => cached.appSettings({}, async () => {
   const settings = await appSettingRepository.findGlobal();
   return settings || DEFAULT_SETTINGS;
-};
+});
 
-const update = (input) => appSettingRepository.upsertGlobal(sanitize(input));
+const update = async (input) => {
+  const settings = await appSettingRepository.upsertGlobal(sanitize(input));
+  await invalidate(TAGS.appSettings);
+  return settings;
+};
 
 module.exports = { get, update };

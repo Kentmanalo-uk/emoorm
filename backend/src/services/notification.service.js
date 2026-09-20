@@ -1,5 +1,6 @@
 const prisma = require('../config/database');
 const notificationRepository = require('../repositories/notification.repository');
+const notificationTarget = require('../utils/notificationTarget');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -10,12 +11,31 @@ const { ApiError } = require('../middleware/errorHandler');
 const AUDIENCES = ['BUYER', 'SELLER', 'ADMIN'];
 
 /**
+ * Which feed a notification belongs in when the caller does not say.
+ * A seller is also a buyer, so the two feeds are separate inboxes rather than
+ * a permission boundary — putting a notice in the wrong one simply hides it
+ * from the person it was written for. Anything unlisted lands in the buyer feed.
+ */
+const DEFAULT_AUDIENCE = {
+  ORDER_RECEIVED: 'SELLER',
+  PRODUCT_APPROVED: 'SELLER',
+  PRODUCT_SUSPENDED: 'SELLER',
+  SELLER_SUSPENDED: 'SELLER',
+  REPORT_SUBMITTED: 'SELLER',
+  RETURN_REQUESTED: 'SELLER',
+  RETURN_RECEIVED: 'SELLER',
+  RETURN_CLOSED: 'SELLER',
+  SELLER_APPLICATION_SUBMITTED: 'ADMIN',
+  ADMIN_ALERT: 'ADMIN',
+};
+
+/**
  * Create notification
  * @param {Object} data - Notification data
  * @returns {Promise<Object>} Created notification
  */
 const createNotification = async (data) => {
-  const { userId, type, title, message, relatedId, audience } = data;
+  const { userId, type, title, message, relatedId, audience, target } = data;
 
   // Must stay in sync with the NotificationType enum in prisma/schema.prisma.
   const validTypes = [
@@ -51,20 +71,16 @@ const createNotification = async (data) => {
     throw new ApiError('Invalid notification type', 400);
   }
 
-  const sellerTypes = [
-    'ORDER_RECEIVED',
-    'PRODUCT_APPROVED',
-    'PRODUCT_SUSPENDED',
-    'SELLER_SUSPENDED',
-    'REPORT_SUBMITTED',
-    'RETURN_REQUESTED',
-    'RETURN_RECEIVED',
-    'RETURN_CLOSED',
-  ];
-  const resolvedAudience = audience || (sellerTypes.includes(type) ? 'SELLER' : 'BUYER');
+  const resolvedAudience = audience || DEFAULT_AUDIENCE[type] || 'BUYER';
   if (!AUDIENCES.includes(resolvedAudience)) {
     throw new ApiError('Invalid notification audience', 400);
   }
+
+  // An explicit target is recorded only for the types where (type, audience,
+  // relatedId) cannot say on their own where the notification leads.
+  const explicitTarget = target && typeof target.kind === 'string'
+    ? { target: { kind: target.kind, id: target.id || null, slug: target.slug || null } }
+    : null;
 
   return notificationRepository.createNotification({
     userId,
@@ -73,6 +89,7 @@ const createNotification = async (data) => {
     message,
     audience: resolvedAudience,
     relatedId: relatedId || null,
+    ...(explicitTarget ? { data: explicitTarget } : {}),
     isRead: false,
   });
 };
@@ -87,7 +104,11 @@ const getUserNotifications = async (userId, options) => {
   if (options.audience && !AUDIENCES.includes(options.audience)) {
     throw new ApiError('Invalid notification audience', 400);
   }
-  return notificationRepository.findByUserId({ ...options, userId });
+  const result = await notificationRepository.findByUserId({ ...options, userId });
+  return {
+    ...result,
+    notifications: await notificationTarget.attachTargets(result.notifications),
+  };
 };
 
 /**
@@ -108,7 +129,7 @@ const getNotificationById = async (id, userId) => {
     throw new ApiError('You do not have permission to view this notification', 403);
   }
 
-  return notification;
+  return notificationTarget.attachTarget(notification);
 };
 
 /**
@@ -129,7 +150,8 @@ const markAsRead = async (id, userId) => {
     throw new ApiError('You do not have permission to update this notification', 403);
   }
 
-  return notificationRepository.markAsRead(id);
+  // Returned with its target so a client can navigate straight from the reply.
+  return notificationTarget.attachTarget(await notificationRepository.markAsRead(id));
 };
 
 /**

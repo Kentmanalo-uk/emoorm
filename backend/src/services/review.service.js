@@ -2,6 +2,7 @@ const reviewRepository = require('../repositories/review.repository');
 const productRepository = require('../repositories/product.repository');
 const orderRepository = require('../repositories/order.repository');
 const storeRepository = require('../repositories/store.repository');
+const { cleanText } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -71,7 +72,7 @@ const createReview = async (userId, data) => {
     userId,
     productId,
     rating: numericRating,
-    comment: comment || null,
+    comment: cleanText(comment, { maxLength: 2000 }) || null,
     images: Array.isArray(images) && images.length ? images : undefined,
     videoUrl: videoUrl || undefined,
   });
@@ -164,7 +165,7 @@ const updateReview = async (reviewId, userId, data) => {
   // Filter allowed fields
   const updateData = {};
   if (data.rating !== undefined) updateData.rating = data.rating;
-  if (data.comment !== undefined) updateData.comment = data.comment;
+  if (data.comment !== undefined) updateData.comment = cleanText(data.comment, { maxLength: 2000 });
 
   return reviewRepository.updateReview(reviewId, updateData);
 };

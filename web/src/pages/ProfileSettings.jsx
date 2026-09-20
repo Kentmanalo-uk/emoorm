@@ -8,6 +8,7 @@ import { API_CONFIG } from '../config/api';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useNavigate } from 'react-router-dom';
 import './ProfileSettings.css';
+import { useMunicipalities } from '../hooks/useReferenceData';
 
 const initialProfileState = (user) => ({
   fullName: user?.fullName || '',
@@ -19,10 +20,10 @@ const initialProfileState = (user) => ({
 });
 
 export default function ProfileSettings() {
-  const { user, updateUser, logout } = useAuthStore();
+  const { user, updateUser, logout, setTokens } = useAuthStore();
   const navigate = useNavigate();
   const [signOutOpen, setSignOutOpen] = useState(false);
-  const [municipalities, setMunicipalities] = useState([]);
+  const { municipalities } = useMunicipalities();
 
   const [form, setForm] = useState(() => initialProfileState(user));
   const original = useMemo(() => initialProfileState(user), [user]);
@@ -39,12 +40,6 @@ export default function ProfileSettings() {
   useEffect(() => {
     setForm(initialProfileState(user));
   }, [user]);
-
-  useEffect(() => {
-    axios.get('/municipalities')
-      .then((r) => setMunicipalities(r.data || []))
-      .catch(() => { });
-  }, []);
 
   const municipalityName = useMemo(() => {
     const id = user?.municipalityId || user?.municipality?.id;
@@ -173,12 +168,18 @@ export default function ProfileSettings() {
     }
     setChangingPw(true);
     try {
-      await axios.post('/auth/change-password', {
+      const res = await axios.post('/auth/change-password', {
         currentPassword: pw.currentPassword,
         newPassword: pw.newPassword,
         confirmPassword: pw.confirmPassword,
       });
-      toast.success('Password changed');
+      // The change invalidated this tab's tokens along with every other
+      // device's. Adopt the replacements so the person who just changed
+      // their password is not the one bounced to the login screen.
+      if (res?.data?.accessToken) {
+        setTokens(res.data.accessToken, res.data.refreshToken);
+      }
+      toast.success('Password changed. Other devices have been signed out.');
       setPw({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Failed');

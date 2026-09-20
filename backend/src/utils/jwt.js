@@ -30,11 +30,27 @@ const generateRefreshToken = (payload) => {
  * @throws {Error} If token is invalid or expired
  */
 const verifyAccessToken = (token) => {
+  let decoded;
   try {
-    return jwt.verify(token, config.jwt.secret);
+    decoded = jwt.verify(token, config.jwt.secret);
   } catch (error) {
     throw new Error('Invalid or expired token');
   }
+
+  // Step-up tokens ('mfa-verify', 'mfa-setup', 'google-profile') are signed
+  // with this same secret, so without this check they verified as ordinary
+  // sessions — and an admin who had entered only a password, but not their
+  // second factor, was already holding a fully privileged bearer token. That
+  // made MFA decorative: the step-up token reached every authenticated route,
+  // including the one that re-enrols the MFA secret.
+  //
+  // Session tokens from generateTokens() never carry `type`, so rejecting any
+  // typed token invalidates nothing that is legitimately in circulation.
+  if (decoded?.type) {
+    throw new Error('Invalid or expired token');
+  }
+
+  return decoded;
 };
 
 /**
@@ -62,6 +78,10 @@ const generateTokens = (user) => {
     email: user.email,
     role: user.role,
     municipalityId: user.municipalityId,
+    // Lets a password change invalidate sessions that already exist.
+    // Defaults to 0 so a caller that fetched the user through a select
+    // without this column still mints a token that validates.
+    tokenVersion: user.tokenVersion ?? 0,
   };
 
   return {

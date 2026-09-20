@@ -11,6 +11,7 @@ import { ENDPOINTS } from '../../src/api/endpoints';
 import toast from '../../src/lib/toast';
 import useAuthStore from '../../src/store/authStore';
 import { colors, spacing, typography } from '../../src/theme';
+import { fetchMunicipalities } from '../../src/lib/referenceData';
 
 const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/;
 
@@ -34,9 +35,8 @@ export default function Register() {
   const login = useAuthStore((s) => s.login);
 
   useEffect(() => {
-    apiClient
-      .get(ENDPOINTS.MUNICIPALITIES)
-      .then((res) => setMunicipalities(res.data || []))
+    fetchMunicipalities()
+      .then(setMunicipalities)
       .catch(() => toast.error('Failed to load municipalities'));
   }, []);
 

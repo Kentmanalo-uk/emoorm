@@ -1,4 +1,5 @@
 const categoryRepository = require('../repositories/category.repository');
+const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -30,9 +31,8 @@ const generateUniqueSlug = async (name, ignoreId = null) => {
  * @param {Boolean} activeOnly - Filter by active categories
  * @returns {Promise<Array>} List of categories
  */
-const getAllCategories = async (activeOnly = true) => {
-  return categoryRepository.findAll(activeOnly);
-};
+const getAllCategories = async (activeOnly = true) =>
+  cached.categoryList({ activeOnly }, () => categoryRepository.findAll(activeOnly));
 
 /**
  * Get category by ID
@@ -40,7 +40,7 @@ const getAllCategories = async (activeOnly = true) => {
  * @returns {Promise<Object>} Category
  */
 const getCategoryById = async (id) => {
-  const category = await categoryRepository.findById(id);
+  const category = await cached.category({ id }, () => categoryRepository.findById(id));
 
   if (!category) {
     throw new ApiError('Category not found', 404);
@@ -55,7 +55,7 @@ const getCategoryById = async (id) => {
  * @returns {Promise<Object>} Category
  */
 const getCategoryBySlug = async (slug) => {
-  const category = await categoryRepository.findBySlug(slug);
+  const category = await cached.category({ slug }, () => categoryRepository.findBySlug(slug));
 
   if (!category) {
     throw new ApiError('Category not found', 404);
@@ -80,12 +80,14 @@ const createCategory = async (data) => {
     throw new ApiError('Category slug already exists', 409);
   }
 
-  return categoryRepository.createCategory({
+  const category = await categoryRepository.createCategory({
     name: data.name.trim(),
     slug,
     description: data.description ?? null,
     image: data.image ?? null,
   });
+  await invalidate(TAGS.categories, TAGS.products);
+  return category;
 };
 
 /**
@@ -117,7 +119,10 @@ const updateCategory = async (id, data) => {
     update.slug = await generateUniqueSlug(update.name, id);
   }
 
-  return categoryRepository.updateCategory(id, update);
+  const updated = await categoryRepository.updateCategory(id, update);
+  // Product payloads embed the category name/image, so they go too.
+  await invalidate(TAGS.categories, TAGS.products);
+  return updated;
 };
 
 /**
@@ -141,6 +146,7 @@ const deleteCategory = async (id) => {
   }
 
   await categoryRepository.deleteCategory(id);
+  await invalidate(TAGS.categories, TAGS.products);
 };
 
 /**
@@ -155,9 +161,11 @@ const toggleCategoryStatus = async (id) => {
     throw new ApiError('Category not found', 404);
   }
 
-  return categoryRepository.updateCategory(id, {
+  const toggled = await categoryRepository.updateCategory(id, {
     isActive: !category.isActive,
   });
+  await invalidate(TAGS.categories, TAGS.products);
+  return toggled;
 };
 
 /**

@@ -13,6 +13,7 @@ import { inspectImage } from "../lib/imageQuality";
 import { IDENTITY_VERIFICATION_PATH } from "../lib/identity";
 import resolveImg from "../lib/media";
 import "./SellerApply.css";
+import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 
 const ID_TYPES = [
   "Philippine Statistics Authority (PhilSys) National ID",
@@ -250,17 +251,14 @@ export default function SellerApply() {
   const [application, setApplication] = useState(null);
   const [loadingApplication, setLoadingApplication] = useState(true);
 
-  const [dbMunicipalities, setDbMunicipalities] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const { municipalities: dbMunicipalities } = useMunicipalities();
+  const { categories } = useCategories();
 
   // Local-only object URLs for the photo previews (never sent to the server).
   const [previews, setPreviews] = useState({ idFrontUrl: null, idBackUrl: null, sellerPermitUrl: null });
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    axios.get("/municipalities").then((r) => setDbMunicipalities(r.data || [])).catch(() => { });
-    axios.get("/categories").then((r) => setCategories(r.data || [])).catch(() => { });
-  }, []);
+
 
   useEffect(() => {
     let cancelled = false;

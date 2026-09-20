@@ -4,7 +4,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
 
 /** Authenticated user starts MFA enrolment from Settings. */
 const beginSetup = asyncHandler(async (req, res) => {
-  const data = await mfaService.beginSetup(req.user.id);
+  const data = await mfaService.beginSetup(req.user.id, { code: req.body?.code });
   successResponse(res, data, 'MFA setup initiated');
 });
 

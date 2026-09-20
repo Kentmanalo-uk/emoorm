@@ -1,0 +1,13 @@
+{
+  "//": "nodemon only watches .js by default, so editing .env left the server running with the old value — which is how a dead Resend key survived a 'restart' and made every password reset silently fail. Credentials are read once at require time, so the file has to trigger a restart like source does.",
+  "watch": ["server.js", "src", ".env"],
+  "ext": "js,json,env",
+  "ignore": [
+    "node_modules",
+    "uploads",
+    "prisma/migrations",
+    "test-*.js",
+    "src/**/*.test.js"
+  ],
+  "delay": 400
+}

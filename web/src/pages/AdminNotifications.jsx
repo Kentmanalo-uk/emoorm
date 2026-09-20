@@ -4,22 +4,19 @@ import { Bell, Checks } from '@phosphor-icons/react';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
 import { formatRelativeTime } from '../lib/time';
+import { notificationHref } from '../lib/notificationLink';
 import '../components/admin/AdminLayout.css';
 import './AdminNotifications.css';
 
 const PAGE_SIZE = 20;
 
-const TYPE_ROUTES = {
-  SELLER_APPLICATION_SUBMITTED: '/admin/sellers',
-  REPORT_SUBMITTED: '/admin/reports',
-  SUPPORT_MESSAGE: '/admin/support',
-};
-
 const TYPE_LABELS = {
   SELLER_APPLICATION_SUBMITTED: 'Seller application',
   REPORT_SUBMITTED: 'Report',
+  REPORT_RESOLVED: 'Report',
   SUPPORT_MESSAGE: 'Support',
   ADMIN_ALERT: 'Alert',
+  SYSTEM_ANNOUNCEMENT: 'Announcement',
 };
 
 const titleCase = (s = '') =>
@@ -77,8 +74,8 @@ export default function AdminNotifications() {
         console.error(err);
       }
     }
-    const route = TYPE_ROUTES[n.type];
-    if (route) navigate(route);
+    const href = notificationHref(n);
+    if (href) navigate(href);
   };
 
   return (
@@ -113,7 +110,7 @@ export default function AdminNotifications() {
               <li key={n.id}>
                 <button
                   type="button"
-                  className={`admin-notif-item${n.isRead ? '' : ' unread'}${TYPE_ROUTES[n.type] ? ' linkable' : ''}`}
+                  className={`admin-notif-item${n.isRead ? '' : ' unread'}${notificationHref(n) ? ' linkable' : ''}`}
                   onClick={() => openItem(n)}
                 >
                   <span className="admin-notif-dot" aria-hidden="true" />

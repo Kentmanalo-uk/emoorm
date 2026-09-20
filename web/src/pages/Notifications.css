@@ -271,6 +271,23 @@
   flex-shrink: 0;
 }
 
+.notif-heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 2px;
+  line-height: 1.4;
+}
+
+/* Only the rows that actually go somewhere invite a click. */
+.notif-item:not(.is-linkable) {
+  cursor: default;
+}
+
+.notif-item.is-linkable:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 2px;
+}
 .notif-message {
   font-size: 14px;
   color: #374151;
@@ -813,5 +830,83 @@
     flex: 0 0 auto;
     gap: 5px;
     padding: 0 12px;
+  }
+}
+
+/* Single notification view (/notifications/:id) */
+.notif-detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.notif-detail-back:hover {
+  background: #f9fafb;
+}
+
+.notif-detail-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 22px;
+}
+
+.notif-detail-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.notif-detail-head h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+  line-height: 1.35;
+}
+
+.notif-detail-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.notif-detail-meta {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.notif-detail-body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #374151;
+  margin: 0 0 18px;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .notif-detail-card {
+    padding: 16px;
+  }
+
+  .notif-detail-head h1 {
+    font-size: 17px;
   }
 }

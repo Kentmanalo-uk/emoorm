@@ -28,7 +28,10 @@
 
 .sd-title {
   font-size: 20px;
-  font-weight: 700;
+  /* Medium, not bold: the size already marks this as the page heading, and
+     bold on top of that made every screen open shouting. Shared by the
+     Seller Center, the admin panel and the municipal admin panel. */
+  font-weight: 500;
   color: #0f172a;
   margin: 0 0 4px;
   line-height: 1.2;
@@ -195,7 +198,7 @@
 }
 
 .sd-stat-label {
-  font-size: 12.5px;
+  font-size: 15px;
   color: #64748b;
   font-weight: 500;
   order: 2;
@@ -476,9 +479,12 @@
   padding-bottom: 8px;
 }
 
+/* Card headings across the Seller Center and admin panel share this size
+   and weight. Bold at a small size made every card shout; a slightly
+   larger medium reads as a heading without competing with the numbers. */
 .sd-card-header h2 {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 17.5px;
+  font-weight: 500;
   color: #0f172a;
   margin: 0;
 }
@@ -842,7 +848,10 @@
 
 .seller-header h1 {
   font-size: 20px;
-  font-weight: 700;
+  /* Medium, not bold: the size already marks this as the page heading, and
+     bold on top of that made every screen open shouting. Shared by the
+     Seller Center, the admin panel and the municipal admin panel. */
+  font-weight: 500;
   margin: 0 0 4px;
   color: #0f172a;
 }
@@ -2062,7 +2071,7 @@
   .sc-content .sd-kpi-quick .sd-stat-label {
     padding: 0 4px;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 500;
     color: #0f172a;
   }
 
@@ -2105,7 +2114,7 @@
 
   .sc-content .sd-card-header h2 {
     min-width: 0;
-    font-size: 16px;
+    font-size: 16.5px;
   }
 
   .sc-content .sd-view-all {
@@ -2285,3 +2294,4 @@
     font-size: 11px;
   }
 }
+

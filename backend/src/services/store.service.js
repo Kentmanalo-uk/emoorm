@@ -2,6 +2,8 @@ const storeRepository = require('../repositories/store.repository');
 const userRepository = require('../repositories/user.repository');
 const prisma = require('../config/database');
 const notificationService = require('./notification.service');
+const { cleanFields } = require('../utils/sanitize');
+const { cached } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -31,6 +33,24 @@ const attachDeletionInfo = (store) => {
     Math.ceil((scheduledAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
   );
   return { ...store, deletionScheduledAt: scheduledAt, deletionDaysRemaining: daysRemaining };
+};
+
+/**
+ * Read a store through the shared cache.
+ *
+ * A store with a deletion pending is deliberately never served from cache:
+ * finalisation is time-sensitive and depends on a real Date object, which does
+ * not survive JSON round-tripping. Those (rare) stores re-read from the
+ * database so the grace period stays exact.
+ * @param {Function} policy - The cachePolicy helper to use
+ * @param {Object} params - Cache key dimensions
+ * @param {Function} loader - Database read
+ * @returns {Promise<Object|null>} Store
+ */
+const readStoreCached = async (policy, params, loader) => {
+  const store = await policy(params, loader);
+  if (store && store.deletionRequestedAt) return loader();
+  return store;
 };
 
 // Lazily finalizes a pending deletion once the grace period has elapsed
@@ -121,7 +141,7 @@ const createStore = async (userId, data) => {
  * @returns {Promise<Object>} Store
  */
 const getStoreById = async (id) => {
-  let store = await storeRepository.findById(id);
+  let store = await readStoreCached(cached.store, { id }, () => storeRepository.findById(id));
   store = await finalizeIfExpired(store);
 
   if (!store || store.deletedAt) {
@@ -137,7 +157,7 @@ const getStoreById = async (id) => {
  * @returns {Promise<Object>} Store
  */
 const getStoreBySlug = async (slug) => {
-  let store = await storeRepository.findBySlug(slug);
+  let store = await readStoreCached(cached.store, { slug }, () => storeRepository.findBySlug(slug));
   store = await finalizeIfExpired(store);
 
   if (!store || store.deletedAt) {
@@ -149,11 +169,23 @@ const getStoreBySlug = async (slug) => {
 
 // Aggregated storefront: store + ratings summary + category tabs with counts.
 const getStorefront = async (slug) => {
-  let store = await storeRepository.findBySlug(slug);
+  let store = await readStoreCached(cached.store, { slug }, () => storeRepository.findBySlug(slug));
   store = await finalizeIfExpired(store);
   if (!store || store.deletedAt) {
     throw new ApiError('Store not found', 404);
   }
+
+  // Ratings and category tabs are three more queries; the whole aggregate is
+  // the same for every visitor, so it is cached as one unit.
+  return cached.storefront({ slug }, () => buildStorefront(store));
+};
+
+/**
+ * Assemble the storefront aggregate: store, rating summary and category tabs.
+ * @param {Object} store - Already-loaded store
+ * @returns {Promise<Object>} Storefront payload
+ */
+const buildStorefront = async (store) => {
 
   const productWhere = {
     storeId: store.id,
@@ -161,7 +193,7 @@ const getStorefront = async (slug) => {
     status: 'APPROVED',
   };
 
-  const [ratingAgg, categoryGroups, categoryRows] = await Promise.all([
+  const [ratingAgg, categoryGroups] = await Promise.all([
     prisma.review.aggregate({
       where: {
         deletedAt: null,
@@ -174,9 +206,6 @@ const getStorefront = async (slug) => {
       by: ['categoryId'],
       where: productWhere,
       _count: { _all: true },
-    }),
-    prisma.category.findMany({
-      where: { id: { in: [] } },
     }),
   ]);
 
@@ -252,8 +281,25 @@ const completeGuide = async (userId, key) => {
  * @param {Object} options - Query options
  * @returns {Promise<Object>} Stores and pagination
  */
-const getStores = async (options) => {
-  return storeRepository.findAll(options);
+const getStores = async (options = {}) => {
+  // Admin listings include suspended/inactive shops and must stay fresh for
+  // moderation, so only the public directory is cached.
+  if (options.includeInactive || options.isAdmin) {
+    return storeRepository.findAll(options);
+  }
+  return cached.storeList(
+    {
+      page: options.page,
+      pageSize: options.pageSize,
+      municipalityId: options.municipalityId,
+      search: options.search,
+      sortBy: options.sortBy,
+      sortOrder: options.sortOrder,
+      isActive: options.isActive,
+      isSuspended: options.isSuspended,
+    },
+    () => storeRepository.findAll(options)
+  );
 };
 
 /**
@@ -263,7 +309,10 @@ const getStores = async (options) => {
  * @param {Object} data - Update data
  * @returns {Promise<Object>} Updated store
  */
-const updateStore = async (storeId, userId, data) => {
+const updateStore = async (storeId, userId, rawData) => {
+  // Shop text is rendered as plain text by every client; strip markup on the
+  // way in so a stored payload can never be executed by a future consumer.
+  const data = cleanFields(rawData, { name: 120, description: 2000, pickupInstructions: 1000, paymentInstructions: 1000 });
   const store = await storeRepository.findById(storeId);
 
   if (!store || store.deletedAt) {

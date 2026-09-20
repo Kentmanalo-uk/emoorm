@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, Package, Truck, Wallet } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -11,6 +12,16 @@ export default function SellerReturns() {
   const load = () => axios.get('/returns/store', { params: { pageSize: 50 } }).then((res) => setReturns(res.data || [])).catch((err) => toast.error(err.message || 'Unable to load returns'));
   useEffect(() => { load(); }, []);
   const choose = (item) => { setSelected(item); setAmount(String(item.requestedAmount || '')); setNote(item.sellerNote || ''); };
+  const [searchParams] = useSearchParams();
+  // Deep link from a return notification: /seller/returns?id=<returnId>.
+  const openedId = useRef(null);
+  useEffect(() => {
+    const targetId = searchParams.get('id');
+    if (!targetId || returns.length === 0 || openedId.current === targetId) return;
+    openedId.current = targetId;
+    const match = returns.find((item) => item.id === targetId);
+    if (match) choose(match);
+  }, [returns, searchParams]);
   const call = async (path, body, message) => { setBusy(true); try { await axios.patch(`/returns/${selected.id}/${path}`, body); toast.success(message); setSelected(null); await load(); } catch (err) { toast.error(err.message || 'Action failed'); } finally { setBusy(false); } };
   const decide = (action) => { if (action === 'REJECT' && !note.trim()) return toast.error('Add a rejection note'); call('decision', { action, approvedAmount: Number(amount), requiresPhysicalReturn: physical, sellerNote: note }, action === 'APPROVE' ? 'Return approved' : 'Return rejected'); };
   const visible = tab === 'all' ? returns : returns.filter((r) => r.status === tab);

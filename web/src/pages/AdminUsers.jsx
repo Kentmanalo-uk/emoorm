@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Users, MagnifyingGlass as Search, ShieldCheck, ShieldSlash as ShieldOff, UserMinus as UserX, UserCheck,
   CaretDown as ChevronDown, X, Eye, DownloadSimple, Storefront
@@ -32,7 +32,9 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
   const isSuperAdmin = actor?.role === 'SUPER_ADMIN';
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  // Seeded from ?search= so a top-bar search result opens filtered.
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [roleFilter, setRoleFilter] = useState(fixedRole);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
@@ -45,6 +47,18 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
   useEffect(() => {
     fetchUsers();
   }, [search, roleFilter, page, fixedRole]);
+
+  // Follows ?search= when it changes, so a second search from the top bar
+  // re-filters instead of leaving the first term in place. Only a change to
+  // the URL counts, so typing in this page's own box is left alone.
+  const urlSearch = searchParams.get('search') || '';
+  const lastUrlSearch = useRef(urlSearch);
+  useEffect(() => {
+    if (urlSearch === lastUrlSearch.current) return;
+    lastUrlSearch.current = urlSearch;
+    setSearch(urlSearch);
+    setPage(1);
+  }, [urlSearch]);
 
   const fetchUsers = async () => {
     setIsLoading(true);

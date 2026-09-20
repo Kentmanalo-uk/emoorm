@@ -421,7 +421,10 @@
 
 .an-page-title {
   font-size: 20px;
-  font-weight: 700;
+  /* Medium, not bold: the size already marks this as the page heading, and
+     bold on top of that made every screen open shouting. Shared by the
+     Seller Center, the admin panel and the municipal admin panel. */
+  font-weight: 500;
   color: #0f172a;
   margin: 0 0 4px;
 }

@@ -29,7 +29,7 @@ function Row({ label, help, children }) {
 }
 
 export default function AdminSettings() {
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, setTokens } = useAuthStore();
   const queryClient = useQueryClient();
   const isMunicipalAdmin = user?.role === 'MUNICIPAL_ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -204,12 +204,18 @@ export default function AdminSettings() {
     }
     setSavingPw(true);
     try {
-      await axios.post('/auth/change-password', {
+      const res = await axios.post('/auth/change-password', {
         currentPassword: pwForm.currentPassword,
         newPassword: pwForm.newPassword,
       });
+      // The change invalidated this tab's tokens along with every other
+      // device's. Adopt the replacements so the person who just changed
+      // their password is not the one bounced to the login screen.
+      if (res?.data?.accessToken) {
+        setTokens(res.data.accessToken, res.data.refreshToken);
+      }
       setPwForm({ currentPassword: '', newPassword: '', confirm: '' });
-      toast.success('Password changed');
+      toast.success('Password changed. Other devices have been signed out.');
     } catch (err) {
       toast.error(err.message || 'Failed to change password');
     } finally {

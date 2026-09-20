@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import { useReferenceInvalidation } from '../hooks/useReferenceData';
 import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
@@ -23,6 +24,9 @@ export default function AdminMunicipalities() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Municipality names appear on store and product cards across the app.
+  const invalidate = useReferenceInvalidation();
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -61,6 +65,9 @@ export default function AdminMunicipalities() {
       setShowCreate(false);
       setCreateForm({ name: '', code: '' });
       fetchData();
+      invalidate.municipalities();
+      invalidate.stores();
+      invalidate.products();
     } catch (err) {
       toast.error(err.message || 'Failed to create municipality');
     } finally {
@@ -80,6 +87,9 @@ export default function AdminMunicipalities() {
       setAssigningId(null);
       setAssignUserId('');
       fetchData();
+      invalidate.municipalities();
+      invalidate.stores();
+      invalidate.products();
     } catch (err) {
       toast.error(err.message || 'Failed to assign admin');
     } finally {
@@ -94,6 +104,9 @@ export default function AdminMunicipalities() {
       await axios.put(`/municipalities/${mun.id}`, { adminId: null });
       toast.success('Admin removed');
       fetchData();
+      invalidate.municipalities();
+      invalidate.stores();
+      invalidate.products();
     } catch (err) {
       toast.error(err.message || 'Failed to remove admin');
     } finally {
@@ -109,6 +122,9 @@ export default function AdminMunicipalities() {
       await axios.put(`/municipalities/${mun.id}`, { logo: url });
       toast.success('Municipality logo updated');
       fetchData();
+      invalidate.municipalities();
+      invalidate.stores();
+      invalidate.products();
     } catch (err) {
       toast.error(err.message || 'Failed to upload logo');
     } finally {

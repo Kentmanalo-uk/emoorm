@@ -22,6 +22,7 @@ import LoadingSkeleton from '../../src/components/LoadingSkeleton';
 import { ProductGridSkeleton } from '../../src/components/SkeletonLayouts';
 import { getCacheEntry, getCachedData, refreshCachedData } from '../../src/lib/dataCache';
 import { colors, fontFamily, radius, spacing, typography } from '../../src/theme';
+import { fetchCategories } from '../../src/lib/referenceData';
 
 // Mirrors web's Header.jsx logo + header-search (flat gray bar, camera + search buttons).
 function HomeHeader() {
@@ -140,11 +141,13 @@ export default function Home() {
     }
     try {
       const data = await refreshCachedData(HOME_CACHE_KEY, async () => {
-        const [catRes, prodRes] = await Promise.all([
-          apiClient.get(ENDPOINTS.CATEGORIES),
+        // Categories come from the shared reference cache, so switching
+        // tabs does not refetch a list that changes a few times a year.
+        const [categories, prodRes] = await Promise.all([
+          fetchCategories(),
           apiClient.get(ENDPOINTS.PRODUCTS, { params: { pageSize: SUGGESTED_PAGE_SIZE, sortBy: 'createdAt', sortOrder: 'desc' } }),
         ]);
-        return { categories: catRes.data || [], products: prodRes.data || [], totalPages: prodRes.pagination?.totalPages || 1 };
+        return { categories, products: prodRes.data || [], totalPages: prodRes.pagination?.totalPages || 1 };
       });
       setCategories(data.categories);
       setFeaturedProducts(data.products);

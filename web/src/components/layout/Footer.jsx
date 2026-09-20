@@ -1,36 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
+import { useMunicipalities, useCategories } from '../../hooks/useReferenceData';
+import { queryKeys, policy } from '../../lib/queryKeys';
 import AppLogo from '../AppLogo';
 import './Footer.css';
 
-// The footer renders on every page; fetch the municipality list once per session.
-let municipalitiesRequest = null;
-const loadMunicipalities = () => {
-  if (!municipalitiesRequest) {
-    municipalitiesRequest = axios.get('/municipalities')
-      .then((res) => res.data || [])
-      .catch((err) => {
-        municipalitiesRequest = null;
-        throw err;
-      });
-  }
-  return municipalitiesRequest;
-};
-
-let storesRequest = null;
-const loadStores = () => {
-  if (!storesRequest) {
-    storesRequest = axios.get('/stores', { params: { page: 1, pageSize: 12 } })
-      .then((res) => res.data || [])
-      .catch((err) => {
-        storesRequest = null;
-        throw err;
-      });
-  }
-  return storesRequest;
-};
+// The footer renders on every page, so these three reads used to fire on every
+// navigation. They now share the app-wide query cache with the rest of the
+// screens, which replaced the per-module request dedupe that used to live here.
 
 const PAYMENT_OPTIONS = ['Cash on Delivery', 'GCash', 'QR Ph', 'Bank Transfer'];
 const LANGUAGE_NAMES = ['English', 'Tagalog', 'Bisaya'];
@@ -84,29 +64,19 @@ const APP_PAGE = /^\/(profile|cart|checkout|wishlist|notifications|orders)(\/|$)
 const Footer = () => {
   const { pathname } = useLocation();
   const currentYear = new Date().getFullYear();
-  const [categories, setCategories] = useState([]);
-  const [municipalities, setMunicipalities] = useState([]);
-  const [allCategories, setAllCategories] = useState([]);
-  const [stores, setStores] = useState([]);
+  const { municipalities } = useMunicipalities();
+  const { categories: fetchedCategories } = useCategories();
+  const { data: stores = [] } = useQuery({
+    queryKey: queryKeys.stores({ page: 1, pageSize: 12 }),
+    queryFn: async () => (await axios.get('/stores', { params: { page: 1, pageSize: 12 } })).data || [],
+    ...policy.publicContent,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    axios.get('/categories')
-      .then((res) => {
-        if (cancelled) return;
-        const list = (res.data || []).filter((c) => c.isActive !== false);
-        setCategories(list.slice(0, 8));
-        setAllCategories(list);
-      })
-      .catch(() => { /* footer categories are optional */ });
-    loadMunicipalities()
-      .then((list) => { if (!cancelled) setMunicipalities(list); })
-      .catch(() => { /* falls back to the plain-text list */ });
-    loadStores()
-      .then((list) => { if (!cancelled) setStores(list); })
-      .catch(() => { /* store list is optional */ });
-    return () => { cancelled = true; };
-  }, []);
+  const allCategories = useMemo(
+    () => fetchedCategories.filter((c) => c.isActive !== false),
+    [fetchedCategories]
+  );
+  const categories = useMemo(() => allCategories.slice(0, 8), [allCategories]);
 
   return (
     <footer className={`footer${APP_PAGE.test(pathname) ? ' footer--app-page' : ''}`}>

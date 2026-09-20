@@ -464,7 +464,7 @@
 }
 
 .sc-shell.is-collapsed .sc-brand-text,
-.sc-shell.is-collapsed .sc-nav-item>span:not(.sc-nav-chevron),
+.sc-shell.is-collapsed .sc-nav-item>span:not(.sc-nav-chevron):not(.nav-badge),
 .sc-shell.is-collapsed .sc-user-meta {
   max-width: 0;
   opacity: 0;

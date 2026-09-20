@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -7,6 +8,17 @@ const config = require('./config/env');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const apiRoutes = require('./routes/index');
 const { csrfOriginGuard, isLocalNetworkOrigin } = require('./middleware/security');
+const { noStore, immutableAsset } = require('./middleware/httpCache');
+
+// The only media types this server will ever serve out of /uploads. Anything
+// else is handed back as an unrenderable download.
+const SERVABLE_UPLOAD_TYPES = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+};
 
 const app = express();
 app.disable('x-powered-by');
@@ -15,8 +27,15 @@ app.disable('x-powered-by');
 // SECURITY & GENERAL MIDDLEWARE
 // ============================================
 
-// Trust proxy (if behind a reverse proxy like Nginx)
-app.set('trust proxy', 1);
+// Trust exactly one proxy hop, and only in production where a reverse proxy
+// actually terminates TLS in front of this process.
+//
+// X-Forwarded-For is client-supplied. Trusting it when nothing is in front of
+// the server lets anyone rotate their rate-limit bucket by sending a new
+// header value on every request, which silently defeats every limiter —
+// including the one protecting login and MFA. In development the socket
+// address is the honest one.
+app.set('trust proxy', config.nodeEnv === 'production' ? 1 : false);
 
 // Helmet — sensible security headers. Disable CSP because API returns JSON and
 // the uploaded images are served from /uploads.
@@ -83,8 +102,45 @@ app.use(
 app.use(express.json({ limit: config.bodyLimit }));
 app.use(express.urlencoded({ extended: true, limit: config.bodyLimit }));
 
-// Static files (for uploaded files)
-app.use('/uploads', express.static(config.upload.uploadDir));
+// Static files (for uploaded files). Filenames are generated per upload and
+// their contents never change, so they are immutable for a year — a CDN or
+// browser then serves them without ever coming back here.
+app.use(
+  '/uploads',
+  immutableAsset,
+  express.static(config.upload.uploadDir, {
+    maxAge: config.httpCache.uploadsMaxAge * 1000,
+    immutable: true,
+    etag: true,
+    lastModified: true,
+    // Never fall through to the API for a missing image.
+    fallthrough: false,
+    index: false,
+    // Only ever serve extensions the upload pipeline produces. Even if a file
+    // with another extension somehow reached this directory, it is not served.
+    extensions: false,
+    dotfiles: 'deny',
+    setHeaders: (res, filePath) => {
+      const ext = path.extname(filePath).toLowerCase();
+      if (!SERVABLE_UPLOAD_TYPES[ext]) {
+        // Force a download rather than rendering, and strip any type the
+        // client could act on. Defence in depth behind content verification.
+        res.set('Content-Type', 'application/octet-stream');
+        res.set('Content-Disposition', 'attachment');
+        return;
+      }
+      res.set('Content-Type', SERVABLE_UPLOAD_TYPES[ext]);
+      // This directory holds user-supplied files. A locked-down CSP means
+      // that even a file that slipped through cannot run script, load a
+      // frame, or call home if it is ever rendered.
+      res.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+      res.set('X-Content-Type-Options', 'nosniff');
+    },
+  })
+);
+
+// Anything below is API traffic: uncacheable unless a route opts in.
+app.use(noStore);
 
 // ============================================
 // REQUEST LOGGING (Development)
@@ -128,10 +184,13 @@ app.get('/health', async (req, res) => {
   } catch {
     db = 'down';
   }
+  // Cache health is reported but never gates the check: a cache outage
+  // degrades performance, it does not make the service unhealthy.
   res.status(db === 'up' ? 200 : 503).json({
     success: db === 'up',
     message: db === 'up' ? 'Server is healthy' : 'Database unreachable',
     database: db,
+    cache: require('./lib/cache').getStats(),
     timestamp: new Date().toISOString(),
   });
 });

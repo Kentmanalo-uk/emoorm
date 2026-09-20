@@ -28,6 +28,7 @@ import { uploadImage } from '../src/lib/upload';
 import { toast } from '../src/lib/toast';
 import { getCacheEntry, getCachedData, invalidateCachedData, refreshCachedData, setCachedData } from '../src/lib/dataCache';
 import { colors, fontFamily, radius, spacing, typography } from '../src/theme';
+import { fetchCategories } from '../src/lib/referenceData';
 
 const TABS = [
   { key: 'overview', label: 'Overview', Icon: TrendingUp },
@@ -203,7 +204,7 @@ function SellerProducts() {
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const load = useCallback(async (force = false) => { if (!force) { const fresh = getCachedData(SELLER_CACHE.products, SELLER_CACHE_TTL); if (fresh) { setProducts(fresh.products); setCategories(fresh.categories); setLoading(false); return; } } setLoading(!getCacheEntry(SELLER_CACHE.products)); try { const data = await refreshCachedData(SELLER_CACHE.products, async () => { const [productResponse, categoryResponse] = await Promise.all([apiClient.get(ENDPOINTS.MY_PRODUCTS, { params: { pageSize: 100 } }), apiClient.get(ENDPOINTS.CATEGORIES)]); return { products: productResponse.data || [], categories: categoryResponse.data || [] }; }); setProducts(data.products); setCategories(data.categories); } catch (error) { toast.error('Failed to load inventory', error.message); } finally { setLoading(false); } }, []);
+  const load = useCallback(async (force = false) => { if (!force) { const fresh = getCachedData(SELLER_CACHE.products, SELLER_CACHE_TTL); if (fresh) { setProducts(fresh.products); setCategories(fresh.categories); setLoading(false); return; } } setLoading(!getCacheEntry(SELLER_CACHE.products)); try { const data = await refreshCachedData(SELLER_CACHE.products, async () => { const [productResponse, categories] = await Promise.all([apiClient.get(ENDPOINTS.MY_PRODUCTS, { params: { pageSize: 100 } }), fetchCategories()]); return { products: productResponse.data || [], categories }; }); setProducts(data.products); setCategories(data.categories); } catch (error) { toast.error('Failed to load inventory', error.message); } finally { setLoading(false); } }, []);
   useEffect(() => { load(); }, [load]);
   const openForm = (product) => { setEditingId(product?.id || null); setForm(product ? { name: product.name || '', description: product.description || '', price: String(product.price || ''), stock: String(product.stock ?? ''), categoryId: product.categoryId || product.category?.id || '', images: product.images || [] } : EMPTY_PRODUCT); setFormOpen(true); };
   const chooseImage = async () => { const permission = await ImagePicker.requestMediaLibraryPermissionsAsync(); if (!permission.granted) return toast.error('Photo permission is required'); const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 }); if (result.canceled) return; setUploading(true); try { const uploaded = await uploadImage(result.assets[0]); setForm((current) => ({ ...current, images: [...current.images, uploaded.url].slice(0, 10) })); } catch (error) { toast.error('Upload failed', error.message); } finally { setUploading(false); } };

@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
+import { notificationHref } from '../lib/notificationLink';
 import useAuthStore from '../store/authStore';
 import './Notifications.css';
 
@@ -24,6 +25,19 @@ const TYPE_CONFIG = {
   REPORT_RESOLVED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Report Resolved' },
   SUPPORT_MESSAGE: { icon: ChatCircleDots, color: '#059669', bg: '#d1fae5', label: 'Municipal Admin' },
   SYSTEM_ANNOUNCEMENT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Announcement' },
+  STORE_NEW_PRODUCT: { icon: ShoppingBag, color: '#3b82f6', bg: '#dbeafe', label: 'New Product' },
+  STORE_PROMOTION: { icon: Star, color: '#f59e0b', bg: '#fef3c7', label: 'Promotion' },
+  STORE_ANNOUNCEMENT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Store Update' },
+  RETURN_REQUESTED: { icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', label: 'Return Requested' },
+  RETURN_APPROVED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Return Approved' },
+  RETURN_REJECTED: { icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Return Rejected' },
+  RETURN_AWAITING_SHIPMENT: { icon: Package, color: '#f97316', bg: '#ffedd5', label: 'Ship Your Return' },
+  RETURN_RECEIVED: { icon: Package, color: '#3b82f6', bg: '#dbeafe', label: 'Return Received' },
+  RETURN_REFUNDED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Refund Issued' },
+  RETURN_CANCELLED: { icon: XCircle, color: '#6b7280', bg: '#f3f4f6', label: 'Return Cancelled' },
+  RETURN_CLOSED: { icon: CheckCircle, color: '#6b7280', bg: '#f3f4f6', label: 'Return Closed' },
+  SELLER_APPLICATION_SUBMITTED: { icon: Info, color: '#3b82f6', bg: '#dbeafe', label: 'Seller Application' },
+  ADMIN_ALERT: { icon: AlertCircle, color: '#ef4444', bg: '#fee2e2', label: 'Alert' },
   DEFAULT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Notification' },
 };
 
@@ -80,13 +94,12 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
     }
   };
 
-  // Admin messages open the conversation so the user can reply.
+  // The API resolves each notification to a destination (an order, a return,
+  // a conversation, the announcement itself). Anything without one stays put.
   const openNotification = (notif) => {
     handleMarkRead(notif);
-    if (notif.type === 'SUPPORT_MESSAGE' && notif.relatedId) {
-      const base = audience === 'SELLER' ? '/seller/support' : '/profile/support';
-      navigate(`${base}?c=${notif.relatedId}`);
-    }
+    const href = notificationHref(notif);
+    if (href) navigate(href);
   };
 
   const handleMarkAllRead = async () => {
@@ -227,11 +240,20 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
             {notifications.map((notif) => {
               const cfg = getConfig(notif.type);
               const Icon = cfg.icon;
+              const href = notificationHref(notif);
               return (
                 <div
                   key={notif.id}
-                  className={`notif-item ${!notif.isRead ? 'unread' : ''}`}
+                  className={`notif-item ${!notif.isRead ? 'unread' : ''}${href ? ' is-linkable' : ''}`}
+                  role={href ? 'link' : undefined}
+                  tabIndex={href ? 0 : undefined}
                   onClick={() => openNotification(notif)}
+                  onKeyDown={(e) => {
+                    if (href && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      openNotification(notif);
+                    }
+                  }}
                 >
                   <div
                     className="notif-icon-wrap"
@@ -247,6 +269,7 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
                       </span>
                       {!notif.isRead && <span className="notif-dot" />}
                     </div>
+                    {notif.title && <p className="notif-heading">{notif.title}</p>}
                     <p className="notif-message">{notif.message}</p>
                     <span className="notif-time">{formatTime(notif.createdAt)}</span>
                   </div>

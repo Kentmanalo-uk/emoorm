@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Package, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
@@ -28,8 +28,11 @@ export default function AdminProducts() {
   const storeId = searchParams.get('storeId') || '';
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('APPROVED');
+  // Seeded from ?search= so a top-bar search result opens filtered. The
+  // status filter starts open in that case: a searched-for product may well
+  // be pending or suspended, and the usual APPROVED default would hide it.
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('search') ? '' : 'APPROVED');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [selected, setSelected] = useState(null);
@@ -41,6 +44,19 @@ export default function AdminProducts() {
   useEffect(() => {
     fetchProducts();
   }, [statusFilter, search, page, storeId]);
+
+  // Follows ?search= when it changes, so a second search from the top bar
+  // re-filters instead of leaving the first term in place. Only a change to
+  // the URL counts, so typing in this page's own box is left alone.
+  const urlSearch = searchParams.get('search') || '';
+  const lastUrlSearch = useRef(urlSearch);
+  useEffect(() => {
+    if (urlSearch === lastUrlSearch.current) return;
+    lastUrlSearch.current = urlSearch;
+    setSearch(urlSearch);
+    setStatusFilter(urlSearch ? '' : 'APPROVED');
+    setPage(1);
+  }, [urlSearch]);
 
   const fetchProducts = async () => {
     setIsLoading(true);

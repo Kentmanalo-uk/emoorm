@@ -23,6 +23,7 @@ import { resolveImg } from '../src/lib/media';
 import { toast } from '../src/lib/toast';
 import { uploadImage } from '../src/lib/upload';
 import { colors, fontFamily, radius, spacing, typography } from '../src/theme';
+import { fetchMunicipalities } from '../src/lib/referenceData';
 
 const peso = (value) => `₱${Number(value || 0).toLocaleString('en-PH', {
   minimumFractionDigits: 2,
@@ -79,8 +80,10 @@ export default function Checkout() {
   }, [items.length, orderIds.length, router]);
 
   useEffect(() => {
-    apiClient.get(ENDPOINTS.MUNICIPALITIES)
-      .then((res) => setMunicipalities(res.data || []))
+    // The municipality list is reference data; the cart and the order
+    // itself below stay live reads.
+    fetchMunicipalities()
+      .then(setMunicipalities)
       .catch(() => setMunicipalities([]));
   }, []);
 

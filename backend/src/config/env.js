@@ -26,6 +26,49 @@ const config = {
     rounds: parseInt(process.env.BCRYPT_ROUNDS || '10', 10),
   },
 
+  // ── Caching ───────────────────────────────────────────────────────────
+  // TTLs are the single place the caching policy per resource is written
+  // down. They are deliberately short for anything a seller changes and
+  // watches (stock, listings) and long for reference data that barely moves.
+  //
+  // Everything here is shared-cache policy: only responses that are byte-for-
+  // byte identical for every caller are ever stored server side. Carts,
+  // orders, profiles, payments and admin data are never in this list.
+  cache: {
+    enabled: process.env.CACHE_ENABLED !== 'false',
+    redisUrl: process.env.CACHE_REDIS_URL || process.env.REDIS_URL || '',
+    namespace: process.env.CACHE_NAMESPACE || 'emoorm',
+    // Bump to invalidate everything at once, e.g. after a response-shape change.
+    version: process.env.CACHE_VERSION || '1',
+    maxMemoryEntries: parseInt(process.env.CACHE_MAX_MEMORY_ENTRIES || '2000', 10),
+    ttl: {
+      appSettings: parseInt(process.env.CACHE_TTL_APP_SETTINGS || '600', 10),   // 10m — config
+      categories: parseInt(process.env.CACHE_TTL_CATEGORIES || '900', 10),      // 15m — near-static
+      municipalities: parseInt(process.env.CACHE_TTL_MUNICIPALITIES || '1800', 10), // 30m — static
+      banners: parseInt(process.env.CACHE_TTL_BANNERS || '300', 10),            //  5m — campaigns
+      stores: parseInt(process.env.CACHE_TTL_STORES || '300', 10),              //  5m — public shops
+      products: parseInt(process.env.CACHE_TTL_PRODUCTS || '60', 10),           //  1m — stock moves
+      productDetail: parseInt(process.env.CACHE_TTL_PRODUCT_DETAIL || '120', 10), // 2m
+      search: parseInt(process.env.CACHE_TTL_SEARCH || '30', 10),               // 30s — long tail
+      reviews: parseInt(process.env.CACHE_TTL_REVIEWS || '120', 10),            //  2m
+    },
+  },
+
+  // Browser/CDN cache lifetimes, in seconds. Static uploads are content-
+  // addressed by filename, so they can be cached effectively forever.
+  httpCache: {
+    uploadsMaxAge: parseInt(process.env.HTTP_CACHE_UPLOADS_MAX_AGE || '31536000', 10),
+    // Public API responses stay revalidatable: short max-age plus a longer
+    // stale-while-revalidate so a CDN can serve instantly and refresh behind.
+    staleWhileRevalidate: parseInt(process.env.HTTP_CACHE_SWR || '60', 10),
+  },
+
+  // Optional CDN in front of /uploads. When set, upload responses hand back
+  // absolute CDN URLs instead of routing every image through this server.
+  cdn: {
+    url: (process.env.CDN_URL || '').replace(/\/$/, ''),
+  },
+
   // CORS Configuration
   cors: {
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173', 'http://localhost:19006'],
@@ -62,12 +105,33 @@ const config = {
   },
 
   // Email Configuration
+  //
+  // Two transports, tried in order by utils/email.js:
+  //   1. Resend's HTTP API (preferred) — returns a structured error when a
+  //      send is rejected, so a dropped recipient shows up in the logs
+  //      instead of vanishing behind an SMTP "250 OK".
+  //   2. Plain SMTP via nodemailer — any provider, including Resend's own
+  //      SMTP bridge. Kept so an existing deployment does not break.
+  // With neither configured, mail falls back to an in-memory dev transport.
   email: {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587', 10),
     user: process.env.SMTP_USER,
     password: process.env.SMTP_PASSWORD,
     from: process.env.SMTP_FROM || 'noreply@emoorm.com',
+  },
+
+  resend: {
+    // RESEND_API_KEY is the documented name. An existing install that put
+    // the key in SMTP_PASSWORD (pointing SMTP_HOST at smtp.resend.com) keeps
+    // working without editing .env — the key is the same credential either
+    // way, and Resend keys are unambiguous about being one ("re_" prefix).
+    apiKey:
+      process.env.RESEND_API_KEY ||
+      (String(process.env.SMTP_PASSWORD || '').startsWith('re_')
+        ? process.env.SMTP_PASSWORD
+        : ''),
+    from: process.env.RESEND_FROM || process.env.SMTP_FROM || '',
   },
 
   // Frontend URL (used for links in outgoing emails)

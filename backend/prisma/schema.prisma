@@ -250,9 +250,20 @@ model User {
   passwordResetToken  String?   @map("password_reset_token")
   passwordResetExpiry DateTime? @map("password_reset_expiry")
 
+  // Bumped whenever the password changes, which invalidates every access and
+  // refresh token issued before that point. Sessions are stateless JWTs, so
+  // without this counter a thief who already held a session kept it after the
+  // owner reset the password — the reset locked the front door while leaving
+  // the intruder inside. Tokens carry the value they were minted with and are
+  // rejected once it falls behind.
+  tokenVersion Int @default(0) @map("token_version")
+
   // MFA / TOTP (enforced for admins)
   mfaEnabled       Boolean   @default(false) @map("mfa_enabled")
   mfaSecret        String?   @map("mfa_secret") @db.Text
+  // Candidate secret during (re-)enrolment. The live mfaSecret is only
+  // replaced once a code from the new authenticator is confirmed.
+  mfaPendingSecret String?  @map("mfa_pending_secret") @db.Text
   mfaEnabledAt     DateTime? @map("mfa_enabled_at")
   mfaBackupCodes   String?   @map("mfa_backup_codes") @db.Text
   mfaLastVerifiedAt DateTime? @map("mfa_last_verified_at")
@@ -290,6 +301,9 @@ model User {
   identityVerification IdentityVerification?
 
   @@map("users")
+  @@index([deletedAt, role, municipalityId, createdAt], map: "users_role_municipality_idx")
+  @@index([sellerApplicationStatus, deletedAt, sellerApplicationDate], map: "users_seller_application_idx")
+  @@index([shopMunicipalityId, sellerApplicationStatus], map: "users_shop_municipality_idx")
 }
 
 enum IdentityVerificationStatus {
@@ -522,6 +536,7 @@ model Store {
   returnRequests ReturnRequest[] @relation("StoreReturns")
 
   @@map("stores")
+  @@index([deletedAt, isActive, isSuspended, municipalityId, createdAt], map: "stores_public_idx")
 }
 
 model StoreFollow {
@@ -571,6 +586,7 @@ model Category {
   products    Product[]
 
   @@map("categories")
+  @@index([isActive, name], map: "categories_active_idx")
 }
 
 model Product {
@@ -622,6 +638,13 @@ model Product {
   inventoryMovements InventoryMovement[]
 
   @@map("products")
+  // Composite indexes matching the browse/filter/sort shapes in
+  // product.repository.findAll() — see migration 20260920140000.
+  @@index([status, deletedAt, municipalityId, createdAt], map: "products_public_municipality_idx")
+  @@index([status, deletedAt, categoryId, createdAt], map: "products_public_category_idx")
+  @@index([storeId, deletedAt, status, createdAt], map: "products_store_idx")
+  @@index([status, deletedAt, price], map: "products_price_idx")
+  @@index([deletedAt, status, createdAt], map: "products_moderation_idx")
 }
 
 model InventoryMovement {
@@ -698,8 +721,16 @@ model Order {
   statusHistory   OrderStatusHistory[]
   voucherRedemption VoucherRedemption?
 
-  @@index([buyerId, checkoutKey])
+  // A double-submitted checkout must not become two orders. The application
+  // also looks the key up first, but that check-then-insert races under
+  // concurrent submits — this constraint is what actually enforces it.
+  // checkoutKey is nullable and MySQL permits many NULLs in a unique index,
+  // so orders placed without a key are unaffected.
+  @@unique([buyerId, checkoutKey], map: "orders_buyer_checkout_key_unique")
   @@map("orders")
+  @@index([buyerId, createdAt], map: "orders_buyer_idx")
+  @@index([storeId, status, createdAt], map: "orders_store_status_idx")
+  @@index([status, createdAt], map: "orders_status_created_idx")
 }
 
 model OrderStatusHistory {
@@ -738,6 +769,7 @@ model OrderItem {
   returnRequestItems ReturnRequestItem[] @relation("OrderItemReturns")
 
   @@map("order_items")
+  @@index([productId, orderId], map: "order_items_product_idx")
 }
 
 model CartItem {
@@ -796,6 +828,8 @@ model Review {
   deletedAt DateTime? @map("deleted_at")
 
   @@map("reviews")
+  @@index([productId, deletedAt, createdAt], map: "reviews_product_idx")
+  @@index([userId, deletedAt, createdAt], map: "reviews_user_idx")
 }
 
 model Report {
@@ -853,6 +887,7 @@ model Notification {
   deletedAt DateTime?        @map("deleted_at")
 
   @@map("notifications")
+  @@index([userId, deletedAt, isRead, createdAt], map: "notifications_user_feed_idx")
 }
 
 model PushToken {
@@ -896,6 +931,9 @@ model AuditLog {
 
   @@index([municipalityId, createdAt])
   @@map("audit_logs")
+  @@index([createdAt], map: "audit_logs_created_idx")
+  @@index([userId, createdAt], map: "audit_logs_actor_idx")
+  @@index([entity, entityId], map: "audit_logs_entity_idx")
 }
 
 // ============================================

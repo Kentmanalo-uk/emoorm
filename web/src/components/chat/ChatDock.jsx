@@ -7,6 +7,7 @@ import {
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
+import SafetyNotice from '../common/SafetyNotice';
 import './ChatDock.css';
 
 const LIST_POLL_MS = 30000;
@@ -338,6 +339,7 @@ export default function ChatDock() {
           {error && <p className="cd-error">{error}</p>}
           <div ref={bottomRef} />
         </div>
+        <SafetyNotice className="is-compact" />
         <form className="cd-composer" onSubmit={send}>
           <input
             ref={inputRef}

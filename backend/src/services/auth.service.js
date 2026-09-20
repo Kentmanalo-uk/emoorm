@@ -10,7 +10,7 @@ const identityVerificationService = require('./identityVerification.service');
 const googleService = require('./google.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateTokens, verifyRefreshToken, generateMfaToken, generateGoogleProfileToken, verifyGoogleProfileToken } = require('../utils/jwt');
-const { sendPasswordResetEmail } = require('../utils/email');
+const { sendPasswordResetEmail, sendPasswordChangedEmail } = require('../utils/email');
 const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -145,6 +145,14 @@ const refreshToken = async (refreshToken) => {
       throw new ApiError('Account is not active', 403);
     }
 
+    // Refuse to mint a new session from a refresh token that predates a
+    // password change. Without this the tokenVersion check is decorative:
+    // an access token dies in minutes, but the refresh token it came with
+    // would go on issuing replacements for weeks.
+    if ((decoded.tokenVersion ?? 0) !== (user.tokenVersion ?? 0)) {
+      throw new ApiError('Session expired', 401);
+    }
+
     // Generate new tokens
     const tokens = generateTokens(user);
 
@@ -203,11 +211,15 @@ const updateProfile = async (userId, updateData) => {
 };
 
 /**
- * Change user password
+ * Change user password while signed in.
+ *
+ * Signs out every other device by bumping tokenVersion, then hands the
+ * caller a replacement pair so the device that made the change stays in.
+ *
  * @param {String} userId - User ID
  * @param {String} currentPassword - Current password
  * @param {String} newPassword - New password
- * @returns {Promise<void>}
+ * @returns {Promise<{ accessToken: String, refreshToken: String }>}
  */
 const changePassword = async (userId, currentPassword, newPassword) => {
   // Get user with password
@@ -229,10 +241,22 @@ const changePassword = async (userId, currentPassword, newPassword) => {
   // Hash new password
   const hashedPassword = await hashPassword(newPassword);
 
-  // Update password
+  // One write: the new password, and the counter that retires every token
+  // issued under the old one.
   await userRepository.updateUser(userId, {
     password: hashedPassword,
+    tokenVersion: { increment: 1 },
   });
+
+  // Re-read so the replacement tokens carry the bumped version. Minting
+  // them from the stale `user` would hand back a pair that the very next
+  // request rejects — signing the caller out of their own password change.
+  const updated = await userRepository.findById(userId);
+  const tokens = generateTokens(updated);
+
+  await notifyPasswordChanged(updated || user);
+
+  return tokens;
 };
 
 /** Terms revision an applicant consents to. Bump when the seller terms change. */
@@ -785,13 +809,33 @@ const forgotPassword = async (email) => {
     console.error('[forgotPassword] Failed to send email:', err.message);
   }
 
+  // The plaintext token is deliberately NOT returned. Only its SHA-256 is
+  // stored, and the token itself exists solely inside the email that was just
+  // sent. Handing it back to the caller made the whole reset flow bypassable
+  // by anyone who could name a user's email address.
+  //
+  // resetUrl is returned for the development console log only, and the
+  // controller never puts it in an HTTP response.
   return {
     delivered,
     transport,
-    // Exposed by the controller only when NODE_ENV !== 'production'.
-    resetToken,
     resetUrl,
   };
+};
+
+/**
+ * Tell the account owner their password moved. If they didn't do it, this
+ * email is the only warning they get, so it goes out on both password
+ * paths — but a mail failure must never roll back a completed change, so
+ * it is logged and swallowed.
+ */
+const notifyPasswordChanged = async (user) => {
+  if (!user?.email) return;
+  try {
+    await sendPasswordChangedEmail({ user });
+  } catch (err) {
+    console.error('[password] Failed to send change notification:', err.message);
+  }
 };
 
 /**
@@ -810,8 +854,16 @@ const resetPassword = async (token, newPassword) => {
 
   const hashedPassword = await hashPassword(newPassword);
 
-  await userRepository.updateUser(user.id, { password: hashedPassword });
+  // Bumping tokenVersion here is the point of the whole recovery flow: if
+  // the account was taken over, the thief is holding a live session, and
+  // changing the password alone would not have touched it.
+  await userRepository.updateUser(user.id, {
+    password: hashedPassword,
+    tokenVersion: { increment: 1 },
+  });
   await userRepository.clearPasswordResetToken(user.id);
+
+  await notifyPasswordChanged(user);
 };
 
 /**

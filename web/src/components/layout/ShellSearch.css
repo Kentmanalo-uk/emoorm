@@ -1,0 +1,301 @@
+/* Search box in the Seller Center / Admin top bars.
+   Sits where the breadcrumb trail used to, and hides on the mobile shells
+   alongside it — the mobile bar shows the page title instead. */
+
+.shell-search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-width: 640px;
+  /* The top bar carries nothing else on desktop, so auto margins split
+     the leftover space either side and centre the field. */
+  margin: 0 auto;
+}
+
+.shell-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px;
+  background: #f2f3f5;
+  border: 1px solid #edeff2;
+  border-radius: 8px;
+  transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+
+.shell-search-field:focus-within {
+  background: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+}
+
+.shell-search-field:focus-within .shell-search-input {
+  color: #111827;
+}
+
+.shell-search-icon {
+  flex-shrink: 0;
+  color: #a8aeb8;
+}
+
+.shell-search-field:focus-within .shell-search-icon {
+  color: #059669;
+}
+
+.shell-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  color: #4b5563;
+}
+
+.shell-search-input::placeholder {
+  color: #a8aeb8;
+}
+
+.shell-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #d1d5db;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.shell-search-clear:hover {
+  background: #9ca3af;
+}
+
+.shell-search-spinner {
+  flex-shrink: 0;
+  color: #9ca3af;
+  animation: shell-search-spin 0.8s linear infinite;
+}
+
+@keyframes shell-search-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Results ───────────────────────────────────────────────── */
+
+.shell-search-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  animation: shell-search-open .14s ease-out;
+}
+
+@keyframes shell-search-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.shell-search-group + .shell-search-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.shell-search-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shell-search-group-label {
+  margin: 0;
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.shell-search-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shell-search-result.is-active {
+  background: #ecfdf5;
+}
+
+/* Picture first, then the two lines of text beside it. */
+.shell-search-result-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.shell-search-thumb {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #f3f4f6;
+}
+
+/* People read as avatars; products and stores as tiles. */
+.shell-search-thumb.is-person {
+  border-radius: 50%;
+}
+
+.shell-search-thumb.is-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+}
+
+.shell-search-result-title {
+  font-size: 13.5px;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell-search-result-sub {
+  font-size: 12px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell-search-empty {
+  margin: 0;
+  padding: 14px 10px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-search-panel { animation: none; }
+  .shell-search-spinner { animation-duration: 2s; }
+}
+
+/* ── Recent searches ──────────────────────────────────────────────────────
+   Shown when the box is focused but not yet holding a searchable term, so it
+   fills the moment the panel would otherwise be blank rather than adding a
+   step. Each row is two controls: the term itself, and a way to forget it. */
+
+.shell-search-group-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shell-search-clear-all {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #6b7280;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.shell-search-clear-all:hover {
+  color: #111827;
+}
+
+.shell-search-clear-all:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* The row holds the term button and the remove button side by side; the
+   remove button only appears once the row is hovered or focused, so a list of
+   past searches does not read as a column of dismiss icons. */
+.shell-search-group li {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.shell-search-result.is-history {
+  padding-right: 30px;
+}
+
+.shell-search-forget {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .12s, color .12s, background-color .12s;
+}
+
+.shell-search-group li:hover .shell-search-forget,
+.shell-search-forget:focus-visible {
+  opacity: 1;
+}
+
+.shell-search-forget:hover {
+  color: #b91c1c;
+  background: #fdeeee;
+}
+
+.shell-search-forget:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 1px;
+}
+
+/* A past search has no picture, so the clock stands in for one and keeps the
+   rows aligned with the result rows above them. */
+.shell-search-thumb.is-history {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  background: #f3f4f6;
+}

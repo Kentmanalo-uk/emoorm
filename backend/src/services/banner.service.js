@@ -1,4 +1,6 @@
 const bannerRepository = require('../repositories/banner.repository');
+const { cleanText, cleanUrl } = require('../utils/sanitize');
+const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 
 const PLACEMENTS = ['HOME_CAROUSEL', 'HOME_SIDEBAR_TOP', 'HOME_SIDEBAR_BOTTOM', 'HOME_POPUP'];
@@ -8,12 +10,12 @@ const sanitize = (input = {}) => {
   if (input.title !== undefined) {
     const title = String(input.title || '').trim();
     if (!title || title.length > 120) throw new ApiError('Title is required (1-120 characters)', 400);
-    data.title = title;
+    data.title = cleanText(title, { maxLength: 120 });
   }
   if (input.subtitle !== undefined) {
     const subtitle = input.subtitle == null ? null : String(input.subtitle).trim();
     if (subtitle && subtitle.length > 400) throw new ApiError('Subtitle must be at most 400 characters', 400);
-    data.subtitle = subtitle || null;
+    data.subtitle = subtitle ? cleanText(subtitle, { maxLength: 400 }) : null;
   }
   if (input.imageUrl !== undefined) {
     const imageUrl = String(input.imageUrl || '').trim();
@@ -23,7 +25,15 @@ const sanitize = (input = {}) => {
   if (input.linkUrl !== undefined) {
     const linkUrl = input.linkUrl == null ? null : String(input.linkUrl).trim();
     if (linkUrl && linkUrl.length > 500) throw new ApiError('Link URL must be at most 500 characters', 400);
-    data.linkUrl = linkUrl || null;
+    // This value becomes an href on the homepage. Anything but http(s) or a
+    // same-site path — javascript:, data:, vbscript: — is script execution.
+    if (linkUrl) {
+      const safe = cleanUrl(linkUrl);
+      if (!safe) throw new ApiError('Link must be an http(s) address or a site path', 400);
+      data.linkUrl = safe;
+    } else {
+      data.linkUrl = null;
+    }
   }
   if (input.placement !== undefined) {
     if (!PLACEMENTS.includes(input.placement)) {
@@ -42,7 +52,7 @@ const sanitize = (input = {}) => {
   return data;
 };
 
-const listActive = () => bannerRepository.findActive();
+const listActive = () => cached.bannerList({}, () => bannerRepository.findActive());
 const listAll = () => bannerRepository.findAll();
 
 const create = async (userId, input) => {
@@ -54,7 +64,9 @@ const create = async (userId, input) => {
     if (occupied) throw new ApiError('This right-side banner position is already in use', 409);
   }
   data.createdById = userId || null;
-  return bannerRepository.create(data);
+  const banner = await bannerRepository.create(data);
+  await invalidate(TAGS.banners);
+  return banner;
 };
 
 const update = async (id, input) => {
@@ -67,13 +79,17 @@ const update = async (id, input) => {
       throw new ApiError('This right-side banner position is already in use', 409);
     }
   }
-  return bannerRepository.update(id, data);
+  const banner = await bannerRepository.update(id, data);
+  await invalidate(TAGS.banners);
+  return banner;
 };
 
 const remove = async (id) => {
   const existing = await bannerRepository.findById(id);
   if (!existing) throw new ApiError('Banner not found', 404);
-  return bannerRepository.remove(id);
+  const removed = await bannerRepository.remove(id);
+  await invalidate(TAGS.banners);
+  return removed;
 };
 
 module.exports = { listActive, listAll, create, update, remove };

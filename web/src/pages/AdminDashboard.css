@@ -118,6 +118,37 @@
   flex-shrink: 0;
 }
 
+/* Sits at the far end of the banner, in the banner's own colour so it
+   reads as part of the notice rather than a separate control. */
+.dash-attention-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity .12s, background-color .12s;
+}
+
+.dash-attention-dismiss:hover {
+  opacity: 1;
+  background: rgba(17, 24, 39, 0.06);
+}
+
+.dash-attention-dismiss:focus-visible {
+  opacity: 1;
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
 .dash-attention strong {
   font-size: 14px;
   color: #111827;
@@ -192,8 +223,8 @@
 }
 
 .dash-stat-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 500;
   color: #6b7280;
 }
 
@@ -237,29 +268,93 @@
 }
 
 /* Cards */
+
+/* Six columns, and each card says how many it takes. auto-fit was choosing
+   a different column count per row — a row of two cards sat at half width
+   while the row below it sat at a third — so no two rows shared an edge,
+   and at some widths a third card was orphaned and stretched across the
+   full row. A fixed track count makes every card edge line up. */
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 16px;
-  align-items: start;
+  /* Stretch, not start: sized to their own content, a card holding one row
+     sat beside a card holding eight and the difference read as a hole in
+     the page. Every card in a row is now the same height. */
+  align-items: stretch;
 }
 
+.dash-col-full { grid-column: span 6; }
+.dash-col-half { grid-column: span 3; }
+.dash-col-third { grid-column: span 2; }
+
 .dash-card {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   background: #fff;
 }
 
+/* A ceiling on how tall a row may grow, so one long feed cannot force the
+   cards beside it into hundreds of pixels of blank space. The full-width
+   chart is exempt — it sets its own height. */
+.dash-col-half,
+.dash-col-third {
+  max-height: 320px;
+}
+
+/* The narrow cards hold short queues and a feed. Letting the feed scroll a
+   little sooner keeps the queue beside it from carrying dead space. */
+.dash-col-third {
+  max-height: 272px;
+}
+
+/* Takes whatever height the row settled on and scrolls inside it, rather
+   than pushing the row taller. */
+.dash-card-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dash-card-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dash-card-body::-webkit-scrollbar-thumb {
+  border: 2px solid #fff;
+  border-radius: 4px;
+  background: #e5e7eb;
+}
+
+.dash-card-body:hover::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+}
+
 .dash-card-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  row-gap: 8px;
   padding: 14px 18px 8px;
 }
 
+/* Never let a heading be the thing that gets compressed. */
+.dash-card-head h2 {
+  flex-shrink: 0;
+}
+
+/* Card headings across the Seller Center and admin panel share this size
+   and weight. Bold at a small size made every card shout; a slightly
+   larger medium reads as a heading without competing with the numbers. */
 .dash-card-head h2 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 17.5px;
+  font-weight: 500;
   color: #111827;
 }
 
@@ -275,20 +370,80 @@
   color: #d1d5db;
 }
 
+/* Controls that change what this card shows, as opposed to the link, which
+   leaves the dashboard. Pushed right; the link then sits after them. */
+.dash-card-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.dash-card-toggle {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 7px;
+  background: #f3f4f6;
+}
+
+.dash-card-toggle button {
+  padding: 3px 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .12s, background-color .12s;
+}
+
+.dash-card-toggle button:hover {
+  color: #111827;
+}
+
+.dash-card-toggle button.is-active {
+  color: #065f46;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+
+.dash-card-toggle button:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 1px;
+}
+
+/* An icon button rather than a worded link. Card headings already say what
+   the card is, so "View all" mostly repeated them; the destination lives in
+   the link's title and aria-label instead of in the layout. */
 .dash-card-link {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
   margin-left: auto;
-  font-size: 12px;
-  font-weight: 600;
-  color: #059669;
+  border-radius: 7px;
+  color: #6b7280;
   text-decoration: none;
-  white-space: nowrap;
+  transition: color .12s, background-color .12s;
+}
+
+.dash-card-tools + .dash-card-link {
+  margin-left: 0;
 }
 
 .dash-card-link:hover {
   color: #047857;
+  background: #ecfdf5;
+}
+
+.dash-card-link:focus-visible {
+  color: #047857;
+  outline: 2px solid #059669;
+  outline-offset: 1px;
 }
 
 .dash-empty {
@@ -300,6 +455,7 @@
 
 /* Chart */
 .dash-chart {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 3px;
@@ -318,9 +474,67 @@
   background: #059669;
 }
 
+/* The tallest bar in the range. Without it every bar reads the same and
+   the eye has to compare heights by hand. */
+.dash-chart-bar.is-peak {
+  background: #059669;
+}
+
+/* A day with no completed orders still needs a tick so the axis reads as
+   continuous, but green would claim revenue that never arrived. */
+.dash-chart-bar.is-zero {
+  background: #e9ecef;
+}
+
+.dash-chart-bar.is-zero:hover {
+  background: #d1d5db;
+}
+
+/* Average reference line, drawn behind the bars. */
+.dash-chart-avg {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  height: 0;
+  border-top: 1px dashed #cbd5e1;
+  pointer-events: none;
+}
+
+.dash-chart-avg em {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 600;
+  color: #9ca3af;
+  background: #fff;
+  padding: 0 4px;
+}
+
+.dash-chart-axis {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 18px 14px;
+  font-size: 11.5px;
+  color: #9ca3af;
+}
+
+.dash-chart-peak {
+  font-weight: 600;
+  color: #047857;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Lists */
 .dash-list,
 .dash-feed {
+  flex-shrink: 0;
   margin: 0;
   padding: 4px 0 8px;
   list-style: none;
@@ -498,13 +712,52 @@
   background: #34d399;
 }
 
+/* Below this the thirds are too narrow to hold a name and a number, so
+   everything drops to two tracks at once and card edges still align. */
+@media (max-width: 1280px) {
+  .dash-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dash-col-full {
+    grid-column: span 2;
+  }
+
+  .dash-col-half,
+  .dash-col-third {
+    grid-column: span 1;
+  }
+}
+
 @media (max-width: 1100px) {
   .dash-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
+@media (max-width: 860px) {
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* No row to match here, so nothing needs cropping. */
+  .dash-col-half,
+  .dash-col-third {
+    max-height: none;
+  }
+
+  .dash-col-full,
+  .dash-col-half,
+  .dash-col-third {
+    grid-column: span 1;
+  }
+}
+
 @media (max-width: 640px) {
+  .dash-legend {
+    grid-template-columns: 1fr;
+  }
+
   .dash-header {
     align-items: stretch;
   }
@@ -520,10 +773,6 @@
   .dash-segment button {
     flex: 1;
     padding: 6px 4px;
-  }
-
-  .dash-grid {
-    grid-template-columns: 1fr;
   }
 
   .dash-list li {
@@ -546,15 +795,237 @@
   }
 }
 
+/* Share of the largest value, painted behind the row so the proportion
+   costs no extra line. */
+.dash-list-bars li {
+  position: relative;
+  gap: 8px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.dash-row-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: #ecfdf5;
+}
+
+.dash-list-bars li > *:not(.dash-row-fill) {
+  position: relative;
+}
+
+.dash-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dash-row-sub {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-chip {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.dash-chip.is-warn {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+
+/* Name, status and figure on one line, bar beneath — three stacked lines
+   per row made fifteen municipalities unreadable. */
+.dash-bar-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dash-bar-head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-bar-head b {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Coverage meter */
+.dash-coverage {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 18px 10px;
+}
+
+.dash-coverage-bar {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #f1f3f5;
+}
+
+.dash-coverage-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #059669;
+}
+
+.dash-coverage-note {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Order pipeline */
+.dash-pipeline {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding: 4px 18px 16px;
+}
+
+.dash-pipeline-bar {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #f1f3f5;
+}
+
+.dash-pipeline-bar > span {
+  height: 100%;
+  transition: filter .12s;
+}
+
+.dash-pipeline-bar > span:hover {
+  filter: brightness(0.92);
+}
+
+.dash-legend {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dash-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12.5px;
+}
+
+.dash-legend li.is-zero {
+  opacity: 0.45;
+}
+
+.dash-legend-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6b7280;
+}
+
+.dash-legend-value {
+  font-weight: 700;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+
+.dash-dot.is-amber, .dash-pipeline-bar > span.is-amber { background: #f59e0b; }
+.dash-dot.is-blue,  .dash-pipeline-bar > span.is-blue  { background: #3b82f6; }
+.dash-dot.is-teal,  .dash-pipeline-bar > span.is-teal  { background: #14b8a6; }
+.dash-dot.is-green, .dash-pipeline-bar > span.is-green { background: #059669; }
+.dash-dot.is-red,   .dash-pipeline-bar > span.is-red   { background: #ef4444; }
+
+/* Counts that are true of the platform right now, rather than of the
+   selected range — kept visually quieter than the range figures above. */
+.dash-figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  /* auto pins these to the foot of the card instead of stranding the gap
+     below them. */
+  margin: auto 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #f1f3f5;
+}
+
+.dash-figures dt {
+  font-size: 11px;
+  color: #9ca3af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-figures dd {
+  margin: 2px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-figures dd.is-warn {
+  color: #b45309;
+}
+
+.dash-pipeline-bar.is-empty {
+  background: repeating-linear-gradient(
+    90deg, #f1f3f5 0 6px, #e9ecef 6px 12px
+  );
+}
+
 /* Empty states */
 .dash-empty-state {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 180px;
-  padding: 24px 20px 28px;
+  min-height: 0;
+  padding: 20px;
   text-align: center;
 }
 
@@ -631,7 +1102,8 @@
 
 .dash-stat-label {
   margin-top: 6px;
-  font-size: 14px;
+  /* Same size as the Seller Center stat labels. */
+  font-size: 15px;
   color: #374151;
 }
 
@@ -786,7 +1258,8 @@
   }
 
   .dash-card-link {
-    min-height: 32px;
+    width: 32px;
+    height: 32px;
   }
 
   .dash-list li,

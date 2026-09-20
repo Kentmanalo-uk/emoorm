@@ -12,20 +12,15 @@ import EmptyState from '../components/analytics/EmptyState';
 import { peso, num, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
 import MunicipalAdminAnalytics from './MunicipalAdminAnalytics';
 import '../components/analytics/analytics.css';
+import { useMunicipalities } from '../hooks/useReferenceData';
 
 function PlatformAnalytics() {
   const [range, setRange] = useState(() => DateRangePicker.default30d());
   const [muniFilter, setMuniFilter] = useState('');
-  const [municipalities, setMunicipalities] = useState([]);
+  const { municipalities } = useMunicipalities();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    axios.get('/municipalities')
-      .then((res) => setMunicipalities(res.data || []))
-      .catch(() => { });
-  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);

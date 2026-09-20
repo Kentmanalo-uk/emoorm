@@ -5,8 +5,8 @@
 - **Frontend**: http://localhost:5174/
 
 ## Test Accounts
-- **Buyer 1**: buyer1@emoorm.local / Test@1234
-- **Buyer 2**: testuser2@emoorm.local / Test@1234
+- **Buyer 1**: buyer1@emoorm.local / <see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD>
+- **Buyer 2**: testuser2@emoorm.local / <see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD>
 
 ## Complete Shopping Flow Test
 

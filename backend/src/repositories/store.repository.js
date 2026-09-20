@@ -1,4 +1,22 @@
 const prisma = require('../config/database');
+const { invalidate, TAGS } = require('../lib/cachePolicy');
+
+/**
+ * Drop cached copies a store write makes stale. Store details are cached by
+ * both id and slug, and product list payloads embed the store name, so a
+ * rename or suspension has to clear the catalogue too.
+ * @param {Object} store - The written store
+ * @returns {Promise<void>}
+ */
+const invalidateStore = async (store) => {
+  if (!store) return;
+  await invalidate([
+    TAGS.stores,
+    TAGS.products,
+    store.id && TAGS.store(store.id),
+    store.slug && TAGS.store(store.slug),
+  ]);
+};
 
 /**
  * Store Repository
@@ -11,7 +29,7 @@ const prisma = require('../config/database');
  * @returns {Promise<Object>} Created store
  */
 const createStore = async (data) => {
-  return prisma.store.create({
+  const created = await prisma.store.create({
     data,
     include: {
       owner: {
@@ -30,6 +48,8 @@ const createStore = async (data) => {
       },
     },
   });
+  await invalidateStore(created);
+  return created;
 };
 
 /**
@@ -207,7 +227,7 @@ const findAll = async (options = {}) => {
  * @returns {Promise<Object>} Updated store
  */
 const updateStore = async (id, data) => {
-  return prisma.store.update({
+  const updated = await prisma.store.update({
     where: { id },
     data,
     include: {
@@ -219,6 +239,8 @@ const updateStore = async (id, data) => {
       },
     },
   });
+  await invalidateStore(updated);
+  return updated;
 };
 
 /**
@@ -227,13 +249,15 @@ const updateStore = async (id, data) => {
  * @returns {Promise<Object>} Deleted store
  */
 const softDeleteStore = async (id) => {
-  return prisma.store.update({
+  const deleted = await prisma.store.update({
     where: { id },
     data: {
       deletedAt: new Date(),
       isActive: false,
     },
   });
+  await invalidateStore(deleted);
+  return deleted;
 };
 
 /**
@@ -276,10 +300,13 @@ const nameExists = async (name, excludeOwnerId = null) => {
 };
 
 const suspendStore = async (id, reason = null) => {
-  return prisma.store.update({
+  const suspended = await prisma.store.update({
     where: { id },
     data: { isSuspended: true, suspensionReason: reason },
   });
+  // A suspended shop must disappear from the public catalogue immediately.
+  await invalidateStore(suspended);
+  return suspended;
 };
 
 /**
@@ -288,10 +315,12 @@ const suspendStore = async (id, reason = null) => {
  * @returns {Promise<Object>} Updated store
  */
 const unsuspendStore = async (id) => {
-  return prisma.store.update({
+  const restored = await prisma.store.update({
     where: { id },
     data: { isSuspended: false, suspensionReason: null },
   });
+  await invalidateStore(restored);
+  return restored;
 };
 
 // ---------- Service Areas ----------

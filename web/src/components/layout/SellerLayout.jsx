@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
@@ -12,6 +12,10 @@ import useAccountSwitchStore from '../../store/accountSwitchStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import { useCompactLayout, useMobileNav } from '../../hooks/useMobileNav';
 import LanguageSwitcher from '../LanguageSwitcher';
+import ShellSearch from './ShellSearch';
+import NavBadge from './NavBadge';
+import useAttention from '../../hooks/useAttention';
+import { sellerSearchSources } from '../../lib/shellSearchSources';
 import AppLogo from '../AppLogo';
 import SellerCenterGuide from '../seller/SellerCenterGuide';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -43,6 +47,13 @@ export default function SellerLayout() {
     || location.pathname === '/seller/shop-profile'
   );
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // New orders, returns to review, unread messages and low stock, counted
+  // once on the server so the sidebar can point at the work. The endpoint is
+  // seller-only, and a SUPER_ADMIN can open the Seller Center too, so it is
+  // skipped for them rather than left to 403.
+  const { byLink: waiting } = useAttention(user?.role === 'SELLER' ? '/stores/my/attention' : null);
+  const badge = (path) => <NavBadge {...(waiting[path] || {})} />;
   const [accountOpen, setAccountOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const accountRef = useRef(null);
@@ -148,16 +159,16 @@ export default function SellerLayout() {
               <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
             <NavLink to="/seller/orders" className={navCls} title="My Orders">
-              <ShoppingBag size={17} weight="fill" /> <span>My Orders</span>
+              <ShoppingBag size={17} weight="fill" /> <span>My Orders</span>{badge('/seller/orders')}
             </NavLink>
             <NavLink to="/seller/returns" className={navCls} title="Returns & refunds">
-              <ReturnsIcon size={17} weight="fill" /> <span>Returns & refunds</span>
+              <ReturnsIcon size={17} weight="fill" /> <span>Returns & refunds</span>{badge('/seller/returns')}
             </NavLink>
             <NavLink to="/seller/messages" className={navCls} title="Messages">
-              <MessageSquare size={17} weight="fill" /> <span>Messages</span>
+              <MessageSquare size={17} weight="fill" /> <span>Messages</span>{badge('/seller/messages')}
             </NavLink>
             <NavLink to="/seller/support" className={navCls} title="Admin messages">
-              <Headset size={17} weight="fill" /> <span>Admin</span>
+              <Headset size={17} weight="fill" /> <span>Admin</span>{badge('/seller/support')}
             </NavLink>
 
             {/* Products group */}
@@ -175,7 +186,7 @@ export default function SellerLayout() {
             {productsOpen && (
               <div className="sc-subnav">
                 <NavLink to="/seller/products" end className={subNavCls}>
-                  All Products
+                  All Products{badge('/seller/products')}
                 </NavLink>
                 <NavLink to="/seller/products/new" className={subNavCls}>
                   Add New
@@ -183,6 +194,10 @@ export default function SellerLayout() {
               </div>
             )}
 
+            <NavLink to="/seller/notifications" className={navCls} title="Notifications">
+              <Bell size={17} weight="fill" /> <span>Notifications</span>
+              <NavBadge count={unreadCount} label="unread" />
+            </NavLink>
             <NavLink to="/seller/reviews" className={navCls} title="Reviews">
               <Star size={17} weight="fill" /> <span>Reviews</span>
             </NavLink>
@@ -291,18 +306,16 @@ export default function SellerLayout() {
             <List size={22} weight="bold" />
           </button>
           <span className="sc-mobile-title">{crumbs[crumbs.length - 1]?.label}</span>
-          <nav className="sc-crumbs" aria-label="Breadcrumb">
-            {crumbs.map((c, i) => (
-              <React.Fragment key={`${c.to}-${i}`}>
-                {i > 0 && <ChevronRight size={14} className="sc-crumb-sep" />}
-                {i === crumbs.length - 1 ? (
-                  <span className="sc-crumb sc-crumb--current">{c.label}</span>
-                ) : (
-                  <Link to={c.to} className="sc-crumb">{c.label}</Link>
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
+          {/* The breadcrumb trail only ever repeated the page you were already
+              looking at, so the space now carries a search box instead. It is
+              hidden on the mobile shell, which shows the page title. */}
+          <ShellSearch
+            className="sc-search"
+            sources={sellerSearchSources}
+            placeholder="Search your products and orders"
+            ariaLabel="Search the Seller Center"
+            scope="seller"
+          />
 
           {/* Shown on small screens; the right rail takes over on desktop. */}
           <div className="sc-topbar-actions">

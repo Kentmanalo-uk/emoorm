@@ -1,0 +1,64 @@
+/* Sidebar attention badges, shared by the Seller Center and the admin panel. */
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  /* A faded red: enough to catch the eye scanning the sidebar, not the
+     alarm red of a failure. Opaque rather than translucent so it stays the
+     same colour over the mint background of the active item. */
+  color: #c22f2f;
+  background: #fbe3e3;
+}
+
+/* ── Collapsed sidebar ─────────────────────────────────────────
+   There is no room for a number beside a 17px icon, so the badge
+   becomes a dot pinned to the corner of the item. */
+.ac-shell.is-collapsed .ac-nav-item,
+.sc-shell.is-collapsed .sc-nav-item {
+  position: relative;
+}
+
+.ac-shell.is-collapsed .nav-badge,
+.sc-shell.is-collapsed .nav-badge {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  min-width: 8px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #e08585;
+  /* Pushes the digits out of an 8px circle without hiding the element from
+     assistive technology, which still reads the aria-label. */
+  text-indent: -9em;
+}
+
+/* ── Subnav rows ───────────────────────────────────────────────
+   The grouped links are plain text rows, so the badge sits tighter. */
+.ac-subnav-link:has(.nav-badge),
+.sc-subnav-link:has(.nav-badge) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ac-subnav .nav-badge,
+.sc-subnav .nav-badge {
+  height: 16px;
+  min-width: 18px;
+  font-size: 10.5px;
+}

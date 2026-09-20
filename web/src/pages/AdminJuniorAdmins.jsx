@@ -5,6 +5,7 @@ import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
 import './AdminJuniorAdmins.css';
+import { useMunicipalities } from '../hooks/useReferenceData';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const toDateInput = (date) => {
@@ -39,9 +40,8 @@ export default function AdminJuniorAdmins() {
   const load = async () => {
     setIsLoading(true);
     try {
-      const [adminsRes, munisRes] = await Promise.all([
+      const [adminsRes] = await Promise.all([
         axios.get('/admin/junior-admins', { params: { pageSize: 100 } }),
-        axios.get('/municipalities'),
       ]);
       const now = Date.now();
       setAdmins((adminsRes.data || []).map((a) => ({
@@ -49,7 +49,6 @@ export default function AdminJuniorAdmins() {
         accessExpired: Boolean(a.isBackup && a.adminAccessExpiresAt && new Date(a.adminAccessExpiresAt).getTime() <= now),
       })));
 
-      setMunicipalities(munisRes.data || []);
     } catch (err) {
       toast.error(err?.message || 'Failed to load');
     } finally {

@@ -7,6 +7,7 @@ import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import AppLogo from '../components/AppLogo';
 import './Login.css';
+import { useMunicipalities } from '../hooks/useReferenceData';
 
 const QR_POLL_INTERVAL_MS = 2000;
 
@@ -36,7 +37,8 @@ const Login = () => {
   // First-time Google sign-in — collect name/address/contact/password before
   // the account is actually created.
   const [googleProfile, setGoogleProfile] = useState(null); // { googleToken, email, fullName, profilePhoto }
-  const [municipalities, setMunicipalities] = useState([]);
+  // Only needed once the Google profile step is reached.
+  const { municipalities } = useMunicipalities({ enabled: mfaStage === 'google-profile' });
   const [googleForm, setGoogleForm] = useState({
     fullName: '',
     contactNumber: '',
@@ -54,12 +56,6 @@ const Login = () => {
   const [googleFormErrors, setGoogleFormErrors] = useState({});
   const [showGooglePassword, setShowGooglePassword] = useState(false);
   const [completingGoogle, setCompletingGoogle] = useState(false);
-
-  useEffect(() => {
-    if (mfaStage === 'google-profile' && municipalities.length === 0) {
-      axios.get('/municipalities').then((res) => setMunicipalities(res.data || [])).catch(() => { });
-    }
-  }, [mfaStage, municipalities.length]);
 
   // QR code login
   const [showQrLogin, setShowQrLogin] = useState(false);

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, RefreshControl,
   ScrollView, Share, StyleSheet, Text, TextInput, View,
@@ -48,7 +48,7 @@ const firstImage = (images) => {
 export default function Orders() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { status } = useLocalSearchParams();
+  const { status, id: deepLinkOrderId } = useLocalSearchParams();
   const addItem = useCartStore((state) => state.addItem);
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState(String(status || 'all').toUpperCase());
@@ -76,6 +76,19 @@ export default function Orders() {
   }, []);
 
   useFocusEffect(useCallback(() => { fetchOrders(); }, [fetchOrders]));
+
+  // Deep link from an order notification: /orders?id=<orderId> opens that
+  // order once the list has loaded. The id is remembered rather than cleared,
+  // so dismissing the sheet does not immediately reopen it while a different
+  // order arriving from another notification still does.
+  const openedOrderId = useRef(null);
+  useEffect(() => {
+    if (!deepLinkOrderId || orders.length === 0) return;
+    if (openedOrderId.current === deepLinkOrderId) return;
+    openedOrderId.current = deepLinkOrderId;
+    const match = orders.find((order) => order.id === deepLinkOrderId);
+    if (match) setSelectedOrder(match);
+  }, [deepLinkOrderId, orders]);
 
   const filteredOrders = useMemo(() => activeTab === 'ALL' || activeTab === 'all'
     ? orders

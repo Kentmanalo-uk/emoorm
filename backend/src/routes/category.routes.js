@@ -1,3 +1,5 @@
+const { publicCache } = require('../middleware/httpCache');
+const config = require('../config/env');
 const express = require('express');
 const router = express.Router();
 const categoryController = require('../controllers/category.controller');
@@ -10,16 +12,19 @@ const { authenticate, authorize } = require('../middleware/auth');
 // Public routes
 router.get(
   '/',
+  publicCache(config.cache.ttl.categories),
   categoryController.getAllCategories
 );
 
 router.get(
   '/:id',
+  publicCache(config.cache.ttl.categories),
   categoryController.getCategoryById
 );
 
 router.get(
   '/slug/:slug',
+  publicCache(config.cache.ttl.categories),
   categoryController.getCategoryBySlug
 );
 

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import { useReferenceInvalidation } from '../hooks/useReferenceData';
 import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
 
@@ -21,6 +22,9 @@ export default function AdminCategories() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Categories are cached app-wide; refresh those readers after every edit.
+  const invalidate = useReferenceInvalidation();
 
   const fetchCategories = async () => {
     setIsLoading(true);
@@ -80,6 +84,8 @@ export default function AdminCategories() {
       await axios.put(`/categories/${editing.id}`, { image: form.image || null });
       toast.success(form.image ? 'Category image saved' : 'Category image removed');
       fetchCategories();
+      invalidate.categories();
+      invalidate.products();
     } catch (err) {
       toast.error(err.message || 'Failed to save image');
     } finally {
@@ -101,6 +107,8 @@ export default function AdminCategories() {
       }
       setShowForm(false);
       fetchCategories();
+      invalidate.categories();
+      invalidate.products();
     } catch (err) {
       toast.error(err.message || 'Failed to save category');
     } finally {
@@ -113,6 +121,8 @@ export default function AdminCategories() {
       await axios.post(`/categories/${cat.id}/toggle`);
       toast.success(`Category ${cat.isActive ? 'deactivated' : 'activated'}`);
       fetchCategories();
+      invalidate.categories();
+      invalidate.products();
     } catch (err) {
       toast.error(err.message || 'Failed to toggle category');
     }
@@ -125,6 +135,8 @@ export default function AdminCategories() {
       await axios.delete(`/categories/${cat.id}`);
       toast.success('Category deleted');
       fetchCategories();
+      invalidate.categories();
+      invalidate.products();
     } catch (err) {
       toast.error(err.message || 'Failed to delete category');
     } finally {

@@ -1,0 +1,12 @@
+-- Invalidate outstanding sessions when a password changes.
+--
+-- Access and refresh tokens are stateless JWTs with no server-side store, so
+-- resetting a password did nothing to sessions that already existed. Someone
+-- who had taken over an account kept their session after the owner recovered
+-- it: the reset locked the front door and left the intruder inside.
+--
+-- Tokens now carry the token_version they were minted with, and are rejected
+-- once the stored value moves past it. Existing tokens have no such claim and
+-- are treated as version 0, which matches this default — so the change does
+-- not sign anyone out on deploy.
+ALTER TABLE `users` ADD COLUMN `token_version` INT NOT NULL DEFAULT 0;

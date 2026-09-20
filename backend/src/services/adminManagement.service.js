@@ -132,6 +132,8 @@ const assignJuniorAdmin = async (actor, { userId, municipalityId, backup = false
       title: 'You are now a Municipal Admin',
       message: `You have been assigned as the municipal administrator of ${municipality.name}.`,
       relatedId: municipalityId,
+      audience: 'ADMIN',
+      target: { kind: 'admin-dashboard' },
     });
   } catch (err) {
     console.error('[assignJuniorAdmin] notify failed:', err.message);
@@ -229,6 +231,8 @@ async function assignBackupAdmin(actor, { userId, municipalityId, accessExpiresA
       title: 'Backup admin access granted',
       message: `You can act as a municipal admin for ${municipality.name} until ${expiresAt.toLocaleDateString('en-PH')}.`,
       relatedId: municipalityId,
+      audience: 'ADMIN',
+      target: { kind: 'admin-dashboard' },
     });
   } catch (err) {
     console.error('[assignBackupAdmin] notify failed:', err.message);

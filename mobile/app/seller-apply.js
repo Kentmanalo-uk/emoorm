@@ -13,6 +13,7 @@ import useAuthStore from '../src/store/authStore';
 import { uploadKycDocument } from '../src/lib/upload';
 import { toast } from '../src/lib/toast';
 import { colors, radius, spacing, typography } from '../src/theme';
+import { fetchMunicipalities, fetchCategories } from '../src/lib/referenceData';
 
 const ID_TYPES = ['PhilSys National ID', 'Passport', 'Driver License (LTO)', 'PRC Professional ID', 'SSS / GSIS ID', 'UMID', 'Voter ID', 'Postal ID', 'PhilHealth ID', 'Barangay ID'];
 const FULFILLMENT_OPTIONS = [{ label: 'Deliver to buyers', value: 'DELIVERY' }, { label: 'Buyers pick up', value: 'PICKUP' }, { label: 'Both', value: 'BOTH' }];
@@ -34,8 +35,8 @@ export default function SellerApply() {
   const [application, setApplication] = useState(null);
 
   useEffect(() => {
-    apiClient.get(ENDPOINTS.MUNICIPALITIES).then((r) => setMunicipalities(r.data || [])).catch(() => { });
-    apiClient.get(ENDPOINTS.CATEGORIES).then((r) => setCategories(r.data || [])).catch(() => { });
+    fetchMunicipalities().then(setMunicipalities).catch(() => { });
+    fetchCategories().then(setCategories).catch(() => { });
     apiClient.get(ENDPOINTS.SELLER.APPLICATION_STATUS).then((r) => setApplication(r.data || null)).catch(() => { });
   }, []);
 
@@ -103,7 +104,7 @@ export default function SellerApply() {
   };
 
   return <View style={styles.screen}><ScreenHeader title="Start Selling" subtitle="Seller verification" /><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-    {status === 'REJECTED' ? <View style={styles.reject}><Warning size={20} color={colors.danger} /><View style={styles.noticeText}><Text style={styles.rejectTitle}>Your previous application was not approved</Text>{application?.rejectionReason ? <Text style={styles.noticeBody}>{application.rejectionReason}</Text> : null}<Text style={styles.noticeBody}>Fix that and submit again.</Text></View></View> : null}
+    {status === 'REJECTED' ? <View style={styles.reject}><Warning size={20} color={colors.error} /><View style={styles.noticeText}><Text style={styles.rejectTitle}>Your previous application was not approved</Text>{application?.rejectionReason ? <Text style={styles.noticeBody}>{application.rejectionReason}</Text> : null}<Text style={styles.noticeBody}>Fix that and submit again.</Text></View></View> : null}
     <View style={styles.notice}><Store size={20} color={colors.secondary} /><View style={styles.noticeText}><Text style={styles.noticeTitle}>Your shop goes live once approved</Text><Text style={styles.noticeBody}>The municipality you pick below decides which admin reviews your application.</Text></View></View>
     <View style={styles.section}><Text style={styles.sectionTitle}>Shop Details</Text><TextField label="Shop name" value={form.shopName} onChangeText={(value) => setField('shopName', value)} autoCapitalize="words" placeholder="Maria's Fresh Farm" maxLength={60} /><TextField label="Shop description" value={form.shopDescription} onChangeText={(value) => setField('shopDescription', value)} autoCapitalize="sentences" placeholder="Tell buyers what makes your shop special" multiline /><Select label="Shop municipality" value={form.shopMunicipalityId} onChange={(value) => setField('shopMunicipalityId', value)} options={municipalities.map((m) => ({ label: m.name, value: m.id }))} placeholder="Select municipality" /><TextField label="Shop address" value={form.shopAddress} onChangeText={(value) => setField('shopAddress', value)} autoCapitalize="words" placeholder="Purok, Barangay" />
       <Text style={styles.fieldLabel}>Shop categories</Text>

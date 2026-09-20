@@ -12,4 +12,25 @@ const broadcast = asyncHandler(async (req, res) => {
   successResponse(res, result, 'Announcement broadcast successfully');
 });
 
-module.exports = { broadcast };
+/**
+ * Announcements already sent, so an admin can see what went out.
+ * @route GET /api/announcements
+ * @access Private (MUNICIPAL_ADMIN | SUPER_ADMIN)
+ */
+const listSent = asyncHandler(async (req, res) => {
+  const result = await announcementService.listSent(req.user, req.query);
+
+  res.json({
+    success: true,
+    message: 'Announcements retrieved successfully',
+    data: result.announcements,
+    pagination: {
+      page: result.page,
+      pageSize: result.pageSize,
+      total: result.total,
+      totalPages: Math.ceil(result.total / result.pageSize),
+    },
+  });
+});
+
+module.exports = { broadcast, listSent };

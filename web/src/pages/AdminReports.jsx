@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Flag, MagnifyingGlass as Search, Eye, X, CheckCircle, ChatText as MessageSquare, DownloadSimple } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
@@ -34,6 +34,25 @@ export default function AdminReports() {
   useEffect(() => {
     fetchReports();
   }, [typeFilter, statusFilter, page]);
+
+  const [searchParams] = useSearchParams();
+  // Deep link from an admin notification: /admin/reports?id=<reportId>.
+  // The report is usually on the pending page already; one that is filtered
+  // out is fetched on its own so the link never dead-ends.
+  const openedId = useRef(null);
+  useEffect(() => {
+    const targetId = searchParams.get('id');
+    if (!targetId || openedId.current === targetId) return;
+    openedId.current = targetId;
+    const listed = reports.find((r) => r.id === targetId);
+    if (listed) {
+      setSelected(listed);
+      return;
+    }
+    axios.get(`/reports/${targetId}`)
+      .then((res) => setSelected(res.data))
+      .catch(() => toast.error('That report is no longer available'));
+  }, [reports, searchParams]);
 
   const fetchReports = async () => {
     setIsLoading(true);

@@ -185,6 +185,10 @@
     display: none;
   }
 
+  .sc-shell .shell-search {
+    display: none;
+  }
+
   .sc-shell .sc-topbar-actions {
     display: flex;
     flex-shrink: 0;

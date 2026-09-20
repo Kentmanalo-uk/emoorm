@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mfaController = require('../controllers/mfa.controller');
 const { authenticate } = require('../middleware/auth');
+const { mfaLimiter } = require('../middleware/security');
 
 /**
  * MFA routes.
@@ -10,9 +11,9 @@ const { authenticate } = require('../middleware/auth');
  */
 
 // Login-time flow (public, but each hits requires a valid mfaToken).
-router.post('/verify-login', mfaController.verifyLogin);
-router.post('/setup/begin-login', mfaController.beginSetupWithToken);
-router.post('/setup/complete-login', mfaController.completeSetupWithToken);
+router.post('/verify-login', mfaLimiter, mfaController.verifyLogin);
+router.post('/setup/begin-login', mfaLimiter, mfaController.beginSetupWithToken);
+router.post('/setup/complete-login', mfaLimiter, mfaController.completeSetupWithToken);
 
 // Authenticated flow (Settings page).
 router.get('/status', authenticate, mfaController.getStatus);

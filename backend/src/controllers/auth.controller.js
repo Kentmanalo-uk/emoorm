@@ -103,9 +103,16 @@ const updateProfile = asyncHandler(async (req, res) => {
 const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
-  await authService.changePassword(req.user.id, currentPassword, newPassword);
+  // Changing the password signs out every session, including this one.
+  // The replacement pair keeps the device that made the change signed in;
+  // a client that ignores it simply lands on the login screen.
+  const tokens = await authService.changePassword(req.user.id, currentPassword, newPassword);
 
-  successResponse(res, null, 'Password changed successfully');
+  successResponse(
+    res,
+    tokens,
+    'Password changed successfully. You have been signed out on your other devices.',
+  );
 });
 
 /**
@@ -331,14 +338,17 @@ const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
   const result = await authService.forgotPassword(email);
 
-  const isDev = process.env.NODE_ENV !== 'production';
+  // The reset token is NEVER returned in the response, in any environment.
+  // It used to be included whenever NODE_ENV was not exactly 'production' —
+  // and NODE_ENV defaults to 'development' when unset, so a deploy that
+  // forgot to set it handed anyone who knew an admin's email address a
+  // working password-reset token, with no authentication at all.
+  //
+  // For local QA the token is printed to the server console instead, where
+  // it needs shell access rather than an HTTP request.
   const payload = {};
-  if (isDev && result?.resetToken) {
-    // Dev/test only — lets QA and this smoke-test flow skip a real inbox.
-    payload.resetToken = result.resetToken;
-    if (result.resetUrl) payload.resetUrl = result.resetUrl;
-    if (result.transport) payload.transport = result.transport;
-    payload.delivered = result.delivered;
+  if (process.env.NODE_ENV === 'development' && result?.resetUrl) {
+    console.log(`[forgot-password] reset link for ${email}: ${result.resetUrl}`);
   }
 
   successResponse(

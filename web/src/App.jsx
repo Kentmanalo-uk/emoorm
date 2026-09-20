@@ -35,6 +35,7 @@ import MunicipalityShowcase from './pages/MunicipalityShowcase';
 import MunicipalityGallery from './pages/MunicipalityGallery';
 import Wishlist from './pages/Wishlist';
 import Notifications from './pages/Notifications';
+import NotificationDetail from './pages/NotificationDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminSellers from './pages/AdminSellers';
 import AdminProducts from './pages/AdminProducts';
@@ -81,19 +82,39 @@ import RoleGate from './components/RoleGate';
 import ScrollToTop from './components/ScrollToTop';
 import AppToaster from './components/ui/AppToaster';
 import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
+import useAuthStore from './store/authStore';
 import './App.css';
 import './styles/responsive.css';
 import './styles/accent.css';
 
-// Create a client
+/**
+ * Shared query client.
+ *
+ * Defaults are deliberately conservative — a per-resource staleTime from
+ * lib/queryKeys.js overrides them where a longer or shorter window is right.
+ * Two requests for the same key made at the same time are de-duplicated into
+ * one network call, which is where most of the saved traffic comes from.
+ */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      // Come back online → refresh, so a reconnect does not leave stale data.
+      refetchOnReconnect: true,
       retry: 1,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 15 * 60 * 1000,
     },
   },
+});
+
+// Signing in or out must drop every cached response: without this, the next
+// account could be shown the previous one's data from memory. Nothing is
+// persisted to disk, so no cached response survives a reload either.
+useAuthStore.subscribe((state, previousState) => {
+  if ((state.user?.id ?? null) !== (previousState.user?.id ?? null)) {
+    queryClient.clear();
+  }
 });
 
 function App() {
@@ -158,6 +179,7 @@ function App() {
             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/notifications/:id" element={<ProtectedRoute><NotificationDetail /></ProtectedRoute>} />
 
             {/* Seller onboarding */}
             <Route path="/seller/apply" element={<SellerApply />} />
@@ -198,6 +220,7 @@ function App() {
             <Route path="/admin/junior-admins" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminJuniorAdmins /></AdminRoute>} />
             <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogs /></AdminRoute>} />
             <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />
+            <Route path="/admin/notifications/:id" element={<AdminRoute><NotificationDetail admin /></AdminRoute>} />
             <Route path="/admin/reviews" element={<AdminRoute><AdminReviews /></AdminRoute>} />
             <Route path="/admin/returns" element={<AdminRoute><AdminReturns /></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />

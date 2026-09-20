@@ -431,7 +431,10 @@
 
 .admin-page-title {
   font-size: 24px;
-  font-weight: 700;
+  /* Medium, not bold: the size already marks this as the page heading, and
+     bold on top of that made every screen open shouting. Shared by the
+     Seller Center, the admin panel and the municipal admin panel. */
+  font-weight: 500;
   color: #0f172a;
   line-height: 1.2;
   margin: 0;
@@ -495,9 +498,10 @@
   flex-wrap: wrap;
 }
 
+/* Matches the card headings in the Seller Center and on the dashboards. */
 .admin-card-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 17.5px;
+  font-weight: 500;
   color: #0f172a;
   margin: 0;
 }
@@ -1087,7 +1091,7 @@
 }
 
 .ac-shell.is-collapsed .ac-brand-text,
-.ac-shell.is-collapsed .ac-nav-item>span:not(.ac-nav-chevron),
+.ac-shell.is-collapsed .ac-nav-item>span:not(.ac-nav-chevron):not(.nav-badge),
 .ac-shell.is-collapsed .ac-user-meta {
   max-width: 0;
   opacity: 0;

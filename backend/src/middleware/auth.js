@@ -34,6 +34,7 @@ const authenticate = async (req, res, next) => {
         isActive: true,
         deletedAt: true,
         adminAccessExpiresAt: true,
+        tokenVersion: true,
       },
     });
 
@@ -50,6 +51,18 @@ const authenticate = async (req, res, next) => {
         message: 'Account is suspended. Please contact support.',
       });
     }
+
+    // The password has changed since this token was issued, so the session
+    // it represents is over. Tokens minted before the column existed carry
+    // no claim at all; they read as 0, which is the default every existing
+    // row got, so nobody is signed out merely by deploying this.
+    if ((decoded.tokenVersion ?? 0) !== user.tokenVersion) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired because the account password was changed. Please sign in again.',
+      });
+    }
+    delete user.tokenVersion;
 
     // Temporary (backup) municipal admin whose access has ended → plain buyer again.
     if (user.role === 'MUNICIPAL_ADMIN' && user.adminAccessExpiresAt && user.adminAccessExpiresAt <= new Date()) {
@@ -255,10 +268,23 @@ const optionalAuth = async (req, res, next) => {
         municipalityId: true,
         isActive: true,
         deletedAt: true,
+        adminAccessExpiresAt: true,
+        tokenVersion: true,
       },
     });
 
-    if (user && !user.deletedAt && user.isActive) {
+    if (user && !user.deletedAt && user.isActive
+      && (decoded.tokenVersion ?? 0) === user.tokenVersion) {
+      // A temporary municipal admin whose window has closed is a buyer here
+      // too. This used to be checked only in authenticate(), so an expired
+      // backup admin still carried MUNICIPAL_ADMIN into every optionalAuth
+      // route — and those routes branch on the role.
+      if (user.role === 'MUNICIPAL_ADMIN' && user.adminAccessExpiresAt
+        && user.adminAccessExpiresAt <= new Date()) {
+        user.role = 'BUYER';
+      }
+      delete user.adminAccessExpiresAt;
+      delete user.tokenVersion;
       req.user = user;
     }
 

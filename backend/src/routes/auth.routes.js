@@ -2,7 +2,12 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { authenticate, authorize } = require('../middleware/auth');
-const { sellerApplyLimiter } = require('../middleware/security');
+const {
+  sellerApplyLimiter,
+  passwordResetLimiter,
+  forgotPasswordEmailLimiter,
+  forgotPasswordIpLimiter,
+} = require('../middleware/security');
 const validate = require('../middleware/validate');
 const {
   registerValidation,
@@ -52,15 +57,20 @@ router.post(
   authController.refreshToken
 );
 
+// Validation runs first so the email-keyed limiter always sees a well-formed
+// address, and a malformed body is rejected without consuming anyone's quota.
 router.post(
   '/forgot-password',
   forgotPasswordValidation,
   validate,
+  forgotPasswordIpLimiter,
+  forgotPasswordEmailLimiter,
   authController.forgotPassword
 );
 
 router.post(
   '/reset-password',
+  passwordResetLimiter,
   resetPasswordValidation,
   validate,
   authController.resetPassword

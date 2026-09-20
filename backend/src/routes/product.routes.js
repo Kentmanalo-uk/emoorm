@@ -1,3 +1,5 @@
+const { publicCache } = require('../middleware/httpCache');
+const config = require('../config/env');
 const express = require('express');
 const multer = require('multer');
 const router = express.Router();
@@ -21,6 +23,7 @@ const imageSearchUpload = multer({
 // Static public routes — must come before /:id
 router.get(
   '/slug/:slug',
+  publicCache(config.cache.ttl.productDetail),
   optionalAuth,
   productController.getProductBySlug
 );
@@ -59,6 +62,9 @@ router.post(
 // Public list route (optionalAuth attaches req.user for scoping when a token is present)
 router.get(
   '/',
+  // publicCache downgrades to a private cache when the caller is signed in,
+  // because a seller's own products are filtered out of their view.
+  publicCache(config.cache.ttl.products),
   optionalAuth,
   productController.getProducts
 );
@@ -66,6 +72,7 @@ router.get(
 // Dynamic :id routes last
 router.get(
   '/:id',
+  publicCache(config.cache.ttl.productDetail),
   optionalAuth,
   productController.getProductById
 );

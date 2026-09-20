@@ -11,6 +11,7 @@ import useCartStore from '../../store/cartStore';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
+import { notificationHref } from '../../lib/notificationLink';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import ImageSearchModal from './ImageSearchModal';
@@ -169,6 +170,18 @@ const Header = () => {
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
+  // The bell preview is a shortcut, not a dead list: a row marks itself read
+  // and goes wherever the notification points.
+  const openNotif = (n) => {
+    if (!n.isRead) {
+      setRecentNotifs((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
+      setUnreadCount((c) => Math.max(0, c - 1));
+      axios.put(`/notifications/${n.id}/read`).catch(() => { /* the next poll will correct it */ });
+    }
+    const href = notificationHref(n);
+    navigate(href || '/notifications');
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     const q = searchQuery.trim();
@@ -323,7 +336,16 @@ const Header = () => {
                             return (
                               <li
                                 key={n.id}
-                                className={`notif-dropdown-row ${!n.isRead ? 'is-unread' : ''}`}
+                                className={`notif-dropdown-row is-linkable ${!n.isRead ? 'is-unread' : ''}`}
+                                role="link"
+                                tabIndex={0}
+                                onClick={() => openNotif(n)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    openNotif(n);
+                                  }
+                                }}
                               >
                                 <span
                                   className="notif-dropdown-icon"

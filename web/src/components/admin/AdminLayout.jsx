@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SquaresFour as LayoutGrid, Users, Package, Flag, Tag, MapPin, ChartPie as PieChart,
@@ -14,6 +14,10 @@ import { useCompactLayout, useMobileNav } from '../../hooks/useMobileNav';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import AppRail from '../layout/AppRail';
+import NavBadge from '../layout/NavBadge';
+import useAttention from '../../hooks/useAttention';
+import ShellSearch from '../layout/ShellSearch';
+import { adminSearchSources } from '../../lib/shellSearchSources';
 import './AdminLayout.css';
 import './AdminShellMobile.css';
 
@@ -49,6 +53,11 @@ export default function AdminLayout({ children }) {
     location.pathname.startsWith('/admin/municipalities')
   );
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // What is waiting on this admin, keyed by the route it lives at, so the
+  // sidebar can say where the work is without opening every page.
+  const { byLink: waiting } = useAttention('/moderation/attention');
+  const badge = (path) => <NavBadge {...(waiting[path] || {})} />;
   const [municipalityName, setMunicipalityName] = useState(user?.municipality?.name || '');
   const [municipalityLogo, setMunicipalityLogo] = useState(user?.municipality?.logo || '');
 
@@ -158,21 +167,21 @@ export default function AdminLayout({ children }) {
                 </button>
                 {reviewsOpen && (
                   <div className="ac-subnav">
-                    <NavLink to="/admin/sellers" className={subNavCls}>Seller Applications</NavLink>
+                    <NavLink to="/admin/sellers" className={subNavCls}>Seller Applications{badge('/admin/sellers')}</NavLink>
                     <NavLink to="/admin/all-sellers" className={subNavCls}>All Sellers</NavLink>
                     <NavLink to="/admin/buyers" className={subNavCls}>All Buyers</NavLink>
-                    <NavLink to="/admin/products" className={subNavCls}>Products</NavLink>
-                    <NavLink to="/admin/orders" className={subNavCls}>Orders</NavLink>
-                    <NavLink to="/admin/reports" className={subNavCls}>Reports</NavLink>
+                    <NavLink to="/admin/products" className={subNavCls}>Products{badge('/admin/products')}</NavLink>
+                    <NavLink to="/admin/orders" className={subNavCls}>Orders{badge('/admin/orders')}</NavLink>
+                    <NavLink to="/admin/reports" className={subNavCls}>Reports{badge('/admin/reports')}</NavLink>
                     <NavLink to="/admin/reviews" className={subNavCls}>Reviews</NavLink>
-                    <NavLink to="/admin/returns" className={subNavCls}>Returns</NavLink>
+                    <NavLink to="/admin/returns" className={subNavCls}>Returns{badge('/admin/returns')}</NavLink>
                   </div>
                 )}
               </>
             ) : (
               <>
                 <NavLink to="/admin/sellers" className={navCls} title="Seller Applications">
-                  <Flag size={17} weight="fill" /> <span>Seller Applications</span>
+                  <Flag size={17} weight="fill" /> <span>Seller Applications</span>{badge('/admin/sellers')}
                 </NavLink>
                 <NavLink to="/admin/all-sellers" className={navCls} title="Sellers">
                   <StoreIcon size={17} weight="fill" /> <span>Sellers</span>
@@ -181,25 +190,30 @@ export default function AdminLayout({ children }) {
                   <Users size={17} weight="fill" /> <span>Buyers</span>
                 </NavLink>
                 <NavLink to="/admin/products" className={navCls} title="Products">
-                  <Package size={17} weight="fill" /> <span>Products</span>
+                  <Package size={17} weight="fill" /> <span>Products</span>{badge('/admin/products')}
                 </NavLink>
                 <NavLink to="/admin/orders" className={navCls} title="Orders">
-                  <FileText size={17} weight="fill" /> <span>Orders</span>
+                  <FileText size={17} weight="fill" /> <span>Orders</span>{badge('/admin/orders')}
                 </NavLink>
                 <NavLink to="/admin/reports" className={navCls} title="Reports">
-                  <Flag size={17} weight="fill" /> <span>Reports</span>
+                  <Flag size={17} weight="fill" /> <span>Reports</span>{badge('/admin/reports')}
                 </NavLink>
                 <NavLink to="/admin/reviews" className={navCls} title="Reviews">
                   <Star size={17} weight="fill" /> <span>Reviews</span>
                 </NavLink>
                 <NavLink to="/admin/returns" className={navCls} title="Returns">
-                  <ArrowCounterClockwise size={17} weight="fill" /> <span>Returns</span>
+                  <ArrowCounterClockwise size={17} weight="fill" /> <span>Returns</span>{badge('/admin/returns')}
                 </NavLink>
               </>
             )}
 
             <NavLink to="/admin/support" className={navCls} title="Support Messages">
-              <ChatsCircle size={17} weight="fill" /> <span>Support Messages</span>
+              <ChatsCircle size={17} weight="fill" /> <span>Support Messages</span>{badge('/admin/support')}
+            </NavLink>
+
+            <NavLink to="/admin/notifications" className={navCls} title="Notifications">
+              <Bell size={17} weight="fill" /> <span>Notifications</span>
+              <NavBadge count={unreadCount} label="unread" />
             </NavLink>
 
             <NavLink to="/admin/announcements" className={navCls} title="Announcements">
@@ -288,18 +302,16 @@ export default function AdminLayout({ children }) {
             <List size={22} weight="bold" />
           </button>
           <span className="ac-mobile-title">{crumbs[crumbs.length - 1]?.label}</span>
-          <nav className="ac-crumbs" aria-label="Breadcrumb">
-            {crumbs.map((c, i) => (
-              <React.Fragment key={c.to}>
-                {i > 0 && <ChevronRight size={14} className="ac-crumb-sep" />}
-                {i === crumbs.length - 1 ? (
-                  <span className="ac-crumb ac-crumb--current">{c.label}</span>
-                ) : (
-                  <Link to={c.to} className="ac-crumb">{c.label}</Link>
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
+          {/* Replaces the breadcrumb trail: searching stores, products and
+              people is far more use in this bar than a restatement of the
+              current page. Hidden on the mobile shell, same as the crumbs. */}
+          <ShellSearch
+            className="ac-search"
+            sources={adminSearchSources}
+            placeholder="Search stores, products and people"
+            ariaLabel="Search the admin panel"
+            scope="admin"
+          />
 
           <div className="ac-topbar-actions">
             <LanguageSwitcher variant="shell" />

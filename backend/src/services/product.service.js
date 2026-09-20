@@ -4,6 +4,8 @@ const storeRepository = require('../repositories/store.repository');
 const categoryRepository = require('../repositories/category.repository');
 const notificationService = require('./notification.service');
 const followService = require('./storeFollow.service');
+const { cached } = require('../lib/cachePolicy');
+const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
 const { bufferToDHash, hammingDistance, hashFromSource, HASH_BIT_LENGTH } = require('../utils/imageHash');
 
@@ -18,16 +20,23 @@ const computeImageHashSafe = async (images) => {
   }
 };
 
+/**
+ * Text fields a seller controls that are rendered as plain text everywhere.
+ * Markup is stripped here so no consumer — web, mobile, email, export — can
+ * be made to execute it later.
+ */
+const PRODUCT_TEXT_FIELDS = { name: 200, description: 5000 };
+
 const normalizeProductOptions = (data) => {
   const returnPolicy = typeof data.returnPolicy === 'string'
-    ? data.returnPolicy.trim().slice(0, 2000)
+    ? cleanText(data.returnPolicy, { maxLength: 2000 })
     : null;
   const rawVariations = Array.isArray(data.variations) ? data.variations : [];
   const variations = rawVariations
     .map((variation) => ({
-      name: String(variation?.name || '').trim().slice(0, 80),
+      name: cleanText(String(variation?.name || ''), { maxLength: 80 }),
       options: Array.isArray(variation?.options)
-        ? variation.options.map((option) => String(option).trim().slice(0, 80)).filter(Boolean).slice(0, 30)
+        ? variation.options.map((option) => cleanText(String(option), { maxLength: 80 })).filter(Boolean).slice(0, 30)
         : [],
     }))
     .filter((variation) => variation.name && variation.options.length)
@@ -77,7 +86,8 @@ const generateSlug = async (name) => {
  * @param {Object} data - Product data
  * @returns {Promise<Object>} Created product
  */
-const createProduct = async (userId, data) => {
+const createProduct = async (userId, rawData) => {
+  const data = cleanFields(rawData, PRODUCT_TEXT_FIELDS);
   // Get seller's store
   const store = await storeRepository.findByOwnerId(userId);
 
@@ -143,7 +153,10 @@ const createProduct = async (userId, data) => {
  * @returns {Promise<Object>} Product
  */
 const getProductById = async (id, viewerId = null, viewerRole = null) => {
-  const product = await productRepository.findById(id);
+  // The product payload does not vary by caller; the ownership check below
+  // decides visibility and deliberately runs on the cached value, not inside
+  // the cache, so one caller's permission can never be cached for another.
+  const product = await cached.product({ id }, () => productRepository.findById(id));
 
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);
@@ -162,7 +175,7 @@ const getProductById = async (id, viewerId = null, viewerRole = null) => {
  * @returns {Promise<Object>} Product
  */
 const getProductBySlug = async (slug, viewerId = null, viewerRole = null) => {
-  const product = await productRepository.findBySlug(slug);
+  const product = await cached.product({ slug }, () => productRepository.findBySlug(slug));
 
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);
@@ -189,7 +202,34 @@ const getProducts = async (options) => {
     options.excludeOwnerId = options.userId;
   }
 
-  return productRepository.findAll(options);
+  // Only the anonymous public catalogue is shared between callers. An admin
+  // listing is private and must be fresh for moderation; a signed-in seller's
+  // listing hides their own products, which makes it caller-specific. Both go
+  // straight to the database.
+  const isSharedPublicView = !options.isAdmin && !options.excludeOwnerId;
+  if (!isSharedPublicView) {
+    return productRepository.findAll(options);
+  }
+
+  // Every dimension that changes the result is part of the key — miss one and
+  // two different filters would collide on the same entry.
+  const key = {
+    page: options.page,
+    pageSize: options.pageSize,
+    storeId: options.storeId,
+    categoryId: options.categoryId,
+    municipalityId: options.municipalityId,
+    minPrice: options.minPrice,
+    maxPrice: options.maxPrice,
+    search: options.search,
+    sortBy: options.sortBy,
+    sortOrder: options.sortOrder,
+  };
+
+  // Free-text search has a long tail of one-off keys, so it gets a shorter TTL
+  // and its own namespace to keep it from evicting the browse pages.
+  const load = () => productRepository.findAll(options);
+  return options.search ? cached.productSearch(key, load) : cached.productList(key, load);
 };
 
 /**
@@ -215,7 +255,8 @@ const getMyProducts = async (userId, options) => {
  * @param {Object} data - Update data
  * @returns {Promise<Object>} Updated product
  */
-const updateProduct = async (productId, userId, data) => {
+const updateProduct = async (productId, userId, rawData) => {
+  const data = cleanFields(rawData, PRODUCT_TEXT_FIELDS);
   const product = await productRepository.findById(productId);
 
   if (!product || product.deletedAt) {

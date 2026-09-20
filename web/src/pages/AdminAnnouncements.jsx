@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
-import { PaperPlaneTilt as Send, CheckCircle } from '@phosphor-icons/react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { PaperPlaneTilt as Send, CheckCircle, Megaphone } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
+import { formatRelativeTime } from '../lib/time';
 import '../components/admin/AdminLayout.css';
+import './AdminNotifications.css';
+
+const TARGET_LABELS = {
+  all: 'All users',
+  buyers: 'Buyers',
+  sellers: 'Sellers',
+  admins: 'Municipal admins',
+};
 
 export default function AdminAnnouncements() {
   const { user } = useAuthStore();
@@ -15,6 +24,24 @@ export default function AdminAnnouncements() {
   const [target, setTarget] = useState('all');
   const [sending, setSending] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const [sent, setSent] = useState([]);
+  const [loadingSent, setLoadingSent] = useState(true);
+
+  // A broadcast fans out into per-user notifications rather than a row of its
+  // own, so the audit trail is what "already sent" means here.
+  const loadSent = useCallback(async () => {
+    setLoadingSent(true);
+    try {
+      const res = await axios.get('/announcements', { params: { pageSize: 10 } });
+      setSent(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setSent([]);
+    } finally {
+      setLoadingSent(false);
+    }
+  }, []);
+
+  useEffect(() => { loadSent(); }, [loadSent]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -33,6 +60,7 @@ export default function AdminAnnouncements() {
       toast.success(`Delivered to ${payload.delivered} user(s)`);
       setTitle('');
       setMessage('');
+      loadSent();
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to broadcast');
     } finally {
@@ -109,6 +137,43 @@ export default function AdminAnnouncements() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <h2 className="admin-card-title">Recently sent</h2>
+        </div>
+        {loadingSent ? (
+          <div className="admin-empty"><p>Loading…</p></div>
+        ) : sent.length === 0 ? (
+          <div className="admin-empty">
+            <Megaphone size={34} color="#94a3b8" weight="fill" />
+            <p>No announcements have been sent yet.</p>
+          </div>
+        ) : (
+          <ul className="admin-notif-list">
+            {sent.map((a) => (
+              <li key={a.id}>
+                <div className="admin-notif-item">
+                  <span className="admin-notif-body">
+                    <span className="admin-notif-top">
+                      <span className="admin-badge admin-badge-neutral">
+                        {TARGET_LABELS[a.target] || a.target}
+                      </span>
+                      <span className="admin-notif-time">{formatRelativeTime(a.sentAt)}</span>
+                    </span>
+                    <span className="admin-notif-title">{a.title}</span>
+                    {a.message && <span className="admin-notif-message">{a.message}</span>}
+                    <span className="admin-notif-message">
+                      Delivered to {a.recipients} recipient{a.recipients === 1 ? '' : 's'}
+                      {a.sentBy ? ` · sent by ${a.sentBy}` : ''}
+                    </span>
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {lastResult && (

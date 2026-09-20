@@ -112,8 +112,12 @@ const errorHandler = (err, req, res, next) => {
     response.errors = errors;
   }
 
-  // Include stack trace in development
-  if (config.nodeEnv !== 'production' && err.stack) {
+  // Stack traces leak absolute paths and internal structure, so they are
+  // opt-IN. This deliberately reads process.env directly rather than
+  // config.nodeEnv, which defaults to 'development' when the variable is
+  // unset — a deploy that forgets NODE_ENV would otherwise start handing
+  // stack traces to the internet. An absent variable must fail safe.
+  if (process.env.NODE_ENV === 'development' && err.stack) {
     response.stack = err.stack;
   }
 
@@ -124,9 +128,12 @@ const errorHandler = (err, req, res, next) => {
  * 404 Not Found handler
  */
 const notFoundHandler = (req, res, next) => {
+  // The path is not echoed back: reflecting attacker-controlled text into a
+  // response is a habit worth not having, and it tells a prober nothing
+  // useful anyway.
   res.status(404).json({
     success: false,
-    message: `Route ${req.method} ${req.url} not found`,
+    message: 'The requested endpoint does not exist',
   });
 };
 

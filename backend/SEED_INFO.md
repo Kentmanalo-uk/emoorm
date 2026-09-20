@@ -33,15 +33,15 @@ Products are distributed across the following categories:
 ### 👥 Test Accounts
 
 #### Sellers (5 accounts)
-- seller1@emoorm.local / Test@1234 (Mindoro Crafts Hub)
-- seller2@emoorm.local / Test@1234 (Local Harvest Market)
-- seller3@emoorm.local / Test@1234 (Island Artisans)
-- seller4@emoorm.local / Test@1234 (Green Valley Store)
-- seller5@emoorm.local / Test@1234 (Coastal Treasures)
+- seller1@emoorm.local / <see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD> (Mindoro Crafts Hub)
+- seller2@emoorm.local / <see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD> (Local Harvest Market)
+- seller3@emoorm.local / <see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD> (Island Artisans)
+- seller4@emoorm.local / <see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD> (Green Valley Store)
+- seller5@emoorm.local / <see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD> (Coastal Treasures)
 
 #### Buyers (existing)
-- buyer1@emoorm.local / Test@1234
-- testuser2@emoorm.local / Test@1234
+- buyer1@emoorm.local / <see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD>
+- testuser2@emoorm.local / <see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD>
 
 ## Running the Seed Script
 

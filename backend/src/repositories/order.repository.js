@@ -102,6 +102,49 @@ const createOrderWithItems = async (orderData, itemsData, voucherRedemption = nu
     );
 
     if (voucherRedemption && voucherRedemption.voucherId) {
+      // Voucher limits are re-checked here, inside the transaction, and never
+      // trusted from the earlier read-only validation: that check-then-act
+      // let five concurrent checkouts redeem a one-use voucher five times.
+      //
+      // The conditional increment below is what makes this safe. It both
+      // enforces the global usage limit atomically and takes a row lock on
+      // the voucher, so any concurrent order for the same voucher waits here
+      // until this transaction commits — which in turn serialises the
+      // per-user count that follows.
+      const claimed = await tx.voucher.updateMany({
+        where: {
+          id: voucherRedemption.voucherId,
+          isActive: true,
+          OR: [
+            { usageLimit: null },
+            { usageLimit: { gt: tx.voucher.fields.timesUsed } },
+          ],
+        },
+        data: { timesUsed: { increment: 1 } },
+      });
+
+      if (claimed.count === 0) {
+        const err = new Error('Voucher usage limit reached');
+        err.code = 'VOUCHER_UNAVAILABLE';
+        throw err;
+      }
+
+      const voucher = await tx.voucher.findUnique({
+        where: { id: voucherRedemption.voucherId },
+        select: { perUserLimit: true },
+      });
+
+      if (voucher?.perUserLimit != null) {
+        const used = await tx.voucherRedemption.count({
+          where: { voucherId: voucherRedemption.voucherId, userId: voucherRedemption.userId },
+        });
+        if (used >= voucher.perUserLimit) {
+          const err = new Error('You have already used this voucher');
+          err.code = 'VOUCHER_UNAVAILABLE';
+          throw err;
+        }
+      }
+
       await tx.voucherRedemption.create({
         data: {
           voucherId: voucherRedemption.voucherId,
@@ -109,10 +152,6 @@ const createOrderWithItems = async (orderData, itemsData, voucherRedemption = nu
           orderId: order.id,
           discountAmount: voucherRedemption.discountAmount,
         },
-      });
-      await tx.voucher.update({
-        where: { id: voucherRedemption.voucherId },
-        data: { timesUsed: { increment: 1 } },
       });
     }
 

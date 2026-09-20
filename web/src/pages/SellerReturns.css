@@ -12,6 +12,9 @@
 
 .seller-returns h1 {
   margin: 4px 0 6px;
+  /* Medium, like every other page heading in the Seller Center; without
+     this it fell back to the browser default of bold. */
+  font-weight: 500;
   font-size: 29px
 }
 

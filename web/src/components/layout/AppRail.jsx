@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Translate, Bell, SignOut, Check, BellSlash, WarningCircle } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
+import { notificationHref } from '../../lib/notificationLink';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../../lib/googleTranslate';
 import './AppRail.css';
 
@@ -57,6 +58,14 @@ export default function AppRail({
     loadNotifications();
   }, [loadNotifications, unreadCount]);
 
+  // A row in the rail is a shortcut to the thing it is about, not just to the
+  // list. Marking it read locally keeps the badge honest without a refetch.
+  const openNotification = (n) => {
+    if (n.isRead) return;
+    setNotifications((prev) => (prev || []).map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
+    axios.put(`/notifications/${n.id}/read`).catch(() => { /* the next load will correct it */ });
+  };
+
   const pickLanguage = (code) => {
     if (code !== current) setLanguage(code);
   };
@@ -107,7 +116,7 @@ export default function AppRail({
             <ul className="sr-notif-list">
               {notifications.map((n) => (
                 <li key={n.id} className={n.isRead ? '' : 'is-unread'}>
-                  <Link to={notificationsTo}>
+                  <Link to={notificationHref(n) || notificationsTo} onClick={() => openNotification(n)}>
                     <strong>{n.title}</strong>
                     {n.message && <span>{n.message}</span>}
                     <small>{formatTime(n.createdAt)}</small>

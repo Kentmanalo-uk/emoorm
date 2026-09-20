@@ -7,6 +7,19 @@ const kycRetentionService = require('./src/services/kycRetention.service');
 
 const PORT = config.port;
 
+/**
+ * One line describing the cache the server will use, for the startup banner.
+ * @returns {String} Human-readable cache mode
+ */
+const describeCache = () => {
+  if (!config.cache.enabled) return 'disabled (CACHE_ENABLED=false) — every read hits MySQL';
+  if (!config.cache.redisUrl) {
+    return 'in-process only (set CACHE_REDIS_URL to share one cache across instances)';
+  }
+  const target = config.cache.redisUrl.replace(/:\/\/.*@/, '://');
+  return `Redis at ${target} — falls back to in-process if it is unreachable`;
+};
+
 // Test database connection
 const testDatabaseConnection = async () => {
   try {
@@ -32,6 +45,10 @@ const startServer = async () => {
       console.log(`  Environment: ${config.nodeEnv}`);
       console.log(`  Port: ${PORT}`);
       console.log(`  API Base: http://localhost:${PORT}${config.apiPrefix}`);
+      // Say which cache is in use at boot. Falling back to the in-process
+      // cache is safe but halves the benefit once there is more than one API
+      // instance, so it should never be a silent surprise.
+      console.log(`  Cache: ${describeCache()}`);
       console.log('================================================');
       const expiryTimer = setInterval(() => {
         orderService.expirePendingOrders().catch((error) => {

@@ -18,6 +18,7 @@ import { ENDPOINTS } from '../src/api/endpoints';
 import useAuthStore from '../src/store/authStore';
 import { toast } from '../src/lib/toast';
 import { colors, radius, spacing, typography } from '../src/theme';
+import { fetchMunicipalities } from '../src/lib/referenceData';
 
 const emptyForm = { label: '', fullName: '', contactNumber: '', street: '', barangay: '', municipalityId: '' };
 
@@ -39,7 +40,7 @@ export default function Addresses() {
   };
 
   useEffect(() => {
-    Promise.all([loadAddresses(), apiClient.get(ENDPOINTS.MUNICIPALITIES).then((res) => setMunicipalities(res.data || []))])
+    Promise.all([loadAddresses(), fetchMunicipalities().then(setMunicipalities)])
       .catch((error) => toast.error('Failed to load addresses', error.message))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps

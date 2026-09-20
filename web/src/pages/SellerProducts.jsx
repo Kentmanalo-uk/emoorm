@@ -14,6 +14,7 @@ import { resolveImg } from '../lib/media';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerProducts.css';
+import { useCategories } from '../hooks/useReferenceData';
 
 const EMPTY_FORM = {
   name: '',
@@ -54,7 +55,8 @@ export default function SellerProducts() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  // Seeded from ?search= so a top-bar search result opens filtered.
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1 });
 
   // Form state
@@ -70,16 +72,20 @@ export default function SellerProducts() {
   const [confirmState, setConfirmState] = useState(null); // { type: 'delete-one'|'bulk-delete', product?, ids? }
 
   useEffect(() => {
-    loadCategories();
     loadProducts();
   }, [pagination.page, search]);
 
-  const loadCategories = async () => {
-    try {
-      const res = await axios.get('/categories');
-      setCategories(res.data || []);
-    } catch (_) { }
-  };
+  // Follows ?search= when it changes, so a second search from the top bar
+  // re-filters instead of leaving the first term in place. Only a change to
+  // the URL counts, so typing in this page's own box is left alone.
+  const urlSearch = searchParams.get('search') || '';
+  const lastUrlSearch = useRef(urlSearch);
+  useEffect(() => {
+    if (urlSearch === lastUrlSearch.current) return;
+    lastUrlSearch.current = urlSearch;
+    setSearch(urlSearch);
+    setPagination((p) => ({ ...p, page: 1 }));
+  }, [urlSearch]);
 
   const loadProducts = async () => {
     setIsLoading(true);

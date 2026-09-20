@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   WarningCircleIcon as AlertCircle, CheckCircleIcon as CheckCircle, InfoIcon as Info, PackageIcon as Package, ShoppingBagIcon as ShoppingBag, StarIcon as Star, TrashIcon as Trash2, XCircleIcon as XCircle,
 } from 'phosphor-react-native';
@@ -12,15 +12,12 @@ import {
 } from '../lib/dataCache';
 import EmptyState from './EmptyState';
 import { ListSkeleton } from './SkeletonLayouts';
+import { notificationRoute, SELLER_TABS } from '../lib/notificationLink';
 import { colors, fontFamily, radius, spacing, typography } from '../theme';
 
 const CACHE_KEY = 'seller:notifications';
 const CACHE_TTL = 60 * 1000;
-const SELLER_TYPES = new Set([
-  'ORDER_RECEIVED', 'ORDER_CANCELLED', 'PRODUCT_APPROVED', 'PRODUCT_SUSPENDED',
-  'SELLER_APPROVED', 'SELLER_SUSPENDED', 'REPORT_SUBMITTED', 'REPORT_RESOLVED',
-  'SYSTEM_ANNOUNCEMENT',
-]);
+
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { Icon: ShoppingBag, color: colors.info },
   ORDER_CANCELLED: { Icon: XCircle, color: colors.error },
@@ -31,6 +28,9 @@ const TYPE_CONFIG = {
   REPORT_SUBMITTED: { Icon: AlertCircle, color: colors.warning },
   REPORT_RESOLVED: { Icon: CheckCircle, color: colors.success },
   SYSTEM_ANNOUNCEMENT: { Icon: Info, color: colors.textMuted },
+  RETURN_REQUESTED: { Icon: AlertCircle, color: colors.warning },
+  RETURN_RECEIVED: { Icon: Package, color: colors.info },
+  RETURN_CLOSED: { Icon: CheckCircle, color: colors.textMuted },
 };
 
 function timeAgo(iso) {
@@ -43,14 +43,9 @@ function timeAgo(iso) {
   return new Date(iso).toLocaleDateString();
 }
 
-function destinationFor(type) {
-  if (type === 'ORDER_RECEIVED' || type === 'ORDER_CANCELLED') return 'orders';
-  if (type === 'PRODUCT_APPROVED' || type === 'PRODUCT_SUSPENDED') return 'products';
-  if (type === 'SELLER_APPROVED' || type === 'SELLER_SUSPENDED') return 'store';
-  return null;
-}
 
 export default function SellerNotifications({ onNavigate, onUnreadChange }) {
+  const router = useRouter();
   const initialData = getCacheEntry(CACHE_KEY)?.data;
   const [notifications, setNotifications] = useState(initialData || []);
   const [loading, setLoading] = useState(!initialData);
@@ -73,8 +68,10 @@ export default function SellerNotifications({ onNavigate, onUnreadChange }) {
     if (!silent) setLoading(!getCacheEntry(CACHE_KEY));
     try {
       const data = await refreshCachedData(CACHE_KEY, async () => {
-        const response = await apiClient.get(ENDPOINTS.NOTIFICATIONS.LIST, { params: { page: 1, pageSize: 50 } });
-        return (response.data || []).filter((item) => SELLER_TYPES.has(item.type));
+        const response = await apiClient.get(ENDPOINTS.NOTIFICATIONS.LIST, {
+          params: { page: 1, pageSize: 50, audience: 'SELLER' },
+        });
+        return response.data || [];
       });
       applyNotifications(data);
     } catch (error) {
@@ -105,8 +102,17 @@ export default function SellerNotifications({ onNavigate, onUnreadChange }) {
         return;
       }
     }
-    const destination = destinationFor(notification.type);
-    if (destination) onNavigate?.(destination);
+    // The seller area is one screen with internal tabs, so a seller-side
+    // notification moves the tab; anything else (a store's own product page,
+    // an announcement) is a normal route.
+    const kind = notification.target?.kind;
+    const tab = SELLER_TABS[kind];
+    if (tab) {
+      onNavigate?.(tab);
+      return;
+    }
+    const route = notificationRoute(notification);
+    if (route) router.push(route);
   };
 
   const removeNotification = async (notification) => {

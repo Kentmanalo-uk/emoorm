@@ -9,12 +9,13 @@ import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
+import { useCategories } from '../hooks/useReferenceData';
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [imageSearchPreview, setImageSearchPreview] = useState('');
-  const [categories, setCategories] = useState([]);
+  const { categories } = useCategories();
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const addItem = useCartStore((s) => s.addItem);
@@ -49,10 +50,6 @@ const Products = () => {
     totalPages: 0,
   });
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   // Sync local search state whenever the URL query string changes (e.g. header re-search).
   useEffect(() => {
     const q = searchParams.get('q') || '';
@@ -81,15 +78,6 @@ const Products = () => {
     fetchProducts();
     return undefined;
   }, [selectedCategory, searchQuery, sortBy, priceRange, pagination.page, municipalityId, imageSearch]);
-
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get('/categories');
-      setCategories(response.data || []);
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
-    }
-  };
 
   const fetchProducts = async () => {
     setIsLoading(true);

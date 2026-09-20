@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Package, MapPin, Eye, ChatText as MessageSquare, ArrowCounterClockwise as RotateCcw, Star, X,
@@ -68,6 +68,22 @@ const Orders = () => {
   useEffect(() => {
     filterOrders();
   }, [activeTab, orders]);
+
+  // Deep link from a notification: /profile/orders?id=<orderId> opens that
+  // order once the list has loaded. The id is remembered rather than stripped
+  // from the URL, so closing the panel does not immediately reopen it while a
+  // different order arriving from another notification still does.
+  const openedOrderId = useRef(null);
+  useEffect(() => {
+    const targetId = searchParams.get('id');
+    if (!targetId || orders.length === 0 || openedOrderId.current === targetId) return;
+    openedOrderId.current = targetId;
+    const match = orders.find((order) => order.id === targetId);
+    if (match) {
+      setSelectedOrder(match);
+      setShowOrderDetails(true);
+    }
+  }, [orders, searchParams]);
 
   const fetchOrders = async () => {
     setIsLoading(true);

@@ -3,6 +3,7 @@ import { Plus, PencilSimple as Edit3, Trash, UploadSimple as Upload, ArrowUp, Ar
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
+import { useReferenceInvalidation } from '../hooks/useReferenceData';
 import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
@@ -27,6 +28,9 @@ export default function AdminBanners() {
   const [uploadingSlot, setUploadingSlot] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+
+  // The homepage reads the public banner list from the shared cache.
+  const invalidate = useReferenceInvalidation();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -148,6 +152,7 @@ export default function AdminBanners() {
       }
       closeForm();
       load();
+      invalidate.banners();
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to save banner');
     } finally {
@@ -168,6 +173,7 @@ export default function AdminBanners() {
     try {
       await axios.put(`/banners/${banner.id}`, { sortOrder: (banner.sortOrder ?? 0) + delta });
       load();
+      invalidate.banners();
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to reorder');
     }

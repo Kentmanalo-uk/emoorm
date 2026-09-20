@@ -8,6 +8,7 @@ import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import ReasonDialog from '../admin/ReasonDialog';
 import NewMessageDialog from './NewMessageDialog';
+import SafetyNotice from '../common/SafetyNotice';
 import './SupportChat.css';
 
 const THREAD_POLL_MS = 5000;
@@ -544,6 +545,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                   <div ref={bottomRef} />
                 </div>
 
+                <SafetyNotice />
                 <form className="sc-composer" onSubmit={send}>
                   {isAdmin && <QuickReplies onPick={insertQuickReply} disabled={sending} />}
                   <textarea

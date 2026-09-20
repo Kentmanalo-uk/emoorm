@@ -9,9 +9,6 @@ const ForgotPassword = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [devInfo, setDevInfo] = useState(null);
-
-  const isDev = import.meta.env.DEV;
 
   const submit = async (nextEmail) => {
     setError('');
@@ -22,18 +19,12 @@ const ForgotPassword = () => {
 
     setIsLoading(true);
     try {
-      const res = await axios.post('/auth/forgot-password', {
+      await axios.post('/auth/forgot-password', {
         email: nextEmail.toLowerCase().trim(),
       });
+      // The response carries no token by design — the reset link exists only
+      // in the email. Locally, the server prints it to the backend console.
       setSubmitted(true);
-      if (isDev && res?.data) {
-        setDevInfo({
-          resetToken: res.data.resetToken || null,
-          resetUrl: res.data.resetUrl || null,
-          transport: res.data.transport || null,
-          delivered: Boolean(res.data.delivered),
-        });
-      }
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
     } finally {
@@ -86,41 +77,6 @@ const ForgotPassword = () => {
                   Back to Sign In
                 </Link>
               </div>
-
-              {isDev && devInfo && (devInfo.resetToken || devInfo.resetUrl) && (
-                <div
-                  style={{
-                    marginTop: 24,
-                    padding: 12,
-                    borderRadius: 8,
-                    background: '#fef3c7',
-                    border: '1px solid #fde68a',
-                    color: '#92400e',
-                    fontSize: 12,
-                    textAlign: 'left',
-                  }}
-                >
-                  <strong style={{ display: 'block', marginBottom: 6 }}>
-                    Development helper
-                  </strong>
-                  <div style={{ marginBottom: 6 }}>
-                    Transport: <code>{devInfo.transport || 'unknown'}</code>{' '}
-                    {devInfo.delivered
-                      ? '(email actually sent)'
-                      : '(email not sent — SMTP not configured, use the link below)'}
-                  </div>
-                  {devInfo.resetToken && (
-                    <div>
-                      <Link
-                        to={`/reset-password?token=${devInfo.resetToken}`}
-                        style={{ color: '#92400e', fontWeight: 600 }}
-                      >
-                        Skip email → open reset page
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           ) : (
             <>

@@ -429,6 +429,24 @@
   align-items: flex-start;
 }
 
+.notif-dropdown-row.is-linkable {
+  cursor: pointer;
+}
+
+.notif-dropdown-row.is-linkable:hover {
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.notif-dropdown-row.is-linkable.is-unread:hover {
+  background: #ecfdf5;
+}
+
+.notif-dropdown-row.is-linkable:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: -2px;
+  border-radius: 6px;
+}
 .notif-dropdown-row:last-child {
   border-bottom: none;
 }

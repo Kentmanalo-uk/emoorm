@@ -37,9 +37,22 @@ const verifyTotp = (secret, code) =>
  * short-lived mfa-setup token). Generates a fresh TOTP secret and QR code.
  * Does NOT set mfaEnabled — that only flips after completeSetup.
  */
-const beginSetup = async (userId) => {
-  const user = await userRepository.findById(userId);
+const beginSetup = async (userId, { code } = {}) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, mfaSecret: true, mfaEnabled: true },
+  });
   if (!user) throw new ApiError('User not found', 404);
+
+  // Re-enrolling an account that already has MFA must prove possession of the
+  // current authenticator. Without this, anyone holding a session could
+  // silently swap in their own secret and lock the owner out — which is
+  // exactly how a stolen password used to become a permanent takeover.
+  if (user.mfaEnabled && user.mfaSecret) {
+    if (!code || !verifyTotp(user.mfaSecret, code)) {
+      throw new ApiError('Enter a code from your current authenticator to set up a new one', 400);
+    }
+  }
 
   const secret = speakeasy.generateSecret({
     length: 20,
@@ -47,13 +60,14 @@ const beginSetup = async (userId) => {
     issuer: ISSUER,
   });
 
+  // The candidate secret is held separately and the live one is left alone.
+  // Previously this overwrote mfaSecret and set mfaEnabled to false up front,
+  // so merely *starting* setup — or abandoning it — disabled the account's
+  // second factor. MFA now stays fully in force until the new authenticator
+  // is confirmed by completeSetup().
   await prisma.user.update({
     where: { id: userId },
-    data: {
-      mfaSecret: secret.base32,
-      mfaEnabled: false,
-      mfaBackupCodes: null,
-    },
+    data: { mfaPendingSecret: secret.base32 },
   });
 
   const qrDataUrl = await qrcode.toDataURL(secret.otpauth_url);
@@ -69,21 +83,27 @@ const beginSetup = async (userId) => {
 const completeSetup = async (userId, code) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, mfaSecret: true, mfaEnabled: true },
+    select: { id: true, email: true, mfaSecret: true, mfaEnabled: true, mfaPendingSecret: true },
   });
   if (!user) throw new ApiError('User not found', 404);
-  if (!user.mfaSecret) throw new ApiError('MFA setup was not initiated', 400);
 
-  if (!verifyTotp(user.mfaSecret, code)) {
+  // Confirm against the candidate secret from beginSetup(), not the live one.
+  const candidate = user.mfaPendingSecret;
+  if (!candidate) throw new ApiError('MFA setup was not initiated', 400);
+
+  if (!verifyTotp(candidate, code)) {
     throw new ApiError('Invalid authenticator code', 400);
   }
 
   const backupCodes = generateBackupCodes();
   const hashed = backupCodes.map((c) => hashBackupCode(c));
 
+  // Only now does the new authenticator replace the old one.
   await prisma.user.update({
     where: { id: userId },
     data: {
+      mfaSecret: candidate,
+      mfaPendingSecret: null,
       mfaEnabled: true,
       mfaEnabledAt: new Date(),
       mfaBackupCodes: JSON.stringify(hashed),

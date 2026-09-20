@@ -1,4 +1,5 @@
 const storeService = require('../services/store.service');
+const sellerAttentionService = require('../services/sellerAttention.service');
 const followService = require('../services/storeFollow.service');
 const auditLog = require('../services/auditLog.service');
 const {
@@ -136,6 +137,17 @@ const getMyStore = asyncHandler(async (req, res) => {
 });
 
 /**
+ * What is waiting on this seller, for the Seller Center sidebar's badges.
+ * @route GET /api/stores/my/attention
+ * @access Private (Seller only)
+ */
+const getMyAttention = asyncHandler(async (req, res) => {
+  const items = await sellerAttentionService.getSellerAttention(req.user);
+
+  successResponse(res, items, 'Attention queue retrieved');
+});
+
+/**
  * Mark a Seller Center tutorial as finished
  * @route PUT /api/stores/my/guides
  * @access Private (Seller)
@@ -256,6 +268,7 @@ module.exports = {
   getStoreBySlug,
   getStorefront,
   getMyStore,
+  getMyAttention,
   completeGuide,
   updateStore,
   requestDeletion,

@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
-const { upload, kycUpload } = require('../middleware/upload');
+const { upload, kycUpload, assertRealImage } = require('../middleware/upload');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { successResponse } = require('../utils/response');
 const { uploadLimiter } = require('../middleware/security');
+const { optimizeUpload } = require('../utils/imageOptimizer');
 
 /**
  * Upload a single image file
@@ -22,8 +23,23 @@ router.post(
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const url = `/uploads/${req.file.filename}`;
-    successResponse(res, { url, filename: req.file.filename }, 'File uploaded successfully');
+    // The declared Content-Type and the filename are both attacker-chosen.
+    // Verify the bytes before this file is allowed near a public directory.
+    const verdict = await assertRealImage(req.file);
+    if (!verdict.ok) {
+      return res.status(400).json({ success: false, message: verdict.reason });
+    }
+
+    // Downscale + WebP before the file is ever served. Falls back to the
+    // original if the image cannot be processed, so an upload never fails
+    // because of optimisation.
+    const optimized = await optimizeUpload(req.file);
+
+    successResponse(
+      res,
+      { url: optimized.url, filename: optimized.filename },
+      'File uploaded successfully'
+    );
   })
 );
 
@@ -44,6 +60,11 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const verdict = await assertRealImage(req.file);
+    if (!verdict.ok) {
+      return res.status(400).json({ success: false, message: verdict.reason });
     }
 
     successResponse(res, { fileId: req.file.filename }, 'File uploaded successfully');

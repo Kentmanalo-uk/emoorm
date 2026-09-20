@@ -185,6 +185,10 @@
     display: none;
   }
 
+  .ac-shell .shell-search {
+    display: none;
+  }
+
   .ac-shell .ac-topbar-actions {
     display: flex;
     flex-shrink: 0;

@@ -229,6 +229,17 @@ const createOrder = async (userId, data) => {
     if (err.code === 'INSUFFICIENT_STOCK') {
       throw new ApiError('One or more items no longer have sufficient stock', 400);
     }
+    if (err.code === 'VOUCHER_UNAVAILABLE') {
+      throw new ApiError(err.message, 400);
+    }
+    // A unique violation on (buyerId, checkoutKey) means a concurrent submit
+    // of the same checkout won the race. Return that order instead of an
+    // error: the buyer pressed the button twice, they did not do anything
+    // wrong, and they must end up with exactly one order either way.
+    if (err.code === 'P2002' && checkoutKey) {
+      const existing = await orderRepository.findByCheckoutKey(userId, String(checkoutKey));
+      if (existing) return existing;
+    }
     throw err;
   }
 

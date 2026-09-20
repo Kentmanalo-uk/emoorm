@@ -176,8 +176,8 @@ Content-Type: application/json
 
 {
   "email": "test@example.com",
-  "password": "Test@1234",
-  "confirmPassword": "Test@1234",
+  "password": "<see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD>",
+  "confirmPassword": "<see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD>",
   "fullName": "Test User",
   "contactNumber": "09123456789",
   "municipalityId": "PASTE-MUNICIPALITY-ID-HERE",
@@ -193,7 +193,7 @@ Content-Type: application/json
 
 {
   "email": "test@example.com",
-  "password": "Test@1234"
+  "password": "<see backend/prisma/seed.js — local defaults, override with SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD>"
 }
 ```
 

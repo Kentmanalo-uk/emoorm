@@ -23,9 +23,10 @@ const getMyNotifications = asyncHandler(async (req, res) => {
     audience,
   } = req.query;
 
+  // Clamped rather than trusted: page size reaches Prisma as `take`.
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     isRead: isRead !== undefined ? isRead === 'true' : undefined,
     audience,
   };
@@ -34,6 +35,8 @@ const getMyNotifications = asyncHandler(async (req, res) => {
     req.user.id,
     options
   );
+
+  const totalPages = Math.ceil(result.total / result.pageSize);
 
   res.json({
     success: true,
@@ -44,7 +47,9 @@ const getMyNotifications = asyncHandler(async (req, res) => {
       page: result.page,
       pageSize: result.pageSize,
       total: result.total,
-      totalPages: Math.ceil(result.total / result.pageSize),
+      totalPages,
+      hasNext: result.page < totalPages,
+      hasPrev: result.page > 1,
     },
   });
 });

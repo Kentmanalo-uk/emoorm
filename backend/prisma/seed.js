@@ -1,7 +1,42 @@
+require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
+
+/**
+ * This script creates working accounts with known passwords, and this
+ * repository is public — so the passwords below are, in effect, published.
+ * That is fine for a local sandbox and catastrophic anywhere reachable, so
+ * the script refuses to run unless NODE_ENV says development or test.
+ *
+ * To seed a shared environment, set SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD
+ * to values of your own. There is no default for those: if you want accounts
+ * somewhere that is not your laptop, you choose the credentials.
+ */
+const ENVIRONMENT = process.env.NODE_ENV || 'development';
+const IS_LOCAL = ['development', 'test'].includes(ENVIRONMENT);
+
+if (!IS_LOCAL && !process.env.SEED_ADMIN_PASSWORD) {
+  throw new Error(
+    `Refusing to seed with NODE_ENV="${ENVIRONMENT}". This script creates accounts whose `
+    + 'passwords are committed to a public repository. Run it only against a local '
+    + 'database, or set SEED_ADMIN_PASSWORD and SEED_USER_PASSWORD to your own values.'
+  );
+}
+
+/** Local-only defaults. Overridable, and never used outside development/test. */
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'SuperAdmin@1234';
+const MUNADMIN_PASSWORD = process.env.SEED_MUNADMIN_PASSWORD
+  || process.env.SEED_ADMIN_PASSWORD
+  || 'MunAdmin@1234';
+const USER_PASSWORD = process.env.SEED_USER_PASSWORD || 'Test@1234';
+
+/** Only echo a password when it is the well-known local default. */
+const showPassword = (password) =>
+  (process.env.SEED_ADMIN_PASSWORD || process.env.SEED_USER_PASSWORD)
+    ? '(from SEED_* environment variable)'
+    : password;
 
 // Sample product images (placeholder URLs)
 const PLACEHOLDER_IMAGES = [
@@ -97,7 +132,7 @@ async function main() {
     update: {},
     create: {
       email: 'superadmin@emoorm.local',
-      password: await bcrypt.hash('SuperAdmin@1234', 10),
+      password: await bcrypt.hash(ADMIN_PASSWORD, 10),
       fullName: 'Super Admin',
       contactNumber: '09170000001',
       municipalityId: firstMun.id,
@@ -106,14 +141,14 @@ async function main() {
       isVerified: true,
     },
   });
-  console.log('  ✓ superadmin@emoorm.local / SuperAdmin@1234  [SUPER_ADMIN]');
+  console.log(`  ✓ superadmin@emoorm.local / ${showPassword(ADMIN_PASSWORD)}  [SUPER_ADMIN]`);
 
   await prisma.user.upsert({
     where: { email: 'munadmin@emoorm.local' },
     update: {},
     create: {
       email: 'munadmin@emoorm.local',
-      password: await bcrypt.hash('MunAdmin@1234', 10),
+      password: await bcrypt.hash(MUNADMIN_PASSWORD, 10),
       fullName: 'Municipal Admin',
       contactNumber: '09170000002',
       municipalityId: firstMun.id,
@@ -122,7 +157,7 @@ async function main() {
       isVerified: true,
     },
   });
-  console.log(`  ✓ munadmin@emoorm.local  / MunAdmin@1234   [MUNICIPAL_ADMIN — ${firstMun.name}]\n`);
+  console.log(`  ✓ munadmin@emoorm.local  / ${showPassword(MUNADMIN_PASSWORD)}   [MUNICIPAL_ADMIN — ${firstMun.name}]\n`);
 
   // Get existing categories
   const categories = await prisma.category.findMany({
@@ -155,7 +190,7 @@ async function main() {
       const seller = await prisma.user.create({
         data: {
           email: `seller${i + 1}@emoorm.local`,
-          password: await bcrypt.hash('Test@1234', 10),
+          password: await bcrypt.hash(USER_PASSWORD, 10),
           fullName: `${storeData.name} Owner`,
           contactNumber: `0917${String(i + 1).padStart(7, '0')}`,
           municipalityId: municipality.id,
@@ -318,11 +353,11 @@ async function main() {
   console.log(`  - Categories used: ${Object.keys(PRODUCTS_DATA).length}`);
   console.log('\n💡 You can now test the shopping flow with real data!');
   console.log('\n� Admin accounts:');
-  console.log('  - superadmin@emoorm.local / SuperAdmin@1234  [SUPER_ADMIN]');
-  console.log('  - munadmin@emoorm.local   / MunAdmin@1234   [MUNICIPAL_ADMIN]');
+  console.log(`  - superadmin@emoorm.local / ${showPassword(ADMIN_PASSWORD)}  [SUPER_ADMIN]`);
+  console.log(`  - munadmin@emoorm.local   / ${showPassword(MUNADMIN_PASSWORD)}   [MUNICIPAL_ADMIN]`);
   console.log('\n�📧 Seller accounts created:');
   for (let i = 0; i < STORES_DATA.length; i++) {
-    console.log(`  - seller${i + 1}@emoorm.local / Test@1234`);
+    console.log(`  - seller${i + 1}@emoorm.local / ${showPassword(USER_PASSWORD)}`);
   }
   console.log('\n🚀 Start the frontend and browse products!\n');
 }

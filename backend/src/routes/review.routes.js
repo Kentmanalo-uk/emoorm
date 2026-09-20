@@ -6,16 +6,25 @@ const crypto = require('crypto');
 const reviewController = require('../controllers/review.controller');
 const { authenticate, authorize } = require('../middleware/auth');
 const config = require('../config/env');
+const { uploadLimiter } = require('../middleware/security');
+const { publicCache } = require('../middleware/httpCache');
 
 /**
  * Review Routes
  */
 
+const REVIEW_EXTENSIONS = {
+  'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/png': '.png', 'image/webp': '.webp',
+  'video/mp4': '.mp4', 'video/webm': '.webm', 'video/quicktime': '.mov',
+};
+
 // Multer instance scoped to review media (images + short videos)
 const reviewStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, config.upload.uploadDir),
+  // The stored extension comes from the allow-listed declared type, never
+  // from the client's filename — that is how .html and .svg used to get in.
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
+    const ext = REVIEW_EXTENSIONS[file.mimetype] || '.bin';
     const rand = crypto.randomBytes(16).toString('hex');
     cb(null, `review-${Date.now()}-${rand}${ext}`);
   },
@@ -43,6 +52,7 @@ const reviewMediaFields = reviewUpload.fields([
 // Public routes
 router.get(
   '/product/:productId',
+  publicCache(config.cache.ttl.reviews),
   reviewController.getProductReviews
 );
 
@@ -72,6 +82,9 @@ router.post(
   '/',
   authenticate,
   authorize('BUYER', 'SELLER'),
+  // Review media accepts 50MB videos, so it needs the same abuse ceiling as
+  // the other upload endpoints.
+  uploadLimiter,
   reviewMediaFields,
   reviewController.createReview
 );

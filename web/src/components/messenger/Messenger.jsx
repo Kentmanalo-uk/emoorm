@@ -8,6 +8,7 @@ import {
 } from '@phosphor-icons/react';
 import axiosInstance from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
+import SafetyNotice from '../common/SafetyNotice';
 import './Messenger.css';
 
 const POLL_INTERVAL_MS = 5000;
@@ -540,6 +541,8 @@ export default function Messenger({ role = 'buyer', className = '' }) {
             </div>
 
             {error && <div className="msgr-error">{error}</div>}
+
+            <SafetyNotice />
 
             <form className="msgr-composer" onSubmit={handleSend}>
               {attachedOrder && (

@@ -4,6 +4,7 @@ import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import { ACTION_LABELS, actionLabel } from '../lib/auditActions';
 import '../components/admin/AdminLayout.css';
+import { useMunicipalities } from '../hooks/useReferenceData';
 
 const ACTIONS = Object.keys(ACTION_LABELS);
 
@@ -13,15 +14,10 @@ export default function AdminAuditLogs() {
   const [logs, setLogs] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0 });
   const [filters, setFilters] = useState({ action: '', entity: '', from: '', to: '', municipalityId: '' });
-  const [municipalities, setMunicipalities] = useState([]);
+  // Only a super admin uses the municipality filter, so the list is only
+  // requested for them.
+  const { municipalities } = useMunicipalities({ enabled: isSuperAdmin });
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!isSuperAdmin) return;
-    axios.get('/municipalities')
-      .then((res) => setMunicipalities(Array.isArray(res.data) ? res.data : []))
-      .catch(() => { });
-  }, [isSuperAdmin]);
 
   const load = async (page = 1) => {
     setIsLoading(true);

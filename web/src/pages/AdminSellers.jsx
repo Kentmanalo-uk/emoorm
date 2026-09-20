@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Users, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
   Phone, MapPin, Calendar, CreditCard
@@ -13,6 +14,7 @@ import axios from '../lib/axios';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
+import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 
 const STATUS_BADGE = {
   PENDING: 'admin-badge-pending',
@@ -75,22 +77,30 @@ export default function AdminSellers() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [bulkProcessing, setBulkProcessing] = useState(false);
-  const [lookups, setLookups] = useState({ municipalities: {}, categories: {} });
+  const { municipalities: municipalityList } = useMunicipalities();
+  const { categories: categoryList } = useCategories();
+
+  // Applications store the shop's municipality and categories as IDs.
+  const lookups = useMemo(() => {
+    const byId = (list) => Object.fromEntries(list.map((x) => [x.id, x.name]));
+    return { municipalities: byId(municipalityList), categories: byId(categoryList) };
+  }, [municipalityList, categoryList]);
 
   useEffect(() => {
     fetchApplicants();
   }, [statusFilter, search, page]);
 
-  // Applications store the shop's municipality and categories as IDs.
+  // Deep link from the "new seller application" notification:
+  // /admin/sellers?id=<userId> opens that application.
+  const [searchParams] = useSearchParams();
+  const openedId = useRef(null);
   useEffect(() => {
-    Promise.all([
-      axios.get('/municipalities').catch(() => ({ data: [] })),
-      axios.get('/categories').catch(() => ({ data: [] })),
-    ]).then(([m, c]) => {
-      const byId = (list) => Object.fromEntries((list || []).map((x) => [x.id, x.name]));
-      setLookups({ municipalities: byId(m.data), categories: byId(c.data) });
-    });
-  }, []);
+    const targetId = searchParams.get('id');
+    if (!targetId || applicants.length === 0 || openedId.current === targetId) return;
+    openedId.current = targetId;
+    const match = applicants.find((u) => u.id === targetId);
+    if (match) setSelected(match);
+  }, [applicants, searchParams]);
 
   const shopMunicipality = (u) =>
     lookups.municipalities[u.shopMunicipalityId] || u.municipality?.name || '—';
