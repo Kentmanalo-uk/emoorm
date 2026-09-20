@@ -263,6 +263,8 @@ run()
     }
     if (createdUserIds.length > 0) {
       await prisma.notification.deleteMany({ where: { userId: { in: createdUserIds } } });
+      // Approving a seller creates their store, which references the owner.
+      await prisma.store.deleteMany({ where: { ownerId: { in: createdUserIds } } });
       await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
     }
     await prisma.$disconnect();

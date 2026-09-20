@@ -257,6 +257,24 @@ const slugExists = async (slug, excludeId = null) => {
  * @param {String} id - Store ID
  * @returns {Promise<Object>} Updated store
  */
+/**
+ * Check whether a shop display name is already taken. The MySQL collation is
+ * case-insensitive, so "Maria's Farm" and "maria's farm" collide as intended.
+ * @param {String} name - Shop name to check
+ * @param {String|null} excludeOwnerId - Owner whose own store should not count
+ * @returns {Promise<Boolean>} True if another store already uses the name
+ */
+const nameExists = async (name, excludeOwnerId = null) => {
+  const count = await prisma.store.count({
+    where: {
+      name: String(name || '').trim(),
+      deletedAt: null,
+      ...(excludeOwnerId && { ownerId: { not: excludeOwnerId } }),
+    },
+  });
+  return count > 0;
+};
+
 const suspendStore = async (id, reason = null) => {
   return prisma.store.update({
     where: { id },
@@ -328,6 +346,7 @@ module.exports = {
   updateStore,
   softDeleteStore,
   slugExists,
+  nameExists,
   suspendStore,
   unsuspendStore,
   getServiceAreas,

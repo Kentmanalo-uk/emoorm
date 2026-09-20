@@ -3,6 +3,7 @@ const app = require('./src/app');
 const config = require('./src/config/env');
 const prisma = require('./src/config/database');
 const orderService = require('./src/services/order.service');
+const kycRetentionService = require('./src/services/kycRetention.service');
 
 const PORT = config.port;
 
@@ -38,6 +39,17 @@ const startServer = async () => {
         });
       }, 5 * 60 * 1000);
       expiryTimer.unref();
+
+      // Delete ID photos / permits once a decided application is past the
+      // retention window. Runs at boot, then once a day.
+      const purgeKyc = () => {
+        kycRetentionService.purgeExpiredKycDocuments().catch((error) => {
+          console.error('[kyc-retention] failed:', error.message);
+        });
+      };
+      purgeKyc();
+      const retentionTimer = setInterval(purgeKyc, 24 * 60 * 60 * 1000);
+      retentionTimer.unref();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

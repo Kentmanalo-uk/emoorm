@@ -16,12 +16,6 @@
   --color-accent-pink-text: #9d174d;
 }
 
-/* ── Cart item count (header + phone bottom navigation) ────────── */
-.header-cart-badge,
-.mobile-bottom-icon-wrap b {
-  background-color: var(--color-accent-pink);
-}
-
 /* ── Wishlist / saved items ───────────────────────────────────── */
 /* Faded pink instead of faded green for the "nothing saved yet" heart. */
 .wishlist-page .wishlist-empty > svg:not(.keep-color),

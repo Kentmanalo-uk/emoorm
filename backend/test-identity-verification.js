@@ -26,17 +26,17 @@ const request = async (path, token, options = {}) => {
 };
 
 // Renders a simple PhilSys-style card so the test does not depend on a real ID.
-const renderIdCard = async ({ lastName, givenNames, idNumber, address }) => {
+const renderIdCard = async ({ lastName = '', givenNames = '', idNumber = '', address = '' }) => {
   const lines = [
     'REPUBLIKA NG PILIPINAS',
     'PAMBANSANG PAGKAKAKILANLAN',
     'Philippine Identification Card',
     idNumber,
-    `Last Name: ${lastName}`,
-    `Given Names: ${givenNames}`,
+    lastName && `Last Name: ${lastName}`,
+    givenNames && `Given Names: ${givenNames}`,
     'Date of Birth: JANUARY 15, 1990',
-    `Address: ${address}`,
-  ];
+    address && `Address: ${address}`,
+  ].filter(Boolean);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="460">
     <rect width="100%" height="100%" fill="#eef3f7"/>
     ${lines.map((line, i) => `<text x="30" y="${50 + i * 50}" font-family="Arial" font-size="28" fill="#111">${line}</text>`).join('')}
@@ -44,10 +44,11 @@ const renderIdCard = async ({ lastName, givenNames, idNumber, address }) => {
   return sharp(Buffer.from(svg)).jpeg().toBuffer();
 };
 
-const submitId = (token, image, idType = 'PHILSYS') => {
+const submitId = (token, image, idType = 'PHILSYS', backImage = null) => {
   const form = new FormData();
   form.append('idType', idType);
   form.append('idImage', new Blob([image], { type: 'image/jpeg' }), 'id.jpg');
+  if (backImage) form.append('idBackImage', new Blob([backImage], { type: 'image/jpeg' }), 'id-back.jpg');
   return request('/identity-verification', token, { method: 'POST', body: form });
 };
 
@@ -113,9 +114,17 @@ const run = async () => {
   await check('Unreadable photo fails', () => submitId(token, blank), 200,
     (body) => body.data.status === 'FAILED' && /couldn't read/i.test(body.data.failureReason) && !body.data.attempt);
 
-  const matching = await renderIdCard({ lastName: 'DELA CRUZ', givenNames: 'JUAN', idNumber, address });
-  await check('Matching ID verifies', () => submitId(token, matching), 200,
+  // Split card: the name and ID number are on the front, the address on the back.
+  const frontOnly = await renderIdCard({ lastName: 'DELA CRUZ', givenNames: 'JUAN', idNumber, address: '' });
+  await check('Front alone fails when the address is on the back', () => submitId(token, frontOnly), 200,
+    (body) => body.data.status === 'FAILED' && /address/i.test(body.data.failureReason));
+
+  const backOnly = await renderIdCard({ address });
+  await check('Front + back verifies', () => submitId(token, frontOnly, 'PHILSYS', backOnly), 200,
     (body) => body.data.status === 'VERIFIED');
+
+  // Same ID, printed on a single side — used by the checks below.
+  const matching = await renderIdCard({ lastName: 'DELA CRUZ', givenNames: 'JUAN', idNumber, address });
 
   // The payload is invalid on purpose; any error other than the identity gate proves the gate passed.
   const gated = await request('/orders', token, {

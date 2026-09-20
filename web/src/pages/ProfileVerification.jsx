@@ -92,16 +92,63 @@ function CameraCapture({ onCapture, onClose }) {
   );
 }
 
+/** One photo slot (front or back) with camera, upload and preview. */
+function PhotoSlot({ side, label, hint, previewUrl, disabled, optional, onPick, onClear, onCamera }) {
+  const inputRef = useRef(null);
+  return (
+    <div className="idv-field">
+      <span className="idv-label">
+        {label}
+        {optional && <em className="idv-optional"> · optional</em>}
+      </span>
+      {previewUrl ? (
+        <div className="idv-preview">
+          <img src={previewUrl} alt={`${label} preview`} />
+          <button type="button" className="idv-btn idv-btn-ghost" onClick={onClear} disabled={disabled}>
+            <ArrowClockwise size={16} /> Replace photo
+          </button>
+        </div>
+      ) : (
+        <div className="idv-drop">
+          <IdentificationCard size={40} />
+          <p>{hint}</p>
+          <div className="idv-drop-actions">
+            <button
+              type="button"
+              className="idv-btn idv-btn-outline"
+              onClick={() => (navigator.mediaDevices?.getUserMedia ? onCamera(side) : inputRef.current?.click())}
+            >
+              <Camera size={18} /> Scan with camera
+            </button>
+            <button type="button" className="idv-btn idv-btn-outline" onClick={() => inputRef.current?.click()}>
+              <UploadSimple size={18} /> Upload photo
+            </button>
+          </div>
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        onChange={(e) => {
+          onPick(side, e.target.files?.[0]);
+          e.target.value = '';
+        }}
+      />
+    </div>
+  );
+}
+
 export default function ProfileVerification() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [idType, setIdType] = useState('');
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState({ front: null, back: null });
   const [submitting, setSubmitting] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
+  const [cameraSide, setCameraSide] = useState(null);
   const [contacting, setContacting] = useState(false);
   const navigate = useNavigate();
-  const fileRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -120,13 +167,17 @@ export default function ProfileVerification() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Keep the preview local to the browser and release it when replaced.
-  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : ''), [file]);
+  // Keep the previews local to the browser and release them when replaced.
+  const frontPreview = useMemo(() => (files.front ? URL.createObjectURL(files.front) : ''), [files.front]);
+  const backPreview = useMemo(() => (files.back ? URL.createObjectURL(files.back) : ''), [files.back]);
   useEffect(() => () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
+    if (frontPreview) URL.revokeObjectURL(frontPreview);
+  }, [frontPreview]);
+  useEffect(() => () => {
+    if (backPreview) URL.revokeObjectURL(backPreview);
+  }, [backPreview]);
 
-  const pickFile = (selected) => {
+  const pickFile = (side, selected) => {
     if (!selected) return;
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(selected.type)) {
       toast.error('Use a JPG, PNG, or WebP image.');
@@ -136,7 +187,7 @@ export default function ProfileVerification() {
       toast.error('Image must be 5 MB or smaller.');
       return;
     }
-    setFile(selected);
+    setFiles((current) => ({ ...current, [side]: selected }));
   };
 
   const handleSubmit = async (e) => {
@@ -145,15 +196,19 @@ export default function ProfileVerification() {
       toast.error('Select your ID type');
       return;
     }
-    if (!file) {
-      toast.error('Capture or upload a photo of your ID');
+    if (!files.front) {
+      toast.error('Capture or upload a photo of the front of your ID');
+      return;
+    }
+    if (backRequired && !files.back) {
+      toast.error('Capture or upload a photo of the back of your ID');
       return;
     }
     setSubmitting(true);
     try {
-      const result = await submitIdentityVerification(idType, file);
+      const result = await submitIdentityVerification(idType, files.front, files.back);
       setStatus(result);
-      setFile(null);
+      setFiles({ front: null, back: null });
       if (result.status === 'VERIFIED') toast.success('Your identity has been verified');
       else toast.error('Identity verification failed');
     } catch (error) {
@@ -197,6 +252,8 @@ export default function ProfileVerification() {
   const canSubmit = current === 'NOT_VERIFIED' || current === 'FAILED';
   const outOfAttempts = status?.attemptsRemaining === 0;
   const selectedType = status?.supportedIdTypes?.find((option) => option.value === idType);
+  // Cards that print an address carry it on the back, so both sides are needed.
+  const backRequired = Boolean(idType) && selectedType?.hasAddress !== false;
 
   return (
     <div className="profile-page-wrap idv-wrap">
@@ -270,70 +327,51 @@ export default function ProfileVerification() {
             </select>
           </label>
 
-          <div className="idv-field">
-            <span className="idv-label">Photo of the front of your ID</span>
-            {previewUrl ? (
-              <div className="idv-preview">
-                <img src={previewUrl} alt="Selected ID" />
-                <button
-                  type="button"
-                  className="idv-btn idv-btn-ghost"
-                  onClick={() => setFile(null)}
-                  disabled={submitting}
-                >
-                  <ArrowClockwise size={16} /> Replace photo
-                </button>
-              </div>
-            ) : (
-              <div className="idv-drop">
-                <IdentificationCard size={40} />
-                <p>Use a clear, well-lit photo showing the whole card. Your name and address must be readable.</p>
-                <div className="idv-drop-actions">
-                  <button
-                    type="button"
-                    className="idv-btn idv-btn-outline"
-                    onClick={() => (navigator.mediaDevices?.getUserMedia ? setShowCamera(true) : fileRef.current?.click())}
-                  >
-                    <Camera size={18} /> Scan with camera
-                  </button>
-                  <button type="button" className="idv-btn idv-btn-outline" onClick={() => fileRef.current?.click()}>
-                    <UploadSimple size={18} /> Upload photo
-                  </button>
-                </div>
-              </div>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              hidden
-              onChange={(e) => {
-                pickFile(e.target.files?.[0]);
-                e.target.value = '';
-              }}
-            />
-          </div>
+          <PhotoSlot
+            side="front"
+            label="Photo of the front of your ID"
+            hint="Use a clear, well-lit photo showing the whole card. Your name must be readable."
+            previewUrl={frontPreview}
+            disabled={submitting}
+            onPick={pickFile}
+            onClear={() => setFiles((current) => ({ ...current, front: null }))}
+            onCamera={setCameraSide}
+          />
+
+          <PhotoSlot
+            side="back"
+            label="Photo of the back of your ID"
+            hint={backRequired
+              ? 'Most IDs print the address on the back. Make sure the address is readable.'
+              : 'Add the back of the card if it has printed details.'}
+            optional={!backRequired}
+            previewUrl={backPreview}
+            disabled={submitting}
+            onPick={pickFile}
+            onClear={() => setFiles((current) => ({ ...current, back: null }))}
+            onCamera={setCameraSide}
+          />
 
           <ul className="idv-rules">
             <li>The name on your ID must closely match your account name. <Link to="/profile/settings">Edit profile</Link></li>
             {selectedType?.hasAddress === false ? (
-              <li>This ID has no printed address, so only your name and ID number are checked.</li>
+              <li>This ID has no printed address, so only your name and ID number are checked. The back photo is optional.</li>
             ) : (
-              <li>The address on your ID must closely match your registered address.</li>
+              <li>The address on your ID must closely match your registered address. It is usually printed on the back.</li>
             )}
             <li>Each ID can verify only one account.</li>
           </ul>
 
           <p className="idv-privacy">
             <LockSimple size={16} />
-            Your ID photo is processed once and discarded. We only keep encrypted verification details.
+            Your ID photos are processed once and discarded. We only keep encrypted verification details.
           </p>
 
           <div className="idv-actions">
             <button
               type="submit"
               className="idv-btn idv-btn-primary"
-              disabled={submitting || !file || !idType || outOfAttempts}
+              disabled={submitting || !files.front || (backRequired && !files.back) || !idType || outOfAttempts}
             >
               {submitting ? <><CircleNotch size={18} className="idv-spin" /> Verifying...</> : 'Verify identity'}
             </button>
@@ -348,12 +386,12 @@ export default function ProfileVerification() {
         </p>
       )}
 
-      {showCamera && (
+      {cameraSide && (
         <CameraCapture
-          onClose={() => setShowCamera(false)}
+          onClose={() => setCameraSide(null)}
           onCapture={(captured) => {
-            pickFile(captured);
-            setShowCamera(false);
+            pickFile(cameraSide, captured);
+            setCameraSide(null);
           }}
         />
       )}

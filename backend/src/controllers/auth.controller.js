@@ -114,16 +114,17 @@ const changePassword = asyncHandler(async (req, res) => {
  * @access Private (BUYER only)
  */
 const applyForSeller = asyncHandler(async (req, res) => {
-  const { shopName, shopDescription, shopAddress, idType, idFrontUrl, idBackUrl, selfieUrl } = req.body;
+  // The service validates and normalises the body — it is the gate that holds
+  // for direct API calls, not just for the browser form.
+  const user = await authService.applyForSeller(req.user.id, req.body || {});
 
-  const user = await authService.applyForSeller(req.user.id, {
-    shopName,
-    shopDescription,
-    shopAddress,
-    idType,
-    idFrontUrl,
-    idBackUrl,
-    selfieUrl,
+  await auditLog.record({
+    actor: req.user,
+    action: 'SUBMIT_SELLER_APPLICATION',
+    entity: 'User',
+    entityId: req.user.id,
+    details: { shopName: user.shopName || null },
+    req,
   });
 
   successResponse(
@@ -131,6 +132,31 @@ const applyForSeller = asyncHandler(async (req, res) => {
     user,
     'Seller application submitted successfully. Awaiting admin approval.'
   );
+});
+
+/**
+ * Get the caller's seller application status, rejection reason and draft
+ * @route GET /api/auth/seller-application
+ * @access Private
+ */
+const getSellerApplication = asyncHandler(async (req, res) => {
+  const application = await authService.getSellerApplication(req.user.id);
+
+  successResponse(res, application, 'Seller application retrieved');
+});
+
+/**
+ * Save (or clear) the in-progress seller application form
+ * @route PUT /api/auth/seller-application/draft
+ * @access Private
+ */
+const saveSellerApplicationDraft = asyncHandler(async (req, res) => {
+  const result = await authService.saveSellerApplicationDraft(
+    req.user.id,
+    req.body?.draft ?? null
+  );
+
+  successResponse(res, result, 'Draft saved');
 });
 
 /**
@@ -191,6 +217,9 @@ const getUsers = asyncHandler(async (req, res) => {
     isActive: isActive !== undefined ? isActive === 'true' : undefined,
     search,
     sellerApplicationStatus,
+    // Only the seller-applications view widens the scope to shops located in
+    // the admin's municipality; the general user list stays strictly scoped.
+    includeShopMunicipality: Boolean(sellerApplicationStatus),
   };
 
   const result = await authService.getUsers(options);
@@ -396,6 +425,8 @@ module.exports = {
   forgotPassword,
   resetPassword,
   applyForSeller,
+  getSellerApplication,
+  saveSellerApplicationDraft,
   getUserById,
   getKycPhoto,
   getUsers,

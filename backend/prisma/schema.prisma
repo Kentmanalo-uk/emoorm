@@ -211,6 +211,41 @@ model User {
   idBackUrl               String?   @map("id_back_url")
   selfieUrl               String?   @map("selfie_url")
 
+  // Where the shop itself operates — chosen in the application's address
+  // picker, which may differ from the account's own municipality.
+  shopMunicipalityId      String?   @map("shop_municipality_id")
+  shopBarangay            String?   @map("shop_barangay")
+  shopTagline             String?   @map("shop_tagline")
+  shopLogoUrl             String?   @map("shop_logo_url")
+  // Category IDs the shop plans to sell in, e.g. ["uuid", "uuid"].
+  shopCategories          Json?     @map("shop_categories")
+
+  // Business identity (optional — individual sellers leave these blank)
+  sellerBusinessType      String?   @map("seller_business_type")
+  sellerPermitNumber      String?   @map("seller_permit_number")
+  sellerPermitUrl         String?   @map("seller_permit_url")
+  sellerBirTin            String?   @map("seller_bir_tin")
+
+  // How the seller gets paid and fulfils orders (pre-fills the shop settings)
+  payoutMethod            String?   @map("payout_method")
+  payoutAccountName       String?   @map("payout_account_name")
+  payoutAccountNumber     String?   @map("payout_account_number")
+  fulfillmentPreference   String?   @map("fulfillment_preference")
+
+  // Explicit consent — which terms version was agreed to, and when
+  sellerTermsVersion      String?   @map("seller_terms_version")
+  sellerTermsAcceptedAt   DateTime? @map("seller_terms_accepted_at")
+
+  // Review outcome, kept so both the admin and the applicant can see it later
+  sellerRejectionReason   String?   @db.Text @map("seller_rejection_reason")
+  sellerReviewedById      String?   @map("seller_reviewed_by_id")
+  sellerReviewedAt        DateTime? @map("seller_reviewed_at")
+
+  // Unsubmitted form contents, so a refresh does not lose the application.
+  sellerApplicationDraft  Json?     @map("seller_application_draft")
+  // Append-only trail: [{ action, at, by, byName, reason }]
+  sellerApplicationHistory Json?    @map("seller_application_history")
+
   // Password Reset
   passwordResetToken  String?   @map("password_reset_token")
   passwordResetExpiry DateTime? @map("password_reset_expiry")

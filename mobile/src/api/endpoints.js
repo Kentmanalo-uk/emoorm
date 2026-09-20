@@ -63,6 +63,7 @@ export const ENDPOINTS = {
   },
   SELLER: {
     APPLICATION: '/auth/apply-seller',
+    APPLICATION_STATUS: '/auth/seller-application',
     MY_STORE: '/stores/my/store',
     ANALYTICS: '/analytics/seller',
   },

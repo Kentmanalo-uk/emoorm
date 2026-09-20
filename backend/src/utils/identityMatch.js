@@ -371,7 +371,8 @@ const nameTokens = (value) => tokenize(value).filter((t) => t.length >= 2 && !NA
 const contentLines = (text) => String(text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
 // Minimum share of matching words for a name or address to count as a match.
-const MATCH_THRESHOLD = 0.7;
+// Kept at half so a partly unreadable ID photo can still verify.
+const MATCH_THRESHOLD = 0.5;
 
 const ratio = (found, total) => (total === 0 ? 1 : found / total);
 
@@ -392,7 +393,7 @@ const scoreName = (expected, idName) => {
 
 /**
  * Name rule: the ID name (labelled fields, or else the best-matching block of
- * up to 3 consecutive lines) must be at least 70% similar to the account name.
+ * up to 3 consecutive lines) must be at least 50% similar to the account name.
  */
 const matchName = (accountName, fields, ocrText) => {
   const expected = nameTokens(accountName);
@@ -464,7 +465,7 @@ const findAddressText = (municipality, fields, ocrText) => {
 };
 
 /**
- * Address rule: at least 70% of the registered address words (street,
+ * Address rule: at least 50% of the registered address words (street,
  * barangay, municipality, province) must appear in the ID's address.
  */
 const matchAddress = ({ municipalityName, barangay, province, street }, fields, ocrText) => {

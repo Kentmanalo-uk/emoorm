@@ -32,7 +32,13 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
 
   const [applications, products, reports, payments, returns, conversations] = await Promise.all([
     prisma.user.findMany({
-      where: { sellerApplicationStatus: 'PENDING', deletedAt: null, ...(scope && { municipalityId: scope }) },
+      // An applicant may live in one municipality and open their shop in
+      // another — the queue follows the shop, like the review itself.
+      where: {
+        sellerApplicationStatus: 'PENDING',
+        deletedAt: null,
+        ...(scope && { OR: [{ municipalityId: scope }, { shopMunicipalityId: scope }] }),
+      },
       select: { sellerApplicationDate: true },
     }),
     prisma.product.findMany({

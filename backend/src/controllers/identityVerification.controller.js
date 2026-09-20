@@ -13,19 +13,23 @@ const getStatus = asyncHandler(async (req, res) => {
 });
 
 /**
- * Submit a government ID photo for OCR verification
+ * Submit government ID photos (front, and the back when the card has one)
+ * for OCR verification
  * @route POST /api/identity-verification
  * @access Private
  */
 const submit = asyncHandler(async (req, res) => {
+  const front = req.files?.idImage?.[0] || req.file;
+  const back = req.files?.idBackImage?.[0];
   const status = await identityVerificationService.submit(
     req.user,
     req.body.idType,
-    req.file?.buffer,
+    { front: front?.buffer, back: back?.buffer },
     req
   );
-  // Drop the in-memory image as soon as processing is done.
-  if (req.file) req.file.buffer = null;
+  // Drop the in-memory images as soon as processing is done.
+  if (front) front.buffer = null;
+  if (back) back.buffer = null;
 
   const message = status.status === 'VERIFIED'
     ? 'Your identity has been verified'

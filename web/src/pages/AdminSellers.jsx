@@ -75,16 +75,33 @@ export default function AdminSellers() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [lookups, setLookups] = useState({ municipalities: {}, categories: {} });
 
   useEffect(() => {
     fetchApplicants();
   }, [statusFilter, search, page]);
 
+  // Applications store the shop's municipality and categories as IDs.
+  useEffect(() => {
+    Promise.all([
+      axios.get('/municipalities').catch(() => ({ data: [] })),
+      axios.get('/categories').catch(() => ({ data: [] })),
+    ]).then(([m, c]) => {
+      const byId = (list) => Object.fromEntries((list || []).map((x) => [x.id, x.name]));
+      setLookups({ municipalities: byId(m.data), categories: byId(c.data) });
+    });
+  }, []);
+
+  const shopMunicipality = (u) =>
+    lookups.municipalities[u.shopMunicipalityId] || u.municipality?.name || '—';
+
   const fetchApplicants = async () => {
     setIsLoading(true);
     setSelectedIds([]);
     try {
-      const params = { pageSize: 20, page, role: 'SELLER' };
+      // No role filter: applicants stay BUYER until they are approved, so
+      // filtering by SELLER would hide every pending application.
+      const params = { pageSize: 20, page };
       if (statusFilter) params.sellerApplicationStatus = statusFilter;
       if (search) params.search = search;
 
@@ -101,7 +118,7 @@ export default function AdminSellers() {
   };
 
   const handleApprove = async (userId) => {
-    if (!window.confirm('Approve this seller application?')) return;
+    if (!window.confirm('Approve this seller application? Their shop will be created and go live.')) return;
     setProcessing(userId);
     try {
       await axios.post(`/auth/users/${userId}/approve-seller`);
@@ -122,7 +139,7 @@ export default function AdminSellers() {
       toast.error('Please provide a reason for rejection');
       return;
     }
-    if (!window.confirm('Reject this seller application? The applicant will be notified.')) return;
+    if (!window.confirm('Reject this seller application? The applicant will be notified and can fix it and re-apply.')) return;
     setProcessing(userId);
     try {
       await axios.post(`/auth/users/${userId}/reject-seller`, { reason });
@@ -231,7 +248,7 @@ export default function AdminSellers() {
                     </th>
                     <th>Applicant</th>
                     <th>Shop Name</th>
-                    <th>Location</th>
+                    <th>Shop Location</th>
                     <th>ID Type</th>
                     <th>Applied</th>
                     <th>Status</th>
@@ -267,7 +284,7 @@ export default function AdminSellers() {
                         </div>
                       </td>
                       <td>{u.shopName || <span style={{ color: '#94a3b8' }}>—</span>}</td>
-                      <td>{u.municipality?.name || '—'}</td>
+                      <td>{shopMunicipality(u)}</td>
                       <td>{u.idType || '—'}</td>
                       <td>
                         {u.sellerApplicationDate
@@ -348,15 +365,59 @@ export default function AdminSellers() {
                 </div>
               </div>
 
+              {/* Previous verdict */}
+              {selected.sellerRejectionReason && (
+                <div className="admin-detail-section">
+                  <h4>Previous Rejection</h4>
+                  <p className="admin-detail-note">{selected.sellerRejectionReason}</p>
+                </div>
+              )}
+
               {/* Shop info */}
               <div className="admin-detail-section">
                 <h4>Shop Information</h4>
                 <div className="admin-detail-grid">
                   <div><label>Shop Name</label><p>{selected.shopName || '—'}</p></div>
-                  <div><label>Shop Address</label><p>{selected.shopAddress || '—'}</p></div>
+                  <div><label>Shop Municipality</label><p>{shopMunicipality(selected)}</p></div>
+                  <div className="admin-detail-full"><label>Shop Address</label><p>{selected.shopAddress || '—'}</p></div>
+                  <div className="admin-detail-full"><label>Tagline</label><p>{selected.shopTagline || '—'}</p></div>
+                  <div className="admin-detail-full">
+                    <label>Categories</label>
+                    <p>
+                      {Array.isArray(selected.shopCategories) && selected.shopCategories.length > 0
+                        ? selected.shopCategories.map((id) => lookups.categories[id] || id).join(', ')
+                        : '—'}
+                    </p>
+                  </div>
                   <div className="admin-detail-full">
                     <label>Description</label>
                     <p>{selected.shopDescription || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Business, payout and fulfillment */}
+              <div className="admin-detail-section">
+                <h4>Business &amp; Payments</h4>
+                <div className="admin-detail-grid">
+                  <div>
+                    <label>Seller Type</label>
+                    <p>{selected.sellerBusinessType === 'REGISTERED' ? 'Registered business' : 'Individual seller'}</p>
+                  </div>
+                  <div><label>Permit / Registration No.</label><p>{selected.sellerPermitNumber || '—'}</p></div>
+                  <div><label>BIR TIN</label><p>{selected.sellerBirTin || '—'}</p></div>
+                  <div><label>Payout Method</label><p>{selected.payoutMethod || '—'}</p></div>
+                  <div><label>Payout Account</label>
+                    <p>{[selected.payoutAccountName, selected.payoutAccountNumber].filter(Boolean).join(' · ') || '—'}</p>
+                  </div>
+                  <div><label>Fulfillment</label><p>{selected.fulfillmentPreference || '—'}</p></div>
+                  <div className="admin-detail-full">
+                    <label>Terms Accepted</label>
+                    <p>
+                      {selected.sellerTermsAcceptedAt
+                        ? `v${selected.sellerTermsVersion} on ${new Date(selected.sellerTermsAcceptedAt).toLocaleString('en-PH')}`
+                        : '—'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -366,17 +427,42 @@ export default function AdminSellers() {
                 <h4><CreditCard size={14} /> ID Verification — {selected.idType || 'N/A'}</h4>
                 <div className="admin-id-photos">
                   {[
-                    { label: 'Front', field: 'idFront' },
-                    { label: 'Back', field: 'idBack' },
-                    { label: 'Selfie with ID', field: 'selfie' },
-                  ].map(({ label, field }) => (
+                    { label: 'Front', field: 'idFront', has: selected.idFrontUrl },
+                    { label: 'Back', field: 'idBack', has: selected.idBackUrl },
+                    // Legacy applications also captured a selfie; newer ones don't.
+                    { label: 'Selfie with ID', field: 'selfie', has: selected.selfieUrl },
+                    { label: 'Permit', field: 'permit', has: selected.sellerPermitUrl },
+                  ].filter(({ has }) => has).map(({ label, field }) => (
                     <div key={label} className="admin-id-photo">
                       <span className="admin-id-label">{label}</span>
                       <KycPhoto userId={selected.id} field={field} label={label} />
                     </div>
                   ))}
+                  {!selected.idFrontUrl && !selected.idBackUrl && !selected.selfieUrl && (
+                    <div className="admin-id-missing">
+                      No documents on file — the applicant's identity was verified separately,
+                      or the photos have passed their retention period.
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Audit trail */}
+              {Array.isArray(selected.sellerApplicationHistory) && selected.sellerApplicationHistory.length > 0 && (
+                <div className="admin-detail-section">
+                  <h4><Calendar size={14} /> Application History</h4>
+                  <ul className="admin-detail-timeline">
+                    {[...selected.sellerApplicationHistory].reverse().map((entry, i) => (
+                      <li key={`${entry.at}-${i}`}>
+                        <strong>{entry.action}</strong>
+                        <span>{new Date(entry.at).toLocaleString('en-PH')}</span>
+                        {entry.byName && <span>by {entry.byName}</span>}
+                        {entry.reason && <p>{entry.reason}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {selected.sellerApplicationStatus === 'PENDING' && (
@@ -426,7 +512,7 @@ export default function AdminSellers() {
       <ConfirmDialog
         open={bulkConfirmOpen}
         title={`Approve ${selectedIds.length} seller application(s)?`}
-        message="Each applicant's store will be activated and they will be notified."
+        message="Each applicant becomes a seller, their shop is created and goes live, and they are notified."
         confirmLabel="Approve selected"
         loading={bulkProcessing}
         onConfirm={handleBulkApprove}

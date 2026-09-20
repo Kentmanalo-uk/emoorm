@@ -10,10 +10,11 @@ export const fetchIdentityStatus = async () => {
   return res.data;
 };
 
-export const submitIdentityVerification = async (idType, file) => {
+export const submitIdentityVerification = async (idType, frontFile, backFile) => {
   const form = new FormData();
   form.append('idType', idType);
-  form.append('idImage', file);
+  form.append('idImage', frontFile);
+  if (backFile) form.append('idBackImage', backFile);
   const res = await axios.post('/identity-verification', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,

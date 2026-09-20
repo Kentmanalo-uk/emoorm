@@ -725,3 +725,792 @@
     padding: 32px 16px;
   }
 }
+
+/* ── Seller Center brand header (matches the Seller Center sidebar) ── */
+.apply-brand-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto 18px;
+  padding: 0 4px;
+}
+
+.apply-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.apply-brand-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.apply-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.apply-brand-text strong {
+  font-size: 17px;
+  font-weight: 700;
+  color: #006927;
+  letter-spacing: 0.01em;
+}
+
+.apply-brand-text span {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+@media (max-width: 480px) {
+  .apply-brand-bar {
+    margin-bottom: 14px;
+  }
+
+  .apply-brand-logo {
+    width: 30px;
+    height: 30px;
+  }
+
+  .apply-brand-text strong {
+    font-size: 16px;
+  }
+}
+
+/* ═══ Single-scroll application: header bar, form column, sticky preview ═══ */
+.apply-page {
+  display: block;
+  padding: 0 0 80px;
+}
+
+.apply-brand-bar {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 24px;
+  padding: 0;
+  background: #fff;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.apply-brand-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  max-width: 1280px;
+  height: 64px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.apply-brand-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #6b7280;
+  text-decoration: none;
+}
+
+.apply-brand-back:hover {
+  color: #047857;
+}
+
+.apply-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: start;
+  gap: 24px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.apply-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.apply-shell .apply-card {
+  max-width: none;
+  padding: 28px;
+}
+
+/* Preview column */
+.apply-aside {
+  position: sticky;
+  top: 24px;
+  min-width: 0;
+}
+
+.apply-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+}
+
+.apply-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.apply-preview-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.apply-preview-head span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.apply-preview-shop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.apply-preview-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  background: #059669;
+  border-radius: 12px;
+}
+
+.apply-preview-shop-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.apply-preview-shop-text strong {
+  overflow: hidden;
+  font-size: 15px;
+  color: #111827;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.apply-preview-shop-text span {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #6b7280;
+}
+
+.apply-preview-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.apply-preview-list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 14px;
+  margin: 0;
+}
+
+.apply-preview-list dt {
+  font-size: 12.5px;
+  color: #9ca3af;
+}
+
+.apply-preview-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.apply-preview-thumbs {
+  display: flex;
+  gap: 8px;
+}
+
+.apply-preview-thumbs img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.apply-preview-missing {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #b45309;
+}
+
+.apply-preview .apply-terms {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.apply-preview .apply-btn-submit {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Tablet and phone: preview moves below the form. */
+@media (max-width: 1024px) {
+  .apply-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .apply-aside {
+    position: static;
+  }
+
+  .apply-preview {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 768px) {
+  .apply-brand-inner,
+  .apply-shell {
+    padding: 0 16px;
+  }
+
+  .apply-brand-inner {
+    height: 58px;
+  }
+
+  .apply-brand-back span {
+    display: none;
+  }
+
+  .apply-shell .apply-card {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .apply-brand-inner,
+  .apply-shell {
+    padding: 0 12px;
+  }
+
+  .apply-brand-back {
+    font-size: 12.5px;
+  }
+}
+
+/* ═══ Sticky translucent header + borderless cards ═══ */
+.apply-brand-bar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  margin-bottom: 24px;
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 0;
+  backdrop-filter: saturate(1.6) blur(12px);
+  -webkit-backdrop-filter: saturate(1.6) blur(12px);
+  box-shadow: 0 1px 12px rgba(15, 23, 42, 0.06);
+}
+
+/* Cards: no outlines, just a soft lift. */
+.apply-shell .apply-card,
+.apply-preview,
+.apply-card-status {
+  border: 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.apply-shell .apply-info-grid,
+.apply-preview .apply-info-grid {
+  border: 0;
+  background: #f9fafb;
+}
+
+.apply-shell .apply-warn {
+  border: 0;
+}
+
+/* Upload areas keep their shape through a tint instead of a dashed outline. */
+.apply-shell .upload-box {
+  background: #f7f8fa;
+  border: 0;
+  transition: background-color 0.15s ease;
+}
+
+.apply-shell .upload-box:hover {
+  background: #eef7f1;
+}
+
+/* The sticky preview sits below the header when both are pinned. */
+.apply-aside {
+  top: 88px;
+}
+
+.apply-preview {
+  max-height: calc(100vh - 112px);
+}
+
+@media (max-width: 1024px) {
+  .apply-preview {
+    max-height: none;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Application form additions: rejection notice, categories,
+   option cards, inline contact edit, terms checkbox, confirm dialog.
+   ─────────────────────────────────────────────────────────────── */
+
+/* ── Previous rejection ───────────────────────────────────────── */
+.apply-shell--notice {
+  padding-bottom: 0;
+}
+
+.apply-reject {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  color: #7f1d1d;
+  background: #fef2f2;
+  border-radius: 12px;
+}
+
+.apply-reject > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #dc2626;
+}
+
+.apply-reject strong {
+  display: block;
+  font-size: 14px;
+}
+
+.apply-reject p {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.apply-reject > div > span {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: #9a3412;
+}
+
+/* ── Field hints ──────────────────────────────────────────────── */
+.field-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9ca3af;
+}
+
+/* ── Category chips ───────────────────────────────────────────── */
+.apply-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+
+.apply-chips.input-error {
+  background: #fef2f2;
+}
+
+.apply-chip {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  background: #fff;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.apply-chip:hover {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.apply-chip.is-active {
+  color: #fff;
+  background: #059669;
+}
+
+/* ── Radio option cards ───────────────────────────────────────── */
+.apply-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.apply-options--inline {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.apply-option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  cursor: pointer;
+  background: #f9fafb;
+  border-radius: 10px;
+  transition: background-color 0.15s ease;
+}
+
+.apply-option:hover {
+  background: #f3f4f6;
+}
+
+.apply-option.is-active {
+  background: #ecfdf5;
+}
+
+.apply-option input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: #059669;
+}
+
+.apply-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.apply-option strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.apply-option small {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ── Payout pair ──────────────────────────────────────────────── */
+.apply-pay-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+}
+
+/* ── Shop logo row ────────────────────────────────────────────── */
+.apply-logo-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.apply-logo-row .upload-box {
+  flex-shrink: 0;
+  width: 132px;
+}
+
+.apply-logo-row .field-hint {
+  margin-top: 0;
+}
+
+/* ── Inline contact number edit ───────────────────────────────── */
+.apply-info-row--edit {
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.apply-inline-field {
+  display: flex;
+  gap: 8px;
+}
+
+.apply-inline-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #111827;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.apply-inline-field input:focus {
+  border-color: #059669;
+  outline: none;
+}
+
+.apply-inline-field input.input-error {
+  border-color: #ef4444;
+}
+
+.apply-inline-save {
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background: #059669;
+  border: 0;
+  border-radius: 8px;
+}
+
+.apply-inline-save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.apply-inline-edit {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.apply-inline-edit:hover {
+  text-decoration: underline;
+}
+
+/* ── Already-verified identity ────────────────────────────────── */
+.apply-verified {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  background: #ecfdf5;
+  border-radius: 12px;
+}
+
+.apply-verified > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #059669;
+}
+
+.apply-verified strong {
+  display: block;
+  font-size: 13.5px;
+  color: #065f46;
+}
+
+.apply-verified span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #047857;
+}
+
+.apply-verified a {
+  font-weight: 600;
+  color: #047857;
+}
+
+/* ── Preview extras ───────────────────────────────────────────── */
+.apply-preview-logo {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.apply-preview-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.apply-preview-cats span {
+  padding: 4px 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #047857;
+  background: #ecfdf5;
+  border-radius: 999px;
+}
+
+.apply-draft-note {
+  margin: 0;
+  font-size: 11.5px;
+  text-align: center;
+  color: #9ca3af;
+}
+
+/* ── Terms checkbox ───────────────────────────────────────────── */
+.apply-terms-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.apply-terms-check input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  accent-color: #059669;
+}
+
+.apply-terms-check a {
+  font-weight: 600;
+  color: #059669;
+}
+
+/* ── Submit confirmation ──────────────────────────────────────── */
+.apply-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.45);
+  animation: apply-confirm-fade 0.15s ease;
+}
+
+.apply-confirm {
+  width: 100%;
+  max-width: 400px;
+  padding: 22px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22);
+  animation: apply-confirm-pop 0.18s ease;
+}
+
+.apply-confirm h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  color: #111827;
+}
+
+.apply-confirm p {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #6b7280;
+}
+
+.apply-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.apply-confirm-cancel,
+.apply-confirm-go {
+  flex: 1;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 0;
+  border-radius: 10px;
+}
+
+.apply-confirm-cancel {
+  color: #4b5563;
+  background: #f3f4f6;
+}
+
+.apply-confirm-go {
+  color: #fff;
+  background: #059669;
+}
+
+.apply-confirm-go:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.apply-status-meta {
+  font-size: 12.5px;
+  color: #9ca3af;
+}
+
+@keyframes apply-confirm-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes apply-confirm-pop {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 600px) {
+  .apply-logo-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .apply-logo-row .upload-box {
+    width: 100%;
+  }
+
+  .apply-confirm-actions {
+    flex-direction: column-reverse;
+  }
+}

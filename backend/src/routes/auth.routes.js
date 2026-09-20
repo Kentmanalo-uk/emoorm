@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { authenticate, authorize } = require('../middleware/auth');
+const { sellerApplyLimiter } = require('../middleware/security');
 const validate = require('../middleware/validate');
 const {
   registerValidation,
@@ -96,7 +97,21 @@ router.post(
   '/apply-seller',
   authenticate,
   authorize('BUYER'),
+  sellerApplyLimiter,
   authController.applyForSeller
+);
+
+router.get(
+  '/seller-application',
+  authenticate,
+  authController.getSellerApplication
+);
+
+router.put(
+  '/seller-application/draft',
+  authenticate,
+  authorize('BUYER'),
+  authController.saveSellerApplicationDraft
 );
 
 // Admin routes

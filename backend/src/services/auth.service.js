@@ -3,8 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const userRepository = require('../repositories/user.repository');
 const storeRepository = require('../repositories/store.repository');
+const municipalityRepository = require('../repositories/municipality.repository');
 const storeService = require('./store.service');
 const notificationService = require('./notification.service');
+const identityVerificationService = require('./identityVerification.service');
 const googleService = require('./google.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateTokens, verifyRefreshToken, generateMfaToken, generateGoogleProfileToken, verifyGoogleProfileToken } = require('../utils/jwt');
@@ -233,9 +235,121 @@ const changePassword = async (userId, currentPassword, newPassword) => {
   });
 };
 
+/** Terms revision an applicant consents to. Bump when the seller terms change. */
+const SELLER_TERMS_VERSION = '2026-09-20';
+
+const BUSINESS_TYPES = ['INDIVIDUAL', 'REGISTERED'];
+const PAYOUT_METHODS = ['GCASH', 'MAYA', 'BANK', 'COD_ONLY'];
+const FULFILLMENT_PREFERENCES = ['DELIVERY', 'PICKUP', 'BOTH'];
+
+const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
+
 /**
- * Apply to become a seller
+ * Validate and normalise a seller application on the server. The browser form
+ * checks the same rules for a friendlier experience, but this is the gate that
+ * actually holds — a direct API call goes through here too.
+ * @param {Object} data - Raw request body
+ * @param {Object} context - { identityVerified }
+ * @returns {Promise<Object>} Normalised application data
+ */
+const normalizeSellerApplication = async (data = {}, context = {}) => {
+  const shopName = trimmed(data.shopName);
+  if (!shopName) throw new ApiError('Shop name is required', 400);
+  if (shopName.length < 3 || shopName.length > 60) {
+    throw new ApiError('Shop name must be between 3 and 60 characters', 400);
+  }
+
+  const shopAddress = trimmed(data.shopAddress);
+  if (!shopAddress) throw new ApiError('Shop address is required', 400);
+
+  const shopMunicipalityId = trimmed(data.shopMunicipalityId) || trimmed(data.municipalityId);
+  if (!shopMunicipalityId) throw new ApiError('Shop municipality is required', 400);
+  const municipality = await municipalityRepository.findById(shopMunicipalityId);
+  if (!municipality) throw new ApiError('Invalid shop municipality', 400);
+
+  if (!data.acceptedTerms) {
+    throw new ApiError('You must accept the Seller Terms of Service to apply', 400);
+  }
+
+  const shopDescription = trimmed(data.shopDescription);
+  if (shopDescription.length > 1000) {
+    throw new ApiError('Shop description must be 1000 characters or fewer', 400);
+  }
+
+  const shopTagline = trimmed(data.shopTagline);
+  if (shopTagline.length > 80) {
+    throw new ApiError('Tagline must be 80 characters or fewer', 400);
+  }
+
+  const shopCategories = Array.isArray(data.shopCategories)
+    ? data.shopCategories.map(trimmed).filter(Boolean).slice(0, 5)
+    : [];
+  if (shopCategories.length === 0) {
+    throw new ApiError('Select at least one category your shop sells in', 400);
+  }
+
+  const sellerBusinessType = trimmed(data.sellerBusinessType).toUpperCase() || 'INDIVIDUAL';
+  if (!BUSINESS_TYPES.includes(sellerBusinessType)) {
+    throw new ApiError('Invalid business type', 400);
+  }
+
+  const payoutMethod = trimmed(data.payoutMethod).toUpperCase();
+  if (payoutMethod && !PAYOUT_METHODS.includes(payoutMethod)) {
+    throw new ApiError('Invalid payout method', 400);
+  }
+  const payoutAccountNumber = trimmed(data.payoutAccountNumber);
+  const payoutAccountName = trimmed(data.payoutAccountName);
+  if (payoutMethod && payoutMethod !== 'COD_ONLY') {
+    if (!payoutAccountName) throw new ApiError('Payout account name is required', 400);
+    if (!payoutAccountNumber) throw new ApiError('Payout account number is required', 400);
+  }
+
+  const fulfillmentPreference = trimmed(data.fulfillmentPreference).toUpperCase() || 'DELIVERY';
+  if (!FULFILLMENT_PREFERENCES.includes(fulfillmentPreference)) {
+    throw new ApiError('Invalid fulfillment preference', 400);
+  }
+
+  // A buyer who already passed OCR identity verification does not upload an ID
+  // a second time — that record is the proof, and it stores no photo.
+  const idType = trimmed(data.idType);
+  const idFrontUrl = trimmed(data.idFrontUrl);
+  const idBackUrl = trimmed(data.idBackUrl);
+  if (!context.identityVerified) {
+    if (!idType) throw new ApiError('Please select the type of valid ID', 400);
+    if (!idFrontUrl) throw new ApiError('A photo of the front of your ID is required', 400);
+    if (!idBackUrl) throw new ApiError('A photo of the back of your ID is required', 400);
+  }
+
+  return {
+    shopName,
+    shopDescription: shopDescription || null,
+    shopAddress,
+    shopMunicipalityId,
+    shopBarangay: trimmed(data.shopBarangay) || null,
+    shopTagline: shopTagline || null,
+    shopLogoUrl: trimmed(data.shopLogoUrl) || null,
+    shopCategories,
+    sellerBusinessType,
+    sellerPermitNumber: trimmed(data.sellerPermitNumber) || null,
+    sellerPermitUrl: trimmed(data.sellerPermitUrl) || null,
+    sellerBirTin: trimmed(data.sellerBirTin) || null,
+    payoutMethod: payoutMethod || null,
+    payoutAccountName: payoutAccountName || null,
+    payoutAccountNumber: payoutAccountNumber || null,
+    fulfillmentPreference,
+    idType: idType || null,
+    idFrontUrl: idFrontUrl || null,
+    idBackUrl: idBackUrl || null,
+    termsVersion: SELLER_TERMS_VERSION,
+  };
+};
+
+/**
+ * Apply to become a seller. The applicant stays a BUYER — the SELLER role and
+ * the store are only granted when an admin approves, so a rejected or pending
+ * applicant never has Seller Center access.
  * @param {String} userId - User ID
+ * @param {Object} data - Application form data
  * @returns {Promise<Object>} Updated user
  */
 const applyForSeller = async (userId, data = {}) => {
@@ -253,41 +367,120 @@ const applyForSeller = async (userId, data = {}) => {
     throw new ApiError('You already have a pending seller application', 400);
   }
 
-  // Save application data + mark as pending
-  await userRepository.applyForSeller(userId, data);
-
-  // Immediately promote to SELLER so they can access the dashboard.
-  // The store below stays inactive until an admin approves it, so the
-  // profile and any products they add remain hidden from the public.
-  const updatedUser = await userRepository.promoteToSeller(userId);
-
-  // Create an inactive store from the application data so the seller can
-  // immediately start adding products (kept hidden until admin activates).
-  const existingStore = await storeRepository.findByOwnerId(userId);
-  if (!existingStore && data.shopName) {
-    const slug = await storeService.generateSlug(data.shopName);
-    await storeRepository.createStore({
-      name: data.shopName,
-      slug,
-      description: data.shopDescription || null,
-      logo: null,
-      coverImage: null,
-      businessHours: null,
-      ownerId: userId,
-      municipalityId: updatedUser.municipalityId,
-      isActive: false,
-      isSuspended: false,
-    });
+  if (!user.contactNumber) {
+    throw new ApiError('Add a contact number to your profile before applying', 400);
   }
 
-  await notificationService.notifyMunicipalAdmins(updatedUser.municipalityId, {
+  const identityVerified = await identityVerificationService.isVerified(userId);
+  const application = await normalizeSellerApplication(data, { identityVerified });
+
+  // Two shops sharing a display name confuses buyers even though their URLs
+  // differ, so the name has to be free before the application is accepted.
+  if (await storeRepository.nameExists(application.shopName, userId)) {
+    throw new ApiError('That shop name is already taken. Please choose another.', 409);
+  }
+
+  const existing = await userRepository.findSellerApplication(userId);
+  const updatedUser = await userRepository.applyForSeller(
+    userId,
+    application,
+    existing?.sellerApplicationHistory
+  );
+
+  // Route the review to the admin of the municipality the SHOP is in, which
+  // is not necessarily the municipality on the applicant's own profile.
+  await notificationService.notifyMunicipalAdmins(application.shopMunicipalityId, {
     type: 'SELLER_APPLICATION_SUBMITTED',
     title: 'New seller application',
-    message: `${updatedUser.fullName} applied to sell as "${data.shopName || 'a new shop'}".`,
+    message: `${updatedUser.fullName} applied to sell as "${application.shopName}".`,
     relatedId: userId,
   });
 
   return updatedUser;
+};
+
+/**
+ * Current application status, the reason if it was rejected, and any saved
+ * draft, so the applicant can pick up where they left off.
+ * @param {String} userId - User ID
+ * @returns {Promise<Object>} Application state
+ */
+const getSellerApplication = async (userId) => {
+  const record = await userRepository.findSellerApplication(userId);
+  if (!record) {
+    throw new ApiError('User not found', 404);
+  }
+
+  return {
+    status: record.sellerApplicationStatus || null,
+    submittedAt: record.sellerApplicationDate,
+    reviewedAt: record.sellerReviewedAt,
+    rejectionReason: record.sellerRejectionReason,
+    termsVersion: SELLER_TERMS_VERSION,
+    acceptedTermsVersion: record.sellerTermsVersion,
+    history: Array.isArray(record.sellerApplicationHistory) ? record.sellerApplicationHistory : [],
+    draft: record.sellerApplicationDraft || null,
+    identityVerified: await identityVerificationService.isVerified(userId),
+  };
+};
+
+/** Fields the draft is allowed to carry — anything else is dropped. */
+const DRAFT_FIELDS = [
+  'shopName', 'shopDescription', 'shopAddress', 'shopTagline', 'shopLogoUrl',
+  'shopCategories', 'province', 'provinceCode', 'municipalityId', 'municipalityName',
+  'municipalityCode', 'barangay', 'barangayCode', 'street', 'sellerBusinessType',
+  'sellerPermitNumber', 'sellerPermitUrl', 'sellerBirTin', 'payoutMethod',
+  'payoutAccountName', 'payoutAccountNumber', 'fulfillmentPreference',
+  'idType', 'idFrontUrl', 'idBackUrl',
+];
+
+/**
+ * Save the in-progress application form. Nothing here is validated — it is a
+ * draft — but it is filtered and size-capped so it cannot be used as storage.
+ * @param {String} userId - User ID
+ * @param {Object|null} draft - Form contents, or null to clear
+ * @returns {Promise<Object>} Saved draft
+ */
+const saveSellerApplicationDraft = async (userId, draft) => {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new ApiError('User not found', 404);
+  if (user.role === 'SELLER') {
+    throw new ApiError('You are already a seller', 400);
+  }
+
+  if (!draft) {
+    await userRepository.saveSellerApplicationDraft(userId, null);
+    return { draft: null };
+  }
+
+  const clean = {};
+  for (const field of DRAFT_FIELDS) {
+    const value = draft[field];
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) clean[field] = value.slice(0, 5).map((v) => String(v).slice(0, 200));
+    else clean[field] = String(value).slice(0, 1200);
+  }
+
+  const saved = await userRepository.saveSellerApplicationDraft(userId, clean);
+  return { draft: saved.sellerApplicationDraft };
+};
+
+/**
+ * A municipal admin manages the users of their own municipality, plus anyone
+ * whose seller application is for a shop located there — an applicant may live
+ * in one town and open a shop in another, and the town the shop is in is the
+ * one that reviews it.
+ * @param {Object} actor - The acting admin (req.user)
+ * @param {Object} user - The target user
+ * @returns {Promise<Boolean>} True if the actor may manage this user
+ */
+const canAdminManageUser = async (actor, user) => {
+  if (actor?.role !== 'MUNICIPAL_ADMIN') return true;
+  if (user.municipalityId === actor.municipalityId) return true;
+  if (!user.sellerApplicationStatus) return false;
+
+  const application = await userRepository.findSellerApplication(user.id);
+  return application?.shopMunicipalityId === actor.municipalityId;
 };
 
 /**
@@ -302,7 +495,7 @@ const getUserById = async (userId, actor) => {
     throw new ApiError('User not found', 404);
   }
 
-  if (actor?.role === 'MUNICIPAL_ADMIN' && user.municipalityId !== actor.municipalityId) {
+  if (!(await canAdminManageUser(actor, user))) {
     throw new ApiError('You can only access users in your assigned municipality', 403);
   }
 
@@ -317,6 +510,7 @@ const KYC_FIELD_COLUMNS = {
   idFront: 'idFrontUrl',
   idBack: 'idBackUrl',
   selfie: 'selfieUrl',
+  permit: 'sellerPermitUrl',
 };
 
 /**
@@ -389,7 +583,7 @@ const approveSeller = async (userId, actor) => {
     throw new ApiError('User not found', 404);
   }
 
-  if (actor?.role === 'MUNICIPAL_ADMIN' && user.municipalityId !== actor.municipalityId) {
+  if (!(await canAdminManageUser(actor, user))) {
     throw new ApiError('You can only manage sellers in your assigned municipality', 403);
   }
 
@@ -397,12 +591,39 @@ const approveSeller = async (userId, actor) => {
     throw new ApiError('No pending seller application found', 400);
   }
 
-  const updatedUser = await userRepository.approveSeller(userId);
+  const application = await userRepository.findSellerApplication(userId);
 
-  // Activate the seller's store so it and its approved products become public.
-  const store = await storeRepository.findByOwnerId(userId);
+  const updatedUser = await userRepository.approveSeller(userId, {
+    reviewedById: actor?.id || null,
+    reviewerName: actor?.fullName || null,
+    history: application?.sellerApplicationHistory,
+  });
+
+  // The store is created here, at approval — not at submission — so a pending
+  // or rejected applicant never owns one. An existing store is reactivated.
+  let store = await storeRepository.findByOwnerId(userId);
   if (store) {
     await storeRepository.updateStore(store.id, { isActive: true });
+  } else if (application?.shopName) {
+    const slug = await storeService.generateSlug(application.shopName);
+    store = await storeRepository.createStore({
+      name: application.shopName,
+      slug,
+      description: application.shopDescription || null,
+      logo: application.shopLogoUrl || null,
+      coverImage: null,
+      businessHours: null,
+      ownerId: userId,
+      // The municipality the applicant picked for the shop, which may differ
+      // from the one on their own profile.
+      municipalityId: application.shopMunicipalityId || user.municipalityId,
+      pickupAddress: application.shopAddress || null,
+      fulfillmentMode: FULFILLMENT_PREFERENCES.includes(application.fulfillmentPreference)
+        ? application.fulfillmentPreference
+        : 'DELIVERY',
+      isActive: true,
+      isSuspended: false,
+    });
   }
 
   // Notify the newly approved seller (non-blocking on failure).
@@ -429,7 +650,7 @@ const rejectSeller = async (userId, actor, reason) => {
     throw new ApiError('User not found', 404);
   }
 
-  if (actor?.role === 'MUNICIPAL_ADMIN' && user.municipalityId !== actor.municipalityId) {
+  if (!(await canAdminManageUser(actor, user))) {
     throw new ApiError('You can only manage sellers in your assigned municipality', 403);
   }
 
@@ -437,10 +658,31 @@ const rejectSeller = async (userId, actor, reason) => {
     throw new ApiError('No pending seller application found', 400);
   }
 
-  const updatedUser = await userRepository.rejectSeller(userId);
+  const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!trimmedReason) {
+    throw new ApiError('A reason is required so the applicant knows what to fix', 400);
+  }
+
+  const application = await userRepository.findSellerApplication(userId);
+
+  // The reason is stored (not only sent as a notification) and the account
+  // drops back to BUYER so the applicant can correct things and re-apply.
+  const updatedUser = await userRepository.rejectSeller(userId, {
+    reason: trimmedReason,
+    reviewedById: actor?.id || null,
+    reviewerName: actor?.fullName || null,
+    history: application?.sellerApplicationHistory,
+  });
+
+  // Legacy applicants promoted under the old flow may already own a store —
+  // hide it so a rejected shop cannot stay reachable.
+  const store = await storeRepository.findByOwnerId(userId);
+  if (store?.isActive) {
+    await storeRepository.updateStore(store.id, { isActive: false });
+  }
 
   try {
-    await notificationService.notifySellerRejected(userId, reason);
+    await notificationService.notifySellerRejected(userId, trimmedReason);
   } catch (err) {
     console.error('[rejectSeller] notification failed:', err.message);
   }
@@ -722,6 +964,9 @@ module.exports = {
   forgotPassword,
   resetPassword,
   applyForSeller,
+  getSellerApplication,
+  saveSellerApplicationDraft,
+  SELLER_TERMS_VERSION,
   getUserById,
   getUsers,
   approveSeller,

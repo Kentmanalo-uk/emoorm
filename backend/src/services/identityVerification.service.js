@@ -88,9 +88,15 @@ const assertVerifiedForCheckout = async (userId) => {
 
 /**
  * Extracts the ID fields from OCR text and checks them against the account:
- * readable text, an ID number, and name/address at least 70% similar.
+ * readable text, an ID number, and name/address at least 50% similar.
  * Returns { verified, failureCode, checks, scores, extracted, idNumber }.
  */
+/** Text of both sides, kept as separate lines for the line-based checks. */
+const joinSides = (frontText, backText) => [frontText, backText]
+  .map((t) => String(t || '').trim())
+  .filter(Boolean)
+  .join('\n');
+
 const evaluate = (text, idType, user) => {
   const readable = String(text || '').replace(/\s/g, '').length >= MIN_TEXT_LENGTH;
   const fields = extractFields(text);
@@ -140,15 +146,19 @@ const evaluate = (text, idType, user) => {
 };
 
 /**
- * Runs OCR on an uploaded ID and updates the user's verification status.
+ * Runs OCR on the uploaded ID and updates the user's verification status.
+ * Both sides are read when a back photo is sent (many IDs print the address
+ * there) and the checks run against the two sides together.
  * @param {Object} actor - req.user
  * @param {String} idType - key of ID_TYPES
- * @param {Buffer} imageBuffer - in-memory upload; never persisted
+ * @param {Buffer|{front: Buffer, back?: Buffer}} images - in-memory uploads; never persisted
  * @param {Object} req - Express request (audit IP/UA)
  */
-const submit = async (actor, idType, imageBuffer, req) => {
+const submit = async (actor, idType, images, req) => {
+  const front = Buffer.isBuffer(images) ? images : images?.front;
+  const back = Buffer.isBuffer(images) ? null : images?.back;
   if (!ID_TYPES[idType]) throw new ApiError('Please select a supported ID type', 400);
-  if (!imageBuffer?.length) throw new ApiError('Please upload a photo of your ID', 400);
+  if (!front?.length) throw new ApiError('Please upload a photo of the front of your ID', 400);
 
   const userId = actor.id;
   const [existing, user, attemptsUsed] = await Promise.all([
@@ -179,12 +189,23 @@ const submit = async (actor, idType, imageBuffer, req) => {
   let confidence = 0;
   let ocrText = '';
   try {
-    const ocr = await recognizeId(imageBuffer, {
+    const frontOcr = await recognizeId(front, {
       accept: (text) => evaluate(text, idType, user).verified,
     });
-    confidence = Math.round(ocr.confidence);
-    ocrText = ocr.text;
-    outcome = evaluate(ocr.text, idType, user);
+    let combined = frontOcr.text;
+    confidence = Math.round(frontOcr.confidence);
+
+    if (back?.length) {
+      const backOcr = await recognizeId(back, {
+        // The back only has to complete what the front is missing.
+        accept: (text) => evaluate(joinSides(frontOcr.text, text), idType, user).verified,
+      });
+      combined = joinSides(frontOcr.text, backOcr.text);
+      confidence = Math.round((frontOcr.confidence + backOcr.confidence) / 2);
+    }
+
+    ocrText = combined;
+    outcome = evaluate(combined, idType, user);
   } catch (err) {
     console.error('[identity] OCR failed:', err.message);
     outcome = { verified: false, failureCode: 'UNREADABLE', nameMatched: false, addressMatched: false };

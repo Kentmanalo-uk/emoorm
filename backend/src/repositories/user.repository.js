@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
 
 /**
@@ -142,6 +143,8 @@ const findById = async (id) => {
       isVerified: true,
       sellerApplicationStatus: true,
       sellerApplicationDate: true,
+      sellerRejectionReason: true,
+      sellerReviewedAt: true,
       createdAt: true,
       updatedAt: true,
       deletedAt: true,
@@ -228,6 +231,7 @@ const findAll = async (options = {}) => {
     isActive,
     search,
     sellerApplicationStatus,
+    includeShopMunicipality = false,
   } = options;
 
   const where = {
@@ -236,14 +240,23 @@ const findAll = async (options = {}) => {
 
   if (Array.isArray(role)) where.role = { in: role };
   else if (role) where.role = role;
-  if (municipalityId) where.municipalityId = municipalityId;
+  if (municipalityId && includeShopMunicipality) {
+    // Seller applications are filed under the municipality the SHOP is in, so
+    // that town's admin sees them even when the applicant lives elsewhere.
+    where.AND = [{ OR: [{ municipalityId }, { shopMunicipalityId: municipalityId }] }];
+  } else if (municipalityId) {
+    where.municipalityId = municipalityId;
+  }
   if (isActive !== undefined) where.isActive = isActive;
   if (sellerApplicationStatus) where.sellerApplicationStatus = sellerApplicationStatus;
   if (search) {
-    where.OR = [
-      { fullName: { contains: search } },
-      { email: { contains: search } },
-    ];
+    const matchesSearch = {
+      OR: [
+        { fullName: { contains: search } },
+        { email: { contains: search } },
+      ],
+    };
+    where.AND = [...(where.AND || []), matchesSearch];
   }
 
   const [users, total] = await Promise.all([
@@ -285,9 +298,27 @@ const findAll = async (options = {}) => {
         isVerified: true,
         sellerApplicationStatus: true,
         sellerApplicationDate: true,
+        sellerRejectionReason: true,
+        sellerReviewedAt: true,
+        sellerApplicationHistory: true,
+        sellerTermsVersion: true,
+        sellerTermsAcceptedAt: true,
         shopName: true,
         shopDescription: true,
         shopAddress: true,
+        shopBarangay: true,
+        shopMunicipalityId: true,
+        shopTagline: true,
+        shopLogoUrl: true,
+        shopCategories: true,
+        sellerBusinessType: true,
+        sellerPermitNumber: true,
+        sellerPermitUrl: true,
+        sellerBirTin: true,
+        payoutMethod: true,
+        payoutAccountName: true,
+        payoutAccountNumber: true,
+        fulfillmentPreference: true,
         idType: true,
         idFrontUrl: true,
         idBackUrl: true,
@@ -310,66 +341,169 @@ const findAll = async (options = {}) => {
 };
 
 /**
- * Apply to become a seller
+ * Everything the applicant filled in, plus the review outcome and any saved
+ * draft. Used by the application status endpoint and the admin review screen.
  * @param {String} userId - User ID
+ * @returns {Promise<Object|null>} Application record or null
+ */
+const findSellerApplication = async (userId) => {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true,
+      municipalityId: true,
+      sellerApplicationStatus: true,
+      sellerApplicationDate: true,
+      sellerRejectionReason: true,
+      sellerReviewedAt: true,
+      sellerApplicationDraft: true,
+      sellerApplicationHistory: true,
+      sellerTermsVersion: true,
+      sellerTermsAcceptedAt: true,
+      shopName: true,
+      shopDescription: true,
+      shopAddress: true,
+      shopMunicipalityId: true,
+      shopBarangay: true,
+      shopTagline: true,
+      shopLogoUrl: true,
+      shopCategories: true,
+      sellerBusinessType: true,
+      sellerPermitNumber: true,
+      sellerPermitUrl: true,
+      sellerBirTin: true,
+      payoutMethod: true,
+      payoutAccountName: true,
+      payoutAccountNumber: true,
+      fulfillmentPreference: true,
+      idType: true,
+      idFrontUrl: true,
+      idBackUrl: true,
+      selfieUrl: true,
+    },
+  });
+};
+
+/**
+ * Store (or clear) the unsubmitted application form so a refresh does not
+ * lose what the applicant typed.
+ * @param {String} userId - User ID
+ * @param {Object|null} draft - Form contents, or null to clear
  * @returns {Promise<Object>} Updated user
  */
-const applyForSeller = async (userId, data = {}) => {
+const saveSellerApplicationDraft = async (userId, draft) => {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { sellerApplicationDraft: draft ?? Prisma.JsonNull },
+    select: { id: true, sellerApplicationDraft: true },
+  });
+};
+
+/**
+ * Append one entry to the application's audit trail.
+ * @param {Array} history - Existing history (may be null)
+ * @param {Object} entry - { action, by, byName, reason }
+ * @returns {Array} New history array
+ */
+const appendHistory = (history, entry) => {
+  const list = Array.isArray(history) ? history : [];
+  return [...list, { ...entry, at: new Date().toISOString() }].slice(-50);
+};
+
+/**
+ * Apply to become a seller. Saves every application field, records the terms
+ * the applicant agreed to, clears any previous rejection, and drops the draft.
+ * @param {String} userId - User ID
+ * @param {Object} data - Validated application data
+ * @param {Array} history - Existing application history
+ * @returns {Promise<Object>} Updated user
+ */
+const applyForSeller = async (userId, data = {}, history = []) => {
   return prisma.user.update({
     where: { id: userId },
     data: {
       sellerApplicationStatus: 'PENDING',
       sellerApplicationDate: new Date(),
-      ...(data.shopName && { shopName: data.shopName }),
-      ...(data.shopDescription && { shopDescription: data.shopDescription }),
-      ...(data.shopAddress && { shopAddress: data.shopAddress }),
+      // A resubmission starts clean — the previous verdict no longer applies.
+      sellerRejectionReason: null,
+      sellerReviewedById: null,
+      sellerReviewedAt: null,
+      sellerApplicationDraft: Prisma.JsonNull,
+      sellerApplicationHistory: appendHistory(history, { action: 'SUBMITTED', by: userId }),
+      shopName: data.shopName,
+      shopDescription: data.shopDescription ?? null,
+      shopAddress: data.shopAddress,
+      shopMunicipalityId: data.shopMunicipalityId,
+      shopBarangay: data.shopBarangay ?? null,
+      shopTagline: data.shopTagline ?? null,
+      shopLogoUrl: data.shopLogoUrl ?? null,
+      shopCategories: data.shopCategories?.length ? data.shopCategories : Prisma.JsonNull,
+      sellerBusinessType: data.sellerBusinessType ?? null,
+      sellerPermitNumber: data.sellerPermitNumber ?? null,
+      sellerPermitUrl: data.sellerPermitUrl ?? null,
+      sellerBirTin: data.sellerBirTin ?? null,
+      payoutMethod: data.payoutMethod ?? null,
+      payoutAccountName: data.payoutAccountName ?? null,
+      payoutAccountNumber: data.payoutAccountNumber ?? null,
+      fulfillmentPreference: data.fulfillmentPreference ?? null,
+      sellerTermsVersion: data.termsVersion,
+      sellerTermsAcceptedAt: new Date(),
       ...(data.idType && { idType: data.idType }),
       ...(data.idFrontUrl && { idFrontUrl: data.idFrontUrl }),
       ...(data.idBackUrl && { idBackUrl: data.idBackUrl }),
-      ...(data.selfieUrl && { selfieUrl: data.selfieUrl }),
     },
   });
 };
 
 /**
- * Approve seller application
+ * Approve seller application — this is the only place the SELLER role is
+ * granted, so an applicant has no seller access until an admin says yes.
  * @param {String} userId - User ID
+ * @param {Object} review - { reviewedById, reviewerName, history }
  * @returns {Promise<Object>} Updated user
  */
-const approveSeller = async (userId) => {
+const approveSeller = async (userId, review = {}) => {
   return prisma.user.update({
     where: { id: userId },
     data: {
       role: 'SELLER',
       sellerApplicationStatus: 'APPROVED',
+      sellerRejectionReason: null,
+      sellerReviewedById: review.reviewedById ?? null,
+      sellerReviewedAt: new Date(),
+      sellerApplicationHistory: appendHistory(review.history, {
+        action: 'APPROVED',
+        by: review.reviewedById ?? null,
+        byName: review.reviewerName ?? null,
+      }),
     },
   });
 };
 
 /**
- * Promote user to SELLER role without changing application status.
- * Used when a user applies — role becomes SELLER immediately, but their
- * store stays inactive until an admin approves the pending application.
+ * Reject seller application. The reason is stored so both the admin and the
+ * applicant can see it later, and the account drops back to BUYER so a
+ * rejected applicant cannot keep Seller Center access.
  * @param {String} userId - User ID
+ * @param {Object} review - { reason, reviewedById, reviewerName, history }
  * @returns {Promise<Object>} Updated user
  */
-const promoteToSeller = async (userId) => {
-  return prisma.user.update({
-    where: { id: userId },
-    data: { role: 'SELLER' },
-  });
-};
-
-/**
- * Reject seller application
- * @param {String} userId - User ID
- * @returns {Promise<Object>} Updated user
- */
-const rejectSeller = async (userId) => {
+const rejectSeller = async (userId, review = {}) => {
   return prisma.user.update({
     where: { id: userId },
     data: {
+      role: 'BUYER',
       sellerApplicationStatus: 'REJECTED',
+      sellerRejectionReason: review.reason || null,
+      sellerReviewedById: review.reviewedById ?? null,
+      sellerReviewedAt: new Date(),
+      sellerApplicationHistory: appendHistory(review.history, {
+        action: 'REJECTED',
+        by: review.reviewedById ?? null,
+        byName: review.reviewerName ?? null,
+        reason: review.reason || null,
+      }),
     },
   });
 };
@@ -429,6 +563,7 @@ const findKycRecordById = async (id) => {
       idFrontUrl: true,
       idBackUrl: true,
       selfieUrl: true,
+      sellerPermitUrl: true,
     },
   });
 };
@@ -466,8 +601,9 @@ module.exports = {
   emailExists,
   findAll,
   applyForSeller,
+  findSellerApplication,
+  saveSellerApplicationDraft,
   approveSeller,
-  promoteToSeller,
   rejectSeller,
   findByMunicipality,
   setPasswordResetToken,

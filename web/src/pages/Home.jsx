@@ -34,6 +34,7 @@ const Home = () => {
   ];
   const [bannerData, setBannerData] = useState(fallbackBanners);
   const [sideBanners, setSideBanners] = useState({ top: null, bottom: null });
+  const [sideBannersReady, setSideBannersReady] = useState(false);
   const [promotionPopup, setPromotionPopup] = useState(null);
   const [popupOpen, setPopupOpen] = useState(false);
 
@@ -70,6 +71,8 @@ const Home = () => {
         }
       } catch {
         // keep fallback banners
+      } finally {
+        if (!cancelled) setSideBannersReady(true);
       }
     })();
     return () => { cancelled = true; };
@@ -284,55 +287,17 @@ const Home = () => {
 
             {/* Right: Two Cards */}
             <div className="banner-sidebar">
-              {sideBanners.top ? (
+              {!sideBannersReady ? (
+                <SideBannerSkeleton />
+              ) : sideBanners.top ? (
                 <HomepageSideBanner banner={sideBanners.top} />
-              ) : (
-                <div className="banner-card banner-card-seller">
-                  <div className="banner-card-badge-corner">FREE</div>
-                  <h3 className="banner-card-title">
-                    Sell on<br />Emoorm.
-                  </h3>
-                  <p className="banner-card-text">Reach buyers across Oriental Mindoro.</p>
-                  <Link to="/sell" className="banner-card-button">
-                    Register
-                    <ArrowRight size={16} />
-                  </Link>
-                </div>
-              )}
+              ) : null}
 
-              {sideBanners.bottom ? (
+              {!sideBannersReady ? (
+                <SideBannerSkeleton />
+              ) : sideBanners.bottom ? (
                 <HomepageSideBanner banner={sideBanners.bottom} />
-              ) : (
-                <div className="banner-card banner-card-app">
-                  <div className="banner-card-app-copy">
-                    <div className="banner-card-label">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <rect x="4" y="2" width="8" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" />
-                        <circle cx="8" cy="12" r="0.5" fill="currentColor" />
-                      </svg>
-                      MOBILE APP
-                    </div>
-                    <h4 className="banner-card-title-small">
-                      Try Emoorm<br />on mobile.
-                    </h4>
-                    <p className="banner-card-text-small">Scan with your phone camera.</p>
-                  </div>
-                  <div className="qr-code">
-                    <svg viewBox="0 0 100 100" width="72" height="72">
-                      <rect width="100" height="100" fill="white" />
-                      <rect x="10" y="10" width="35" height="35" fill="black" />
-                      <rect x="55" y="10" width="35" height="35" fill="black" />
-                      <rect x="10" y="55" width="35" height="35" fill="black" />
-                      <rect x="15" y="15" width="25" height="25" fill="white" />
-                      <rect x="60" y="15" width="25" height="25" fill="white" />
-                      <rect x="15" y="60" width="25" height="25" fill="white" />
-                      <rect x="20" y="20" width="15" height="15" fill="black" />
-                      <rect x="65" y="20" width="15" height="15" fill="black" />
-                      <rect x="20" y="65" width="15" height="15" fill="black" />
-                    </svg>
-                  </div>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -498,10 +463,21 @@ const Home = () => {
   );
 };
 
+/** Placeholder with the card's shape while banners (or their images) load. */
+function SideBannerSkeleton() {
+  return <div className="banner-card banner-card-skeleton" aria-hidden="true" />;
+}
+
 function HomepageSideBanner({ banner }) {
+  const [loaded, setLoaded] = useState(false);
   const content = (
-    <div className="banner-card banner-card-image">
-      <img src={banner.imageUrl} alt={banner.title || 'Homepage banner'} />
+    <div className={`banner-card banner-card-image${loaded ? '' : ' is-loading'}`}>
+      <img
+        src={banner.imageUrl}
+        alt={banner.title || 'Homepage banner'}
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+      />
     </div>
   );
   if (!banner.linkUrl) return content;
@@ -510,16 +486,33 @@ function HomepageSideBanner({ banner }) {
     : <Link to={banner.linkUrl} className="banner-card-image-link">{content}</Link>;
 }
 
+const PROMO_CLOSE_MS = 240;
+
 function PromotionPopup({ banner, onClose }) {
+  const [closing, setClosing] = useState(false);
   const image = <img src={banner.imageUrl} alt={banner.title || 'Promotion'} />;
+
+  // Let the shrink animation finish before the popup is removed.
+  const close = () => {
+    if (closing) return;
+    setClosing(true);
+    window.setTimeout(onClose, PROMO_CLOSE_MS);
+  };
+
   return (
-    <div className="home-promo-backdrop" role="dialog" aria-modal="true" aria-label={banner.title || 'Promotion'} onClick={onClose}>
+    <div
+      className={`home-promo-backdrop${closing ? ' is-closing' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={banner.title || 'Promotion'}
+      onClick={close}
+    >
       <div className="home-promo-dialog" onClick={(event) => event.stopPropagation()}>
-        <button type="button" className="home-promo-close" onClick={onClose} aria-label="Close promotion"><X size={18} /></button>
+        <button type="button" className="home-promo-close" onClick={close} aria-label="Close promotion"><X size={18} /></button>
         {banner.linkUrl ? (
           banner.linkUrl.startsWith('http')
-            ? <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer" onClick={onClose}>{image}</a>
-            : <Link to={banner.linkUrl} onClick={onClose}>{image}</Link>
+            ? <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer" onClick={close}>{image}</a>
+            : <Link to={banner.linkUrl} onClick={close}>{image}</Link>
         ) : image}
       </div>
     </div>

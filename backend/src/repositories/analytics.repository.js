@@ -242,7 +242,13 @@ const getMunicipalityStats = async (municipalityId, window) => {
     uniqueBuyers,
   ] = await Promise.all([
     prisma.user.count({
-      where: { municipalityId, sellerApplicationStatus: 'PENDING', deletedAt: null },
+      // Applications follow the shop's municipality, which may differ from
+      // the applicant's own.
+      where: {
+        sellerApplicationStatus: 'PENDING',
+        deletedAt: null,
+        OR: [{ municipalityId }, { shopMunicipalityId: municipalityId }],
+      },
     }),
     prisma.user.count({ where: { municipalityId, role: 'SELLER', deletedAt: null } }),
     prisma.store.count({ where: { municipalityId, isActive: true, isSuspended: false, deletedAt: null } }),
@@ -275,7 +281,11 @@ const getMunicipalityStats = async (municipalityId, window) => {
       orderBy: { createdAt: 'asc' },
     }),
     prisma.user.findMany({
-      where: { municipalityId, sellerApplicationStatus: 'PENDING', deletedAt: null },
+      where: {
+        sellerApplicationStatus: 'PENDING',
+        deletedAt: null,
+        OR: [{ municipalityId }, { shopMunicipalityId: municipalityId }],
+      },
       select: { id: true, fullName: true, email: true, shopName: true, sellerApplicationDate: true },
       orderBy: { sellerApplicationDate: 'desc' },
       take: 5,

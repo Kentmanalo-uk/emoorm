@@ -17,6 +17,19 @@ const imageSearchLimiter = rateLimit({
   message: { success: false, message: 'Image search limit reached. Try again later.' },
 });
 
+// Submitting a seller application notifies every municipal admin, so it is
+// capped the same way identity verification is.
+const sellerApplyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Only accepted submissions count — correcting a validation error should not
+  // use up the applicant's quota.
+  skipFailedRequests: true,
+  message: { success: false, message: 'Too many seller applications. Please try again later.' },
+});
+
 /**
  * Development only: the site is opened from the PC's LAN address when testing
  * on a phone, so accept origins on a private network. Never true in production.
@@ -40,4 +53,10 @@ const csrfOriginGuard = (req, res, next) => {
   });
 };
 
-module.exports = { uploadLimiter, imageSearchLimiter, csrfOriginGuard, isLocalNetworkOrigin };
+module.exports = {
+  uploadLimiter,
+  imageSearchLimiter,
+  sellerApplyLimiter,
+  csrfOriginGuard,
+  isLocalNetworkOrigin,
+};

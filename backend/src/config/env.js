@@ -48,6 +48,12 @@ const config = {
     ],
   },
 
+  // KYC document retention — ID photos and permits are deleted this many days
+  // after an application is decided. Set to 0 to keep them indefinitely.
+  kyc: {
+    retentionDays: parseInt(process.env.KYC_RETENTION_DAYS || '90', 10),
+  },
+
   // Cloudinary Configuration
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,

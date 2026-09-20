@@ -759,3 +759,28 @@
     display: none;
   }
 }
+
+/* ── Sidebar navigation scrolls when there are many items ───────
+   min-height: 0 lets the flex child shrink (otherwise a long list
+   overflows the sidebar instead of scrolling). The brand row and the
+   account card stay put; only the list moves. */
+.sc-sidebar-inner > .sc-nav {
+  min-height: 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.sc-nav::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.sc-nav:hover::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+}
+
+.sc-sidebar-inner > .sc-brand-row,
+.sc-sidebar-inner > .sc-account,
+.sc-sidebar-inner > .sc-user-card {
+  flex-shrink: 0;
+}
