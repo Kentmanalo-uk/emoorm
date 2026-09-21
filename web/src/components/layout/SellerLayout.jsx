@@ -22,6 +22,7 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import AppRail from './AppRail';
 import './SellerLayout.css';
 import './SellerShellMobile.css';
+import UserAvatar from '../ui/UserAvatar';
 
 /**
  * Persistent shell for /seller/* routes.
@@ -60,12 +61,14 @@ export default function SellerLayout() {
   const startAccountSwitch = useAccountSwitchStore((s) => s.start);
   const rememberShop = useAccountSwitchStore((s) => s.setShop);
 
-  if (!isAuthenticated) return <Navigate to="/login?redirect=/seller" replace />;
-  if (user?.role !== 'SELLER' && user?.role !== 'SUPER_ADMIN') {
-    return <Navigate to="/sell" replace />;
-  }
+  // Hooks run on every render, so the sign-in and role gates come after
+  // them (below). Returning early above an effect changed the hook count
+  // between renders, which React reports as a render error the moment the
+  // session ends while this layout is mounted.
+  const allowed = isAuthenticated && (user?.role === 'SELLER' || user?.role === 'SUPER_ADMIN');
 
   useEffect(() => {
+    if (!allowed) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -82,7 +85,7 @@ export default function SellerLayout() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [allowed]);
 
   // Keep the switch animation's shop logo in sync (also after profile edits).
   useEffect(() => {
@@ -102,6 +105,9 @@ export default function SellerLayout() {
       document.removeEventListener('keydown', onKey);
     };
   }, [accountOpen]);
+
+  if (!isAuthenticated) return <Navigate to="/login?redirect=/seller" replace />;
+  if (!allowed) return <Navigate to="/sell" replace />;
 
   const switchToPersonal = () => {
     setAccountOpen(false);
@@ -261,11 +267,13 @@ export default function SellerLayout() {
                 tabIndex={accountOpen ? 0 : -1}
                 onClick={switchToPersonal}
               >
-                {user?.profilePhoto ? (
-                  <img src={resolveImg(user.profilePhoto)} alt="" className="sc-account-switch-avatar" />
-                ) : (
-                  <span className="sc-account-switch-avatar sc-account-switch-avatar--fallback">{personalInitial}</span>
-                )}
+                <UserAvatar
+                  src={user?.profilePhoto}
+                  name={personalInitial}
+                  alt=""
+                  imgClassName="sc-account-switch-avatar"
+                  fallbackClassName="sc-account-switch-avatar sc-account-switch-avatar--fallback"
+                />
                 <span className="sc-account-menu-meta">
                   <strong className="sc-account-switch-label">Switch to Personal Account</strong>
                   <span>{personalName}</span>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star } from '@phosphor-icons/react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star, WarningCircle } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import useCartStore from '../store/cartStore';
@@ -11,12 +11,56 @@ import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 import { useCategories } from '../hooks/useReferenceData';
 
+// The DB stores `images` as JSON; some rows come back stringified. Normalize.
+const parseImages = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [raw];
+    } catch {
+      return [raw];
+    }
+  }
+  return [];
+};
+
+// Stars only from real review data; a product with no reviews shows "New".
+const renderRating = (product, size = 14) => {
+  const count = Number(product.reviewCount ?? 0);
+  if (count <= 0) {
+    return (
+      <div className="product-rating-row">
+        <span className="product-review-count">New</span>
+      </div>
+    );
+  }
+  const filled = Math.round(Number(product.averageRating || 0));
+  return (
+    <div className="product-rating-row">
+      <div className="product-stars">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <Star
+            key={i}
+            size={size}
+            weight={i < filled ? 'fill' : 'regular'}
+            color={i < filled ? 'var(--t-warning-500, #f59e0b)' : 'var(--t-neutral-300, #d1d5db)'}
+          />
+        ))}
+      </div>
+      <span className="product-review-count">({count})</span>
+    </div>
+  );
+};
+
 const Products = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [imageSearchPreview, setImageSearchPreview] = useState('');
   const { categories } = useCategories();
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const addItem = useCartStore((s) => s.addItem);
 
@@ -27,8 +71,30 @@ const Products = () => {
       toast.error('Out of stock');
       return;
     }
-    addItem(product, 1);
-    toast.success(`${product.name} added to cart`);
+    // Options must be chosen on the product page.
+    if (Array.isArray(product.variations) && product.variations.length > 0) {
+      navigate(`/product/${product.slug}`);
+      return;
+    }
+    try {
+      addItem({
+        id: product.id,
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        image: parseImages(product.images)[0] || '/placeholder-product.png',
+        storeId: product.storeId || product.store?.id,
+        storeName: product.store?.name,
+        storeLogo: product.store?.logoUrl || product.store?.logo || null,
+        stock: product.stock,
+        slug: product.slug,
+        categoryId: product.categoryId,
+        selectedVariations: null,
+      }, 1);
+      toast.success(`${product.name} added to cart`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to add to cart');
+    }
   };
 
   // Filters
@@ -81,6 +147,7 @@ const Products = () => {
 
   const fetchProducts = async () => {
     setIsLoading(true);
+    setLoadError('');
     try {
       const params = {
         page: pagination.page,
@@ -119,6 +186,7 @@ const Products = () => {
     } catch (error) {
       console.error('Failed to fetch products:', error);
       setProducts([]);
+      setLoadError(error?.message || 'Failed to load products');
     } finally {
       setIsLoading(false);
     }
@@ -311,6 +379,15 @@ const Products = () => {
               {/* Products Grid/List */}
               {isLoading ? (
                 <Skeleton.Cards count={12} />
+              ) : loadError ? (
+                <div className="products-empty products-error" role="alert">
+                  <WarningCircle size={64} weight="fill" />
+                  <h3>Couldn't load products</h3>
+                  <p>{loadError}</p>
+                  <button onClick={fetchProducts} className="empty-clear-btn">
+                    Try again
+                  </button>
+                </div>
               ) : products.length === 0 ? (
                 <div className="products-empty">
                   <Package size={64} weight="fill" />
@@ -350,19 +427,10 @@ const Products = () => {
                       <div className="product-info">
                         <h3 className="product-name">{product.name}</h3>
                         <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
-                        <div className="product-rating-row">
-                          <div className="product-stars">
-                            {[0, 1, 2, 3, 4].map((i) => (
-                              <Star
-                                key={i}
-                                size={14}
-                                weight="fill"
-                                color="var(--t-warning-500, #f59e0b)"
-                              />
-                            ))}
-                          </div>
-                          <span className="product-review-count">({product.reviewCount ?? 0})</span>
-                        </div>
+                        {renderRating(product)}
+                        {Number(product.soldCount) > 0 && (
+                          <span className="product-review-count">{product.soldCount} sold</span>
+                        )}
                       </div>
                     </Link>
                   ))}

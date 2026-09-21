@@ -91,6 +91,14 @@ router.delete(
   productController.deleteProduct
 );
 
+// Seller stock adjustment (restock / manual correction), own products only
+router.post(
+  '/:id/stock',
+  authenticate,
+  authorize('SELLER'),
+  productController.adjustStock
+);
+
 // Admin routes
 router.post(
   '/:id/approve',

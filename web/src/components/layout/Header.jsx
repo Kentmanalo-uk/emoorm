@@ -10,12 +10,12 @@ import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
 import axios from '../../lib/axios';
-import { resolveImg } from '../../lib/media';
 import { notificationHref } from '../../lib/notificationLink';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import ImageSearchModal from './ImageSearchModal';
 import './Header.css';
+import UserAvatar from '../ui/UserAvatar';
 
 const NOTIF_TYPE = {
   ORDER_RECEIVED: { Icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New order' },
@@ -393,13 +393,13 @@ const Header = () => {
             <div className="account-hover">
               {isAuthenticated ? (
                 <Link to="/profile" className="topbar-link account-trigger account-trigger-user">
-                  {user?.profilePhoto ? (
-                    <img src={resolveImg(user.profilePhoto)} alt="" className="account-avatar" />
-                  ) : (
-                    <span className="account-avatar account-avatar-fallback">
-                      {(user?.fullName || 'U').charAt(0).toUpperCase()}
-                    </span>
-                  )}
+                  <UserAvatar
+                    src={user?.profilePhoto}
+                    name={user?.fullName || 'U'}
+                    alt=""
+                    imgClassName="account-avatar"
+                    fallbackClassName="account-avatar account-avatar-fallback"
+                  />
                   <span className="account-name">{(user?.fullName || 'My Account').toUpperCase()}</span>
                 </Link>
               ) : (

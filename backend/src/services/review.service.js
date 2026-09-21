@@ -16,19 +16,16 @@ const { ApiError } = require('../middleware/errorHandler');
  * @param {String} productId - Product ID
  * @returns {Promise<Boolean>} True if purchased
  */
-const hasPurchasedProduct = async (buyerId, productId) => {
-  const eligibleStatuses = ['COMPLETED', 'DELIVERED', 'PICKED_UP'];
+const hasPurchasedProduct = async (buyerId, productId) => (
+  (await reviewRepository.countPurchases(buyerId, productId)) > 0
+);
 
-  for (const status of eligibleStatuses) {
-    const result = await orderRepository.findAll({ buyerId, status, pageSize: 100 });
-    for (const order of result.orders) {
-      const hasProduct = order.items.some((item) => item.productId === productId);
-      if (hasProduct) return true;
-    }
-  }
-
-  return false;
-};
+/**
+ * What this buyer has received and not yet reviewed.
+ * @param {String} userId
+ * @returns {Promise<Array>}
+ */
+const getPendingReviews = async (userId) => reviewRepository.findPendingForBuyer(userId);
 
 /**
  * Create review
@@ -158,13 +155,14 @@ const updateReview = async (reviewId, userId, data) => {
   }
 
   // Validate rating if provided
-  if (data.rating && (data.rating < 1 || data.rating > 5)) {
+  const numericRating = data.rating === undefined ? undefined : parseInt(data.rating, 10);
+  if (numericRating !== undefined && (!numericRating || numericRating < 1 || numericRating > 5)) {
     throw new ApiError('Rating must be between 1 and 5', 400);
   }
 
   // Filter allowed fields
   const updateData = {};
-  if (data.rating !== undefined) updateData.rating = data.rating;
+  if (numericRating !== undefined) updateData.rating = numericRating;
   if (data.comment !== undefined) updateData.comment = cleanText(data.comment, { maxLength: 2000 });
 
   return reviewRepository.updateReview(reviewId, updateData);
@@ -256,6 +254,7 @@ module.exports = {
   getReviews,
   getProductReviews,
   getMyReviews,
+  getPendingReviews,
   updateReview,
   deleteReview,
   getSellerReviews,

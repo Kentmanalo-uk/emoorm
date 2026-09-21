@@ -67,20 +67,21 @@ const getProducts = asyncHandler(async (req, res) => {
       ? req.user.municipalityId
       : municipalityId;
 
+  // The service whitelists sort fields, clamps paging and drops NaN prices.
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page,
+    pageSize,
     storeId,
     categoryId,
     municipalityId: scopedMunicipalityId,
     status,
-    minPrice: minPrice ? parseFloat(minPrice) : undefined,
-    maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+    minPrice,
+    maxPrice,
     search,
     sortBy,
     sortOrder,
     userId: req.user?.id,
-    isAdmin: req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN'),
+    isAdmin: !!req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN'),
   };
 
   const result = await productService.getProducts(options);
@@ -111,8 +112,8 @@ const getMyProducts = asyncHandler(async (req, res) => {
   } = req.query;
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page,
+    pageSize,
     status,
     search,
     sortBy,
@@ -166,6 +167,17 @@ const updateProduct = asyncHandler(async (req, res) => {
   );
 
   successResponse(res, product, 'Product updated successfully');
+});
+
+/**
+ * Adjust stock by a relative amount (restock / manual correction)
+ * @route POST /api/products/:id/stock
+ * @access Private (Product owner only)
+ */
+const adjustStock = asyncHandler(async (req, res) => {
+  const product = await productService.adjustStock(req.params.id, req.user.id, req.body);
+
+  successResponse(res, product, 'Stock updated successfully');
 });
 
 /**
@@ -286,6 +298,7 @@ module.exports = {
   getProductById,
   getProductBySlug,
   updateProduct,
+  adjustStock,
   deleteProduct,
   approveProduct,
   suspendProduct,

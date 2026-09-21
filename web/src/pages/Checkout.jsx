@@ -21,15 +21,45 @@ import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import useIdentityGate from '../hooks/useIdentityGate';
+import useAppSettings, { quoteDeliveryFee } from '../hooks/useAppSettings';
 import { isIdentityRequiredError } from '../lib/identity';
 import './Checkout.css';
+
+// Same rules the server applies at POST /orders.
+const CONTACT_NUMBER_RE = /^(09\d{9}|\+639\d{9})$/;
+const PAYMENT_REFERENCE_RE = /^[A-Za-z0-9 -]{4,64}$/;
+const normalizeContact = (value) => String(value || '').replace(/[\s-]/g, '');
 
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user } = useAuthStore();
-  const { items: allItems, getTotalPrice, clearCart } = useCartStore();
+  const { items: allItems, clearCart, revalidate } = useCartStore();
   const { requireVerifiedIdentity, showIdentityRequired, identityDialog } = useIdentityGate();
+  const { settings } = useAppSettings();
+
+  // Refresh price / stock / availability of every line before anything is placed.
+  const [revalidating, setRevalidating] = useState(false);
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let cancelled = false;
+    (async () => {
+      if (useCartStore.getState().items.length === 0) return;
+      setRevalidating(true);
+      try {
+        const { capped, unavailable } = await revalidate();
+        if (cancelled) return;
+        if (capped.length) toast(`Quantity reduced to available stock: ${capped.join(', ')}`);
+        if (unavailable.length) toast.error(`${unavailable.length} ${unavailable.length === 1 ? 'item is' : 'items are'} no longer available`);
+      } catch {
+        // Leave the lines as they are; the server re-checks at order time.
+      } finally {
+        if (!cancelled) setRevalidating(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   // Direct visits to /checkout get the verification prompt straight away.
   useEffect(() => {
@@ -83,11 +113,17 @@ const Checkout = () => {
   const [addressesLoaded, setAddressesLoaded] = useState(false);
 
   // Per-store settings + coverage
-  const [storeInfo, setStoreInfo] = useState({}); // { [storeId]: { store, covered, checked } }
+  const [storeInfo, setStoreInfo] = useState({}); // { [storeId]: { store, error, covered, checked } }
+  const [storesLoading, setStoresLoading] = useState(false);
+  const [storeLoadAttempt, setStoreLoadAttempt] = useState(0);
+
+  // Lines flagged by re-validation stay visible but can't be ordered.
+  const unavailableItems = useMemo(() => items.filter((it) => it.unavailable), [items]);
+  const orderableItems = useMemo(() => items.filter((it) => !it.unavailable), [items]);
 
   const subtotal = useMemo(
-    () => items.reduce((sum, it) => sum + Number(it.price) * it.quantity, 0),
-    [items]
+    () => orderableItems.reduce((sum, it) => sum + Number(it.price) * it.quantity, 0),
+    [orderableItems]
   );
 
   // Group items by store
@@ -186,33 +222,43 @@ const Checkout = () => {
     }
   }, [user, addressesLoaded, savedAddresses.length]);
 
-  // Fetch each store's settings once
+  // Fetch each store's settings once (Retry bumps the attempt counter)
   useEffect(() => {
     let cancelled = false;
+    if (storeIds.length === 0) return undefined;
     (async () => {
+      setStoresLoading(true);
       const results = await Promise.all(
         storeIds.map(async (id) => {
           try {
             const res = await axios.get(`/stores/${id}`);
-            return { id, store: res.data };
+            return { id, store: res.data || null, error: !res.data };
           } catch {
-            return { id, store: null };
+            return { id, store: null, error: true };
           }
         })
       );
       if (cancelled) return;
       setStoreInfo((prev) => {
         const next = { ...prev };
-        for (const { id, store } of results) {
-          next[id] = { ...(next[id] || {}), store };
+        for (const { id, store, error } of results) {
+          next[id] = { ...(next[id] || {}), store, error };
         }
         return next;
       });
+      setStoresLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [storeIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [storeIds.join(','), storeLoadAttempt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A store that failed to load blocks checkout: its payment / fulfilment
+  // rules are unknown, so nothing can be assumed available.
+  const storeLoadFailed = useMemo(
+    () => !storesLoading && storeIds.some((id) => storeInfo[id]?.error),
+    [storesLoading, storeIds, storeInfo]
+  );
 
   // Coverage check on delivery address change (debounced by simple effect)
   const checkCoverage = useCallback(async () => {
@@ -292,7 +338,8 @@ const Checkout = () => {
     [fulfillmentMethod, storeIds, storeInfo]
   );
 
-  const shippingFee = fulfillmentMethod === 'PICKUP' ? 0 : subtotal >= 500 ? 0 : 50;
+  const shippingFee = quoteDeliveryFee(settings, subtotal, fulfillmentMethod);
+  const freeDeliveryThreshold = Number(settings.freeDeliveryThreshold || 0);
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount);
 
@@ -308,7 +355,7 @@ const Checkout = () => {
       toast.success(`Voucher ${res.data.voucher.code} applied`);
     } catch (err) {
       setAppliedVoucher(null);
-      toast.error(err?.response?.data?.message || 'Invalid voucher code');
+      toast.error(err?.message || 'Invalid voucher code');
     } finally {
       setVoucherLoading(false);
     }
@@ -354,6 +401,9 @@ const Checkout = () => {
     const errs = {};
     if (!deliveryForm.fullName.trim()) errs.fullName = 'Full name is required.';
     if (!deliveryForm.contactNumber.trim()) errs.contactNumber = 'Contact number is required.';
+    else if (!CONTACT_NUMBER_RE.test(normalizeContact(deliveryForm.contactNumber))) {
+      errs.contactNumber = 'Enter a valid PH mobile number (09XXXXXXXXX or +639XXXXXXXXX).';
+    }
     if (fulfillmentMethod === 'DELIVERY') {
       if (!deliveryForm.street.trim()) errs.street = 'Street / house address is required.';
       if (!deliveryForm.barangay.trim()) errs.barangay = 'Barangay is required.';
@@ -363,8 +413,22 @@ const Checkout = () => {
     return Object.keys(errs).length === 0;
   };
 
+  // Returns an error message, or '' when the prepaid fields are acceptable.
+  const validatePrepaid = () => {
+    if (paymentMethod !== 'GCASH' && paymentMethod !== 'QRPH') return '';
+    const reference = paymentReference.trim();
+    if (!reference) return 'Please enter your payment reference number.';
+    if (!PAYMENT_REFERENCE_RE.test(reference)) return 'Reference must be 4–64 letters, numbers, spaces or dashes.';
+    if (!paymentProofUrl) return 'Please upload your payment proof screenshot.';
+    return '';
+  };
+
   const goToStep = (step) => {
     if (step === 1) return setCurrentStep(1);
+    if (storeLoadFailed) {
+      toast.error('Store details could not be loaded. Retry before continuing.');
+      return;
+    }
     if (step === 2) {
       if (!validateDelivery()) return;
       if (anyCoverageMissing) {
@@ -373,15 +437,10 @@ const Checkout = () => {
       }
       setCurrentStep(2);
     } else if (step === 3 && paymentMethod) {
-      if ((paymentMethod === 'GCASH' || paymentMethod === 'QRPH')) {
-        if (!paymentReference.trim()) {
-          toast.error('Please enter your payment reference number.');
-          return;
-        }
-        if (!paymentProofUrl) {
-          toast.error('Please upload your payment proof screenshot.');
-          return;
-        }
+      const prepaidError = validatePrepaid();
+      if (prepaidError) {
+        toast.error(prepaidError);
+        return;
       }
       setCurrentStep(3);
     }
@@ -412,8 +471,26 @@ const Checkout = () => {
       navigate('/cart');
       return;
     }
-    if (paymentMethod !== 'COD' && (!paymentReference.trim() || !paymentProofUrl)) {
-      toast.error('Please provide a payment reference and upload proof of payment.');
+    if (storeLoadFailed) {
+      toast.error('Store details could not be loaded. Retry before placing your order.');
+      return;
+    }
+    if (unavailableItems.length > 0) {
+      toast.error('Remove the unavailable items from your cart before placing the order.');
+      return;
+    }
+    if (orderableItems.length === 0) {
+      toast.error('There is nothing available to order.');
+      return;
+    }
+    if (!CONTACT_NUMBER_RE.test(normalizeContact(deliveryForm.contactNumber))) {
+      toast.error('Enter a valid PH mobile number (09XXXXXXXXX or +639XXXXXXXXX).');
+      setCurrentStep(1);
+      return;
+    }
+    const prepaidError = validatePrepaid();
+    if (prepaidError) {
+      toast.error(prepaidError);
       setCurrentStep(2);
       return;
     }
@@ -433,17 +510,17 @@ const Checkout = () => {
           checkoutKey: `${checkoutId}:${storeId}`,
           fulfillmentMethod,
           paymentMethod,
-          paymentReference: paymentReference || undefined,
-          paymentProofUrl: paymentProofUrl || undefined,
+          paymentReference: paymentMethod === 'COD' ? undefined : paymentReference.trim() || undefined,
+          paymentProofUrl: paymentMethod === 'COD' ? undefined : paymentProofUrl || undefined,
           voucherCode: appliedVoucher?.voucher?.code || undefined,
           deliveryAddress:
             fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
-          contactNumber: deliveryForm.contactNumber,
+          contactNumber: normalizeContact(deliveryForm.contactNumber),
           deliveryNotes: notes || undefined,
           buyerMunicipalityId: deliveryForm.municipalityId || undefined,
           buyerBarangay: deliveryForm.barangay || undefined,
           buyerProvince: deliveryForm.province || undefined,
-          items: storeItems.map((item) => ({
+          items: storeItems.filter((item) => !item.unavailable).map((item) => ({
             productId: item.productId || item.id,
             quantity: item.quantity,
             selectedVariations: item.selectedVariations || undefined,
@@ -482,8 +559,7 @@ const Checkout = () => {
         showIdentityRequired();
         return;
       }
-      const backendMsg = error?.response?.data?.message;
-      toast.error(backendMsg || error?.message || 'Failed to place order. Please try again.');
+      toast.error(error?.message || 'Failed to place order. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -561,8 +637,42 @@ const Checkout = () => {
           <div className="checkout-layout">
             <div className="checkout-main">
 
+              {/* Store details are required to know what can be offered */}
+              {storeLoadFailed && (
+                <div className="checkout-section">
+                  <div className="store-status bad checkout-store-error" role="alert">
+                    <AlertTriangle size={16} />
+                    <div>
+                      <strong>Couldn't load store details</strong>
+                      <p>Payment and fulfilment options depend on the store's settings. Check your connection and try again.</p>
+                      <button
+                        type="button"
+                        className="btn-back"
+                        onClick={() => setStoreLoadAttempt((n) => n + 1)}
+                        disabled={storesLoading}
+                      >
+                        {storesLoading ? 'Retrying…' : 'Retry'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {unavailableItems.length > 0 && (
+                <div className="checkout-section">
+                  <div className="store-status bad" role="alert">
+                    <AlertTriangle size={16} />
+                    <div>
+                      <strong>{unavailableItems.length === 1 ? 'An item is' : `${unavailableItems.length} items are`} no longer available</strong>
+                      <p>{unavailableItems.map((it) => it.name).join(', ')}. Remove {unavailableItems.length === 1 ? 'it' : 'them'} from your cart to place this order.</p>
+                      <Link to="/cart" className="btn-back">Back to cart</Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Step 1: Fulfillment + Address */}
-              {currentStep === 1 && (
+              {currentStep === 1 && !storeLoadFailed && (
                 <div className="checkout-section">
                   <div className="section-header">
                     <Truck size={24} />
@@ -760,15 +870,15 @@ const Checkout = () => {
                   <button
                     onClick={() => goToStep(2)}
                     className="btn-continue"
-                    disabled={anyCoverageMissing}
+                    disabled={anyCoverageMissing || storesLoading || revalidating}
                   >
-                    Continue to Payment
+                    {storesLoading ? 'Loading store details…' : 'Continue to Payment'}
                   </button>
                 </div>
               )}
 
               {/* Step 2: Payment */}
-              {currentStep === 2 && (
+              {currentStep === 2 && !storeLoadFailed && (
                 <div className="checkout-section">
                   <div className="section-header">
                     <CreditCard size={24} />
@@ -860,7 +970,7 @@ const Checkout = () => {
               )}
 
               {/* Step 3: Review */}
-              {currentStep === 3 && (
+              {currentStep === 3 && !storeLoadFailed && (
                 <div className="checkout-section">
                   <div className="section-header">
                     <Package size={24} />
@@ -868,15 +978,17 @@ const Checkout = () => {
                   </div>
 
                   <div className="review-items">
-                    <h3>Order Items ({items.length})</h3>
+                    <h3>Order Items ({orderableItems.length})</h3>
                     {items.map((item) => (
-                      <div key={item.id} className="review-item">
+                      <div key={item.id} className={`review-item ${item.unavailable ? 'is-unavailable' : ''}`}>
                         <ProductImage src={item.image || item.images?.[0]} alt={item.name} />
                         <div className="review-item-details">
                           <p className="review-item-name">{item.name}</p>
-                          <p className="review-item-quantity">Qty: {item.quantity}</p>
+                          <p className="review-item-quantity">
+                            {item.unavailable ? (item.unavailableReason || 'Unavailable') : `Qty: ${item.quantity}`}
+                          </p>
                         </div>
-                        <div className="review-item-price">₱{(item.price * item.quantity).toFixed(2)}</div>
+                        <div className="review-item-price">{item.unavailable ? '—' : `₱${(item.price * item.quantity).toFixed(2)}`}</div>
                       </div>
                     ))}
                   </div>
@@ -920,7 +1032,7 @@ const Checkout = () => {
 
                   <div className="checkout-section-actions">
                     <button onClick={() => goToStep(2)} className="btn-back">Back</button>
-                    <button onClick={handlePlaceOrder} disabled={isSubmitting} className="btn-place-order">
+                    <button onClick={handlePlaceOrder} disabled={isSubmitting || revalidating || unavailableItems.length > 0} className="btn-place-order">
                       {isSubmitting ? 'Placing Order...' : 'Place Order'}
                     </button>
                   </div>
@@ -933,7 +1045,7 @@ const Checkout = () => {
               <div className="checkout-summary">
                 <h3>Order Summary</h3>
                 <div className="summary-row">
-                  <span>Subtotal ({items.length} items)</span>
+                  <span>Subtotal ({orderableItems.length} {orderableItems.length === 1 ? 'item' : 'items'})</span>
                   <span>₱{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="summary-row">
@@ -951,9 +1063,9 @@ const Checkout = () => {
                   <span>Total</span>
                   <span className="total-amount">₱{total.toFixed(2)}</span>
                 </div>
-                {fulfillmentMethod === 'DELIVERY' && subtotal < 500 && (
+                {fulfillmentMethod === 'DELIVERY' && freeDeliveryThreshold > 0 && subtotal < freeDeliveryThreshold && (
                   <div className="shipping-reminder">
-                    Add ₱{(500 - subtotal).toFixed(2)} more for free shipping
+                    Add ₱{(freeDeliveryThreshold - subtotal).toFixed(2)} more for free shipping
                   </div>
                 )}
 

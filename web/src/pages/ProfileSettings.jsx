@@ -9,9 +9,17 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useNavigate } from 'react-router-dom';
 import './ProfileSettings.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
+import UserAvatar from '../components/ui/UserAvatar';
+
+const USERNAME_RE = /^[a-z0-9][a-z0-9._]{2,19}$/;
+
+// Keep what the person types inside what the server will accept, so the
+// only surprise left is "that username is taken" (409).
+const cleanUsername = (value) => value.toLowerCase().replace(/[^a-z0-9._]/g, '').slice(0, 20);
 
 const initialProfileState = (user) => ({
   fullName: user?.fullName || '',
+  username: user?.username || '',
   contactNumber: user?.contactNumber || '',
   barangay: user?.barangay || '',
   address: user?.address || '',
@@ -57,6 +65,10 @@ export default function ProfileSettings() {
       toast.error('Please enter your full name');
       return false;
     }
+    if (form.username && (!USERNAME_RE.test(form.username) || form.username.includes('..'))) {
+      toast.error('Username must be 3–20 characters: letters, numbers, dot or underscore');
+      return false;
+    }
     if (form.contactNumber) {
       const digits = form.contactNumber.replace(/\D/g, '');
       if (!/^09\d{9}$/.test(digits)) {
@@ -69,7 +81,7 @@ export default function ProfileSettings() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    setForm((f) => ({ ...f, [name]: name === 'username' ? cleanUsername(value) : value }));
   };
 
   const handleSave = async (e) => {
@@ -85,12 +97,17 @@ export default function ProfileSettings() {
         address: form.address?.trim() || null,
         profilePhoto: form.profilePhoto || null,
       };
+      // Only send the username when it actually changed: sending the same
+      // one back is a no-op server side, but there is no reason to risk it.
+      if ((form.username || '') !== (original.username || '')) {
+        payload.username = form.username.trim();
+      }
       const res = await axios.put('/auth/profile', payload);
       const updated = res.data ?? res;
       if (updateUser) updateUser({ ...user, ...updated });
       toast.success('Profile updated');
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Failed to save');
+      toast.error(err.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -208,11 +225,12 @@ export default function ProfileSettings() {
 
         <div className="ps-photo-row">
           <div className="ps-photo">
-            {photoUrl ? (
-              <img src={photoUrl} alt={form.fullName} />
-            ) : (
-              <span className="ps-photo-fallback">{initials}</span>
-            )}
+            <UserAvatar
+              src={form.profilePhoto}
+              name={initials}
+              alt={form.fullName}
+              fallbackClassName="ps-photo-fallback"
+            />
             {uploading && (
               <div className="ps-photo-uploading">
                 <Loader2 size={20} className="ps-spin" />
@@ -262,6 +280,25 @@ export default function ProfileSettings() {
               required
               className="ps-input"
             />
+          </label>
+
+          <label className="ps-field">
+            <span className="ps-label">Username</span>
+            <div className="ps-input-wrap ps-input-prefixed">
+              <span className="ps-input-prefix" aria-hidden="true">@</span>
+              <input
+                name="username"
+                value={form.username}
+                onChange={handleChange}
+                placeholder="juandelacruz"
+                maxLength={20}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                className="ps-input"
+              />
+            </div>
+            <span className="ps-help">3–20 characters: letters, numbers, dot or underscore</span>
           </label>
 
           <label className="ps-field">

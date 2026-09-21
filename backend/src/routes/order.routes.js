@@ -3,6 +3,12 @@ const router = express.Router();
 const orderController = require('../controllers/order.controller');
 const { authenticate, authorize } = require('../middleware/auth');
 const { checkoutLimiter } = require('../middleware/security');
+const {
+  createOrderValidation,
+  paymentProofValidation,
+  verifyPaymentValidation,
+  rejectInvalid,
+} = require('../validators/order.validator');
 
 /**
  * Order Routes
@@ -14,6 +20,8 @@ router.post(
   authenticate,
   authorize('BUYER', 'SELLER'),
   checkoutLimiter,
+  createOrderValidation,
+  rejectInvalid,
   orderController.createOrder
 );
 
@@ -29,6 +37,22 @@ router.post(
   authenticate,
   authorize('BUYER', 'SELLER'),
   orderController.cancelOrder
+);
+
+router.patch(
+  '/:id/proof',
+  authenticate,
+  authorize('BUYER', 'SELLER'),
+  paymentProofValidation,
+  rejectInvalid,
+  orderController.submitPaymentProof
+);
+
+router.post(
+  '/:id/received',
+  authenticate,
+  authorize('BUYER', 'SELLER'),
+  orderController.markReceived
 );
 
 // Seller routes
@@ -50,6 +74,8 @@ router.patch(
   '/:id/payment',
   authenticate,
   authorize('SELLER', 'SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
+  verifyPaymentValidation,
+  rejectInvalid,
   orderController.verifyPayment
 );
 

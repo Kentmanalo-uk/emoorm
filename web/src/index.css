@@ -446,3 +446,14 @@ img {
   color: var(--t-primary-200, #a7f3d0);
   fill: var(--t-primary-200, #a7f3d0);
 }
+
+/* A link to someone's public profile, used wherever a buyer's name is printed
+   (seller orders, product reviews, seller reviews). Global because those
+   pages load different stylesheets. */
+.profile-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+
+.profile-link:hover { color: var(--t-primary-700, #047857); }

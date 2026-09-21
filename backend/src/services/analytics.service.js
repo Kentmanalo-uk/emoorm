@@ -20,7 +20,11 @@ const { ApiError } = require('../middleware/errorHandler');
  *   }
  */
 
-const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'];
+// Every OrderStatus value, so the counts map always carries the full set.
+const ORDER_STATUSES = [
+  'PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED',
+  'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP',
+];
 const PRODUCT_STATUSES = ['PENDING', 'APPROVED', 'HIDDEN', 'SUSPENDED', 'ARCHIVED'];
 
 const toCountMap = (rows, statuses) => {
@@ -101,8 +105,11 @@ const getSellerAnalytics = async (userId, query = {}) => {
   const orderStatus = toCountMap(raw.ordersByStatus, ORDER_STATUSES);
   const productStatus = toCountMap(raw.productsByStatus, PRODUCT_STATUSES);
 
-  const revenue = Number(raw.revenueAgg._sum.total || 0);
-  const previousRevenue = Number(raw.previousRevenueAgg._sum.total || 0);
+  // Revenue is what was kept: completed, not fully refunded, minus partial refunds.
+  const refunded = Number(raw.refundedAgg?._sum?.refundedAmount || 0);
+  const previousRefunded = Number(raw.previousRefundedAgg?._sum?.refundedAmount || 0);
+  const revenue = Number(raw.revenueAgg._sum.total || 0) - refunded;
+  const previousRevenue = Number(raw.previousRevenueAgg._sum.total || 0) - previousRefunded;
   const completedOrders = raw.revenueAgg._count._all;
   const previousCompletedOrders = raw.previousRevenueAgg._count._all;
   const avgOrderValue = completedOrders ? revenue / completedOrders : 0;
@@ -129,6 +136,7 @@ const getSellerAnalytics = async (userId, query = {}) => {
     store: { id: store.id, name: store.name, isActive: store.isActive, isSuspended: store.isSuspended },
     kpis: {
       revenue: kpi(revenue, previousRevenue),
+      refunded: kpi(refunded, previousRefunded),
       orders: kpi(completedOrders, previousCompletedOrders),
       totalOrders: { value: orderStatus.total, previous: null, delta: null },
       avgOrderValue: kpi(avgOrderValue, previousAvg),
@@ -177,8 +185,11 @@ const getMunicipalityAnalytics = async (actor, query = {}) => {
   const orderStatus = toCountMap(raw.ordersByStatus, ORDER_STATUSES);
   const productStatus = toCountMap(raw.productsByStatus, PRODUCT_STATUSES);
 
-  const revenue = Number(raw.revenueAgg._sum.total || 0);
-  const previousRevenue = Number(raw.previousRevenueAgg._sum.total || 0);
+  // Revenue is what was kept: completed, not fully refunded, minus partial refunds.
+  const refunded = Number(raw.refundedAgg?._sum?.refundedAmount || 0);
+  const previousRefunded = Number(raw.previousRefundedAgg?._sum?.refundedAmount || 0);
+  const revenue = Number(raw.revenueAgg._sum.total || 0) - refunded;
+  const previousRevenue = Number(raw.previousRevenueAgg._sum.total || 0) - previousRefunded;
   const completedOrders = raw.revenueAgg._count._all;
   const previousCompletedOrders = raw.previousRevenueAgg._count._all;
   const avgOrderValue = completedOrders ? revenue / completedOrders : 0;
@@ -217,6 +228,7 @@ const getMunicipalityAnalytics = async (actor, query = {}) => {
     municipality: { id: municipality.id, name: municipality.name, code: municipality.code },
     kpis: {
       revenue: kpi(revenue, previousRevenue),
+      refunded: kpi(refunded, previousRefunded),
       orders: kpi(completedOrders, previousCompletedOrders),
       totalOrders: { value: orderStatus.total, previous: null, delta: null },
       avgOrderValue: kpi(avgOrderValue, previousAvg),
@@ -254,8 +266,11 @@ const getPlatformAnalytics = async (query = {}) => {
   const usersByRole = { BUYER: 0, SELLER: 0, MUNICIPAL_ADMIN: 0, SUPER_ADMIN: 0 };
   for (const row of raw.usersByRole) usersByRole[row.role] = row._count._all;
 
-  const revenue = Number(raw.revenueAgg._sum.total || 0);
-  const previousRevenue = Number(raw.previousRevenueAgg._sum.total || 0);
+  // Revenue is what was kept: completed, not fully refunded, minus partial refunds.
+  const refunded = Number(raw.refundedAgg?._sum?.refundedAmount || 0);
+  const previousRefunded = Number(raw.previousRefundedAgg?._sum?.refundedAmount || 0);
+  const revenue = Number(raw.revenueAgg._sum.total || 0) - refunded;
+  const previousRevenue = Number(raw.previousRevenueAgg._sum.total || 0) - previousRefunded;
   const completedOrders = raw.revenueAgg._count._all;
   const previousCompletedOrders = raw.previousRevenueAgg._count._all;
   const avgOrderValue = completedOrders ? revenue / completedOrders : 0;
@@ -326,6 +341,7 @@ const getPlatformAnalytics = async (query = {}) => {
     filter: { municipalityId: query.municipalityId || null },
     kpis: {
       revenue: kpi(revenue, previousRevenue),
+      refunded: kpi(refunded, previousRefunded),
       orders: kpi(completedOrders, previousCompletedOrders),
       totalOrders: { value: orderStatus.total, previous: null, delta: null },
       avgOrderValue: kpi(avgOrderValue, previousAvg),

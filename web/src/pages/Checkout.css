@@ -909,6 +909,19 @@
   font-style: italic;
 }
 
+/* Blocking notices (store failed to load / unavailable lines) */
+.store-status .btn-back {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  padding: 6px 12px;
+  text-decoration: none;
+}
+
+.review-item.is-unavailable {
+  opacity: 0.55;
+}
+
 .qr-payment-panel {
   display: grid;
   grid-template-columns: 220px 1fr;

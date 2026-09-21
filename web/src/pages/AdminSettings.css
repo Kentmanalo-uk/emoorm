@@ -1245,3 +1245,21 @@ textarea.st-input {
     flex: 1 1 100%;
   }
 }
+
+/* A labelled checkbox switch for on/off settings. */
+.st-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.st-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--t-primary-600);
+  cursor: pointer;
+}

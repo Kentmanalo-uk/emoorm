@@ -1,4 +1,5 @@
 const appSettingRepository = require('../repositories/appSetting.repository');
+const config = require('../config/env');
 const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -9,6 +10,16 @@ const DEFAULT_SETTINGS = {
   theme: null,
   deliveryFee: 50,
   freeDeliveryThreshold: 500,
+  requireBuyerVerification: true,
+};
+
+// A switch is a boolean. "yes", 1 and "" are rejected rather than guessed
+// at, because a mis-set checkout gate is not something to be lenient about.
+const booleanField = (value, field) => {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new ApiError(`${field} must be true or false`, 400);
 };
 
 // Money fields are bounded so a typo cannot quote a six-figure delivery fee.
@@ -156,10 +167,26 @@ const sanitize = (input = {}) => {
     data[field] = moneyField(input[field], field);
   }
 
+  if (input.requireBuyerVerification !== undefined) {
+    data.requireBuyerVerification = booleanField(input.requireBuyerVerification, 'requireBuyerVerification');
+  }
+
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme or checkout pricing', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing or verification setting', 400);
   }
   return data;
+};
+
+/**
+ * Whether checkout is gated on buyer ID verification right now.
+ *
+ * IDENTITY_VERIFICATION_REQUIRED=false in the environment still forces the
+ * gate off (local development), otherwise the super admin's setting decides.
+ */
+const isBuyerVerificationRequired = async () => {
+  if (!config.identity.requiredForCheckout) return false;
+  const settings = await get();
+  return settings.requireBuyerVerification !== false;
 };
 
 /**
@@ -185,4 +212,4 @@ const update = async (input) => {
   return settings;
 };
 
-module.exports = { get, update, getCheckoutPricing };
+module.exports = { get, update, getCheckoutPricing, isBuyerVerificationRequired };

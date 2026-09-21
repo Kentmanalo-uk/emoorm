@@ -259,7 +259,11 @@ export default function ProfileVerification() {
     <div className="profile-page-wrap idv-wrap">
       <header className="profile-page-header">
         <h1 className="profile-page-title">Identity Verification</h1>
-        <p className="idv-subtitle">Verified identity is required before checking out.</p>
+        <p className="idv-subtitle">
+          {status?.requiredForCheckout === false
+            ? 'Verification is optional right now, but a verified account is ready if it becomes required.'
+            : 'Verified identity is required before checking out.'}
+        </p>
       </header>
 
       <section className={`idv-status idv-status--${meta.tone}`} aria-live="polite">

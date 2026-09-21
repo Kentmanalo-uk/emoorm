@@ -1192,3 +1192,20 @@
     padding: 12px 14px 6px;
   }
 }
+
+/* Header buttons: view the public profile, edit the private one. */
+.profile-header-actions {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.profile-edit-button--ghost {
+  background-color: transparent;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+}
+
+.profile-edit-button--ghost:hover {
+  background-color: var(--t-neutral-50, #f9fafb);
+}

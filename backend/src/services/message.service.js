@@ -1,5 +1,6 @@
 const messageRepository = require('../repositories/message.repository');
 const storeRepository = require('../repositories/store.repository');
+const orderRepository = require('../repositories/order.repository');
 const { ApiError } = require('../middleware/errorHandler');
 const prisma = require('../config/database');
 
@@ -156,6 +157,35 @@ const openConversationWithStore = async (userId, storeId) => {
   }
 
   return getConversation(conversation.id, userId);
+};
+
+/**
+ * A seller opens (or resumes) the conversation with one of their buyers.
+ *
+ * Only a buyer who has ordered from the store can be contacted this way, so
+ * a seller cannot use the marketplace to cold-message arbitrary accounts.
+ */
+const openConversationWithBuyer = async (sellerUserId, buyerId) => {
+  const store = await storeRepository.findByOwnerId(sellerUserId);
+  if (!store) {
+    throw new ApiError('You do not have a store', 404);
+  }
+  if (buyerId === sellerUserId) {
+    throw new ApiError('You cannot start a conversation with yourself', 400);
+  }
+  // Any order at all, including completed ones: a seller may well need to
+  // follow up on a purchase that finished weeks ago.
+  const orders = await orderRepository.findAll({ buyerId, storeId: store.id, page: 1, pageSize: 1 });
+  if (!orders.total) {
+    throw new ApiError('You can only message buyers who have ordered from your store', 403);
+  }
+
+  let conversation = await messageRepository.findConversationByPair(buyerId, store.id);
+  if (!conversation) {
+    conversation = await messageRepository.createConversation(buyerId, store.id);
+  }
+
+  return getConversation(conversation.id, sellerUserId);
 };
 
 /**
@@ -337,6 +367,7 @@ const rateConversationService = async (conversationId, userId, rating) => {
 module.exports = {
   listMyConversations,
   openConversationWithStore,
+  openConversationWithBuyer,
   getConversation,
   sendMessage,
   markConversationRead,

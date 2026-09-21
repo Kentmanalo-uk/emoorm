@@ -421,13 +421,32 @@ const updateOrder = async (id, data) => {
   });
 };
 
-const updatePaymentStatus = async (id, paymentStatus, actorId = null) => {
+/**
+ * Record a payment decision. The write is conditional on the payment status
+ * (and, optionally, the order status) the caller decided against, so two
+ * reviewers deciding the same proof cannot both win.
+ * @param {String} id
+ * @param {String} paymentStatus - new payment status
+ * @param {String} [actorId]
+ * @param {Object} [options]
+ * @param {String} [options.fromPaymentStatus='PENDING_VERIFICATION']
+ * @param {String} [options.orderStatus] - required current order status, if any
+ * @param {String} [options.note] - appended to the history note
+ */
+const updatePaymentStatus = async (id, paymentStatus, actorId = null, {
+  fromPaymentStatus = 'PENDING_VERIFICATION',
+  orderStatus,
+  note,
+} = {}) => {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id }, select: { paymentStatus: true } });
     if (!order) return null;
-    // Only a payment still awaiting review can be decided (guards double clicks).
     const changed = await tx.order.updateMany({
-      where: { id, paymentStatus: 'PENDING_VERIFICATION' },
+      where: {
+        id,
+        paymentStatus: fromPaymentStatus,
+        ...(orderStatus ? { status: orderStatus } : {}),
+      },
       data: { paymentStatus },
     });
     if (changed.count === 0) {
@@ -442,10 +461,49 @@ const updatePaymentStatus = async (id, paymentStatus, actorId = null) => {
         fromStatus: updated.status,
         toStatus: updated.status,
         actorId,
-        note: `Payment status: ${order.paymentStatus} -> ${paymentStatus}`,
+        note: `Payment status: ${order.paymentStatus} -> ${paymentStatus}${note ? ` (${note})` : ''}`,
       },
     });
     return updated;
+  });
+};
+
+/**
+ * Buyer replaces a rejected (or still unreviewed) payment proof. Only a
+ * prepaid order still at PENDING / CONFIRMED with paymentStatus FAILED or
+ * PENDING_VERIFICATION qualifies; the check is part of the write.
+ */
+const updatePaymentProof = async (id, { paymentReference, paymentProofUrl }, actorId = null) => {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.order.findUnique({
+      where: { id },
+      select: { status: true, paymentStatus: true },
+    });
+    if (!current) return null;
+    const changed = await tx.order.updateMany({
+      where: {
+        id,
+        paymentMethod: { not: 'COD' },
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        paymentStatus: { in: ['FAILED', 'PENDING_VERIFICATION'] },
+      },
+      data: { paymentStatus: 'PENDING_VERIFICATION', paymentReference, paymentProofUrl },
+    });
+    if (changed.count === 0) {
+      const error = new Error('Payment proof can no longer be submitted for this order');
+      error.code = 'PROOF_NOT_ACCEPTED';
+      throw error;
+    }
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId: id,
+        fromStatus: current.status,
+        toStatus: current.status,
+        actorId,
+        note: `Payment proof resubmitted (${current.paymentStatus} -> PENDING_VERIFICATION)`,
+      },
+    });
+    return tx.order.findUnique({ where: { id } });
   });
 };
 
@@ -455,12 +513,14 @@ const updatePaymentStatus = async (id, paymentStatus, actorId = null) => {
  * @param {String} [actorId]
  * @param {Object} [options]
  * @param {String[]} [options.fromStatuses] - statuses the order may be cancelled from
+ * @param {String[]} [options.fromPaymentStatuses] - payment statuses the order may be cancelled from
  * @param {String} [options.paymentStatus] - payment status to record alongside
  * @param {String} [options.note] - status history note
  * @returns {Promise<Object>} Cancelled order
  */
 const cancelOrder = async (id, actorId = null, {
   fromStatuses = ['PENDING', 'CONFIRMED'],
+  fromPaymentStatuses,
   paymentStatus,
   note,
 } = {}) => {
@@ -469,7 +529,11 @@ const cancelOrder = async (id, actorId = null, {
     const data = { status: 'CANCELLED', cancelledAt: new Date() };
     if (paymentStatus) data.paymentStatus = paymentStatus;
     const changed = await tx.order.updateMany({
-      where: { id, status: { in: fromStatuses } },
+      where: {
+        id,
+        status: { in: fromStatuses },
+        ...(fromPaymentStatuses ? { paymentStatus: { in: fromPaymentStatuses } } : {}),
+      },
       data,
     });
 
@@ -530,5 +594,7 @@ module.exports = {
   updateStatus,
   updateOrder,
   updatePaymentStatus,
+  updatePaymentProof,
   cancelOrder,
+  EXPIRABLE_PAYMENT_STATUSES,
 };

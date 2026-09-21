@@ -2,6 +2,7 @@ const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
 const identityRepository = require('../repositories/identityVerification.repository');
 const userRepository = require('../repositories/user.repository');
+const appSettingService = require('./appSetting.service');
 const auditLogService = require('./auditLog.service');
 const { recognizeId } = require('../utils/identityOcr');
 const { encryptJson, hashIdNumber } = require('../utils/identityCrypto');
@@ -39,7 +40,7 @@ const idTypeOptions = () => Object.entries(ID_TYPES).map(([value, { label }]) =>
   hasAddress: idTypeHasAddress(value),
 }));
 
-const toPublicStatus = (record, attemptsUsed = 0) => {
+const toPublicStatus = (record, attemptsUsed = 0, requiredForCheckout = true) => {
   let status = record?.status || 'NOT_VERIFIED';
   // A PENDING row left behind by a crashed request should not block retries.
   if (status === 'PENDING' && record.lastAttemptAt && Date.now() - record.lastAttemptAt.getTime() > PENDING_TIMEOUT_MS) {
@@ -57,17 +58,18 @@ const toPublicStatus = (record, attemptsUsed = 0) => {
     attemptsRemaining: config.identity.maxAttemptsPerDay > 0
       ? Math.max(0, config.identity.maxAttemptsPerDay - attemptsUsed)
       : null,
-    requiredForCheckout: config.identity.requiredForCheckout,
+    requiredForCheckout,
     supportedIdTypes: idTypeOptions(),
   };
 };
 
 const getStatus = async (userId) => {
-  const [record, attemptsUsed] = await Promise.all([
+  const [record, attemptsUsed, requiredForCheckout] = await Promise.all([
     identityRepository.findByUserId(userId),
     identityRepository.countRecentAttempts(userId, new Date(Date.now() - DAY_MS)),
+    appSettingService.isBuyerVerificationRequired(),
   ]);
-  return toPublicStatus(record, attemptsUsed);
+  return toPublicStatus(record, attemptsUsed, requiredForCheckout);
 };
 
 const isVerified = async (userId) => {
@@ -77,7 +79,7 @@ const isVerified = async (userId) => {
 
 /** Backend checkout gate — called before any order is created. */
 const assertVerifiedForCheckout = async (userId) => {
-  if (!config.identity.requiredForCheckout) return;
+  if (!(await appSettingService.isBuyerVerificationRequired())) return;
   if (await isVerified(userId)) return;
   throw new ApiError(
     'Identity verification required. Please verify your identity before checking out.',

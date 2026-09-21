@@ -7,7 +7,11 @@ const voucherRepository = require('../repositories/voucher.repository');
 const voucherService = require('./voucher.service');
 const notificationService = require('./notification.service');
 const identityVerificationService = require('./identityVerification.service');
+const appSettingService = require('./appSetting.service');
 const { ApiError } = require('../middleware/errorHandler');
+
+const PAYMENT_METHODS = ['COD', 'GCASH', 'QRPH'];
+const MAX_ORDER_LINES = 50;
 
 /**
  * Order Service
@@ -105,6 +109,12 @@ const createOrder = async (userId, data) => {
   }
 
   // Payment method must be allowed
+  if (paymentMethod === 'BANK_TRANSFER') {
+    throw new ApiError('Bank transfer is not available yet', 400);
+  }
+  if (!PAYMENT_METHODS.includes(paymentMethod)) {
+    throw new ApiError('Invalid payment method', 400);
+  }
   if (paymentMethod === 'COD' && store.acceptsCod === false) {
     throw new ApiError('This store does not accept Cash on Delivery', 400);
   }
@@ -129,8 +139,11 @@ const createOrder = async (userId, data) => {
   }
 
   // Validate items and calculate totals
-  if (!items || items.length === 0) {
+  if (!Array.isArray(items) || items.length === 0) {
     throw new ApiError('Order must contain at least one item', 400);
+  }
+  if (items.length > MAX_ORDER_LINES) {
+    throw new ApiError(`Order may contain at most ${MAX_ORDER_LINES} items`, 400);
   }
 
   let totalAmount = 0;
@@ -176,7 +189,11 @@ const createOrder = async (userId, data) => {
     });
   }
 
-  const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0 : (totalAmount >= 500 ? 0 : 50);
+  // Delivery pricing is an admin setting, not a constant.
+  const { deliveryFee, freeDeliveryThreshold } = await appSettingService.getCheckoutPricing();
+  const DELIVERY_FEE = fulfillmentMethod === 'PICKUP'
+    ? 0
+    : (totalAmount >= freeDeliveryThreshold ? 0 : deliveryFee);
   let voucherRecord = null;
   let discountAmount = 0;
   if (voucherCode) {
@@ -456,10 +473,15 @@ const cancelOrder = async (orderId, userId) => {
 };
 
 /**
- * Approve (PAID) or reject (FAILED) a prepaid order's payment proof.
- * A rejected payment cancels the order so its stock and voucher are released.
+ * Decide a prepaid order's payment.
+ *  - PAID:     proof accepted (from PENDING_VERIFICATION)
+ *  - FAILED:   proof rejected (from PENDING_VERIFICATION). The order and its
+ *              stock stay as they are; the buyer is asked to resubmit. The
+ *              expiry job cancels it later if it stays unpaid.
+ *  - REFUNDED: the seller has returned the money for a cancelled, already
+ *              verified order (paymentStatus PAID and status CANCELLED).
  */
-const verifyPayment = async (orderId, actor, paymentStatus) => {
+const verifyPayment = async (orderId, actor, paymentStatus, note = '') => {
   const order = await orderRepository.findById(orderId);
   if (!order) throw new ApiError('Order not found', 404);
   const isSeller = actor.role === 'SELLER' && order.store?.ownerId === actor.id;
@@ -468,47 +490,193 @@ const verifyPayment = async (orderId, actor, paymentStatus) => {
     && actor.municipalityId
     && (order.buyer?.municipalityId === actor.municipalityId || order.store?.municipalityId === actor.municipalityId);
   if (!isSeller && !isAdmin && !isScopedAdmin) throw new ApiError('Not authorized to verify this payment', 403);
-  if (!['PAID', 'FAILED'].includes(paymentStatus)) {
-    throw new ApiError('Payment status must be PAID or FAILED', 400);
+  if (!['PAID', 'FAILED', 'REFUNDED'].includes(paymentStatus)) {
+    throw new ApiError('Payment status must be PAID, FAILED or REFUNDED', 400);
   }
   if (order.paymentMethod === 'COD') {
     throw new ApiError('COD orders do not require payment verification', 400);
   }
-  if (order.paymentStatus !== 'PENDING_VERIFICATION') {
-    throw new ApiError('This payment has already been processed', 409);
+  const trimmedNote = String(note || '').trim().slice(0, 200);
+
+  let updated;
+  if (paymentStatus === 'REFUNDED') {
+    if (order.paymentStatus !== 'PAID' || order.status !== 'CANCELLED') {
+      throw new ApiError('Only a verified payment on a cancelled order can be marked as refunded', 409);
+    }
+    try {
+      updated = await orderRepository.updatePaymentStatus(orderId, 'REFUNDED', actor.id, {
+        fromPaymentStatus: 'PAID',
+        orderStatus: 'CANCELLED',
+        note: trimmedNote || 'Refund recorded by seller',
+      });
+    } catch (err) {
+      if (err.code === 'PAYMENT_ALREADY_PROCESSED') {
+        throw new ApiError('This order was updated elsewhere. Refresh and try again.', 409);
+      }
+      throw err;
+    }
+  } else {
+    if (order.paymentStatus !== 'PENDING_VERIFICATION') {
+      throw new ApiError('This payment has already been processed', 409);
+    }
+    if (order.status === 'CANCELLED') {
+      throw new ApiError('This order has been cancelled', 409);
+    }
+    try {
+      updated = await orderRepository.updatePaymentStatus(orderId, paymentStatus, actor.id, {
+        fromPaymentStatus: 'PENDING_VERIFICATION',
+        note: trimmedNote || (paymentStatus === 'FAILED' ? 'Payment proof rejected' : undefined),
+      });
+    } catch (err) {
+      if (err.code === 'PAYMENT_ALREADY_PROCESSED') {
+        throw new ApiError('This payment has already been processed', 409);
+      }
+      throw err;
+    }
   }
-  if (order.status === 'CANCELLED') {
-    throw new ApiError('This order has been cancelled', 409);
+
+  try {
+    const reason = trimmedNote ? ` Seller's note: ${trimmedNote}.` : '';
+    if (paymentStatus === 'PAID') {
+      await notificationService.createNotification({
+        userId: order.buyerId,
+        type: 'ORDER_CONFIRMED',
+        title: 'Payment Verified',
+        message: `Your payment for order ${order.orderNumber} was verified. The seller will now prepare your order.`,
+        relatedId: orderId,
+      });
+    } else if (paymentStatus === 'FAILED') {
+      await notificationService.createNotification({
+        userId: order.buyerId,
+        type: 'SYSTEM_ANNOUNCEMENT',
+        audience: 'BUYER',
+        title: 'Payment Proof Rejected',
+        message: `The payment proof for order ${order.orderNumber} could not be verified.${reason} Please open the order and submit a new reference and screenshot. Your order is kept while you do.`,
+        relatedId: orderId,
+        target: { kind: 'buyer-order', id: orderId },
+      });
+    } else {
+      await notificationService.createNotification({
+        userId: order.buyerId,
+        type: 'SYSTEM_ANNOUNCEMENT',
+        audience: 'BUYER',
+        title: 'Refund Issued',
+        message: `The seller has recorded a refund of your payment for cancelled order ${order.orderNumber}.${reason}`,
+        relatedId: orderId,
+        target: { kind: 'buyer-order', id: orderId },
+      });
+    }
+  } catch (err) {
+    console.error('[verifyPayment] notification failed:', err.message);
+  }
+
+  return updated;
+};
+
+/**
+ * Buyer submits (or resubmits) a payment reference and proof for a prepaid
+ * order. Allowed while the order is PENDING / CONFIRMED and the payment is
+ * FAILED or still PENDING_VERIFICATION.
+ */
+const submitPaymentProof = async (orderId, userId, { paymentReference, paymentProofUrl }) => {
+  const order = await orderRepository.findById(orderId);
+  if (!order) throw new ApiError('Order not found', 404);
+  if (order.buyerId !== userId) {
+    throw new ApiError('You can only submit payment proof for your own orders', 403);
+  }
+  if (order.paymentMethod === 'COD') {
+    throw new ApiError('Cash on delivery orders do not need payment proof', 400);
+  }
+  if (!['PENDING', 'CONFIRMED'].includes(order.status)) {
+    throw new ApiError('Payment proof can no longer be submitted for this order', 409);
+  }
+  if (!['FAILED', 'PENDING_VERIFICATION'].includes(order.paymentStatus)) {
+    throw new ApiError('This order is not awaiting payment proof', 409);
   }
 
   let updated;
   try {
-    updated = paymentStatus === 'FAILED'
-      ? await orderRepository.cancelOrder(orderId, actor.id, {
-        fromStatuses: ['PENDING', 'CONFIRMED'],
-        paymentStatus: 'FAILED',
-        note: 'Payment rejected',
-      })
-      : await orderRepository.updatePaymentStatus(orderId, paymentStatus, actor.id);
+    updated = await orderRepository.updatePaymentProof(orderId, {
+      paymentReference: String(paymentReference).trim(),
+      paymentProofUrl: String(paymentProofUrl).trim(),
+    }, userId);
   } catch (err) {
-    if (err.code === 'PAYMENT_ALREADY_PROCESSED' || err.code === 'ORDER_NOT_CANCELLABLE') {
-      throw new ApiError('This payment has already been processed', 409);
+    if (err.code === 'PROOF_NOT_ACCEPTED') {
+      throw new ApiError('This order was updated elsewhere. Refresh and try again.', 409);
     }
     throw err;
   }
 
   try {
+    if (order.store?.ownerId) {
+      await notificationService.createNotification({
+        userId: order.store.ownerId,
+        type: 'ORDER_RECEIVED',
+        title: 'Payment Proof Submitted',
+        message: `${order.buyer?.fullName || 'The buyer'} submitted a new payment proof for order ${order.orderNumber}. Please verify it.`,
+        relatedId: orderId,
+      });
+    }
+  } catch (err) {
+    console.error('[submitPaymentProof] notification failed:', err.message);
+  }
+
+  return updated;
+};
+
+/**
+ * Buyer confirms they have the goods: DELIVERED / PICKED_UP -> COMPLETED.
+ * Goes through updateStatus so a COD payment flips to PAID and history is
+ * written exactly as it is for the seller.
+ */
+const markReceived = async (orderId, userId) => {
+  const order = await orderRepository.findById(orderId);
+  if (!order) throw new ApiError('Order not found', 404);
+  if (order.buyerId !== userId) {
+    throw new ApiError('You can only confirm receipt of your own orders', 403);
+  }
+  if (!['DELIVERED', 'PICKED_UP'].includes(order.status)) {
+    throw new ApiError('This order is not ready to be marked as received', 409);
+  }
+
+  let updated;
+  try {
+    updated = await orderRepository.updateStatus(
+      orderId, 'COMPLETED', order.status, userId, 'Buyer confirmed receipt',
+    );
+  } catch (err) {
+    if (err.code === 'STALE_ORDER_STATUS') {
+      throw new ApiError('This order was updated elsewhere. Refresh and try again.', 409);
+    }
+    throw err;
+  }
+
+  try {
+    if (order.store?.ownerId) {
+      await notificationService.createNotification({
+        userId: order.store.ownerId,
+        type: 'ORDER_COMPLETED',
+        audience: 'SELLER',
+        title: 'Order Received',
+        message: `${order.buyer?.fullName || 'The buyer'} confirmed receipt of order ${order.orderNumber}. The order is now completed.`,
+        relatedId: orderId,
+      });
+    }
+  } catch (err) {
+    console.error('[markReceived] notification failed:', err.message);
+  }
+
+  // The buyer has the goods in hand: the best moment to ask for a review.
+  try {
     await notificationService.createNotification({
-      userId: order.buyerId,
-      type: paymentStatus === 'PAID' ? 'ORDER_CONFIRMED' : 'ORDER_CANCELLED',
-      title: paymentStatus === 'PAID' ? 'Payment Verified' : 'Payment Rejected',
-      message: paymentStatus === 'PAID'
-        ? `Your payment for order ${order.orderNumber} was verified. The seller will now prepare your order.`
-        : `Your payment for order ${order.orderNumber} could not be verified, so the order was cancelled. Contact the seller if you believe this is a mistake.`,
+      userId,
+      type: 'ORDER_COMPLETED',
+      title: 'How was your order?',
+      message: `Rate the items from order ${order.orderNumber} to help other buyers and the seller.`,
       relatedId: orderId,
     });
   } catch (err) {
-    console.error('[verifyPayment] notification failed:', err.message);
+    console.error('[markReceived] review nudge failed:', err.message);
   }
 
   return updated;
@@ -525,6 +693,9 @@ const expirePendingOrders = async (ageHours = PENDING_EXPIRY_HOURS) => {
     try {
       await orderRepository.cancelOrder(order.id, null, {
         fromStatuses: ['PENDING'],
+        // Re-checked inside the write: a proof uploaded (or verified) since
+        // the lookup must not be swept away.
+        fromPaymentStatuses: orderRepository.EXPIRABLE_PAYMENT_STATUSES,
         paymentStatus: order.paymentMethod === 'COD' ? undefined : 'EXPIRED',
         note: `Not confirmed by the seller within ${ageHours} hours`,
       });
@@ -556,5 +727,7 @@ module.exports = {
   updateOrderStatus,
   cancelOrder,
   verifyPayment,
+  submitPaymentProof,
+  markReceived,
   expirePendingOrders,
 };

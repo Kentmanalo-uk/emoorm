@@ -6,6 +6,7 @@ import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
 import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
@@ -37,6 +38,7 @@ export default function AdminOrders() {
   const [selected, setSelected] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmRefund, setConfirmRefund] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -92,17 +94,24 @@ export default function AdminOrders() {
     }
   };
 
+  const PAYMENT_TOASTS = {
+    PAID: 'Payment approved',
+    FAILED: 'Payment rejected — buyer asked to resubmit proof',
+    REFUNDED: 'Refund recorded',
+  };
+
   const verifyPayment = async (paymentStatus) => {
     setProcessing(true);
     try {
       const res = await axios.patch(`/orders/${selected.id}/payment`, { paymentStatus });
       setSelected(res.data);
-      toast.success(paymentStatus === 'PAID' ? 'Payment approved' : 'Payment rejected');
+      toast.success(PAYMENT_TOASTS[paymentStatus] || 'Payment updated');
       load();
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Unable to update payment');
+      toast.error(err?.message || err?.response?.data?.message || 'Unable to update payment');
     } finally {
       setProcessing(false);
+      setConfirmRefund(false);
     }
   };
 
@@ -202,10 +211,31 @@ export default function AdminOrders() {
                   )}
                 </div>
               )}
+              {selected.paymentStatus === 'PAID' && selected.status === 'CANCELLED' && (
+                <div className="admin-detail-section">
+                  <h4>Refund</h4>
+                  <p>This prepaid order was cancelled after payment. Record the refund once the seller has returned the money.</p>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button className="admin-btn admin-btn-green" disabled={processing} onClick={() => setConfirmRefund(true)}>
+                      <CheckCircle size={14} /> Mark refunded
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
       </DetailDrawer>
+
+      <ConfirmDialog
+        open={confirmRefund}
+        title="Mark this order as refunded?"
+        message="Only confirm once the buyer has actually received the money back. This records the refund on the order and cannot be undone."
+        confirmLabel="Mark refunded"
+        loading={processing}
+        onConfirm={() => verifyPayment('REFUNDED')}
+        onCancel={() => setConfirmRefund(false)}
+      />
     </AdminLayout>
   );
 }

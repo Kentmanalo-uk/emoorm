@@ -376,3 +376,11 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* One line above the stars, e.g. right after the buyer confirms receipt. */
+.review-intro {
+  margin: -8px 0 16px;
+  font-size: 14px;
+  color: var(--t-neutral-600, #4b5563);
+  line-height: 1.5;
+}

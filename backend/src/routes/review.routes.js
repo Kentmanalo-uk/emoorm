@@ -56,12 +56,19 @@ router.get(
   reviewController.getProductReviews
 );
 
-// Buyer static route — must come before /:id
+// Buyer static routes — must come before /:id
 router.get(
   '/my/reviews',
   authenticate,
   authorize('BUYER', 'SELLER'),
   reviewController.getMyReviews
+);
+
+router.get(
+  '/my/pending',
+  authenticate,
+  authorize('BUYER', 'SELLER'),
+  reviewController.getPendingReviews
 );
 
 // Seller static route — must come before /:id

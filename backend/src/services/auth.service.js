@@ -11,6 +11,36 @@ const googleService = require('./google.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateTokens, verifyRefreshToken, generateMfaToken, generateGoogleProfileToken, verifyGoogleProfileToken } = require('../utils/jwt');
 const { sendPasswordResetEmail, sendPasswordChangedEmail } = require('../utils/email');
+const { normalizeUsername, validateUsername, suggestFromName } = require('../utils/username');
+
+/**
+ * Pick a free public handle for a brand-new account.
+ *
+ * Every account needs one, and the person has not chosen anything yet, so
+ * this derives a base from their display name (or the email local part) and
+ * appends digits until it is free. They can change it later in Settings.
+ *
+ * A handle is not worth failing a signup over: if the column is somehow
+ * contended past the attempt limit, the account is created without one and
+ * the person is asked for a handle when they next edit their profile.
+ *
+ * @param {String} fullName - Display name
+ * @param {String} email - Email address (only the local part is used)
+ * @returns {Promise<String|null>} A free username, or null
+ */
+const allocateUsername = async (fullName, email) => {
+  const base = suggestFromName(fullName, email);
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    // The first attempt tries the bare base, then base2, base3, ...
+    const suffix = attempt === 0 ? '' : String(attempt + 1);
+    const candidate = `${base.slice(0, 20 - suffix.length)}${suffix}`;
+    if (validateUsername(candidate)) continue;
+    // eslint-disable-next-line no-await-in-loop -- candidates must be tried in order
+    const taken = await userRepository.findByUsername(candidate);
+    if (!taken) return candidate;
+  }
+  return null;
+};
 const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -41,6 +71,7 @@ const register = async (userData) => {
     email,
     password: hashedPassword,
     fullName,
+    username: await allocateUsername(fullName, email),
     contactNumber: contactNumber || null,
     municipalityId,
     province: province || 'Oriental Mindoro',
@@ -201,11 +232,43 @@ const updateProfile = async (userId, updateData) => {
     }
   }
 
+  // Username is public and unique, so it is checked rather than just copied.
+  let usernameUnchanged = false;
+  if (updateData.username !== undefined) {
+    const username = normalizeUsername(updateData.username);
+    const current = await userRepository.findById(userId);
+    if (!current) throw new ApiError('User not found', 404);
+
+    // Re-submitting the handle they already have is not an error.
+    if (username === (current.username || '')) {
+      usernameUnchanged = true;
+    } else {
+      const problem = validateUsername(username);
+      if (problem) throw new ApiError(problem, 400);
+
+      const owner = await userRepository.findByUsername(username);
+      if (owner && owner.id !== userId) throw new ApiError('That username is taken', 409);
+
+      filteredData.username = username;
+    }
+  }
+
   if (Object.keys(filteredData).length === 0) {
+    // Only an unchanged username was sent: nothing to write, nothing to fail.
+    if (usernameUnchanged) return getProfile(userId);
     throw new ApiError('No valid fields to update', 400);
   }
 
-  const user = await userRepository.updateUser(userId, filteredData);
+  let user;
+  try {
+    user = await userRepository.updateUser(userId, filteredData);
+  } catch (err) {
+    // Lost a race with another account claiming the same handle.
+    if (err.code === 'P2002' && String(err.meta?.target || '').includes('username')) {
+      throw new ApiError('That username is taken', 409);
+    }
+    throw err;
+  }
 
   return user;
 };
@@ -983,6 +1046,7 @@ const completeGoogleSignup = async (googleToken, data) => {
     email,
     password: hashedPassword,
     fullName: String(fullName).trim(),
+    username: await allocateUsername(String(fullName).trim(), email),
     contactNumber: contactNumber || null,
     profilePhoto: profilePhoto || null,
     googleId,

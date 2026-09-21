@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Star, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyArt from '../components/ui/EmptyArt';
@@ -158,7 +159,11 @@ export default function SellerReviews() {
                   <li key={r.id} className="reviews-item">
                     <div className="reviews-item-head">
                       <Stars value={r.rating} />
-                      <strong className="reviews-item-name">{r.user?.fullName || 'Buyer'}</strong>
+                      <strong className="reviews-item-name">
+                        {r.user?.id
+                          ? <Link to={`/u/${r.user.id}`} className="profile-link" title="View buyer profile">{r.user.fullName || 'Buyer'}</Link>
+                          : (r.user?.fullName || 'Buyer')}
+                      </strong>
                       <span className="reviews-item-date">
                         {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
                       </span>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
-  Heart, ShareNetwork as Share2, Storefront as Store, MapPin, ShieldCheck,
+  Heart, ShareNetwork as Share2, Storefront as Store, MapPin,
   Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck, Info,
-  CaretRight as ChevronRightSm, ChatCircle as MessageCircle,
+  CaretRight as ChevronRightSm, ChatCircle as MessageCircle, Money, QrCode,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -12,12 +12,12 @@ import Skeleton from '../components/ui/Skeleton';
 import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
-import { formatRelativeTime } from '../lib/time';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import useWishlistStore from '../store/wishlistStore';
 import useIdentityGate from '../hooks/useIdentityGate';
 import './ProductDetails.css';
+import UserAvatar from '../components/ui/UserAvatar';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -46,6 +46,36 @@ const renderStars = (rating, size = 14) => (
   ))
 );
 
+// Shelf-card rating: stars only from real review data, "New" when unreviewed.
+const renderShelfRating = (p) => {
+  const count = Number(p.reviewCount ?? 0);
+  return (
+    <div className="product-rating-row">
+      {count > 0 ? (
+        <>
+          <div className="product-stars">{renderStars(p.averageRating, 11)}</div>
+          <span className="product-review-count">({count})</span>
+        </>
+      ) : (
+        <span className="product-review-count">New</span>
+      )}
+    </div>
+  );
+};
+
+// Fulfilment / payment lines come from the store record, never hardcoded.
+const storeServiceLines = (store) => {
+  if (!store) return [];
+  const lines = [];
+  const mode = store.fulfillmentMode;
+  if (mode === 'DELIVERY' || mode === 'BOTH') lines.push({ icon: Truck, text: 'Delivery available' });
+  if (mode === 'PICKUP' || mode === 'BOTH') lines.push({ icon: Store, text: 'Pickup available' });
+  if (store.acceptsCod) lines.push({ icon: Money, text: 'Cash on delivery accepted' });
+  if (store.paymentQrType === 'GCASH') lines.push({ icon: QrCode, text: 'GCash accepted' });
+  else if (store.paymentQrType === 'QRPH') lines.push({ icon: QrCode, text: 'QR Ph accepted' });
+  return lines;
+};
+
 const ProductDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -63,6 +93,7 @@ const ProductDetails = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [sameShopProducts, setSameShopProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [ratingStats, setRatingStats] = useState(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [zoom, setZoom] = useState({ active: false, x: 50, y: 50 });
@@ -95,7 +126,10 @@ const ProductDetails = () => {
       if (res.data?.id) fetchReviews(res.data.id);
     } catch (error) {
       console.error('Failed to fetch product:', error);
-      if (error.status === 404) navigate('/products');
+      if (error.status === 404) {
+        toast.error('Product not found');
+        navigate('/products', { replace: true });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -123,13 +157,17 @@ const ProductDetails = () => {
     try {
       const res = await axios.get(`/reviews/product/${productId}`);
       setReviews(res.data || []);
+      // axios unwraps to the body, so the sibling `ratingStats` survives.
+      setRatingStats(res.ratingStats || null);
     } catch (err) {
       console.error('Failed to fetch reviews:', err);
     }
   };
 
+  const loginRedirect = () => navigate(`/login?redirect=${encodeURIComponent(`/product/${slug}`)}`);
+
   const handleAddToCart = () => {
-    if (!isAuthenticated) { navigate('/login'); return; }
+    if (!isAuthenticated) { loginRedirect(); return; }
     const variationDefinitions = Array.isArray(product.variations) ? product.variations : [];
     const missingVariation = variationDefinitions.find((variation) => !selectedVariations[variation.name]);
     if (missingVariation) {
@@ -202,52 +240,17 @@ const ProductDetails = () => {
     }
   };
 
-  const soldCount = useMemo(() => {
-    // Backend may return orderCount or _count.orderItems depending on include shape.
-    return product?.orderCount ?? product?._count?.orderItems ?? 0;
-  }, [product]);
+  const soldCount = useMemo(() => Number(product?.soldCount ?? 0), [product]);
 
-  // Realtime-ish store presence: derive live "Active X ago" indicator from
-  // the store's last known activity timestamp. Not a hardcoded string.
-  const storeActivity = useMemo(() => {
-    const store = product?.store;
-    if (!store) return null;
-    if (store.isSuspended) return { online: false, label: 'Store suspended' };
-    if (store.isActive === false) return { online: false, label: 'Store inactive' };
+  const serviceLines = useMemo(() => storeServiceLines(product?.store), [product]);
 
-    // Pick the most recent activity signal available on the store payload.
-    const stamps = [
-      store.lastActiveAt,
-      store.updatedAt,
-      store.owner?.updatedAt,
-      product?.updatedAt,
-    ].filter(Boolean).map((v) => new Date(v).getTime()).filter((t) => !Number.isNaN(t));
-    const last = stamps.length ? new Date(Math.max(...stamps)) : null;
-    if (!last) return { online: true, label: 'Active' };
-
-    const diffMs = Date.now() - last.getTime();
-    // Under 15m = green "Active now" bubble
-    if (diffMs < 15 * 60 * 1000) return { online: true, label: 'Active now' };
-    return { online: false, label: `Active ${formatRelativeTime(last)}` };
-  }, [product]);
-
-  // Poll the store endpoint every 45s so the "Active" badge stays fresh
-  // without a full-page refresh. Silent failures are fine.
+  // Tab title follows the product while this page is mounted.
   useEffect(() => {
-    const storeSlug = product?.store?.slug;
-    if (!storeSlug) return undefined;
-    const iv = setInterval(async () => {
-      try {
-        const res = await axios.get(`/stores/slug/${storeSlug}`);
-        if (res?.data) {
-          setProduct((prev) => (prev ? { ...prev, store: { ...prev.store, ...res.data } } : prev));
-        }
-      } catch {
-        // ignore transient errors
-      }
-    }, 45000);
-    return () => clearInterval(iv);
-  }, [product?.store?.slug]);
+    if (!product?.name) return undefined;
+    const previous = document.title;
+    document.title = `${product.name} · Emoorm`;
+    return () => { document.title = previous; };
+  }, [product?.name]);
 
   if (isLoading) {
     return (
@@ -425,8 +428,8 @@ const ProductDetails = () => {
   const gallery = images.length ? images : ['/placeholder-product.png'];
   const isOutOfStock = product.stock === 0;
   const wishlisted = isInWishlist(product.id);
-  const avgRating = Number(product.averageRating || 0);
-  const reviewCount = product.reviewCount ?? reviews.length;
+  const avgRating = Number(product.averageRating ?? ratingStats?.averageRating ?? 0);
+  const reviewCount = Number(product.reviewCount ?? ratingStats?.totalReviews ?? reviews.length);
 
   return (
     <Layout>
@@ -508,8 +511,14 @@ const ProductDetails = () => {
 
               <div className="pdp-meta-row">
                 <div className="pdp-rating">
-                  <span className="pdp-rating-stars">{renderStars(avgRating)}</span>
-                  <span className="pdp-rating-score">{avgRating > 0 ? avgRating.toFixed(1) : 'New'}</span>
+                  {reviewCount > 0 ? (
+                    <>
+                      <span className="pdp-rating-stars">{renderStars(avgRating)}</span>
+                      <span className="pdp-rating-score">{avgRating.toFixed(1)}</span>
+                    </>
+                  ) : (
+                    <span className="pdp-meta-muted">New</span>
+                  )}
                 </div>
                 <span className="pdp-meta-divider" />
                 <button
@@ -549,13 +558,15 @@ const ProductDetails = () => {
                       <span className="pdp-row-strong">
                         {product.municipality?.name || product.store?.municipality?.name || 'Oriental Mindoro'}
                       </span>
-                      <button type="button" className="pdp-row-link">CHANGE</button>
                     </div>
-                    <div className="pdp-row-line">
-                      <Truck size={14} className="pdp-row-icon" />
-                      <span>Standard delivery · Ships within 2–3 business days</span>
-                    </div>
-                    <div className="pdp-row-line pdp-row-muted">Cash on delivery available</div>
+                    {serviceLines.length > 0 ? serviceLines.map(({ icon: Icon, text }) => (
+                      <div className="pdp-row-line" key={text}>
+                        <Icon size={14} className="pdp-row-icon" />
+                        <span>{text}</span>
+                      </div>
+                    )) : (
+                      <div className="pdp-row-line pdp-row-muted">Fulfilment and payment options are shown at checkout</div>
+                    )}
                   </div>
                 </div>
 
@@ -664,7 +675,7 @@ const ProductDetails = () => {
                   type="button"
                   className={`pdp-cta-icon ${wishlisted ? 'is-active' : ''}`}
                   onClick={() => {
-                    if (!isAuthenticated) { navigate('/login'); return; }
+                    if (!isAuthenticated) { loginRedirect(); return; }
                     const wasIn = wishlisted;
                     toggleItem(product);
                     toast.success(wasIn ? 'Removed from wishlist' : 'Added to wishlist');
@@ -690,19 +701,10 @@ const ProductDetails = () => {
                 <div>
                   <div className="pdp-store-name">
                     {product.store.name}
-                    {product.store.isVerified && <span className="pdp-store-verified" title="Verified"><ShieldCheck size={14} /></span>}
                   </div>
                   <div className="pdp-store-meta">
-                    {storeActivity && (
-                      <span className={`pdp-store-active ${storeActivity.online ? 'is-online' : 'is-offline'}`}>
-                        <span className="pdp-store-active-dot" /> {storeActivity.label}
-                      </span>
-                    )}
                     {product.store.municipality?.name && (
                       <span><MapPin size={12} /> {product.store.municipality.name}</span>
-                    )}
-                    {product.store.ratingAverage > 0 && (
-                      <span><Star size={12} weight="fill" color="var(--t-warning-500, #f59e0b)" /> {Number(product.store.ratingAverage).toFixed(1)}</span>
                     )}
                   </div>
                 </div>
@@ -767,9 +769,15 @@ const ProductDetails = () => {
                   return (
                     <div key={r.id} className="pdp-review">
                       <div className="pdp-review-head">
-                        <div className="pdp-review-avatar">{reviewer.fullName?.charAt(0) || 'U'}</div>
+                        <div className="pdp-review-avatar">
+                          <UserAvatar src={reviewer.profilePhoto} name={reviewer.fullName || 'U'} alt="" />
+                        </div>
                         <div>
-                          <div className="pdp-review-name">{reviewer.fullName || 'Anonymous'}</div>
+                          <div className="pdp-review-name">
+                            {reviewer.id
+                              ? <Link to={`/u/${reviewer.id}`} className="profile-link">{reviewer.fullName || 'Anonymous'}</Link>
+                              : (reviewer.fullName || 'Anonymous')}
+                          </div>
                           <div className="pdp-review-stars">{renderStars(r.rating, 12)}</div>
                         </div>
                         <div className="pdp-review-date">{new Date(r.createdAt).toLocaleDateString()}</div>
@@ -817,14 +825,7 @@ const ProductDetails = () => {
                     <div className="product-info">
                       <span className="product-name">{p.name}</span>
                       <span className="product-price">{peso(p.price)}</span>
-                      <div className="product-rating-row">
-                        <div className="product-stars">
-                          {[0, 1, 2, 3, 4].map((i) => (
-                            <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
-                          ))}
-                        </div>
-                        <span className="product-review-count">({p.reviewCount ?? 0})</span>
-                      </div>
+                      {renderShelfRating(p)}
                     </div>
                   </Link>
                 ))}
@@ -850,14 +851,7 @@ const ProductDetails = () => {
                     <div className="product-info">
                       <span className="product-name">{p.name}</span>
                       <span className="product-price">{peso(p.price)}</span>
-                      <div className="product-rating-row">
-                        <div className="product-stars">
-                          {[0, 1, 2, 3, 4].map((i) => (
-                            <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
-                          ))}
-                        </div>
-                        <span className="product-review-count">({p.reviewCount ?? 0})</span>
-                      </div>
+                      {renderShelfRating(p)}
                     </div>
                   </Link>
                 ))}

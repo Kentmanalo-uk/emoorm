@@ -301,6 +301,19 @@ const markRefunded = async (id, seller, payload) => {
       reference: payload.refundReference || null,
     }),
   });
+
+  // Reflect the refund on the order itself: fully refunded once the sum of
+  // its refunded returns covers the order total, partially until then.
+  try {
+    const totalRefunded = await returnRepository.sumRefundedForOrder(request.orderId);
+    const orderTotal = Number(updated.order?.total ?? request.order?.total ?? 0);
+    await orderRepository.updateOrder(request.orderId, {
+      paymentStatus: totalRefunded >= orderTotal ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+    });
+  } catch (err) {
+    console.error('[markRefunded] order payment status update failed:', err.message);
+  }
+
   await notify(
     request.buyerId,
     'RETURN_REFUNDED',

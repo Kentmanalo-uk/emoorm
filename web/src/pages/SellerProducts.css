@@ -146,6 +146,101 @@
   cursor: not-allowed;
 }
 
+/* Live-product edit note */
+.product-form-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--t-primary-700, #047857);
+  background: var(--t-primary-50, #ecfdf5);
+  border: 1px solid var(--t-primary-200, #a7f3d0);
+}
+
+.product-form-note svg {
+  flex-shrink: 0;
+}
+
+/* Stock cell: value, low/out badge and the inline restock control */
+.product-stock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.product-stock-value {
+  font-weight: 600;
+  color: var(--t-neutral-900, #111827);
+}
+
+.product-stock--low .product-stock-value {
+  color: var(--t-warning-700, #b45309);
+}
+
+.product-stock--out .product-stock-value {
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.product-stock-badge {
+  font-size: 10.5px;
+  padding: 2px 8px;
+}
+
+.product-restock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-basis: 100%;
+}
+
+.product-restock-input {
+  width: 72px;
+  padding: 4px 8px;
+  font-size: 12.5px;
+}
+
+.product-restock-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  min-height: 0;
+}
+
+.product-restock-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Moderation note under a suspended/archived row */
+.products-row--noted td {
+  border-bottom: 0;
+}
+
+.products-note-row td {
+  padding-top: 0;
+}
+
+.products-moderation-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--t-danger-700, #b91c1c);
+  background: var(--t-danger-50, #fef2f2);
+  border: 1px solid var(--t-danger-100, #fee2e2);
+}
+
+.products-moderation-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 .form-input--error {
   border-color: var(--t-danger-600, #dc2626) !important;
 }
@@ -470,6 +565,26 @@
     padding: 8px 0;
     border-top: 1px solid var(--t-neutral-100, #f1f5f9);
     text-align: right;
+  }
+
+  .sc-content .products-table .product-stock {
+    justify-content: flex-end;
+  }
+
+  .sc-content .products-table .product-restock {
+    justify-content: flex-end;
+  }
+
+  /* The note row is a continuation of the card above it */
+  .sc-content .products-table tbody tr.products-note-row {
+    display: block;
+    margin-top: -10px;
+    padding: 0 14px 12px;
+    border-radius: 0 0 12px 12px;
+  }
+
+  .sc-content .products-table tbody tr.products-row--noted {
+    border-radius: 12px 12px 0 0;
   }
 
   .sc-content .products-table .product-cell {

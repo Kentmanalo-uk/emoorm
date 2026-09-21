@@ -95,6 +95,19 @@ const getUsedQuantitiesForOrder = async (orderId) => {
 const updateRequest = (id, data) =>
   prisma.returnRequest.update({ where: { id }, data, include: REQUEST_INCLUDE });
 
+/**
+ * Total actually refunded on an order across its REFUNDED return requests.
+ * @param {String} orderId
+ * @returns {Promise<Number>}
+ */
+const sumRefundedForOrder = async (orderId) => {
+  const agg = await prisma.returnRequest.aggregate({
+    where: { orderId, status: 'REFUNDED' },
+    _sum: { refundedAmount: true },
+  });
+  return Number(agg._sum.refundedAmount || 0);
+};
+
 const updateItemRestock = (id, restockOnReceive) =>
   prisma.returnRequestItem.update({ where: { id }, data: { restockOnReceive } });
 
@@ -151,6 +164,7 @@ module.exports = {
   findByStore,
   getUsedQuantitiesForOrder,
   updateRequest,
+  sumRefundedForOrder,
   updateItemRestock,
   generateRequestNumber,
   incrementProductStock,

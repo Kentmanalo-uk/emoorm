@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import useCartStore from './cartStore';
 
 // Initialize auth state from localStorage
 const initializeAuth = () => {
@@ -53,6 +54,9 @@ const useAuthStore = create(
         if (refreshToken) {
           localStorage.setItem('refreshToken', refreshToken);
         }
+
+        // Switch to this user's cart (merging anything added as a guest).
+        useCartStore.getState().setOwner(userData?.id || null);
       },
 
       logout: () => {
@@ -68,6 +72,9 @@ const useAuthStore = create(
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
+
+        // Leave the user's cart behind; the visible cart becomes the guest one.
+        useCartStore.getState().setOwner(null);
       },
 
       updateUser: (userData) => {
@@ -121,5 +128,8 @@ const useAuthStore = create(
     }
   )
 );
+
+// Point the cart at whoever is already signed in on this device.
+useCartStore.getState().setOwner(useAuthStore.getState().user?.id || null);
 
 export default useAuthStore;

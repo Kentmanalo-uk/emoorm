@@ -112,6 +112,7 @@ const findAll = async (options = {}) => {
             id: true,
             name: true,
             slug: true,
+            images: true,
           },
         },
       },
@@ -310,12 +311,81 @@ const replyToReview = async (id, replyText) => {
   });
 };
 
+// An order counts as a purchase once the buyer has the goods.
+const PURCHASED_STATUSES = ['COMPLETED', 'DELIVERED', 'PICKED_UP'];
+
+/**
+ * How many received order lines this buyer has for a product.
+ */
+const countPurchases = (buyerId, productId) => prisma.orderItem.count({
+  where: {
+    productId,
+    order: { buyerId, status: { in: PURCHASED_STATUSES } },
+  },
+});
+
+/**
+ * Products this buyer has received but not yet reviewed, newest purchase
+ * first, one entry per product.
+ */
+const findPendingForBuyer = async (buyerId) => {
+  const [lines, reviewed] = await Promise.all([
+    prisma.orderItem.findMany({
+      where: {
+        order: { buyerId, status: { in: PURCHASED_STATUSES } },
+        product: { deletedAt: null },
+      },
+      select: {
+        productId: true,
+        productName: true,
+        quantity: true,
+        selectedVariations: true,
+        product: { select: { id: true, name: true, slug: true, images: true, status: true } },
+        order: {
+          select: {
+            id: true, orderNumber: true, status: true, completedAt: true, updatedAt: true,
+            store: { select: { id: true, name: true, slug: true } },
+          },
+        },
+      },
+      orderBy: { order: { updatedAt: 'desc' } },
+    }),
+    prisma.review.findMany({
+      where: { userId: buyerId, deletedAt: null },
+      select: { productId: true },
+    }),
+  ]);
+
+  const done = new Set(reviewed.map((r) => r.productId));
+  const seen = new Set();
+  const pending = [];
+  for (const line of lines) {
+    if (done.has(line.productId) || seen.has(line.productId)) continue;
+    seen.add(line.productId);
+    pending.push({
+      productId: line.productId,
+      product: line.product,
+      productName: line.productName,
+      quantity: line.quantity,
+      selectedVariations: line.selectedVariations,
+      orderId: line.order.id,
+      orderNumber: line.order.orderNumber,
+      orderStatus: line.order.status,
+      receivedAt: line.order.completedAt || line.order.updatedAt,
+      store: line.order.store,
+    });
+  }
+  return pending;
+};
+
 module.exports = {
   createReview,
   findById,
   findByBuyerAndProduct,
   findAll,
   findAllForStore,
+  countPurchases,
+  findPendingForBuyer,
   updateReview,
   softDeleteReview,
   getProductRatingStats,

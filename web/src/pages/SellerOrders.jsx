@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, Clock, Package, Truck, CaretDown as ChevronDown, FileText, Storefront as StoreIcon, MagnifyingGlass, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -37,34 +37,46 @@ const STATUS_MAP = {
   CANCELLED: { label: 'Cancelled', cls: 'status-cancelled', icon: <XCircle size={13} /> },
 };
 
-// Fulfillment-aware next-status resolution
+// Fulfillment-aware next-status resolution. Mirrors the backend map in
+// order.service.js updateOrderStatus exactly: the first entry is the primary
+// "next" action, CANCELLED is offered wherever the server allows it.
 const DELIVERY_FLOW = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['TO_SHIP', 'CANCELLED'],
-  PREPARING: ['TO_SHIP'],
-  TO_SHIP: ['OUT_FOR_DELIVERY'],
-  OUT_FOR_DELIVERY: ['DELIVERED'],
+  CONFIRMED: ['TO_SHIP', 'PREPARING', 'CANCELLED'],
+  PREPARING: ['TO_SHIP', 'READY', 'CANCELLED'],
+  TO_SHIP: ['OUT_FOR_DELIVERY', 'CANCELLED'],
+  OUT_FOR_DELIVERY: ['DELIVERED', 'CANCELLED'],
   DELIVERED: ['COMPLETED'],
+  READY: ['COMPLETED', 'CANCELLED'],
 };
 
 const PICKUP_FLOW = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['READY_FOR_PICKUP', 'CANCELLED'],
-  PREPARING: ['READY_FOR_PICKUP'],
-  READY: ['PICKED_UP'],
-  READY_FOR_PICKUP: ['PICKED_UP'],
+  CONFIRMED: ['READY_FOR_PICKUP', 'PREPARING', 'CANCELLED'],
+  PREPARING: ['READY_FOR_PICKUP', 'READY', 'CANCELLED'],
+  READY_FOR_PICKUP: ['PICKED_UP', 'CANCELLED'],
   PICKED_UP: ['COMPLETED'],
+  READY: ['COMPLETED', 'CANCELLED'],
 };
 
 const PAYMENT_LABELS = {
-  PENDING: { label: 'Unpaid (COD)', cls: 'status-pending' },
+  PENDING: { label: 'Unpaid', cls: 'status-pending' },
   PENDING_VERIFICATION: { label: 'Payment to verify', cls: 'status-pending' },
   PAID: { label: 'Paid', cls: 'status-completed' },
-  FAILED: { label: 'Payment rejected', cls: 'status-cancelled' },
+  FAILED: { label: 'Proof rejected — awaiting resubmission', cls: 'status-cancelled' },
   EXPIRED: { label: 'Payment expired', cls: 'status-cancelled' },
   REFUNDED: { label: 'Refunded', cls: 'status-cancelled' },
   PARTIALLY_REFUNDED: { label: 'Partially refunded', cls: 'status-cancelled' },
 };
+
+const PAYMENT_FILTERS = [
+  { key: '', label: 'Any payment' },
+  ...Object.entries(PAYMENT_LABELS).map(([key, v]) => ({ key, label: v.label })),
+];
+
+const PAGE_SIZE = 20;
+
+const canMarkRefunded = (order) => order?.paymentStatus === 'PAID' && order?.status === 'CANCELLED';
 
 // Prepaid orders cannot move past confirmation until the payment is verified
 // (the backend enforces the same rule).
@@ -87,8 +99,8 @@ const ACTION_LABELS = {
   READY: { label: 'Mark Ready', cls: 'action-ready' },
   READY_FOR_PICKUP: { label: 'Ready for Pickup', cls: 'action-ready' },
   PICKED_UP: { label: 'Mark Picked Up', cls: 'action-complete' },
-  COMPLETED: { label: 'Complete', cls: 'action-complete' },
-  CANCELLED: { label: 'Cancel', cls: 'action-cancel' },
+  COMPLETED: { label: 'Mark Completed', cls: 'action-complete' },
+  CANCELLED: { label: 'Cancel Order', cls: 'action-cancel' },
 };
 
 export default function SellerOrders() {
@@ -101,29 +113,78 @@ export default function SellerOrders() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
-  // Matched against the order number and the buyer, which are the two
-  // things a seller has to hand when a buyer asks about an order.
+  // Server-side filters: order number search, created-at range and payment
+  // status, all sent as query params to GET /orders/store/orders.
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1, hasNext: false });
   const [cancelConfirm, setCancelConfirm] = useState(null); // { orderId }
   const [rejectConfirm, setRejectConfirm] = useState(null); // { orderId }
+  const [refundConfirm, setRefundConfirm] = useState(null); // { orderId }
   const [verifyingId, setVerifyingId] = useState(null);
+
+  // Typing shouldn't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
   useEffect(() => {
     loadOrders();
-  }, [activeTab]);
+  }, [activeTab, page, debouncedSearch, from, to, paymentFilter]);
+
+  const selectTab = (key) => {
+    if (key === activeTab) return;
+    setActiveTab(key);
+    setPage(1);
+  };
+
+  const applyFilter = (setter) => (value) => {
+    setter(value);
+    setPage(1);
+  };
+
+  const hasFilters = Boolean(debouncedSearch || from || to || paymentFilter);
+
+  const clearFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setFrom('');
+    setTo('');
+    setPaymentFilter('');
+    setPage(1);
+  };
 
   const loadOrders = async () => {
     setIsLoading(true);
     try {
-      const params = activeTab !== 'all' ? { status: activeTab, pageSize: 50 } : { pageSize: 50 };
+      const params = {
+        page,
+        pageSize: PAGE_SIZE,
+        status: activeTab !== 'all' ? activeTab : undefined,
+        search: debouncedSearch || undefined,
+        from: from || undefined,
+        to: to || undefined,
+        paymentStatus: paymentFilter || undefined,
+      };
       const res = await axios.get('/orders/store/orders', { params });
       const loaded = res.data || [];
       setOrders(loaded);
+      if (res.pagination) setPagination(res.pagination);
       // Deep-link support: /seller/orders?id=<orderId> opens that order's detail panel
       const targetId = searchParams.get('id');
       if (targetId) {
         const match = loaded.find((o) => o.id === targetId);
-        if (match) setSelectedOrder(match);
+        if (match) {
+          setSelectedOrder(match);
+        } else {
+          // Not on this page; fetch it directly so the link still works.
+          axios.get(`/orders/${targetId}`).then((r) => { if (r.data) setSelectedOrder(r.data); }).catch(() => {});
+        }
         setSearchParams((prev) => {
           const next = new URLSearchParams(prev);
           next.delete('id');
@@ -131,7 +192,7 @@ export default function SellerOrders() {
         }, { replace: true });
       }
     } catch (err) {
-      toast.error('Failed to load orders');
+      toast.error(err.message || 'Failed to load orders');
     } finally {
       setIsLoading(false);
     }
@@ -142,9 +203,15 @@ export default function SellerOrders() {
     try {
       const res = await axios.put(`/orders/${orderId}/status`, { status: newStatus });
       toast.success(`Order marked as ${STATUS_MAP[newStatus]?.label || newStatus}`);
-      applyOrderUpdate(orderId, { status: newStatus, paymentStatus: res.data?.paymentStatus });
+      applyOrderUpdate(orderId, {
+        status: res.data?.status || newStatus,
+        paymentStatus: res.data?.paymentStatus,
+      });
     } catch (err) {
       toast.error(err.message || 'Failed to update order');
+      // 409: the order moved on under us (buyer cancelled, another tab acted).
+      // Refetch so the list shows the real state instead of a stale action.
+      if (err.status === 409) loadOrders();
     } finally {
       setUpdatingId(null);
     }
@@ -157,29 +224,35 @@ export default function SellerOrders() {
     setSelectedOrder((prev) => (prev?.id === orderId ? { ...prev, ...clean } : prev));
   }
 
+  const PAYMENT_TOASTS = {
+    PAID: 'Payment verified',
+    FAILED: 'Payment rejected — the buyer will be asked to upload a new proof',
+    REFUNDED: 'Refund recorded',
+  };
+
+  // PATCH /orders/:id/payment { paymentStatus: 'PAID' | 'FAILED' | 'REFUNDED' }.
+  // Rejecting no longer cancels the order: it stays open with its stock and
+  // paymentStatus FAILED until the buyer resubmits proof.
   const handlePaymentDecision = async (orderId, paymentStatus) => {
     setVerifyingId(orderId);
     try {
       const res = await axios.patch(`/orders/${orderId}/payment`, { paymentStatus });
-      applyOrderUpdate(orderId, { paymentStatus: res.data?.paymentStatus, status: res.data?.status });
-      toast.success(paymentStatus === 'PAID' ? 'Payment verified' : 'Payment rejected and order cancelled');
+      applyOrderUpdate(orderId, {
+        paymentStatus: res.data?.paymentStatus || paymentStatus,
+        status: res.data?.status,
+      });
+      toast.success(PAYMENT_TOASTS[paymentStatus] || 'Payment updated');
     } catch (err) {
       toast.error(err.message || 'Failed to update payment');
       loadOrders();
     } finally {
       setVerifyingId(null);
       setRejectConfirm(null);
+      setRefundConfirm(null);
     }
   };
 
-  const term = search.trim().toLowerCase();
-  const displayed = (activeTab === 'all' ? orders : orders.filter(o => o.status === activeTab))
-    .filter((o) => {
-      if (!term) return true;
-      const buyer = o.buyer?.fullName || o.buyer?.email || '';
-      return String(o.orderNumber || o.id).toLowerCase().includes(term)
-        || buyer.toLowerCase().includes(term);
-    });
+  const displayed = orders;
 
   const requestStatusChange = (orderId, newStatus) => {
     if (newStatus === 'CANCELLED') {
@@ -208,8 +281,8 @@ export default function SellerOrders() {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Order number or buyer"
-                aria-label="Search your orders"
+                placeholder="Order number"
+                aria-label="Search your orders by order number"
               />
               {search && (
                 <button type="button" onClick={() => setSearch('')} aria-label="Clear search">
@@ -226,11 +299,39 @@ export default function SellerOrders() {
             <button
               key={t.key}
               className={`seller-tab ${activeTab === t.key ? 'seller-tab--active' : ''}`}
-              onClick={() => setActiveTab(t.key)}
+              onClick={() => selectTab(t.key)}
             >
               {t.label}
             </button>
           ))}
+        </div>
+
+        {/* Date range + payment status filters (server-side) */}
+        <div className="so-filters">
+          <label className="so-filter">
+            <span>From</span>
+            <input type="date" value={from} max={to || undefined} onChange={(e) => applyFilter(setFrom)(e.target.value)} />
+          </label>
+          <label className="so-filter">
+            <span>To</span>
+            <input type="date" value={to} min={from || undefined} onChange={(e) => applyFilter(setTo)(e.target.value)} />
+          </label>
+          <label className="so-filter">
+            <span>Payment</span>
+            <select value={paymentFilter} onChange={(e) => applyFilter(setPaymentFilter)(e.target.value)}>
+              {PAYMENT_FILTERS.map((p) => (
+                <option key={p.key || 'any'} value={p.key}>{p.label}</option>
+              ))}
+            </select>
+          </label>
+          {hasFilters && (
+            <button type="button" className="btn-seller-outline so-filter-clear" onClick={clearFilters}>
+              <X size={12} weight="bold" /> Clear
+            </button>
+          )}
+          {!isLoading && pagination.total > 0 && (
+            <span className="so-filter-count">{pagination.total} order{pagination.total === 1 ? '' : 's'}</span>
+          )}
         </div>
 
         <div className={`orders-layout${selectedOrder ? '' : ' is-single'}`}>
@@ -241,19 +342,20 @@ export default function SellerOrders() {
             ) : displayed.length === 0 ? (
               <div className="seller-empty is-page">
                 <EmptyArt name="shopping" size={168} />
-                <strong>{term ? 'No orders match your search' : 'No orders in this category'}</strong>
+                <strong>{hasFilters ? 'No orders match your filters' : 'No orders in this category'}</strong>
                 <p>
-                  {term
-                    ? `Nothing matches “${search.trim()}”. Try an order number or the buyer's name.`
+                  {hasFilters
+                    ? 'Try a different order number, date range or payment status.'
                     : 'New orders from buyers will appear here.'}
                 </p>
-                {term && (
-                  <button type="button" className="btn-seller-outline" onClick={() => setSearch('')}>
-                    Clear search
+                {hasFilters && (
+                  <button type="button" className="btn-seller-outline" onClick={clearFilters}>
+                    Clear filters
                   </button>
                 )}
               </div>
             ) : (
+              <>
               <table className="seller-table so-orders-table">
                 <thead>
                   <tr>
@@ -332,7 +434,13 @@ export default function SellerOrders() {
                         </td>
                         <td>
                           <div className="so-buyer">
-                            <span className="so-buyer-name">{order.buyer?.fullName || 'Buyer'}</span>
+                            {order.buyer?.id ? (
+                              <Link to={`/u/${order.buyer.id}`} className="so-buyer-name profile-link" title="View buyer profile">
+                                {order.buyer.fullName || 'Buyer'}
+                              </Link>
+                            ) : (
+                              <span className="so-buyer-name">{order.buyer?.fullName || 'Buyer'}</span>
+                            )}
                             {order.buyer?.contactNumber && (
                               <span className="so-buyer-meta">{order.buyer.contactNumber}</span>
                             )}
@@ -345,6 +453,12 @@ export default function SellerOrders() {
                           </span>
                           {order.paymentStatus === 'PENDING_VERIFICATION' && order.status !== 'CANCELLED' && (
                             <div className="so-payment-flag">Payment to verify</div>
+                          )}
+                          {order.paymentStatus === 'FAILED' && order.status !== 'CANCELLED' && (
+                            <div className="so-payment-flag">Awaiting new proof</div>
+                          )}
+                          {canMarkRefunded(order) && (
+                            <div className="so-payment-flag">Refund due</div>
                           )}
                         </td>
                         <td>
@@ -389,6 +503,28 @@ export default function SellerOrders() {
                   })}
                 </tbody>
               </table>
+              {pagination.totalPages > 1 && (
+                <div className="so-pagination">
+                  <button
+                    type="button"
+                    className="btn-seller-outline so-pagination-btn"
+                    disabled={page <= 1 || isLoading}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Prev
+                  </button>
+                  <span>Page {page} of {pagination.totalPages}</span>
+                  <button
+                    type="button"
+                    className="btn-seller-outline so-pagination-btn"
+                    disabled={page >= pagination.totalPages || isLoading}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+              </>
             )}
           </div>
 
@@ -413,7 +549,11 @@ export default function SellerOrders() {
                 {/* Buyer */}
                 <div className="detail-row">
                   <span>Buyer</span>
-                  <strong>{selectedOrder.buyer?.fullName || '—'}</strong>
+                  <strong>
+                    {selectedOrder.buyer?.id
+                      ? <Link to={`/u/${selectedOrder.buyer.id}`} className="profile-link" title="View buyer profile">{selectedOrder.buyer.fullName || '—'}</Link>
+                      : (selectedOrder.buyer?.fullName || '—')}
+                  </strong>
                 </div>
 
                 <div className="detail-row">
@@ -462,6 +602,28 @@ export default function SellerOrders() {
                         onClick={() => setRejectConfirm({ orderId: selectedOrder.id })}
                       >
                         <XCircle size={16} /> Reject payment
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedOrder.paymentStatus === 'FAILED' && selectedOrder.status !== 'CANCELLED' && (
+                  <div className="so-payment-review">
+                    <p>The proof was rejected. The order and its stock are kept while the buyer uploads a new one; it expires automatically if they don't.</p>
+                  </div>
+                )}
+
+                {canMarkRefunded(selectedOrder) && (
+                  <div className="so-payment-review">
+                    <p>This prepaid order was cancelled after payment. Once you have returned the money to the buyer, record it here.</p>
+                    <div className="so-payment-actions">
+                      <button
+                        type="button"
+                        className="so-payment-btn so-payment-btn--approve"
+                        disabled={verifyingId === selectedOrder.id}
+                        onClick={() => setRefundConfirm({ orderId: selectedOrder.id })}
+                      >
+                        <CheckCircle size={16} /> Mark refunded
                       </button>
                     </div>
                   </div>
@@ -528,6 +690,12 @@ export default function SellerOrders() {
                     <span>Delivery fee</span>
                     <span>₱{Number(selectedOrder.deliveryFee || 0).toFixed(2)}</span>
                   </div>
+                  {Number(selectedOrder.discountAmount) > 0 && (
+                    <div className="detail-total-row">
+                      <span>Discount{selectedOrder.voucherCode ? ` (${selectedOrder.voucherCode})` : ''}</span>
+                      <span>−₱{Number(selectedOrder.discountAmount).toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="detail-total-row detail-total-row--bold">
                     <span>Total</span>
                     <span>₱{Number(selectedOrder.total).toFixed(2)}</span>
@@ -586,12 +754,22 @@ export default function SellerOrders() {
       <ConfirmDialog
         open={!!rejectConfirm}
         title="Reject this payment?"
-        message="Only reject if the payment did not arrive or the proof is invalid. The order will be cancelled, stock restored, and the buyer notified."
+        message="Only reject if the payment did not arrive or the proof is invalid. The buyer will be asked to upload a new proof. The order and its stock are kept."
         confirmLabel="Reject Payment"
         danger
         loading={verifyingId === rejectConfirm?.orderId}
         onConfirm={() => handlePaymentDecision(rejectConfirm.orderId, 'FAILED')}
         onCancel={() => setRejectConfirm(null)}
+      />
+
+      <ConfirmDialog
+        open={!!refundConfirm}
+        title="Mark this order as refunded?"
+        message="Only confirm once the buyer has actually received the money back. This records the refund on the order and cannot be undone."
+        confirmLabel="Mark Refunded"
+        loading={verifyingId === refundConfirm?.orderId}
+        onConfirm={() => handlePaymentDecision(refundConfirm.orderId, 'REFUNDED')}
+        onCancel={() => setRefundConfirm(null)}
       />
     </div>
   );

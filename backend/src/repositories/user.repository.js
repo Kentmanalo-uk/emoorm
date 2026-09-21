@@ -18,6 +18,7 @@ const createUser = async (userData) => {
       id: true,
       email: true,
       fullName: true,
+      username: true,
       contactNumber: true,
       profilePhoto: true,
       municipalityId: true,
@@ -65,6 +66,7 @@ const findByEmail = async (email, includePassword = false) => {
     id: true,
     email: true,
     fullName: true,
+    username: true,
     contactNumber: true,
     profilePhoto: true,
     municipalityId: true,
@@ -112,6 +114,7 @@ const findById = async (id) => {
       id: true,
       email: true,
       fullName: true,
+      username: true,
       contactNumber: true,
       profilePhoto: true,
       municipalityId: true,
@@ -168,6 +171,7 @@ const updateUser = async (id, updateData) => {
       id: true,
       email: true,
       fullName: true,
+      username: true,
       contactNumber: true,
       profilePhoto: true,
       municipalityId: true,
@@ -181,6 +185,11 @@ const updateUser = async (id, updateData) => {
       },
       barangay: true,
       address: true,
+      // province must be selected here because the caller diffs this result
+      // against findById() to decide whether the change invalidates identity
+      // verification. Leaving it out made province look changed on every
+      // update and silently revoked a verified buyer's status.
+      province: true,
       role: true,
       isActive: true,
       isVerified: true,
@@ -217,6 +226,19 @@ const emailExists = async (email) => {
     where: { email },
   });
   return count > 0;
+};
+
+/**
+ * Find whoever holds a username. Deleted accounts still count: their handle
+ * stays claimed so an old profile link can never point at someone new.
+ * @param {String} username - Normalized (lowercase) username
+ * @returns {Promise<Object|null>} { id, username } or null
+ */
+const findByUsername = async (username) => {
+  return prisma.user.findUnique({
+    where: { username },
+    select: { id: true, username: true },
+  });
 };
 
 /**
@@ -602,6 +624,7 @@ module.exports = {
   updateUser,
   softDeleteUser,
   emailExists,
+  findByUsername,
   findAll,
   applyForSeller,
   findSellerApplication,

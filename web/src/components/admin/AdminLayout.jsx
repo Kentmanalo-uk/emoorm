@@ -20,6 +20,7 @@ import ShellSearch from '../layout/ShellSearch';
 import { adminSearchSources } from '../../lib/shellSearchSources';
 import './AdminLayout.css';
 import './AdminShellMobile.css';
+import UserAvatar from '../ui/UserAvatar';
 
 /**
  * Persistent shell for /admin/* pages — mirrors SellerLayout look & feel.
@@ -275,11 +276,13 @@ export default function AdminLayout({ children }) {
           </nav>
 
           <Link to="/profile" className="ac-user-card" title="View profile">
-            {user?.profilePhoto ? (
-              <img src={resolveImg(user.profilePhoto)} alt="" className="ac-user-avatar" />
-            ) : (
-              <span className="ac-user-avatar ac-user-avatar--fallback">{initial}</span>
-            )}
+            <UserAvatar
+              src={user?.profilePhoto}
+              name={initial}
+              alt=""
+              imgClassName="ac-user-avatar"
+              fallbackClassName="ac-user-avatar ac-user-avatar--fallback"
+            />
             <span className="ac-user-meta">
               <strong>{shortName}</strong>
               <span>{roleLabel}</span>

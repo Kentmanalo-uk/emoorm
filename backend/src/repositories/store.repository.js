@@ -61,12 +61,14 @@ const findById = async (id) => {
   return prisma.store.findUnique({
     where: { id },
     include: {
+      // No contactNumber: this record is served on public store endpoints,
+      // and the owner's personal phone number is not public data.
       owner: {
         select: {
           id: true,
           fullName: true,
-          email: true,
-          contactNumber: true,
+          username: true,
+          identityVerification: { select: { status: true } },
         },
       },
       municipality: {
@@ -109,11 +111,14 @@ const findBySlug = async (slug) => {
   return prisma.store.findUnique({
     where: { slug },
     include: {
+      // No contactNumber: the storefront is public, and the owner's personal
+      // phone number is not a shop contact detail.
       owner: {
         select: {
           id: true,
           fullName: true,
-          contactNumber: true,
+          username: true,
+          identityVerification: { select: { status: true } },
         },
       },
       municipality: {
@@ -128,6 +133,7 @@ const findBySlug = async (slug) => {
           products: {
             where: { deletedAt: null, status: 'APPROVED' },
           },
+          followers: true,
         },
       },
     },

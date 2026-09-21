@@ -9,6 +9,7 @@ import {
 import axiosInstance from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
 import SafetyNotice from '../common/SafetyNotice';
+import UserAvatar from '../ui/UserAvatar';
 import './Messenger.css';
 
 const POLL_INTERVAL_MS = 5000;
@@ -78,13 +79,12 @@ function ConversationListItem({ item, active, currentUserId, onClick }) {
       onClick={onClick}
     >
       <div className="msgr-avatar">
-        {avatar ? (
-          <img src={avatar} alt={title} />
-        ) : isSellerView ? (
-          <span>{title.slice(0, 1).toUpperCase()}</span>
-        ) : (
-          <StoreIcon size={18} weight="regular" />
-        )}
+        <UserAvatar
+          src={avatar}
+          name={title}
+          alt={title}
+          fallbackIcon={isSellerView ? null : StoreIcon}
+        />
       </div>
       <div className="msgr-convo-body">
         <div className="msgr-convo-row">
@@ -155,11 +155,13 @@ function MessageBubble({ message, isSelf }) {
     <div className={`msgr-bubble-row ${isSelf ? 'is-self' : ''}`}>
       {!isSelf && (
         <div className="msgr-bubble-avatar">
-          {message.sender?.profilePhoto ? (
-            <img src={message.sender.profilePhoto} alt="" />
-          ) : (
-            <UserIcon size={14} />
-          )}
+          <UserAvatar
+            src={message.sender?.profilePhoto}
+            name={message.sender?.fullName}
+            alt=""
+            fallbackIcon={UserIcon}
+            iconSize={14}
+          />
         </div>
       )}
       <div className="msgr-bubble">
@@ -474,11 +476,9 @@ export default function Messenger({ role = 'buyer', className = '' }) {
                 <CaretLeft size={22} />
               </button>
               <div className="msgr-avatar msgr-avatar-lg">
-                {activeHeader?.avatar ? (
-                  <img src={activeHeader.avatar} alt={activeHeader.title} />
-                ) : (
-                  activeHeader?.icon
-                )}
+                {activeHeader?.avatar
+                  ? <UserAvatar src={activeHeader.avatar} name={activeHeader.title} alt={activeHeader.title} />
+                  : activeHeader?.icon}
               </div>
               <div className="msgr-thread-title">
                 <div className="msgr-thread-name">

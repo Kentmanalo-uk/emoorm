@@ -8,14 +8,17 @@ const listConversations = asyncHandler(async (req, res) => {
 });
 
 const openConversation = asyncHandler(async (req, res) => {
-  const { storeId } = req.body;
-  if (!storeId) {
-    return res.status(400).json({ success: false, message: 'storeId is required' });
+  const { storeId, buyerId } = req.body;
+  // A buyer names the store; a seller names one of their buyers.
+  if (!storeId && !buyerId) {
+    return res.status(400).json({ success: false, message: 'storeId or buyerId is required' });
   }
-  const conversation = await messageService.openConversationWithStore(
-    req.user.id,
-    storeId,
-  );
+  if (buyerId && req.user.role !== 'SELLER') {
+    return res.status(403).json({ success: false, message: 'Only a seller can open a conversation with a buyer' });
+  }
+  const conversation = buyerId
+    ? await messageService.openConversationWithBuyer(req.user.id, String(buyerId))
+    : await messageService.openConversationWithStore(req.user.id, storeId);
   successResponse(res, conversation, 'Conversation ready');
 });
 

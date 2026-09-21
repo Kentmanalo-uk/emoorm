@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import useAuthStore from './authStore';
+import useCartStore from './cartStore';
 
 /**
  * Drives the account-switching overlay (personal ⇄ seller).
@@ -24,6 +26,8 @@ const useAccountSwitchStore = create((set, get) => ({
   shop: readShop(),
   start: (target, path) => {
     if (get().request) return;
+    // Re-point the cart at the signed-in account so no other bucket leaks across the switch.
+    useCartStore.getState().setOwner(useAuthStore.getState().user?.id || null);
     set({ request: { id: nextId++, target, path } });
   },
   finish: () => set({ request: null }),

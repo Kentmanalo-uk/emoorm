@@ -235,7 +235,7 @@ const ORDER_STATUS_NOTICES = {
   READY: { type: 'ORDER_READY', text: 'is ready' },
   READY_FOR_PICKUP: { type: 'ORDER_READY', text: 'is ready for pickup' },
   PICKED_UP: { type: 'ORDER_READY', text: 'has been picked up' },
-  COMPLETED: { type: 'ORDER_COMPLETED', text: 'is complete' },
+  COMPLETED: { type: 'ORDER_COMPLETED', text: 'is complete. How was it? Rate the items you received to help other buyers' },
   CANCELLED: { type: 'ORDER_CANCELLED', text: 'was cancelled by the seller' },
 };
 

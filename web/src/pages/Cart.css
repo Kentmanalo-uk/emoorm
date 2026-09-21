@@ -408,6 +408,41 @@
   opacity: 0.7;
 }
 
+/* Lines that failed re-validation (gone, not approved, out of stock) */
+.cart-item.is-unavailable .cart-item-image,
+.cart-item.is-unavailable .cart-item-name,
+.cart-item.is-unavailable .cart-item-price,
+.cart-item.is-unavailable .cart-item-variations {
+  opacity: 0.5;
+}
+
+.cart-item-remove-unavailable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cart-revalidation-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: var(--spacing-3);
+  font-size: 13px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.cart-revalidation-notice.is-warning {
+  border-color: var(--t-warning-200, #fde68a);
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-700, #b45309);
+}
+
 /* Continue Shopping Link */
 .btn-continue-shopping-link {
   display: inline-flex;

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   MapPin,
-  Phone,
   Package,
   Star,
   ShoppingCart,
@@ -14,6 +13,7 @@ import {
   X,
   Heart,
   Users,
+  SealCheck,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -264,7 +264,18 @@ export default function StoreDetail() {
                     {store.isActive && !store.isSuspended && (
                       <span className="shop-badge">Active</span>
                     )}
+                    {store.owner?.identityVerified && (
+                      <span
+                        className="shop-badge shop-badge-verified"
+                        title="This seller's identity was verified with a government ID"
+                      >
+                        <SealCheck size={12} weight="fill" /> Seller verified
+                      </span>
+                    )}
                   </div>
+                  {store.owner?.username && (
+                    <p className="shop-username">@{store.owner.username}</p>
+                  )}
                   {store.description && (
                     <p className="shop-tagline">{store.description}</p>
                   )}
@@ -344,12 +355,6 @@ export default function StoreDetail() {
               <div className="shop-info-item">
                 <span className="shop-info-label">Seller</span>
                 <span>{store.owner.fullName}</span>
-              </div>
-            )}
-            {(store.owner?.contactNumber || store.contactNumber) && (
-              <div className="shop-info-item">
-                <Phone size={14} />
-                <span>{store.contactNumber || store.owner.contactNumber}</span>
               </div>
             )}
             {store.pickupAddress && (
@@ -538,14 +543,28 @@ function ProductCard({ product, onAddToCart }) {
       <div className="product-info">
         <span className="product-name">{product.name}</span>
         <span className="product-price">₱{price.toFixed(2)}</span>
-        <div className="product-rating-row">
-          <div className="product-stars">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
-            ))}
+        {/* Stars only from real review data; an unrated product says "New". */}
+        {Number(product.reviewCount ?? 0) > 0 ? (
+          <div className="product-rating-row">
+            <div className="product-stars">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star
+                  key={i}
+                  size={11}
+                  weight={i < Math.round(Number(product.averageRating || 0)) ? 'fill' : 'regular'}
+                  color={i < Math.round(Number(product.averageRating || 0))
+                    ? 'var(--t-warning-500, #f59e0b)'
+                    : 'var(--t-neutral-300, #d1d5db)'}
+                />
+              ))}
+            </div>
+            <span className="product-review-count">({product.reviewCount})</span>
           </div>
-          <span className="product-review-count">({product.reviewCount ?? 0})</span>
-        </div>
+        ) : (
+          <div className="product-rating-row">
+            <span className="product-review-count">New</span>
+          </div>
+        )}
       </div>
     </Link>
   );

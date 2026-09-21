@@ -178,6 +178,22 @@
   letter-spacing: 0.5px;
 }
 
+.shop-badge-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.shop-username {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t-neutral-500, #64748b);
+  overflow-wrap: anywhere;
+}
+
 .shop-tagline {
   margin: 6px 0 10px;
   font-size: 13.5px;
@@ -802,6 +818,11 @@
   .shop-badge {
     padding: 2px 8px;
     font-size: 10px;
+  }
+
+  .shop-username {
+    margin-top: 4px;
+    font-size: 12px;
   }
 
   .shop-tagline {

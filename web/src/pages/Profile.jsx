@@ -4,12 +4,13 @@ import {
   PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Headset, Question, ChatCircleDots,
+  Eye,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
 import useAuthStore from '../store/authStore';
 import { fetchIdentityStatus } from '../lib/identity';
 import './Profile.css';
+import UserAvatar from '../components/ui/UserAvatar';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -129,13 +130,12 @@ const Profile = () => {
       <div className="profile-header-card">
         <div className="profile-header-left">
           <div className="profile-avatar">
-            {profile?.profilePhoto ? (
-              <img src={resolveImg(profile.profilePhoto)} alt={profile.fullName} />
-            ) : (
-              <div className="profile-avatar-placeholder">
-                {profile?.fullName?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
-            )}
+            <UserAvatar
+              src={profile?.profilePhoto}
+              name={profile?.fullName || 'U'}
+              alt={profile?.fullName || ''}
+              fallbackClassName="profile-avatar-placeholder"
+            />
           </div>
           <div className="profile-header-info">
             <h2 className="profile-name">{profile?.fullName || user?.fullName}</h2>
@@ -156,10 +156,18 @@ const Profile = () => {
             </div>
           </div>
         </div>
-        <Link to="/profile/settings" className="profile-edit-button">
-          <Edit size={18} />
-          Edit Profile
-        </Link>
+        <div className="profile-header-actions">
+          {user?.id && (
+            <Link to={`/u/${user.id}`} className="profile-edit-button profile-edit-button--ghost" title="See your profile as sellers and other buyers see it">
+              <Eye size={18} />
+              View public profile
+            </Link>
+          )}
+          <Link to="/profile/settings" className="profile-edit-button">
+            <Edit size={18} />
+            Edit Profile
+          </Link>
+        </div>
       </div>
 
       {/* Identity Verification Section */}

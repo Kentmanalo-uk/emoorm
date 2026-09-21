@@ -13,6 +13,8 @@ export const DEFAULT_APP_SETTINGS = {
   // server from the same record. Defaults match the server's defaults.
   deliveryFee: 50,
   freeDeliveryThreshold: 500,
+  // Whether buyers must verify their ID before checking out.
+  requireBuyerVerification: true,
 };
 
 /**

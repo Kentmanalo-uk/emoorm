@@ -17,6 +17,30 @@ const paymentLabel = (m) => ({
 
 const fulfillmentLabel = (m) => (m === 'PICKUP' ? 'Store Pickup' : 'Delivery');
 
+const statusLabel = (status, fulfillmentMethod) => ({
+  PENDING: 'Pending',
+  CONFIRMED: 'Confirmed',
+  PREPARING: 'Preparing',
+  READY: fulfillmentMethod === 'PICKUP' ? 'Ready for Pickup' : 'Ready',
+  READY_FOR_PICKUP: 'Ready for Pickup',
+  TO_SHIP: 'To Ship',
+  OUT_FOR_DELIVERY: 'Out for Delivery',
+  DELIVERED: 'Delivered',
+  PICKED_UP: 'Picked Up',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+})[status] || status || '—';
+
+const paymentStatusLabel = (order) => ({
+  PENDING: order.paymentMethod === 'COD' ? 'Unpaid' : 'Awaiting payment',
+  PENDING_VERIFICATION: 'Awaiting verification',
+  PAID: 'Paid',
+  FAILED: 'Proof rejected — resubmit',
+  EXPIRED: 'Expired',
+  REFUNDED: 'Refunded',
+  PARTIALLY_REFUNDED: 'Partially refunded',
+})[order.paymentStatus] || order.paymentStatus || '—';
+
 export default function OrderReceipt() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
@@ -40,9 +64,11 @@ export default function OrderReceipt() {
   if (error || !order) return <div className="receipt-loading">{error || 'Order not found'}</div>;
 
   const items = order.items || [];
-  const itemsSubtotal = items.reduce((sum, it) => sum + Number(it.price) * Number(it.quantity), 0);
+  // Amounts come straight from the order record, as charged.
+  const itemsSubtotal = Number(order.subtotal || 0);
   const deliveryFee = Number(order.deliveryFee || 0);
-  const totalAmount = Number(order.totalAmount || itemsSubtotal + deliveryFee);
+  const discountAmount = Number(order.discountAmount || 0);
+  const totalAmount = Number(order.total || 0);
 
   const store = order.store || {};
   const buyer = order.buyer || {};
@@ -95,7 +121,8 @@ export default function OrderReceipt() {
           {order.paymentReference && (
             <div><span className="meta-label">Reference</span><span>{order.paymentReference}</span></div>
           )}
-          <div><span className="meta-label">Status</span><span>{order.status}</span></div>
+          <div><span className="meta-label">Payment Status</span><span>{paymentStatusLabel(order)}</span></div>
+          <div><span className="meta-label">Status</span><span>{statusLabel(order.status, order.fulfillmentMethod)}</span></div>
         </section>
 
         <section className="receipt-items">
@@ -127,6 +154,9 @@ export default function OrderReceipt() {
         <section className="receipt-totals">
           <div className="totals-row"><span>Items Subtotal</span><span>{peso(itemsSubtotal)}</span></div>
           <div className="totals-row"><span>{order.fulfillmentMethod === 'PICKUP' ? 'Pickup Fee' : 'Delivery Fee'}</span><span>{deliveryFee === 0 ? 'FREE' : peso(deliveryFee)}</span></div>
+          {discountAmount > 0 && (
+            <div className="totals-row"><span>Discount{order.voucherCode ? ` (${order.voucherCode})` : ''}</span><span>-{peso(discountAmount)}</span></div>
+          )}
           <div className="totals-row totals-grand"><span>TOTAL</span><span>{peso(totalAmount)}</span></div>
         </section>
 

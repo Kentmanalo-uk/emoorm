@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search } from '@phosphor-icons/react';
+import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search, WarningCircle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import useIdentityGate from '../hooks/useIdentityGate';
+import useAppSettings, { quoteDeliveryFee } from '../hooks/useAppSettings';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
@@ -13,19 +14,75 @@ import './Cart.css';
 
 const SUGGESTION_COUNT = 12;
 
+// Stars only from real review data; unreviewed products read "New".
+const renderSuggestionRating = (product) => {
+  const count = Number(product.reviewCount ?? 0);
+  if (count <= 0) {
+    return (
+      <div className="cart-suggestion-rating">
+        <span className="cart-suggestion-review-count">New</span>
+      </div>
+    );
+  }
+  const filled = Math.round(Number(product.averageRating || 0));
+  return (
+    <div className="cart-suggestion-rating">
+      <div className="cart-suggestion-stars">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <Star
+            key={i}
+            size={11}
+            weight={i < filled ? 'fill' : 'regular'}
+            color={i < filled ? 'var(--t-warning-500, #f59e0b)' : 'var(--t-neutral-300, #d1d5db)'}
+          />
+        ))}
+      </div>
+      <span className="cart-suggestion-review-count">({count})</span>
+    </div>
+  );
+};
+
 const Cart = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuthStore();
   const { requireVerifiedIdentity, identityDialog } = useIdentityGate();
+  const { settings } = useAppSettings();
   const {
     items,
     getItemCount,
-    getTotalPrice,
     updateQuantity,
     removeItem,
-    clearCart
+    clearCart,
+    revalidate,
   } = useCartStore();
+
+  // Prices and stock are frozen at add time: refresh every line against the
+  // catalogue on load (and again after login), flagging what can't be bought.
+  const [revalidating, setRevalidating] = useState(false);
+  const [revalidationNotice, setRevalidationNotice] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (useCartStore.getState().items.length === 0) return;
+      setRevalidating(true);
+      try {
+        const { capped, unavailable } = await revalidate();
+        if (cancelled) return;
+        const notes = [];
+        if (unavailable.length) notes.push(`${unavailable.length} ${unavailable.length === 1 ? 'item is' : 'items are'} no longer available`);
+        if (capped.length) notes.push(`quantity reduced to available stock for ${capped.join(', ')}`);
+        if (capped.length) toast(`Quantity reduced to available stock: ${capped.join(', ')}`);
+        setRevalidationNotice(notes.length ? `${notes.join('; ')}.` : '');
+      } catch {
+        // Leave the cart as it was; the checkout re-checks anyway.
+      } finally {
+        if (!cancelled) setRevalidating(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   // "You may also like" — products from similar categories as cart items
   const [suggestions, setSuggestions] = useState([]);
@@ -79,29 +136,33 @@ const Cart = () => {
     ].some((value) => String(value || '').toLowerCase().includes(cartSearch)));
   }, [items, cartSearch]);
 
-  const [selectedIds, setSelectedIds] = useState(() => items.map((item) => item.id));
+  // Unavailable lines can never be selected, counted or checked out.
+  const purchasableItems = useMemo(() => items.filter((item) => !item.unavailable), [items]);
+  const unavailableItems = useMemo(() => items.filter((item) => item.unavailable), [items]);
+  const [selectedIds, setSelectedIds] = useState(() => purchasableItems.map((item) => item.id));
 
   useEffect(() => {
     setSelectedIds((prev) => {
       const known = new Set(prev);
       // Auto-select newly added items so the reference "all checked" default holds.
-      const merged = items.map((item) => item.id).filter((id) => known.has(id));
-      const additions = items.map((item) => item.id).filter((id) => !known.has(id));
+      const merged = purchasableItems.map((item) => item.id).filter((id) => known.has(id));
+      const additions = purchasableItems.map((item) => item.id).filter((id) => !known.has(id));
       return [...merged, ...additions];
     });
-  }, [items]);
+  }, [purchasableItems]);
 
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const selectedItems = useMemo(
-    () => items.filter((item) => selectedSet.has(item.id)),
-    [items, selectedSet]
+    () => purchasableItems.filter((item) => selectedSet.has(item.id)),
+    [purchasableItems, selectedSet]
   );
   const selectedCount = selectedItems.reduce((count, item) => count + item.quantity, 0);
   const subtotal = selectedItems.reduce(
     (sum, item) => sum + Number(item.price) * item.quantity,
     0
   );
-  const shippingFee = subtotal === 0 || subtotal >= 500 ? 0 : 50;
+  const shippingFee = quoteDeliveryFee(settings, subtotal, 'DELIVERY');
+  const freeDeliveryThreshold = Number(settings.freeDeliveryThreshold || 0);
   const [voucherInput, setVoucherInput] = useState('');
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [voucherLoading, setVoucherLoading] = useState(false);
@@ -117,7 +178,7 @@ const Cart = () => {
       toast.success(`Voucher ${res.data.voucher.code} applied`);
     } catch (err) {
       setAppliedVoucher(null);
-      toast.error(err?.response?.data?.message || 'Invalid voucher code');
+      toast.error(err?.message || 'Invalid voucher code');
     } finally {
       setVoucherLoading(false);
     }
@@ -149,7 +210,8 @@ const Cart = () => {
 
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount);
-  const allSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedSet.has(item.id));
+  const visiblePurchasable = visibleItems.filter((item) => !item.unavailable);
+  const allSelected = visiblePurchasable.length > 0 && visiblePurchasable.every((item) => selectedSet.has(item.id));
   const selectedStoreCount = new Set(selectedItems.map((item) => item.storeId).filter(Boolean)).size;
   const multiStoreSelected = selectedStoreCount > 1;
 
@@ -158,7 +220,8 @@ const Cart = () => {
   };
 
   const toggleStoreSelected = (storeItems) => {
-    const ids = storeItems.map((item) => item.id);
+    const ids = storeItems.filter((item) => !item.unavailable).map((item) => item.id);
+    if (ids.length === 0) return;
     const allOn = ids.every((id) => selectedSet.has(id));
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -169,7 +232,7 @@ const Cart = () => {
   };
 
   const toggleAllSelected = () => {
-    const visibleIds = visibleItems.map((item) => item.id);
+    const visibleIds = visiblePurchasable.map((item) => item.id);
     setSelectedIds((current) => {
       const next = new Set(current);
       if (allSelected) visibleIds.forEach((id) => next.delete(id));
@@ -266,16 +329,7 @@ const Cart = () => {
                     <span className="cart-suggestion-price">
                       ₱{Number(product.price).toFixed(2)}
                     </span>
-                    <div className="cart-suggestion-rating">
-                      <div className="cart-suggestion-stars">
-                        {[0, 1, 2, 3, 4].map((i) => (
-                          <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
-                        ))}
-                      </div>
-                      <span className="cart-suggestion-review-count">
-                        ({product.reviewCount ?? 0})
-                      </span>
-                    </div>
+                    {renderSuggestionRating(product)}
                   </div>
                 </Link>
               ))}
@@ -351,6 +405,12 @@ const Cart = () => {
           <div className="cart-layout">
             {/* Cart Items */}
             <div className="cart-items-section">
+              {(revalidating || revalidationNotice) && (
+                <div className={`cart-revalidation-notice ${revalidationNotice ? 'is-warning' : ''}`} role="status">
+                  <WarningCircle size={16} />
+                  <span>{revalidating ? 'Checking current prices and stock…' : revalidationNotice}</span>
+                </div>
+              )}
               {cartSearch && visibleItems.length === 0 && (
                 <div className="cart-search-empty">
                   <Search size={30} weight="fill" />
@@ -359,7 +419,8 @@ const Cart = () => {
                 </div>
               )}
               {Object.entries(itemsByStore).map(([storeId, storeData]) => {
-                const storeAllSelected = storeData.items.every((it) => selectedSet.has(it.id));
+                const storePurchasable = storeData.items.filter((it) => !it.unavailable);
+                const storeAllSelected = storePurchasable.length > 0 && storePurchasable.every((it) => selectedSet.has(it.id));
                 return (
                   <div key={storeId} className="cart-store-group">
                     <div className="store-group-header">
@@ -367,6 +428,7 @@ const Cart = () => {
                         <input
                           type="checkbox"
                           checked={storeAllSelected}
+                          disabled={storePurchasable.length === 0}
                           onChange={() => toggleStoreSelected(storeData.items)}
                           aria-label={`Select all items from ${storeData.storeName}`}
                         />
@@ -389,11 +451,12 @@ const Cart = () => {
 
                     <div className="cart-items-list">
                       {storeData.items.map((item) => (
-                        <div key={item.id} className="cart-item">
+                        <div key={item.id} className={`cart-item ${item.unavailable ? 'is-unavailable' : ''}`}>
                           <label className="cart-item-check">
                             <input
                               type="checkbox"
-                              checked={selectedSet.has(item.id)}
+                              checked={!item.unavailable && selectedSet.has(item.id)}
+                              disabled={!!item.unavailable}
                               onChange={() => toggleItemSelected(item.id)}
                               aria-label={`Select ${item.name}`}
                             />
@@ -418,49 +481,62 @@ const Cart = () => {
                                 {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
                               </p>
                             )}
-                            {item.stock !== undefined && item.stock < 10 && item.stock > 0 && (
+                            {!item.unavailable && item.stock !== undefined && item.stock < 10 && item.stock > 0 && (
                               <span className="cart-item-stock-warning">
                                 Only {item.stock} left in stock
                               </span>
                             )}
-                            {item.stock === 0 && (
+                            {item.unavailable && (
                               <span className="cart-item-out-of-stock">
-                                Out of stock
+                                {item.unavailableReason || 'Unavailable'}
                               </span>
                             )}
                           </div>
 
-                          <div className="cart-item-actions">
-                            <div className="cart-item-quantity">
+                          {item.unavailable ? (
+                            <div className="cart-item-actions">
                               <button
-                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                disabled={item.quantity <= 1}
-                                className="quantity-btn"
+                                type="button"
+                                onClick={() => removeItem(item.id)}
+                                className="btn-remove-item cart-item-remove-unavailable"
                               >
-                                <Minus size={16} />
-                              </button>
-                              <span className="quantity-display">{item.quantity}</span>
-                              <button
-                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                disabled={item.quantity >= (item.stock || 999)}
-                                className="quantity-btn"
-                              >
-                                <Plus size={16} />
+                                <Trash2 size={16} />
+                                <span>Unavailable — remove</span>
                               </button>
                             </div>
+                          ) : (
+                            <div className="cart-item-actions">
+                              <div className="cart-item-quantity">
+                                <button
+                                  onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                  disabled={item.quantity <= 1}
+                                  className="quantity-btn"
+                                >
+                                  <Minus size={16} />
+                                </button>
+                                <span className="quantity-display">{item.quantity}</span>
+                                <button
+                                  onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                  disabled={item.quantity >= (item.stock || 999)}
+                                  className="quantity-btn"
+                                >
+                                  <Plus size={16} />
+                                </button>
+                              </div>
 
-                            <div className="cart-item-subtotal">
-                              ₱{(item.price * item.quantity).toFixed(2)}
+                              <div className="cart-item-subtotal">
+                                ₱{(item.price * item.quantity).toFixed(2)}
+                              </div>
+
+                              <button
+                                onClick={() => handleRemoveItem(item.id)}
+                                className="btn-remove-item"
+                                title="Remove item"
+                              >
+                                <Trash2 size={18} />
+                              </button>
                             </div>
-
-                            <button
-                              onClick={() => handleRemoveItem(item.id)}
-                              className="btn-remove-item"
-                              title="Remove item"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -503,9 +579,9 @@ const Cart = () => {
                   </div>
                 )}
 
-                {subtotal < 500 && (
+                {freeDeliveryThreshold > 0 && subtotal < freeDeliveryThreshold && (
                   <div className="shipping-notice">
-                    Add ₱{(500 - subtotal).toFixed(2)} more for free shipping
+                    Add ₱{(freeDeliveryThreshold - subtotal).toFixed(2)} more for free shipping
                   </div>
                 )}
 
@@ -522,7 +598,7 @@ const Cart = () => {
                 <button
                   onClick={handleCheckout}
                   className="btn-checkout"
-                  disabled={selectedItems.length === 0 || multiStoreSelected || selectedItems.some(item => item.stock === 0)}
+                  disabled={revalidating || selectedItems.length === 0 || multiStoreSelected || selectedItems.some((item) => item.unavailable || item.stock === 0)}
                 >
                   <span className="btn-checkout-label-desktop">Proceed to Checkout</span>
                   <span className="btn-checkout-label-mobile">Checkout</span>
@@ -534,9 +610,9 @@ const Cart = () => {
                   </p>
                 )}
 
-                {items.some(item => item.stock === 0) && (
+                {unavailableItems.length > 0 && (
                   <p className="checkout-warning">
-                    Please remove out of stock items before checkout
+                    {unavailableItems.length === 1 ? 'One item is' : `${unavailableItems.length} items are`} unavailable and will not be checked out. Remove {unavailableItems.length === 1 ? 'it' : 'them'} to tidy your cart.
                   </p>
                 )}
 

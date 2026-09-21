@@ -79,8 +79,17 @@ export default function AdminSettings() {
     setBrandingForm({
       appLogo: currentAppSettings.appLogo,
       productPlaceholder: currentAppSettings.productPlaceholder,
+      deliveryFee: String(currentAppSettings.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
+      freeDeliveryThreshold: String(currentAppSettings.freeDeliveryThreshold ?? DEFAULT_APP_SETTINGS.freeDeliveryThreshold),
+      requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
     });
-  }, [currentAppSettings.appLogo, currentAppSettings.productPlaceholder]);
+  }, [
+    currentAppSettings.appLogo,
+    currentAppSettings.productPlaceholder,
+    currentAppSettings.deliveryFee,
+    currentAppSettings.freeDeliveryThreshold,
+    currentAppSettings.requireBuyerVerification,
+  ]);
 
   useEffect(() => {
     if (!isMunicipalAdmin || !user?.municipalityId) return;
@@ -167,11 +176,40 @@ export default function AdminSettings() {
   };
 
   const saveBranding = async () => {
+    const deliveryFee = Number(brandingForm.deliveryFee);
+    const freeDeliveryThreshold = Number(brandingForm.freeDeliveryThreshold);
+    if (!Number.isFinite(deliveryFee) || deliveryFee < 0) {
+      toast.error('Delivery fee must be 0 or more');
+      return;
+    }
+    if (!Number.isFinite(freeDeliveryThreshold) || freeDeliveryThreshold < 0) {
+      toast.error('Free delivery threshold must be 0 or more');
+      return;
+    }
+    // Send only what changed; the server keeps the rest.
+    const changes = {};
+    if (brandingForm.appLogo !== currentAppSettings.appLogo) changes.appLogo = brandingForm.appLogo;
+    if (brandingForm.productPlaceholder !== currentAppSettings.productPlaceholder) {
+      changes.productPlaceholder = brandingForm.productPlaceholder;
+    }
+    if (deliveryFee !== Number(currentAppSettings.deliveryFee)) changes.deliveryFee = deliveryFee;
+    if (freeDeliveryThreshold !== Number(currentAppSettings.freeDeliveryThreshold)) {
+      changes.freeDeliveryThreshold = freeDeliveryThreshold;
+    }
+    const requireBuyerVerification = brandingForm.requireBuyerVerification !== false;
+    if (requireBuyerVerification !== (currentAppSettings.requireBuyerVerification !== false)) {
+      changes.requireBuyerVerification = requireBuyerVerification;
+    }
+    if (Object.keys(changes).length === 0) {
+      toast.success('No changes to save');
+      return;
+    }
     setSavingBranding(true);
     try {
-      const response = await axios.put('/app-settings', brandingForm);
-      queryClient.setQueryData(APP_SETTINGS_QUERY_KEY, response.data);
-      toast.success('App branding updated');
+      const response = await axios.put('/app-settings', changes);
+      queryClient.setQueryData(APP_SETTINGS_QUERY_KEY, { ...DEFAULT_APP_SETTINGS, ...(response.data || {}) });
+      queryClient.invalidateQueries({ queryKey: APP_SETTINGS_QUERY_KEY });
+      toast.success('App settings updated');
     } catch (err) {
       toast.error(err.message || 'Failed to save app branding');
     } finally {
@@ -332,7 +370,7 @@ export default function AdminSettings() {
       <header className="st-panel-head">
         <div>
           <h2>App branding</h2>
-          <p>The Emoorm logo and the image shown when a product has no photo.</p>
+          <p>The Emoorm logo, the image shown when a product has no photo, and checkout delivery pricing.</p>
         </div>
       </header>
       <div className="st-branding-grid">
@@ -358,6 +396,49 @@ export default function AdminSettings() {
           </div>
         ))}
       </div>
+
+      <Row label="Delivery fee (₱)" help="Charged on delivery orders below the free-delivery threshold. Pickup orders are never charged.">
+        <input
+          className="st-input"
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          value={brandingForm.deliveryFee ?? ''}
+          onChange={(e) => setBrandingForm((current) => ({ ...current, deliveryFee: e.target.value }))}
+          placeholder={String(DEFAULT_APP_SETTINGS.deliveryFee)}
+        />
+      </Row>
+
+      <Row label="Free delivery from (₱ subtotal)" help="Delivery orders with a subtotal at or above this amount get free delivery. Set 0 to make every delivery free.">
+        <input
+          className="st-input"
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          value={brandingForm.freeDeliveryThreshold ?? ''}
+          onChange={(e) => setBrandingForm((current) => ({ ...current, freeDeliveryThreshold: e.target.value }))}
+          placeholder={String(DEFAULT_APP_SETTINGS.freeDeliveryThreshold)}
+        />
+      </Row>
+
+      <Row
+        label="Buyer ID verification"
+        help={brandingForm.requireBuyerVerification !== false
+          ? 'On: buyers must verify a government ID before they can check out.'
+          : 'Off: anyone with an account can check out. Verification stays available and records are kept.'}
+      >
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={brandingForm.requireBuyerVerification !== false}
+            onChange={(e) => setBrandingForm((current) => ({ ...current, requireBuyerVerification: e.target.checked }))}
+          />
+          <span>Require verification before checkout</span>
+        </label>
+      </Row>
+
       <footer className="st-panel-foot">
         <button type="button" className="st-btn st-btn-primary" onClick={saveBranding} disabled={savingBranding || Boolean(uploadingBrandField)}>
           {savingBranding ? <Loader2 size={15} className="spin" /> : <Save size={15} weight="fill" />}

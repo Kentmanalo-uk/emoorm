@@ -36,6 +36,27 @@ const attachDeletionInfo = (store) => {
 };
 
 /**
+ * Reduce the loaded owner to the fields a shop page may show anyone: who
+ * they are, their handle, and whether their identity has been checked.
+ * The owner's email and phone number are never part of a store payload.
+ * @param {Object} store - Store with an `owner` relation loaded
+ * @returns {Object} The same store with a public-safe owner
+ */
+const withPublicOwner = (store) => {
+  if (!store || !store.owner) return store;
+  const { id, fullName, username, identityVerification } = store.owner;
+  return {
+    ...store,
+    owner: {
+      id,
+      fullName,
+      username: username || null,
+      identityVerified: identityVerification?.status === 'VERIFIED',
+    },
+  };
+};
+
+/**
  * Read a store through the shared cache.
  *
  * A store with a deletion pending is deliberately never served from cache:
@@ -148,7 +169,7 @@ const getStoreById = async (id) => {
     throw new ApiError('Store not found', 404);
   }
 
-  return store;
+  return withPublicOwner(store);
 };
 
 /**
@@ -164,7 +185,7 @@ const getStoreBySlug = async (slug) => {
     throw new ApiError('Store not found', 404);
   }
 
-  return store;
+  return withPublicOwner(store);
 };
 
 // Aggregated storefront: store + ratings summary + category tabs with counts.
@@ -225,11 +246,12 @@ const buildStorefront = async (store) => {
     .sort((a, b) => b.count - a.count);
 
   return {
-    ...store,
+    ...withPublicOwner(store),
     stats: {
       productCount: store._count?.products || 0,
       averageRating: Number(ratingAgg._avg.rating || 0),
       reviewCount: ratingAgg._count._all || 0,
+      followerCount: store._count?.followers || 0,
     },
     categories: categoryTabs,
     // Suppress the raw _count field so response shape stays clean

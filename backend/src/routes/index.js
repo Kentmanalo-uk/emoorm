@@ -75,6 +75,7 @@ router.use('/support', supportRoutes);
 router.use('/banners', bannerRoutes);
 router.use('/vouchers', voucherRoutes);
 router.use('/app-settings', appSettingRoutes);
+router.use('/profiles', require('./profile.routes'));
 router.use('/identity-verification', require('./identityVerification.routes'));
 router.use('/moderation', require('./moderation.routes'));
 

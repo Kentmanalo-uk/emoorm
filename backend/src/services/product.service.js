@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const config = require('../config/env');
 const productRepository = require('../repositories/product.repository');
 const storeRepository = require('../repositories/store.repository');
 const categoryRepository = require('../repositories/category.repository');
@@ -27,6 +28,24 @@ const computeImageHashSafe = async (images) => {
  */
 const PRODUCT_TEXT_FIELDS = { name: 200, description: 5000 };
 
+// ── Validation limits ───────────────────────────────────────────────────
+const NAME_MIN = 2;
+const NAME_MAX = 200;
+const DESCRIPTION_MIN = 10;
+const DESCRIPTION_MAX = 5000;
+const PRICE_MAX = 9999999.99;
+const QUANTITY_MAX = 1000000;
+const IMAGES_MAX = 10;
+const IMAGE_PATTERN = /^\/uploads\/[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif)$/i;
+const STOCK_DELTA_MAX = 100000;
+const STOCK_REASON_MAX = 120;
+const SEARCH_MAX = 100;
+const SORT_BY = new Set(['createdAt', 'price', 'name', 'orderCount']);
+const PRODUCT_STATUSES = new Set(['PENDING', 'APPROVED', 'HIDDEN', 'SUSPENDED', 'ARCHIVED']);
+const ADMIN_ROLES = new Set(['SUPER_ADMIN', 'MUNICIPAL_ADMIN']);
+
+const isAdminRole = (role) => ADMIN_ROLES.has(role);
+
 const normalizeProductOptions = (data) => {
   const returnPolicy = typeof data.returnPolicy === 'string'
     ? cleanText(data.returnPolicy, { maxLength: 2000 })
@@ -52,6 +71,227 @@ const normalizeProductOptions = (data) => {
   return { returnPolicy, variations: variations.length ? variations : null };
 };
 
+// ── Field validators (each returns the normalised value or throws 400) ──
+
+const validateName = (value) => {
+  if (typeof value !== 'string' || value.length < NAME_MIN || value.length > NAME_MAX) {
+    throw new ApiError(`Product name must be between ${NAME_MIN} and ${NAME_MAX} characters`, 400);
+  }
+  return value;
+};
+
+const validateDescription = (value) => {
+  if (typeof value !== 'string' || value.length < DESCRIPTION_MIN || value.length > DESCRIPTION_MAX) {
+    throw new ApiError(`Product description must be between ${DESCRIPTION_MIN} and ${DESCRIPTION_MAX} characters`, 400);
+  }
+  return value;
+};
+
+const validatePrice = (value) => {
+  const price = typeof value === 'string' ? Number(value.trim()) : Number(value);
+  if (typeof value === 'boolean' || value === '' || value === null || !Number.isFinite(price) || price <= 0) {
+    throw new ApiError('Product price must be a number greater than zero', 400);
+  }
+  if (price > PRICE_MAX) {
+    throw new ApiError(`Product price cannot exceed ${PRICE_MAX.toLocaleString('en-US')}`, 400);
+  }
+  // The column holds two decimals. A price that rounds to nothing is a free
+  // product, which is never what a seller typed 0.001 for.
+  const rounded = Math.round(price * 100) / 100;
+  if (rounded <= 0) {
+    throw new ApiError('Product price must be at least 0.01', 400);
+  }
+  return rounded;
+};
+
+const validateWholeNumber = (value, label) => {
+  const n = typeof value === 'string' ? Number(value.trim()) : Number(value);
+  if (typeof value === 'boolean' || value === '' || value === null || !Number.isInteger(n) || n < 0 || n > QUANTITY_MAX) {
+    throw new ApiError(`${label} must be a whole number between 0 and ${QUANTITY_MAX.toLocaleString('en-US')}`, 400);
+  }
+  return n;
+};
+
+const validateImages = (value) => {
+  if (!Array.isArray(value) || value.length < 1 || value.length > IMAGES_MAX) {
+    throw new ApiError(`Provide between 1 and ${IMAGES_MAX} product images`, 400);
+  }
+  const images = value.map((img) => (typeof img === 'string' ? img.trim() : img));
+  for (const img of images) {
+    if (typeof img !== 'string' || !IMAGE_PATTERN.test(img)) {
+      throw new ApiError('Each product image must be an uploaded image path (e.g. /uploads/photo.jpg)', 400);
+    }
+  }
+  return images;
+};
+
+const validateCategory = async (categoryId) => {
+  if (typeof categoryId !== 'string' || !categoryId.trim()) {
+    throw new ApiError('Category is required', 400);
+  }
+  const category = await categoryRepository.findById(categoryId.trim());
+  if (!category || !category.isActive) {
+    throw new ApiError('Category not found or is no longer available', 400);
+  }
+  return category.id;
+};
+
+const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined;
+
+/**
+ * Validate a create (all required) or update (partial) payload.
+ * @param {Object} data - Sanitised payload
+ * @param {Object} options
+ * @param {Boolean} options.partial - true for updates
+ * @returns {Promise<Object>} Only the validated, normalised fields present
+ */
+const validateProductPayload = async (data, { partial }) => {
+  const out = {};
+
+  if (!partial || has(data, 'name')) out.name = validateName(data.name);
+  if (!partial || has(data, 'description')) out.description = validateDescription(data.description);
+  if (!partial || has(data, 'price')) out.price = validatePrice(data.price);
+  if (!partial || has(data, 'stock')) {
+    out.stock = validateWholeNumber(partial ? data.stock : data.stock ?? 0, 'Product stock');
+  }
+  if (!partial || has(data, 'lowStockThreshold')) {
+    out.lowStockThreshold = validateWholeNumber(partial ? data.lowStockThreshold : data.lowStockThreshold ?? 5, 'Low-stock threshold');
+  }
+  if (!partial || has(data, 'images')) out.images = validateImages(data.images);
+  if (!partial || has(data, 'categoryId')) out.categoryId = await validateCategory(data.categoryId);
+
+  return out;
+};
+
+/**
+ * A seller may only write products while their store is open for business.
+ * @param {Object|null} store
+ * @param {String} action - Verb for the message
+ */
+const assertStoreCanEdit = (store, action) => {
+  if (!store) {
+    throw new ApiError(`You must have a store to ${action} products`, 403);
+  }
+  if (store.isSuspended) {
+    throw new ApiError(`Your store is suspended. Cannot ${action} products.`, 403);
+  }
+  if (!store.isActive || store.deletedAt) {
+    throw new ApiError(`Your store is inactive. Cannot ${action} products.`, 403);
+  }
+};
+
+// ── Public shaping ──────────────────────────────────────────────────────
+
+const PUBLIC_STORE_FIELDS = [
+  'id', 'name', 'slug', 'logo', 'fulfillmentMode', 'acceptsCod', 'paymentQrType',
+  'pickupAddress', 'isActive', 'isSuspended', 'municipality',
+];
+const PRIVATE_PRODUCT_FIELDS = ['moderationNote', 'approvedById', 'imageHash'];
+
+/**
+ * Reduce a full product record to what an anonymous buyer may see.
+ * @param {Object} product - Full record from the repository
+ * @param {Object} [options]
+ * @param {Boolean} [options.withOwner] - Include store.owner { id, fullName } (detail only)
+ * @returns {Object}
+ */
+const toPublicProduct = (product, { withOwner = false } = {}) => {
+  if (!product) return product;
+  const out = { ...product };
+  for (const field of PRIVATE_PRODUCT_FIELDS) delete out[field];
+
+  if (product.store) {
+    const store = {};
+    for (const field of PUBLIC_STORE_FIELDS) {
+      if (product.store[field] !== undefined) store[field] = product.store[field];
+    }
+    if (withOwner && product.store.owner) {
+      store.owner = { id: product.store.owner.id, fullName: product.store.owner.fullName };
+    }
+    out.store = store;
+  }
+  return out;
+};
+
+/** Strip the internal-only store field that rides along for the visibility rule. */
+const stripStoreInternals = (product) => {
+  if (!product?.store) return product;
+  const store = { ...product.store };
+  delete store.deletedAt;
+  return { ...product, store };
+};
+
+const isPubliclyVisible = (product) =>
+  product.status === 'APPROVED'
+  && !!product.store
+  && product.store.isActive === true
+  && product.store.isSuspended === false
+  && !product.store.deletedAt;
+
+/**
+ * Apply the detail visibility rule and shape the record for the viewer.
+ * The owner and admins see the full record; everyone else sees the public
+ * shape and only when the listing is live.
+ */
+const presentDetail = (product, viewerId, viewerRole) => {
+  if (!product || product.deletedAt) {
+    throw new ApiError('Product not found', 404);
+  }
+  const isOwner = !!viewerId && product.store?.owner?.id === viewerId;
+  if (isOwner || isAdminRole(viewerRole)) {
+    return stripStoreInternals(product);
+  }
+  if (!isPubliclyVisible(product)) {
+    throw new ApiError('Product not found', 404);
+  }
+  return toPublicProduct(product, { withOwner: true });
+};
+
+// ── Listing option normalisation ────────────────────────────────────────
+
+const toInt = (value, fallback) => {
+  const n = typeof value === 'string' ? parseInt(value, 10) : Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+};
+
+const toPrice = (value) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+};
+
+/**
+ * Whitelist and clamp everything a caller can put in the query string.
+ * @param {Object} options - Raw options from the controller
+ * @returns {Object} Safe options
+ */
+const normalizeListOptions = (options = {}) => {
+  const maxPageSize = config.pagination.maxPageSize || 100;
+  const defaultPageSize = Math.min(config.pagination.defaultPageSize || 20, maxPageSize);
+
+  const page = Math.max(1, toInt(options.page, 1));
+  const pageSize = Math.min(maxPageSize, Math.max(1, toInt(options.pageSize, defaultPageSize)));
+
+  const search = typeof options.search === 'string'
+    ? cleanText(options.search, { maxLength: SEARCH_MAX })
+    : undefined;
+
+  const minPrice = toPrice(options.minPrice);
+  const maxPrice = toPrice(options.maxPrice);
+
+  return {
+    ...options,
+    page,
+    pageSize,
+    search: search || undefined,
+    minPrice,
+    maxPrice,
+    sortBy: SORT_BY.has(options.sortBy) ? options.sortBy : 'createdAt',
+    sortOrder: options.sortOrder === 'asc' ? 'asc' : 'desc',
+    status: PRODUCT_STATUSES.has(options.status) ? options.status : undefined,
+  };
+};
+
 /**
  * Product Service
  * Contains business logic for product operations
@@ -67,6 +307,7 @@ const generateSlug = async (name) => {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+  if (!slug) slug = 'product';
 
   // Check if slug exists and add number if needed
   let counter = 1;
@@ -87,64 +328,34 @@ const generateSlug = async (name) => {
  * @returns {Promise<Object>} Created product
  */
 const createProduct = async (userId, rawData) => {
-  const data = cleanFields(rawData, PRODUCT_TEXT_FIELDS);
+  const data = cleanFields(rawData || {}, PRODUCT_TEXT_FIELDS);
   // Get seller's store
   const store = await storeRepository.findByOwnerId(userId);
+  assertStoreCanEdit(store, 'create');
 
-  if (!store) {
-    throw new ApiError('You must have a store to create products', 403);
-  }
+  const fields = await validateProductPayload(data, { partial: false });
 
-  if (store.isSuspended) {
-    throw new ApiError('Your store is suspended. Cannot create products.', 403);
-  }
-
-  const price = Number(data.price);
-  const stock = Number(data.stock ?? 0);
-  const lowStockThreshold = Number(data.lowStockThreshold ?? 5);
-  if (!Number.isFinite(price) || price <= 0) {
-    throw new ApiError('Product price must be greater than zero', 400);
-  }
-  if (!Number.isInteger(stock) || stock < 0) {
-    throw new ApiError('Product stock must be a whole number of zero or more', 400);
-  }
-  if (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) {
-    throw new ApiError('Low-stock threshold must be a whole number of zero or more', 400);
-  }
-
-  // Verify category exists
-  const category = await categoryRepository.findById(data.categoryId);
-  if (!category) {
-    throw new ApiError('Category not found', 404);
-  }
-
-  // Generate unique slug
-  const slug = await generateSlug(data.name);
+  // Generate unique slug — derived from the name only, never client-assignable
+  const slug = await generateSlug(fields.name);
 
   // If the seller's shop is already approved (active + not suspended), products go live immediately.
   // Admins can still suspend or hide them later.
   const initialStatus = store.isActive && !store.isSuspended ? 'APPROVED' : 'PENDING';
 
   // Create product
-  const imageHash = await computeImageHashSafe(data.images);
+  const imageHash = await computeImageHashSafe(fields.images);
   const options = normalizeProductOptions(data);
   const product = await productRepository.createProduct({
-    name: data.name,
+    ...fields,
     slug,
-    description: data.description,
-    price,
-    stock,
-    lowStockThreshold,
-    images: data.images || [],
     ...options,
     imageHash,
     storeId: store.id,
-    categoryId: data.categoryId,
     municipalityId: store.municipalityId,
     status: initialStatus,
   });
 
-  return product;
+  return stripStoreInternals(product);
 };
 
 /**
@@ -153,20 +364,11 @@ const createProduct = async (userId, rawData) => {
  * @returns {Promise<Object>} Product
  */
 const getProductById = async (id, viewerId = null, viewerRole = null) => {
-  // The product payload does not vary by caller; the ownership check below
-  // decides visibility and deliberately runs on the cached value, not inside
-  // the cache, so one caller's permission can never be cached for another.
+  // The product payload does not vary by caller; the visibility check below
+  // deliberately runs on the cached value, not inside the cache, so one
+  // caller's permission can never be cached for another.
   const product = await cached.product({ id }, () => productRepository.findById(id));
-
-  if (!product || product.deletedAt) {
-    throw new ApiError('Product not found', 404);
-  }
-  if (viewerId && viewerRole !== 'SUPER_ADMIN' && viewerRole !== 'MUNICIPAL_ADMIN'
-    && product.store?.owner?.id === viewerId) {
-    throw new ApiError('Product not found', 404);
-  }
-
-  return product;
+  return presentDetail(product, viewerId, viewerRole);
 };
 
 /**
@@ -176,16 +378,7 @@ const getProductById = async (id, viewerId = null, viewerRole = null) => {
  */
 const getProductBySlug = async (slug, viewerId = null, viewerRole = null) => {
   const product = await cached.product({ slug }, () => productRepository.findBySlug(slug));
-
-  if (!product || product.deletedAt) {
-    throw new ApiError('Product not found', 404);
-  }
-  if (viewerId && viewerRole !== 'SUPER_ADMIN' && viewerRole !== 'MUNICIPAL_ADMIN'
-    && product.store?.owner?.id === viewerId) {
-    throw new ApiError('Product not found', 404);
-  }
-
-  return product;
+  return presentDetail(product, viewerId, viewerRole);
 };
 
 /**
@@ -193,7 +386,9 @@ const getProductBySlug = async (slug, viewerId = null, viewerRole = null) => {
  * @param {Object} options - Query options
  * @returns {Promise<Object>} Products and pagination
  */
-const getProducts = async (options) => {
+const getProducts = async (rawOptions) => {
+  const options = normalizeListOptions(rawOptions);
+
   // If not admin, only show approved products from active, non-suspended stores.
   if (!options.isAdmin) {
     options.status = 'APPROVED';
@@ -202,13 +397,17 @@ const getProducts = async (options) => {
     options.excludeOwnerId = options.userId;
   }
 
+  const shape = (result) => (options.isAdmin
+    ? { ...result, products: result.products.map(stripStoreInternals) }
+    : { ...result, products: result.products.map((p) => toPublicProduct(p)) });
+
   // Only the anonymous public catalogue is shared between callers. An admin
   // listing is private and must be fresh for moderation; a signed-in seller's
   // listing hides their own products, which makes it caller-specific. Both go
   // straight to the database.
   const isSharedPublicView = !options.isAdmin && !options.excludeOwnerId;
   if (!isSharedPublicView) {
-    return productRepository.findAll(options);
+    return shape(await productRepository.findAll(options));
   }
 
   // Every dimension that changes the result is part of the key — miss one and
@@ -229,7 +428,10 @@ const getProducts = async (options) => {
   // Free-text search has a long tail of one-off keys, so it gets a shorter TTL
   // and its own namespace to keep it from evicting the browse pages.
   const load = () => productRepository.findAll(options);
-  return options.search ? cached.productSearch(key, load) : cached.productList(key, load);
+  const result = options.search
+    ? await cached.productSearch(key, load)
+    : await cached.productList(key, load);
+  return shape(result);
 };
 
 /**
@@ -238,14 +440,36 @@ const getProducts = async (options) => {
  * @param {Object} options - Query options
  * @returns {Promise<Object>} Products and pagination
  */
-const getMyProducts = async (userId, options) => {
+const getMyProducts = async (userId, rawOptions) => {
   const store = await storeRepository.findByOwnerId(userId);
 
   if (!store) {
     throw new ApiError('You do not have a store', 404);
   }
 
-  return productRepository.findByStore(store.id, options);
+  const options = normalizeListOptions(rawOptions);
+  const result = await productRepository.findByStore(store.id, options);
+  return { ...result, products: result.products.map(stripStoreInternals) };
+};
+
+/**
+ * Tell the store's followers a product is back in stock. Best-effort.
+ */
+const notifyRestock = async (store, before, after) => {
+  try {
+    const wasOutOfStock = (before.stock || 0) === 0;
+    const nowInStock = (after.stock || 0) > 0;
+    if (wasOutOfStock && nowInStock && after.status === 'APPROVED') {
+      await followService.notifyFollowers(after.storeId, {
+        type: 'STORE_NEW_PRODUCT',
+        title: `${store.name} restocked ${after.name}`,
+        message: `${after.name} is back in stock at ${store.name}.`,
+        relatedId: after.id,
+      });
+    }
+  } catch (err) {
+    console.error('[product] restock notification failed:', err.message);
+  }
 };
 
 /**
@@ -256,7 +480,7 @@ const getMyProducts = async (userId, options) => {
  * @returns {Promise<Object>} Updated product
  */
 const updateProduct = async (productId, userId, rawData) => {
-  const data = cleanFields(rawData, PRODUCT_TEXT_FIELDS);
+  const data = cleanFields(rawData || {}, PRODUCT_TEXT_FIELDS);
   const product = await productRepository.findById(productId);
 
   if (!product || product.deletedAt) {
@@ -269,99 +493,110 @@ const updateProduct = async (productId, userId, rawData) => {
   if (!store || product.storeId !== store.id) {
     throw new ApiError('You can only update your own products', 403);
   }
+  assertStoreCanEdit(store, 'update');
 
-  // If updating name, regenerate slug
-  if (data.name && data.name !== product.name) {
-    data.slug = await generateSlug(data.name);
+  // Only whitelisted fields, each validated. `slug` is never accepted.
+  const updateData = await validateProductPayload(data, { partial: true });
+
+  // Renaming regenerates the slug; the old slug's cache entry is cleared below.
+  let previousSlug = null;
+  if (updateData.name !== undefined && updateData.name !== product.name) {
+    updateData.slug = await generateSlug(updateData.name);
+    previousSlug = product.slug;
   }
 
-  // If updating category, verify it exists
-  if (data.categoryId && data.categoryId !== product.categoryId) {
-    const category = await categoryRepository.findById(data.categoryId);
-    if (!category) {
-      throw new ApiError('Category not found', 404);
-    }
-  }
-
-  // Filter allowed fields
-  const allowedFields = [
-    'name',
-    'slug',
-    'lowStockThreshold',
-    'description',
-    'price',
-    'stock',
-    'images',
-    'categoryId',
-    'returnPolicy',
-    'variations',
-  ];
-
-  const updateData = {};
-  for (const field of allowedFields) {
-    if (data[field] !== undefined) {
-      updateData[field] = data[field];
-    }
-  }
-
-  if (Object.prototype.hasOwnProperty.call(updateData, 'price')) {
-    const price = Number(updateData.price);
-    if (!Number.isFinite(price) || price <= 0) {
-      throw new ApiError('Product price must be greater than zero', 400);
-    }
-    updateData.price = price;
-  }
-  if (Object.prototype.hasOwnProperty.call(updateData, 'stock')) {
-    const stock = Number(updateData.stock);
-    if (!Number.isInteger(stock) || stock < 0) {
-      throw new ApiError('Product stock must be a whole number of zero or more', 400);
-    }
-    updateData.stock = stock;
-  }
-  if (Object.prototype.hasOwnProperty.call(updateData, 'lowStockThreshold')) {
-    const lowStockThreshold = Number(updateData.lowStockThreshold);
-    if (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) {
-      throw new ApiError('Low-stock threshold must be a whole number of zero or more', 400);
-    }
-    updateData.lowStockThreshold = lowStockThreshold;
-  }
-
-  if (Object.prototype.hasOwnProperty.call(data, 'returnPolicy')
-    || Object.prototype.hasOwnProperty.call(data, 'variations')) {
+  if (has(data, 'returnPolicy') || has(data, 'variations')) {
     Object.assign(updateData, normalizeProductOptions({
       returnPolicy: data.returnPolicy,
       variations: data.variations,
     }));
   }
 
-  // If product was rejected and being updated, reset to pending
+  // If product was suspended/archived and is being edited, send it back for review
   if (product.status === 'SUSPENDED' || product.status === 'ARCHIVED') {
     updateData.status = 'PENDING';
   }
 
-  if (Object.prototype.hasOwnProperty.call(updateData, 'images')) {
+  if (updateData.images !== undefined) {
     updateData.imageHash = await computeImageHashSafe(updateData.images);
   }
 
-  const updated = await productRepository.updateProduct(productId, updateData);
-
-  // Restock notification: was 0 (or null), now > 0 while APPROVED
-  try {
-    const wasOutOfStock = (product.stock || 0) === 0;
-    const nowInStock = updateData.stock !== undefined && Number(updateData.stock) > 0;
-    if (wasOutOfStock && nowInStock && updated.status === 'APPROVED') {
-      await followService.notifyFollowers(updated.storeId, {
-        type: 'STORE_NEW_PRODUCT',
-        title: `${store.name} restocked ${updated.name}`,
-        message: `${updated.name} is back in stock at ${store.name}.`,
-        relatedId: updated.id,
-      });
-    }
-  } catch (err) {
-    console.error('[updateProduct] restock notification failed:', err.message);
+  if (Object.keys(updateData).length === 0) {
+    throw new ApiError('No valid fields to update', 400);
   }
 
-  return updated;
+  const updated = await productRepository.updateProduct(productId, updateData, {
+    actorId: userId,
+    previousSlug,
+  });
+
+  if (updateData.stock !== undefined) {
+    await notifyRestock(store, product, updated);
+  }
+
+  return stripStoreInternals(updated);
+};
+
+/**
+ * Adjust stock by a relative amount (Owner only). Restocks and manual
+ * corrections are written to the inventory ledger.
+ * @param {String} productId
+ * @param {String} userId
+ * @param {Object} body - { delta, reason? }
+ * @returns {Promise<Object>} Updated product
+ */
+const adjustStock = async (productId, userId, body = {}) => {
+  const rawDelta = body?.delta;
+  const delta = typeof rawDelta === 'string' ? Number(rawDelta.trim()) : Number(rawDelta);
+  if (typeof rawDelta === 'boolean' || rawDelta === '' || rawDelta === null || rawDelta === undefined
+    || !Number.isInteger(delta) || delta === 0) {
+    throw new ApiError('Stock adjustment must be a non-zero whole number', 400);
+  }
+  if (Math.abs(delta) > STOCK_DELTA_MAX) {
+    throw new ApiError(`Stock adjustment cannot exceed ${STOCK_DELTA_MAX.toLocaleString('en-US')} units`, 400);
+  }
+  // Optional free-text reason: validated so a bad payload is rejected up
+  // front. The ledger's `reason` column carries the movement code
+  // (RESTOCK / MANUAL_ADJUSTMENT), so the note itself is not persisted.
+  const rawReason = body?.reason;
+  if (rawReason !== undefined && rawReason !== null) {
+    if (typeof rawReason !== 'string') {
+      throw new ApiError('Reason must be text', 400);
+    }
+    if (cleanText(rawReason).length > STOCK_REASON_MAX) {
+      throw new ApiError(`Reason cannot exceed ${STOCK_REASON_MAX} characters`, 400);
+    }
+  }
+
+  const product = await productRepository.findById(productId);
+  if (!product || product.deletedAt) {
+    throw new ApiError('Product not found', 404);
+  }
+
+  const store = await storeRepository.findByOwnerId(userId);
+  if (!store || product.storeId !== store.id) {
+    throw new ApiError('You can only adjust stock on your own products', 403);
+  }
+  assertStoreCanEdit(store, 'update');
+
+  if (delta > 0 && product.stock + delta > QUANTITY_MAX) {
+    throw new ApiError(`Stock cannot exceed ${QUANTITY_MAX.toLocaleString('en-US')}`, 400);
+  }
+
+  const reason = delta > 0 ? 'RESTOCK' : 'MANUAL_ADJUSTMENT';
+
+  let updated;
+  try {
+    updated = await productRepository.adjustStock(productId, delta, { reason, actorId: userId });
+  } catch (err) {
+    if (err.code === 'INSUFFICIENT_STOCK') {
+      throw new ApiError('Not enough stock to remove that quantity', 400);
+    }
+    throw err;
+  }
+
+  await notifyRestock(store, product, updated);
+  return stripStoreInternals(updated);
 };
 
 /**
@@ -387,25 +622,18 @@ const deleteProduct = async (productId, userId) => {
   await productRepository.softDeleteProduct(productId);
 };
 
-/**
- * Approve product (Admin only)
- * @param {String} productId - Product ID
- * @param {String} adminId - Approving admin user ID
- * @param {Object} [actor] - The acting admin (for municipality scope)
-      if (Object.prototype.hasOwnProperty.call(updateData, 'lowStockThreshold')) {
-        const lowStockThreshold = Number(updateData.lowStockThreshold);
-        if (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) {
-          throw new ApiError('Low-stock threshold must be a whole number of zero or more', 400);
-        }
-        updateData.lowStockThreshold = lowStockThreshold;
-      }
- * @returns {Promise<Object>} Updated product
- */
 const cleanReason = (reason) => {
   const text = String(reason || '').trim();
   return text ? text.slice(0, 500) : null;
 };
 
+/**
+ * Approve product (Admin only)
+ * @param {String} productId - Product ID
+ * @param {String} adminId - Approving admin user ID
+ * @param {Object} [actor] - The acting admin (for municipality scope)
+ * @returns {Promise<Object>} Updated product
+ */
 const approveProduct = async (productId, adminId, actor) => {
   const product = await productRepository.findById(productId);
 
@@ -452,7 +680,7 @@ const approveProduct = async (productId, adminId, actor) => {
     console.error('[approveProduct] follower fan-out failed:', err.message);
   }
 
-  return updated;
+  return stripStoreInternals(updated);
 };
 
 /**
@@ -484,7 +712,7 @@ const suspendProduct = async (productId, actor, reason) => {
     console.error('[suspendProduct] notification failed:', err.message);
   }
 
-  return updated;
+  return stripStoreInternals(updated);
 };
 
 /**
@@ -516,7 +744,7 @@ const archiveProduct = async (productId, actor, reason) => {
     console.error('[archiveProduct] notification failed:', err.message);
   }
 
-  return updated;
+  return stripStoreInternals(updated);
 };
 
 /**
@@ -555,7 +783,7 @@ const restoreProduct = async (productId, actor) => {
     console.error('[restoreProduct] notification failed:', err.message);
   }
 
-  return { ...updated, previousStatus: product.status };
+  return { ...stripStoreInternals(updated), previousStatus: product.status };
 };
 
 const normalizeImages = (raw) => {
@@ -608,14 +836,18 @@ const searchByImageBuffer = async (buffer, { threshold = 20, limit = 24 } = {}) 
     }))
     .filter((r) => r.distance <= threshold)
     .sort((a, b) => a.distance - b.distance)
-    .slice(0, limit)
-    .map(({ product, distance }) => ({
-      ...product,
-      matchDistance: distance,
-      matchSimilarity: Math.max(0, Math.round(((HASH_BIT_LENGTH - distance) / HASH_BIT_LENGTH) * 100)),
-    }));
+    .slice(0, limit);
 
-  return { queryHash, results: scored };
+  const stats = await productRepository.getStatsForIds(scored.map((r) => r.product.id));
+
+  const results = scored.map(({ product, distance }) => ({
+    ...toPublicProduct(product),
+    ...(stats.get(product.id) || { averageRating: 0, reviewCount: 0, soldCount: 0 }),
+    matchDistance: distance,
+    matchSimilarity: Math.max(0, Math.round(((HASH_BIT_LENGTH - distance) / HASH_BIT_LENGTH) * 100)),
+  }));
+
+  return { queryHash, results };
 };
 
 const BULK_ACTIONS = {
@@ -648,16 +880,16 @@ const bulkUpdateProducts = async (userId, ids, action) => {
     return { updatedCount, action };
   }
 
-  const config = BULK_ACTIONS[action];
-  if (!config) {
+  const bulkAction = BULK_ACTIONS[action];
+  if (!bulkAction) {
     throw new ApiError('Invalid bulk action', 400);
   }
 
   const updatedCount = await productRepository.bulkUpdateStatus(
     ids,
     store.id,
-    config.fromStatuses,
-    config.toStatus
+    bulkAction.fromStatuses,
+    bulkAction.toStatus
   );
   return { updatedCount, action };
 };
@@ -669,6 +901,7 @@ module.exports = {
   getProducts,
   getMyProducts,
   updateProduct,
+  adjustStock,
   deleteProduct,
   approveProduct,
   suspendProduct,

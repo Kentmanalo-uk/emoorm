@@ -7,6 +7,7 @@ import {
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import Skeleton from '../components/ui/Skeleton';
+import UserAvatar from '../components/ui/UserAvatar';
 import { getSellerFollowerStats, subscribeToFollowChanges } from '../lib/follow';
 import { completeGuide, shouldShowGuide } from '../lib/sellerGuides';
 
@@ -369,13 +370,7 @@ export default function SellerDashboard() {
                               className="sd-followers-avatar"
                               title={r.buyer.fullName}
                             >
-                              {r.buyer.profilePhoto ? (
-                                <img src={r.buyer.profilePhoto} alt={r.buyer.fullName} />
-                              ) : (
-                                <span>
-                                  {(r.buyer.fullName || '?').slice(0, 1).toUpperCase()}
-                                </span>
-                              )}
+                              <UserAvatar src={r.buyer.profilePhoto} name={r.buyer.fullName} alt={r.buyer.fullName} />
                             </div>
                           ))}
                           {followerStats.recent.length > 6 && (

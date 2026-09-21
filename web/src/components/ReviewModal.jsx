@@ -8,10 +8,21 @@ import './ReviewModal.css';
 const MAX_IMAGES = 5;
 const MAX_VIDEO_MB = 50;
 
-export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
-  const [rating, setRating] = useState(0);
+/**
+ * Rate & review a product.
+ *
+ * @param {object}  product        { id, name, images }
+ * @param {string}  [orderId]
+ * @param {number}  [initialRating] stars pre-selected (e.g. tapped on an order card)
+ * @param {string}  [intro]         one line shown above the stars, e.g. after receipt
+ * @param {object}  [existing]      an existing review to edit ({ id, rating, comment });
+ *                                  in that mode only rating and comment change
+ */
+export default function ReviewModal({ product, orderId, onClose, onSuccess, initialRating = 0, intro, existing }) {
+  const editing = Boolean(existing?.id);
+  const [rating, setRating] = useState(existing?.rating || initialRating || 0);
   const [hovered, setHovered] = useState(0);
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState(existing?.comment || '');
   const [submitting, setSubmitting] = useState(false);
 
   const [images, setImages] = useState([]); // [{ file, preview }]
@@ -71,6 +82,13 @@ export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
     }
     setSubmitting(true);
     try {
+      if (editing) {
+        await axios.put(`/reviews/${existing.id}`, { rating, comment: comment.trim() });
+        toast.success('Review updated');
+        onSuccess?.();
+        onClose();
+        return;
+      }
       const form = new FormData();
       form.append('productId', product.id);
       if (orderId) form.append('orderId', orderId);
@@ -82,7 +100,7 @@ export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
       await axios.post('/reviews', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      toast.success('Review submitted!');
+      toast.success('Thanks for your review!');
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -96,9 +114,10 @@ export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
     <div className="review-overlay" onClick={onClose}>
       <div className="review-modal" onClick={(e) => e.stopPropagation()}>
         <div className="review-modal-header">
-          <h2>Rate &amp; Review</h2>
+          <h2>{editing ? 'Edit your review' : 'Rate & Review'}</h2>
           <button className="review-close" onClick={onClose}><X size={20} /></button>
         </div>
+        {intro && <p className="review-intro">{intro}</p>}
 
         <div className="review-product-row">
           {product.images?.[0] && (
@@ -137,7 +156,8 @@ export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
           />
           <div className="review-char-count">{comment.length}/1000</div>
 
-          {/* Media uploads */}
+          {/* Media uploads (new reviews only; photos and video stay as posted) */}
+          {!editing && (
           <div className="review-media">
             <div className="review-media-header">
               <span>Add photos / video</span>
@@ -212,13 +232,14 @@ export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
               onChange={handleVideoPick}
             />
           </div>
+          )}
 
           <div className="review-actions">
             <button type="button" className="review-btn-cancel" onClick={onClose}>
               Cancel
             </button>
             <button type="submit" className="review-btn-submit" disabled={submitting || !rating}>
-              {submitting ? 'Submitting…' : 'Submit Review'}
+              {submitting ? 'Saving…' : editing ? 'Save changes' : 'Submit Review'}
             </button>
           </div>
         </form>

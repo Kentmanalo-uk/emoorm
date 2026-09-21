@@ -234,6 +234,49 @@
   background: var(--t-neutral-0, #fff);
 }
 
+/* Asks for a rating on a completed order until every item has one. */
+.order-review-nudge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--t-warning-50, #fffbeb);
+  border: 1px solid var(--t-warning-200, #fde68a);
+}
+
+.order-review-nudge-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--t-neutral-800, #1f2937);
+}
+
+.order-review-nudge-text > svg { color: var(--t-warning-500, #f59e0b); flex-shrink: 0; }
+
+.order-review-nudge-stars { display: inline-flex; gap: 2px; }
+
+.order-review-nudge-stars button {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 2px;
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: pointer;
+  transition: transform 0.1s, color 0.1s;
+}
+
+/* Hovering the third star lights the first three: the row is laid out in
+   reverse so "every star after the hovered one" is the ones to its left. */
+.order-review-nudge-stars { flex-direction: row-reverse; }
+.order-review-nudge-stars button:hover,
+.order-review-nudge-stars button:hover ~ button { color: var(--t-warning-500, #f59e0b); }
+.order-review-nudge-stars button:hover { transform: scale(1.15); }
+
 .order-action-btn {
   display: inline-flex;
   align-items: center;
@@ -276,6 +319,82 @@
   background-color: var(--t-danger-50, #fef2f2);
   color: var(--t-danger-700, #b91c1c);
   border-color: var(--t-danger-300, #fca5a5);
+}
+
+.order-action-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Payment + fulfilment badges side by side */
+.order-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Inline "resubmit payment proof" form under the card actions */
+.order-proof-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px 16px;
+  background: var(--t-neutral-0, #fff);
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.order-proof-hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.order-proof-fields {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.order-proof-input {
+  flex: 1 1 220px;
+  padding: 9px 12px;
+  font-size: 14px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 0;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-900, #111827);
+}
+
+.order-proof-input:focus {
+  outline: none;
+  border-color: var(--t-primary-500, #10b981);
+}
+
+.order-proof-upload {
+  cursor: pointer;
+}
+
+.order-proof-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-proof-preview img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+}
+
+.order-proof-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 /* Modal */

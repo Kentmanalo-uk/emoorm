@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye,
   MagnifyingGlass as Search, WarningCircle as AlertCircle, CheckCircle, Clock, FloppyDisk as Save, X, UploadSimple as Upload, CircleNotch as Loader2,
-  EyeSlash as EyeOff, Archive,
+  EyeSlash as EyeOff, Archive, Info,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -49,16 +49,39 @@ const STATUS_LABELS = {
   ARCHIVED: { label: 'Archived', cls: 'status-cancelled', icon: <Archive size={12} /> },
 };
 
+// Status filter tabs; the key is sent as `status` to GET /products/my/products.
+const PRODUCT_TABS = [
+  { key: 'all', label: 'All' },
+  { key: 'APPROVED', label: 'Live' },
+  { key: 'PENDING', label: 'Pending' },
+  { key: 'HIDDEN', label: 'Hidden' },
+  { key: 'SUSPENDED', label: 'Suspended' },
+  { key: 'ARCHIVED', label: 'Archived' },
+];
+
+const stockLevel = (product) => {
+  const stock = Number(product?.stock ?? 0);
+  if (stock <= 0) return 'out';
+  const threshold = Number(product?.lowStockThreshold ?? 0);
+  return stock <= threshold ? 'low' : 'ok';
+};
+
 export default function SellerProducts() {
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const { categories } = useCategories();
   const [isLoading, setIsLoading] = useState(true);
   // Seeded from ?search= so a top-bar search result opens filtered.
   const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const fromUrl = searchParams.get('status');
+    return PRODUCT_TABS.some((t) => t.key === fromUrl) ? fromUrl : 'all';
+  });
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1 });
+  // Inline restock: per-row draft quantity and the row currently saving.
+  const [restockDrafts, setRestockDrafts] = useState({});
+  const [restockingId, setRestockingId] = useState(null);
 
   // Form state
   const [showForm, setShowForm] = useState(searchParams.get('action') === 'new');
@@ -74,7 +97,7 @@ export default function SellerProducts() {
 
   useEffect(() => {
     loadProducts();
-  }, [pagination.page, search]);
+  }, [pagination.page, search, statusFilter]);
 
   // Follows ?search= when it changes, so a second search from the top bar
   // re-filters instead of leaving the first term in place. Only a change to
@@ -92,14 +115,19 @@ export default function SellerProducts() {
     setIsLoading(true);
     try {
       const res = await axios.get('/products/my/products', {
-        params: { page: pagination.page, pageSize: 15, search: search || undefined },
+        params: {
+          page: pagination.page,
+          pageSize: 15,
+          search: search || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+        },
       });
       setProducts(res.data || []);
       if (res.pagination) {
         setPagination(p => ({ ...p, total: res.pagination.total, totalPages: res.pagination.totalPages }));
       }
     } catch (err) {
-      toast.error('Failed to load products');
+      toast.error(err.message || 'Failed to load products');
     } finally {
       setIsLoading(false);
     }
@@ -109,6 +137,35 @@ export default function SellerProducts() {
     e.preventDefault();
     setPagination(p => ({ ...p, page: 1 }));
     loadProducts();
+  };
+
+  const selectStatusTab = (key) => {
+    if (key === statusFilter) return;
+    setStatusFilter(key);
+    setSelectedIds([]);
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
+
+  // POST /products/:id/stock { delta } — the response is the updated product,
+  // so the row is replaced in place instead of reloading the whole page.
+  const handleRestock = async (product) => {
+    const delta = parseInt(restockDrafts[product.id], 10);
+    if (!Number.isInteger(delta) || delta === 0) {
+      toast.error('Enter a quantity to add (or a negative number to remove)');
+      return;
+    }
+    setRestockingId(product.id);
+    try {
+      const res = await axios.post(`/products/${product.id}/stock`, { delta });
+      const updated = res.data || {};
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, ...updated } : p)));
+      setRestockDrafts((prev) => ({ ...prev, [product.id]: '' }));
+      toast.success(delta > 0 ? `Added ${delta} to stock` : `Removed ${Math.abs(delta)} from stock`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update stock');
+    } finally {
+      setRestockingId(null);
+    }
   };
 
   const openNew = () => {
@@ -183,8 +240,10 @@ export default function SellerProducts() {
         await axios.put(`/products/${editingId}`, payload);
         toast.success('Product updated!');
       } else {
-        await axios.post('/products', payload);
-        toast.success('Product created! Pending admin approval.');
+        const res = await axios.post('/products', payload);
+        toast.success(res.data?.status === 'APPROVED'
+          ? 'Product created! Product is live.'
+          : 'Product created! Pending admin approval.');
       }
       closeForm();
       loadProducts();
@@ -334,6 +393,8 @@ export default function SellerProducts() {
     });
   };
 
+  const editingProduct = editingId ? products.find((p) => p.id === editingId) : null;
+
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
@@ -355,6 +416,12 @@ export default function SellerProducts() {
               <button className="seller-icon-btn" onClick={closeForm}><X size={18} /></button>
             </div>
             <form onSubmit={handleSave} className="product-form">
+              {editingProduct?.status === 'APPROVED' && (
+                <div className="product-form-note">
+                  <Info size={15} />
+                  <span>This product is live. Changes you save go live immediately.</span>
+                </div>
+              )}
               <div className="form-row">
                 <div className="form-group">
                   <label>Product Name <span className="required">*</span></label>
@@ -581,6 +648,20 @@ export default function SellerProducts() {
           </div>
         )}
 
+        {/* Status filter tabs */}
+        <div className="seller-tabs products-tabs">
+          {PRODUCT_TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={`seller-tab ${statusFilter === t.key ? 'seller-tab--active' : ''}`}
+              onClick={() => selectStatusTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         {/* Search bar */}
         <div className="seller-card products-toolbar">
           <form onSubmit={handleSearchSubmit} className="products-search-form">
@@ -603,7 +684,11 @@ export default function SellerProducts() {
           ) : products.length === 0 ? (
             <div className="seller-empty">
               <Package size={40} weight="fill" />
-              <p>No products yet. Click "Add Product" to create your first listing.</p>
+              <p>
+                {statusFilter !== 'all' || search
+                  ? 'No products match this filter.'
+                  : 'No products yet. Click "Add Product" to create your first listing.'}
+              </p>
             </div>
           ) : (
             <>
@@ -630,8 +715,12 @@ export default function SellerProducts() {
                   {products.map(product => {
                     const s = STATUS_LABELS[product.status] || { label: product.status, cls: '' };
                     const thumb = product.images?.[0];
+                    const level = stockLevel(product);
+                    const showNote = Boolean(product.moderationNote)
+                      && (product.status === 'SUSPENDED' || product.status === 'ARCHIVED');
                     return (
-                      <tr key={product.id}>
+                      <React.Fragment key={product.id}>
+                      <tr className={showNote ? 'products-row--noted' : ''}>
                         <td>
                           <input
                             type="checkbox"
@@ -654,7 +743,39 @@ export default function SellerProducts() {
                         </td>
                         <td>{product.category?.name || '—'}</td>
                         <td>₱{Number(product.price).toFixed(2)}</td>
-                        <td data-label="Stock">{product.stock}</td>
+                        <td data-label="Stock">
+                          <div className={`product-stock ${level !== 'ok' ? `product-stock--${level}` : ''}`}>
+                            <span className="product-stock-value">{product.stock}</span>
+                            {level === 'out' && (
+                              <span className="seller-badge status-cancelled product-stock-badge">Out of stock</span>
+                            )}
+                            {level === 'low' && (
+                              <span className="seller-badge status-pending product-stock-badge">Low stock</span>
+                            )}
+                            <form
+                              className="product-restock"
+                              onSubmit={(e) => { e.preventDefault(); handleRestock(product); }}
+                            >
+                              <input
+                                type="number"
+                                step="1"
+                                className="form-input product-restock-input"
+                                placeholder="+ qty"
+                                aria-label={`Restock ${product.name}`}
+                                value={restockDrafts[product.id] ?? ''}
+                                onChange={(e) => setRestockDrafts((prev) => ({ ...prev, [product.id]: e.target.value }))}
+                                disabled={restockingId === product.id}
+                              />
+                              <button
+                                type="submit"
+                                className="btn-seller-outline product-restock-btn"
+                                disabled={restockingId === product.id || !restockDrafts[product.id]}
+                              >
+                                {restockingId === product.id ? <Loader2 size={13} className="spin" /> : 'Restock'}
+                              </button>
+                            </form>
+                          </div>
+                        </td>
                         <td>
                           <span className={`seller-badge ${s.cls}`}>
                             {s.icon} {s.label}
@@ -698,6 +819,20 @@ export default function SellerProducts() {
                           </div>
                         </td>
                       </tr>
+                      {showNote && (
+                        <tr className="products-note-row">
+                          <td colSpan={7}>
+                            <div className="products-moderation-note">
+                              <AlertCircle size={14} />
+                              <span>
+                                <strong>{product.status === 'SUSPENDED' ? 'Suspended by admin: ' : 'Archived by admin: '}</strong>
+                                {product.moderationNote}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>

@@ -31,6 +31,7 @@ import SellerFulfillment from './pages/SellerFulfillment';
 import SellerSettings from './pages/SellerSettings';
 import Stores from './pages/Stores';
 import StoreDetail from './pages/StoreDetail';
+import PublicProfile from './pages/PublicProfile';
 import MunicipalityShowcase from './pages/MunicipalityShowcase';
 import MunicipalityGallery from './pages/MunicipalityGallery';
 import Wishlist from './pages/Wishlist';
@@ -141,6 +142,7 @@ function App() {
             <Route path="/product/:slug" element={<ProductDetails />} />
             <Route path="/stores" element={<Stores />} />
             <Route path="/store/:slug" element={<StoreDetail />} />
+            <Route path="/u/:id" element={<PublicProfile />} />
             <Route path="/municipality/:id" element={<MunicipalityShowcase />} />
             <Route path="/municipality/:id/gallery" element={<MunicipalityGallery />} />
             <Route path="/sell" element={<Sell />} />

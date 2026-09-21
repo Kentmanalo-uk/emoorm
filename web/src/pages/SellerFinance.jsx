@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Info, DownloadSimple as Download, ArrowsClockwise as RefreshCw } from '@phosphor-icons/react';
+import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyArt from '../components/ui/EmptyArt';
@@ -19,6 +20,7 @@ import '../components/analytics/analytics.css';
  * itself over time.
  */
 const PAGE_SIZE = 25;
+const EXPORT_PAGE_SIZE = 100;
 
 // Excel needs a UTF-8 byte-order mark or it mangles the peso sign. Built
 // from its code point so no invisible character ends up in this file.
@@ -33,15 +35,66 @@ const fmtExact = (n) =>
 const shortDate = (iso) =>
   iso ? new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) : '';
 
+// The orders endpoint takes `from`/`to` as local calendar days (YYYY-MM-DD,
+// inclusive). The picker's ISO strings are UTC, so slicing them would shift a
+// day for PH time; format the local date instead.
+const ymd = (iso) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return undefined;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+// kpis entries are `{ value, change }`; tolerate a bare number too.
+const kpiValue = (k) => (k && typeof k === 'object' ? Number(k.value || 0) : Number(k || 0));
+
+const PAYMENT_LABELS = {
+  PENDING: 'Unpaid',
+  PENDING_VERIFICATION: 'To verify',
+  PAID: 'Paid',
+  FAILED: 'Proof rejected',
+  EXPIRED: 'Expired',
+  REFUNDED: 'Refunded',
+  PARTIALLY_REFUNDED: 'Partially refunded',
+};
+
+// Refunded amount for a completed order: the sum of its REFUNDED return
+// requests when the payload carries them, else inferred from paymentStatus.
+const refundedOf = (o) => {
+  if (Array.isArray(o.returnRequests)) {
+    return o.returnRequests
+      .filter((r) => r.status === 'REFUNDED')
+      .reduce((sum, r) => sum + Number(r.refundedAmount || 0), 0);
+  }
+  if (o.paymentStatus === 'REFUNDED') return Number(o.total || 0);
+  return null;
+};
+
+const toRow = (o) => ({
+  id: o.id,
+  date: o.createdAt,
+  number: (o.orderNumber || o.id).toString(),
+  buyer: o.buyer?.fullName || o.buyer?.email || '—',
+  items: o.items?.length || 0,
+  amount: Number(o.total || 0),
+  paymentStatus: o.paymentStatus || '',
+  refunded: refundedOf(o),
+});
+
 export default function SellerFinance() {
   const [range, setRange] = useState(() => DateRangePicker.defaultMonth());
   const [kpis, setKpis] = useState(null);
   const [ordersByStatus, setOrdersByStatus] = useState({});
   const [orders, setOrders] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1, hasNext: false });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState(null);
+
+  const orderParams = { status: 'COMPLETED', from: ymd(range.from), to: ymd(range.to) };
 
   // The fetch lives inside the effect rather than in a callback the effect
   // calls: every setState then sits after an await and behind the cancelled
@@ -53,32 +106,24 @@ export default function SellerFinance() {
       try {
         const [analyticsRes, ordersRes] = await Promise.all([
           axios.get('/analytics/seller', { params: { from: range.from, to: range.to } }),
-          axios.get('/orders/store/orders', { params: { status: 'COMPLETED', pageSize: PAGE_SIZE } }),
+          axios.get('/orders/store/orders', {
+            params: {
+              status: 'COMPLETED',
+              from: ymd(range.from),
+              to: ymd(range.to),
+              page,
+              pageSize: PAGE_SIZE,
+            },
+          }),
         ]);
         if (cancelled) return;
-        setKpis(analyticsRes.data.kpis || {});
-        setOrdersByStatus(analyticsRes.data.ordersByStatus || {});
+        setKpis(analyticsRes.data?.kpis || {});
+        // Either `{ counts: {...} }` or the flat counts map.
+        const byStatus = analyticsRes.data?.ordersByStatus || {};
+        setOrdersByStatus(byStatus.counts || byStatus);
         setError(null);
-
-        // The orders endpoint has no date filter, so the range is applied
-        // here. Completed orders are the only ones that count as earnings.
-        const from = new Date(range.from).getTime();
-        const to = new Date(range.to).getTime();
-        setOrders(
-          (ordersRes.data || [])
-            .map((o) => ({
-              id: o.id,
-              date: o.createdAt,
-              number: (o.orderNumber || o.id).toString(),
-              buyer: o.buyer?.fullName || o.buyer?.email || '—',
-              items: o.items?.length || 0,
-              amount: Number(o.total || 0),
-            }))
-            .filter((o) => {
-              const at = new Date(o.date).getTime();
-              return Number.isFinite(at) ? at >= from && at <= to : true;
-            }),
-        );
+        setOrders((ordersRes.data || []).map(toRow));
+        if (ordersRes.pagination) setPagination(ordersRes.pagination);
       } catch (err) {
         if (!cancelled) setError(err?.message || 'Could not load your earnings.');
       } finally {
@@ -89,47 +134,77 @@ export default function SellerFinance() {
       }
     })();
     return () => { cancelled = true; };
-  }, [range, reloadKey]);
+  }, [range, page, reloadKey]);
+
+  const changeRange = (next) => {
+    setPage(1);
+    setRange(next);
+  };
 
   const refresh = () => {
     setIsRefreshing(true);
     setReloadKey((k) => k + 1);
   };
 
-  const inProgressCount =
-    (ordersByStatus.PENDING || 0) +
-    (ordersByStatus.CONFIRMED || 0) +
-    (ordersByStatus.PREPARING || 0) +
-    (ordersByStatus.READY || 0);
+  // Everything that is neither finished nor cancelled is still in flight.
+  const inProgressCount = Object.entries(ordersByStatus)
+    .filter(([status]) => status !== 'COMPLETED' && status !== 'CANCELLED')
+    .reduce((sum, [, count]) => sum + (Number(count) || 0), 0);
 
-  const periodTotal = orders.reduce((sum, o) => sum + o.amount, 0);
+  const periodTotal = kpiValue(kpis?.revenue);
+  const periodRefunded = kpiValue(kpis?.refunded);
+  const pageTotal = orders.reduce((sum, o) => sum + o.amount, 0);
 
   /** Plain CSV, so it opens in Excel or Sheets without an import step. */
-  const exportCsv = () => {
-    const rows = [
-      ['Date', 'Order', 'Buyer', 'Items', 'Amount (PHP)'],
-      ...orders.map((o) => [
-        o.date ? new Date(o.date).toLocaleDateString('en-PH') : '',
-        o.number,
-        o.buyer,
-        o.items,
-        fmtExact(o.amount),
-      ]),
-      [],
-      ['Total', '', '', '', fmtExact(periodTotal)],
-    ];
-    // Quote every field: buyer names and order references may contain commas.
-    const csv = rows
-      .map((r) => r.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
-      .join('\r\n');
+  const exportCsv = async () => {
+    setIsExporting(true);
+    try {
+      // Pull every page of the range, not just the one on screen.
+      const all = [];
+      let next = 1;
+      for (;;) {
+        const res = await axios.get('/orders/store/orders', {
+          params: { ...orderParams, page: next, pageSize: EXPORT_PAGE_SIZE },
+        });
+        all.push(...(res.data || []).map(toRow));
+        const pg = res.pagination;
+        const more = pg ? (pg.hasNext ?? next < (pg.totalPages || 1)) : false;
+        if (!more) break;
+        next += 1;
+      }
 
-    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `emoorm-earnings-${range.from.slice(0, 10)}-to-${range.to.slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      const rows = [
+        ['Date', 'Order', 'Buyer', 'Items', 'Payment', 'Refunded (PHP)', 'Amount (PHP)'],
+        ...all.map((o) => [
+          o.date ? new Date(o.date).toLocaleDateString('en-PH') : '',
+          o.number,
+          o.buyer,
+          o.items,
+          PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus,
+          o.refunded === null ? '' : fmtExact(o.refunded),
+          fmtExact(o.amount),
+        ]),
+        [],
+        ['Refunded', '', '', '', '', '', fmtExact(periodRefunded)],
+        ['Earned this period', '', '', '', '', '', fmtExact(periodTotal)],
+      ];
+      // Quote every field: buyer names and order references may contain commas.
+      const csv = rows
+        .map((r) => r.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+        .join('\r\n');
+
+      const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `emoorm-earnings-${ymd(range.from)}-to-${ymd(range.to)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err?.message || 'Export failed');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -140,17 +215,17 @@ export default function SellerFinance() {
           subtitle={`Completed orders · ${shortDate(range.from)} — ${shortDate(range.to)}`}
           actions={(
             <div className="an-actions">
-              <DateRangePicker value={range} onChange={setRange} />
+              <DateRangePicker value={range} onChange={changeRange} />
               <button className="an-icon-btn" onClick={refresh} disabled={isLoading || isRefreshing} title="Refresh">
                 <RefreshCw size={13} className={isLoading || isRefreshing ? 'an-spin' : ''} /> Refresh
               </button>
               <button
                 className="an-icon-btn"
                 onClick={exportCsv}
-                disabled={isLoading || orders.length === 0}
-                title="Download these orders as CSV"
+                disabled={isLoading || isExporting || pagination.total === 0}
+                title="Download every completed order in this range as CSV"
               >
-                <Download size={13} /> Export
+                <Download size={13} /> {isExporting ? 'Exporting…' : 'Export'}
               </button>
             </div>
           )}
@@ -180,7 +255,10 @@ export default function SellerFinance() {
             <span className="sd-stat-value sd-stat-value--big">
               {isLoading ? '…' : fmt(periodTotal)}
             </span>
-            <span className="sd-stat-hint">{orders.length} completed order{orders.length === 1 ? '' : 's'}</span>
+            <span className="sd-stat-hint">
+              {pagination.total} completed order{pagination.total === 1 ? '' : 's'}
+              {periodRefunded > 0 && ` · ${fmt(periodRefunded)} refunded`}
+            </span>
           </div>
           <div className="sd-stat">
             <span className="sd-stat-label">Lifetime earnings</span>
@@ -210,7 +288,7 @@ export default function SellerFinance() {
           </div>
           {isLoading ? (
             <div style={{ padding: 16 }}>
-              <Skeleton.Table cols={5} rows={6} showHeader={false} />
+              <Skeleton.Table cols={7} rows={6} showHeader={false} />
             </div>
           ) : orders.length === 0 ? (
             <div className="seller-empty">
@@ -218,34 +296,67 @@ export default function SellerFinance() {
               <p>No completed orders in this period.</p>
             </div>
           ) : (
-            <table className="seller-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Order</th>
-                  <th>Buyer</th>
-                  <th style={{ textAlign: 'right' }}>Items</th>
-                  <th style={{ textAlign: 'right' }}>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id}>
-                    <td>{o.date ? new Date(o.date).toLocaleDateString() : ''}</td>
-                    <td>#{o.number.slice(-8)}</td>
-                    <td>{o.buyer}</td>
-                    <td style={{ textAlign: 'right' }}>{o.items}</td>
-                    <td className="txn-credit">{fmt(o.amount)}</td>
+            <>
+              <table className="seller-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Order</th>
+                    <th>Buyer</th>
+                    <th style={{ textAlign: 'right' }}>Items</th>
+                    <th>Payment</th>
+                    <th style={{ textAlign: 'right' }}>Refunded</th>
+                    <th style={{ textAlign: 'right' }}>Amount</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={4} style={{ fontWeight: 600 }}>Total</td>
-                  <td className="txn-credit" style={{ fontWeight: 700 }}>{fmt(periodTotal)}</td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                <tbody>
+                  {orders.map((o) => (
+                    <tr key={o.id}>
+                      <td>{o.date ? new Date(o.date).toLocaleDateString() : ''}</td>
+                      <td>#{o.number.slice(-8)}</td>
+                      <td>{o.buyer}</td>
+                      <td style={{ textAlign: 'right' }}>{o.items}</td>
+                      <td>{PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus || '—'}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        {o.refunded === null ? '—' : (o.refunded > 0 ? fmt(o.refunded) : '—')}
+                      </td>
+                      <td className="txn-credit">{fmt(o.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={6} style={{ fontWeight: 600 }}>
+                      {pagination.totalPages > 1 ? `Page ${page} total` : 'Total'}
+                    </td>
+                    <td className="txn-credit" style={{ fontWeight: 700 }}>{fmt(pageTotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+              {pagination.totalPages > 1 && (
+                <div className="an-actions" style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                  <button
+                    type="button"
+                    className="an-icon-btn"
+                    disabled={page <= 1 || isLoading}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Prev
+                  </button>
+                  <span style={{ fontSize: 13, color: 'var(--t-neutral-500, #6b7280)' }}>
+                    Page {page} of {pagination.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="an-icon-btn"
+                    disabled={page >= pagination.totalPages || isLoading}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

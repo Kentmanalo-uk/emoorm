@@ -105,6 +105,18 @@ const checkoutLimiter = rateLimit({
   message: { success: false, message: 'Too many checkout attempts. Please wait a moment and try again.' },
 });
 
+// Validating a voucher reveals whether a code exists, so an unthrottled
+// endpoint is a code-guessing oracle. Keyed on the account for the same
+// reason as checkout.
+const voucherValidateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req),
+  message: { success: false, message: 'Too many voucher attempts. Please wait a moment and try again.' },
+});
+
 /**
  * Development only: the site is opened from the PC's LAN address when testing
  * on a phone, so accept origins on a private network. Never true in production.
@@ -137,6 +149,7 @@ module.exports = {
   forgotPasswordIpLimiter,
   passwordResetLimiter,
   checkoutLimiter,
+  voucherValidateLimiter,
   csrfOriginGuard,
   isLocalNetworkOrigin,
 };

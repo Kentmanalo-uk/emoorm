@@ -193,10 +193,21 @@ const replyToReview = asyncHandler(async (req, res) => {
   successResponse(res, review, 'Reply posted successfully');
 });
 
+/**
+ * Products the buyer has received but not reviewed yet
+ * @route GET /api/reviews/my/pending
+ * @access Private (Buyer)
+ */
+const getPendingReviews = asyncHandler(async (req, res) => {
+  const pending = await reviewService.getPendingReviews(req.user.id);
+  successResponse(res, pending, 'Pending reviews retrieved successfully');
+});
+
 module.exports = {
   createReview,
   getProductReviews,
   getMyReviews,
+  getPendingReviews,
   getReviewById,
   updateReview,
   deleteReview,

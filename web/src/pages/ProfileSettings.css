@@ -180,6 +180,22 @@
   color: var(--t-neutral-900, #111827);
 }
 
+/* Username: the @ sits inside the field so the value reads as a handle. */
+.ps-input-prefixed .ps-input {
+  padding-left: 28px;
+  padding-right: 13px;
+}
+
+.ps-input-prefix {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  color: var(--t-neutral-500, #6b7280);
+  pointer-events: none;
+}
+
 /* Actions */
 .ps-actions {
   display: flex;
@@ -409,6 +425,10 @@
 
   .profile-main .ps-help {
     font-size: 12px;
+  }
+
+  .profile-main .ps-input-prefix {
+    font-size: 16px;
   }
 
   .profile-main .ps-input-eye {
