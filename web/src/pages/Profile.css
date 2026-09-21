@@ -1,6 +1,6 @@
 /* Profile Page */
 .profile-page {
-  background-color: #f3f4f6;
+  background-color: var(--t-neutral-100, #f3f4f6);
   min-height: calc(100vh - 200px);
   padding: var(--spacing-6) 0;
 }
@@ -29,8 +29,8 @@
 .profile-loading-spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid #e5e7eb;
-  border-top-color: #059669;
+  border: 4px solid var(--t-neutral-200, #e5e7eb);
+  border-top-color: var(--t-primary-600, #059669);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -62,7 +62,7 @@
   align-items: center;
   gap: var(--spacing-3);
   padding: 11px 12px;
-  color: #4b5563;
+  color: var(--t-neutral-600, #4b5563);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -71,24 +71,24 @@
 }
 
 .profile-nav-item:hover {
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #111827);
 }
 
 .profile-nav-item-active {
-  background-color: #f3f4f6;
-  color: #047857;
+  background-color: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-primary-700, #047857);
   font-weight: 600;
 }
 
 /* Filled icons: grey by default, green on the active page. */
 .profile-nav-icon {
   flex-shrink: 0;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .profile-nav-item-active .profile-nav-icon {
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 /* Main Content */
@@ -105,14 +105,14 @@
 .profile-page-title {
   font-size: 24px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0 0 6px;
   line-height: 1.2;
 }
 
 .profile-page-subtitle {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0;
   line-height: 1.5;
 }
@@ -139,14 +139,14 @@
 }
 
 .help-topic-card {
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   padding: 22px 24px;
 }
 
 .help-topic-title {
   font-size: 16px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0 0 12px;
 }
 
@@ -163,13 +163,13 @@
   display: inline-block;
   padding: 4px 0;
   font-size: 14px;
-  color: #047857;
+  color: var(--t-primary-700, #047857);
   text-decoration: none;
   transition: color 0.15s;
 }
 
 .help-topic-link:hover {
-  color: #065f46;
+  color: var(--t-primary-800, #065f46);
   text-decoration: underline;
 }
 
@@ -194,7 +194,7 @@
   height: 80px;
   border-radius: 50%;
   overflow: hidden;
-  background-color: #f3f4f6;
+  background-color: var(--t-neutral-100, #f3f4f6);
 }
 
 .profile-avatar img {
@@ -211,8 +211,8 @@
   justify-content: center;
   font-size: 36px;
   font-weight: 700;
-  color: #059669;
-  background-color: #dcfce7;
+  color: var(--t-primary-600, #059669);
+  background-color: var(--t-success-100, #dcfce7);
 }
 
 .profile-header-info {
@@ -224,13 +224,13 @@
 .profile-name {
   font-size: 22px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0;
 }
 
 .profile-email {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0;
 }
 
@@ -250,12 +250,12 @@
 .profile-stat-number {
   font-size: 20px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .profile-stat-label {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .profile-edit-button {
@@ -263,8 +263,8 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-3) var(--spacing-5);
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #111827);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -273,7 +273,7 @@
 }
 
 .profile-edit-button:hover {
-  background-color: #e5e7eb;
+  background-color: var(--t-neutral-200, #e5e7eb);
 }
 
 /* Section */
@@ -293,20 +293,20 @@
 .profile-section-title {
   font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0;
 }
 
 .profile-section-link {
   font-size: 14px;
   font-weight: 500;
-  color: #059669;
+  color: var(--t-primary-600, #059669);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .profile-section-link:hover {
-  color: #047857;
+  color: var(--t-primary-700, #047857);
   text-decoration: underline;
 }
 
@@ -323,26 +323,26 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-5);
-  background-color: #f9fafb;
+  background-color: var(--t-neutral-50, #f9fafb);
   border-radius: 0;
   text-decoration: none;
   transition: background 0.15s;
 }
 
 .purchase-status-item:hover {
-  background-color: #f0fdf4;
+  background-color: var(--t-success-50, #f0fdf4);
 }
 
 .purchase-status-icon {
   position: relative;
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 .purchase-status-badge {
   position: absolute;
   top: -8px;
   right: -8px;
-  background-color: #ef4444;
+  background-color: var(--t-danger-500, #ef4444);
   color: white;
   font-size: 11px;
   font-weight: 600;
@@ -354,7 +354,7 @@
 
 .purchase-status-label {
   font-size: 14px;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   font-weight: 500;
 }
 
@@ -377,16 +377,16 @@
 }
 
 .service-item:hover {
-  background-color: #f9fafb;
+  background-color: var(--t-neutral-50, #f9fafb);
 }
 
 .service-icon {
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 .service-label {
   font-size: 13px;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   font-weight: 500;
 }
 
@@ -398,24 +398,24 @@
   justify-content: center;
   padding: 48px 24px;
   gap: 12px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   text-align: center;
 }
 
 .empty-state svg {
-  color: #d1d5db;
+  color: var(--t-neutral-300, #d1d5db);
 }
 
 .empty-state-text {
   font-size: 16px;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   font-weight: 600;
   margin: 0;
 }
 
 .empty-state-hint {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0;
   max-width: 420px;
   line-height: 1.5;
@@ -424,7 +424,7 @@
 .empty-state-button {
   margin-top: 8px;
   padding: 10px 22px;
-  background-color: #059669;
+  background-color: var(--t-primary-600, #059669);
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -434,7 +434,7 @@
 }
 
 .empty-state-button:hover {
-  background-color: #047857;
+  background-color: var(--t-primary-700, #047857);
 }
 
 /* Followed Stores Grid */
@@ -450,14 +450,14 @@
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
-  background: #f9fafb;
+  background: var(--t-neutral-50, #f9fafb);
   border-radius: 0;
   text-decoration: none;
   transition: background 0.15s;
 }
 
 .followed-store-card:hover {
-  background: #f0fdf4;
+  background: var(--t-success-50, #f0fdf4);
 }
 
 .followed-store-image {
@@ -465,7 +465,7 @@
   height: 80px;
   border-radius: 50%;
   overflow: hidden;
-  background-color: #f3f4f6;
+  background-color: var(--t-neutral-100, #f3f4f6);
 }
 
 .followed-store-image img {
@@ -477,14 +477,14 @@
 .followed-store-name {
   font-size: 15px;
   font-weight: 600;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0;
   text-align: center;
 }
 
 .followed-store-products {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0;
 }
 
@@ -591,7 +591,7 @@
 
   .profile-mobile-page-header h1 {
     margin: 0;
-    color: #111827;
+    color: var(--t-neutral-900, #111827);
     font-size: 26px;
     font-weight: 800;
     letter-spacing: -0.3px;
@@ -610,8 +610,8 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: #fff;
-    color: #374151;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-700, #374151);
     text-decoration: none;
   }
 
@@ -664,7 +664,7 @@
     width: 100%;
     margin-top: 6px;
     padding-top: 13px;
-    border-top: 1px solid #eef0f2;
+    border-top: 1px solid var(--t-neutral-150, #eef0f2);
   }
 
   .profile-stat-item {
@@ -679,7 +679,7 @@
     top: 4px;
     bottom: 4px;
     width: 1px;
-    background: #eef0f2;
+    background: var(--t-neutral-150, #eef0f2);
   }
 
   .profile-stat-number {
@@ -697,7 +697,7 @@
     width: auto;
     padding: 0;
     background: transparent;
-    color: #059669;
+    color: var(--t-primary-600, #059669);
     font-size: 13px;
   }
 
@@ -737,7 +737,7 @@
 
   .purchase-status-label {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--t-neutral-500, #6b7280);
     white-space: nowrap;
   }
 
@@ -758,7 +758,7 @@
   .profile-mobile-service-section {
     display: block;
     padding: 16px;
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
     border-radius: 9px;
   }
 
@@ -776,14 +776,14 @@
     gap: 14px;
     min-height: 56px;
     padding: 0 16px;
-    color: #374151;
-    border-top: 1px solid #f0f1f2;
+    color: var(--t-neutral-700, #374151);
+    border-top: 1px solid var(--t-neutral-150, #f0f1f2);
     text-decoration: none;
   }
 
   .profile-mobile-service-item svg:first-child {
     flex: 0 0 auto;
-    color: #059669;
+    color: var(--t-primary-600, #059669);
   }
 
   .profile-mobile-service-item span {
@@ -792,11 +792,11 @@
   }
 
   .profile-mobile-service-item svg:last-child {
-    color: #d1d5db;
+    color: var(--t-neutral-300, #d1d5db);
   }
 
   .profile-mobile-service-item:active {
-    background: #f0fdf4;
+    background: var(--t-success-50, #f0fdf4);
   }
 }
 
@@ -814,13 +814,13 @@
   width: 48px;
   height: 48px;
   flex-shrink: 0;
-  color: #6b7280;
-  background: #f3f4f6;
+  color: var(--t-neutral-500, #6b7280);
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
-.profile-identity-icon--success { color: #059669; background: #ecfdf5; }
-.profile-identity-icon--pending { color: #d97706; background: #fffbeb; }
-.profile-identity-icon--error { color: #dc2626; background: #fef2f2; }
+.profile-identity-icon--success { color: var(--t-primary-600, #059669); background: var(--t-primary-50, #ecfdf5); }
+.profile-identity-icon--pending { color: var(--t-warning-600, #d97706); background: var(--t-warning-50, #fffbeb); }
+.profile-identity-icon--error { color: var(--t-danger-600, #dc2626); background: var(--t-danger-50, #fef2f2); }
 
 .profile-identity-body {
   flex: 1;
@@ -834,34 +834,34 @@
   gap: 8px;
   margin: 6px 0 0;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .profile-identity-badge {
   padding: 2px 10px;
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
-  background: #f3f4f6;
+  color: var(--t-neutral-700, #374151);
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
-.profile-identity-badge--success { color: #047857; background: #d1fae5; }
-.profile-identity-badge--pending { color: #b45309; background: #fef3c7; }
-.profile-identity-badge--error { color: #b91c1c; background: #fee2e2; }
+.profile-identity-badge--success { color: var(--t-primary-700, #047857); background: var(--t-primary-100, #d1fae5); }
+.profile-identity-badge--pending { color: var(--t-warning-700, #b45309); background: var(--t-warning-100, #fef3c7); }
+.profile-identity-badge--error { color: var(--t-danger-700, #b91c1c); background: var(--t-danger-100, #fee2e2); }
 
 .profile-identity-button {
   flex-shrink: 0;
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
-  background-color: #059669;
+  color: var(--t-neutral-0, #fff);
+  background-color: var(--t-primary-600, #059669);
   text-decoration: none;
   transition: background-color 0.2s;
 }
 
 .profile-identity-button:hover {
-  background-color: #047857;
+  background-color: var(--t-primary-700, #047857);
 }
 
 @media (max-width: 768px) {
@@ -878,7 +878,7 @@
 /* ── Mobile (≤768px / ≤480px) ── */
 @media (max-width: 768px) {
   .profile-page {
-    background: #f2f2f7;
+    background: var(--t-neutral-100, #f2f2f7);
     padding: 12px 0 16px;
   }
 
@@ -974,15 +974,15 @@
     margin-top: 6px;
     padding: 0 12px;
     border-radius: 999px;
-    background: #e9f7f0;
-    color: #047857;
+    background: var(--t-secondary-50, #e9f7f0);
+    color: var(--t-primary-700, #047857);
     font-size: 12.5px;
     font-weight: 600;
     white-space: nowrap;
   }
 
   .profile-main .profile-header-card .profile-edit-button:active {
-    background: #d1fae5;
+    background: var(--t-primary-100, #d1fae5);
   }
 
   .profile-main .profile-header-card .profile-stats {
@@ -1076,7 +1076,7 @@
 
   .profile-main .profile-mobile-service-item span {
     font-size: 14px;
-    color: #1f2937;
+    color: var(--t-neutral-800, #1f2937);
   }
 
   .profile-main .profile-mobile-service-list > :last-child {
@@ -1092,7 +1092,7 @@
   .profile-main .empty-state > svg {
     width: 64px;
     height: 64px;
-    color: #a7f3d0;
+    color: var(--t-primary-200, #a7f3d0);
   }
 
   .profile-main .empty-state-text {
@@ -1152,7 +1152,7 @@
   }
 
   .help-topic-list li + li {
-    border-top: 1px solid #f0f1f2;
+    border-top: 1px solid var(--t-neutral-150, #f0f1f2);
   }
 
   .help-topic-link {

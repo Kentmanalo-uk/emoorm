@@ -1,0 +1,44 @@
+/* The illustration is embedded rather than linked, so the wrapper carries the
+   sizing and the <svg> inside simply fills it. Height is set inline by the
+   caller; width follows the drawing's own ratio, which runs from a tall
+   rocket to a very wide row of books. */
+.empty-art {
+  display: block;
+  /* Centres inside a text-align container; a flex column that already
+     centres its children is unaffected. */
+  margin-inline: auto;
+  width: auto;
+  max-width: 100%;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Pages across the app carry rules like `.admin-empty svg { width: 200px }`,
+   written for the outline icons that used to sit in empty states. They never
+   reached this component while it rendered an <img>; now that the drawing is
+   real SVG they all match it, at the same specificity, and whichever
+   stylesheet happens to load last would decide how big it is.
+
+   So the geometry is forced. A caller sets the size through the `size` prop,
+   which is the only thing that should decide it — an ambient rule meant for a
+   24px icon must not stretch a drawing to fill the card.
+
+   `fill` is reset for the same reason: those rules set `fill: currentColor`
+   to tint an icon, and inside an SVG that inherits into any shape that did
+   not name its own fill. Back to initial, the drawing renders exactly as the
+   file does, with its own --art-* colours. */
+.empty-art > svg {
+  display: block;
+  height: 100% !important;
+  width: auto !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  fill: initial;
+  opacity: 1;
+  overflow: visible;
+}

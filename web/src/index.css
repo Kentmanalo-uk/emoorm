@@ -1,7 +1,9 @@
 ﻿/* E-MOORM Base Styles */
+@import './styles/tokens.css';
 @import './styles/colors.css';
 @import './styles/typography.css';
 @import './styles/spacing.css';
+@import './styles/elevation.css';
 
 /* CSS Reset & Base */
 *,
@@ -441,6 +443,6 @@ img {
   .stores-empty, .wishlist-empty, .an-empty, .returns-empty, .pdp-empty,
   .municipalities-empty, .discover-stores-empty
 ) > svg:not(.keep-color) {
-  color: #a7f3d0;
-  fill: #a7f3d0;
+  color: var(--t-primary-200, #a7f3d0);
+  fill: var(--t-primary-200, #a7f3d0);
 }

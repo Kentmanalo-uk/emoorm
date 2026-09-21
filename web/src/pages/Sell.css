@@ -2,9 +2,9 @@
 
 .sell-page {
   min-height: 100vh;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   font-family: 'Inter', sans-serif;
-  color: #111;
+  color: var(--t-neutral-900, #111);
 }
 
 /* ─── Sticky header ─────────────────────────────────────────────── */
@@ -19,20 +19,20 @@
 /* Topbar */
 .sell-topbar {
   height: 40px;
-  background: #29a366;
+  background: var(--t-secondary-500, #29a366);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   font-size: 12px;
   font-weight: 500;
-  color: #fff;
+  color: var(--t-neutral-0, #fff);
   letter-spacing: 0.01em;
 }
 
 /* Nav header */
 .sell-header {
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -65,7 +65,7 @@
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.04em;
-  color: #008341;
+  color: var(--t-success-700, #008341);
 }
 
 /* Nav links */
@@ -84,15 +84,15 @@
   border-radius: 30px;
   font-size: 16px;
   font-weight: 500;
-  color: #555;
+  color: var(--t-neutral-600, #555);
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
 
 .sell-nav-link:hover,
 .sell-nav-link--active {
-  background: #f2f2f0;
-  color: #111;
+  background: var(--t-neutral-100, #f2f2f0);
+  color: var(--t-neutral-900, #111);
 }
 
 /* Header actions */
@@ -117,14 +117,14 @@
     border: 1px solid rgba(0, 0, 0, 0.12);
     font-size: 14px;
     font-weight: 600;
-    color: #111;
-    background: #fff;
+    color: var(--t-neutral-900, #111);
+    background: var(--t-neutral-0, #fff);
     cursor: pointer;
     transition: background 0.15s;
   }
 
   .sell-nav-btn-ghost:hover {
-    background: #f2f2f0;
+    background: var(--t-neutral-100, #f2f2f0);
   }
 }
 
@@ -136,8 +136,8 @@
   border-radius: 9999px;
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
-  background: #29a366;
+  color: var(--t-neutral-0, #fff);
+  background: var(--t-secondary-500, #29a366);
   border: none;
   cursor: pointer;
   transition: opacity 0.15s;
@@ -159,12 +159,12 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #555;
+  color: var(--t-neutral-600, #555);
   transition: background 0.15s;
 }
 
 .sell-mobile-toggle:hover {
-  background: #f2f2f0;
+  background: var(--t-neutral-100, #f2f2f0);
 }
 
 /* ─── Auth hover dropdown ───────────────────────────────────────── */
@@ -201,7 +201,7 @@
   right: 40px;
   width: 14px;
   height: 14px;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   transform: rotate(45deg);
   box-shadow: -1px -1px 0 rgba(0, 0, 0, .06);
   z-index: 1;
@@ -211,8 +211,8 @@
   position: relative;
   z-index: 2;
   padding: 16px 18px 14px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  background: var(--t-neutral-0, #fff);
   box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
 }
 
@@ -223,19 +223,19 @@
   gap: 6px;
   padding-bottom: 12px;
   margin-bottom: 12px;
-  border-bottom: 1px solid #eef2f7;
+  border-bottom: 1px solid var(--t-neutral-150, #eef2f7);
 }
 
 .sell-auth-drop-title {
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   margin: 0;
 }
 
 .sell-auth-drop-sub {
   font-size: 12px;
-  color: #4b5563;
+  color: var(--t-neutral-600, #4b5563);
   margin: 0;
 }
 
@@ -243,20 +243,20 @@
   margin: 0 0 6px;
   font-size: 13px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .sell-auth-drop-links a {
   display: block;
   padding: 3px 0;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   font-size: 12px;
   line-height: 1.5;
   text-decoration: none;
 }
 
 .sell-auth-drop-links a:hover {
-  color: #c2410c;
+  color: var(--t-orange-700, #c2410c);
   text-decoration: underline;
 }
 
@@ -264,8 +264,8 @@
   display: inline-block;
   padding: 8px 42px;
   border: none;
-  background: #059669;
-  color: #fff;
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff);
   font-size: 13px;
   font-family: inherit;
   font-weight: 600;
@@ -274,7 +274,7 @@
 }
 
 .sell-auth-drop-cta:hover {
-  background: #047857;
+  background: var(--t-primary-700, #047857);
 }
 
 /* ─── Mega dropdown ─────────────────────────────────────────────── */
@@ -297,7 +297,7 @@
 .sell-mega-label {
   font-size: 11px;
   font-weight: 600;
-  color: #bbb;
+  color: var(--t-neutral-300, #bbb);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 0 0 12px 4px;
@@ -320,14 +320,14 @@
 }
 
 .sell-mega-item:hover {
-  background: #f2f2f0;
+  background: var(--t-neutral-100, #f2f2f0);
 }
 
 .sell-mega-n {
   font-size: 22px;
   font-weight: 900;
   line-height: 1;
-  color: #29a366;
+  color: var(--t-secondary-500, #29a366);
   opacity: 0.22;
   width: 24px;
   text-align: center;
@@ -338,13 +338,13 @@
 .sell-mega-item-title {
   font-size: 13px;
   font-weight: 600;
-  color: #111;
+  color: var(--t-neutral-900, #111);
   margin: 0 0 2px;
 }
 
 .sell-mega-item-desc {
   font-size: 11px;
-  color: #888;
+  color: var(--t-neutral-500, #888);
   line-height: 1.4;
   margin: 0;
 }
@@ -367,25 +367,25 @@
 
 .sell-mega-chip {
   display: inline-block;
-  background: #f2f2f0;
+  background: var(--t-neutral-100, #f2f2f0);
   padding: 6px 16px;
   border-radius: 100px;
   font-size: 13px;
   font-weight: 500;
-  color: #555;
+  color: var(--t-neutral-600, #555);
   text-decoration: none;
   transition: background 0.12s, color 0.12s;
 }
 
 .sell-mega-chip:hover {
   background: rgba(41, 163, 102, 0.1);
-  color: #29a366;
+  color: var(--t-secondary-500, #29a366);
 }
 
 /* ─── Mobile menu ───────────────────────────────────────────────── */
 .sell-mobile-menu {
   display: none;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   padding: 12px 16px;
   flex-direction: column;
@@ -401,7 +401,7 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
-  color: #555;
+  color: var(--t-neutral-600, #555);
   text-decoration: none;
   background: none;
   border: none;
@@ -410,7 +410,7 @@
 }
 
 .sell-mobile-link:hover {
-  background: #f2f2f0;
+  background: var(--t-neutral-100, #f2f2f0);
 }
 
 /* ─── Shared container ──────────────────────────────────────────── */
@@ -435,7 +435,7 @@
 }
 
 .sell-section--gray {
-  background: #f9fafb;
+  background: var(--t-neutral-50, #f9fafb);
 }
 
 .sell-section-head {
@@ -448,13 +448,13 @@
 .sell-section-head h2 {
   font-size: clamp(24px, 4vw, 36px);
   font-weight: 600;
-  color: #111;
+  color: var(--t-neutral-900, #111);
   margin: 0 0 6px;
 }
 
 .sell-section-head p {
   font-size: 13px;
-  color: #999;
+  color: var(--t-neutral-400, #999);
   margin: 0;
 }
 
@@ -480,17 +480,17 @@
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.03em;
-  color: #111;
+  color: var(--t-neutral-900, #111);
   margin: 0 0 16px;
 }
 
 .sell-hero-accent {
-  color: #29a366;
+  color: var(--t-secondary-500, #29a366);
 }
 
 .sell-hero-sub {
   font-size: 15px;
-  color: #666;
+  color: var(--t-neutral-600, #666);
   line-height: 1.6;
   margin: 0 0 28px;
   max-width: 400px;
@@ -509,8 +509,8 @@
   height: 56px;
   padding: 0 40px;
   border-radius: 9999px;
-  background: #29a366;
-  color: #fff;
+  background: var(--t-secondary-500, #29a366);
+  color: var(--t-neutral-0, #fff);
   font-size: 15px;
   font-weight: 700;
   border: none;
@@ -534,8 +534,8 @@
   padding: 0 40px;
   border-radius: 9999px;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  background: #fff;
-  color: #555;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-600, #555);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -543,13 +543,13 @@
 }
 
 .sell-hero-btn-ghost:hover {
-  background: #f2f2f0;
+  background: var(--t-neutral-100, #f2f2f0);
 }
 
 .sell-hero-pending {
   margin: 16px 0 0;
   font-size: 13px;
-  color: #f59e0b;
+  color: var(--t-warning-500, #f59e0b);
 }
 
 /* Hero images */
@@ -600,7 +600,7 @@
 }
 
 .sell-benefit-card {
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   border-radius: 16px;
   padding: 20px;
 }
@@ -608,14 +608,14 @@
 .sell-benefit-title {
   font-size: 17px;
   font-weight: 700;
-  color: #111;
+  color: var(--t-neutral-900, #111);
   margin: 0 0 6px;
   line-height: 1.3;
 }
 
 .sell-benefit-desc {
   font-size: 13px;
-  color: #888;
+  color: var(--t-neutral-500, #888);
   line-height: 1.6;
   margin: 0;
 }
@@ -631,7 +631,7 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 16px;
   padding: 20px 24px;
@@ -641,7 +641,7 @@
   font-size: 40px;
   font-weight: 900;
   line-height: 1;
-  color: #29a366;
+  color: var(--t-secondary-500, #29a366);
   opacity: 0.2;
   width: 40px;
   text-align: center;
@@ -651,14 +651,14 @@
 .sell-step-title {
   font-size: 17px;
   font-weight: 700;
-  color: #111;
+  color: var(--t-neutral-900, #111);
   margin: 0 0 4px;
   line-height: 1.3;
 }
 
 .sell-step-desc {
   font-size: 13px;
-  color: #888;
+  color: var(--t-neutral-500, #888);
   margin: 0;
 }
 
@@ -671,18 +671,18 @@
 }
 
 .sell-cat-chip {
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 9999px;
   padding: 8px 20px;
   font-size: 13px;
   font-weight: 600;
-  color: #444;
+  color: var(--t-neutral-700, #444);
 }
 
 /* ─── Final CTA ─────────────────────────────────────────────────── */
 .sell-final-cta {
-  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  background: linear-gradient(135deg, var(--t-primary-900, #064e3b) 0%, var(--t-primary-800, #065f46) 100%);
   padding: 80px 0;
 }
 
@@ -697,7 +697,7 @@
 .sell-final-cta h2 {
   font-size: clamp(24px, 4vw, 36px);
   font-weight: 600;
-  color: #fff;
+  color: var(--t-neutral-0, #fff);
   margin: 0;
 }
 
@@ -721,8 +721,8 @@
   height: 48px;
   padding: 0 32px;
   border-radius: 30px;
-  background: #fff;
-  color: #065f46;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-800, #065f46);
   font-size: 14px;
   font-weight: 700;
   border: none;
@@ -747,7 +747,7 @@
   padding: 0 32px;
   border-radius: 30px;
   background: transparent;
-  color: #fff;
+  color: var(--t-neutral-0, #fff);
   font-size: 14px;
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -778,7 +778,7 @@
 }
 
 .sell-final-login button:hover {
-  color: #fff;
+  color: var(--t-neutral-0, #fff);
 }
 
 /* ─── Responsive ────────────────────────────────────────────────── */
@@ -953,11 +953,11 @@
     padding: 16px;
     border: 0;
     border-radius: 12px;
-    background: #f9fafb;
+    background: var(--t-neutral-50, #f9fafb);
   }
 
   .sell-section--gray .sell-step-card {
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
   }
 
   .sell-step-n {

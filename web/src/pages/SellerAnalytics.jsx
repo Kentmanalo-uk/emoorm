@@ -11,6 +11,7 @@ import GranularityToggle from '../components/analytics/GranularityToggle';
 import SalesTable from '../components/analytics/SalesTable';
 import DayDetailModal from '../components/analytics/DayDetailModal';
 import { peso, num, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
+import SellerPageHead from '../components/seller/SellerPageHead';
 import './SellerDashboard.css';
 import '../components/analytics/analytics.css';
 
@@ -72,25 +73,26 @@ export default function SellerAnalytics() {
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
-        <div className="an-page-header">
-          <div>
-            <h1 className="an-page-title">Analytics</h1>
-            <p className="an-page-sub">
-              {data ? `${shortDate(data.window.from)} — ${shortDate(data.window.to)}` : 'Sales analytics & insights'}
-            </p>
-          </div>
-          <div className="an-actions">
-            <DateRangePicker value={range} onChange={setRange} />
-            <button className="an-icon-btn" onClick={load} disabled={loading} title="Refresh">
-              <RefreshCw size={13} className={loading ? 'an-spin' : ''} /> Refresh
-            </button>
-            <button className="an-icon-btn" onClick={exportCsv} disabled={!data} title="Export CSV">
-              <Download size={13} /> Export
-            </button>
-          </div>
-        </div>
+        {/* Same heading component as every other Seller Center page: the
+            analytics header was a parallel implementation with its own title
+            size and spacing. */}
+        <SellerPageHead
+          title="Analytics"
+          subtitle={data ? `${shortDate(data.window.from)} — ${shortDate(data.window.to)}` : 'Sales analytics & insights'}
+          actions={(
+            <div className="an-actions">
+              <DateRangePicker value={range} onChange={setRange} />
+              <button className="an-icon-btn" onClick={load} disabled={loading} title="Refresh">
+                <RefreshCw size={13} className={loading ? 'an-spin' : ''} /> Refresh
+              </button>
+              <button className="an-icon-btn" onClick={exportCsv} disabled={!data} title="Export CSV">
+                <Download size={13} /> Export
+              </button>
+            </div>
+          )}
+        />
 
-        {error && <div className="an-card" style={{ padding: 16, color: '#dc2626' }}>{error}</div>}
+        {error && <div className="an-card" style={{ padding: 16, color: 'var(--t-danger-600, #dc2626)' }}>{error}</div>}
 
         {/* Overview cards */}
         <div className="an-kpi-grid">

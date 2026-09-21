@@ -20,6 +20,7 @@ import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerFulfillment.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
+import SellerPageHead from '../components/seller/SellerPageHead';
 
 const MODES = [
   {
@@ -340,11 +341,10 @@ export default function SellerFulfillment() {
     return (
       <div className="seller-dashboard">
         <div className="seller-container">
-          <div className="seller-header">
-            <div>
-              <h1>Fulfillment & Payment</h1>
-            </div>
-          </div>
+          <SellerPageHead
+            title="Fulfillment & Payment"
+            subtitle="Configure how buyers receive and pay for their orders."
+          />
           <div className="seller-card">
             <div className="sf-body sf-loading">Loading store settings…</div>
           </div>
@@ -356,21 +356,19 @@ export default function SellerFulfillment() {
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
-        <div className="seller-header">
-          <div>
-            <h1>Fulfillment & Payment</h1>
-            <p className="seller-welcome">
-              Configure how buyers receive and pay for their orders.
-            </p>
-          </div>
-          <button
-            className="btn-seller-primary"
-            onClick={saveSettings}
-            disabled={saving}
-          >
-            <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
+        <SellerPageHead
+          title="Fulfillment & Payment"
+          subtitle="Configure how buyers receive and pay for their orders."
+          actions={(
+            <button
+              className="btn-seller-primary"
+              onClick={saveSettings}
+              disabled={saving}
+            >
+              <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          )}
+        />
 
         {/* Fulfillment Mode */}
         <div className="seller-card">

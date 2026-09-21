@@ -11,7 +11,7 @@
 }
 
 .cf-dialog {
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   border-radius: 14px;
   width: 100%;
   max-width: 420px;
@@ -35,26 +35,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--t-danger-100, #fee2e2);
+  color: var(--t-danger-600, #dc2626);
 }
 
 .cf-dialog-icon--neutral {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: var(--t-sky-100, #e0f2fe);
+  color: var(--t-sky-600, #0284c7);
 }
 
 .cf-dialog-text h3 {
   margin: 0 0 6px;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--t-neutral-900, #0f172a);
 }
 
 .cf-dialog-text p {
   margin: 0;
   font-size: 13.5px;
-  color: #475569;
+  color: var(--t-neutral-600, #475569);
   line-height: 1.5;
 }
 
@@ -81,30 +81,30 @@
 }
 
 .cf-dialog-btn--cancel {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--t-neutral-700, #334155);
 }
 
 .cf-dialog-btn--cancel:hover:not(:disabled) {
-  background: #e2e8f0;
+  background: var(--t-neutral-200, #e2e8f0);
 }
 
 .cf-dialog-btn--danger {
-  background: #dc2626;
-  color: #fff;
+  background: var(--t-danger-600, #dc2626);
+  color: var(--t-neutral-0, #fff);
 }
 
 .cf-dialog-btn--danger:hover:not(:disabled) {
-  background: #b91c1c;
+  background: var(--t-danger-700, #b91c1c);
 }
 
 .cf-dialog-btn--primary {
-  background: #059669;
-  color: #fff;
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff);
 }
 
 .cf-dialog-btn--primary:hover:not(:disabled) {
-  background: #047857;
+  background: var(--t-primary-700, #047857);
 }
 
 @keyframes cfFadeIn {

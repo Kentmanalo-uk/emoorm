@@ -183,7 +183,7 @@ export default function SellerLayout() {
               <span>Products</span>
               <ChevronDown size={15} className="sc-nav-chevron" />
             </button>
-            {productsOpen && (
+            <div className={`sc-subnav-wrap${productsOpen ? ' is-open' : ''}`}>
               <div className="sc-subnav">
                 <NavLink to="/seller/products" end className={subNavCls}>
                   All Products{badge('/seller/products')}
@@ -192,7 +192,7 @@ export default function SellerLayout() {
                   Add New
                 </NavLink>
               </div>
-            )}
+            </div>
 
             <NavLink to="/seller/notifications" className={navCls} title="Notifications">
               <Bell size={17} weight="fill" /> <span>Notifications</span>
@@ -220,7 +220,7 @@ export default function SellerLayout() {
               <span>My Shop</span>
               <ChevronDown size={15} className="sc-nav-chevron" />
             </button>
-            {shopOpen && (
+            <div className={`sc-subnav-wrap${shopOpen ? ' is-open' : ''}`}>
               <div className="sc-subnav">
                 <NavLink to="/seller/store" className={subNavCls}>
                   Shop Profile
@@ -242,7 +242,7 @@ export default function SellerLayout() {
                   </a>
                 )}
               </div>
-            )}
+            </div>
           </nav>
 
           <div className={`sc-account${accountOpen ? ' is-open' : ''}`} ref={accountRef}>

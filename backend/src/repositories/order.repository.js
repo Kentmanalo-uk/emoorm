@@ -204,8 +204,16 @@ const findByCheckoutKey = async (buyerId, checkoutKey) => {
   });
 };
 
+// Only orders nobody has paid for (or whose proof was rejected) may expire.
+// PAID and PENDING_VERIFICATION are never touched: the buyer has done their part.
+const EXPIRABLE_PAYMENT_STATUSES = ['PENDING', 'FAILED'];
+
 const findExpiredPending = (before) => prisma.order.findMany({
-  where: { status: 'PENDING', createdAt: { lt: before } },
+  where: {
+    status: 'PENDING',
+    paymentStatus: { in: EXPIRABLE_PAYMENT_STATUSES },
+    createdAt: { lt: before },
+  },
   select: {
     id: true,
     orderNumber: true,
@@ -279,7 +287,11 @@ const findAll = async (options = {}) => {
     buyerId,
     storeId,
     status,
+    paymentStatus,
     municipalityId,
+    from,
+    to,
+    search,
   } = options;
 
   const where = {};
@@ -287,6 +299,14 @@ const findAll = async (options = {}) => {
   if (buyerId) where.buyerId = buyerId;
   if (storeId) where.storeId = storeId;
   if (status) where.status = status;
+  if (paymentStatus) where.paymentStatus = paymentStatus;
+  // `from` / `to` are inclusive calendar days on createdAt.
+  if (from || to) {
+    where.createdAt = {};
+    if (from) where.createdAt.gte = from;
+    if (to) where.createdAt.lte = to;
+  }
+  if (search) where.orderNumber = { contains: search };
   if (municipalityId) {
     where.OR = [
       { buyer: { municipalityId } },
@@ -343,7 +363,7 @@ const findAll = async (options = {}) => {
  * @param {String} status - New status
  * @returns {Promise<Object>} Updated order
  */
-const updateStatus = async (id, status, expectedStatus = null, actorId = null) => {
+const updateStatus = async (id, status, expectedStatus = null, actorId = null, note = null) => {
   const data = { status };
   if (status === 'COMPLETED') data.completedAt = new Date();
   if (status === 'CANCELLED') data.cancelledAt = new Date();
@@ -353,21 +373,38 @@ const updateStatus = async (id, status, expectedStatus = null, actorId = null) =
       where: { id },
       select: { status: true, paymentMethod: true, paymentStatus: true },
     });
-    if (!current || (expectedStatus && current.status !== expectedStatus)) {
+    const stale = () => {
       const error = new Error('Order status changed before this action completed');
       error.code = 'STALE_ORDER_STATUS';
-      throw error;
-    }
-    // Cash on delivery is collected when the buyer receives the order.
-    if (current.paymentMethod === 'COD' && current.paymentStatus === 'PENDING'
-      && ['DELIVERED', 'PICKED_UP', 'COMPLETED'].includes(status)) {
-      data.paymentStatus = 'PAID';
-    }
-    const updated = await tx.order.update({ where: { id }, data });
-    await tx.orderStatusHistory.create({
-      data: { orderId: id, fromStatus: current.status, toStatus: status, actorId },
+      return error;
+    };
+    if (!current || (expectedStatus && current.status !== expectedStatus)) throw stale();
+
+    const fromStatus = expectedStatus || current.status;
+
+    // Cash on delivery is collected when the buyer receives the order. The
+    // flip is part of the same conditional write so it cannot overwrite a
+    // payment status that changed in the meantime.
+    const codCollected = current.paymentMethod === 'COD' && current.paymentStatus === 'PENDING'
+      && ['DELIVERED', 'PICKED_UP', 'COMPLETED'].includes(status);
+    if (codCollected) data.paymentStatus = 'PAID';
+
+    // The write itself is conditional: two sellers (or a seller and the
+    // expiry job) racing on the same order cannot both win.
+    const changed = await tx.order.updateMany({
+      where: {
+        id,
+        status: fromStatus,
+        ...(codCollected ? { paymentStatus: 'PENDING' } : {}),
+      },
+      data,
     });
-    return updated;
+    if (changed.count === 0) throw stale();
+
+    await tx.orderStatusHistory.create({
+      data: { orderId: id, fromStatus, toStatus: status, actorId, note: note || null },
+    });
+    return tx.order.findUnique({ where: { id } });
   });
 };
 

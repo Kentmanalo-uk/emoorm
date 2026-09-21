@@ -18,19 +18,19 @@ import ImageSearchModal from './ImageSearchModal';
 import './Header.css';
 
 const NOTIF_TYPE = {
-  ORDER_RECEIVED: { Icon: ShoppingBag, color: '#3b82f6', bg: '#dbeafe', label: 'New order' },
-  ORDER_CONFIRMED: { Icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Order confirmed' },
-  ORDER_READY: { Icon: Package, color: '#f97316', bg: '#ffedd5', label: 'Ready for pickup' },
-  ORDER_COMPLETED: { Icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Order completed' },
-  ORDER_CANCELLED: { Icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Order cancelled' },
-  PRODUCT_APPROVED: { Icon: Star, color: '#f59e0b', bg: '#fef3c7', label: 'Product approved' },
-  PRODUCT_SUSPENDED: { Icon: AlertCircle, color: '#ef4444', bg: '#fee2e2', label: 'Product suspended' },
-  SELLER_APPROVED: { Icon: Star, color: '#059669', bg: '#d1fae5', label: 'Seller approved' },
-  SELLER_SUSPENDED: { Icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Seller suspended' },
-  REPORT_SUBMITTED: { Icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', label: 'Report submitted' },
-  REPORT_RESOLVED: { Icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Report resolved' },
-  SYSTEM_ANNOUNCEMENT: { Icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Announcement' },
-  DEFAULT: { Icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Notification' },
+  ORDER_RECEIVED: { Icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New order' },
+  ORDER_CONFIRMED: { Icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Order confirmed' },
+  ORDER_READY: { Icon: Package, color: 'var(--t-orange-500, #f97316)', bg: 'var(--t-orange-100, #ffedd5)', label: 'Ready for pickup' },
+  ORDER_COMPLETED: { Icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Order completed' },
+  ORDER_CANCELLED: { Icon: XCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Order cancelled' },
+  PRODUCT_APPROVED: { Icon: Star, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Product approved' },
+  PRODUCT_SUSPENDED: { Icon: AlertCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Product suspended' },
+  SELLER_APPROVED: { Icon: Star, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Seller approved' },
+  SELLER_SUSPENDED: { Icon: XCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Seller suspended' },
+  REPORT_SUBMITTED: { Icon: AlertCircle, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Report submitted' },
+  REPORT_RESOLVED: { Icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Report resolved' },
+  SYSTEM_ANNOUNCEMENT: { Icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Announcement' },
+  DEFAULT: { Icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Notification' },
 };
 
 function notifCfg(type) {

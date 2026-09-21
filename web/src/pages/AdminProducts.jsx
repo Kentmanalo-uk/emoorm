@@ -185,14 +185,14 @@ export default function AdminProducts() {
           <h2 className="admin-card-title">
             Products
             {pagination.total > 0 && (
-              <span style={{ fontWeight: 400, color: '#64748b', fontSize: 14, marginLeft: 8 }}>
+              <span style={{ fontWeight: 400, color: 'var(--t-neutral-500, #64748b)', fontSize: 14, marginLeft: 8 }}>
                 ({pagination.total})
               </span>
             )}
           </h2>
           <div className="admin-toolbar">
             <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-neutral-400, #94a3b8)' }} />
               <input
                 className="admin-search-input"
                 style={{ paddingLeft: 30 }}

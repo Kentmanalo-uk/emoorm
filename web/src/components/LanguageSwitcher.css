@@ -46,8 +46,8 @@
   margin: 0;
   padding: 6px;
   list-style: none;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--t-neutral-0, #ffffff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 10px;
   box-shadow: 0 10px 32px -8px rgba(15, 23, 42, 0.18);
   z-index: 1000;
@@ -105,18 +105,18 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
-  color: #1f2937;
+  color: var(--t-neutral-800, #1f2937);
   text-align: left;
   transition: background 0.12s ease;
 }
 
 .lang-switch__option:hover {
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 .lang-switch__option.is-active {
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
 }
 
 .lang-switch__option-label {
@@ -126,23 +126,23 @@
 
 .lang-switch__option-code {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   letter-spacing: 0.4px;
 }
 
 .lang-switch__option.is-active .lang-switch__option-code {
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 .lang-switch__tick {
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 /* ─── Variant: buyer topbar (small, matches ENGLISH placeholder) ─── */
 
 .lang-switch--topbar .lang-switch__trigger {
   font-size: 12px;
-  color: #000;
+  color: var(--t-neutral-900, #000);
   text-transform: uppercase;
 }
 
@@ -151,18 +151,18 @@
 .lang-switch--shell .lang-switch__trigger {
   height: 32px;
   padding: 0 10px;
-  border: 1px solid #eef0f3;
+  border: 1px solid var(--t-neutral-150, #eef0f3);
   border-radius: 8px;
-  background: #fff;
-  color: #374151;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
   font-size: 12.5px;
   font-weight: 500;
 }
 
 .lang-switch--shell .lang-switch__trigger:hover {
-  border-color: #d1d5db;
+  border-color: var(--t-neutral-300, #d1d5db);
   opacity: 1;
-  background: #f9fafb;
+  background: var(--t-neutral-50, #f9fafb);
 }
 
 /* ─── Hide Google Translate chrome ───────────────────── */

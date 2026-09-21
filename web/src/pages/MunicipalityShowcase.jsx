@@ -85,7 +85,7 @@ export default function MunicipalityShowcase() {
                           <strong>{product.name}</strong>
                           <span className="municipality-product-price">₱{Number(product.price || 0).toFixed(2)}</span>
                           <div className="municipality-product-rating">
-                            <div>{[0, 1, 2, 3, 4].map((star) => <Star key={star} size={11} weight="fill" color="#f59e0b" />)}</div>
+                            <div>{[0, 1, 2, 3, 4].map((star) => <Star key={star} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />)}</div>
                             <span>({product.reviewCount ?? 0})</span>
                           </div>
                         </div>

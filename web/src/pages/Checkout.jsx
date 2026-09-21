@@ -822,7 +822,7 @@ const Checkout = () => {
                           />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Payment proof <span style={{ color: '#dc2626' }}>*</span></label>
+                          <label className="form-label">Payment proof <span style={{ color: 'var(--t-danger-600, #dc2626)' }}>*</span></label>
                           {paymentProofUrl ? (
                             <div className="proof-preview">
                               <img src={resolveImg(paymentProofUrl)} alt="Payment proof" />
@@ -941,7 +941,7 @@ const Checkout = () => {
                   <span>{shippingFee === 0 ? <span className="free-text">FREE</span> : `₱${shippingFee.toFixed(2)}`}</span>
                 </div>
                 {appliedVoucher && discountAmount > 0 && (
-                  <div className="summary-row" style={{ color: '#059669' }}>
+                  <div className="summary-row" style={{ color: 'var(--t-primary-600, #059669)' }}>
                     <span>Voucher ({appliedVoucher.voucher.code})</span>
                     <span>-₱{discountAmount.toFixed(2)}</span>
                   </div>
@@ -957,7 +957,7 @@ const Checkout = () => {
                   </div>
                 )}
 
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--t-neutral-200, #e5e7eb)' }}>
                   <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Voucher</label>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input
@@ -966,7 +966,7 @@ const Checkout = () => {
                       onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
                       placeholder="Enter code"
                       disabled={voucherLoading || !!appliedVoucher}
-                      style={{ flex: 1, padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
+                      style={{ flex: 1, padding: '8px 10px', border: '1px solid var(--t-neutral-300, #d1d5db)', borderRadius: 6, fontSize: 13 }}
                     />
                     {appliedVoucher ? (
                       <button type="button" onClick={removeVoucher} className="btn-back" style={{ padding: '8px 12px', fontSize: 13 }}>Remove</button>
@@ -983,7 +983,7 @@ const Checkout = () => {
                     )}
                   </div>
                   {appliedVoucher && (
-                    <p style={{ marginTop: 6, fontSize: 12, color: '#059669' }}>
+                    <p style={{ marginTop: 6, fontSize: 12, color: 'var(--t-primary-600, #059669)' }}>
                       {appliedVoucher.voucher.description || 'Voucher applied'}
                     </p>
                   )}

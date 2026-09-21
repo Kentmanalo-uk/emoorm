@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Plus, PencilSimple as Pencil, Check, X, UserGear as UserCog, Camera } from '@phosphor-icons/react';
+import { Plus, PencilSimple as Pencil, Check, X, UserGear as UserCog, Camera } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
@@ -7,6 +7,7 @@ import axios from '../lib/axios';
 import { useReferenceInvalidation } from '../hooks/useReferenceData';
 import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
+import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 
 export default function AdminMunicipalities() {
@@ -142,7 +143,7 @@ export default function AdminMunicipalities() {
         <div className="admin-card-header">
           <h2 className="admin-card-title">
             Municipalities
-            <span style={{ fontWeight: 400, color: '#64748b', fontSize: 14, marginLeft: 8 }}>
+            <span style={{ fontWeight: 400, color: 'var(--t-neutral-500, #64748b)', fontSize: 14, marginLeft: 8 }}>
               ({municipalities.length})
             </span>
           </h2>
@@ -195,7 +196,7 @@ export default function AdminMunicipalities() {
         {isLoading ? (
           <Skeleton.Table cols={5} rows={5} />
         ) : municipalities.length === 0 ? (
-          <div className="admin-empty"><MapPin size={36} weight="fill" /><p>No municipalities yet</p></div>
+          <div className="admin-empty"><EmptyArt name="places" size={104} /><p>No municipalities yet</p></div>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -242,18 +243,18 @@ export default function AdminMunicipalities() {
                           />
                         </div>
                       </td>
-                      <td style={{ fontWeight: 600, color: '#0f172a' }}>{mun.name}</td>
-                      <td><code style={{ fontSize: 12, color: '#64748b' }}>{mun.code}</code></td>
+                      <td style={{ fontWeight: 600, color: 'var(--t-neutral-900, #0f172a)' }}>{mun.name}</td>
+                      <td><code style={{ fontSize: 12, color: 'var(--t-neutral-500, #64748b)' }}>{mun.code}</code></td>
                       <td>{mun._count?.users ?? 0}</td>
                       <td>{mun._count?.stores ?? 0}</td>
                       <td>
                         {mun.admin ? (
                           <div>
                             <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{mun.admin.fullName}</p>
-                            <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>{mun.admin.email}</p>
+                            <p style={{ fontSize: 12, color: 'var(--t-neutral-500, #64748b)', margin: 0 }}>{mun.admin.email}</p>
                           </div>
                         ) : (
-                          <span style={{ fontSize: 13, color: '#94a3b8' }}>None assigned</span>
+                          <span style={{ fontSize: 13, color: 'var(--t-neutral-400, #94a3b8)' }}>None assigned</span>
                         )}
                       </td>
                       <td>
@@ -288,9 +289,9 @@ export default function AdminMunicipalities() {
                     {/* Assign admin row */}
                     {assigningId === mun.id && (
                       <tr>
-                        <td colSpan={8} style={{ background: '#f0fdf4', padding: '12px 16px' }}>
+                        <td colSpan={8} style={{ background: 'var(--t-success-50, #f0fdf4)', padding: '12px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Select admin for {mun.name}:</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-neutral-900, #0f172a)' }}>Select admin for {mun.name}:</span>
                             <select
                               className="admin-select"
                               value={assignUserId}

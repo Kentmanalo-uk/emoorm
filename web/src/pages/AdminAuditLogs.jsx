@@ -148,12 +148,12 @@ export default function AdminAuditLogs() {
                       </td>
                       <td style={{ fontSize: 11, maxWidth: 280 }}>
                         {note && (
-                          <div style={{ fontSize: 12, color: '#0f172a', marginBottom: 2 }}>
+                          <div style={{ fontSize: 12, color: 'var(--t-neutral-900, #0f172a)', marginBottom: 2 }}>
                             <strong>{d.reason ? 'Reason' : 'Note'}:</strong> {String(note)}
                           </div>
                         )}
                         <div
-                          style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#64748b' }}
+                          style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--t-neutral-500, #64748b)' }}
                           title={l.details ? JSON.stringify(l.details) : ''}
                         >
                           {l.details ? JSON.stringify(l.details) : '—'}

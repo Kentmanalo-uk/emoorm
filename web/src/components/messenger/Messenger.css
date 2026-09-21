@@ -11,15 +11,15 @@
 .messages-page-title {
   font-size: 22px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0 0 16px;
 }
 
 .msgr-shell {
   display: grid;
   grid-template-columns: minmax(260px, 320px) 1fr;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 12px;
   overflow: hidden;
   height: calc(100vh - 220px);
@@ -37,8 +37,8 @@
 .msgr-list {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-right: 1px solid var(--t-neutral-200, #e5e7eb);
+  background: var(--t-neutral-50, #f9fafb);
   min-width: 0;
 }
 
@@ -47,8 +47,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #fff;
+  border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
+  background: var(--t-neutral-0, #fff);
 }
 
 .msgr-list-head h2 {
@@ -57,7 +57,7 @@
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0;
 }
 
@@ -68,15 +68,15 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #6b7280;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-500, #6b7280);
   cursor: pointer;
 }
 
 .msgr-icon-btn:hover {
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #111827);
 }
 
 .msgr-list-scroll {
@@ -92,22 +92,22 @@
   padding: 12px 14px;
   background: transparent;
   border: none;
-  border-bottom: 1px solid #eef0f3;
+  border-bottom: 1px solid var(--t-neutral-150, #eef0f3);
   text-align: left;
   cursor: pointer;
   transition: background 120ms ease;
 }
 
 .msgr-convo-item:hover {
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 .msgr-convo-item.is-active {
-  background: #ecfdf5;
+  background: var(--t-primary-50, #ecfdf5);
 }
 
 .msgr-convo-item.is-active .msgr-convo-title {
-  color: #047857;
+  color: var(--t-primary-700, #047857);
 }
 
 .msgr-avatar {
@@ -116,8 +116,8 @@
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
-  background: #e5e7eb;
-  color: #4b5563;
+  background: var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-600, #4b5563);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -151,7 +151,7 @@
 .msgr-convo-title {
   font-size: 13.5px;
   font-weight: 600;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -159,13 +159,13 @@
 
 .msgr-convo-time {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   flex-shrink: 0;
 }
 
 .msgr-convo-preview {
   font-size: 12.5px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -174,7 +174,7 @@
 
 .msgr-convo-role {
   font-size: 10.5px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-top: 2px;
@@ -185,8 +185,8 @@
   height: 18px;
   padding: 0 6px;
   border-radius: 9999px;
-  background: #059669;
-  color: #fff;
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff);
   font-size: 10.5px;
   font-weight: 700;
   display: inline-flex;
@@ -198,7 +198,7 @@
 .msgr-list-empty {
   padding: 32px 16px;
   text-align: center;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -208,7 +208,7 @@
 
 .msgr-empty-link {
   margin-top: 4px;
-  color: #059669;
+  color: var(--t-primary-600, #059669);
   font-weight: 600;
   text-decoration: none;
 }
@@ -223,7 +223,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   overflow: hidden;
 }
 
@@ -234,7 +234,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   font-size: 14px;
 }
 
@@ -243,7 +243,7 @@
   align-items: center;
   gap: 12px;
   padding: 14px 18px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
   flex-shrink: 0;
 }
 
@@ -254,7 +254,7 @@
 .msgr-thread-name {
   font-size: 15px;
   font-weight: 600;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -266,12 +266,12 @@
 }
 
 .msgr-thread-name a:hover {
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 .msgr-thread-sub {
   font-size: 11.5px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -279,8 +279,8 @@
 /* ---------- Pinned orders ---------- */
 .msgr-pins {
   padding: 10px 18px 8px;
-  background: #fafafa;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--t-neutral-50, #fafafa);
+  border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
   flex-shrink: 0;
 }
 
@@ -288,7 +288,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -297,7 +297,7 @@
 }
 
 .msgr-pins-count {
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   font-weight: 500;
 }
 
@@ -311,8 +311,8 @@
 .msgr-pin-card {
   flex-shrink: 0;
   width: 280px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 10px;
   padding: 10px;
   display: flex;
@@ -325,8 +325,8 @@
   width: 52px;
   height: 52px;
   border-radius: 8px;
-  background: #f3f4f6;
-  color: #9ca3af;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-400, #9ca3af);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -357,7 +357,7 @@
 .msgr-pin-num {
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -372,39 +372,39 @@
 }
 
 .msgr-pin-status.is-amber {
-  background: #f3f4f6;
-  color: #78716c;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-500, #78716c);
 }
 
 .msgr-pin-status.is-blue {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--t-info-50, #eff6ff);
+  color: var(--t-info-700, #1d4ed8);
 }
 
 .msgr-pin-status.is-teal {
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
 }
 
 .msgr-pin-status.is-green {
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
 }
 
 .msgr-pin-status.is-red {
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-700, #b91c1c);
 }
 
 .msgr-pin-status.is-gray {
-  background: #f3f4f6;
-  color: #4b5563;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-600, #4b5563);
 }
 
 .msgr-pin-name {
   font-size: 13px;
   font-weight: 500;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -412,7 +412,7 @@
 }
 
 .msgr-pin-more {
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   font-weight: 400;
   font-size: 11.5px;
 }
@@ -427,19 +427,19 @@
 .msgr-pin-total {
   font-size: 13px;
   font-weight: 600;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .msgr-pin-date {
   font-size: 11.5px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .msgr-pin-attach {
   margin-left: auto;
   background: transparent;
-  border: 1px solid #e5e7eb;
-  color: #374151;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-700, #374151);
   border-radius: 6px;
   padding: 3px 8px;
   font-size: 11px;
@@ -449,9 +449,9 @@
 }
 
 .msgr-pin-attach:hover {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
-  color: #047857;
+  background: var(--t-primary-50, #ecfdf5);
+  border-color: var(--t-primary-200, #a7f3d0);
+  color: var(--t-primary-700, #047857);
 }
 
 /* ---------- Messages ---------- */
@@ -464,7 +464,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: #f9fafb;
+  background: var(--t-neutral-50, #f9fafb);
 }
 
 .msgr-messages-empty {
@@ -473,7 +473,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   gap: 8px;
   font-size: 13px;
 }
@@ -494,8 +494,8 @@
   height: 24px;
   border-radius: 50%;
   overflow: hidden;
-  background: #e5e7eb;
-  color: #6b7280;
+  background: var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-500, #6b7280);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -510,11 +510,11 @@
 
 .msgr-bubble {
   max-width: 68%;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 12px;
   padding: 8px 12px;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   font-size: 13.5px;
   line-height: 1.5;
   display: flex;
@@ -523,9 +523,9 @@
 }
 
 .msgr-bubble-row.is-self .msgr-bubble {
-  background: #059669;
-  border-color: #047857;
-  color: #fff;
+  background: var(--t-primary-600, #059669);
+  border-color: var(--t-primary-700, #047857);
+  color: var(--t-neutral-0, #fff);
 }
 
 .msgr-bubble-row.is-self .msgr-bubble-time {
@@ -536,8 +536,8 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--t-warning-100, #fef3c7);
+  color: var(--t-warning-800, #92400e);
   padding: 6px 8px;
   border-radius: 8px;
   font-size: 11.5px;
@@ -545,7 +545,7 @@
 
 .msgr-bubble-row.is-self .msgr-bubble-order {
   background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  color: var(--t-neutral-0, #fff);
 }
 
 .msgr-bubble-order-num {
@@ -565,15 +565,15 @@
 
 .msgr-bubble-time {
   font-size: 10.5px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   align-self: flex-end;
 }
 
 /* ---------- Composer ---------- */
 .msgr-composer {
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--t-neutral-200, #e5e7eb);
   padding: 10px 14px 14px;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -584,19 +584,19 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--t-warning-100, #fef3c7);
+  color: var(--t-warning-800, #92400e);
   padding: 6px 10px;
   border-radius: 8px;
   font-size: 12px;
-  border: 1px solid #fde68a;
+  border: 1px solid var(--t-warning-200, #fde68a);
 }
 
 .msgr-composer-attach-clear {
   margin-left: auto;
   background: transparent;
   border: none;
-  color: #92400e;
+  color: var(--t-warning-800, #92400e);
   font-weight: 600;
   cursor: pointer;
   font-size: 11.5px;
@@ -614,7 +614,7 @@
 
 .msgr-composer-input {
   flex: 1;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 13.5px;
@@ -627,15 +627,15 @@
 }
 
 .msgr-composer-input:focus {
-  border-color: #059669;
+  border-color: var(--t-primary-600, #059669);
 }
 
 .msgr-composer-send {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #059669;
-  color: #fff;
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff);
   border: none;
   border-radius: 10px;
   padding: 10px 14px;
@@ -646,20 +646,20 @@
 }
 
 .msgr-composer-send:hover:not(:disabled) {
-  background: #047857;
+  background: var(--t-primary-700, #047857);
 }
 
 .msgr-composer-send:disabled {
-  background: #d1d5db;
+  background: var(--t-neutral-300, #d1d5db);
   cursor: not-allowed;
 }
 
 .msgr-error {
   padding: 8px 14px;
-  color: #991b1b;
-  background: #fee2e2;
+  color: var(--t-danger-800, #991b1b);
+  background: var(--t-danger-100, #fee2e2);
   font-size: 12.5px;
-  border-top: 1px solid #fecaca;
+  border-top: 1px solid var(--t-danger-200, #fecaca);
 }
 
 .msgr-spin {
@@ -687,7 +687,7 @@
 
   .msgr-list {
     border-right: none;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
     min-height: 0;
   }
 
@@ -751,12 +751,12 @@
     min-height: 0;
     border: 0;
     border-radius: 0;
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
   }
 
   .msgr-list {
     border: 0;
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
     display: block;
   }
 
@@ -770,9 +770,9 @@
     gap: 8px;
     margin: 0 16px 8px;
     padding: 10px 12px;
-    background: #f3f4f6;
+    background: var(--t-neutral-100, #f3f4f6);
     border-radius: 10px;
-    color: #6b7280;
+    color: var(--t-neutral-500, #6b7280);
   }
 
   .msgr-list-search input {
@@ -782,12 +782,12 @@
     border: 0;
     outline: 0;
     font-size: 14px;
-    color: #111827;
+    color: var(--t-neutral-900, #111827);
     padding: 0;
   }
 
   .msgr-list-search input::placeholder {
-    color: #9ca3af;
+    color: var(--t-neutral-400, #9ca3af);
   }
 
   .msgr-list-scroll {
@@ -798,14 +798,14 @@
     padding: 12px 16px;
     gap: 12px;
     align-items: center;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--t-neutral-100, #f1f5f9);
   }
 
   .msgr-convo-item .msgr-avatar {
     width: 44px;
     height: 44px;
-    background: #dcfce7;
-    color: #059669;
+    background: var(--t-success-100, #dcfce7);
+    color: var(--t-primary-600, #059669);
   }
 
   .msgr-convo-body {
@@ -822,12 +822,12 @@
   .msgr-convo-title {
     font-size: 15px;
     font-weight: 700;
-    color: #111827;
+    color: var(--t-neutral-900, #111827);
   }
 
   .msgr-convo-preview {
     font-size: 13px;
-    color: #6b7280;
+    color: var(--t-neutral-500, #6b7280);
     margin-top: 2px;
   }
 
@@ -836,7 +836,7 @@
     right: 16px;
     top: 14px;
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--t-neutral-400, #9ca3af);
   }
 
   .msgr-convo-role {
@@ -859,7 +859,7 @@
   }
 
   .msgr-thread {
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
   }
 
   .msgr-shell:not(.has-active) .msgr-thread {
@@ -872,8 +872,8 @@
     top: 0;
     z-index: 5;
     padding: 12px 12px;
-    background: #fff;
-    border-bottom: 1px solid #eef0f3;
+    background: var(--t-neutral-0, #fff);
+    border-bottom: 1px solid var(--t-neutral-150, #eef0f3);
     gap: 6px;
   }
 
@@ -887,7 +887,7 @@
     background: transparent;
     border: 0;
     border-radius: 8px;
-    color: #111827;
+    color: var(--t-neutral-900, #111827);
     cursor: pointer;
     padding: 0;
     flex-shrink: 0;
@@ -895,7 +895,7 @@
 
   .msgr-thread-back:active,
   .msgr-thread-menu:active {
-    background: #f3f4f6;
+    background: var(--t-neutral-100, #f3f4f6);
   }
 
   .msgr-thread-head .msgr-avatar {
@@ -911,7 +911,7 @@
   .msgr-thread-name {
     font-size: 17px;
     font-weight: 700;
-    color: #111827;
+    color: var(--t-neutral-900, #111827);
     text-align: center;
   }
 
@@ -922,8 +922,8 @@
   /* Pinned orders — trim to match reference "Your orders" card style */
   .msgr-pins {
     padding: 10px 16px;
-    background: #fff;
-    border-bottom: 1px solid #eef0f3;
+    background: var(--t-neutral-0, #fff);
+    border-bottom: 1px solid var(--t-neutral-150, #eef0f3);
   }
 
   .msgr-pins-head {
@@ -931,7 +931,7 @@
     letter-spacing: 0;
     font-size: 13px;
     font-weight: 500;
-    color: #9ca3af;
+    color: var(--t-neutral-400, #9ca3af);
     margin-bottom: 6px;
   }
 
@@ -964,7 +964,7 @@
   .msgr-pin-status {
     background: transparent !important;
     padding: 0;
-    color: #059669 !important;
+    color: var(--t-primary-600, #059669) !important;
     font-size: 11px;
     letter-spacing: 0.04em;
   }
@@ -978,7 +978,7 @@
     order: 1;
     font-size: 13px;
     font-weight: 700;
-    color: #111827;
+    color: var(--t-neutral-900, #111827);
   }
 
   .msgr-pin-row-bottom {
@@ -988,7 +988,7 @@
 
   .msgr-pin-total {
     font-size: 12.5px;
-    color: #6b7280;
+    color: var(--t-neutral-500, #6b7280);
     font-weight: 500;
   }
 
@@ -996,7 +996,7 @@
   .msgr-messages {
     padding: 14px 12px;
     gap: 8px;
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
   }
 
   .msgr-bubble-row {
@@ -1014,15 +1014,15 @@
     font-size: 14px;
     gap: 2px;
     border: 0;
-    background: #f3f4f6;
-    color: #111827;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-900, #111827);
     box-shadow: 0 1px 1px rgba(15, 23, 42, 0.04);
   }
 
   .msgr-bubble-row.is-self .msgr-bubble {
-    background: #22c55e;
-    border-color: #22c55e;
-    color: #fff;
+    background: var(--t-success-500, #22c55e);
+    border-color: var(--t-success-500, #22c55e);
+    color: var(--t-neutral-0, #fff);
   }
 
   .msgr-bubble-time {
@@ -1034,7 +1034,7 @@
   }
 
   .msgr-bubble-row:not(.is-self) .msgr-bubble-time {
-    color: #9ca3af;
+    color: var(--t-neutral-400, #9ca3af);
   }
 
   .msgr-bubble-check {
@@ -1044,8 +1044,8 @@
   /* Composer — pill input with leading icons + trailing send */
   .msgr-composer {
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid #eef0f3;
-    background: #fff;
+    border-top: 1px solid var(--t-neutral-150, #eef0f3);
+    background: var(--t-neutral-0, #fff);
     gap: 0;
   }
 
@@ -1064,18 +1064,18 @@
     background: transparent;
     border: 0;
     border-radius: 50%;
-    color: #6b7280;
+    color: var(--t-neutral-500, #6b7280);
     cursor: pointer;
     flex-shrink: 0;
   }
 
   .msgr-composer-icon:active {
-    background: #f3f4f6;
+    background: var(--t-neutral-100, #f3f4f6);
   }
 
   .msgr-composer-input {
     flex: 1;
-    background: #f3f4f6;
+    background: var(--t-neutral-100, #f3f4f6);
     border: 0;
     border-radius: 9999px;
     padding: 10px 16px;
@@ -1091,7 +1091,7 @@
 
   .msgr-composer-send {
     background: transparent;
-    color: #22c55e;
+    color: var(--t-success-500, #22c55e);
     padding: 0;
     width: 40px;
     height: 40px;
@@ -1106,7 +1106,7 @@
 
   .msgr-composer-send:disabled {
     background: transparent;
-    color: #d1d5db;
+    color: var(--t-neutral-300, #d1d5db);
   }
 
   .msgr-composer-send-label {

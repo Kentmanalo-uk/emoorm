@@ -94,7 +94,7 @@ const ResetPassword = () => {
               <div
                 style={{
                   width: 56, height: 56, margin: '0 auto 16px',
-                  borderRadius: '50%', background: '#dcfce7', color: '#166534',
+                  borderRadius: '50%', background: 'var(--t-success-100, #dcfce7)', color: 'var(--t-success-800, #166534)',
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
@@ -165,15 +165,15 @@ const ResetPassword = () => {
                         <li
                           key={r.label}
                           style={{
-                            color: r.ok ? '#059669' : '#9ca3af',
+                            color: r.ok ? 'var(--t-primary-600, #059669)' : 'var(--t-neutral-400, #9ca3af)',
                             display: 'flex', alignItems: 'center', gap: 6,
                           }}
                         >
                           <span
                             style={{
                               width: 14, height: 14, borderRadius: '50%',
-                              background: r.ok ? '#059669' : '#e5e7eb',
-                              color: '#fff', display: 'inline-flex',
+                              background: r.ok ? 'var(--t-primary-600, #059669)' : 'var(--t-neutral-200, #e5e7eb)',
+                              color: 'var(--t-neutral-0, #fff)', display: 'inline-flex',
                               alignItems: 'center', justifyContent: 'center',
                               fontSize: 10,
                             }}

@@ -60,7 +60,7 @@ const ForgotPassword = () => {
                 If <strong>{email}</strong> is registered, we've sent a password reset link.
                 The link expires in <strong>1 hour</strong>.
               </p>
-              <p className="fp-description" style={{ fontSize: 13, color: '#6b7280' }}>
+              <p className="fp-description" style={{ fontSize: 13, color: 'var(--t-neutral-500, #6b7280)' }}>
                 Didn't get an email? Check your spam folder, or resend below.
               </p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>

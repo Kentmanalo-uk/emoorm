@@ -10,7 +10,7 @@
 }
 
 .report-modal {
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   border-radius: 8px;
   width: 100%;
   max-width: 460px;
@@ -34,19 +34,19 @@
 .report-modal-title h2 {
   font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0;
 }
 
 .report-icon {
-  color: #ef4444;
+  color: var(--t-danger-500, #ef4444);
 }
 
 .report-close {
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   padding: 4px;
   display: flex;
   border-radius: 4px;
@@ -54,16 +54,16 @@
 }
 
 .report-close:hover {
-  color: #111827;
-  background: #f3f4f6;
+  color: var(--t-neutral-900, #111827);
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 .report-target {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0 0 16px;
   padding: 8px 12px;
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
   border-radius: 4px;
 }
 
@@ -77,25 +77,25 @@
 .report-field label {
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
 }
 
 .report-field select,
 .report-field textarea {
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
   border-radius: 6px;
   font-size: 14px;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   font-family: inherit;
   outline: none;
   transition: border-color 0.2s;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
 }
 
 .report-field select:focus,
 .report-field textarea:focus {
-  border-color: #ef4444;
+  border-color: var(--t-danger-500, #ef4444);
 }
 
 .report-field textarea {
@@ -104,13 +104,13 @@
 
 .report-char {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   text-align: right;
 }
 
 .report-disclaimer {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   margin: 0 0 20px;
   line-height: 1.5;
 }
@@ -123,23 +123,23 @@
 
 .report-btn-cancel {
   padding: 10px 20px;
-  border: 1px solid #d1d5db;
-  background: #fff;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  background: var(--t-neutral-0, #fff);
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   transition: background 0.2s;
 }
 
 .report-btn-cancel:hover {
-  background: #f9fafb;
+  background: var(--t-neutral-50, #f9fafb);
 }
 
 .report-btn-submit {
   padding: 10px 24px;
-  background: #ef4444;
-  color: #fff;
+  background: var(--t-danger-500, #ef4444);
+  color: var(--t-neutral-0, #fff);
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -149,7 +149,7 @@
 }
 
 .report-btn-submit:hover:not(:disabled) {
-  background: #dc2626;
+  background: var(--t-danger-600, #dc2626);
 }
 
 .report-btn-submit:disabled {

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import SellerPageHead from '../components/seller/SellerPageHead';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerSettings.css';
@@ -68,14 +69,10 @@ export default function SellerSettings() {
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
-        <div className="seller-header">
-          <div>
-            <h1>Shop Settings</h1>
-            <p className="seller-welcome">
-              Account-level shop controls — separate from your public Shop Profile
-            </p>
-          </div>
-        </div>
+        <SellerPageHead
+          title="Shop Settings"
+          subtitle="Account-level shop controls — separate from your public Shop Profile"
+        />
 
         {isLoading ? (
           <div className="seller-card" style={{ padding: 20 }}>

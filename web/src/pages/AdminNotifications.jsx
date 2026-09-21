@@ -101,7 +101,7 @@ export default function AdminNotifications() {
           <div className="admin-empty"><p>{error}</p></div>
         ) : items.length === 0 ? (
           <div className="admin-empty">
-            <Bell size={36} color="#94a3b8" weight="fill" />
+            <Bell size={36} color="var(--t-neutral-400, #94a3b8)" weight="fill" />
             <p>You have no notifications yet.</p>
           </div>
         ) : (

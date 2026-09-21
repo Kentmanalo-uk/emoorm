@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Tag, Plus, PencilSimple as Pencil, Trash as Trash2, ToggleLeft, ToggleRight, X, Check, UploadSimple as Upload, Image as ImageIcon, CircleNotch as Loader2 } from '@phosphor-icons/react';
+import { Plus, PencilSimple as Pencil, Trash as Trash2, ToggleLeft, ToggleRight, X, Check, UploadSimple as Upload, Image as ImageIcon, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import { useReferenceInvalidation } from '../hooks/useReferenceData';
 import { resolveImg } from '../lib/media';
+import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 
 export default function AdminCategories() {
@@ -154,7 +155,7 @@ export default function AdminCategories() {
         <div className="admin-card-header">
           <h2 className="admin-card-title">
             Categories
-            <span style={{ fontWeight: 400, color: '#64748b', fontSize: 14, marginLeft: 8 }}>
+            <span style={{ fontWeight: 400, color: 'var(--t-neutral-500, #64748b)', fontSize: 14, marginLeft: 8 }}>
               ({categories.length})
             </span>
           </h2>
@@ -254,7 +255,7 @@ export default function AdminCategories() {
         {isLoading ? (
           <Skeleton.Table cols={5} rows={6} />
         ) : categories.length === 0 ? (
-          <div className="admin-empty"><Tag size={36} weight="fill" /><p>No categories yet</p></div>
+          <div className="admin-empty"><EmptyArt name="products" size={104} /><p>No categories yet</p></div>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -280,9 +281,9 @@ export default function AdminCategories() {
                         )}
                       </div>
                     </td>
-                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{cat.name}</td>
-                    <td><code style={{ fontSize: 12, color: '#64748b' }}>{cat.slug}</code></td>
-                    <td style={{ fontSize: 13, color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontWeight: 600, color: 'var(--t-neutral-900, #0f172a)' }}>{cat.name}</td>
+                    <td><code style={{ fontSize: 12, color: 'var(--t-neutral-500, #64748b)' }}>{cat.slug}</code></td>
+                    <td style={{ fontSize: 13, color: 'var(--t-neutral-500, #64748b)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {cat.description || '—'}
                     </td>
                     <td>

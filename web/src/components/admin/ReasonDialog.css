@@ -7,13 +7,13 @@
 .reason-dialog-body h3 {
   margin: 0;
   font-size: 16px;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .reason-dialog-body p {
   margin: 0;
   font-size: 13px;
-  color: #4b5563;
+  color: var(--t-neutral-600, #4b5563);
 }
 
 .reason-dialog-input {
@@ -21,18 +21,18 @@
   padding: 10px 12px;
   font: inherit;
   font-size: 14px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
   resize: vertical;
 }
 
 .reason-dialog-input:focus {
   outline: none;
-  border-color: #059669;
+  border-color: var(--t-primary-600, #059669);
 }
 
 .reason-dialog-hint {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   text-align: right;
 }
 

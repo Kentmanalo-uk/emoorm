@@ -85,14 +85,14 @@ const Profile = () => {
 
   const getOrderStatusBadge = (status) => {
     const badges = {
-      PENDING: { label: 'Pending', color: '#f59e0b', icon: Clock },
-      CONFIRMED: { label: 'Confirmed', color: '#3b82f6', icon: Package },
-      PREPARING: { label: 'Preparing', color: '#8b5cf6', icon: Package },
-      READY: { label: 'Ready', color: '#f97316', icon: Store },
-      COMPLETED: { label: 'Completed', color: '#10b981', icon: CheckCircle },
-      CANCELLED: { label: 'Cancelled', color: '#ef4444', icon: null },
+      PENDING: { label: 'Pending', color: 'var(--t-warning-500, #f59e0b)', icon: Clock },
+      CONFIRMED: { label: 'Confirmed', color: 'var(--t-info-500, #3b82f6)', icon: Package },
+      PREPARING: { label: 'Preparing', color: 'var(--t-violet-500, #8b5cf6)', icon: Package },
+      READY: { label: 'Ready', color: 'var(--t-orange-500, #f97316)', icon: Store },
+      COMPLETED: { label: 'Completed', color: 'var(--t-primary-500, #10b981)', icon: CheckCircle },
+      CANCELLED: { label: 'Cancelled', color: 'var(--t-danger-500, #ef4444)', icon: null },
     };
-    return badges[status] || { label: status, color: '#6b7280', icon: null };
+    return badges[status] || { label: status, color: 'var(--t-neutral-500, #6b7280)', icon: null };
   };
 
   const identityMeta = IDENTITY_META[identityStatus] || IDENTITY_META.NOT_VERIFIED;

@@ -1,8 +1,8 @@
 .ja-backup {
   margin-bottom: 20px;
   padding: 12px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  background: var(--t-neutral-50, #f8fafc);
 }
 
 .ja-backup-toggle {
@@ -17,12 +17,12 @@
 .ja-backup-toggle input {
   width: 16px;
   height: 16px;
-  accent-color: #059669;
+  accent-color: var(--t-primary-600, #059669);
 }
 
 .ja-backup-help {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--t-neutral-500, #64748b);
   font-size: 12px;
   line-height: 1.5;
 }

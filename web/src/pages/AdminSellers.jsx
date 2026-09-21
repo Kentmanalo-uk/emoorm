@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-  Users, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
-  Phone, MapPin, Calendar, CreditCard
-} from '@phosphor-icons/react';
+import { MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X, Phone, MapPin, Calendar, CreditCard } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
@@ -15,6 +12,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
+import EmptyArt from '../components/ui/EmptyArt';
 
 const STATUS_BADGE = {
   PENDING: 'admin-badge-pending',
@@ -200,7 +198,7 @@ export default function AdminSellers() {
           <h2 className="admin-card-title">Applications</h2>
           <div className="admin-toolbar">
             <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-neutral-400, #94a3b8)' }} />
               <input
                 className="admin-search-input"
                 style={{ paddingLeft: 30 }}
@@ -226,7 +224,7 @@ export default function AdminSellers() {
           <Skeleton.Table cols={7} rows={6} />
         ) : applicants.length === 0 ? (
           <div className="admin-empty">
-            <Users size={36} weight="fill" />
+            <EmptyArt name="stores" size={104} />
             <p>No {statusFilter.toLowerCase()} applications</p>
           </div>
         ) : (
@@ -293,7 +291,7 @@ export default function AdminSellers() {
                           </div>
                         </div>
                       </td>
-                      <td>{u.shopName || <span style={{ color: '#94a3b8' }}>—</span>}</td>
+                      <td>{u.shopName || <span style={{ color: 'var(--t-neutral-400, #94a3b8)' }}>—</span>}</td>
                       <td>{shopMunicipality(u)}</td>
                       <td>{u.idType || '—'}</td>
                       <td>

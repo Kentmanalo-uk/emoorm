@@ -1,4 +1,3 @@
-import { Table } from '@phosphor-icons/react';
 import EmptyState from './EmptyState';
 import './analytics.css';
 
@@ -10,7 +9,7 @@ const SalesTable = ({
   formatLabel = (v) => v,
   formatValue = (v) => v,
 }) => {
-  if (!rows.length) return <EmptyState icon={Table} title="No sales yet" message={emptyMessage} compact />;
+  if (!rows.length) return <EmptyState art="revenue" title="No sales yet" message={emptyMessage} compact />;
 
   return (
     <div className="an-table-wrap">
@@ -33,7 +32,7 @@ const SalesTable = ({
               >
                 <td>{formatLabel(r[labelKey])}</td>
                 <td style={{ textAlign: 'right' }}>{r.orders}</td>
-                <td style={{ textAlign: 'right', fontWeight: 600, color: '#059669' }}>
+                <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--t-primary-600, #059669)' }}>
                   {formatValue(r.total)}
                 </td>
               </tr>

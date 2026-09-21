@@ -288,7 +288,7 @@ const Register = () => {
               {googleProfile && (
                 <div className="login-mfa-hint" style={{ marginBottom: 16 }}>
                   Continuing with Google as <strong>{googleProfile.email}</strong>.{' '}
-                  <button type="button" onClick={handleCancelGoogleProfile} className="register-form-google" style={{ display: 'inline', padding: 0, border: 'none', background: 'none', color: '#2563eb', textDecoration: 'underline', width: 'auto' }}>
+                  <button type="button" onClick={handleCancelGoogleProfile} className="register-form-google" style={{ display: 'inline', padding: 0, border: 'none', background: 'none', color: 'var(--t-info-600, #2563eb)', textDecoration: 'underline', width: 'auto' }}>
                     Use a different account
                   </button>
                 </div>

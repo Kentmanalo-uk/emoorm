@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Eye, Package, X, CheckCircle, XCircle, DownloadSimple } from '@phosphor-icons/react';
+import { Eye, X, CheckCircle, XCircle, DownloadSimple } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
@@ -9,6 +9,7 @@ import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
+import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -113,7 +114,7 @@ export default function AdminOrders() {
 
       <div className="admin-card">
         <div className="admin-card-header">
-          <h2 className="admin-card-title">Orders {pagination.total > 0 && <span style={{ fontWeight: 400, color: '#64748b', fontSize: 14 }}>({pagination.total})</span>}</h2>
+          <h2 className="admin-card-title">Orders {pagination.total > 0 && <span style={{ fontWeight: 400, color: 'var(--t-neutral-500, #64748b)', fontSize: 14 }}>({pagination.total})</span>}</h2>
           <div className="admin-toolbar">
             <select className="admin-select" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
               <option value="">All statuses</option>
@@ -128,7 +129,7 @@ export default function AdminOrders() {
         {loading ? (
           <Skeleton.Table cols={7} rows={7} />
         ) : orders.length === 0 ? (
-          <div className="admin-empty"><Package size={36} weight="fill" /><p>No orders found</p></div>
+          <div className="admin-empty"><EmptyArt name="shopping" size={104} /><p>No orders found</p></div>
         ) : (
           <>
             <div className="admin-table-wrap">
@@ -145,7 +146,7 @@ export default function AdminOrders() {
                       onClick={rowOpen(() => viewOrder(order.id))}
                       onKeyDown={rowKeyOpen(() => viewOrder(order.id))}
                     >
-                      <td><strong>{order.orderNumber}</strong><div style={{ color: '#94a3b8', fontSize: 11 }}>{new Date(order.createdAt).toLocaleDateString('en-PH')}</div></td>
+                      <td><strong>{order.orderNumber}</strong><div style={{ color: 'var(--t-neutral-400, #94a3b8)', fontSize: 11 }}>{new Date(order.createdAt).toLocaleDateString('en-PH')}</div></td>
                       <td>{order.buyer?.fullName || '—'}</td>
                       <td>{order.store?.name || '—'}</td>
                       <td>₱{Number(order.total).toFixed(2)}</td>

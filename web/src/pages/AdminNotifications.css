@@ -1,21 +1,21 @@
 .admin-notif-list { list-style: none; margin: 0; padding: 0; }
-.admin-notif-list li + li { border-top: 1px solid #e2e8f0; }
+.admin-notif-list li + li { border-top: 1px solid var(--t-neutral-200, #e2e8f0); }
 .admin-notif-item {
   display: flex; gap: 12px; width: 100%; text-align: left;
-  padding: 14px 16px; background: #fff; border: 0; border-radius: 0;
+  padding: 14px 16px; background: var(--t-neutral-0, #fff); border: 0; border-radius: 0;
   cursor: default; font: inherit; color: inherit;
 }
 .admin-notif-item.linkable { cursor: pointer; }
-.admin-notif-item:hover { background: #f8fafc; }
-.admin-notif-item.unread { background: #ecfdf5; border-left: 3px solid #059669; }
+.admin-notif-item:hover { background: var(--t-neutral-50, #f8fafc); }
+.admin-notif-item.unread { background: var(--t-primary-50, #ecfdf5); border-left: 3px solid var(--t-primary-600, #059669); }
 .admin-notif-dot { width: 8px; height: 8px; margin-top: 6px; flex-shrink: 0; background: transparent; }
-.admin-notif-item.unread .admin-notif-dot { background: #059669; }
+.admin-notif-item.unread .admin-notif-dot { background: var(--t-primary-600, #059669); }
 .admin-notif-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
 .admin-notif-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-.admin-notif-time { font-size: 12px; color: #64748b; white-space: nowrap; }
-.admin-notif-title { font-size: 14px; color: #0f172a; }
+.admin-notif-time { font-size: 12px; color: var(--t-neutral-500, #64748b); white-space: nowrap; }
+.admin-notif-title { font-size: 14px; color: var(--t-neutral-900, #0f172a); }
 .admin-notif-item.unread .admin-notif-title { font-weight: 600; }
-.admin-notif-message { font-size: 13px; color: #475569; overflow-wrap: anywhere; }
+.admin-notif-message { font-size: 13px; color: var(--t-neutral-600, #475569); overflow-wrap: anywhere; }
 
 .admin-attention-grid {
   display: grid; gap: 12px; margin-bottom: 20px;
@@ -23,21 +23,21 @@
 }
 .admin-attention-card {
   display: flex; flex-direction: column; gap: 4px; padding: 14px 16px;
-  background: #fff; border: 1px solid #e2e8f0; border-left: 4px solid #94a3b8;
-  border-radius: 0; text-decoration: none; color: #0f172a;
+  background: var(--t-neutral-0, #fff); border: 1px solid var(--t-neutral-200, #e2e8f0); border-left: 4px solid var(--t-neutral-400, #94a3b8);
+  border-radius: 0; text-decoration: none; color: var(--t-neutral-900, #0f172a);
 }
-.admin-attention-card:hover { border-color: #059669; }
-.admin-attention-card.sev-high { border-left-color: #dc2626; }
-.admin-attention-card.sev-high .admin-attention-count { color: #dc2626; }
-.admin-attention-card.sev-medium { border-left-color: #d97706; }
-.admin-attention-card.sev-medium .admin-attention-count { color: #d97706; }
-.admin-attention-card.sev-low { border-left-color: #059669; }
-.admin-attention-card.sev-low .admin-attention-count { color: #059669; }
-.admin-attention-card.sev-none { background: #f8fafc; color: #64748b; }
+.admin-attention-card:hover { border-color: var(--t-primary-600, #059669); }
+.admin-attention-card.sev-high { border-left-color: var(--t-danger-600, #dc2626); }
+.admin-attention-card.sev-high .admin-attention-count { color: var(--t-danger-600, #dc2626); }
+.admin-attention-card.sev-medium { border-left-color: var(--t-warning-600, #d97706); }
+.admin-attention-card.sev-medium .admin-attention-count { color: var(--t-warning-600, #d97706); }
+.admin-attention-card.sev-low { border-left-color: var(--t-primary-600, #059669); }
+.admin-attention-card.sev-low .admin-attention-count { color: var(--t-primary-600, #059669); }
+.admin-attention-card.sev-none { background: var(--t-neutral-50, #f8fafc); color: var(--t-neutral-500, #64748b); }
 .admin-attention-label { font-size: 13px; font-weight: 600; }
 .admin-attention-count { font-size: 26px; font-weight: 700; line-height: 1.1; }
-.admin-attention-meta { font-size: 12px; color: #64748b; }
-.admin-attention-heading { font-size: 15px; font-weight: 600; margin: 0 0 10px; color: #0f172a; }
+.admin-attention-meta { font-size: 12px; color: var(--t-neutral-500, #64748b); }
+.admin-attention-heading { font-size: 15px; font-weight: 600; margin: 0 0 10px; color: var(--t-neutral-900, #0f172a); }
 
 /* ── Mobile (≤768px / ≤480px) ── */
 @media (max-width: 768px) {

@@ -14,6 +14,19 @@ model AppSetting {
   id                 String   @id @default("global")
   appLogo            String   @default("/brand-icon.png") @map("app_logo")
   productPlaceholder String   @default("/brand-icon.png") @map("product_placeholder")
+
+  /// The active colour palette, set by a super admin in Settings -> Appearance.
+  /// Null means the palette the application ships with. Stored as JSON rather
+  /// than columns because a theme is a handful of seed colours plus whatever
+  /// was overridden on top, and that shape changes as tokens are added.
+  theme              Json?    @map("theme")
+
+  /// Checkout pricing. One delivery fee for the platform and the subtotal at
+  /// which delivery becomes free. The order service applies these and the web
+  /// reads the same values to quote them, so the two can never disagree.
+  deliveryFee           Decimal @default(50)  @db.Decimal(10, 2) @map("delivery_fee")
+  freeDeliveryThreshold Decimal @default(500) @db.Decimal(10, 2) @map("free_delivery_threshold")
+
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 

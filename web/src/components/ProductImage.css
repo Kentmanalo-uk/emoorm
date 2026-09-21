@@ -5,7 +5,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 .product-image > .product-image-fallback {

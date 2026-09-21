@@ -71,6 +71,10 @@ export const sellerSearchSources = [
         kind: 'product',
         image: firstImage(product.images),
         href: `/seller/products?search=${enc(product.name)}`,
+        actions: actionList([
+          { key: 'edit', label: 'Edit product', href: `/seller/products?search=${enc(product.name)}` },
+          product.slug && { key: 'view', label: 'View public page', href: `/product/${product.slug}`, external: true },
+        ]),
       }));
     },
   },
@@ -100,10 +104,23 @@ export const sellerSearchSources = [
           kind: 'order',
           image: firstImage(order.items?.[0]?.product?.images),
           href: `/seller/orders?id=${enc(order.id)}`,
+          actions: actionList([
+            { key: 'open', label: 'Open order', href: `/seller/orders?id=${enc(order.id)}` },
+            { key: 'messages', label: 'Message the buyer', href: '/seller/messages' },
+            { key: 'returns', label: 'Check returns', href: '/seller/returns' },
+          ]),
         }));
     },
   },
 ];
+
+/**
+ * Builds the quick-action list for a result, dropping any entry whose
+ * target is missing. `external` opens in a new tab — used for the public
+ * storefront and product pages, which are a different surface from the
+ * panel the admin or seller is working in.
+ */
+const actionList = (entries) => entries.filter((e) => e && e.href);
 
 /* ── Admin panel ───────────────────────────────────────────── */
 
@@ -132,6 +149,18 @@ export const adminSearchSources = [
         kind: 'store',
         image: store.logo || store.bannerImage || store.coverImage || null,
         href: `/admin/products?storeId=${enc(store.id)}`,
+        actions: actionList([
+          store.slug && { key: 'visit', label: 'Visit storefront', href: `/store/${store.slug}`, external: true },
+          { key: 'products', label: 'View its products', href: `/admin/products?storeId=${enc(store.id)}` },
+          // The store list endpoint returns the owner id and name but not
+          // their email, so the lookup goes by name — which is what the
+          // sellers list searches on anyway.
+          store.owner?.fullName && {
+            key: 'owner',
+            label: 'View the owner',
+            href: `/admin/all-sellers?search=${enc(store.owner.fullName)}`,
+          },
+        ]),
       }));
     },
   },
@@ -151,6 +180,15 @@ export const adminSearchSources = [
         kind: 'product',
         image: firstImage(product.images),
         href: `/admin/products?search=${enc(product.name)}`,
+        actions: actionList([
+          { key: 'review', label: 'Review listing', href: `/admin/products?search=${enc(product.name)}` },
+          product.slug && { key: 'view', label: 'View public page', href: `/product/${product.slug}`, external: true },
+          product.store?.id && {
+            key: 'store',
+            label: 'View its store',
+            href: `/admin/products?storeId=${enc(product.store.id)}`,
+          },
+        ]),
       }));
     },
   },
@@ -172,6 +210,16 @@ export const adminSearchSources = [
         kind: 'person',
         image: user.profilePhoto || null,
         href: personHref(user),
+        actions: actionList([
+          { key: 'open', label: 'Open record', href: personHref(user) },
+          user.store?.slug && { key: 'store', label: 'Visit their store', href: `/store/${user.store.slug}`, external: true },
+          ['BUYER', 'SELLER'].includes(user.role) && {
+            key: 'message',
+            label: 'Message them',
+            href: `/admin/support?to=${enc(user.id)}`,
+          },
+          { key: 'orders', label: 'See their orders', href: `/admin/orders?buyerId=${enc(user.id)}` },
+        ]),
       }));
     },
   },

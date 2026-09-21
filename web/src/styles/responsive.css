@@ -234,7 +234,7 @@
   .msgr-list {
     min-height: 0;
     border-right: 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
   }
 
   .msgr-chat-panel {
@@ -353,8 +353,8 @@
 
 @media (max-width: 480px) {
   body {
-    background: #f2f2f7;
-    color: #1c1c1e;
+    background: var(--t-neutral-100, #f2f2f7);
+    color: var(--t-secondary-950, #1c1c1e);
   }
 
   .home-page,
@@ -370,7 +370,7 @@
   .receipt-page,
   .seller-dashboard,
   .admin-page {
-    background: #f2f2f7;
+    background: var(--t-neutral-100, #f2f2f7);
   }
 
   .banner-card-seller::before,

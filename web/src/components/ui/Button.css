@@ -76,7 +76,7 @@
 }
 
 .btn-danger:hover:not(.btn-disabled) {
-  background-color: #dc2626;
+  background-color: var(--t-danger-600, #dc2626);
 }
 
 .btn-link {

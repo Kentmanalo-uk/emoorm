@@ -1,4 +1,3 @@
-import { ListNumbers } from '@phosphor-icons/react';
 import { resolveImg } from '../../lib/media';
 import EmptyState from './EmptyState';
 import './analytics.css';
@@ -7,12 +6,12 @@ const TopList = ({
   items = [],
   emptyMessage = 'No items.',
   emptyTitle = 'Nothing here yet',
-  emptyIcon = ListNumbers,
+  emptyArt = 'analytics',
   metric = 'revenue',
   renderMetric,
 }) => {
   if (!items.length) {
-    return <EmptyState icon={emptyIcon} title={emptyTitle} message={emptyMessage} compact />;
+    return <EmptyState art={emptyArt} title={emptyTitle} message={emptyMessage} compact />;
   }
   return (
     <ol className="an-toplist">

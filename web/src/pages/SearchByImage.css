@@ -1,6 +1,6 @@
 .sbi-page {
   padding: 32px 0 64px;
-  background-color: #f5f5f5;
+  background-color: var(--t-neutral-100, #f5f5f5);
   min-height: calc(100vh - 200px);
 }
 
@@ -58,7 +58,7 @@
 }
 
 .sbi-upload-btn:hover {
-  background: #fafafa;
+  background: var(--t-neutral-50, #fafafa);
 }
 
 .sbi-body {
@@ -122,7 +122,7 @@
 }
 
 .sbi-status-error {
-  color: #dc2626;
+  color: var(--t-danger-600, #dc2626);
 }
 
 .sbi-spin {
@@ -223,8 +223,8 @@
     min-height: 44px;
     border: 0;
     border-radius: 12px;
-    background: #fff;
-    color: #047857;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-primary-700, #047857);
     font-size: 14px;
     font-weight: 600;
   }

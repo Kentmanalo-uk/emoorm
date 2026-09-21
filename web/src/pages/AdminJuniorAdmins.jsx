@@ -106,7 +106,7 @@ export default function AdminJuniorAdmins() {
                   <tr key={a.id}>
                     <td>{a.fullName}</td>
                     <td>{a.email}</td>
-                    <td>{a.municipality?.name || <em style={{ color: '#dc2626' }}>unassigned</em>}</td>
+                    <td>{a.municipality?.name || <em style={{ color: 'var(--t-danger-600, #dc2626)' }}>unassigned</em>}</td>
                     <td><AccessBadge admin={a} /></td>
                     <td style={{ textAlign: 'right' }}>
                       <button
@@ -203,7 +203,7 @@ function AssignAdminModal({ municipalities, onClose, onAssigned }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: '#fff', width: 'min(560px, 100%)', padding: 24, maxHeight: '90vh', overflowY: 'auto' }
+        style={{ background: 'var(--t-neutral-0, #fff)', width: 'min(560px, 100%)', padding: 24, maxHeight: '90vh', overflowY: 'auto' }
 }
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -234,7 +234,7 @@ function AssignAdminModal({ municipalities, onClose, onAssigned }) {
 
         {results.length > 0 && (
           <div style={{
-            maxHeight: 200, overflowY: 'auto', border: '1px solid #e5e7eb',
+            maxHeight: 200, overflowY: 'auto', border: '1px solid var(--t-neutral-200, #e5e7eb)',
             borderRadius: 4, marginBottom: 16,
           }}>
             {results.map((u) => (
@@ -244,19 +244,19 @@ function AssignAdminModal({ municipalities, onClose, onAssigned }) {
                 onClick={() => { setSelectedUser(u); setResults([]); setSearch(u.fullName); }}
                 style={{
                   display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px',
-                  background: 'none', border: 'none', borderBottom: '1px solid #f3f4f6',
+                  background: 'none', border: 'none', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)',
                   cursor: 'pointer',
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{u.fullName}</div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>{u.email} • {u.role}</div>
+                <div style={{ fontSize: 12, color: 'var(--t-neutral-500, #6b7280)' }}>{u.email} • {u.role}</div>
               </button>
             ))}
           </div>
         )}
 
         {selectedUser && (
-          <div style={{ padding: 12, background: '#f9fafb', borderRadius: 4, marginBottom: 16 }}>
+          <div style={{ padding: 12, background: 'var(--t-neutral-50, #f9fafb)', borderRadius: 4, marginBottom: 16 }}>
             <strong>Selected:</strong> {selectedUser.fullName} ({selectedUser.email})
           </div>
         )}

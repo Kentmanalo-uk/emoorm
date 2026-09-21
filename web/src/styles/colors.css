@@ -1,57 +1,70 @@
-/* E-MOORM Design System - Color Palette */
+/* ═══════════════════════════════════════════════════════════════════════
+   Legacy colour names.
+
+   These were the original palette variables. They are kept because plenty
+   of stylesheets still name them, but they no longer hold values of their
+   own — each one points at a token in tokens.css, so anything written
+   against the old names follows the active theme like everything else.
+
+   New CSS should use the tokens directly. --text-muted says what it is
+   for; --color-text-secondary only says where it sits in a list.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 :root {
-  /* Primary Colors - Green Theme */
-  --color-primary: #22c55e;
-  --color-primary-dark: #16a34a;
-  --color-primary-light: #4ade80;
-  --color-primary-lighter: #bbf7d0;
-  
-  /* Secondary Colors */
-  --color-secondary: #059669;
-  --color-secondary-dark: #047857;
-  
-  /* Accent Colors */
-  --color-accent-orange: #fb923c;
-  --color-accent-red: #ef4444;
-  --color-accent-yellow: #fbbf24;
-  
-  /* Neutral Colors */
-  --color-white: #ffffff;
+  /* Brand.
+     --color-primary used to be a lighter green than the one on almost
+     every button in the app. It now follows the brand token, so a themed
+     palette reaches the few places that still name it. */
+  --color-primary: var(--t-primary-600);
+  --color-primary-dark: var(--t-primary-700);
+  --color-primary-light: var(--t-primary-400);
+  --color-primary-lighter: var(--t-primary-200);
+
+  --color-secondary: var(--t-primary-600);
+  --color-secondary-dark: var(--t-primary-700);
+
+  /* Accents */
+  --color-accent-orange: var(--t-orange-500);
+  --color-accent-red: var(--t-danger-500);
+  --color-accent-yellow: var(--t-warning-400);
+
+  /* Neutrals */
+  --color-white: var(--t-neutral-0);
   --color-black: #000000;
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-  
-  /* Status Colors */
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #3b82f6;
-  
-  /* Background Colors */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-green: #22c55e;
-  --color-bg-green-light: #f0fdf4;
-  
-  /* Text Colors */
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-muted: #9ca3af;
-  --color-text-white: #ffffff;
-  
-  /* Border Colors */
-  --color-border-light: #e5e7eb;
-  --color-border-medium: #d1d5db;
-  --color-border-dark: #9ca3af;
-  
-  /* Rating/Star Color */
-  --color-star: #fbbf24;
+  --color-gray-50: var(--t-neutral-50);
+  --color-gray-100: var(--t-neutral-100);
+  --color-gray-200: var(--t-neutral-200);
+  --color-gray-300: var(--t-neutral-300);
+  --color-gray-400: var(--t-neutral-400);
+  --color-gray-500: var(--t-neutral-500);
+  --color-gray-600: var(--t-neutral-600);
+  --color-gray-700: var(--t-neutral-700);
+  --color-gray-800: var(--t-neutral-800);
+  --color-gray-900: var(--t-neutral-900);
+
+  /* Status */
+  --color-success: var(--t-success-500);
+  --color-warning: var(--t-warning-500);
+  --color-error: var(--t-danger-500);
+  --color-info: var(--t-info-500);
+
+  /* Backgrounds */
+  --color-bg-primary: var(--surface-card);
+  --color-bg-secondary: var(--surface-page);
+  --color-bg-green: var(--t-success-500);
+  --color-bg-green-light: var(--t-success-50);
+
+  /* Text */
+  --color-text-primary: var(--text-strong);
+  --color-text-secondary: var(--text-muted);
+  --color-text-muted: var(--text-subtle);
+  --color-text-white: var(--text-inverse);
+
+  /* Borders */
+  --color-border-light: var(--border-default);
+  --color-border-medium: var(--border-strong);
+  --color-border-dark: var(--t-neutral-400);
+
+  /* Ratings */
+  --color-star: var(--t-warning-400);
 }

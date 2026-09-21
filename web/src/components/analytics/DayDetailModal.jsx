@@ -33,7 +33,7 @@ const DayDetailModal = ({ date, onClose }) => {
         </div>
 
         {loading && <div className="an-empty">Loading…</div>}
-        {error && <div className="an-empty" style={{ color: '#dc2626' }}>{error}</div>}
+        {error && <div className="an-empty" style={{ color: 'var(--t-danger-600, #dc2626)' }}>{error}</div>}
 
         {data && (
           <>
@@ -65,7 +65,7 @@ const DayDetailModal = ({ date, onClose }) => {
                   </div>
                   <div>
                     <span className="an-kpi-label">{o.buyer?.name || 'Guest'}</span>
-                    <div style={{ textAlign: 'right', fontWeight: 600, color: '#059669' }}>{peso(o.total)}</div>
+                    <div style={{ textAlign: 'right', fontWeight: 600, color: 'var(--t-primary-600, #059669)' }}>{peso(o.total)}</div>
                   </div>
                 </div>
                 <ul className="an-day-order-items">

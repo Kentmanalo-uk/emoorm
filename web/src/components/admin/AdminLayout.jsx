@@ -165,7 +165,7 @@ export default function AdminLayout({ children }) {
                   <span>Marketplace</span>
                   <ChevronDown size={15} className="ac-nav-chevron" />
                 </button>
-                {reviewsOpen && (
+                <div className={`ac-subnav-wrap${reviewsOpen ? ' is-open' : ''}`}>
                   <div className="ac-subnav">
                     <NavLink to="/admin/sellers" className={subNavCls}>Seller Applications{badge('/admin/sellers')}</NavLink>
                     <NavLink to="/admin/all-sellers" className={subNavCls}>All Sellers</NavLink>
@@ -176,7 +176,7 @@ export default function AdminLayout({ children }) {
                     <NavLink to="/admin/reviews" className={subNavCls}>Reviews</NavLink>
                     <NavLink to="/admin/returns" className={subNavCls}>Returns{badge('/admin/returns')}</NavLink>
                   </div>
-                )}
+                </div>
               </>
             ) : (
               <>
@@ -234,7 +234,7 @@ export default function AdminLayout({ children }) {
                   <span>System</span>
                   <ChevronDown size={15} className="ac-nav-chevron" />
                 </button>
-                {systemOpen && (
+                <div className={`ac-subnav-wrap${systemOpen ? ' is-open' : ''}`}>
                   <div className="ac-subnav">
                     <NavLink to="/admin/users" className={subNavCls}>
                       All Users
@@ -249,7 +249,7 @@ export default function AdminLayout({ children }) {
                       Municipal Admins
                     </NavLink>
                   </div>
-                )}
+                </div>
 
                 <NavLink to="/admin/banners" className={navCls} title="Banners">
                   <ImageIcon size={17} weight="fill" /> <span>Banners</span>

@@ -119,7 +119,7 @@ export default function ReviewModal({ product, orderId, onClose, onSuccess }) {
                 onMouseLeave={() => setHovered(0)}
                 onClick={() => setRating(n)}
               >
-                <Star size={32} weight={n <= (hovered || rating) ? 'fill' : 'regular'} color={n <= (hovered || rating) ? '#f59e0b' : 'currentColor'} />
+                <Star size={32} weight={n <= (hovered || rating) ? 'fill' : 'regular'} color={n <= (hovered || rating) ? 'var(--t-warning-500, #f59e0b)' : 'currentColor'} />
               </button>
             ))}
           </div>

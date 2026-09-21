@@ -201,7 +201,7 @@
   height: 64px;
   overflow: hidden;
   border-radius: 50%;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   box-shadow: 0 0 0 1px var(--color-gray-200, #e5e7eb);
 }
 
@@ -214,7 +214,7 @@
 .footer-municipality span {
   font-size: 16px;
   font-weight: 700;
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 .footer-brand {
@@ -429,7 +429,7 @@
 }
 
 .footer-directory-links a:hover {
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 @media (max-width: 1024px) {

@@ -1,6 +1,6 @@
 /* Order Receipt — screen + print */
 .receipt-page {
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
   min-height: 100vh;
   padding: 24px 16px 48px;
 }
@@ -17,7 +17,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #4b5563;
+  color: var(--t-neutral-600, #4b5563);
   text-decoration: none;
   font-size: 14px;
 }
@@ -27,7 +27,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: #059669;
+  background: var(--t-primary-600, #059669);
   color: white;
   border: none;
   font-size: 14px;
@@ -35,13 +35,13 @@
 }
 
 .receipt-print-btn:hover {
-  background: #047857;
+  background: var(--t-primary-700, #047857);
 }
 
 .receipt-loading {
   padding: 40px;
   text-align: center;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .receipt-paper {
@@ -50,7 +50,7 @@
   background: white;
   padding: 40px 48px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
@@ -59,7 +59,7 @@
   justify-content: space-between;
   align-items: flex-start;
   padding-bottom: 20px;
-  border-bottom: 2px solid #111827;
+  border-bottom: 2px solid var(--t-neutral-900, #111827);
   margin-bottom: 20px;
 }
 
@@ -79,12 +79,12 @@
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 .receipt-brand-sub {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .receipt-title {
@@ -99,7 +99,7 @@
 
 .receipt-title-sub {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin-top: 4px;
   font-family: 'Courier New', monospace;
 }
@@ -113,7 +113,7 @@
 
 .receipt-parties h3 {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin: 0 0 8px;
@@ -131,8 +131,8 @@
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px 20px;
   padding: 14px 16px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--t-neutral-50, #f9fafb);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
   margin-bottom: 24px;
   font-size: 13px;
 }
@@ -147,7 +147,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   font-weight: 600;
 }
 
@@ -166,13 +166,13 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  border-bottom: 2px solid #111827;
-  color: #374151;
+  border-bottom: 2px solid var(--t-neutral-900, #111827);
+  color: var(--t-neutral-700, #374151);
 }
 
 .receipt-items tbody td {
   padding: 10px 6px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--t-neutral-100, #f0f0f0);
   font-size: 13px;
   vertical-align: top;
 }
@@ -183,7 +183,7 @@
 
 .item-unit {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   margin-top: 2px;
 }
 
@@ -214,7 +214,7 @@
 }
 
 .totals-grand {
-  border-top: 2px solid #111827;
+  border-top: 2px solid var(--t-neutral-900, #111827);
   margin-top: 6px;
   padding-top: 10px;
   font-size: 16px;
@@ -229,13 +229,13 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0 0 8px;
 }
 
 .receipt-proof img {
   max-width: 240px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
 }
 
 .receipt-notes {
@@ -246,7 +246,7 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0 0 8px;
 }
 
@@ -254,8 +254,8 @@
   font-size: 13px;
   margin: 0;
   padding: 10px 12px;
-  background: #f9fafb;
-  border-left: 3px solid #059669;
+  background: var(--t-neutral-50, #f9fafb);
+  border-left: 3px solid var(--t-primary-600, #059669);
 }
 
 .receipt-signatures {
@@ -266,7 +266,7 @@
 }
 
 .sig-line {
-  border-top: 1px solid #111827;
+  border-top: 1px solid var(--t-neutral-900, #111827);
   height: 1px;
   margin-bottom: 6px;
 }
@@ -274,7 +274,7 @@
 .sig-label {
   font-size: 11px;
   text-align: center;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -282,9 +282,9 @@
 .receipt-footer {
   margin-top: 40px;
   padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--t-neutral-200, #e5e7eb);
   text-align: center;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   font-size: 12px;
 }
 

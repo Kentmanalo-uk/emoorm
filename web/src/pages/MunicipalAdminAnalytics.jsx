@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   DownloadSimple as Download, ArrowsClockwise as RefreshCw, CaretRight,
-  Storefront, Package, Flag, Trophy, ShoppingBag, UserPlus, HourglassMedium,
+  Storefront, Package, Flag,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import AdminLayout from '../components/admin/AdminLayout';
@@ -98,7 +98,7 @@ export default function MunicipalAdminAnalytics() {
           </div>
         </div>
 
-        {error && <div className="an-card" style={{ padding: 16, color: '#b91c1c' }}>{error}</div>}
+        {error && <div className="an-card" style={{ padding: 16, color: 'var(--t-danger-700, #b91c1c)' }}>{error}</div>}
 
         <div className="an-kpi-grid">
           <KpiCard loading={first} label="Revenue" value={peso(k.revenue?.value)} delta={k.revenue?.delta} hint="Completed orders" />
@@ -128,7 +128,7 @@ export default function MunicipalAdminAnalytics() {
                 revenue: s.revenue,
               }))}
               renderMetric={(s) => peso(s.revenue)}
-              emptyIcon={Trophy}
+              emptyArt="shopping"
               emptyTitle="No top stores yet"
               emptyMessage="Stores with completed sales will rank here."
             />
@@ -150,7 +150,7 @@ export default function MunicipalAdminAnalytics() {
                 revenue: p.revenue,
               }))}
               renderMetric={(p) => peso(p.revenue)}
-              emptyIcon={ShoppingBag}
+              emptyArt="products"
               emptyTitle="No products sold yet"
               emptyMessage="Best-selling products will rank here."
             />
@@ -184,7 +184,7 @@ export default function MunicipalAdminAnalytics() {
                 subtitle: `${s.fullName || s.email}${s.sellerApplicationDate ? ` · ${shortDate(s.sellerApplicationDate)}` : ''}`,
               }))}
               renderMetric={() => ''}
-              emptyIcon={UserPlus}
+              emptyArt="launch"
               emptyTitle="No pending applications"
               emptyMessage="New seller applications will show up here."
             />
@@ -199,7 +199,7 @@ export default function MunicipalAdminAnalytics() {
                 subtitle: [p.store?.name, p.price != null ? peso(p.price) : null].filter(Boolean).join(' · '),
               }))}
               renderMetric={() => ''}
-              emptyIcon={HourglassMedium}
+              emptyArt="calendar"
               emptyTitle="Nothing to review"
               emptyMessage="Products waiting for approval will show up here."
             />

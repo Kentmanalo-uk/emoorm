@@ -429,7 +429,7 @@ export default function SellerDashboard() {
                             ₱{formatNumber(p.price)} · Stock: {p.stock ?? 0}
                           </span>
                           <span className="sd-top-rating">
-                            <Star size={11} weight="fill" color="#f59e0b" />
+                            <Star size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
                             {p.averageRating != null ? Number(p.averageRating).toFixed(1) : '—'}
                           </span>
                         </div>

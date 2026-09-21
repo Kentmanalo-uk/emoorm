@@ -1,5 +1,6 @@
 import { useLocation, useSearchParams } from 'react-router-dom';
 import SupportChat from '../components/support/SupportChat';
+import SellerPageHead from '../components/seller/SellerPageHead';
 import './SellerDashboard.css';
 
 export default function SellerSupport() {
@@ -9,12 +10,10 @@ export default function SellerSupport() {
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
-        <div className="seller-header">
-          <div>
-            <h1>Admin Messages</h1>
-            <p className="seller-welcome">Conversations with your municipal admin</p>
-          </div>
-        </div>
+        <SellerPageHead
+          title="Admin Messages"
+          subtitle="Conversations with your municipal admin"
+        />
         <SupportChat
           key={conversationId || 'inbox'}
           mode="user"

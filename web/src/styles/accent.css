@@ -8,12 +8,14 @@
    ─────────────────────────────────────────────────────────────── */
 
 :root {
-  --color-accent-pink: #ec4899;
-  --color-accent-pink-dark: #db2777;
-  --color-accent-pink-deep: #be185d;
-  --color-accent-pink-soft: #fdf2f8;
-  --color-accent-pink-border: #fbcfe8;
-  --color-accent-pink-text: #9d174d;
+  /* The pink accent is the accent ramp in tokens.css; these names are
+     kept so the rules below read as they always did. */
+  --color-accent-pink: var(--t-accent-500);
+  --color-accent-pink-dark: var(--t-accent-600);
+  --color-accent-pink-deep: var(--t-accent-700);
+  --color-accent-pink-soft: var(--t-accent-50);
+  --color-accent-pink-border: var(--t-accent-200);
+  --color-accent-pink-text: var(--t-accent-800);
 }
 
 /* ── Wishlist / saved items ───────────────────────────────────── */
@@ -81,5 +83,5 @@
 
 .notif-filter-btn.active .notif-filter-count {
   color: var(--color-accent-pink-text);
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
 }

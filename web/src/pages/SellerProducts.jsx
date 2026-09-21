@@ -15,6 +15,7 @@ import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerProducts.css';
 import { useCategories } from '../hooks/useReferenceData';
+import SellerPageHead from '../components/seller/SellerPageHead';
 
 const EMPTY_FORM = {
   name: '',
@@ -336,19 +337,15 @@ export default function SellerProducts() {
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
-        <div className="seller-header">
-          <div>
-            <h1>My Products</h1>
-            <p className="seller-welcome">Add, edit, and manage your inventory</p>
-          </div>
-          <div className="seller-header-actions">
-            {!showForm && (
-              <button className="btn-seller-primary" onClick={openNew}>
-                <Plus size={16} /> Add Product
-              </button>
-            )}
-          </div>
-        </div>
+        <SellerPageHead
+          title="My Products"
+          subtitle="Add, edit, and manage your inventory"
+          actions={!showForm && (
+            <button className="btn-seller-primary" onClick={openNew}>
+              <Plus size={16} /> Add Product
+            </button>
+          )}
+        />
 
         {/* Inline form */}
         {showForm && (

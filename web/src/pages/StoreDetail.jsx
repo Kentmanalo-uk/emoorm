@@ -39,8 +39,8 @@ const SORTS = [
 ];
 
 const PAGE_SIZE = 16;
-const DEFAULT_PRIMARY = '#059669';
-const DEFAULT_SECONDARY = '#f59e0b';
+const DEFAULT_PRIMARY = 'var(--t-primary-600, #059669)';
+const DEFAULT_SECONDARY = 'var(--t-warning-500, #f59e0b)';
 
 // Debounce hook for search
 function useDebounce(value, delay = 350) {
@@ -541,7 +541,7 @@ function ProductCard({ product, onAddToCart }) {
         <div className="product-rating-row">
           <div className="product-stars">
             {[0, 1, 2, 3, 4].map((i) => (
-              <Star key={i} size={11} weight="fill" color="#f59e0b" />
+              <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
             ))}
           </div>
           <span className="product-review-count">({product.reviewCount ?? 0})</span>

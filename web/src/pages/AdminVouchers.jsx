@@ -287,9 +287,9 @@ export default function AdminVouchers() {
 
       <div className="admin-card">
         {loading ? (
-          <div style={{ padding: 20, color: '#64748b' }}>Loading vouchers…</div>
+          <div style={{ padding: 20, color: 'var(--t-neutral-500, #64748b)' }}>Loading vouchers…</div>
         ) : items.length === 0 ? (
-          <div style={{ padding: 20, color: '#64748b' }}>No vouchers found.</div>
+          <div style={{ padding: 20, color: 'var(--t-neutral-500, #64748b)' }}>No vouchers found.</div>
         ) : (
           <table className="admin-table">
             <thead>
@@ -308,12 +308,12 @@ export default function AdminVouchers() {
                 <tr key={v.id}>
                   <td>
                     <strong>{v.code}</strong>
-                    {v.description && <div style={{ color: '#64748b', fontSize: 12 }}>{v.description}</div>}
+                    {v.description && <div style={{ color: 'var(--t-neutral-500, #64748b)', fontSize: 12 }}>{v.description}</div>}
                   </td>
                   <td>{formatDiscount(v)}{v.maxDiscount ? ` (max ₱${Number(v.maxDiscount).toFixed(2)})` : ''}</td>
                   <td>{v.minOrderAmount ? `₱${Number(v.minOrderAmount).toFixed(2)}` : '—'}</td>
                   <td>{v.timesUsed}{v.usageLimit ? ` / ${v.usageLimit}` : ''}{v.perUserLimit ? ` • ${v.perUserLimit}/user` : ''}</td>
-                  <td style={{ fontSize: 12, color: '#64748b' }}>
+                  <td style={{ fontSize: 12, color: 'var(--t-neutral-500, #64748b)' }}>
                     {v.startsAt ? new Date(v.startsAt).toLocaleDateString() : '—'} → {v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : '—'}
                   </td>
                   <td>
@@ -324,7 +324,7 @@ export default function AdminVouchers() {
                   <td>
                     <div style={{ display: 'inline-flex', gap: 6 }}>
                       <button className="admin-btn" onClick={() => openEdit(v)}><Edit3 size={12} /> Edit</button>
-                      <button className="admin-btn" onClick={() => remove(v)} style={{ color: '#dc2626' }}><Trash size={12} /> Delete</button>
+                      <button className="admin-btn" onClick={() => remove(v)} style={{ color: 'var(--t-danger-600, #dc2626)' }}><Trash size={12} /> Delete</button>
                     </div>
                   </td>
                 </tr>

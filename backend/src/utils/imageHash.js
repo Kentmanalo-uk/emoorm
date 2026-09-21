@@ -31,35 +31,42 @@ const bufferToDHash = async (buffer) => {
   return bits.toString(16).padStart(16, '0');
 };
 
-// Resolve an image URL/path to a local Buffer for hashing.
+/**
+ * Map a stored image reference (`/uploads/<file>`) to an absolute path that is
+ * guaranteed to sit inside the configured upload directory. Anything else —
+ * remote URLs, other directories, traversal — resolves to null and is never
+ * read. The hash is only ever computed from files this server wrote itself.
+ * @param {String} source - Image reference as stored on the product
+ * @returns {String|null} Absolute path inside the upload dir, or null
+ */
+const resolveUploadPath = (source) => {
+  if (typeof source !== 'string') return null;
+  const trimmed = source.trim();
+  if (!trimmed || /^[a-z][a-z0-9+.-]*:/i.test(trimmed) || trimmed.startsWith('//')) return null;
+
+  // Strip an optional leading "/uploads/" prefix; what remains must be a bare filename.
+  const relative = trimmed.replace(/^\/+/, '').replace(/^uploads\//i, '');
+  if (!relative || relative.includes('/') || relative.includes('\\') || relative.includes('\0')) return null;
+
+  const uploadRoot = path.resolve(config.upload.uploadDir);
+  const abs = path.resolve(uploadRoot, relative);
+  const rootWithSep = uploadRoot.endsWith(path.sep) ? uploadRoot : uploadRoot + path.sep;
+  if (!abs.startsWith(rootWithSep)) return null;
+  return abs;
+};
+
+// Resolve an image reference to a local Buffer for hashing.
 const resolveImageBuffer = async (source) => {
   if (!source) return null;
   if (Buffer.isBuffer(source)) return source;
 
-  if (typeof source !== 'string') return null;
-
-  // Absolute HTTP(S) URL
-  if (/^https?:\/\//i.test(source)) {
-    const res = await fetch(source);
-    if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
-    return Buffer.from(await res.arrayBuffer());
+  const abs = resolveUploadPath(source);
+  if (!abs) return null;
+  try {
+    return await fs.readFile(abs);
+  } catch {
+    return null;
   }
-
-  // Relative /uploads path — resolve against upload dir
-  const cleaned = source.replace(/^\/+/, '');
-  const uploadRoot = path.resolve(config.upload.uploadDir);
-  const candidates = [
-    path.resolve(process.cwd(), cleaned),
-    path.resolve(uploadRoot, path.basename(cleaned)),
-  ];
-  for (const abs of candidates) {
-    try {
-      return await fs.readFile(abs);
-    } catch {
-      // try next
-    }
-  }
-  return null;
 };
 
 const hashFromSource = async (source) => {
@@ -85,5 +92,6 @@ module.exports = {
   bufferToDHash,
   hashFromSource,
   hammingDistance,
+  resolveUploadPath,
   HASH_BIT_LENGTH: 64,
 };

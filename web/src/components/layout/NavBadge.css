@@ -17,8 +17,8 @@
   /* A faded red: enough to catch the eye scanning the sidebar, not the
      alarm red of a failure. Opaque rather than translucent so it stays the
      same colour over the mint background of the active item. */
-  color: #c22f2f;
-  background: #fbe3e3;
+  color: var(--t-danger-700, #c22f2f);
+  background: var(--t-danger-100, #fbe3e3);
 }
 
 /* ── Collapsed sidebar ─────────────────────────────────────────
@@ -41,7 +41,7 @@
   margin: 0;
   border-radius: 50%;
   overflow: hidden;
-  background: #e08585;
+  background: var(--t-danger-300, #e08585);
   /* Pushes the digits out of an 8px circle without hiding the element from
      assistive technology, which still reads the aria-label. */
   text-indent: -9em;

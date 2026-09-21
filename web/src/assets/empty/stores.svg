@@ -1,0 +1,24 @@
+<svg id="stores-bank" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 675.29 309"><style>#stores-bank .stop1{stop-color:var(--art-brand-400, #34d399);}#stores-bank .stop2{stop-color:var(--art-brand-600, #059669);}</style>
+              <linearGradient id="stores-linear-gradient-bank" y1="182.28" x2="675.29" y2="182.28" gradientUnits="userSpaceOnUse">
+                <stop offset="0" class="stop1"></stop>
+                <stop offset="1" class="stop2"></stop>
+              </linearGradient>
+              <linearGradient id="stores-linear-gradient-2-bank" x1="487.61" y1="90.27" x2="624.16" y2="90.27" xlink:href="#stores-linear-gradient-bank"></linearGradient>
+              <linearGradient id="stores-linear-gradient-3-bank" x1="710.82" y1="472.55" x2="1313.19" y2="472.55" xlink:href="#stores-linear-gradient-bank"></linearGradient>
+              <linearGradient id="stores-linear-gradient-4-bank" x1="32.98" y1="47.49" x2="637.86" y2="47.49" xlink:href="#stores-linear-gradient-bank"></linearGradient>
+              <linearGradient id="stores-linear-gradient-5-bank" x1="32.98" y1="82.21" x2="637.86" y2="82.21" xlink:href="#stores-linear-gradient-bank"></linearGradient>
+              <linearGradient id="stores-linear-gradient-6-bank" x1="32.98" y1="122.14" x2="637.86" y2="122.14" xlink:href="#stores-linear-gradient-bank"></linearGradient>
+              <linearGradient id="stores-linear-gradient-7-bank" x1="32.98" y1="153.39" x2="637.86" y2="153.39" xlink:href="#stores-linear-gradient-bank"></linearGradient>
+              <linearGradient id="stores-linear-gradient-8-bank" x1="36.15" y1="254.32" x2="228.03" y2="254.32" xlink:href="#stores-linear-gradient-bank"></linearGradient>
+              <linearGradient id="stores-linear-gradient-9-bank" x1="330.99" y1="255.19" x2="647.67" y2="255.19" xlink:href="#stores-linear-gradient-bank"></linearGradient>
+              <title>bank</title>
+              <polygon style="fill:url(#stores-linear-gradient-bank);" points="0 161.44 0 203.11 675.29 203.11 675 162 0 161.44"></polygon>
+              <polygon class="bank" points="72.91 19.1 71.83 163.18 92.01 163.18 91.9 19.1 72.91 19.1"></polygon>
+              <polygon style="fill:url(#stores-linear-gradient-2-bank);" points="583.28 17.36 584.77 163.18 604.11 163.18 604.04 17.36 583.28 17.36"></polygon>
+              <path style="fill:url(#stores-linear-gradient-3-bank);" d="M710.82,482.1S716,463,729.91,463l561.17.14a11.35,11.35,0,0,1,5.41,1.37c4.74,2.56,14.14,8.61,16.7,17.58Z" transform="translate(-674 -463)"></path>
+              <polygon style="fill:url(#stores-linear-gradient-4-bank);" points="32.98 38.95 32.98 55.55 637.86 56.04 637.38 39.93 32.98 38.95"></polygon>
+              <polygon style="fill:url(#stores-linear-gradient-5-bank);" points="32.98 73.67 32.98 90.27 637.86 90.76 637.38 74.65 32.98 73.67"></polygon>
+              <polygon style="fill:url(#stores-linear-gradient-6-bank);" points="32.98 113.6 32.98 130.2 637.86 130.69 637.38 114.57 32.98 113.6"></polygon>
+              <polygon style="fill:url(#stores-linear-gradient-7-bank);" points="32.98 144.84 32.98 161.44 637.86 161.93 637.38 145.82 32.98 144.84"></polygon>
+              <polygon style="fill:url(#stores-linear-gradient-8-bank);" points="60.76 201.37 61.23 307.26 109.36 307.26 110.79 201.37 60.76 201.37"></polygon>
+              <polygon style="fill:url(#stores-linear-gradient-9-bank);" points="567.66 201.84 568.59 309 618 309 617.07 201.37 567.66 201.84"></polygon></svg>

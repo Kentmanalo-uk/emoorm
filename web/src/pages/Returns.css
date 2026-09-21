@@ -3,7 +3,7 @@
 .returns-page,
 .return-form-page,
 .return-detail-page {
-  color: #17231c
+  color: var(--t-secondary-950, #17231c)
 }
 
 /* Returns list: header with the "start from an order" link on the right. */
@@ -29,7 +29,7 @@
 .return-card-caret {
   margin-left: 4px;
   vertical-align: -2px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .returns-heading,
@@ -44,7 +44,7 @@
 .returns-eyebrow,
 .seller-kicker {
   margin: 0 0 7px;
-  color: #18834b;
+  color: var(--t-secondary-600, #18834b);
   text-transform: uppercase;
   letter-spacing: .11em;
   font-size: 11px;
@@ -63,8 +63,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #176b3a;
-  color: #fff;
+  background: var(--t-secondary-700, #176b3a);
+  color: var(--t-neutral-0, #fff);
   border: 0;
   padding: 12px 18px;
   border-radius: 5px;
@@ -77,7 +77,7 @@
   display: flex;
   gap: 4px;
   overflow: auto;
-  border-bottom: 1px solid #dfe8e1;
+  border-bottom: 1px solid var(--t-secondary-100, #dfe8e1);
   margin-bottom: 22px
 }
 
@@ -85,14 +85,14 @@
   background: none;
   border: 0;
   padding: 12px 14px;
-  color: #66736a;
+  color: var(--t-neutral-500, #66736a);
   white-space: nowrap;
   cursor: pointer
 }
 
 .returns-tabs button.is-active {
-  color: #176b3a;
-  border-bottom: 2px solid #176b3a;
+  color: var(--t-secondary-700, #176b3a);
+  border-bottom: 2px solid var(--t-secondary-700, #176b3a);
   font-weight: 750
 }
 
@@ -104,8 +104,8 @@
 .return-card {
   width: 100%;
   text-align: left;
-  background: #fff;
-  border: 1px solid #e0e8e1;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e0e8e1);
   border-radius: 6px;
   padding: 17px 18px;
   cursor: pointer;
@@ -113,7 +113,7 @@
 }
 
 .return-card:hover {
-  border-color: #78b58e
+  border-color: var(--t-secondary-300, #78b58e)
 }
 
 .return-card-top,
@@ -141,31 +141,31 @@
 }
 
 .status-requested {
-  background: #fff4d6;
-  color: #936b00
+  background: var(--t-orange-100, #fff4d6);
+  color: var(--t-warning-800, #936b00)
 }
 
 .status-approved,
 .status-received {
-  background: #e5f1ff;
-  color: #1662a2
+  background: var(--t-sky-100, #e5f1ff);
+  color: var(--t-sky-700, #1662a2)
 }
 
 .status-awaiting_shipment {
-  background: #eaf0ff;
-  color: #405ba8
+  background: var(--t-info-50, #eaf0ff);
+  color: var(--t-info-800, #405ba8)
 }
 
 .status-refunded,
 .status-closed {
-  background: #e2f5e9;
-  color: #14713d
+  background: var(--t-secondary-50, #e2f5e9);
+  color: var(--t-secondary-700, #14713d)
 }
 
 .status-rejected,
 .status-cancelled {
-  background: #ffe8e7;
-  color: #ad3933
+  background: var(--t-danger-100, #ffe8e7);
+  color: var(--t-danger-700, #ad3933)
 }
 
 .return-card-main {
@@ -177,12 +177,12 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  color: #46554b
+  color: var(--t-neutral-600, #46554b)
 }
 
 .return-product-stack span {
   font-weight: 650;
-  color: #17231c
+  color: var(--t-secondary-950, #17231c)
 }
 
 .return-card-amount {
@@ -196,7 +196,7 @@
 .return-muted,
 .return-detail-head span,
 .return-hint {
-  color: #758178;
+  color: var(--t-neutral-500, #758178);
   font-size: 13px
 }
 
@@ -207,16 +207,16 @@
   justify-content: center;
   flex-direction: column;
   gap: 10px;
-  color: #718077;
+  color: var(--t-neutral-500, #718077);
   text-align: center
 }
 
 .returns-empty strong {
-  color: #24352a
+  color: var(--t-neutral-800, #24352a)
 }
 
 .returns-empty a {
-  color: #176b3a;
+  color: var(--t-secondary-700, #176b3a);
   font-weight: 750
 }
 
@@ -228,7 +228,7 @@
   display: inline-flex;
   gap: 7px;
   align-items: center;
-  color: #176b3a;
+  color: var(--t-secondary-700, #176b3a);
   text-decoration: none;
   font-weight: 700;
   font-size: 13px;
@@ -238,8 +238,8 @@
 .return-form-card,
 .return-detail-panel,
 .return-note {
-  background: #fff;
-  border: 1px solid #e0e8e1;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e0e8e1);
   border-radius: 6px;
   padding: 24px
 }
@@ -272,12 +272,12 @@
   display: flex;
   justify-content: space-between;
   padding: 13px;
-  background: #f1f8f3;
+  background: var(--t-neutral-100, #f1f8f3);
   border-radius: 4px
 }
 
 .request-order-summary span {
-  color: #617067
+  color: var(--t-neutral-600, #617067)
 }
 
 .request-item {
@@ -286,14 +286,14 @@
   gap: 10px;
   align-items: center;
   padding: 12px;
-  border: 1px solid #e2e9e3;
+  border: 1px solid var(--t-neutral-200, #e2e9e3);
   margin-top: 7px;
   border-radius: 4px;
   cursor: pointer
 }
 
 .request-item small {
-  color: #718077
+  color: var(--t-neutral-500, #718077)
 }
 
 .reason-grid {
@@ -304,17 +304,17 @@
 
 .reason-grid button {
   padding: 9px 12px;
-  border: 1px solid #d5e0d7;
+  border: 1px solid var(--t-neutral-300, #d5e0d7);
   border-radius: 3px;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   cursor: pointer;
-  color: #536158
+  color: var(--t-neutral-600, #536158)
 }
 
 .reason-grid button.is-selected {
-  border-color: #176b3a;
-  background: #eaf6ee;
-  color: #176b3a;
+  border-color: var(--t-secondary-700, #176b3a);
+  background: var(--t-secondary-50, #eaf6ee);
+  color: var(--t-secondary-700, #176b3a);
   font-weight: 750
 }
 
@@ -325,7 +325,7 @@
   display: block;
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #d5e0d7;
+  border: 1px solid var(--t-neutral-300, #d5e0d7);
   border-radius: 4px;
   padding: 11px;
   font: inherit;
@@ -343,9 +343,9 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  border: 1px dashed #aac4b0;
+  border: 1px dashed var(--t-neutral-300, #aac4b0);
   padding: 14px;
-  color: #176b3a;
+  color: var(--t-secondary-700, #176b3a);
   font-weight: 750;
   cursor: pointer
 }
@@ -357,7 +357,7 @@
 .photo-upload small {
   width: 100%;
   padding-left: 26px;
-  color: #748078;
+  color: var(--t-neutral-500, #748078);
   font-weight: 400
 }
 
@@ -394,7 +394,7 @@
 }
 
 .timeline-dot {
-  color: #176b3a
+  color: var(--t-secondary-700, #176b3a)
 }
 
 .timeline-row strong,
@@ -403,7 +403,7 @@
 }
 
 .timeline-row small {
-  color: #758178;
+  color: var(--t-neutral-500, #758178);
   margin-top: 3px;
   font-size: 12px
 }
@@ -414,11 +414,11 @@
   gap: 10px;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #edf1ed
+  border-bottom: 1px solid var(--t-neutral-150, #edf1ed)
 }
 
 .detail-item small {
-  color: #718077
+  color: var(--t-neutral-500, #718077)
 }
 
 .detail-total {
@@ -429,12 +429,12 @@
 
 .return-note {
   margin-top: 14px;
-  background: #f5faf6
+  background: var(--t-neutral-50, #f5faf6)
 }
 
 .return-note p {
   margin-bottom: 0;
-  color: #526158
+  color: var(--t-neutral-600, #526158)
 }
 
 .return-detail-actions {
@@ -443,9 +443,9 @@
 
 .return-detail-actions button,
 .seller-actions button {
-  border: 1px solid #d78a82;
-  background: #fff;
-  color: #a33c32;
+  border: 1px solid var(--t-danger-300, #d78a82);
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-danger-700, #a33c32);
   border-radius: 4px;
   padding: 10px 14px;
   cursor: pointer;
@@ -456,9 +456,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f4f8ff;
+  background: var(--t-info-50, #f4f8ff);
   padding: 13px;
-  color: #4d6596
+  color: var(--t-info-800, #4d6596)
 }
 
 @media(max-width:600px) {

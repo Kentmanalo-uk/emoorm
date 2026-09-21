@@ -269,7 +269,7 @@ const Cart = () => {
                     <div className="cart-suggestion-rating">
                       <div className="cart-suggestion-stars">
                         {[0, 1, 2, 3, 4].map((i) => (
-                          <Star key={i} size={11} weight="fill" color="#f59e0b" />
+                          <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
                         ))}
                       </div>
                       <span className="cart-suggestion-review-count">
@@ -497,7 +497,7 @@ const Cart = () => {
                 </div>
 
                 {appliedVoucher && discountAmount > 0 && (
-                  <div className="summary-row" style={{ color: '#059669' }}>
+                  <div className="summary-row" style={{ color: 'var(--t-primary-600, #059669)' }}>
                     <span>Voucher ({appliedVoucher.voucher.code})</span>
                     <span>-₱{discountAmount.toFixed(2)}</span>
                   </div>
@@ -586,7 +586,7 @@ const Cart = () => {
                   )}
                 </div>
                 {appliedVoucher && (
-                  <p style={{ marginTop: 8, fontSize: 12, color: '#059669' }}>
+                  <p style={{ marginTop: 8, fontSize: 12, color: 'var(--t-primary-600, #059669)' }}>
                     {appliedVoucher.voucher.description || `Discount of ₱${discountAmount.toFixed(2)} applied.`}
                   </p>
                 )}

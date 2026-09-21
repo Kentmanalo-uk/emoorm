@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowUUpLeft, Eye, X, ArrowSquareOut } from '@phosphor-icons/react';
+import { Eye, X, ArrowSquareOut } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
@@ -7,6 +7,7 @@ import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import './AdminModeration.css';
@@ -137,7 +138,7 @@ export default function AdminReturns() {
           <Skeleton.Table cols={7} rows={6} />
         ) : rows.length === 0 ? (
           <div className="admin-empty">
-            <ArrowUUpLeft size={36} weight="fill" />
+            <EmptyArt name="delivery" size={104} />
             <p>{status ? `No ${statusLabel(status).toLowerCase()} return requests` : 'No return requests yet'}</p>
           </div>
         ) : (

@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  Users, MagnifyingGlass as Search, ShieldCheck, ShieldSlash as ShieldOff, UserMinus as UserX, UserCheck,
-  CaretDown as ChevronDown, X, Eye, DownloadSimple, Storefront
-} from '@phosphor-icons/react';
+import { MagnifyingGlass as Search, ShieldCheck, ShieldSlash as ShieldOff, UserMinus as UserX, UserCheck, CaretDown as ChevronDown, X, Eye, DownloadSimple, Storefront } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
@@ -14,6 +11,7 @@ import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import ReasonDialog from '../components/admin/ReasonDialog';
 import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
+import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -196,14 +194,14 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
           <h2 className="admin-card-title">
             Users
             {pagination.total > 0 && (
-              <span style={{ fontWeight: 400, color: '#64748b', fontSize: 14, marginLeft: 8 }}>
+              <span style={{ fontWeight: 400, color: 'var(--t-neutral-500, #64748b)', fontSize: 14, marginLeft: 8 }}>
                 ({pagination.total})
               </span>
             )}
           </h2>
           <div className="admin-toolbar">
             <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-neutral-400, #94a3b8)' }} />
               <input
                 className="admin-search-input"
                 style={{ paddingLeft: 30 }}
@@ -233,7 +231,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
         {isLoading ? (
           <Skeleton.Table cols={6} rows={7} />
         ) : users.length === 0 ? (
-          <div className="admin-empty"><Users size={36} weight="fill" /><p>No users found</p></div>
+          <div className="admin-empty"><EmptyArt name="inbox" size={104} /><p>No users found</p></div>
         ) : (
           <>
             <div className="admin-table-wrap">
@@ -404,7 +402,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                       </button>
                     ))}
                   </div>
-                  <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>
+                  <p style={{ fontSize: 12, color: 'var(--t-neutral-400, #94a3b8)', marginTop: 8 }}>
                     Setting MUNICIPAL_ADMIN grants admin panel access. Assign to a municipality on the Municipalities page.
                   </p>
                 </div>

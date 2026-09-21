@@ -7,7 +7,7 @@
 
 .seller-guide-focus {
   position: fixed;
-  border: 2px solid #22c55e;
+  border: 2px solid var(--t-success-500, #22c55e);
   border-radius: 7px;
   box-shadow: 0 0 0 9999px rgba(15, 23, 42, .58);
   pointer-events: none;
@@ -18,8 +18,8 @@
   position: fixed;
   box-sizing: border-box;
   padding: 18px;
-  background: #fff;
-  border: 1px solid #dce8df;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-secondary-100, #dce8df);
   border-radius: 7px;
   box-shadow: 0 18px 45px rgba(15, 23, 42, .2);
   pointer-events: auto
@@ -29,7 +29,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #059669;
+  color: var(--t-primary-600, #059669);
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase
@@ -43,20 +43,20 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #64748b;
+  color: var(--t-neutral-500, #64748b);
   cursor: pointer
 }
 
 .seller-guide-tip h2 {
   margin: 9px 0 6px;
-  color: #0f172a;
+  color: var(--t-neutral-900, #0f172a);
   font-size: 18px;
   letter-spacing: 0
 }
 
 .seller-guide-tip p {
   margin: 0;
-  color: #64748b;
+  color: var(--t-neutral-500, #64748b);
   font-size: 13px;
   line-height: 1.55
 }
@@ -79,13 +79,13 @@
 .seller-guide-skip {
   border: 0;
   background: transparent;
-  color: #64748b
+  color: var(--t-neutral-500, #64748b)
 }
 
 .seller-guide-next {
-  border: 1px solid #059669;
-  background: #059669;
-  color: #fff
+  border: 1px solid var(--t-primary-600, #059669);
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff)
 }
 
 @media(max-width:600px) {
@@ -127,6 +127,6 @@
   }
 
   .seller-guide-skip {
-    background: #f1f5f9;
+    background: var(--t-neutral-100, #f1f5f9);
   }
 }

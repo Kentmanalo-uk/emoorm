@@ -8,11 +8,12 @@ import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
+import SellerPageHead from '../components/seller/SellerPageHead';
 import './SellerDashboard.css';
 import './SellerStore.css';
 
-const DEFAULT_PRIMARY = '#059669';
-const DEFAULT_SECONDARY = '#f59e0b';
+const DEFAULT_PRIMARY = 'var(--t-primary-600, #059669)';
+const DEFAULT_SECONDARY = 'var(--t-warning-500, #f59e0b)';
 const DESCRIPTION_MAX = 500;
 const PH_MOBILE_REGEX = /^(09\d{9}|\+639\d{9})$/;
 
@@ -155,17 +156,15 @@ export default function SellerStore() {
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
-        <div className="seller-header">
-          <div>
-            <h1>{isNew ? 'Create Your Store' : 'Store Settings'}</h1>
-            <p className="seller-welcome">Your public storefront details</p>
-          </div>
-          {!isNew && isDirty && (
+        <SellerPageHead
+          title={isNew ? 'Create Your Store' : 'Store Settings'}
+          subtitle="Your public storefront details"
+          actions={!isNew && isDirty && (
             <span className="store-unsaved-badge">
               <AlertCircle size={13} /> Unsaved changes
             </span>
           )}
-        </div>
+        />
 
         {isLoading ? (
           <div className="seller-card">
@@ -490,7 +489,7 @@ function ColorPicker({ label, hint, value, onChange }) {
           type="text"
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="#059669"
+          placeholder="var(--t-primary-600, #059669)"
           className="form-input color-hex"
           maxLength={7}
         />
@@ -501,8 +500,8 @@ function ColorPicker({ label, hint, value, onChange }) {
 
 function ThemePreview({ name, logo, banner, primary, secondary }) {
   const style = {
-    '--sp-primary': primary || '#059669',
-    '--sp-secondary': secondary || '#f59e0b',
+    '--sp-primary': primary || 'var(--t-primary-600, #059669)',
+    '--sp-secondary': secondary || 'var(--t-warning-500, #f59e0b)',
   };
   return (
     <div className="theme-preview" style={style}>

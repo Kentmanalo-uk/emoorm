@@ -4,9 +4,9 @@
    competing with the conversation itself. */
 .safety-notice {
   flex-shrink: 0;
-  border-top: 1px solid #f6e3bf;
-  background: #fffbf2;
-  color: #8a5a12;
+  border-top: 1px solid var(--t-warning-100, #f6e3bf);
+  background: var(--t-warning-50, #fffbf2);
+  color: var(--t-warning-800, #8a5a12);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -20,7 +20,7 @@
 
 .safety-notice-icon {
   flex-shrink: 0;
-  color: #d4880f;
+  color: var(--t-warning-600, #d4880f);
 }
 
 /* Truncates rather than wraps, so the strip is always exactly one line tall
@@ -42,7 +42,7 @@
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: #a06a10;
+  color: var(--t-warning-700, #a06a10);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -54,7 +54,7 @@
 }
 
 .safety-notice-toggle:focus-visible {
-  outline: 2px solid #d4880f;
+  outline: 2px solid var(--t-warning-600, #d4880f);
   outline-offset: 1px;
 }
 

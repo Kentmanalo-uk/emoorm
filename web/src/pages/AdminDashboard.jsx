@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle, WarningCircle, BellRinging, CaretRight, ArrowUp, ArrowDown, ArrowClockwise,
-  ChartBar, Storefront, Package, Trophy, ShoppingBag, ShieldCheck, Flag, ClockCounterClockwise, X,
-  MapTrifold,
+  X,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import ReasonDialog from '../components/admin/ReasonDialog';
 import Skeleton from '../components/ui/Skeleton';
+import EmptyArt from '../components/ui/EmptyArt';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import { formatRelativeTime } from '../lib/time';
@@ -164,12 +164,14 @@ function RowFill({ pct }) {
   );
 }
 
-// Empty state: large filled icon with a short message; without an icon it is a plain loading line.
-function Empty({ icon: Icon, title, children }) {
-  if (!Icon) return <p className="dash-empty">{children}</p>;
+// Empty state: an illustration with a short message. Without an `art`
+// name it stays a plain loading line, which is what the brief moment
+// before the first response should look like.
+function Empty({ art, title, children }) {
+  if (!art) return <p className="dash-empty">{children}</p>;
   return (
     <div className="dash-empty-state">
-      <span className="dash-empty-icon"><Icon size={44} weight="fill" /></span>
+      <EmptyArt name={art} size={86} />
       <strong>{title}</strong>
       {children && <span>{children}</span>}
     </div>
@@ -546,7 +548,7 @@ export default function AdminDashboard() {
             {!analytics ? (
               <div className="dash-chart"><Skeleton width="100%" height={100} /></div>
             ) : sales.length === 0 || salesTotal === 0 ? (
-              <Empty icon={ChartBar} title="No sales yet">Completed orders in this period will appear here.</Empty>
+              <Empty art="analytics" title="No sales yet">Completed orders in this period will appear here.</Empty>
             ) : (
               <div className="dash-chart-wrap">
                 <div
@@ -606,7 +608,7 @@ export default function AdminDashboard() {
               ) : null}
             >
               {!analytics ? <Empty>Loading…</Empty> : municipalities.length === 0 ? (
-                <Empty icon={MapTrifold} title="No municipalities">Municipalities appear here once they are added.</Empty>
+                <Empty art="places" title="No municipalities">Municipalities appear here once they are added.</Empty>
               ) : (
                 <>
                   <div className="dash-coverage">
@@ -620,7 +622,7 @@ export default function AdminDashboard() {
                     </span>
                   </div>
                   {shownMunicipalities.length === 0 ? (
-                    <Empty icon={ShieldCheck} title="All staffed">Every municipality already has an admin.</Empty>
+                    <Empty art="places" title="All staffed">Every municipality already has an admin.</Empty>
                   ) : (
                       <ul className="dash-list dash-list-bars">
                         {shownMunicipalities.map((m) => (
@@ -691,7 +693,7 @@ export default function AdminDashboard() {
           {!isSuperAdmin && (
             <Section title="Seller applications" span="half" link="/admin/sellers">
               {pendingSellers === null ? <Empty>Loading…</Empty> : pendingSellers.length === 0 ? (
-                <Empty icon={Storefront} title="No pending applications">New seller applications will show up here.</Empty>
+                <Empty art="launch" title="No pending applications">New seller applications will show up here.</Empty>
               ) : (
                 <ul className="dash-list">
                   {pendingSellers.map((s) => (
@@ -729,7 +731,7 @@ export default function AdminDashboard() {
           {!isSuperAdmin && (
             <Section title="Products awaiting approval" span="half" link="/admin/products">
               {pendingProducts === null ? <Empty>Loading…</Empty> : pendingProducts.length === 0 ? (
-                <Empty icon={Package} title="No products waiting">Every submitted product has been reviewed.</Empty>
+                <Empty art="products" title="No products waiting">Every submitted product has been reviewed.</Empty>
               ) : (
                 <ul className="dash-list">
                   {pendingProducts.map((p) => (
@@ -779,7 +781,7 @@ export default function AdminDashboard() {
             ) : null}
           >
             {!analytics ? <Empty>Loading…</Empty> : topStores.length === 0 ? (
-              <Empty icon={Trophy} title="No top stores yet">Stores with completed sales will rank here.</Empty>
+              <Empty art="shopping" title="No top stores yet">Stores with completed sales will rank here.</Empty>
             ) : (
               <ol className="dash-list dash-rank">
                 {topStores.map((st, i) => (
@@ -813,7 +815,7 @@ export default function AdminDashboard() {
             ) : null}
           >
             {!analytics ? <Empty>Loading…</Empty> : topProducts.length === 0 ? (
-              <Empty icon={ShoppingBag} title="No top products yet">Best-selling products will rank here.</Empty>
+              <Empty art="products" title="No top products yet">Best-selling products will rank here.</Empty>
             ) : (
               <ol className="dash-list dash-rank">
                 {topProducts.map((p, i) => (
@@ -836,7 +838,7 @@ export default function AdminDashboard() {
           {/* Health, reports and activity */}
           <Section title="Stores to check" span="third" link="/admin/all-sellers" linkLabel="All sellers">
             {health === null ? <Empty>Loading…</Empty> : health.length === 0 ? (
-              <Empty icon={ShieldCheck} title="All stores look healthy">No store needs a follow-up right now.</Empty>
+              <Empty art="maintenance" title="All stores look healthy">No store needs a follow-up right now.</Empty>
             ) : (
               <ul className="dash-list">
                 {health.map((st) => (
@@ -863,7 +865,7 @@ export default function AdminDashboard() {
 
           <Section title="Open reports" span="third" link="/admin/reports">
             {reports === null ? <Empty>Loading…</Empty> : reports.length === 0 ? (
-              <Empty icon={Flag} title="No open reports">Reports from buyers will appear here.</Empty>
+              <Empty art="inbox" title="No open reports">Reports from buyers will appear here.</Empty>
             ) : (
               <ul className="dash-list">
                 {reports.map((r) => (
@@ -881,7 +883,7 @@ export default function AdminDashboard() {
 
           <Section title="Recent activity" span="third" link="/admin/audit-logs" linkLabel="Audit log">
             {activity === null ? <Empty>Loading…</Empty> : activity.length === 0 ? (
-              <Empty icon={ClockCounterClockwise} title="No activity yet">Approvals and other admin actions will be listed here.</Empty>
+              <Empty art="activity" title="No activity yet">Approvals and other admin actions will be listed here.</Empty>
             ) : (
               <ul className="dash-feed">
                 {activity.map((log) => (

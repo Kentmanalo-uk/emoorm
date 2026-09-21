@@ -1,6 +1,6 @@
 .seller-returns {
-  padding: 30px 34px 60px;
-  color: #17231c
+  padding: 0 0 20px;
+  color: var(--t-secondary-950, #17231c)
 }
 
 .seller-returns-head {
@@ -10,17 +10,13 @@
   margin-bottom: 25px
 }
 
-.seller-returns h1 {
-  margin: 4px 0 6px;
-  /* Medium, like every other page heading in the Seller Center; without
-     this it fell back to the browser default of bold. */
-  font-weight: 500;
-  font-size: 29px
-}
+/* Title size, weight and spacing come from SellerPageHead now — this rule
+   made Returns the one page whose heading was 29px and indented further
+   than the rest. */
 
 .seller-returns-head p {
   margin: 0;
-  color: #6a776e
+  color: var(--t-neutral-500, #6a776e)
 }
 
 .seller-return-stat {
@@ -29,10 +25,11 @@
   column-gap: 9px;
   align-items: center;
   padding: 14px 18px;
-  border: 1px solid #dce8df;
-  background: #f5faf6;
+  background: var(--t-neutral-50, #f5faf6);
   border-radius: 5px;
-  color: #176b3a
+  color: var(--t-secondary-700, #176b3a)
+
+  box-shadow: var(--elev-card);
 }
 
 .seller-return-stat svg {
@@ -45,13 +42,12 @@
 
 .seller-return-stat span {
   font-size: 11px;
-  color: #6b796f
+  color: var(--t-neutral-500, #6b796f)
 }
 
 .seller-return-tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid #dce5dd;
   overflow: auto
 }
 
@@ -62,20 +58,20 @@
   padding: 11px 13px;
   border: 0;
   background: transparent;
-  color: #66736a;
+  color: var(--t-neutral-500, #66736a);
   white-space: nowrap;
   cursor: pointer
 }
 
 .seller-return-tabs button.is-active {
-  color: #176b3a;
-  border-bottom: 2px solid #176b3a;
+  color: var(--t-secondary-700, #176b3a);
+  border-bottom: 2px solid var(--t-secondary-700, #176b3a);
   font-weight: 750
 }
 
 .seller-return-tabs b {
   font-size: 11px;
-  background: #edf3ee;
+  background: var(--t-neutral-150, #edf3ee);
   padding: 3px 6px;
   border-radius: 10px
 }
@@ -85,6 +81,13 @@
   grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.15fr);
   gap: 18px;
   margin-top: 18px
+}
+
+/* The detail pane only exists once a request is picked. Holding its column
+   open meanwhile squeezed the list into half the width and left the other
+   half blank. */
+.seller-return-layout.is-single {
+  grid-template-columns: 1fr;
 }
 
 .seller-return-list {
@@ -98,17 +101,18 @@
   justify-content: space-between;
   gap: 12px;
   text-align: left;
-  border: 1px solid #e0e8e1;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   padding: 15px;
   border-radius: 5px;
   cursor: pointer;
   color: inherit
+
+  box-shadow: var(--elev-card);
 }
 
 .seller-return-row.is-selected {
-  border-color: #176b3a;
-  box-shadow: 0 0 0 1px #176b3a
+  border-color: var(--t-secondary-700, #176b3a);
+  box-shadow: 0 0 0 1px var(--t-secondary-700, #176b3a)
 }
 
 .seller-return-row strong,
@@ -119,7 +123,7 @@
 
 .seller-return-row span {
   font-size: 12px;
-  color: #758178;
+  color: var(--t-neutral-500, #758178);
   margin-top: 7px
 }
 
@@ -137,11 +141,12 @@
 }
 
 .seller-return-detail {
-  border: 1px solid #dce8df;
   border-radius: 6px;
   padding: 22px;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   align-self: start
+
+  box-shadow: var(--elev-card);
 }
 
 .seller-detail-top {
@@ -157,13 +162,13 @@
 
 .seller-detail-top p {
   font-size: 13px;
-  color: #748078;
+  color: var(--t-neutral-500, #748078);
   margin: 0
 }
 
 .seller-detail-items {
-  border-top: 1px solid #edf1ed;
-  border-bottom: 1px solid #edf1ed;
+  border-top: 1px solid var(--t-neutral-150, #edf1ed);
+  border-bottom: 1px solid var(--t-neutral-150, #edf1ed);
   margin: 20px 0;
   padding: 7px 0
 }
@@ -177,10 +182,10 @@
 }
 
 .buyer-note {
-  background: #f5faf6;
+  background: var(--t-neutral-50, #f5faf6);
   padding: 12px;
   font-size: 13px;
-  color: #536158
+  color: var(--t-neutral-600, #536158)
 }
 
 .seller-action-form {
@@ -211,8 +216,8 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  background: #176b3a;
-  color: #fff;
+  background: var(--t-secondary-700, #176b3a);
+  color: var(--t-neutral-0, #fff);
   border: 0;
   border-radius: 4px;
   padding: 11px 15px;
@@ -227,16 +232,17 @@
 .seller-return-empty {
   padding: 55px 20px;
   text-align: center;
-  color: #718077;
-  border: 1px dashed #cddbd0;
+  color: var(--t-neutral-500, #718077);
   display: grid;
   justify-items: center;
   gap: 10px
+
+  box-shadow: var(--elev-card);
 }
 
 @media(max-width:800px) {
   .seller-returns {
-    padding: 20px 15px 45px
+    padding: 0 0 16px
   }
 
   .seller-returns-head {
@@ -283,7 +289,7 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #059669;
+    color: var(--t-primary-600, #059669);
   }
 
   .sc-content .seller-returns h1 {
@@ -295,7 +301,7 @@
   .sc-content .seller-returns-head p {
     font-size: 13px;
     line-height: 1.45;
-    color: #6b7280;
+    color: var(--t-neutral-500, #6b7280);
   }
 
   .sc-content .seller-return-stat {
@@ -303,26 +309,26 @@
     column-gap: 12px;
     padding: 12px 14px;
     border-radius: 12px;
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
   }
 
   .sc-content .seller-return-stat svg {
     box-sizing: content-box;
     padding: 9px;
     border-radius: 50%;
-    background: #e9f7f0;
-    color: #059669;
+    background: var(--t-secondary-50, #e9f7f0);
+    color: var(--t-primary-600, #059669);
   }
 
   .sc-content .seller-return-stat strong {
     font-size: 20px;
     line-height: 1.1;
-    color: #0f172a;
+    color: var(--t-neutral-900, #0f172a);
   }
 
   .sc-content .seller-return-stat span {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--t-neutral-500, #6b7280);
   }
 
   /* Tabs */
@@ -335,24 +341,24 @@
   .sc-content .seller-return-tabs button {
     min-height: 40px;
     padding: 8px 14px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
     border-radius: 999px;
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
     font-size: 13px;
     font-weight: 500;
-    color: #374151;
+    color: var(--t-neutral-700, #374151);
   }
 
   .sc-content .seller-return-tabs button.is-active {
-    border-color: #059669;
-    background: #059669;
-    color: #fff;
+    border-color: var(--t-primary-600, #059669);
+    background: var(--t-primary-600, #059669);
+    color: var(--t-neutral-0, #fff);
     font-weight: 600;
   }
 
   .sc-content .seller-return-tabs button.is-active b {
     background: rgba(255, 255, 255, 0.22);
-    color: #fff;
+    color: var(--t-neutral-0, #fff);
   }
 
   .sc-content .seller-return-layout {
@@ -375,7 +381,7 @@
 
   .sc-content .seller-return-row.is-selected {
     border-color: transparent;
-    box-shadow: inset 0 0 0 2px #059669;
+    box-shadow: inset 0 0 0 2px var(--t-primary-600, #059669);
   }
 
   .sc-content .seller-return-row > div:first-child {
@@ -403,7 +409,7 @@
   .sc-content .seller-status {
     padding: 3px 10px;
     border-radius: 999px;
-    background: #f1f5f9;
+    background: var(--t-neutral-100, #f1f5f9);
     font-size: 11px;
     font-style: normal;
     font-weight: 700;
@@ -412,39 +418,39 @@
   }
 
   .sc-content .seller-status.status-requested {
-    background: #fef3c7;
-    color: #b45309;
+    background: var(--t-warning-100, #fef3c7);
+    color: var(--t-warning-700, #b45309);
   }
 
   .sc-content .seller-status.status-approved,
   .sc-content .seller-status.status-awaiting_shipment,
   .sc-content .seller-status.status-received {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: var(--t-info-100, #dbeafe);
+    color: var(--t-info-700, #1d4ed8);
   }
 
   .sc-content .seller-status.status-refunded,
   .sc-content .seller-status.status-closed {
-    background: #d1fae5;
-    color: #047857;
+    background: var(--t-primary-100, #d1fae5);
+    color: var(--t-primary-700, #047857);
   }
 
   .sc-content .seller-status.status-rejected,
   .sc-content .seller-status.status-cancelled {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: var(--t-danger-100, #fee2e2);
+    color: var(--t-danger-700, #b91c1c);
   }
 
   .sc-content .seller-return-empty {
     padding: 36px 16px;
     border: 0;
     border-radius: 12px;
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
     font-size: 14px;
   }
 
   .sc-content .seller-return-empty svg {
-    color: #a7f3d0;
+    color: var(--t-primary-200, #a7f3d0);
   }
 
   /* Request detail */
@@ -496,7 +502,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    color: #334155;
+    color: var(--t-neutral-700, #334155);
   }
 
   .sc-content .seller-action-form input:not([type="checkbox"]),
@@ -506,13 +512,13 @@
     width: 100%;
     min-height: 46px;
     padding: 10px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--t-neutral-300, #d1d5db);
     border-radius: 10px;
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
     font: inherit;
     font-size: 16px;
     font-weight: 400;
-    color: #111827;
+    color: var(--t-neutral-900, #111827);
   }
 
   .sc-content .seller-action-form textarea {
@@ -523,7 +529,7 @@
   .sc-content .seller-action-form input:focus,
   .sc-content .seller-action-form select:focus,
   .sc-content .seller-action-form textarea:focus {
-    border-color: #059669;
+    border-color: var(--t-primary-600, #059669);
     outline: none;
     box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
   }
@@ -539,7 +545,7 @@
     height: 20px;
     margin: 0;
     flex-shrink: 0;
-    accent-color: #059669;
+    accent-color: var(--t-primary-600, #059669);
   }
 
   .sc-content .seller-actions {
@@ -561,15 +567,52 @@
   }
 
   .sc-content .seller-actions > button:not(.seller-approve) {
-    border: 1px solid #fca5a5;
-    background: #fff;
-    color: #b91c1c;
+    border: 1px solid var(--t-danger-300, #fca5a5);
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-danger-700, #b91c1c);
   }
 
   .sc-content .seller-actions .seller-approve,
   .sc-content .seller-wide-action {
     min-height: 46px;
     border-radius: 10px;
-    background: #059669;
+    background: var(--t-primary-600, #059669);
+  }
+}
+
+/* Matches .seller-empty.is-page: this page is a list, so its empty state
+   should fill the card rather than float in it. */
+/* The dashed outline used to be this block's only surface, so removing it
+   left the empty state floating on the page background. It gets the same
+   card as every other list surface instead. */
+.seller-return-empty {
+  background: var(--t-neutral-0, #fff);
+  border-radius: 12px;
+  box-shadow: var(--elev-card);
+  min-height: 420px;
+  align-content: center;
+  gap: 0;
+  padding: 56px 24px 64px;
+}
+
+.seller-return-empty strong {
+  margin-top: 22px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.seller-return-empty p {
+  margin: 6px 0 0;
+  max-width: 46ch;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--t-neutral-500, #6a776e);
+}
+
+@media (max-width: 640px) {
+  .seller-return-empty {
+    min-height: 320px;
+    padding: 36px 16px 44px;
   }
 }

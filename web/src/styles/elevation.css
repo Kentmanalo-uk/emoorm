@@ -1,0 +1,33 @@
+/* E-MOORM Design System — Elevation
+   ─────────────────────────────────────────────────────────────────────────
+   Surfaces in the Seller Center and the admin panels are separated by shadow
+   rather than by an outline. A 1px border reads as a drawn box and, once a
+   page holds a dozen of them, the grid of lines competes with the content.
+
+   One soft, wide layer per level: a generous blur with no spread and no
+   contact shadow, so the surface reads as gently lifted rather than pressed
+   onto the page.
+
+   The tint is the important part. #959da5 is a blue-grey, not black, so the
+   shadow stays neutral against the page background instead of muddying it —
+   black at this opacity turns the grey underneath brown. The three levels
+   share that colour and differ only in blur and opacity, which is what keeps
+   a card, a hover state and an open menu feeling like the same material. */
+:root {
+  /* Default surface: cards, panels, stat tiles, table containers. */
+  --elev-card: rgba(149, 157, 165, 0.06) 0px 8px 24px;
+
+  /* A surface sitting on another surface, or one under the cursor. */
+  --elev-raised: rgba(149, 157, 165, 0.085) 0px 14px 34px;
+
+  /* Leaves the page: menus, popovers, dropdowns, dialogs. */
+  --elev-popover: rgba(149, 157, 165, 0.23) 0px 22px 54px;
+
+  /* Inset outline for a chosen option, where a border would otherwise return. */
+  --elev-selected: inset 0 0 0 1.5px var(--color-secondary, #059669);
+
+  /* The faintest possible row rule. Used only inside dense tables, where
+     removing the line outright costs more in scannability than the line
+     costs in noise. */
+  --rule-hairline: rgba(15, 23, 42, 0.05);
+}

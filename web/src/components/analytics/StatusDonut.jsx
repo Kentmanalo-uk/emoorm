@@ -1,18 +1,17 @@
-import { ChartDonut } from '@phosphor-icons/react';
 import EmptyState from './EmptyState';
 import './analytics.css';
 
 const DEFAULT_COLORS = {
-  PENDING: '#f59e0b',
-  CONFIRMED: '#3b82f6',
-  PREPARING: '#8b5cf6',
-  READY: '#0ea5e9',
-  COMPLETED: '#059669',
-  CANCELLED: '#ef4444',
-  APPROVED: '#059669',
-  HIDDEN: '#6b7280',
-  SUSPENDED: '#ef4444',
-  ARCHIVED: '#374151',
+  PENDING: 'var(--t-warning-500, #f59e0b)',
+  CONFIRMED: 'var(--t-info-500, #3b82f6)',
+  PREPARING: 'var(--t-violet-500, #8b5cf6)',
+  READY: 'var(--t-sky-500, #0ea5e9)',
+  COMPLETED: 'var(--t-primary-600, #059669)',
+  CANCELLED: 'var(--t-danger-500, #ef4444)',
+  APPROVED: 'var(--t-primary-600, #059669)',
+  HIDDEN: 'var(--t-neutral-500, #6b7280)',
+  SUSPENDED: 'var(--t-danger-500, #ef4444)',
+  ARCHIVED: 'var(--t-neutral-700, #374151)',
 };
 
 const StatusDonut = ({
@@ -26,7 +25,7 @@ const StatusDonut = ({
   const total = entries.reduce((s, [, v]) => s + v, 0);
 
   if (total === 0) {
-    return <EmptyState icon={ChartDonut} title={emptyTitle} message={emptyMessage} compact />;
+    return <EmptyState art="analytics" title={emptyTitle} message={emptyMessage} compact />;
   }
 
   const radius = size / 2 - 8;
@@ -46,7 +45,7 @@ const StatusDonut = ({
         cy={cy}
         r={radius}
         fill="none"
-        stroke={colors[key] || '#9ca3af'}
+        stroke={colors[key] || 'var(--t-neutral-400, #9ca3af)'}
         strokeWidth="16"
         strokeDasharray={`${dash} ${gap}`}
         strokeDashoffset={-offset}
@@ -71,7 +70,7 @@ const StatusDonut = ({
       <ul className="an-donut-legend">
         {entries.map(([key, value]) => (
           <li key={key}>
-            <span className="an-donut-swatch" style={{ background: colors[key] || '#9ca3af' }} />
+            <span className="an-donut-swatch" style={{ background: colors[key] || 'var(--t-neutral-400, #9ca3af)' }} />
             <span className="an-donut-key">{key.toLowerCase()}</span>
             <span className="an-donut-val">{value}</span>
           </li>

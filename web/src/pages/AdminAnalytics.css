@@ -19,8 +19,8 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--t-neutral-50, #f8fafc);
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
   border-radius: 8px;
   padding: 12px 20px;
   min-width: 100px;
@@ -29,7 +29,7 @@
 .analytics-status-count {
   font-size: 22px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--t-neutral-900, #0f172a);
 }
 
 .analytics-revenue-card {
@@ -37,9 +37,9 @@
   align-items: center;
   gap: 14px;
   padding: 16px 20px;
-  background: #f0fdf4;
-  border-color: #a7f3d0;
-  color: #059669;
+  background: var(--t-success-50, #f0fdf4);
+  border-color: var(--t-primary-200, #a7f3d0);
+  color: var(--t-primary-600, #059669);
 }
 
 .analytics-revenue-label {
@@ -48,12 +48,12 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0 0 2px;
-  color: #64748b;
+  color: var(--t-neutral-500, #64748b);
 }
 
 .analytics-revenue-value {
   font-size: 24px;
   font-weight: 800;
-  color: #059669;
+  color: var(--t-primary-600, #059669);
   margin: 0;
 }

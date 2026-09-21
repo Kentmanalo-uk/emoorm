@@ -17,7 +17,7 @@
 .dash-subtitle {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .dash-controls {
@@ -29,26 +29,26 @@
 .dash-segment {
   display: inline-flex;
   padding: 3px;
-  background: #e9ecef;
+  background: var(--t-neutral-150, #e9ecef);
 }
 
 .dash-segment button {
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
-  color: #4b5563;
+  color: var(--t-neutral-600, #4b5563);
   background: transparent;
   border: 0;
   cursor: pointer;
 }
 
 .dash-segment button:hover {
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .dash-segment button.is-active {
-  color: #047857;
-  background: #fff;
+  color: var(--t-primary-700, #047857);
+  background: var(--t-neutral-0, #fff);
 }
 
 .dash-refresh {
@@ -57,15 +57,15 @@
   justify-content: center;
   width: 34px;
   height: 34px;
-  color: #4b5563;
-  background: #e9ecef;
+  color: var(--t-neutral-600, #4b5563);
+  background: var(--t-neutral-150, #e9ecef);
   border: 0;
   cursor: pointer;
 }
 
 .dash-refresh:hover {
-  color: #047857;
-  background: #dfe3e8;
+  color: var(--t-primary-700, #047857);
+  background: var(--t-neutral-200, #dfe3e8);
 }
 
 .dash-custom-range {
@@ -73,7 +73,7 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 12px 16px;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
 }
 
 .dash-custom-range label {
@@ -82,14 +82,14 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
 }
 
 .dash-custom-range input {
   padding: 6px 8px;
   font: inherit;
   font-size: 13px;
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
   border: 0;
 }
 
@@ -99,19 +99,19 @@
   align-items: flex-start;
   gap: 12px;
   padding: 14px 18px;
-  color: #b45309;
-  background: #fef7e6;
+  color: var(--t-warning-700, #b45309);
+  background: var(--t-warning-50, #fef7e6);
 }
 
 .dash-attention.is-urgent {
-  color: #b91c1c;
-  background: #fdeeee;
+  color: var(--t-danger-700, #b91c1c);
+  background: var(--t-danger-50, #fdeeee);
 }
 
 .dash-attention.is-clear {
   align-items: center;
-  color: #047857;
-  background: #e9f7f0;
+  color: var(--t-primary-700, #047857);
+  background: var(--t-secondary-50, #e9f7f0);
 }
 
 .dash-attention > svg {
@@ -151,13 +151,13 @@
 
 .dash-attention strong {
   font-size: 14px;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .dash-attention-sub {
   font-size: 13px;
   font-weight: 400;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .dash-attention-body {
@@ -177,17 +177,17 @@
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   text-decoration: none;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
 }
 
 .dash-chip:hover {
-  color: #047857;
+  color: var(--t-primary-700, #047857);
 }
 
 .dash-chip.sev-high {
-  color: #b91c1c;
+  color: var(--t-danger-700, #b91c1c);
 }
 
 .dash-error {
@@ -196,8 +196,8 @@
   gap: 8px;
   padding: 12px 16px;
   font-size: 13px;
-  color: #b91c1c;
-  background: #fdeeee;
+  color: var(--t-danger-700, #b91c1c);
+  background: var(--t-danger-50, #fdeeee);
 }
 
 /* Headline numbers */
@@ -212,7 +212,9 @@
   flex-direction: column;
   gap: 6px;
   padding: 18px 20px;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
+  border-radius: 12px;
+  box-shadow: var(--elev-card);
 }
 
 .dash-stat-top {
@@ -225,7 +227,7 @@
 .dash-stat-label {
   font-size: 15px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .dash-stat-value {
@@ -233,13 +235,13 @@
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.01em;
-  color: #0f172a;
+  color: var(--t-neutral-900, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
 .dash-stat-hint {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .dash-trend {
@@ -253,18 +255,18 @@
 }
 
 .dash-trend.is-up {
-  color: #047857;
-  background: #e9f7f0;
+  color: var(--t-primary-700, #047857);
+  background: var(--t-secondary-50, #e9f7f0);
 }
 
 .dash-trend.is-down {
-  color: #b91c1c;
-  background: #fdeeee;
+  color: var(--t-danger-700, #b91c1c);
+  background: var(--t-danger-50, #fdeeee);
 }
 
 .dash-trend.is-flat {
-  color: #6b7280;
-  background: #f3f4f6;
+  color: var(--t-neutral-500, #6b7280);
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 /* Cards */
@@ -292,7 +294,9 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
+  border-radius: 12px;
+  box-shadow: var(--elev-card);
 }
 
 /* A ceiling on how tall a row may grow, so one long feed cannot force the
@@ -325,13 +329,13 @@
 }
 
 .dash-card-body::-webkit-scrollbar-thumb {
-  border: 2px solid #fff;
+  border: 2px solid var(--t-neutral-0, #fff);
   border-radius: 4px;
-  background: #e5e7eb;
+  background: var(--t-neutral-200, #e5e7eb);
 }
 
 .dash-card-body:hover::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--t-neutral-300, #d1d5db);
 }
 
 .dash-card-head {
@@ -355,19 +359,19 @@
   margin: 0;
   font-size: 17.5px;
   font-weight: 500;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .dash-card-meta {
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .dash-card-head h2 + .dash-card-meta::before {
   content: '·';
   margin-right: 8px;
-  color: #d1d5db;
+  color: var(--t-neutral-300, #d1d5db);
 }
 
 /* Controls that change what this card shows, as opposed to the link, which
@@ -383,7 +387,7 @@
   display: inline-flex;
   padding: 2px;
   border-radius: 7px;
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 .dash-card-toggle button {
@@ -391,7 +395,7 @@
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
@@ -400,17 +404,17 @@
 }
 
 .dash-card-toggle button:hover {
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .dash-card-toggle button.is-active {
-  color: #065f46;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+  color: var(--t-primary-800, #065f46);
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-card);
 }
 
 .dash-card-toggle button:focus-visible {
-  outline: 2px solid #059669;
+  outline: 2px solid var(--t-primary-600, #059669);
   outline-offset: 1px;
 }
 
@@ -426,7 +430,7 @@
   height: 26px;
   margin-left: auto;
   border-radius: 7px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   text-decoration: none;
   transition: color .12s, background-color .12s;
 }
@@ -436,13 +440,13 @@
 }
 
 .dash-card-link:hover {
-  color: #047857;
-  background: #ecfdf5;
+  color: var(--t-primary-700, #047857);
+  background: var(--t-primary-50, #ecfdf5);
 }
 
 .dash-card-link:focus-visible {
-  color: #047857;
-  outline: 2px solid #059669;
+  color: var(--t-primary-700, #047857);
+  outline: 2px solid var(--t-primary-600, #059669);
   outline-offset: 1px;
 }
 
@@ -450,7 +454,7 @@
   margin: 0;
   padding: 18px;
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 /* Chart */
@@ -466,28 +470,28 @@
 .dash-chart-bar {
   flex: 1;
   min-width: 3px;
-  background: #34d399;
+  background: var(--t-primary-400, #34d399);
   transition: background-color .15s;
 }
 
 .dash-chart-bar:hover {
-  background: #059669;
+  background: var(--t-primary-600, #059669);
 }
 
 /* The tallest bar in the range. Without it every bar reads the same and
    the eye has to compare heights by hand. */
 .dash-chart-bar.is-peak {
-  background: #059669;
+  background: var(--t-primary-600, #059669);
 }
 
 /* A day with no completed orders still needs a tick so the axis reads as
    continuous, but green would claim revenue that never arrived. */
 .dash-chart-bar.is-zero {
-  background: #e9ecef;
+  background: var(--t-neutral-150, #e9ecef);
 }
 
 .dash-chart-bar.is-zero:hover {
-  background: #d1d5db;
+  background: var(--t-neutral-300, #d1d5db);
 }
 
 /* Average reference line, drawn behind the bars. */
@@ -496,7 +500,7 @@
   left: 18px;
   right: 18px;
   height: 0;
-  border-top: 1px dashed #cbd5e1;
+  border-top: 1px dashed var(--t-neutral-300, #cbd5e1);
   pointer-events: none;
 }
 
@@ -507,8 +511,8 @@
   font-size: 10.5px;
   font-style: normal;
   font-weight: 600;
-  color: #9ca3af;
-  background: #fff;
+  color: var(--t-neutral-400, #9ca3af);
+  background: var(--t-neutral-0, #fff);
   padding: 0 4px;
 }
 
@@ -519,12 +523,12 @@
   gap: 10px;
   padding: 0 18px 14px;
   font-size: 11.5px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .dash-chart-peak {
   font-weight: 600;
-  color: #047857;
+  color: var(--t-primary-700, #047857);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -550,7 +554,7 @@
 
 .dash-list li:hover,
 .dash-feed li:hover {
-  background: #f9fafb;
+  background: var(--t-neutral-50, #f9fafb);
 }
 
 .dash-list-main {
@@ -571,7 +575,7 @@
 .dash-list-main strong {
   font-size: 13px;
   font-weight: 600;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .dash-list-main a {
@@ -581,26 +585,26 @@
 }
 
 .dash-list-main a:hover strong {
-  color: #047857;
+  color: var(--t-primary-700, #047857);
 }
 
 .dash-list-main > span {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   text-transform: none;
 }
 
 .dash-list-side {
   flex-shrink: 0;
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .dash-list-value {
   flex-shrink: 0;
   font-size: 13px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   font-variant-numeric: tabular-nums;
 }
 
@@ -614,8 +618,8 @@
   overflow: hidden;
   font-size: 14px;
   font-weight: 700;
-  color: #047857;
-  background: #e9f7f0;
+  color: var(--t-primary-700, #047857);
+  background: var(--t-secondary-50, #e9f7f0);
 }
 
 .dash-thumb img {
@@ -629,13 +633,13 @@
   width: 16px;
   font-size: 13px;
   font-weight: 700;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
 .dash-rank li:first-child .dash-rank-no {
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 /* Inline actions */
@@ -661,22 +665,22 @@
 }
 
 .dash-btn-primary {
-  color: #fff;
-  background: #059669;
+  color: var(--t-neutral-0, #fff);
+  background: var(--t-primary-600, #059669);
 }
 
 .dash-btn-primary:hover:not(:disabled) {
-  background: #047857;
+  background: var(--t-primary-700, #047857);
 }
 
 .dash-btn-quiet {
-  color: #4b5563;
-  background: #f3f4f6;
+  color: var(--t-neutral-600, #4b5563);
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 .dash-btn-quiet:hover:not(:disabled) {
-  color: #111827;
-  background: #e5e7eb;
+  color: var(--t-neutral-900, #111827);
+  background: var(--t-neutral-200, #e5e7eb);
 }
 
 /* Store health tags */
@@ -693,14 +697,14 @@
   font-size: 11px;
   font-style: normal;
   font-weight: 600;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--t-warning-800, #92400e);
+  background: var(--t-warning-100, #fef3c7);
 }
 
 .dash-tag.tag-high_cancellations,
 .dash-tag.tag-low_rating {
-  color: #b91c1c;
-  background: #fdeeee;
+  color: var(--t-danger-700, #b91c1c);
+  background: var(--t-danger-50, #fdeeee);
 }
 
 /* Activity feed */
@@ -709,7 +713,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #34d399;
+  background: var(--t-primary-400, #34d399);
 }
 
 /* Below this the thirds are too narrow to hold a name and a number, so
@@ -809,7 +813,7 @@
   top: 0;
   bottom: 0;
   left: 0;
-  background: #ecfdf5;
+  background: var(--t-primary-50, #ecfdf5);
 }
 
 .dash-list-bars li > *:not(.dash-row-fill) {
@@ -824,13 +828,13 @@
   white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .dash-row-sub {
   flex-shrink: 0;
   font-size: 11.5px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   font-variant-numeric: tabular-nums;
 }
 
@@ -845,8 +849,8 @@
 }
 
 .dash-chip.is-warn {
-  color: #b45309;
-  background: #fef3c7;
+  color: var(--t-warning-700, #b45309);
+  background: var(--t-warning-100, #fef3c7);
 }
 
 
@@ -869,7 +873,7 @@
   margin-left: auto;
   font-size: 12.5px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   font-variant-numeric: tabular-nums;
 }
 
@@ -887,19 +891,19 @@
   height: 8px;
   overflow: hidden;
   border-radius: 4px;
-  background: #f1f3f5;
+  background: var(--t-neutral-100, #f1f3f5);
 }
 
 .dash-coverage-bar > span {
   display: block;
   height: 100%;
   border-radius: 4px;
-  background: #059669;
+  background: var(--t-primary-600, #059669);
 }
 
 .dash-coverage-note {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 /* Order pipeline */
@@ -915,7 +919,7 @@
   height: 10px;
   overflow: hidden;
   border-radius: 5px;
-  background: #f1f3f5;
+  background: var(--t-neutral-100, #f1f3f5);
 }
 
 .dash-pipeline-bar > span {
@@ -954,12 +958,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .dash-legend-value {
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   font-variant-numeric: tabular-nums;
 }
 
@@ -968,14 +972,14 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #9ca3af;
+  background: var(--t-neutral-400, #9ca3af);
 }
 
-.dash-dot.is-amber, .dash-pipeline-bar > span.is-amber { background: #f59e0b; }
-.dash-dot.is-blue,  .dash-pipeline-bar > span.is-blue  { background: #3b82f6; }
-.dash-dot.is-teal,  .dash-pipeline-bar > span.is-teal  { background: #14b8a6; }
-.dash-dot.is-green, .dash-pipeline-bar > span.is-green { background: #059669; }
-.dash-dot.is-red,   .dash-pipeline-bar > span.is-red   { background: #ef4444; }
+.dash-dot.is-amber, .dash-pipeline-bar > span.is-amber { background: var(--t-warning-500, #f59e0b); }
+.dash-dot.is-blue,  .dash-pipeline-bar > span.is-blue  { background: var(--t-info-500, #3b82f6); }
+.dash-dot.is-teal,  .dash-pipeline-bar > span.is-teal  { background: var(--t-teal-500, #14b8a6); }
+.dash-dot.is-green, .dash-pipeline-bar > span.is-green { background: var(--t-primary-600, #059669); }
+.dash-dot.is-red,   .dash-pipeline-bar > span.is-red   { background: var(--t-danger-500, #ef4444); }
 
 /* Counts that are true of the platform right now, rather than of the
    selected range — kept visually quieter than the range figures above. */
@@ -987,12 +991,11 @@
      below them. */
   margin: auto 0 0;
   padding-top: 12px;
-  border-top: 1px solid #f1f3f5;
 }
 
 .dash-figures dt {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1002,17 +1005,17 @@
   margin: 2px 0 0;
   font-size: 17px;
   font-weight: 600;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   font-variant-numeric: tabular-nums;
 }
 
 .dash-figures dd.is-warn {
-  color: #b45309;
+  color: var(--t-warning-700, #b45309);
 }
 
 .dash-pipeline-bar.is-empty {
   background: repeating-linear-gradient(
-    90deg, #f1f3f5 0 6px, #e9ecef 6px 12px
+    90deg, var(--t-neutral-100, #f1f3f5) 0 6px, var(--t-neutral-150, #e9ecef) 6px 12px
   );
 }
 
@@ -1032,34 +1035,34 @@
 .dash-empty-icon {
   display: inline-flex;
   margin-bottom: 6px;
-  color: #a7f3d0;
+  color: var(--t-primary-200, #a7f3d0);
 }
 
 .dash-empty-state strong {
   font-size: 14px;
   font-weight: 700;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
 }
 
 .dash-empty-state span:last-child {
   max-width: 260px;
   font-size: 12px;
   line-height: 1.5;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
-/* Match the admin card shape (10px radius, faint shadow). */
+/* One radius across every dashboard surface, seller and admin alike. */
 .dash-card,
 .dash-stat,
 .dash-custom-range {
   overflow: hidden;
-  border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  border-radius: 12px;
+  box-shadow: var(--elev-card);
 }
 
 .dash-attention,
 .dash-error {
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .dash-segment,
@@ -1104,12 +1107,12 @@
   margin-top: 6px;
   /* Same size as the Seller Center stat labels. */
   font-size: 15px;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
 }
 
 .dash-stat-hint {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .dash-trend {

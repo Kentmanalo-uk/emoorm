@@ -44,7 +44,7 @@
   width: 108px;
   height: 108px;
   object-fit: cover;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   border-radius: 50%;
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
   animation: acs-avatar-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -56,20 +56,20 @@
   justify-content: center;
   font-size: 42px;
   font-weight: 700;
-  color: #fff;
-  background: #059669;
+  color: var(--t-neutral-0, #fff);
+  background: var(--t-primary-600, #059669);
 }
 
 .acs-avatar-wrap.is-shop .acs-avatar--fallback {
-  color: #fff;
-  background: #006927;
+  color: var(--t-neutral-0, #fff);
+  background: var(--t-secondary-800, #006927);
 }
 
 .acs-ring {
   position: absolute;
   inset: 0;
-  border: 3px solid #e6f4ec;
-  border-top-color: #059669;
+  border: 3px solid var(--t-secondary-50, #e6f4ec);
+  border-top-color: var(--t-primary-600, #059669);
   border-radius: 50%;
   animation: acs-spin 0.8s linear infinite;
 }
@@ -80,14 +80,14 @@
   font-size: 22px;
   font-weight: 700;
   line-height: 1.25;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .acs-title {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 @keyframes acs-fade-in {

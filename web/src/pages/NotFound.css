@@ -4,7 +4,7 @@
   justify-content: center;
   min-height: 60vh;
   padding: 48px 16px;
-  background: #f7f7f7;
+  background: var(--t-neutral-50, #f7f7f7);
 }
 
 .not-found-card {
@@ -15,8 +15,8 @@
   max-width: 520px;
   padding: 40px 32px;
   text-align: center;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
 }
 
 .not-found-logo {
@@ -28,7 +28,7 @@
 
 .not-found-code {
   margin: 16px 0 0;
-  color: #059669;
+  color: var(--t-primary-600, #059669);
   font-size: 72px;
   font-weight: 800;
   line-height: 1;
@@ -37,24 +37,24 @@
 
 .not-found-card h1 {
   margin: 8px 0 0;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   font-size: 24px;
   font-weight: 700;
 }
 
 .not-found-text {
   margin: 10px 0 0;
-  color: #4b5563;
+  color: var(--t-neutral-600, #4b5563);
   font-size: 14px;
   line-height: 1.6;
 }
 
 .not-found-text code {
   padding: 1px 6px;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   font-size: 13px;
   word-break: break-all;
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 .not-found-actions {
@@ -70,25 +70,25 @@
   align-items: center;
   gap: 8px;
   padding: 11px 20px;
-  color: #059669;
+  color: var(--t-primary-600, #059669);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
-  background: #fff;
-  border: 1px solid #059669;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-primary-600, #059669);
 }
 
 .not-found-btn--primary {
-  color: #fff;
-  background: #059669;
+  color: var(--t-neutral-0, #fff);
+  background: var(--t-primary-600, #059669);
 }
 
 .not-found-btn:hover {
-  background: #ecfdf5;
+  background: var(--t-primary-50, #ecfdf5);
 }
 
 .not-found-btn--primary:hover {
-  background: #047857;
+  background: var(--t-primary-700, #047857);
 }
 
 .not-found-back {
@@ -97,7 +97,7 @@
   gap: 6px;
   margin-top: 16px;
   padding: 4px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   font-size: 13px;
   background: none;
   border: 0;
@@ -105,7 +105,7 @@
 }
 
 .not-found-back:hover {
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 @media (max-width: 480px) {
@@ -131,7 +131,7 @@
 @media (max-width: 768px) {
   .not-found {
     min-height: calc(100dvh - 160px);
-    background: #f2f2f7;
+    background: var(--t-neutral-100, #f2f2f7);
     padding: 24px 16px;
   }
 

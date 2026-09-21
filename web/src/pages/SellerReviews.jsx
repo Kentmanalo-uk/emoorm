@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Star, ChatText as MessageSquare, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2 } from '@phosphor-icons/react';
+import { Star, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
+import EmptyArt from '../components/ui/EmptyArt';
+import SellerPageHead from '../components/seller/SellerPageHead';
 import './SellerDashboard.css';
 
 const PAGE_SIZE = 10;
@@ -15,7 +17,7 @@ function Stars({ value, size = 13 }) {
           key={i}
           size={size}
           weight={i < (value || 0) ? 'fill' : 'regular'}
-          color={i < (value || 0) ? '#f59e0b' : '#cbd5e1'}
+          color={i < (value || 0) ? 'var(--t-warning-500, #f59e0b)' : 'var(--t-neutral-300, #cbd5e1)'}
         />
       ))}
     </span>
@@ -27,6 +29,9 @@ export default function SellerReviews() {
   const [ratingStats, setRatingStats] = useState({ averageRating: 0, totalReviews: 0 });
   const [pagination, setPagination] = useState({ page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 1 });
   const [ratingFilter, setRatingFilter] = useState('');
+  // Client-side: the reviews endpoint filters by rating but not by whether
+  // a reply exists, and the page already holds the current page of rows.
+  const [unansweredOnly, setUnansweredOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [openReplyId, setOpenReplyId] = useState(null);
@@ -88,15 +93,16 @@ export default function SellerReviews() {
     }
   };
 
+  const awaitingReply = reviews.filter((r) => !r.sellerReply).length;
+  const visibleReviews = unansweredOnly ? reviews.filter((r) => !r.sellerReply) : reviews;
+
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
-        <div className="seller-header">
-          <div>
-            <h1>Reviews</h1>
-            <p className="seller-welcome">Feedback left by your buyers — across all your products</p>
-          </div>
-          {ratingStats.totalReviews > 0 && (
+        <SellerPageHead
+          title="Reviews"
+          subtitle="Feedback left by your buyers — across all your products"
+          actions={ratingStats.totalReviews > 0 && (
             <div className="reviews-summary">
               <div className="reviews-avg">{Number(ratingStats.averageRating).toFixed(1)}</div>
               <Stars value={Math.round(ratingStats.averageRating)} />
@@ -105,10 +111,10 @@ export default function SellerReviews() {
               </span>
             </div>
           )}
-        </div>
+        />
 
-        <div className="seller-card" style={{ padding: '10px 16px', marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
-          <label style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>Filter by rating:</label>
+        <div className="seller-card" style={{ padding: '10px 16px', marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <label style={{ fontSize: 13, color: 'var(--t-neutral-600, #475569)', fontWeight: 600 }}>Filter by rating:</label>
           <select
             className="form-select"
             style={{ maxWidth: 160 }}
@@ -120,6 +126,19 @@ export default function SellerReviews() {
               <option key={n} value={n}>{n} star{n === 1 ? '' : 's'}</option>
             ))}
           </select>
+
+          <button
+            type="button"
+            className={unansweredOnly ? 'btn-seller-primary' : 'btn-seller-outline'}
+            onClick={() => setUnansweredOnly((v) => !v)}
+            title="Show only reviews you have not replied to"
+          >
+            Needs reply{awaitingReply > 0 ? ` (${awaitingReply})` : ''}
+          </button>
+
+          <span style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--t-neutral-400, #94a3b8)' }}>
+            Showing {visibleReviews.length} of {reviews.length} on this page
+          </span>
         </div>
 
         <div className="seller-card">
@@ -127,15 +146,15 @@ export default function SellerReviews() {
             <div style={{ padding: 16 }}>
               <Skeleton.List rows={4} />
             </div>
-          ) : reviews.length === 0 ? (
+          ) : visibleReviews.length === 0 ? (
             <div className="seller-empty">
-              <MessageSquare size={36} weight="fill" />
-              <p>No reviews yet.</p>
+              <EmptyArt name="reviews" size={104} />
+              <p>{unansweredOnly ? 'Every review on this page has a reply.' : 'No reviews yet.'}</p>
             </div>
           ) : (
             <>
               <ul className="reviews-list">
-                {reviews.map((r) => (
+                {visibleReviews.map((r) => (
                   <li key={r.id} className="reviews-item">
                     <div className="reviews-item-head">
                       <Stars value={r.rating} />

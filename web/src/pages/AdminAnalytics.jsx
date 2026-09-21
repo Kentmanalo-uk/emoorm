@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { DownloadSimple as Download, ArrowsClockwise as RefreshCw, MapTrifold } from '@phosphor-icons/react';
+import { DownloadSimple as Download, ArrowsClockwise as RefreshCw } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import AdminLayout from '../components/admin/AdminLayout';
 import useAuthStore from '../store/authStore';
@@ -93,7 +93,7 @@ function PlatformAnalytics() {
           </div>
         </div>
 
-        {error && <div className="an-card" style={{ padding: 16, color: '#dc2626' }}>{error}</div>}
+        {error && <div className="an-card" style={{ padding: 16, color: 'var(--t-danger-600, #dc2626)' }}>{error}</div>}
 
         <div className="an-kpi-grid">
           <KpiCard loading={loading && !data} label="Revenue" value={peso(k.revenue?.value)} delta={k.revenue?.delta} />
@@ -166,7 +166,7 @@ function PlatformAnalytics() {
             </div>
             <StatusDonut
               counts={usersByRole}
-              colors={{ BUYER: '#3b82f6', SELLER: '#059669', MUNICIPAL_ADMIN: '#8b5cf6' }}
+              colors={{ BUYER: 'var(--t-info-500, #3b82f6)', SELLER: 'var(--t-primary-600, #059669)', MUNICIPAL_ADMIN: 'var(--t-violet-500, #8b5cf6)' }}
             />
           </div>
         </div>
@@ -179,24 +179,24 @@ function PlatformAnalytics() {
           <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px 16px', fontSize: 12, color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>Municipality</th>
-                <th style={{ textAlign: 'left', padding: '8px 16px', fontSize: 12, color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>Admin</th>
-                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>Orders</th>
-                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>Revenue</th>
+                <th style={{ textAlign: 'left', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Municipality</th>
+                <th style={{ textAlign: 'left', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Admin</th>
+                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Orders</th>
+                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Revenue</th>
               </tr>
             </thead>
             <tbody>
               {(data?.salesByMunicipality || []).length === 0 && (
-                <tr><td colSpan={4}><EmptyState icon={MapTrifold} title="No municipality data" message="Sales per municipality will appear here." compact /></td></tr>
+                <tr><td colSpan={4}><EmptyState art="places" title="No municipality data" message="Sales per municipality will appear here." compact /></td></tr>
               )}
               {(data?.salesByMunicipality || []).map((m) => (
                 <tr key={m.id}>
-                  <td style={{ padding: '10px 16px', fontSize: 13, borderBottom: '1px solid #f9fafb' }}>{m.name}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: m.hasAdmin ? '#059669' : '#9ca3af', borderBottom: '1px solid #f9fafb' }}>
+                  <td style={{ padding: '10px 16px', fontSize: 13, borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{m.name}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, color: m.hasAdmin ? 'var(--t-primary-600, #059669)' : 'var(--t-neutral-400, #9ca3af)', borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>
                     {m.hasAdmin ? 'Assigned' : '—'}
                   </td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', borderBottom: '1px solid #f9fafb' }}>{num(m.orders)}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, borderBottom: '1px solid #f9fafb' }}>{peso(m.revenue)}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{num(m.orders)}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{peso(m.revenue)}</td>
                 </tr>
               ))}
             </tbody>

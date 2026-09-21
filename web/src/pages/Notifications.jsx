@@ -9,43 +9,54 @@ import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
 import { notificationHref } from '../lib/notificationLink';
 import useAuthStore from '../store/authStore';
+import SellerPageHead from '../components/seller/SellerPageHead';
+import EmptyArt from '../components/ui/EmptyArt';
+import './SellerDashboard.css';
 import './Notifications.css';
 
 const TYPE_CONFIG = {
-  ORDER_RECEIVED: { icon: ShoppingBag, color: '#3b82f6', bg: '#dbeafe', label: 'New Order' },
-  ORDER_CONFIRMED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Order Confirmed' },
-  ORDER_READY: { icon: Package, color: '#f97316', bg: '#ffedd5', label: 'Ready for Pickup' },
-  ORDER_COMPLETED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Order Completed' },
-  ORDER_CANCELLED: { icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Order Cancelled' },
-  PRODUCT_APPROVED: { icon: Star, color: '#f59e0b', bg: '#fef3c7', label: 'Product Approved' },
-  PRODUCT_SUSPENDED: { icon: AlertCircle, color: '#ef4444', bg: '#fee2e2', label: 'Product Suspended' },
-  SELLER_APPROVED: { icon: Star, color: '#059669', bg: '#d1fae5', label: 'Seller Approved' },
-  SELLER_SUSPENDED: { icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Seller Suspended' },
-  REPORT_SUBMITTED: { icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', label: 'Report Submitted' },
-  REPORT_RESOLVED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Report Resolved' },
-  SUPPORT_MESSAGE: { icon: ChatCircleDots, color: '#059669', bg: '#d1fae5', label: 'Municipal Admin' },
-  SYSTEM_ANNOUNCEMENT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Announcement' },
-  STORE_NEW_PRODUCT: { icon: ShoppingBag, color: '#3b82f6', bg: '#dbeafe', label: 'New Product' },
-  STORE_PROMOTION: { icon: Star, color: '#f59e0b', bg: '#fef3c7', label: 'Promotion' },
-  STORE_ANNOUNCEMENT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Store Update' },
-  RETURN_REQUESTED: { icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', label: 'Return Requested' },
-  RETURN_APPROVED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Return Approved' },
-  RETURN_REJECTED: { icon: XCircle, color: '#ef4444', bg: '#fee2e2', label: 'Return Rejected' },
-  RETURN_AWAITING_SHIPMENT: { icon: Package, color: '#f97316', bg: '#ffedd5', label: 'Ship Your Return' },
-  RETURN_RECEIVED: { icon: Package, color: '#3b82f6', bg: '#dbeafe', label: 'Return Received' },
-  RETURN_REFUNDED: { icon: CheckCircle, color: '#059669', bg: '#d1fae5', label: 'Refund Issued' },
-  RETURN_CANCELLED: { icon: XCircle, color: '#6b7280', bg: '#f3f4f6', label: 'Return Cancelled' },
-  RETURN_CLOSED: { icon: CheckCircle, color: '#6b7280', bg: '#f3f4f6', label: 'Return Closed' },
-  SELLER_APPLICATION_SUBMITTED: { icon: Info, color: '#3b82f6', bg: '#dbeafe', label: 'Seller Application' },
-  ADMIN_ALERT: { icon: AlertCircle, color: '#ef4444', bg: '#fee2e2', label: 'Alert' },
-  DEFAULT: { icon: Info, color: '#6b7280', bg: '#f3f4f6', label: 'Notification' },
+  ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
+  ORDER_CONFIRMED: { icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Order Confirmed' },
+  ORDER_READY: { icon: Package, color: 'var(--t-orange-500, #f97316)', bg: 'var(--t-orange-100, #ffedd5)', label: 'Ready for Pickup' },
+  ORDER_COMPLETED: { icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Order Completed' },
+  ORDER_CANCELLED: { icon: XCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Order Cancelled' },
+  PRODUCT_APPROVED: { icon: Star, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Product Approved' },
+  PRODUCT_SUSPENDED: { icon: AlertCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Product Suspended' },
+  SELLER_APPROVED: { icon: Star, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Seller Approved' },
+  SELLER_SUSPENDED: { icon: XCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Seller Suspended' },
+  REPORT_SUBMITTED: { icon: AlertCircle, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Report Submitted' },
+  REPORT_RESOLVED: { icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Report Resolved' },
+  SUPPORT_MESSAGE: { icon: ChatCircleDots, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Municipal Admin' },
+  SYSTEM_ANNOUNCEMENT: { icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Announcement' },
+  STORE_NEW_PRODUCT: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Product' },
+  STORE_PROMOTION: { icon: Star, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Promotion' },
+  STORE_ANNOUNCEMENT: { icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Store Update' },
+  RETURN_REQUESTED: { icon: AlertCircle, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Return Requested' },
+  RETURN_APPROVED: { icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Return Approved' },
+  RETURN_REJECTED: { icon: XCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Return Rejected' },
+  RETURN_AWAITING_SHIPMENT: { icon: Package, color: 'var(--t-orange-500, #f97316)', bg: 'var(--t-orange-100, #ffedd5)', label: 'Ship Your Return' },
+  RETURN_RECEIVED: { icon: Package, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Return Received' },
+  RETURN_REFUNDED: { icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Refund Issued' },
+  RETURN_CANCELLED: { icon: XCircle, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Return Cancelled' },
+  RETURN_CLOSED: { icon: CheckCircle, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Return Closed' },
+  SELLER_APPLICATION_SUBMITTED: { icon: Info, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Seller Application' },
+  ADMIN_ALERT: { icon: AlertCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Alert' },
+  DEFAULT: { icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Notification' },
 };
 
 function getConfig(type) {
   return TYPE_CONFIG[type] || TYPE_CONFIG.DEFAULT;
 }
 
-export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
+/**
+ * `bare` says a layout already wraps this page. `shell` says whose layout,
+ * because the chrome differs: the Seller Center has its own heading and
+ * card, the buyer profile has another. They were the same branch before,
+ * so the Seller Center inherited the profile's title styling.
+ */
+export default function Notifications({ bare = false, mode = 'BUYER', shell } = {}) {
+  const chrome = shell || (bare ? 'profile' : 'standalone');
+  const isSeller = chrome === 'seller';
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const audience = mode === 'SELLER' ? 'SELLER' : 'BUYER';
@@ -150,8 +161,8 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
   };
 
   const inner = (
-    <div className={bare ? 'profile-page-wrap' : 'notif-page'}>
-      <div className={bare ? '' : 'notif-container'}>
+    <div className={isSeller ? 'seller-dashboard' : (bare ? 'profile-page-wrap' : 'notif-page')}>
+      <div className={isSeller ? 'seller-container' : (bare ? '' : 'notif-container')}>
 
         {!bare && (
           <div className="notif-breadcrumbs">
@@ -161,7 +172,28 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
         )}
 
         {/* Header */}
-        {bare ? (
+        {isSeller ? (
+          <SellerPageHead
+            title="Notifications"
+            subtitle={unreadCount > 0
+              ? `${unreadCount} unread · order updates and alerts for your shop`
+              : 'Order updates and alerts for your shop'}
+            actions={(notifications.length > 0 || unreadCount > 0) && (
+              <>
+                {unreadCount > 0 && (
+                  <button className="notif-action-btn" onClick={handleMarkAllRead}>
+                    <CheckCheck size={15} /> Mark all read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll}>
+                    <Trash2 size={15} /> Clear all
+                  </button>
+                )}
+              </>
+            )}
+          />
+        ) : bare ? (
           <header className="profile-page-header notif-page-header">
             <h1 className="profile-page-title">Notifications</h1>
             <div className="notif-header-actions">
@@ -201,7 +233,8 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
         )}
 
         {/* Filters */}
-        <div className="notif-filters">
+        <div className={`notif-body${isSeller ? ' is-seller' : ''}`}>
+        <div className={`notif-filters${isSeller ? ' is-seller' : ''}`}>
           <button
             className={`notif-filter-btn ${filter === 'all' ? 'active' : ''}`}
             onClick={() => { setFilter('all'); setPage(1); }}
@@ -225,8 +258,10 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
             ))}
           </div>
         ) : notifications.length === 0 ? (
-          <div className="notif-empty">
-            <BellOff size={48} weight="fill" />
+          <div className={`notif-empty${isSeller ? ' is-seller' : ''}`}>
+            {isSeller
+              ? <EmptyArt name="inbox" size={150} />
+              : <BellOff size={48} weight="fill" />}
             <h2>{filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}</h2>
             <p>You'll see order updates and important alerts here.</p>
             {filter === 'unread' && (
@@ -318,6 +353,7 @@ export default function Notifications({ bare = false, mode = 'BUYER' } = {}) {
             </button>
           </div>
         )}
+        </div>
 
       </div>
     </div>

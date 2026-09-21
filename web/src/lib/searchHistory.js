@@ -64,3 +64,41 @@ export const removeSearchHistory = (scope, userId, term) => {
 };
 
 export const clearSearchHistory = (scope, userId) => write(scope, userId, []);
+
+/* ── Pinned terms ─────────────────────────────────────────────────────────
+   A pinned term is one someone returns to — a shop they are reviewing, a
+   buyer they are chasing. It is kept in its own list so the ordinary
+   most-recent-wins rotation cannot push it out, and it is shown above the
+   rest. Same storage rules as the history: per browser, per account, never
+   sent anywhere. */
+
+const pinnedKey = (scope, userId) => `emoorm.search.pinned.${scope}.${userId || 'anon'}`;
+
+export const readPinnedSearches = (scope, userId) => {
+  try {
+    const raw = localStorage.getItem(pinnedKey(scope, userId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((t) => typeof t === 'string' && t.trim()).slice(0, CAP);
+  } catch {
+    return [];
+  }
+};
+
+export const togglePinnedSearch = (scope, userId, term) => {
+  const clean = normalise(term);
+  if (clean.length < MIN_LENGTH) return readPinnedSearches(scope, userId);
+
+  const current = readPinnedSearches(scope, userId);
+  const without = current.filter((t) => t.toLowerCase() !== clean.toLowerCase());
+  // Already pinned → unpin. Otherwise pin it to the top.
+  const next = without.length !== current.length ? without : [clean, ...without].slice(0, CAP);
+
+  try {
+    localStorage.setItem(pinnedKey(scope, userId), JSON.stringify(next));
+  } catch {
+    /* The list still works for this page view. */
+  }
+  return next;
+};

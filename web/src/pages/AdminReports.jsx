@@ -8,6 +8,7 @@ import DetailDrawer from '../components/admin/DetailDrawer';
 import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -128,7 +129,7 @@ export default function AdminReports() {
           <h2 className="admin-card-title">
             Reports
             {pagination.total > 0 && (
-              <span style={{ fontWeight: 400, color: '#64748b', fontSize: 14, marginLeft: 8 }}>
+              <span style={{ fontWeight: 400, color: 'var(--t-neutral-500, #64748b)', fontSize: 14, marginLeft: 8 }}>
                 ({pagination.total})
               </span>
             )}
@@ -164,7 +165,7 @@ export default function AdminReports() {
           <Skeleton.Table cols={6} rows={6} />
         ) : reports.length === 0 ? (
           <div className="admin-empty">
-            <CheckCircle size={36} weight="fill" />
+            <EmptyArt name="inbox" size={104} />
             <p>No {statusFilter.toLowerCase().replace('_', ' ')} reports</p>
           </div>
         ) : (

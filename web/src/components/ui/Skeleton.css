@@ -5,7 +5,7 @@
 .sk {
   display: block;
   position: relative;
-  background: #eef1f4;
+  background: var(--t-neutral-150, #eef1f4);
   overflow: hidden;
   isolation: isolate;
 }
@@ -72,8 +72,8 @@
 }
 
 .sk-stat-card {
-  background: #fff;
-  border: 1px solid #eef0f3;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-150, #eef0f3);
   border-radius: 12px;
   padding: 18px;
   display: flex;
@@ -85,7 +85,7 @@
 
 .sk-table {
   width: 100%;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -96,7 +96,7 @@
   gap: 16px;
   align-items: center;
   padding: 14px 16px;
-  border-bottom: 1px solid #f1f2f5;
+  border-bottom: 1px solid var(--t-neutral-100, #f1f2f5);
 }
 
 .sk-table-row:last-child {
@@ -104,7 +104,7 @@
 }
 
 .sk-table-head {
-  background: #f9fafb;
+  background: var(--t-neutral-50, #f9fafb);
   padding: 10px 16px;
 }
 
@@ -132,8 +132,8 @@
 }
 
 .sk-card {
-  background: #fff;
-  border: 1px solid #eef0f3;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-150, #eef0f3);
   border-radius: 12px;
   overflow: hidden;
   display: flex;
@@ -174,7 +174,7 @@
   gap: 14px;
   align-items: center;
   padding: 14px 4px;
-  border-bottom: 1px solid #f1f2f5;
+  border-bottom: 1px solid var(--t-neutral-100, #f1f2f5);
 }
 
 .sk-list-row:last-child {
@@ -211,7 +211,7 @@
   gap: 12px;
   align-items: center;
   padding: 12px 4px;
-  border-bottom: 1px solid #f1f2f5;
+  border-bottom: 1px solid var(--t-neutral-100, #f1f2f5);
 }
 
 .sk-order-row:last-child {

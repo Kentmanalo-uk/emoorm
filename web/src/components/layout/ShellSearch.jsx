@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MagnifyingGlass, CircleNotch, X, Package, Storefront, User, Receipt, ClockCounterClockwise } from '@phosphor-icons/react';
+import { MagnifyingGlass, CircleNotch, X, Package, Storefront, User, Receipt, ClockCounterClockwise, DotsThreeVertical, PushPin, PushPinSlash } from '@phosphor-icons/react';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import {
@@ -8,6 +8,8 @@ import {
   pushSearchHistory,
   removeSearchHistory,
   clearSearchHistory,
+  readPinnedSearches,
+  togglePinnedSearch,
 } from '../../lib/searchHistory';
 import './ShellSearch.css';
 
@@ -65,6 +67,81 @@ function ResultThumb({ src, kind, alt }) {
   );
 }
 
+/**
+ * The quick actions for a single result, behind a three-dot button.
+ *
+ * The list comes from the search source, which is the only place that
+ * knows a store has a public storefront and an owner record, or that an
+ * order has a buyer to message. Anything without a target was already
+ * dropped there, so every entry that reaches here goes somewhere real.
+ */
+function ResultMenu({ item, onOpen }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  // The row behind this is itself a button, so every click here has to be
+  // stopped from reaching it or opening the menu would also navigate.
+  const swallow = (e) => { e.preventDefault(); e.stopPropagation(); };
+
+  const actions = item.actions || [];
+  if (actions.length === 0) return null;
+
+  return (
+    <span className="shell-search-menu" ref={wrapRef}>
+      <button
+        type="button"
+        className="shell-search-menu-btn"
+        aria-label={`Actions for ${item.title}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={(e) => { swallow(e); setOpen((v) => !v); }}
+      >
+        <DotsThreeVertical size={18} weight="fill" />
+      </button>
+
+      {open && (
+        <span className="shell-search-menu-pop" role="menu">
+          {actions.map((action) => (action.external ? (
+            <a
+              key={action.key}
+              role="menuitem"
+              href={action.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => { e.stopPropagation(); setOpen(false); }}
+            >
+              {action.label}
+            </a>
+          ) : (
+            <button
+              key={action.key}
+              type="button"
+              role="menuitem"
+              onClick={(e) => { swallow(e); setOpen(false); onOpen({ ...item, href: action.href }); }}
+            >
+              {action.label}
+            </button>
+          )))}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function ShellSearch({
   sources,
   placeholder = 'Search',
@@ -89,6 +166,12 @@ export default function ShellSearch({
   const [isOpen, setIsOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [history, setHistory] = useState(() => readSearchHistory(scope, userId));
+  const [pinned, setPinned] = useState(() => readPinnedSearches(scope, userId));
+  // Held open for the length of the exit animation. Without this the panel
+  // unmounts on the same frame it is asked to close, and there is nothing
+  // left on screen to animate.
+  const [exiting, setExiting] = useState(false);
+  const closeTimer = useRef(null);
 
   // The list belongs to whoever is signed in, so it is re-read when that
   // changes — switching accounts must not show the previous one's terms.
@@ -99,6 +182,7 @@ export default function ShellSearch({
   if (historyOwner !== owner) {
     setHistoryOwner(owner);
     setHistory(readSearchHistory(scope, userId));
+    setPinned(readPinnedSearches(scope, userId));
   }
 
   // One flat list behind the grouped display, so the arrow keys have something
@@ -154,17 +238,31 @@ export default function ShellSearch({
     return () => clearTimeout(timer);
   }, [query, sources, reset]);
 
+  const CLOSE_MS = 150;
+
+  // Set from the handlers that close the panel, never from an effect, so
+  // the exit is driven by the interaction that caused it.
+  const closePanel = useCallback(() => {
+    clearTimeout(closeTimer.current);
+    setExiting(true);
+    closeTimer.current = setTimeout(() => {
+      setExiting(false);
+      setIsOpen(false);
+    }, CLOSE_MS);
+  }, []);
+
   // Clicking anywhere else closes the panel.
   useEffect(() => {
     if (!isOpen) return undefined;
     const onDown = (event) => {
-      if (rootRef.current && !rootRef.current.contains(event.target)) setIsOpen(false);
+      if (rootRef.current && !rootRef.current.contains(event.target)) closePanel();
     };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
-  }, [isOpen]);
+  }, [isOpen, closePanel]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
 
   // A term is only worth remembering once it actually took someone
   // somewhere. Recording every keystroke, or every abandoned query, fills
@@ -191,18 +289,29 @@ export default function ShellSearch({
     setActive(-1);
   };
 
+  const togglePin = (term) => {
+    setPinned(togglePinnedSearch(scope, userId, term));
+    setActive(-1);
+  };
+
   const trimmed = query.trim();
   const showResults = isOpen && trimmed.length >= MIN_CHARS;
-  const showHistory = isOpen && trimmed.length < MIN_CHARS && history.length > 0;
+  const pinnedSet = new Set(pinned.map((t) => t.toLowerCase()));
+  const recentTerms = [...pinned, ...history.filter((t) => !pinnedSet.has(t.toLowerCase()))];
+  const showHistory = isOpen && trimmed.length < MIN_CHARS && recentTerms.length > 0;
   const showEmpty = showResults && !isSearching && groups.length === 0;
 
   // The arrow keys walk whichever list is actually on screen, so recent
   // searches are reachable from the keyboard the same way results are.
-  const navigable = showHistory ? history : flat;
+  const navigable = showHistory ? recentTerms : flat;
+
+  // Open, the field and the panel are drawn as one card, so the root needs
+  // to know: the field loses its bottom curve and the panel picks it up.
+  const panelOpen = showResults || showHistory;
 
   const onKeyDown = (event) => {
     if (event.key === 'Escape') {
-      setIsOpen(false);
+      closePanel();
       inputRef.current?.blur();
       return;
     }
@@ -222,7 +331,7 @@ export default function ShellSearch({
     if (event.key === 'Enter') {
       event.preventDefault();
       if (showHistory) {
-        const term = history[active >= 0 ? active : 0];
+        const term = recentTerms[active >= 0 ? active : 0];
         if (term) runHistoryTerm(term);
         return;
       }
@@ -233,7 +342,7 @@ export default function ShellSearch({
   };
 
   return (
-    <div className={`shell-search ${className}`.trim()} ref={rootRef}>
+    <div className={`shell-search${panelOpen ? ' is-open' : ''}${exiting ? ' is-closing' : ''} ${className}`.trim()} ref={rootRef}>
       <div className="shell-search-field">
         <MagnifyingGlass size={16} className="shell-search-icon" weight="bold" />
         <input
@@ -279,7 +388,7 @@ export default function ShellSearch({
               </button>
             </p>
             <ul>
-              {history.map((term, index) => (
+              {recentTerms.map((term, index) => (
                 <li key={term}>
                   <button
                     type="button"
@@ -290,21 +399,39 @@ export default function ShellSearch({
                     onClick={() => runHistoryTerm(term)}
                   >
                     <span className="shell-search-thumb is-history is-empty" aria-hidden="true">
-                      <ClockCounterClockwise size={15} weight="bold" />
+                      {pinnedSet.has(term.toLowerCase())
+                        ? <PushPin size={15} weight="fill" />
+                        : <ClockCounterClockwise size={15} weight="bold" />}
                     </span>
                     <span className="shell-search-result-text">
                       <span className="shell-search-result-title">{term}</span>
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    className="shell-search-forget"
-                    aria-label={`Remove "${term}" from recent searches`}
-                    title="Remove"
-                    onClick={() => forgetTerm(term)}
-                  >
-                    <X size={11} weight="bold" />
-                  </button>
+                  <span className="shell-search-history-actions">
+                    <button
+                      type="button"
+                      className="shell-search-pin"
+                      aria-pressed={pinnedSet.has(term.toLowerCase())}
+                      aria-label={pinnedSet.has(term.toLowerCase())
+                        ? `Unpin "${term}"`
+                        : `Pin "${term}" to the top`}
+                      title={pinnedSet.has(term.toLowerCase()) ? 'Unpin' : 'Pin this search'}
+                      onClick={() => togglePin(term)}
+                    >
+                      {pinnedSet.has(term.toLowerCase())
+                        ? <PushPinSlash size={13} weight="bold" />
+                        : <PushPin size={13} weight="bold" />}
+                    </button>
+                    <button
+                      type="button"
+                      className="shell-search-forget"
+                      aria-label={`Remove "${term}" from recent searches`}
+                      title="Remove"
+                      onClick={() => forgetTerm(term)}
+                    >
+                      <X size={12} weight="bold" />
+                    </button>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -343,6 +470,7 @@ export default function ShellSearch({
                             )}
                           </span>
                         </button>
+                        <ResultMenu item={item} onOpen={go} />
                       </li>
                     );
                   })}

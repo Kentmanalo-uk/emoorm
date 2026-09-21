@@ -83,6 +83,7 @@ import ScrollToTop from './components/ScrollToTop';
 import AppToaster from './components/ui/AppToaster';
 import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import useAuthStore from './store/authStore';
+import { ThemeRuntime } from './hooks/useTheme';
 import './App.css';
 import './styles/responsive.css';
 import './styles/accent.css';
@@ -120,6 +121,9 @@ useAuthStore.subscribe((state, previousState) => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      {/* Applies the saved palette and renders nothing. Inside the query
+          provider because the theme arrives with the app settings. */}
+      <ThemeRuntime />
       <Router>
         <ScrollToTop />
         <AppToaster />
@@ -191,7 +195,7 @@ function App() {
               <Route path="returns" element={<SellerReturns />} />
               <Route path="messages" element={<SellerMessages />} />
               <Route path="support" element={<SellerSupport />} />
-              <Route path="notifications" element={<Notifications mode="SELLER" bare />} />
+              <Route path="notifications" element={<Notifications mode="SELLER" bare shell="seller" />} />
               <Route path="products" element={<SellerProducts />} />
               <Route path="products/new" element={<SellerProducts />} />
               <Route path="reviews" element={<SellerReviews />} />

@@ -1,0 +1,764 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Settings → Appearance.
+
+   Written against the tokens like everything else, so the panel that edits
+   the theme is itself themed. The one exception is the preview, which sets
+   its own tokens on a container and must not inherit the live ones.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.th-panel {
+  --th-gap: 18px;
+}
+
+.th-mode-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.th-mode-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.th-mode-switch button.is-active {
+  background: var(--surface-card);
+  color: var(--text-strong);
+  box-shadow: var(--elev-card, rgba(149, 157, 165, 0.06) 0 8px 24px);
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────── */
+
+.th-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+  gap: var(--th-gap);
+  align-items: start;
+  padding: var(--th-gap) 0;
+}
+
+.th-editor,
+.th-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--th-gap);
+  min-width: 0;
+}
+
+.th-block {
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--surface-card);
+  box-shadow: var(--elev-card, rgba(149, 157, 165, 0.06) 0 8px 24px);
+}
+
+.th-block-sticky {
+  position: sticky;
+  top: 16px;
+}
+
+.th-block-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 14px;
+}
+
+.th-block-head > strong {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.th-block-head > span {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ── Presets ──────────────────────────────────────────────────────────── */
+
+.th-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.th-preset {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-sunken);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 180ms ease, background 180ms ease;
+}
+
+.th-preset:hover {
+  background: var(--surface-muted);
+}
+
+.th-preset.is-active {
+  background: var(--surface-card);
+  box-shadow: var(--elev-selected, inset 0 0 0 1.5px var(--t-primary-600));
+}
+
+/* The swatch is the preset's own colours, so it cannot use tokens. */
+.th-preset-swatch {
+  display: inline-flex;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.th-preset-swatch i {
+  display: block;
+  width: 11px;
+  height: 34px;
+}
+
+.th-preset-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.th-preset-body strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.th-preset-body strong em {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--t-primary-50);
+  color: var(--t-primary-700);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.th-preset-body > span {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.th-preset-tick {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  color: var(--t-primary-600);
+}
+
+/* ── Colour fields ────────────────────────────────────────────────────── */
+
+.th-notation {
+  display: inline-flex;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--surface-sunken);
+  align-self: flex-start;
+}
+
+.th-notation button {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.th-notation button.is-active {
+  background: var(--surface-card);
+  color: var(--text-strong);
+}
+
+.th-group + .th-group {
+  margin-top: 16px;
+}
+
+.th-group h5 {
+  margin: 0 0 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.th-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+  gap: 10px;
+}
+
+.th-field {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 11px;
+  background: var(--surface-sunken);
+}
+
+/* The swatch shows the colour itself, so the native input sits on top of it
+   at full size and invisible — the whole square becomes the picker. */
+.th-field-swatch {
+  position: relative;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.th-field-swatch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.th-field-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.th-field-body > strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.th-field-tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--t-warning-100);
+  color: var(--t-warning-800);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.th-field-body > span {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.th-field-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.th-field-input input {
+  width: 100%;
+  padding: 6px 28px 6px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--surface-card);
+  color: var(--text-body);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  box-shadow: inset 0 0 0 1px var(--border-default);
+}
+
+.th-field-input input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--border-focus);
+}
+
+.th-field-input input.is-invalid {
+  box-shadow: inset 0 0 0 1.5px var(--t-danger-500);
+}
+
+.th-field-clear {
+  position: absolute;
+  right: 5px;
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+}
+
+.th-field-clear:hover {
+  background: var(--surface-sunken);
+  color: var(--text-strong);
+}
+
+/* ── Dark mode controls ───────────────────────────────────────────────── */
+
+.th-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.th-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--t-primary-600);
+  cursor: pointer;
+}
+
+.th-radios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.th-radios label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  background: var(--surface-sunken);
+  cursor: pointer;
+}
+
+.th-radios label.is-active {
+  background: var(--surface-card);
+  box-shadow: var(--elev-selected, inset 0 0 0 1.5px var(--t-primary-600));
+}
+
+.th-radios input {
+  margin-top: 2px;
+  accent-color: var(--t-primary-600);
+  cursor: pointer;
+}
+
+.th-radios span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.th-radios strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.th-radios small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Live preview ─────────────────────────────────────────────────────── */
+
+/* Everything inside reads the candidate tokens the container sets, which is
+   why the preview is trustworthy: it runs the same var() names the real
+   screens do rather than a parallel set of hardcoded colours. */
+.th-preview {
+  padding: 11px;
+  border-radius: 13px;
+  background: var(--surface-page);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  overflow: hidden;
+}
+
+.th-preview-shell {
+  display: flex;
+  gap: 9px;
+}
+
+.th-preview-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 34px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: var(--surface-card);
+}
+
+.th-preview-brand {
+  height: 16px;
+  border-radius: 5px;
+  background: var(--t-primary-600);
+}
+
+.th-preview-nav {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-sunken);
+}
+
+.th-preview-nav.is-active {
+  background: var(--t-primary-100);
+}
+
+.th-preview-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.th-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.th-preview-head h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.th-preview-head p {
+  margin: 1px 0 0;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.th-preview-btn {
+  padding: 6px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-primary-600);
+  color: var(--t-on-primary);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.th-preview-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.th-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--surface-card);
+  box-shadow: var(--elev-card, rgba(149, 157, 165, 0.06) 0 8px 24px);
+}
+
+.th-preview-muted {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.th-preview-figure {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.th-preview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.th-preview-badges em {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.th-preview-badges .is-success {
+  background: var(--t-success-50);
+  color: var(--t-success-700);
+}
+
+.th-preview-badges .is-warning {
+  background: var(--t-warning-50);
+  color: var(--t-warning-800);
+}
+
+.th-preview-badges .is-danger {
+  background: var(--t-danger-50);
+  color: var(--t-danger-700);
+}
+
+.th-preview-badges .is-info {
+  background: var(--t-info-50);
+  color: var(--t-info-700);
+}
+
+.th-preview-input {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--surface-card);
+  box-shadow: inset 0 0 0 1px var(--border-default);
+  font-size: 10px;
+  color: var(--text-subtle);
+}
+
+.th-preview-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-link);
+}
+
+.th-preview-list {
+  gap: 0;
+  padding: 4px 10px;
+}
+
+.th-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 0;
+  font-size: 10.5px;
+  color: var(--text-body);
+}
+
+.th-preview-item + .th-preview-item {
+  box-shadow: inset 0 1px 0 var(--border-subtle);
+}
+
+.th-preview-item svg {
+  color: var(--t-primary-600);
+  flex-shrink: 0;
+}
+
+.th-preview-item b {
+  margin-left: auto;
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.th-preview-empty {
+  align-items: center;
+  text-align: center;
+  padding: 14px 10px;
+}
+
+.th-preview-empty strong {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.th-live {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 11px;
+  padding: 9px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface-sunken);
+  color: var(--text-body);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.th-live:hover {
+  background: var(--surface-muted);
+}
+
+.th-live.is-on {
+  background: var(--t-primary-600);
+  color: var(--t-on-primary);
+}
+
+.th-live-note {
+  margin: 7px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* ── Contrast report ──────────────────────────────────────────────────── */
+
+.th-contrast {
+  margin-top: 16px;
+  padding-top: 14px;
+  box-shadow: inset 0 1px 0 var(--border-subtle);
+}
+
+.th-contrast-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  align-items: center;
+  color: var(--t-primary-700);
+}
+
+.th-contrast-head.is-bad {
+  color: var(--t-warning-800);
+}
+
+.th-contrast-head svg {
+  grid-row: span 2;
+  align-self: start;
+  margin-top: 2px;
+}
+
+.th-contrast-head strong {
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.th-contrast-head span {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.th-contrast-list {
+  list-style: none;
+  margin: 11px 0 0;
+  padding: 0;
+}
+
+.th-contrast-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 11.5px;
+}
+
+.th-contrast-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--border-default);
+  font-size: 10.5px;
+  font-weight: 650;
+}
+
+.th-contrast-label {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-body);
+}
+
+.th-contrast-ratio {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.th-contrast-grade {
+  width: 36px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--t-primary-700);
+}
+
+.th-contrast-list li.is-fail .th-contrast-grade {
+  color: var(--t-danger-600);
+}
+
+.th-foot {
+  gap: 8px;
+}
+
+/* ── Narrow screens ───────────────────────────────────────────────────── */
+
+@media (max-width: 1080px) {
+  .th-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .th-block-sticky {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .th-panel {
+    --th-gap: 12px;
+  }
+
+  .th-block {
+    padding: 14px;
+  }
+
+  .th-presets,
+  .th-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .th-preview-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

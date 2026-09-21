@@ -315,7 +315,7 @@ export default function AdminBanners() {
                 <img
                   src={resolveImg(form.imageUrl) || form.imageUrl}
                   alt="Banner preview"
-                  style={{ maxWidth: 480, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                  style={{ maxWidth: 480, borderRadius: 8, border: '1px solid var(--t-neutral-200, #e5e7eb)' }}
                 />
               )}
               <label className="admin-btn" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', width: 'max-content', cursor: 'pointer' }}>
@@ -376,9 +376,9 @@ export default function AdminBanners() {
 
       <div className="admin-card">
         {loading ? (
-          <div style={{ padding: 20, color: '#64748b' }}>Loading banners…</div>
+          <div style={{ padding: 20, color: 'var(--t-neutral-500, #64748b)' }}>Loading banners…</div>
         ) : banners.length === 0 ? (
-          <div style={{ padding: 20, color: '#64748b' }}>No banners yet. Click “Add banner” to create your first one.</div>
+          <div style={{ padding: 20, color: 'var(--t-neutral-500, #64748b)' }}>No banners yet. Click “Add banner” to create your first one.</div>
         ) : (
           <table className="admin-table">
             <thead>
@@ -398,13 +398,13 @@ export default function AdminBanners() {
                     <img
                       src={resolveImg(b.imageUrl) || b.imageUrl}
                       alt=""
-                      style={{ width: 100, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb' }}
+                      style={{ width: 100, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--t-neutral-200, #e5e7eb)' }}
                     />
                   </td>
                   <td>
                     <strong>{b.title}</strong>
-                    {b.subtitle && <div style={{ color: '#64748b', fontSize: 12 }}>{b.subtitle}</div>}
-                    {b.linkUrl && <div style={{ color: '#059669', fontSize: 12 }}>{b.linkUrl}</div>}
+                    {b.subtitle && <div style={{ color: 'var(--t-neutral-500, #64748b)', fontSize: 12 }}>{b.subtitle}</div>}
+                    {b.linkUrl && <div style={{ color: 'var(--t-primary-600, #059669)', fontSize: 12 }}>{b.linkUrl}</div>}
                   </td>
                   <td>{
                     b.placement === 'HOME_SIDEBAR_TOP'
@@ -433,7 +433,7 @@ export default function AdminBanners() {
                   <td>
                     <div style={{ display: 'inline-flex', gap: 6 }}>
                       <button className="admin-btn" onClick={() => openEdit(b)}><Edit3 size={12} /> Edit</button>
-                      <button className="admin-btn" onClick={() => remove(b)} style={{ color: '#dc2626' }}><Trash size={12} /> Delete</button>
+                      <button className="admin-btn" onClick={() => remove(b)} style={{ color: 'var(--t-danger-600, #dc2626)' }}><Trash size={12} /> Delete</button>
                     </div>
                   </td>
                 </tr>

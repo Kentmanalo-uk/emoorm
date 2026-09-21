@@ -357,7 +357,7 @@ const Products = () => {
                                 key={i}
                                 size={14}
                                 weight="fill"
-                                color="#f59e0b"
+                                color="var(--t-warning-500, #f59e0b)"
                               />
                             ))}
                           </div>

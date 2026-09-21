@@ -9,7 +9,7 @@ const get = asyncHandler(async (req, res) => {
 
 const update = asyncHandler(async (req, res) => {
   const settings = await appSettingService.update(req.body);
-  successResponse(res, settings, 'App branding updated');
+  successResponse(res, settings, 'App settings updated');
 });
 
 module.exports = { get, update };

@@ -1,7 +1,7 @@
 import React from 'react';
 import './analytics.css';
 
-const TrendLine = ({ data = [], height = 60, valueKey = 'total', color = '#059669' }) => {
+const TrendLine = ({ data = [], height = 60, valueKey = 'total', color = 'var(--t-primary-600, #059669)' }) => {
   const points = data.map((d) => Number(d[valueKey] || 0));
   const max = Math.max(1, ...points);
   const min = Math.min(0, ...points);

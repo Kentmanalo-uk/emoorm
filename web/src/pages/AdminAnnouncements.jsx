@@ -104,7 +104,7 @@ export default function AdminAnnouncements() {
               className="admin-input"
               required
             />
-            <small style={{ color: '#6b7280' }}>{message.length} / 1000</small>
+            <small style={{ color: 'var(--t-neutral-500, #6b7280)' }}>{message.length} / 1000</small>
           </label>
 
           <label style={{ display: 'grid', gap: 6 }}>
@@ -119,7 +119,7 @@ export default function AdminAnnouncements() {
               <option value="sellers">Sellers only</option>
               {isSuperAdmin && <option value="admins">Municipal admins only</option>}
             </select>
-            <small style={{ color: '#6b7280' }}>
+            <small style={{ color: 'var(--t-neutral-500, #6b7280)' }}>
               {isSuperAdmin
                 ? 'As Super Admin, this broadcasts platform-wide.'
                 : 'Broadcast is limited to your municipality.'}
@@ -147,7 +147,7 @@ export default function AdminAnnouncements() {
           <div className="admin-empty"><p>Loading…</p></div>
         ) : sent.length === 0 ? (
           <div className="admin-empty">
-            <Megaphone size={34} color="#94a3b8" weight="fill" />
+            <Megaphone size={34} color="var(--t-neutral-400, #94a3b8)" weight="fill" />
             <p>No announcements have been sent yet.</p>
           </div>
         ) : (
@@ -179,10 +179,10 @@ export default function AdminAnnouncements() {
       {lastResult && (
         <div className="admin-card" style={{ padding: 14 }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <CheckCircle size={18} color="#059669" />
+            <CheckCircle size={18} color="var(--t-primary-600, #059669)" />
             <div>
               <strong>Announcement delivered.</strong>
-              <div style={{ fontSize: 13, color: '#64748b' }}>
+              <div style={{ fontSize: 13, color: 'var(--t-neutral-500, #64748b)' }}>
                 {lastResult.delivered} recipients • target: {lastResult.target}
                 {lastResult.municipalityId ? ` • municipality-scoped` : ' • platform-wide'}
               </div>

@@ -349,7 +349,7 @@ const Home = () => {
                     <div className="product-rating-row">
                       <div className="product-stars">
                         {[0, 1, 2, 3, 4].map((i) => (
-                          <Star key={i} size={11} weight="fill" color="#f59e0b" />
+                          <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
                         ))}
                       </div>
                       <span className="product-review-count">({product.reviewCount ?? 0})</span>
@@ -530,7 +530,7 @@ function HomeProductCard({ product, onAddToCart }) {
         <span className="product-name">{product.name}</span>
         <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
         <div className="product-rating-row">
-          <div className="product-stars">{[0, 1, 2, 3, 4].map((i) => <Star key={i} size={11} weight="fill" color="#f59e0b" />)}</div>
+          <div className="product-stars">{[0, 1, 2, 3, 4].map((i) => <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />)}</div>
           <span className="product-review-count">({product.reviewCount ?? 0})</span>
         </div>
       </div>

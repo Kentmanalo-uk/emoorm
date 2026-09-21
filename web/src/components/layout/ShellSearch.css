@@ -12,35 +12,47 @@
   margin: 0 auto;
 }
 
+/* A pill with a visible outline. The border was already here but at
+   #edeff2 on an #f2f3f5 fill it was invisible, so the field read as a bare
+   grey slab. The extra side padding keeps the icon and the clear button
+   off the curve. */
 .shell-search-field {
   display: flex;
   align-items: center;
   gap: 8px;
   height: 36px;
-  padding: 0 10px;
-  background: #f2f3f5;
-  border: 1px solid #edeff2;
-  border-radius: 8px;
-  transition: background-color .15s, border-color .15s, box-shadow .15s;
+  padding: 0 14px;
+  background: var(--t-neutral-100, #f2f3f5);
+  border: 1px solid var(--t-neutral-300, #d9dde3);
+  border-radius: 999px;
+  transition:
+    background-color .18s ease,
+    border-color .18s ease,
+    border-radius .22s cubic-bezier(0.22, 1, 0.3, 1),
+    box-shadow .22s ease;
+}
+
+.shell-search-field:hover {
+  border-color: var(--t-neutral-300, #c6ccd4);
 }
 
 .shell-search-field:focus-within {
-  background: #ffffff;
-  border-color: #059669;
+  background: var(--t-neutral-0, #ffffff);
+  border-color: var(--t-primary-600, #059669);
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
 }
 
 .shell-search-field:focus-within .shell-search-input {
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .shell-search-icon {
   flex-shrink: 0;
-  color: #a8aeb8;
+  color: var(--t-neutral-400, #a8aeb8);
 }
 
 .shell-search-field:focus-within .shell-search-icon {
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 .shell-search-input {
@@ -51,11 +63,11 @@
   background: transparent;
   font: inherit;
   font-size: 13.5px;
-  color: #4b5563;
+  color: var(--t-neutral-600, #4b5563);
 }
 
 .shell-search-input::placeholder {
-  color: #a8aeb8;
+  color: var(--t-neutral-400, #a8aeb8);
 }
 
 .shell-search-clear {
@@ -68,18 +80,18 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #d1d5db;
-  color: #ffffff;
+  background: var(--t-neutral-300, #d1d5db);
+  color: var(--t-neutral-0, #ffffff);
   cursor: pointer;
 }
 
 .shell-search-clear:hover {
-  background: #9ca3af;
+  background: var(--t-neutral-400, #9ca3af);
 }
 
 .shell-search-spinner {
   flex-shrink: 0;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   animation: shell-search-spin 0.8s linear infinite;
 }
 
@@ -98,14 +110,29 @@
   max-height: 60vh;
   overflow-y: auto;
   padding: 6px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--t-neutral-0, #ffffff);
+  border: 0;
   border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  box-shadow: var(--elev-popover);
   animation: shell-search-open .14s ease-out;
 }
 
 @keyframes shell-search-open {
+  from {
+    opacity: 0;
+    /* Scaled from the top edge so the card appears to unfold out of the
+       field rather than slide in from behind it. */
+    transform: scaleY(0.94) translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Rows arrive just behind the panel, and each just behind the one above,
+   so the list reads as settling rather than appearing all at once. */
+@keyframes shell-search-row {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: none; }
 }
@@ -113,7 +140,7 @@
 .shell-search-group + .shell-search-group {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
 }
 
 .shell-search-group ul {
@@ -124,12 +151,12 @@
 
 .shell-search-group-label {
   margin: 0;
-  padding: 6px 8px 4px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #9ca3af;
+  padding: 8px 8px 5px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .shell-search-result {
@@ -147,7 +174,7 @@
 }
 
 .shell-search-result.is-active {
-  background: #ecfdf5;
+  background: var(--t-primary-50, #ecfdf5);
 }
 
 /* Picture first, then the two lines of text beside it. */
@@ -165,11 +192,12 @@
   height: 32px;
   object-fit: cover;
   border-radius: 6px;
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 /* People read as avatars; products and stores as tiles. */
-.shell-search-thumb.is-person {
+.shell-search-thumb.is-person,
+.shell-search-thumb.is-store {
   border-radius: 50%;
 }
 
@@ -177,12 +205,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .shell-search-result-title {
   font-size: 13.5px;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -190,7 +218,7 @@
 
 .shell-search-result-sub {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -200,7 +228,7 @@
   margin: 0;
   padding: 14px 10px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   text-align: center;
 }
 
@@ -225,7 +253,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   font: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -235,11 +263,11 @@
 }
 
 .shell-search-clear-all:hover {
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .shell-search-clear-all:focus-visible {
-  outline: 2px solid #059669;
+  outline: 2px solid var(--t-primary-600, #059669);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -257,9 +285,10 @@
   padding-right: 30px;
 }
 
+/* Positioning moved to .shell-search-history-actions, which now holds this
+   and the pin. Left absolute, this sat on top of the pin and swallowed its
+   clicks. */
 .shell-search-forget {
-  position: absolute;
-  right: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -269,7 +298,7 @@
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   cursor: pointer;
   opacity: 0;
   transition: opacity .12s, color .12s, background-color .12s;
@@ -281,12 +310,12 @@
 }
 
 .shell-search-forget:hover {
-  color: #b91c1c;
-  background: #fdeeee;
+  color: var(--t-danger-700, #b91c1c);
+  background: var(--t-danger-50, #fdeeee);
 }
 
 .shell-search-forget:focus-visible {
-  outline: 2px solid #059669;
+  outline: 2px solid var(--t-primary-600, #059669);
   outline-offset: 1px;
 }
 
@@ -296,6 +325,265 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
-  background: #f3f4f6;
+  color: var(--t-neutral-400, #9ca3af);
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+/* ── Open: field and panel become one card ────────────────────────────────
+   Closed, the field is a free-standing pill. Open, it is the top of the
+   result card: the bottom curve flattens, the panel takes the curve instead,
+   and the two meet on a single hairline so the whole thing reads as one
+   surface rather than a box hovering under a pill. */
+.shell-search.is-open .shell-search-field,
+.shell-search.is-open .shell-search-field:focus-within {
+  background: var(--t-neutral-0, #ffffff);
+  /* No outline once it is part of the card — the shadow draws the edge.
+     The one line that stays is the join, which is what separates the
+     typing area from the results. */
+  border-color: transparent;
+  border-bottom-color: var(--t-neutral-150, #ebedf0);
+  border-radius: 18px 18px 0 0;
+  /* The panel paints above the field, so the downward half of this shadow is
+     hidden and only the lift around the top and sides shows. */
+  box-shadow: var(--elev-popover);
+}
+
+.shell-search.is-open .shell-search-panel {
+  top: 100%;
+  border: 0;
+  border-radius: 0 0 18px 18px;
+  /* Flush against the field: the open animation slid it down from a gap that
+     no longer exists. */
+  animation: none;
+}
+
+/* ── Open motion ──────────────────────────────────────────────────────────
+   The panel unfolds from the field's bottom edge. transform-origin is what
+   sells it: scaled from the top, the card grows downward out of the search
+   bar; scaled from the centre it would look like it was zooming toward you. */
+.shell-search-panel {
+  transform-origin: top center;
+  animation: shell-search-open .24s cubic-bezier(0.22, 1, 0.3, 1);
+}
+
+/* Restated here because the connected-card rules above switch the animation
+   off — they were written when the panel simply appeared in place. */
+.shell-search.is-open .shell-search-panel {
+  animation: shell-search-open .24s cubic-bezier(0.22, 1, 0.3, 1);
+}
+
+.shell-search-panel .shell-search-group,
+.shell-search-panel .shell-search-empty {
+  animation: shell-search-row .26s cubic-bezier(0.22, 1, 0.3, 1) backwards;
+}
+
+.shell-search-panel .shell-search-group:nth-child(1) { animation-delay: 60ms; }
+.shell-search-panel .shell-search-group:nth-child(2) { animation-delay: 100ms; }
+.shell-search-panel .shell-search-group:nth-child(3) { animation-delay: 130ms; }
+.shell-search-panel .shell-search-group:nth-child(n+4) { animation-delay: 150ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-search-field,
+  .shell-search-panel,
+  .shell-search.is-open .shell-search-panel,
+  .shell-search-panel .shell-search-group,
+  .shell-search-panel .shell-search-empty {
+    transition-duration: 1ms;
+    animation-duration: 1ms;
+    animation-delay: 0s;
+  }
+}
+
+/* ── Close ────────────────────────────────────────────────────────────────
+   The panel is held mounted for the length of this animation by `is-closing`,
+   so it folds back into the field instead of vanishing on one frame. Faster
+   than the open: leaving should feel decisive, arriving should not. */
+@keyframes shell-search-close {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: scaleY(0.96) translateY(-2px); }
+}
+
+.shell-search.is-closing .shell-search-panel {
+  animation: shell-search-close .15s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+
+/* The rows have their own entry delays; on the way out they leave with the
+   panel rather than staggering again. */
+.shell-search.is-closing .shell-search-panel .shell-search-group,
+.shell-search.is-closing .shell-search-panel .shell-search-empty {
+  animation: none;
+}
+
+/* ── Per-result actions ───────────────────────────────────────────────────
+   The row itself is a button, so this sits beside it rather than inside it —
+   a button inside a button is invalid and the click target would be
+   ambiguous. It appears on hover or focus so a list of results does not read
+   as a column of dot icons. */
+.shell-search-panel li {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.shell-search-panel li > .shell-search-result {
+  padding-right: 34px;
+}
+
+.shell-search-menu {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+}
+
+.shell-search-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .12s, color .12s, background-color .12s;
+}
+
+.shell-search-panel li:hover .shell-search-menu-btn,
+.shell-search-menu-btn:focus-visible,
+.shell-search-menu-btn[aria-expanded='true'] {
+  opacity: 1;
+}
+
+.shell-search-menu-btn:hover,
+.shell-search-menu-btn[aria-expanded='true'] {
+  color: var(--t-neutral-900, #111827);
+  background: var(--t-neutral-150, #eef0f3);
+}
+
+.shell-search-menu-btn:focus-visible {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 1px;
+}
+
+.shell-search-menu-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 168px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-popover);
+  animation: shell-search-open .16s cubic-bezier(0.22, 1, 0.3, 1);
+  transform-origin: top right;
+}
+
+.shell-search-menu-pop > * {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.shell-search-menu-pop > *:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #111827);
+}
+
+.shell-search-menu-pop > *:focus-visible {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: -2px;
+}
+
+.shell-search-menu-pop svg {
+  flex-shrink: 0;
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-search.is-closing .shell-search-panel,
+  .shell-search-menu-pop {
+    animation-duration: 1ms;
+  }
+}
+
+/* The "Clear" control sits on the Recent searches heading, which is now the
+   same size as the group headings above it. */
+.shell-search-clear-all {
+  font-size: 11px;
+}
+
+/* ── Pin / remove on a recent search ─────────────────────────────────────
+   Two controls share the right edge of the row, so they live in one flex
+   holder rather than each being positioned against it. */
+.shell-search-history-actions {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.shell-search-history-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .12s, color .12s, background-color .12s;
+}
+
+.shell-search-group li:hover .shell-search-history-actions button,
+.shell-search-history-actions button:focus-visible {
+  opacity: 1;
+}
+
+/* A pinned row keeps its pin visible — it is the reason the row is at the
+   top, so hiding it until hover would make the order look arbitrary. */
+.shell-search-pin[aria-pressed='true'] {
+  opacity: 1;
+  color: var(--t-primary-700, #047857);
+}
+
+.shell-search-history-actions button:hover {
+  color: var(--t-neutral-900, #111827);
+  background: var(--t-neutral-150, #eef0f3);
+}
+
+.shell-search-forget:hover {
+  color: var(--t-danger-700, #b91c1c);
+  background: var(--t-danger-50, #fdeeee);
+}
+
+.shell-search-history-actions button:focus-visible {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 1px;
+}
+
+/* Room for two controls instead of one. */
+.shell-search-result.is-history {
+  padding-right: 56px;
 }

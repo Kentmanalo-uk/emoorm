@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Star, MagnifyingGlass as Search, Trash, ChatCenteredText, ArrowSquareOut } from '@phosphor-icons/react';
+import { Star, MagnifyingGlass as Search, Trash, ArrowSquareOut } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminModeration.css';
 
@@ -121,7 +122,7 @@ export default function AdminReviews() {
           <Skeleton.Table cols={6} rows={6} />
         ) : rows.length === 0 ? (
           <div className="admin-empty">
-            <ChatCenteredText size={36} weight="fill" />
+            <EmptyArt name="reviews" size={104} />
             <p>{search || rating ? 'No reviews match these filters' : 'No reviews yet'}</p>
           </div>
         ) : (

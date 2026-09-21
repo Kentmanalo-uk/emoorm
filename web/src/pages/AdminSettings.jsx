@@ -3,10 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ShieldCheck, Key as KeyRound, User, MapPin, FloppyDisk as Save, CircleNotch as Loader2,
-  ArrowsClockwise as RefreshCcw, Copy, Image as ImageIcon, UploadSimple, Plus, X, ArrowSquareOut, Palette, CheckCircle,
+  ArrowsClockwise as RefreshCcw, Copy, Image as ImageIcon, UploadSimple, Plus, X, ArrowSquareOut, Palette, PaintBrushBroad, CheckCircle,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import ThemePanel from '../components/admin/theme/ThemePanel';
 import '../components/admin/AdminLayout.css';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
@@ -316,6 +317,7 @@ export default function AdminSettings() {
 
   const sections = [
     isSuperAdmin && { key: 'branding', label: 'App branding', hint: 'Logo and placeholder', icon: Palette },
+    isSuperAdmin && { key: 'appearance', label: 'Theme & colours', hint: 'Palette for every screen', icon: PaintBrushBroad },
     isMunicipalAdmin && { key: 'municipality', label: 'Municipality page', hint: 'Public showcase', icon: MapPin },
     { key: 'profile', label: 'Profile', hint: 'Name and contact', icon: User },
     { key: 'password', label: 'Password', hint: 'Change your password', icon: KeyRound },
@@ -629,6 +631,9 @@ export default function AdminSettings() {
 
   const panels = {
     branding: brandingPanel,
+    // Only ever reachable by a super admin: the tab is left out of the
+    // sections list for anyone else, so activeTab cannot resolve to it.
+    appearance: <ThemePanel />,
     municipality: municipalityPanel,
     profile: profilePanel,
     password: passwordPanel,
@@ -640,7 +645,7 @@ export default function AdminSettings() {
       <div className="st">
         <header className="st-header">
           <h1 className="admin-page-title">Settings</h1>
-          <p>Manage {isMunicipalAdmin ? 'your municipality page, ' : ''}{isSuperAdmin ? 'app branding, ' : ''}profile and account security.</p>
+          <p>Manage {isMunicipalAdmin ? 'your municipality page, ' : ''}{isSuperAdmin ? 'app branding, the colour theme, ' : ''}profile and account security.</p>
         </header>
 
         <div className="st-layout">

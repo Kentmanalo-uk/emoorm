@@ -1,0 +1,209 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Design tokens — every colour the interface is allowed to use.
+
+   Stylesheets read these through var(). Nothing else in the application
+   decides a colour, which is what lets Settings → Appearance change the
+   whole thing at once.
+
+   The values here are the palette the application shipped with. They are
+   also the defaults the theme editor restores to, and the last line of
+   defence: if the theme runtime never runs — JavaScript blocked, a stale
+   cache, a bug in this feature — the page still paints exactly as it did
+   before any of this existed.
+
+   Layers, from raw to meaningful. Prefer the bottom two when writing new
+   CSS: --surface-card says what it is for, --t-neutral-0 only says what
+   colour it happens to be, and only the first one survives a dark theme.
+
+     --t-<ramp>-<stop>   the ramps         50 pale → 950 near-black
+     --surface-*         backgrounds
+     --text-*            foregrounds
+     --border-*          lines
+     --art-*             the empty-state illustrations
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Primary: the brand emerald ─────────────────────────────────────── */
+  --t-primary-50: #ecfdf5;
+  --t-primary-100: #d1fae5;
+  --t-primary-200: #a7f3d0;
+  --t-primary-300: #6ee7b7;
+  --t-primary-400: #34d399;
+  --t-primary-500: #10b981;
+  --t-primary-600: #059669;
+  --t-primary-700: #047857;
+  --t-primary-800: #065f46;
+  --t-primary-900: #064e3b;
+  --t-primary-950: #052e1f;
+
+  /* ── Secondary: the deeper forest green of headers and the footer ───── */
+  --t-secondary-50: #e9f7f0;
+  --t-secondary-100: #d7ecdf;
+  --t-secondary-200: #aedcc0;
+  --t-secondary-300: #7cc79b;
+  --t-secondary-400: #48ae76;
+  --t-secondary-500: #29a366;
+  --t-secondary-600: #1f8a54;
+  --t-secondary-700: #176b3a;
+  --t-secondary-800: #006927;
+  --t-secondary-900: #0b5c38;
+  --t-secondary-950: #17231c;
+
+  /* ── Accent: pink, for saved items and promotions ───────────────────── */
+  --t-accent-50: #fdf2f8;
+  --t-accent-100: #fce7f3;
+  --t-accent-200: #fbcfe8;
+  --t-accent-300: #f9a8d4;
+  --t-accent-400: #f472b6;
+  --t-accent-500: #ec4899;
+  --t-accent-600: #db2777;
+  --t-accent-700: #be185d;
+  --t-accent-800: #9d174d;
+  --t-accent-900: #831843;
+  --t-accent-950: #500724;
+
+  /* ── Status ─────────────────────────────────────────────────────────── */
+  --t-success-50: #f0fdf4;
+  --t-success-100: #dcfce7;
+  --t-success-200: #bbf7d0;
+  --t-success-300: #86efac;
+  --t-success-400: #4ade80;
+  --t-success-500: #22c55e;
+  --t-success-600: #16a34a;
+  --t-success-700: #15803d;
+  --t-success-800: #166534;
+  --t-success-900: #14532d;
+  --t-success-950: #052e16;
+
+  --t-warning-50: #fffbeb;
+  --t-warning-100: #fef3c7;
+  --t-warning-200: #fde68a;
+  --t-warning-300: #fcd34d;
+  --t-warning-400: #fbbf24;
+  --t-warning-500: #f59e0b;
+  --t-warning-600: #d97706;
+  --t-warning-700: #b45309;
+  --t-warning-800: #92400e;
+  --t-warning-900: #78350f;
+  --t-warning-950: #451a03;
+
+  --t-danger-50: #fef2f2;
+  --t-danger-100: #fee2e2;
+  --t-danger-200: #fecaca;
+  --t-danger-300: #fca5a5;
+  --t-danger-400: #f87171;
+  --t-danger-500: #ef4444;
+  --t-danger-600: #dc2626;
+  --t-danger-700: #b91c1c;
+  --t-danger-800: #991b1b;
+  --t-danger-900: #7f1d1d;
+  --t-danger-950: #450a0a;
+
+  --t-info-50: #eff6ff;
+  --t-info-100: #dbeafe;
+  --t-info-200: #bfdbfe;
+  --t-info-300: #93c5fd;
+  --t-info-400: #60a5fa;
+  --t-info-500: #3b82f6;
+  --t-info-600: #2563eb;
+  --t-info-700: #1d4ed8;
+  --t-info-800: #1e40af;
+  --t-info-900: #1e3a8a;
+  --t-info-950: #172554;
+
+  /* ── Neutral ──────────────────────────────────────────────────────────
+     0 is the card surface and 950 is near-black. The extra 150 step is
+     where most of the app's hairlines and inset panels sit. */
+  --t-neutral-0: #ffffff;
+  --t-neutral-50: #f9fafb;
+  --t-neutral-100: #f3f4f6;
+  --t-neutral-150: #eef0f3;
+  --t-neutral-200: #e5e7eb;
+  --t-neutral-300: #d1d5db;
+  --t-neutral-400: #9ca3af;
+  --t-neutral-500: #6b7280;
+  --t-neutral-600: #4b5563;
+  --t-neutral-700: #374151;
+  --t-neutral-800: #1f2937;
+  --t-neutral-900: #111827;
+  --t-neutral-950: #030712;
+
+  /* ── Extended: order statuses and chart segments ──────────────────────
+     More hues than a brand palette carries, kept distinguishable from one
+     another. Presets may replace them; the custom editor does not. */
+  --t-violet-100: #ede9fe;
+  --t-violet-500: #8b5cf6;
+  --t-violet-600: #7c3aed;
+  --t-violet-700: #6d28d9;
+  --t-sky-100: #e0f2fe;
+  --t-sky-500: #0ea5e9;
+  --t-sky-600: #0284c7;
+  --t-sky-700: #0e6f95;
+  --t-orange-100: #ffedd5;
+  --t-orange-500: #f97316;
+  --t-orange-700: #c2410c;
+  --t-teal-500: #14b8a6;
+  --t-teal-600: #0891b2;
+  --t-indigo-600: #4338ca;
+  --t-teal-700: #155e75;
+  --t-indigo-500: #4f46e5;
+  --t-indigo-700: #3730a3;
+
+  /* ── Surfaces ───────────────────────────────────────────────────────── */
+  --surface-page: #f9fafb;
+  --surface-card: #ffffff;
+  --surface-sunken: #f3f4f6;
+  --surface-muted: #eef0f3;
+  --surface-raised: #ffffff;
+  --surface-inverse: #111827;
+  --surface-overlay: rgba(17, 24, 39, 0.45);
+
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  --text-strong: #111827;
+  --text-body: #374151;
+  --text-muted: #6b7280;
+  --text-subtle: #9ca3af;
+  --text-inverse: #ffffff;
+  --text-link: #059669;
+
+  /* ── Lines ──────────────────────────────────────────────────────────── */
+  --border-subtle: #eef0f3;
+  --border-default: #e5e7eb;
+  --border-strong: #d1d5db;
+  --border-focus: #059669;
+
+  /* ── Text sitting on a filled colour ──────────────────────────────────
+     Recomputed for contrast whenever a palette changes, so a pale brand
+     colour gets dark text rather than unreadable white. */
+  --t-on-primary: #ffffff;
+  --t-on-secondary: #ffffff;
+  --t-on-accent: #ffffff;
+  --t-on-success: #ffffff;
+  --t-on-warning: #111827;
+  --t-on-danger: #ffffff;
+  --t-on-info: #ffffff;
+
+  /* ── Illustrations ────────────────────────────────────────────────────
+     The empty-state drawings are inlined rather than linked so these reach
+     them. They are separate from the interface tokens because a drawing
+     needs a flatter range than a control does. */
+  --art-paper: #ffffff;
+  --art-surface: #fcfcfd;
+  --art-neutral-100: #f4f4f4;
+  --art-neutral-200: #efefef;
+  --art-neutral-300: #eef2f7;
+  --art-brand-200: #a7f3d0;
+  --art-brand-300: #6ee7b7;
+  --art-brand-400: #34d399;
+  --art-brand-600: #059669;
+  --art-brand-700: #047857;
+  --art-brand-900: #0b5c38;
+  --art-accent-400: #fbbf24;
+  --art-accent-500: #f59e0b;
+}
+
+/* Form controls, scrollbars and the like follow the active mode. The theme
+   runtime sets this too; declaring it here covers the first paint. */
+:root {
+  color-scheme: light;
+}

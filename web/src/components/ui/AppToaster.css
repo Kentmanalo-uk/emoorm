@@ -7,7 +7,7 @@
   padding: 10px 12px;
   overflow: hidden;
   border-radius: 10px;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   box-shadow: 0 8px 24px rgba(15, 23, 42, .12), 0 1px 2px rgba(15, 23, 42, .06);
   opacity: 0;
   transform: translateY(-10px) scale(.96);
@@ -32,8 +32,8 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: #e9f8ef;
-  color: #059669;
+  background: var(--t-secondary-50, #e9f8ef);
+  color: var(--t-primary-600, #059669);
 }
 
 .app-toast.is-visible .app-toast-icon {
@@ -41,13 +41,13 @@
 }
 
 .app-toast--error .app-toast-icon {
-  background: #fef0ef;
-  color: #dc2626;
+  background: var(--t-danger-50, #fef0ef);
+  color: var(--t-danger-600, #dc2626);
 }
 
 .app-toast--loading .app-toast-icon {
-  background: #eef4ff;
-  color: #2563eb;
+  background: var(--t-info-50, #eef4ff);
+  color: var(--t-info-600, #2563eb);
 }
 
 .app-toast--loading .app-toast-icon svg {
@@ -57,7 +57,7 @@
 .app-toast-message {
   flex: 1;
   min-width: 0;
-  color: #17231c;
+  color: var(--t-secondary-950, #17231c);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
@@ -73,14 +73,14 @@
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: #94a3b8;
+  color: var(--t-neutral-400, #94a3b8);
   cursor: pointer;
   transition: background .15s ease, color .15s ease;
 }
 
 .app-toast-close:hover {
-  background: #f1f5f4;
-  color: #475569;
+  background: var(--t-neutral-100, #f1f5f4);
+  color: var(--t-neutral-600, #475569);
 }
 
 .app-toast-commerce {
@@ -95,7 +95,7 @@
   gap: 8px;
   border-radius: 7px;
   background: rgba(0, 0, 0, .70);
-  color: #fff;
+  color: var(--t-neutral-0, #fff);
   text-align: center;
   box-shadow: none;
   backdrop-filter: none;
@@ -118,11 +118,11 @@
 
 .app-toast-commerce>svg {
   margin-bottom: 3px;
-  color: #fff;
+  color: var(--t-neutral-0, #fff);
 }
 
 .app-toast-commerce strong {
-  color: #fff;
+  color: var(--t-neutral-0, #fff);
   font-size: 15px;
   line-height: 1.25;
 }

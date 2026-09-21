@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import {
-  ShoppingBag, Eye, CheckCircle, XCircle,
-  Clock, Package, Truck, CaretDown as ChevronDown, FileText, Storefront as StoreIcon
-} from '@phosphor-icons/react';
+import { Eye, CheckCircle, XCircle, Clock, Package, Truck, CaretDown as ChevronDown, FileText, Storefront as StoreIcon, MagnifyingGlass, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { resolveImg } from '../lib/media';
+import EmptyArt from '../components/ui/EmptyArt';
+import SellerPageHead from '../components/seller/SellerPageHead';
 import './SellerDashboard.css';
 import './SellerOrders.css';
 
@@ -102,6 +101,9 @@ export default function SellerOrders() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  // Matched against the order number and the buyer, which are the two
+  // things a seller has to hand when a buyer asks about an order.
+  const [search, setSearch] = useState('');
   const [cancelConfirm, setCancelConfirm] = useState(null); // { orderId }
   const [rejectConfirm, setRejectConfirm] = useState(null); // { orderId }
   const [verifyingId, setVerifyingId] = useState(null);
@@ -170,9 +172,14 @@ export default function SellerOrders() {
     }
   };
 
-  const displayed = activeTab === 'all'
-    ? orders
-    : orders.filter(o => o.status === activeTab);
+  const term = search.trim().toLowerCase();
+  const displayed = (activeTab === 'all' ? orders : orders.filter(o => o.status === activeTab))
+    .filter((o) => {
+      if (!term) return true;
+      const buyer = o.buyer?.fullName || o.buyer?.email || '';
+      return String(o.orderNumber || o.id).toLowerCase().includes(term)
+        || buyer.toLowerCase().includes(term);
+    });
 
   const requestStatusChange = (orderId, newStatus) => {
     if (newStatus === 'CANCELLED') {
@@ -191,12 +198,27 @@ export default function SellerOrders() {
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
-        <div className="seller-header">
-          <div>
-            <h1>Orders</h1>
-            <p className="seller-welcome">Manage incoming orders from buyers</p>
-          </div>
-        </div>
+        <SellerPageHead
+          title="Orders"
+          subtitle="Manage incoming orders from buyers"
+          actions={(
+            <div className="seller-search">
+              <MagnifyingGlass size={15} />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Order number or buyer"
+                aria-label="Search your orders"
+              />
+              {search && (
+                <button type="button" onClick={() => setSearch('')} aria-label="Clear search">
+                  <X size={12} weight="bold" />
+                </button>
+              )}
+            </div>
+          )}
+        />
 
         {/* Tabs */}
         <div className="seller-tabs">
@@ -211,15 +233,25 @@ export default function SellerOrders() {
           ))}
         </div>
 
-        <div className="orders-layout">
+        <div className={`orders-layout${selectedOrder ? '' : ' is-single'}`}>
           {/* Order list */}
           <div className="seller-card orders-list-card">
             {isLoading ? (
               <Skeleton.Table cols={6} rows={6} />
             ) : displayed.length === 0 ? (
-              <div className="seller-empty">
-                <ShoppingBag size={40} weight="fill" />
-                <p>No orders in this category.</p>
+              <div className="seller-empty is-page">
+                <EmptyArt name="shopping" size={168} />
+                <strong>{term ? 'No orders match your search' : 'No orders in this category'}</strong>
+                <p>
+                  {term
+                    ? `Nothing matches “${search.trim()}”. Try an order number or the buyer's name.`
+                    : 'New orders from buyers will appear here.'}
+                </p>
+                {term && (
+                  <button type="button" className="btn-seller-outline" onClick={() => setSearch('')}>
+                    Clear search
+                  </button>
+                )}
               </div>
             ) : (
               <table className="seller-table so-orders-table">

@@ -18,7 +18,7 @@
   position: relative;
   width: 100%;
   max-width: 640px;
-  background: #ffffff;
+  background: var(--t-neutral-0, #ffffff);
   border-radius: 2px;
   padding: 44px 44px 40px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
@@ -43,7 +43,7 @@
   width: 32px;
   height: 32px;
   cursor: pointer;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
   font-size: 24px;
   line-height: 1;
   display: flex;
@@ -53,7 +53,7 @@
 }
 
 .ism-close:hover {
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
 }
 
 .ism-head {
@@ -64,54 +64,54 @@
   margin: 0 0 6px;
   font-size: 20px;
   font-weight: 600;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   letter-spacing: -0.01em;
 }
 
 .ism-head p {
   margin: 0;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .ism-drop {
-  border: 1px dashed #d1d5db;
+  border: 1px dashed var(--t-neutral-300, #d1d5db);
   border-radius: 2px;
   padding: 64px 24px;
   text-align: center;
   cursor: pointer;
-  background: #fafafa;
+  background: var(--t-neutral-50, #fafafa);
   transition: border-color 0.25s ease, background-color 0.25s ease;
 }
 
 .ism-drop:hover {
-  border-color: #059669;
-  background: #f7fdfa;
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-neutral-50, #f7fdfa);
 }
 
 .ism-drop-active {
-  border-color: #059669;
-  background: #ecfdf5;
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-50, #ecfdf5);
 }
 
 .ism-drop-title {
   margin: 0;
   font-size: 15px;
   font-weight: 500;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   transition: color 0.2s ease;
 }
 
 .ism-drop-hint {
   margin: 6px 0 22px;
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .ism-drop-btn {
   display: inline-block;
   padding: 10px 22px;
-  background: #111827;
+  background: var(--t-neutral-900, #111827);
   color: white;
   border-radius: 2px;
   font-size: 13px;
@@ -121,7 +121,7 @@
 }
 
 .ism-drop:hover .ism-drop-btn {
-  background: #059669;
+  background: var(--t-primary-600, #059669);
 }
 
 @media (max-width: 640px) {

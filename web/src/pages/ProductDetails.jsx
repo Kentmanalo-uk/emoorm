@@ -41,7 +41,7 @@ const renderStars = (rating, size = 14) => (
       key={i}
       size={size}
       weight={i < Math.round(rating || 0) ? 'fill' : 'regular'}
-      color={i < Math.round(rating || 0) ? '#f59e0b' : '#d1d5db'}
+      color={i < Math.round(rating || 0) ? 'var(--t-warning-500, #f59e0b)' : 'var(--t-neutral-300, #d1d5db)'}
     />
   ))
 );
@@ -671,7 +671,7 @@ const ProductDetails = () => {
                   }}
                   aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                 >
-                  <Heart size={20} weight={wishlisted ? 'fill' : 'regular'} color={wishlisted ? '#ec4899' : 'currentColor'} />
+                  <Heart size={20} weight={wishlisted ? 'fill' : 'regular'} color={wishlisted ? 'var(--t-accent-500, #ec4899)' : 'currentColor'} />
                   <span>{wishlisted ? 'Saved' : 'Like'}</span>
                 </button>
               </div>
@@ -702,7 +702,7 @@ const ProductDetails = () => {
                       <span><MapPin size={12} /> {product.store.municipality.name}</span>
                     )}
                     {product.store.ratingAverage > 0 && (
-                      <span><Star size={12} weight="fill" color="#f59e0b" /> {Number(product.store.ratingAverage).toFixed(1)}</span>
+                      <span><Star size={12} weight="fill" color="var(--t-warning-500, #f59e0b)" /> {Number(product.store.ratingAverage).toFixed(1)}</span>
                     )}
                   </div>
                 </div>
@@ -820,7 +820,7 @@ const ProductDetails = () => {
                       <div className="product-rating-row">
                         <div className="product-stars">
                           {[0, 1, 2, 3, 4].map((i) => (
-                            <Star key={i} size={11} weight="fill" color="#f59e0b" />
+                            <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
                           ))}
                         </div>
                         <span className="product-review-count">({p.reviewCount ?? 0})</span>
@@ -853,7 +853,7 @@ const ProductDetails = () => {
                       <div className="product-rating-row">
                         <div className="product-stars">
                           {[0, 1, 2, 3, 4].map((i) => (
-                            <Star key={i} size={11} weight="fill" color="#f59e0b" />
+                            <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
                           ))}
                         </div>
                         <span className="product-review-count">({p.reviewCount ?? 0})</span>

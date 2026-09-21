@@ -1,5 +1,5 @@
 .stores-page {
-  background: #f9fafb;
+  background: var(--t-neutral-50, #f9fafb);
   min-height: calc(100vh - 64px);
   padding: 32px 0 64px;
 }
@@ -16,22 +16,22 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin-bottom: 24px;
 }
 
 .stores-breadcrumbs a {
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .stores-breadcrumbs a:hover {
-  color: #059669;
+  color: var(--t-primary-600, #059669);
 }
 
 .stores-breadcrumbs span:not(:last-child) {
-  color: #d1d5db;
+  color: var(--t-neutral-300, #d1d5db);
 }
 
 /* Hero */
@@ -47,13 +47,13 @@
 .stores-title {
   font-size: 28px;
   font-weight: 800;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0 0 6px;
 }
 
 .stores-subtitle {
   font-size: 15px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0;
 }
 
@@ -72,30 +72,30 @@
 
 .stores-search-inner input {
   padding: 10px 16px 10px 36px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
   border-radius: 8px;
   font-size: 14px;
   width: 240px;
-  background: #fff;
+  background: var(--t-neutral-0, #fff);
   outline: none;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   transition: border-color 0.2s;
 }
 
 .stores-search-inner input:focus {
-  border-color: #059669;
+  border-color: var(--t-primary-600, #059669);
 }
 
 .stores-search-icon {
   position: absolute;
   left: 10px;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .stores-search button {
   padding: 10px 20px;
-  background: #059669;
-  color: #fff;
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff);
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -106,13 +106,13 @@
 }
 
 .stores-search button:hover {
-  background: #047857;
+  background: var(--t-primary-700, #047857);
 }
 
 /* Count */
 .stores-count {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0 0 20px;
 }
 
@@ -133,7 +133,7 @@
 .store-card-skeleton {
   height: 200px;
   border-radius: 10px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--t-neutral-100, #f0f0f0) 25%, var(--t-neutral-200, #e0e0e0) 50%, var(--t-neutral-100, #f0f0f0) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
 }
@@ -152,7 +152,7 @@
 .stores-empty {
   text-align: center;
   padding: 80px 0;
-  color: #9ca3af;
+  color: var(--t-neutral-400, #9ca3af);
 }
 
 .stores-empty svg {
@@ -168,8 +168,8 @@
 
 .stores-clear-btn {
   background: none;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  color: var(--t-neutral-700, #374151);
   padding: 8px 20px;
   border-radius: 6px;
   cursor: pointer;
@@ -178,13 +178,13 @@
 }
 
 .stores-clear-btn:hover {
-  background: #f3f4f6;
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 /* Store Card */
 .store-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 10px;
   padding: 20px;
   display: flex;
@@ -198,14 +198,14 @@
 .store-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  border-color: #059669;
+  border-color: var(--t-primary-600, #059669);
 }
 
 .store-card-avatar {
   width: 56px;
   height: 56px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #059669, #047857);
+  background: linear-gradient(135deg, var(--t-primary-600, #059669), var(--t-primary-700, #047857));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,7 +220,7 @@
 }
 
 .store-card-avatar span {
-  color: #fff;
+  color: var(--t-neutral-0, #fff);
   font-size: 20px;
   font-weight: 700;
 }
@@ -232,13 +232,13 @@
 .store-card-name {
   font-size: 16px;
   font-weight: 700;
-  color: #111827;
+  color: var(--t-neutral-900, #111827);
   margin: 0 0 4px;
 }
 
 .store-card-address {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0 0 6px;
   display: flex;
   align-items: center;
@@ -247,7 +247,7 @@
 
 .store-card-desc {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -259,7 +259,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
   padding-top: 10px;
 }
 
@@ -268,14 +268,14 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 .store-badge-active {
   font-size: 11px;
   font-weight: 600;
-  color: #059669;
-  background: #d1fae5;
+  color: var(--t-primary-600, #059669);
+  background: var(--t-primary-100, #d1fae5);
   padding: 2px 8px;
   border-radius: 9999px;
 }
@@ -283,8 +283,8 @@
 .store-badge-inactive {
   font-size: 11px;
   font-weight: 600;
-  color: #6b7280;
-  background: #f3f4f6;
+  color: var(--t-neutral-500, #6b7280);
+  background: var(--t-neutral-100, #f3f4f6);
   padding: 2px 8px;
   border-radius: 9999px;
 }
@@ -303,18 +303,18 @@
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  border: 1px solid #d1d5db;
-  background: #fff;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  background: var(--t-neutral-0, #fff);
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
-  color: #374151;
+  color: var(--t-neutral-700, #374151);
   transition: background 0.2s, border-color 0.2s;
 }
 
 .stores-page-btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #059669;
+  background: var(--t-neutral-50, #f9fafb);
+  border-color: var(--t-primary-600, #059669);
 }
 
 .stores-page-btn:disabled {
@@ -324,7 +324,7 @@
 
 .stores-page-info {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #6b7280);
 }
 
 @media (max-width: 640px) {
@@ -496,17 +496,17 @@
   .stores-empty {
     padding: 40px 16px;
     border-radius: 12px;
-    background: #fff;
+    background: var(--t-neutral-0, #fff);
   }
 
   .stores-empty svg {
-    color: #a7f3d0;
+    color: var(--t-primary-200, #a7f3d0);
     opacity: 1;
   }
 
   .stores-empty p {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--t-neutral-500, #6b7280);
   }
 
   .stores-clear-btn {

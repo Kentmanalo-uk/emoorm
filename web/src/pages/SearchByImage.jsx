@@ -170,7 +170,7 @@ const SearchByImage = () => {
                           <div className="product-rating-row">
                             <div className="product-stars">
                               {[0, 1, 2, 3, 4].map((i) => (
-                                <Star key={i} size={11} weight="fill" color="#f59e0b" />
+                                <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
                               ))}
                             </div>
                             <span className="product-review-count">({product.reviewCount ?? 0})</span>
