@@ -431,7 +431,24 @@
 /* ─── Sections ──────────────────────────────────────────────────── */
 .sell-section {
   padding: 56px 0;
+}
 
+/* A section that should read as roughly one screen. It is a minimum, not a
+   fixed height: content always wins, so a long section simply grows and a
+   short one still fills the view. Below the desktop breakpoint the whole
+   idea is dropped — a phone screen is not a canvas. */
+.sell-screen {
+  display: flex;
+  align-items: center;
+  min-height: min(1000px, calc(100svh - var(--sell-head)));
+  padding-top: clamp(48px, 7vh, 96px);
+  padding-bottom: clamp(48px, 7vh, 96px);
+  position: relative;
+  overflow: hidden;
+}
+
+.sell-screen > .sell-container {
+  width: 100%;
 }
 
 .sell-section--gray {
@@ -460,19 +477,48 @@
 
 /* ─── Hero ──────────────────────────────────────────────────────── */
 .sell-hero {
-  padding: 56px 0 64px;
-}
-
-.sell-hero-layout {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 48px;
+  /* The sticky topbar and header sit above it, so the hero takes what is
+     left. svh keeps it honest on mobile browsers whose toolbars come and go. */
+  min-height: calc(100svh - var(--sell-head));
+  padding: clamp(24px, 4vh, 56px) 0 clamp(32px, 5vh, 64px);
+  overflow: hidden;
+}
+
+/* A soft wash behind the collage so the right half is not a bare rectangle. */
+.sell-hero-glow {
+  position: absolute;
+  top: -12%;
+  right: -8%;
+  width: 780px;
+  height: 780px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--t-primary-50, #ecfdf5) 0%,
+    rgba(255, 255, 255, 0) 68%
+  );
+  pointer-events: none;
+}
+
+.sell-hero > .sell-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Deliberately uneven: the copy keeps a readable measure and the collage
+   takes the wider share, pushed a little past the grid on large screens. */
+.sell-hero-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 72px);
 }
 
 .sell-hero-copy {
-  flex: 1;
   min-width: 0;
-  padding-top: 8px;
 }
 
 .sell-hero-h1 {
@@ -554,12 +600,10 @@
 
 /* Hero images */
 .sell-hero-imgs {
-  width: 400px;
-  flex-shrink: 0;
   display: grid;
   grid-template-columns: 3fr 2fr;
-  gap: 10px;
-  height: 360px;
+  gap: 12px;
+  height: clamp(340px, 62vh, 620px);
 }
 
 .sell-hero-img-main,
@@ -601,8 +645,28 @@
 
 .sell-benefit-card {
   background: var(--t-neutral-0, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.sell-benefit-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 0, 0, 0.09);
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.25);
+}
+
+.sell-benefit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-secondary-500, #29a366);
 }
 
 .sell-benefit-title {
@@ -622,30 +686,63 @@
 
 /* ─── How it works ──────────────────────────────────────────────── */
 .sell-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .sell-step-card {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+  position: relative;
+  padding: 26px 24px 28px;
+  border-radius: 18px;
   background: var(--t-neutral-0, #fff);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 16px;
-  padding: 20px 24px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 20px 44px -34px rgba(0, 0, 0, 0.45);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.sell-step-card:hover {
+  box-shadow: 0 26px 52px -32px rgba(0, 0, 0, 0.5);
+}
+
+/* The line that carries the eye from one step to the next. It is angled to
+   follow the stagger, and nothing trails off the last number. */
+.sell-step-card:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 46px;
+  left: calc(100% + 2px);
+  width: 22px;
+  height: 2px;
+  transform-origin: left center;
+  transform: rotate(2.2deg);
+  background: linear-gradient(
+    to right,
+    var(--t-primary-200, #a7f3d0),
+    var(--t-primary-100, #d1fae5) 62%,
+    transparent
+  );
 }
 
 .sell-step-n {
-  font-size: 40px;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--t-secondary-500, #29a366);
-  opacity: 0.2;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 40px;
-  text-align: center;
-  flex-shrink: 0;
+  height: 40px;
+  margin-bottom: 16px;
+  border-radius: 9999px;
+  background: var(--t-secondary-500, #29a366);
+  color: var(--t-neutral-0, #fff);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 5px var(--t-primary-50, #ecfdf5);
 }
 
 .sell-step-title {
@@ -671,19 +768,50 @@
 }
 
 .sell-cat-chip {
+  display: inline-block;
   background: var(--t-neutral-0, #fff);
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 9999px;
-  padding: 8px 20px;
+  padding: 9px 20px;
   font-size: 13px;
   font-weight: 600;
   color: var(--t-neutral-700, #444);
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.sell-cat-chip:hover {
+  border-color: var(--t-secondary-500, #29a366);
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
 }
 
 /* ─── Final CTA ─────────────────────────────────────────────────── */
 .sell-final-cta {
+  position: relative;
   background: linear-gradient(135deg, var(--t-primary-900, #064e3b) 0%, var(--t-primary-800, #065f46) 100%);
-  padding: 80px 0;
+  padding: clamp(80px, 13vh, 140px) 0;
+  overflow: hidden;
+}
+
+/* Concentric rings, off-centre, so the closing band has somewhere to look. */
+.sell-final-rings {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 780px;
+  height: 780px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 0 0 120px rgba(255, 255, 255, 0.045) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+
+.sell-final-inner {
+  position: relative;
 }
 
 .sell-final-inner {
@@ -1016,4 +1144,1273 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+}
+
+
+/* ─── Hero additions ────────────────────────────────────────────── */
+.sell-hero-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sell-hero-points li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t-neutral-600, #555);
+}
+
+.sell-hero-points svg {
+  color: var(--t-secondary-500, #29a366);
+  flex-shrink: 0;
+}
+
+.sell-hero-media {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Sits over the corner of the photos so the hero shows the product and not
+   only produce. Decorative, and hidden from assistive technology. */
+.sell-hero-badge {
+  position: absolute;
+  left: -28px;
+  bottom: -22px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  max-width: 260px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.32);
+}
+
+.sell-hero-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-secondary-500, #29a366);
+}
+
+.sell-hero-badge span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--t-neutral-500, #888);
+}
+
+.sell-hero-badge strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #111);
+}
+
+/* ─── Seller tools ──────────────────────────────────────────────── */
+.sell-tool-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #111);
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+.sell-tool-desc {
+  display: block;
+  font-size: 13px;
+  color: var(--t-neutral-500, #888);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ─── Requirements ──────────────────────────────────────────────── */
+.sell-req-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 22px 22px 26px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 18px 40px -30px rgba(0, 0, 0, 0.45);
+}
+
+.sell-req-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-secondary-500, #29a366);
+}
+
+.sell-req-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #111);
+  margin: 2px 0 5px;
+  line-height: 1.3;
+}
+
+.sell-req-desc {
+  font-size: 13px;
+  color: var(--t-neutral-500, #888);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.sell-req-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 22px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--t-neutral-600, #555);
+}
+
+.sell-req-note svg {
+  color: var(--t-secondary-500, #29a366);
+  flex-shrink: 0;
+}
+
+/* ─── FAQ ───────────────────────────────────────────────────────── */
+.sell-faq {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sell-faq-item {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.sell-faq-item.is-open {
+  border-color: var(--t-primary-200, #a7f3d0);
+}
+
+.sell-faq-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 18px 22px;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--t-neutral-900, #111);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sell-faq-q svg {
+  flex-shrink: 0;
+  color: var(--t-secondary-500, #29a366);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sell-faq-item.is-open .sell-faq-q svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sell-faq-a,
+  .sell-faq-q svg {
+    transition: none;
+  }
+}
+
+/* A grid row animates from nothing to content height, which plain
+   height: auto cannot do. The inner wrapper is what actually clips. */
+.sell-faq-a {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+}
+
+.sell-faq-item.is-open .sell-faq-a {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.sell-faq-a-inner {
+  overflow: hidden;
+  min-height: 0;
+  padding: 0 22px;
+}
+
+.sell-faq-item.is-open .sell-faq-a-inner {
+  padding-bottom: 18px;
+}
+
+.sell-faq-a p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--t-neutral-600, #555);
+  max-width: 62ch;
+}
+
+/* ─── Responsive for the new sections ───────────────────────────── */
+@media (max-width: 1080px) {
+  .sell-tools-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .sell-steps {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px 20px;
+  }
+
+  /* Only the first of each pair still has a neighbour to point at. */
+  .sell-step-card:nth-child(2n)::after {
+    display: none;
+  }
+
+  .sell-req-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sell-hero-badge {
+    left: 12px;
+    bottom: -18px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sell-steps {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .sell-step-card::after {
+    display: none !important;
+  }
+
+  .sell-step-card {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    column-gap: 16px;
+    align-items: center;
+  }
+
+  .sell-step-n {
+    grid-row: span 2;
+    margin-bottom: 0;
+  }
+
+  .sell-tools-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Art on the left, title and text stacked beside it. A plain flex row
+     would put the title in its own narrow column and break every word. */
+  .sell-tool-card {
+    display: grid;
+    grid-template-columns: 68px 1fr;
+    column-gap: 16px;
+    align-items: center;
+    padding: 18px;
+  }
+
+  .sell-tool-art {
+    grid-row: span 2;
+    width: 68px;
+    margin-bottom: 0;
+  }
+
+  /* EmptyArt sets its height inline, so the phone size has to win. */
+  .sell-tool-art .empty-art {
+    height: 60px !important;
+  }
+
+  .sell-hero-badge {
+    position: static;
+    max-width: none;
+    margin-top: 14px;
+    box-shadow: none;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .sell-faq-q {
+    padding: 16px 18px;
+    font-size: 14.5px;
+  }
+
+  .sell-faq-a {
+    padding: 0 18px 16px;
+  }
+}
+
+
+/* ═══ Section compositions ══════════════════════════════════════════
+   Each section is laid out on purpose rather than repeating the same
+   centred heading. They share the type scale, colours and card
+   treatment; what differs is where things sit. */
+
+:root {
+  /* topbar 40 + header 80 + its hairline, rounded up so the hero never
+     spills a sub-pixel past the fold */
+  --sell-head: 122px;
+}
+
+/* A small label above a heading, used across the sections. */
+.sell-eyebrow {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t-secondary-500, #29a366);
+}
+
+.sell-eyebrow--onDark {
+  color: var(--t-primary-200, #a7f3d0);
+}
+
+.sell-h2 {
+  font-size: clamp(28px, 3.4vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  color: var(--t-neutral-900, #111);
+  margin: 0 0 14px;
+}
+
+.sell-h2-muted {
+  color: var(--t-neutral-400, #9ca3af);
+  font-weight: 600;
+}
+
+.sell-lede {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--t-neutral-600, #666);
+  margin: 0;
+  max-width: 44ch;
+}
+
+.sell-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 22px;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t-secondary-500, #29a366);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sell-text-link:hover {
+  color: var(--t-primary-700, #047857);
+}
+
+.sell-text-link:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ─── Split: a column that stays put beside one that scrolls ─────── */
+.sell-split {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: clamp(32px, 5vw, 80px);
+  align-items: center;
+}
+
+.sell-split--reverse .sell-tools-stack {
+  order: -1;
+}
+
+.sell-split-aside,
+.sell-split-main {
+  min-width: 0;
+}
+
+/* ─── Hero extras ───────────────────────────────────────────────── */
+.sell-hero-h1 {
+  font-size: clamp(38px, 5.2vw, 66px);
+}
+
+.sell-hero-sub {
+  max-width: 42ch;
+  font-size: clamp(14px, 1.15vw, 16px);
+}
+
+/* One reassurance, so it reads as a badge rather than a list. */
+.sell-hero-points li {
+  padding: 7px 14px 7px 11px;
+  border-radius: 9999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+}
+
+/* The stacked pair rides higher than the tall frame. */
+.sell-hero-img-side {
+  padding-bottom: 34px;
+}
+
+.sell-hero-img-main {
+  margin-top: 26px;
+  box-shadow: 0 30px 60px -34px rgba(0, 0, 0, 0.5);
+}
+
+.sell-hero-chip {
+  position: absolute;
+  top: 44%;
+  right: -26px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 16px 36px -18px rgba(0, 0, 0, 0.34);
+}
+
+.sell-hero-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-secondary-500, #29a366);
+}
+
+.sell-hero-chip span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--t-neutral-500, #888);
+}
+
+.sell-hero-chip strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #111);
+}
+
+/* ─── Benefits: staggered cards beside a held heading ────────────── */
+.sell-benefits-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* The second column drops half a card, so the eye zigzags down the pair
+   instead of reading two flat rows. */
+.sell-benefits-grid > :nth-child(2n) {
+  transform: translateY(28px);
+}
+
+/* ─── How it works: a descending walk ───────────────────────────── */
+.sell-steps-head {
+  max-width: 560px;
+  margin-bottom: clamp(36px, 6vh, 64px);
+}
+
+.sell-steps-section > .sell-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* A quiet marker of where you are, set into the corner. */
+.sell-steps-ghost {
+  position: absolute;
+  right: clamp(16px, 4vw, 64px);
+  top: clamp(40px, 9vh, 96px);
+  font-size: clamp(56px, 8vw, 104px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--t-neutral-900, #111);
+  opacity: 0.045;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Each step sits a little lower than the one before it. */
+.sell-steps > :nth-child(2) { transform: translateY(26px); }
+.sell-steps > :nth-child(3) { transform: translateY(52px); }
+.sell-steps > :nth-child(4) { transform: translateY(78px); }
+
+.sell-steps-section .sell-steps {
+  margin-bottom: 78px;
+}
+
+/* ─── Tools: a layered stack facing a list ──────────────────────── */
+.sell-tools-stack {
+  position: relative;
+  min-height: clamp(320px, 46vh, 420px);
+}
+
+.sell-stack-card {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.sell-stack-card--back {
+  top: 0;
+  left: 4%;
+  width: 54%;
+  height: 46%;
+  transform: rotate(-5deg);
+  box-shadow: 0 20px 40px -28px rgba(0, 0, 0, 0.4);
+}
+
+.sell-stack-card--mid {
+  right: 0;
+  top: 14%;
+  width: 52%;
+  height: 48%;
+  transform: rotate(4deg);
+  box-shadow: 0 24px 44px -28px rgba(0, 0, 0, 0.42);
+}
+
+.sell-stack-card--front {
+  left: 14%;
+  bottom: 0;
+  width: 68%;
+  height: 56%;
+  box-shadow: 0 34px 60px -32px rgba(0, 0, 0, 0.5);
+}
+
+.sell-tools-list {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sell-tool-row {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 14px;
+  transition: background 0.16s ease;
+}
+
+.sell-tool-row:hover {
+  background: var(--t-neutral-0, #fff);
+}
+
+.sell-tool-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Categories: heading anchored, catalogue drifting past ─────── */
+.sell-cats-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.sell-cats-ring {
+  position: absolute;
+  left: -160px;
+  bottom: -220px;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  border: 44px solid var(--t-primary-50, #ecfdf5);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.sell-cats-head .sell-h2 {
+  font-size: clamp(30px, 4vw, 52px);
+}
+
+.sell-cat-chips {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.sell-cat-chip {
+  padding: 11px 22px;
+  font-size: 14px;
+}
+
+/* A loose drift rather than a tidy row of pills. */
+.sell-cat-chips > :nth-child(3n + 2) { transform: translateY(12px); }
+.sell-cat-chips > :nth-child(4n + 3) { transform: translateY(-8px); }
+
+/* ─── Requirements: cards stepping down past a right-hand heading ── */
+.sell-req-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+}
+
+.sell-req-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Each card is inset a little further, so the three read as a descent. */
+.sell-req-cards > :nth-child(2) { margin-left: clamp(16px, 3vw, 46px); }
+.sell-req-cards > :nth-child(3) { margin-left: clamp(32px, 6vw, 92px); }
+
+.sell-req-step {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  background: var(--t-secondary-500, #29a366);
+  color: var(--t-neutral-0, #fff);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 0 0 4px var(--t-neutral-50, #f9fafb);
+}
+
+/* ─── FAQ ───────────────────────────────────────────────────────── */
+.sell-faq-section .sell-faq {
+  max-width: none;
+  margin: 0;
+}
+
+/* ─── Final CTA ─────────────────────────────────────────────────── */
+.sell-final-cta h2 {
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sell-final-cta p {
+  font-size: 15px;
+}
+
+/* ═══ Responsive ════════════════════════════════════════════════════
+   Below 1024px the one-screen idea is dropped: sections take the height
+   their content needs and every split becomes a single column. */
+@media (max-width: 1024px) {
+  .sell-screen {
+    display: block;
+    min-height: 0;
+    overflow: visible;
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  .sell-hero {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .sell-split,
+  .sell-cats-layout,
+  .sell-req-layout,
+  .sell-hero-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sell-split-aside,
+  .sell-cats-head {
+    margin-bottom: 8px;
+  }
+
+  .sell-split--reverse .sell-tools-stack {
+    order: 0;
+  }
+
+  .sell-tools-stack {
+    display: none;
+  }
+
+  /* The staggers are a large-screen device; stacked, they only misalign. */
+  .sell-benefits-grid > :nth-child(2n),
+  .sell-steps > :nth-child(2),
+  .sell-steps > :nth-child(3),
+  .sell-steps > :nth-child(4),
+  .sell-cat-chips > :nth-child(3n + 2),
+  .sell-cat-chips > :nth-child(4n + 3) {
+    transform: none;
+  }
+
+  .sell-steps-section .sell-steps {
+    margin-bottom: 0;
+  }
+
+  .sell-req-cards > :nth-child(2),
+  .sell-req-cards > :nth-child(3) {
+    margin-left: 0;
+  }
+
+  /* Heading first on a narrow screen, whichever side it sits on wide. */
+  .sell-req-layout .sell-req-head {
+    order: -1;
+  }
+
+  .sell-hero-chip {
+    right: 0;
+  }
+
+  .sell-cats-ring {
+    display: none;
+  }
+
+  .sell-steps-ghost {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .sell-benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sell-tool-row {
+    grid-template-columns: 44px 1fr;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .sell-hero-imgs {
+    height: 300px;
+  }
+
+  .sell-hero-img-main {
+    margin-top: 0;
+  }
+
+  .sell-hero-img-side {
+    padding-bottom: 0;
+  }
+}
+
+
+/* ═══ Filling the screen ════════════════════════════════════════════
+   A screen-sized section only works if its content is sized to match.
+   These grow the pieces that were floating in the middle of one. */
+
+/* ─── Categories as tiles ───────────────────────────────────────── */
+.sell-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sell-cat-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  color: var(--t-neutral-900, #111);
+  text-decoration: none;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.sell-cat-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--t-primary-200, #a7f3d0);
+  box-shadow: 0 16px 34px -22px rgba(0, 0, 0, 0.35);
+}
+
+.sell-cat-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-secondary-500, #29a366);
+}
+
+.sell-cat-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sell-cat-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sell-cat-go {
+  flex-shrink: 0;
+  color: var(--t-neutral-300, #d1d5db);
+  transition: color 0.16s ease, transform 0.16s ease;
+}
+
+.sell-cat-tile:hover .sell-cat-go {
+  color: var(--t-secondary-500, #29a366);
+  transform: translateX(2px);
+}
+
+/* The tile grid is the wide half now, so the ring moves out of its way. */
+.sell-cats-ring {
+  left: -220px;
+  bottom: -280px;
+}
+
+/* ─── Bigger bodies for the thinner sections ────────────────────── */
+.sell-benefit-card {
+  padding: 28px 26px;
+}
+
+.sell-benefit-icon {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 18px;
+}
+
+.sell-benefit-title {
+  font-size: 17.5px;
+}
+
+.sell-req-card {
+  padding: 26px 26px 26px 30px;
+}
+
+.sell-req-icon {
+  width: 50px;
+  height: 50px;
+}
+
+.sell-tool-row {
+  padding: 16px;
+}
+
+.sell-faq-q {
+  padding: 22px 24px;
+}
+
+/* Padding belongs to the inner wrapper: on the collapsed container it
+   would leave every closed row carrying dead space. */
+.sell-faq-a-inner {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.sell-faq-item.is-open .sell-faq-a-inner {
+  padding-bottom: 22px;
+}
+
+/* ─── A closing band with some presence ─────────────────────────── */
+.sell-final-cta {
+  padding: clamp(96px, 16vh, 180px) 0;
+}
+
+@media (max-width: 1024px) {
+  .sell-cat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  /* Two across, so nine portrait tiles do not become a 1800px scroll. */
+  .sell-cat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .sell-cat-thumb {
+    height: 84px;
+  }
+
+  .sell-cat-foot {
+    padding: 10px 12px;
+  }
+
+  .sell-cat-name {
+    font-size: 13px;
+  }
+
+  .sell-step-card {
+    padding: 20px;
+  }
+}
+
+
+/* ═══ Later revisions ═══════════════════════════════════════════════ */
+
+/* The eyebrow labels and the hero reassurance badge were removed from the
+   markup; their rules are neutralised here rather than hunted down above. */
+.sell-eyebrow,
+.sell-hero-points {
+  display: none;
+}
+
+/* ─── Glass cards over the hero collage ─────────────────────────── */
+.sell-hero-badge,
+.sell-hero-chip {
+  background: rgba(255, 255, 255, 0.62);
+  /* Safari still wants the prefix for the blur behind the card. */
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 18px 40px -22px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.sell-hero-badge-icon,
+.sell-hero-chip-icon {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Glass only reads as glass over something; keep the text legible. */
+.sell-hero-badge strong,
+.sell-hero-chip strong {
+  color: var(--t-neutral-900, #111);
+}
+
+.sell-hero-badge span:last-child,
+.sell-hero-chip span:last-child {
+  color: var(--t-neutral-700, #374151);
+}
+
+/* Where the browser cannot blur, fall back to something nearly opaque
+   so the card never turns into unreadable grey mush. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sell-hero-badge,
+  .sell-hero-chip {
+    background: rgba(255, 255, 255, 0.94);
+  }
+}
+
+/* ─── Category tiles, portrait ──────────────────────────────────── */
+.sell-cat-grid {
+  gap: 14px;
+}
+
+.sell-cat-tile {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.sell-cat-thumb {
+  width: 100%;
+  height: clamp(96px, 13vh, 132px);
+  border-radius: 0;
+}
+
+.sell-cat-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 15px;
+}
+
+.sell-cat-name {
+  font-size: 14px;
+}
+
+/* ─── Requirements: something beside the heading ────────────────── */
+.sell-req-art {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 26px;
+  opacity: 0.95;
+}
+
+/* ─── A little more body in the thinner sections ────────────────── */
+.sell-step-card {
+  min-height: 210px;
+}
+
+.sell-steps > :nth-child(2) { transform: translateY(30px); }
+.sell-steps > :nth-child(3) { transform: translateY(60px); }
+.sell-steps > :nth-child(4) { transform: translateY(90px); }
+
+.sell-steps-section .sell-steps {
+  margin-bottom: 90px;
+}
+
+.sell-req-card {
+  padding: 28px 28px 28px 32px;
+}
+
+@media (max-width: 1024px) {
+  .sell-step-card {
+    min-height: 0;
+  }
+
+  .sell-steps-section .sell-steps {
+    margin-bottom: 0;
+  }
+
+  .sell-req-art {
+    display: none;
+  }
+}
+
+
+/* ═══ Later revisions, second round ═════════════════════════════════ */
+
+/* The hero's call to action runs from the accent pink into the brand
+   green. Both ends are theme tokens, so a repainted palette carries the
+   gradient with it rather than stranding a hardcoded pink. */
+.sell-hero-btn-primary {
+  /* The blend runs almost the whole width: each colour holds only at its
+     own end, so the sweep between them is the thing you notice. */
+  background: linear-gradient(
+    95deg,
+    var(--t-accent-500, #ec4899) 0%,
+    var(--t-accent-500, #ec4899) 6%,
+    var(--t-primary-600, #059669) 94%,
+    var(--t-primary-600, #059669) 100%
+  );
+  border: none;
+  box-shadow: none;
+  transition: transform 160ms ease, filter 200ms ease;
+}
+
+.sell-hero-btn-primary:hover:not(:disabled) {
+  opacity: 1;
+  filter: saturate(1.08) brightness(1.04);
+  transform: translateY(-1px);
+}
+
+/* ─── Benefit cards: no icon, the title carries the card ────────── */
+.sell-benefit-icon {
+  display: none;
+}
+
+.sell-benefit-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 30px 28px;
+}
+
+.sell-benefit-title {
+  font-size: clamp(19px, 1.5vw, 23px);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin: 0 0 9px;
+}
+
+.sell-benefit-desc {
+  font-size: 13.5px;
+}
+
+@media (max-width: 720px) {
+  .sell-benefit-card {
+    padding: 22px 20px;
+  }
+
+  .sell-benefit-title {
+    font-size: 18px;
+  }
+}
+
+
+/* ═══ Pink, used sparingly ══════════════════════════════════════════
+   Green still means "do this": buttons, links, the numbered walk.
+   Pink marks and decorates, so the page reads as two-tone rather than
+   one long wash of green. */
+
+/* ─── Hero cards: bare icons, no plate behind them ──────────────── */
+.sell-hero-badge-icon,
+.sell-hero-chip-icon {
+  width: auto;
+  height: auto;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
+.sell-hero-badge-icon {
+  color: var(--t-secondary-500, #29a366);
+}
+
+/* The payment card takes the accent, so the two cards are not a pair of
+   identical green chips sitting on the same photo. */
+.sell-hero-chip-icon {
+  color: var(--t-accent-500, #ec4899);
+}
+
+.sell-hero-badge,
+.sell-hero-chip {
+  gap: 13px;
+}
+
+/* ─── The headline sweep matches the button ─────────────────────── */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .sell-hero-accent {
+    /* Pink and green sit opposite each other, so a long blend between
+       them turns grey. The headline holds each colour and crosses fast;
+       only the button wants the long sweep. */
+    background: linear-gradient(
+      95deg,
+      var(--t-accent-500, #ec4899) 0%,
+      var(--t-accent-500, #ec4899) 34%,
+      var(--t-primary-600, #059669) 62%,
+      var(--t-primary-600, #059669) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+/* ─── The application markers ───────────────────────────────────── */
+/* Numbered, but not the same track as "How it works" — these are things
+   to bring, not steps to walk. The colour says so. */
+.sell-req-step {
+  background: var(--t-accent-500, #ec4899);
+}
+
+.sell-req-icon {
+  background: var(--t-accent-50, #fdf2f8);
+  color: var(--t-accent-600, #db2777);
+}
+
+/* ─── Decorative ring behind the catalogue ──────────────────────── */
+.sell-cats-ring {
+  border-color: var(--t-accent-50, #fdf2f8);
+}
+
+/* ─── The open question ─────────────────────────────────────────── */
+.sell-faq-item.is-open {
+  border-color: var(--t-accent-200, #fbcfe8);
+}
+
+.sell-faq-item.is-open .sell-faq-q svg {
+  color: var(--t-accent-500, #ec4899);
+}
+
+/* ─── A warm edge on the closing band ───────────────────────────── */
+.sell-final-cta::before {
+  content: '';
+  position: absolute;
+  top: -45%;
+  right: -14%;
+  width: 780px;
+  height: 780px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(236, 72, 153, 0.42) 0%,
+    rgba(236, 72, 153, 0.16) 45%,
+    rgba(236, 72, 153, 0) 72%
+  );
+  pointer-events: none;
+}
+
+/* The primary button in the closing band picks up the same sweep as the
+   hero's, so the two calls to action are obviously the same offer. */
+.sell-final-btn {
+  background: linear-gradient(
+    95deg,
+    var(--t-accent-500, #ec4899) 0%,
+    var(--t-accent-500, #ec4899) 6%,
+    var(--t-primary-500, #10b981) 94%,
+    var(--t-primary-500, #10b981) 100%
+  );
+  color: var(--t-neutral-0, #fff);
+  border: none;
+}
+
+.sell-final-btn:hover:not(:disabled) {
+  filter: saturate(1.08) brightness(1.06);
+}
+
+
+/* ─── Requirements: bare icons, a stronger title ────────────────── */
+/* The plate behind the icon added nothing here: the card already has an
+   edge, and three tinted squares in a column read as clutter. */
+.sell-req-icon {
+  width: auto;
+  height: auto;
+  background: none;
+  border-radius: 0;
+  color: var(--t-accent-500, #ec4899);
+}
+
+.sell-req-card {
+  gap: 18px;
+  align-items: center;
+}
+
+.sell-req-title {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+
+.sell-req-desc {
+  font-size: 13.5px;
 }

@@ -2,19 +2,67 @@
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import {
   ArrowRight, Star, List as Menu, X, CaretDown as ChevronDown,
+  Storefront, Users, Truck, ChatCircleDots, ChartLineUp, SealCheck,
+  IdentificationCard, Camera, Package,  Plus, Minus, Money,
 } from '@phosphor-icons/react';
 import useAuthStore from '../store/authStore';
 import Footer from '../components/layout/Footer';
 import AppLogo from '../components/AppLogo';
+import EmptyArt from '../components/ui/EmptyArt';
+import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import './Sell.css';
 
 const BENEFITS = [
-  { title: 'Free to open a shop', desc: 'No fees. Keep more of what you earn.' },
-  { title: 'Reach local buyers', desc: 'Buyers across Oriental Mindoro looking for fresh, local products.' },
-  { title: 'You control delivery', desc: 'Set your own area and schedule.' },
-  { title: 'Direct messaging', desc: 'Chat with buyers in real time to confirm orders.' },
-  { title: 'Track performance', desc: 'Sales, reviews, and earnings in one dashboard.' },
-  { title: 'Verified & trusted', desc: "Gov't ID verification builds buyer confidence." },
+  { icon: Storefront, title: 'Free to open a shop', desc: 'No listing fees and no commission. What the buyer pays is what you earn.' },
+  { icon: Users, title: 'Reach local buyers', desc: 'Shoppers across all 15 towns and cities of Oriental Mindoro, looking for what you make.' },
+  { icon: Truck, title: 'You control delivery', desc: 'Choose the barangays you serve, or let buyers pick up from your shop.' },
+  { icon: ChatCircleDots, title: 'Talk to your buyers', desc: 'Message them before and after the order to confirm details.' },
+  { icon: ChartLineUp, title: 'See how you are doing', desc: 'Orders, earnings, reviews and low stock in one dashboard.' },
+  { icon: SealCheck, title: 'Verified and trusted', desc: 'A verified ID badge on your shop tells buyers who they are buying from.' },
+];
+
+/* The tools a seller gets, shown with the same illustrations the app uses. */
+const TOOLS = [
+  { art: 'products', title: 'List what you sell', desc: 'Add photos, prices, stock and variations. Update them any time from the Seller Center.' },
+  { art: 'delivery', title: 'Fulfil your way', desc: 'Deliver to the areas you choose, offer pickup, or do both. You set the rules.' },
+  { art: 'payments', title: 'Get paid directly', desc: 'Cash on delivery, GCash or QR Ph. Emoorm never holds your money.' },
+  { art: 'analytics', title: 'Know your numbers', desc: 'Track earnings by period, see your best sellers and export your records.' },
+];
+
+/* What an application actually asks for, so nobody is surprised. */
+const REQUIREMENTS = [
+  { icon: IdentificationCard, title: 'A valid government ID', desc: 'Used once to verify who you are. Your ID is never shown to buyers.' },
+  { icon: Storefront, title: 'Your shop details', desc: 'Shop name, the municipality you operate in, and how you want to fulfil orders.' },
+  { icon: Camera, title: 'Photos of your products', desc: 'Clear photos and honest descriptions. You can add more listings any time.' },
+];
+
+/* Answers match how the platform actually works — see the site footer. */
+const FAQS = [
+  {
+    q: 'How much does it cost to sell?',
+    a: 'Nothing. Opening a shop and listing products is free, and Emoorm takes no commission on your sales.',
+  },
+  {
+    q: 'How do I get paid?',
+    a: 'Buyers pay you directly. Depending on what you accept, that is cash on delivery, GCash, or QR Ph. Emoorm does not process or hold payments, so there is no payout waiting period.',
+  },
+  {
+    q: 'How long does approval take?',
+    a: 'Applications are reviewed by a municipal or platform administrator, usually within 1 to 2 business days. You will be notified once your shop is live.',
+  },
+  {
+    q: 'Do I have to deliver?',
+    a: 'No. You choose the municipalities and barangays you deliver to, and you can offer store pickup instead of or alongside delivery.',
+  },
+  {
+    q: 'What about returns?',
+    a: 'A buyer can request a return within 7 days if an item arrives damaged, incorrect, incomplete or not as described, unless your own return policy says otherwise. You review each request.',
+  },
+  {
+    q: 'Can I sell and buy with the same account?',
+    a: 'Yes. Your account switches between your personal profile and your Seller Center, and your buyer activity stays private.',
+  },
 ];
 
 const STEPS = [
@@ -40,10 +88,11 @@ const NAV_BENEFITS = [
   { title: 'Verified & trusted', desc: "Gov't ID verification builds buyer confidence." },
 ];
 
+/* Stands in only until the live catalogue answers. */
 const CATEGORIES = [
-  'Vegetables', 'Fruits', 'Seafood', 'Rice & Grains', 'Meat & Poultry',
-  'Dairy', 'Handicrafts', 'Wellness Products', 'Delicacies',
-  'Beverages', 'Condiments & Sauces', 'Seedlings & Plants',
+  { name: 'Vegetables' }, { name: 'Fruits' }, { name: 'Seafood' },
+  { name: 'Livestock' }, { name: 'Handicrafts' }, { name: 'Dried Goods' },
+  { name: 'Local Delicacies' }, { name: 'Processed Foods' }, { name: 'Beverages' },
 ];
 
 function AuthDropdown({ label, variant, onClick, to, title, subtitle, items }) {
@@ -93,10 +142,21 @@ export default function Sell() {
   const [headerVisible, setHeaderVisible] = useState(true);
   const [activeNav, setActiveNav] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState(0);
 
-  if (isAuthenticated && user?.role === 'SELLER') {
-    return <Navigate to="/seller" replace />;
-  }
+  // The categories a seller can actually list under come from the catalogue,
+  // not a hardcoded list that can promise something the platform does not have.
+  const [categories, setCategories] = useState(CATEGORIES);
+  useEffect(() => {
+    let cancelled = false;
+    axios.get('/categories')
+      .then((res) => {
+        const live = (res.data || []).filter((c) => c?.name);
+        if (!cancelled && live.length) setCategories(live);
+      })
+      .catch(() => { /* the shipped list stands in */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const isPending = isAuthenticated && user?.sellerApplicationStatus === 'PENDING';
   const ctaLabel = isPending ? 'Application Pending' : isAuthenticated ? 'Apply to sell' : 'Start selling';
@@ -127,6 +187,14 @@ export default function Sell() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Sellers already have a shop, so this page is not for them. The check sits
+  // below every hook: returning above one changes the hook count between
+  // renders, which React reports as a render error the moment a visitor signs
+  // in as a seller while this page is mounted.
+  if (isAuthenticated && user?.role === 'SELLER') {
+    return <Navigate to="/seller" replace />;
+  }
 
   return (
     <div className="sell-page">
@@ -273,6 +341,7 @@ export default function Sell() {
 
       {/* Hero */}
       <section className="sell-hero">
+        <span className="sell-hero-glow" aria-hidden="true" />
         <div className="sell-container">
           <div className="sell-hero-layout">
             <div className="sell-hero-copy">
@@ -280,7 +349,10 @@ export default function Sell() {
                 Start Selling<br />
                 <span className="sell-hero-accent">in Emoorm</span>
               </h1>
-              <p className="sell-hero-sub">Join local farmers and agri-entrepreneurs.</p>
+              <p className="sell-hero-sub">
+                Open a free shop and sell to buyers across Oriental Mindoro. Farmers,
+                fisherfolk, artisans and home cooks are already here.
+              </p>
               <div className="sell-hero-btns">
                 <button className="sell-hero-btn-primary" onClick={handleCTA} disabled={isPending}>
                   {ctaLabel} <ArrowRight size={16} />
@@ -296,13 +368,34 @@ export default function Sell() {
               )}
             </div>
 
-            <div className="sell-hero-imgs">
-              <div className="sell-hero-img-main">
-                <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&q=80" alt="Fresh vegetables" />
+            {/* The collage is deliberately off-grid: the tall frame sits
+                lower than the stacked pair, and both cards break its edges. */}
+            <div className="sell-hero-media">
+              <div className="sell-hero-imgs">
+                <div className="sell-hero-img-main">
+                  <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&q=80" alt="Fresh vegetables" />
+                </div>
+                <div className="sell-hero-img-side">
+                  <img src="https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&q=80" alt="Fresh fruits" />
+                  <img src="https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&q=80" alt="Root vegetables" />
+                </div>
               </div>
-              <div className="sell-hero-img-side">
-                <img src="https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&q=80" alt="Fresh fruits" />
-                <img src="https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&q=80" alt="Root vegetables" />
+
+              {/* A glimpse of the Seller Center, so the hero shows the product. */}
+              <div className="sell-hero-badge" aria-hidden="true">
+                <span className="sell-hero-badge-icon"><Storefront size={30} weight="fill" /></span>
+                <span>
+                  <strong>Your Seller Center</strong>
+                  Orders, earnings and messages in one place
+                </span>
+              </div>
+
+              <div className="sell-hero-chip" aria-hidden="true">
+                <span className="sell-hero-chip-icon"><Money size={28} weight="fill" /></span>
+                <span>
+                  <strong>Paid directly</strong>
+                  Cash, GCash or QR Ph
+                </span>
               </div>
             </div>
           </div>
@@ -310,16 +403,25 @@ export default function Sell() {
       </section>
 
       {/* Benefits */}
-      <section id="benefits" className="sell-section sell-section--gray">
-        <div className="sell-container sell-container--narrow">
-          <div className="sell-section-head">
-            <h2>Why sell on Emoorm?</h2>
+      {/* Benefits — heading held on the left while staggered cards pass it */}
+      <section id="benefits" className="sell-section sell-section--gray sell-screen">
+        <div className="sell-container sell-split">
+          <div className="sell-split-aside">
+            <h2 className="sell-h2">
+              Built for Oriental Mindoro,<br />
+              <span className="sell-h2-muted">not a marketplace that happens to reach it.</span>
+            </h2>
+            <p className="sell-lede">
+              Every shop here is run by someone local. Buyers know who grew, caught
+              or made what they are buying.
+            </p>
           </div>
+
           <div className="sell-benefits-grid">
-            {BENEFITS.map(b => (
-              <div key={b.title} className="sell-benefit-card">
-                <p className="sell-benefit-title">{b.title}</p>
-                <p className="sell-benefit-desc">{b.desc}</p>
+            {BENEFITS.map(({ title, desc }) => (
+              <div key={title} className="sell-benefit-card">
+                <p className="sell-benefit-title">{title}</p>
+                <p className="sell-benefit-desc">{desc}</p>
               </div>
             ))}
           </div>
@@ -327,46 +429,166 @@ export default function Sell() {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" className="sell-section">
-        <div className="sell-container sell-container--narrow">
-          <div className="sell-section-head">
-            <h2>How it works</h2>
-            <p>Up and running in under 10 minutes.</p>
+      {/* How it works — a descending walk, heading pinned to the top left */}
+      <section id="how-it-works" className="sell-section sell-screen sell-steps-section">
+        <span className="sell-steps-ghost" aria-hidden="true">01 — 04</span>
+        <div className="sell-container">
+          <div className="sell-steps-head">
+            <h2 className="sell-h2">How it works</h2>
+            <p className="sell-lede">Four steps, about ten minutes, and no paperwork to post.</p>
           </div>
-          <div className="sell-steps">
+          <ol className="sell-steps">
             {STEPS.map(s => (
-              <div key={s.n} className="sell-step-card">
+              <li key={s.n} className="sell-step-card">
                 <span className="sell-step-n">{s.n}</span>
-                <div>
-                  <p className="sell-step-title">{s.title}</p>
-                  <p className="sell-step-desc">{s.desc}</p>
-                </div>
-              </div>
+                <p className="sell-step-title">{s.title}</p>
+                <p className="sell-step-desc">{s.desc}</p>
+              </li>
             ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* What you get — the Seller Center, in the app's own illustrations */}
+      {/* Tools — a layered stack of screens on the left, the list on the right */}
+      <section id="tools" className="sell-section sell-section--gray sell-screen sell-tools-section">
+        <div className="sell-container sell-split sell-split--reverse">
+          <div className="sell-tools-stack" aria-hidden="true">
+            <div className="sell-stack-card sell-stack-card--back"><EmptyArt name="revenue" size={110} /></div>
+            <div className="sell-stack-card sell-stack-card--mid"><EmptyArt name="stores" size={120} /></div>
+            <div className="sell-stack-card sell-stack-card--front"><EmptyArt name="analytics" size={140} /></div>
+          </div>
+
+          <div className="sell-split-main">
+            <h2 className="sell-h2">Everything you need to run your shop</h2>
+            <p className="sell-lede">No spreadsheets, no separate apps, nothing to install.</p>
+            <ul className="sell-tools-list">
+              {TOOLS.map(t => (
+                <li key={t.title} className="sell-tool-row">
+                  <span className="sell-tool-art"><EmptyArt name={t.art} size={52} /></span>
+                  <span>
+                    <strong className="sell-tool-title">{t.title}</strong>
+                    <span className="sell-tool-desc">{t.desc}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
       {/* Categories */}
-      <section id="categories" className="sell-section sell-section--gray">
-        <div className="sell-container sell-container--narrow sell-container--center">
-          <div className="sell-section-head">
-            <h2>What can you sell?</h2>
-            <p>Local, fresh, and made in Oriental Mindoro.</p>
+      {/* Categories — heading anchored left, the catalogue drifting past it */}
+      <section id="categories" className="sell-section sell-screen sell-cats-section">
+        <span className="sell-cats-ring" aria-hidden="true" />
+        <div className="sell-container sell-cats-layout">
+          <div className="sell-cats-head">
+            <h2 className="sell-h2">What can<br />you sell?</h2>
+            <p className="sell-lede">
+              Whatever is local, fresh or made by hand in Oriental Mindoro. Pick a
+              category to see what is already on the marketplace.
+            </p>
+            <Link to="/products" className="sell-text-link">
+              Browse the marketplace <ArrowRight size={15} />
+            </Link>
           </div>
-          <div className="sell-cat-chips">
-            {CATEGORIES.map(cat => (
-              <span key={cat} className="sell-cat-chip">{cat}</span>
+
+          <div className="sell-cat-grid">
+            {categories.map(cat => (
+              <Link
+                key={cat.id || cat.name}
+                to={cat.slug ? `/products?category=${cat.id}` : `/products?q=${encodeURIComponent(cat.name)}`}
+                className="sell-cat-tile"
+              >
+                <span className="sell-cat-thumb">
+                  {cat.image
+                    ? <img src={resolveImg(cat.image)} alt="" loading="lazy" />
+                    : <Package size={22} weight="fill" />}
+                </span>
+                <span className="sell-cat-foot">
+                  <span className="sell-cat-name">{cat.name}</span>
+                  <ArrowRight size={14} className="sell-cat-go" />
+                </span>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
+      {/* Requirements — heading to the right, cards stepping down past it */}
+      <section id="requirements" className="sell-section sell-section--gray sell-screen sell-req-section">
+        <div className="sell-container sell-req-layout">
+          <div className="sell-req-cards">
+            {REQUIREMENTS.map(({ icon: Icon, title, desc }, i) => (
+              <div key={title} className="sell-req-card">
+                <span className="sell-req-step">{i + 1}</span>
+                <span className="sell-req-icon"><Icon size={30} weight="fill" /></span>
+                <div>
+                  <p className="sell-req-title">{title}</p>
+                  <p className="sell-req-desc">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="sell-req-head">
+            <h2 className="sell-h2">What you need to get started</h2>
+            <p className="sell-lede">Three things. The application itself takes about ten minutes.</p>
+            <div className="sell-req-art" aria-hidden="true">
+              <EmptyArt name="workspace" size={124} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ — heading held at the left while the answers scroll past */}
+      <section id="faq" className="sell-section sell-screen sell-faq-section">
+        <div className="sell-container sell-split">
+          <div className="sell-split-aside">
+            <h2 className="sell-h2">Questions<br />sellers ask</h2>
+            <p className="sell-lede">
+              Still unsure about something? Message customer care and a real person
+              will answer.
+            </p>
+            <Link to="/help" className="sell-text-link">
+              Visit the Help Centre <ArrowRight size={15} />
+            </Link>
+          </div>
+
+          <div className="sell-faq">
+            {FAQS.map((f, i) => {
+              const isOpen = openFaq === i;
+              return (
+                <div key={f.q} className={`sell-faq-item ${isOpen ? 'is-open' : ''}`}>
+                  <button
+                    type="button"
+                    className="sell-faq-q"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenFaq(isOpen ? -1 : i)}
+                  >
+                    <span>{f.q}</span>
+                    {isOpen ? <Minus size={16} /> : <Plus size={16} />}
+                  </button>
+                  {/* Kept in the DOM and collapsed with a grid row so the
+                      open and close can be animated. */}
+                  <div className="sell-faq-a" aria-hidden={!isOpen}>
+                    <div className="sell-faq-a-inner">
+                      <p>{f.a}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA — layered rings behind a centred, deliberate close */}
       <section className="sell-final-cta">
+        <span className="sell-final-rings" aria-hidden="true" />
         <div className="sell-container sell-final-inner">
           <h2>Ready to start selling?</h2>
-          <p>Free, local, and built for you.</p>
+          <p>Free to open, no commission, and your buyers are already here.</p>
           <div className="sell-final-btns">
             <button className="sell-final-btn" onClick={handleCTA} disabled={isPending}>
               {isPending ? 'Application Pending' : 'Start selling'} <ArrowRight size={16} />
