@@ -18,12 +18,24 @@ class ApiError extends Error {
  * Global error handler middleware
  */
 const errorHandler = (err, req, res, next) => {
-  let statusCode = err.statusCode || 500;
+  // `statusCode` is our own ApiError convention; `status` is what Express and
+  // its middleware set (express.static uses it for a missing file). Reading
+  // only the first turned every 404 from those into a 500, which buries real
+  // faults in monitoring under a pile of missing images.
+  let statusCode = err.statusCode || err.status || 500;
   let message = err.message || 'Internal Server Error';
   let errors = err.errors || null;
 
-  // Handle Prisma errors
-  if (err.code) {
+  // A missing file is not a server fault. serve-static surfaces it as an
+  // ENOENT, which fell through to the Prisma branch below and was reported as
+  // "Database operation failed" with a 500 — misleading in the response and
+  // in monitoring.
+  if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
+    statusCode = 404;
+    message = 'Not found';
+  } else if (err.code && String(err.code).startsWith('P')) {
+    // Prisma error codes are all P-prefixed (P1xxx, P2xxx). Matching on the
+    // presence of `code` alone swept in every Node system error too.
     switch (err.code) {
       case 'P2002':
         // Unique constraint violation

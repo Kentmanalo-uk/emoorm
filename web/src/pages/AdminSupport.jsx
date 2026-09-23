@@ -5,12 +5,13 @@ import AdminLayout from '../components/admin/AdminLayout';
 import SupportChat from '../components/support/SupportChat';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
+import './AdminSupport.css';
 
 export default function AdminSupport() {
   const [searchParams, setSearchParams] = useSearchParams();
   const conversationId = searchParams.get('c');
   // Set by "Message them" in the shell search, which knows a user id but not
-  // whether a conversation with them exists yet.
+  // whether a case with them exists yet.
   const openFor = searchParams.get('to');
   const [resolving, setResolving] = useState(false);
   // A StrictMode double-mount would otherwise fire the request twice.
@@ -21,10 +22,10 @@ export default function AdminSupport() {
     requested.current = openFor;
     setResolving(true);
 
-    // Opens the existing conversation with this user, or starts one. Either
-    // way the id comes back and the URL is rewritten to the normal ?c= form,
-    // so a refresh or a shared link behaves like any other thread.
-    axios.post(`/support/chat/users/${openFor}`, {})
+    // Opens the existing case with this user, or starts one. Either way the
+    // id comes back and the URL is rewritten to the normal ?c= form, so a
+    // refresh or a shared link behaves like any other thread.
+    axios.post(`/support/cases/for-user/${openFor}`, {})
       .then((res) => setSearchParams({ c: res.data.id }, { replace: true }))
       .catch((err) => {
         toast.error(err?.message || 'Could not open a conversation with that person');
@@ -36,13 +37,15 @@ export default function AdminSupport() {
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">Support Messages</h1>
+        <h1 className="admin-page-title">Buyer Support</h1>
       </div>
-      <SupportChat
-        key={conversationId || (resolving ? 'opening' : 'inbox')}
-        mode="admin"
-        initialConversationId={conversationId}
-      />
+      <div className="as-support">
+        <SupportChat
+          key={conversationId || (resolving ? 'opening' : 'inbox')}
+          mode="admin"
+          initialConversationId={conversationId}
+        />
+      </div>
     </AdminLayout>
   );
 }

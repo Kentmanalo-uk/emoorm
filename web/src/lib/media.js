@@ -4,8 +4,20 @@
 
 import { forLocalNetwork } from '../config/runtimeHost';
 
+/**
+ * In production the API process serves this app too, so /uploads is on the
+ * same origin and an empty prefix keeps every image URL relative — correct on
+ * any hostname, and unaffected by a missing env file. In development the Vite
+ * dev server runs on a different port and does not proxy /uploads, so the
+ * absolute backend origin is required.
+ *
+ * Without this, a production build asked every visitor's browser for images
+ * from http://localhost:3000 and none of them loaded.
+ */
+const DEFAULT_BACKEND_URL = import.meta.env.PROD ? '' : 'http://localhost:3000';
+
 export const BACKEND_URL = forLocalNetwork(
-  import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000',
+  import.meta.env.VITE_BACKEND_URL || DEFAULT_BACKEND_URL,
 );
 
 export const resolveImg = (path) => {

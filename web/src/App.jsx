@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -46,7 +46,8 @@ import AdminOrders from './pages/AdminOrders';
 import AdminCategories from './pages/AdminCategories';
 import AdminMunicipalities from './pages/AdminMunicipalities';
 import AdminAnalytics from './pages/AdminAnalytics';
-import AdminAnnouncements from './pages/AdminAnnouncements';
+import AdminMessages from './pages/AdminMessages';
+import AdminFeedback from './pages/AdminFeedback';
 import AdminBanners from './pages/AdminBanners';
 import AdminVouchers from './pages/AdminVouchers';
 import AdminJuniorAdmins from './pages/AdminJuniorAdmins';
@@ -59,6 +60,7 @@ import ProfileMessages from './pages/ProfileMessages';
 import ProfileSettings from './pages/ProfileSettings';
 import ProfileVerification from './pages/ProfileVerification';
 import ProfileSupport from './pages/ProfileSupport';
+import ProfileReports from './pages/ProfileReports';
 import AdminSupport from './pages/AdminSupport';
 import AdminNotifications from './pages/AdminNotifications';
 import AdminReviews from './pages/AdminReviews';
@@ -74,8 +76,6 @@ import Returns from './pages/Returns';
 import ReturnRequest from './pages/ReturnRequest';
 import ReturnDetail from './pages/ReturnDetail';
 import SellerReturns from './pages/SellerReturns';
-import CustomerCare from './pages/CustomerCare';
-import Feedback from './pages/Feedback';
 import { WishlistContent } from './pages/Wishlist';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
@@ -151,8 +151,10 @@ function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/cookies" element={<CookiePolicy />} />
-            <Route path="/customer-care" element={<CustomerCare />} />
-            <Route path="/feedback" element={<Feedback />} />
+            {/* Customer Care and Feedback folded into Help & Support. Both
+                paths are still linked from the wild, so they redirect. */}
+            <Route path="/customer-care" element={<Navigate to="/help" replace />} />
+            <Route path="/feedback" element={<Navigate to="/help" replace />} />
 
             {/* Protected routes — require login */}
             <Route
@@ -177,6 +179,7 @@ function App() {
               <Route path="settings" element={<ProfileSettings />} />
               <Route path="verification" element={<ProfileVerification />} />
               <Route path="support" element={<ProfileSupport />} />
+              <Route path="reports" element={<ProfileReports />} />
             </Route>
             <Route path="/help" element={<HelpCenter />} />
             <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
@@ -220,7 +223,11 @@ function App() {
             <Route path="/admin/categories" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCategories /></AdminRoute>} />
             <Route path="/admin/municipalities" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminMunicipalities /></AdminRoute>} />
             <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
-            <Route path="/admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
+            {/* Announcements are a tab of Messages now; the old path is still
+                linked from bookmarks and older notifications. */}
+            <Route path="/admin/messages" element={<AdminRoute><AdminMessages /></AdminRoute>} />
+            <Route path="/admin/feedback" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminFeedback /></AdminRoute>} />
+            <Route path="/admin/announcements" element={<Navigate to="/admin/messages?tab=announcements" replace />} />
             <Route path="/admin/banners" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminBanners /></AdminRoute>} />
             <Route path="/admin/vouchers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminVouchers /></AdminRoute>} />
             <Route path="/admin/junior-admins" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminJuniorAdmins /></AdminRoute>} />

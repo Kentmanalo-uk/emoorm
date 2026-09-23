@@ -1,0 +1,229 @@
+/* Feedback triage queue — built on .admin-card / .admin-table / .admin-badge
+   so it reads as part of the admin shell rather than a bolt-on. */
+
+/* ── summary strip ──────────────────────────────────────────────────── */
+.afb-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.afb-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 12px;
+  background: var(--t-surface, #ffffff);
+}
+
+.afb-stat-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.afb-stat-star {
+  color: var(--t-warning-500, #f59e0b);
+}
+
+.afb-stat-label {
+  font-size: 12px;
+  color: var(--t-neutral-500, #64748b);
+}
+
+/* ── status tabs ────────────────────────────────────────────────────── */
+.afb-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.afb-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.afb-tab:hover {
+  background: var(--t-neutral-50, #f8fafc);
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.afb-tab.is-active {
+  border-color: var(--t-secondary-500, #29a366);
+  background: var(--t-secondary-50, #ecfdf5);
+  color: var(--t-secondary-700, #15803d);
+}
+
+.afb-tab-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--t-secondary-500, #29a366);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── search ─────────────────────────────────────────────────────────── */
+.afb-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 8px;
+  background: var(--t-surface, #ffffff);
+  color: var(--t-neutral-400, #94a3b8);
+}
+
+.afb-search input {
+  width: 190px;
+  padding: 7px 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--t-neutral-900, #0f172a);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.afb-search:focus-within {
+  border-color: var(--t-secondary-500, #29a366);
+}
+
+/* ── table cells ────────────────────────────────────────────────────── */
+.afb-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.afb-person strong {
+  display: block;
+  font-size: 13.5px;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.afb-person-meta {
+  display: block;
+  font-size: 11.5px;
+  color: var(--t-neutral-500, #64748b);
+}
+
+.afb-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.afb-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: var(--t-secondary-100, #d1fae5);
+  color: var(--t-secondary-700, #15803d);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* One line in the table; the whole thing is in the drawer. */
+.afb-excerpt {
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--t-neutral-700, #334155);
+}
+
+.afb-when {
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--t-neutral-500, #64748b);
+}
+
+.afb-stars {
+  display: inline-flex;
+  gap: 1px;
+  color: var(--t-neutral-300, #cbd5e1);
+}
+
+.afb-stars .is-on {
+  color: var(--t-warning-500, #f59e0b);
+}
+
+.afb-norating {
+  font-size: 12px;
+  color: var(--t-neutral-400, #94a3b8);
+}
+
+/* ── drawer ─────────────────────────────────────────────────────────── */
+.afb-message {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 3px solid var(--t-secondary-500, #29a366);
+  border-radius: 0 10px 10px 0;
+  background: var(--t-neutral-50, #f8fafc);
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  color: var(--t-neutral-800, #1e293b);
+}
+
+.afb-notes {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 8px;
+  background: var(--t-surface, #ffffff);
+  color: var(--t-neutral-900, #0f172a);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.afb-notes:focus {
+  outline: none;
+  border-color: var(--t-secondary-500, #29a366);
+  box-shadow: 0 0 0 3px rgba(41, 163, 102, .15);
+}
+
+.afb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+@media (max-width: 900px) {
+  .afb-search input { width: 140px; }
+  .afb-excerpt { max-width: 200px; }
+}
+
+@media (max-width: 640px) {
+  .afb-summary { grid-template-columns: repeat(2, 1fr); }
+  .afb-search { width: 100%; }
+  .afb-search input { width: 100%; }
+  .afb-actions .admin-btn { flex: 1 1 auto; justify-content: center; }
+}

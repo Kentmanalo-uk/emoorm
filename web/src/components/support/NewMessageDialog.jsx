@@ -48,7 +48,7 @@ export default function NewMessageDialog({ open, onClose, onOpened }) {
   const pick = async (user) => {
     setOpeningId(user.id);
     try {
-      const res = await axios.post(`/support/chat/users/${user.id}`, {});
+      const res = await axios.post(`/support/cases/for-user/${user.id}`, {});
       onOpened(res.data);
       setQuery('');
       onClose();

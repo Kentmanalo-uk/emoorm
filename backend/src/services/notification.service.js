@@ -26,6 +26,7 @@ const DEFAULT_AUDIENCE = {
   RETURN_RECEIVED: 'SELLER',
   RETURN_CLOSED: 'SELLER',
   SELLER_APPLICATION_SUBMITTED: 'ADMIN',
+  ADMIN_MESSAGE: 'ADMIN',
   ADMIN_ALERT: 'ADMIN',
 };
 
@@ -63,6 +64,9 @@ const createNotification = async (data) => {
     'RETURN_CANCELLED',
     'RETURN_CLOSED',
     'SUPPORT_MESSAGE',
+    'SUPPORT_RESOLVED',
+    'ADMIN_MESSAGE',
+    'STORE_MESSAGE',
     'SELLER_APPLICATION_SUBMITTED',
     'ADMIN_ALERT',
   ];
@@ -372,9 +376,33 @@ const notifyMunicipalAdmins = async (municipalityId, notice) => {
   }
 };
 
+/**
+ * Notify every active super admin (admin audience). Never throws.
+ * Used by admin messaging, where "the other side" of a municipal admin's
+ * reply is the super admin bench rather than one named person.
+ * @param {{type: String, title: String, message: String, relatedId?: String}} notice
+ * @param {{excludeUserId?: String}} options
+ */
+const notifySuperAdmins = async (notice, { excludeUserId } = {}) => {
+  try {
+    const supers = await prisma.user.findMany({
+      where: { role: 'SUPER_ADMIN', isActive: true, deletedAt: null },
+      select: { id: true },
+    });
+    await Promise.all(
+      supers
+        .filter((u) => u.id !== excludeUserId)
+        .map((u) => createNotification({ ...notice, userId: u.id, audience: 'ADMIN' })),
+    );
+  } catch (err) {
+    console.error('[notifySuperAdmins] failed:', err.message);
+  }
+};
+
 module.exports = {
   findResponsibleAdmins,
   notifyMunicipalAdmins,
+  notifySuperAdmins,
   createNotification,
   getUserNotifications,
   getNotificationById,

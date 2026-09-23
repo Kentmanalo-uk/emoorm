@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
-  ShieldCheck, ShieldWarning, Headset, Question, ChatCircleDots,
+  ShieldCheck, ShieldWarning, Question,
   Eye,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
@@ -275,19 +275,7 @@ const Profile = () => {
             <div className="service-icon">
               <Question size={24} />
             </div>
-            <span className="service-label">Help Centre</span>
-          </Link>
-          <Link to="/customer-care" className="service-item">
-            <div className="service-icon">
-              <Headset size={24} />
-            </div>
-            <span className="service-label">Customer Care</span>
-          </Link>
-          <Link to="/feedback" className="service-item">
-            <div className="service-icon">
-              <ChatCircleDots size={24} />
-            </div>
-            <span className="service-label">Feedback</span>
+            <span className="service-label">Help &amp; Support</span>
           </Link>
         </div>
       </div>

@@ -1,6 +1,7 @@
 const messageRepository = require('../repositories/message.repository');
 const storeRepository = require('../repositories/store.repository');
 const orderRepository = require('../repositories/order.repository');
+const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
 const prisma = require('../config/database');
 
@@ -303,6 +304,32 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
     productId: productId || null,
   });
   await messageRepository.touchConversation(conversationId, now);
+
+  // Buyer <-> store messages used to emit nothing at all, so the only way to
+  // learn you had been written to was to open the thread. Non-blocking: a
+  // failed notification must never lose the message that was already stored.
+  try {
+    const side = resolveRole(conversation, userId);
+    const recipientId = side === 'buyer' ? conversation.store.ownerId : conversation.buyerId;
+    if (recipientId && recipientId !== userId) {
+      const senderName = side === 'buyer'
+        ? (conversation.buyer?.fullName || 'A customer')
+        : (conversation.store?.name || 'A store');
+      const body = trimmed || (trimmedImageUrl ? 'Sent a photo' : 'Shared an item');
+      await notificationService.createNotification({
+        userId: recipientId,
+        type: 'STORE_MESSAGE',
+        title: `New message from ${senderName}`,
+        message: body.length > 120 ? `${body.slice(0, 117)}...` : body,
+        relatedId: conversationId,
+        // The recipient reads it in the feed for the role they hold in this
+        // conversation: the seller in their dashboard, the buyer in the bell.
+        audience: side === 'buyer' ? 'SELLER' : 'BUYER',
+      });
+    }
+  } catch (err) {
+    console.error('[sendMessage] notification failed:', err.message);
+  }
 
   return {
     id: message.id,

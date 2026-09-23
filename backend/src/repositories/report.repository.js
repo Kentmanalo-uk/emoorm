@@ -6,10 +6,65 @@ const prisma = require('../config/database');
  * status, municipalityId, resolutionNotes, resolvedAt
  */
 
-const REPORT_INCLUDE_LIST = {
-  reporter: {
-    select: { id: true, fullName: true, email: true },
+/**
+ * Who filed it. Email and contact number are deliberately absent: a report is
+ * read by every admin of the municipality, and none of them needs the
+ * reporter's contact details to judge the listing. The reporter's own
+ * barangay/municipality stay, as context for where the complaint comes from.
+ */
+const REPORTER_SELECT = {
+  select: {
+    id: true,
+    fullName: true,
+    username: true,
+    profilePhoto: true,
+    barangay: true,
+    municipality: { select: { id: true, name: true } },
   },
+};
+
+/** Who was reported — a name and a store, rather than a bare UUID. */
+const REPORTED_SELLER_SELECT = {
+  select: {
+    id: true,
+    fullName: true,
+    username: true,
+    store: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        municipality: { select: { id: true, name: true } },
+      },
+    },
+  },
+};
+
+/** The admin who decided it, so the drawer shows a name and not a UUID. */
+const RESOLVER_SELECT = {
+  select: { id: true, fullName: true, username: true },
+};
+
+/**
+ * Who was reported when a seller files against a customer. Same rule as the
+ * reporter select: name and place, never contact details — an admin judging
+ * "this account places fake orders" does not need their phone number.
+ */
+const REPORTED_BUYER_SELECT = {
+  select: {
+    id: true,
+    fullName: true,
+    username: true,
+    profilePhoto: true,
+    barangay: true,
+    municipality: { select: { id: true, name: true } },
+  },
+};
+
+const REPORT_INCLUDE_LIST = {
+  reporter: REPORTER_SELECT,
+  reportedSeller: REPORTED_SELLER_SELECT,
+  reportedBuyer: REPORTED_BUYER_SELECT,
   product: {
     select: {
       id: true,
@@ -22,9 +77,10 @@ const REPORT_INCLUDE_LIST = {
 };
 
 const REPORT_INCLUDE_DETAIL = {
-  reporter: {
-    select: { id: true, fullName: true, email: true, contactNumber: true },
-  },
+  resolvedBy: RESOLVER_SELECT,
+  reporter: REPORTER_SELECT,
+  reportedSeller: REPORTED_SELLER_SELECT,
+  reportedBuyer: REPORTED_BUYER_SELECT,
   product: {
     select: {
       id: true,
@@ -60,6 +116,7 @@ const findAll = async (options = {}) => {
     reporterId,
     productId,
     reportedSellerId,
+    reportedBuyerId,
     type,
     status,
     municipalityId,
@@ -69,6 +126,7 @@ const findAll = async (options = {}) => {
   if (reporterId) where.reporterId = reporterId;
   if (productId) where.productId = productId;
   if (reportedSellerId) where.reportedSellerId = reportedSellerId;
+  if (reportedBuyerId) where.reportedBuyerId = reportedBuyerId;
   if (type) where.type = type;
   if (status) where.status = status;
   if (municipalityId) where.municipalityId = municipalityId;
@@ -87,13 +145,16 @@ const findAll = async (options = {}) => {
   return { reports, total, page, pageSize };
 };
 
-const updateStatus = async (id, status, resolutionNotes = null) => {
+const updateStatus = async (id, status, resolutionNotes = null, resolvedById = null) => {
   const data = { status };
   if (resolutionNotes !== null && resolutionNotes !== undefined) {
     data.resolutionNotes = resolutionNotes;
   }
+  // Who decided it — previously only recoverable from the audit log, which no
+  // admin screen reads.
   if (status === 'RESOLVED' || status === 'DISMISSED') {
     data.resolvedAt = new Date();
+    data.resolvedById = resolvedById || null;
   }
   return prisma.report.update({
     where: { id },

@@ -983,3 +983,38 @@
     animation: none;
   }
 }
+
+/* Reporting a customer sits beside their name in the order detail panel.
+   Deliberately quiet — it is a last resort, not a primary action. */
+.so-buyer-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.so-report-buyer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.so-report-buyer:hover {
+  color: var(--t-danger-600, #dc2626);
+  border-color: var(--t-danger-200, #fecaca);
+  background: var(--t-danger-50, #fef2f2);
+}
+
+.so-report-buyer:focus-visible {
+  outline: 2px solid var(--t-danger-500, #ef4444);
+  outline-offset: 2px;
+}

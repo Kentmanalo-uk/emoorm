@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import useSeo from '../lib/seo';
 import {
   Storefront, ShieldCheck, Truck, IdentificationCard, ChatsCircle, ArrowCounterClockwise,
   MapPin, Translate, UserPlus, MagnifyingGlass, ShoppingCart, Package, GraduationCap, Code,
@@ -70,7 +71,15 @@ const DEVELOPERS = [
 
 const initials = (name) => name.split(' ').map((part) => part[0]).slice(0, 2).join('');
 
-const About = () => (
+const About = () => {
+  useSeo({
+    title: 'About E-MOORM',
+    description: 'E-MOORM is a hyperlocal marketplace connecting buyers and sellers '
+      + 'across Oriental Mindoro, Philippines.',
+    path: '/about',
+  });
+
+  return (
   <Layout>
     <div className="about-page">
       <section className="about-hero">
@@ -175,14 +184,14 @@ const About = () => (
 
       <section className="about-cta">
         <h2>Questions or feedback?</h2>
-        <p>Visit the Help Centre or send us your feedback. We would love to hear from you.</p>
+        <p>Browse the answers in Help &amp; Support, or start a case and tell us what you need. We would love to hear from you.</p>
         <div className="about-hero-actions">
-          <Link to="/help" className="about-btn about-btn-primary">Help Centre</Link>
-          <Link to="/feedback" className="about-btn">Send feedback</Link>
+          <Link to="/help" className="about-btn about-btn-primary">Help &amp; Support</Link>
         </div>
       </section>
-    </div>
-  </Layout>
-);
+      </div>
+    </Layout>
+  );
+};
 
 export default About;

@@ -463,6 +463,9 @@ const cancelOrder = async (orderId, userId) => {
         title: 'Order Cancelled',
         message: `Order ${order.orderNumber} was cancelled by the buyer.${refund}`,
         relatedId: orderId,
+        // Without this the seller's copy defaulted to the BUYER feed and
+        // linked to /profile/orders — a page the seller does not use.
+        audience: 'SELLER',
       });
     }
   } catch (err) {
@@ -712,6 +715,8 @@ const expirePendingOrders = async (ageHours = PENDING_EXPIRY_HOURS) => {
       }),
       order.store?.ownerId && notificationService.createNotification({
         userId: order.store.ownerId, type: 'ORDER_CANCELLED', title: 'Order Expired', message, relatedId: order.id,
+        // The seller's copy belongs in the seller feed, not the buyer bell.
+        audience: 'SELLER',
       }),
     ]);
   }

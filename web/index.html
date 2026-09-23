@@ -2,12 +2,53 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <title>Emoorm - Fresh from the island</title>
+
+    <!--
+      These are defaults only. When the API server also serves this build it
+      rewrites the title, description, canonical, Open Graph and JSON-LD tags
+      per URL before sending the HTML, so a product link previews correctly on
+      Facebook, Messenger and Viber — none of which run JavaScript.
+      See backend/src/middleware/webApp.js.
+    -->
+    <title>E-MOORM — Shop local from Oriental Mindoro</title>
+    <meta
+      name="description"
+      content="Buy directly from verified local sellers across Oriental Mindoro, Philippines. Handcrafted goods, fresh produce and island-made products, delivered or ready for pickup in your municipality."
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="theme-color" content="#29a366" />
+    <meta name="author" content="E-MOORM" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="E-MOORM" />
+    <meta property="og:title" content="E-MOORM — Shop local from Oriental Mindoro" />
+    <meta
+      property="og:description"
+      content="Buy directly from verified local sellers across Oriental Mindoro, Philippines."
+    />
+    <meta property="og:image" content="/icon-512x512.png" />
+    <meta property="og:locale" content="en_PH" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="E-MOORM — Shop local from Oriental Mindoro" />
+    <meta
+      name="twitter:description"
+      content="Buy directly from verified local sellers across Oriental Mindoro, Philippines."
+    />
+    <meta name="twitter:image" content="/icon-512x512.png" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192x192.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Fonts are render-blocking, so the connection is opened early. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

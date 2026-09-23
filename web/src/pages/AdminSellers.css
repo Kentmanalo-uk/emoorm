@@ -583,3 +583,48 @@
   line-height: 1.5;
   text-align: center;
 }
+
+/* Shown in place of a vanishing toast when a notification link cannot open
+   the report it points at. */
+.ar-deeplink-error {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 14px 18px;
+  border-left: 3px solid var(--t-warning-500, #f59e0b);
+  color: var(--t-neutral-800, #1e293b);
+}
+
+.ar-deeplink-error > svg {
+  flex-shrink: 0;
+  color: var(--t-warning-500, #f59e0b);
+}
+
+.ar-deeplink-error > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.ar-deeplink-error strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.ar-deeplink-error p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--t-neutral-600, #475569);
+}
+
+@media (max-width: 640px) {
+  .ar-deeplink-error {
+    flex-wrap: wrap;
+  }
+  .ar-deeplink-error .admin-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

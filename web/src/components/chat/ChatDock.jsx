@@ -6,6 +6,7 @@ import {
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
+import { CASE_STATUS_LABELS } from '../../lib/supportCategories';
 import useAuthStore from '../../store/authStore';
 import SafetyNotice from '../common/SafetyNotice';
 import './ChatDock.css';
@@ -27,9 +28,10 @@ const formatTime = (value) => {
     : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
 
-const supportName = (c) => (c.topic === 'DIRECT'
+const supportName = (c) => c.subject || (c.topic === 'DIRECT'
   ? `${c.municipality?.name || 'Municipal'} Admin`
   : `${c.municipality?.name || 'Municipal'} Support`);
+
 
 /** Normalizes store and support conversations into one list-item shape. */
 const toItem = (c, kind, userId) => {
@@ -40,7 +42,8 @@ const toItem = (c, kind, userId) => {
       id: c.id,
       name: supportName(c),
       avatar: c.municipality?.logo,
-      subtitle: c.adminName ? `Municipal admin: ${c.adminName}` : 'Municipal support',
+      subtitle: [CASE_STATUS_LABELS[c.status] || 'Open', c.adminName || c.municipality?.name || 'Municipal support']
+        .filter(Boolean).join(' · '),
       preview: c.lastMessage
         ? `${c.lastMessage.senderId === userId ? 'You: ' : ''}${c.lastMessage.body}`
         : 'No messages yet',
@@ -90,7 +93,6 @@ export default function ChatDock() {
   const [thread, setThread] = useState(null); // { key, data }
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const [startingSupport, setStartingSupport] = useState(false);
   const [error, setError] = useState('');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -99,7 +101,7 @@ export default function ChatDock() {
     .then((res) => setStoreConvos(res.data || []))
     .catch(() => setStoreConvos((prev) => prev || [])), []);
 
-  const loadSupport = useCallback(() => axios.get('/support/chat/my')
+  const loadSupport = useCallback(() => axios.get('/support/cases')
     .then((res) => setSupportConvos(res.data || []))
     .catch(() => setSupportConvos((prev) => prev || [])), []);
 
@@ -124,7 +126,7 @@ export default function ChatDock() {
     let cancelled = false;
     const key = `${selected.kind}:${selected.id}`;
     const url = selected.kind === 'support'
-      ? `/support/chat/${selected.id}`
+      ? `/support/cases/${selected.id}`
       : `/messages/conversations/${selected.id}`;
     const fetchThread = () => axios.get(url)
       .then((res) => {
@@ -172,20 +174,6 @@ export default function ChatDock() {
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  const startSupport = async () => {
-    setStartingSupport(true);
-    setError('');
-    try {
-      const res = await axios.post('/support/chat/municipal', {});
-      await loadSupport();
-      select('support', res.data.id);
-    } catch (err) {
-      setError(err.message || 'Could not start a support chat');
-    } finally {
-      setStartingSupport(false);
-    }
-  };
-
   const send = async (event) => {
     event.preventDefault();
     const body = draft.trim();
@@ -193,13 +181,13 @@ export default function ChatDock() {
     setSending(true);
     try {
       if (selected.kind === 'support') {
-        await axios.post(`/support/chat/${selected.id}/messages`, { body });
+        await axios.post(`/support/cases/${selected.id}/messages`, { body });
       } else {
         await axios.post(`/messages/conversations/${selected.id}/messages`, { body });
       }
       setDraft('');
       const url = selected.kind === 'support'
-        ? `/support/chat/${selected.id}`
+        ? `/support/cases/${selected.id}`
         : `/messages/conversations/${selected.id}`;
       const res = await axios.get(url);
       setThread({ key: `${selected.kind}:${selected.id}`, data: res.data });
@@ -237,11 +225,10 @@ export default function ChatDock() {
           <div className="cd-empty">
             <Headset size={56} weight="fill" />
             <strong>Need help?</strong>
-            <span>Message your municipal admin about your account or orders.</span>
-            <button type="button" className="cd-primary" onClick={startSupport} disabled={startingSupport}>
-              {startingSupport ? <CircleNotch size={14} className="cd-spin" /> : <ChatCircleDots size={15} weight="fill" />}
-              Contact support
-            </button>
+            <span>Start a case about an order, a payment or your account and your municipal admin replies here.</span>
+            <Link to="/help#get-help" className="cd-primary" onClick={() => setOpen(false)}>
+              <ChatCircleDots size={15} weight="fill" /> Get help
+            </Link>
           </div>
         );
       }

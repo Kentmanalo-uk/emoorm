@@ -53,6 +53,13 @@ const broadcast = async (actor, data) => {
     throw new ApiError('Invalid target audience', 400);
   }
 
+  // Broadcasting to administrators is a platform-level act. The UI only hid
+  // the option from municipal admins, so the API accepted it from anyone —
+  // a municipal admin could message every admin on the platform.
+  if (target === 'admins' && actor.role !== 'SUPER_ADMIN') {
+    throw new ApiError('Only a super admin can broadcast to administrators', 403);
+  }
+
   let municipalityId = data.municipalityId || null;
 
   if (actor.role === 'MUNICIPAL_ADMIN') {

@@ -7,6 +7,7 @@ import {
   Clock, TrendUp as TrendingUp,
 } from '@phosphor-icons/react';
 import useAuthStore from '../../store/authStore';
+import FeedbackDialog from '../feedback/FeedbackDialog';
 import useCartStore from '../../store/cartStore';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
 import axios from '../../lib/axios';
@@ -97,6 +98,9 @@ const Header = () => {
   const startAccountSwitch = useAccountSwitchStore((s) => s.start);
   const { getItemCount } = useCartStore();
   const [searchQuery, setSearchQuery] = useState('');
+  // Platform feedback lives in a dialog rather than a page: it is a one-way
+  // note, so navigating away from what you were doing to send it is wrong.
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifs, setRecentNotifs] = useState([]);
@@ -284,8 +288,6 @@ const Header = () => {
       >
         <div className="topbar-container">
           <div className="topbar-left">
-            <Link to="/feedback" className="topbar-link topbar-link-feedback">FEEDBACK</Link>
-            <span className="topbar-divider">|</span>
             {isAuthenticated && (user?.role === 'MUNICIPAL_ADMIN' || user?.role === 'SUPER_ADMIN') ? (
               <Link to="/admin" className="topbar-link topbar-link-sell">ADMIN PANEL</Link>
             ) : isAuthenticated && user?.role === 'SELLER' ? (
@@ -294,7 +296,15 @@ const Header = () => {
               <Link to="/sell" className="topbar-link topbar-link-sell">SELL ON EMOORM</Link>
             )}
             <span className="topbar-divider">|</span>
-            <Link to="/customer-care" className="topbar-link">CUSTOMER CARE</Link>
+            <Link to="/help" className="topbar-link">HELP &amp; SUPPORT</Link>
+            <span className="topbar-divider">|</span>
+            <button
+              type="button"
+              className="topbar-link topbar-link-button"
+              onClick={() => setFeedbackOpen(true)}
+            >
+              FEEDBACK
+            </button>
           </div>
           <div className="topbar-right">
             <div className="notif-hover">
@@ -472,9 +482,7 @@ const Header = () => {
                       {(!isAuthenticated || user?.role === 'BUYER') && (
                         <Link to="/sell">Sell on Emoorm</Link>
                       )}
-                      <Link to="/help">Help Center</Link>
-                      <Link to="/customer-care">Customer Care</Link>
-                      <Link to="/feedback">Send Feedback</Link>
+                      <Link to="/help">Help &amp; Support</Link>
                     </div>
                   </div>
                 </div>
@@ -641,9 +649,8 @@ const Header = () => {
             </form>
           </div>
           <div className="header-mobile-links">
-            <Link to="/feedback" className="header-mobile-link">Feedback</Link>
             <Link to="/sell" className="header-mobile-link">Sell on Emoorm</Link>
-            <Link to="/customer-care" className="header-mobile-link">Customer Care</Link>
+            <Link to="/help" className="header-mobile-link">Help &amp; Support</Link>
             {isAuthenticated ? (
               <button onClick={handleLogout} className="header-mobile-link">Sign Out</button>
             ) : (
@@ -687,6 +694,8 @@ const Header = () => {
         onClose={() => setImageModalOpen(false)}
         onFile={handleImageFileSelected}
       />
+      {feedbackOpen && <FeedbackDialog onClose={() => setFeedbackOpen(false)} />}
+
     </>
   );
 };

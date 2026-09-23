@@ -38,10 +38,24 @@ const ROUTES = {
   'admin-seller-application': ({ id }) => (id ? `/admin/sellers?id=${enc(id)}` : '/admin/sellers'),
   'seller-application': () => '/seller/apply',
 
+  // Reports the person filed themselves.
+  'buyer-reports': ({ id }) => (id ? `/profile/reports?id=${enc(id)}` : '/profile/reports'),
+
   // Support conversations
   'buyer-support': ({ id }) => (id ? `/profile/support?c=${enc(id)}` : '/profile/support'),
   'seller-support': ({ id }) => (id ? `/seller/support?c=${enc(id)}` : '/seller/support'),
   'admin-support': ({ id }) => (id ? `/admin/support?c=${enc(id)}` : '/admin/support'),
+
+  // Super admin <-> municipal admin threads.
+  'admin-messages': ({ id }) => (id ? `/admin/messages?c=${enc(id)}` : '/admin/messages'),
+
+  // Platform feedback, super admin only.
+  'admin-feedback': ({ id }) => (id ? `/admin/feedback?id=${enc(id)}` : '/admin/feedback'),
+
+  // Buyer <-> store conversations. Both sides open in the same Messenger,
+  // which takes the conversation id as `?c=`.
+  'buyer-messages': ({ id }) => (id ? `/profile/messages?c=${enc(id)}` : '/profile/messages'),
+  'seller-messages': ({ id }) => (id ? `/seller/messages?c=${enc(id)}` : '/seller/messages'),
 
   // Account and platform
   'buyer-verification': () => '/profile/verification',

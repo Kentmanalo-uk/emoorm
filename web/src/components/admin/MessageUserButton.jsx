@@ -19,7 +19,7 @@ export default function MessageUserButton({ userId, role, label = 'Message', siz
   const open = async () => {
     setOpening(true);
     try {
-      const res = await axios.post(`/support/chat/users/${userId}`, {});
+      const res = await axios.post(`/support/cases/for-user/${userId}`, {});
       navigate(`/admin/support?c=${res.data.id}`);
     } catch (err) {
       toast.error(err.message || 'Unable to open a conversation');

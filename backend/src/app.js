@@ -9,6 +9,8 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const apiRoutes = require('./routes/index');
 const { csrfOriginGuard, isLocalNetworkOrigin } = require('./middleware/security');
 const { noStore, immutableAsset } = require('./middleware/httpCache');
+const seoRoutes = require('./routes/seo.routes');
+const { mountWebApp } = require('./middleware/webApp');
 
 // The only media types this server will ever serve out of /uploads. Anything
 // else is handed back as an unrenderable download.
@@ -37,11 +39,57 @@ app.disable('x-powered-by');
 // address is the honest one.
 app.set('trust proxy', config.nodeEnv === 'production' ? 1 : false);
 
-// Helmet — sensible security headers. Disable CSP because API returns JSON and
-// the uploaded images are served from /uploads.
+// Third parties the web app genuinely loads. Kept as one list so the policy
+// below reads as "these, and nothing else".
+// Google Identity Services and the Translate widget both pull from several
+// hosts and change them without notice, so these are matched by wildcard
+// rather than pinned one subdomain at a time.
+const GOOGLE_HOSTS = [
+  'https://*.google.com',
+  'https://*.googleapis.com',
+  'https://*.gstatic.com',
+  'https://accounts.google.com',
+  'https://apis.google.com',
+];
+const MAP_TILES = ['https://*.tile.openstreetmap.org', 'https://unpkg.com'];
+const IMAGE_HOSTS = [
+  'https://images.unsplash.com',
+  'https://via.placeholder.com',
+  'https://*.googleusercontent.com',
+];
+
+// Helmet — security headers.
+//
+// The CSP matters now that this process serves HTML rather than only JSON: a
+// policy is what stops an injected script from running, and seller-supplied
+// text is rendered on product and shop pages. It is written as an allow-list
+// of what the app actually uses, so anything else is refused by the browser.
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   hsts: config.nodeEnv === 'production' ? undefined : false,
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      // 'unsafe-inline' is required by Google Identity Services and the
+      // Translate widget, both of which inject inline scripts.
+      scriptSrc: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
+      // Vite emits inline styles, and Leaflet sets them on elements directly.
+      styleSrc: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
+      styleSrcElem: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
+      fontSrc: ["'self'", 'data:', ...GOOGLE_HOSTS],
+      imgSrc: ["'self'", 'data:', 'blob:', ...MAP_TILES, ...IMAGE_HOSTS, ...GOOGLE_HOSTS],
+      connectSrc: ["'self'", 'https://psgc.gitlab.io', ...GOOGLE_HOSTS, ...MAP_TILES],
+      frameSrc: ["'self'", 'https://accounts.google.com', 'https://www.google.com'],
+      // Nothing on this site belongs in someone else's frame.
+      frameAncestors: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      ...(config.nodeEnv === 'production' ? { upgradeInsecureRequests: [] } : {}),
+    },
+  },
 }));
 
 // Production traffic must terminate TLS at the reverse proxy/load balancer.
@@ -87,7 +135,13 @@ app.use(csrfOriginGuard);
 
 // Global light rate limit. Registered after CORS so a 429 still carries CORS
 // headers — otherwise browsers report it as a generic "Network Error".
+//
+// Scoped to the API on purpose. Once this process also serves the web app, a
+// single page view is one HTML request plus every script, stylesheet, font
+// and product image on it; counting those against an API budget throttles
+// ordinary browsing long before it throttles abuse.
 app.use(
+  config.apiPrefix,
   rateLimit({
     windowMs: 60 * 1000,
     max: config.rateLimit.maxRequests,
@@ -139,6 +193,10 @@ app.use(
   })
 );
 
+// Crawler entry points. Registered before the API's no-store blanket so they
+// keep the long cache lifetimes they set for themselves.
+app.use('/', seoRoutes);
+
 // Anything below is API traffic: uncacheable unless a route opts in.
 app.use(noStore);
 
@@ -164,16 +222,6 @@ app.use(`${config.apiPrefix}/auth/forgot-password`, authLimiter);
 app.use(`${config.apiPrefix}/auth/qr/create`, authLimiter);
 app.use(config.apiPrefix, apiRoutes);
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'E-MOORM Backend API',
-    version: '1.0.0',
-    documentation: `${config.apiPrefix}/`,
-  });
-});
-
 // Health check endpoint (includes database ping)
 app.get('/health', async (req, res) => {
   const prisma = require('./config/database');
@@ -194,6 +242,30 @@ app.get('/health', async (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// ============================================
+// WEB APP
+// ============================================
+
+// Serves the built React app and injects per-URL metadata into its HTML, so
+// search engines and link previews get a real title, description and image
+// rather than an empty root div. A no-op unless WEB_DIST_DIR is set, which
+// keeps a pure-API deployment behaving exactly as it did before.
+const servingWeb = mountWebApp(app);
+
+// On an API-only deployment nothing answers '/', so keep the banner that
+// tells a human they have reached the right service. When the SPA is mounted
+// it has already claimed this route above.
+if (!servingWeb) {
+  app.get('/', (req, res) => {
+    res.status(200).json({
+      success: true,
+      message: 'E-MOORM Backend API',
+      version: '1.0.0',
+      documentation: `${config.apiPrefix}/`,
+    });
+  });
+}
 
 // ============================================
 // ERROR HANDLING

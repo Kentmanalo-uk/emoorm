@@ -35,8 +35,7 @@ const SELLER_TOOLS = [
 
 const COMPANY_LINKS = [
   { to: '/about', label: 'About Emoorm' },
-  { to: '/customer-care', label: 'Customer Care' },
-  { to: '/feedback', label: 'Feedback' },
+  { to: '/help', label: 'Help & Support' },
   { to: '/privacy', label: 'Privacy Policy' },
   { to: '/terms', label: 'Terms of Service' },
   { to: '/cookies', label: 'Cookie Policy' },
@@ -119,14 +118,12 @@ const Footer = () => {
           <div className="footer-section">
             <h3 className="footer-title">Customer Care</h3>
             <ul className="footer-links">
-              <li><Link to="/help">Help Centre</Link></li>
+              <li><Link to="/help">Help &amp; Support</Link></li>
               <li><Link to="/help?topic=buying">How to Buy</Link></li>
               <li><Link to="/sell">How to Sell</Link></li>
               <li><Link to="/help?topic=returns">Returns & Refunds</Link></li>
               <li><Link to="/help?topic=delivery">Shipping & Delivery</Link></li>
               <li><Link to="/help?topic=payments">Payment Methods</Link></li>
-              <li><Link to="/customer-care">Contact Support</Link></li>
-              <li><Link to="/feedback">Feedback</Link></li>
             </ul>
           </div>
 

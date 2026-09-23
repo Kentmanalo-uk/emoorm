@@ -1,7 +1,24 @@
 // API Configuration
 import { forLocalNetwork } from './runtimeHost';
+
+/**
+ * Where the API lives.
+ *
+ * A production build defaults to a relative path because the API is served by
+ * the same process and origin as this app: relative means the bundle works on
+ * whatever hostname it is deployed to, with no rebuild per environment and no
+ * CORS. Development keeps the absolute localhost URL, since Vite serves the
+ * app on a different port from the API.
+ *
+ * The default is in code rather than only in .env.production because env
+ * files are gitignored here — a checkout that lacks one would otherwise build
+ * a production bundle that calls localhost. VITE_API_URL still overrides it,
+ * which is what a split frontend/API deployment would set.
+ */
+const DEFAULT_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:3000/api';
+
 export const API_CONFIG = {
-  BASE_URL: forLocalNetwork(import.meta.env.VITE_API_URL || 'http://localhost:3000/api'),
+  BASE_URL: forLocalNetwork(import.meta.env.VITE_API_URL || DEFAULT_BASE_URL),
   TIMEOUT: 30000,
 };
 

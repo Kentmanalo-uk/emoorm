@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import useSeo, { productSchema, breadcrumbs, clampText } from '../lib/seo';
 import {
   Heart, ShareNetwork as Share2, Storefront as Store, MapPin,
   Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck, Info,
-  CaretRight as ChevronRightSm, ChatCircle as MessageCircle, Money, QrCode,
+  CaretRight as ChevronRightSm, ChatCircle as MessageCircle, Money, QrCode, Flag,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -251,6 +252,40 @@ const ProductDetails = () => {
     document.title = `${product.name} · Emoorm`;
     return () => { document.title = previous; };
   }, [product?.name]);
+
+  // The server already put these tags in the HTML; this keeps them right
+  // when the shopper arrives from another page inside the app.
+  const seoImage = product ? parseImages(product.images)[0] : null;
+  useSeo({
+    ready: Boolean(product),
+    title: product ? `${product.name}${product.store?.name ? ` from ${product.store.name}` : ''}` : '',
+    description: product
+      ? clampText(product.description
+        || `Buy ${product.name} from local sellers in Oriental Mindoro on E-MOORM.`)
+      : '',
+    image: seoImage ? resolveImg(seoImage) : undefined,
+    path: product ? `/product/${product.slug}` : undefined,
+    jsonLd: product
+      ? [
+        productSchema({
+          name: product.name,
+          description: clampText(product.description),
+          image: seoImage ? resolveImg(seoImage) : undefined,
+          price: product.price,
+          inStock: Number(product.stock) > 0,
+          storeName: product.store?.name,
+          slug: product.slug,
+          rating: Number(product.averageRating) || undefined,
+          reviewCount: Number(product.reviewCount) || undefined,
+        }),
+        breadcrumbs([
+          { name: 'Home', path: '/' },
+          { name: 'Products', path: '/products' },
+          { name: product.name, path: `/product/${product.slug}` },
+        ]),
+      ]
+      : undefined,
+  });
 
   if (isLoading) {
     return (
@@ -684,6 +719,19 @@ const ProductDetails = () => {
                 >
                   <Heart size={20} weight={wishlisted ? 'fill' : 'regular'} color={wishlisted ? 'var(--t-accent-500, #ec4899)' : 'currentColor'} />
                   <span>{wishlisted ? 'Saved' : 'Like'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="pdp-cta-icon"
+                  onClick={() => {
+                    if (!isAuthenticated) { loginRedirect(); return; }
+                    setShowReport(true);
+                  }}
+                  aria-label="Report this listing"
+                  title="Report this listing to the municipal admin"
+                >
+                  <Flag size={20} />
+                  <span>Report</span>
                 </button>
               </div>
             </div>

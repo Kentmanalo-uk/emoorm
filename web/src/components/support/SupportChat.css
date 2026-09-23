@@ -1147,3 +1147,182 @@
     border-radius: 999px;
   }
 }
+
+/* ---- Support cases (user side) ---------------------------------------- */
+
+.sc-badge-open {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.sc-badge-resolved {
+  background: var(--t-success-100, #dcfce7);
+  color: var(--t-success-800, #166534);
+}
+
+.sc-badge-rated {
+  background: var(--t-warning-100, #fef3c7);
+  color: var(--t-warning-800, #92400e);
+}
+
+/* New case dialog (reuses .sc-dialog shell) */
+.sc-case-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 16px 16px;
+  overflow-y: auto;
+}
+
+.sc-case-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sc-case-form label > span {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t-neutral-700, #374151);
+}
+
+.sc-case-form select,
+.sc-case-form input,
+.sc-case-form textarea {
+  width: 100%;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--t-neutral-900, #111827);
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 8px;
+  outline: none;
+}
+
+.sc-case-form textarea {
+  min-height: 90px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.sc-case-form select:focus,
+.sc-case-form input:focus,
+.sc-case-form textarea:focus {
+  border-color: var(--t-primary-600, #059669);
+}
+
+.sc-case-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sc-case-foot .sc-btn {
+  padding: 9px 14px;
+  border-radius: 8px;
+}
+
+/* Rate a resolved case */
+.sc-rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 12px 0;
+  padding: 12px 14px;
+  background: var(--t-primary-50, #ecfdf5);
+  border: 1px solid var(--t-primary-100, #d1fae5);
+  border-radius: 10px;
+}
+
+.sc-rating > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--t-neutral-900, #111827);
+}
+
+.sc-rating-hint {
+  font-size: 12.5px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.sc-rating-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.sc-rating-star {
+  padding: 2px;
+  color: var(--t-neutral-400, #9ca3af);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.sc-rating-star.is-lit {
+  color: var(--t-warning-500, #f59e0b);
+}
+
+.sc-rating textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--t-neutral-900, #111827);
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+}
+
+.sc-rating textarea:focus {
+  border-color: var(--t-primary-600, #059669);
+}
+
+.sc-rating .sc-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+}
+
+.sc-rating.is-done {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-rating.is-done p {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.sc-stars {
+  display: inline-flex;
+  gap: 1px;
+  color: var(--t-neutral-300, #d1d5db);
+  line-height: 0;
+}
+
+.sc-stars .is-lit {
+  color: var(--t-warning-500, #f59e0b);
+}
+
+@media (max-width: 768px) {
+  .sc-rating {
+    margin: 8px 10px 0;
+    padding: 10px 12px;
+  }
+
+  .sc-case-foot .sc-btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 42px;
+  }
+}

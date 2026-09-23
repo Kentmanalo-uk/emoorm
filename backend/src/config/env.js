@@ -8,6 +8,26 @@ const config = {
   port: parseInt(process.env.PORT || '3000', 10),
   apiPrefix: process.env.API_PREFIX || '/api',
 
+  // ── Public site ───────────────────────────────────────────────────────
+  // The canonical origin this deployment answers on, with no trailing
+  // slash. Everything a search engine or a social card needs an absolute
+  // URL for is built from this one value: canonical links, the sitemap,
+  // Open Graph images and structured data.
+  //
+  // Getting it wrong is worse than leaving it unset, because Google will
+  // happily index the placeholder, so production must set SITE_URL.
+  site: {
+    url: (process.env.SITE_URL || 'http://localhost:3000').replace(/\/+$/, ''),
+    name: process.env.SITE_NAME || 'E-MOORM',
+    // Where the built React app lives. When present, this server also
+    // serves the SPA, which is what lets crawlers receive real per-page
+    // meta tags instead of an empty root div.
+    webDir: process.env.WEB_DIST_DIR || '',
+    // Set to false on a staging or preview deployment so it never competes
+    // with production in the index.
+    indexable: process.env.SITE_INDEXABLE !== 'false',
+  },
+
   // Database Configuration
   database: {
     url: process.env.DATABASE_URL,

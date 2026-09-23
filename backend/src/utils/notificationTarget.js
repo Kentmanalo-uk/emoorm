@@ -51,8 +51,11 @@ const KINDS = [
   'seller-product', 'admin-product', 'product',
   'store', 'seller-store', 'seller-dashboard',
   'buyer-return', 'seller-return', 'admin-return',
-  'admin-report',
+  'admin-report', 'buyer-reports',
   'buyer-support', 'seller-support', 'admin-support',
+  'admin-messages',
+  'admin-feedback',
+  'buyer-messages', 'seller-messages',
   'admin-seller-application', 'seller-application',
   'buyer-verification', 'municipality', 'admin-dashboard',
   'notification', 'admin-notification',
@@ -123,13 +126,25 @@ const resolveRef = (notification) => {
 
     case 'REPORT_SUBMITTED':
     case 'REPORT_RESOLVED':
-      // Only admins have a reports queue; a reporter has nowhere to go.
-      return isAdmin && id ? { kind: 'admin-report', id, slug: null } : null;
+      // Admins land on the moderation queue; the reporter now has a reports
+      // page of their own, so their copy is clickable too.
+      if (isAdmin) return id ? { kind: 'admin-report', id, slug: null } : null;
+      return { kind: 'buyer-reports', id, slug: null };
 
     case 'SUPPORT_MESSAGE':
+    case 'SUPPORT_RESOLVED':
       if (!id) return null;
       if (isAdmin) return { kind: 'admin-support', id, slug: null };
       return { kind: isSeller ? 'seller-support' : 'buyer-support', id, slug: null };
+
+    // Super admin <-> municipal admin thread. Only admins ever receive one.
+    case 'ADMIN_MESSAGE':
+      return { kind: 'admin-messages', id, slug: null };
+
+    // Buyer <-> store conversation, one page per side.
+    case 'STORE_MESSAGE':
+      if (!id) return null;
+      return { kind: isSeller ? 'seller-messages' : 'buyer-messages', id, slug: null };
 
     case 'ADMIN_ALERT':
       return { kind: 'admin-dashboard', id: null, slug: null };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import useSeo from '../lib/seo';
 import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ShoppingCart, Star, Storefront, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -25,6 +26,13 @@ const exploreColumns = () => {
 };
 
 const Home = () => {
+  useSeo({
+    title: 'E-MOORM — Shop local from Oriental Mindoro',
+    description: 'Buy directly from verified local sellers across Oriental Mindoro, Philippines. '
+      + 'Handcrafted goods, fresh produce and island-made products, delivered or ready for pickup.',
+    path: '/',
+  });
+
   const [currentIndex, setCurrentIndex] = useState(1); // Start at 1 (first real slide)
   const [isTransitioning, setIsTransitioning] = useState(false);
 

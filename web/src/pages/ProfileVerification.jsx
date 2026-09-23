@@ -219,17 +219,20 @@ export default function ProfileVerification() {
     }
   };
 
-  // Opens the help chat with the municipal admin for the user's address.
+  // Opens a support case with the municipal admin for the user's address.
+  // Goes through the same `POST /support/cases` every other entry point uses,
+  // so the case arrives in the admin inbox with a category and subject rather
+  // than as an untitled thread the admin has to open to understand.
   const contactSupport = async () => {
     setContacting(true);
     try {
-      const res = await axios.post('/support/chat/municipal', { topic: 'IDENTITY_VERIFICATION' });
       const reason = status?.failureReason ? ` Last result: "${status.failureReason}"` : '';
-      navigate(`/profile/support?c=${res.data.id}`, {
-        state: {
-          draft: `Hi, I reached today's limit for identity verification and still can't verify my account.${reason} Could you help me verify my identity?`,
-        },
+      const res = await axios.post('/support/cases', {
+        category: 'IDENTITY_VERIFICATION',
+        subject: 'Help verifying my identity',
+        message: `Hi, I reached today's limit for identity verification and still can't verify my account.${reason} Could you help me verify my identity?`,
       });
+      navigate(`/profile/support?c=${res.data.id}`);
     } catch (error) {
       toast.error(error?.message || 'Could not reach municipal support');
     } finally {

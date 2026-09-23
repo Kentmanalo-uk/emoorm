@@ -2,8 +2,8 @@ import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
   User, MapPin, Star, Package, Heart, Storefront as Store,
-  ChatText as MessageSquare, Bell, Gear as Settings, Question as HelpCircle,
-  ArrowCounterClockwise as ReturnsIcon, ShieldCheck, ChatsCircle,
+  ChatText as MessageSquare, Bell, Gear as Settings,
+  ArrowCounterClockwise as ReturnsIcon, ShieldCheck, Lifebuoy, Flag,
 } from '@phosphor-icons/react';
 import Layout from './Layout';
 import '../../pages/Profile.css';
@@ -19,9 +19,9 @@ const navItems = [
   { to: '/profile/followed-stores', label: 'Followed Stores', icon: Store },
   { to: '/profile/messages', label: 'Messages', icon: MessageSquare },
   { to: '/profile/notifications', label: 'Notifications', icon: Bell },
-  { to: '/profile/support', label: 'Support Messages', icon: ChatsCircle },
+  { to: '/profile/support', label: 'Help & Support', icon: Lifebuoy },
+  { to: '/profile/reports', label: 'My Reports', icon: Flag },
   { to: '/profile/settings', label: 'Settings', icon: Settings },
-  { to: '/help', label: 'Help Center', icon: HelpCircle },
 ];
 
 const ProfileLayout = () => {

@@ -1,0 +1,251 @@
+/* Feedback dialog — matches the report modal's shell so the app has one
+   dialog language rather than one per feature. */
+
+.fbd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, .45);
+  animation: fbd-fade .16s ease;
+}
+
+.fbd-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--t-surface, #ffffff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .18);
+  animation: fbd-rise .18s ease;
+}
+
+.fbd-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.fbd-head h2 {
+  margin: 0 0 4px;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #111827);
+}
+
+.fbd-head p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.fbd-close {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t-neutral-500, #6b7280);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.fbd-close:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #111827);
+}
+
+.fbd-body {
+  padding: 20px 24px 24px;
+}
+
+.fbd-field {
+  margin-bottom: 18px;
+}
+
+.fbd-field label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-neutral-700, #374151);
+}
+
+.fbd-field select,
+.fbd-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  background: var(--t-surface, #ffffff);
+  color: var(--t-neutral-900, #111827);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.fbd-field textarea {
+  resize: vertical;
+  min-height: 108px;
+  line-height: 1.55;
+}
+
+.fbd-field select:focus,
+.fbd-field textarea:focus {
+  outline: none;
+  border-color: var(--t-secondary-500, #29a366);
+  box-shadow: 0 0 0 3px rgba(41, 163, 102, .15);
+}
+
+.fbd-count {
+  display: block;
+  margin-top: 6px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+/* ── rating ─────────────────────────────────────────────────────────── */
+.fbd-stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fbd-star {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: var(--t-neutral-300, #d1d5db);
+  cursor: pointer;
+  transition: color .12s ease, transform .12s ease;
+}
+
+.fbd-star:hover {
+  transform: scale(1.12);
+}
+
+.fbd-star.is-on {
+  color: var(--t-warning-500, #f59e0b);
+}
+
+.fbd-star:focus-visible {
+  outline: 2px solid var(--t-secondary-500, #29a366);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.fbd-clear {
+  margin-left: 8px;
+  border: none;
+  background: transparent;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ── footer ─────────────────────────────────────────────────────────── */
+.fbd-note,
+.fbd-signin {
+  margin: 0 0 18px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f9fafb);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.fbd-note a {
+  color: var(--t-secondary-600, #1f8a53);
+  font-weight: 600;
+}
+
+.fbd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.fbd-btn,
+.fbd-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .15s ease, border-color .15s ease, opacity .15s ease;
+}
+
+.fbd-btn {
+  border: none;
+  background: var(--t-secondary-500, #29a366);
+  color: #ffffff;
+}
+
+.fbd-btn:hover:not(:disabled) {
+  background: var(--t-secondary-600, #1f8a53);
+}
+
+.fbd-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.fbd-btn-ghost {
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  background: transparent;
+  color: var(--t-neutral-700, #374151);
+}
+
+.fbd-btn-ghost:hover {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+@keyframes fbd-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fbd-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fbd-overlay,
+  .fbd-modal { animation: none; }
+  .fbd-star:hover { transform: none; }
+}
+
+@media (max-width: 560px) {
+  .fbd-overlay { padding: 0; align-items: flex-end; }
+  .fbd-modal {
+    max-width: none;
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+  }
+  .fbd-actions { flex-direction: column-reverse; }
+  .fbd-btn,
+  .fbd-btn-ghost { justify-content: center; width: 100%; }
+}

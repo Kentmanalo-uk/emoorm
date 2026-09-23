@@ -1,0 +1,19 @@
+/* Admin-only additions to the shared support chat.
+   Both sides of <SupportChat /> are styled by SupportChat.css; these rules
+   cover what only the admin inbox renders. */
+
+/* The admin row leads with the person's name, so a case's own subject gets a
+   line of its own above the category — an inbox is triaged by subject. */
+.as-list-subject {
+  overflow: hidden;
+  color: var(--t-neutral-700, #374151);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Subject + category + municipality + email outgrow one line in the header. */
+.as-support .sc-thread-title > span {
+  white-space: normal;
+}

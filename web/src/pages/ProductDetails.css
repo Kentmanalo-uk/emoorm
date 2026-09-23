@@ -692,7 +692,8 @@
    ========================================================= */
 .pdp-cta-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+  /* Buy / Add to cart, then Share, Like and Report. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto auto;
   gap: 12px;
   align-items: center;
   padding-top: 12px;
@@ -1414,7 +1415,7 @@
   }
 
   .pdp-cta-row {
-    grid-template-columns: 1fr 1fr auto auto;
+    grid-template-columns: 1fr 1fr auto auto auto;
     gap: 8px;
   }
 
@@ -1661,7 +1662,7 @@
     position: sticky;
     bottom: calc(68px + env(safe-area-inset-bottom, 0px));
     z-index: 10;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto auto;
     gap: 8px;
     margin: 4px -14px -14px;
     padding: 10px 14px;

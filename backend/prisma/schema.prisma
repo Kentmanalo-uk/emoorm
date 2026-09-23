@@ -102,6 +102,8 @@ enum PaymentStatus {
 enum ReportType {
   PRODUCT
   SELLER
+  /// A seller reporting the person who bought from them.
+  BUYER
 }
 
 enum ReportStatus {
@@ -136,6 +138,12 @@ enum NotificationType {
   RETURN_CANCELLED
   RETURN_CLOSED
   SUPPORT_MESSAGE
+  /// A support case was resolved, which is when we ask for a rating.
+  SUPPORT_RESOLVED
+  /// Super admin <-> municipal admin thread.
+  ADMIN_MESSAGE
+  /// A buyer or seller was sent a new message by the other side of an order.
+  STORE_MESSAGE
   SELLER_APPLICATION_SUBMITTED
   ADMIN_ALERT
 }
@@ -180,15 +188,20 @@ enum QrLoginStatus {
   EXPIRED
 }
 
-enum SupportTicketType {
-  CUSTOMER_CARE
-  FEEDBACK
-}
-
-enum SupportTicketStatus {
-  OPEN
-  IN_REVIEW
-  CLOSED
+/// What a buyer or seller says their support case is about. Replaces the
+/// old CUSTOMER_CARE / FEEDBACK split, which produced two forms writing to
+/// a table nobody could read.
+enum SupportCategory {
+  ORDER
+  PAYMENT
+  DELIVERY
+  RETURN
+  ACCOUNT
+  SELLER
+  IDENTITY_VERIFICATION
+  APP_EXPERIENCE
+  FEATURE_REQUEST
+  OTHER
 }
 
 // ============================================
@@ -313,9 +326,15 @@ model User {
   qrLoginSessions QrLoginSession[]
   pushTokens    PushToken[]
   returnRequests ReturnRequest[] @relation("BuyerReturns")
-  supportTickets SupportTicket[]
   supportConversations SupportConversation[]
   supportMessages SupportMessage[]
+  adminConversations   AdminConversation[] @relation("AdminConversationAdmin")
+  adminMessages        AdminMessage[]      @relation("AdminMessageSender")
+  reportsAgainst       Report[]            @relation("ReportedSeller")
+  reportsResolved      Report[]            @relation("ReportResolver")
+  reportsAsBuyer       Report[]            @relation("ReportedBuyer")
+  feedback             Feedback[]          @relation("FeedbackAuthor")
+  feedbackReviewed     Feedback[]          @relation("FeedbackReviewer")
   bannersCreated Banner[]         @relation("BannerCreator")
   vouchersCreated Voucher[]       @relation("VoucherCreator")
   voucherRedemptions VoucherRedemption[]
@@ -359,28 +378,11 @@ model IdentityVerification {
   @@map("identity_verifications")
 }
 
-model SupportTicket {
-  id          String              @id @default(uuid())
-  userId      String              @map("user_id")
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        SupportTicketType
-  category    String
-  subject     String
-  message     String              @db.Text
-  rating      Int?
-  status      SupportTicketStatus @default(OPEN)
-  createdAt   DateTime            @default(now()) @map("created_at")
-  updatedAt   DateTime            @updatedAt @map("updated_at")
-
-  @@index([userId, createdAt])
-  @@index([type, status])
-  @@map("support_tickets")
-}
-
 // Help chat between a user and their municipality's admin (e.g. identity
 // verification problems). Separate from buyer–store messaging.
 enum SupportConversationStatus {
   OPEN
+  RESOLVED
   CLOSED
 }
 
@@ -391,7 +393,23 @@ model SupportConversation {
   municipalityId  String                    @map("municipality_id")
   municipality    Municipality              @relation(fields: [municipalityId], references: [id])
   topic           String                    @default("GENERAL")
+  /// What the case is about. `topic` is kept for the existing GENERAL /
+  /// IDENTITY_VERIFICATION / DIRECT threads; new cases set this too.
+  category        SupportCategory           @default(OTHER)
+  /// One line from the person, so an admin can triage an inbox without
+  /// opening every thread.
+  subject         String?                   @db.VarChar(160)
   status          SupportConversationStatus @default(OPEN)
+
+  /// Filled when an admin marks the case resolved, which is what invites
+  /// the person to rate it. Feedback belongs to the case that earned it
+  /// rather than to a disconnected form.
+  resolvedAt      DateTime?                 @map("resolved_at")
+  resolvedById    String?                   @map("resolved_by_id")
+  rating          Int?
+  ratingComment   String?                   @db.Text @map("rating_comment")
+  ratedAt         DateTime?                 @map("rated_at")
+
   lastMessageAt   DateTime?                 @map("last_message_at")
   userLastReadAt  DateTime?                 @map("user_last_read_at")
   adminLastReadAt DateTime?                 @map("admin_last_read_at")
@@ -399,9 +417,56 @@ model SupportConversation {
   updatedAt       DateTime                  @updatedAt @map("updated_at")
   messages        SupportMessage[]
 
-  @@unique([userId, municipalityId])
-  @@index([municipalityId, lastMessageAt])
+  // The old @@unique([userId, municipalityId]) allowed a person only one
+  // thread ever, so opening a support case silently rewrote the admin's
+  // direct message to them. A person may now have several cases at once.
+  @@index([municipalityId, status, lastMessageAt])
+  @@index([userId, lastMessageAt])
   @@map("support_conversations")
+}
+
+// ============================================
+// ADMIN MESSAGING (super admin <-> municipal admin)
+// ============================================
+
+/// A thread between the platform's super admins and one municipal admin.
+/// Deliberately separate from support_conversations: administrative traffic
+/// must not land in the same inbox as buyer conversations.
+model AdminConversation {
+  id              String    @id @default(uuid())
+
+  /// The municipal admin this thread belongs to. Any super admin may take
+  /// part, the same way any municipal admin can answer a support case.
+  adminId         String    @map("admin_id")
+  admin           User      @relation("AdminConversationAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+
+  subject         String    @db.VarChar(160)
+  status          SupportConversationStatus @default(OPEN)
+
+  lastMessageAt   DateTime? @map("last_message_at")
+  adminLastReadAt DateTime? @map("admin_last_read_at")
+  superLastReadAt DateTime? @map("super_last_read_at")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  messages        AdminMessage[]
+
+  @@index([adminId, lastMessageAt])
+  @@index([status, lastMessageAt])
+  @@map("admin_conversations")
+}
+
+model AdminMessage {
+  id             String            @id @default(uuid())
+  conversationId String            @map("conversation_id")
+  conversation   AdminConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String            @map("sender_id")
+  sender         User              @relation("AdminMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  body           String            @db.Text
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("admin_messages")
 }
 
 model SupportMessage {
@@ -491,6 +556,7 @@ model Municipality {
   serviceAreas StoreServiceArea[]
   addresses Address[]
   supportConversations SupportConversation[]
+  feedback  Feedback[]
 
   @@map("municipalities")
 }
@@ -864,7 +930,16 @@ model Report {
   type          ReportType
   productId     String?      @map("product_id")
   product       Product?     @relation(fields: [productId], references: [id])
+
+  // Was a bare string, so a seller report came back as a UUID with no name,
+  // store or municipality for the admin to act on.
   reportedSellerId String?   @map("reported_seller_id")
+  reportedSeller   User?     @relation("ReportedSeller", fields: [reportedSellerId], references: [id])
+
+  /// The other direction: a seller reporting a buyer. Routed to the buyer's
+  /// own municipality, since that is the admin who can act on the account.
+  reportedBuyerId  String?   @map("reported_buyer_id")
+  reportedBuyer    User?     @relation("ReportedBuyer", fields: [reportedBuyerId], references: [id])
 
   // Content
   reason        String       @db.Text
@@ -881,10 +956,21 @@ model Report {
   // Resolution
   resolutionNotes String?    @db.Text @map("resolution_notes")
   resolvedAt      DateTime?  @map("resolved_at")
+  /// Who decided it. Previously only recoverable by digging through the
+  /// audit log, which no admin screen does.
+  resolvedById    String?    @map("resolved_by_id")
+  resolvedBy      User?      @relation("ReportResolver", fields: [resolvedById], references: [id])
 
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
 
+  // The admin queue filters by municipality and status and orders by date;
+  // without these it was a full table scan for both the page and its count.
+  @@index([municipalityId, status, createdAt], map: "reports_municipality_idx")
+  @@index([status, createdAt], map: "reports_status_idx")
+  @@index([reporterId, createdAt], map: "reports_reporter_idx")
+  @@index([reportedSellerId], map: "reports_seller_idx")
+  @@index([reportedBuyerId], map: "reports_buyer_idx")
   @@map("reports")
 }
 
@@ -1161,4 +1247,64 @@ model VoucherRedemption {
 
   @@index([voucherId, userId])
   @@map("voucher_redemptions")
+}
+
+/// How the sender classified their own feedback, so the super admin can read
+/// the bug reports without wading through the compliments.
+enum FeedbackCategory {
+  USABILITY
+  PERFORMANCE
+  BUG
+  FEATURE_REQUEST
+  DESIGN
+  PRAISE
+  OTHER
+}
+
+enum FeedbackStatus {
+  NEW
+  REVIEWED
+  ARCHIVED
+}
+
+/// Unsolicited feedback about the platform itself, sent from the top bar.
+///
+/// Deliberately NOT a support case: a case is a conversation with the
+/// municipal admin that someone is waiting on an answer to, while this is a
+/// one-way note to the people who run E-MOORM. Mixing them would bury real
+/// support requests under "the search is slow".
+model Feedback {
+  id             String           @id @default(uuid())
+
+  /// Nullable so removing an account does not erase what they told us.
+  userId         String?          @map("user_id")
+  user           User?            @relation("FeedbackAuthor", fields: [userId], references: [id], onDelete: SetNull)
+
+  /// The hat they were wearing and where they were standing, captured at send
+  /// time — a seller complaining about checkout means something different from
+  /// a buyer doing the same.
+  role           UserRole?
+  page           String?          @db.VarChar(200)
+
+  municipalityId String?          @map("municipality_id")
+  municipality   Municipality?    @relation(fields: [municipalityId], references: [id], onDelete: SetNull)
+
+  category       FeedbackCategory @default(OTHER)
+  /// Optional 1-5 satisfaction score; plenty of feedback is prose only.
+  rating         Int?
+  message        String           @db.Text
+
+  status         FeedbackStatus   @default(NEW)
+  adminNotes     String?          @db.Text @map("admin_notes")
+  reviewedAt     DateTime?        @map("reviewed_at")
+  reviewedById   String?          @map("reviewed_by_id")
+  reviewedBy     User?            @relation("FeedbackReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  @@index([status, createdAt], map: "feedback_status_idx")
+  @@index([category, createdAt], map: "feedback_category_idx")
+  @@index([municipalityId, createdAt], map: "feedback_municipality_idx")
+  @@index([userId], map: "feedback_user_idx")
+  @@map("feedback")
 }

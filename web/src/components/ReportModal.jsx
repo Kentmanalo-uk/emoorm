@@ -4,26 +4,55 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import './ReportModal.css';
 
+/**
+ * Reasons are sent as the API's enum value, not as the label.
+ *
+ * This modal used to post the label ("Counterfeit or fake product"), which the
+ * API rejects with "Invalid report reason" — so every report filed from a
+ * product or store page failed. The value is what travels; the label is only
+ * ever shown.
+ */
 const REPORT_REASONS = {
   PRODUCT: [
-    'Counterfeit or fake product',
-    'Prohibited / illegal item',
-    'Misleading description',
-    'Wrong item received',
-    'Dangerous or unsafe product',
-    'Other',
+    { value: 'COUNTERFEIT', label: 'Counterfeit or fake product' },
+    { value: 'INAPPROPRIATE_CONTENT', label: 'Prohibited or illegal item' },
+    { value: 'MISLEADING', label: 'Misleading description or photos' },
+    { value: 'SPAM', label: 'Spam or duplicate listing' },
+    { value: 'OTHER', label: 'Something else' },
   ],
   SELLER: [
-    'Fraud or scam',
-    'Harassment or abusive behavior',
-    'Selling prohibited items',
-    'Non-delivery of items',
-    'Impersonation',
-    'Other',
+    { value: 'FRAUD', label: 'Fraud or scam' },
+    { value: 'ABUSIVE_BEHAVIOR', label: 'Harassment or abusive behaviour' },
+    { value: 'INAPPROPRIATE_CONTENT', label: 'Selling prohibited items' },
+    { value: 'MISLEADING', label: 'Item never arrived or was not as described' },
+    { value: 'SPAM', label: 'Impersonation or spam' },
+    { value: 'OTHER', label: 'Something else' },
+  ],
+  BUYER: [
+    { value: 'NON_PAYMENT', label: 'Did not pay for the order' },
+    { value: 'FAKE_ORDER', label: 'Fake or repeated bogus orders' },
+    { value: 'ABUSIVE_BEHAVIOR', label: 'Harassment or abusive behaviour' },
+    { value: 'FRAUD', label: 'Fraud or chargeback abuse' },
+    { value: 'SPAM', label: 'Spam messages' },
+    { value: 'OTHER', label: 'Something else' },
   ],
 };
 
-export default function ReportModal({ type, productId, storeId, targetName, onClose }) {
+const HEADING = { PRODUCT: 'Report Product', SELLER: 'Report Seller', BUYER: 'Report Buyer' };
+
+/**
+ * Who reads it, so the reporter is not left wondering where it went.
+ * Product and seller reports go to the municipality the shop trades in; a
+ * buyer report goes to the buyer's own municipal admin, because that is the
+ * admin who can act on the account.
+ */
+const DESTINATION = {
+  PRODUCT: "This goes to the municipal admin for the shop's municipality.",
+  SELLER: "This goes to the municipal admin for the shop's municipality.",
+  BUYER: "This goes to the municipal admin for the buyer's municipality.",
+};
+
+export default function ReportModal({ type, productId, storeId, reportedBuyerId, targetName, onClose }) {
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -41,6 +70,7 @@ export default function ReportModal({ type, productId, storeId, targetName, onCl
         type,
         productId: productId || undefined,
         storeId: storeId || undefined,
+        reportedBuyerId: reportedBuyerId || undefined,
         reason,
         description: description.trim(),
       });
@@ -59,7 +89,7 @@ export default function ReportModal({ type, productId, storeId, targetName, onCl
         <div className="report-modal-header">
           <div className="report-modal-title">
             <AlertTriangle size={20} className="report-icon" />
-            <h2>Report {type === 'SELLER' ? 'Seller' : 'Product'}</h2>
+            <h2>{HEADING[type] || 'Report'}</h2>
           </div>
           <button className="report-close" onClick={onClose}><X size={20} /></button>
         </div>
@@ -73,7 +103,7 @@ export default function ReportModal({ type, productId, storeId, targetName, onCl
             <label>Reason for report</label>
             <select value={reason} onChange={(e) => setReason(e.target.value)} required>
               <option value="">Select a reason…</option>
-              {reasons.map((r) => <option key={r} value={r}>{r}</option>)}
+              {reasons.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
 
@@ -91,8 +121,8 @@ export default function ReportModal({ type, productId, storeId, targetName, onCl
           </div>
 
           <p className="report-disclaimer">
-            False reports may result in account action. Our team will review this
-            within 24–48 hours.
+            {DESTINATION[type] || DESTINATION.PRODUCT} You can follow it in{' '}
+            <strong>My Reports</strong>. False reports may result in account action.
           </p>
 
           <div className="report-actions">

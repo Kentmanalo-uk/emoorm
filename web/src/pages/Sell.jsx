@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
+import useSeo from '../lib/seo';
 import {
   ArrowRight, Star, List as Menu, X, CaretDown as ChevronDown,
   Storefront, Users, Truck, ChatCircleDots, ChartLineUp, SealCheck,
@@ -137,6 +138,13 @@ function AuthDropdown({ label, variant, onClick, to, title, subtitle, items }) {
 const NAV_LINKS = ['How it works', 'Benefits', 'Categories'];
 
 export default function Sell() {
+  useSeo({
+    title: 'Sell on E-MOORM — Reach customers across Oriental Mindoro',
+    description: 'Open a shop on E-MOORM and sell to customers across Oriental Mindoro. '
+      + 'Free to start, approved by your municipal administrator.',
+    path: '/sell',
+  });
+
   const { isAuthenticated, user } = useAuthStore();
   const navigate = useNavigate();
   const [headerVisible, setHeaderVisible] = useState(true);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Eye, CheckCircle, XCircle, Clock, Package, Truck, CaretDown as ChevronDown, FileText, Storefront as StoreIcon, MagnifyingGlass, X } from '@phosphor-icons/react';
+import { Eye, CheckCircle, XCircle, Clock, Package, Truck, CaretDown as ChevronDown, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
@@ -8,6 +8,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { resolveImg } from '../lib/media';
 import EmptyArt from '../components/ui/EmptyArt';
 import SellerPageHead from '../components/seller/SellerPageHead';
+import ReportModal from '../components/ReportModal';
 import './SellerDashboard.css';
 import './SellerOrders.css';
 
@@ -105,6 +106,9 @@ const ACTION_LABELS = {
 
 export default function SellerOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
+  // The buyer a seller is filing a report against, or null when the dialog is
+  // closed. Reports route to the buyer's own municipal admin.
+  const [reportBuyer, setReportBuyer] = useState(null);
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState(() => {
     const fromUrl = searchParams.get('status');
@@ -549,10 +553,20 @@ export default function SellerOrders() {
                 {/* Buyer */}
                 <div className="detail-row">
                   <span>Buyer</span>
-                  <strong>
+                  <strong className="so-buyer-cell">
                     {selectedOrder.buyer?.id
                       ? <Link to={`/u/${selectedOrder.buyer.id}`} className="profile-link" title="View buyer profile">{selectedOrder.buyer.fullName || '—'}</Link>
                       : (selectedOrder.buyer?.fullName || '—')}
+                    {selectedOrder.buyer?.id && (
+                      <button
+                        type="button"
+                        className="so-report-buyer"
+                        onClick={() => setReportBuyer(selectedOrder.buyer)}
+                        title="Report this buyer to their municipal admin"
+                      >
+                        <Flag size={14} /> Report
+                      </button>
+                    )}
                   </strong>
                 </div>
 
@@ -771,6 +785,15 @@ export default function SellerOrders() {
         onConfirm={() => handlePaymentDecision(refundConfirm.orderId, 'REFUNDED')}
         onCancel={() => setRefundConfirm(null)}
       />
+      {reportBuyer && (
+        <ReportModal
+          type="BUYER"
+          reportedBuyerId={reportBuyer.id}
+          targetName={reportBuyer.fullName || 'this buyer'}
+          onClose={() => setReportBuyer(null)}
+        />
+      )}
+
     </div>
   );
 }

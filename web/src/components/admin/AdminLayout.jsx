@@ -3,8 +3,8 @@ import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SquaresFour as LayoutGrid, Users, Package, Flag, Tag, MapPin, ChartPie as PieChart,
   CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
-  Megaphone, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
-  Star, ArrowCounterClockwise, List, X,
+  EnvelopeSimple, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
+  Star, ArrowCounterClockwise, List, X, ChatCircleDots,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
@@ -54,6 +54,12 @@ export default function AdminLayout({ children }) {
     location.pathname.startsWith('/admin/municipalities')
   );
   const [unreadCount, setUnreadCount] = useState(0);
+  // Unread messages between this admin and the super admin — the one thing
+  // the Messages page has that nothing else in the shell would surface.
+  const [messageUnread, setMessageUnread] = useState(0);
+  // Feedback nobody has read yet. Super admin only — municipal admins have no
+  // feedback page to send them to.
+  const [feedbackNew, setFeedbackNew] = useState(0);
 
   // What is waiting on this admin, keyed by the route it lives at, so the
   // sidebar can say where the work is without opening every page.
@@ -71,9 +77,23 @@ export default function AdminLayout({ children }) {
       } catch {
         /* ignore */
       }
+      try {
+        const m = await axios.get('/admin-messages/unread-count');
+        if (!cancelled) setMessageUnread(m.data?.count ?? 0);
+      } catch {
+        /* ignore */
+      }
+      if (isSuperAdmin) {
+        try {
+          const f = await axios.get('/feedback/unread-count');
+          if (!cancelled) setFeedbackNew(f.data?.count ?? 0);
+        } catch {
+          /* ignore */
+        }
+      }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     if (isSuperAdmin || !user?.id) return;
@@ -173,9 +193,9 @@ export default function AdminLayout({ children }) {
                     <NavLink to="/admin/buyers" className={subNavCls}>All Buyers</NavLink>
                     <NavLink to="/admin/products" className={subNavCls}>Products{badge('/admin/products')}</NavLink>
                     <NavLink to="/admin/orders" className={subNavCls}>Orders{badge('/admin/orders')}</NavLink>
-                    <NavLink to="/admin/reports" className={subNavCls}>Reports{badge('/admin/reports')}</NavLink>
                     <NavLink to="/admin/reviews" className={subNavCls}>Reviews</NavLink>
                     <NavLink to="/admin/returns" className={subNavCls}>Returns{badge('/admin/returns')}</NavLink>
+                    <NavLink to="/admin/reports" className={subNavCls}>Reports{badge('/admin/reports')}</NavLink>
                   </div>
                 </div>
               </>
@@ -196,29 +216,38 @@ export default function AdminLayout({ children }) {
                 <NavLink to="/admin/orders" className={navCls} title="Orders">
                   <FileText size={17} weight="fill" /> <span>Orders</span>{badge('/admin/orders')}
                 </NavLink>
-                <NavLink to="/admin/reports" className={navCls} title="Reports">
-                  <Flag size={17} weight="fill" /> <span>Reports</span>{badge('/admin/reports')}
-                </NavLink>
                 <NavLink to="/admin/reviews" className={navCls} title="Reviews">
                   <Star size={17} weight="fill" /> <span>Reviews</span>
                 </NavLink>
                 <NavLink to="/admin/returns" className={navCls} title="Returns">
                   <ArrowCounterClockwise size={17} weight="fill" /> <span>Returns</span>{badge('/admin/returns')}
                 </NavLink>
+                <NavLink to="/admin/reports" className={navCls} title="Reports">
+                  <Flag size={17} weight="fill" /> <span>Reports</span>{badge('/admin/reports')}
+                </NavLink>
               </>
             )}
 
-            <NavLink to="/admin/support" className={navCls} title="Support Messages">
-              <ChatsCircle size={17} weight="fill" /> <span>Support Messages</span>{badge('/admin/support')}
+            <NavLink to="/admin/support" className={navCls} title="Buyer Support">
+              <ChatsCircle size={17} weight="fill" /> <span>Buyer Support</span>{badge('/admin/support')}
             </NavLink>
+
+            {/* Admin-to-admin messaging; announcements live here as a tab. */}
+            <NavLink to="/admin/messages" className={navCls} title="Messages">
+              <EnvelopeSimple size={17} weight="fill" /> <span>Messages</span>
+              <NavBadge count={messageUnread} label="unread" />
+            </NavLink>
+
+            {isSuperAdmin && (
+              <NavLink to="/admin/feedback" className={navCls} title="Feedback">
+                <ChatCircleDots size={17} weight="fill" /> <span>Feedback</span>
+                <NavBadge count={feedbackNew} label="new" />
+              </NavLink>
+            )}
 
             <NavLink to="/admin/notifications" className={navCls} title="Notifications">
               <Bell size={17} weight="fill" /> <span>Notifications</span>
               <NavBadge count={unreadCount} label="unread" />
-            </NavLink>
-
-            <NavLink to="/admin/announcements" className={navCls} title="Announcements">
-              <Megaphone size={17} weight="fill" /> <span>Announcements</span>
             </NavLink>
 
             {isSuperAdmin && (
@@ -394,8 +423,9 @@ const LABELS = {
   '/admin/categories': 'Categories',
   '/admin/municipalities': 'Municipalities',
   '/admin/analytics': 'Analytics',
-  '/admin/announcements': 'Announcements',
-  '/admin/support': 'Support Messages',
+  '/admin/messages': 'Messages',
+  '/admin/feedback': 'Feedback',
+  '/admin/support': 'Buyer Support',
   '/admin/notifications': 'Notifications',
   '/admin/reviews': 'Reviews',
   '/admin/returns': 'Returns',

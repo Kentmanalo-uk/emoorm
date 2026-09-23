@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ChatsCircle, PaperPlaneRight, CaretLeft, CaretDown, Lightning, IdentificationCard,
-  LockSimple, LockSimpleOpen, CheckCircle, XCircle, X, CircleNotch, NotePencil,
+  LockSimple, LockSimpleOpen, CheckCircle, XCircle, X, CircleNotch, NotePencil, Star,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
+import {
+  SUPPORT_CATEGORIES, CATEGORY_LABELS, CASE_STATUS_LABELS as STATUS_LABELS,
+  SUBJECT_MAX, MESSAGE_MAX,
+} from '../../lib/supportCategories';
 import ReasonDialog from '../admin/ReasonDialog';
 import NewMessageDialog from './NewMessageDialog';
 import SafetyNotice from '../common/SafetyNotice';
@@ -20,9 +24,11 @@ const TOPIC_LABELS = {
   DIRECT: 'Direct message',
 };
 
+
 const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'awaiting', label: 'Awaiting reply' },
+  { key: 'resolved', label: 'Resolved' },
   { key: 'closed', label: 'Closed' },
 ];
 
@@ -70,7 +76,9 @@ const humanize = (value) => (value ? String(value).replace(/_/g, ' ').toLowerCas
 
 const matchesFilter = (c, filter) => {
   if (filter === 'closed') return c.status === 'CLOSED';
-  if (filter === 'awaiting') return Boolean(c.awaitingReply) && c.status !== 'CLOSED';
+  if (filter === 'resolved') return c.status === 'RESOLVED';
+  // A case an admin has already settled is not waiting on anybody.
+  if (filter === 'awaiting') return Boolean(c.awaitingReply) && (c.status || 'OPEN') === 'OPEN';
   return true;
 };
 
@@ -257,9 +265,172 @@ function IdentityPanel({ userId, onClose }) {
   );
 }
 
+/** User side: open a new support case without leaving the page. */
+function NewCaseDialog({ open, onClose, onOpened }) {
+  const [form, setForm] = useState({ category: 'ORDER', subject: '', message: '' });
+  const [saving, setSaving] = useState(false);
+  const firstRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    requestAnimationFrame(() => firstRef.current?.focus());
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const set = (key) => (e) => setForm((current) => ({ ...current, [key]: e.target.value }));
+
+  const submit = async (event) => {
+    event.preventDefault();
+    const subject = form.subject.trim();
+    const message = form.message.trim();
+    if (subject.length < 3) {
+      toast.error('Give your case a short subject (at least 3 characters).');
+      return;
+    }
+    if (!message) {
+      toast.error('Tell us what you need help with.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await axios.post('/support/cases', { category: form.category, subject, message });
+      toast.success('Case started — your municipal admin has it.');
+      setForm({ category: 'ORDER', subject: '', message: '' });
+      onOpened(res.data);
+      onClose();
+    } catch (err) {
+      toast.error(err.message || 'Could not start your case');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="sc-dialog-overlay" onClick={onClose}>
+      <div className="sc-dialog" role="dialog" aria-modal="true" aria-label="New support case" onClick={(e) => e.stopPropagation()}>
+        <div className="sc-dialog-head">
+          <strong>New support case</strong>
+          <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
+        </div>
+        <form className="sc-case-form" onSubmit={submit}>
+          <label>
+            <span>What is it about?</span>
+            <select ref={firstRef} value={form.category} onChange={set('category')}>
+              {SUPPORT_CATEGORIES.map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Subject</span>
+            <input value={form.subject} onChange={set('subject')} maxLength={SUBJECT_MAX} placeholder="e.g. My order has not arrived" />
+          </label>
+          <label>
+            <span>Tell us more</span>
+            <textarea value={form.message} onChange={set('message')} maxLength={MESSAGE_MAX} rows={4} placeholder="Include order numbers or store names that help us sort this out." />
+          </label>
+          <div className="sc-case-foot">
+            <button type="button" className="sc-btn sc-btn-ghost" onClick={onClose} disabled={saving}>Cancel</button>
+            <button type="submit" className="sc-btn sc-btn-green" disabled={saving}>
+              {saving ? <CircleNotch size={14} className="sc-spin" /> : <PaperPlaneRight size={14} weight="fill" />}
+              {saving ? 'Sending…' : 'Start case'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/** Read-only stars, used once a case has been rated. */
+const Stars = ({ value }) => (
+  <span className="sc-stars" aria-label={`${value} out of 5`}>
+    {[1, 2, 3, 4, 5].map((n) => (
+      <Star key={n} size={15} weight={n <= value ? 'fill' : 'regular'} className={n <= value ? 'is-lit' : ''} />
+    ))}
+  </span>
+);
+
+/**
+ * Shown to the case owner once an admin resolves the case. One rating per
+ * case, so after it is sent the score replaces the prompt.
+ */
+function RatingPrompt({ conversation, onRated }) {
+  const [picked, setPicked] = useState(0);
+  const [hovered, setHovered] = useState(0);
+  const [comment, setComment] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  if (conversation.rating) {
+    return (
+      <div className="sc-rating is-done">
+        <strong><CheckCircle size={14} weight="fill" /> You rated this case</strong>
+        <Stars value={Number(conversation.rating)} />
+        {conversation.ratingComment && <p>“{conversation.ratingComment}”</p>}
+      </div>
+    );
+  }
+
+  const submit = async () => {
+    if (!picked) return;
+    setSaving(true);
+    try {
+      const res = await axios.post(`/support/cases/${conversation.id}/rating`, {
+        rating: picked,
+        ...(comment.trim() ? { comment: comment.trim() } : {}),
+      });
+      toast.success('Thanks for the feedback.');
+      onRated(res.data);
+    } catch (err) {
+      toast.error(err.message || 'Could not save your rating');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const shown = hovered || picked;
+
+  return (
+    <div className="sc-rating">
+      <strong>How did we do?</strong>
+      <span className="sc-rating-hint">This case was marked resolved. Rate the help you got.</span>
+      <div className="sc-rating-stars" onMouseLeave={() => setHovered(0)}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            className={`sc-rating-star${n <= shown ? ' is-lit' : ''}`}
+            onMouseEnter={() => setHovered(n)}
+            onFocus={() => setHovered(n)}
+            onBlur={() => setHovered(0)}
+            onClick={() => setPicked(n)}
+            aria-label={`${n} star${n === 1 ? '' : 's'}`}
+          >
+            <Star size={22} weight={n <= shown ? 'fill' : 'regular'} />
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        maxLength={1000}
+        rows={2}
+        placeholder="Anything you want to add? (optional)"
+      />
+      <button type="button" className="sc-btn sc-btn-green" onClick={submit} disabled={!picked || saving}>
+        {saving ? 'Sending…' : 'Send rating'}
+      </button>
+    </div>
+  );
+}
+
 /**
  * Help chat between users and municipal admins.
- * mode="user": the signed-in user's conversations with their municipality.
+ * mode="user": the signed-in user's support cases with their municipality.
  * mode="admin": the admin inbox (scoped to the admin's municipality by the API).
  */
 export default function SupportChat({ mode = 'user', initialConversationId = null, initialDraft = '' }) {
@@ -277,7 +448,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   const [panelToggle, setPanelToggle] = useState({ id: null, open: false });
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
-  const listUrl = isAdmin ? '/support/chat/inbox' : '/support/chat/my';
+  const listUrl = isAdmin ? '/support/inbox' : '/support/cases';
 
   const visibleConversations = isAdmin ? conversations.filter((c) => matchesFilter(c, filter)) : conversations;
   const filterCounts = isAdmin
@@ -302,7 +473,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   useEffect(() => {
     if (!activeId) return undefined;
     let cancelled = false;
-    const fetchThread = () => axios.get(`/support/chat/${activeId}`)
+    const fetchThread = () => axios.get(`/support/cases/${activeId}`)
       .then((res) => {
         if (cancelled) return;
         setThread(res.data);
@@ -328,7 +499,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
     if (!body || !activeId) return;
     setSending(true);
     try {
-      const res = await axios.post(`/support/chat/${activeId}/messages`, { body });
+      const res = await axios.post(`/support/cases/${activeId}/messages`, { body });
       setDraft('');
       setThread((prev) => (prev
         ? { ...prev, status: isAdmin ? prev.status : 'OPEN', messages: [...prev.messages, res.data] }
@@ -345,18 +516,30 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
     if (!activeId) return;
     setTogglingStatus(true);
     try {
-      const res = await axios.patch(`/support/chat/${activeId}/status`, { status });
+      const res = await axios.patch(`/support/cases/${activeId}/status`, { status });
       setThread(res.data);
       setConversations((prev) => prev.map((c) => (c.id === activeId
-        ? { ...c, status, awaitingReply: status === 'CLOSED' ? false : c.awaitingReply }
+        ? { ...c, status, awaitingReply: status === 'OPEN' ? c.awaitingReply : false }
         : c)));
-      toast.success(status === 'CLOSED' ? 'Conversation closed' : 'Conversation reopened');
+      toast.success(status === 'CLOSED' ? 'Case closed'
+        : status === 'RESOLVED' ? 'Case resolved — the buyer can now rate it'
+          : 'Case reopened');
       refreshList();
     } catch (err) {
       toast.error(err.message || 'Failed to update conversation');
     } finally {
       setTogglingStatus(false);
     }
+  };
+
+  // A rating reply may come back without the messages, so merge rather than replace.
+  const handleRated = (updated) => {
+    setThread((prev) => (prev
+      ? { ...prev, ...updated, messages: updated?.messages || prev.messages }
+      : prev));
+    setConversations((prev) => prev.map((c) => (c.id === activeId
+      ? { ...c, rating: updated?.rating ?? c.rating, ratingComment: updated?.ratingComment ?? c.ratingComment }
+      : c)));
   };
 
   const closeCompose = useCallback(() => setComposeOpen(false), []);
@@ -377,14 +560,29 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
+  const fallbackTitle = (c) => (c.topic === 'DIRECT'
+    ? `${c.municipality?.name || 'Municipal'} Admin`
+    : `${c.municipality?.name || 'Municipal'} Support`);
+
   const titleFor = (c) => {
     if (isAdmin) return c.user?.fullName || 'User';
-    return c.topic === 'DIRECT' ? `${c.municipality?.name} Municipal Admin` : `${c.municipality?.name} Support`;
+    return c.subject || fallbackTitle(c);
   };
+
+  // The user's line under the subject: what the case is about, and who holds it.
+  // The admin sees the same thing about the person's case, so a queue can be
+  // triaged by category without opening every thread.
+  const subtitleFor = (c) => [
+    CATEGORY_LABELS[c.category] || TOPIC_LABELS[c.topic] || 'Support',
+    c.municipality?.name,
+  ].filter(Boolean).join(' · ');
+
   const active = thread && thread.id === activeId ? thread : null;
   const activeSummary = conversations.find((c) => c.id === activeId);
   const activeStatus = active?.status || activeSummary?.status || 'OPEN';
   const isClosed = activeStatus === 'CLOSED';
+  // Rating is the user's, and only once an admin has finished with the case.
+  const canRate = !isAdmin && active && (activeStatus === 'RESOLVED' || activeStatus === 'CLOSED');
   const panelOpen = Boolean(isAdmin && active && active.user?.id && (
     panelToggle.id === activeId ? panelToggle.open : active.topic === 'IDENTITY_VERIFICATION'
   ));
@@ -392,6 +590,13 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   return (
     <div className={`sc-chat${activeId ? ' has-active' : ''}`}>
       <aside className="sc-list">
+        {!isAdmin && (
+          <div className="sc-list-head">
+            <button type="button" className="sc-compose" onClick={() => setComposeOpen(true)}>
+              <NotePencil size={16} weight="fill" /> New support case
+            </button>
+          </div>
+        )}
         {isAdmin && (
           <div className="sc-list-head">
             <button type="button" className="sc-compose" onClick={() => setComposeOpen(true)}>
@@ -421,7 +626,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
             <ChatsCircle size={36} weight="fill" />
             <p>
               {!isAdmin
-                ? 'No support conversations yet.'
+                ? 'No support cases yet. Start one and your municipal admin will pick it up.'
                 : filter === 'awaiting'
                   ? 'Nobody is waiting for a reply.'
                   : filter === 'closed'
@@ -441,23 +646,36 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
               <span className="sc-list-body">
                 <span className="sc-list-top">
                   <strong>
-                    {isAdmin && c.awaitingReply && c.status !== 'CLOSED' && (
+                    {isAdmin && c.awaitingReply && (c.status || 'OPEN') === 'OPEN' && (
                       <span className="sc-await-dot" title="Awaiting reply" aria-label="Awaiting reply" />
                     )}
                     {titleFor(c)}
                   </strong>
                   <small>{formatTime(c.lastMessage?.createdAt || c.createdAt)}</small>
                 </span>
-                <span className="sc-list-topic">
-                  {TOPIC_LABELS[c.topic] || c.topic}
-                  {isAdmin && ` · ${c.municipality?.name}`}
-                </span>
+                {/* The admin row leads with the person's name, so the case's
+                    own subject needs a line of its own to triage by. */}
+                {isAdmin && c.subject && <span className="as-list-subject">{c.subject}</span>}
+                <span className="sc-list-topic">{subtitleFor(c)}</span>
                 <span className="sc-list-preview">{c.lastMessage?.body || 'No messages yet'}</span>
-                {(c.status === 'CLOSED' || (isAdmin && c.awaitingReply)) && (
+                {isAdmin ? (
+                  (c.status !== 'OPEN' || c.awaitingReply) && (
+                    <span className="sc-list-badges">
+                      {c.status === 'CLOSED' || c.status === 'RESOLVED'
+                        ? (
+                          <span className={`sc-badge sc-badge-${c.status.toLowerCase()}`}>
+                            {STATUS_LABELS[c.status]}
+                          </span>
+                        )
+                        : <span className="sc-badge sc-badge-await">Awaiting reply</span>}
+                    </span>
+                  )
+                ) : (
                   <span className="sc-list-badges">
-                    {c.status === 'CLOSED'
-                      ? <span className="sc-badge sc-badge-closed">Closed</span>
-                      : <span className="sc-badge sc-badge-await">Awaiting reply</span>}
+                    <span className={`sc-badge sc-badge-${(c.status || 'OPEN').toLowerCase()}`}>
+                      {STATUS_LABELS[c.status] || 'Open'}
+                    </span>
+                    {c.rating > 0 && <span className="sc-badge sc-badge-rated">Rated {c.rating}/5</span>}
                   </span>
                 )}
               </span>
@@ -482,14 +700,15 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
               <div className="sc-thread-title">
                 <strong>
                   {titleFor(active)}
-                  {isClosed && <span className="sc-badge sc-badge-closed">Closed</span>}
+                  <span className={`sc-badge sc-badge-${activeStatus.toLowerCase()}`}>
+                    {STATUS_LABELS[activeStatus] || activeStatus}
+                  </span>
                 </strong>
                 <span>
                   {isAdmin
-                    ? `${active.user?.email || ''} · ${active.municipality?.name}`
-                    : active.adminName
-                      ? `Municipal admin: ${active.adminName}`
-                      : 'Waiting for a municipal admin to be assigned'}
+                    ? [active.subject, subtitleFor(active), active.user?.email]
+                      .filter(Boolean).join(' · ')
+                    : `${subtitleFor(active)} · ${active.adminName || 'Waiting for a municipal admin'}`}
                 </span>
               </div>
               {isAdmin && (
@@ -502,15 +721,38 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                   >
                     <IdentificationCard size={14} /> Verification
                   </button>
-                  <button
-                    type="button"
-                    className="sc-btn sc-btn-ghost"
-                    disabled={togglingStatus}
-                    onClick={() => setConversationStatus(isClosed ? 'OPEN' : 'CLOSED')}
-                  >
-                    {isClosed ? <LockSimpleOpen size={14} /> : <LockSimple size={14} />}
-                    {isClosed ? 'Reopen' : 'Close conversation'}
-                  </button>
+                  {/* Resolved is the state that invites the buyer to rate the
+                      case; closed simply ends it without asking. */}
+                  {activeStatus === 'OPEN' && (
+                    <button
+                      type="button"
+                      className="sc-btn sc-btn-green"
+                      disabled={togglingStatus}
+                      onClick={() => setConversationStatus('RESOLVED')}
+                    >
+                      <CheckCircle size={14} /> Mark resolved
+                    </button>
+                  )}
+                  {activeStatus !== 'OPEN' && (
+                    <button
+                      type="button"
+                      className="sc-btn sc-btn-ghost"
+                      disabled={togglingStatus}
+                      onClick={() => setConversationStatus('OPEN')}
+                    >
+                      <LockSimpleOpen size={14} /> Reopen
+                    </button>
+                  )}
+                  {!isClosed && (
+                    <button
+                      type="button"
+                      className="sc-btn sc-btn-ghost"
+                      disabled={togglingStatus}
+                      onClick={() => setConversationStatus('CLOSED')}
+                    >
+                      <LockSimple size={14} /> Close case
+                    </button>
+                  )}
                 </div>
               )}
             </header>
@@ -539,11 +781,13 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                       <LockSimple size={14} />
                       {isAdmin
                         ? 'This conversation is closed. Replying or reopening will make it active again.'
-                        : 'This conversation was closed. Send a message to reopen it.'}
+                        : 'This case was closed. Send a message to reopen it.'}
                     </p>
                   )}
                   <div ref={bottomRef} />
                 </div>
+
+                {canRate && <RatingPrompt conversation={active} onRated={handleRated} />}
 
                 <SafetyNotice />
                 <form className="sc-composer" onSubmit={send}>
@@ -577,8 +821,10 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
         )}
       </section>
 
-      {isAdmin && (
+      {isAdmin ? (
         <NewMessageDialog open={composeOpen} onClose={closeCompose} onOpened={handleOpened} />
+      ) : (
+        <NewCaseDialog open={composeOpen} onClose={closeCompose} onOpened={handleOpened} />
       )}
     </div>
   );

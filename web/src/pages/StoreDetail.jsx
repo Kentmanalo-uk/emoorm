@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import useSeo, { storeSchema, breadcrumbs, clampText } from '../lib/seo';
 import {
   MapPin,
   Package,
@@ -198,6 +199,40 @@ export default function StoreDetail() {
       '--shop-secondary': secondary,
     };
   }, [store?.primaryColor, store?.secondaryColor]);
+
+  // Above every early return, so the hook order is the same whether the
+  // shop is loading, missing or loaded.
+  useSeo({
+    ready: Boolean(store),
+    title: store
+      ? `${store.name} — Local shop in ${store.municipality?.name || 'Oriental Mindoro'}`
+      : '',
+    description: store
+      ? clampText(store.description
+        || `${store.name} sells locally made products on E-MOORM`
+        + `${store.municipality?.name ? `, based in ${store.municipality.name}` : ''}.`)
+      : '',
+    image: store
+      ? resolveImg(store.bannerImage || store.coverImage || store.logo)
+      : undefined,
+    path: store ? `/store/${store.slug}` : undefined,
+    jsonLd: store
+      ? [
+        storeSchema({
+          name: store.name,
+          description: clampText(store.description),
+          image: resolveImg(store.bannerImage || store.coverImage || store.logo),
+          slug: store.slug,
+          municipality: store.municipality?.name,
+        }),
+        breadcrumbs([
+          { name: 'Home', path: '/' },
+          { name: 'Shops', path: '/stores' },
+          { name: store.name, path: `/store/${store.slug}` },
+        ]),
+      ]
+      : undefined,
+  });
 
   if (isLoadingStore) {
     return (

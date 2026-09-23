@@ -4,6 +4,7 @@ const config = require('./src/config/env');
 const prisma = require('./src/config/database');
 const orderService = require('./src/services/order.service');
 const kycRetentionService = require('./src/services/kycRetention.service');
+const { assertSafeToStart } = require('./src/config/startupChecks');
 
 const PORT = config.port;
 
@@ -32,13 +33,20 @@ const testDatabaseConnection = async () => {
 };
 
 // Start server
+let httpServer = null;
+let shuttingDown = false;
+
 const startServer = async () => {
   try {
+    // Never serve production traffic with a development secret or a
+    // localhost canonical URL.
+    assertSafeToStart();
+
     // Test database connection
     await testDatabaseConnection();
 
     // Start Express server
-    app.listen(PORT, () => {
+    httpServer = app.listen(PORT, () => {
       console.log('================================================');
       console.log('  E-MOORM Backend Server');
       console.log('================================================');
@@ -74,17 +82,55 @@ const startServer = async () => {
   }
 };
 
-// Handle graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully...');
-  await prisma.$disconnect();
-  process.exit(0);
+/**
+ * Graceful shutdown.
+ *
+ * A deploy sends SIGTERM and then kills the process. Exiting immediately drops
+ * every request still in flight — an order being placed, an upload halfway
+ * through — so the listener is closed first and existing connections are given
+ * time to finish. The timer is the backstop for a connection that never does.
+ */
+const SHUTDOWN_GRACE_MS = 10000;
+
+const shutdown = async (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received, shutting down gracefully...`);
+
+  const forced = setTimeout(() => {
+    console.error('  Shutdown timed out; forcing exit.');
+    process.exit(1);
+  }, SHUTDOWN_GRACE_MS);
+  forced.unref();
+
+  try {
+    if (httpServer) {
+      await new Promise((resolve) => httpServer.close(resolve));
+      console.log('  HTTP server closed.');
+    }
+    await prisma.$disconnect();
+    console.log('  Database disconnected.');
+    clearTimeout(forced);
+    process.exit(0);
+  } catch (error) {
+    console.error('  Shutdown failed:', error.message);
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// An unhandled rejection leaves the process in an unknown state. Log it and
+// shut down cleanly so the supervisor restarts into a known-good one.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+  shutdown('unhandledRejection');
 });
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully...');
-  await prisma.$disconnect();
-  process.exit(0);
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+  shutdown('uncaughtException');
 });
 
 // Start the server
