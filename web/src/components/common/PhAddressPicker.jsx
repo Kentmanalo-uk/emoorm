@@ -44,6 +44,7 @@ const PhAddressPicker = ({
   value,
   onChange,
   dbMunicipalities = [],
+  dbLoading = false,
   showStreet = true,
   errors = {},
   disabled = false,
@@ -111,6 +112,22 @@ const PhAddressPicker = ({
     return map;
   }, [dbMunicipalities]);
 
+  // Resolve the municipality id once the platform catalogue arrives.
+  //
+  // The list of towns is a constant, so the dropdown is usable on first paint,
+  // but `municipalityId` can only come from the catalogue the page fetches.
+  // Someone picking a town before that request lands would end up with a
+  // municipality plainly selected and no id behind it, and the form would
+  // refuse to submit with "Municipality is required" pointing at a field that
+  // looked filled in. Locally the fetch always won the race; over a real
+  // network it does not.
+  useEffect(() => {
+    if (!v.municipalityName || v.municipalityId || dbMuniByNormName.size === 0) return;
+    const match = dbMuniByNormName.get(normalizeName(v.municipalityName));
+    if (match) onChange({ ...v, municipalityId: match.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbMuniByNormName, v.municipalityName, v.municipalityId]);
+
   const handleMunicipality = (e) => {
     const code = e.target.value;
     const m = municipalities.find((x) => x.code === code);
@@ -168,9 +185,11 @@ const PhAddressPicker = ({
           className={`ph-input ${errors.municipality || errors.municipalityId ? 'error' : ''}`}
           value={v.municipalityCode || ''}
           onChange={handleMunicipality}
-          disabled={disabled}
+          disabled={disabled || dbLoading}
         >
-          <option value="">Select city / municipality</option>
+          <option value="">
+            {dbLoading ? 'Loading municipalities…' : 'Select city / municipality'}
+          </option>
           {municipalities.map((m) => {
             const supported = dbMuniByNormName.has(normalizeName(m.name));
             return (

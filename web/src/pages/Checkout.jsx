@@ -91,6 +91,7 @@ const Checkout = () => {
   });
   const [deliveryErrors, setDeliveryErrors] = useState({});
   const [municipalities, setMunicipalities] = useState([]);
+  const [municipalitiesLoading, setMunicipalitiesLoading] = useState(true);
   const [fulfillmentMethod, setFulfillmentMethod] = useState('DELIVERY');
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [paymentReference, setPaymentReference] = useState('');
@@ -161,6 +162,10 @@ const Checkout = () => {
         setMunicipalities(res.data || []);
       } catch {
         // non-fatal
+      } finally {
+        // The picker keeps its town list disabled until this lands, so a
+        // selection cannot be made before there is an id to attach to it.
+        setMunicipalitiesLoading(false);
       }
     })();
   }, []);
@@ -819,6 +824,7 @@ const Checkout = () => {
                           }));
                         }}
                         dbMunicipalities={municipalities}
+                        dbLoading={municipalitiesLoading}
                         errors={deliveryErrors}
                       />
                     )}

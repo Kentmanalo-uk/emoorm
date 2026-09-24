@@ -251,7 +251,7 @@ export default function SellerApply() {
   const [application, setApplication] = useState(null);
   const [loadingApplication, setLoadingApplication] = useState(true);
 
-  const { municipalities: dbMunicipalities } = useMunicipalities();
+  const { municipalities: dbMunicipalities, isLoading: dbMunicipalitiesLoading } = useMunicipalities();
   const { categories } = useCategories();
 
   // Local-only object URLs for the photo previews (never sent to the server).
@@ -656,6 +656,7 @@ export default function SellerApply() {
                     setErrors((prev) => ({ ...prev, shopAddress: "", municipalityId: "" }));
                   }}
                   dbMunicipalities={dbMunicipalities}
+                  dbLoading={dbMunicipalitiesLoading}
                   errors={{
                     province: errors.shopAddress,
                     municipalityId: errors.shopAddress || errors.municipalityId,

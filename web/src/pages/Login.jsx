@@ -38,7 +38,7 @@ const Login = () => {
   // the account is actually created.
   const [googleProfile, setGoogleProfile] = useState(null); // { googleToken, email, fullName, profilePhoto }
   // Only needed once the Google profile step is reached.
-  const { municipalities } = useMunicipalities({ enabled: mfaStage === 'google-profile' });
+  const { municipalities, isLoading: municipalitiesLoading } = useMunicipalities({ enabled: mfaStage === 'google-profile' });
   const [googleForm, setGoogleForm] = useState({
     fullName: '',
     contactNumber: '',
@@ -427,6 +427,7 @@ const Login = () => {
                   onChange={handleGoogleFormChange}
                   onAddressChange={(next) => setGoogleForm((prev) => ({ ...prev, ...next }))}
                   municipalities={municipalities}
+                  municipalitiesLoading={municipalitiesLoading}
                   showPassword={showGooglePassword}
                   onTogglePassword={() => setShowGooglePassword((v) => !v)}
                   onSubmit={handleCompleteGoogleProfile}
@@ -584,7 +585,7 @@ export default Login;
 // ─── Google sign-in: first-time profile completion card ──────────
 
 function GoogleCompleteProfile({
-  profile, form, errors, onChange, onAddressChange, municipalities,
+  profile, form, errors, onChange, onAddressChange, municipalities, municipalitiesLoading,
   showPassword, onTogglePassword, onSubmit, onCancel, isLoading, apiError,
 }) {
   return (
@@ -625,6 +626,7 @@ function GoogleCompleteProfile({
           value={form}
           onChange={onAddressChange}
           dbMunicipalities={municipalities}
+          dbLoading={municipalitiesLoading}
           errors={errors}
           streetLabel="Street / House No. (optional)"
         />

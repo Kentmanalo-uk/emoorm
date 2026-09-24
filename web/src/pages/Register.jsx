@@ -346,6 +346,7 @@ const Register = () => {
                       }
                     }}
                     dbMunicipalities={municipalities}
+                    dbLoading={loadingMunicipalities}
                     errors={errors}
                     streetLabel="Street / House No. (optional)"
                     streetPlaceholder="123 Rizal St."

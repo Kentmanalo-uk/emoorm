@@ -116,9 +116,31 @@ const mountWebApp = (app) => {
     return false;
   }
 
-  // Read once: the file only changes when a new build is deployed, and that
-  // restarts the process.
-  const template = fs.readFileSync(indexPath, 'utf8');
+  // Cached, but re-read when the file changes on disk.
+  //
+  // Holding the first read forever is fine right up until someone rebuilds
+  // without restarting: the shell then keeps naming the previous bundle hash,
+  // every asset 404s, and the site serves a blank page — a total outage from
+  // a step that looks harmless. One stat() per HTML request is nothing next
+  // to that, and it costs nothing in the steady state.
+  let cached = { html: null, mtimeMs: 0, size: 0 };
+
+  const readTemplate = () => {
+    try {
+      const stat = fs.statSync(indexPath);
+      if (cached.html === null || stat.mtimeMs !== cached.mtimeMs || stat.size !== cached.size) {
+        cached = { html: fs.readFileSync(indexPath, 'utf8'), mtimeMs: stat.mtimeMs, size: stat.size };
+      }
+    } catch (err) {
+      // A missing or unreadable file mid-deploy: keep serving the last good
+      // copy rather than failing the request.
+      if (cached.html === null) throw err;
+      console.error('[web] could not re-read index.html:', err.message);
+    }
+    return cached.html;
+  };
+
+  readTemplate();
 
   // Hashed bundles under /assets are immutable; everything else in the build
   // (icons, manifest, robots) may be replaced in place, so it revalidates.
@@ -157,7 +179,7 @@ const mountWebApp = (app) => {
     try {
       const meta = await seoService.resolve(req.path);
       const head = renderTags(meta);
-      const stripped = MANAGED.reduce((html, pattern) => html.replace(pattern, ''), template);
+      const stripped = MANAGED.reduce((html, pattern) => html.replace(pattern, ''), readTemplate());
       const html = stripped.replace('</head>', `    ${head}\n  </head>`);
 
       res.set('Content-Type', 'text/html; charset=utf-8');
@@ -169,7 +191,7 @@ const mountWebApp = (app) => {
       console.error('[web] failed to render shell:', err.message);
       // A metadata failure must never take the app down — serve it plain.
       res.set('Content-Type', 'text/html; charset=utf-8');
-      return res.status(200).send(template);
+      return res.status(200).send(readTemplate());
     }
   });
 

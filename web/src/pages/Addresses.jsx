@@ -30,7 +30,7 @@ const emptyForm = {
 const Addresses = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
-  const { municipalities } = useMunicipalities();
+  const { municipalities, isLoading: municipalitiesLoading } = useMunicipalities();
   const [addresses, setAddresses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -290,6 +290,7 @@ const Addresses = () => {
             value={formData}
             onChange={(next) => setFormData((prev) => ({ ...prev, ...next }))}
             dbMunicipalities={municipalities}
+            dbLoading={municipalitiesLoading}
             errors={formErrors}
           />
 
