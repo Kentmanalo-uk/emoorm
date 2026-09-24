@@ -66,6 +66,21 @@ const IMAGE_HOSTS = [
 // of what the app actually uses, so anything else is refused by the browser.
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // Helmet's default here is `same-origin`, which severs `window.opener`
+  // between this page and any popup it opens. "Continue with Google" is a
+  // popup that hands its auth code back through window.opener.postMessage,
+  // so under the default the popup closes and nothing happens — no callback,
+  // no error. `same-origin-allow-popups` keeps other sites from grabbing our
+  // window while letting popups we open talk back; it is the value Google's
+  // Identity Services documentation requires.
+  //
+  // This only surfaced in production because in development Vite served the
+  // HTML, so Helmet's headers never reached the page.
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  // Helmet defaults to `no-referrer`, which Google also warns can break the
+  // sign-in handshake. This is the modern browser default and still strips
+  // the path from cross-origin requests.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   hsts: config.nodeEnv === 'production' ? undefined : false,
   contentSecurityPolicy: {
     useDefaults: true,
