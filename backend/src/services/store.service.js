@@ -388,6 +388,16 @@ const updateStore = async (storeId, userId, rawData) => {
     }
   }
 
+  // The platform serves one province, so a shop cannot be placed outside it.
+  // The auth and address validators hold the same rule for accounts and
+  // delivery addresses; this route has no validator, so it is held here.
+  if (typeof updateData.province === 'string' && updateData.province.trim() !== '') {
+    if (!/^\s*oriental\s+mindoro\s*$/i.test(updateData.province)) {
+      throw new ApiError('Only Oriental Mindoro is served at the moment', 400);
+    }
+    updateData.province = 'Oriental Mindoro';
+  }
+
   return storeRepository.updateStore(storeId, updateData);
 };
 

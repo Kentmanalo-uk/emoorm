@@ -56,10 +56,17 @@ const registerValidation = [
     .withMessage('Invalid municipality ID'),
 
   body('province')
-    .optional({ nullable: true })
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ max: 100 })
-    .withMessage('Province name is too long'),
+    .withMessage('Province name is too long')
+    // The platform serves one province. The address picker fixes it in the
+    // UI, but a request need not come from the picker, so the rule is held
+    // here as well. Accepted spellings are canonicalised so the stored value
+    // is always the same string.
+    .matches(/^oriental\s+mindoro$/i)
+    .withMessage('Only Oriental Mindoro is served at the moment')
+    .customSanitizer(() => 'Oriental Mindoro'),
 
   body('barangay')
     .optional()
@@ -213,10 +220,17 @@ const googleCompleteValidation = [
     .withMessage('Invalid municipality ID'),
 
   body('province')
-    .optional({ nullable: true })
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ max: 100 })
-    .withMessage('Province name is too long'),
+    .withMessage('Province name is too long')
+    // The platform serves one province. The address picker fixes it in the
+    // UI, but a request need not come from the picker, so the rule is held
+    // here as well. Accepted spellings are canonicalised so the stored value
+    // is always the same string.
+    .matches(/^oriental\s+mindoro$/i)
+    .withMessage('Only Oriental Mindoro is served at the moment')
+    .customSanitizer(() => 'Oriental Mindoro'),
 
   body('barangay')
     .optional()

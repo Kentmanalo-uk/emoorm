@@ -31,10 +31,14 @@ const addressValidation = [
     .withMessage('Invalid municipality ID'),
 
   body('province')
-    .optional({ nullable: true })
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ max: 100 })
-    .withMessage('Province name is too long'),
+    .withMessage('Province name is too long')
+    // The platform serves one province; see auth.validator for the reasoning.
+    .matches(/^oriental\s+mindoro$/i)
+    .withMessage('Only Oriental Mindoro is served at the moment')
+    .customSanitizer(() => 'Oriental Mindoro'),
 
   body('barangay')
     .trim()
@@ -64,7 +68,16 @@ const addressUpdateValidation = [
   body('fullName').optional().trim().notEmpty().withMessage('Recipient name is required').isLength({ max: 100 }).withMessage('Recipient name is too long'),
   body('contactNumber').optional().trim().matches(/^(\+63|0)?[0-9]{10}$/).withMessage('Please provide a valid Philippine contact number'),
   body('municipalityId').optional().isUUID().withMessage('Invalid municipality ID'),
-  body('province').optional({ nullable: true }).trim().isLength({ max: 100 }).withMessage('Province name is too long'),
+  body('province')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Province name is too long')
+    // Same rule as on create: an address cannot be moved out of the served
+    // province after the fact.
+    .matches(/^oriental\s+mindoro$/i)
+    .withMessage('Only Oriental Mindoro is served at the moment')
+    .customSanitizer(() => 'Oriental Mindoro'),
   body('barangay').optional().trim().notEmpty().withMessage('Barangay is required').isLength({ max: 100 }).withMessage('Barangay name is too long'),
   body('street').optional().trim().notEmpty().withMessage('Street / house address is required').isLength({ max: 500 }).withMessage('Address is too long'),
   body('isDefault').optional().isBoolean().withMessage('isDefault must be true or false'),

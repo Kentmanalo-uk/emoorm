@@ -1,24 +1,30 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  listProvinces,
-  listMunicipalitiesByProvince,
+  SERVICE_PROVINCE,
+  SERVICE_REGION,
+  listServiceMunicipalities,
   listBarangaysByMunicipality,
-  matchPsgcMunicipality,
   normalizeName,
 } from '../../lib/phAddress';
 import './PhAddressPicker.css';
 
 /**
- * Reusable Philippine address picker.
+ * Reusable Philippine address picker, scoped to the province the platform serves.
  *
  * Emits a `value` object shaped like:
  *   { province, provinceCode, municipalityId, municipalityName, municipalityCode,
  *     barangay, barangayCode, street }
  *
- * The picker cross-references PSGC municipalities against the platform's DB
- * `municipalities` list (passed in via `dbMunicipalities`) so the emitted
- * `municipalityId` remains a valid FK for the backend. Provinces not covered
- * by the platform are still selectable but marked as unavailable.
+ * The province is fixed to Oriental Mindoro. E-MOORM only serves it, so asking
+ * for it was a choice with one answer — and it cost a fetch of every province
+ * in the country before the municipality list would load, which left the form
+ * stuck on "Select a province first" whenever PSGC was slow. The emitted value
+ * keeps the same shape, so nothing upstream has to know.
+ *
+ * Municipalities come from a fixed list (a province's municipalities do not
+ * change), cross-referenced against the platform's own `municipalities`
+ * catalogue (`dbMunicipalities`) so the emitted `municipalityId` is a valid FK.
+ * Barangays still come from PSGC, with manual entry as the fallback.
  */
 const emptyValue = {
   province: '',
@@ -30,6 +36,9 @@ const emptyValue = {
   barangayCode: '',
   street: '',
 };
+
+const isServiceProvince = (name, code) =>
+  normalizeName(name) === normalizeName(SERVICE_PROVINCE.name) && code === SERVICE_PROVINCE.code;
 
 const PhAddressPicker = ({
   value,
@@ -44,60 +53,33 @@ const PhAddressPicker = ({
 }) => {
   const v = { ...emptyValue, ...(value || {}) };
 
-  const [provinces, setProvinces] = useState([]);
-  const [provincesLoading, setProvincesLoading] = useState(true);
-  const [municipalities, setMunicipalities] = useState([]);
-  const [muniLoading, setMuniLoading] = useState(false);
+  const municipalities = useMemo(() => listServiceMunicipalities(), []);
   const [barangays, setBarangays] = useState([]);
   const [brgyLoading, setBrgyLoading] = useState(false);
   const [manualBarangay, setManualBarangay] = useState(false);
 
-  // Load provinces once.
+  // Pin the province. For a fresh form this runs once (the consumers seed the
+  // name but not the code). It runs again only if something upstream puts a
+  // different province in — a record saved before the lock, say — and then
+  // the municipality and barangay that belonged to it are cleared as well,
+  // because they cannot be right.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const list = await listProvinces();
-        if (!cancelled) setProvinces(list);
-      } catch {
-        if (!cancelled) setProvinces([]);
-      } finally {
-        if (!cancelled) setProvincesLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    if (isServiceProvince(v.province, v.provinceCode)) return;
 
-  // Resolve initial province code from name when only the name is present.
-  useEffect(() => {
-    if (!v.provinceCode && v.province && provinces.length > 0) {
-      const target = normalizeName(v.province);
-      const match = provinces.find((p) => normalizeName(p.name) === target);
-      if (match) onChange({ ...v, provinceCode: match.code });
-    }
+    const foreign =
+      (v.province && normalizeName(v.province) !== normalizeName(SERVICE_PROVINCE.name)) ||
+      (v.provinceCode && v.provinceCode !== SERVICE_PROVINCE.code);
+
+    onChange({
+      ...v,
+      province: SERVICE_PROVINCE.name,
+      provinceCode: SERVICE_PROVINCE.code,
+      ...(foreign
+        ? { municipalityId: '', municipalityName: '', municipalityCode: '', barangay: '', barangayCode: '' }
+        : {}),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provinces, v.province]);
-
-  // Load PSGC municipalities/cities whenever province changes.
-  useEffect(() => {
-    if (!v.provinceCode) {
-      setMunicipalities([]);
-      return;
-    }
-    let cancelled = false;
-    setMuniLoading(true);
-    (async () => {
-      try {
-        const list = await listMunicipalitiesByProvince(v.provinceCode);
-        if (!cancelled) setMunicipalities(list);
-      } catch {
-        if (!cancelled) setMunicipalities([]);
-      } finally {
-        if (!cancelled) setMuniLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [v.provinceCode]);
+  }, [v.province, v.provinceCode]);
 
   // Load barangays whenever municipality changes.
   useEffect(() => {
@@ -129,23 +111,6 @@ const PhAddressPicker = ({
     return map;
   }, [dbMunicipalities]);
 
-  const psgcMunicipalitiesForCurrentProvince = municipalities;
-
-  const handleProvince = (e) => {
-    const code = e.target.value;
-    const p = provinces.find((x) => x.code === code);
-    onChange({
-      ...v,
-      province: p?.name || '',
-      provinceCode: code,
-      municipalityId: '',
-      municipalityName: '',
-      municipalityCode: '',
-      barangay: '',
-      barangayCode: '',
-    });
-  };
-
   const handleMunicipality = (e) => {
     const code = e.target.value;
     const m = municipalities.find((x) => x.code === code);
@@ -175,13 +140,6 @@ const PhAddressPicker = ({
   };
 
   const currentDbMuni = dbMuniByNormName.get(normalizeName(v.municipalityName));
-  const provinceUnavailable =
-    v.provinceCode &&
-    !provincesLoading &&
-    !muniLoading &&
-    municipalities.length > 0 &&
-    !municipalities.some((m) => dbMuniByNormName.has(normalizeName(m.name)));
-
   const municipalityUnsupported =
     v.municipalityName && !currentDbMuni && dbMunicipalities.length > 0;
 
@@ -189,21 +147,19 @@ const PhAddressPicker = ({
     <div className={`ph-address-picker ${compact ? 'compact' : ''}`}>
       <div className="ph-field">
         <label className="ph-label">Province</label>
-        <select
-          className={`ph-input ${errors.province ? 'error' : ''}`}
-          value={v.provinceCode || ''}
-          onChange={handleProvince}
-          disabled={disabled || provincesLoading}
-        >
-          <option value="">{provincesLoading ? 'Loading provinces…' : 'Select province'}</option>
-          {provinces.map((p) => (
-            <option key={p.code} value={p.code}>{p.name}</option>
-          ))}
-        </select>
+        <input
+          type="text"
+          className={`ph-input ph-input-locked ${errors.province ? 'error' : ''}`}
+          value={SERVICE_PROVINCE.name}
+          readOnly
+          aria-readonly="true"
+          tabIndex={-1}
+          title={`${SERVICE_PROVINCE.name}, ${SERVICE_REGION.shortName}`}
+        />
+        <span className="ph-hint">
+          We currently serve {SERVICE_PROVINCE.name} ({SERVICE_REGION.shortName}) only.
+        </span>
         {errors.province && <span className="ph-error">{errors.province}</span>}
-        {provinceUnavailable && (
-          <span className="ph-note">This province is not yet served by the platform.</span>
-        )}
       </div>
 
       <div className="ph-field">
@@ -212,15 +168,9 @@ const PhAddressPicker = ({
           className={`ph-input ${errors.municipality || errors.municipalityId ? 'error' : ''}`}
           value={v.municipalityCode || ''}
           onChange={handleMunicipality}
-          disabled={disabled || !v.provinceCode || muniLoading}
+          disabled={disabled}
         >
-          <option value="">
-            {muniLoading
-              ? 'Loading…'
-              : !v.provinceCode
-                ? 'Select a province first'
-                : 'Select city / municipality'}
-          </option>
+          <option value="">Select city / municipality</option>
           {municipalities.map((m) => {
             const supported = dbMuniByNormName.has(normalizeName(m.name));
             return (

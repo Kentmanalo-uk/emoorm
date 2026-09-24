@@ -43,6 +43,23 @@
   cursor: not-allowed;
 }
 
+/* The province is fixed to the one the platform serves. It reads as a filled
+   field rather than a greyed-out control, because nothing about it is broken
+   or waiting — it simply is not a choice. */
+.ph-input-locked,
+.ph-input-locked:focus {
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-700, #374151);
+  border-color: var(--t-neutral-300, #d1d5db);
+  box-shadow: none;
+  cursor: default;
+}
+
+.ph-hint {
+  font-size: 12px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
 .ph-input.error {
   border-color: var(--t-danger-600, #dc2626);
 }
