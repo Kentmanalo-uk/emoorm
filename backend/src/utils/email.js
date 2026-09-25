@@ -258,10 +258,177 @@ const sendPasswordChangedEmail = async ({ user }) => {
   return sendMail({ to: user.email, subject, html, text });
 };
 
+/* ── Account and seller lifecycle emails ─────────────────────────────── */
+
+const appUrl = (path = '') => `${String(config.frontendUrl || '').replace(/\/$/, '')}${path}`;
+
+const button = (href, label) => `
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${escapeHtml(href)}"
+         style="display:inline-block;background:#059669;color:#ffffff;
+                text-decoration:none;font-weight:600;padding:12px 24px;
+                border-radius:8px;font-size:14px;">
+        ${escapeHtml(label)}
+      </a>
+    </p>`;
+
+const heading = (textContent) => `
+    <h1 style="font-size:20px;font-weight:600;margin:0 0 12px;color:#111827;">${escapeHtml(textContent)}</h1>`;
+
+const para = (htmlContent) => `
+    <p style="margin:0 0 16px;color:#374151;">${htmlContent}</p>`;
+
+const footer = `
+    <p style="margin:24px 0 0;color:#6b7280;font-size:12px;">
+      Emoorm will never ask you for your password, OTP or PIN.
+    </p>`;
+
+/** Sent once, right after an account is created (email or Google sign-up). */
+const sendWelcomeEmail = async ({ user }) => {
+  const name = user.fullName || 'there';
+  const shopUrl = appUrl('/products');
+  const verifyUrl = appUrl('/profile/verification');
+  const sellUrl = appUrl('/seller/apply');
+  const subject = 'Welcome to Emoorm!';
+
+  const text = [
+    `Hi ${name},`,
+    '',
+    "Welcome to Emoorm, Oriental Mindoro's local online marketplace.",
+    'Your account is ready. Here is how to get started:',
+    '',
+    `- Browse fresh produce, local delicacies and crafts: ${shopUrl}`,
+    `- Verify your identity once so you can check out: ${verifyUrl}`,
+    `- Have something to sell? Open your own shop: ${sellUrl}`,
+    '',
+    'Salamat, and happy shopping!',
+    '— The Emoorm team',
+  ].join('\n');
+
+  const html = layout(`
+    ${heading(`Welcome to Emoorm, ${name}!`)}
+    ${para("Your account is ready. Emoorm connects you with farmers, fishers, artisans and food producers across Oriental Mindoro, all in one place.")}
+    <ul style="margin:0 0 16px;padding-left:20px;color:#374151;">
+      <li style="margin-bottom:6px;">Browse fresh produce, local delicacies and handmade crafts.</li>
+      <li style="margin-bottom:6px;"><a href="${escapeHtml(verifyUrl)}" style="color:#059669;">Verify your identity</a> once so you can check out.</li>
+      <li>Have something to sell? <a href="${escapeHtml(sellUrl)}" style="color:#059669;">Open your own shop</a>.</li>
+    </ul>
+    ${button(shopUrl, 'Start shopping')}
+    ${para('Salamat, and happy shopping!')}
+    ${footer}
+  `);
+
+  return sendMail({ to: user.email, subject, html, text });
+};
+
+/** Confirms a seller application was received and is waiting for review. */
+const sendSellerApplicationReceivedEmail = async ({ user, shopName }) => {
+  const name = user.fullName || 'there';
+  const statusUrl = appUrl('/seller/apply');
+  const subject = 'We received your Emoorm seller application';
+
+  const text = [
+    `Hi ${name},`,
+    '',
+    `Thank you for applying to sell on Emoorm as "${shopName}".`,
+    'Your application has been sent to the administrator of your shop\'s municipality for review.',
+    'We will email you as soon as it is approved or if anything needs to change.',
+    '',
+    `Check your application status: ${statusUrl}`,
+    '',
+    '— The Emoorm team',
+  ].join('\n');
+
+  const html = layout(`
+    ${heading('Application received')}
+    ${para(`Hi ${escapeHtml(name)}, thank you for applying to sell on Emoorm as <strong>${escapeHtml(shopName)}</strong>.`)}
+    ${para("Your application has been sent to the administrator of your shop's municipality for review. We will email you as soon as it is approved, or if anything needs to change.")}
+    ${button(statusUrl, 'View application status')}
+    ${footer}
+  `);
+
+  return sendMail({ to: user.email, subject, html, text });
+};
+
+/** The application was approved and the shop is live. */
+const sendSellerApprovedEmail = async ({ user, storeName }) => {
+  const name = user.fullName || 'there';
+  const centerUrl = appUrl('/seller');
+  const productsUrl = appUrl('/seller/products');
+  const fulfillmentUrl = appUrl('/seller/fulfillment');
+  const shop = storeName || 'your shop';
+  const subject = `Your shop "${shop}" is approved on Emoorm`;
+
+  const text = [
+    `Hi ${name},`,
+    '',
+    `Good news: your seller application was approved and ${shop} is now open on Emoorm.`,
+    '',
+    'Next steps:',
+    `- Set your delivery fee, pickup and payment options: ${fulfillmentUrl}`,
+    `- Add your first products: ${productsUrl}`,
+    '',
+    `Open Seller Center: ${centerUrl}`,
+    '',
+    '— The Emoorm team',
+  ].join('\n');
+
+  const html = layout(`
+    ${heading('Your shop is approved!')}
+    ${para(`Hi ${escapeHtml(name)}, good news: your seller application was approved and <strong>${escapeHtml(shop)}</strong> is now open on Emoorm.`)}
+    ${para('A few things to do next:')}
+    <ol style="margin:0 0 16px;padding-left:20px;color:#374151;">
+      <li style="margin-bottom:6px;"><a href="${escapeHtml(fulfillmentUrl)}" style="color:#059669;">Set your delivery fee, pickup and payment options</a>.</li>
+      <li><a href="${escapeHtml(productsUrl)}" style="color:#059669;">Add your first products</a>. New listings are reviewed before buyers see them.</li>
+    </ol>
+    ${button(centerUrl, 'Open Seller Center')}
+    ${footer}
+  `);
+
+  return sendMail({ to: user.email, subject, html, text });
+};
+
+/** The application was not approved; says why and how to re-apply. */
+const sendSellerRejectedEmail = async ({ user, reason }) => {
+  const name = user.fullName || 'there';
+  const applyUrl = appUrl('/seller/apply');
+  const subject = 'Update on your Emoorm seller application';
+
+  const text = [
+    `Hi ${name},`,
+    '',
+    'Your seller application was not approved this time.',
+    '',
+    `Reason from the reviewer: ${reason}`,
+    '',
+    `You can update your details and apply again: ${applyUrl}`,
+    '',
+    '— The Emoorm team',
+  ].join('\n');
+
+  const html = layout(`
+    ${heading('Your application needs changes')}
+    ${para(`Hi ${escapeHtml(name)}, your seller application was not approved this time.`)}
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:14px 16px;margin:0 0 16px;">
+      <p style="margin:0 0 4px;color:#9a3412;font-size:13px;font-weight:600;">Reason from the reviewer</p>
+      <p style="margin:0;color:#7c2d12;font-size:14px;white-space:pre-wrap;">${escapeHtml(reason)}</p>
+    </div>
+    ${para('You can update your details and apply again.')}
+    ${button(applyUrl, 'Update and re-apply')}
+    ${footer}
+  `);
+
+  return sendMail({ to: user.email, subject, html, text });
+};
+
 module.exports = {
   sendMail,
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
+  sendWelcomeEmail,
+  sendSellerApplicationReceivedEmail,
+  sendSellerApprovedEmail,
+  sendSellerRejectedEmail,
   isSmtpConfigured,
   isResendConfigured,
 };

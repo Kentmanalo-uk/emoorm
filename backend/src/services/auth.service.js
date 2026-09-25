@@ -10,7 +10,24 @@ const identityVerificationService = require('./identityVerification.service');
 const googleService = require('./google.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateTokens, verifyRefreshToken, generateMfaToken, generateGoogleProfileToken, verifyGoogleProfileToken } = require('../utils/jwt');
-const { sendPasswordResetEmail, sendPasswordChangedEmail } = require('../utils/email');
+const {
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail,
+  sendWelcomeEmail,
+  sendSellerApplicationReceivedEmail,
+  sendSellerApprovedEmail,
+  sendSellerRejectedEmail,
+} = require('../utils/email');
+
+/**
+ * Send a courtesy email without holding up the request. The action it
+ * describes has already happened, so a mail failure is logged, never thrown.
+ */
+const sendInBackground = (label, send) => {
+  Promise.resolve()
+    .then(send)
+    .catch((err) => console.error(`[email] ${label} failed:`, err.message));
+};
 const { normalizeUsername, validateUsername, suggestFromName } = require('../utils/username');
 
 /**
@@ -81,6 +98,8 @@ const register = async (userData) => {
     isActive: true,
     isVerified: false,
   });
+
+  sendInBackground('welcome', () => sendWelcomeEmail({ user }));
 
   // Generate tokens
   const tokens = generateTokens(user);
@@ -483,6 +502,11 @@ const applyForSeller = async (userId, data = {}) => {
     relatedId: userId,
   });
 
+  sendInBackground('seller application received', () => sendSellerApplicationReceivedEmail({
+    user: updatedUser,
+    shopName: application.shopName,
+  }));
+
   return updatedUser;
 };
 
@@ -720,6 +744,11 @@ const approveSeller = async (userId, actor) => {
     console.error('[approveSeller] notification failed:', err.message);
   }
 
+  sendInBackground('seller approved', () => sendSellerApprovedEmail({
+    user,
+    storeName: store?.name || application?.shopName,
+  }));
+
   return updatedUser;
 };
 
@@ -773,6 +802,8 @@ const rejectSeller = async (userId, actor, reason) => {
   } catch (err) {
     console.error('[rejectSeller] notification failed:', err.message);
   }
+
+  sendInBackground('seller rejected', () => sendSellerRejectedEmail({ user, reason: trimmedReason }));
 
   return updatedUser;
 };
@@ -1063,6 +1094,8 @@ const completeGoogleSignup = async (googleToken, data) => {
   if (!user) {
     throw new ApiError('Unable to complete Google sign-in', 500);
   }
+
+  sendInBackground('welcome', () => sendWelcomeEmail({ user }));
 
   const tokens = generateTokens(user);
   return { user, ...tokens };
