@@ -1666,3 +1666,82 @@
     animation: none;
   }
 }
+
+/* Home header on phones, any width (320px up to 768px): the search pill
+   fills everything after the logo. The field itself must be allowed to
+   shrink (an input keeps a ~20-character minimum width otherwise, which
+   pushed the search button out of the pill on small phones). The header
+   cart is hidden: the bottom navigation carries Cart at these widths. */
+@media (max-width: 768px) {
+  .header.is-home .header-center,
+  .header.is-home .header-search-wrap {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .header.is-home .header-search {
+    width: 100%;
+    min-width: 0;
+    max-width: none; /* the tablet rule caps it at 400px */
+  }
+
+  .header.is-home .header-search-input-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .header.is-home .header-search-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .header.is-home .header-search-placeholder {
+    right: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .header.is-home .header-cart {
+    display: none;
+  }
+}
+
+/* Very small phones: a little more room for the text. */
+@media (max-width: 360px) {
+  .header.is-home .header-container {
+    gap: 8px;
+  }
+
+  .header.is-home .header-search-input,
+  .header.is-home .header-search-placeholder {
+    padding-left: 0;
+  }
+
+  .header.is-home .header-search-input {
+    padding-left: 12px;
+  }
+
+  .header.is-home .header-search-placeholder {
+    left: 12px;
+    font-size: 14px;
+  }
+
+  .header.is-home .header-search-camera {
+    width: 34px;
+    min-width: 34px;
+  }
+
+  .header.is-home .header-search-camera svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .header.is-home .header-search-button {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+  }
+}

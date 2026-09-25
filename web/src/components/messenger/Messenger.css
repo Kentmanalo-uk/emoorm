@@ -1322,3 +1322,797 @@
     padding: 0 12px;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   Chat features: photos, attached products, day separators, "Seen",
+   the product picker sheet, the photo viewer, the ⋯ menu and a friendlier
+   empty chat. Base styles apply everywhere; phone tweaks at the end.
+   ════════════════════════════════════════════════════════════════════ */
+.msgr-file-input {
+  display: none;
+}
+
+.msgr-thread-more {
+  flex-shrink: 0;
+}
+
+.msgr-convo-item.is-unread .msgr-convo-title,
+.msgr-convo-item.is-unread .msgr-convo-preview {
+  color: var(--t-neutral-900, #111827);
+  font-weight: 600;
+}
+
+/* Day separator */
+.msgr-day {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 2px;
+}
+
+.msgr-day span {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* Photo in a bubble */
+.msgr-bubble-image {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  padding: 0;
+  overflow: hidden;
+  border: none;
+  border-radius: 10px;
+  background: var(--t-neutral-100, #f3f4f6);
+  cursor: zoom-in;
+}
+
+.msgr-bubble-image img {
+  display: block;
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+}
+
+.msgr-bubble.is-media-only {
+  padding: 4px;
+}
+
+.msgr-bubble.is-media-only .msgr-bubble-time {
+  padding: 2px 6px 2px;
+}
+
+/* Attached product in a bubble */
+.msgr-bubble-product {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 200px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-900, #111827);
+  text-decoration: none;
+  box-shadow: inset 0 0 0 1px var(--t-neutral-200, #e5e7eb);
+}
+
+.msgr-bubble-product-img {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+.msgr-bubble-product-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msgr-bubble-product-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.msgr-bubble-product-name {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 1.3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.msgr-bubble-product-price {
+  color: var(--t-primary-700, #047857);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.msgr-bubble-check.is-seen {
+  color: #bbf7d0;
+}
+
+/* Empty chat: who you're talking to, a hint, quick questions */
+.msgr-messages-empty {
+  gap: 6px;
+  text-align: center;
+}
+
+.msgr-intro-avatar {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-600, #059669);
+}
+
+.msgr-intro-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msgr-messages-empty h3 {
+  margin: 6px 0 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 16px;
+}
+
+.msgr-messages-empty p {
+  max-width: 280px;
+  margin: 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.msgr-quick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.msgr-quick-chip {
+  padding: 8px 14px;
+  border: 1px solid var(--t-primary-200, #a7f3d0);
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.msgr-quick-chip:disabled {
+  opacity: 0.5;
+}
+
+.msgr-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-600, #059669);
+}
+
+/* Error with a dismiss button */
+.msgr-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.msgr-error button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Composer: what will be sent with the next message */
+.msgr-composer-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 8px;
+}
+
+.msgr-attach-image {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.msgr-attach-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msgr-attach-image button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(17, 24, 39, 0.7);
+  color: #fff;
+  cursor: pointer;
+}
+
+.msgr-attach-busy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--t-primary-700, #047857);
+}
+
+.msgr-attach-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 6px 5px 10px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font-size: 12.5px;
+}
+
+.msgr-attach-chip span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.msgr-attach-chip button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(6, 95, 70, 0.12);
+  color: inherit;
+  cursor: pointer;
+}
+
+.msgr-composer-input {
+  max-height: 120px;
+  resize: none;
+  overflow-y: auto;
+}
+
+.msgr-composer-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Product picker: a sheet from the bottom (a centred card on wide screens) */
+.msgr-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+  animation: msgr-fade-in 180ms ease-out both;
+}
+
+.msgr-sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: 80vh;
+  padding: 8px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-radius: 20px 20px 0 0;
+  background: var(--t-neutral-0, #fff);
+  animation: msgr-sheet-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (min-width: 769px) {
+  .msgr-sheet-backdrop {
+    align-items: center;
+  }
+
+  .msgr-sheet {
+    border-radius: 16px;
+  }
+}
+
+.msgr-sheet-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 8px;
+}
+
+.msgr-sheet-grabber {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--t-neutral-200, #e5e7eb);
+  transform: translateX(-50%);
+}
+
+.msgr-sheet-head h3 {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 17px;
+}
+
+.msgr-sheet-close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
+  cursor: pointer;
+}
+
+.msgr-sheet-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  margin-bottom: 8px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+.msgr-sheet-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--t-neutral-900, #111827);
+  font-size: 16px;
+}
+
+.msgr-sheet-list {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.msgr-sheet-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 14px;
+}
+
+.msgr-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 4px;
+  border: none;
+  border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.msgr-sheet-item:active {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.msgr-sheet-item-img {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+.msgr-sheet-item-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msgr-sheet-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.msgr-sheet-item-name {
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 14.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.msgr-sheet-item-price {
+  color: var(--t-primary-700, #047857);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* Full-screen photo */
+.msgr-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.9);
+  animation: msgr-fade-in 160ms ease-out both;
+  cursor: zoom-out;
+}
+
+.msgr-viewer img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 6px;
+  object-fit: contain;
+  cursor: default;
+}
+
+.msgr-viewer-close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+}
+
+@keyframes msgr-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes msgr-sheet-up {
+  from { transform: translateY(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msgr-sheet-backdrop,
+  .msgr-sheet,
+  .msgr-viewer {
+    animation: none;
+  }
+}
+
+/* ── Phones ── */
+@media (max-width: 768px) {
+  /* Chat header: back · avatar · name and "Store" · ⋯ (left-aligned, like
+     most chat apps), instead of a bare centred name. */
+  .msgr-thread-head .msgr-avatar {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  .msgr-thread-title {
+    text-align: left;
+    padding: 0 2px;
+  }
+
+  .msgr-thread-name {
+    text-align: left;
+    font-weight: 600;
+  }
+
+  .msgr-thread-name a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .msgr-thread-sub {
+    display: block;
+    overflow: hidden;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .msgr-thread-menu {
+    border-radius: 50%;
+  }
+
+  .msgr-bubble-row.is-self .msgr-bubble {
+    background: var(--t-primary-600, #059669);
+    border-color: var(--t-primary-600, #059669);
+  }
+
+  .msgr-bubble-image {
+    max-width: 220px;
+  }
+
+  .msgr-bubble-product {
+    min-width: 180px;
+  }
+
+  .msgr-messages-empty {
+    justify-content: center;
+    min-height: 100%;
+    padding: 24px 16px;
+  }
+
+  .msgr-composer-attachments {
+    padding: 2px 4px 8px;
+  }
+
+  .msgr-composer-send:disabled {
+    opacity: 0.35;
+  }
+}
+
+/* Chat header subtitle in normal case; product thumbnails fill their frame. */
+.msgr-thread-head .msgr-thread-sub {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.msgr-bubble-product-img > *,
+.msgr-sheet-item-img > *,
+.msgr-pin-thumb > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msgr-bubble-product-img img,
+.msgr-sheet-item-img img,
+.msgr-pin-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The ⋯ menu and the photo / product buttons work on every screen size now
+   (they used to be phone-only placeholders). */
+@media (min-width: 769px) {
+  .msgr-thread-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--t-neutral-600, #4b5563);
+    cursor: pointer;
+  }
+
+  .msgr-thread-menu:hover {
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .msgr-composer-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--t-neutral-500, #6b7280);
+    cursor: pointer;
+  }
+
+  .msgr-composer-icon:hover:not(:disabled) {
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-primary-700, #047857);
+  }
+
+  .msgr-composer-row {
+    align-items: flex-end;
+  }
+
+  /* Name takes the room, so the ⋯ menu sits at the right edge. */
+  .msgr-thread-head .msgr-thread-title {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Messages page header: title with search and ⋯ on the right (like the
+   Profile and Notifications headers). */
+.msgr-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.msgr-page-head .messages-page-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.msgr-page-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.msgr-page-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.msgr-page-tool.is-active,
+.msgr-page-tool[aria-expanded='true'] {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.msgr-list-search-clear {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--t-neutral-300, #d1d5db);
+  color: var(--t-neutral-0, #fff);
+  cursor: pointer;
+}
+
+.msgr-filter-pill {
+  padding: 0 16px 8px;
+}
+
+.msgr-filter-pill button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--t-primary-600, #059669);
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Wide screens: the list search appears when the search button is on. */
+@media (min-width: 769px) {
+  .msgr-shell.is-searching .msgr-list-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-500, #6b7280);
+  }
+
+  .msgr-shell.is-searching .msgr-list-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-size: 14px;
+  }
+
+  .msgr-filter-pill {
+    padding-top: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .msgr-page-head {
+    margin-bottom: 6px;
+    padding-right: 12px;
+  }
+
+  .msgr-page-head .messages-page-title {
+    margin: 0;
+  }
+
+  /* The search bar appears from the header button instead of always. */
+  .msgr-shell.has-page-head:not(.is-searching) .msgr-list-search {
+    display: none;
+  }
+
+  body.messenger-chat-open .msgr-page-head {
+    display: none;
+  }
+}

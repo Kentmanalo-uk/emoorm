@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell, BellSlash as BellOff, Checks as CheckCheck, Trash as Trash2, Package, ShoppingBag,
-  CheckCircle, XCircle, Star, WarningCircle as AlertCircle, Info, ChatCircleDots
+  CheckCircle, XCircle, Star, WarningCircle as AlertCircle, Info, ChatCircleDots,
+  MagnifyingGlass, X, Storefront,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -11,6 +12,7 @@ import { notificationHref } from '../lib/notificationLink';
 import useAuthStore from '../store/authStore';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import EmptyArt from '../components/ui/EmptyArt';
+import MoreMenu from '../components/MoreMenu';
 import './SellerDashboard.css';
 import './Notifications.css';
 
@@ -68,17 +70,36 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   const [filter, setFilter] = useState('all'); // all | unread
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ totalPages: 0, total: 0 });
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const next = searchText.trim();
+      if (next === search) return;
+      setSearch(next);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchText, search]);
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchText('');
+  };
 
   useEffect(() => {
     if (!isAuthenticated) { navigate(`/login?redirect=${notificationsPath}`); return; }
     fetchNotifications();
-  }, [isAuthenticated, filter, page, audience]);
+  }, [isAuthenticated, filter, page, audience, search]);
 
   const fetchNotifications = async () => {
     setIsLoading(true);
     try {
       const params = { page, pageSize: 20, audience };
       if (filter === 'unread') params.isRead = false;
+      if (search) params.search = search;
 
       const response = await axios.get('/notifications', { params });
       setNotifications(response.data || []);
@@ -137,7 +158,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   const handleDeleteAll = async () => {
     if (!window.confirm('Delete all notifications?')) return;
     try {
-      await axios.delete('/notifications');
+      await axios.delete('/notifications', { params: { audience } });
       setNotifications([]);
       setUnreadCount(0);
       toast.success('All notifications deleted');
@@ -159,6 +180,51 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
   };
+
+  // Buyer headers: search, then ⋯ with this page's actions.
+  const headerTools = (
+    <div className="notif-tools">
+      <button
+        type="button"
+        className={`notif-tool-btn${searchOpen ? ' is-active' : ''}`}
+        onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
+        aria-label={searchOpen ? 'Close search' : 'Search notifications'}
+        aria-expanded={searchOpen}
+      >
+        {searchOpen ? <X size={19} weight="bold" /> : <MagnifyingGlass size={19} />}
+      </button>
+      <MoreMenu
+        className="notif-more"
+        buttonClassName="notif-tool-btn"
+        label="Notification options"
+        iconSize={22}
+        items={[
+          unreadCount > 0 && { key: 'read', icon: <CheckCheck size={17} />, label: 'Mark all as read', onClick: handleMarkAllRead },
+          { key: 'shops', icon: <Storefront size={17} />, label: 'Manage shop alerts', to: '/profile/followed-stores' },
+          notifications.length > 0 && { key: 'clear', icon: <Trash2 size={17} />, label: 'Clear all', danger: true, onClick: handleDeleteAll },
+        ]}
+      />
+    </div>
+  );
+
+  const searchRow = searchOpen && (
+    <label className="notif-search">
+      <MagnifyingGlass size={16} />
+      <input
+        type="search"
+        value={searchText}
+        onChange={(e) => setSearchText(e.target.value)}
+        placeholder="Search notifications"
+        aria-label="Search notifications"
+        autoFocus
+      />
+      {searchText && (
+        <button type="button" onClick={() => setSearchText('')} aria-label="Clear search">
+          <X size={13} weight="bold" />
+        </button>
+      )}
+    </label>
+  );
 
   const inner = (
     <div className={isSeller ? 'seller-dashboard' : (bare ? 'profile-page-wrap' : 'notif-page')}>
@@ -196,18 +262,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
         ) : bare ? (
           <header className="profile-page-header notif-page-header">
             <h1 className="profile-page-title">Notifications</h1>
-            <div className="notif-header-actions">
-              {unreadCount > 0 && (
-                <button className="notif-action-btn" onClick={handleMarkAllRead} aria-label="Mark all read">
-                  <CheckCheck size={15} /> <span className="notif-action-label">Mark all read</span>
-                </button>
-              )}
-              {notifications.length > 0 && (
-                <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll} aria-label="Clear all">
-                  <Trash2 size={15} /> <span className="notif-action-label">Clear all</span>
-                </button>
-              )}
-            </div>
+            {headerTools}
           </header>
         ) : (
           <div className="notif-header">
@@ -217,20 +272,11 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
                 <span className="notif-unread-badge">{unreadCount} unread</span>
               )}
             </div>
-            <div className="notif-header-actions">
-              {unreadCount > 0 && (
-                <button className="notif-action-btn" onClick={handleMarkAllRead} aria-label="Mark all read">
-                  <CheckCheck size={15} /> <span className="notif-action-label">Mark all read</span>
-                </button>
-              )}
-              {notifications.length > 0 && (
-                <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll} aria-label="Clear all">
-                  <Trash2 size={15} /> <span className="notif-action-label">Clear all</span>
-                </button>
-              )}
-            </div>
+            {headerTools}
           </div>
         )}
+
+        {!isSeller && searchRow}
 
         {/* Filters */}
         <div className={`notif-body${isSeller ? ' is-seller' : ''}`}>
@@ -262,8 +308,15 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
             {isSeller
               ? <EmptyArt name="inbox" size={150} />
               : <BellOff size={48} weight="fill" />}
-            <h2>{filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}</h2>
-            <p>You'll see order updates and important alerts here.</p>
+            <h2>{search
+              ? `No notifications match “${search}”`
+              : filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}</h2>
+            <p>{search ? 'Try another word, or clear the search.' : "You'll see order updates and important alerts here."}</p>
+            {search && (
+              <button className="notif-show-all-btn" onClick={closeSearch}>
+                Clear search
+              </button>
+            )}
             {filter === 'unread' && (
               <button className="notif-show-all-btn" onClick={() => setFilter('all')}>
                 View all notifications

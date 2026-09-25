@@ -21,6 +21,7 @@ const getMyNotifications = asyncHandler(async (req, res) => {
     pageSize = 20,
     isRead,
     audience,
+    search,
   } = req.query;
 
   // Clamped rather than trusted: page size reaches Prisma as `take`.
@@ -29,6 +30,8 @@ const getMyNotifications = asyncHandler(async (req, res) => {
     pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     isRead: isRead !== undefined ? isRead === 'true' : undefined,
     audience,
+    // Free text over title and message; capped so it stays a cheap LIKE.
+    search: typeof search === 'string' && search.trim() ? search.trim().slice(0, 100) : undefined,
   };
 
   const result = await notificationService.getUserNotifications(
@@ -121,7 +124,9 @@ const deleteNotification = asyncHandler(async (req, res) => {
  * @access Private (Authenticated users)
  */
 const deleteAllNotifications = asyncHandler(async (req, res) => {
-  const result = await notificationService.deleteAllNotifications(req.user.id);
+  // Clears one inbox (buyer or seller) when ?audience= is given; the same
+  // account can have both, and clearing one must not empty the other.
+  const result = await notificationService.deleteAllNotifications(req.user.id, req.query.audience);
 
   successResponse(res, result, 'All notifications deleted');
 });

@@ -4,6 +4,12 @@ const orderRepository = require('../repositories/order.repository');
 const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
 const prisma = require('../config/database');
+const config = require('../config/env');
+
+const UPLOAD_FILE = /^\/uploads\/[A-Za-z0-9._-]+$/;
+const isOwnUpload = (url) =>
+  UPLOAD_FILE.test(url)
+  || (Boolean(config.cdn?.url) && url.startsWith(`${config.cdn.url}/uploads/`) && UPLOAD_FILE.test(url.slice(config.cdn.url.length)));
 
 /**
  * Determine which side of a conversation the user is on.
@@ -78,7 +84,7 @@ const shapeConversationSummary = async (conversation, viewerId) => {
     where: { conversationId: conversation.id },
     orderBy: { createdAt: 'desc' },
     take: 1,
-    select: { id: true, body: true, imageUrl: true, senderId: true, createdAt: true, orderId: true },
+    select: { id: true, body: true, imageUrl: true, senderId: true, createdAt: true, orderId: true, productId: true },
   });
 
   return {
@@ -95,7 +101,8 @@ const shapeConversationSummary = async (conversation, viewerId) => {
     lastMessage: lastMessage
       ? {
         id: lastMessage.id,
-        body: lastMessage.body || (lastMessage.imageUrl ? 'Photo' : ''),
+        body: lastMessage.body
+          || (lastMessage.imageUrl ? 'Photo' : lastMessage.productId ? 'Product' : lastMessage.orderId ? 'Order' : ''),
         senderId: lastMessage.senderId,
         createdAt: lastMessage.createdAt,
         hasOrder: Boolean(lastMessage.orderId),
@@ -262,6 +269,11 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
   }
   if (trimmedImageUrl.length > 191) {
     throw new ApiError('Image URL is too long', 400);
+  }
+  // Only images uploaded to this site (POST /upload/image returns
+  // /uploads/<file>, or the CDN copy of it): no links to other sites.
+  if (trimmedImageUrl && !isOwnUpload(trimmedImageUrl)) {
+    throw new ApiError('Images must be uploaded through E-MOORM', 400);
   }
 
   const conversation = await messageRepository.findConversationById(conversationId);

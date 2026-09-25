@@ -50,12 +50,20 @@ const findByUserId = async (options = {}) => {
     pageSize = 20,
     isRead,
     audience,
+    search,
   } = options;
 
   const where = {
     userId,
     deletedAt: null,
   };
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search } },
+      { message: { contains: search } },
+    ];
+  }
 
   if (isRead !== undefined) {
     where.isRead = isRead;
@@ -137,11 +145,12 @@ const softDeleteNotification = async (id) => {
  * @param {String} userId - User ID
  * @returns {Promise<Object>} Delete count
  */
-const deleteAllForUser = async (userId) => {
+const deleteAllForUser = async (userId, audience) => {
   return prisma.notification.updateMany({
     where: {
       userId,
       deletedAt: null,
+      ...(audience === 'BUYER' || audience === 'SELLER' ? { audience } : {}),
     },
     data: { deletedAt: new Date() },
   });
