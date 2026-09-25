@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import useSeo, { productSchema, breadcrumbs, clampText } from '../lib/seo';
 import {
@@ -21,6 +21,7 @@ import useIdentityGate from '../hooks/useIdentityGate';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import MoreMenu from '../components/MoreMenu';
 import ReviewItem from '../components/reviews/ReviewItem';
+import ProductOptionSheet from '../components/ProductOptionSheet';
 import './ProductDetails.css';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -128,6 +129,9 @@ const ProductDetails = () => {
   const [ratingStats, setRatingStats] = useState(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  // Phone: 'cart' | 'buy' while the options sheet is open.
+  const [sheetMode, setSheetMode] = useState(null);
+  const closeSheet = useCallback(() => setSheetMode(null), []);
   const [zoom, setZoom] = useState({ active: false, x: 50, y: 50 });
 
   const handleZoomMove = (e) => {
@@ -236,6 +240,18 @@ const ProductDetails = () => {
   const handleBuyNow = async () => {
     if (isAuthenticated && !(await requireVerifiedIdentity())) return;
     if (handleAddToCart() !== false) setTimeout(() => navigate('/cart'), 250);
+  };
+
+  // Phone sheet: the sheet has already checked every option group.
+  const confirmSheet = async () => {
+    const mode = sheetMode;
+    if (!isAuthenticated) { setSheetMode(null); loginRedirect(); return; }
+    // The identity dialog shows in place of the sheet.
+    if (mode === 'buy' && !(await requireVerifiedIdentity())) { setSheetMode(null); return; }
+    // On failure (e.g. more than the stock) the sheet stays open with the toast.
+    if (handleAddToCart() === false) return;
+    setSheetMode(null);
+    if (mode === 'buy') setTimeout(() => navigate('/cart'), 250);
   };
 
   const changeQty = (delta) => {
@@ -759,7 +775,26 @@ const ProductDetails = () => {
                   </div>
                 )}
 
-                {Array.isArray(product.variations) && product.variations.length > 0 && (
+                {isPhone && (
+                  <button type="button" className="pdp-row pdp-m-options-row" onClick={() => setSheetMode('cart')}>
+                    <span className="pdp-row-label">
+                      {Array.isArray(product.variations) && product.variations.length > 0 ? 'Options' : 'Quantity'}
+                    </span>
+                    <span className="pdp-m-options-value">
+                      {(() => {
+                        const defs = Array.isArray(product.variations) ? product.variations : [];
+                        const picked = defs.filter((v) => selectedVariations[v.name]).map((v) => `${v.name}: ${selectedVariations[v.name]}`);
+                        const qty = `Qty ${quantity}`;
+                        if (!defs.length) return qty;
+                        if (picked.length < defs.length) return `Select ${defs.map((v) => v.name).join(', ')}`;
+                        return `${picked.join(', ')} · ${qty}`;
+                      })()}
+                    </span>
+                    <ChevronRightSm size={16} className="pdp-m-options-caret" />
+                  </button>
+                )}
+
+                {!isPhone && Array.isArray(product.variations) && product.variations.length > 0 && (
                   <div className={`pdp-row pdp-variations-row ${variationError ? 'is-error' : ''}`}>
                     <div className="pdp-row-label">Select options:</div>
                     <div className="pdp-row-content pdp-variation-selectors">
@@ -790,6 +825,7 @@ const ProductDetails = () => {
                   </div>
                 )}
 
+                {!isPhone && (
                 <div className="pdp-row">
                   <div className="pdp-row-label">Quantity:</div>
                   <div className="pdp-row-content pdp-row-qty">
@@ -814,6 +850,7 @@ const ProductDetails = () => {
                     </span>
                   </div>
                 </div>
+                )}
               </div>
 
               {/* CTAs */}
@@ -1020,7 +1057,7 @@ const ProductDetails = () => {
           <button
             type="button"
             className="pdp-m-addcart"
-            onClick={handleAddToCart}
+            onClick={() => setSheetMode('cart')}
             disabled={isOutOfStock || isAddingToCart}
             aria-label="Add to cart"
           >
@@ -1030,13 +1067,31 @@ const ProductDetails = () => {
           <button
             type="button"
             className="pdp-m-buy"
-            onClick={handleBuyNow}
+            onClick={() => setSheetMode('buy')}
             disabled={isOutOfStock || isAddingToCart}
           >
             <span>{isOutOfStock ? 'Out of stock' : 'Buy now'}</span>
             {!isOutOfStock && <small>{peso(Number(product.price || 0) * quantity)}</small>}
           </button>
         </div>
+      )}
+
+      {isPhone && (
+        <ProductOptionSheet
+          mode={sheetMode}
+          product={product}
+          image={gallery[0]}
+          selected={selectedVariations}
+          onSelect={(name, value) => {
+            setSelectedVariations((current) => ({ ...current, [name]: value }));
+            if (variationError === name) setVariationError('');
+          }}
+          quantity={quantity}
+          onQuantity={setQuantity}
+          onConfirm={confirmSheet}
+          onClose={closeSheet}
+          busy={isAddingToCart}
+        />
       )}
 
       {showReport && (

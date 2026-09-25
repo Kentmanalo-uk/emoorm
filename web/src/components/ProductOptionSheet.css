@@ -1,0 +1,310 @@
+/* Phone bottom sheet: choose options and quantity, then add or buy. */
+
+body.pos-open {
+  overflow: hidden;
+}
+
+.pos-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.pos-scrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.5);
+  animation: pos-fade-in 0.22s ease both;
+}
+
+.pos-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: 78vh;
+  max-height: 78dvh;
+  border-radius: 20px 20px 0 0;
+  background: #fff;
+  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.18);
+  animation: pos-slide-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.pos-root.is-closing .pos-scrim {
+  animation: pos-fade-out 0.22s ease both;
+}
+
+.pos-root.is-closing .pos-sheet {
+  animation: pos-slide-down 0.22s ease-in both;
+}
+
+@keyframes pos-slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes pos-slide-down { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes pos-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pos-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* The round × sits just above the sheet's top-right corner. */
+.pos-close {
+  position: absolute;
+  top: -52px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.62);
+  color: #fff;
+  cursor: pointer;
+}
+
+.pos-head {
+  display: flex;
+  gap: 14px;
+  padding: 16px 16px 12px;
+}
+
+.pos-thumb {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.pos-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pos-head-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.pos-price {
+  color: var(--t-accent-500, #ec4899);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.pos-stock {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 12px;
+}
+
+.pos-stock.is-low {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.pos-stock.is-out {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.pos-picked {
+  overflow: hidden;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pos-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 4px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 13px;
+}
+
+.pos-banner span:first-of-type {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pos-banner strong {
+  font-weight: 500;
+}
+
+.pos-banner-note {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+}
+
+.pos-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 16px 12px;
+}
+
+.pos-group {
+  padding: 12px 0 4px;
+}
+
+.pos-group-title {
+  margin: 0 0 10px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.pos-group-title span {
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.pos-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.pos-option {
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 13.5px;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.pos-option.is-selected {
+  border-color: var(--t-accent-500, #ec4899);
+  background: #fdf2f8;
+  color: var(--t-accent-600, #db2777);
+}
+
+.pos-group.is-error .pos-option:not(.is-selected) {
+  border-color: #fca5a5;
+}
+
+.pos-error {
+  margin: 6px 0 0;
+  color: #dc2626;
+  font-size: 12.5px;
+}
+
+.pos-qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+}
+
+.pos-qty-row .pos-group-title {
+  margin: 0;
+}
+
+.pos-qty {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+}
+
+.pos-qty button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 36px;
+  border: none;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-800, #1f2937);
+  cursor: pointer;
+}
+
+.pos-qty button:disabled {
+  color: var(--t-neutral-300, #d1d5db);
+  cursor: not-allowed;
+}
+
+.pos-qty input {
+  width: 48px;
+  height: 36px;
+  border: none;
+  border-left: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-right: 1px solid var(--t-neutral-200, #e5e7eb);
+  font-size: 15px;
+  text-align: center;
+  outline: none;
+}
+
+.pos-note {
+  margin: 6px 0 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  text-align: right;
+}
+
+.pos-foot {
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--t-neutral-150, #eef0f3);
+}
+
+.pos-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: 999px;
+  background: var(--t-accent-500, #ec4899);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.pos-confirm-buy {
+  background: var(--t-primary-600, #009f3a);
+}
+
+.pos-confirm span {
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.pos-confirm small {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.pos-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

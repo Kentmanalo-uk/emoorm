@@ -2413,3 +2413,39 @@
     color: var(--t-warning-500, #f59e0b);
   }
 }
+
+/* Phones: one tappable row opens the options sheet. */
+@media (max-width: 768px) {
+  .pdp-is-phone .pdp-m-options-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--t-neutral-150, #eef0f3);
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pdp-is-phone .pdp-m-options-row .pdp-row-label {
+    flex-shrink: 0;
+    margin: 0;
+  }
+
+  .pdp-m-options-value {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--t-neutral-800, #1f2937);
+    font-size: 14px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .pdp-m-options-caret {
+    flex-shrink: 0;
+    color: var(--t-neutral-400, #9ca3af);
+  }
+}
