@@ -21,11 +21,21 @@ if (!process.env.WEB_DIST_DIR) {
   process.env.WEB_DIST_DIR = path.join(__dirname, 'web', 'dist');
 }
 
+// Hides the password in any connection string that ends up in a log line.
+const redact = (text) => String(text || '').replace(/(\w+:\/\/[^:\s/]+:)[^@\s]+@/g, '$1****@');
+
 if (process.env.RUN_MIGRATIONS !== 'false') {
   try {
-    execSync('npx prisma migrate deploy', { cwd: backendDir, stdio: 'inherit' });
+    const out = execSync('npx prisma migrate deploy', { cwd: backendDir, encoding: 'utf8', stdio: 'pipe' });
+    console.log(redact(out).trim());
   } catch (err) {
-    console.error('[start] prisma migrate deploy failed:', err.message);
+    // Hostinger's runtime log keeps console lines, so print Prisma's own
+    // explanation (P1001 can't reach the server, P3005 database not empty...)
+    // line by line instead of only "Command failed".
+    const detail = redact(`${err.stdout || ''}\n${err.stderr || ''}`)
+      .split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    console.error('[start] prisma migrate deploy failed:');
+    detail.forEach((line) => console.error(`[start]   ${line}`));
     process.exit(1);
   }
 }

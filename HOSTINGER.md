@@ -5,11 +5,12 @@ API (`/api/...`). Nothing else needs its own domain or port.
 
 ## 1. Database (hPanel → Databases → MySQL Databases)
 
-Create a database and a user. Note the database name, user, password and
-host (usually `localhost`). The connection string is:
+Create a database and a user. Note the database name, user and password.
+The app must connect to host **127.0.0.1** (not `localhost`: on Hostinger
+that can resolve to IPv6, which the database user is not allowed to use):
 
 ```
-mysql://USER:PASSWORD@HOST:3306/DATABASE
+mysql://USER:PASSWORD@127.0.0.1:3306/DATABASE
 ```
 
 (URL-encode special characters in the password: `@` → `%40`, `#` → `%23`, ...)
