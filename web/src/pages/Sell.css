@@ -2414,3 +2414,607 @@
 .sell-req-desc {
   font-size: 13.5px;
 }
+
+/* Phone-only pieces stay hidden on wider screens. */
+.sell-benefit-icon,
+.sell-copy-short {
+  display: none;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Phones (≤768px): a visual, low-text version of the landing page.
+   Photos lead the hero with the two glass cards over them; sections are
+   tiles and short lists instead of paragraphs. Tablet and desktop are
+   unchanged.
+   ════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Decorative glows and rings are wider than a phone; keep them inside. */
+  .sell-page {
+    overflow-x: clip;
+  }
+
+  .sell-page .sell-hero,
+  .sell-page .sell-final-cta,
+  .sell-page .sell-cats-section,
+  .sell-page .sell-steps-section {
+    overflow: hidden;
+  }
+
+  .sell-page .sell-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .sell-page .sell-section,
+  .sell-page .sell-screen {
+    min-height: 0;
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+
+  /* ── header: logo and one button ── */
+  .sell-page .sell-topbar,
+  .sell-page .sell-mobile-toggle,
+  .sell-page .sell-mobile-menu {
+    display: none;
+  }
+
+  /* The header used to slide up by the topbar's height on scroll; with no
+     topbar it stays put. */
+  .sell-page .sell-sticky {
+    transform: none !important;
+  }
+
+  .sell-page .sell-nav-btn-primary {
+    height: 36px;
+    padding: 0 16px;
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+
+  /* ── type: medium titles, short copy ── */
+  .sell-page .sell-hero-h1 {
+    margin-bottom: 8px;
+    font-size: 34px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .sell-page .sell-h2,
+  .sell-page .sell-cats-head .sell-h2 {
+    margin: 0 0 16px;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .sell-page .sell-h2 br,
+  .sell-page .sell-h2-muted,
+  .sell-page .sell-lede,
+  .sell-page .sell-copy-long {
+    display: none;
+  }
+
+  .sell-page .sell-copy-short {
+    display: inline;
+  }
+
+  /* ── hero: photos first, then the pitch ── */
+  .sell-page .sell-hero {
+    padding-top: 12px;
+    padding-bottom: 28px;
+  }
+
+  .sell-page .sell-hero-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .sell-page .sell-hero-media {
+    order: -1;
+    position: relative;
+    margin: 0;
+  }
+
+  .sell-page .sell-hero-imgs {
+    height: 340px;
+    margin: 0;
+  }
+
+  /* The two glass cards float over the photos, as on desktop. */
+  .sell-page .sell-hero-badge,
+  .sell-page .sell-hero-chip {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 210px;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+
+  .sell-page .sell-hero-badge {
+    left: 10px;
+    right: auto;
+    top: auto;
+    bottom: 12px;
+  }
+
+  .sell-page .sell-hero-chip {
+    top: 14px;
+    right: 10px;
+    left: auto;
+    bottom: auto;
+  }
+
+  .sell-page .sell-hero-badge strong,
+  .sell-page .sell-hero-chip strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .sell-page .sell-hero-badge-icon svg,
+  .sell-page .sell-hero-chip-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sell-page .sell-hero-copy {
+    text-align: left;
+  }
+
+  .sell-page .sell-hero-sub {
+    margin-bottom: 18px;
+    color: var(--t-neutral-600, #4b5563);
+    font-size: 15px;
+  }
+
+  .sell-page .sell-hero-btns {
+    gap: 10px;
+  }
+
+  .sell-page .sell-hero-btn-primary,
+  .sell-page .sell-hero-btn-ghost {
+    height: 50px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  /* ── benefits: a 2 × 3 grid of icon tiles ── */
+  .sell-page .sell-benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .sell-page .sell-benefits-grid > * {
+    transform: none;
+  }
+
+  .sell-page .sell-benefit-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    min-height: 118px;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .sell-page .sell-benefit-card:nth-child(4n + 2),
+  .sell-page .sell-benefit-card:nth-child(4n + 3) {
+    background: var(--t-primary-50, #ecfdf5);
+    border-color: transparent;
+  }
+
+  .sell-page .sell-benefit-icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--t-primary-600, #059669);
+    color: #fff;
+  }
+
+  .sell-page .sell-benefit-card:nth-child(3n + 2) .sell-benefit-icon {
+    background: var(--t-accent-500, #ec4899);
+  }
+
+  .sell-page .sell-benefit-title {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .sell-page .sell-benefit-desc {
+    display: none;
+  }
+
+  /* ── how it works: a numbered timeline ── */
+  .sell-page .sell-steps-ghost {
+    display: none;
+  }
+
+  .sell-page .sell-steps-head {
+    margin-bottom: 4px;
+  }
+
+  .sell-page .sell-steps {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
+
+  .sell-page .sell-steps > * {
+    transform: none;
+  }
+
+  .sell-page .sell-step-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    column-gap: 14px;
+    row-gap: 0;
+    align-content: start;
+    margin: 0;
+    padding: 0 0 20px;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .sell-page .sell-step-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* The line joining the numbers. */
+  .sell-page .sell-step-card::after,
+  .sell-page .sell-step-card:nth-child(2n)::after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 38px;
+    bottom: 2px;
+    left: 17px;
+    width: 2px;
+    height: auto;
+    border: none;
+    border-radius: 2px;
+    background: var(--t-primary-100, #d1fae5);
+    transform: none;
+  }
+
+  .sell-page .sell-step-card:last-child {
+    padding-bottom: 0;
+  }
+
+  .sell-page .sell-step-card:last-child::after {
+    display: none;
+  }
+
+  .sell-page .sell-step-n {
+    display: grid;
+    place-items: center;
+    grid-row: span 2;
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    border-radius: 50%;
+    background: var(--t-primary-600, #059669);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1;
+    -webkit-text-fill-color: #fff;
+    box-shadow: 0 0 0 4px var(--t-primary-50, #ecfdf5);
+  }
+
+  .sell-page .sell-step-title {
+    margin: 6px 0 2px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .sell-page .sell-step-desc {
+    margin: 0;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 13px;
+  }
+
+  /* ── tools: a 2 × 2 grid of illustrated tiles ── */
+  .sell-page .sell-tools-stack {
+    display: none;
+  }
+
+  .sell-page .sell-tools-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .sell-page .sell-tool-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 16px;
+    background: #fff;
+  }
+
+  .sell-page .sell-tool-art {
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+  }
+
+  .sell-page .sell-tool-art .empty-art,
+  .sell-page .sell-tool-art svg {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .sell-page .sell-tool-title {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .sell-page .sell-tool-desc {
+    display: none;
+  }
+
+  /* ── categories: three across ── */
+  .sell-page .sell-cats-ring {
+    display: none;
+  }
+
+  .sell-page .sell-cats-layout {
+    display: block;
+  }
+
+  .sell-page .sell-cats-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .sell-page .sell-cats-head .sell-h2 {
+    margin: 0;
+  }
+
+  .sell-page .sell-cats-head .sell-text-link {
+    flex-shrink: 0;
+    font-size: 13.5px;
+  }
+
+  .sell-page .sell-cat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 8px;
+  }
+
+  .sell-page .sell-cat-grid > * {
+    transform: none;
+  }
+
+  .sell-page .sell-cat-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .sell-page .sell-cat-thumb {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 14px;
+  }
+
+  .sell-page .sell-cat-foot {
+    justify-content: center;
+    padding: 0;
+    border: none;
+  }
+
+  .sell-page .sell-cat-name {
+    overflow: hidden;
+    color: var(--t-neutral-800, #1f2937);
+    font-size: 12.5px;
+    font-weight: 400;
+    text-align: center;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sell-page .sell-cat-go {
+    display: none;
+  }
+
+  /* ── requirements: three tiles in a row ── */
+  .sell-page .sell-req-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .sell-page .sell-req-head {
+    order: -1;
+  }
+
+  .sell-page .sell-req-art,
+  .sell-page .sell-req-step,
+  .sell-page .sell-req-desc {
+    display: none;
+  }
+
+  .sell-page .sell-req-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .sell-page .sell-req-cards > * {
+    transform: none;
+  }
+
+  .sell-page .sell-req-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 16px 8px;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: none;
+    text-align: center;
+  }
+
+  .sell-page .sell-req-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+  }
+
+  .sell-page .sell-req-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sell-page .sell-req-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  /* ── FAQ: one bordered list ── */
+  .sell-page .sell-split-aside .sell-text-link {
+    display: none;
+  }
+
+  .sell-page .sell-faq {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 16px;
+    background: #fff;
+  }
+
+  .sell-page .sell-faq-item {
+    margin: 0;
+    border: none;
+    border-bottom: 1px solid var(--t-neutral-150, #eef0f3);
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .sell-page .sell-faq-item:last-child {
+    border-bottom: none;
+  }
+
+  .sell-page .sell-faq-q {
+    gap: 12px;
+    padding: 15px 16px;
+    font-size: 14.5px;
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .sell-page .sell-faq-q svg {
+    flex-shrink: 0;
+  }
+
+  .sell-page .sell-faq-a-inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .sell-page .sell-faq-item.is-open .sell-faq-a-inner {
+    padding-bottom: 15px;
+  }
+
+  .sell-page .sell-faq-a p {
+    margin: 0;
+    padding: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+
+  .sell-page .sell-text-link {
+    font-weight: 500;
+  }
+
+  /* ── closing call to action ── */
+  .sell-page .sell-final-cta {
+    padding: 40px 0;
+  }
+
+  .sell-page .sell-final-inner h2 {
+    font-size: 24px;
+    font-weight: 500;
+  }
+
+  .sell-page .sell-final-inner p {
+    font-size: 14px;
+  }
+
+  .sell-page .sell-final-btn,
+  .sell-page .sell-final-btn-ghost {
+    height: 50px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Heading over content, not beside it: no split-column gap. */
+  .sell-page .sell-split {
+    display: block;
+  }
+
+  .sell-page .sell-h2-comma {
+    display: none;
+  }
+
+  .sell-page .sell-req-head,
+  .sell-page .sell-req-head .sell-h2 {
+    text-align: left;
+  }
+
+  /* The answer's own padding indented it past its question. */
+  .sell-page .sell-faq-a {
+    padding: 0;
+  }
+}

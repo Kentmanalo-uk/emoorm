@@ -318,9 +318,13 @@ export default function Sell() {
                 <div className="sell-mega-content">
                   <p className="sell-mega-label">What you can sell</p>
                   <div className="sell-mega-chips">
-                    {CATEGORIES.map(cat => (
-                      <Link key={cat} to={`/products?search=${encodeURIComponent(cat)}`} className="sell-mega-chip">
-                        {cat}
+                    {categories.map(cat => (
+                      <Link
+                        key={cat.id || cat.name}
+                        to={cat.id ? `/products?category=${cat.id}` : `/products?search=${encodeURIComponent(cat.name)}`}
+                        className="sell-mega-chip"
+                      >
+                        {cat.name}
                       </Link>
                     ))}
                   </div>
@@ -358,8 +362,12 @@ export default function Sell() {
                 <span className="sell-hero-accent">in Emoorm</span>
               </h1>
               <p className="sell-hero-sub">
-                Open a free shop and sell to buyers across Oriental Mindoro. Farmers,
-                fisherfolk, artisans and home cooks are already here.
+                <span className="sell-copy-long">
+                  Open a free shop and sell to buyers across Oriental Mindoro. Farmers,
+                  fisherfolk, artisans and home cooks are already here.
+                </span>
+                {/* Phones: the same promise, one line. */}
+                <span className="sell-copy-short">Free shop. Local buyers. No commission.</span>
               </p>
               <div className="sell-hero-btns">
                 <button className="sell-hero-btn-primary" onClick={handleCTA} disabled={isPending}>
@@ -416,7 +424,7 @@ export default function Sell() {
         <div className="sell-container sell-split">
           <div className="sell-split-aside">
             <h2 className="sell-h2">
-              Built for Oriental Mindoro,<br />
+              Built for Oriental Mindoro<span className="sell-h2-comma">,</span><br />
               <span className="sell-h2-muted">not a marketplace that happens to reach it.</span>
             </h2>
             <p className="sell-lede">
@@ -426,8 +434,9 @@ export default function Sell() {
           </div>
 
           <div className="sell-benefits-grid">
-            {BENEFITS.map(({ title, desc }) => (
+            {BENEFITS.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="sell-benefit-card">
+                <span className="sell-benefit-icon" aria-hidden="true"><Icon size={22} weight="fill" /></span>
                 <p className="sell-benefit-title">{title}</p>
                 <p className="sell-benefit-desc">{desc}</p>
               </div>
@@ -491,7 +500,7 @@ export default function Sell() {
         <span className="sell-cats-ring" aria-hidden="true" />
         <div className="sell-container sell-cats-layout">
           <div className="sell-cats-head">
-            <h2 className="sell-h2">What can<br />you sell?</h2>
+            <h2 className="sell-h2">What can <br />you sell?</h2>
             <p className="sell-lede">
               Whatever is local, fresh or made by hand in Oriental Mindoro. Pick a
               category to see what is already on the marketplace.
@@ -505,7 +514,7 @@ export default function Sell() {
             {categories.map(cat => (
               <Link
                 key={cat.id || cat.name}
-                to={cat.slug ? `/products?category=${cat.id}` : `/products?q=${encodeURIComponent(cat.name)}`}
+                to={cat.slug ? `/products?category=${cat.id}` : `/products?search=${encodeURIComponent(cat.name)}`}
                 className="sell-cat-tile"
               >
                 <span className="sell-cat-thumb">
@@ -553,7 +562,7 @@ export default function Sell() {
       <section id="faq" className="sell-section sell-screen sell-faq-section">
         <div className="sell-container sell-split">
           <div className="sell-split-aside">
-            <h2 className="sell-h2">Questions<br />sellers ask</h2>
+            <h2 className="sell-h2">Questions <br />sellers ask</h2>
             <p className="sell-lede">
               Still unsure about something? Message customer care and a real person
               will answer.
