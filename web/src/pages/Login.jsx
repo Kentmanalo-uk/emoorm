@@ -492,7 +492,12 @@ const Login = () => {
                       <label htmlFor="password" className="login-form-label">
                         Password
                       </label>
-                      <Link to="/forgot-password" className="login-form-forgot">
+                      <Link
+                        to="/forgot-password"
+                        replace={isPhone}
+                        state={isPhone ? { ...location.state, fromSheet: true } : undefined}
+                        className="login-form-forgot"
+                      >
                         Forgot?
                       </Link>
                     </div>

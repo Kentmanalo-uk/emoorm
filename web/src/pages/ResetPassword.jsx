@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeSlash as EyeOff, Check } from '@phosphor-icons/react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeSlash as EyeOff, Check, CheckCircle } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import AppLogo from '../components/AppLogo';
+import AuthSheetBar from '../components/AuthSheetBar';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import './ResetPassword.css';
+import './AuthSheet.css';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isPhone = usePhoneLayout();
+  const sheetSwitched = Boolean(location.state?.fromSheet);
   const [searchParams] = useSearchParams();
   const tokenFromUrl = searchParams.get('token') || '';
 
@@ -22,6 +28,7 @@ const ResetPassword = () => {
   const [done, setDone] = useState(false);
 
   const hasTokenFromUrl = Boolean(tokenFromUrl);
+  const loginState = isPhone ? { ...location.state, fromSheet: true } : undefined;
 
   const rules = [
     { label: 'At least 8 characters', ok: formData.password.length >= 8 },
@@ -66,7 +73,8 @@ const ResetPassword = () => {
       setDone(true);
       setTimeout(() => {
         navigate('/login', {
-          state: { message: 'Password reset successful. Please sign in.' },
+          replace: isPhone,
+          state: { ...loginState, message: 'Password reset successful. Please sign in.' },
         });
       }, 2000);
     } catch (err) {
@@ -76,8 +84,10 @@ const ResetPassword = () => {
     }
   };
 
+  const confirmMatches = formData.confirmPassword && formData.confirmPassword === formData.password;
+
   return (
-    <div className="rp-page">
+    <div className={`rp-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}>
       <header className="rp-header">
         <div className="rp-header-container">
           <Link to="/" className="rp-logo">
@@ -89,22 +99,19 @@ const ResetPassword = () => {
 
       <div className="rp-content">
         <div className="rp-card">
+          {isPhone && <AuthSheetBar switchTo="/login" switchLabel="Log in" />}
           {done ? (
-            <div style={{ textAlign: 'center' }}>
-              <div
-                style={{
-                  width: 56, height: 56, margin: '0 auto 16px',
-                  borderRadius: '50%', background: 'var(--t-success-100, #dcfce7)', color: 'var(--t-success-800, #166534)',
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                <Check size={28} />
+            <div className="rp-done">
+              <div className="rp-done-icon" aria-hidden="true">
+                <CheckCircle size={32} weight="fill" />
               </div>
               <h2 className="rp-title">Password updated</h2>
               <p className="rp-description">
-                You can now sign in with your new password. Redirecting to sign in…
+                You can now log in with your new password. Taking you to log in…
               </p>
-              <Link to="/login" className="rp-back-link">Go to Sign In now</Link>
+              <Link to="/login" replace={isPhone} state={loginState} className="rp-submit rp-submit-link">
+                Log in now
+              </Link>
             </div>
           ) : (
             <>
@@ -115,10 +122,10 @@ const ResetPassword = () => {
                   : 'Paste the reset token from your email and choose a new password.'}
               </p>
 
-              <form onSubmit={handleSubmit} className="rp-form">
+              <form onSubmit={handleSubmit} className="rp-form" noValidate>
                 {!hasTokenFromUrl && (
                   <div className="rp-form-group">
-                    <label htmlFor="token" className="rp-label">Reset Token</label>
+                    <label htmlFor="token" className="rp-label">Reset token</label>
                     <input
                       type="text"
                       id="token"
@@ -127,13 +134,14 @@ const ResetPassword = () => {
                       placeholder="Paste your reset token"
                       value={formData.token}
                       onChange={handleChange}
+                      autoComplete="off"
                     />
                     {errors.token && <span className="rp-error">{errors.token}</span>}
                   </div>
                 )}
 
                 <div className="rp-form-group">
-                  <label htmlFor="password" className="rp-label">New Password</label>
+                  <label htmlFor="password" className="rp-label">New password</label>
                   <div className="rp-input-wrapper">
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -149,36 +157,18 @@ const ResetPassword = () => {
                       type="button"
                       className="rp-toggle-password"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
                   {errors.password && <span className="rp-error">{errors.password}</span>}
                   {formData.password && (
-                    <ul
-                      style={{
-                        listStyle: 'none', padding: 0, margin: '8px 0 0',
-                        fontSize: 12, display: 'grid', gap: 4,
-                      }}
-                    >
+                    <ul className="rp-rules" aria-label="Password requirements">
                       {rules.map((r) => (
-                        <li
-                          key={r.label}
-                          style={{
-                            color: r.ok ? 'var(--t-primary-600, #059669)' : 'var(--t-neutral-400, #9ca3af)',
-                            display: 'flex', alignItems: 'center', gap: 6,
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 14, height: 14, borderRadius: '50%',
-                              background: r.ok ? 'var(--t-primary-600, #059669)' : 'var(--t-neutral-200, #e5e7eb)',
-                              color: 'var(--t-neutral-0, #fff)', display: 'inline-flex',
-                              alignItems: 'center', justifyContent: 'center',
-                              fontSize: 10,
-                            }}
-                          >
-                            {r.ok ? '✓' : ''}
+                        <li key={r.label} className={r.ok ? 'is-ok' : ''}>
+                          <span className="rp-rule-dot" aria-hidden="true">
+                            {r.ok && <Check size={10} weight="bold" />}
                           </span>
                           {r.label}
                         </li>
@@ -188,7 +178,7 @@ const ResetPassword = () => {
                 </div>
 
                 <div className="rp-form-group">
-                  <label htmlFor="confirmPassword" className="rp-label">Confirm New Password</label>
+                  <label htmlFor="confirmPassword" className="rp-label">Confirm new password</label>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     id="confirmPassword"
@@ -199,27 +189,30 @@ const ResetPassword = () => {
                     onChange={handleChange}
                     autoComplete="new-password"
                   />
-                  {errors.confirmPassword && (
+                  {errors.confirmPassword ? (
                     <span className="rp-error">{errors.confirmPassword}</span>
+                  ) : confirmMatches && (
+                    <span className="rp-match"><Check size={12} weight="bold" /> Passwords match</span>
                   )}
                 </div>
 
-                <button type="submit" className="rp-submit" disabled={isLoading}>
-                  {isLoading ? 'Resetting...' : 'Reset Password'}
-                </button>
-
                 {apiError && (
-                  <div className="rp-api-error">
+                  <div className="rp-api-error" role="alert">
                     {apiError}
-                    <div style={{ marginTop: 6, fontSize: 12 }}>
-                      Need a new link? <Link to="/forgot-password">Request another one</Link>.
+                    <div className="rp-api-error-more">
+                      Need a new link? <Link to="/forgot-password" replace={isPhone} state={loginState}>Request another one</Link>.
                     </div>
                   </div>
                 )}
+
+                <button type="submit" className="rp-submit" disabled={isLoading}>
+                  {isLoading ? 'Resetting…' : 'Reset password'}
+                </button>
               </form>
 
               <div className="rp-footer-link">
-                <Link to="/login" className="rp-back-link">← Back to Sign In</Link>
+                Remembered it?{' '}
+                <Link to="/login" replace={isPhone} state={loginState} className="rp-back-link">Log in</Link>
               </div>
             </>
           )}
