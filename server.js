@@ -26,7 +26,10 @@ const redact = (text) => String(text || '').replace(/(\w+:\/\/[^:\s/]+:)[^@\s]+@
 
 if (process.env.RUN_MIGRATIONS !== 'false') {
   try {
-    const out = execSync('npx prisma migrate deploy', { cwd: backendDir, encoding: 'utf8', stdio: 'pipe' });
+    // Call Prisma's CLI with this same Node binary: Hostinger's runtime has no
+    // npx on its PATH (only the build step does).
+    const prismaCli = require.resolve('prisma/build/index.js', { paths: [backendDir] });
+    const out = execSync(`"${process.execPath}" "${prismaCli}" migrate deploy`, { cwd: backendDir, encoding: 'utf8', stdio: 'pipe' });
     console.log(redact(out).trim());
   } catch (err) {
     // Hostinger's runtime log keeps console lines, so print Prisma's own
