@@ -591,6 +591,9 @@ model Store {
   paymentQrType        String?         @map("payment_qr_type")
   paymentInstructions  String?         @db.Text @map("payment_instructions")
   acceptsCod           Boolean         @default(true) @map("accepts_cod")
+  /// What this store charges per delivery order. Null: the platform's
+  /// default delivery fee (AppSetting.deliveryFee) applies.
+  deliveryFee          Decimal?        @db.Decimal(10, 2) @map("delivery_fee")
 
   // Theme customization
   primaryColor         String?         @map("primary_color")

@@ -80,14 +80,12 @@ export default function AdminSettings() {
       appLogo: currentAppSettings.appLogo,
       productPlaceholder: currentAppSettings.productPlaceholder,
       deliveryFee: String(currentAppSettings.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
-      freeDeliveryThreshold: String(currentAppSettings.freeDeliveryThreshold ?? DEFAULT_APP_SETTINGS.freeDeliveryThreshold),
       requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
     });
   }, [
     currentAppSettings.appLogo,
     currentAppSettings.productPlaceholder,
     currentAppSettings.deliveryFee,
-    currentAppSettings.freeDeliveryThreshold,
     currentAppSettings.requireBuyerVerification,
   ]);
 
@@ -177,13 +175,8 @@ export default function AdminSettings() {
 
   const saveBranding = async () => {
     const deliveryFee = Number(brandingForm.deliveryFee);
-    const freeDeliveryThreshold = Number(brandingForm.freeDeliveryThreshold);
     if (!Number.isFinite(deliveryFee) || deliveryFee < 0) {
       toast.error('Delivery fee must be 0 or more');
-      return;
-    }
-    if (!Number.isFinite(freeDeliveryThreshold) || freeDeliveryThreshold < 0) {
-      toast.error('Free delivery threshold must be 0 or more');
       return;
     }
     // Send only what changed; the server keeps the rest.
@@ -193,9 +186,6 @@ export default function AdminSettings() {
       changes.productPlaceholder = brandingForm.productPlaceholder;
     }
     if (deliveryFee !== Number(currentAppSettings.deliveryFee)) changes.deliveryFee = deliveryFee;
-    if (freeDeliveryThreshold !== Number(currentAppSettings.freeDeliveryThreshold)) {
-      changes.freeDeliveryThreshold = freeDeliveryThreshold;
-    }
     const requireBuyerVerification = brandingForm.requireBuyerVerification !== false;
     if (requireBuyerVerification !== (currentAppSettings.requireBuyerVerification !== false)) {
       changes.requireBuyerVerification = requireBuyerVerification;
@@ -397,7 +387,7 @@ export default function AdminSettings() {
         ))}
       </div>
 
-      <Row label="Delivery fee (₱)" help="Charged on delivery orders below the free-delivery threshold. Pickup orders are never charged.">
+      <Row label="Default delivery fee (₱)" help="Charged on delivery orders from stores that have not set their own delivery fee. Sellers set theirs in Fulfillment & Payment. Pickup orders are never charged.">
         <input
           className="st-input"
           type="number"
@@ -407,19 +397,6 @@ export default function AdminSettings() {
           value={brandingForm.deliveryFee ?? ''}
           onChange={(e) => setBrandingForm((current) => ({ ...current, deliveryFee: e.target.value }))}
           placeholder={String(DEFAULT_APP_SETTINGS.deliveryFee)}
-        />
-      </Row>
-
-      <Row label="Free delivery from (₱ subtotal)" help="Delivery orders with a subtotal at or above this amount get free delivery. Set 0 to make every delivery free.">
-        <input
-          className="st-input"
-          type="number"
-          min="0"
-          step="0.01"
-          inputMode="decimal"
-          value={brandingForm.freeDeliveryThreshold ?? ''}
-          onChange={(e) => setBrandingForm((current) => ({ ...current, freeDeliveryThreshold: e.target.value }))}
-          placeholder={String(DEFAULT_APP_SETTINGS.freeDeliveryThreshold)}
         />
       </Row>
 

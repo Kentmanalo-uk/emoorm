@@ -9,27 +9,27 @@ export const DEFAULT_APP_SETTINGS = {
   productPlaceholder: '/brand-icon.png',
   // null means the palette the application ships with.
   theme: null,
-  // Checkout pricing, quoted by the cart and checkout and applied by the
-  // server from the same record. Defaults match the server's defaults.
+  // Default delivery fee for stores that have not set their own. The
+  // server applies the same rule. Matches the server's default.
   deliveryFee: 50,
-  freeDeliveryThreshold: 500,
   // Whether buyers must verify their ID before checking out.
   requireBuyerVerification: true,
 };
 
 /**
- * Delivery fee for a given subtotal under the platform rule.
+ * The delivery fee a store charges, as the server computes it at POST
+ * /orders: the store's own fee, or the platform default when it has none.
+ * Pickup has no fee.
+ * @param {object|null} store - store record (deliveryFee may be null)
  * @param {object} settings - from useAppSettings()
- * @param {number} subtotal
  * @param {'DELIVERY'|'PICKUP'} fulfillmentMethod
  */
-export const quoteDeliveryFee = (settings, subtotal, fulfillmentMethod = 'DELIVERY') => {
+export const storeDeliveryFee = (store, settings, fulfillmentMethod = 'DELIVERY') => {
   if (fulfillmentMethod === 'PICKUP') return 0;
-  const sub = Number(subtotal || 0);
-  if (sub <= 0) return 0;
-  const fee = Number(settings?.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee);
-  const free = Number(settings?.freeDeliveryThreshold ?? DEFAULT_APP_SETTINGS.freeDeliveryThreshold);
-  return sub >= free ? 0 : fee;
+  if (store && store.deliveryFee !== null && store.deliveryFee !== undefined && store.deliveryFee !== '') {
+    return Number(store.deliveryFee);
+  }
+  return Number(settings?.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee);
 };
 
 export const resolveAppSettingImage = (value) => (

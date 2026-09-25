@@ -189,11 +189,12 @@ const createOrder = async (userId, data) => {
     });
   }
 
-  // Delivery pricing is an admin setting, not a constant.
-  const { deliveryFee, freeDeliveryThreshold } = await appSettingService.getCheckoutPricing();
+  // Each store sets its own delivery fee; stores that have not set one use
+  // the platform default. There is no free-shipping threshold.
+  const { deliveryFee: platformDeliveryFee } = await appSettingService.getCheckoutPricing();
   const DELIVERY_FEE = fulfillmentMethod === 'PICKUP'
     ? 0
-    : (totalAmount >= freeDeliveryThreshold ? 0 : deliveryFee);
+    : (store.deliveryFee != null ? Number(store.deliveryFee) : platformDeliveryFee);
   let voucherRecord = null;
   let discountAmount = 0;
   if (voucherCode) {

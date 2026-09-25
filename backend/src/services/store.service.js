@@ -325,6 +325,22 @@ const getStores = async (options = {}) => {
 };
 
 /**
+ * A seller's delivery fee: blank clears it (the platform default applies),
+ * otherwise a peso amount from 0 to 10,000 with at most two decimals.
+ */
+const normalizeDeliveryFee = (value) => {
+  if (value === null || value === '') return null;
+  const fee = Number(value);
+  if (!Number.isFinite(fee) || fee < 0 || fee > 10000) {
+    throw new ApiError('Delivery fee must be between ₱0 and ₱10,000', 400);
+  }
+  if (Math.abs(Math.round(fee * 100) - fee * 100) > 1e-6) {
+    throw new ApiError('Delivery fee can have at most two decimal places', 400);
+  }
+  return fee;
+};
+
+/**
  * Update store (Owner only)
  * @param {String} storeId - Store ID
  * @param {String} userId - User ID
@@ -369,6 +385,7 @@ const updateStore = async (storeId, userId, rawData) => {
     'paymentQrType',
     'paymentInstructions',
     'acceptsCod',
+    'deliveryFee',
     'primaryColor',
     'secondaryColor',
     'bannerImage',
@@ -382,6 +399,8 @@ const updateStore = async (storeId, userId, rawData) => {
         updateData[field] = normalizeCoordinate(data[field], -90, 90, 'Latitude');
       } else if (field === 'longitude') {
         updateData[field] = normalizeCoordinate(data[field], -180, 180, 'Longitude');
+      } else if (field === 'deliveryFee') {
+        updateData[field] = normalizeDeliveryFee(data[field]);
       } else {
         updateData[field] = data[field];
       }

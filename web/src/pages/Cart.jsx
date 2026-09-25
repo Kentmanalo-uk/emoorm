@@ -6,7 +6,7 @@ import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import useIdentityGate from '../hooks/useIdentityGate';
-import useAppSettings, { quoteDeliveryFee } from '../hooks/useAppSettings';
+import useAppSettings, { storeDeliveryFee } from '../hooks/useAppSettings';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
@@ -176,8 +176,27 @@ const Cart = () => {
     (sum, item) => sum + Number(item.price) * item.quantity,
     0
   );
-  const shippingFee = quoteDeliveryFee(settings, subtotal, 'DELIVERY');
-  const freeDeliveryThreshold = Number(settings.freeDeliveryThreshold || 0);
+  // Checkout is one shop at a time, so the fee is that shop's own.
+  const selectedStoreIds = [...new Set(selectedItems.map((item) => item.storeId).filter(Boolean))];
+  const feeStoreId = selectedStoreIds.length === 1 ? selectedStoreIds[0] : null;
+  const [feeStores, setFeeStores] = useState({});
+  useEffect(() => {
+    if (!feeStoreId || feeStores[feeStoreId] !== undefined) return;
+    let cancelled = false;
+    axios.get(`/stores/${feeStoreId}`)
+      .then((res) => { if (!cancelled) setFeeStores((cur) => ({ ...cur, [feeStoreId]: res.data || null })); })
+      .catch(() => { if (!cancelled) setFeeStores((cur) => ({ ...cur, [feeStoreId]: null })); });
+    return () => { cancelled = true; };
+  }, [feeStoreId, feeStores]);
+  const feeStore = feeStoreId ? feeStores[feeStoreId] : undefined;
+  const pickupOnly = feeStore?.fulfillmentMode === 'PICKUP';
+  // null: not known yet (nothing selected, several shops, or still loading).
+  const shippingFee = subtotal > 0 && feeStore !== undefined
+    ? (pickupOnly ? 0 : storeDeliveryFee(feeStore, settings, 'DELIVERY'))
+    : null;
+  const shippingLabel = shippingFee === null
+    ? '—'
+    : pickupOnly ? 'Pickup only' : `₱${shippingFee.toFixed(2)}`;
   const [voucherInput, setVoucherInput] = useState('');
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [voucherLoading, setVoucherLoading] = useState(false);
@@ -224,7 +243,7 @@ const Cart = () => {
   }, [subtotal]);
 
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
-  const total = Math.max(0, subtotal + shippingFee - discountAmount);
+  const total = Math.max(0, subtotal + (shippingFee || 0) - discountAmount);
   const visiblePurchasable = visibleItems.filter((item) => !item.unavailable);
   const allSelected = visiblePurchasable.length > 0 && visiblePurchasable.every((item) => selectedSet.has(item.id));
   const selectedStoreCount = new Set(selectedItems.map((item) => item.storeId).filter(Boolean)).size;
@@ -748,13 +767,9 @@ const Cart = () => {
                 </div>
 
                 <div className="summary-row">
-                  <span>Shipping Fee</span>
+                  <span>Delivery Fee</span>
                   <span>
-                    {shippingFee === 0 ? (
-                      <span className="free-shipping">FREE</span>
-                    ) : (
-                      `₱${shippingFee.toFixed(2)}`
-                    )}
+                    {shippingLabel}
                   </span>
                 </div>
 
@@ -765,11 +780,6 @@ const Cart = () => {
                   </div>
                 )}
 
-                {freeDeliveryThreshold > 0 && subtotal < freeDeliveryThreshold && (
-                  <div className="shipping-notice">
-                    Add ₱{(freeDeliveryThreshold - subtotal).toFixed(2)} more for free shipping
-                  </div>
-                )}
 
                 <div className="summary-divider"></div>
 
@@ -862,13 +872,11 @@ const Cart = () => {
 
       {isPhone && (
         <div className="cart-m-bar">
-          {(multiStoreSelected || unavailableItems.length > 0 || (freeDeliveryThreshold > 0 && subtotal > 0 && subtotal < freeDeliveryThreshold)) && (
+          {(multiStoreSelected || unavailableItems.length > 0) && (
             <p className={`cart-m-bar-note${multiStoreSelected ? ' is-bad' : ''}`}>
               {multiStoreSelected
                 ? 'Check out one shop at a time — deselect items from the other shops.'
-                : unavailableItems.length > 0
-                  ? `${unavailableItems.length === 1 ? 'One item is' : `${unavailableItems.length} items are`} unavailable and won't be checked out.`
-                  : `Add ₱${(freeDeliveryThreshold - subtotal).toFixed(2)} more for free shipping`}
+                : `${unavailableItems.length === 1 ? 'One item is' : `${unavailableItems.length} items are`} unavailable and won't be checked out.`}
             </p>
           )}
           <div className="cart-m-bar-row">
@@ -880,7 +888,7 @@ const Cart = () => {
               <strong>₱{total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
               <span>
                 {selectedCount > 0
-                  ? (shippingFee === 0 ? 'Free shipping' : `Shipping: ₱${shippingFee.toFixed(2)}`)
+                  ? (shippingFee === null ? 'Delivery fee at checkout' : pickupOnly ? 'Pickup only' : `Delivery fee: ₱${shippingFee.toFixed(2)}`)
                   : 'Select items'}
               </span>
               {discountAmount > 0 && <span className="is-off">₱{discountAmount.toFixed(2)} off</span>}

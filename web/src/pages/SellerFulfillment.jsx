@@ -21,6 +21,7 @@ import './SellerStore.css';
 import './SellerFulfillment.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import SellerPageHead from '../components/seller/SellerPageHead';
+import useAppSettings from '../hooks/useAppSettings';
 
 const MODES = [
   {
@@ -81,7 +82,11 @@ export default function SellerFulfillment() {
     paymentQrType: 'GCASH',
     paymentInstructions: '',
     acceptsCod: true,
+    // Blank: the platform's default delivery fee applies.
+    deliveryFee: '',
   });
+  const { settings: appSettings } = useAppSettings();
+  const platformFee = Number(appSettings?.deliveryFee ?? 0);
 
   useEffect(() => {
     (async () => {
@@ -107,6 +112,7 @@ export default function SellerFulfillment() {
           paymentQrType: s.paymentQrType || 'GCASH',
           paymentInstructions: s.paymentInstructions || '',
           acceptsCod: s.acceptsCod ?? true,
+          deliveryFee: s.deliveryFee === null || s.deliveryFee === undefined ? '' : String(Number(s.deliveryFee)),
         });
       } catch (err) {
         toast.error(err.message || 'Failed to load store');
@@ -313,13 +319,22 @@ export default function SellerFulfillment() {
       toast.error('Please provide a pickup address.');
       return;
     }
+    const feeText = String(form.deliveryFee ?? '').trim();
+    const fee = Number(feeText);
+    if (feeText !== '' && (!Number.isFinite(fee) || fee < 0 || fee > 10000)) {
+      toast.error('Delivery fee must be between ₱0 and ₱10,000.');
+      return;
+    }
     if (!form.acceptsCod && !form.paymentQrImage) {
       toast.error('Enable COD or upload a QR image so buyers can pay.');
       return;
     }
     setSaving(true);
     try {
-      await axios.put(`/stores/${store.id}`, form);
+      await axios.put(`/stores/${store.id}`, {
+        ...form,
+        deliveryFee: feeText === '' ? null : Math.round(fee * 100) / 100,
+      });
       await axios.put('/stores/my/service-areas', {
         areas: areas.map((a) => ({
           municipalityId: a.municipalityId,
@@ -442,6 +457,40 @@ export default function SellerFulfillment() {
                   placeholder="Opening hours, landmarks, contact person…"
                 />
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delivery fee */}
+        {showDeliveryAreas && (
+          <div className="seller-card">
+            <div className="seller-card-header">
+              <h2>
+                <Truck size={16} /> Delivery Fee
+              </h2>
+            </div>
+            <div className="sf-body">
+              <div className="form-group">
+                <label htmlFor="sf-delivery-fee">Delivery fee per order (₱)</label>
+                <input
+                  id="sf-delivery-fee"
+                  type="number"
+                  name="deliveryFee"
+                  min="0"
+                  max="10000"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={form.deliveryFee}
+                  onChange={handleChange}
+                  placeholder={`Platform default: ₱${platformFee.toFixed(2)}`}
+                  className="form-input"
+                />
+              </div>
+              <p className="sf-note">
+                <Info size={14} /> Added to the buyer's total at checkout when they choose delivery.
+                {' '}Enter 0 to deliver for free. Leave blank to use the platform default
+                {' '}(₱{platformFee.toFixed(2)}). Pickup orders are never charged.
+              </p>
             </div>
           </div>
         )}

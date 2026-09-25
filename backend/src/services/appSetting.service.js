@@ -197,7 +197,6 @@ const getCheckoutPricing = async () => {
   const settings = await get();
   return {
     deliveryFee: Number(settings.deliveryFee ?? DEFAULT_SETTINGS.deliveryFee),
-    freeDeliveryThreshold: Number(settings.freeDeliveryThreshold ?? DEFAULT_SETTINGS.freeDeliveryThreshold),
   };
 };
 

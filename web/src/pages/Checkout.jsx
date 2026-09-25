@@ -10,6 +10,10 @@ import {
   Storefront as StoreIcon,
   Warning as AlertTriangle,
   UploadSimple as Upload,
+  Money,
+  QrCode,
+  DeviceMobile,
+  NotePencil,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -21,8 +25,9 @@ import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import useIdentityGate from '../hooks/useIdentityGate';
-import useAppSettings, { quoteDeliveryFee } from '../hooks/useAppSettings';
+import useAppSettings, { storeDeliveryFee } from '../hooks/useAppSettings';
 import { isIdentityRequiredError } from '../lib/identity';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import './Checkout.css';
 
 // Same rules the server applies at POST /orders.
@@ -37,6 +42,7 @@ const Checkout = () => {
   const { items: allItems, clearCart, revalidate } = useCartStore();
   const { requireVerifiedIdentity, showIdentityRequired, identityDialog } = useIdentityGate();
   const { settings } = useAppSettings();
+  const isPhone = usePhoneLayout();
 
   // Refresh price / stock / availability of every line before anything is placed.
   const [revalidating, setRevalidating] = useState(false);
@@ -75,7 +81,6 @@ const Checkout = () => {
     return allItems.filter((it) => allow.has(it.id));
   }, [allItems, selectedIds]);
 
-  const [currentStep, setCurrentStep] = useState(1);
   const [deliveryForm, setDeliveryForm] = useState({
     fullName: '',
     contactNumber: '',
@@ -343,8 +348,9 @@ const Checkout = () => {
     [fulfillmentMethod, storeIds, storeInfo]
   );
 
-  const shippingFee = quoteDeliveryFee(settings, subtotal, fulfillmentMethod);
-  const freeDeliveryThreshold = Number(settings.freeDeliveryThreshold || 0);
+  // Checkout holds one store's items; its own delivery fee applies.
+  const checkoutStore = storeInfo[storeIds[0]]?.store || null;
+  const shippingFee = orderableItems.length > 0 ? storeDeliveryFee(checkoutStore, settings, fulfillmentMethod) : 0;
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount);
 
@@ -428,27 +434,9 @@ const Checkout = () => {
     return '';
   };
 
-  const goToStep = (step) => {
-    if (step === 1) return setCurrentStep(1);
-    if (storeLoadFailed) {
-      toast.error('Store details could not be loaded. Retry before continuing.');
-      return;
-    }
-    if (step === 2) {
-      if (!validateDelivery()) return;
-      if (anyCoverageMissing) {
-        toast.error('One or more stores does not deliver to your address. Please choose Pickup or update your address.');
-        return;
-      }
-      setCurrentStep(2);
-    } else if (step === 3 && paymentMethod) {
-      const prepaidError = validatePrepaid();
-      if (prepaidError) {
-        toast.error(prepaidError);
-        return;
-      }
-      setCurrentStep(3);
-    }
+  // One page: point the buyer at the section that needs attention.
+  const scrollToSection = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const buildDeliveryAddress = () =>
@@ -488,15 +476,20 @@ const Checkout = () => {
       toast.error('There is nothing available to order.');
       return;
     }
-    if (!CONTACT_NUMBER_RE.test(normalizeContact(deliveryForm.contactNumber))) {
-      toast.error('Enter a valid PH mobile number (09XXXXXXXXX or +639XXXXXXXXX).');
-      setCurrentStep(1);
+    if (!validateDelivery()) {
+      toast.error(fulfillmentMethod === 'DELIVERY' ? 'Please complete your delivery address.' : 'Please complete your contact details.');
+      scrollToSection('co-address');
+      return;
+    }
+    if (anyCoverageMissing) {
+      toast.error('This store does not deliver to your address. Choose Pickup or update your address.');
+      scrollToSection('co-address');
       return;
     }
     const prepaidError = validatePrepaid();
     if (prepaidError) {
       toast.error(prepaidError);
-      setCurrentStep(2);
+      scrollToSection('co-payment');
       return;
     }
     if (!(await requireVerifiedIdentity())) return;
@@ -600,13 +593,22 @@ const Checkout = () => {
     );
   }
 
+  const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const itemCount = orderableItems.reduce((n, it) => n + Number(it.quantity || 0), 0);
+  const variationText = (item) => (item.selectedVariations && Object.keys(item.selectedVariations).length
+    ? Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(', ')
+    : '');
+
+  const placeDisabled = isSubmitting || revalidating || storesLoading || unavailableItems.length > 0 || storeLoadFailed;
+  const placeLabel = isSubmitting ? 'Placing Order…' : storesLoading ? 'Loading store details…' : 'Place Order';
+
   const activeQrStore = (paymentMethod === 'GCASH' || paymentMethod === 'QRPH')
     ? storeIds.map((id) => storeInfo[id]?.store).find((s) => s?.paymentQrImage)
     : null;
 
   return (
     <Layout>
-      <div className="checkout-page">
+      <div className={`checkout-page${isPhone ? ' co-phone' : ''}`}>
         <div className="container">
           <div className="breadcrumbs">
             <Link to="/">Home</Link>
@@ -619,24 +621,6 @@ const Checkout = () => {
           <div className="checkout-header">
             <h1 className="checkout-title">Checkout</h1>
             <Link to="/cart" className="btn-back-to-cart"><ChevronLeft size={18} />Back to Cart</Link>
-          </div>
-
-          {/* Progress Steps */}
-          <div className="checkout-steps">
-            <div className={`checkout-step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
-              <div className="step-number">1</div>
-              <span className="step-label">Fulfillment</span>
-            </div>
-            <div className="step-line"></div>
-            <div className={`checkout-step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
-              <div className="step-number">2</div>
-              <span className="step-label">Payment</span>
-            </div>
-            <div className="step-line"></div>
-            <div className={`checkout-step ${currentStep >= 3 ? 'active' : ''}`}>
-              <div className="step-number">3</div>
-              <span className="step-label">Review</span>
-            </div>
           </div>
 
           <div className="checkout-layout">
@@ -676,373 +660,358 @@ const Checkout = () => {
                 </div>
               )}
 
-              {/* Step 1: Fulfillment + Address */}
-              {currentStep === 1 && !storeLoadFailed && (
-                <div className="checkout-section">
-                  <div className="section-header">
-                    <Truck size={24} />
-                    <h2>Fulfillment Method</h2>
-                  </div>
-
-                  <div className="fulfillment-picker">
-                    <label
-                      className={`fulfillment-option ${fulfillmentMethod === 'DELIVERY' ? 'selected' : ''} ${!fulfillmentAvailability.delivery ? 'disabled' : ''}`}
-                    >
-                      <input
-                        type="radio"
-                        name="fulfillment"
-                        value="DELIVERY"
-                        checked={fulfillmentMethod === 'DELIVERY'}
-                        onChange={() => setFulfillmentMethod('DELIVERY')}
-                        disabled={!fulfillmentAvailability.delivery}
-                      />
-                      <Truck size={18} />
-                      <div>
-                        <strong>Delivery</strong>
-                        <p>{fulfillmentAvailability.delivery ? 'Have it delivered to your address' : 'Not available for these stores'}</p>
-                      </div>
-                    </label>
-                    <label
-                      className={`fulfillment-option ${fulfillmentMethod === 'PICKUP' ? 'selected' : ''} ${!fulfillmentAvailability.pickup ? 'disabled' : ''}`}
-                    >
-                      <input
-                        type="radio"
-                        name="fulfillment"
-                        value="PICKUP"
-                        checked={fulfillmentMethod === 'PICKUP'}
-                        onChange={() => setFulfillmentMethod('PICKUP')}
-                        disabled={!fulfillmentAvailability.pickup}
-                      />
-                      <StoreIcon size={18} />
-                      <div>
-                        <strong>Pickup</strong>
-                        <p>{fulfillmentAvailability.pickup ? 'Pick up at the store' : 'Not available for these stores'}</p>
-                      </div>
-                    </label>
-                  </div>
-
-                  <div className="section-header" style={{ marginTop: 24 }}>
-                    <MapPin size={24} />
-                    <h2>{fulfillmentMethod === 'DELIVERY' ? 'Delivery Address' : 'Contact Details'}</h2>
-                  </div>
-
-                  {fulfillmentMethod === 'DELIVERY' && savedAddresses.length > 0 && (
-                    <div className="saved-address-picker">
-                      {savedAddresses.map((addr) => (
-                        <label
-                          key={addr.id}
-                          className={`saved-address-option ${selectedAddressId === addr.id ? 'selected' : ''}`}
-                        >
-                          <input
-                            type="radio"
-                            name="savedAddress"
-                            checked={selectedAddressId === addr.id}
-                            onChange={() => applySavedAddress(addr)}
-                          />
-                          <div>
-                            <strong>
-                              {addr.label ? `${addr.label} — ` : ''}{addr.fullName}
-                              {addr.isDefault && <span className="saved-address-default-tag">Default</span>}
-                            </strong>
-                            <p>{addr.street}, {addr.barangay}, {addr.municipality?.name}, {addr.province || 'Oriental Mindoro'}</p>
-                            <p className="saved-address-phone">{addr.contactNumber}</p>
-                          </div>
-                        </label>
-                      ))}
-                      <label className={`saved-address-option ${selectedAddressId === null ? 'selected' : ''}`}>
-                        <input
-                          type="radio"
-                          name="savedAddress"
-                          checked={selectedAddressId === null}
-                          onChange={useManualAddress}
-                        />
-                        <div>
-                          <strong>Enter a different address</strong>
-                          <p>Use a one-off address for this order</p>
-                        </div>
-                      </label>
-                    </div>
-                  )}
-
-                  <div className="address-form">
-                    <div className="form-group">
-                      <label className="form-label">Full Name</label>
-                      <input
-                        type="text"
-                        name="fullName"
-                        className={`form-input ${deliveryErrors.fullName ? 'form-input-error' : ''}`}
-                        placeholder="Juan Dela Cruz"
-                        value={deliveryForm.fullName}
-                        onChange={handleDeliveryChange}
-                      />
-                      {deliveryErrors.fullName && <span className="form-error">{deliveryErrors.fullName}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Contact Number</label>
-                      <input
-                        type="text"
-                        name="contactNumber"
-                        className={`form-input ${deliveryErrors.contactNumber ? 'form-input-error' : ''}`}
-                        placeholder="09xxxxxxxxx"
-                        value={deliveryForm.contactNumber}
-                        onChange={handleDeliveryChange}
-                      />
-                      {deliveryErrors.contactNumber && <span className="form-error">{deliveryErrors.contactNumber}</span>}
+              {!storeLoadFailed && (
+                <>
+                  {/* Fulfillment */}
+                  <div className="checkout-section" id="co-fulfillment">
+                    <div className="section-header">
+                      <Truck size={24} />
+                      <h2>Fulfillment Method</h2>
                     </div>
 
-                    {fulfillmentMethod === 'DELIVERY' && (
-                      <PhAddressPicker
-                        value={{
-                          province: deliveryForm.province,
-                          provinceCode: deliveryForm.provinceCode,
-                          municipalityId: deliveryForm.municipalityId,
-                          municipalityName: deliveryForm.municipality || deliveryForm.municipalityName,
-                          municipalityCode: deliveryForm.municipalityCode,
-                          barangay: deliveryForm.barangay,
-                          barangayCode: deliveryForm.barangayCode,
-                          street: deliveryForm.street,
-                        }}
-                        onChange={(next) => {
-                          setDeliveryForm((prev) => ({
-                            ...prev,
-                            province: next.province ?? prev.province,
-                            provinceCode: next.provinceCode ?? prev.provinceCode,
-                            municipalityId: next.municipalityId ?? prev.municipalityId,
-                            municipalityName: next.municipalityName ?? prev.municipalityName,
-                            municipality: next.municipalityName ?? prev.municipality,
-                            municipalityCode: next.municipalityCode ?? prev.municipalityCode,
-                            barangay: next.barangay ?? prev.barangay,
-                            barangayCode: next.barangayCode ?? prev.barangayCode,
-                            street: next.street ?? prev.street,
-                          }));
-                          setDeliveryErrors((prev) => ({
-                            ...prev,
-                            street: '',
-                            barangay: '',
-                            municipality: '',
-                            municipalityId: '',
-                          }));
-                        }}
-                        dbMunicipalities={municipalities}
-                        dbLoading={municipalitiesLoading}
-                        errors={deliveryErrors}
-                      />
-                    )}
-                  </div>
-
-                  {/* Per-store status */}
-                  {storeIds.length > 0 && (
-                    <div className="store-status-list">
-                      {storeIds.map((id) => {
-                        const info = storeInfo[id];
-                        const storeName = info?.store?.name || itemsByStore[id][0]?.storeName || 'Store';
-                        if (fulfillmentMethod === 'PICKUP') {
-                          return (
-                            <div key={id} className="store-status ok">
-                              <StoreIcon size={16} />
-                              <div>
-                                <strong>{storeName}</strong>
-                                <p>Pickup at: {info?.store?.pickupAddress || '—'}</p>
-                                {info?.store?.pickupInstructions && (
-                                  <p className="store-status-note">{info.store.pickupInstructions}</p>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        }
-                        // DELIVERY
-                        if (!info?.checked) return null;
-                        return info.covered ? (
-                          <div key={id} className="store-status ok">
-                            <CheckCircle size={16} />
-                            <div>
-                              <strong>{storeName}</strong>
-                              <p>Delivers to your address</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <div key={id} className="store-status bad">
-                            <AlertTriangle size={16} />
-                            <div>
-                              <strong>{storeName}</strong>
-                              <p>Does not deliver to your address. Choose Pickup or update your address.</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => goToStep(2)}
-                    className="btn-continue"
-                    disabled={anyCoverageMissing || storesLoading || revalidating}
-                  >
-                    {storesLoading ? 'Loading store details…' : 'Continue to Payment'}
-                  </button>
-                </div>
-              )}
-
-              {/* Step 2: Payment */}
-              {currentStep === 2 && !storeLoadFailed && (
-                <div className="checkout-section">
-                  <div className="section-header">
-                    <CreditCard size={24} />
-                    <h2>Payment Method</h2>
-                  </div>
-                  <div className="payment-methods">
-                    {[
-                      { value: 'COD', label: 'Cash on Delivery / Pickup', desc: 'Pay when you receive/pick up your order', enabled: paymentAvailability.cod },
-                      { value: 'GCASH', label: 'GCash (QR)', desc: 'Scan and pay via GCash', enabled: paymentAvailability.gcash },
-                      { value: 'QRPH', label: 'QR Ph', desc: 'Scan and pay via QR Ph', enabled: paymentAvailability.qrph },
-                    ].map(({ value, label, desc, enabled }) => (
-                      <div
-                        key={value}
-                        className={`payment-card ${paymentMethod === value ? 'selected' : ''} ${!enabled ? 'disabled' : ''}`}
-                        onClick={() => enabled && setPaymentMethod(value)}
+                    <div className="fulfillment-picker">
+                      <label
+                        className={`fulfillment-option ${fulfillmentMethod === 'DELIVERY' ? 'selected' : ''} ${!fulfillmentAvailability.delivery ? 'disabled' : ''}`}
                       >
                         <input
                           type="radio"
-                          name="payment"
-                          value={value}
-                          checked={paymentMethod === value}
-                          onChange={() => enabled && setPaymentMethod(value)}
-                          disabled={!enabled}
+                          name="fulfillment"
+                          value="DELIVERY"
+                          checked={fulfillmentMethod === 'DELIVERY'}
+                          onChange={() => setFulfillmentMethod('DELIVERY')}
+                          disabled={!fulfillmentAvailability.delivery}
                         />
-                        <div className="payment-details">
-                          <strong>{label}</strong>
-                          <p>{enabled ? desc : 'Not available for these stores'}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {(paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && activeQrStore && (
-                    <div className="qr-payment-panel">
-                      <div className="qr-payment-image">
-                        <img src={resolveImg(activeQrStore.paymentQrImage)} alt="Payment QR code" />
-                      </div>
-                      <div className="qr-payment-details">
-                        <h4>Scan to pay</h4>
-                        {activeQrStore.paymentInstructions && (
-                          <p className="qr-instructions">{activeQrStore.paymentInstructions}</p>
-                        )}
-                        <div className="form-group">
-                          <label className="form-label">Reference / Transaction ID</label>
-                          <input
-                            type="text"
-                            className="form-input"
-                            placeholder="Enter reference number from your payment app"
-                            value={paymentReference}
-                            onChange={(e) => setPaymentReference(e.target.value)}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Payment proof <span style={{ color: 'var(--t-danger-600, #dc2626)' }}>*</span></label>
-                          {paymentProofUrl ? (
-                            <div className="proof-preview">
-                              <img src={resolveImg(paymentProofUrl)} alt="Payment proof" />
-                              <button
-                                type="button"
-                                className="btn-back"
-                                onClick={() => setPaymentProofUrl('')}
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ) : (
-                            <label className="proof-uploader">
-                              <Upload size={16} />
-                              <span>{uploadingProof ? 'Uploading…' : 'Upload screenshot'}</span>
-                              <input
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp"
-                                onChange={handleProofUpload}
-                                disabled={uploadingProof}
-                                hidden
-                              />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="checkout-section-actions">
-                    <button onClick={() => goToStep(1)} className="btn-back">Back</button>
-                    <button onClick={() => goToStep(3)} className="btn-continue">Review Order</button>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Review */}
-              {currentStep === 3 && !storeLoadFailed && (
-                <div className="checkout-section">
-                  <div className="section-header">
-                    <Package size={24} />
-                    <h2>Review Your Order</h2>
-                  </div>
-
-                  <div className="review-items">
-                    <h3>Order Items ({orderableItems.length})</h3>
-                    {items.map((item) => (
-                      <div key={item.id} className={`review-item ${item.unavailable ? 'is-unavailable' : ''}`}>
-                        <ProductImage src={item.image || item.images?.[0]} alt={item.name} />
-                        <div className="review-item-details">
-                          <p className="review-item-name">{item.name}</p>
-                          <p className="review-item-quantity">
-                            {item.unavailable ? (item.unavailableReason || 'Unavailable') : `Qty: ${item.quantity}`}
+                        <Truck size={18} />
+                        <div>
+                          <strong>Delivery</strong>
+                          <p>
+                            {fulfillmentAvailability.delivery
+                              ? `Delivered to your address · ${peso(storeDeliveryFee(checkoutStore, settings, 'DELIVERY'))} delivery fee`
+                              : 'Not available for this store'}
                           </p>
                         </div>
-                        <div className="review-item-price">{item.unavailable ? '—' : `₱${(item.price * item.quantity).toFixed(2)}`}</div>
+                      </label>
+                      <label
+                        className={`fulfillment-option ${fulfillmentMethod === 'PICKUP' ? 'selected' : ''} ${!fulfillmentAvailability.pickup ? 'disabled' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="fulfillment"
+                          value="PICKUP"
+                          checked={fulfillmentMethod === 'PICKUP'}
+                          onChange={() => setFulfillmentMethod('PICKUP')}
+                          disabled={!fulfillmentAvailability.pickup}
+                        />
+                        <StoreIcon size={18} />
+                        <div>
+                          <strong>Pickup</strong>
+                          <p>{fulfillmentAvailability.pickup ? 'Pick up at the store · no delivery fee' : 'Not available for this store'}</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Address / contact */}
+                  <div className="checkout-section" id="co-address">
+                    <div className="section-header">
+                      <MapPin size={24} />
+                      <h2>{fulfillmentMethod === 'DELIVERY' ? 'Delivery Address' : 'Contact Details'}</h2>
+                    </div>
+
+                    {fulfillmentMethod === 'DELIVERY' && savedAddresses.length > 0 && (
+                      <div className="saved-address-picker">
+                        {savedAddresses.map((addr) => (
+                          <label
+                            key={addr.id}
+                            className={`saved-address-option ${selectedAddressId === addr.id ? 'selected' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name="savedAddress"
+                              checked={selectedAddressId === addr.id}
+                              onChange={() => applySavedAddress(addr)}
+                            />
+                            <div>
+                              <strong>
+                                {addr.label ? `${addr.label} — ` : ''}{addr.fullName}
+                                {addr.isDefault && <span className="saved-address-default-tag">Default</span>}
+                              </strong>
+                              <p>{addr.street}, {addr.barangay}, {addr.municipality?.name}, {addr.province || 'Oriental Mindoro'}</p>
+                              <p className="saved-address-phone">{addr.contactNumber}</p>
+                            </div>
+                          </label>
+                        ))}
+                        <label className={`saved-address-option ${selectedAddressId === null ? 'selected' : ''}`}>
+                          <input
+                            type="radio"
+                            name="savedAddress"
+                            checked={selectedAddressId === null}
+                            onChange={useManualAddress}
+                          />
+                          <div>
+                            <strong>Enter a different address</strong>
+                            <p>Use a one-off address for this order</p>
+                          </div>
+                        </label>
                       </div>
-                    ))}
-                  </div>
-
-                  <div className="review-section">
-                    <h3>{fulfillmentMethod === 'DELIVERY' ? 'Delivery Address' : 'Contact / Pickup'}</h3>
-                    <p><strong>{deliveryForm.fullName}</strong></p>
-                    <p>{deliveryForm.contactNumber}</p>
-                    {fulfillmentMethod === 'DELIVERY' ? (
-                      <p>{buildDeliveryAddress()}</p>
-                    ) : (
-                      storeIds.map((id) => (
-                        <p key={id}>
-                          <strong>{storeInfo[id]?.store?.name}:</strong> {storeInfo[id]?.store?.pickupAddress || '—'}
-                        </p>
-                      ))
                     )}
-                    <button onClick={() => goToStep(1)} className="btn-change">Change</button>
+
+                    <div className="address-form">
+                      <div className="form-group">
+                        <label className="form-label">Full Name</label>
+                        <input
+                          type="text"
+                          name="fullName"
+                          className={`form-input ${deliveryErrors.fullName ? 'form-input-error' : ''}`}
+                          placeholder="Juan Dela Cruz"
+                          value={deliveryForm.fullName}
+                          onChange={handleDeliveryChange}
+                        />
+                        {deliveryErrors.fullName && <span className="form-error">{deliveryErrors.fullName}</span>}
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Contact Number</label>
+                        <input
+                          type="text"
+                          name="contactNumber"
+                          className={`form-input ${deliveryErrors.contactNumber ? 'form-input-error' : ''}`}
+                          placeholder="09xxxxxxxxx"
+                          value={deliveryForm.contactNumber}
+                          onChange={handleDeliveryChange}
+                        />
+                        {deliveryErrors.contactNumber && <span className="form-error">{deliveryErrors.contactNumber}</span>}
+                      </div>
+
+                      {fulfillmentMethod === 'DELIVERY' && (
+                        <PhAddressPicker
+                          value={{
+                            province: deliveryForm.province,
+                            provinceCode: deliveryForm.provinceCode,
+                            municipalityId: deliveryForm.municipalityId,
+                            municipalityName: deliveryForm.municipality || deliveryForm.municipalityName,
+                            municipalityCode: deliveryForm.municipalityCode,
+                            barangay: deliveryForm.barangay,
+                            barangayCode: deliveryForm.barangayCode,
+                            street: deliveryForm.street,
+                          }}
+                          onChange={(next) => {
+                            setDeliveryForm((prev) => ({
+                              ...prev,
+                              province: next.province ?? prev.province,
+                              provinceCode: next.provinceCode ?? prev.provinceCode,
+                              municipalityId: next.municipalityId ?? prev.municipalityId,
+                              municipalityName: next.municipalityName ?? prev.municipalityName,
+                              municipality: next.municipalityName ?? prev.municipality,
+                              municipalityCode: next.municipalityCode ?? prev.municipalityCode,
+                              barangay: next.barangay ?? prev.barangay,
+                              barangayCode: next.barangayCode ?? prev.barangayCode,
+                              street: next.street ?? prev.street,
+                            }));
+                            setDeliveryErrors((prev) => ({
+                              ...prev,
+                              street: '',
+                              barangay: '',
+                              municipality: '',
+                              municipalityId: '',
+                            }));
+                          }}
+                          dbMunicipalities={municipalities}
+                          dbLoading={municipalitiesLoading}
+                          errors={deliveryErrors}
+                        />
+                      )}
+                    </div>
+
+                    {/* Per-store status */}
+                    {storeIds.length > 0 && (
+                      <div className="store-status-list">
+                        {storeIds.map((id) => {
+                          const info = storeInfo[id];
+                          const storeName = info?.store?.name || itemsByStore[id][0]?.storeName || 'Store';
+                          if (fulfillmentMethod === 'PICKUP') {
+                            return (
+                              <div key={id} className="store-status ok">
+                                <StoreIcon size={16} />
+                                <div>
+                                  <strong>{storeName}</strong>
+                                  <p>Pickup at: {info?.store?.pickupAddress || '—'}</p>
+                                  {info?.store?.pickupInstructions && (
+                                    <p className="store-status-note">{info.store.pickupInstructions}</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
+                          if (!info?.checked) return null;
+                          return info.covered ? (
+                            <div key={id} className="store-status ok">
+                              <CheckCircle size={16} />
+                              <div>
+                                <strong>{storeName}</strong>
+                                <p>Delivers to your address</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div key={id} className="store-status bad">
+                              <AlertTriangle size={16} />
+                              <div>
+                                <strong>{storeName}</strong>
+                                <p>Does not deliver to your address. Choose Pickup or update your address.</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="review-section">
-                    <h3>Payment Method</h3>
-                    <p className="review-payment">
-                      {paymentMethod === 'COD' && 'Cash on Delivery / Pickup'}
-                      {paymentMethod === 'GCASH' && `GCash — Ref: ${paymentReference || '—'}`}
-                      {paymentMethod === 'QRPH' && `QR Ph — Ref: ${paymentReference || '—'}`}
-                    </p>
-                    <button onClick={() => goToStep(2)} className="btn-change">Change</button>
+                  {/* Items, per store */}
+                  <div className="checkout-section co-items-section" id="co-items">
+                    <div className="section-header">
+                      <Package size={24} />
+                      <h2>Order Items ({itemCount})</h2>
+                    </div>
+                    {storeIds.map((id) => {
+                      const storeName = storeInfo[id]?.store?.name || itemsByStore[id][0]?.storeName || 'Store';
+                      return (
+                        <div className="co-m-store" key={id}>
+                          <div className="co-m-store-head">
+                            <StoreIcon size={18} />
+                            <span>{storeName}</span>
+                          </div>
+                          {itemsByStore[id].map((item) => (
+                            <div key={item.id} className={`co-m-item${item.unavailable ? ' is-unavailable' : ''}`}>
+                              <ProductImage src={item.image || item.images?.[0]} alt={item.name} className="co-m-item-img" />
+                              <div className="co-m-item-info">
+                                <p className="co-m-item-name">{item.name}</p>
+                                {variationText(item) && <p className="co-m-item-var">{variationText(item)}</p>}
+                                {item.unavailable ? (
+                                  <p className="co-m-item-bad">{item.unavailableReason || 'Unavailable'}</p>
+                                ) : (
+                                  <div className="co-m-item-row">
+                                    <span className="co-m-item-price">{peso(item.price)}</span>
+                                    <span className="co-m-item-qty">×{item.quantity}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                          <div className="co-m-ship">
+                            <span>
+                              {fulfillmentMethod === 'PICKUP' ? <StoreIcon size={16} /> : <Truck size={16} />}
+                              {fulfillmentMethod === 'PICKUP' ? 'Pickup at the store' : 'Delivery fee'}
+                            </span>
+                            <span>{fulfillmentMethod === 'PICKUP' ? 'No fee' : peso(shippingFee)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
-                  <div className="review-section">
-                    <h3>Order Notes (Optional)</h3>
+                  {/* Payment */}
+                  <div className="checkout-section" id="co-payment">
+                    <div className="section-header">
+                      <CreditCard size={24} />
+                      <h2>Payment Method</h2>
+                    </div>
+                    <div className="payment-methods">
+                      {[
+                        { value: 'COD', label: 'Cash on Delivery / Pickup', desc: 'Pay when you receive/pick up your order', enabled: paymentAvailability.cod, Icon: Money },
+                        { value: 'GCASH', label: 'GCash (QR)', desc: 'Scan and pay via GCash', enabled: paymentAvailability.gcash, Icon: DeviceMobile },
+                        { value: 'QRPH', label: 'QR Ph', desc: 'Scan and pay via QR Ph', enabled: paymentAvailability.qrph, Icon: QrCode },
+                      ].map(({ value, label, desc, enabled, Icon }) => (
+                        <div
+                          key={value}
+                          className={`payment-card ${paymentMethod === value ? 'selected' : ''} ${!enabled ? 'disabled' : ''}`}
+                          onClick={() => enabled && setPaymentMethod(value)}
+                        >
+                          <input
+                            type="radio"
+                            name="payment"
+                            value={value}
+                            checked={paymentMethod === value}
+                            onChange={() => enabled && setPaymentMethod(value)}
+                            disabled={!enabled}
+                          />
+                          <span className={`payment-icon payment-icon-${value.toLowerCase()}`} aria-hidden="true">
+                            <Icon size={20} />
+                          </span>
+                          <div className="payment-details">
+                            <strong>{label}</strong>
+                            <p>{enabled ? desc : 'Not available for this store'}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {(paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && activeQrStore && (
+                      <div className="qr-payment-panel">
+                        <div className="qr-payment-image">
+                          <img src={resolveImg(activeQrStore.paymentQrImage)} alt="Payment QR code" />
+                        </div>
+                        <div className="qr-payment-details">
+                          <h4>Scan to pay {peso(total)}</h4>
+                          {activeQrStore.paymentInstructions && (
+                            <p className="qr-instructions">{activeQrStore.paymentInstructions}</p>
+                          )}
+                          <div className="form-group">
+                            <label className="form-label">Reference / Transaction ID</label>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="Enter reference number from your payment app"
+                              value={paymentReference}
+                              onChange={(e) => setPaymentReference(e.target.value)}
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Payment proof <span style={{ color: 'var(--t-danger-600, #dc2626)' }}>*</span></label>
+                            {paymentProofUrl ? (
+                              <div className="proof-preview">
+                                <img src={resolveImg(paymentProofUrl)} alt="Payment proof" />
+                                <button
+                                  type="button"
+                                  className="btn-back"
+                                  onClick={() => setPaymentProofUrl('')}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="proof-uploader">
+                                <Upload size={16} />
+                                <span>{uploadingProof ? 'Uploading…' : 'Upload screenshot'}</span>
+                                <input
+                                  type="file"
+                                  accept="image/png,image/jpeg,image/webp"
+                                  onChange={handleProofUpload}
+                                  disabled={uploadingProof}
+                                  hidden
+                                />
+                              </label>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notes */}
+                  <div className="checkout-section" id="co-notes">
+                    <div className="section-header">
+                      <NotePencil size={24} />
+                      <h2>Order Notes (Optional)</h2>
+                    </div>
                     <textarea
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Add any special instructions..."
+                      placeholder="Add any special instructions for the seller…"
                       className="order-notes-textarea"
                       rows="3"
+                      maxLength={500}
                     />
                   </div>
-
-                  <div className="checkout-section-actions">
-                    <button onClick={() => goToStep(2)} className="btn-back">Back</button>
-                    <button onClick={handlePlaceOrder} disabled={isSubmitting || revalidating || unavailableItems.length > 0} className="btn-place-order">
-                      {isSubmitting ? 'Placing Order...' : 'Place Order'}
-                    </button>
-                  </div>
-                </div>
+                </>
               )}
             </div>
 
@@ -1051,29 +1020,24 @@ const Checkout = () => {
               <div className="checkout-summary">
                 <h3>Order Summary</h3>
                 <div className="summary-row">
-                  <span>Subtotal ({orderableItems.length} {orderableItems.length === 1 ? 'item' : 'items'})</span>
-                  <span>₱{subtotal.toFixed(2)}</span>
+                  <span>Subtotal ({itemCount} {itemCount === 1 ? 'item' : 'items'})</span>
+                  <span>{peso(subtotal)}</span>
                 </div>
                 <div className="summary-row">
-                  <span>{fulfillmentMethod === 'PICKUP' ? 'Pickup' : 'Shipping Fee'}</span>
-                  <span>{shippingFee === 0 ? <span className="free-text">FREE</span> : `₱${shippingFee.toFixed(2)}`}</span>
+                  <span>{fulfillmentMethod === 'PICKUP' ? 'Pickup' : 'Delivery Fee'}</span>
+                  <span>{fulfillmentMethod === 'PICKUP' ? 'No fee' : peso(shippingFee)}</span>
                 </div>
                 {appliedVoucher && discountAmount > 0 && (
                   <div className="summary-row" style={{ color: 'var(--t-primary-600, #059669)' }}>
                     <span>Voucher ({appliedVoucher.voucher.code})</span>
-                    <span>-₱{discountAmount.toFixed(2)}</span>
+                    <span>-{peso(discountAmount)}</span>
                   </div>
                 )}
                 <div className="summary-divider"></div>
                 <div className="summary-total">
                   <span>Total</span>
-                  <span className="total-amount">₱{total.toFixed(2)}</span>
+                  <span className="total-amount">{peso(total)}</span>
                 </div>
-                {fulfillmentMethod === 'DELIVERY' && freeDeliveryThreshold > 0 && subtotal < freeDeliveryThreshold && (
-                  <div className="shipping-reminder">
-                    Add ₱{(freeDeliveryThreshold - subtotal).toFixed(2)} more for free shipping
-                  </div>
-                )}
 
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--t-neutral-200, #e5e7eb)' }}>
                   <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Voucher</label>
@@ -1093,7 +1057,7 @@ const Checkout = () => {
                         type="button"
                         onClick={() => applyVoucher()}
                         disabled={voucherLoading || !voucherInput.trim() || subtotal === 0}
-                        className="btn-continue"
+                        className="btn-continue co-voucher-apply"
                         style={{ padding: '8px 12px', fontSize: 13, width: 'auto' }}
                       >
                         {voucherLoading ? '…' : 'Apply'}
@@ -1106,11 +1070,46 @@ const Checkout = () => {
                     </p>
                   )}
                 </div>
+
+                {!isPhone && (
+                  <button
+                    type="button"
+                    onClick={handlePlaceOrder}
+                    disabled={placeDisabled}
+                    className="btn-place-order co-place-desktop"
+                  >
+                    {placeLabel}
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {isPhone && (
+        <div className="co-m-bar">
+          {discountAmount > 0 && (
+            <div className="co-m-saving">
+              Voucher {appliedVoucher?.voucher?.code} saves you {peso(discountAmount)} on this order.
+            </div>
+          )}
+          <div className="co-m-bar-row">
+            <div className="co-m-total">
+              <span>Total ({itemCount} {itemCount === 1 ? 'item' : 'items'})</span>
+              <strong>{peso(total)}</strong>
+            </div>
+            <button
+              type="button"
+              className="co-m-cta"
+              onClick={handlePlaceOrder}
+              disabled={placeDisabled}
+            >
+              {placeLabel}
+            </button>
+          </div>
+        </div>
+      )}
       {identityDialog}
     </Layout>
   );
