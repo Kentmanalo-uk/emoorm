@@ -1866,3 +1866,65 @@
     animation: none;
   }
 }
+
+/* Illustrated empty state for "Suggested for You" and "Stores Near You".
+   Rendered on phones only (see usePhoneLayout in Home.jsx). */
+.home-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px 28px;
+  text-align: center;
+}
+
+.home-empty .empty-art {
+  margin-bottom: 16px;
+}
+
+.home-empty-title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #111827);
+}
+
+.home-empty-body {
+  max-width: 280px;
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.home-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 10px;
+  border: 1px solid var(--t-primary-600, #009f3a);
+  color: var(--t-primary-700, #047857);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.home-empty-btn:hover,
+.home-empty-btn:focus-visible {
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+/* Phones: the two banners under the main banner sit closer together and
+   have square corners. */
+@media (max-width: 768px) {
+  .banner-grid .banner-sidebar {
+    gap: 4px;
+    padding: 6px 12px;
+  }
+
+  .banner-grid .banner-sidebar .banner-card,
+  .banner-grid .banner-sidebar .banner-card img,
+  .banner-grid .banner-sidebar .banner-card-image-link {
+    border-radius: 0 !important;
+  }
+}

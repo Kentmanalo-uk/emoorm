@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search, WarningCircle } from '@phosphor-icons/react';
+import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search, WarningCircle, Heart } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
@@ -10,6 +10,7 @@ import useAppSettings, { quoteDeliveryFee } from '../hooks/useAppSettings';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
+import MoreMenu from '../components/MoreMenu';
 import './Cart.css';
 
 const SUGGESTION_COUNT = 12;
@@ -44,7 +45,8 @@ const renderSuggestionRating = (product) => {
 
 const Cart = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [cartSearchText, setCartSearchText] = useState(() => searchParams.get('cartSearch') || '');
   const { isAuthenticated } = useAuthStore();
   const { requireVerifiedIdentity, identityDialog } = useIdentityGate();
   const { settings } = useAppSettings();
@@ -340,10 +342,60 @@ const Cart = () => {
     </>
   );
 
+  // Phones: the cart's own head, like Messages and the other tabs: title and
+  // a ⋯ menu, then a search field. Hidden above 768px, where the site header
+  // carries the cart search instead.
+  // The field keeps its own text so fast typing never waits on the URL.
+  const setCartSearch = (value) => {
+    setCartSearchText(value);
+    const next = new URLSearchParams(searchParams);
+    if (value.trim()) next.set('cartSearch', value); else next.delete('cartSearch');
+    setSearchParams(next, { replace: true });
+  };
+  const phoneHead = (
+    <div className="cart-m-head">
+      <div className="cart-m-titlebar">
+        <h1 className="cart-m-title">
+          Cart
+          {itemCount > 0 && <span className="cart-m-count">{itemCount}</span>}
+        </h1>
+        <MoreMenu
+          className="cart-m-more"
+          buttonClassName="cart-m-more-btn"
+          label="Cart options"
+          items={[
+            { key: 'shop', icon: <Storefront size={17} />, label: 'Continue shopping', to: '/products' },
+            { key: 'wish', icon: <Heart size={17} />, label: 'My wishlist', to: '/wishlist' },
+            items.length > 0 && {
+              key: 'clear',
+              icon: <Trash2 size={17} />,
+              label: 'Clear cart',
+              danger: true,
+              onClick: handleClearCart,
+            },
+          ]}
+        />
+      </div>
+      {items.length > 0 && (
+        <label className="cart-m-search">
+          <Search size={16} />
+          <input
+            type="search"
+            value={cartSearchText}
+            onChange={(e) => setCartSearch(e.target.value)}
+            placeholder="Search in cart"
+            aria-label="Search in cart"
+          />
+        </label>
+      )}
+    </div>
+  );
+
   if (items.length === 0) {
     return (
       <Layout>
         <div className="cart-page">
+          {phoneHead}
           <div className="container">
             <div className="cart-empty">
               <ShoppingCart size={64} weight="fill" />
@@ -364,6 +416,7 @@ const Cart = () => {
   return (
     <Layout>
       <div className="cart-page">
+        {phoneHead}
         <div className="container">
           {/* Breadcrumbs */}
           <div className="breadcrumbs">

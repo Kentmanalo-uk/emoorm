@@ -17,6 +17,8 @@ import AppLogo from '../AppLogo';
 import ImageSearchModal from './ImageSearchModal';
 import './Header.css';
 import UserAvatar from '../ui/UserAvatar';
+import { isBottomNavTab } from '../../lib/navTabs';
+import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm } from '../../lib/buyerSearch';
 
 const NOTIF_TYPE = {
   ORDER_RECEIVED: { Icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New order' },
@@ -58,39 +60,6 @@ const PLACEHOLDER_SUGGESTIONS = [
   'Coconut Oil',
 ];
 
-const POPULAR_SUGGESTIONS = [
-  'Organic Honey',
-  'Banana Chips',
-  'Calamansi',
-  'Native Bag',
-  'Coconut Oil',
-];
-
-const RECENT_KEY = 'emoorm_recent_searches';
-
-const loadRecent = () => {
-  try {
-    const raw = localStorage.getItem(RECENT_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr.slice(0, 8) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveRecent = (query) => {
-  const q = query.trim();
-  if (!q) return [];
-  try {
-    const cur = loadRecent().filter((s) => s.toLowerCase() !== q.toLowerCase());
-    const next = [q, ...cur].slice(0, 8);
-    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-    return next;
-  } catch {
-    return [];
-  }
-};
-
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -116,6 +85,13 @@ const Header = () => {
 
   const cartCount = getItemCount();
   const isCartPage = location.pathname === '/cart';
+  // Phones: the bottom navigation belongs to the five tab pages; every other
+  // page has its own back button and gets the full height.
+  const isTabPage = isBottomNavTab(location.pathname);
+  useEffect(() => {
+    document.body.classList.toggle('no-bottom-nav', !isTabPage);
+    return () => document.body.classList.remove('no-bottom-nav');
+  }, [isTabPage]);
 
   useEffect(() => {
     if (!isCartPage) return;
@@ -221,9 +197,7 @@ const Header = () => {
 
   const removeRecent = (e, term) => {
     e.stopPropagation();
-    const next = recentSearches.filter((s) => s !== term);
-    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* silent */ }
-    setRecentSearches(next);
+    setRecentSearches(removeRecentTerm(term));
   };
 
   const handleLogout = () => {
@@ -617,7 +591,6 @@ const Header = () => {
               <button type="submit" aria-label="Search in cart"><Search size={19} /></button>
             </form>
           )}
-
           {/* Mobile Menu Toggle */}
           <button
             className="header-mobile-toggle"
@@ -663,7 +636,7 @@ const Header = () => {
         </div>
       )}
 
-      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+      {isTabPage && <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <Link className={location.pathname === '/' ? 'is-active' : ''} to="/">
           <HomeIcon size={21} weight={location.pathname === '/' ? 'fill' : 'regular'} />
           <span>Home</span>
@@ -687,7 +660,7 @@ const Header = () => {
           <User size={21} weight={location.pathname.startsWith('/profile') ? 'fill' : 'regular'} />
           <span>Profile</span>
         </Link>
-      </nav>
+      </nav>}
 
       <ImageSearchModal
         open={imageModalOpen}

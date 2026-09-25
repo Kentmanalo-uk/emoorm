@@ -57,8 +57,9 @@ function LinkList({ items }) {
   );
 }
 
-// App-style pages where phones hide the site footer (the bottom nav is the navigation).
-const APP_PAGE = /^\/(profile|cart|checkout|wishlist|notifications|orders)(\/|$)/;
+// On phones the site footer shows on the homepage only; every other page
+// behaves like an app screen, with the bottom nav as the navigation.
+const isAppPage = (pathname) => pathname !== '/';
 
 const Footer = () => {
   const { pathname } = useLocation();
@@ -78,7 +79,7 @@ const Footer = () => {
   const categories = useMemo(() => allCategories.slice(0, 8), [allCategories]);
 
   return (
-    <footer className={`footer${APP_PAGE.test(pathname) ? ' footer--app-page' : ''}`}>
+    <footer className={`footer${isAppPage(pathname) ? ' footer--app-page' : ''}`}>
       <div className="container">
         {/* Brand band: municipality seals (decorative) and the app mark */}
         <div className="footer-brand-band">

@@ -6,6 +6,9 @@ import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import AppLogo from '../components/AppLogo';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import AuthSheetBar from '../components/AuthSheetBar';
+import './AuthSheet.css';
 import './Login.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
 
@@ -14,6 +17,10 @@ const QR_POLL_INTERVAL_MS = 2000;
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const isPhone = usePhoneLayout();
+  // Switching between Log in and Sign up swaps the sheet without sliding it
+  // up again.
+  const sheetSwitched = Boolean(location.state?.fromSheet);
   const { login: storeLogin } = useAuthStore();
   const requestedRedirect = new URLSearchParams(location.search).get('redirect');
   const safeRedirect = requestedRedirect?.startsWith('/') ? requestedRedirect : null;
@@ -360,7 +367,7 @@ const Login = () => {
   };
 
   return (
-    <div className="login-page">
+    <div className={`login-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}>
       {/* Header */}
       <header className="login-header">
         <div className="login-header-container">
@@ -369,7 +376,7 @@ const Login = () => {
             <span className="login-logo-text">emoorm</span>
           </Link>
           <div className="login-header-actions">
-            <Link to="/register" className="login-header-link">Log In</Link>
+            <Link to="/register" className="login-header-link">Sign Up</Link>
           </div>
         </div>
       </header>
@@ -392,6 +399,7 @@ const Login = () => {
 
           {/* Right Side - Form */}
           <div className="login-form-container">
+            {isPhone && <AuthSheetBar switchTo="/register" switchLabel="Sign up" />}
             <div className="login-form-card">
               {mfaStage === 'verify' && (
                 <MfaVerify
@@ -436,7 +444,7 @@ const Login = () => {
                   apiError={apiError}
                 />
               )}
-              {mfaStage === 'credentials' && showQrLogin && (
+              {mfaStage === 'credentials' && showQrLogin && !isPhone && (
                 <QrLoginPanel
                   onBack={() => setShowQrLogin(false)}
                   onApproved={(userData, token, refreshToken) => {
@@ -445,7 +453,7 @@ const Login = () => {
                   }}
                 />
               )}
-              {mfaStage === 'credentials' && !showQrLogin && (<>
+              {mfaStage === 'credentials' && (!showQrLogin || isPhone) && (<>
                 <div className="login-form-header login-form-header-row">
                   <h2 className="login-form-title">Sign In</h2>
                   <button
@@ -531,7 +539,7 @@ const Login = () => {
 
                   {/* Divider */}
                   <div className="login-form-divider">
-                    <span className="login-form-divider-text">OR CONTINUE WITH</span>
+                    <span className="login-form-divider-text">or</span>
                   </div>
 
                   {/* Google Sign In */}
@@ -553,7 +561,7 @@ const Login = () => {
                   {/* Sign Up Link */}
                   <div className="login-form-footer">
                     <span className="login-form-footer-text">New to Emoorm? </span>
-                    <Link to="/register" className="login-form-footer-link">
+                    <Link to="/register" replace={isPhone} state={isPhone ? { ...location.state, fromSheet: true } : undefined} className="login-form-footer-link">
                       Create an account
                     </Link>
                   </div>

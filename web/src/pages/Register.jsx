@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import AppLogo from '../components/AppLogo';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import AuthSheetBar from '../components/AuthSheetBar';
+import './AuthSheet.css';
 import './Register.css';
 
 const Register = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isPhone = usePhoneLayout();
+  const sheetSwitched = Boolean(location.state?.fromSheet);
   const [searchParams] = useSearchParams();
   const { login: storeLogin } = useAuthStore();
   const requestedRedirect = searchParams.get('redirect');
@@ -250,7 +256,7 @@ const Register = () => {
   };
 
   return (
-    <div className="register-page">
+    <div className={`register-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}>
       {/* Header */}
       <header className="register-header">
         <div className="register-header-container">
@@ -280,6 +286,7 @@ const Register = () => {
 
           {/* Right Side - Form */}
           <div className="register-form-container">
+            {isPhone && <AuthSheetBar switchTo="/login" switchLabel="Log in" />}
             <div className="register-form-card">
               <div className="register-form-header">
                 <h2 className="register-form-title">Sign Up</h2>
@@ -446,7 +453,7 @@ const Register = () => {
                   <>
                     {/* Divider */}
                     <div className="register-form-divider">
-                      <span className="register-form-divider-text">OR CONTINUE WITH</span>
+                      <span className="register-form-divider-text">or</span>
                     </div>
 
                     {/* Google Sign Up */}
@@ -470,7 +477,7 @@ const Register = () => {
                 {/* Sign In Link */}
                 <div className="register-form-footer">
                   <span className="register-form-footer-text">Already have an account? </span>
-                  <Link to="/login" className="register-form-footer-link">
+                  <Link to="/login" replace={isPhone} state={isPhone ? { ...location.state, fromSheet: true } : undefined} className="register-form-footer-link">
                     Log in
                   </Link>
                 </div>

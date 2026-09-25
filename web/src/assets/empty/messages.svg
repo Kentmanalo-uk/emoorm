@@ -9,20 +9,20 @@
                 <stop offset="0" class="stop1"></stop>
                 <stop offset="1" class="stop2"></stop>
               </linearGradient>
-              <path d="M225.5,432.4c0,7.5-6,13.5-13.5,13.5l0,0H15.1c-7.4,0-13.5-6-13.5-13.5V15c0-7.5,6-13.5,13.5-13.5H212 c7.4,0,13.5,6,13.5,13.5L225.5,432.4z"></path>
+              <path style="fill:url(#messages-phone_2_)" d="M225.5,432.4c0,7.5-6,13.5-13.5,13.5l0,0H15.1c-7.4,0-13.5-6-13.5-13.5V15c0-7.5,6-13.5,13.5-13.5H212 c7.4,0,13.5,6,13.5,13.5L225.5,432.4z"></path>
               <rect x="23" y="62.4" style="fill:var(--art-paper, #fff)" class="st2" width="181" height="329.1"></rect>
               <polygon style="fill:var(--art-paper, #fff);" points="23.3,391.8 23.3,61.9 145,61.5 72.7,391.5"></polygon>
               <linearGradient id="messages-phone_3_" gradientUnits="userSpaceOnUse" x1="22.04" y1="223.035" x2="205.07" y2="223.035" gradientTransform="matrix(1 0 0 -1 0 450)">
                 <stop offset="0" class="stop1"></stop>
                 <stop offset="1" class="stop2"></stop>
               </linearGradient>
-              <rect x="23" y="62.4" class="st3" width="181" height="329.1"></rect>
+              <rect x="23" y="62.4" style="fill:none;stroke:var(--art-neutral-200, #e5e7eb);stroke-miterlimit:10;" class="st3" width="181" height="329.1"></rect>
               <linearGradient id="messages-phone_5_" gradientUnits="userSpaceOnUse" x1="94.41" y1="410.715" x2="129.33" y2="410.715" gradientTransform="matrix(1 0 0 -1 0 450)">
                 <stop offset="0" class="stop0"></stop>
                 <stop offset="1" class="stop1"></stop>
               </linearGradient>
               <path class="phone-sound" style="stroke-miterlimit:10;" d="M98.5,35.7h26.7c2,0,3.6,1.6,3.6,3.6v0c0,2-1.6,3.6-3.6,3.6H98.5c-2,0-3.6-1.6-3.6-3.6v0 C94.9,37.3,96.5,35.7,98.5,35.7z"></path>
-              <circle class="circle-phone" cx="112" cy="22.8" r="3.2"></circle>
+              <circle style="fill:url(#messages-phone_5_)" class="circle-phone" cx="112" cy="22.8" r="3.2"></circle>
               <linearGradient id="messages-phone_7_" gradientUnits="userSpaceOnUse" x1="969.6899" y1="-288.29" x2="990.7499" y2="-288.29" gradientTransform="matrix(1 0 0 -1 -868 130.5)">
                 <stop offset="0" class="stop1"></stop>
                 <stop offset="1" class="stop2"></stop>
@@ -36,4 +36,4 @@
                 <stop offset="0" class="stop1"></stop>
                 <stop offset="1" class="stop2"></stop>
               </linearGradient>
-              <circle cx="112.2" cy="418.8" r="10.5"></circle></svg>
+              <circle style="fill:url(#messages-phone_9_)" cx="112.2" cy="418.8" r="10.5"></circle></svg>

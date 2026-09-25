@@ -4,13 +4,17 @@ import {
   PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Question,
-  Eye,
+  Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut, SealCheck,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import { fetchIdentityStatus } from '../lib/identity';
 import './Profile.css';
 import UserAvatar from '../components/ui/UserAvatar';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import useWishlistStore from '../store/wishlistStore';
+import { listMyFollowing } from '../lib/follow';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -19,9 +23,25 @@ const IDENTITY_META = {
   FAILED: { label: 'Verification Failed', tone: 'error', Icon: ShieldWarning, hint: 'Please retry with a valid ID.', action: 'Retry Verification' },
 };
 
+// Phones: one line in the account lists.
+function Row({ to, icon: Icon, label, hint }) {
+  return (
+    <Link to={to} className="pf-m-row">
+      <span className="pf-m-row-icon"><Icon size={19} weight="fill" /></span>
+      <span className="pf-m-row-label">{label}</span>
+      {hint != null && <span className="pf-m-row-hint">{hint}</span>}
+      <ChevronRight size={16} className="pf-m-row-chev" />
+    </Link>
+  );
+}
+
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
+  const isPhone = usePhoneLayout();
+  const wishlistCount = useWishlistStore((st) => st.items.length);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({
@@ -75,8 +95,15 @@ const Profile = () => {
         // non-fatal — the section falls back to "Not Verified"
       }
 
-      // TODO: Fetch followed stores when endpoint is available
-      setFollowedStores([]);
+      // Followed stores and review count; neither blocks the page.
+      const [following, reviews] = await Promise.allSettled([
+        listMyFollowing(),
+        axios.get('/reviews/my/reviews', { params: { page: 1, pageSize: 1 } }),
+      ]);
+      setFollowedStores(following.status === 'fulfilled' && Array.isArray(following.value) ? following.value : []);
+      if (reviews.status === 'fulfilled') {
+        setReviewCount(reviews.value?.pagination?.total ?? (reviews.value?.data || []).length);
+      }
     } catch (error) {
       console.error('Failed to fetch profile data:', error);
     } finally {
@@ -104,6 +131,129 @@ const Profile = () => {
       <div className="profile-loading">
         <div className="profile-loading-spinner"></div>
         <p>Loading profile...</p>
+      </div>
+    );
+  }
+
+  const name = profile?.fullName || user?.fullName || 'Your account';
+  const email = profile?.email || user?.email;
+  const purchase = [
+    ['To Pay', ShoppingBag, '/profile/orders?status=pending', stats.toPayCount],
+    ['To Ship', Package, '/profile/orders?status=processing', stats.toShipCount],
+    ['To Receive', Truck, '/profile/orders?status=shipped', stats.toReceiveCount],
+    ['To Pick Up', Store, '/profile/orders?status=ready', stats.toPickupCount],
+  ];
+  if (isPhone) {
+    return (
+      <div className="pf-m">
+        <div className="profile-mobile-page-header">
+          <h1>Profile</h1>
+          <div className="profile-mobile-header-actions">
+            {user?.id && (
+              <Link to={`/u/${user.id}`} className="profile-mobile-header-action" aria-label="View public profile">
+                <Eye size={19} />
+              </Link>
+            )}
+            <Link to="/profile/settings" className="profile-mobile-header-action" aria-label="Settings">
+              <Settings size={19} />
+            </Link>
+          </div>
+        </div>
+
+        {/* Account card: tap to edit. */}
+        <section className="pf-m-card">
+          <Link to="/profile/settings" className="pf-m-id" aria-label="Edit profile">
+            <span className="pf-m-avatar">
+              <UserAvatar
+                src={profile?.profilePhoto}
+                name={name}
+                alt=""
+                fallbackClassName="profile-avatar-placeholder"
+              />
+            </span>
+            <span className="pf-m-id-text">
+              <strong>{name}</strong>
+              {email && <span>{email}</span>}
+              <em><Edit size={12} weight="bold" /> Edit profile</em>
+            </span>
+            <ChevronRight size={18} className="pf-m-row-chev" />
+          </Link>
+          <div className="pf-m-stats">
+            <Link to="/profile/followed-stores"><strong>{followedStores.length}</strong><span>Following</span></Link>
+            <Link to="/profile/wishlist"><strong>{wishlistCount}</strong><span>Wishlist</span></Link>
+            <Link to="/profile/reviews"><strong>{reviewCount}</strong><span>Reviews</span></Link>
+          </div>
+        </section>
+
+        {/* Identity: one compact row. */}
+        <Link to="/profile/verification" className={`pf-m-identity is-${identityMeta.tone}`}>
+          <span className="pf-m-identity-icon">
+            {identityStatus === 'VERIFIED' ? <SealCheck size={22} weight="fill" /> : <IdentityIcon size={22} weight="fill" />}
+          </span>
+          <span className="pf-m-identity-text">
+            <strong>{identityStatus === 'VERIFIED' ? 'Identity verified' : identityStatus === 'NOT_VERIFIED' ? 'Verify your identity' : identityMeta.label}</strong>
+            <span>{identityMeta.hint}</span>
+          </span>
+          {identityStatus === 'VERIFIED'
+            ? <ChevronRight size={16} className="pf-m-row-chev" />
+            : <span className="pf-m-identity-cta">{identityStatus === 'NOT_VERIFIED' ? 'Verify' : identityStatus === 'FAILED' ? 'Retry' : 'View'}</span>}
+        </Link>
+
+        <section className="pf-m-section">
+          <div className="pf-m-section-head">
+            <h2>My Purchase</h2>
+            <Link to="/profile/orders">See all <ChevronRight size={13} weight="bold" /></Link>
+          </div>
+          <div className="pf-m-purchase">
+            {purchase.map(([label, Icon, to, count]) => (
+              <Link key={label} to={to}>
+                <span className="pf-m-purchase-icon">
+                  <Icon size={24} />
+                  {count > 0 && <b>{count > 99 ? '99+' : count}</b>}
+                </span>
+                <span>{label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="pf-m-section pf-m-list">
+          <h2>Orders &amp; shopping</h2>
+          <Row to="/profile/orders" icon={Package} label="My Orders" />
+          <Row to="/profile/returns" icon={ArrowCounterClockwise} label="Returns & refunds" />
+          <Row to="/profile/addresses" icon={MapPin} label="My Addresses" />
+          <Row to="/profile/wishlist" icon={Heart} label="Wishlist" hint={wishlistCount || null} />
+          <Row to="/profile/followed-stores" icon={Store} label="Followed Stores" hint={followedStores.length || null} />
+          <Row to="/profile/reviews" icon={Star} label="My Reviews" hint={reviewCount || null} />
+        </section>
+
+        <section className="pf-m-section pf-m-list">
+          <h2>Inbox</h2>
+          <Row to="/profile/messages" icon={MessageSquare} label="Messages" />
+          <Row to="/profile/notifications" icon={Bell} label="Notifications" />
+        </section>
+
+        <section className="pf-m-section pf-m-list">
+          <h2>More</h2>
+          <Row to="/sell" icon={ShoppingBag} label="Sell on Emoorm" />
+          <Row to="/profile/support" icon={Lifebuoy} label="Help & Support" />
+          <Row to="/profile/reports" icon={Flag} label="My Reports" />
+          <Row to="/profile/settings" icon={Settings} label="Settings" />
+        </section>
+
+        <button type="button" className="pf-m-signout" onClick={() => setSignOutOpen(true)}>
+          <SignOut size={18} weight="bold" /> Log out
+        </button>
+
+        <ConfirmDialog
+          open={signOutOpen}
+          title="Log out?"
+          message="You will need to log in again to place orders and see your account."
+          confirmLabel="Log out"
+          danger
+          onConfirm={() => { setSignOutOpen(false); logout(); navigate('/login'); }}
+          onCancel={() => setSignOutOpen(false)}
+        />
       </div>
     );
   }
@@ -146,11 +296,11 @@ const Profile = () => {
                 <span className="profile-stat-label">Following</span>
               </div>
               <div className="profile-stat-item">
-                <span className="profile-stat-number">4</span>
+                <span className="profile-stat-number">{wishlistCount}</span>
                 <span className="profile-stat-label">Wishlist</span>
               </div>
               <div className="profile-stat-item">
-                <span className="profile-stat-number">0</span>
+                <span className="profile-stat-number">{reviewCount}</span>
                 <span className="profile-stat-label">Reviews</span>
               </div>
             </div>

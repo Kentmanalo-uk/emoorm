@@ -1032,6 +1032,24 @@
   color: var(--t-neutral-900, #111827);
 }
 
+/* Phones: the image-search button is a primary way in on a small screen.
+   The desktop 15px padding left only 8px for the icon once the button
+   narrows to 38px, so the camera was being squashed to a speck — the padding
+   goes, and the icon is sized explicitly (overriding the SVG's own width and
+   height attributes; the viewBox keeps it sharp). */
+@media (max-width: 768px) {
+  .header-search-camera {
+    padding: 0;
+    color: var(--t-neutral-500, #6b7280);
+  }
+
+  .header-search-camera svg {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+  }
+}
+
 .header-search-button {
   background-color: var(--t-primary-600, #009f3a);
   border: none;
@@ -1525,14 +1543,126 @@
 }
 
 /* ── Mobile: the logo + search header belongs to Home only ──
-   Other buyer pages have their own page titles and the bottom navigation;
-   the Cart keeps its dedicated cart header. */
+   Other buyer pages, the Cart included, have their own page titles and the
+   bottom navigation. */
 @media (max-width: 768px) {
-  .header:not(.is-home):not(.is-cart) {
+  .header:not(.is-home) {
     display: none;
   }
 
-  .header-spacer:not(.is-home):not(.is-cart) {
+  .header-spacer:not(.is-home) {
     height: 0;
+  }
+}
+
+
+/* ── Home header on phones: one rounded search pill ─────────────────
+   Logo, then a pill holding the text, the camera and a round green search
+   button, instead of a grey box butted against a square button. On focus
+   the pill turns white with a green edge, and the suggestions open as a
+   full-width sheet under the header with larger rows for thumbs.
+   (The .header box is transformed for hide-on-scroll, so a fixed child is
+   placed against the header itself: top: 100% sits right under it.) */
+@media (max-width: 768px) {
+  .header.is-home .header-container {
+    gap: 10px;
+  }
+
+  .header.is-home .header-search {
+    align-items: center;
+    height: 44px;
+    padding: 0 4px 0 0;
+    border: 1.5px solid transparent;
+    border-radius: 999px;
+    background: var(--t-neutral-100, #f3f4f6);
+    transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .header.is-home .header-search:focus-within {
+    border-color: var(--t-primary-500, #10b981);
+    background: var(--t-neutral-0, #fff);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+  }
+
+  .header.is-home .header-search-input {
+    height: 100%;
+    padding: 0 0 0 16px;
+    font-size: 16px; /* 16px keeps iOS from zooming in on focus */
+  }
+
+  .header.is-home .header-search-placeholder {
+    left: 16px;
+    font-size: 15px;
+  }
+
+  .header.is-home .header-search-camera {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+
+  .header.is-home .header-search-camera:active {
+    background: var(--t-neutral-200, #e5e7eb);
+  }
+
+  .header.is-home .header-search-button {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    margin-left: 2px;
+    border-radius: 50%;
+  }
+
+  .header.is-home .header-search-button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .header.is-home .header-search-suggest {
+    position: fixed;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 70vh;
+    padding: 8px 0 12px;
+    border: none;
+    border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+    border-radius: 0 0 18px 18px;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+    animation: header-suggest-in 180ms ease-out both;
+  }
+
+  .header.is-home .hss-group-title {
+    padding: 10px 16px 6px;
+  }
+
+  .header.is-home .hss-row {
+    gap: 12px;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  .header.is-home .hss-row-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  /* No hover on touch screens: the remove button is always there. */
+  .header.is-home .hss-row-remove {
+    width: 30px;
+    height: 30px;
+    opacity: 1;
+  }
+}
+
+@keyframes header-suggest-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header.is-home .header-search-suggest {
+    animation: none;
   }
 }

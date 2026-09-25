@@ -594,7 +594,7 @@
 }
 
 @media (max-width: 768px) {
-  /* Account and checkout screens behave like an app on phones: no site footer. */
+  /* Every page but the homepage behaves like an app on phones: no site footer. */
   .footer.footer--app-page {
     display: none;
   }

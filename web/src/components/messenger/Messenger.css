@@ -1306,3 +1306,19 @@
     right: 12px;
   }
 }
+
+/* Phones: the Messages title lines up with the other tabs (centred in a
+   48px row, 12px from the left, as on Profile). */
+@media (max-width: 768px) {
+  .messages-page {
+    padding-top: 10px;
+  }
+
+  .messages-page-title {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    margin: 0 0 6px;
+    padding: 0 12px;
+  }
+}

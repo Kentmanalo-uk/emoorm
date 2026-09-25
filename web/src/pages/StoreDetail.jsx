@@ -15,6 +15,19 @@ import {
   Heart,
   Users,
   SealCheck,
+  ShareNetwork,
+  Truck,
+  Storefront,
+  Money,
+  Clock,
+  User,
+  Rows,
+  GridFour,
+  ArrowUp,
+  ArrowDown,
+  SquaresFour,
+  Info,
+  Plus,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -29,6 +42,8 @@ import {
 } from '../lib/follow';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import MoreMenu from '../components/MoreMenu';
 import './StoreDetail.css';
 
 const SORTS = [
@@ -57,7 +72,13 @@ export default function StoreDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
-  const { addItem } = useCartStore();
+  const { addItem, getItemCount } = useCartStore();
+  const cartCount = getItemCount();
+  const isPhone = usePhoneLayout();
+  // Phones: Products / Categories / About, list or grid, product search.
+  const [mobileTab, setMobileTab] = useState('products');
+  const [mobileLayout, setMobileLayout] = useState('list');
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const [store, setStore] = useState(null);
   const [products, setProducts] = useState([]);
@@ -80,6 +101,8 @@ export default function StoreDetail() {
     setActiveCategory('all');
     setSortKey('newest');
     setRawSearch('');
+    setMobileTab('products');
+    setSearchOpen(false);
   }, [slug]);
 
   useEffect(() => {
@@ -140,6 +163,40 @@ export default function StoreDetail() {
     }
     addItem({ ...product, quantity: 1 });
     toast.success(`${product.name} added to cart`);
+  };
+
+  // Phones: the same rules as the product list (options are picked on the
+  // product page), and guests may fill a cart, as on the product page.
+  const addToCartPhone = (product) => {
+    if (Array.isArray(product.variations) && product.variations.length > 0) {
+      navigate(`/product/${product.slug}`);
+      return false;
+    }
+    try {
+      addItem({
+        id: product.id,
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        image: (Array.isArray(product.images) ? product.images[0] : null) || '/placeholder-product.png',
+        storeId: store.id,
+        storeName: store.name,
+        storeLogo: store.logo || null,
+        stock: product.stock,
+        slug: product.slug,
+        categoryId: product.categoryId,
+        selectedVariations: null,
+      }, 1);
+      toast.success(`${product.name} added to cart`);
+      return true;
+    } catch (error) {
+      toast.error(error.message || 'Failed to add to cart');
+      return false;
+    }
+  };
+
+  const buyNowPhone = (product) => {
+    if (addToCartPhone(product)) setTimeout(() => navigate('/cart'), 250);
   };
 
   const handleToggleFollow = async () => {
@@ -260,10 +317,312 @@ export default function StoreDetail() {
   const isFollowing = !!store.isFollowing;
   const isOwnStore = user?.id && store.ownerId === user.id;
   const categories = Array.isArray(store.categories) ? store.categories : [];
+  const offersDelivery = store.fulfillmentMode === 'DELIVERY' || store.fulfillmentMode === 'BOTH';
+  const offersPickup = store.fulfillmentMode === 'PICKUP' || store.fulfillmentMode === 'BOTH';
+
+  const openReport = () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to report');
+      return;
+    }
+    setShowReport(true);
+  };
+
+  const openChat = () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to chat');
+      return;
+    }
+    navigate(`/messages?store=${store.id}`);
+  };
+
+  const shareStore = async () => {
+    const url = `${window.location.origin}/store/${store.slug}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: store.name, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      toast.success('Shop link copied');
+    } catch (err) {
+      if (err?.name !== 'AbortError') toast.error('Could not share this shop');
+    }
+  };
+
+  const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate('/stores'));
+  const perkLabels = [
+    offersDelivery && 'Delivery',
+    offersPickup && 'Pickup',
+    store.acceptsCod && 'COD',
+  ].filter(Boolean);
+  const activeCategoryName = categories.find((c) => c.id === activeCategory)?.name;
+  const priceSort = sortKey === 'price_asc' || sortKey === 'price_desc';
+  const openSearch = () => {
+    setMobileTab('products');
+    setSearchOpen(true);
+  };
+  const pickCategory = (id) => {
+    onCategoryChange(id);
+    setMobileTab('products');
+  };
 
   return (
-    <Layout>
-      <div className="shop-page" style={themeStyle}>
+    <Layout phoneBar={false}>
+      <div className={`shop-page${isPhone ? ' is-phone' : ''}`} style={themeStyle}>
+        {isPhone && (
+          <div className="shop-m-hero">
+            <div className="shop-m-backdrop" aria-hidden="true">
+              {banner ? <img src={resolveImg(banner)} alt="" /> : null}
+            </div>
+
+            <div className="shop-m-topbar">
+              <button type="button" className="shop-m-icon" onClick={goBack} aria-label="Back">
+                <ChevronLeft size={24} weight="bold" />
+              </button>
+              <div className="shop-m-topbar-right">
+                <button type="button" className="shop-m-icon" onClick={openSearch} aria-label="Search this shop">
+                  <Search size={22} />
+                </button>
+                <button type="button" className="shop-m-icon" onClick={shareStore} aria-label="Share shop">
+                  <ShareNetwork size={22} />
+                </button>
+                <Link to="/cart" className="shop-m-icon shop-m-cart" aria-label={`Cart, ${cartCount} items`}>
+                  <ShoppingCart size={22} />
+                  {cartCount > 0 && <b>{cartCount > 99 ? '99+' : cartCount}</b>}
+                </Link>
+                <MoreMenu
+                  className="shop-m-more"
+                  buttonClassName="shop-m-icon"
+                  label="Shop options"
+                  iconSize={22}
+                  items={[
+                    { key: 'about', icon: <Info size={17} />, label: 'About this shop', onClick: () => setMobileTab('about') },
+                    { key: 'all', icon: <Storefront size={17} />, label: 'All stores', to: '/stores' },
+                    !isOwnStore && { key: 'report', icon: <Flag size={17} />, label: 'Report shop', onClick: openReport },
+                  ]}
+                />
+              </div>
+            </div>
+
+            <div className="shop-m-card">
+              <button type="button" className="shop-m-band" onClick={() => setMobileTab('about')}>
+                <span className="shop-m-band-brand">
+                  <Storefront size={15} weight="fill" /> Local shop
+                  {store.owner?.identityVerified && <SealCheck size={14} weight="fill" className="shop-m-band-seal" />}
+                </span>
+                <span className="shop-m-band-perks">
+                  {perkLabels.length ? perkLabels.join(' · ') : (store.municipality?.name || 'Oriental Mindoro')}
+                  <ChevronRight size={13} weight="bold" />
+                </span>
+              </button>
+
+              <div className="shop-m-main">
+                <div className="shop-m-logo">
+                  {store.logo ? <img src={resolveImg(store.logo)} alt="" /> : <span>{initials}</span>}
+                </div>
+                <div className="shop-m-id-text">
+                  <button type="button" className="shop-m-name" onClick={() => setMobileTab('about')}>
+                    <h1>{store.name}</h1>
+                    <ChevronRight size={15} weight="bold" />
+                  </button>
+                  <div className="shop-m-rating-row">
+                    {rating > 0 ? (
+                      <span className="shop-m-rating"><Star size={12} weight="fill" /> {rating.toFixed(1)}</span>
+                    ) : (
+                      <span className="shop-m-rating is-new">New</span>
+                    )}
+                    <span className="shop-m-counts">
+                      {productCount} {productCount === 1 ? 'product' : 'products'} · {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
+                    </span>
+                  </div>
+                </div>
+                <div className="shop-m-cta">
+                  {!isOwnStore && (
+                    <button
+                      type="button"
+                      className={`shop-m-follow${isFollowing ? ' is-following' : ''}`}
+                      onClick={handleToggleFollow}
+                      disabled={followBusy}
+                    >
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </button>
+                  )}
+                  <button type="button" className="shop-m-message" onClick={openChat}>Message</button>
+                </div>
+              </div>
+
+              {(store.description || store.municipality?.name) && (
+                <div className="shop-m-note">
+                  <div className="shop-m-note-text">
+                    <strong>
+                      <MapPin size={13} weight="fill" /> {store.municipality?.name || 'Oriental Mindoro'}
+                    </strong>
+                    {store.description && <span>{store.description}</span>}
+                  </div>
+                  <button type="button" onClick={() => setMobileTab('about')}>View</button>
+                </div>
+              )}
+            </div>
+
+            <div className="shop-m-tabs" role="tablist">
+              {[
+                ['products', 'Products'],
+                ['categories', 'Categories'],
+                ['about', 'About'],
+              ].map(([key, label]) => (
+                <button
+                  type="button"
+                  role="tab"
+                  key={key}
+                  aria-selected={mobileTab === key}
+                  className={`shop-m-tab${mobileTab === key ? ' is-active' : ''}`}
+                  onClick={() => setMobileTab(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {mobileTab === 'categories' && (
+              <div className="shop-m-panel">
+                {categories.length === 0 ? (
+                  <p className="shop-m-muted">This shop hasn&rsquo;t sorted its products into categories yet.</p>
+                ) : (
+                  <div className="shop-m-cats">
+                    <button type="button" className="shop-m-cat" onClick={() => pickCategory('all')}>
+                      <span className="shop-m-cat-all"><SquaresFour size={26} weight="fill" /></span>
+                      <strong>All products</strong>
+                      <small>{productCount}</small>
+                    </button>
+                    {categories.map((c) => (
+                      <button type="button" key={c.id} className="shop-m-cat" onClick={() => pickCategory(c.id)}>
+                        <span className="shop-m-cat-img">
+                          {c.image ? <img src={resolveImg(c.image)} alt="" /> : <Package size={24} />}
+                        </span>
+                        <strong>{c.name}</strong>
+                        <small>{c.count ?? ''}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {mobileTab === 'about' && (
+              <div className="shop-m-panel">
+                {store.description && <p className="shop-m-about-desc">{store.description}</p>}
+                <div className="shop-m-about-stats">
+                  <div><strong>{rating > 0 ? rating.toFixed(1) : '—'}</strong><span>{reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}</span></div>
+                  <div><strong>{productCount}</strong><span>{productCount === 1 ? 'product' : 'products'}</span></div>
+                  <div><strong>{followerCount}</strong><span>{followerCount === 1 ? 'follower' : 'followers'}</span></div>
+                </div>
+                {(offersDelivery || offersPickup || store.acceptsCod) && (
+                  <div className="shop-m-perks">
+                    {offersDelivery && <span><Truck size={14} /> Delivery</span>}
+                    {offersPickup && <span><Storefront size={14} /> Pickup</span>}
+                    {store.acceptsCod && <span><Money size={14} /> Cash on delivery</span>}
+                  </div>
+                )}
+                <ul className="shop-m-details">
+                  {store.owner?.fullName && (
+                    <li><User size={15} /><span className="shop-m-details-label">Seller</span><span>{store.owner.fullName}</span></li>
+                  )}
+                  {store.owner?.identityVerified && (
+                    <li><SealCheck size={15} /><span className="shop-m-details-label">ID</span><span>Seller identity verified</span></li>
+                  )}
+                  {store.municipality?.name && (
+                    <li><MapPin size={15} /><span className="shop-m-details-label">Town</span><span>{store.municipality.name}</span></li>
+                  )}
+                  {store.pickupAddress && (
+                    <li><Storefront size={15} /><span className="shop-m-details-label">Pickup</span><span>{store.pickupAddress}</span></li>
+                  )}
+                  {store.businessHours && (
+                    <li><Clock size={15} /><span className="shop-m-details-label">Hours</span><span>{store.businessHours}</span></li>
+                  )}
+                  {store.createdAt && (
+                    <li><Package size={15} /><span className="shop-m-details-label">Joined</span><span>{new Date(store.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span></li>
+                  )}
+                </ul>
+                {!isOwnStore && (
+                  <button type="button" className="shop-m-report" onClick={openReport}>
+                    <Flag size={15} /> Report this shop
+                  </button>
+                )}
+              </div>
+            )}
+
+            {mobileTab === 'products' && (
+              <div className="shop-m-sortbar">
+                <div className="shop-m-sorts" role="toolbar" aria-label="Sort products">
+                  <button
+                    type="button"
+                    className={sortKey === 'newest' ? 'is-active' : ''}
+                    onClick={() => onSortChange('newest')}
+                  >
+                    Newest
+                  </button>
+                  <button
+                    type="button"
+                    className={sortKey === 'popular' || sortKey === 'best' ? 'is-active' : ''}
+                    onClick={() => onSortChange('popular')}
+                  >
+                    Popular
+                  </button>
+                  <button
+                    type="button"
+                    className={priceSort ? 'is-active' : ''}
+                    onClick={() => onSortChange(sortKey === 'price_asc' ? 'price_desc' : 'price_asc')}
+                    aria-label={sortKey === 'price_desc' ? 'Price, high to low' : 'Price, low to high'}
+                  >
+                    Price
+                    {priceSort && (sortKey === 'price_desc' ? <ArrowDown size={12} weight="bold" /> : <ArrowUp size={12} weight="bold" />)}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="shop-m-layout"
+                  onClick={() => setMobileLayout((v) => (v === 'list' ? 'grid' : 'list'))}
+                  aria-label={mobileLayout === 'list' ? 'Show as grid' : 'Show as list'}
+                >
+                  {mobileLayout === 'list' ? <GridFour size={20} /> : <Rows size={20} />}
+                </button>
+              </div>
+            )}
+
+            {mobileTab === 'products' && (searchOpen || rawSearch || activeCategory !== 'all') && (
+              <div className="shop-m-filters">
+                {(searchOpen || rawSearch) && (
+                  <div className="shop-m-search">
+                    <Search size={17} />
+                    <input
+                      type="search"
+                      enterKeyHint="search"
+                      value={rawSearch}
+                      onChange={(e) => onSearchChange(e.target.value)}
+                      placeholder={`Search ${store.name}`}
+                      aria-label="Search this shop"
+                      autoFocus={searchOpen && !rawSearch}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { onSearchChange(''); setSearchOpen(false); }}
+                      aria-label="Close search"
+                    >
+                      <X size={14} weight="bold" />
+                    </button>
+                  </div>
+                )}
+                {activeCategory !== 'all' && activeCategory !== 'new' && activeCategoryName && (
+                  <button type="button" className="shop-m-activecat" onClick={() => onCategoryChange('all')}>
+                    {activeCategoryName} <X size={12} weight="bold" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Hero */}
         <div className="shop-hero">
           <div className="shop-hero-banner">
@@ -355,26 +714,14 @@ export default function StoreDetail() {
                 <button
                   type="button"
                   className="shop-btn shop-btn-outline"
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      toast.error('Please login to chat');
-                      return;
-                    }
-                    navigate(`/messages?store=${store.id}`);
-                  }}
+                  onClick={openChat}
                 >
                   <MessageCircle size={14} /> Message
                 </button>
                 <button
                   type="button"
                   className="shop-btn shop-btn-outline"
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      toast.error('Please login to report');
-                      return;
-                    }
-                    setShowReport(true);
-                  }}
+                  onClick={openReport}
                 >
                   <Flag size={14} /> Report
                 </button>
@@ -408,7 +755,7 @@ export default function StoreDetail() {
         </div>
 
         {/* Products */}
-        <div className="shop-container shop-products-section">
+        <div className={`shop-container shop-products-section${isPhone && mobileTab !== 'products' ? ' is-hidden-phone' : ''}`}>
           {/* Toolbar */}
           <div className="shop-toolbar">
             <div className="shop-toolbar-left">
@@ -483,7 +830,7 @@ export default function StoreDetail() {
             </div>
           ) : products.length === 0 ? (
             <div className="shop-empty">
-              <Package size={40} weight="fill" />
+              <span className="shop-empty-icon"><Package size={isPhone ? 30 : 40} weight="fill" /></span>
               <p>
                 {search
                   ? `No products match “${search}”.`
@@ -503,6 +850,17 @@ export default function StoreDetail() {
                   Reset filters
                 </button>
               )}
+            </div>
+          ) : isPhone && mobileLayout === 'list' ? (
+            <div className="shop-m-list">
+              {products.map((product) => (
+                <PhoneProductRow
+                  key={product.id}
+                  product={product}
+                  onAdd={() => addToCartPhone(product)}
+                  onBuy={() => buyNowPhone(product)}
+                />
+              ))}
             </div>
           ) : (
             <div className="shop-grid">
@@ -602,5 +960,52 @@ function ProductCard({ product, onAddToCart }) {
         )}
       </div>
     </Link>
+  );
+}
+
+/** Phones: one product per row, like the reference: photo, name, rating and
+ *  sales, price, then add-to-cart and Buy. */
+function PhoneProductRow({ product, onAdd, onBuy }) {
+  const price = Number(product.price);
+  const images = Array.isArray(product.images) ? product.images : [];
+  const rating = Number(product.averageRating || 0);
+  const reviews = Number(product.reviewCount || 0);
+  const sold = Number(product.soldCount || 0);
+  const soldOut = Number(product.stock) === 0;
+  return (
+    <div className="shop-m-row">
+      <Link to={`/product/${product.slug}`} className="shop-m-row-img">
+        <ProductImage src={images[0] || null} alt={product.name} />
+        {soldOut && <span className="shop-m-row-soldout">Sold out</span>}
+      </Link>
+      <div className="shop-m-row-body">
+        <Link to={`/product/${product.slug}`} className="shop-m-row-name">{product.name}</Link>
+        <div className="shop-m-row-meta">
+          {reviews > 0 ? (
+            <span className="shop-m-row-stars">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} size={12} weight={i < Math.round(rating) ? 'fill' : 'regular'} />
+              ))}
+              <em>{rating.toFixed(1)}</em>
+            </span>
+          ) : (
+            <span className="shop-m-row-new">New</span>
+          )}
+          {sold > 0 && <span className="shop-m-row-sold">{sold} sold</span>}
+        </div>
+        <div className="shop-m-row-foot">
+          <span className="shop-m-row-price">₱{price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <div className="shop-m-row-actions">
+            <button type="button" className="shop-m-row-cart" onClick={onAdd} disabled={soldOut} aria-label={`Add ${product.name} to cart`}>
+              <ShoppingCart size={18} />
+              <Plus size={9} weight="bold" className="shop-m-row-plus" />
+            </button>
+            <button type="button" className="shop-m-row-buy" onClick={onBuy} disabled={soldOut}>
+              Buy
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

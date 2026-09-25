@@ -1209,3 +1209,366 @@
 .profile-edit-button--ghost:hover {
   background-color: var(--t-neutral-50, #f9fafb);
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   Profile on phones (rendered only at ≤768px, see Profile.jsx)
+   Account card (tap to edit) with tappable counts, a one-line identity
+   row, My Purchase, grouped lists reaching every account page, Log out.
+   ════════════════════════════════════════════════════════════════════ */
+.pf-m {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px;
+}
+
+.pf-m-card,
+.pf-m-section,
+.pf-m-identity {
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+}
+
+/* ── account card ── */
+.pf-m-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pf-m-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.pf-m-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pf-m-id-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pf-m-id-text strong {
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pf-m-id-text span {
+  overflow: hidden;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pf-m-id-text em {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: var(--t-primary-700, #047857);
+  font-size: 12.5px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.pf-m-row-chev {
+  flex-shrink: 0;
+  color: var(--t-neutral-300, #d1d5db);
+}
+
+.pf-m-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.pf-m-stats a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 12px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pf-m-stats a + a {
+  border-left: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.pf-m-stats a:active {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.pf-m-stats strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.pf-m-stats span {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+}
+
+/* ── identity row ── */
+.pf-m-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pf-m-identity-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-600, #d97706);
+}
+
+.pf-m-identity.is-success .pf-m-identity-icon {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-600, #059669);
+}
+
+.pf-m-identity.is-error .pf-m-identity-icon {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-600, #dc2626);
+}
+
+.pf-m-identity.is-pending .pf-m-identity-icon {
+  background: var(--t-info-50, #eff6ff);
+  color: var(--t-info-600, #2563eb);
+}
+
+.pf-m-identity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pf-m-identity-text strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.pf-m-identity-text span {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+}
+
+.pf-m-identity-cta {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ── sections ── */
+.pf-m-section {
+  padding: 14px 16px;
+}
+
+.pf-m-section h2 {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 15.5px;
+  font-weight: 800;
+}
+
+.pf-m-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pf-m-section-head a {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.pf-m-purchase {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 12px;
+}
+
+.pf-m-purchase a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 12.5px;
+  text-decoration: none;
+}
+
+.pf-m-purchase-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.pf-m-purchase-icon b {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--t-neutral-0, #fff);
+  border-radius: 999px;
+  background: var(--t-accent-500, #ec4899);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* ── lists ── */
+.pf-m-list {
+  padding: 14px 0 4px;
+}
+
+.pf-m-list h2 {
+  padding: 0 16px 4px;
+}
+
+.pf-m-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.pf-m-row + .pf-m-row {
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.pf-m-row:active {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.pf-m-row-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-600, #059669);
+}
+
+.pf-m-row-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.pf-m-row-hint {
+  color: var(--t-neutral-400, #9ca3af);
+  font-size: 13px;
+}
+
+/* ── log out ── */
+.pf-m-signout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border: 1px solid var(--t-danger-200, #fecaca);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-danger-600, #dc2626);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pf-m-signout:active {
+  background: var(--t-danger-50, #fef2f2);
+}
+
+/* Phones: header buttons (public profile, settings, help) are circles;
+   My Purchase shows icons only; list icons sit bare, filled black. */
+@media (max-width: 768px) {
+  .profile-mobile-header-action {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+  }
+
+  .pf-m-purchase-icon {
+    width: auto;
+    height: 32px;
+    background: none;
+  }
+
+  .pf-m-purchase-icon b {
+    top: -4px;
+    right: -10px;
+  }
+
+  .pf-m-row-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 0;
+    background: none;
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .pf-m-row {
+    gap: 14px;
+  }
+}

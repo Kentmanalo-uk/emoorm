@@ -1734,3 +1734,123 @@
     min-height: 44px;
   }
 }
+
+/* ── Phone page head (≤768px) ────────────────────────────────────────
+   Matches Messages and the other tabs: bold title on the page background
+   with the ⋯ menu on the right, then a grey search field. It replaces the
+   breadcrumbs and the white "Cart" band on phones. */
+.cart-m-head {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .cart-page {
+    padding-top: 12px;
+  }
+
+  .cart-m-head {
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .cart-m-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 0 16px;
+  }
+
+  .cart-m-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .cart-m-count {
+    min-width: 22px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #047857);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .cart-m-more-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 12px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-900, #111827);
+    cursor: pointer;
+  }
+
+  .cart-m-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 16px;
+    padding: 10px 12px;
+    min-height: 44px;
+    border-radius: 10px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-500, #6b7280);
+  }
+
+  .cart-m-search input {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--t-neutral-900, #111827);
+    font-size: 14px;
+  }
+
+  .cart-m-search input::placeholder {
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .cart-page .breadcrumbs,
+  .cart-page .cart-header {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .cart-m-titlebar {
+    padding: 0 12px;
+  }
+
+  .cart-m-search {
+    margin: 0 12px;
+  }
+}
+
+/* Phones: cart header lines up with the other tabs (title centred in a
+   48px row, as on Profile); the ⋯ button is a circle. */
+@media (max-width: 768px) {
+  .cart-page {
+    padding-top: 10px;
+  }
+
+  .cart-m-titlebar {
+    min-height: 48px;
+  }
+
+  .cart-m-more-btn {
+    border-radius: 50%;
+  }
+}

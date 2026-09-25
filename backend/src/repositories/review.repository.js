@@ -177,22 +177,34 @@ const softDeleteReview = async (id) => {
  * @returns {Promise<Object>} Average rating and count
  */
 const getProductRatingStats = async (productId) => {
-  const stats = await prisma.review.aggregate({
-    where: {
-      productId,
-      deletedAt: null,
-    },
-    _avg: {
-      rating: true,
-    },
-    _count: {
-      id: true,
-    },
+  const where = { productId, deletedAt: null };
+  const [stats, byRating] = await Promise.all([
+    prisma.review.aggregate({
+      where,
+      _avg: {
+        rating: true,
+      },
+      _count: {
+        id: true,
+      },
+    }),
+    prisma.review.groupBy({
+      by: ['rating'],
+      where,
+      _count: { id: true },
+    }),
+  ]);
+
+  // How many reviews gave each star rating, 1 through 5 (zeros included).
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  byRating.forEach((row) => {
+    if (distribution[row.rating] !== undefined) distribution[row.rating] = row._count.id;
   });
 
   return {
     averageRating: stats._avg.rating || 0,
     totalReviews: stats._count.id,
+    distribution,
   };
 };
 

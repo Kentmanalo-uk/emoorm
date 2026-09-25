@@ -19,3 +19,72 @@
     padding-bottom: calc(72px + env(safe-area-inset-bottom));
   }
 }
+
+/* Phones: pages without the bottom navigation don't reserve room for it. */
+@media (max-width: 768px) {
+  body.no-bottom-nav .layout-main {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Phones: back button above the page title on pages without the bottom
+   navigation (see Layout.jsx). */
+.layout-back-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .layout-back-bar {
+    position: sticky;
+    top: 0;
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    height: 52px;
+    padding: env(safe-area-inset-top, 0px) 6px 0;
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .layout-back-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--t-neutral-900, #111827);
+    cursor: pointer;
+  }
+
+  .layout-back-btn:active {
+    background: var(--t-neutral-200, #e5e7eb);
+  }
+
+  .layout-back-bar {
+    gap: 4px;
+  }
+
+  .layout-back-btn {
+    flex-shrink: 0;
+  }
+
+  /* The page's own title, moved up beside the arrow. */
+  .layout-back-title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--t-neutral-900, #111827);
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* ...and hidden where it was. */
+  [data-in-back-bar] {
+    display: none !important;
+  }
+}

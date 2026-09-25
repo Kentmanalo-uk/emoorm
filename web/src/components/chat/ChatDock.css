@@ -590,47 +590,6 @@
   color: var(--t-primary-700, #047857);
 }
 
-/* Narrow screens: one pane at a time */
-@media (max-width: 640px) {
-  .cd-panes {
-    grid-template-columns: 1fr;
-  }
-
-  .cd-side {
-    border-right: 0;
-  }
-
-  .cd-panel.has-thread .cd-side,
-  .cd-panel:not(.has-thread) .cd-main {
-    display: none;
-  }
-
-  .cd-back {
-    display: inline-flex;
-  }
-}
-
-/* Mobile: sit above the bottom navigation */
-@media (max-width: 480px) {
-  .cd-root {
-    right: 12px;
-    bottom: calc(80px + env(safe-area-inset-bottom));
-    left: 12px;
-  }
-
-  .cd-bar {
-    height: 40px;
-    padding: 0 14px 0 12px;
-    font-size: 13px;
-  }
-
-  .cd-panel,
-  .cd-panel.is-guest {
-    width: 100%;
-    height: min(480px, calc(100vh - 200px));
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .cd-panel,
   .cd-root.is-open .cd-panel,
@@ -641,44 +600,18 @@
   }
 }
 
-/* ── Mobile (≤768px / ≤480px) ── */
+/* ── Mobile (≤768px) ── */
 @media (max-width: 768px) {
-  /* Float the Messages pill just above the 68px buyer bottom nav. */
+  /*
+   * The bottom navigation takes over at this width, and it already has a
+   * Messages tab. The floating pill used to sit just above it, so a phone
+   * showed two ways into the same inbox stacked on top of each other, with
+   * the pill covering content. Hidden here; desktop and tablet keep it.
+   *
+   * The panel and bar live inside .cd-root, so this hides the whole dock —
+   * which is why there are no narrower-screen rules for it any more.
+   */
   .cd-root {
-    right: 16px;
-    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .cd-bar {
-    height: 44px;
-    min-height: 44px;
-    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.28);
-  }
-
-  .cd-panel,
-  .cd-panel.is-guest {
-    max-width: calc(100vw - 32px);
-    height: min(520px, calc(100dvh - 220px));
-  }
-}
-
-@media (max-width: 480px) {
-  .cd-root {
-    right: 12px;
-    left: 12px;
-    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .cd-bar {
-    height: 44px;
-    padding: 0 16px 0 12px;
-    font-size: 13px;
-  }
-
-  .cd-panel,
-  .cd-panel.is-guest {
-    width: 100%;
-    max-width: none;
-    height: min(480px, calc(100dvh - 216px));
+    display: none;
   }
 }

@@ -1,0 +1,184 @@
+/* ════════════════════════════════════════════════════════════════════
+   Log in / Sign up on phones (≤768px): a full-screen sheet.
+   The page's header, hero and card step aside; the form sits on a white
+   sheet that slides up from the bottom over the brand green, with a grab
+   handle, a close button and a link to switch between the two. Switching
+   swaps the sheet in place instead of sliding it up again.
+   Tablet and desktop keep the page layout.
+   ════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Over the page the shopper was on, dimmed behind the sheet. */
+  .login-page.is-sheet,
+  .register-page.is-sheet {
+    position: fixed;
+    inset: 0;
+    /* Above the page underneath, its header and any popup it opened
+       (Home's promo sits at 1200); toasts (9999) still show on top. */
+    z-index: 1500;
+    min-height: 0;
+    background: rgba(15, 23, 42, 0.42);
+    animation: auth-backdrop-in 260ms ease-out both;
+    transition: background-color 260ms ease-in;
+  }
+
+  .login-page.is-sheet.is-switched,
+  .register-page.is-sheet.is-switched {
+    animation: none;
+  }
+
+  .login-page.is-sheet.is-closing,
+  .register-page.is-sheet.is-closing {
+    background: transparent;
+  }
+
+  @keyframes auth-backdrop-in {
+    from { background-color: transparent; }
+  }
+
+  .is-sheet .login-header,
+  .is-sheet .register-header,
+  .is-sheet .login-hero,
+  .is-sheet .register-hero {
+    display: none;
+  }
+
+  .is-sheet .login-content,
+  .is-sheet .register-content,
+  .is-sheet .login-container,
+  .is-sheet .register-container {
+    display: block;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    background: none;
+  }
+
+  /* The sheet */
+  .is-sheet .login-form-container,
+  .is-sheet .register-form-container {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 20px calc(24px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--t-neutral-0, #fff);
+    animation: auth-sheet-up 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .is-switched .login-form-container,
+  .is-switched .register-form-container {
+    animation: auth-sheet-fade 160ms ease-out both;
+  }
+
+  @keyframes auth-sheet-up {
+    from { transform: translateY(100%); border-radius: 24px 24px 0 0; }
+    70% { border-radius: 24px 24px 0 0; }
+    to { transform: none; border-radius: 0; }
+  }
+
+  /* Closing: from wherever the sheet is (top, or part-way after a drag). */
+  @keyframes auth-sheet-down {
+    from { transform: translateY(var(--sheet-from, 0px)); }
+    to { transform: translateY(100%); }
+  }
+
+  @keyframes auth-sheet-fade {
+    from { opacity: 0.4; }
+    to { opacity: 1; }
+  }
+
+  /* Top bar: handle, close, switch */
+  .auth-sheet-bar {
+    touch-action: none;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 -20px;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 12px 8px;
+    background: var(--t-neutral-0, #fff);
+  }
+
+  .auth-sheet-grabber {
+    position: absolute;
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    left: 50%;
+    width: 40px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--t-neutral-200, #e5e7eb);
+    transform: translateX(-50%);
+  }
+
+  .auth-sheet-close {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-800, #1f2937);
+    cursor: pointer;
+  }
+
+  .auth-sheet-switch {
+    padding: 8px 12px;
+    border-radius: 999px;
+    color: var(--t-primary-700, #047857);
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .auth-sheet-switch:active {
+    background: var(--t-primary-50, #ecfdf5);
+  }
+
+  /* No card inside the sheet */
+  .is-sheet .login-form-card,
+  .is-sheet .register-form-card {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 8px 0 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .is-sheet .login-form-title,
+  .is-sheet .register-form-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .is-sheet .login-header-qr-btn {
+    display: none;
+  }
+
+  .is-sheet .login-help-link,
+  .is-sheet .register-help-link {
+    align-self: center;
+    margin-top: 20px;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .is-sheet .login-form-container,
+  .is-sheet .register-form-container {
+    animation: none;
+  }
+}

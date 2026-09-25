@@ -457,3 +457,57 @@ img {
 }
 
 .profile-link:hover { color: var(--t-primary-700, #047857); }
+
+/* Phones: product cards drop the round green add-to-cart button; tapping
+   the card opens the product, where the action bar has Add to cart. */
+@media (max-width: 768px) {
+  .product-card .product-cart-fab {
+    display: none !important;
+  }
+}
+
+/* Phones: headings in the regular weight, not bold — page titles, section
+   titles ("Shop by Category", "My Purchase", "Orders & shopping" ...) and
+   card titles. Names stay bold so they still stand out in lists: products,
+   shops, stores, people. */
+@media (max-width: 768px) {
+  /* #root: outranks the phone medium-weight copies (vite.config.js). */
+  html body #root .layout-main :is(h1, h2, h3, h4):not(
+    .product-name, .pdp-title, .store-card-name, .followed-store-name,
+    .cart-suggestion-name, .address-name, .profile-name, .pp-name,
+    .shop-m-name h1, .stores-m-card h3
+  ),
+  html body #root .login-form-title,
+  html body #root .register-form-title,
+  html body #root .pf-m-identity-text strong,
+  html body #root .shop-m-note-text strong {
+    font-weight: 400 !important;
+  }
+
+  /* <b> / <strong> without a class of their own: medium, not bold. */
+  :is(.layout, .login-page, .register-page) :is(b, strong) {
+    font-weight: 500;
+  }
+}
+
+/* Phones: product cards square-cornered, a little closer together, with
+   slightly larger names. */
+@media (max-width: 768px) {
+  .layout-main .product-card {
+    border-radius: 0 !important;
+  }
+
+  .layout-main .product-card .product-image,
+  .layout-main .product-card .product-image img {
+    border-radius: 0 !important;
+  }
+
+  .layout-main :is(.products-grid, .shop-grid, .pdp-shelf-row, .sbi-grid):has(> .product-card) {
+    gap: 4px !important;
+  }
+
+  .layout-main .product-card .product-name {
+    font-size: 14px !important;
+    line-height: 1.35;
+  }
+}

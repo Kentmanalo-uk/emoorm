@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star, WarningCircle } from '@phosphor-icons/react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star, WarningCircle,
+  CaretLeft, MagnifyingGlass, X, ClockCounterClockwise, TrendUp,
+} from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import useCartStore from '../store/cartStore';
@@ -10,6 +13,8 @@ import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 import { useCategories } from '../hooks/useReferenceData';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm, clearRecent } from '../lib/buyerSearch';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 const parseImages = (raw) => {
@@ -55,7 +60,9 @@ const renderRating = (product, size = 14) => {
 
 const Products = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isPhone = usePhoneLayout();
   const [products, setProducts] = useState([]);
   const [imageSearchPreview, setImageSearchPreview] = useState('');
   const { categories } = useCategories();
@@ -243,9 +250,163 @@ const Products = () => {
 
   const hasActiveFilters = selectedCategory || searchQuery || priceRange.min || priceRange.max || sortBy !== 'newest';
 
+  /* ── Phones: the page brings its own search bar (the site header is Home
+     only), a suggestions panel, filter chips and a friendlier empty state. */
+  // The field's text follows the URL query until the shopper edits it.
+  const [draftState, setDraftState] = useState({ q: searchQuery, text: searchQuery });
+  const draft = draftState.q === searchQuery ? draftState.text : searchQuery;
+  const setDraft = (text) => setDraftState({ q: searchQuery, text });
+  // A fresh /search with nothing asked yet opens straight onto suggestions.
+  const [panelOpen, setPanelOpen] = useState(
+    () => location.pathname === '/search' && !searchParams.get('q') && !searchParams.get('category') && !imageSearch,
+  );
+  const [recent, setRecent] = useState(loadRecent);
+  const [priceOpen, setPriceOpen] = useState(false);
+  const priceActive = Boolean(searchParams.get('minPrice') || searchParams.get('maxPrice'));
+
+  const runSearch = (term) => {
+    const q = term.trim();
+    if (!q) return;
+    setRecent(saveRecent(q));
+    setDraftState({ q, text: q });
+    setPanelOpen(false);
+    document.activeElement?.blur?.();
+    navigate(`/search?q=${encodeURIComponent(q)}`);
+  };
+
+  const pickCategory = (categoryId) => {
+    setPanelOpen(false);
+    navigate(categoryId ? `/search?category=${categoryId}` : '/search');
+  };
+
+  const phoneBack = () => {
+    if (panelOpen && (searchQuery || selectedCategory || imageSearch)) {
+      setPanelOpen(false);
+      setDraft(searchQuery);
+      return;
+    }
+    if (window.history.length > 1) navigate(-1); else navigate('/');
+  };
+
+  const clearPrice = () => {
+    setPriceRange({ min: '', max: '' });
+    setPriceOpen(false);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+    updateURL({ minPrice: '', maxPrice: '', page: 1 });
+  };
+
+  const typed = draft.trim().toLowerCase();
+  const recentShown = typed ? recent.filter((t) => t.toLowerCase().includes(typed)) : recent;
+  const popularShown = typed ? POPULAR_SUGGESTIONS.filter((t) => t.toLowerCase().includes(typed)) : POPULAR_SUGGESTIONS;
+  const activeCategoryName = categories.find((c) => c.id === selectedCategory)?.name;
+  const minParam = searchParams.get('minPrice');
+  const maxParam = searchParams.get('maxPrice');
+  const priceLabel = priceActive
+    ? (maxParam ? `₱${minParam || 0} – ₱${maxParam}` : `₱${minParam} and up`)
+    : 'Price';
+
   return (
-    <Layout>
-      <div className="products-page">
+    <Layout phoneBar={false}>
+      <div className={`products-page${isPhone ? ' is-phone' : ''}${isPhone && panelOpen ? ' is-suggesting' : ''}`}>
+        {isPhone && (
+          <div className={`srch-m-bar${panelOpen ? ' is-open' : ''}`}>
+            <button type="button" className="srch-m-back" onClick={phoneBack} aria-label="Back">
+              <CaretLeft size={22} weight="bold" />
+            </button>
+            <form
+              className="srch-m-field"
+              role="search"
+              onSubmit={(e) => { e.preventDefault(); runSearch(draft); }}
+            >
+              <MagnifyingGlass size={18} className="srch-m-field-icon" />
+              <input
+                type="search"
+                enterKeyHint="search"
+                value={draft}
+                onChange={(e) => { setDraft(e.target.value); setPanelOpen(true); }}
+                onFocus={() => setPanelOpen(true)}
+                placeholder="Search products"
+                aria-label="Search products"
+                autoFocus={panelOpen}
+              />
+              {draft && (
+                <button type="button" className="srch-m-clear" onClick={() => setDraft('')} aria-label="Clear search">
+                  <X size={13} weight="bold" />
+                </button>
+              )}
+              <button type="submit" className="srch-m-go" aria-label="Search">
+                <MagnifyingGlass size={18} weight="bold" />
+              </button>
+            </form>
+          </div>
+        )}
+
+        {isPhone && panelOpen && (
+          <div className="srch-m-panel">
+            {typed && (
+              <button type="button" className="srch-m-typed" onClick={() => runSearch(draft)}>
+                <MagnifyingGlass size={17} />
+                <span>Search for “<strong>{draft.trim()}</strong>”</span>
+              </button>
+            )}
+
+            {recentShown.length > 0 && (
+              <section className="srch-m-group">
+                <div className="srch-m-group-head">
+                  <h2>Recent searches</h2>
+                  {!typed && (
+                    <button type="button" onClick={() => setRecent(clearRecent())}>Clear all</button>
+                  )}
+                </div>
+                <div className="srch-m-rows">
+                  {recentShown.map((term) => (
+                    <div className="srch-m-row" key={`r-${term}`}>
+                      <button type="button" className="srch-m-row-main" onClick={() => runSearch(term)}>
+                        <ClockCounterClockwise size={17} />
+                        <span>{term}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="srch-m-row-remove"
+                        onClick={() => setRecent(removeRecentTerm(term))}
+                        aria-label={`Remove ${term}`}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {popularShown.length > 0 && (
+              <section className="srch-m-group">
+                <div className="srch-m-group-head"><h2>Popular right now</h2></div>
+                <div className="srch-m-chips-wrap">
+                  {popularShown.map((term) => (
+                    <button type="button" key={`p-${term}`} className="srch-m-chip" onClick={() => runSearch(term)}>
+                      <TrendUp size={14} /> {term}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {!typed && categories.length > 0 && (
+              <section className="srch-m-group">
+                <div className="srch-m-group-head"><h2>Browse categories</h2></div>
+                <div className="srch-m-chips-wrap">
+                  {categories.map((c) => (
+                    <button type="button" key={c.id} className="srch-m-chip" onClick={() => pickCategory(c.id)}>
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
         {/* Breadcrumbs */}
         <div className="container">
           <div className="breadcrumbs">
@@ -365,6 +526,100 @@ const Products = () => {
                 </div>
               </div>
 
+              {isPhone && !panelOpen && (
+                <div className="srch-m-tools">
+                  <div className="srch-m-summary">
+                    {isLoading ? (
+                      <Skeleton height={12} width={150} />
+                    ) : imageSearch ? (
+                      <span className="srch-m-image">
+                        {imageSearchPreview && <img src={imageSearchPreview} alt="" />}
+                        <span><strong>{pagination.total}</strong> matching this photo</span>
+                      </span>
+                    ) : (
+                      <span>
+                        <strong>{pagination.total}</strong> {pagination.total === 1 ? 'result' : 'results'}
+                        {searchQuery ? <> for “{searchQuery}”</> : activeCategoryName ? <> in {activeCategoryName}</> : null}
+                      </span>
+                    )}
+                  </div>
+                  <label className="srch-m-sort">
+                    <select value={sortBy} onChange={(e) => handleSortChange(e.target.value)} aria-label="Sort by">
+                      <option value="newest">Newest</option>
+                      <option value="price-low">Price: Low to High</option>
+                      <option value="price-high">Price: High to Low</option>
+                      <option value="name-asc">Name: A to Z</option>
+                      <option value="name-desc">Name: Z to A</option>
+                      <option value="oldest">Oldest</option>
+                    </select>
+                    <ChevronDown size={13} weight="bold" />
+                  </label>
+                </div>
+              )}
+
+              {isPhone && !panelOpen && !imageSearch && (
+                <>
+                  <div className="srch-m-filters" role="toolbar" aria-label="Filters">
+                    <button
+                      type="button"
+                      className={`srch-m-chip srch-m-price-chip${priceActive || priceOpen ? ' is-active' : ''}`}
+                      onClick={() => setPriceOpen((v) => !v)}
+                      aria-expanded={priceOpen}
+                    >
+                      <SlidersHorizontal size={14} />
+                      {priceLabel}
+                    </button>
+                    <button
+                      type="button"
+                      className={`srch-m-chip${!selectedCategory ? ' is-active' : ''}`}
+                      onClick={() => handleCategoryChange('')}
+                    >
+                      All
+                    </button>
+                    {categories.map((c) => (
+                      <button
+                        type="button"
+                        key={c.id}
+                        className={`srch-m-chip${selectedCategory === c.id ? ' is-active' : ''}`}
+                        onClick={() => handleCategoryChange(c.id)}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                  {priceOpen && (
+                    <form
+                      className="srch-m-price"
+                      onSubmit={(e) => { e.preventDefault(); handlePriceFilter(); setPriceOpen(false); }}
+                    >
+                      <div className="srch-m-price-inputs">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          placeholder="₱ Min"
+                          value={priceRange.min}
+                          onChange={(e) => setPriceRange((prev) => ({ ...prev, min: e.target.value }))}
+                          aria-label="Minimum price"
+                        />
+                        <span aria-hidden="true">–</span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          placeholder="₱ Max"
+                          value={priceRange.max}
+                          onChange={(e) => setPriceRange((prev) => ({ ...prev, max: e.target.value }))}
+                          aria-label="Maximum price"
+                        />
+                      </div>
+                      <div className="srch-m-price-actions">
+                        <button type="button" className="srch-m-price-reset" onClick={clearPrice}>Reset</button>
+                        <button type="submit" className="srch-m-price-apply">Apply</button>
+                      </div>
+                    </form>
+                  )}
+                </>
+              )}
+
               {/* Results Info */}
               <div className="products-results-info">
                 {isLoading ? (
@@ -387,6 +642,27 @@ const Products = () => {
                   <button onClick={fetchProducts} className="empty-clear-btn">
                     Try again
                   </button>
+                </div>
+              ) : products.length === 0 && isPhone ? (
+                <div className="srch-m-empty">
+                  <span className="srch-m-empty-icon"><MagnifyingGlass size={30} weight="bold" /></span>
+                  <h3>{searchQuery ? <>No results for “{searchQuery}”</> : 'No products found'}</h3>
+                  <p>
+                    {searchQuery
+                      ? 'Check the spelling, or try a shorter or more general word.'
+                      : 'Try another category or price range.'}
+                  </p>
+                  {(selectedCategory || priceActive) && (
+                    <button type="button" className="srch-m-empty-btn" onClick={clearFilters}>Clear filters</button>
+                  )}
+                  <div className="srch-m-empty-try">
+                    <span>Try searching for</span>
+                    <div className="srch-m-chips-wrap">
+                      {POPULAR_SUGGESTIONS.map((term) => (
+                        <button type="button" key={term} className="srch-m-chip" onClick={() => runSearch(term)}>{term}</button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : products.length === 0 ? (
                 <div className="products-empty">

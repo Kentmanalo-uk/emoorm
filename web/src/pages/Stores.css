@@ -548,3 +548,356 @@
     padding: 0 14px;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   Phone stores (≤768px)
+   Sticky search bar (live search), a page title, town chips, and compact
+   store cards: logo, name, town and product count, one line about the
+   shop, and a peek at three of its products. Breadcrumbs, the desktop
+   search row and the "Active" badge step aside. Tablet and desktop keep
+   the layout above.
+   ════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .stores-page.is-phone {
+    padding: 0 0 24px;
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .stores-page.is-phone .stores-container {
+    padding: 0 12px;
+  }
+
+  .stores-page.is-phone .stores-breadcrumbs,
+  .stores-page.is-phone .stores-subtitle,
+  .stores-page.is-phone .stores-search {
+    display: none;
+  }
+
+  .stores-page.is-phone .stores-hero {
+    display: block;
+    margin: 0;
+    padding: 14px 4px 10px;
+  }
+
+  .stores-page.is-phone .stores-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  /* ── search bar ── */
+  .stores-m-bar {
+    position: sticky;
+    top: 0;
+    z-index: 131;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px 10px 6px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: 0 1px 0 var(--t-neutral-200, #e5e7eb);
+  }
+
+  .stores-m-back {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--t-neutral-900, #111827);
+    cursor: pointer;
+  }
+
+  .stores-m-back:active {
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .stores-m-field {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 12px 0 14px;
+    border: 1.5px solid transparent;
+    border-radius: 999px;
+    background: var(--t-neutral-100, #f3f4f6);
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+
+  .stores-m-field:focus-within {
+    border-color: var(--t-primary-500, #10b981);
+    background: var(--t-neutral-0, #fff);
+  }
+
+  .stores-m-field-icon {
+    flex-shrink: 0;
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .stores-m-field input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--t-neutral-900, #111827);
+    font-size: 16px; /* keeps iOS from zooming in on focus */
+  }
+
+  .stores-m-field input::placeholder {
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .stores-m-field input::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  .stores-m-clear {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 50%;
+    background: var(--t-neutral-300, #d1d5db);
+    color: var(--t-neutral-0, #fff);
+    cursor: pointer;
+  }
+
+  /* ── town chips ── */
+  .stores-m-towns {
+    display: flex;
+    gap: 8px;
+    margin: 0 -12px;
+    padding: 2px 12px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .stores-m-towns::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stores-m-chip {
+    flex-shrink: 0;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 999px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-700, #374151);
+    font-size: 13.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .stores-m-chip.is-active {
+    border-color: var(--t-primary-600, #059669);
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #047857);
+    font-weight: 600;
+  }
+
+  .stores-page.is-phone .stores-count {
+    margin: 0 4px 10px;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 13.5px;
+  }
+
+  .stores-page.is-phone .stores-count strong {
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .stores-page.is-phone .stores-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .stores-page.is-phone .stores-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .stores-page.is-phone .store-card-skeleton {
+    height: 150px;
+    border-radius: 16px;
+  }
+
+  /* ── store card ── */
+  .stores-m-card {
+    display: block;
+    padding: 14px;
+    border-radius: 16px;
+    background: var(--t-neutral-0, #fff);
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.12s ease;
+  }
+
+  .stores-m-card:active {
+    transform: scale(0.99);
+  }
+
+  .stores-m-card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .stores-m-logo {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    overflow: hidden;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--t-primary-500, #10b981), var(--t-primary-700, #047857));
+    color: var(--t-neutral-0, #fff);
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .stores-m-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: var(--t-neutral-0, #fff);
+  }
+
+  .stores-m-card-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .stores-m-card-text h3 {
+    margin: 0 0 4px;
+    overflow: hidden;
+    color: var(--t-neutral-900, #111827);
+    font-size: 15.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .stores-m-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 0;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 12.5px;
+  }
+
+  .stores-m-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .stores-m-meta svg {
+    color: var(--t-primary-600, #059669);
+  }
+
+  .stores-m-chevron {
+    flex-shrink: 0;
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .stores-m-desc {
+    display: -webkit-box;
+    margin: 10px 0 0;
+    overflow: hidden;
+    color: var(--t-neutral-600, #4b5563);
+    font-size: 13.5px;
+    line-height: 1.45;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .stores-m-previews {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .stores-m-preview {
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .stores-m-preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* ── nothing found ── */
+  .stores-m-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 36px 20px 30px;
+    border-radius: 16px;
+    background: var(--t-neutral-0, #fff);
+    text-align: center;
+  }
+
+  .stores-m-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 14px;
+    border-radius: 50%;
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-600, #059669);
+  }
+
+  .stores-m-empty h2 {
+    margin: 0 0 6px;
+    color: var(--t-neutral-900, #111827);
+    font-size: 17px;
+    overflow-wrap: anywhere;
+  }
+
+  .stores-m-empty p {
+    margin: 0;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 14px;
+  }
+
+  .stores-m-empty-btn {
+    margin-top: 16px;
+    height: 38px;
+    padding: 0 22px;
+    border: 1px solid var(--t-primary-600, #059669);
+    border-radius: 999px;
+    background: none;
+    color: var(--t-primary-700, #047857);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .stores-page.is-phone .stores-pagination {
+    margin-top: 16px;
+  }
+}

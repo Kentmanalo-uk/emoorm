@@ -7,7 +7,7 @@
                 <stop offset="0" class="stop1"></stop>
                 <stop offset="1" class="stop2"></stop>
               </linearGradient>
-              <polygon points="74.7,189.1 212,25.5 375.5,162.8 238.3,326.3"></polygon>
+              <polygon style="fill:url(#reviews-photo_2_)" points="74.7,189.1 212,25.5 375.5,162.8 238.3,326.3"></polygon>
               <linearGradient id="reviews-photo_3_" gradientUnits="userSpaceOnUse" x1="852.6625" y1="-995.0219" x2="1058.792" y2="-995.0219" gradientTransform="matrix(1.0012 -4.678037e-03 -4.678037e-03 -1.0012 -823.7786 -720.795)">
                 <stop offset="0" class="stop1"></stop>
                 <stop offset="1" class="stop2"></stop>
@@ -31,7 +31,7 @@
                 <stop offset="0" class="stop1"></stop>
                 <stop offset="1" class="stop2"></stop>
               </linearGradient>
-              <rect x="2.5" y="2.5" width="214.8" height="214.8"></rect>
+              <rect style="fill:url(#reviews-photo_7_)" x="2.5" y="2.5" width="214.8" height="214.8"></rect>
               <linearGradient id="reviews-photo_8_" gradientUnits="userSpaceOnUse" x1="0" y1="-585.75" x2="219.8" y2="-585.75" gradientTransform="matrix(1 0 0 -1 0 -344)">
                 <stop offset="0" class="stop1"></stop>
                 <stop offset="1" class="stop2"></stop>

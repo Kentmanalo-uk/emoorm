@@ -7,6 +7,8 @@ import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
 import ChatDock from '../components/chat/ChatDock';
+import EmptyArt from '../components/ui/EmptyArt';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
@@ -33,6 +35,8 @@ const Home = () => {
     path: '/',
   });
 
+  // Phones get illustrated empty states; wider screens keep the plain line.
+  const isPhone = usePhoneLayout();
   const [currentIndex, setCurrentIndex] = useState(1); // Start at 1 (first real slide)
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -366,6 +370,13 @@ const Home = () => {
                 </Link>
               ))}
             </div>
+          ) : isPhone ? (
+            <div className="home-empty">
+              <EmptyArt name="products" size={120} />
+              <p className="home-empty-title">No suggestions yet</p>
+              <p className="home-empty-body">Browse local products and we’ll suggest more like them.</p>
+              <Link to="/products" className="home-empty-btn">Browse products</Link>
+            </div>
           ) : (
             <div className="products-message">
               <p>Browse local products from Oriental Mindoro sellers</p>
@@ -385,6 +396,13 @@ const Home = () => {
           {nearbyStores.length > 0 ? (
             <div className="home-stores-grid">
               {nearbyStores.map((store) => <HomeStoreCard key={store.id} store={store} />)}
+            </div>
+          ) : isPhone ? (
+            <div className="home-empty">
+              <EmptyArt name="stores" size={120} />
+              <p className="home-empty-title">No stores near you yet</p>
+              <p className="home-empty-body">Shops in your municipality will show up here as they open.</p>
+              <Link to="/stores" className="home-empty-btn">See all stores</Link>
             </div>
           ) : (
             <div className="stores-message">

@@ -1,0 +1,70 @@
+/* Signed-out placeholder for account-only tabs on phones: the tab's title
+   at the top, as on the signed-in page, then a short message and a Log in
+   button centred in the space above the bottom navigation. */
+.login-gate-page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 68px - env(safe-area-inset-bottom, 0px));
+  padding-top: 12px;
+}
+
+/* Same as the signed-in tab titles (see .messages-page-title). */
+.login-gate-heading {
+  margin: 0 0 10px;
+  padding: 0 16px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #111827);
+}
+
+.login-gate {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 24px 64px;
+  text-align: center;
+}
+
+.login-gate-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #111827);
+}
+
+.login-gate-body {
+  max-width: 290px;
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.login-gate-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+  height: 42px;
+  padding: 0 28px;
+  border-radius: 999px;
+  background: var(--t-primary-600, #009f3a);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.login-gate-btn:hover,
+.login-gate-btn:focus-visible {
+  background: var(--t-primary-700, #047857);
+}
+
+@media (max-width: 480px) {
+  .login-gate-heading {
+    padding: 0 12px;
+  }
+}

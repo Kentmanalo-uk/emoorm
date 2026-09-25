@@ -14,6 +14,22 @@ export function useCompactLayout() {
   return useSyncExternalStore(subscribe, getSnapshot, () => false);
 }
 
+// Phone widths: the same breakpoint at which the buyer bottom navigation
+// replaces the header (see .mobile-bottom-nav in Header.css). Phone-only UI
+// keys off this so it switches at exactly the width the navigation does.
+const PHONE_QUERY = '(max-width: 768px)';
+const subscribePhone = (onChange) => {
+  const media = window.matchMedia(PHONE_QUERY);
+  media.addEventListener('change', onChange);
+  return () => media.removeEventListener('change', onChange);
+};
+const getPhoneSnapshot = () => window.matchMedia(PHONE_QUERY).matches;
+
+/** True at phone widths, where the bottom navigation is showing. */
+export function usePhoneLayout() {
+  return useSyncExternalStore(subscribePhone, getPhoneSnapshot, () => false);
+}
+
 /**
  * Open/close state for the Seller/Admin navigation drawer on small screens.
  * Closes on navigation and Escape, and locks page scroll while open.

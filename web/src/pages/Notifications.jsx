@@ -198,13 +198,13 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
             <h1 className="profile-page-title">Notifications</h1>
             <div className="notif-header-actions">
               {unreadCount > 0 && (
-                <button className="notif-action-btn" onClick={handleMarkAllRead}>
-                  <CheckCheck size={15} /> Mark all read
+                <button className="notif-action-btn" onClick={handleMarkAllRead} aria-label="Mark all read">
+                  <CheckCheck size={15} /> <span className="notif-action-label">Mark all read</span>
                 </button>
               )}
               {notifications.length > 0 && (
-                <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll}>
-                  <Trash2 size={15} /> Clear all
+                <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll} aria-label="Clear all">
+                  <Trash2 size={15} /> <span className="notif-action-label">Clear all</span>
                 </button>
               )}
             </div>
@@ -219,13 +219,13 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
             </div>
             <div className="notif-header-actions">
               {unreadCount > 0 && (
-                <button className="notif-action-btn" onClick={handleMarkAllRead}>
-                  <CheckCheck size={15} /> Mark all read
+                <button className="notif-action-btn" onClick={handleMarkAllRead} aria-label="Mark all read">
+                  <CheckCheck size={15} /> <span className="notif-action-label">Mark all read</span>
                 </button>
               )}
               {notifications.length > 0 && (
-                <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll}>
-                  <Trash2 size={15} /> Clear all
+                <button className="notif-action-btn notif-action-danger" onClick={handleDeleteAll} aria-label="Clear all">
+                  <Trash2 size={15} /> <span className="notif-action-label">Clear all</span>
                 </button>
               )}
             </div>

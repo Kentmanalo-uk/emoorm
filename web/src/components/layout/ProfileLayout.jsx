@@ -26,7 +26,7 @@ const navItems = [
 
 const ProfileLayout = () => {
   return (
-    <Layout>
+    <Layout phoneBackTo="/profile">
       <div className="profile-page">
         <div className="container">
           <div className="profile-grid">

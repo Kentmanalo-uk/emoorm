@@ -991,3 +991,79 @@
     padding: 32px 16px 40px;
   }
 }
+
+/* Phones (buyer): title row like the other tabs — title and unread count on
+   the left, round icon buttons for Mark all read / Clear all on the right. */
+@media (max-width: 768px) {
+  .layout .notif-page,
+  .layout .notifications-page {
+    padding-top: 10px;
+  }
+
+  .layout .notif-header {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 48px;
+    margin: 0 0 8px;
+    padding: 0;
+  }
+
+  .layout .notif-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .layout .notif-header h1 {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.15;
+  }
+
+  .layout .notif-unread-badge {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    font-size: 12px;
+  }
+
+  .layout .notif-header-actions {
+    width: auto;
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .layout .notif-action-btn {
+    flex: none;
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .layout .notif-action-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .layout .notif-action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
