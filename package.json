@@ -1,0 +1,12 @@
+{
+  "name": "emoorm",
+  "private": true,
+  "description": "E-MOORM: one Node app serving the API and the built web app (Hostinger Node.js hosting).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm ci --prefix web --include=dev && npm run build --prefix web && cd backend && npm ci --include=dev && npx prisma generate",
+    "start": "node server.js"
+  }
+}

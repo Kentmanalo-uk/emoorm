@@ -1,0 +1,33 @@
+/**
+ * Hostinger entry point (hPanel → Node.js app, entry file: server.js).
+ *
+ * Runs the backend, which also serves the built web app from web/dist, so
+ * emoorm.shop needs just this one Node app: pages and /api on one domain.
+ *
+ * Before starting it applies any pending database migrations (`prisma
+ * migrate deploy` only runs migration files already in the repo, in order;
+ * it never resets or drops the database). Set RUN_MIGRATIONS=false to skip.
+ */
+const path = require('path');
+const { execSync } = require('child_process');
+
+const backendDir = path.join(__dirname, 'backend');
+
+// The backend resolves .env, uploads/ and prisma/ relative to its folder.
+process.chdir(backendDir);
+
+// Serve the web build unless told otherwise.
+if (!process.env.WEB_DIST_DIR) {
+  process.env.WEB_DIST_DIR = path.join(__dirname, 'web', 'dist');
+}
+
+if (process.env.RUN_MIGRATIONS !== 'false') {
+  try {
+    execSync('npx prisma migrate deploy', { cwd: backendDir, stdio: 'inherit' });
+  } catch (err) {
+    console.error('[start] prisma migrate deploy failed:', err.message);
+    process.exit(1);
+  }
+}
+
+require('./backend/server.js');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search, WarningCircle, Heart } from '@phosphor-icons/react';
+import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search, WarningCircle, Heart, Check, CaretRight, CaretDown } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
@@ -11,6 +11,7 @@ import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
 import MoreMenu from '../components/MoreMenu';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import './Cart.css';
 
 const SUGGESTION_COUNT = 12;
@@ -43,9 +44,21 @@ const renderSuggestionRating = (product) => {
   );
 };
 
+/** Phones: round selection check (the reference's circles). */
+function RoundCheck({ checked, disabled, onChange, label }) {
+  return (
+    <label className={`cart-m-check${checked ? ' is-checked' : ''}${disabled ? ' is-disabled' : ''}`}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={onChange} aria-label={label} />
+      <span aria-hidden="true">{checked && <Check size={14} weight="bold" />}</span>
+    </label>
+  );
+}
+
 const Cart = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isPhone = usePhoneLayout();
+  const [storeSlugs, setStoreSlugs] = useState({});
   const [cartSearchText, setCartSearchText] = useState(() => searchParams.get('cartSearch') || '');
   const { isAuthenticated } = useAuthStore();
   const { requireVerifiedIdentity, identityDialog } = useIdentityGate();
@@ -284,6 +297,22 @@ const Cart = () => {
   };
 
   // Group items by store
+  // Phones link each shop name to its page; look up the slugs once.
+  const cartStoreIds = [...new Set(items.map((item) => item.storeId).filter(Boolean))].sort().join(',');
+  useEffect(() => {
+    if (!isPhone || !cartStoreIds) return undefined;
+    let cancelled = false;
+    const missing = cartStoreIds.split(',').filter((id) => !storeSlugs[id]);
+    if (missing.length === 0) return undefined;
+    Promise.all(missing.map((id) => axios.get(`/stores/${id}`).then((res) => [id, res.data?.slug]).catch(() => [id, null])))
+      .then((pairs) => {
+        if (cancelled) return;
+        setStoreSlugs((cur) => ({ ...cur, ...Object.fromEntries(pairs.filter(([, slug]) => slug)) }));
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPhone, cartStoreIds]);
+
   const itemsByStore = visibleItems.reduce((acc, item) => {
     const storeId = item.storeId || 'unknown';
     if (!acc[storeId]) {
@@ -454,6 +483,110 @@ const Cart = () => {
               <Trash2 size={14} /> Clear
             </button>
           </div>
+
+          {isPhone && (
+            <div className="cart-m-list">
+              {(revalidating || revalidationNotice) && (
+                <div className={`cart-revalidation-notice ${revalidationNotice ? 'is-warning' : ''}`} role="status">
+                  <WarningCircle size={16} />
+                  <span>{revalidating ? 'Checking current prices and stock…' : revalidationNotice}</span>
+                </div>
+              )}
+              {cartSearch && visibleItems.length === 0 && (
+                <div className="cart-search-empty">
+                  <Search size={30} weight="fill" />
+                  <h2>No cart items found</h2>
+                  <p>Try another product or store name.</p>
+                </div>
+              )}
+              {Object.entries(itemsByStore).map(([storeId, storeData]) => {
+                const storePurchasable = storeData.items.filter((it) => !it.unavailable);
+                const storeAllSelected = storePurchasable.length > 0 && storePurchasable.every((it) => selectedSet.has(it.id));
+                const slug = storeSlugs[storeId];
+                return (
+                  <section key={storeId} className="cart-m-store">
+                    <div className="cart-m-store-head">
+                      <RoundCheck
+                        checked={storeAllSelected}
+                        disabled={storePurchasable.length === 0}
+                        onChange={() => toggleStoreSelected(storeData.items)}
+                        label={`Select all items from ${storeData.storeName}`}
+                      />
+                      {slug ? (
+                        <Link to={`/store/${slug}`} className="cart-m-store-name">
+                          <Storefront size={17} weight="fill" /> <span>{storeData.storeName}</span> <CaretRight size={14} weight="bold" />
+                        </Link>
+                      ) : (
+                        <span className="cart-m-store-name">
+                          <Storefront size={17} weight="fill" /> <span>{storeData.storeName}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {storeData.items.map((item) => {
+                      const options = item.selectedVariations && Object.keys(item.selectedVariations).length > 0
+                        ? Object.values(item.selectedVariations).join(', ')
+                        : null;
+                      return (
+                        <div key={item.id} className={`cart-m-item${item.unavailable ? ' is-unavailable' : ''}`}>
+                          <RoundCheck
+                            checked={!item.unavailable && selectedSet.has(item.id)}
+                            disabled={!!item.unavailable}
+                            onChange={() => toggleItemSelected(item.id)}
+                            label={`Select ${item.name}`}
+                          />
+                          <Link to={`/product/${item.slug || item.id}`} className="cart-m-item-img">
+                            <ProductImage src={item.image} alt={item.name} />
+                          </Link>
+                          <div className="cart-m-item-body">
+                            <Link to={`/product/${item.slug || item.id}`} className="cart-m-item-name">{item.name}</Link>
+                            {options && (
+                              <Link to={`/product/${item.slug || item.id}`} className="cart-m-item-options" aria-label={`Change options: ${options}`}>
+                                <span>{options}</span> <CaretDown size={12} weight="bold" />
+                              </Link>
+                            )}
+                            <div className="cart-m-item-foot">
+                              <span className="cart-m-item-price">₱{Number(item.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              {item.unavailable ? (
+                                <button type="button" className="cart-m-remove" onClick={() => removeItem(item.id)}>
+                                  <Trash2 size={15} /> Remove
+                                </button>
+                              ) : (
+                                <div className="cart-m-stepper">
+                                  <button
+                                    type="button"
+                                    onClick={() => (item.quantity <= 1 ? handleRemoveItem(item.id) : handleQuantityChange(item.id, item.quantity - 1))}
+                                    aria-label={item.quantity <= 1 ? `Remove ${item.name}` : 'Decrease quantity'}
+                                  >
+                                    {item.quantity <= 1 ? <Trash2 size={15} /> : <Minus size={15} />}
+                                  </button>
+                                  <span>{item.quantity}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                    disabled={item.quantity >= (item.stock || 999)}
+                                    aria-label="Increase quantity"
+                                  >
+                                    <Plus size={15} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            {!item.unavailable && item.stock !== undefined && item.stock < 10 && item.stock > 0 && (
+                              <span className="cart-m-item-note">Only {item.stock} left</span>
+                            )}
+                            {item.unavailable && (
+                              <span className="cart-m-item-note is-bad">{item.unavailableReason || 'Unavailable'}</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </section>
+                );
+              })}
+            </div>
+          )}
 
           <div className="cart-layout">
             {/* Cart Items */}
@@ -726,6 +859,43 @@ const Cart = () => {
           {suggestionsSection}
         </div>
       </div>
+
+      {isPhone && (
+        <div className="cart-m-bar">
+          {(multiStoreSelected || unavailableItems.length > 0 || (freeDeliveryThreshold > 0 && subtotal > 0 && subtotal < freeDeliveryThreshold)) && (
+            <p className={`cart-m-bar-note${multiStoreSelected ? ' is-bad' : ''}`}>
+              {multiStoreSelected
+                ? 'Check out one shop at a time — deselect items from the other shops.'
+                : unavailableItems.length > 0
+                  ? `${unavailableItems.length === 1 ? 'One item is' : `${unavailableItems.length} items are`} unavailable and won't be checked out.`
+                  : `Add ₱${(freeDeliveryThreshold - subtotal).toFixed(2)} more for free shipping`}
+            </p>
+          )}
+          <div className="cart-m-bar-row">
+            <div className="cart-m-bar-all">
+              <RoundCheck checked={allSelected} onChange={toggleAllSelected} label="Select all items" />
+              <span>All</span>
+            </div>
+            <div className="cart-m-bar-total">
+              <strong>₱{total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              <span>
+                {selectedCount > 0
+                  ? (shippingFee === 0 ? 'Free shipping' : `Shipping: ₱${shippingFee.toFixed(2)}`)
+                  : 'Select items'}
+              </span>
+              {discountAmount > 0 && <span className="is-off">₱{discountAmount.toFixed(2)} off</span>}
+            </div>
+            <button
+              type="button"
+              className="cart-m-checkout"
+              onClick={handleCheckout}
+              disabled={revalidating || selectedItems.length === 0 || multiStoreSelected || selectedItems.some((item) => item.unavailable || item.stock === 0)}
+            >
+              Check out{selectedItems.length > 0 ? ` (${selectedItems.length})` : ''}
+            </button>
+          </div>
+        </div>
+      )}
       {identityDialog}
     </Layout>
   );

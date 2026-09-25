@@ -29,6 +29,10 @@ const safeFilename = (file) => {
   return `${Date.now()}-${rand}${ext}`;
 };
 
+// A fresh server (or an UPLOAD_DIR outside the app, as on Hostinger) starts
+// without the folder; multer does not create it.
+fs.mkdirSync(config.upload.uploadDir, { recursive: true });
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, config.upload.uploadDir);
