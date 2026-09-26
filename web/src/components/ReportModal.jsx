@@ -3,6 +3,7 @@ import { X, Warning as AlertTriangle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import './ReportModal.css';
+import { useSheetClose } from '../hooks/useSheetMotion';
 
 /**
  * Reasons are sent as the API's enum value, not as the label.
@@ -52,7 +53,9 @@ const DESTINATION = {
   BUYER: "This goes to the municipal admin for the buyer's municipality.",
 };
 
-export default function ReportModal({ type, productId, storeId, reportedBuyerId, targetName, onClose }) {
+export default function ReportModal({ type, productId, storeId, reportedBuyerId, targetName, onClose: onCloseProp }) {
+  // Phones: slide down before the parent removes the sheet.
+  const [sheetClosing, onClose] = useSheetClose(onCloseProp);
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -84,8 +87,8 @@ export default function ReportModal({ type, productId, storeId, reportedBuyerId,
   };
 
   return (
-    <div className="report-overlay" onClick={onClose}>
-      <div className="report-modal" onClick={(e) => e.stopPropagation()}>
+    <div className={`report-overlay ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} onClick={() => onClose()}>
+      <div className="report-modal ui-sheet-panel" onClick={(e) => e.stopPropagation()}>
         <div className="report-modal-header">
           <div className="report-modal-title">
             <AlertTriangle size={20} className="report-icon" />

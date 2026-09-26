@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import './ReviewModal.css';
+import { useSheetClose } from '../hooks/useSheetMotion';
 
 const MAX_IMAGES = 5;
 const MAX_VIDEO_MB = 50;
@@ -18,7 +19,9 @@ const MAX_VIDEO_MB = 50;
  * @param {object}  [existing]      an existing review to edit ({ id, rating, comment });
  *                                  in that mode only rating and comment change
  */
-export default function ReviewModal({ product, orderId, onClose, onSuccess, initialRating = 0, intro, existing }) {
+export default function ReviewModal({ product, orderId, onClose: onCloseProp, onSuccess, initialRating = 0, intro, existing }) {
+  // Phones: slide down before the parent removes the sheet.
+  const [sheetClosing, onClose] = useSheetClose(onCloseProp);
   const editing = Boolean(existing?.id);
   const [rating, setRating] = useState(existing?.rating || initialRating || 0);
   const [hovered, setHovered] = useState(0);
@@ -111,8 +114,8 @@ export default function ReviewModal({ product, orderId, onClose, onSuccess, init
   };
 
   return (
-    <div className="review-overlay" onClick={onClose}>
-      <div className="review-modal" onClick={(e) => e.stopPropagation()}>
+    <div className={`review-overlay ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} onClick={() => onClose()}>
+      <div className="review-modal ui-sheet-panel" onClick={(e) => e.stopPropagation()}>
         <div className="review-modal-header">
           <h2>{editing ? 'Edit your review' : 'Rate & Review'}</h2>
           <button className="review-close" onClick={onClose}><X size={20} /></button>

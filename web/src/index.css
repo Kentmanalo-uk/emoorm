@@ -511,3 +511,58 @@ img {
     line-height: 1.35;
   }
 }
+
+/* Touch: no grey/blue flash on tapped elements, and no focus ring left
+   behind after a tap. Keyboard focus still shows (:focus-visible). */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a,
+button,
+[role="button"],
+label,
+summary,
+input[type="checkbox"],
+input[type="radio"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Bottom sheets on phones (see hooks/useSheetMotion.js) ──────────────
+   The backdrop fades by its colour, not its opacity, so the sheet inside
+   it does not fade with it. */
+@media (max-width: 768px) {
+  .ui-sheet-backdrop {
+    animation: ui-sheet-dim-in 200ms ease-out both;
+  }
+
+  .ui-sheet-backdrop .ui-sheet-panel {
+    animation: ui-sheet-up 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .ui-sheet-backdrop.is-closing {
+    pointer-events: none;
+    animation: ui-sheet-dim-out 240ms ease-in both;
+  }
+
+  .ui-sheet-backdrop.is-closing .ui-sheet-panel {
+    animation: ui-sheet-down 240ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  @keyframes ui-sheet-dim-in { from { background-color: transparent; } }
+  @keyframes ui-sheet-dim-out { to { background-color: transparent; } }
+  @keyframes ui-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes ui-sheet-down { from { transform: none; } to { transform: translateY(100%); } }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .ui-sheet-backdrop,
+  .ui-sheet-backdrop .ui-sheet-panel {
+    animation: none;
+  }
+}

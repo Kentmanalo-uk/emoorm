@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
 import './FeedbackDialog.css';
+import { useSheetClose } from '../../hooks/useSheetMotion';
 
 /**
  * Feedback about E-MOORM itself, addressed to the people who run it.
@@ -25,7 +26,9 @@ const CATEGORIES = [
 
 const MESSAGE_MAX = 4000;
 
-export default function FeedbackDialog({ onClose }) {
+export default function FeedbackDialog({ onClose: onCloseProp }) {
+  // Phones: slide down before the parent removes the sheet.
+  const [sheetClosing, onClose] = useSheetClose(onCloseProp);
   const location = useLocation();
   const { isAuthenticated } = useAuthStore();
   const [category, setCategory] = useState('');
@@ -65,9 +68,9 @@ export default function FeedbackDialog({ onClose }) {
   };
 
   return (
-    <div className="fbd-overlay" onClick={onClose} role="presentation">
+    <div className={`fbd-overlay ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} onClick={() => onClose()} role="presentation">
       <div
-        className="fbd-modal"
+        className="fbd-modal ui-sheet-panel"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

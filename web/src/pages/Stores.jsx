@@ -10,6 +10,7 @@ import { resolveImg } from '../lib/media';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import './Stores.css';
+import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
 
 export default function Stores() {
   const navigate = useNavigate();
@@ -190,11 +191,7 @@ export default function Stores() {
 
           {/* Store grid */}
           {isLoading ? (
-            <div className="stores-loading">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="store-card-skeleton" />
-              ))}
-            </div>
+            <StoreCardsSkeleton count={6} />
           ) : stores.length === 0 ? (
             isPhone ? (
               <div className="stores-m-empty">

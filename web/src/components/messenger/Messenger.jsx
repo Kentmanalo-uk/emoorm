@@ -16,7 +16,9 @@ import ProductImage from '../ProductImage';
 import MoreMenu from '../MoreMenu';
 import ReportModal from '../ReportModal';
 import EmptyState from '../ui/EmptyState';
+import { useSheetClose } from '../../hooks/useSheetMotion';
 import './Messenger.css';
+import { ConversationListSkeleton } from '../ui/PageSkeletons';
 
 const POLL_INTERVAL_MS = 5000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -234,7 +236,11 @@ function MessageBubble({ message, isSelf, seen, onOpenImage }) {
 }
 
 /** Bottom sheet listing the shop's products to attach to the next message. */
-function ProductPicker({ storeId, onPick, onClose }) {
+function ProductPicker({ storeId, onPick: onPickProp, onClose: onCloseProp }) {
+  // Phones: the sheet slides down whether it is closed or a product is picked.
+  const [closingByClose, onClose] = useSheetClose(onCloseProp);
+  const [closingByPick, onPick] = useSheetClose(onPickProp);
+  const sheetClosing = closingByClose || closingByPick;
   const [query, setQuery] = useState('');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -263,8 +269,8 @@ function ProductPicker({ storeId, onPick, onClose }) {
   }, [onClose]);
 
   return (
-    <div className="msgr-sheet-backdrop" onClick={onClose} role="presentation">
-      <div className="msgr-sheet" role="dialog" aria-modal="true" aria-label="Attach a product" onClick={(e) => e.stopPropagation()}>
+    <div className={`msgr-sheet-backdrop ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} onClick={() => onClose()} role="presentation">
+      <div className="msgr-sheet ui-sheet-panel" role="dialog" aria-modal="true" aria-label="Attach a product" onClick={(e) => e.stopPropagation()}>
         <div className="msgr-sheet-head">
           <span className="msgr-sheet-grabber" aria-hidden="true" />
           <h3>Attach a product</h3>
@@ -728,10 +734,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '' }
         )}
         <div className="msgr-list-scroll">
           {loadingList ? (
-            <div className="msgr-list-empty">
-              <Loader2 size={16} className="msgr-spin" weight="fill" />
-              <span>Loading conversations…</span>
-            </div>
+            <ConversationListSkeleton />
           ) : filteredConversations.length === 0 ? (
             <EmptyState
               className="msgr-empty-state"

@@ -954,14 +954,14 @@ const ProductDetails = () => {
                   <div className="pdp-store-name">
                     {product.store.name}
                   </div>
+                  {storeFollow.count !== null && (
+                    <div className="pdp-store-followers">
+                      {storeFollow.count} {storeFollow.count === 1 ? 'follower' : 'followers'}
+                    </div>
+                  )}
                   <div className="pdp-store-meta">
                     {product.store.municipality?.name && (
                       <span><MapPin size={12} /> {product.store.municipality.name}</span>
-                    )}
-                    {storeFollow.count !== null && (
-                      <span className="pdp-store-followers">
-                        {storeFollow.count} {storeFollow.count === 1 ? 'follower' : 'followers'}
-                      </span>
                     )}
                   </div>
                 </div>

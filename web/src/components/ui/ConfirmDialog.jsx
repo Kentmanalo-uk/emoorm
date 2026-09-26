@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Warning as AlertTriangle, Question as HelpCircle, CircleNotch as Loader2 } from '@phosphor-icons/react';
+import { useSheetPresence } from '../../hooks/useSheetMotion';
 import './ConfirmDialog.css';
 
 /**
@@ -29,6 +30,9 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }) {
+  // Phones: stays up while it slides away after closing.
+  const { mounted, closing } = useSheetPresence(open);
+
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e) => {
@@ -38,17 +42,17 @@ export default function ConfirmDialog({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open, loading, onCancel]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   return (
     <div
-      className="cf-dialog-backdrop"
+      className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`}
       onClick={() => !loading && onCancel?.()}
       role="dialog"
       aria-modal="true"
       aria-labelledby="cf-dialog-title"
     >
-      <div className="cf-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="cf-dialog ui-sheet-panel" onClick={(e) => e.stopPropagation()}>
         <div className="cf-dialog-body">
           <div className={`cf-dialog-icon ${!danger ? 'cf-dialog-icon--neutral' : ''}`}>
             {danger ? <AlertTriangle size={20} /> : <HelpCircle size={20} />}

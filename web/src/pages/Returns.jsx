@@ -6,6 +6,7 @@ import axios from '../lib/axios';
 import ProductImage from '../components/ProductImage';
 import './Orders.css';
 import './Returns.css';
+import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -50,9 +51,8 @@ export default function Returns() {
 
   if (loading) {
     return (
-      <div className="profile-loading">
-        <div className="profile-loading-spinner"></div>
-        <p>Loading return requests...</p>
+      <div className="profile-page-wrap">
+        <OrderCardsSkeleton title="Returns & Refunds" count={2} />
       </div>
     );
   }

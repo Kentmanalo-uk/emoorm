@@ -10,6 +10,7 @@ import {
 } from '../lib/follow';
 import { resolveImg } from '../lib/media';
 import './ProfileFollowedStores.css';
+import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
 
 const SORTS = [
   { key: 'recent', label: 'Recently followed' },
@@ -130,11 +131,7 @@ const ProfileFollowedStores = () => {
       </div>
 
       {loading ? (
-        <div className="followed-grid">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="followed-card followed-skeleton" />
-          ))}
-        </div>
+        <StoreCardsSkeleton count={4} />
       ) : isEmpty ? (
         <div className="empty-state">
           <Store size={40} strokeWidth={1.5} weight="fill" />

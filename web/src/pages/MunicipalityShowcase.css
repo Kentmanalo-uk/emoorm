@@ -671,11 +671,9 @@
 
   .municipality-showcase .section-arrow-link {
     flex: 0 0 auto;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     margin-left: auto;
-    border-radius: 50%;
-    background: var(--t-secondary-50, #e9f7f0);
   }
 
   .municipality-product-grid {

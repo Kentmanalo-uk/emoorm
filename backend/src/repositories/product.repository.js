@@ -97,6 +97,10 @@ const roundRating = (value) => Math.round(Number(value || 0) * 10) / 10;
  * @param {String[]} ids - Product IDs
  * @returns {Promise<Map<String, {averageRating:Number, reviewCount:Number, soldCount:Number}>>}
  */
+// Orders that count as a sale: delivered, picked up or completed. Pending,
+// in-progress and cancelled orders are not sales yet (or ever).
+const SETTLED_ORDER_STATUSES = ['COMPLETED', 'DELIVERED', 'PICKED_UP'];
+
 const getStatsForIds = async (ids) => {
   const stats = new Map();
   const unique = [...new Set((ids || []).filter(Boolean))];
@@ -111,7 +115,8 @@ const getStatsForIds = async (ids) => {
     }),
     prisma.orderItem.groupBy({
       by: ['productId'],
-      where: { productId: { in: unique }, order: { status: { not: 'CANCELLED' } } },
+      // Sold means handed over: the order is settled, not merely placed.
+      where: { productId: { in: unique }, order: { status: { in: SETTLED_ORDER_STATUSES } } },
       _sum: { quantity: true },
     }),
   ]);

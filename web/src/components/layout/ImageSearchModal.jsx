@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useSheetPresence } from '../../hooks/useSheetMotion';
 import './ImageSearchModal.css';
 
 const ImageSearchModal = ({ open, onClose, onFile }) => {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [entered, setEntered] = useState(false);
+  // Phones: stays up while it slides away after closing.
+  const { mounted, closing } = useSheetPresence(open);
 
   useEffect(() => {
     if (!open) {
@@ -22,7 +25,7 @@ const ImageSearchModal = ({ open, onClose, onFile }) => {
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const handleFiles = (files) => {
     const file = files?.[0];
@@ -47,13 +50,13 @@ const ImageSearchModal = ({ open, onClose, onFile }) => {
 
   return (
     <div
-      className={`ism-overlay ${entered ? 'ism-overlay-in' : ''}`}
+      className={`ism-overlay ui-sheet-backdrop${closing ? ' is-closing' : ''} ${entered ? 'ism-overlay-in' : ''}`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className={`ism-card ${entered ? 'ism-card-in' : ''}`}
+        className={`ism-card ui-sheet-panel ${entered ? 'ism-card-in' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         <button className="ism-close" onClick={onClose} aria-label="Close">×</button>

@@ -4,6 +4,7 @@ import { Printer, CaretLeft as ChevronLeft } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import './OrderReceipt.css';
+import { ReceiptSkeleton } from '../components/ui/PageSkeletons';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateFmt = (d) => new Date(d).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -60,7 +61,7 @@ export default function OrderReceipt() {
     })();
   }, [id]);
 
-  if (loading) return <div className="receipt-loading">Loading receipt…</div>;
+  if (loading) return <ReceiptSkeleton />;
   if (error || !order) return <div className="receipt-loading">{error || 'Order not found'}</div>;
 
   const items = order.items || [];

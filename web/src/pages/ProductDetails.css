@@ -2510,3 +2510,24 @@
     min-width: 0;
   }
 }
+
+/* Shop section reads Name / Followers / Address, tight under each other. */
+.pdp-store-left > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pdp-store-name {
+  line-height: 1.25;
+}
+
+div.pdp-store-followers {
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.pdp-store-left .pdp-store-meta {
+  margin-top: 1px;
+}

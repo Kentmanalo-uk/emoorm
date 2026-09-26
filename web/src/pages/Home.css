@@ -1585,10 +1585,8 @@
 
   .banner-section ~ section .section-arrow-link {
     flex: 0 0 auto;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--t-secondary-50, #e9f7f0);
+    width: 32px;
+    height: 32px;
   }
 
   /* Product tiles */

@@ -9,6 +9,7 @@ import ReviewModal from '../components/ReviewModal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import ProductImage from '../components/ProductImage';
 import './ProfileReviews.css';
+import { ReviewCardsSkeleton } from '../components/ui/PageSkeletons';
 
 const RATING_WORDS = ['', 'Terrible', 'Poor', 'OK', 'Good', 'Excellent'];
 
@@ -151,7 +152,7 @@ const ProfileReviews = () => {
       </div>
 
       {loading ? (
-        <div className="profile-section"><p className="rv-muted">Loading your reviews…</p></div>
+        <ReviewCardsSkeleton />
       ) : error ? (
         <div className="profile-section">
           <div className="empty-state">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import '../ui/ConfirmDialog.css';
 import './ReasonDialog.css';
+import { useSheetPresence } from '../../hooks/useSheetMotion';
 
 /**
  * Confirmation dialog that asks the admin for a reason (sent to the affected
@@ -31,6 +32,7 @@ export default function ReasonDialog({
   onCancel,
 }) {
   const [reason, setReason] = useState('');
+  const { mounted, closing } = useSheetPresence(open);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -41,7 +43,7 @@ export default function ReasonDialog({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open, loading, onCancel]);
 
-  if (!open) return null;
+  if (!mounted) return null;
   const trimmed = reason.trim();
   const disabled = loading || (required && trimmed.length < 3);
 
@@ -59,8 +61,8 @@ export default function ReasonDialog({
   };
 
   return (
-    <div className="cf-dialog-backdrop" onClick={close} role="dialog" aria-modal="true" aria-labelledby="reason-dialog-title">
-      <form className="cf-dialog reason-dialog" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+    <div className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`} onClick={close} role="dialog" aria-modal="true" aria-labelledby="reason-dialog-title">
+      <form className="cf-dialog reason-dialog ui-sheet-panel" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <div className="cf-dialog-body reason-dialog-body">
           <h3 id="reason-dialog-title">{title}</h3>
           {message && <p>{message}</p>}

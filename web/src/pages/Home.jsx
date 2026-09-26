@@ -358,14 +358,7 @@ const Home = () => {
                   <div className="product-info">
                     <span className="product-name">{product.name}</span>
                     <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
-                    <div className="product-rating-row">
-                      <div className="product-stars">
-                        {[0, 1, 2, 3, 4].map((i) => (
-                          <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
-                        ))}
-                      </div>
-                      <span className="product-review-count">({product.reviewCount ?? 0})</span>
-                    </div>
+                    <ProductStats product={product} />
                   </div>
                 </Link>
               ))}
@@ -543,6 +536,40 @@ function PromotionPopup({ banner, onClose }) {
   );
 }
 
+/** Stars only from real reviews; sold only from settled orders; else "New". */
+function ProductStats({ product }) {
+  const reviews = Number(product.reviewCount || 0);
+  const rating = Number(product.averageRating || 0);
+  const sold = Number(product.soldCount || 0);
+  if (reviews === 0 && sold === 0) {
+    return (
+      <div className="product-rating-row">
+        <span className="product-review-count product-new">New</span>
+      </div>
+    );
+  }
+  return (
+    <div className="product-rating-row">
+      {reviews > 0 && (
+        <>
+          <div className="product-stars" aria-label={`Rated ${rating.toFixed(1)} of 5`}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Star
+                key={i}
+                size={11}
+                weight={i < Math.round(rating) ? 'fill' : 'regular'}
+                color={i < Math.round(rating) ? 'var(--t-warning-500, #f59e0b)' : 'var(--t-neutral-300, #d1d5db)'}
+              />
+            ))}
+          </div>
+          <span className="product-review-count">({reviews})</span>
+        </>
+      )}
+      {sold > 0 && <span className="product-review-count product-sold">{sold} sold</span>}
+    </div>
+  );
+}
+
 function HomeProductCard({ product, onAddToCart }) {
   return (
     <Link to={`/product/${product.slug}`} className="product-card">
@@ -555,10 +582,7 @@ function HomeProductCard({ product, onAddToCart }) {
       <div className="product-info">
         <span className="product-name">{product.name}</span>
         <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
-        <div className="product-rating-row">
-          <div className="product-stars">{[0, 1, 2, 3, 4].map((i) => <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />)}</div>
-          <span className="product-review-count">({product.reviewCount ?? 0})</span>
-        </div>
+        <ProductStats product={product} />
       </div>
     </Link>
   );

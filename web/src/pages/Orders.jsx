@@ -14,6 +14,8 @@ import ProductImage from '../components/ProductImage';
 import useAuthStore from '../store/authStore';
 import useCartStore from '../store/cartStore';
 import './Orders.css';
+import { useSheetPresence } from '../hooks/useSheetMotion';
+import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 const parseImages = (raw) => {
@@ -74,6 +76,8 @@ const Orders = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  // Phones: the details sheet slides away instead of vanishing.
+  const detailsSheet = useSheetPresence(showOrderDetails);
   const [reviewTarget, setReviewTarget] = useState(null); // { product, orderId, initialRating?, intro? }
   const [reorderingId, setReorderingId] = useState(null);
 
@@ -414,9 +418,8 @@ const Orders = () => {
 
   if (isLoading) {
     return (
-      <div className="orders-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading orders…</p>
+      <div className="profile-page-wrap">
+        <OrderCardsSkeleton title="My Orders" />
       </div>
     );
   }
@@ -720,9 +723,9 @@ const Orders = () => {
       )}
 
       {/* Order Details Modal */}
-      {showOrderDetails && selectedOrder && (
-        <div className="modal-overlay" onClick={() => setShowOrderDetails(false)}>
-          <div className="modal-content order-details-modal" onClick={(e) => e.stopPropagation()}>
+      {detailsSheet.mounted && selectedOrder && (
+        <div className={`modal-overlay ui-sheet-backdrop${detailsSheet.closing ? ' is-closing' : ''}`} onClick={() => setShowOrderDetails(false)}>
+          <div className="modal-content order-details-modal ui-sheet-panel" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Order Details</h2>
               <button

@@ -6,6 +6,7 @@ import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import './MunicipalityShowcase.css';
+import { HighlightCardsSkeleton } from '../components/ui/PageSkeletons';
 
 const readList = (response) => Array.isArray(response?.data) ? response.data : [];
 
@@ -57,7 +58,7 @@ export default function MunicipalityShowcase() {
         <div className="container municipality-showcase-content">
           {error && <div className="municipality-error">{error}</div>}
           {isLoading ? (
-            <div className="municipality-loading">Loading local highlights…</div>
+            <HighlightCardsSkeleton />
           ) : (
             <>
               <section className="municipality-feature-grid">

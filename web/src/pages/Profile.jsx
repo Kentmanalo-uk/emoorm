@@ -15,6 +15,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import useWishlistStore from '../store/wishlistStore';
 import { listMyFollowing } from '../lib/follow';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import { ProfileSkeleton } from '../components/ui/PageSkeletons';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -128,10 +129,7 @@ const Profile = () => {
 
   if (isLoading) {
     return (
-      <div className="profile-loading">
-        <div className="profile-loading-spinner"></div>
-        <p>Loading profile...</p>
-      </div>
+      <ProfileSkeleton />
     );
   }
 

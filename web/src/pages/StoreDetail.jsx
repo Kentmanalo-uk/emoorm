@@ -47,6 +47,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import MoreMenu from '../components/MoreMenu';
 import { useShare } from '../components/ShareSheet';
 import './StoreDetail.css';
+import { StoreSkeleton } from '../components/ui/PageSkeletons';
 
 const SORTS = [
   { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -312,10 +313,7 @@ export default function StoreDetail() {
   if (isLoadingStore) {
     return (
       <Layout>
-        <div className="shop-loading">
-          <div className="loading-spinner" />
-          <p>Loading store…</p>
-        </div>
+        <StoreSkeleton />
       </Layout>
     );
   }

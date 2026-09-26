@@ -14,6 +14,7 @@ import ReasonDialog from '../admin/ReasonDialog';
 import NewMessageDialog from './NewMessageDialog';
 import SafetyNotice from '../common/SafetyNotice';
 import './SupportChat.css';
+import { useSheetPresence } from '../../hooks/useSheetMotion';
 
 const THREAD_POLL_MS = 5000;
 const LIST_POLL_MS = 15000;
@@ -267,6 +268,7 @@ function IdentityPanel({ userId, onClose }) {
 
 /** User side: open a new support case without leaving the page. */
 function NewCaseDialog({ open, onClose, onOpened }) {
+  const sheet = useSheetPresence(open);
   const [form, setForm] = useState({ category: 'ORDER', subject: '', message: '' });
   const [saving, setSaving] = useState(false);
   const firstRef = useRef(null);
@@ -279,7 +281,7 @@ function NewCaseDialog({ open, onClose, onOpened }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!sheet.mounted) return null;
 
   const set = (key) => (e) => setForm((current) => ({ ...current, [key]: e.target.value }));
 
@@ -310,8 +312,8 @@ function NewCaseDialog({ open, onClose, onOpened }) {
   };
 
   return (
-    <div className="sc-dialog-overlay" onClick={onClose}>
-      <div className="sc-dialog" role="dialog" aria-modal="true" aria-label="New support case" onClick={(e) => e.stopPropagation()}>
+    <div className={`sc-dialog-overlay ui-sheet-backdrop${sheet.closing ? ' is-closing' : ''}`} onClick={onClose}>
+      <div className="sc-dialog ui-sheet-panel" role="dialog" aria-modal="true" aria-label="New support case" onClick={(e) => e.stopPropagation()}>
         <div className="sc-dialog-head">
           <strong>New support case</strong>
           <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>

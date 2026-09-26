@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { fetchIdentityStatus, submitIdentityVerification } from '../lib/identity';
 import './ProfileVerification.css';
+import { useSheetClose } from '../hooks/useSheetMotion';
 
 const STATUS_META = {
   NOT_VERIFIED: {
@@ -37,7 +38,8 @@ const STATUS_META = {
 };
 
 // Webcam capture for desktops; phones use the native camera through the file input.
-function CameraCapture({ onCapture, onClose }) {
+function CameraCapture({ onCapture, onClose: onCloseProp }) {
+  const [sheetClosing, onClose] = useSheetClose(onCloseProp);
   const videoRef = useRef(null);
   const [error, setError] = useState('');
 
@@ -69,8 +71,8 @@ function CameraCapture({ onCapture, onClose }) {
   };
 
   return (
-    <div className="idv-camera" role="dialog" aria-modal="true" aria-label="Capture ID photo">
-      <div className="idv-camera-panel">
+    <div className={`idv-camera ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} role="dialog" aria-modal="true" aria-label="Capture ID photo">
+      <div className="idv-camera-panel ui-sheet-panel">
         {error ? (
           <p className="idv-camera-error">{error}</p>
         ) : (
