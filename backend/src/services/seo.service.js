@@ -187,7 +187,7 @@ const breadcrumbLd = (crumbs) => ({
  */
 const productMeta = async (slug) => {
   const product = await prisma.product.findFirst({
-    where: { slug, deletedAt: null, status: 'APPROVED' },
+    where: { slug, deletedAt: null, status: 'APPROVED', store: { isApproved: true } },
     select: {
       name: true, slug: true, description: true, price: true, stock: true,
       images: true, updatedAt: true,
@@ -266,7 +266,7 @@ const productMeta = async (slug) => {
  */
 const storeMeta = async (slug) => {
   const store = await prisma.store.findFirst({
-    where: { slug, deletedAt: null, isActive: true },
+    where: { slug, deletedAt: null, isActive: true, isApproved: true },
     select: {
       name: true, slug: true, description: true, logo: true,
       bannerImage: true, coverImage: true, updatedAt: true,

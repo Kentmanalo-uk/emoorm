@@ -1,5 +1,5 @@
 ﻿import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, CheckCircle, UploadSimple as Upload, X, User,
   Storefront as Store, ShieldCheck, Warning, Buildings, Wallet, Check,
@@ -11,6 +11,7 @@ import PhAddressPicker from "../components/common/PhAddressPicker";
 import AppLogo from "../components/AppLogo";
 import { inspectImage } from "../lib/imageQuality";
 import { IDENTITY_VERIFICATION_PATH } from "../lib/identity";
+import IdentityVerifier from "../components/identity/IdentityVerifier";
 import resolveImg from "../lib/media";
 import "./SellerApply.css";
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
@@ -229,6 +230,9 @@ const EMPTY_FORM = {
 
 export default function SellerApply() {
   const { isAuthenticated, user, updateUser } = useAuthStore();
+  const navigate = useNavigate();
+  // Set when the ID passes the OCR check on this page.
+  const [verifiedHere, setVerifiedHere] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -281,7 +285,7 @@ export default function SellerApply() {
   }, []);
 
   const status = application?.status ?? user?.sellerApplicationStatus ?? null;
-  const identityVerified = application?.identityVerified === true;
+  const identityVerified = application?.identityVerified === true || verifiedHere;
 
   // ── Draft autosave ──────────────────────────────────────────────────
   const savedDraftRef = useRef("");
@@ -377,7 +381,6 @@ export default function SellerApply() {
     const keys = [
       "shopName", "shopTagline", "shopDescription", "shopAddress", "municipalityId",
       "shopCategories", "payoutAccountName", "payoutAccountNumber", "sellerPermitNumber",
-      ...(identityVerified ? [] : ["idType", "idFrontUrl", "idBackUrl"]),
     ];
     const errs = {};
     for (const key of keys) {
@@ -394,9 +397,7 @@ export default function SellerApply() {
     !form.shopCategories.length && "Shop categories",
     form.sellerBusinessType === "REGISTERED" && !form.sellerPermitNumber.trim() && "Permit number",
     form.payoutMethod !== "COD_ONLY" && !form.payoutAccountNumber.trim() && "Payout details",
-    !identityVerified && !form.idType && "ID type",
-    !identityVerified && !form.idFrontUrl && "Front of ID",
-    !identityVerified && !form.idBackUrl && "Back of ID",
+    !identityVerified && "Verify your ID",
     !contactNumber && "Contact number",
     !acceptedTerms && "Accept the seller terms",
   ].filter(Boolean), [form, identityVerified, contactNumber, acceptedTerms]);
@@ -412,22 +413,16 @@ export default function SellerApply() {
         acceptedTerms: true,
       });
       const updated = res?.data ?? res;
+      // The account is a seller now: the shop is set up and private until an
+      // admin approves the application, so the Seller Center opens straight away.
       updateUser({
         ...user,
         ...(updated || {}),
-        // The account stays a buyer until an admin approves the application.
-        role: updated?.role || "BUYER",
+        role: updated?.role || "SELLER",
         sellerApplicationStatus: updated?.sellerApplicationStatus || "PENDING",
       });
-      setApplication((prev) => ({
-        ...(prev || {}),
-        status: "PENDING",
-        rejectionReason: null,
-        submittedAt: new Date().toISOString(),
-        draft: null,
-      }));
-      toast.success("Application submitted — we'll review it shortly");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      toast.success("Application submitted. Set up your shop while it's reviewed.");
+      navigate("/seller", { replace: true });
     } catch (err) {
       toast.error(err.message || "Submission failed");
     } finally {
@@ -443,6 +438,11 @@ export default function SellerApply() {
         document.querySelector(".input-error, .field-error")
           ?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
+      return;
+    }
+    if (!identityVerified) {
+      toast.error("Verify your ID first");
+      document.getElementById("apply-identity")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     if (!contactNumber) {
@@ -823,16 +823,16 @@ export default function SellerApply() {
             </div>
           </section>
 
-          {/* ── Identity verification ── */}
-          <section className="apply-card apply-section">
+          {/* ── Identity verification (OCR, same check as Profile → Verification) ── */}
+          <section className="apply-card apply-section" id="apply-identity">
             <div className="apply-section-head">
               <ShieldCheck size={22} />
               <div>
                 <h2>Identity Verification</h2>
                 <p>
                   {identityVerified
-                    ? "Your identity is already verified — there's nothing to upload."
-                    : "Upload a valid government-issued ID. This builds trust with buyers and is required by your municipality."}
+                    ? "Your identity is verified — there's nothing to upload."
+                    : "Scan a valid government-issued ID. We read it automatically and match it to your account, so your application can be approved faster."}
                 </p>
               </div>
             </div>
@@ -843,61 +843,17 @@ export default function SellerApply() {
                 <div>
                   <strong>Identity verified</strong>
                   <span>
-                    We already checked your ID when you verified your account, and kept no copy of the photo.{" "}
+                    Your ID matched your account, and no copy of the photo was kept.{" "}
                     <Link to={IDENTITY_VERIFICATION_PATH}>View verification</Link>
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="apply-form">
-                <div className="apply-field">
-                  <label>Type of Valid ID <span className="req">*</span></label>
-                  <select
-                    value={form.idType}
-                    onChange={(e) => set("idType", e.target.value)}
-                    onBlur={() => touch("idType")}
-                    className={errors.idType ? "input-error" : ""}
-                  >
-                    <option value="">Select ID type…</option>
-                    {ID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                  {errors.idType && <span className="field-error">{errors.idType}</span>}
-                </div>
-
-                <div className="upload-grid">
-                  <div className="apply-field">
-                    <label>Front of ID <span className="req">*</span></label>
-                    <UploadBox
-                      label="Upload front of ID"
-                      hint="Clear photo, all corners visible"
-                      fileId={form.idFrontUrl}
-                      previewUrl={previews.idFrontUrl}
-                      onChange={(fileId, preview) => setUpload("idFrontUrl", fileId, preview)}
-                      required
-                    />
-                    {errors.idFrontUrl && <span className="field-error">{errors.idFrontUrl}</span>}
-                  </div>
-
-                  <div className="apply-field">
-                    <label>Back of ID <span className="req">*</span></label>
-                    <UploadBox
-                      label="Upload back of ID"
-                      hint="Include signature if present"
-                      fileId={form.idBackUrl}
-                      previewUrl={previews.idBackUrl}
-                      onChange={(fileId, preview) => setUpload("idBackUrl", fileId, preview)}
-                      required
-                    />
-                    {errors.idBackUrl && <span className="field-error">{errors.idBackUrl}</span>}
-                  </div>
-                </div>
-
-                <div className="apply-id-note">
-                  <ShieldCheck size={15} />
-                  Your ID photos are stored privately, seen only by the reviewing admin, and deleted
-                  a while after your application has been decided.
-                </div>
-              </div>
+              <IdentityVerifier
+                as="div"
+                verifiedText="Your identity is verified. You can submit your application."
+                onVerified={() => setVerifiedHere(true)}
+              />
             )}
           </section>
         </div>

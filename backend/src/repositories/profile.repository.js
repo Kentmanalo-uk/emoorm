@@ -23,7 +23,7 @@ const findPublicUser = (id) => prisma.user.findFirst({
     store: {
       select: {
         id: true, name: true, slug: true, logo: true,
-        isActive: true, isSuspended: true, deletedAt: true, deletionRequestedAt: true,
+        isActive: true, isSuspended: true, isApproved: true, deletedAt: true, deletionRequestedAt: true,
       },
     },
   },

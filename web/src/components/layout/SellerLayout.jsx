@@ -346,6 +346,15 @@ export default function SellerLayout() {
         </header>
 
         <main className="sc-content">
+          {store && store.isApproved === false && (
+            <div className="sc-private-banner" role="status">
+              <strong>Your shop is private while your application is reviewed.</strong>
+              <span>
+                Add products and set up delivery and payments now. Buyers will see your shop
+                as soon as an admin approves it.
+              </span>
+            </div>
+          )}
           <Outlet context={{ store, setStore }} />
         </main>
         <SellerCenterGuide store={store} setStore={setStore} />

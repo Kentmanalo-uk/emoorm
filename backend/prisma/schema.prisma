@@ -603,6 +603,9 @@ model Store {
   // Status
   isActive      Boolean  @default(true) @map("is_active")
   isSuspended   Boolean  @default(false) @map("is_suspended")
+  /// False while the owner's seller application is pending: the shop works
+  /// for its owner but is hidden from buyers until an admin approves it.
+  isApproved    Boolean  @default(true) @map("is_approved")
   suspensionReason String? @db.Text @map("suspension_reason")
 
   // Deletion grace period — set when the seller requests deletion; store is

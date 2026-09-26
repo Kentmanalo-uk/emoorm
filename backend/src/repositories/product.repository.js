@@ -63,6 +63,7 @@ const PUBLIC_STORE_SELECT = {
   pickupAddress: true,
   isActive: true,
   isSuspended: true,
+  isApproved: true,
   deletedAt: true,
   municipality: { select: { id: true, name: true } },
 };
@@ -220,6 +221,7 @@ const findAll = async (options = {}) => {
     status,
     storeIsActive,
     storeIsSuspended,
+    storeIsApproved,
     excludeOwnerId,
     minPrice,
     maxPrice,
@@ -237,10 +239,11 @@ const findAll = async (options = {}) => {
   if (municipalityId) where.municipalityId = municipalityId;
   if (status) where.status = status;
 
-  if (storeIsActive !== undefined || storeIsSuspended !== undefined) {
+  if (storeIsActive !== undefined || storeIsSuspended !== undefined || storeIsApproved !== undefined) {
     where.store = {};
     if (storeIsActive !== undefined) where.store.isActive = storeIsActive;
     if (storeIsSuspended !== undefined) where.store.isSuspended = storeIsSuspended;
+    if (storeIsApproved !== undefined) where.store.isApproved = storeIsApproved;
   }
   if (excludeOwnerId) {
     where.store = {

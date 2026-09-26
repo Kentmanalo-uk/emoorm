@@ -226,6 +226,7 @@ const isPubliclyVisible = (product) =>
   && !!product.store
   && product.store.isActive === true
   && product.store.isSuspended === false
+  && product.store.isApproved !== false
   && !product.store.deletedAt;
 
 /**
@@ -394,6 +395,7 @@ const getProducts = async (rawOptions) => {
     options.status = 'APPROVED';
     options.storeIsActive = true;
     options.storeIsSuspended = false;
+    options.storeIsApproved = true;
     options.excludeOwnerId = options.userId;
   }
 
@@ -820,7 +822,7 @@ const searchByImageBuffer = async (buffer, { threshold = 20, limit = 24 } = {}) 
       deletedAt: null,
       status: 'APPROVED',
       imageHash: { not: null },
-      store: { isActive: true, isSuspended: false },
+      store: { isActive: true, isSuspended: false, isApproved: true },
     },
     include: {
       store: { select: { id: true, name: true, slug: true } },

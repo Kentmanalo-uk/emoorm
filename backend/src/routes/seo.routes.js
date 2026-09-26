@@ -62,7 +62,7 @@ const buildSitemap = async () => {
 
   const [products, stores, municipalities, categories] = await Promise.all([
     prisma.product.findMany({
-      where: { deletedAt: null, status: 'APPROVED' },
+      where: { deletedAt: null, status: 'APPROVED', store: { isActive: true, isSuspended: false, isApproved: true } },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: 'desc' },
       // Google accepts 50,000 per sitemap; this stays well inside it while
@@ -70,7 +70,7 @@ const buildSitemap = async () => {
       take: 20000,
     }),
     prisma.store.findMany({
-      where: { deletedAt: null, isActive: true },
+      where: { deletedAt: null, isActive: true, isApproved: true },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: 'desc' },
       take: 5000,

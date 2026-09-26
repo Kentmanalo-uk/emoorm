@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X, Phone, MapPin, Calendar, CreditCard } from '@phosphor-icons/react';
+import { MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X, Phone, MapPin, Calendar, CreditCard, Warning } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
@@ -69,6 +69,17 @@ export default function AdminSellers() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [selected, setSelected] = useState(null); // detail panel
+  // The OCR identity result for the open applicant (from the user detail).
+  const [identity, setIdentity] = useState(null);
+  useEffect(() => {
+    if (!selected?.id) { setIdentity(null); return undefined; }
+    let cancelled = false;
+    setIdentity(null);
+    axios.get(`/auth/users/${selected.id}`)
+      .then((res) => { if (!cancelled) setIdentity(res.data?.identity || { status: 'NOT_VERIFIED' }); })
+      .catch(() => { if (!cancelled) setIdentity({ status: 'UNKNOWN' }); });
+    return () => { cancelled = true; };
+  }, [selected?.id]);
   const [processing, setProcessing] = useState(null); // id being processed
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
@@ -432,7 +443,26 @@ export default function AdminSellers() {
 
               {/* ID Verification */}
               <div className="admin-detail-section">
-                <h4><CreditCard size={14} /> ID Verification — {selected.idType || 'N/A'}</h4>
+                <h4><CreditCard size={14} /> ID Verification</h4>
+                {identity === null ? (
+                  <p className="admin-id-check">Checking identity…</p>
+                ) : identity.status === 'VERIFIED' ? (
+                  <p className="admin-id-check is-verified">
+                    <CheckCircle size={16} weight="fill" />
+                    <span>
+                      <strong>ID verified automatically</strong>
+                      {' '}— the scanned ID matched this account's name and address
+                      {identity.idType && identity.idType !== 'IN_PERSON' ? ` (${identity.idType.replace(/_/g, ' ')})` : ''}
+                      {identity.idType === 'IN_PERSON' ? ' (verified in person by an admin)' : ''}
+                      {identity.verifiedAt ? `, ${new Date(identity.verifiedAt).toLocaleDateString('en-PH')}` : ''}.
+                    </span>
+                  </p>
+                ) : (
+                  <p className="admin-id-check is-missing">
+                    <Warning size={16} weight="fill" />
+                    <span>Not verified by ID scan{selected.idType ? ` · submitted ${selected.idType}` : ''}.</span>
+                  </p>
+                )}
                 <div className="admin-id-photos">
                   {[
                     { label: 'Front', field: 'idFront', has: selected.idFrontUrl },

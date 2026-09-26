@@ -628,3 +628,36 @@
     justify-content: center;
   }
 }
+
+/* OCR identity result on the application review. */
+.admin-id-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.admin-id-check svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.admin-id-check.is-verified {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+}
+
+.admin-id-check.is-verified strong {
+  font-weight: 600;
+}
+
+.admin-id-check.is-missing {
+  background: #fffbeb;
+  color: #92400e;
+}

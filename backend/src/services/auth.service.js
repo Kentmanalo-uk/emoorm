@@ -7,6 +7,7 @@ const municipalityRepository = require('../repositories/municipality.repository'
 const storeService = require('./store.service');
 const notificationService = require('./notification.service');
 const identityVerificationService = require('./identityVerification.service');
+const identityVerificationRepository = require('../repositories/identityVerification.repository');
 const googleService = require('./google.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateTokens, verifyRefreshToken, generateMfaToken, generateGoogleProfileToken, verifyGoogleProfileToken } = require('../utils/jwt');
@@ -458,6 +459,50 @@ const normalizeSellerApplication = async (data = {}, context = {}) => {
  * @param {Object} data - Application form data
  * @returns {Promise<Object>} Updated user
  */
+/**
+ * The applicant's shop, created from their application or refreshed from it
+ * when they re-apply. `approved` decides whether buyers can see it.
+ */
+const ensureSellerStore = async (user, application, { approved }) => {
+  const fulfillmentMode = FULFILLMENT_PREFERENCES.includes(application?.fulfillmentPreference)
+    ? application.fulfillmentPreference
+    : 'DELIVERY';
+  let store = await storeRepository.findByOwnerId(user.id);
+  if (store) {
+    const changes = { isActive: true, isApproved: approved };
+    if (application?.shopName && application.shopName !== store.name && !approved) {
+      changes.name = application.shopName;
+      changes.slug = await storeService.generateSlug(application.shopName);
+    }
+    if (!approved && application) {
+      changes.description = application.shopDescription || store.description || null;
+      if (application.shopLogoUrl) changes.logo = application.shopLogoUrl;
+      if (application.shopMunicipalityId) changes.municipalityId = application.shopMunicipalityId;
+      if (application.shopAddress) changes.pickupAddress = application.shopAddress;
+    }
+    return storeRepository.updateStore(store.id, changes);
+  }
+  if (!application?.shopName) return null;
+  store = await storeRepository.createStore({
+    name: application.shopName,
+    slug: await storeService.generateSlug(application.shopName),
+    description: application.shopDescription || null,
+    logo: application.shopLogoUrl || null,
+    coverImage: null,
+    businessHours: null,
+    ownerId: user.id,
+    // The municipality the applicant picked for the shop, which may differ
+    // from the one on their own profile.
+    municipalityId: application.shopMunicipalityId || user.municipalityId,
+    pickupAddress: application.shopAddress || null,
+    fulfillmentMode,
+    isActive: true,
+    isSuspended: false,
+    isApproved: approved,
+  });
+  return store;
+};
+
 const applyForSeller = async (userId, data = {}) => {
   const user = await userRepository.findById(userId);
 
@@ -477,7 +522,12 @@ const applyForSeller = async (userId, data = {}) => {
     throw new ApiError('Add a contact number to your profile before applying', 400);
   }
 
+  // The ID is checked by the same OCR verification buyers use (name and
+  // address must match the account at 50% or better); no photo is kept.
   const identityVerified = await identityVerificationService.isVerified(userId);
+  if (!identityVerified) {
+    throw new ApiError('Verify your ID before applying. It only takes a minute.', 400);
+  }
   const application = await normalizeSellerApplication(data, { identityVerified });
 
   // Two shops sharing a display name confuses buyers even though their URLs
@@ -487,11 +537,17 @@ const applyForSeller = async (userId, data = {}) => {
   }
 
   const existing = await userRepository.findSellerApplication(userId);
-  const updatedUser = await userRepository.applyForSeller(
+  await userRepository.applyForSeller(
     userId,
     application,
     existing?.sellerApplicationHistory
   );
+
+  // The applicant gets their Seller Center straight away. The shop works for
+  // them (products, settings, everything) but stays private until an admin
+  // approves the application.
+  await ensureSellerStore(user, application, { approved: false });
+  const updatedUser = await userRepository.updateUser(userId, { role: 'SELLER' });
 
   // Route the review to the admin of the municipality the SHOP is in, which
   // is not necessarily the municipality on the applicant's own profile.
@@ -614,7 +670,14 @@ const getUserById = async (userId, actor) => {
     throw new ApiError('Municipal admins can only access buyer and seller accounts', 403);
   }
 
-  return user;
+  // The OCR identity result, for the seller-application review (status,
+  // ID type and when; never the extracted personal data).
+  const record = await identityVerificationRepository.findByUserId(userId).catch(() => null);
+  const identity = record
+    ? { status: record.status, idType: record.idType, verifiedAt: record.verifiedAt, reviewedById: record.reviewedById }
+    : { status: 'NOT_VERIFIED' };
+
+  return { ...user, identity };
 };
 
 const KYC_FIELD_COLUMNS = {
@@ -710,32 +773,9 @@ const approveSeller = async (userId, actor) => {
     history: application?.sellerApplicationHistory,
   });
 
-  // The store is created here, at approval — not at submission — so a pending
-  // or rejected applicant never owns one. An existing store is reactivated.
-  let store = await storeRepository.findByOwnerId(userId);
-  if (store) {
-    await storeRepository.updateStore(store.id, { isActive: true });
-  } else if (application?.shopName) {
-    const slug = await storeService.generateSlug(application.shopName);
-    store = await storeRepository.createStore({
-      name: application.shopName,
-      slug,
-      description: application.shopDescription || null,
-      logo: application.shopLogoUrl || null,
-      coverImage: null,
-      businessHours: null,
-      ownerId: userId,
-      // The municipality the applicant picked for the shop, which may differ
-      // from the one on their own profile.
-      municipalityId: application.shopMunicipalityId || user.municipalityId,
-      pickupAddress: application.shopAddress || null,
-      fulfillmentMode: FULFILLMENT_PREFERENCES.includes(application.fulfillmentPreference)
-        ? application.fulfillmentPreference
-        : 'DELIVERY',
-      isActive: true,
-      isSuspended: false,
-    });
-  }
+  // Approval makes the shop public. Applicants from before shops opened at
+  // application time get theirs created here.
+  const store = await ensureSellerStore(user, application, { approved: true });
 
   // Notify the newly approved seller (non-blocking on failure).
   try {
@@ -792,9 +832,10 @@ const rejectSeller = async (userId, actor, reason) => {
 
   // Legacy applicants promoted under the old flow may already own a store —
   // hide it so a rejected shop cannot stay reachable.
+  // The shop stays private; the applicant can fix things and re-apply.
   const store = await storeRepository.findByOwnerId(userId);
-  if (store?.isActive) {
-    await storeRepository.updateStore(store.id, { isActive: false });
+  if (store) {
+    await storeRepository.updateStore(store.id, { isActive: false, isApproved: false });
   }
 
   try {

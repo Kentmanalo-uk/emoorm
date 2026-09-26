@@ -92,7 +92,7 @@ const createOrder = async (userId, data) => {
 
   // Validate store
   const store = await storeRepository.findById(storeId);
-  if (!store || store.deletedAt || store.isSuspended || !store.isActive || store.deletionRequestedAt) {
+  if (!store || store.deletedAt || store.isSuspended || !store.isActive || store.deletionRequestedAt || store.isApproved === false) {
     throw new ApiError('Store not found or suspended', 404);
   }
   if (store.ownerId === userId) {

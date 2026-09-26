@@ -16,7 +16,7 @@ const { ApiError } = require('../middleware/errorHandler');
 
 /** The store, but only while it is genuinely open to the public. */
 const activeStore = (store) => (
-  store && store.isActive && !store.isSuspended && !store.deletedAt && !store.deletionRequestedAt
+  store && store.isActive && !store.isSuspended && store.isApproved !== false && !store.deletedAt && !store.deletionRequestedAt
     ? { id: store.id, name: store.name, slug: store.slug, logo: store.logo }
     : null
 );

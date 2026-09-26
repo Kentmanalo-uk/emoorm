@@ -9,7 +9,8 @@ const { ApiError } = require('../middleware/errorHandler');
 
 const ensureStore = async (storeId) => {
   const store = await storeRepository.findById(storeId);
-  if (!store || store.deletedAt) {
+  // A shop still awaiting approval is private, so it cannot be followed yet.
+  if (!store || store.deletedAt || store.isApproved === false) {
     throw new ApiError('Store not found', 404);
   }
   return store;
