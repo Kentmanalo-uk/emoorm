@@ -1,0 +1,193 @@
+/* Share sheet: slides up on phones, a centred card on wider screens. */
+.share-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.share-scrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.5);
+  animation: share-fade-in 0.22s ease both;
+}
+
+.share-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 20px 20px 0 0;
+  background: #fff;
+  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.18);
+  animation: share-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.share-root.is-closing .share-scrim { animation: share-fade-out 0.22s ease both; }
+.share-root.is-closing .share-sheet { animation: share-down 0.22s ease-in both; }
+
+@keyframes share-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes share-down { from { transform: none; } to { transform: translateY(100%); } }
+@keyframes share-fade-in { from { opacity: 0; } }
+@keyframes share-fade-out { to { opacity: 0; } }
+
+.share-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding-top: 6px;
+}
+
+.share-grabber {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--t-neutral-200, #e5e7eb);
+  transform: translateX(-50%);
+}
+
+.share-head h2 {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.share-close {
+  position: absolute;
+  right: 0;
+  top: 6px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
+  cursor: pointer;
+}
+
+.share-title {
+  margin: 2px 0 14px;
+  overflow: hidden;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13.5px;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.share-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px 8px;
+  padding: 4px 0 18px;
+}
+
+.share-target {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.share-target-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  color: #fff;
+  transition: transform 0.12s ease;
+}
+
+.share-target:active .share-target-icon {
+  transform: scale(0.94);
+}
+
+.share-target-label {
+  color: var(--t-neutral-700, #374151);
+  font-size: 12.5px;
+}
+
+.share-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 14px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.share-link-url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--t-neutral-700, #374151);
+  font-size: 13.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.share-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.share-copy.is-done {
+  background: var(--t-primary-700, #047857);
+}
+
+/* Wider screens: a centred card instead of a bottom sheet. */
+@media (min-width: 769px) {
+  .share-root {
+    justify-content: center;
+  }
+
+  .share-sheet {
+    max-width: 440px;
+    padding: 12px 20px 20px;
+    border-radius: 20px;
+    animation: share-pop 0.2s ease-out both;
+  }
+
+  .share-root.is-closing .share-sheet {
+    animation: share-fade-out 0.18s ease both;
+  }
+
+  .share-grabber {
+    display: none;
+  }
+
+  @keyframes share-pop { from { opacity: 0; transform: scale(0.96); } }
+}

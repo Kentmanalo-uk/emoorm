@@ -22,6 +22,10 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import MoreMenu from '../components/MoreMenu';
 import ReviewItem from '../components/reviews/ReviewItem';
 import ProductOptionSheet from '../components/ProductOptionSheet';
+import { useShare } from '../components/ShareSheet';
+import {
+  getFollowStatus, followStore as apiFollowStore, unfollowStore as apiUnfollowStore, subscribeToFollowChanges,
+} from '../lib/follow';
 import './ProductDetails.css';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -84,7 +88,7 @@ const storeServiceLines = (store) => {
 const ProductDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { addItem, getItemCount } = useCartStore();
   const cartCount = getItemCount();
 
@@ -131,6 +135,9 @@ const ProductDetails = () => {
   const [showReport, setShowReport] = useState(false);
   // Phone: 'cart' | 'buy' while the options sheet is open.
   const [sheetMode, setSheetMode] = useState(null);
+  const { share, shareSheet } = useShare();
+  // The shop's live follow state (the product payload carries none).
+  const [storeFollow, setStoreFollow] = useState({ following: false, count: null, busy: false });
   const closeSheet = useCallback(() => setSheetMode(null), []);
   const [zoom, setZoom] = useState({ active: false, x: 50, y: 50 });
 
@@ -141,6 +148,25 @@ const ProductDetails = () => {
     setZoom({ active: true, x, y });
   };
   const handleZoomLeave = () => setZoom((z) => ({ ...z, active: false }));
+
+  const followStoreId = product?.store?.id || null;
+  useEffect(() => {
+    if (!followStoreId) return undefined;
+    let cancelled = false;
+    setStoreFollow({ following: false, count: null, busy: false });
+    getFollowStatus(followStoreId)
+      .then((st) => { if (!cancelled) setStoreFollow((cur) => ({ ...cur, following: !!st.following, count: st.followerCount ?? 0 })); })
+      .catch(() => {});
+    const unsub = subscribeToFollowChanges((msg) => {
+      if (!msg || msg.storeId !== followStoreId) return;
+      setStoreFollow((cur) => ({
+        ...cur,
+        following: msg.type === 'follow' ? true : msg.type === 'unfollow' ? false : cur.following,
+        count: msg.data?.followerCount ?? cur.count,
+      }));
+    });
+    return () => { cancelled = true; unsub(); };
+  }, [followStoreId, isAuthenticated]);
 
   useEffect(() => {
     fetchProduct();
@@ -201,6 +227,22 @@ const ProductDetails = () => {
   };
 
   const loginRedirect = () => navigate(`/login?redirect=${encodeURIComponent(`/product/${slug}`)}`);
+
+  const toggleStoreFollow = async () => {
+    if (!isAuthenticated) { loginRedirect(); return; }
+    if (!product?.store || storeFollow.busy) return;
+    setStoreFollow((cur) => ({ ...cur, busy: true }));
+    try {
+      const res = storeFollow.following
+        ? await apiUnfollowStore(product.store.id)
+        : await apiFollowStore(product.store.id);
+      setStoreFollow({ following: !!res.following, count: res.followerCount ?? 0, busy: false });
+      toast.success(res.following ? `You now follow ${product.store.name}` : `Unfollowed ${product.store.name}`);
+    } catch (err) {
+      setStoreFollow((cur) => ({ ...cur, busy: false }));
+      toast.error(err.message || 'Could not update follow');
+    }
+  };
 
   const handleAddToCart = () => {
     if (!isAuthenticated) { loginRedirect(); return; }
@@ -274,19 +316,12 @@ const ProductDetails = () => {
     if (list.length) setSelectedImage((p) => (p - 1 + list.length) % list.length);
   };
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: product.name, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast.success('Link copied to clipboard');
-      }
-    } catch {
-      // user cancelled — no-op
-    }
-  };
+  // The device's share menu where there is one, otherwise the app list.
+  const handleShare = () => share({
+    title: product.name,
+    text: `${product.name} — ${peso(product.price)} on E-MOORM`,
+    url: `${window.location.origin}/product/${product.slug}`,
+  });
 
   const soldCount = useMemo(() => Number(product?.soldCount ?? 0), [product]);
 
@@ -923,10 +958,26 @@ const ProductDetails = () => {
                     {product.store.municipality?.name && (
                       <span><MapPin size={12} /> {product.store.municipality.name}</span>
                     )}
+                    {storeFollow.count !== null && (
+                      <span className="pdp-store-followers">
+                        {storeFollow.count} {storeFollow.count === 1 ? 'follower' : 'followers'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
               <div className="pdp-store-actions">
+                {!(user?.id && (product.store.ownerId || product.store.owner?.id) === user.id) && (
+                  <button
+                    type="button"
+                    className={`pdp-store-btn pdp-store-follow${storeFollow.following ? ' is-following' : ''}`}
+                    onClick={toggleStoreFollow}
+                    disabled={storeFollow.busy}
+                    aria-pressed={storeFollow.following}
+                  >
+                    {storeFollow.following ? 'Following' : 'Follow'}
+                  </button>
+                )}
                 <Link to={`/messages?store=${product.store.id}`} className="pdp-store-btn pdp-store-btn-ghost">
                   <MessageCircle size={15} /> Chat
                 </Link>
@@ -1102,6 +1153,7 @@ const ProductDetails = () => {
           onClose={() => setShowReport(false)}
         />
       )}
+      {shareSheet}
       {identityDialog}
     </Layout>
   );

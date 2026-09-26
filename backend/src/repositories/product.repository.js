@@ -51,6 +51,9 @@ const withImagesList = (products) => (products || []).map(withImages);
  */
 const PUBLIC_STORE_SELECT = {
   id: true,
+  // Lets the page hide Follow on the viewer's own shop (the storefront
+  // already returns it).
+  ownerId: true,
   name: true,
   slug: true,
   logo: true,

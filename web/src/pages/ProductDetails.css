@@ -2449,3 +2449,64 @@
     color: var(--t-neutral-400, #9ca3af);
   }
 }
+
+/* Shop card: follower count and Follow / Following. */
+.pdp-store-followers {
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.pdp-store-follow {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.pdp-store-follow.is-following {
+  border-color: var(--t-neutral-300, #d1d5db);
+  background: #fff;
+  color: var(--t-neutral-700, #374151);
+}
+
+.pdp-store-follow:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (max-width: 768px) {
+  .pdp-is-phone .pdp-store-actions {
+    gap: 6px;
+  }
+
+  .pdp-is-phone .pdp-store-actions .pdp-store-follow {
+    border-color: var(--t-primary-600, #059669);
+    background: var(--t-primary-600, #059669);
+    color: #fff;
+  }
+
+  .pdp-is-phone .pdp-store-actions .pdp-store-follow.is-following {
+    border-color: var(--t-neutral-300, #d1d5db);
+    background: #fff;
+    color: var(--t-neutral-700, #374151);
+  }
+}
+
+@media (max-width: 768px) {
+  /* Two compact pills beside the shop name; the name gives way, not them. */
+  .pdp-is-phone .pdp-store-actions .pdp-store-btn {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 0 14px;
+    white-space: nowrap;
+  }
+
+  .pdp-is-phone .pdp-store-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 768px) {
+  .pdp-is-phone .pdp-store-left > div:last-child {
+    min-width: 0;
+  }
+}

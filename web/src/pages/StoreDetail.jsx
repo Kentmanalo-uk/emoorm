@@ -38,12 +38,14 @@ import ProductImage from '../components/ProductImage';
 import {
   followStore as apiFollowStore,
   unfollowStore as apiUnfollowStore,
+  getFollowStatus,
   subscribeToFollowChanges,
 } from '../lib/follow';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import MoreMenu from '../components/MoreMenu';
+import { useShare } from '../components/ShareSheet';
 import './StoreDetail.css';
 
 const SORTS = [
@@ -87,6 +89,7 @@ export default function StoreDetail() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [showReport, setShowReport] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const { share, shareSheet } = useShare();
 
   const [page, setPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -107,13 +110,28 @@ export default function StoreDetail() {
 
   useEffect(() => {
     if (store) fetchProducts();
-  }, [store, page, activeCategory, sortKey, search]);
+    // Keyed on the store id: following it must not reload the products.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store?.id, page, activeCategory, sortKey, search]);
 
   const fetchStore = async () => {
     setIsLoadingStore(true);
     try {
       const res = await axios.get(`/stores/slug/${slug}/storefront`);
-      setStore(res.data);
+      // The storefront is cached for everyone, so it carries no "you follow
+      // this" and its count can lag; the live values come just below.
+      setStore({
+        ...res.data,
+        isFollowing: false,
+        followerCount: res.data?.stats?.followerCount ?? 0,
+      });
+      if (res.data?.id) {
+        getFollowStatus(res.data.id)
+          .then((st) => setStore((cur) => (cur && cur.id === res.data.id
+            ? { ...cur, isFollowing: !!st.following, followerCount: st.followerCount ?? cur.followerCount }
+            : cur)))
+          .catch(() => { /* keep the cached count */ });
+      }
     } catch (err) {
       if (err.status === 404) navigate('/stores');
       else toast.error('Failed to load store');
@@ -201,7 +219,7 @@ export default function StoreDetail() {
 
   const handleToggleFollow = async () => {
     if (!isAuthenticated) {
-      toast.error('Please login to follow this store');
+      navigate(`/login?redirect=${encodeURIComponent(`/store/${slug}`)}`);
       return;
     }
     if (!store || store.ownerId === user?.id) return;
@@ -336,19 +354,12 @@ export default function StoreDetail() {
     navigate(`/messages?store=${store.id}`);
   };
 
-  const shareStore = async () => {
-    const url = `${window.location.origin}/store/${store.slug}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: store.name, url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      toast.success('Shop link copied');
-    } catch (err) {
-      if (err?.name !== 'AbortError') toast.error('Could not share this shop');
-    }
-  };
+  // The device's share menu where there is one, otherwise the app list.
+  const shareStore = () => share({
+    title: store.name,
+    text: `Shop local at ${store.name} on E-MOORM`,
+    url: `${window.location.origin}/store/${store.slug}`,
+  });
 
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate('/stores'));
   const perkLabels = [
@@ -911,6 +922,7 @@ export default function StoreDetail() {
           onClose={() => setShowReport(false)}
         />
       )}
+      {shareSheet}
     </Layout>
   );
 }
