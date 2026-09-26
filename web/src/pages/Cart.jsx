@@ -11,6 +11,7 @@ import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
 import MoreMenu from '../components/MoreMenu';
+import EmptyState from '../components/ui/EmptyState';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import './Cart.css';
 
@@ -445,15 +446,13 @@ const Cart = () => {
         <div className="cart-page">
           {phoneHead}
           <div className="container">
-            <div className="cart-empty">
-              <ShoppingCart size={64} weight="fill" />
-              <h2>Your cart is empty</h2>
-              <p>Start shopping to add items to your cart</p>
-              <Link to="/products" className="btn-continue-shopping">
-                <ShoppingBag size={20} />
-                Browse Products
-              </Link>
-            </div>
+            <EmptyState
+              className="cart-empty-state"
+              icon={ShoppingCart}
+              title="Your cart is empty"
+              text="Items you add from products and shops will show up here."
+              actions={[{ label: 'Browse products', to: '/products', icon: ShoppingBag }]}
+            />
             {suggestionsSection}
           </div>
         </div>

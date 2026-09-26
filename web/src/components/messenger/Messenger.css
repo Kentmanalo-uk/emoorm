@@ -2116,3 +2116,30 @@
     display: none;
   }
 }
+
+/* Empty list: the shared empty-state card. In the narrow desktop column it
+   stays compact; on phones it sits inset on the grey page like the
+   Notifications and Cart cards. */
+.msgr-empty-state {
+  min-height: 0;
+  margin: 12px;
+  padding: 36px 16px;
+}
+
+@media (max-width: 768px) {
+  .msgr-list:has(.msgr-empty-state),
+  .msgr-list-scroll:has(.msgr-empty-state) {
+    border: none;
+    background: transparent;
+  }
+
+  .msgr-shell:has(.msgr-empty-state) {
+    background: transparent;
+  }
+
+  .msgr-empty-state {
+    min-height: 420px;
+    margin: 4px 12px 16px;
+    padding: 48px 24px;
+  }
+}

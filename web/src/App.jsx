@@ -82,6 +82,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import RoleGate from './components/RoleGate';
 import ScrollToTop from './components/ScrollToTop';
+import StatusBarTint from './components/StatusBarTint';
 import AppToaster from './components/ui/AppToaster';
 import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import useAuthStore from './store/authStore';
@@ -271,6 +272,7 @@ function App() {
       <ThemeRuntime />
       <Router>
         <ScrollToTop />
+        <StatusBarTint />
         <AppToaster />
         <AccountSwitchOverlay />
         <RoleGate>

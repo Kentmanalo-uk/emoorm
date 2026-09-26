@@ -15,6 +15,7 @@ import UserAvatar from '../ui/UserAvatar';
 import ProductImage from '../ProductImage';
 import MoreMenu from '../MoreMenu';
 import ReportModal from '../ReportModal';
+import EmptyState from '../ui/EmptyState';
 import './Messenger.css';
 
 const POLL_INTERVAL_MS = 5000;
@@ -732,29 +733,25 @@ export default function Messenger({ role = 'buyer', className = '', title = '' }
               <span>Loading conversations…</span>
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="msgr-list-empty">
-              <span className="msgr-empty-icon"><MessageSquare size={26} weight="fill" /></span>
-              <p>
-                {searchQuery
-                  ? `No chats match “${searchQuery}”.`
-                  : unreadOnly ? 'No unread chats. You’re all caught up.' : 'No conversations yet.'}
-              </p>
-              {unreadOnly && !searchQuery && (
-                <button type="button" className="msgr-empty-link" onClick={() => setUnreadOnly(false)}>
-                  Show all chats
-                </button>
-              )}
-              {!searchQuery && !unreadOnly && (role === 'buyer' ? (
-                <>
-                  <span>Tap Chat on a product or shop to ask the seller anything.</span>
-                  <Link to="/stores" className="msgr-empty-link">
-                    Browse stores
-                  </Link>
-                </>
-              ) : (
-                <span>Buyers will appear here when they message you.</span>
-              ))}
-            </div>
+            <EmptyState
+              className="msgr-empty-state"
+              icon={MessageSquare}
+              title={searchQuery
+                ? `No chats match “${searchQuery}”`
+                : unreadOnly ? 'No unread chats' : 'No conversations yet'}
+              text={searchQuery
+                ? 'Try another name, or clear the search.'
+                : unreadOnly
+                  ? "You're all caught up."
+                  : role === 'buyer'
+                    ? 'Tap Chat on a product or shop to ask the seller anything.'
+                    : 'Buyers will appear here when they message you.'}
+              actions={searchQuery
+                ? [{ label: 'Clear search', onClick: () => setSearchQuery(''), variant: 'outline' }]
+                : unreadOnly
+                  ? [{ label: 'Show all chats', onClick: () => setUnreadOnly(false), variant: 'outline' }]
+                  : role === 'buyer' ? [{ label: 'Browse stores', to: '/stores', icon: StoreIcon }] : []}
+            />
           ) : (
             filteredConversations.map((c) => (
               <ConversationListItem

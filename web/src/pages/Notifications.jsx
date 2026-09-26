@@ -12,6 +12,7 @@ import { notificationHref } from '../lib/notificationLink';
 import useAuthStore from '../store/authStore';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import EmptyArt from '../components/ui/EmptyArt';
+import EmptyState from '../components/ui/EmptyState';
 import MoreMenu from '../components/MoreMenu';
 import './SellerDashboard.css';
 import './Notifications.css';
@@ -303,6 +304,24 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
               <div key={i} className="notif-skeleton" />
             ))}
           </div>
+        ) : notifications.length === 0 && !isSeller ? (
+          <EmptyState
+            className="notif-empty-state"
+            icon={BellOff}
+            title={search
+              ? `No notifications match “${search}”`
+              : filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+            text={search
+              ? 'Try another word, or clear the search.'
+              : filter === 'unread'
+                ? "You're all caught up."
+                : 'Order updates and alerts from shops you follow will show up here.'}
+            actions={search
+              ? [{ label: 'Clear search', onClick: closeSearch, variant: 'outline' }]
+              : filter === 'unread'
+                ? [{ label: 'View all notifications', onClick: () => setFilter('all'), variant: 'outline' }]
+                : [{ label: 'Browse stores', to: '/stores', icon: Storefront }]}
+          />
         ) : notifications.length === 0 ? (
           <div className={`notif-empty${isSeller ? ' is-seller' : ''}`}>
             {isSeller
