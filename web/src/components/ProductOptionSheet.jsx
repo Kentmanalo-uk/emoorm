@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Minus, Plus, Truck } from '@phosphor-icons/react';
 import ProductImage from './ProductImage';
-import { pricedVariation, priceForSelection, priceRange } from '../lib/variantPricing';
+import {
+  pricedVariation, priceForSelection, priceRange, stockedVariation, stockForSelection,
+} from '../lib/variantPricing';
 import './ProductOptionSheet.css';
 
 const CLOSE_MS = 220;
@@ -63,8 +65,12 @@ export default function ProductOptionSheet({
   if (!shown || !product) return null;
 
   const variations = Array.isArray(product.variations) ? product.variations.filter((v) => v?.name) : [];
-  const stock = Number(product.stock || 0);
+  // Per-option stock: the chosen option's quantity (the total until chosen).
+  const stockGroup = stockedVariation(product.variations);
+  const stock = stockForSelection(product, selected);
   const outOfStock = stock <= 0;
+  const optionSoldOut = (groupName, opt) => stockGroup?.name === groupName
+    && Number(stockGroup.stocks?.[opt] || 0) <= 0;
   const picked = variations.filter((v) => selected[v.name]).map((v) => `${v.name}: ${selected[v.name]}`);
   const unpicked = variations.filter((v) => !selected[v.name]).map((v) => v.name);
   // Per-option pricing: the chosen option's price, or the range until chosen.
@@ -138,19 +144,27 @@ export default function ProductOptionSheet({
                 <div className="pos-options" role="radiogroup" aria-label={v.name}>
                   {options.map((opt) => {
                     const on = selected[v.name] === opt;
+                    const soldOut = optionSoldOut(v.name, opt);
                     return (
                       <button
                         key={opt}
                         type="button"
                         role="radio"
                         aria-checked={on}
-                        className={`pos-option${on ? ' is-selected' : ''}`}
+                        disabled={soldOut && !on}
+                        className={`pos-option${on ? ' is-selected' : ''}${soldOut ? ' is-sold-out' : ''}`}
                         onClick={() => {
                           onSelect(v.name, on ? undefined : opt);
                           if (missing === v.name) setMissing('');
+                          // Keep the quantity within the new option's stock.
+                          if (!on && stockGroup?.name === v.name) {
+                            const left = Number(stockGroup.stocks?.[opt] || 0);
+                            if (left > 0 && quantity > left) onQuantity(left);
+                          }
                         }}
                       >
                         <span>{opt}</span>
+                        {soldOut && <small className="pos-option-soldout">Sold out</small>}
                         {pricedGroup?.name === v.name && Number(pricedGroup.prices?.[opt]) > 0 && (
                           <small className="pos-option-price">{peso(pricedGroup.prices[opt])}</small>
                         )}

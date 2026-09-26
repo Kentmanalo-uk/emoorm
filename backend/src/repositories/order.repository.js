@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { changeStock } = require('./stockLedger');
 
 /**
  * Order Repository
@@ -54,29 +55,15 @@ const createOrder = async (data) => {
  */
 const createOrderWithItems = async (orderData, itemsData, voucherRedemption = null) => {
   return prisma.$transaction(async (tx) => {
-    // Atomically decrement stock; fails if stock is insufficient
+    // Take stock under a row lock (per option when the product keeps stock
+    // per option); fails if there is not enough.
     for (const item of itemsData) {
-      const result = await tx.product.updateMany({
-        where: {
-          id: item.productId,
-          stock: { gte: item.quantity },
-        },
-        data: {
-          stock: { decrement: item.quantity },
-        },
-      });
-
-      if (result.count === 0) {
-        const err = new Error(`Insufficient stock for product ${item.productId}`);
-        err.code = 'INSUFFICIENT_STOCK';
-        throw err;
-      }
-      const product = await tx.product.findUnique({ where: { id: item.productId }, select: { stock: true } });
+      const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, -item.quantity);
       await tx.inventoryMovement.create({
         data: {
           productId: item.productId,
           quantityDelta: -item.quantity,
-          balanceAfter: product.stock,
+          balanceAfter,
           reason: 'SALE',
           referenceId: orderData.checkoutKey || orderData.orderNumber,
           actorId: orderData.buyerId,
@@ -547,20 +534,16 @@ const cancelOrder = async (id, actorId = null, {
 
     const items = await tx.orderItem.findMany({
       where: { orderId: id },
-      select: { productId: true, quantity: true },
+      select: { productId: true, quantity: true, selectedVariations: true },
     });
 
     for (const item of items) {
-      const product = await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { increment: item.quantity } },
-        select: { stock: true },
-      });
+      const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, item.quantity);
       await tx.inventoryMovement.create({
         data: {
           productId: item.productId,
           quantityDelta: item.quantity,
-          balanceAfter: product.stock,
+          balanceAfter,
           reason: 'CANCELLATION',
           referenceId: id,
         },

@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { changeStock } = require('./stockLedger');
 
 const REQUEST_INCLUDE = {
   buyer: { select: { id: true, fullName: true, email: true, contactNumber: true } },
@@ -135,16 +136,12 @@ const receiveAndRestock = async (id, itemRestocks) => {
 
     for (const item of itemRestocks) {
       if (item.restockOnReceive) {
-        const product = await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } },
-          select: { stock: true },
-        });
+        const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, item.quantity);
         await tx.inventoryMovement.create({
           data: {
             productId: item.productId,
             quantityDelta: item.quantity,
-            balanceAfter: product.stock,
+            balanceAfter,
             reason: 'RETURN_RESTOCK',
             referenceId: id,
           },

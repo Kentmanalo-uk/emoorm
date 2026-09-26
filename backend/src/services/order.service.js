@@ -9,7 +9,7 @@ const notificationService = require('./notification.service');
 const identityVerificationService = require('./identityVerification.service');
 const appSettingService = require('./appSetting.service');
 const { ApiError } = require('../middleware/errorHandler');
-const { priceForSelection } = require('../utils/variantPricing');
+const { priceForSelection, stockForSelection } = require('../utils/variantPricing');
 
 const PAYMENT_METHODS = ['COD', 'GCASH', 'QRPH'];
 const MAX_ORDER_LINES = 50;
@@ -175,6 +175,12 @@ const createOrder = async (userId, data) => {
     }
 
     const selectedVariations = normalizeSelectedVariations(product, item.selectedVariations);
+
+    // Per-option stock: the chosen option must have enough on its own.
+    if (stockForSelection(product, selectedVariations) < quantity) {
+      const option = selectedVariations ? Object.values(selectedVariations).join(', ') : '';
+      throw new ApiError(`Insufficient stock for ${product.name}${option ? ` (${option})` : ''}`, 400);
+    }
 
     // The chosen option's price when the product is priced per option
     // (e.g. 1kg vs 250g); otherwise the product's single price.

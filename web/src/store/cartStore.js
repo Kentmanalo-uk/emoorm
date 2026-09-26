@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from '../lib/axios';
-import { priceForSelection, pricedVariation } from '../lib/variantPricing';
+import { priceForSelection, pricedVariation, stockForSelection } from '../lib/variantPricing';
 
 // Carts are kept per owner (user id or 'guest'). `items` mirrors the active
 // owner's bucket so every existing consumer keeps reading `items` directly.
@@ -179,7 +179,8 @@ const useCartStore = create(
 
             const gone = !product || status === 404;
             const notApproved = !gone && product.status !== 'APPROVED';
-            const stock = gone ? 0 : Number(product.stock ?? 0);
+            // Per-option stock: the line's own option's quantity.
+            const stock = gone ? 0 : stockForSelection(product, line.selectedVariations);
             const patch = { unavailable: false, unavailableReason: null };
             if (!gone) {
               patch.name = product.name ?? line.name;

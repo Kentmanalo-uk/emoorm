@@ -326,3 +326,17 @@ body.pos-open {
 .pos-option.is-selected .pos-option-price {
   color: var(--t-accent-600, #db2777);
 }
+
+/* Options with no stock left. */
+.pos-option.is-sold-out {
+  opacity: 0.5;
+}
+
+.pos-option:disabled {
+  cursor: not-allowed;
+}
+
+.pos-option-soldout {
+  color: #b91c1c;
+  font-size: 11.5px;
+}

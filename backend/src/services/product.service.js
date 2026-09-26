@@ -9,6 +9,7 @@ const { cached } = require('../lib/cachePolicy');
 const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
 const { bufferToDHash, hammingDistance, hashFromSource, HASH_BIT_LENGTH } = require('../utils/imageHash');
+const { stockedVariation } = require('../utils/variantPricing');
 
 const computeImageHashSafe = async (images) => {
   const first = Array.isArray(images) ? images[0] : null;
@@ -60,6 +61,9 @@ const normalizeProductOptions = (data) => {
       rawPrices: variation?.prices && typeof variation.prices === 'object' && !Array.isArray(variation.prices)
         ? variation.prices
         : null,
+      rawStocks: variation?.stocks && typeof variation.stocks === 'object' && !Array.isArray(variation.stocks)
+        ? variation.stocks
+        : null,
     }))
     .filter((variation) => variation.name && variation.options.length)
     .slice(0, 10);
@@ -79,7 +83,33 @@ const normalizeProductOptions = (data) => {
   if (priced.length > 1) {
     throw new ApiError('Only one variation can set the price', 400);
   }
-  const cleaned = variations.map(({ rawPrices, ...variation }) => {
+  // Per-option stock (e.g. 250g: 12, 1kg: 3). One group keeps it; every
+  // option in it needs a whole number. product.stock becomes the total.
+  let totalStock = null;
+  const stocked = variations.filter((v) => v.rawStocks && Object.keys(v.rawStocks).length);
+  if (stocked.length > 1) {
+    throw new ApiError('Only one variation can have stock per option', 400);
+  }
+  const withStock = variations.map(({ rawStocks, ...variation }) => {
+    if (!rawStocks || !Object.keys(rawStocks).length) return variation;
+    const stocks = {};
+    for (const option of variation.options) {
+      const raw = rawStocks[option];
+      const value = raw === '' || raw === null || raw === undefined ? 0 : Number(raw);
+      if (!Number.isInteger(value) || value < 0) {
+        throw new ApiError(`Stock for "${option}" must be a whole number of 0 or more`, 400);
+      }
+      if (value > QUANTITY_MAX) {
+        throw new ApiError(`Stock for "${option}" is too high`, 400);
+      }
+      stocks[option] = value;
+    }
+    totalStock = Object.values(stocks).reduce((sum, n) => sum + n, 0);
+    if (totalStock > QUANTITY_MAX) throw new ApiError('Total stock is too high', 400);
+    return { ...variation, stocks };
+  });
+
+  const cleaned = withStock.map(({ rawPrices, ...variation }) => {
     if (!rawPrices || !Object.keys(rawPrices).length) return variation;
     const prices = {};
     for (const option of variation.options) {
@@ -101,6 +131,7 @@ const normalizeProductOptions = (data) => {
     returnPolicy,
     variations: cleaned.length ? cleaned : null,
     ...(minPrice !== null ? { price: minPrice } : {}),
+    ...(totalStock !== null ? { stock: totalStock } : {}),
   };
 };
 
@@ -613,6 +644,10 @@ const adjustStock = async (productId, userId, body = {}) => {
     throw new ApiError('You can only adjust stock on your own products', 403);
   }
   assertStoreCanEdit(store, 'update');
+
+  if (stockedVariation(product.variations)) {
+    throw new ApiError('This product has stock per option. Edit the product to change each option\'s stock.', 400);
+  }
 
   if (delta > 0 && product.stock + delta > QUANTITY_MAX) {
     throw new ApiError(`Stock cannot exceed ${QUANTITY_MAX.toLocaleString('en-US')}`, 400);

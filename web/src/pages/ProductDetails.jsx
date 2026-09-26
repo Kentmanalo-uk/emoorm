@@ -27,7 +27,9 @@ import {
   getFollowStatus, followStore as apiFollowStore, unfollowStore as apiUnfollowStore, subscribeToFollowChanges,
 } from '../lib/follow';
 import './ProductDetails.css';
-import { pricedVariation, priceForSelection, priceRange } from '../lib/variantPricing';
+import {
+  pricedVariation, priceForSelection, priceRange, stockedVariation, stockForSelection,
+} from '../lib/variantPricing';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -264,7 +266,7 @@ const ProductDetails = () => {
         storeId: product.storeId,
         storeName: product.store?.name,
         storeLogo: product.store?.logoUrl || product.store?.logo || null,
-        stock: product.stock,
+        stock: stockForSelection(product, selectedVariations),
         slug: product.slug,
         categoryId: product.categoryId,
         productId: product.id,
@@ -299,12 +301,12 @@ const ProductDetails = () => {
 
   const changeQty = (delta) => {
     const next = quantity + delta;
-    if (product && next >= 1 && next <= product.stock) setQuantity(next);
+    if (product && next >= 1 && next <= stockForSelection(product, selectedVariations)) setQuantity(next);
   };
 
   const setQtyDirect = (raw) => {
     if (!product) return;
-    const n = Math.max(1, Math.min(product.stock || 1, parseInt(raw || '1', 10) || 1));
+    const n = Math.max(1, Math.min(stockForSelection(product, selectedVariations) || 1, parseInt(raw || '1', 10) || 1));
     setQuantity(n);
   };
 
@@ -851,6 +853,8 @@ const ProductDetails = () => {
                                 type="button"
                                 role="radio"
                                 aria-checked={selectedVariations[variation.name] === option}
+                                disabled={stockedVariation(product.variations)?.name === variation.name
+                                  && Number(stockedVariation(product.variations).stocks?.[option] || 0) <= 0}
                                 className={selectedVariations[variation.name] === option ? 'is-selected' : ''}
                                 onClick={() => {
                                   setSelectedVariations((current) => ({ ...current, [variation.name]: option }));
@@ -859,6 +863,10 @@ const ProductDetails = () => {
                                 key={option}
                               >
                                 {option}
+                                {stockedVariation(product.variations)?.name === variation.name
+                                  && Number(stockedVariation(product.variations).stocks?.[option] || 0) <= 0 && (
+                                  <small className="pdp-option-soldout">Sold out</small>
+                                )}
                                 {pricedGroup?.name === variation.name && Number(pricedGroup.prices?.[option]) > 0 && (
                                   <small className="pdp-option-price">{peso(pricedGroup.prices[option])}</small>
                                 )}
@@ -888,7 +896,7 @@ const ProductDetails = () => {
                         className="pdp-qty-input"
                         aria-label="Quantity"
                       />
-                      <button type="button" onClick={() => changeQty(1)} disabled={quantity >= product.stock} className="pdp-qty-btn" aria-label="Increase quantity">
+                      <button type="button" onClick={() => changeQty(1)} disabled={quantity >= stockForSelection(product, selectedVariations)} className="pdp-qty-btn" aria-label="Increase quantity">
                         <Plus size={14} />
                       </button>
                     </div>

@@ -250,6 +250,7 @@ const markReceived = async (id, seller) => {
         productId: item.orderItem.productId,
         quantity: item.quantity,
         restockOnReceive: item.restockOnReceive,
+        selectedVariations: item.orderItem.selectedVariations || null,
       })),
     );
   } catch (err) {

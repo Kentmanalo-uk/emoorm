@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
 const auditLogService = require('./auditLog.service');
+const { changeStock } = require('../repositories/stockLedger');
 
 /**
  * Permanent user deletion (super admin only).
@@ -96,19 +97,15 @@ const purgeUser = async (userId, actor, confirm, req) => {
     if (openElsewhere.length) {
       const items = await tx.orderItem.findMany({
         where: { orderId: { in: openElsewhere.map((o) => o.id) }, productId: { notIn: productIds.length ? productIds : ['__none__'] } },
-        select: { orderId: true, productId: true, quantity: true },
+        select: { orderId: true, productId: true, quantity: true, selectedVariations: true },
       });
       for (const item of items) {
-        const product = await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } },
-          select: { stock: true },
-        });
+        const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, item.quantity);
         await tx.inventoryMovement.create({
           data: {
             productId: item.productId,
             quantityDelta: item.quantity,
-            balanceAfter: product.stock,
+            balanceAfter,
             reason: 'ACCOUNT_DELETED',
             referenceId: item.orderId,
             actorId: actor?.id || null,
