@@ -4,14 +4,16 @@ import {
   SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
   ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X, ListChecks, ArrowLeft,
+  CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check,
 } from '@phosphor-icons/react';
+import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
 import { fetchSellerSetup } from '../../lib/sellerSetup';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
-import { useCompactLayout, useMobileNav } from '../../hooks/useMobileNav';
+import { useCompactLayout, useMobileNav, usePhoneLayout } from '../../hooks/useMobileNav';
 import LanguageSwitcher from '../LanguageSwitcher';
 import ShellSearch from './ShellSearch';
 import NavBadge from './NavBadge';
@@ -25,6 +27,8 @@ import './SellerLayout.css';
 import './SellerShellMobile.css';
 import './SellerPhoneFit.css';
 import '../../pages/SellerSetup.css';
+import './SellerMobile.css';
+import '../../pages/SellerApp.css';
 import UserAvatar from '../ui/UserAvatar';
 
 /**
@@ -39,6 +43,7 @@ export default function SellerLayout() {
   const [store, setStore] = useState(null);
   const [storedCollapsed, toggleCollapsed] = useSidebarCollapse();
   const isCompact = useCompactLayout();
+  const isPhone = usePhoneLayout();
   // The drawer on small screens always shows full labels.
   const collapsed = storedCollapsed && !isCompact;
   const mobileNav = useMobileNav(location.pathname);
@@ -60,6 +65,8 @@ export default function SellerLayout() {
   const badge = (path) => <NavBadge {...(waiting[path] || {})} />;
   const [accountOpen, setAccountOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  // Phone Chat header: "with Buyers ▾" menu.
+  const [chatMenuOpen, setChatMenuOpen] = useState(false);
   const accountRef = useRef(null);
   const startAccountSwitch = useAccountSwitchStore((s) => s.start);
   const rememberShop = useAccountSwitchStore((s) => s.setShop);
@@ -178,8 +185,29 @@ export default function SellerLayout() {
 
   const crumbs = buildCrumbs(location.pathname);
 
+  // Phones work like a seller app: four tabs (Home, Chat, Marketing, Me) on
+  // the bottom bar, Home and Me drawing their own shop header, and every
+  // other page a back arrow with its title (and no tab bar).
+  const cleanPath = location.pathname.replace(/\/$/, '') || '/seller';
+  const editingProduct = cleanPath === '/seller/products' && new URLSearchParams(location.search).has('edit');
+  const isTabRoot = PHONE_TABS.includes(cleanPath) && !editingProduct;
+  const ownHeader = PHONE_OWN_HEADER.includes(cleanPath);
+  const templateKey = cleanPath.startsWith('/seller/decorate/templates/') ? cleanPath.split('/').pop() : null;
+  const phoneTitle = editingProduct
+    ? 'Edit product'
+    : templateKey
+      ? (SHOP_TEMPLATES.find((t) => t.key === templateKey)?.name || 'Template')
+      : PHONE_TITLES[cleanPath] || crumbs[crumbs.length - 1]?.label || 'Seller Center';
+  const goBack = () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else if (cleanPath.startsWith('/seller/decorate/templates/')) navigate('/seller/decorate/templates');
+    else if (/^\/seller\/(products|orders|returns|reviews|analytics|finance)/.test(cleanPath)) navigate('/seller');
+    else navigate('/seller/menu');
+  };
+  const chatUnread = waiting['/seller/messages']?.count || 0;
+
   return (
-    <div className={`sc-shell ${collapsed ? 'is-collapsed' : ''}${mobileNav.open ? ' is-nav-open' : ''}`}>
+    <div className={`sc-shell ${collapsed ? 'is-collapsed' : ''}${mobileNav.open ? ' is-nav-open' : ''}${isPhone && !isTabRoot ? ' is-subpage' : ''}`}>
       <div className="sc-nav-backdrop" onClick={mobileNav.hide} aria-hidden="true" />
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside className="sc-sidebar" aria-label="Seller navigation">
@@ -357,6 +385,65 @@ export default function SellerLayout() {
 
       {/* ── Main column ─────────────────────────────────────── */}
       <div className="sc-main">
+        {isPhone && isTabRoot && !ownHeader && (
+          <header className="scm-head">
+            {cleanPath === '/seller/messages' ? (
+              // "Chat  [Buyers ▾]": who the list is with — buyers here, or
+              // the municipal admin (its own page).
+              <div className="scm-chat-title">
+                <h1 className="scm-title">Chat</h1>
+                <button
+                  type="button"
+                  className="scm-chat-switch"
+                  aria-haspopup="menu"
+                  aria-expanded={chatMenuOpen}
+                  aria-label="Chatting with buyers. Change"
+                  onClick={() => setChatMenuOpen((v) => !v)}
+                >
+                  Buyers <ChevronDown size={13} weight="bold" />
+                </button>
+                {chatMenuOpen && (
+                  <>
+                    <button type="button" className="scm-chat-scrim" aria-label="Close" onClick={() => setChatMenuOpen(false)} />
+                    <div className="scm-chat-menu" role="menu">
+                      <button type="button" role="menuitem" className="is-on" onClick={() => setChatMenuOpen(false)}>
+                        <ChatCircleDots size={19} weight="fill" />
+                        <span>Buyers</span>
+                        <Check size={16} weight="bold" />
+                      </button>
+                      <button type="button" role="menuitem" onClick={() => { setChatMenuOpen(false); navigate('/seller/support'); }}>
+                        <Headset size={19} weight="fill" />
+                        <span>Municipal admin</span>
+                        {waiting['/seller/support']?.count > 0 && <b>{waiting['/seller/support'].count}</b>}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <h1 className="scm-title">{phoneTitle}</h1>
+            )}
+            <div className="scm-actions">
+              <Link to="/seller/notifications" className="scm-icon" aria-label="Notifications">
+                <Bell size={20} />
+                {unreadCount > 0 && <span className="scm-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+              </Link>
+            </div>
+          </header>
+        )}
+        {isPhone && !isTabRoot && (
+          <header className="scm-backbar">
+            <button type="button" className="scm-back" onClick={goBack} aria-label="Back">
+              <CaretLeft size={22} weight="bold" />
+            </button>
+            <h1 className="scm-backtitle">{phoneTitle}</h1>
+            {cleanPath === '/seller/products' && !editingProduct && (
+              <Link to="/seller/products/new" state={{ fromList: true }} className="scm-icon scm-icon--bar" aria-label="Add product">
+                <Plus size={20} weight="bold" />
+              </Link>
+            )}
+          </header>
+        )}
         <header className="sc-topbar">
           <button
             type="button"
@@ -407,16 +494,36 @@ export default function SellerLayout() {
               {setup && <em>{setup.doneCount} of {setup.total} done</em>}
             </Link>
           )}
-          {store && store.isApproved === false && location.pathname !== '/seller/setup' && (
-            <div className="sc-private-banner" role="status">
-              <strong>Your shop is private while your application is reviewed.</strong>
-              <span>
-                Add products and set up delivery and payments now. Buyers will see your shop
-                as soon as an admin approves it.
-              </span>
-            </div>
+          {store && store.isApproved === false && location.pathname !== '/seller/setup' && !(isPhone && ownHeader) && (
+            isPhone ? (
+              // Phones: one short line that opens Shop setup, not a paragraph.
+              <Link to="/seller/setup" className="scm-private" role="status">
+                <LockSimple size={15} weight="fill" />
+                <span>Private until approved</span>
+                <ChevronRight size={14} weight="bold" />
+              </Link>
+            ) : (
+              <div className="sc-private-banner" role="status">
+                <strong>Your shop is private while your application is reviewed.</strong>
+                <span>
+                  Add products and set up delivery and payments now. Buyers will see your shop
+                  as soon as an admin approves it.
+                </span>
+              </div>
+            )
           )}
-          <Outlet context={{ store, setStore, setup, refreshSetup }} />
+          <Outlet
+            context={{
+              store,
+              setStore,
+              setup,
+              refreshSetup,
+              unreadCount,
+              waiting,
+              requestLogout: () => setLogoutOpen(true),
+              switchToPersonal,
+            }}
+          />
         </main>
         <SellerCenterGuide store={store} setStore={setStore} />
       </div>
@@ -424,22 +531,27 @@ export default function SellerLayout() {
       <AppRail unreadCount={unreadCount} onLogout={handleLogout} />
 
       {/* Phone tab bar */}
-      <nav className="sc-tabbar" aria-label="Seller sections">
+      <nav className={`sc-tabbar sc-tabbar--app${isPhone && !isTabRoot ? ' is-hidden' : ''}`} aria-label="Seller sections">
         <NavLink to="/seller" end className={tabCls}>
-          <LayoutGrid size={22} weight="fill" /><span>Dashboard</span>
-        </NavLink>
-        <NavLink to="/seller/orders" className={tabCls}>
-          <ShoppingBag size={22} weight="fill" /><span>Orders</span>
-        </NavLink>
-        <NavLink to="/seller/products" className={tabCls}>
-          <Package size={22} weight="fill" /><span>Products</span>
+          {({ isActive }) => <><House size={24} weight={isActive ? 'fill' : 'regular'} /><span>Home</span></>}
         </NavLink>
         <NavLink to="/seller/messages" className={tabCls}>
-          <MessageSquare size={22} weight="fill" /><span>Messages</span>
+          {({ isActive }) => (
+            <>
+              <span className="sc-tab-icon">
+                <ChatCircleDots size={24} weight={isActive ? 'fill' : 'regular'} />
+                {chatUnread > 0 && <b className="sc-tab-badge">{chatUnread > 9 ? '9+' : chatUnread}</b>}
+              </span>
+              <span>Chat</span>
+            </>
+          )}
         </NavLink>
-        <button type="button" className={`sc-tab${mobileNav.open ? ' is-active' : ''}`} onClick={mobileNav.toggle}>
-          <List size={22} weight="bold" /><span>Menu</span>
-        </button>
+        <NavLink to="/seller/marketing" className={tabCls}>
+          {({ isActive }) => <><Megaphone size={24} weight={isActive ? 'fill' : 'regular'} /><span>Marketing</span></>}
+        </NavLink>
+        <NavLink to="/seller/menu" className={tabCls}>
+          {({ isActive }) => <><UserIcon size={24} weight={isActive ? 'fill' : 'regular'} /><span>Me</span></>}
+        </NavLink>
       </nav>
 
       <ConfirmDialog
@@ -479,12 +591,44 @@ const LABELS = {
   '/seller/products/new': 'Add Product',
   '/seller/setup': 'Shop setup',
   '/seller/verification': 'Verify identity',
+  '/seller/menu': 'Menu',
+  '/seller/marketing': 'Marketing',
+  '/seller/decorate': 'Decorate my shop',
   '/seller/reviews': 'Reviews',
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop Profile',
   '/seller/fulfillment': 'Fulfillment & Payment',
   '/seller/settings': 'Settings',
+};
+
+/** Phone: the four tabs on the bottom bar. */
+const PHONE_TABS = ['/seller', '/seller/messages', '/seller/marketing', '/seller/menu'];
+
+/** Phone: tabs whose page draws its own shop header (Home, Me). */
+const PHONE_OWN_HEADER = ['/seller', '/seller/menu'];
+
+/** Phone header titles: short, plain names. */
+const PHONE_TITLES = {
+  '/seller/orders': 'My orders',
+  '/seller/products': 'My products',
+  '/seller/products/new': 'Add product',
+  '/seller/messages': 'Chat',
+  '/seller/marketing': 'Marketing',
+  '/seller/menu': 'Me',
+  '/seller/decorate': 'Decorate my shop',
+  '/seller/decorate/templates': 'Choose a template',
+  '/seller/returns': 'Returns & refunds',
+  '/seller/support': 'Admin messages',
+  '/seller/notifications': 'Notifications',
+  '/seller/reviews': 'Reviews',
+  '/seller/analytics': 'Analytics',
+  '/seller/finance': 'Finance',
+  '/seller/store': 'Shop profile',
+  '/seller/fulfillment': 'Delivery & payment',
+  '/seller/settings': 'Settings',
+  '/seller/setup': 'Shop setup',
+  '/seller/verification': 'Verify identity',
 };
 
 function buildCrumbs(pathname) {

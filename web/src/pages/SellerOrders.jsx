@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Eye, CheckCircle, XCircle, Clock, Package, Truck, CaretDown as ChevronDown, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag } from '@phosphor-icons/react';
+import { Eye, CheckCircle, XCircle, Clock, Package, Truck, CaretDown as ChevronDown, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag, SlidersHorizontal, Check } from '@phosphor-icons/react';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import PhoneSheet from '../components/seller/PhoneSheet';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
@@ -12,6 +14,9 @@ import ReportModal from '../components/ReportModal';
 import './SellerDashboard.css';
 import './SellerOrders.css';
 import ProofPhotoSheet, { OrderProof } from '../components/orders/ProofPhotoSheet';
+
+// Phones show these as chips; the rest of TABS sit in the filter sheet.
+const PHONE_QUICK_TABS = ['all', 'PENDING', 'TO_SHIP'];
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -131,6 +136,9 @@ export default function SellerOrders() {
   const [rejectConfirm, setRejectConfirm] = useState(null); // { orderId }
   const [refundConfirm, setRefundConfirm] = useState(null); // { orderId }
   const [verifyingId, setVerifyingId] = useState(null);
+  // Phones: a few status chips on one row; everything else in a sheet.
+  const isPhone = usePhoneLayout();
+  const [filterOpen, setFilterOpen] = useState(false);
 
   // Typing shouldn't fire a request per keystroke.
   useEffect(() => {
@@ -318,6 +326,80 @@ export default function SellerOrders() {
           )}
         />
 
+        {isPhone ? (
+          <>
+            <div className="scm-chips" role="group" aria-label="Show orders">
+              {PHONE_QUICK_TABS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`scm-chip${activeTab === key ? ' is-on' : ''}`}
+                  onClick={() => selectTab(key)}
+                >
+                  {TABS.find((t) => t.key === key)?.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`scm-chip scm-chip--more${PHONE_QUICK_TABS.includes(activeTab) ? '' : ' is-on'}`}
+                onClick={() => setFilterOpen(true)}
+              >
+                <SlidersHorizontal size={16} weight="bold" />
+                {PHONE_QUICK_TABS.includes(activeTab) ? 'More' : TABS.find((t) => t.key === activeTab)?.label}
+                {(from || to || paymentFilter) && <span className="scm-chip-dot" aria-label="Filters on" />}
+              </button>
+            </div>
+            {!isLoading && pagination.total > 0 && (
+              <p className="som-count">{pagination.total} order{pagination.total === 1 ? '' : 's'}</p>
+            )}
+            <PhoneSheet
+              open={filterOpen}
+              title="Show orders"
+              onClose={() => setFilterOpen(false)}
+              footer={(
+                <>
+                  <button type="button" className="scm-btn scm-btn--ghost" onClick={() => { clearFilters(); selectTab('all'); }}>
+                    Reset
+                  </button>
+                  <button type="button" className="scm-btn" onClick={() => setFilterOpen(false)}>Done</button>
+                </>
+              )}
+            >
+              <span className="scm-sheet-label">Status</span>
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={`scm-choice${activeTab === t.key ? ' is-on' : ''}`}
+                  onClick={() => selectTab(t.key)}
+                >
+                  {t.label}
+                  {activeTab === t.key && <Check size={18} weight="bold" />}
+                </button>
+              ))}
+              <span className="scm-sheet-label">Date ordered</span>
+              <div className="scm-field-row">
+                <label className="scm-field">
+                  From
+                  <input type="date" value={from} max={to || undefined} onChange={(e) => applyFilter(setFrom)(e.target.value)} />
+                </label>
+                <label className="scm-field">
+                  To
+                  <input type="date" value={to} min={from || undefined} onChange={(e) => applyFilter(setTo)(e.target.value)} />
+                </label>
+              </div>
+              <span className="scm-sheet-label">Payment</span>
+              <label className="scm-field">
+                <select value={paymentFilter} onChange={(e) => applyFilter(setPaymentFilter)(e.target.value)} aria-label="Payment">
+                  {PAYMENT_FILTERS.map((p) => (
+                    <option key={p.key || 'any'} value={p.key}>{p.label}</option>
+                  ))}
+                </select>
+              </label>
+            </PhoneSheet>
+          </>
+        ) : (
+        <>
         {/* Tabs */}
         <div className="seller-tabs">
           {TABS.map(t => (
@@ -358,6 +440,8 @@ export default function SellerOrders() {
             <span className="so-filter-count">{pagination.total} order{pagination.total === 1 ? '' : 's'}</span>
           )}
         </div>
+        </>
+        )}
 
         <div className={`orders-layout${selectedOrder ? '' : ' is-single'}`}>
           {/* Order list */}

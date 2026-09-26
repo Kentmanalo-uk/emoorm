@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, Gear as Settings, MapPin } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -9,6 +9,7 @@ import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
 import SellerPageHead from '../components/seller/SellerPageHead';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import './SellerDashboard.css';
 import './SellerStore.css';
 
@@ -23,6 +24,12 @@ export default function SellerStore() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingField, setUploadingField] = useState(null);
+  // Phones fold the shop colours away until asked for.
+  const isPhone = usePhoneLayout();
+  // "Your own colours" in Decorate links here with #theme: open straight away.
+  const { hash } = useLocation();
+  const [themeOpen, setThemeOpen] = useState(hash === '#theme');
+  const showTheme = !isPhone || themeOpen;
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -321,13 +328,20 @@ export default function SellerStore() {
 
               {/* Theme colors */}
               {!isNew && (
-                <div className="seller-card">
+                <div className="seller-card" id="theme">
                   <div className="seller-card-header">
-                    <h2><Palette size={16} /> Theme Colors</h2>
-                    <button type="button" className="btn-seller-outline" onClick={resetColors}>
-                      Reset defaults
-                    </button>
+                    <h2><Palette size={16} /> {isPhone ? 'Shop colors' : 'Theme Colors'}</h2>
+                    {showTheme ? (
+                      <button type="button" className="btn-seller-outline" onClick={resetColors}>
+                        Reset defaults
+                      </button>
+                    ) : (
+                      <button type="button" className="btn-seller-outline" onClick={() => setThemeOpen(true)}>
+                        Change
+                      </button>
+                    )}
                   </div>
+                  {showTheme && (<>
                   <div className="store-theme-body">
                     <div className="theme-picker-row">
                       <ColorPicker
@@ -358,6 +372,7 @@ export default function SellerStore() {
                       {isSaving ? 'Saving…' : 'Save Theme'}
                     </button>
                   </div>
+                  </>)}
                 </div>
               )}
             </div>

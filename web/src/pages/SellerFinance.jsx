@@ -237,9 +237,8 @@ export default function SellerFinance() {
         >
           <Info size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--t-sky-600, #0284c7)' }} />
           <p style={{ margin: 0, fontSize: 13, color: 'var(--t-neutral-600, #475569)', lineHeight: 1.5 }}>
-            E-MOORM does not hold or process your money — buyers pay you directly via Cash on
-            Delivery, GCash, or QR Ph (configured in <Link to="/seller/fulfillment">Fulfillment &amp; Payment</Link>).
-            This page is a summary of your order revenue, not a wallet balance.
+            Buyers pay you directly by cash, GCash or QR (set in{' '}
+            <Link to="/seller/fulfillment">Delivery &amp; payment</Link>). This page adds up your sales; it is not a wallet.
           </p>
         </div>
 

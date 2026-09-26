@@ -3,6 +3,7 @@ const config = require('../config/env');
 const auditLogService = require('./auditLog.service');
 const notificationService = require('./notification.service');
 const identityVerificationService = require('./identityVerification.service');
+const { storeHealthIssues } = require('../utils/storeHealth');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -322,23 +323,18 @@ const getStoreHealth = async (actor, { municipalityId, limit = 8 } = {}) => {
 
   const flagged = [];
   for (const store of stores) {
-    const issues = [];
     const live = liveByStore.get(store.id) || 0;
     const orders = ordersByStore.get(store.id) || { total: 0, cancelled: 0 };
     const rating = ratingByStore.get(store.id);
     const avgRating = rating ? rating.sum / rating.count : null;
-    const olderThan30Days = store.createdAt < since;
-
-    if (live === 0) issues.push({ code: 'NO_PRODUCTS', label: 'No live products' });
-    if (orders.total >= 3 && orders.cancelled / orders.total >= 0.3) {
-      issues.push({ code: 'HIGH_CANCELLATIONS', label: `${Math.round((orders.cancelled / orders.total) * 100)}% cancelled` });
-    }
-    if (rating && rating.count >= 3 && avgRating < 3) {
-      issues.push({ code: 'LOW_RATING', label: `${avgRating.toFixed(1)}★ average` });
-    }
-    if (live > 0 && olderThan30Days && orders.total === 0) {
-      issues.push({ code: 'NO_SALES', label: 'No orders in 30 days' });
-    }
+    const issues = storeHealthIssues({
+      live,
+      ordersTotal: orders.total,
+      ordersCancelled: orders.cancelled,
+      ratingCount: rating?.count || 0,
+      avgRating,
+      olderThan30Days: store.createdAt < since,
+    });
     if (issues.length) {
       flagged.push({
         id: store.id,

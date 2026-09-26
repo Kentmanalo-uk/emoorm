@@ -627,9 +627,28 @@ model Store {
   serviceAreas  StoreServiceArea[]
   followers     StoreFollow[]
   returnRequests ReturnRequest[] @relation("StoreReturns")
+  announcements StoreAnnouncement[]
 
   @@map("stores")
   @@index([deletedAt, isActive, isSuspended, municipalityId, createdAt], map: "stores_public_idx")
+}
+
+/// A message a seller sent to their followers from Marketing: a shop
+/// announcement, or a product they are promoting (productId set). Kept so the
+/// seller sees what they sent and so sends can be capped per day.
+model StoreAnnouncement {
+  id         String   @id @default(uuid())
+  storeId    String   @map("store_id")
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  message    String   @db.Text
+  productId  String?  @map("product_id")
+  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  recipients Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([storeId, createdAt])
+  @@index([productId])
+  @@map("store_announcements")
 }
 
 model StoreFollow {
@@ -729,6 +748,7 @@ model Product {
   reports     Report[]
   messages    Message[]
   inventoryMovements InventoryMovement[]
+  announcements StoreAnnouncement[]
 
   @@map("products")
   // Composite indexes matching the browse/filter/sort shapes in

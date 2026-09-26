@@ -47,6 +47,27 @@ router.get(
   storeController.getMySetup
 );
 
+router.get(
+  '/my/health',
+  authenticate,
+  authorize('SELLER'),
+  storeController.getMyHealth
+);
+
+router.get(
+  '/my/announcements',
+  authenticate,
+  authorize('SELLER'),
+  storeController.getMyAnnouncements
+);
+
+router.post(
+  '/my/announcements',
+  authenticate,
+  authorize('SELLER'),
+  storeController.sendMyAnnouncement
+);
+
 router.put(
   '/my/guides',
   authenticate,

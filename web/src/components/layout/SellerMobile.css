@@ -1,0 +1,1104 @@
+/*
+ * Seller Center on phones, dressed like the buyer pages: the tab pages get a
+ * big plain title with round white buttons, every other page a back arrow
+ * and its title on the page background, and the page itself stops repeating
+ * its title and subtitle underneath. Sizes match the buyer pages (22px
+ * titles, 40px round buttons, 52px back bar, 16px cards).
+ */
+.scm-head,
+.scm-backbar,
+.scm-private {
+  display: none;
+}
+
+/* ── Bottom sheet (PhoneSheet) ──────────────────────────────── */
+.scm-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.scm-sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: 86vh;
+  max-height: 86dvh;
+  border-radius: 20px 20px 0 0;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.16);
+}
+
+.scm-sheet-grip {
+  align-self: center;
+  width: 40px;
+  height: 4px;
+  margin: 10px 0 2px;
+  border-radius: 999px;
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.scm-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 12px 6px 20px;
+}
+
+.scm-sheet-head h2 {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.scm-sheet-head button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
+  cursor: pointer;
+}
+
+.scm-sheet-body {
+  flex: 1;
+  padding: 6px 20px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.scm-sheet-body:last-child {
+  padding-bottom: calc(18px + env(safe-area-inset-bottom));
+}
+
+.scm-sheet-foot {
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.scm-sheet-foot > * {
+  flex: 1;
+}
+
+/* Sheet pieces: a label, a list of choices, a primary/ghost button. */
+.scm-sheet-label {
+  display: block;
+  margin: 14px 0 8px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+}
+
+.scm-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+  background: none;
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scm-choice.is-on {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+}
+
+.scm-choice--danger {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.scm-choice svg {
+  flex-shrink: 0;
+}
+
+.scm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13px;
+}
+
+.scm-field input,
+.scm-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-900, #111827);
+  font: inherit;
+  font-size: 16px;
+}
+
+.scm-field-row {
+  display: flex;
+  gap: 10px;
+}
+
+.scm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.scm-btn--ghost {
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+}
+
+.scm-btn:disabled {
+  opacity: 0.6;
+}
+
+/* Filter chips on one row (Orders, Products). */
+.scm-chips {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.scm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.scm-chip.is-on {
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.scm-chip--more {
+  margin-left: auto;
+  padding: 0 14px;
+}
+
+.scm-chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--t-accent-500, #ec4899);
+}
+
+@media (max-width: 768px) {
+  .sc-shell {
+    --scm-bg: var(--t-neutral-100, #f3f4f6);
+    --scm-ink: var(--t-neutral-900, #111827);
+    --scm-muted: var(--t-neutral-500, #6b7280);
+  }
+
+  /* The old compact bar (menu, language, bell, sign out) gives way. */
+  .sc-shell .sc-topbar {
+    display: none;
+  }
+
+  /* ── Tab pages: big title, round buttons ─────────────────── */
+  .scm-head {
+    position: sticky;
+    top: 0;
+    z-index: 110;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 12px 8px;
+    background: var(--scm-bg);
+  }
+
+  .scm-title {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--scm-ink);
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .scm-shop {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .scm-shop .sc-user-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .scm-shop-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+  }
+
+  .scm-shop-text strong {
+    overflow: hidden;
+    color: var(--scm-ink);
+    font-size: 18px;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .scm-shop-text small {
+    color: var(--scm-muted);
+    font-size: 12.5px;
+  }
+
+  .scm-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+
+  .scm-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-700, #374151);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    text-decoration: none;
+  }
+
+  .scm-icon:active {
+    background: var(--t-neutral-50, #f9fafb);
+  }
+
+  .scm-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border: 2px solid var(--scm-bg);
+    border-radius: 999px;
+    background: var(--t-accent-500, #ec4899);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+  }
+
+  /* ── Other pages: back arrow + title ──────────────────────── */
+  .scm-backbar {
+    position: sticky;
+    top: 0;
+    z-index: 110;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: calc(52px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 6px 0;
+    background: var(--scm-bg);
+  }
+
+  .scm-back {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--scm-ink);
+    cursor: pointer;
+  }
+
+  .scm-back:active {
+    background: var(--t-neutral-200, #e5e7eb);
+  }
+
+  .scm-backtitle {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--scm-ink);
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* ── App tab bar: Home, Chat, Marketing, Me ───────────────────
+     The buyer bottom bar's sizes: 68px, 24px icons, 10px labels, green
+     when active, a red count on Chat. */
+  .sc-tabbar.sc-tabbar--app {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-height: 68px;
+    padding: 7px 6px max(8px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--t-neutral-200, #e5e7eb);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .sc-tabbar--app .sc-tab {
+    gap: 2px;
+    min-height: 0;
+    border-radius: 0;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  .sc-tabbar--app .sc-tab.is-active {
+    color: var(--t-primary-600, #059669);
+    font-weight: 500;
+  }
+
+  .sc-tabbar--app .sc-tab svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sc-tabbar--app .sc-tab .sc-tab-icon {
+    position: relative;
+    display: inline-flex;
+    max-width: none;
+    overflow: visible;
+  }
+
+  .sc-tab-badge {
+    position: absolute;
+    top: -7px;
+    right: -10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--t-danger-500, #ef4444);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  /* Chat header: "Chat  [Buyers ▾]" — a white pill that says who the
+     list is with, and a small menu to switch to the municipal admin. */
+  .scm-chat-title {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .scm-chat-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-700, #374151);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .scm-chat-switch[aria-expanded='true'] {
+    color: var(--t-primary-700, #047857);
+  }
+
+  .scm-chat-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 125;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .scm-chat-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 130;
+    display: flex;
+    flex-direction: column;
+    min-width: 230px;
+    padding: 4px 0;
+    border-radius: 16px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+  }
+
+  .scm-chat-menu button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 0 16px;
+    border: 0;
+    background: none;
+    color: var(--t-neutral-800, #1f2937);
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .scm-chat-menu button + button {
+    border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+  }
+
+  .scm-chat-menu button > svg:first-child {
+    flex-shrink: 0;
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .scm-chat-menu button > span {
+    flex: 1;
+  }
+
+  .scm-chat-menu button.is-on > svg:last-child {
+    color: var(--t-primary-600, #059669);
+  }
+
+  .scm-chat-menu button b {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--t-accent-500, #ec4899);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  /* Chat: names in the medium weight, as on the buyer's Messages. */
+  .sc-shell .msgr-list .msgr-convo-item .msgr-convo-title,
+  .sc-shell .msgr-avatar,
+  .sc-shell .msgr-thread-name,
+  .sc-shell .msgr-pin-name {
+    font-weight: 500;
+  }
+
+  /* "+" on the My products back bar */
+  .scm-icon--bar {
+    flex-shrink: 0;
+    margin-right: 6px;
+  }
+
+  /* ── Page body ────────────────────────────────────────────── */
+  .sc-shell .sc-content {
+    padding-top: 4px;
+    background: var(--scm-bg);
+  }
+
+  .sc-shell.is-subpage .sc-content {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .sc-tabbar.is-hidden {
+    display: none;
+  }
+
+  /* The header already names the page: no second title and subtitle. */
+  .sc-shell .sc-content .seller-header > div:first-child,
+  .sc-shell .sc-content .seller-welcome {
+    display: none;
+  }
+
+  .sc-shell .sc-content .seller-header {
+    margin-bottom: 12px;
+  }
+
+  .sc-shell .sc-content .seller-header:not(:has(.seller-header-actions)),
+  .sc-shell .sc-content .seller-header:has(> .seller-header-actions:empty) {
+    display: none;
+  }
+
+  /* The back arrow already returns to Shop setup. */
+  .sc-shell .sc-back-setup {
+    display: none;
+  }
+
+  /* Private shop: one short line that opens Shop setup. */
+  .scm-private {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 11px 14px;
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-800, #1f2937);
+    font-size: 14px;
+    text-decoration: none;
+  }
+
+  .scm-private > svg:first-child {
+    color: var(--t-warning-600, #d97706);
+  }
+
+  .scm-private > span {
+    flex: 1;
+  }
+
+  .scm-private > svg:last-child {
+    color: var(--t-neutral-300, #d1d5db);
+  }
+
+  /* Cards: white, 16px corners, no outline — like the buyer pages. */
+  .sc-shell .sc-content :is(.seller-card, .sd-card, .sd-stat, .an-card, .an-kpi) {
+    border-radius: 16px;
+  }
+
+  /* ── Dashboard ────────────────────────────────────────────── */
+  .sdm.pf-m {
+    padding-bottom: 12px;
+  }
+
+  .sdm-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    color: var(--t-warning-700, #b45309);
+    font-size: 13px;
+  }
+
+  .sdm-sales {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 18px 18px 16px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--t-primary-700, #047857), var(--t-primary-600, #059669));
+    color: #fff;
+  }
+
+  .sdm-sales-label {
+    font-size: 13.5px;
+    opacity: 0.85;
+  }
+
+  .sdm-sales strong {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+  }
+
+  .sdm-sales-trend {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 36px;
+    margin: 10px 0 4px;
+  }
+
+  .sdm-sales-trend span {
+    flex: 1;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.35);
+  }
+
+  .sdm-sales-trend span:last-child {
+    background: #fff;
+  }
+
+  .sdm-sales-sub {
+    font-size: 13px;
+    opacity: 0.9;
+  }
+
+  .sdm-stats {
+    border-top: 0;
+  }
+
+  .sdm-list .sd-order-list {
+    margin: 8px -16px -6px;
+  }
+
+  .sdm-empty {
+    margin: 10px 0 2px;
+    color: var(--scm-muted);
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+
+  .sdm-low .pf-m-row-icon {
+    color: var(--t-warning-600, #d97706);
+  }
+
+  /* Section titles read like the buyer pages: plain, not bold. */
+  .sc-shell .pf-m-section h2,
+  .sc-shell .pf-m-list h2 {
+    font-weight: 400;
+  }
+
+  /* ── Orders ───────────────────────────────────────────────── */
+  .som-count {
+    margin: -4px 2px 10px;
+    color: var(--scm-muted);
+    font-size: 13px;
+  }
+
+  /* Order card: quiet order number, plain buyer name, status as coloured
+     words (like the buyer's order cards) instead of loud pills. */
+  .sc-shell .so-orders-table .order-num {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--scm-muted);
+    letter-spacing: 0;
+  }
+
+  .sc-shell .so-orders-table .so-order-date {
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .sc-shell .so-orders-table .so-buyer-name.profile-link {
+    border-bottom: 0;
+    color: var(--scm-ink);
+    font-size: 14.5px;
+    font-weight: 500;
+  }
+
+  .sc-shell .so-orders-table .seller-badge.seller-badge--solid {
+    padding: 0;
+    background: none;
+    color: var(--t-neutral-600, #4b5563);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .sc-shell .so-orders-table .seller-badge--solid.status-pending { color: var(--t-warning-600, #d97706); }
+  .sc-shell .so-orders-table .seller-badge--solid.status-confirmed { color: var(--t-info-600, #2563eb); }
+  .sc-shell .so-orders-table .seller-badge--solid.status-preparing { color: var(--t-indigo-500, #4f46e5); }
+  .sc-shell .so-orders-table .seller-badge--solid.status-ready { color: var(--t-teal-600, #0891b2); }
+  .sc-shell .so-orders-table .seller-badge--solid.status-completed { color: var(--t-primary-600, #059669); }
+  .sc-shell .so-orders-table .seller-badge--solid.status-cancelled { color: var(--t-danger-600, #dc2626); }
+
+  .sc-shell .so-orders-table tr {
+    border-radius: 16px;
+    box-shadow: none;
+  }
+
+  /* ── Products ─────────────────────────────────────────────── */
+  /* Search: one white field with the icon inside, no separate button. */
+  .sc-shell .sc-content .products-toolbar {
+    margin-bottom: 12px;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .sc-shell .sc-content .products-search-form {
+    position: relative;
+  }
+
+  .sc-shell .sc-content .products-search-icon {
+    display: block;
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--t-neutral-400, #9ca3af);
+    pointer-events: none;
+  }
+
+  .sc-shell .sc-content .products-search-input {
+    min-height: 46px;
+    padding-left: 42px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+    font-size: 16px;
+  }
+
+  .sc-shell .sc-content .products-search-btn {
+    display: none;
+  }
+
+  /* No tick boxes or bulk bar on a phone. */
+  .sc-shell .sc-content .products-table thead,
+  .sc-shell .sc-content .products-table tbody td:nth-child(1),
+  .sc-shell .sc-content .products-bulk-bar {
+    display: none;
+  }
+
+  /* Card: photo on the left beside name, price, status, category, stock;
+     the actions underneath. */
+  .sc-shell .sc-content .products-table tbody tr:not(.products-note-row) {
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "thumb name name"
+      "thumb price status"
+      "thumb cat stock"
+      "act act act";
+    column-gap: 12px;
+    row-gap: 2px;
+    padding: 14px;
+    border-radius: 16px;
+    box-shadow: none;
+  }
+
+  .sc-shell .sc-content .products-table tbody td:nth-child(2),
+  .sc-shell .sc-content .products-table .product-cell {
+    display: contents;
+  }
+
+  .sc-shell .sc-content .products-table .product-thumb {
+    grid-area: thumb;
+    align-self: start;
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+  }
+
+  .sc-shell .sc-content .products-table .product-cell-name {
+    grid-area: name;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .sc-shell .sc-content .products-table tbody td:nth-child(4) {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .sc-shell .sc-content .products-table tbody td:nth-child(3) {
+    align-self: center;
+  }
+
+  .sc-shell .sc-content .products-table tbody td:nth-child(5) {
+    grid-area: stock;
+    align-self: center;
+    justify-self: end;
+    margin-top: 0;
+  }
+
+  .sc-shell .sc-content .products-table .product-stock {
+    padding: 0;
+    background: none;
+  }
+
+  .sc-shell .sc-content .products-table .product-stock-line {
+    font-size: 12.5px;
+    color: var(--scm-muted);
+  }
+
+  .sc-shell .sc-content .products-table .product-stock-value {
+    font-size: 13px;
+  }
+
+  .sc-shell .sc-content .products-table tbody td:nth-child(7) {
+    margin-top: 12px;
+  }
+
+  .pm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 44px;
+    gap: 8px;
+  }
+
+  .pm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 8px;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 12px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-800, #1f2937);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .pm-btn--more {
+    padding: 0;
+  }
+
+  /* Add-stock sheet: big counter, quick amounts. */
+  .pm-stock-name {
+    margin: 4px 0 2px;
+    color: var(--scm-ink, #111827);
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .pm-stock-now {
+    margin: 0 0 16px;
+    color: var(--scm-muted, #6b7280);
+    font-size: 14px;
+  }
+
+  .pm-stepper {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) 56px;
+    gap: 10px;
+  }
+
+  .pm-stepper button {
+    display: grid;
+    place-items: center;
+    height: 56px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-800, #1f2937);
+    cursor: pointer;
+  }
+
+  .pm-stepper input {
+    min-width: 0;
+    height: 56px;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 16px;
+    color: var(--t-neutral-900, #111827);
+    font: inherit;
+    font-size: 24px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .pm-quick {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 4px;
+  }
+
+  .pm-quick .scm-chip {
+    flex: 1;
+    justify-content: center;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+  }
+
+  /* ── Smaller pages ────────────────────────────────────────── */
+  /* Names that link to a profile: plain text, no dotted underline. */
+  .sc-shell .sc-content .profile-link {
+    border-bottom: 0;
+  }
+
+  /* Delivery & payment: one Save, kept at the bottom of the screen. */
+  .sc-shell .sf-head {
+    display: none;
+  }
+
+  .sc-shell .sc-content .sf-footer-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 12px -12px 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--t-neutral-150, #eef0f3);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+  }
+
+  .sc-shell .sc-content .sf-footer-actions > .btn-seller-primary {
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  /* Shop profile: the store link and shop controls live in Menu, and the
+     map pin speaks for itself without its coordinates. */
+  .sc-shell .store-preview-card,
+  .sc-shell .store-settings-pointer,
+  .sc-shell .store-map-coordinates {
+    display: none;
+  }
+
+  /* Settings: the danger card already says "Delete this shop" inside. */
+  .sc-shell .store-danger-card > .seller-card-header {
+    display: none;
+  }
+
+  /* Analytics & Finance: dates on one row, no refresh/export buttons,
+     one chart instead of three. */
+  .sc-shell .sc-content .an-daterange-wrap .an-daterange-btn {
+    flex: 1 1 0;
+    padding: 6px 2px;
+  }
+
+  .sc-shell .sc-content .an-actions > .an-icon-btn,
+  .sc-shell .sc-content .an-growth,
+  .sc-shell .sc-content .an-trends {
+    display: none;
+  }
+
+  .an-table-more {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 6px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--t-neutral-50, #f9fafb);
+    color: var(--t-primary-700, #047857);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .an-table-none {
+    margin: 4px 0 8px;
+    color: var(--scm-muted);
+    font-size: 13.5px;
+  }
+
+  /* Reviews: the rating picker sits inside a chip. */
+  .scm-chip--select select {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* Notifications: the ⋯ at the end of the chips. */
+  .notif-more--chips {
+    margin-left: auto;
+  }
+
+  /* ── Menu page ────────────────────────────────────────────── */
+  .sm.pf-m {
+    padding-bottom: 12px;
+  }
+
+  .sm .pf-m-card {
+    overflow: hidden;
+  }
+
+  .sm-view {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+    color: var(--t-primary-700, #047857);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .sm-setup .pf-m-identity-icon {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-600, #059669);
+  }
+
+  .sm-badge {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--t-accent-500, #ec4899);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+  }
+
+  .sm-row-btn {
+    width: 100%;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .sm-lang {
+    cursor: pointer;
+  }
+
+  .sm-lang select {
+    max-width: 50%;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--scm-muted);
+    font: inherit;
+    font-size: 14px;
+    text-align: right;
+    cursor: pointer;
+  }
+}

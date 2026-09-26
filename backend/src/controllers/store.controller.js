@@ -1,6 +1,7 @@
 const storeService = require('../services/store.service');
 const sellerAttentionService = require('../services/sellerAttention.service');
 const sellerSetupService = require('../services/sellerSetup.service');
+const sellerMarketingService = require('../services/sellerMarketing.service');
 const followService = require('../services/storeFollow.service');
 const auditLog = require('../services/auditLog.service');
 const {
@@ -162,6 +163,36 @@ const getMySetup = asyncHandler(async (req, res) => {
 });
 
 /**
+ * The seller's own shop health (same rules the admins see) and key counts.
+ * @route GET /api/stores/my/health
+ * @access Private (Seller only)
+ */
+const getMyHealth = asyncHandler(async (req, res) => {
+  const health = await sellerMarketingService.getMyHealth(req.user.id);
+  successResponse(res, health, 'Shop health retrieved');
+});
+
+/**
+ * Announcements this shop sent its followers, and how many it can still send today.
+ * @route GET /api/stores/my/announcements
+ * @access Private (Seller only)
+ */
+const getMyAnnouncements = asyncHandler(async (req, res) => {
+  const result = await sellerMarketingService.listAnnouncements(req.user.id);
+  successResponse(res, result, 'Announcements retrieved');
+});
+
+/**
+ * Send followers a shop announcement, or promote one product.
+ * @route POST /api/stores/my/announcements
+ * @access Private (Seller only)
+ */
+const sendMyAnnouncement = asyncHandler(async (req, res) => {
+  const result = await sellerMarketingService.sendAnnouncement(req.user.id, req.body || {});
+  createdResponse(res, result, result.sent === 1 ? 'Sent to 1 follower' : `Sent to ${result.sent} followers`);
+});
+
+/**
  * Mark a Seller Center tutorial as finished
  * @route PUT /api/stores/my/guides
  * @access Private (Seller)
@@ -284,6 +315,9 @@ module.exports = {
   getMyStore,
   getMyAttention,
   getMySetup,
+  getMyHealth,
+  getMyAnnouncements,
+  sendMyAnnouncement,
   completeGuide,
   updateStore,
   requestDeletion,

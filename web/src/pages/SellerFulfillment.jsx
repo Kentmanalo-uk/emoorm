@@ -372,6 +372,7 @@ export default function SellerFulfillment() {
     <div className="seller-dashboard">
       <div className="seller-container">
         <SellerPageHead
+          className="sf-head"
           title="Fulfillment & Payment"
           subtitle="Configure how buyers receive and pay for their orders."
           actions={(
@@ -487,9 +488,8 @@ export default function SellerFulfillment() {
                 />
               </div>
               <p className="sf-note">
-                <Info size={14} /> Added to the buyer's total at checkout when they choose delivery.
-                {' '}Enter 0 to deliver for free. Leave blank to use the platform default
-                {' '}(₱{platformFee.toFixed(2)}). Pickup orders are never charged.
+                <Info size={14} /> Added to delivery orders at checkout. Enter 0 for free delivery,
+                {' '}or leave blank to use ₱{platformFee.toFixed(2)}. Pickup is always free.
               </p>
             </div>
           </div>
@@ -505,9 +505,8 @@ export default function SellerFulfillment() {
             </div>
             <div className="sf-body">
               <p className="sf-note">
-                <Info size={14} /> Choose the municipalities you deliver to. For
-                each municipality, deliver to <strong>all barangays</strong> or
-                to <strong>specific barangays</strong> only.
+                <Info size={14} /> Pick the towns you deliver to, then choose
+                {' '}<strong>all barangays</strong> or <strong>specific barangays</strong>.
               </p>
 
               <div className="sf-picker-row">

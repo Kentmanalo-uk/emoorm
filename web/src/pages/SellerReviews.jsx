@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Star, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyArt from '../components/ui/EmptyArt';
 import SellerPageHead from '../components/seller/SellerPageHead';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import './SellerDashboard.css';
 
 const PAGE_SIZE = 10;
@@ -30,20 +31,28 @@ export default function SellerReviews() {
   const [ratingStats, setRatingStats] = useState({ averageRating: 0, totalReviews: 0 });
   const [pagination, setPagination] = useState({ page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 1 });
   const [ratingFilter, setRatingFilter] = useState('');
-  // Client-side: the reviews endpoint filters by rating but not by whether
-  // a reply exists, and the page already holds the current page of rows.
-  const [unansweredOnly, setUnansweredOnly] = useState(false);
+  // "Needs reply" is filtered and counted by the server (unrepliedOnly), so
+  // the count covers every review, not just this page. ?filter=reply (from
+  // the seller Home) opens with it on.
+  const [searchParams] = useSearchParams();
+  const [unansweredOnly, setUnansweredOnly] = useState(() => searchParams.get('filter') === 'reply');
+  const [awaitingReply, setAwaitingReply] = useState(0);
+  const isPhone = usePhoneLayout();
   const [isLoading, setIsLoading] = useState(true);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [openReplyId, setOpenReplyId] = useState(null);
   const [savingReplyId, setSavingReplyId] = useState(null);
 
-  const load = useCallback(async (page = 1, rating = ratingFilter) => {
+  const load = useCallback(async (page = 1, rating = ratingFilter, unreplied = unansweredOnly) => {
     setIsLoading(true);
     try {
-      const res = await axios.get('/reviews/seller/mine', {
-        params: { page, pageSize: PAGE_SIZE, rating: rating || undefined },
-      });
+      const [res, pending] = await Promise.all([
+        axios.get('/reviews/seller/mine', {
+          params: { page, pageSize: PAGE_SIZE, rating: rating || undefined, unrepliedOnly: unreplied || undefined },
+        }),
+        axios.get('/reviews/seller/mine', { params: { pageSize: 1, unrepliedOnly: true } }).catch(() => null),
+      ]);
+      if (pending?.pagination) setAwaitingReply(pending.pagination.total);
       setReviews(res.data || []);
       setRatingStats(res.ratingStats || { averageRating: 0, totalReviews: 0 });
       if (res.pagination) {
@@ -59,12 +68,12 @@ export default function SellerReviews() {
     } finally {
       setIsLoading(false);
     }
-  }, [ratingFilter]);
+  }, [ratingFilter, unansweredOnly]);
 
   useEffect(() => {
-    load(1, ratingFilter);
+    load(1, ratingFilter, unansweredOnly);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ratingFilter]);
+  }, [ratingFilter, unansweredOnly]);
 
   const startReply = (review) => {
     setOpenReplyId(review.id);
@@ -85,6 +94,7 @@ export default function SellerReviews() {
     try {
       const res = await axios.post(`/reviews/${review.id}/reply`, { reply: text });
       setReviews((prev) => prev.map((r) => (r.id === review.id ? { ...r, ...res.data } : r)));
+      if (!review.sellerReply) setAwaitingReply((n) => Math.max(0, n - 1));
       setOpenReplyId(null);
       toast.success('Reply posted');
     } catch (err) {
@@ -94,8 +104,8 @@ export default function SellerReviews() {
     }
   };
 
-  const awaitingReply = reviews.filter((r) => !r.sellerReply).length;
-  const visibleReviews = unansweredOnly ? reviews.filter((r) => !r.sellerReply) : reviews;
+  // The server already filtered; a review answered just now stays in view until the next load.
+  const visibleReviews = reviews;
 
   return (
     <div className="seller-dashboard">
@@ -114,6 +124,26 @@ export default function SellerReviews() {
           )}
         />
 
+        {isPhone ? (
+          // Phones: one row of chips instead of a filter panel.
+          <div className="scm-chips" role="group" aria-label="Show reviews">
+            <button type="button" className={`scm-chip${!unansweredOnly ? ' is-on' : ''}`} onClick={() => setUnansweredOnly(false)}>
+              All
+            </button>
+            <button type="button" className={`scm-chip${unansweredOnly ? ' is-on' : ''}`} onClick={() => setUnansweredOnly(true)}>
+              Needs reply{awaitingReply > 0 ? ` · ${awaitingReply}` : ''}
+            </button>
+            <label className={`scm-chip scm-chip--more scm-chip--select${ratingFilter ? ' is-on' : ''}`}>
+              <Star size={15} weight="fill" />
+              <select value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value)} aria-label="Rating">
+                <option value="">Any</option>
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <option key={n} value={n}>{n} star{n === 1 ? '' : 's'}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : (
         <div className="seller-card" style={{ padding: '10px 16px', marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <label style={{ fontSize: 13, color: 'var(--t-neutral-600, #475569)', fontWeight: 600 }}>Filter by rating:</label>
           <select
@@ -141,6 +171,7 @@ export default function SellerReviews() {
             Showing {visibleReviews.length} of {reviews.length} on this page
           </span>
         </div>
+        )}
 
         <div className="seller-card">
           {isLoading ? (

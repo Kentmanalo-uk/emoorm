@@ -3,8 +3,10 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye, ArrowSquareOut,
   MagnifyingGlass as Search, WarningCircle as AlertCircle, CheckCircle, Clock, X, CircleNotch as Loader2,
-  EyeSlash as EyeOff, Archive,
+  EyeSlash as EyeOff, Archive, DotsThree, SlidersHorizontal, Check, Minus,
 } from '@phosphor-icons/react';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import PhoneSheet from '../components/seller/PhoneSheet';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
@@ -34,6 +36,9 @@ const PRODUCT_TABS = [
   { key: 'SUSPENDED', label: 'Suspended' },
   { key: 'ARCHIVED', label: 'Archived' },
 ];
+
+// Phones show these as chips; the rest of PRODUCT_TABS sit in a sheet.
+const PHONE_QUICK_TABS = ['all', 'APPROVED', 'PENDING'];
 
 const stockLevel = (product) => {
   const stock = Number(product?.stock ?? 0);
@@ -70,6 +75,13 @@ export default function SellerProducts() {
   const editParam = searchParams.get('edit');
   const [editingProduct, setEditingProduct] = useState(null);
   const showForm = isNewRoute || (!!editParam && !!editingProduct);
+
+  // Phones: status sheet, a product's "more" sheet and its add-stock sheet.
+  const isPhone = usePhoneLayout();
+  const [statusSheet, setStatusSheet] = useState(false);
+  const [moreFor, setMoreFor] = useState(null);
+  const [stockFor, setStockFor] = useState(null);
+  const [stockAmount, setStockAmount] = useState(1);
 
   // Bulk selection + confirm dialogs
   const [selectedIds, setSelectedIds] = useState([]);
@@ -147,11 +159,10 @@ export default function SellerProducts() {
 
   // POST /products/:id/stock { delta } — the response is the updated product,
   // so the row is replaced in place instead of reloading the whole page.
-  const handleRestock = async (product) => {
-    const delta = parseInt(restockDrafts[product.id], 10);
+  const changeStock = async (product, delta) => {
     if (!Number.isInteger(delta) || delta === 0) {
       toast.error('Enter how many to add (or a minus number to remove)');
-      return;
+      return false;
     }
     setRestockingId(product.id);
     try {
@@ -160,11 +171,20 @@ export default function SellerProducts() {
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, ...updated } : p)));
       setRestockDrafts((prev) => ({ ...prev, [product.id]: '' }));
       toast.success(delta > 0 ? `Added ${delta} to stock` : `Removed ${Math.abs(delta)} from stock`);
+      return true;
     } catch (err) {
       toast.error(err.message || 'Failed to update stock');
+      return false;
     } finally {
       setRestockingId(null);
     }
+  };
+
+  const handleRestock = (product) => changeStock(product, parseInt(restockDrafts[product.id], 10));
+
+  const openStockSheet = (product) => {
+    setStockAmount(1);
+    setStockFor(product);
   };
 
   const openNew = () => navigate('/seller/products/new', { state: { fromList: true } });
@@ -277,13 +297,32 @@ export default function SellerProducts() {
     );
   }
 
+  const searchBar = (
+    <div className="seller-card products-toolbar">
+      <form onSubmit={handleSearchSubmit} className="products-search-form" role="search">
+        <Search size={16} className="products-search-icon" />
+        <input
+          type="search"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search products…"
+          className="products-search-input"
+          enterKeyHint="search"
+          aria-label="Search products"
+        />
+        <button type="submit" className="products-search-btn">Search</button>
+      </form>
+    </div>
+  );
+
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
         <SellerPageHead
           title="My Products"
           subtitle="Add, edit, and manage your inventory"
-          actions={(
+          // Phones add products from the + in the header.
+          actions={isPhone ? null : (
             <button className="btn-seller-primary" onClick={openNew}>
               <Plus size={16} /> Add Product
             </button>
@@ -315,34 +354,46 @@ export default function SellerProducts() {
           </div>
         )}
 
-        {/* Status filter tabs */}
-        <div className="seller-tabs products-tabs">
-          {PRODUCT_TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              className={`seller-tab ${statusFilter === t.key ? 'seller-tab--active' : ''}`}
-              onClick={() => selectStatusTab(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {isPhone && searchBar}
 
-        {/* Search bar */}
-        <div className="seller-card products-toolbar">
-          <form onSubmit={handleSearchSubmit} className="products-search-form">
-            <Search size={16} className="products-search-icon" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search products…"
-              className="products-search-input"
-            />
-            <button type="submit" className="products-search-btn">Search</button>
-          </form>
-        </div>
+        {/* Status filter tabs */}
+        {isPhone ? (
+          <div className="scm-chips products-tabs" role="group" aria-label="Show products">
+            {PHONE_QUICK_TABS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={`scm-chip${statusFilter === key ? ' is-on' : ''}`}
+                onClick={() => selectStatusTab(key)}
+              >
+                {PRODUCT_TABS.find((t) => t.key === key)?.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`scm-chip scm-chip--more${PHONE_QUICK_TABS.includes(statusFilter) ? '' : ' is-on'}`}
+              onClick={() => setStatusSheet(true)}
+            >
+              <SlidersHorizontal size={16} weight="bold" />
+              {PHONE_QUICK_TABS.includes(statusFilter) ? 'More' : PRODUCT_TABS.find((t) => t.key === statusFilter)?.label}
+            </button>
+          </div>
+        ) : (
+          <div className="seller-tabs products-tabs">
+            {PRODUCT_TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={`seller-tab ${statusFilter === t.key ? 'seller-tab--active' : ''}`}
+                onClick={() => selectStatusTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!isPhone && searchBar}
 
         {/* Products table */}
         <div className="seller-card">
@@ -422,7 +473,7 @@ export default function SellerProducts() {
                                 <span className="seller-badge status-pending product-stock-badge">Low stock</span>
                               )}
                             </span>
-                            {hasStockPerChoice(product) ? (
+                            {isPhone ? null : hasStockPerChoice(product) ? (
                               <button type="button" className="btn-seller-outline product-restock-btn" onClick={() => openEdit(product)}>
                                 Edit stock
                               </button>
@@ -459,6 +510,31 @@ export default function SellerProducts() {
                           </span>
                         </td>
                         <td>
+                          {isPhone ? (
+                            // Phones: the two everyday actions, the rest under ⋯.
+                            <div className="product-actions pm-actions">
+                              <button type="button" className="pm-btn" onClick={() => openEdit(product)} aria-label={`Edit ${product.name}`}>
+                                <Edit2 size={16} /> Edit
+                              </button>
+                              {hasStockPerChoice(product) ? (
+                                <button type="button" className="pm-btn" onClick={() => openEdit(product)}>
+                                  <Plus size={16} /> Edit stock
+                                </button>
+                              ) : (
+                                <button type="button" className="pm-btn" onClick={() => openStockSheet(product)}>
+                                  <Plus size={16} /> Add stock
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="pm-btn pm-btn--more"
+                                onClick={() => setMoreFor(product)}
+                                aria-label={`More for ${product.name}`}
+                              >
+                                <DotsThree size={20} weight="bold" />
+                              </button>
+                            </div>
+                          ) : (
                           <div className="product-actions">
                             <button
                               className="seller-icon-btn product-action"
@@ -497,6 +573,7 @@ export default function SellerProducts() {
                               <Trash2 size={15} /><span>Delete</span>
                             </button>
                           </div>
+                          )}
                         </td>
                       </tr>
                       {showNote && (
@@ -542,6 +619,102 @@ export default function SellerProducts() {
           )}
         </div>
       </div>
+
+      {/* Phones: every status */}
+      <PhoneSheet open={statusSheet} title="Show products" onClose={() => setStatusSheet(false)}>
+        {PRODUCT_TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`scm-choice${statusFilter === t.key ? ' is-on' : ''}`}
+            onClick={() => { selectStatusTab(t.key); setStatusSheet(false); }}
+          >
+            {t.label}
+            {statusFilter === t.key && <Check size={18} weight="bold" />}
+          </button>
+        ))}
+      </PhoneSheet>
+
+      {/* Phones: a product's other actions */}
+      <PhoneSheet open={!!moreFor} title={moreFor?.name || 'Product'} onClose={() => setMoreFor(null)}>
+        {moreFor && (moreFor.status === 'APPROVED' || moreFor.status === 'HIDDEN') && (
+          <button
+            type="button"
+            className="scm-choice"
+            disabled={bulkLoading}
+            onClick={() => { const p = moreFor; setMoreFor(null); handleToggleVisibility(p); }}
+          >
+            {moreFor.status === 'HIDDEN' ? 'Show to buyers again' : 'Hide from buyers'}
+            {moreFor.status === 'HIDDEN' ? <Eye size={18} /> : <EyeOff size={18} />}
+          </button>
+        )}
+        {moreFor?.slug && (
+          <a href={`/product/${moreFor.slug}`} target="_blank" rel="noreferrer" className="scm-choice">
+            See it as a buyer <ArrowSquareOut size={18} />
+          </a>
+        )}
+        <button
+          type="button"
+          className="scm-choice scm-choice--danger"
+          onClick={() => { const p = moreFor; setMoreFor(null); handleDelete(p); }}
+        >
+          Delete product <Trash2 size={18} />
+        </button>
+      </PhoneSheet>
+
+      {/* Phones: add stock with a counter */}
+      <PhoneSheet
+        open={!!stockFor}
+        title="Add stock"
+        onClose={() => setStockFor(null)}
+        footer={(
+          <button
+            type="button"
+            className="scm-btn"
+            disabled={restockingId === stockFor?.id || !(stockAmount > 0)}
+            onClick={async () => { if (await changeStock(stockFor, stockAmount)) setStockFor(null); }}
+          >
+            {restockingId === stockFor?.id ? 'Saving…' : `Add ${stockAmount > 0 ? stockAmount : ''} to stock`}
+          </button>
+        )}
+      >
+        {stockFor && (
+          <div className="pm-stock">
+            <p className="pm-stock-name">{stockFor.name}</p>
+            <p className="pm-stock-now">In stock now: <strong>{stockFor.stock}</strong></p>
+            <div className="pm-stepper">
+              <button
+                type="button"
+                aria-label="Less"
+                onClick={() => setStockAmount((n) => Math.max(1, (Number(n) || 1) - 1))}
+              >
+                <Minus size={20} weight="bold" />
+              </button>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                step="1"
+                value={stockAmount}
+                onChange={(e) => setStockAmount(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                aria-label="How many to add"
+              />
+              <button
+                type="button"
+                aria-label="More"
+                onClick={() => setStockAmount((n) => (Number(n) || 0) + 1)}
+              >
+                <Plus size={20} weight="bold" />
+              </button>
+            </div>
+            <div className="pm-quick">
+              {[5, 10, 20, 50].map((n) => (
+                <button key={n} type="button" className="scm-chip" onClick={() => setStockAmount(n)}>+{n}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </PhoneSheet>
 
       <ConfirmDialog
         open={confirmState?.type === 'delete-one'}

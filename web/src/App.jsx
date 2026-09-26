@@ -30,6 +30,9 @@ import SellerAnalytics from './pages/SellerAnalytics';
 import SellerFinance from './pages/SellerFinance';
 import SellerSetup from './pages/SellerSetup';
 import SellerVerification from './pages/SellerVerification';
+import SellerMenu from './pages/SellerMenu';
+import SellerMarketing from './pages/SellerMarketing';
+import SellerDecorate, { SellerTemplates, SellerTemplatePreview } from './pages/SellerDecorate';
 import SellerFulfillment from './pages/SellerFulfillment';
 import SellerSettings from './pages/SellerSettings';
 import Stores from './pages/Stores';
@@ -211,6 +214,11 @@ function AppRoutes() {
           <Route index element={<SellerDashboard />} />
           <Route path="setup" element={<SellerSetup />} />
           <Route path="verification" element={<SellerVerification />} />
+          <Route path="menu" element={<SellerMenu />} />
+          <Route path="marketing" element={<SellerMarketing />} />
+          <Route path="decorate" element={<SellerDecorate />} />
+          <Route path="decorate/templates" element={<SellerTemplates />} />
+          <Route path="decorate/templates/:key" element={<SellerTemplatePreview />} />
           <Route path="orders" element={<SellerOrders />} />
           <Route path="returns" element={<SellerReturns />} />
           <Route path="messages" element={<SellerMessages />} />

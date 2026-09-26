@@ -130,8 +130,8 @@ export default function SellerAnalytics() {
           <TrendLine data={buckets} />
         </div>
 
-        {/* Revenue vs Orders trends */}
-        <div className="an-grid-2">
+        {/* Revenue vs Orders trends (phones keep just the chart above) */}
+        <div className="an-grid-2 an-trends">
           <div className="an-card">
             <div className="an-card-head">
               <h2 className="an-card-title">Revenue trend</h2>
@@ -153,7 +153,7 @@ export default function SellerAnalytics() {
         <div className="an-card">
           <div className="an-card-head">
             <h2 className="an-card-title">Daily sales</h2>
-            <span className="an-card-sub">Click a date to see order details</span>
+            <span className="an-card-sub">Tap a date to see its orders</span>
           </div>
           <SalesTable
             rows={salesByDay.slice().reverse()}

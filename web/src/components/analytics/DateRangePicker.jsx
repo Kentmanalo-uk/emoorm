@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { usePhoneLayout } from '../../hooks/useMobileNav';
 import './analytics.css';
 
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -36,14 +37,16 @@ const rangeFor = (preset) => {
   }
 };
 
+// `short` is what phones show, so all five choices fit on one row.
 const PRESETS = [
-  { key: 'today', label: 'Today' },
-  { key: 'week', label: 'This Week' },
-  { key: 'month', label: 'This Month' },
-  { key: 'year', label: 'This Year' },
+  { key: 'today', label: 'Today', short: 'Today' },
+  { key: 'week', label: 'This Week', short: 'Week' },
+  { key: 'month', label: 'This Month', short: 'Month' },
+  { key: 'year', label: 'This Year', short: 'Year' },
 ];
 
 const DateRangePicker = ({ value, onChange, showCustom = true }) => {
+  const isPhone = usePhoneLayout();
   const active = value?.preset || 'month';
   const [customOpen, setCustomOpen] = useState(active === 'custom');
   const [customFrom, setCustomFrom] = useState(value?.from?.slice(0, 10) || '');
@@ -71,7 +74,7 @@ const DateRangePicker = ({ value, onChange, showCustom = true }) => {
             className={`an-daterange-btn ${active === p.key ? 'is-active' : ''}`}
             onClick={() => pick(p.key)}
           >
-            {p.label}
+            {isPhone ? p.short : p.label}
           </button>
         ))}
         {showCustom && (

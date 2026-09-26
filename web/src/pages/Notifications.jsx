@@ -14,6 +14,7 @@ import SellerPageHead from '../components/seller/SellerPageHead';
 import EmptyArt from '../components/ui/EmptyArt';
 import EmptyState from '../components/ui/EmptyState';
 import MoreMenu from '../components/MoreMenu';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import './SellerDashboard.css';
 import './Notifications.css';
 
@@ -60,6 +61,10 @@ function getConfig(type) {
 export default function Notifications({ bare = false, mode = 'BUYER', shell } = {}) {
   const chrome = shell || (bare ? 'profile' : 'standalone');
   const isSeller = chrome === 'seller';
+  // Seller Center on a phone looks like the buyer page: the Seller Center
+  // header names the page, and the list is the buyer's list.
+  const isPhone = usePhoneLayout();
+  const sellerLook = isSeller && !isPhone;
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const audience = mode === 'SELLER' ? 'SELLER' : 'BUYER';
@@ -239,7 +244,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
         )}
 
         {/* Header */}
-        {isSeller ? (
+        {isSeller && isPhone ? null : isSeller ? (
           <SellerPageHead
             title="Notifications"
             subtitle={unreadCount > 0
@@ -280,8 +285,8 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
         {!isSeller && searchRow}
 
         {/* Filters */}
-        <div className={`notif-body${isSeller ? ' is-seller' : ''}`}>
-        <div className={`notif-filters${isSeller ? ' is-seller' : ''}`}>
+        <div className={`notif-body${sellerLook ? ' is-seller' : ''}`}>
+        <div className={`notif-filters${sellerLook ? ' is-seller' : ''}`}>
           <button
             className={`notif-filter-btn ${filter === 'all' ? 'active' : ''}`}
             onClick={() => { setFilter('all'); setPage(1); }}
@@ -295,6 +300,18 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
             Unread
             {unreadCount > 0 && <span className="notif-filter-count">{unreadCount}</span>}
           </button>
+          {isSeller && isPhone && (notifications.length > 0 || unreadCount > 0) && (
+            <MoreMenu
+              className="notif-more notif-more--chips"
+              buttonClassName="notif-tool-btn"
+              label="Notification options"
+              iconSize={22}
+              items={[
+                unreadCount > 0 && { key: 'read', icon: <CheckCheck size={17} />, label: 'Mark all as read', onClick: handleMarkAllRead },
+                notifications.length > 0 && { key: 'clear', icon: <Trash2 size={17} />, label: 'Clear all', danger: true, onClick: handleDeleteAll },
+              ]}
+            />
+          )}
         </div>
 
         {/* List */}
@@ -323,7 +340,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
                 : [{ label: 'Browse stores', to: '/stores', icon: Storefront }]}
           />
         ) : notifications.length === 0 ? (
-          <div className={`notif-empty${isSeller ? ' is-seller' : ''}`}>
+          <div className={`notif-empty${sellerLook ? ' is-seller' : ''}`}>
             {isSeller
               ? <EmptyArt name="inbox" size={150} />
               : <BellOff size={48} weight="fill" />}

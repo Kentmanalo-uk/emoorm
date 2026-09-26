@@ -3,9 +3,13 @@ import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Plus, Clock, Truck, CheckCircle, Package,
   ShoppingBag, TrendUp as TrendingUp, Star, ChartBar as BarChart2, User, Users, WarningCircle, X,
-  IdentificationCard, ArrowRight,
+  IdentificationCard, ArrowRight, Wallet, CaretRight, LockSimple, Bell, Receipt,
+  ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, ListChecks, PlusCircle,
 } from '@phosphor-icons/react';
+import { useShare } from '../components/ShareSheet';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import axios from '../lib/axios';
+import { resolveImg } from '../lib/media';
 import useAuthStore from '../store/authStore';
 import Skeleton from '../components/ui/Skeleton';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -15,12 +19,18 @@ import { describeStep } from '../lib/sellerSetup';
 
 const DASHBOARD_GUIDE = 'dashboard';
 import './SellerDashboard.css';
+import './Profile.css';
 
 const STATUS_META = {
-  PENDING: { label: 'To Pay', tint: 'sc-tint-amber', Icon: Clock },
-  CONFIRMED: { label: 'To Pay', tint: 'sc-tint-amber', Icon: Clock },
-  PREPARING: { label: 'To Ship', tint: 'sc-tint-blue', Icon: Package },
-  READY: { label: 'To Ship', tint: 'sc-tint-blue', Icon: Truck },
+  PENDING: { label: 'New', tint: 'sc-tint-amber', Icon: Clock },
+  CONFIRMED: { label: 'Confirmed', tint: 'sc-tint-blue', Icon: CheckCircle },
+  PREPARING: { label: 'Preparing', tint: 'sc-tint-blue', Icon: Package },
+  TO_SHIP: { label: 'To ship', tint: 'sc-tint-blue', Icon: Truck },
+  READY: { label: 'To ship', tint: 'sc-tint-blue', Icon: Truck },
+  OUT_FOR_DELIVERY: { label: 'On the way', tint: 'sc-tint-blue', Icon: Truck },
+  READY_FOR_PICKUP: { label: 'Ready for pickup', tint: 'sc-tint-blue', Icon: Package },
+  DELIVERED: { label: 'Delivered', tint: 'sc-tint-green', Icon: CheckCircle },
+  PICKED_UP: { label: 'Picked up', tint: 'sc-tint-green', Icon: CheckCircle },
   COMPLETED: { label: 'Completed', tint: 'sc-tint-green', Icon: CheckCircle },
   CANCELLED: { label: 'Cancelled', tint: 'sc-tint-red', Icon: Clock },
 };
@@ -179,6 +189,48 @@ export default function SellerDashboard() {
   const todayLabel = new Intl.DateTimeFormat('en-PH', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   }).format(new Date());
+
+  // Phones: the counts on Home (orders to confirm / ship, reviews to answer).
+  const isPhone = usePhoneLayout();
+  const [homeCounts, setHomeCounts] = useState({});
+  useEffect(() => {
+    if (!isPhone) return undefined;
+    let cancelled = false;
+    const total = (res) => res.pagination?.total ?? (res.data || []).length;
+    Promise.all([
+      ...HOME_ORDER_STATUSES.map((status) => axios
+        .get('/orders/store/orders', { params: { status, pageSize: 1 } })
+        .then((res) => [status, total(res)])
+        .catch(() => [status, 0])),
+      axios.get('/reviews/seller/mine', { params: { unrepliedOnly: true, pageSize: 1 } })
+        .then((res) => ['reviews', total(res)])
+        .catch(() => ['reviews', 0]),
+    ]).then((entries) => { if (!cancelled) setHomeCounts(Object.fromEntries(entries)); });
+    return () => { cancelled = true; };
+  }, [isPhone]);
+
+  if (isPhone) {
+    return (
+      <PhoneHome
+        store={store}
+        user={user}
+        setup={setup}
+        waiting={ctx?.waiting || {}}
+        unreadCount={ctx?.unreadCount || 0}
+        switchToPersonal={ctx?.switchToPersonal}
+        isLoading={isLoading}
+        loadError={loadError}
+        analyticsAvailable={analyticsAvailable}
+        stats={stats}
+        salesByDay={salesByDay}
+        recentSales={recentSales}
+        recentOrders={recentOrders}
+        lowStock={lowStock}
+        counts={homeCounts}
+        onOpenOrder={(id) => navigate(`/seller/orders?id=${id}`)}
+      />
+    );
+  }
 
   return (
     <div className="seller-dashboard">
@@ -598,6 +650,311 @@ function DashboardTour({ steps, onFinish, onClose }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Phones: the order statuses counted on Home. */
+const HOME_ORDER_STATUSES = ['PENDING', 'TO_SHIP'];
+
+/** Phones: Home's shop tools, each a filled icon in its own colour. */
+const HOME_TOOLS = [
+  { to: '/seller/products', label: 'My products', Icon: Package, tone: 'orange' },
+  { to: '/seller/orders', label: 'My orders', Icon: Receipt, tone: 'blue' },
+  { to: '/seller/analytics', label: 'Performance', Icon: BarChart2, tone: 'violet' },
+  { to: '/seller/finance', label: 'Finance', Icon: Wallet, tone: 'green' },
+  { to: '/seller/reviews', label: 'Reviews', Icon: Star, tone: 'amber' },
+  { to: '/seller/returns', label: 'Returns', Icon: ArrowCounterClockwise, tone: 'rose' },
+  { to: '/seller/decorate', label: 'Decorate', Icon: PaintBrush, tone: 'pink' },
+  { to: '/seller/products/new', label: 'Add product', Icon: PlusCircle, tone: 'teal', tour: 'add-product' },
+];
+
+/** The one thing Home asks for first, or null: shop private, ID, then setup. */
+const homeNotice = (store, setup) => {
+  const identity = setup?.steps?.find((step) => step.key === 'identity');
+  if (store?.isApproved === false) {
+    return {
+      Icon: LockSimple,
+      tone: 'amber',
+      title: 'Your shop is private',
+      hint: "It's hidden from buyers until the admin approves it.",
+      cta: 'Set up',
+      to: '/seller/setup',
+    };
+  }
+  if (identity && !identity.done) {
+    if (identity.status === 'FAILED') {
+      return { Icon: IdentificationCard, tone: 'red', title: "We couldn't confirm your ID", hint: 'Send a clear photo of a valid ID.', cta: 'Retry', to: '/seller/verification' };
+    }
+    if (identity.status === 'PENDING') {
+      return { Icon: IdentificationCard, tone: 'blue', title: 'Checking your ID', hint: "We'll let you know when it's done.", cta: null, to: '/seller/verification' };
+    }
+    return { Icon: IdentificationCard, tone: 'amber', title: 'Verify your identity', hint: 'Buyers and admins trust verified shops.', cta: 'Verify', to: '/seller/verification' };
+  }
+  if (setup && !setup.complete) {
+    return {
+      Icon: ListChecks,
+      tone: 'green',
+      title: 'Finish setting up your shop',
+      hint: `${setup.doneCount} of ${setup.total} done`,
+      cta: 'Continue',
+      to: '/seller/setup',
+    };
+  }
+  return null;
+};
+
+/** Tips: real things a seller can do, each one tap away. Swipe or wait. */
+function HomeTips({ onShare }) {
+  const slides = [
+    { key: 'decorate', title: 'Decorate your shop', text: 'Pick a ready-made look in one tap.', cta: 'Choose a template', to: '/seller/decorate', Icon: PaintBrush, tone: 'pink' },
+    { key: 'announce', title: 'Tell your followers', text: 'Share news or promote a product.', cta: 'Open Marketing', to: '/seller/marketing', Icon: Megaphone, tone: 'violet' },
+    { key: 'share', title: 'Share your shop', text: 'Send your shop link to friends and groups.', cta: 'Share now', onClick: onShare, Icon: ShareNetwork, tone: 'blue' },
+  ];
+  const [index, setIndex] = useState(0);
+  const trackRef = React.useRef(null);
+
+  // The dots follow whichever slide is in view.
+  const onScroll = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    setIndex(Math.round(el.scrollLeft / el.clientWidth));
+  };
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const el = trackRef.current;
+      if (!el) return;
+      const next = (Math.round(el.scrollLeft / el.clientWidth) + 1) % slides.length;
+      el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' });
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [slides.length]);
+
+  return (
+    <section className="sh-banners" aria-label="Tips">
+      <div className="sh-banner-track" ref={trackRef} onScroll={onScroll}>
+        {slides.map(({ key, title, text, cta, to, onClick, Icon, tone }) => {
+          const body = (
+            <>
+              <span className="sh-banner-text">
+                <strong>{title}</strong>
+                <span>{text}</span>
+                <em>{cta} <CaretRight size={12} weight="bold" /></em>
+              </span>
+              <span className="sh-banner-art" aria-hidden="true"><Icon size={30} weight="fill" /></span>
+            </>
+          );
+          return to
+            ? <Link key={key} to={to} className={`sh-banner is-${tone}`}>{body}</Link>
+            : <button key={key} type="button" className={`sh-banner is-${tone}`} onClick={onClick}>{body}</button>;
+        })}
+      </div>
+      <div className="sh-dots" aria-hidden="true">
+        {slides.map((slide, i) => <span key={slide.key} className={i === index ? 'is-on' : ''} />)}
+      </div>
+    </section>
+  );
+}
+
+/*
+ * Home on a phone: the seller-app layout (the shop at the top, one notice,
+ * the numbers that need action, the shop tools, tips, then sales, recent
+ * orders and low stock) drawn with the buyer pages' pieces: white cards on
+ * grey, bare icons, round header buttons, green for actions.
+ */
+function PhoneHome({
+  store, user, setup, unreadCount, switchToPersonal, waiting,
+  isLoading, loadError, analyticsAvailable, stats, salesByDay, recentSales, recentOrders, lowStock,
+  counts, onOpenOrder,
+}) {
+  const { share, shareSheet } = useShare();
+  const notice = homeNotice(store, setup);
+  const name = store?.name || 'My shop';
+  const firstName = user?.fullName?.trim().split(/\s+/)[0];
+  const trend = salesByDay.slice(-14).map((day) => Number(day.total || 0));
+  const maxTrend = Math.max(1, ...trend);
+  const shareShop = () => store?.slug && share({
+    title: name,
+    text: `Shop at ${name} on Emoorm`,
+    url: `${window.location.origin}/store/${store.slug}`,
+  });
+  const numbers = [
+    { label: 'To confirm', value: counts.PENDING, to: '/seller/orders?status=PENDING' },
+    { label: 'To ship', value: counts.TO_SHIP, to: '/seller/orders?status=TO_SHIP' },
+    { label: 'Returns', value: waiting['/seller/returns']?.count, to: '/seller/returns' },
+    { label: 'Reviews', value: counts.reviews, to: '/seller/reviews?filter=reply' },
+  ];
+
+  return (
+    <div className="seller-dashboard sh">
+      <header className="sh-head">
+        <Link to="/seller/menu" className="sh-shop" aria-label="Your shop">
+          <span className="sh-avatar">
+            {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : name.trim().charAt(0).toUpperCase()}
+          </span>
+          <span className="sh-shop-text">
+            <small>{firstName ? `Hi, ${firstName}` : 'Seller Center'}</small>
+            <strong>{name}</strong>
+          </span>
+        </Link>
+        <div className="sh-actions">
+          <Link to="/seller/notifications" className="sh-icon" aria-label="Notifications">
+            <Bell size={20} />
+            {unreadCount > 0 && <b className="sh-badge">{unreadCount > 9 ? '9+' : unreadCount}</b>}
+          </Link>
+          <button type="button" className="sh-icon sh-me" onClick={switchToPersonal} aria-label="Switch to my buyer account" title="Switch to my buyer account">
+            <UserAvatar src={user?.profilePhoto} name={(user?.fullName || 'U').charAt(0)} alt="" imgClassName="sh-me-img" fallbackClassName="sh-me-img sh-me-fallback" />
+          </button>
+        </div>
+      </header>
+
+      <div className="sh-body">
+        {notice && (
+          <Link to={notice.to} className={`sh-notice is-${notice.tone}`}>
+            <span className="sh-notice-icon"><notice.Icon size={22} weight="fill" /></span>
+            <span className="sh-notice-text">
+              <b>{notice.title}</b>
+              <span>{notice.hint}</span>
+            </span>
+            {notice.cta
+              ? <span className="sh-notice-cta">{notice.cta}</span>
+              : <CaretRight size={16} className="sh-chev" />}
+          </Link>
+        )}
+
+        {loadError && <p className="sdm-note"><WarningCircle size={15} /> Some numbers couldn't load right now.</p>}
+
+        <section className="sh-card sh-numbers" aria-label="Needs your action">
+          {numbers.map(({ label, value, to }) => (
+            <Link key={label} to={to} className={value > 0 ? 'is-due' : undefined}>
+              <strong>{value == null ? '–' : value}</strong>
+              <span>{label}</span>
+            </Link>
+          ))}
+        </section>
+
+        <section className="sh-card">
+          <div className="sh-card-head"><h2>Shop tools</h2></div>
+          <div className="sh-tools">
+            {HOME_TOOLS.map(({ to, label, Icon, tone, tour }) => (
+              <Link key={to} to={to} className="sh-tool" {...(tour ? { 'data-tour': tour } : {})}>
+                <span className={`sh-tool-icon is-${tone}`}><Icon size={30} weight="fill" /></span>
+                <span>{label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <HomeTips onShare={shareShop} />
+
+        <section className="sh-card sh-sales" data-tour="store-overview">
+          <div className="sh-card-head">
+            <h2>Sales</h2>
+            <Link to="/seller/analytics">Details <CaretRight size={13} weight="bold" /></Link>
+          </div>
+          <div className="sh-sales-row">
+            <div>
+              {isLoading
+                ? <Skeleton width={120} height={28} radius={6} />
+                : <strong className="sh-sales-total">{analyticsAvailable ? `₱${formatNumber(stats.lifetimeSales)}` : '—'}</strong>}
+              <span className="sh-sales-sub">
+                {analyticsAvailable ? `₱${formatNumber(recentSales)} in the last 14 days` : 'Not available right now'}
+              </span>
+            </div>
+            {trend.length > 0 && (
+              <span className="sh-spark" aria-hidden="true">
+                {trend.map((amount, i) => <span key={i} style={{ height: `${Math.max(10, (amount / maxTrend) * 100)}%` }} />)}
+              </span>
+            )}
+          </div>
+          <div className="sh-sales-stats">
+            <span><strong>{isLoading ? '–' : formatNumber(stats.completedOrders)}</strong> {Number(stats.completedOrders) === 1 ? 'order' : 'orders'} done</span>
+            <span><strong>{isLoading ? '–' : formatNumber(stats.activeProducts)}</strong> live {Number(stats.activeProducts) === 1 ? 'product' : 'products'}</span>
+          </div>
+        </section>
+
+        <section className="sh-card sdm-list" data-tour="recent-orders">
+          <div className="sh-card-head">
+            <h2>Recent orders</h2>
+            {recentOrders.length > 0 && <Link to="/seller/orders">See all <CaretRight size={13} weight="bold" /></Link>}
+          </div>
+          {isLoading ? (
+            <Skeleton.OrderList rows={3} />
+          ) : recentOrders.length === 0 ? (
+            <p className="sdm-empty">No orders yet. They show up here as soon as a buyer orders.</p>
+          ) : (
+            <ul className="sh-orders">
+              {recentOrders.map((o) => <PhoneOrderRow key={o.id} order={o} onClick={() => onOpenOrder(o.id)} />)}
+            </ul>
+          )}
+        </section>
+
+        {lowStock.length > 0 && (
+          <section className="sh-card sh-list">
+            <div className="sh-card-head"><h2>Running low</h2></div>
+            {lowStock.map((prod) => (
+              <Link key={prod.id} to="/seller/products" className="sh-row">
+                <span className="sh-row-icon"><WarningCircle size={19} weight="fill" /></span>
+                <span className="sh-row-label">{prod.name}</span>
+                <span className="sh-row-hint">{prod.stock} left</span>
+                <CaretRight size={16} className="sh-chev" />
+              </Link>
+            ))}
+          </section>
+        )}
+      </div>
+      {shareSheet}
+    </div>
+  );
+}
+
+/** "Today, 3:20 PM", "Yesterday", or "Sep 26". */
+const orderDay = (value) => {
+  if (!value) return '';
+  const d = new Date(value);
+  const days = Math.round((new Date(new Date().toDateString()) - new Date(d.toDateString())) / 86400000);
+  if (days === 0) return `Today, ${d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}`;
+  if (days === 1) return 'Yesterday';
+  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+};
+
+/**
+ * Phones: a recent order as the seller thinks of it: the product's photo
+ * and name, who ordered and when, the total and where it stands. The order
+ * number stays on the order itself.
+ */
+function PhoneOrderRow({ order, onClick }) {
+  const { label, tint } = STATUS_META[order.status] || STATUS_META.PENDING;
+  const items = order.items || [];
+  const first = items[0];
+  const photo = first?.product?.images?.[0];
+  const name = first?.productName || first?.product?.name || 'Order';
+  const more = items.length - 1;
+  const qty = items.reduce((sum, it) => sum + (it.quantity || 0), 0);
+
+  return (
+    <li
+      className="sh-order"
+      onClick={onClick}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
+      role="button"
+      tabIndex={0}
+    >
+      <span className="sh-order-img">
+        {photo ? <img src={resolveImg(photo)} alt="" /> : <Package size={22} weight="fill" />}
+      </span>
+      <span className="sh-order-body">
+        <strong>
+          {name}
+          {more > 0 ? <small> + {more} more</small> : qty > 1 && <small> × {qty}</small>}
+        </strong>
+        {/* The day first, so a long name is what gets cut. */}
+        <span>{[orderDay(order.createdAt), order.buyer?.fullName].filter(Boolean).join(' · ')}</span>
+      </span>
+      <span className="sh-order-right">
+        <b>₱{formatNumber(order.total)}</b>
+        <em className={`sh-order-status is-${tint.replace('sc-tint-', '')}`}>{label}</em>
+      </span>
+    </li>
   );
 }
 

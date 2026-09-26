@@ -318,7 +318,11 @@ function ProductPicker({ storeId, onPick: onPickProp, onClose: onCloseProp }) {
  * header itself: the title, a search button and a ⋯ menu that act on the
  * conversation list it owns.
  */
-export default function Messenger({ role = 'buyer', className = '', title = '' }) {
+/*
+ * filterChips: an "All / Unread" chip row above the list, for pages whose own
+ * header has no ⋯ menu (the Seller Center's Chat tab on phones).
+ */
+export default function Messenger({ role = 'buyer', className = '', title = '', filterChips = false }) {
   const currentUser = useAuthStore((s) => s.user);
   const [searchParams, setSearchParams] = useSearchParams();
   const initialStoreId = searchParams.get('store');
@@ -725,7 +729,22 @@ export default function Messenger({ role = 'buyer', className = '', title = '' }
             </button>
           )}
         </div>
-        {unreadOnly && (
+        {filterChips && (
+          <div className="msgr-chips" role="group" aria-label="Show chats">
+            <button type="button" className={`msgr-chip${!unreadOnly ? ' is-on' : ''}`} onClick={() => setUnreadOnly(false)}>
+              All
+            </button>
+            <button type="button" className={`msgr-chip${unreadOnly ? ' is-on' : ''}`} onClick={() => setUnreadOnly(true)}>
+              Unread{unreadChats.length > 0 ? ` · ${unreadChats.length}` : ''}
+            </button>
+            {unreadChats.length > 0 && (
+              <button type="button" className="msgr-chip msgr-chip--end" onClick={markAllRead}>
+                Mark all read
+              </button>
+            )}
+          </div>
+        )}
+        {unreadOnly && !filterChips && (
           <div className="msgr-filter-pill">
             <button type="button" onClick={() => setUnreadOnly(false)}>
               Unread only <X size={12} weight="bold" />
