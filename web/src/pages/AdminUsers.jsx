@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MagnifyingGlass as Search, ShieldCheck, ShieldSlash as ShieldOff, UserMinus as UserX, UserCheck, CaretDown as ChevronDown, X, Eye, DownloadSimple, Storefront } from '@phosphor-icons/react';
+import { MagnifyingGlass as Search, ShieldCheck, ShieldSlash as ShieldOff, UserMinus as UserX, UserCheck, CaretDown as ChevronDown, X, Eye, DownloadSimple, Storefront, Trash } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
@@ -10,6 +10,7 @@ import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import ReasonDialog from '../components/admin/ReasonDialog';
+import DeleteUserDialog from '../components/admin/DeleteUserDialog';
 import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
@@ -41,6 +42,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
   const [exporting, setExporting] = useState(false);
   const [storeSuspendOpen, setStoreSuspendOpen] = useState(false);
   const [storeProcessing, setStoreProcessing] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -430,10 +432,40 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                   )}
                 </div>
               </div>
+
+              {isSuperAdmin && selected.role !== 'SUPER_ADMIN' && selected.id !== actor?.id && (
+                <div className="admin-detail-section admin-danger-zone">
+                  <h4>Danger Zone</h4>
+                  <p style={{ fontSize: 12.5, color: 'var(--t-neutral-500, #6b7280)', margin: '0 0 10px' }}>
+                    Permanently removes this account and everything that belongs to it
+                    (orders, store, products, messages). This cannot be undone.
+                  </p>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-red"
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    <Trash size={14} /> Delete permanently
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}
       </DetailDrawer>
+      <DeleteUserDialog
+        open={deleteOpen}
+        user={selected}
+        onCancel={() => setDeleteOpen(false)}
+        onDeleted={() => {
+          const name = selected?.fullName || 'User';
+          setDeleteOpen(false);
+          setSelected(null);
+          setUsers((list) => list.filter((u) => u.id !== selected?.id));
+          setPagination((pg) => ({ ...pg, total: Math.max(0, (pg.total || 1) - 1) }));
+          toast.success(`${name} was permanently deleted`);
+        }}
+      />
       <ReasonDialog
         open={storeSuspendOpen}
         title="Suspend store?"

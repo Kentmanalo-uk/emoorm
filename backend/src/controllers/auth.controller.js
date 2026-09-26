@@ -1,4 +1,5 @@
 const authService = require('../services/auth.service');
+const userPurgeService = require('../services/userPurge.service');
 const auditLog = require('../services/auditLog.service');
 const identityVerificationService = require('../services/identityVerification.service');
 const {
@@ -320,6 +321,27 @@ const activateUser = asyncHandler(async (req, res) => {
 });
 
 /**
+ * What a permanent delete would remove, for the confirmation dialog.
+ * @route GET /api/auth/users/:id/purge-preview
+ * @access Private (SUPER_ADMIN)
+ */
+const previewPurgeUser = asyncHandler(async (req, res) => {
+  const result = await userPurgeService.previewPurge(req.params.id, req.user);
+  successResponse(res, result, 'Deletion preview');
+});
+
+/**
+ * Permanently delete a user and everything that belongs to them. The body
+ * must carry { confirm: 'DELETE' }.
+ * @route POST /api/auth/users/:id/purge
+ * @access Private (SUPER_ADMIN)
+ */
+const purgeUser = asyncHandler(async (req, res) => {
+  const result = await userPurgeService.purgeUser(req.params.id, req.user, req.body?.confirm, req);
+  successResponse(res, result, 'User permanently deleted');
+});
+
+/**
  * Delete user account (Admin)
  * @route DELETE /api/auth/users/:id
  * @access Private (ADMIN only)
@@ -445,5 +467,7 @@ module.exports = {
   suspendUser,
   activateUser,
   deleteUser,
+  previewPurgeUser,
+  purgeUser,
   setUserRole,
 };

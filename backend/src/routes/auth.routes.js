@@ -182,6 +182,21 @@ router.delete(
   authController.deleteUser
 );
 
+// Permanent deletion: preview what goes, then purge with { confirm: 'DELETE' }.
+router.get(
+  '/users/:id/purge-preview',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  authController.previewPurgeUser
+);
+
+router.post(
+  '/users/:id/purge',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  authController.purgeUser
+);
+
 router.post(
   '/users/:id/set-role',
   authenticate,
