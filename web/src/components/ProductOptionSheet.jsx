@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Minus, Plus, Truck } from '@phosphor-icons/react';
 import ProductImage from './ProductImage';
+import { pricedVariation, priceForSelection, priceRange } from '../lib/variantPricing';
 import './ProductOptionSheet.css';
 
 const CLOSE_MS = 220;
@@ -66,7 +67,13 @@ export default function ProductOptionSheet({
   const outOfStock = stock <= 0;
   const picked = variations.filter((v) => selected[v.name]).map((v) => `${v.name}: ${selected[v.name]}`);
   const unpicked = variations.filter((v) => !selected[v.name]).map((v) => v.name);
-  const total = Number(product.price || 0) * quantity;
+  // Per-option pricing: the chosen option's price, or the range until chosen.
+  const pricedGroup = pricedVariation(product.variations);
+  const range = priceRange(product);
+  const chosen = !!(pricedGroup && selected[pricedGroup.name]);
+  const unit = priceForSelection(product, selected);
+  const showRange = !!pricedGroup && range.min !== range.max && !chosen;
+  const total = unit * quantity;
 
   const setQty = (n) => onQuantity(Math.max(1, Math.min(stock || 1, n)));
 
@@ -96,7 +103,7 @@ export default function ProductOptionSheet({
             <ProductImage src={image} alt={product.name} />
           </div>
           <div className="pos-head-info">
-            <div className="pos-price">{peso(product.price)}</div>
+            <div className="pos-price">{showRange ? `${peso(range.min)} – ${peso(range.max)}` : peso(unit)}</div>
             <div className={`pos-stock${outOfStock ? ' is-out' : stock <= (product.lowStockThreshold || 5) ? ' is-low' : ''}`}>
               {outOfStock ? 'Out of stock' : stock <= (product.lowStockThreshold || 5) ? `Only ${stock} left` : `Stock: ${stock}`}
             </div>
@@ -143,7 +150,10 @@ export default function ProductOptionSheet({
                           if (missing === v.name) setMissing('');
                         }}
                       >
-                        {opt}
+                        <span>{opt}</span>
+                        {pricedGroup?.name === v.name && Number(pricedGroup.prices?.[opt]) > 0 && (
+                          <small className="pos-option-price">{peso(pricedGroup.prices[opt])}</small>
+                        )}
                       </button>
                     );
                   })}

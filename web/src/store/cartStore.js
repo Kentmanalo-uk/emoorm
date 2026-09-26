@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from '../lib/axios';
+import { priceForSelection, pricedVariation } from '../lib/variantPricing';
 
 // Carts are kept per owner (user id or 'guest'). `items` mirrors the active
 // owner's bucket so every existing consumer keeps reading `items` directly.
@@ -182,7 +183,9 @@ const useCartStore = create(
             const patch = { unavailable: false, unavailableReason: null };
             if (!gone) {
               patch.name = product.name ?? line.name;
-              patch.price = Number(product.price ?? line.price);
+              // The line's chosen option sets its price when the product is
+              // priced per option.
+              patch.price = priceForSelection(product, line.selectedVariations) || Number(line.price);
               patch.image = firstImage(product.images) || line.image;
               patch.stock = stock;
               patch.slug = product.slug || line.slug;
@@ -191,9 +194,16 @@ const useCartStore = create(
               patch.storeLogo = product.store?.logo || product.store?.logoUrl || line.storeLogo || null;
               patch.categoryId = product.categoryId || line.categoryId;
             }
+            // The chosen option may have been removed since it was added.
+            const group = !gone ? pricedVariation(product.variations) : null;
+            const optionGone = group && line.selectedVariations
+              && !group.options.includes(line.selectedVariations[group.name]);
             if (gone) {
               patch.unavailable = true;
               patch.unavailableReason = 'This product is no longer available';
+            } else if (optionGone) {
+              patch.unavailable = true;
+              patch.unavailableReason = 'This option is no longer available';
             } else if (notApproved) {
               patch.unavailable = true;
               patch.unavailableReason = 'This product is not available right now';

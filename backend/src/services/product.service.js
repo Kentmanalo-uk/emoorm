@@ -57,6 +57,9 @@ const normalizeProductOptions = (data) => {
       options: Array.isArray(variation?.options)
         ? variation.options.map((option) => cleanText(String(option), { maxLength: 80 })).filter(Boolean).slice(0, 30)
         : [],
+      rawPrices: variation?.prices && typeof variation.prices === 'object' && !Array.isArray(variation.prices)
+        ? variation.prices
+        : null,
     }))
     .filter((variation) => variation.name && variation.options.length)
     .slice(0, 10);
@@ -68,7 +71,37 @@ const normalizeProductOptions = (data) => {
     names.add(key);
   }
 
-  return { returnPolicy, variations: variations.length ? variations : null };
+  // Per-option prices (e.g. Weight: 250g ₱100, 1kg ₱300). One group sets
+  // the price; every option in it needs one. product.price becomes the
+  // lowest, so listings show "from" that and sorting still works.
+  let minPrice = null;
+  const priced = variations.filter((v) => v.rawPrices && Object.keys(v.rawPrices).length);
+  if (priced.length > 1) {
+    throw new ApiError('Only one variation can set the price', 400);
+  }
+  const cleaned = variations.map(({ rawPrices, ...variation }) => {
+    if (!rawPrices || !Object.keys(rawPrices).length) return variation;
+    const prices = {};
+    for (const option of variation.options) {
+      const value = Number(rawPrices[option]);
+      if (!Number.isFinite(value) || value <= 0) {
+        throw new ApiError(`Enter a price for "${option}" in ${variation.name}`, 400);
+      }
+      if (value > PRICE_MAX) {
+        throw new ApiError(`The price for "${option}" is too high`, 400);
+      }
+      prices[option] = Math.round(value * 100) / 100;
+    }
+    const lowest = Math.min(...Object.values(prices));
+    minPrice = minPrice === null ? lowest : Math.min(minPrice, lowest);
+    return { ...variation, prices };
+  });
+
+  return {
+    returnPolicy,
+    variations: cleaned.length ? cleaned : null,
+    ...(minPrice !== null ? { price: minPrice } : {}),
+  };
 };
 
 // ── Field validators (each returns the normalised value or throws 400) ──

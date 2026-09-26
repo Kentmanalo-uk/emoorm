@@ -2531,3 +2531,17 @@ div.pdp-store-followers {
 .pdp-store-left .pdp-store-meta {
   margin-top: 1px;
 }
+
+/* Desktop option buttons: the option's own price when it sets the price. */
+.pdp-variation-options button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.pdp-option-price {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 11.5px;
+  font-weight: 400;
+}

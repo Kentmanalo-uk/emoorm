@@ -27,6 +27,7 @@ import {
   getFollowStatus, followStore as apiFollowStore, unfollowStore as apiUnfollowStore, subscribeToFollowChanges,
 } from '../lib/follow';
 import './ProductDetails.css';
+import { pricedVariation, priceForSelection, priceRange } from '../lib/variantPricing';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -258,7 +259,7 @@ const ProductDetails = () => {
       addItem({
         id: product.id,
         name: product.name,
-        price: product.price,
+        price: priceForSelection(product, selectedVariations),
         image: parseImages(product.images)[0] || '/placeholder-product.png',
         storeId: product.storeId,
         storeName: product.store?.name,
@@ -544,6 +545,14 @@ const ProductDetails = () => {
   const images = parseImages(product.images);
   const gallery = images.length ? images : ['/placeholder-product.png'];
   const isOutOfStock = product.stock === 0;
+  // Per-option pricing: the chosen option's price, or the range until one is chosen.
+  const pricedGroup = pricedVariation(product.variations);
+  const range = priceRange(product);
+  const optionPriced = !!pricedGroup && range.min !== range.max;
+  const optionChosen = !!(pricedGroup && selectedVariations[pricedGroup.name]);
+  const unitPrice = priceForSelection(product, selectedVariations);
+  const fmt = (n) => Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const priceLabel = () => (optionPriced && !optionChosen ? `${fmt(range.min)} – ₱${fmt(range.max)}` : fmt(unitPrice));
   const wishlisted = isInWishlist(product.id);
   const toggleWishlist = () => {
     if (!isAuthenticated) { loginRedirect(); return; }
@@ -637,7 +646,7 @@ const ProductDetails = () => {
               <div className="pdp-m-price">
                 <div className="pdp-m-price-main">
                   <span className="pdp-m-peso">₱</span>
-                  {Number(product.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {priceLabel(false)}
                 </div>
                 <div className="pdp-m-price-side">
                   <span className="pdp-m-badge"><Store size={13} weight="fill" /> Local seller</span>
@@ -768,7 +777,7 @@ const ProductDetails = () => {
 
               {/* Price band */}
               <div className="pdp-price-band">
-                <div className="pdp-price">{peso(product.price)}</div>
+                <div className="pdp-price">₱{priceLabel(false)}</div>
               </div>
 
               {/* Row attributes */}
@@ -850,6 +859,9 @@ const ProductDetails = () => {
                                 key={option}
                               >
                                 {option}
+                                {pricedGroup?.name === variation.name && Number(pricedGroup.prices?.[option]) > 0 && (
+                                  <small className="pdp-option-price">{peso(pricedGroup.prices[option])}</small>
+                                )}
                               </button>
                             ))}
                           </div>
@@ -1122,7 +1134,7 @@ const ProductDetails = () => {
             disabled={isOutOfStock || isAddingToCart}
           >
             <span>{isOutOfStock ? 'Out of stock' : 'Buy now'}</span>
-            {!isOutOfStock && <small>{peso(Number(product.price || 0) * quantity)}</small>}
+            {!isOutOfStock && <small>{optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}</small>}
           </button>
         </div>
       )}

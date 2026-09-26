@@ -9,6 +9,7 @@ const notificationService = require('./notification.service');
 const identityVerificationService = require('./identityVerification.service');
 const appSettingService = require('./appSetting.service');
 const { ApiError } = require('../middleware/errorHandler');
+const { priceForSelection } = require('../utils/variantPricing');
 
 const PAYMENT_METHODS = ['COD', 'GCASH', 'QRPH'];
 const MAX_ORDER_LINES = 50;
@@ -175,14 +176,17 @@ const createOrder = async (userId, data) => {
 
     const selectedVariations = normalizeSelectedVariations(product, item.selectedVariations);
 
-    const itemTotal = Number(product.price) * quantity;
+    // The chosen option's price when the product is priced per option
+    // (e.g. 1kg vs 250g); otherwise the product's single price.
+    const unitPrice = priceForSelection(product, selectedVariations);
+    const itemTotal = unitPrice * quantity;
     totalAmount += itemTotal;
 
     orderItems.push({
       productId: product.id,
       productName: product.name,
       quantity,
-      price: product.price,
+      price: unitPrice,
       subtotal: itemTotal,
       selectedVariations,
       returnPolicySnapshot: product.returnPolicy || null,

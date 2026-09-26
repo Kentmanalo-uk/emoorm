@@ -190,6 +190,10 @@ export default function SellerProducts() {
           name: variation.name || '',
           options: Array.isArray(variation.options) ? variation.options.join(', ') : '',
           optionDraft: '',
+          priced: !!(variation.prices && Object.keys(variation.prices).length),
+          prices: variation.prices
+            ? Object.fromEntries(Object.entries(variation.prices).map(([k, v]) => [k, String(v)]))
+            : {},
         }))
         : [],
     });
@@ -205,10 +209,49 @@ export default function SellerProducts() {
     setFormErrors({});
   };
 
+  const splitOptions = (value) => String(value || '').split(',').map((o) => o.trim()).filter(Boolean);
+  // The one variation group whose options set the price, if any.
+  const pricedGroup = form.variations.find((v) => v.priced) || null;
+  const optionPriceRange = (() => {
+    if (!pricedGroup) return null;
+    const values = splitOptions(pricedGroup.options).map((o) => Number(pricedGroup.prices?.[o])).filter((n) => n > 0);
+    return values.length ? { min: Math.min(...values), max: Math.max(...values) } : { min: 0, max: 0 };
+  })();
+
+  // Only one group can set the price: switching it on for one switches it
+  // off for the others.
+  const togglePriced = (index) => {
+    setForm((current) => ({
+      ...current,
+      variations: current.variations.map((variation, rowIndex) => (
+        rowIndex === index
+          ? { ...variation, priced: !variation.priced, prices: variation.prices || {} }
+          : { ...variation, priced: false }
+      )),
+    }));
+  };
+
+  const setOptionPrice = (index, option, value) => {
+    setForm((current) => ({
+      ...current,
+      variations: current.variations.map((variation, rowIndex) => (
+        rowIndex === index
+          ? { ...variation, prices: { ...(variation.prices || {}), [option]: value } }
+          : variation
+      )),
+    }));
+    if (formErrors.price) setFormErrors((e) => ({ ...e, price: '' }));
+  };
+
   const validate = () => {
     const errs = {};
     if (!form.name.trim()) errs.name = 'Product name is required';
-    if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) errs.price = 'Valid price is required';
+    if (pricedGroup) {
+      const missing = splitOptions(pricedGroup.options).find((o) => !(Number(pricedGroup.prices?.[o]) > 0));
+      if (missing) errs.price = `Enter a price for "${missing}"`;
+    } else if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) {
+      errs.price = 'Valid price is required';
+    }
     if (!form.categoryId) errs.categoryId = 'Category is required';
     if (form.stock !== '' && (isNaN(Number(form.stock)) || Number(form.stock) < 0)) errs.stock = 'Stock must be 0 or more';
     setFormErrors(errs);
@@ -223,16 +266,23 @@ export default function SellerProducts() {
       const payload = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
-        price: parseFloat(form.price),
+        // Priced per option: the lowest option price is the listing price.
+        price: pricedGroup ? optionPriceRange.min : parseFloat(form.price),
         stock: form.stock !== '' ? parseInt(form.stock) : 0,
         categoryId: form.categoryId,
         images: Array.isArray(form.images) ? form.images.filter(Boolean) : [],
         returnPolicy: form.returnPolicy.trim() || null,
         variations: form.variations
-          .map((variation) => ({
-            name: variation.name.trim(),
-            options: variation.options.split(',').map((option) => option.trim()).filter(Boolean),
-          }))
+          .map((variation) => {
+            const options = splitOptions(variation.options);
+            return {
+              name: variation.name.trim(),
+              options,
+              ...(variation.priced ? {
+                prices: Object.fromEntries(options.map((o) => [o, Number(variation.prices?.[o])])),
+              } : {}),
+            };
+          })
           .filter((variation) => variation.name && variation.options.length),
       };
 
@@ -568,6 +618,42 @@ export default function SellerProducts() {
                         >
                           <Trash2 size={15} />
                         </button>
+                        <div className="product-variation-pricing">
+                          <label className="product-price-toggle">
+                            <input
+                              type="checkbox"
+                              checked={!!variation.priced}
+                              onChange={() => togglePriced(index)}
+                            />
+                            <span>Different price per option</span>
+                          </label>
+                          {variation.priced && (
+                            splitOptions(variation.options).length === 0 ? (
+                              <p className="product-price-hint">Add options above, then set a price for each.</p>
+                            ) : (
+                              <div className="product-option-prices">
+                                {splitOptions(variation.options).map((option) => (
+                                  <label className="product-option-price" key={option}>
+                                    <span>{option}</span>
+                                    <span className="product-option-price-input">
+                                      <em>₱</em>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        inputMode="decimal"
+                                        value={variation.prices?.[option] ?? ''}
+                                        onChange={(e) => setOptionPrice(index, option, e.target.value)}
+                                        placeholder="0.00"
+                                        aria-label={`Price for ${option}`}
+                                      />
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -577,15 +663,26 @@ export default function SellerProducts() {
               <div className="form-row">
                 <div className="form-group">
                   <label>Price (₱) <span className="required">*</span></label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.price}
-                    onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
-                    placeholder="0.00"
-                    className={`form-input ${formErrors.price ? 'form-input--error' : ''}`}
-                  />
+                  {pricedGroup ? (
+                    <div className="form-input product-price-derived" aria-live="polite">
+                      {optionPriceRange && optionPriceRange.min > 0
+                        ? (optionPriceRange.min === optionPriceRange.max
+                          ? `₱${optionPriceRange.min.toFixed(2)}`
+                          : `₱${optionPriceRange.min.toFixed(2)} – ₱${optionPriceRange.max.toFixed(2)}`)
+                        : 'Set by option'}
+                      <small>Priced by {pricedGroup.name || 'option'}</small>
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.price}
+                      onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
+                      placeholder="0.00"
+                      className={`form-input ${formErrors.price ? 'form-input--error' : ''}`}
+                    />
+                  )}
                   {formErrors.price && <span className="form-error">{formErrors.price}</span>}
                 </div>
                 <div className="form-group">

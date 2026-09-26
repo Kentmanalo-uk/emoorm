@@ -308,3 +308,21 @@ body.pos-open {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Options that set the price show it under their name. */
+.pos-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.pos-option-price {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+}
+
+.pos-option.is-selected .pos-option-price {
+  color: var(--t-accent-600, #db2777);
+}
