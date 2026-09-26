@@ -1,0 +1,686 @@
+/*
+ * Shop setup checklist, its dashboard card, the identity reminder and the
+ * Verify identity page. Loaded by the Seller Center layout.
+ */
+.ss,
+.sd-setup,
+.sd-idv {
+  --ss-green: var(--t-primary-600, #059669);
+  --ss-green-dark: var(--t-primary-700, #047857);
+  --ss-green-soft: var(--t-primary-50, #ecfdf5);
+  --ss-ink: var(--t-neutral-900, #111827);
+  --ss-muted: var(--t-neutral-500, #6b7280);
+  --ss-line: var(--t-neutral-150, #eef0f3);
+}
+
+/* ── Layout bits ──────────────────────────────────────────── */
+.sc-nav-progress {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Stays in reach under the top bar while the seller scrolls to the card
+   they came for. */
+.sc-back-setup {
+  position: sticky;
+  top: 64px;
+  z-index: 20;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+  color: var(--t-primary-700, #047857);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sc-back-setup em {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.sc-back-setup:hover {
+  background: var(--t-primary-100, #d1fae5);
+}
+
+/* Cards a link can open land below the sticky top bar and the back link. */
+.sc-content .seller-card[id] {
+  scroll-margin-top: 120px;
+}
+
+/* The card a setup link opened, flashed once so the eye finds it. */
+.sc-flash {
+  animation: sc-flash 1.8s ease-out;
+}
+
+@keyframes sc-flash {
+  0%, 35% {
+    box-shadow: 0 0 0 3px var(--t-primary-500, #10b981), var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent, var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+  }
+}
+
+/* ── Setup page ───────────────────────────────────────────── */
+.ss {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.ss-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+.ss-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  color: var(--ss-green-dark);
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ss-hero h1 {
+  margin: 6px 0 4px;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ss-ink);
+}
+
+.ss-hero p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ss-muted);
+}
+
+.ss-progress-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--ss-ink);
+}
+
+.ss-progress-top span {
+  color: var(--ss-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ss-progress-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+  overflow: hidden;
+}
+
+.ss-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ss-green);
+  transition: width 0.4s ease;
+}
+
+/* Next step: the one obvious thing to tap. */
+.ss-next {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--t-primary-700, #047857), var(--t-primary-600, #059669));
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(4, 120, 87, 0.22);
+}
+
+.ss-next-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.ss-next-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.ss-next h2 {
+  margin: 2px 0 4px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.ss-next p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  opacity: 0.92;
+}
+
+.ss-next-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ss-next-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ss-green-dark);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ss-next-btn:hover {
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.ss-next-btn--ghost {
+  background: transparent;
+  color: #fff;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+}
+
+.ss-next-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ss-next--waiting {
+  grid-template-columns: auto minmax(0, 1fr);
+  background: var(--t-neutral-0, #fff);
+  color: var(--ss-ink);
+  box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+.ss-next--waiting h2 {
+  color: var(--ss-ink);
+}
+
+.ss-next--waiting .ss-next-icon {
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-600, #d97706);
+}
+
+.ss-next--waiting p,
+.ss-next--waiting .ss-next-label {
+  color: var(--ss-muted);
+  opacity: 1;
+}
+
+/* Step groups */
+.ss-group {
+  padding: 18px 8px 8px;
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+.ss-group-title {
+  margin: 0 14px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ss-muted);
+}
+
+.ss-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ss-step + .ss-step {
+  border-top: 1px solid var(--ss-line);
+}
+
+.ss-step-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 68px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.ss-step-link:hover {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.ss-step-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.ss-step.is-done .ss-step-mark {
+  background: var(--ss-green);
+  color: #fff;
+}
+
+.ss-step.is-failed .ss-step-mark {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-600, #dc2626);
+}
+
+.ss-step.is-waiting .ss-step-mark {
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-600, #d97706);
+}
+
+.ss-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ss-step-body strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ss-ink);
+}
+
+.ss-step-body > span {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ss-muted);
+}
+
+.ss-step.is-done .ss-step-body strong {
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.ss-step.is-failed .ss-step-body > span {
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.ss-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--ss-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.ss-step-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ss-done-word {
+  color: var(--ss-green-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ss-step-go {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--ss-green-soft);
+  color: var(--ss-green-dark);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ss-step.is-failed .ss-step-go {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.ss-step-caret {
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+.ss-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ss-muted);
+}
+
+.ss-skip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Dashboard: setup card and identity reminder ─────────── */
+.sd-setup,
+.sd-idv {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+.sd-setup-body,
+.sd-idv-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sd-setup-body strong,
+.sd-idv-body strong {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--ss-ink);
+}
+
+.sd-setup-body p,
+.sd-idv-body p {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ss-muted);
+}
+
+.sd-setup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sd-setup-head .sd-card-hide {
+  margin: -6px -6px -6px 0;
+}
+
+.sd-setup-bar {
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+  overflow: hidden;
+}
+
+.sd-setup-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ss-green);
+}
+
+.sd-setup-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.sd-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--ss-green);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sd-card-btn:hover {
+  background: var(--ss-green-dark);
+}
+
+.sd-card-hide {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: pointer;
+}
+
+.sd-card-hide:hover {
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--t-neutral-700, #374151);
+}
+
+.sd-idv-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-600, #d97706);
+}
+
+.sd-idv.is-failed .sd-idv-icon {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-600, #dc2626);
+}
+
+.sd-idv.is-failed .sd-card-btn {
+  background: var(--t-danger-600, #dc2626);
+}
+
+.sd-idv.is-waiting .sd-idv-icon {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--ss-green);
+}
+
+/* ── Verify identity page ─────────────────────────────────── */
+.sv {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.sv-privacy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 13.5px;
+}
+
+.sv-privacy svg {
+  flex-shrink: 0;
+}
+
+/* The shared ID verifier, shaped like the Seller Center's other cards. */
+.sv .idv-verifier {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+.sv-after {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.sv-after .ss-next-btn {
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.sv-after .ss-next-btn:hover {
+  background: var(--t-primary-700, #047857);
+}
+
+.sv-after-link {
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── Phones ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .ss {
+    gap: 12px;
+  }
+
+  .ss-hero {
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
+
+  .ss-hero h1 {
+    font-size: 22px;
+  }
+
+  .ss-next {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px 14px;
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
+
+  .ss-next-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+  }
+
+  .ss-next h2 {
+    font-size: 17px;
+  }
+
+  .ss-next-actions {
+    grid-column: 1 / -1;
+  }
+
+  .ss-next-btn {
+    width: 100%;
+  }
+
+  .ss-group {
+    padding: 14px 4px 4px;
+    border-radius: 16px;
+  }
+
+  .ss-group-title {
+    margin: 0 12px 6px;
+  }
+
+  .ss-step-link {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  /* On a phone the row itself is the button; the word would crowd it. */
+  .ss-step-go,
+  .ss-done-word {
+    display: none;
+  }
+
+  .sd-setup,
+  .sd-idv {
+    flex-wrap: wrap;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .sd-setup-actions,
+  .sd-idv .sd-card-btn {
+    width: 100%;
+  }
+
+  .sd-setup-actions .sd-card-btn {
+    flex: 1;
+  }
+}

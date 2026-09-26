@@ -3,6 +3,7 @@ import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Plus, Clock, Truck, CheckCircle, Package,
   ShoppingBag, TrendUp as TrendingUp, Star, ChartBar as BarChart2, User, Users, WarningCircle, X,
+  IdentificationCard, ArrowRight,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -10,6 +11,7 @@ import Skeleton from '../components/ui/Skeleton';
 import UserAvatar from '../components/ui/UserAvatar';
 import { getSellerFollowerStats, subscribeToFollowChanges } from '../lib/follow';
 import { completeGuide, shouldShowGuide } from '../lib/sellerGuides';
+import { describeStep } from '../lib/sellerSetup';
 
 const DASHBOARD_GUIDE = 'dashboard';
 import './SellerDashboard.css';
@@ -46,8 +48,25 @@ export default function SellerDashboard() {
   const ctx = useOutletContext();
   const store = ctx?.store;
   const setStore = ctx?.setStore;
-  const tourEligible = shouldShowGuide(store, DASHBOARD_GUIDE);
+  const setup = ctx?.setup;
   const navigate = useNavigate();
+
+  // A new seller sees Shop setup before the dashboard: the first visit goes
+  // there (it marks itself seen), and the tour waits until after it.
+  const setupUnseen = shouldShowGuide(store, 'setup-intro');
+  useEffect(() => {
+    if (setupUnseen && setup && !setup.complete) navigate('/seller/setup', { replace: true });
+  }, [setupUnseen, setup, navigate]);
+  const tourEligible = shouldShowGuide(store, DASHBOARD_GUIDE) && (!setupUnseen || setup?.complete === true);
+
+  // Reminders from the setup checklist: the ID check until it is done, and
+  // overall progress until the shop is ready (the seller may hide that one).
+  const identityStep = setup?.steps?.find((step) => step.key === 'identity') || null;
+  const identityMeta = identityStep && !identityStep.done ? describeStep(identityStep) : null;
+  const showSetupCard = Boolean(setup && !setup.complete && shouldShowGuide(store, 'setup-card'));
+  const setupNext = setup?.steps?.find(
+    (step) => !step.done && !step.optional && !step.waiting && step.key !== 'identity',
+  ) || null;
 
   const [recentOrders, setRecentOrders] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
@@ -175,6 +194,62 @@ export default function SellerDashboard() {
             </Link>
           </div>
         </div>
+
+        {/* Identity reminder: sellers verify after applying */}
+        {identityMeta && (
+          <section className={`sd-idv is-${identityMeta.tone}`} aria-label="Identity verification">
+            <span className="sd-idv-icon"><IdentificationCard size={24} weight="fill" /></span>
+            <div className="sd-idv-body">
+              <strong>
+                {identityMeta.tone === 'failed'
+                  ? "We couldn't confirm your ID"
+                  : identityMeta.tone === 'waiting' ? 'Checking your ID' : 'Verify your identity'}
+              </strong>
+              <p>
+                {identityMeta.tone === 'todo'
+                  ? 'Scan a valid ID so the admin can approve your shop faster. It takes about a minute.'
+                  : identityMeta.text}
+              </p>
+            </div>
+            {identityMeta.tone !== 'waiting' && (
+              <Link to="/seller/verification" className="sd-card-btn">
+                {identityMeta.action} <ArrowRight size={15} weight="bold" />
+              </Link>
+            )}
+          </section>
+        )}
+
+        {/* Shop setup progress, until the shop is ready */}
+        {showSetupCard && (
+          <section className="sd-setup" aria-label="Shop setup">
+            <div className="sd-setup-body">
+              <div className="sd-setup-head">
+                <strong>Finish setting up your shop</strong>
+                <button
+                  type="button"
+                  className="sd-card-hide"
+                  aria-label="Hide shop setup from the dashboard"
+                  title="Hide (Shop setup stays in the menu)"
+                  onClick={() => completeGuide('setup-card', setStore)}
+                >
+                  <X size={16} weight="bold" />
+                </button>
+              </div>
+              <p>
+                {setup.doneCount} of {setup.total} done
+                {setupNext ? ` · Next: ${describeStep(setupNext, { municipality: setup.municipality }).title}` : ''}
+              </p>
+              <div className="sd-setup-bar" aria-hidden="true">
+                <span style={{ width: `${Math.round((setup.doneCount / Math.max(1, setup.total)) * 100)}%` }} />
+              </div>
+            </div>
+            <div className="sd-setup-actions">
+              <Link to="/seller/setup" className="sd-card-btn">
+                Continue setup <ArrowRight size={15} weight="bold" />
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* Pending-review banner */}
         {store && !store.isActive && (

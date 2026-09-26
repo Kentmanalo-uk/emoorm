@@ -10,8 +10,6 @@ import useAuthStore from "../store/authStore";
 import PhAddressPicker from "../components/common/PhAddressPicker";
 import AppLogo from "../components/AppLogo";
 import { inspectImage } from "../lib/imageQuality";
-import { IDENTITY_VERIFICATION_PATH } from "../lib/identity";
-import IdentityVerifier from "../components/identity/IdentityVerifier";
 import resolveImg from "../lib/media";
 import "./SellerApply.css";
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
@@ -232,7 +230,6 @@ export default function SellerApply() {
   const { isAuthenticated, user, updateUser } = useAuthStore();
   const navigate = useNavigate();
   // Set when the ID passes the OCR check on this page.
-  const [verifiedHere, setVerifiedHere] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -285,7 +282,8 @@ export default function SellerApply() {
   }, []);
 
   const status = application?.status ?? user?.sellerApplicationStatus ?? null;
-  const identityVerified = application?.identityVerified === true || verifiedHere;
+  // The ID is checked after applying now, from the Seller Center.
+  const identityVerified = application?.identityVerified === true;
 
   // ── Draft autosave ──────────────────────────────────────────────────
   const savedDraftRef = useRef("");
@@ -397,10 +395,9 @@ export default function SellerApply() {
     !form.shopCategories.length && "Shop categories",
     form.sellerBusinessType === "REGISTERED" && !form.sellerPermitNumber.trim() && "Permit number",
     form.payoutMethod !== "COD_ONLY" && !form.payoutAccountNumber.trim() && "Payout details",
-    !identityVerified && "Verify your ID",
     !contactNumber && "Contact number",
     !acceptedTerms && "Accept the seller terms",
-  ].filter(Boolean), [form, identityVerified, contactNumber, acceptedTerms]);
+  ].filter(Boolean), [form, contactNumber, acceptedTerms]);
 
   const submit = async () => {
     setConfirming(false);
@@ -421,8 +418,9 @@ export default function SellerApply() {
         role: updated?.role || "SELLER",
         sellerApplicationStatus: updated?.sellerApplicationStatus || "PENDING",
       });
-      toast.success("Application submitted. Set up your shop while it's reviewed.");
-      navigate("/seller", { replace: true });
+      toast.success("Application sent! Let's set up your shop.");
+      // First stop: the Shop setup checklist, not the dashboard.
+      navigate("/seller/setup", { replace: true });
     } catch (err) {
       toast.error(err.message || "Submission failed");
     } finally {
@@ -438,11 +436,6 @@ export default function SellerApply() {
         document.querySelector(".input-error, .field-error")
           ?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
-      return;
-    }
-    if (!identityVerified) {
-      toast.error("Verify your ID first");
-      document.getElementById("apply-identity")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     if (!contactNumber) {
@@ -823,7 +816,7 @@ export default function SellerApply() {
             </div>
           </section>
 
-          {/* ── Identity verification (OCR, same check as Profile → Verification) ── */}
+          {/* ── Identity: verified after applying, from the Seller Center ── */}
           <section className="apply-card apply-section" id="apply-identity">
             <div className="apply-section-head">
               <ShieldCheck size={22} />
@@ -831,29 +824,19 @@ export default function SellerApply() {
                 <h2>Identity Verification</h2>
                 <p>
                   {identityVerified
-                    ? "Your identity is verified — there's nothing to upload."
-                    : "Scan a valid government-issued ID. We read it automatically and match it to your account, so your application can be approved faster."}
+                    ? "Your identity is already verified. There's nothing to do here."
+                    : "No ID needed to apply. After you submit, verify your ID from your Seller Center. It takes about a minute, and admins approve verified shops faster."}
                 </p>
               </div>
             </div>
-
-            {identityVerified ? (
+            {identityVerified && (
               <div className="apply-verified">
                 <CheckCircle size={20} weight="fill" />
                 <div>
                   <strong>Identity verified</strong>
-                  <span>
-                    Your ID matched your account, and no copy of the photo was kept.{" "}
-                    <Link to={IDENTITY_VERIFICATION_PATH}>View verification</Link>
-                  </span>
+                  <span>Your ID matched your account, and no copy of the photo was kept.</span>
                 </div>
               </div>
-            ) : (
-              <IdentityVerifier
-                as="div"
-                verifiedText="Your identity is verified. You can submit your application."
-                onVerified={() => setVerifiedHere(true)}
-              />
             )}
           </section>
         </div>
@@ -899,7 +882,7 @@ export default function SellerApply() {
               <dt>Reviewed by</dt>
               <dd>{form.municipalityName ? `${form.municipalityName} admin` : "Select a municipality"}</dd>
               <dt>Identity</dt>
-              <dd>{identityVerified ? "Verified" : form.idType || "Not selected"}</dd>
+              <dd>{identityVerified ? "Verified" : "After you apply"}</dd>
             </dl>
 
             {thumbs.length > 0 && (

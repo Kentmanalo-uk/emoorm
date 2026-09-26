@@ -460,7 +460,11 @@ export default function AdminSellers() {
                 ) : (
                   <p className="admin-id-check is-missing">
                     <Warning size={16} weight="fill" />
-                    <span>Not verified by ID scan{selected.idType ? ` · submitted ${selected.idType}` : ''}.</span>
+                    <span>
+                      <strong>ID not verified yet.</strong>
+                      {' '}Sellers verify their ID from their Seller Center after applying; you'll get a notification when they do.
+                      {selected.idType ? ` Submitted with the application: ${selected.idType}.` : ''}
+                    </span>
                   </p>
                 )}
                 <div className="admin-id-photos">
@@ -476,7 +480,7 @@ export default function AdminSellers() {
                       <KycPhoto userId={selected.id} field={field} label={label} />
                     </div>
                   ))}
-                  {!selected.idFrontUrl && !selected.idBackUrl && !selected.selfieUrl && (
+                  {identity?.status === 'VERIFIED' && !selected.idFrontUrl && !selected.idBackUrl && !selected.selfieUrl && (
                     <div className="admin-id-missing">
                       No documents on file — the applicant's identity was verified separately,
                       or the photos have passed their retention period.

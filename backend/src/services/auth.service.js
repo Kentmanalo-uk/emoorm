@@ -356,10 +356,9 @@ const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
  * checks the same rules for a friendlier experience, but this is the gate that
  * actually holds — a direct API call goes through here too.
  * @param {Object} data - Raw request body
- * @param {Object} context - { identityVerified }
  * @returns {Promise<Object>} Normalised application data
  */
-const normalizeSellerApplication = async (data = {}, context = {}) => {
+const normalizeSellerApplication = async (data = {}) => {
   const shopName = trimmed(data.shopName);
   if (!shopName) throw new ApiError('Shop name is required', 400);
   if (shopName.length < 3 || shopName.length > 60) {
@@ -416,16 +415,12 @@ const normalizeSellerApplication = async (data = {}, context = {}) => {
     throw new ApiError('Invalid fulfillment preference', 400);
   }
 
-  // A buyer who already passed OCR identity verification does not upload an ID
-  // a second time — that record is the proof, and it stores no photo.
+  // The ID is not part of the application any more: sellers verify it from
+  // the Seller Center after applying (the same OCR check buyers use, which
+  // keeps no photo). Older clients that still send ID photos are accepted.
   const idType = trimmed(data.idType);
   const idFrontUrl = trimmed(data.idFrontUrl);
   const idBackUrl = trimmed(data.idBackUrl);
-  if (!context.identityVerified) {
-    if (!idType) throw new ApiError('Please select the type of valid ID', 400);
-    if (!idFrontUrl) throw new ApiError('A photo of the front of your ID is required', 400);
-    if (!idBackUrl) throw new ApiError('A photo of the back of your ID is required', 400);
-  }
 
   return {
     shopName,
@@ -522,13 +517,9 @@ const applyForSeller = async (userId, data = {}) => {
     throw new ApiError('Add a contact number to your profile before applying', 400);
   }
 
-  // The ID is checked by the same OCR verification buyers use (name and
-  // address must match the account at 50% or better); no photo is kept.
+  // Identity is verified later, from the Seller Center (see below).
   const identityVerified = await identityVerificationService.isVerified(userId);
-  if (!identityVerified) {
-    throw new ApiError('Verify your ID before applying. It only takes a minute.', 400);
-  }
-  const application = await normalizeSellerApplication(data, { identityVerified });
+  const application = await normalizeSellerApplication(data);
 
   // Two shops sharing a display name confuses buyers even though their URLs
   // differ, so the name has to be free before the application is accepted.
@@ -562,6 +553,25 @@ const applyForSeller = async (userId, data = {}) => {
     user: updatedUser,
     shopName: application.shopName,
   }));
+
+  // The ID check comes after applying now. It is the one setup step the
+  // admin looks at when approving, so it gets its own reminder in the
+  // Seller Center feed; the result arrives there too when they do it.
+  if (!identityVerified) {
+    try {
+      await notificationService.createNotification({
+        userId,
+        type: 'SYSTEM_ANNOUNCEMENT',
+        audience: 'SELLER',
+        title: 'Verify your identity',
+        message: 'Scan a valid ID so the admin can approve your shop faster. It only takes a minute.',
+        relatedId: userId,
+        target: { kind: 'seller-verification' },
+      });
+    } catch (err) {
+      console.error('[applyForSeller] verify reminder failed:', err.message);
+    }
+  }
 
   return updatedUser;
 };

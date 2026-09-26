@@ -176,6 +176,8 @@ export default function SellerProducts() {
 
   const closeForm = () => {
     if (location.state?.fromList) navigate(-1);
+    // Opened from Shop setup ("Add your first product"): go back to it.
+    else if (location.state?.fromSetup) navigate('/seller/setup', { replace: true });
     else navigate('/seller/products', { replace: true });
   };
 

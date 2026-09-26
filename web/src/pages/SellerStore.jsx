@@ -177,7 +177,7 @@ export default function SellerStore() {
         ) : (
           <div className="store-settings-grid">
             <div className="store-settings-main">
-              <div className="seller-card">
+              <div className="seller-card" id="shop-info">
                 <div className="seller-card-header">
                   <h2><Store size={18} /> Store Information</h2>
                 </div>
@@ -275,7 +275,7 @@ export default function SellerStore() {
 
               {/* Branding: logo + banner */}
               {!isNew && (
-                <div className="seller-card">
+                <div className="seller-card" id="branding">
                   <div className="seller-card-header">
                     <h2><ImageIcon size={16} /> Branding</h2>
                   </div>

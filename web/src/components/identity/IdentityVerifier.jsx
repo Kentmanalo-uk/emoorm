@@ -147,14 +147,17 @@ function PhotoSlot({ side, label, hint, previewUrl, disabled, optional, onPick, 
  * The OCR identity check: pick the ID type, photograph the front (and back),
  * and the server reads the card and matches it to the account (name and
  * address at 50% or better). Used by Profile → Verification and by the
- * seller application.
+ * Seller Center's Verify identity page.
  *
  * verifiedText: what the verified state says in this context.
  * onStatus(status): every status the server returns.
  * onVerified(status): once, when the account becomes verified here.
  * as: 'form' (own <form>) or 'div' (when placed inside another form).
+ * supportPath: the support inbox a stuck user is sent to.
  */
-export default function IdentityVerifier({ verifiedText, onStatus, onVerified, as = 'form' }) {
+export default function IdentityVerifier({
+  verifiedText, onStatus, onVerified, as = 'form', supportPath = '/profile/support',
+}) {
   const [status, setStatusState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [idType, setIdType] = useState('');
@@ -254,7 +257,7 @@ export default function IdentityVerifier({ verifiedText, onStatus, onVerified, a
         subject: 'Help verifying my identity',
         message: `Hi, I reached today's limit for identity verification and still can't verify my account.${reason} Could you help me verify my identity?`,
       });
-      navigate(`/profile/support?c=${res.data.id}`);
+      navigate(`${supportPath}?c=${res.data.id}`);
     } catch (error) {
       toast.error(error?.message || 'Could not reach municipal support');
     } finally {

@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Link, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
-  ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X,
+  ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X, ListChecks, ArrowLeft,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
+import { fetchSellerSetup } from '../../lib/sellerSetup';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
@@ -23,6 +24,7 @@ import AppRail from './AppRail';
 import './SellerLayout.css';
 import './SellerShellMobile.css';
 import './SellerPhoneFit.css';
+import '../../pages/SellerSetup.css';
 import UserAvatar from '../ui/UserAvatar';
 
 /**
@@ -93,6 +95,49 @@ export default function SellerLayout() {
     if (store) rememberShop(store);
   }, [store, rememberShop]);
 
+  // The new-shop checklist (Shop setup). Re-read on every page change until
+  // it is complete, so the sidebar's progress follows what the seller just
+  // saved; once complete it stops asking.
+  const [setup, setSetup] = useState(null);
+  const refreshSetup = useCallback(async () => {
+    try {
+      const next = await fetchSellerSetup();
+      setSetup(next);
+      return next;
+    } catch {
+      return null;
+    }
+  }, []);
+  const setupComplete = setup?.complete === true;
+  useEffect(() => {
+    if (!store?.id || user?.role !== 'SELLER' || setupComplete) return;
+    refreshSetup();
+  }, [store?.id, user?.role, location.pathname, setupComplete, refreshSetup]);
+
+  // A link like /seller/fulfillment#delivery-fee opens that card: the page
+  // loads its data first, so wait for the card to appear, then bring it into
+  // view and flash it.
+  useEffect(() => {
+    const id = location.hash.slice(1);
+    if (!id) return undefined;
+    let tries = 0;
+    let flashTimer;
+    const timer = window.setInterval(() => {
+      const el = document.getElementById(id);
+      tries += 1;
+      if (!el && tries < 30) return;
+      window.clearInterval(timer);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('sc-flash');
+      flashTimer = window.setTimeout(() => el.classList.remove('sc-flash'), 1800);
+    }, 100);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(flashTimer);
+    };
+  }, [location.pathname, location.hash]);
+
   useEffect(() => {
     if (!accountOpen) return undefined;
     const onDown = (event) => {
@@ -162,6 +207,14 @@ export default function SellerLayout() {
           </div>
 
           <nav className="sc-nav">
+            {setup && !setup.complete && (
+              <NavLink to="/seller/setup" className={navCls} title="Shop setup">
+                <ListChecks size={17} weight="fill" /> <span>Shop setup</span>
+                <span className="sc-nav-progress" aria-label={`${setup.doneCount} of ${setup.total} done`}>
+                  {setup.doneCount}/{setup.total}
+                </span>
+              </NavLink>
+            )}
             <NavLink to="/seller" end className={navCls} title="Dashboard">
               <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
@@ -347,7 +400,14 @@ export default function SellerLayout() {
         </header>
 
         <main className="sc-content">
-          {store && store.isApproved === false && (
+          {location.state?.fromSetup && location.pathname !== '/seller/setup' && (
+            <Link to="/seller/setup" className="sc-back-setup">
+              <ArrowLeft size={15} weight="bold" />
+              <span>Back to shop setup</span>
+              {setup && <em>{setup.doneCount} of {setup.total} done</em>}
+            </Link>
+          )}
+          {store && store.isApproved === false && location.pathname !== '/seller/setup' && (
             <div className="sc-private-banner" role="status">
               <strong>Your shop is private while your application is reviewed.</strong>
               <span>
@@ -356,7 +416,7 @@ export default function SellerLayout() {
               </span>
             </div>
           )}
-          <Outlet context={{ store, setStore }} />
+          <Outlet context={{ store, setStore, setup, refreshSetup }} />
         </main>
         <SellerCenterGuide store={store} setStore={setStore} />
       </div>
@@ -417,6 +477,8 @@ const LABELS = {
   '/seller/support': 'Admin Messages',
   '/seller/products': 'Products',
   '/seller/products/new': 'Add Product',
+  '/seller/setup': 'Shop setup',
+  '/seller/verification': 'Verify identity',
   '/seller/reviews': 'Reviews',
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',

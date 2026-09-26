@@ -1,5 +1,7 @@
 const config = require('../config/env');
+const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
+const notificationService = require('./notification.service');
 const identityRepository = require('../repositories/identityVerification.repository');
 const userRepository = require('../repositories/user.repository');
 const appSettingService = require('./appSetting.service');
@@ -75,6 +77,62 @@ const getStatus = async (userId) => {
 const isVerified = async (userId) => {
   const record = await identityRepository.findByUserId(userId);
   return record?.status === 'VERIFIED';
+};
+
+/**
+ * Sellers verify their ID after applying, from the Seller Center, so the
+ * result reaches them as a Seller Center notification either way: confirmed,
+ * or not confirmed with the reason and a way back to try again. When the
+ * seller's application is still waiting, the admin reviewing it hears that
+ * the applicant is now verified. Buyers see their result on the page they
+ * submitted from, so nothing is sent for them here.
+ *
+ * Never throws: a missed notice must not undo a verification.
+ * @param {String} userId
+ * @param {{verified: Boolean, failureReason?: String, byAdmin?: Boolean}} outcome
+ * @returns {Promise<Boolean>} true when the user is a seller and was notified
+ */
+const notifySellerOutcome = async (userId, { verified, failureReason = null, byAdmin = false }) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, fullName: true, sellerApplicationStatus: true, shopName: true, shopMunicipalityId: true },
+    });
+    if (user?.role !== 'SELLER') return false;
+
+    let message;
+    if (verified) {
+      message = byAdmin
+        ? 'Your municipal admin confirmed your identity. Thank you!'
+        : 'Your ID matched your account. Thank you! Verified shops get approved faster and buyers trust them more.';
+    } else {
+      message = `${failureReason || FAILURE_MESSAGES.UNREADABLE} Open this to try again.`;
+    }
+    await notificationService.createNotification({
+      userId,
+      type: 'SYSTEM_ANNOUNCEMENT',
+      audience: 'SELLER',
+      title: verified ? 'Your ID is confirmed' : "We couldn't confirm your ID",
+      message,
+      relatedId: userId,
+      // SYSTEM_ANNOUNCEMENT is also used for real announcements, so this one
+      // says outright where it leads.
+      target: { kind: 'seller-verification' },
+    });
+
+    if (verified && user.sellerApplicationStatus === 'PENDING' && user.shopMunicipalityId) {
+      await notificationService.notifyMunicipalAdmins(user.shopMunicipalityId, {
+        type: 'SELLER_APPLICATION_SUBMITTED',
+        title: 'Seller applicant verified their ID',
+        message: `${user.fullName} verified their identity for "${user.shopName || 'their shop'}".`,
+        relatedId: userId,
+      });
+    }
+    return true;
+  } catch (err) {
+    console.error('[identity] seller notification failed:', err.message);
+    return false;
+  }
 };
 
 /** Backend checkout gate — called before any order is created. */
@@ -267,6 +325,11 @@ const submit = async (actor, idType, images, req) => {
     req,
   });
 
+  await notifySellerOutcome(userId, {
+    verified: outcome.verified,
+    failureReason: FAILURE_MESSAGES[outcome.failureCode],
+  });
+
   // Users only see success or failure; extracted details stay server-side.
   const response = toPublicStatus(record, attemptsUsed + 1);
   if (config.identity.debugOcr) {
@@ -298,6 +361,24 @@ const invalidateIfVerified = async (actor, changedFields, req) => {
     details: { reason: 'PROFILE_CHANGED', changedFields },
     req,
   });
+
+  // A seller loses the "verified" mark the admin sees, so say so and point
+  // them back to the check.
+  if (actor.role === 'SELLER') {
+    try {
+      await notificationService.createNotification({
+        userId: actor.id,
+        type: 'SYSTEM_ANNOUNCEMENT',
+        audience: 'SELLER',
+        title: 'Please verify your ID again',
+        message: 'You changed your name or address, so your ID check was reset. It only takes a minute.',
+        relatedId: actor.id,
+        target: { kind: 'seller-verification' },
+      });
+    } catch (err) {
+      console.error('[identity] re-verify notice failed:', err.message);
+    }
+  }
 };
 
 module.exports = {
@@ -306,5 +387,6 @@ module.exports = {
   assertVerifiedForCheckout,
   submit,
   invalidateIfVerified,
+  notifySellerOutcome,
   evaluate,
 };

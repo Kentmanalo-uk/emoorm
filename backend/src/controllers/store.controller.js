@@ -1,5 +1,6 @@
 const storeService = require('../services/store.service');
 const sellerAttentionService = require('../services/sellerAttention.service');
+const sellerSetupService = require('../services/sellerSetup.service');
 const followService = require('../services/storeFollow.service');
 const auditLog = require('../services/auditLog.service');
 const {
@@ -150,6 +151,17 @@ const getMyAttention = asyncHandler(async (req, res) => {
 });
 
 /**
+ * The new-shop checklist: which setup steps are done and which are left.
+ * @route GET /api/stores/my/setup
+ * @access Private (Seller only)
+ */
+const getMySetup = asyncHandler(async (req, res) => {
+  const setup = await sellerSetupService.getSetup(req.user.id);
+
+  successResponse(res, setup, 'Shop setup retrieved');
+});
+
+/**
  * Mark a Seller Center tutorial as finished
  * @route PUT /api/stores/my/guides
  * @access Private (Seller)
@@ -271,6 +283,7 @@ module.exports = {
   getStorefront,
   getMyStore,
   getMyAttention,
+  getMySetup,
   completeGuide,
   updateStore,
   requestDeletion,

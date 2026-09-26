@@ -2,6 +2,7 @@ const prisma = require('../config/database');
 const config = require('../config/env');
 const auditLogService = require('./auditLog.service');
 const notificationService = require('./notification.service');
+const identityVerificationService = require('./identityVerification.service');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -240,22 +241,31 @@ const reviewIdentity = async (actor, userId, { decision, note } = {}, req = null
     req,
   });
 
-  try {
-    await notificationService.createNotification({
-      userId,
-      type: 'SYSTEM_ANNOUNCEMENT',
-      title: verified ? 'Your identity is verified' : 'Identity verification update',
-      message: verified
-        ? 'Your municipal admin verified your identity. You can now check out.'
-        : data.failureReason,
-      relatedId: userId,
-      audience: 'BUYER',
-      // SYSTEM_ANNOUNCEMENT is also used for real announcements, so this one
-      // says outright where it leads.
-      target: { kind: 'buyer-verification' },
-    });
-  } catch (err) {
-    console.error('[reviewIdentity] notification failed:', err.message);
+  // Sellers hear it in their Seller Center; buyers get the notice below.
+  const sellerNotified = await identityVerificationService.notifySellerOutcome(userId, {
+    verified,
+    failureReason: data.failureReason,
+    byAdmin: true,
+  });
+
+  if (!sellerNotified) {
+    try {
+      await notificationService.createNotification({
+        userId,
+        type: 'SYSTEM_ANNOUNCEMENT',
+        title: verified ? 'Your identity is verified' : 'Identity verification update',
+        message: verified
+          ? 'Your municipal admin verified your identity. You can now check out.'
+          : data.failureReason,
+        relatedId: userId,
+        audience: 'BUYER',
+        // SYSTEM_ANNOUNCEMENT is also used for real announcements, so this one
+        // says outright where it leads.
+        target: { kind: 'buyer-verification' },
+      });
+    } catch (err) {
+      console.error('[reviewIdentity] notification failed:', err.message);
+    }
   }
 
   return getIdentityForReview(actor, userId);

@@ -426,7 +426,7 @@ export default function SellerFulfillment() {
 
         {/* Pickup Info */}
         {showPickup && (
-          <div className="seller-card">
+          <div className="seller-card" id="pickup">
             <div className="seller-card-header">
               <h2>
                 <StoreIcon size={16} /> Pickup Location
@@ -463,7 +463,7 @@ export default function SellerFulfillment() {
 
         {/* Delivery fee */}
         {showDeliveryAreas && (
-          <div className="seller-card">
+          <div className="seller-card" id="delivery-fee">
             <div className="seller-card-header">
               <h2>
                 <Truck size={16} /> Delivery Fee
@@ -497,7 +497,7 @@ export default function SellerFulfillment() {
 
         {/* Delivery Coverage */}
         {showDeliveryAreas && (
-          <div className="seller-card">
+          <div className="seller-card" id="delivery-areas">
             <div className="seller-card-header">
               <h2>
                 <MapPin size={16} /> Delivery Coverage
@@ -610,7 +610,7 @@ export default function SellerFulfillment() {
         )}
 
         {/* Payment */}
-        <div className="seller-card">
+        <div className="seller-card" id="payment">
           <div className="seller-card-header">
             <h2>
               <QrCode size={16} /> Payment Options

@@ -28,6 +28,8 @@ import SellerSupport from './pages/SellerSupport';
 import SellerReviews from './pages/SellerReviews';
 import SellerAnalytics from './pages/SellerAnalytics';
 import SellerFinance from './pages/SellerFinance';
+import SellerSetup from './pages/SellerSetup';
+import SellerVerification from './pages/SellerVerification';
 import SellerFulfillment from './pages/SellerFulfillment';
 import SellerSettings from './pages/SellerSettings';
 import Stores from './pages/Stores';
@@ -207,6 +209,8 @@ function AppRoutes() {
         {/* Seller Center — SELLER role only (guarded inside SellerLayout) */}
         <Route path="/seller" element={<SellerLayout />}>
           <Route index element={<SellerDashboard />} />
+          <Route path="setup" element={<SellerSetup />} />
+          <Route path="verification" element={<SellerVerification />} />
           <Route path="orders" element={<SellerOrders />} />
           <Route path="returns" element={<SellerReturns />} />
           <Route path="messages" element={<SellerMessages />} />

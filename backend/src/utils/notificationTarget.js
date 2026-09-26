@@ -57,7 +57,8 @@ const KINDS = [
   'admin-feedback',
   'buyer-messages', 'seller-messages',
   'admin-seller-application', 'seller-application',
-  'buyer-verification', 'municipality', 'admin-dashboard',
+  'buyer-verification', 'seller-verification', 'seller-setup',
+  'municipality', 'admin-dashboard',
   'notification', 'admin-notification',
 ];
 

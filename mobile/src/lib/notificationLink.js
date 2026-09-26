@@ -19,6 +19,8 @@ export const SELLER_TABS = {
   'seller-product': 'products',
   'seller-store': 'store',
   'seller-dashboard': 'overview',
+  'seller-verification': 'overview',
+  'seller-setup': 'overview',
 };
 
 const ROUTES = {
@@ -31,6 +33,9 @@ const ROUTES = {
   'seller-product': () => '/seller',
   'seller-store': () => '/seller',
   'seller-dashboard': () => '/seller',
+  // The app has no verification or setup screen of its own yet.
+  'seller-verification': () => '/seller',
+  'seller-setup': () => '/seller',
   'seller-application': () => '/seller-apply',
 };
 

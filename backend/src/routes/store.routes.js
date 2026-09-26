@@ -40,6 +40,13 @@ router.get(
   storeController.getMyAttention
 );
 
+router.get(
+  '/my/setup',
+  authenticate,
+  authorize('SELLER'),
+  storeController.getMySetup
+);
+
 router.put(
   '/my/guides',
   authenticate,

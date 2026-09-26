@@ -68,7 +68,11 @@ export default function SellerCenterGuide({ store, setStore }) {
   const location = useLocation();
   const steps = useMemo(() => GUIDES[location.pathname] || [], [location.pathname]);
   const guideKey = location.pathname;
-  const eligible = shouldShowGuide(store, guideKey);
+  // A seller sent here by Shop setup (or any link to one card) came to do
+  // one thing; the page tour waits for a later visit instead of pulling
+  // them away from it.
+  const focused = Boolean(location.hash) || Boolean(location.state?.fromSetup);
+  const eligible = shouldShowGuide(store, guideKey) && !focused;
   const [active, setActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [position, setPosition] = useState(null);
