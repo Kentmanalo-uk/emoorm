@@ -1,45 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye,
-  MagnifyingGlass as Search, WarningCircle as AlertCircle, CheckCircle, Clock, FloppyDisk as Save, X, UploadSimple as Upload, CircleNotch as Loader2,
-  EyeSlash as EyeOff, Archive, Info,
+  Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye, ArrowSquareOut,
+  MagnifyingGlass as Search, WarningCircle as AlertCircle, CheckCircle, Clock, X, CircleNotch as Loader2,
+  EyeSlash as EyeOff, Archive,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
-import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerProducts.css';
 import { useCategories } from '../hooks/useReferenceData';
 import SellerPageHead from '../components/seller/SellerPageHead';
-
-const EMPTY_FORM = {
-  name: '',
-  description: '',
-  price: '',
-  stock: '',
-  categoryId: '',
-  images: [],
-  returnPolicy: '',
-  variations: [],
-};
-
-const RETURN_POLICY_PRESETS = [
-  { label: 'No returns', value: 'No returns or refunds accepted unless the item is incorrect or damaged on arrival.' },
-  { label: '7-day issue returns', value: 'Returns or refunds accepted within 7 days for incorrect or damaged items. Buyer must provide proof.' },
-  { label: 'Perishable goods', value: 'For perishable goods, report incorrect or damaged items on delivery with photo proof.' },
-];
-
-const VARIATION_PRESETS = [
-  { label: 'Size', name: 'Size', options: 'Small, Medium, Large' },
-  { label: 'Color', name: 'Color', options: 'Red, Blue, Green' },
-  { label: 'Weight', name: 'Weight', options: '250g, 500g, 1kg' },
-  { label: 'Pack size', name: 'Pack Size', options: '1 piece, 3 pieces, 6 pieces' },
-];
+import ProductForm from '../components/seller/ProductForm';
 
 const STATUS_LABELS = {
   PENDING: { label: 'Pending Approval', cls: 'status-pending', icon: <Clock size={12} /> },
@@ -66,8 +42,13 @@ const stockLevel = (product) => {
   return stock <= threshold ? 'low' : 'ok';
 };
 
+const hasStockPerChoice = (product) => Array.isArray(product?.variations)
+  && product.variations.some((v) => v?.stocks && Object.keys(v.stocks).length);
+
 export default function SellerProducts() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
   const { categories } = useCategories();
@@ -83,12 +64,12 @@ export default function SellerProducts() {
   const [restockDrafts, setRestockDrafts] = useState({});
   const [restockingId, setRestockingId] = useState(null);
 
-  // Form state
-  const [showForm, setShowForm] = useState(searchParams.get('action') === 'new');
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [formErrors, setFormErrors] = useState({});
-  const [isSaving, setIsSaving] = useState(false);
+  // The form is a page of its own: /seller/products/new adds a product and
+  // ?edit=<id> edits one, so the phone's back button closes it.
+  const isNewRoute = /\/seller\/products\/new\/?$/.test(location.pathname) || searchParams.get('action') === 'new';
+  const editParam = searchParams.get('edit');
+  const [editingProduct, setEditingProduct] = useState(null);
+  const showForm = isNewRoute || (!!editParam && !!editingProduct);
 
   // Bulk selection + confirm dialogs
   const [selectedIds, setSelectedIds] = useState([]);
@@ -110,6 +91,24 @@ export default function SellerProducts() {
     setSearch(urlSearch);
     setPagination((p) => ({ ...p, page: 1 }));
   }, [urlSearch]);
+
+  // ?edit=<id> follows the URL: going back closes the form, and a reload
+  // reopens it once the product is in the loaded list.
+  useEffect(() => {
+    if (!editParam) {
+      if (editingProduct) setEditingProduct(null);
+      return;
+    }
+    if (editingProduct?.id === editParam) return;
+    const found = products.find((p) => p.id === editParam);
+    if (found) setEditingProduct(found);
+    else if (!isLoading) navigate('/seller/products', { replace: true });
+  }, [editParam, products, isLoading]);
+
+  // Opening or closing the form starts at the top of the page.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [showForm]);
 
   const loadProducts = async () => {
     setIsLoading(true);
@@ -151,7 +150,7 @@ export default function SellerProducts() {
   const handleRestock = async (product) => {
     const delta = parseInt(restockDrafts[product.id], 10);
     if (!Number.isInteger(delta) || delta === 0) {
-      toast.error('Enter a quantity to add (or a negative number to remove)');
+      toast.error('Enter how many to add (or a minus number to remove)');
       return;
     }
     setRestockingId(product.id);
@@ -168,140 +167,28 @@ export default function SellerProducts() {
     }
   };
 
-  const openNew = () => {
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setFormErrors({});
-    setShowForm(true);
-  };
+  const openNew = () => navigate('/seller/products/new', { state: { fromList: true } });
 
   const openEdit = (product) => {
-    setEditingId(product.id);
-    setForm({
-      name: product.name || '',
-      description: product.description || '',
-      price: String(Number(product.price) || ''),
-      stock: String(product.stock ?? ''),
-      categoryId: product.categoryId || product.category?.id || '',
-      images: Array.isArray(product.images) ? product.images : [],
-      returnPolicy: product.returnPolicy || '',
-      variations: Array.isArray(product.variations)
-        ? product.variations.map((variation) => ({
-          name: variation.name || '',
-          options: Array.isArray(variation.options) ? variation.options.join(', ') : '',
-          optionDraft: '',
-          priced: !!(variation.prices && Object.keys(variation.prices).length),
-          prices: variation.prices
-            ? Object.fromEntries(Object.entries(variation.prices).map(([k, v]) => [k, String(v)]))
-            : {},
-        }))
-        : [],
-    });
-    setFormErrors({});
-    setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setEditingProduct(product);
+    navigate(`/seller/products?edit=${product.id}`, { state: { fromList: true } });
   };
 
   const closeForm = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setFormErrors({});
+    if (location.state?.fromList) navigate(-1);
+    else navigate('/seller/products', { replace: true });
   };
 
-  const splitOptions = (value) => String(value || '').split(',').map((o) => o.trim()).filter(Boolean);
-  // The one variation group whose options set the price, if any.
-  const pricedGroup = form.variations.find((v) => v.priced) || null;
-  const optionPriceRange = (() => {
-    if (!pricedGroup) return null;
-    const values = splitOptions(pricedGroup.options).map((o) => Number(pricedGroup.prices?.[o])).filter((n) => n > 0);
-    return values.length ? { min: Math.min(...values), max: Math.max(...values) } : { min: 0, max: 0 };
-  })();
-
-  // Only one group can set the price: switching it on for one switches it
-  // off for the others.
-  const togglePriced = (index) => {
-    setForm((current) => ({
-      ...current,
-      variations: current.variations.map((variation, rowIndex) => (
-        rowIndex === index
-          ? { ...variation, priced: !variation.priced, prices: variation.prices || {} }
-          : { ...variation, priced: false }
-      )),
-    }));
-  };
-
-  const setOptionPrice = (index, option, value) => {
-    setForm((current) => ({
-      ...current,
-      variations: current.variations.map((variation, rowIndex) => (
-        rowIndex === index
-          ? { ...variation, prices: { ...(variation.prices || {}), [option]: value } }
-          : variation
-      )),
-    }));
-    if (formErrors.price) setFormErrors((e) => ({ ...e, price: '' }));
-  };
-
-  const validate = () => {
-    const errs = {};
-    if (!form.name.trim()) errs.name = 'Product name is required';
-    if (pricedGroup) {
-      const missing = splitOptions(pricedGroup.options).find((o) => !(Number(pricedGroup.prices?.[o]) > 0));
-      if (missing) errs.price = `Enter a price for "${missing}"`;
-    } else if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) {
-      errs.price = 'Valid price is required';
+  const handleSaved = (saved, { created }) => {
+    if (created) {
+      toast.success(saved?.status === 'APPROVED'
+        ? 'Product added. It is now live.'
+        : 'Product added. It will go live once approved.');
+    } else {
+      toast.success('Changes saved');
     }
-    if (!form.categoryId) errs.categoryId = 'Category is required';
-    if (form.stock !== '' && (isNaN(Number(form.stock)) || Number(form.stock) < 0)) errs.stock = 'Stock must be 0 or more';
-    setFormErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setIsSaving(true);
-    try {
-      const payload = {
-        name: form.name.trim(),
-        description: form.description.trim() || undefined,
-        // Priced per option: the lowest option price is the listing price.
-        price: pricedGroup ? optionPriceRange.min : parseFloat(form.price),
-        stock: form.stock !== '' ? parseInt(form.stock) : 0,
-        categoryId: form.categoryId,
-        images: Array.isArray(form.images) ? form.images.filter(Boolean) : [],
-        returnPolicy: form.returnPolicy.trim() || null,
-        variations: form.variations
-          .map((variation) => {
-            const options = splitOptions(variation.options);
-            return {
-              name: variation.name.trim(),
-              options,
-              ...(variation.priced ? {
-                prices: Object.fromEntries(options.map((o) => [o, Number(variation.prices?.[o])])),
-              } : {}),
-            };
-          })
-          .filter((variation) => variation.name && variation.options.length),
-      };
-
-      if (editingId) {
-        await axios.put(`/products/${editingId}`, payload);
-        toast.success('Product updated!');
-      } else {
-        const res = await axios.post('/products', payload);
-        toast.success(res.data?.status === 'APPROVED'
-          ? 'Product created! Product is live.'
-          : 'Product created! Pending admin approval.');
-      }
-      closeForm();
-      loadProducts();
-    } catch (err) {
-      toast.error(err.message || 'Failed to save product');
-    } finally {
-      setIsSaving(false);
-    }
+    closeForm();
+    loadProducts();
   };
 
   const handleDelete = (product) => {
@@ -367,83 +254,26 @@ export default function SellerProducts() {
     }
   };
 
-  const addVariation = () => {
-    setForm((current) => ({
-      ...current,
-      variations: [...current.variations, { name: '', options: '', optionDraft: '' }],
-    }));
-  };
-
-  const updateVariation = (index, field, value) => {
-    setForm((current) => ({
-      ...current,
-      variations: current.variations.map((variation, rowIndex) => (
-        rowIndex === index ? { ...variation, [field]: value } : variation
-      )),
-    }));
-  };
-
-  const removeVariation = (index) => {
-    setForm((current) => ({
-      ...current,
-      variations: current.variations.filter((_, rowIndex) => rowIndex !== index),
-    }));
-  };
-
-  const addVariationOption = (index) => {
-    setForm((current) => ({
-      ...current,
-      variations: current.variations.map((variation, rowIndex) => {
-        if (rowIndex !== index) return variation;
-        const option = variation.optionDraft.trim();
-        if (!option) return variation;
-        const options = variation.options.split(',').map((item) => item.trim()).filter(Boolean);
-        if (!options.some((item) => item.toLowerCase() === option.toLowerCase())) options.push(option);
-        return { ...variation, options: options.join(', '), optionDraft: '' };
-      }),
-    }));
-  };
-
-  const removeVariationOption = (variationIndex, optionToRemove) => {
-    setForm((current) => ({
-      ...current,
-      variations: current.variations.map((variation, rowIndex) => {
-        if (rowIndex !== variationIndex) return variation;
-        return {
-          ...variation,
-          options: variation.options.split(',').map((item) => item.trim()).filter(
-            (item) => item && item !== optionToRemove
-          ).join(', '),
-        };
-      }),
-    }));
-  };
-
-  const applyReturnPolicyPreset = (value) => {
-    setForm((current) => ({ ...current, returnPolicy: value }));
-  };
-
-  const addVariationPreset = (preset) => {
-    setForm((current) => {
-      const existingIndex = current.variations.findIndex(
-        (variation) => variation.name.trim().toLowerCase() === preset.name.toLowerCase()
-      );
-      if (existingIndex >= 0) {
-        return {
-          ...current,
-          variations: current.variations.map((variation, index) => (
-            index === existingIndex ? { ...variation, options: preset.options } : variation
-          )),
-        };
-      }
-      return {
-        ...current,
-        variations: [...current.variations, { name: preset.name, options: preset.options, optionDraft: '' }],
-      };
-    });
-  };
-
-  const editingProduct = editingId ? products.find((p) => p.id === editingId) : null;
+  if (showForm) {
+    return (
+      <div className="seller-dashboard">
+        <div className="seller-container">
+          <SellerPageHead
+            className="pf-head"
+            title={editingProduct && !isNewRoute ? 'Edit product' : 'Add a product'}
+            subtitle="Fill in the steps below. Parts marked * are required."
+          />
+          <ProductForm
+            key={isNewRoute ? 'new' : editingProduct?.id}
+            product={isNewRoute ? null : editingProduct}
+            categories={categories}
+            onCancel={closeForm}
+            onSaved={handleSaved}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="seller-dashboard">
@@ -451,274 +281,12 @@ export default function SellerProducts() {
         <SellerPageHead
           title="My Products"
           subtitle="Add, edit, and manage your inventory"
-          actions={!showForm && (
+          actions={(
             <button className="btn-seller-primary" onClick={openNew}>
               <Plus size={16} /> Add Product
             </button>
           )}
         />
-
-        {/* Inline form */}
-        {showForm && (
-          <div className="seller-card products-form-card">
-            <div className="seller-card-header">
-              <h2><Package size={18} /> {editingId ? 'Edit Product' : 'New Product'}</h2>
-              <button className="seller-icon-btn" onClick={closeForm}><X size={18} /></button>
-            </div>
-            <form onSubmit={handleSave} className="product-form">
-              {editingProduct?.status === 'APPROVED' && (
-                <div className="product-form-note">
-                  <Info size={15} />
-                  <span>This product is live. Changes you save go live immediately.</span>
-                </div>
-              )}
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Product Name <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                    placeholder="e.g. Fresh Ampalaya (Bitter Gourd)"
-                    className={`form-input ${formErrors.name ? 'form-input--error' : ''}`}
-                  />
-                  {formErrors.name && <span className="form-error">{formErrors.name}</span>}
-                </div>
-                <div className="form-group">
-                  <label>Category <span className="required">*</span></label>
-                  <select
-                    value={form.categoryId}
-                    onChange={e => setForm(p => ({ ...p, categoryId: e.target.value }))}
-                    className={`form-select ${formErrors.categoryId ? 'form-input--error' : ''}`}
-                  >
-                    <option value="">Select category…</option>
-                    {categories.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                  {formErrors.categoryId && <span className="form-error">{formErrors.categoryId}</span>}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                  placeholder="Describe your product — freshness, variety, farm source..."
-                  className="form-input form-textarea"
-                  rows={3}
-                />
-              </div>
-
-              <div className="product-optional-section">
-                <div className="product-optional-heading">
-                  <div>
-                    <h3>Return Policy <span>Optional</span></h3>
-                    <p>Tell buyers what returns or refunds you accept for this product.</p>
-                  </div>
-                </div>
-                <div className="product-preset-row" aria-label="Return policy presets">
-                  {RETURN_POLICY_PRESETS.map((preset) => (
-                    <button
-                      type="button"
-                      key={preset.label}
-                      className={`product-preset-btn ${form.returnPolicy === preset.value ? 'is-selected' : ''}`}
-                      onClick={() => applyReturnPolicyPreset(preset.value)}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-                <span className="product-custom-hint">Choose a starting point or write your own policy below.</span>
-                <textarea
-                  value={form.returnPolicy}
-                  onChange={(e) => setForm((p) => ({ ...p, returnPolicy: e.target.value }))}
-                  placeholder="Example: Returns accepted within 7 days for damaged or incorrect items."
-                  className="form-input form-textarea"
-                  rows={3}
-                  maxLength={2000}
-                />
-              </div>
-
-              <div className="product-optional-section">
-                <div className="product-optional-heading">
-                  <div>
-                    <h3>Product Variations <span>Optional</span></h3>
-                    <p>Add choices buyers must select, such as Size, Color, or Weight.</p>
-                  </div>
-                  <button type="button" className="btn-seller-outline" onClick={addVariation}>
-                    <Plus size={14} /> Add Variation
-                  </button>
-                </div>
-                <div className="product-preset-row" aria-label="Common variation presets">
-                  {VARIATION_PRESETS.map((preset) => (
-                    <button
-                      type="button"
-                      key={preset.label}
-                      className="product-preset-btn"
-                      onClick={() => addVariationPreset(preset)}
-                    >
-                      <Plus size={12} /> {preset.label}
-                    </button>
-                  ))}
-                </div>
-                {form.variations.length === 0 ? (
-                  <p className="product-variation-empty">No variations added. The product will have one default option.</p>
-                ) : (
-                  <div className="product-variation-list">
-                    {form.variations.map((variation, index) => (
-                      <div className="product-variation-row" key={`variation-${index}`}>
-                        <input
-                          className="form-input"
-                          value={variation.name}
-                          onChange={(e) => updateVariation(index, 'name', e.target.value)}
-                          placeholder="Variation name, e.g. Size"
-                          aria-label="Variation name"
-                        />
-                        <div className="product-option-editor">
-                          <div className="product-option-chips">
-                            {variation.options.split(',').map((option) => option.trim()).filter(Boolean).map((option) => (
-                              <span className="product-option-chip" key={option}>
-                                {option}
-                                <button
-                                  type="button"
-                                  onClick={() => removeVariationOption(index, option)}
-                                  aria-label={`Remove ${option}`}
-                                >
-                                  <X size={11} />
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                          <div className="product-option-add">
-                            <input
-                              className="form-input"
-                              value={variation.optionDraft || ''}
-                              onChange={(e) => updateVariation(index, 'optionDraft', e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  addVariationOption(index);
-                                }
-                              }}
-                              placeholder="Add an option"
-                              aria-label="Add variation option"
-                            />
-                            <button type="button" className="product-option-add-btn" onClick={() => addVariationOption(index)}>
-                              <Plus size={13} /> Add
-                            </button>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className="seller-icon-btn btn-danger-outline"
-                          onClick={() => removeVariation(index)}
-                          aria-label={`Remove variation ${index + 1}`}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                        <div className="product-variation-pricing">
-                          <label className="product-price-toggle">
-                            <input
-                              type="checkbox"
-                              checked={!!variation.priced}
-                              onChange={() => togglePriced(index)}
-                            />
-                            <span>Different price per option</span>
-                          </label>
-                          {variation.priced && (
-                            splitOptions(variation.options).length === 0 ? (
-                              <p className="product-price-hint">Add options above, then set a price for each.</p>
-                            ) : (
-                              <div className="product-option-prices">
-                                {splitOptions(variation.options).map((option) => (
-                                  <label className="product-option-price" key={option}>
-                                    <span>{option}</span>
-                                    <span className="product-option-price-input">
-                                      <em>₱</em>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        inputMode="decimal"
-                                        value={variation.prices?.[option] ?? ''}
-                                        onChange={(e) => setOptionPrice(index, option, e.target.value)}
-                                        placeholder="0.00"
-                                        aria-label={`Price for ${option}`}
-                                      />
-                                    </span>
-                                  </label>
-                                ))}
-                              </div>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Price (₱) <span className="required">*</span></label>
-                  {pricedGroup ? (
-                    <div className="form-input product-price-derived" aria-live="polite">
-                      {optionPriceRange && optionPriceRange.min > 0
-                        ? (optionPriceRange.min === optionPriceRange.max
-                          ? `₱${optionPriceRange.min.toFixed(2)}`
-                          : `₱${optionPriceRange.min.toFixed(2)} – ₱${optionPriceRange.max.toFixed(2)}`)
-                        : 'Set by option'}
-                      <small>Priced by {pricedGroup.name || 'option'}</small>
-                    </div>
-                  ) : (
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={form.price}
-                      onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
-                      placeholder="0.00"
-                      className={`form-input ${formErrors.price ? 'form-input--error' : ''}`}
-                    />
-                  )}
-                  {formErrors.price && <span className="form-error">{formErrors.price}</span>}
-                </div>
-                <div className="form-group">
-                  <label>Stock / Quantity</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={form.stock}
-                    onChange={e => setForm(p => ({ ...p, stock: e.target.value }))}
-                    placeholder="0"
-                    className={`form-input ${formErrors.stock ? 'form-input--error' : ''}`}
-                  />
-                  {formErrors.stock && <span className="form-error">{formErrors.stock}</span>}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Product Images</label>
-                <ProductImageUploader
-                  images={form.images}
-                  onChange={(imgs) => setForm(p => ({ ...p, images: imgs }))}
-                />
-                <span className="form-hint">Upload up to 10 photos (JPEG, PNG, WebP — max 5 MB each). The first image is the cover.</span>
-              </div>
-
-              <div className="form-actions">
-                <button type="button" className="btn-seller-outline" onClick={closeForm}>Cancel</button>
-                <button type="submit" className="btn-seller-primary" disabled={isSaving}>
-                  <Save size={15} />
-                  {isSaving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Product'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
 
         {/* Bulk action bar */}
         {selectedIds.length > 0 && (
@@ -738,7 +306,7 @@ export default function SellerProducts() {
               >
                 <Trash2 size={14} /> Delete
               </button>
-              <button className="seller-icon-btn" onClick={() => setSelectedIds([])} title="Clear selection">
+              <button className="seller-icon-btn" onClick={() => setSelectedIds([])} title="Clear selection" aria-label="Clear selection">
                 <X size={15} />
               </button>
             </div>
@@ -784,7 +352,7 @@ export default function SellerProducts() {
               <p>
                 {statusFilter !== 'all' || search
                   ? 'No products match this filter.'
-                  : 'No products yet. Click "Add Product" to create your first listing.'}
+                  : 'No products yet. Tap "Add Product" to create your first listing.'}
               </p>
             </div>
           ) : (
@@ -842,13 +410,21 @@ export default function SellerProducts() {
                         <td>₱{Number(product.price).toFixed(2)}</td>
                         <td data-label="Stock">
                           <div className={`product-stock ${level !== 'ok' ? `product-stock--${level}` : ''}`}>
-                            <span className="product-stock-value">{product.stock}</span>
-                            {level === 'out' && (
-                              <span className="seller-badge status-cancelled product-stock-badge">Out of stock</span>
-                            )}
-                            {level === 'low' && (
-                              <span className="seller-badge status-pending product-stock-badge">Low stock</span>
-                            )}
+                            <span className="product-stock-line">
+                              <span className="product-stock-label">Stock</span>
+                              <span className="product-stock-value">{product.stock}</span>
+                              {level === 'out' && (
+                                <span className="seller-badge status-cancelled product-stock-badge">Out of stock</span>
+                              )}
+                              {level === 'low' && (
+                                <span className="seller-badge status-pending product-stock-badge">Low stock</span>
+                              )}
+                            </span>
+                            {hasStockPerChoice(product) ? (
+                              <button type="button" className="btn-seller-outline product-restock-btn" onClick={() => openEdit(product)}>
+                                Edit stock
+                              </button>
+                            ) : (
                             <form
                               className="product-restock"
                               onSubmit={(e) => { e.preventDefault(); handleRestock(product); }}
@@ -856,9 +432,10 @@ export default function SellerProducts() {
                               <input
                                 type="number"
                                 step="1"
+                                inputMode="numeric"
                                 className="form-input product-restock-input"
-                                placeholder="+ qty"
-                                aria-label={`Restock ${product.name}`}
+                                placeholder="Qty"
+                                aria-label={`How many ${product.name} to add`}
                                 value={restockDrafts[product.id] ?? ''}
                                 onChange={(e) => setRestockDrafts((prev) => ({ ...prev, [product.id]: e.target.value }))}
                                 disabled={restockingId === product.id}
@@ -868,9 +445,10 @@ export default function SellerProducts() {
                                 className="btn-seller-outline product-restock-btn"
                                 disabled={restockingId === product.id || !restockDrafts[product.id]}
                               >
-                                {restockingId === product.id ? <Loader2 size={13} className="spin" /> : 'Restock'}
+                                {restockingId === product.id ? <Loader2 size={13} className="spin" /> : 'Add stock'}
                               </button>
                             </form>
+                            )}
                           </div>
                         </td>
                         <td>
@@ -881,37 +459,40 @@ export default function SellerProducts() {
                         <td>
                           <div className="product-actions">
                             <button
-                              className="seller-icon-btn"
+                              className="seller-icon-btn product-action"
                               title="Edit"
+                              aria-label={`Edit ${product.name}`}
                               onClick={() => openEdit(product)}
                             >
-                              <Edit2 size={15} />
+                              <Edit2 size={15} /><span>Edit</span>
                             </button>
                             {(product.status === 'APPROVED' || product.status === 'HIDDEN') && (
                               <button
-                                className="seller-icon-btn"
-                                title={product.status === 'HIDDEN' ? 'Unhide (make live again)' : 'Hide from buyers'}
+                                className="seller-icon-btn product-action"
+                                title={product.status === 'HIDDEN' ? 'Show to buyers again' : 'Hide from buyers'}
                                 onClick={() => handleToggleVisibility(product)}
                                 disabled={bulkLoading}
                               >
                                 {product.status === 'HIDDEN' ? <Eye size={15} /> : <EyeOff size={15} />}
+                                <span>{product.status === 'HIDDEN' ? 'Show' : 'Hide'}</span>
                               </button>
                             )}
                             <a
                               href={`/product/${product.slug}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="seller-icon-btn"
-                              title="View"
+                              className="seller-icon-btn product-action"
+                              title="See it as a buyer"
                             >
-                              <Eye size={15} />
+                              <ArrowSquareOut size={15} /><span>View</span>
                             </a>
                             <button
-                              className="seller-icon-btn seller-icon-btn--danger"
+                              className="seller-icon-btn seller-icon-btn--danger product-action"
                               title="Delete"
+                              aria-label={`Delete ${product.name}`}
                               onClick={() => handleDelete(product)}
                             >
-                              <Trash2 size={15} />
+                              <Trash2 size={15} /><span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -981,92 +562,6 @@ export default function SellerProducts() {
         onConfirm={() => runBulkAction('DELETE')}
         onCancel={() => setConfirmState(null)}
       />
-    </div>
-  );
-}
-
-const MAX_IMAGES = 10;
-
-function ProductImageUploader({ images, onChange }) {
-  const inputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
-  const list = Array.isArray(images) ? images : [];
-
-  const pickFiles = () => inputRef.current?.click();
-
-  const handleFiles = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    const remaining = MAX_IMAGES - list.length;
-    if (remaining <= 0) {
-      toast.error(`You can upload up to ${MAX_IMAGES} images`);
-      return;
-    }
-    const chosen = files.slice(0, remaining);
-    if (files.length > remaining) {
-      toast(`Only ${remaining} more image(s) can be added`);
-    }
-
-    setUploading(true);
-    const uploaded = [];
-    for (const file of chosen) {
-      try {
-        const res = await uploadImage(file);
-        uploaded.push(res.url);
-      } catch (err) {
-        toast.error(err.message || 'Upload failed');
-      }
-    }
-    if (uploaded.length) {
-      onChange([...list, ...uploaded]);
-      toast.success(`${uploaded.length} image(s) uploaded`);
-    }
-    setUploading(false);
-    if (inputRef.current) inputRef.current.value = '';
-  };
-
-  const removeAt = (idx) => {
-    onChange(list.filter((_, i) => i !== idx));
-  };
-
-  return (
-    <div className="product-image-uploader">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/jpg,image/png,image/webp"
-        multiple
-        onChange={handleFiles}
-        style={{ display: 'none' }}
-      />
-      <div className="product-image-grid">
-        {list.map((src, idx) => (
-          <div key={src + idx} className="product-image-tile">
-            <img src={resolveImg(src) || src} alt={`Product image ${idx + 1}`} />
-            <button
-              type="button"
-              className="product-image-remove"
-              onClick={() => removeAt(idx)}
-              aria-label="Remove image"
-            >
-              <X size={14} />
-            </button>
-            {idx === 0 && <span className="product-image-cover-badge">Cover</span>}
-          </div>
-        ))}
-        {list.length < MAX_IMAGES && (
-          <button
-            type="button"
-            className="product-image-add"
-            onClick={pickFiles}
-            disabled={uploading}
-          >
-            {uploading ? <Loader2 size={18} className="spin" /> : <Upload size={18} />}
-            <span>{uploading ? 'Uploading…' : 'Add photo'}</span>
-          </button>
-        )}
-      </div>
     </div>
   );
 }

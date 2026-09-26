@@ -1,0 +1,239 @@
+/*
+ * Seller Center on phones: every page fits the screen width.
+ *
+ * Tab rows, date ranges and wide tables used to scroll sideways, which
+ * people rarely notice (the last choices simply looked missing). Here they
+ * wrap into even rows or turn into cards instead. The `.sc-shell` prefix
+ * outranks the older one-row rules in the page stylesheets.
+ */
+/* Order card button words show on phones only; desktop keeps the icons. */
+.so-action-label {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* ── Page-head search boxes use the full width ────────────── */
+  .sc-shell .sc-content .seller-header-actions > .seller-search {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+    border-radius: 12px;
+  }
+
+  .sc-shell .sc-content .seller-header-actions > .seller-search input {
+    font-size: 16px;
+  }
+
+  /* ── Orders: "Details" and "Update status", in words ──────── */
+  .sc-shell .sc-content .so-orders-table .order-row-actions {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 8px;
+  }
+
+  .sc-shell .sc-content .so-orders-table .order-row-actions > .seller-icon-btn,
+  .sc-shell .sc-content .so-orders-table .status-dropdown-btn {
+    gap: 6px;
+    width: 100%;
+    height: 42px;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .sc-shell .sc-content .so-orders-table .status-dropdown {
+    width: 100%;
+  }
+
+  .sc-shell .sc-content .so-orders-table .status-dropdown-btn {
+    border: 0;
+    background: var(--t-primary-600, #059669);
+    color: var(--t-neutral-0, #fff);
+  }
+
+  .sc-shell .sc-content .so-orders-table .status-dropdown-menu {
+    left: 0;
+    right: 0;
+    min-width: 0;
+  }
+
+  .sc-shell .sc-content .so-action-label {
+    display: inline;
+  }
+
+  .sc-shell .sc-content .so-action-dots {
+    display: none;
+  }
+
+  /* ── Filter chips (Orders, Products, Returns) ─────────────── */
+  .sc-shell .sc-content .seller-tabs,
+  .sc-shell .sc-content .seller-return-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 100%;
+    margin: 0 0 12px;
+    padding: 0;
+    overflow: visible;
+    white-space: normal;
+    border-bottom: 0;
+  }
+
+  .sc-shell .sc-content .seller-tab,
+  .sc-shell .sc-content .seller-return-tabs button {
+    display: inline-flex;
+    flex: 1 1 calc(33.333% - 6px);
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 2px 6px;
+    min-width: 0;
+    min-height: 42px;
+    padding: 7px 6px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+  }
+
+  /* ── Date range (Analytics, Finance) ──────────────────────── */
+  .sc-shell .sc-content .an-daterange-wrap,
+  .sc-shell .sc-content .an-daterange-wrap > .an-daterange {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .sc-shell .sc-content .an-daterange-wrap > .an-daterange {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 100%;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+  }
+
+  /* Same chips as the tab rows above. */
+  .sc-shell .sc-content .an-daterange-wrap .an-daterange-btn {
+    flex: 1 1 calc(33.333% - 6px);
+    min-width: 0;
+    min-height: 42px;
+    padding: 6px 4px;
+    border: 1px solid var(--t-neutral-200, #e2e8f0);
+    border-radius: 12px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-700, #374151);
+    font-size: 13px;
+    white-space: normal;
+  }
+
+  .sc-shell .sc-content .an-daterange-wrap .an-daterange-btn.is-active {
+    border-color: var(--t-primary-600, #059669);
+    background: var(--t-primary-600, #059669);
+    color: var(--t-neutral-0, #fff);
+  }
+
+  /* ── Finance: completed orders as cards ───────────────────── */
+  .sc-shell .sc-content .seller-card:has(> .finance-table) {
+    overflow: visible;
+  }
+
+  .sc-shell .sc-content .finance-table,
+  .sc-shell .sc-content .finance-table tbody,
+  .sc-shell .sc-content .finance-table tfoot {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sc-shell .sc-content .finance-table thead {
+    display: none;
+  }
+
+  .sc-shell .sc-content .finance-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "order order amount"
+      "buyer buyer date"
+      "items pay refund";
+    gap: 4px 10px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+  }
+
+  .sc-shell .sc-content .finance-table td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    text-align: left !important;
+    font-size: 13.5px;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-shell .sc-content .finance-table td:nth-child(1) {
+    grid-area: date;
+    text-align: right !important;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 12.5px;
+  }
+
+  .sc-shell .sc-content .finance-table td:nth-child(2) {
+    grid-area: order;
+    font-weight: 700;
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .sc-shell .sc-content .finance-table td:nth-child(3) {
+    grid-area: buyer;
+    color: var(--t-neutral-700, #374151);
+  }
+
+  .sc-shell .sc-content .finance-table td:nth-child(4) { grid-area: items; }
+  .sc-shell .sc-content .finance-table td:nth-child(5) { grid-area: pay; }
+  .sc-shell .sc-content .finance-table td:nth-child(6) { grid-area: refund; }
+
+  .sc-shell .sc-content .finance-table td:nth-child(n+4):nth-child(-n+6) {
+    margin-top: 6px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: var(--t-neutral-50, #f9fafb);
+    font-weight: 600;
+    color: var(--t-neutral-800, #1f2937);
+  }
+
+  .sc-shell .sc-content .finance-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 1px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--t-neutral-500, #6b7280);
+  }
+
+  .sc-shell .sc-content .finance-table td:nth-child(7) {
+    grid-area: amount;
+    text-align: right !important;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .sc-shell .sc-content .finance-table tfoot tr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-top: 1px solid var(--t-neutral-150, #eef0f3);
+  }
+
+  .sc-shell .sc-content .finance-table tfoot td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+}

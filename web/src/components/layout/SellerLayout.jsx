@@ -22,6 +22,7 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import AppRail from './AppRail';
 import './SellerLayout.css';
 import './SellerShellMobile.css';
+import './SellerPhoneFit.css';
 import UserAvatar from '../ui/UserAvatar';
 
 /**
@@ -415,7 +416,7 @@ const LABELS = {
   '/seller/messages': 'Messages',
   '/seller/support': 'Admin Messages',
   '/seller/products': 'Products',
-  '/seller/products/new': 'New Product',
+  '/seller/products/new': 'Add Product',
   '/seller/reviews': 'Reviews',
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',

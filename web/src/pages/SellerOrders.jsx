@@ -491,19 +491,23 @@ export default function SellerOrders() {
                             <button
                               className="seller-icon-btn"
                               title="View details"
+                              aria-label="View order details"
                               onClick={() => setSelectedOrder(
                                 selectedOrder?.id === order.id ? null : order
                               )}
                             >
-                              <Eye size={15} />
+                              <Eye size={15} /><span className="so-action-label">Details</span>
                             </button>
                             {nextStatuses.length > 0 && (
                               <div className="status-dropdown">
                                 <button
                                   className="status-dropdown-btn"
                                   disabled={isUpdating}
+                                  aria-label="Update order status"
+                                  title="Update status"
                                 >
-                                  {isUpdating ? '…' : <ChevronDown size={14} />}
+                                  <span className="so-action-label">{isUpdating ? 'Updating…' : 'Update status'}</span>
+                                  {isUpdating ? <span className="so-action-dots">…</span> : <ChevronDown size={14} />}
                                 </button>
                                 <div className="status-dropdown-menu">
                                   {nextStatuses.map(ns => {

@@ -297,7 +297,7 @@ export default function SellerFinance() {
             </div>
           ) : (
             <>
-              <table className="seller-table">
+              <table className="seller-table finance-table">
                 <thead>
                   <tr>
                     <th>Date</th>
@@ -315,9 +315,9 @@ export default function SellerFinance() {
                       <td>{o.date ? new Date(o.date).toLocaleDateString() : ''}</td>
                       <td>#{o.number.slice(-8)}</td>
                       <td>{o.buyer}</td>
-                      <td style={{ textAlign: 'right' }}>{o.items}</td>
-                      <td>{PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus || '—'}</td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }} data-label="Items">{o.items}</td>
+                      <td data-label="Payment">{PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus || '—'}</td>
+                      <td style={{ textAlign: 'right' }} data-label="Refunded">
                         {o.refunded === null ? '—' : (o.refunded > 0 ? fmt(o.refunded) : '—')}
                       </td>
                       <td className="txn-credit">{fmt(o.amount)}</td>

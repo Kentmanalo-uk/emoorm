@@ -32,7 +32,10 @@ const BarChart = ({
         {data.map((d, i) => {
           const value = Number(d[valueKey] || 0);
           const pct = (value / max) * 100;
-          const shouldLabel = i % labelEvery === 0 || i === data.length - 1;
+          // The last day always gets a label; a regular one too close to it is
+          // dropped so the two don't print on top of each other.
+          const last = data.length - 1;
+          const shouldLabel = i === last || (i % labelEvery === 0 && last - i >= Math.ceil(labelEvery / 2));
           return (
             <div
               key={`${d[labelKey]}-${i}`}

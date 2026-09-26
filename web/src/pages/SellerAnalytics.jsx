@@ -145,7 +145,7 @@ export default function SellerAnalytics() {
               <h2 className="an-card-title">Orders trend</h2>
               <span className="an-card-sub">{buckets.length} {granularity === 'year' ? 'years' : granularity === 'month' ? 'months' : 'days'}</span>
             </div>
-            <BarChart data={buckets} valueKey="orders" formatValue={(v) => `${v} orders`} />
+            <BarChart data={buckets} valueKey="orders" formatValue={(v) => `${v} ${Number(v) === 1 ? 'order' : 'orders'}`} />
           </div>
         </div>
 

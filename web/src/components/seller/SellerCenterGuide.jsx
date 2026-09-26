@@ -11,9 +11,9 @@ const GUIDES = {
     { target: '.products-table', title: 'Manage product status', text: 'Review stock and listing status here. Products may be pending, approved, rejected, or archived.' },
   ],
   '/seller/products/new': [
-    { target: '.products-form-card', title: 'Build your listing', text: 'Complete the product details carefully. Accurate information helps buyers choose confidently.' },
-    { target: '.products-form-card .form-row', title: 'Price and inventory', text: 'Keep price and stock current. Products with no stock are unavailable to buyers.' },
-    { target: '.products-form-card .form-actions', title: 'Save your product', text: 'Submit the listing when ready. New listings may require platform review before appearing publicly.' },
+    { target: '.pf-section', title: 'Build your listing', text: 'Go through the steps from top to bottom. Clear photos and a simple description help buyers choose.' },
+    { target: '.pf-section--price', title: 'Price and stock', text: 'Keep price and stock current. Products with no stock are unavailable to buyers.' },
+    { target: '.pf-footer', title: 'Save your product', text: 'Tap Add product when ready. New listings may need a quick review before buyers can see them.' },
   ],
   '/seller/orders': [
     { target: '.seller-tabs', title: 'Filter by order stage', text: 'Move between new, preparing, delivery, pickup, completed, and cancelled orders.' },
