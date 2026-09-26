@@ -348,7 +348,7 @@ const getAllOrders = async (options) => {
  * @param {String} newStatus - New status
  * @returns {Promise<Object>} Updated order
  */
-const updateOrderStatus = async (orderId, userId, newStatus) => {
+const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl } = {}) => {
   const order = await orderRepository.findById(orderId);
 
   if (!order) {
@@ -394,6 +394,23 @@ const updateOrderStatus = async (orderId, userId, newStatus) => {
     throw new ApiError('Payment must be verified before fulfillment can continue', 409);
   }
 
+  // Handing the order over needs a photo: proof of delivery for delivery
+  // orders, proof of pickup for pickup orders. The validator has already
+  // checked it is an image uploaded to E-MOORM.
+  const handOver = (newStatus === 'DELIVERED' && order.fulfillmentMethod !== 'PICKUP')
+    || (newStatus === 'PICKED_UP' && order.fulfillmentMethod === 'PICKUP');
+  if (handOver && !proofUrl) {
+    throw new ApiError(
+      order.fulfillmentMethod === 'PICKUP'
+        ? 'Add a photo as proof of pickup'
+        : 'Add a photo as proof of delivery',
+      400,
+    );
+  }
+  const proofFields = handOver
+    ? { fulfillmentProofUrl: String(proofUrl).trim(), fulfillmentProofAt: new Date() }
+    : {};
+
   // Cancellation restores product stock (from whatever stage it is allowed).
   let updated;
   try {
@@ -402,7 +419,7 @@ const updateOrderStatus = async (orderId, userId, newStatus) => {
         fromStatuses: [order.status],
         note: 'Cancelled by seller',
       })
-      : await orderRepository.updateStatus(orderId, newStatus, order.status, userId);
+      : await orderRepository.updateStatus(orderId, newStatus, order.status, userId, null, proofFields);
   } catch (err) {
     if (err.code === 'STALE_ORDER_STATUS' || err.code === 'ORDER_NOT_CANCELLABLE') {
       throw new ApiError('This order was updated elsewhere. Refresh and try again.', 409);

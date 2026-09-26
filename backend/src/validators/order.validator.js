@@ -102,6 +102,22 @@ const paymentProofValidation = [
   ),
 ];
 
+// PUT /orders/:id/status — the hand-over photo, when one is sent.
+const statusUpdateValidation = [
+  body('status')
+    .customSanitizer((value) => String(value ?? '').trim().toUpperCase())
+    .notEmpty()
+    .withMessage('Status is required'),
+  body('proofUrl')
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .withMessage('The photo must be an uploaded image')
+    .isLength({ max: 255 })
+    .withMessage('Photo path is too long')
+    .matches(PAYMENT_PROOF_URL)
+    .withMessage('The photo must be an uploaded JPG, PNG or WEBP image'),
+];
+
 const verifyPaymentValidation = [
   body('paymentStatus')
     .customSanitizer((value) => String(value ?? '').trim().toUpperCase())
@@ -124,6 +140,7 @@ module.exports = {
   createOrderValidation,
   paymentProofValidation,
   verifyPaymentValidation,
+  statusUpdateValidation,
   rejectInvalid,
   PH_MOBILE,
   PAYMENT_REFERENCE,

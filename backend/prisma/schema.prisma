@@ -790,6 +790,10 @@ model Order {
   paymentStatus    PaymentStatus @default(PENDING) @map("payment_status")
   paymentReference String?       @map("payment_reference")
   paymentProofUrl  String?       @map("payment_proof_url")
+  /// Photo the seller takes when handing the order over: proof of delivery
+  /// (DELIVERED) or proof of pickup (PICKED_UP), per fulfillmentMethod.
+  fulfillmentProofUrl String?    @map("fulfillment_proof_url")
+  fulfillmentProofAt  DateTime?  @map("fulfillment_proof_at")
 
   // Delivery Information
   deliveryAddress String      @db.Text @map("delivery_address")

@@ -363,8 +363,10 @@ const findAll = async (options = {}) => {
  * @param {String} status - New status
  * @returns {Promise<Object>} Updated order
  */
-const updateStatus = async (id, status, expectedStatus = null, actorId = null, note = null) => {
-  const data = { status };
+const updateStatus = async (id, status, expectedStatus = null, actorId = null, note = null, extra = {}) => {
+  // `extra`: fields written with the status in the same conditional update
+  // (the hand-over photo for DELIVERED / PICKED_UP).
+  const data = { status, ...extra };
   if (status === 'COMPLETED') data.completedAt = new Date();
   if (status === 'CANCELLED') data.cancelledAt = new Date();
 

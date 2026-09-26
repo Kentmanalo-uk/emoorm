@@ -16,6 +16,7 @@ import useCartStore from '../store/cartStore';
 import './Orders.css';
 import { useSheetPresence } from '../hooks/useSheetMotion';
 import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
+import { OrderProof } from '../components/orders/ProofPhotoSheet';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 const parseImages = (raw) => {
@@ -809,6 +810,12 @@ const Orders = () => {
                   </div>
                 </div>
               </div>
+
+              {selectedOrder.fulfillmentProofUrl && (
+                <div className="order-details-section">
+                  <OrderProof order={selectedOrder} resolve={resolveImg} />
+                </div>
+              )}
 
               {/* Order Items */}
               <div className="order-details-section">

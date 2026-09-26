@@ -1,0 +1,160 @@
+/* Proof-of-delivery / proof-of-pickup photo sheet (uses the cf-dialog shell). */
+.proof-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 440px;
+  padding: 20px 20px 0;
+}
+
+.proof-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.proof-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-600, #059669);
+}
+
+.proof-head h3 {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.proof-order {
+  margin: 2px 0 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+}
+
+.proof-hint {
+  margin: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.proof-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.proof-pick-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 104px;
+  border: 1.5px dashed var(--t-neutral-300, #d1d5db);
+  border-radius: 14px;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.proof-pick-btn.is-primary {
+  border-color: var(--t-primary-300, #6ee7b7);
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.proof-preview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.proof-preview img {
+  display: block;
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.proof-retake {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.72);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.proof-sheet .cf-dialog-actions {
+  margin: 0 -20px;
+}
+
+/* Shown on an order: the hand-over photo with its time. */
+.order-proof {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-proof-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.order-proof-label time {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.order-proof-photo {
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  max-width: 320px;
+  border-radius: 12px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.order-proof-photo img {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+}
+
+@media (max-width: 768px) {
+  .proof-sheet {
+    max-width: none;
+    padding: 20px 16px 0;
+  }
+
+  .proof-sheet .cf-dialog-actions {
+    margin: 0 -16px;
+  }
+}

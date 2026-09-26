@@ -179,12 +179,13 @@ const getOrderById = asyncHandler(async (req, res) => {
  * @access Private (Seller only)
  */
 const updateOrderStatus = asyncHandler(async (req, res) => {
-  const { status } = req.body;
+  const { status, proofUrl } = req.body;
 
   const order = await orderService.updateOrderStatus(
     req.params.id,
     req.user.id,
-    status
+    status,
+    { proofUrl }
   );
 
   successResponse(res, order, 'Order status updated successfully');

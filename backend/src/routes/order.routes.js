@@ -7,6 +7,7 @@ const {
   createOrderValidation,
   paymentProofValidation,
   verifyPaymentValidation,
+  statusUpdateValidation,
   rejectInvalid,
 } = require('../validators/order.validator');
 
@@ -67,6 +68,8 @@ router.put(
   '/:id/status',
   authenticate,
   authorize('SELLER'),
+  statusUpdateValidation,
+  rejectInvalid,
   orderController.updateOrderStatus
 );
 

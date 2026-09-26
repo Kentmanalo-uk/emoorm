@@ -11,6 +11,7 @@ import SellerPageHead from '../components/seller/SellerPageHead';
 import ReportModal from '../components/ReportModal';
 import './SellerDashboard.css';
 import './SellerOrders.css';
+import ProofPhotoSheet, { OrderProof } from '../components/orders/ProofPhotoSheet';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -202,20 +203,24 @@ export default function SellerOrders() {
     }
   };
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const handleStatusChange = async (orderId, newStatus, proofUrl) => {
     setUpdatingId(orderId);
     try {
-      const res = await axios.put(`/orders/${orderId}/status`, { status: newStatus });
+      const res = await axios.put(`/orders/${orderId}/status`, { status: newStatus, ...(proofUrl ? { proofUrl } : {}) });
       toast.success(`Order marked as ${STATUS_MAP[newStatus]?.label || newStatus}`);
       applyOrderUpdate(orderId, {
         status: res.data?.status || newStatus,
         paymentStatus: res.data?.paymentStatus,
+        fulfillmentProofUrl: res.data?.fulfillmentProofUrl,
+        fulfillmentProofAt: res.data?.fulfillmentProofAt,
       });
+      return true;
     } catch (err) {
       toast.error(err.message || 'Failed to update order');
       // 409: the order moved on under us (buyer cancelled, another tab acted).
       // Refetch so the list shows the real state instead of a stale action.
       if (err.status === 409) loadOrders();
+      return false;
     } finally {
       setUpdatingId(null);
     }
@@ -258,12 +263,28 @@ export default function SellerOrders() {
 
   const displayed = orders;
 
+  // Handing an order over asks for a photo first: proof of delivery or of pickup.
+  const [proofRequest, setProofRequest] = useState(null);
+
   const requestStatusChange = (orderId, newStatus) => {
     if (newStatus === 'CANCELLED') {
       setCancelConfirm({ orderId });
       return;
     }
+    const order = orders.find((o) => o.id === orderId) || (selectedOrder?.id === orderId ? selectedOrder : null);
+    const pickup = order?.fulfillmentMethod === 'PICKUP';
+    if ((newStatus === 'DELIVERED' && !pickup) || (newStatus === 'PICKED_UP' && pickup)) {
+      setProofRequest({ orderId, status: newStatus, kind: pickup ? 'PICKUP' : 'DELIVERY', orderNumber: order?.orderNumber });
+      return;
+    }
     handleStatusChange(orderId, newStatus);
+  };
+
+  const confirmProof = async (proofUrl) => {
+    if (!proofRequest) return;
+    const ok = await handleStatusChange(proofRequest.orderId, proofRequest.status, proofUrl);
+    if (ok) setProofRequest(null);
+    return ok;
   };
 
   const confirmCancelOrder = async () => {
@@ -662,6 +683,12 @@ export default function SellerOrders() {
                   </div>
                 )}
 
+                {selectedOrder.fulfillmentProofUrl && (
+                  <div className="detail-row detail-row--col">
+                    <OrderProof order={selectedOrder} resolve={resolveImg} />
+                  </div>
+                )}
+
                 {/* Address */}
                 <div className="detail-row detail-row--col">
                   <span>{selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Pickup Location' : 'Delivery Address'}</span>
@@ -754,6 +781,13 @@ export default function SellerOrders() {
         </div>
       </div>
 
+      <ProofPhotoSheet
+        open={!!proofRequest}
+        kind={proofRequest?.kind}
+        orderNumber={proofRequest?.orderNumber}
+        onCancel={() => setProofRequest(null)}
+        onConfirm={confirmProof}
+      />
       <ConfirmDialog
         open={!!cancelConfirm}
         title="Cancel this order?"

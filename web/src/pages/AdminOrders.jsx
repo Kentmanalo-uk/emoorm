@@ -13,6 +13,7 @@ import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
+import { OrderProof } from '../components/orders/ProofPhotoSheet';
 
 const STATUSES = [
   'PENDING', 'CONFIRMED', 'PREPARING', 'TO_SHIP', 'OUT_FOR_DELIVERY',
@@ -199,6 +200,11 @@ export default function AdminOrders() {
                 <h4>Items</h4>
                 {(selected.items || []).map((item) => <p key={item.id}>{item.productName || item.product?.name} × {item.quantity} — ₱{Number(item.subtotal).toFixed(2)}</p>)}
               </div>
+              {selected.fulfillmentProofUrl && (
+                <div className="admin-detail-section">
+                  <OrderProof order={selected} resolve={resolveImg} />
+                </div>
+              )}
               {selected.paymentProofUrl && (
                 <div className="admin-detail-section">
                   <h4>Payment Proof</h4>
