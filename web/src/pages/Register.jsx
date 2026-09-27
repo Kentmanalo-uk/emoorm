@@ -19,7 +19,9 @@ const Register = () => {
   const [searchParams] = useSearchParams();
   const { login: storeLogin } = useAuthStore();
   const requestedRedirect = searchParams.get('redirect');
-  const safeRedirect = requestedRedirect?.startsWith('/') ? requestedRedirect : null;
+  const safeRedirect = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//') ? requestedRedirect : null;
+  // Signing up to sell: "Log in" means the Seller Login.
+  const loginPath = safeRedirect?.startsWith('/seller') ? '/seller/login' : '/login';
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -172,7 +174,7 @@ const Register = () => {
 
       if (token && userData) {
         storeLogin(userData, token, refreshToken);
-        navigate(userData.role === 'SELLER' ? '/seller' : safeRedirect || '/', { replace: true });
+        navigate(safeRedirect || '/', { replace: true });
       } else {
         throw new Error('Invalid response format from server');
       }
@@ -234,7 +236,7 @@ const Register = () => {
           return;
         }
         storeLogin(data.user, data.accessToken, data.refreshToken);
-        navigate(data.user.role === 'SELLER' ? '/seller' : safeRedirect || '/', { replace: true });
+        navigate(safeRedirect || '/', { replace: true });
       } catch (err) {
         setApiError(err?.response?.data?.message || 'Google sign-up failed.');
       } finally {
@@ -264,7 +266,7 @@ const Register = () => {
             <AppLogo className="register-logo-icon" />
             <span className="register-logo-text">emoorm</span>
           </Link>
-          <Link to="/login" className="register-header-link">Log In</Link>
+          <Link to={loginPath} className="register-header-link">Log In</Link>
         </div>
       </header>
 
@@ -286,7 +288,7 @@ const Register = () => {
 
           {/* Right Side - Form */}
           <div className="register-form-container">
-            {isPhone && <AuthSheetBar switchTo="/login" switchLabel="Log in" />}
+            {isPhone && <AuthSheetBar switchTo={loginPath} switchLabel="Log in" />}
             <div className="register-form-card">
               <div className="register-form-header">
                 <h2 className="register-form-title">Sign Up</h2>
@@ -477,7 +479,7 @@ const Register = () => {
                 {/* Sign In Link */}
                 <div className="register-form-footer">
                   <span className="register-form-footer-text">Already have an account? </span>
-                  <Link to="/login" replace={isPhone} state={isPhone ? { ...location.state, fromSheet: true } : undefined} className="register-form-footer-link">
+                  <Link to={loginPath} replace={isPhone} state={isPhone ? { ...location.state, fromSheet: true } : undefined} className="register-form-footer-link">
                     Log in
                   </Link>
                 </div>

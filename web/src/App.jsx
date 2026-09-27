@@ -149,6 +149,7 @@ function AppRoutes() {
         {/* Public routes */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/seller/login" element={<Login seller />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -267,6 +268,7 @@ function AppRoutes() {
       {background && (
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/seller/login" element={<Login seller />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />

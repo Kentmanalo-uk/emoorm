@@ -256,10 +256,10 @@ export default function Sell() {
                   <AuthDropdown
                     label="Log in"
                     variant="ghost"
-                    onClick={() => navigate('/login?redirect=/seller/apply')}
+                    onClick={() => navigate('/seller/login')}
                     to="/login"
-                    title="Your Emoorm shopper account"
-                    subtitle="Sign in to access your account."
+                    title="Already selling on Emoorm?"
+                    subtitle="Log in to your Seller Center."
                     items={[
                       { label: 'Browse stores', target: '/products' },
                       { label: 'My orders', target: '/profile/orders' },
@@ -349,7 +349,7 @@ export default function Sell() {
             </a>
           ))}
           {!isAuthenticated && (
-            <button className="sell-mobile-link" onClick={() => { setMobileOpen(false); navigate('/login'); }}>
+            <button className="sell-mobile-link" onClick={() => { setMobileOpen(false); navigate('/seller/login'); }}>
               Log in
             </button>
           )}
@@ -379,7 +379,7 @@ export default function Sell() {
                   {ctaLabel} <ArrowRight size={16} />
                 </button>
                 {!isAuthenticated && (
-                  <button className="sell-hero-btn-ghost" onClick={() => navigate('/login?redirect=/seller/apply')}>
+                  <button className="sell-hero-btn-ghost" onClick={() => navigate('/seller/login')}>
                     Already a seller? Log in
                   </button>
                 )}
@@ -618,7 +618,7 @@ export default function Sell() {
             {!isAuthenticated && (
               <button
                 className="sell-final-btn-ghost"
-                onClick={() => navigate('/login?redirect=/seller/apply')}
+                onClick={() => navigate('/seller/login')}
               >
                 Already a seller? Log in
               </button>

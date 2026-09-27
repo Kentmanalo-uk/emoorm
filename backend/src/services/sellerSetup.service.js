@@ -29,13 +29,21 @@ const getSetup = async (userId) => {
   const delivers = store.fulfillmentMode !== 'PICKUP';
   const picksUp = store.fulfillmentMode !== 'DELIVERY';
 
-  const [productCount, areaCount, areasWithoutFee, identity, owner] = await Promise.all([
+  const [productCount, areas, townCount, identity, owner] = await Promise.all([
     prisma.product.count({ where: { storeId: store.id, deletedAt: null } }),
-    delivers ? prisma.storeServiceArea.count({ where: { storeId: store.id } }) : Promise.resolve(0),
-    delivers ? prisma.storeServiceArea.count({ where: { storeId: store.id, fee: null } }) : Promise.resolve(0),
+    delivers
+      ? prisma.storeServiceArea.findMany({ where: { storeId: store.id }, select: { municipalityId: true, barangay: true, fee: true } })
+      : Promise.resolve([]),
+    delivers ? prisma.municipality.count({ where: { isActive: true } }) : Promise.resolve(0),
     identityVerificationService.getStatus(userId),
     prisma.user.findUnique({ where: { id: userId }, select: { sellerApplicationStatus: true } }),
   ]);
+  const areaCount = areas.length;
+  const areasWithoutFee = areas.filter((a) => a.fee === null).length;
+  // Where the shop delivers, as the Fulfillment page asks it: only its own
+  // town, some towns, or every town (all around Mindoro).
+  const areaTowns = new Set(areas.map((a) => a.municipalityId));
+  const wholeTowns = new Set(areas.filter((a) => !a.barangay).map((a) => a.municipalityId));
 
   const brandingMissing = [
     !store.logo && 'logo',
@@ -54,7 +62,15 @@ const getSetup = async (userId) => {
     { key: 'profile', done: profileMissing.length === 0, missing: profileMissing },
     ...(delivers
       ? [
-        { key: 'delivery-areas', done: areaCount > 0, count: areaCount },
+        {
+          key: 'delivery-areas',
+          done: areaCount > 0,
+          count: areaCount,
+          towns: areaTowns.size,
+          barangays: areas.filter((a) => a.barangay).length,
+          allTowns: townCount > 0 && wholeTowns.size >= townCount,
+          homeOnly: areaTowns.size === 1 && areaTowns.has(store.municipalityId),
+        },
         // Each area may have its own fee; the rest use the standard fee, and
         // a store without one uses the platform default. The step asks the
         // seller to decide: a standard fee (0 is free), or a fee on every area.

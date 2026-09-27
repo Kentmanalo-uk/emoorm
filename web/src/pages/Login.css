@@ -59,21 +59,21 @@
   gap: 20px;
 }
 
-.login-header-qr-btn {
-  display: flex;
+/* Top right of the form: Seller Login (and Buyer Login back) */
+.login-switch-link {
+  display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 6px;
-  background: none;
-  border: none;
-  cursor: pointer;
+  color: var(--t-success-700, #15803d);
   font-size: 14px;
   font-weight: 500;
-  color: var(--t-success-700, #15803d);
-  padding: 0;
+  text-decoration: none;
+  white-space: nowrap;
   transition: color 0.2s;
 }
 
-.login-header-qr-btn:hover {
+.login-switch-link:hover {
   color: var(--t-success-800, #166534);
 }
 
@@ -989,12 +989,12 @@
     margin: 0;
   }
 
-  .login-header-qr-btn {
+  .login-switch-link {
     min-height: 36px;
-    padding: 0 10px;
+    padding: 0 12px;
     border-radius: 999px;
     background: var(--t-secondary-50, #e9f7f0);
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 600;
   }
 

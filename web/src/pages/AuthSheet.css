@@ -163,7 +163,8 @@
     letter-spacing: -0.01em;
   }
 
-  .is-sheet .login-header-qr-btn {
+  /* The QR sign-in is for computers (scanned with the phone app). */
+  .is-sheet .login-form-qr {
     display: none;
   }
 

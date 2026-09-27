@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle, X } from '@phosphor-icons/react';
+import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle, X, Storefront, ShoppingBag } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
+import useAccountSwitchStore from '../store/accountSwitchStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import AppLogo from '../components/AppLogo';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -14,16 +15,27 @@ import { useMunicipalities } from '../hooks/useReferenceData';
 
 const QR_POLL_INTERVAL_MS = 2000;
 
-const Login = () => {
+/**
+ * Log in, and (with `seller`, at /seller/login) the Seller Login. Log in
+ * opens the buyer side, a seller's account too; Seller Login opens the Seller
+ * Center, and an account without a shop goes on to apply for one.
+ */
+const Login = ({ seller = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isPhone = usePhoneLayout();
   // Switching between Log in and Sign up swaps the sheet without sliding it
   // up again.
   const sheetSwitched = Boolean(location.state?.fromSheet);
-  const { login: storeLogin } = useAuthStore();
+  const { login: storeLogin, isAuthenticated, user: signedInUser } = useAuthStore();
+  const startAccountSwitch = useAccountSwitchStore((s) => s.start);
   const requestedRedirect = new URLSearchParams(location.search).get('redirect');
-  const safeRedirect = requestedRedirect?.startsWith('/') ? requestedRedirect : null;
+  const safeRedirect = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//') ? requestedRedirect : null;
+  // The Seller Center page asked for (e.g. from a link while signed out), or its home.
+  const sellerTarget = safeRedirect?.startsWith('/seller/') && !/^\/seller\/(login|apply)\b/.test(safeRedirect)
+    ? safeRedirect
+    : '/seller';
+  const signUpPath = seller ? '/register?redirect=/seller/apply' : '/register';
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -175,19 +187,30 @@ const Login = () => {
     }
   };
 
+  // Where a signed-in account goes next.
+  const goOn = (role) => {
+    if (role === 'SUPER_ADMIN' || role === 'MUNICIPAL_ADMIN') {
+      navigate('/admin', { replace: true });
+    } else if (seller && role === 'SELLER') {
+      startAccountSwitch('seller', sellerTarget, { replace: true });
+    } else if (seller) {
+      // No shop yet: the Seller Login leads on to opening one.
+      navigate('/seller/apply', { replace: true });
+    } else {
+      navigate(safeRedirect || location.state?.from?.pathname || '/', { replace: true });
+    }
+  };
+
   const finishLogin = (userData, token, refreshToken) => {
     storeLogin(userData, token, refreshToken);
-    const role = userData?.role;
-    let target;
-    if (role === 'SUPER_ADMIN' || role === 'MUNICIPAL_ADMIN') {
-      target = '/admin';
-    } else if (role === 'SELLER') {
-      target = '/seller';
-    } else {
-      target = safeRedirect || location.state?.from?.pathname || '/';
-    }
-    navigate(target, { replace: true });
+    goOn(userData?.role);
   };
+
+  // Already signed in: the Seller Login has nothing to ask.
+  useEffect(() => {
+    if (seller && isAuthenticated) goOn(signedInUser?.role);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleVerifyMfa = async (e) => {
     e.preventDefault();
@@ -367,7 +390,7 @@ const Login = () => {
   };
 
   return (
-    <div className={`login-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}>
+    <div className={`login-page${seller ? ' is-seller' : ''}${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}>
       {/* Header */}
       <header className="login-header">
         <div className="login-header-container">
@@ -376,7 +399,7 @@ const Login = () => {
             <span className="login-logo-text">emoorm</span>
           </Link>
           <div className="login-header-actions">
-            <Link to="/register" className="login-header-link">Sign Up</Link>
+            <Link to={signUpPath} className="login-header-link">Sign Up</Link>
           </div>
         </div>
       </header>
@@ -390,16 +413,23 @@ const Login = () => {
               <AppLogo className="login-hero-icon" />
               <span className="login-hero-text">emoorm</span>
             </div>
-            <h1 className="register-hero-title">
-              Made in Mindoro<br />
-              <span className="register-hero-title-highlight">the place of rich<br />in Agriculture Producers</span>
-            </h1>
+            {seller ? (
+              <h1 className="register-hero-title">
+                Seller Center<br />
+                <span className="register-hero-title-highlight">run your shop<br />from one place</span>
+              </h1>
+            ) : (
+              <h1 className="register-hero-title">
+                Made in Mindoro<br />
+                <span className="register-hero-title-highlight">the place of rich<br />in Agriculture Producers</span>
+              </h1>
+            )}
 
           </div>
 
           {/* Right Side - Form */}
           <div className="login-form-container">
-            {isPhone && <AuthSheetBar switchTo="/register" switchLabel="Sign up" />}
+            {isPhone && <AuthSheetBar switchTo={signUpPath} switchLabel="Sign up" />}
             <div className="login-form-card">
               {mfaStage === 'verify' && (
                 <MfaVerify
@@ -455,15 +485,17 @@ const Login = () => {
               )}
               {mfaStage === 'credentials' && (!showQrLogin || isPhone) && (<>
                 <div className="login-form-header login-form-header-row">
-                  <h2 className="login-form-title">Sign In</h2>
-                  <button
-                    type="button"
-                    className="login-header-qr-btn"
-                    onClick={() => setShowQrLogin(true)}
+                  <h2 className="login-form-title">{seller ? 'Seller Login' : 'Sign In'}</h2>
+                  {/* The other door: sellers to the Seller Center, and back */}
+                  <Link
+                    to={seller ? '/login' : '/seller/login'}
+                    replace={isPhone}
+                    state={isPhone ? { ...location.state, fromSheet: true } : undefined}
+                    className="login-switch-link"
                   >
-                    <QrCode size={16} />
-                    Login with QR
-                  </button>
+                    {seller ? <ShoppingBag size={17} weight="fill" /> : <Storefront size={17} weight="fill" />}
+                    {seller ? 'Buyer Login' : 'Seller Login'}
+                  </Link>
                 </div>
 
                 <form onSubmit={handleSubmit} className="login-form">
@@ -530,7 +562,7 @@ const Login = () => {
                     className="login-form-submit"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Signing in...' : 'Log in'}
+                    {isLoading ? 'Signing in...' : seller ? 'Log in to Seller Center' : 'Log in'}
                   </button>
 
                   {/* API Error Message */}
@@ -563,11 +595,23 @@ const Login = () => {
                     {googleLoading ? 'Signing in…' : 'Sign in with Google'}
                   </button>
 
+                  {/* Computers only: approve the sign-in from the phone app */}
+                  {!seller && (
+                    <button
+                      type="button"
+                      className="login-form-google login-form-qr"
+                      onClick={() => setShowQrLogin(true)}
+                    >
+                      <QrCode size={18} />
+                      Log in with QR code
+                    </button>
+                  )}
+
                   {/* Sign Up Link */}
                   <div className="login-form-footer">
-                    <span className="login-form-footer-text">New to Emoorm? </span>
-                    <Link to="/register" replace={isPhone} state={isPhone ? { ...location.state, fromSheet: true } : undefined} className="login-form-footer-link">
-                      Create an account
+                    <span className="login-form-footer-text">{seller ? 'New to selling? ' : 'New to Emoorm? '}</span>
+                    <Link to={signUpPath} replace={isPhone} state={isPhone ? { ...location.state, fromSheet: true } : undefined} className="login-form-footer-link">
+                      {seller ? 'Open a shop' : 'Create an account'}
                     </Link>
                   </div>
 

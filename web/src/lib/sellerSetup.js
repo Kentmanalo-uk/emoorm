@@ -86,25 +86,31 @@ export const describeStep = (step, { municipality } = {}) => {
         title: 'Choose where you deliver',
         label: 'Where you deliver',
         text: step.done
-          ? `You deliver to ${plural(step.count, 'area')}.`
-          : 'Pick the towns you deliver to, and the barangays if not all of them.',
-        action: 'Choose areas',
+          ? (step.allTowns
+            ? 'You deliver all around Mindoro.'
+            : step.homeOnly
+              ? (step.barangays
+                ? `You deliver to ${plural(step.barangays, 'barangay')} in ${municipality || 'your town'}.`
+                : `You deliver anywhere in ${municipality || 'your town'}.`)
+              : `You deliver to ${plural(step.towns || step.count, 'town')}.`)
+          : 'Only in your town, some towns, or all around Mindoro.',
+        action: 'Choose where',
         icon: MapPin,
         to: '/seller/fulfillment#delivery-areas',
       };
 
     case 'delivery-fee': {
       const own = step.pricedAreas || 0;
-      const ownText = own > 0 ? ` ${plural(own, 'area')} ${own === 1 ? 'has' : 'have'} its own fee.` : '';
+      const ownText = own > 0 ? ` ${plural(own, 'place')} ${own === 1 ? 'has' : 'have'} its own fee.` : '';
       return {
         ...base,
         title: 'Set your delivery fees',
         label: 'Delivery fees',
         text: step.done
           ? (step.fee == null
-            ? 'Every area has its own fee.'
-            : `${step.fee > 0 ? `${peso(step.fee)} standard fee.` : 'Free delivery as standard.'}${ownText}`)
-          : 'One fee for everywhere, or a fee for each town or barangay. Delivery can be free.',
+            ? 'A fee for each place.'
+            : `${step.fee > 0 ? `${peso(step.fee)} for every place.` : 'Free delivery.'}${ownText}`)
+          : 'Free, the same fee everywhere, or a fee for each place.',
         action: 'Set delivery fees',
         icon: Truck,
         to: '/seller/fulfillment#delivery-fee',

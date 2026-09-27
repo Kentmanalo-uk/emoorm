@@ -450,7 +450,7 @@ export default function SellerApply() {
     setConfirming(true);
   };
 
-  if (!isAuthenticated) return <Navigate to="/login?redirect=/seller/apply" replace />;
+  if (!isAuthenticated) return <Navigate to="/seller/login?redirect=/seller/apply" replace />;
   if (user?.role === "SELLER") return <Navigate to="/seller" replace />;
 
   if (status === "PENDING") {

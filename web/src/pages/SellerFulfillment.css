@@ -14,7 +14,7 @@
   padding: 32px;
 }
 
-/* Fulfillment mode cards */
+/* Fulfillment mode cards (also the answers to the delivery questions) */
 .sf-mode-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -51,6 +51,11 @@
   pointer-events: none;
 }
 
+.sf-mode-card:has(input:focus-visible) {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 2px;
+}
+
 .sf-mode-text {
   display: flex;
   flex-direction: column;
@@ -84,85 +89,96 @@
   color: var(--t-neutral-0, #fff);
 }
 
-/* Note / info box */
-.sf-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--t-info-50, #eff6ff);
-  border: 1px solid var(--t-info-100, #dbeafe);
-  color: var(--t-info-800, #1e40af);
-  border-radius: 8px;
-  font-size: 12.5px;
-  margin: 0;
-  line-height: 1.5;
-}
-
-.sf-note svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
 .sf-hint {
   font-size: 12px;
   color: var(--t-neutral-400, #94a3b8);
   margin: 0;
 }
 
-/* Add municipality picker */
-.sf-picker-row {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-
-.sf-picker-row .form-input {
-  flex: 1;
-  min-width: 0;
-}
-
-.sf-picker-row .btn-seller-primary {
-  white-space: nowrap;
-}
-
-/* Empty state */
-.sf-empty {
-  text-align: center;
-  padding: 28px 16px;
-  color: var(--t-neutral-400, #94a3b8);
-  background: var(--t-neutral-50, #fafafa);
-  border: 1px dashed var(--t-neutral-200, #e5e7eb);
-  border-radius: 10px;
+/* Delivery: two questions, where and then how much */
+.sf-q {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  scroll-margin-top: 80px;
+}
+
+.sf-q + .sf-q {
+  padding-top: 18px;
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.sf-q-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sf-q-num {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.sf-hint-lead {
+  color: var(--t-neutral-600, #475569);
+  font-size: 13px;
+}
+
+/* "Some towns": every town as a chip to tap */
+.sf-town-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sf-town-chip {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
 }
 
-.sf-empty p {
-  margin: 0;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--t-neutral-500, #64748b);
+.sf-town-chip:hover {
+  border-color: var(--t-primary-500, #10b981);
 }
 
-.sf-empty small {
-  font-size: 12px;
+.sf-town-chip svg {
   color: var(--t-neutral-400, #94a3b8);
 }
 
-.sf-empty svg {
-  color: var(--t-neutral-300, #cbd5e1);
+.sf-town-chip.is-on {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font-weight: 600;
 }
 
-/* Service area list */
-.sf-area-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.sf-town-chip.is-on svg {
+  color: var(--t-primary-600, #059669);
 }
 
+/* A town delivered to: all its barangays, or some */
 .sf-area-card {
   border-radius: 10px;
   padding: 14px;
@@ -172,12 +188,6 @@
   gap: 12px;
 
   box-shadow: var(--elev-card);
-}
-
-.sf-area-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .sf-area-title {
@@ -190,24 +200,6 @@
 
 .sf-area-title svg {
   color: var(--t-primary-600, #059669);
-}
-
-.sf-icon-btn {
-  background: none;
-  border: none;
-  padding: 6px;
-  color: var(--t-neutral-400, #94a3b8);
-  cursor: pointer;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.sf-icon-btn:hover {
-  background: var(--t-danger-100, #fee2e2);
-  color: var(--t-danger-600, #dc2626);
 }
 
 /* Radio toggle */
@@ -246,6 +238,32 @@
   border-color: var(--t-primary-600, #059669);
   background: var(--t-success-50, #f0fdf4);
   color: var(--t-primary-800, #065f46);
+  font-weight: 500;
+}
+
+/* "All around Mindoro", and the answers in one sentence */
+.sf-all,
+.sf-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--t-success-50, #f0fdf4);
+  color: var(--t-primary-800, #065f46);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.sf-all svg,
+.sf-summary svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--t-primary-600, #059669);
+}
+
+.sf-summary {
   font-weight: 500;
 }
 
@@ -304,6 +322,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .sf-chip {
@@ -395,35 +416,21 @@
   padding: 8px 0 4px;
 }
 
-/* Delivery fees: the standard fee, then a fee box (or Free) per town or
-   barangay. An empty box uses the fee from the level above. */
-.sf-standard {
+/* Delivery fees: one fee for everywhere, or a fee box (or Free) per place */
+.sf-same {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 10px 12px;
   padding: 12px 14px;
   border-radius: 10px;
   background: var(--t-neutral-50, #f9fafb);
 }
 
-.sf-standard-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.sf-standard-text label {
+.sf-same label {
   color: var(--t-neutral-900, #0f172a);
   font-size: 14px;
   font-weight: 600;
-}
-
-.sf-standard-text small {
-  color: var(--t-neutral-500, #64748b);
-  font-size: 12px;
 }
 
 .sf-fee {
@@ -511,11 +518,18 @@
 }
 
 .sf-fee-row-name {
+  display: flex;
   flex: 1 1 60px;
+  flex-direction: column;
   min-width: 0;
   color: var(--t-neutral-800, #1e293b);
   font-size: 13.5px;
   overflow-wrap: anywhere;
+}
+
+.sf-fee-row-name small {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
 }
 
 .sf-brgy-fees {
@@ -530,32 +544,16 @@
 }
 
 .sf-brgy-fees .sf-fee-row {
-  padding: 8px 6px 8px 12px;
+  padding: 8px 8px 8px 12px;
 }
 
 .sf-brgy-fees .sf-fee-row + .sf-fee-row {
   border-top: 1px solid var(--t-neutral-100, #f1f5f9);
 }
 
-.sf-fee-remove {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  color: var(--t-neutral-400, #94a3b8);
-}
-
 @media (max-width: 640px) {
   .sf-payment-grid {
     grid-template-columns: 1fr;
-  }
-
-  .sf-picker-row {
-    flex-direction: column;
-  }
-
-  .sf-picker-row .btn-seller-primary {
-    width: 100%;
-    justify-content: center;
   }
 }
 
@@ -582,45 +580,55 @@
     background: var(--t-success-50, #f0fdf4);
   }
 
+  .sc-content .sf-mode-text strong {
+    font-size: 14.5px;
+    font-weight: 500;
+  }
+
+  .sc-content .sf-mode-text small {
+    font-size: 12.5px;
+    font-weight: 400;
+  }
+
   .sc-content .sf-mode-check {
     top: 50%;
     right: 14px;
     transform: translateY(-50%);
   }
 
-  .sc-content .sf-note {
-    display: block;
-    position: relative;
-    padding: 10px 12px 10px 34px;
-    border-radius: 10px;
-    font-size: 13px;
+  .sc-content .sf-q-title {
+    font-size: 16px;
+    font-weight: 500;
   }
 
-  .sc-content .sf-note svg {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    margin: 0;
+  .sc-content .sf-q-num {
+    font-weight: 500;
   }
 
-  .sc-content .sf-picker-row {
-    flex-direction: column;
+  .sc-content .sf-town-chips {
+    gap: 8px;
   }
 
-  .sc-content .sf-picker-row .form-input {
-    width: 100%;
-    border-radius: 10px;
+  .sc-content .sf-town-chip {
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 400;
   }
 
-  .sc-content .sf-picker-row .btn-seller-primary {
-    justify-content: center;
-    width: 100%;
-    min-height: 44px;
+  .sc-content .sf-town-chip.is-on {
+    font-weight: 500;
   }
 
-  .sc-content .sf-empty {
-    padding: 24px 16px;
+  .sc-content .sf-all,
+  .sc-content .sf-summary {
+    padding: 12px;
     border-radius: 12px;
+    font-size: 14px;
+  }
+
+  .sc-content .sf-summary {
+    font-weight: 500;
   }
 
   .sc-content .sf-area-card {
@@ -633,12 +641,11 @@
   .sc-content .sf-area-title {
     min-width: 0;
     overflow-wrap: anywhere;
+    font-size: 15px;
   }
 
-  .sc-content .sf-icon-btn {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
+  .sc-content .sf-area-title strong {
+    font-weight: 500;
   }
 
   .sc-content .sf-radio {
@@ -737,9 +744,13 @@
     height: 140px;
   }
 
-  .sc-content .sf-standard {
+  .sc-content .sf-same {
     padding: 12px;
     border-radius: 12px;
+  }
+
+  .sc-content .sf-same label {
+    font-weight: 500;
   }
 
   .sc-content .sf-fee-box {
@@ -748,17 +759,25 @@
     border-radius: 10px;
   }
 
+  .sc-content .sf-same .sf-fee-box {
+    width: 120px;
+  }
+
   .sc-content .sf-free {
     height: 40px;
     padding: 0 11px;
   }
 
   .sc-content .sf-brgy-fees .sf-fee-row {
-    padding: 6px 4px 6px 12px;
+    padding: 8px 8px 8px 12px;
   }
 
   .sc-content .sf-brgy-fees {
     border-radius: 10px;
+  }
+
+  .sc-content .sf-fee-row-name {
+    font-size: 14px;
   }
 
   .sc-content .sf-footer-actions {

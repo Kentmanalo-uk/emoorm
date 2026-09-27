@@ -159,7 +159,11 @@ export default function SellerLayout() {
     };
   }, [accountOpen]);
 
-  if (!isAuthenticated) return <Navigate to="/login?redirect=/seller" replace />;
+  if (!isAuthenticated) {
+    // The Seller Login returns to this page (the Seller Center home is its default).
+    const back = location.pathname.replace(/\/$/, '') + location.search;
+    return <Navigate to={back === '/seller' ? '/seller/login' : `/seller/login?redirect=${encodeURIComponent(back)}`} replace />;
+  }
   if (!allowed) return <Navigate to="/sell" replace />;
 
   const switchToPersonal = () => {
@@ -170,7 +174,7 @@ export default function SellerLayout() {
   const handleLogout = () => {
     setLogoutOpen(false);
     logout();
-    navigate('/login');
+    navigate('/seller/login');
   };
 
   const shopName = store?.name || 'My Shop';

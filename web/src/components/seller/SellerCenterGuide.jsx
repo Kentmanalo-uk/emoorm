@@ -38,7 +38,7 @@ const GUIDES = {
   ],
   '/seller/fulfillment': [
     { target: '.sf-mode-grid', title: 'Choose fulfillment methods', text: 'Offer delivery, pickup, or both depending on how your store can serve buyers.' },
-    { target: '.sf-picker-row', title: 'Set delivery coverage', text: 'Add municipalities and barangays you can serve, then configure the appropriate fee.' },
+    { target: '#delivery-areas .sf-q', title: 'Where and how much', text: 'Answer two questions: where you deliver (your town, some towns, or all around Mindoro), then how much delivery costs.' },
     { target: '.sf-payment-grid', title: 'Configure payments', text: 'Select the payment method and upload the correct payment QR image shown at checkout.' },
     { target: '.sf-footer-actions', title: 'Save fulfillment settings', text: 'Save after changing coverage, fees, pickup instructions, or payment information.' },
   ],

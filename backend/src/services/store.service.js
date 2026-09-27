@@ -598,6 +598,7 @@ const replaceMyServiceAreas = async (userId, areas) => {
   const store = await storeRepository.findByOwnerId(userId);
   if (!store) throw new ApiError('You do not have a store', 404);
   if (!Array.isArray(areas)) throw new ApiError('Areas must be an array', 400);
+  const seen = new Set();
   const normalized = areas
     .filter((a) => a && a.municipalityId)
     .map((a) => ({
@@ -605,7 +606,14 @@ const replaceMyServiceAreas = async (userId, areas) => {
       barangay: a.barangay ? String(a.barangay).trim() : null,
       // Blank: the store's standard fee applies. 0: free delivery here.
       fee: a.fee === undefined ? null : normalizeDeliveryFee(a.fee),
-    }));
+    }))
+    // One row per place (a barangay named twice, in any case, is one place).
+    .filter((a) => {
+      const key = `${a.municipalityId}|${(a.barangay || '').toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   return storeRepository.replaceServiceAreas(store.id, normalized);
 };
 
