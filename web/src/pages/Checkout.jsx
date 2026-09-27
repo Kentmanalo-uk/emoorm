@@ -14,6 +14,7 @@ import {
   QrCode,
   DeviceMobile,
   NotePencil,
+  Copy,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -28,6 +29,7 @@ import useIdentityGate from '../hooks/useIdentityGate';
 import useAppSettings, { storeDeliveryFee } from '../hooks/useAppSettings';
 import { isIdentityRequiredError } from '../lib/identity';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import { qrMethod, formatAccountNumber } from '../lib/qrPayment';
 import './Checkout.css';
 
 // Same rules the server applies at POST /orders.
@@ -462,6 +464,16 @@ const Checkout = () => {
     } finally {
       setUploadingProof(false);
       e.target.value = '';
+    }
+  };
+
+  // Buyers on a phone cannot scan their own screen: they send to the number.
+  const copyAccountNumber = async (number) => {
+    try {
+      await navigator.clipboard.writeText(number);
+      toast.success('Number copied');
+    } catch {
+      toast.error('Could not copy. Select the number and copy it instead.');
     }
   };
 
@@ -958,6 +970,31 @@ const Checkout = () => {
                         </div>
                         <div className="qr-payment-details">
                           <h4>Scan to pay {peso(total)}</h4>
+                          {(activeQrStore.paymentAccountName || activeQrStore.paymentAccountNumber) && (
+                            <dl className="qr-payee">
+                              {activeQrStore.paymentAccountName && (
+                                <div>
+                                  <dt>Account name</dt>
+                                  <dd>{activeQrStore.paymentAccountName}</dd>
+                                </div>
+                              )}
+                              {activeQrStore.paymentAccountNumber && (
+                                <div>
+                                  <dt>{qrMethod(activeQrStore.paymentQrType).numberLabel}</dt>
+                                  <dd>
+                                    <span>{formatAccountNumber(activeQrStore.paymentAccountNumber)}</span>
+                                    <button
+                                      type="button"
+                                      className="qr-payee-copy"
+                                      onClick={() => copyAccountNumber(activeQrStore.paymentAccountNumber)}
+                                    >
+                                      <Copy size={13} /> Copy
+                                    </button>
+                                  </dd>
+                                </div>
+                              )}
+                            </dl>
+                          )}
                           {activeQrStore.paymentInstructions && (
                             <p className="qr-instructions">{activeQrStore.paymentInstructions}</p>
                           )}

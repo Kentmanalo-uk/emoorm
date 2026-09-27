@@ -590,6 +590,10 @@ model Store {
   paymentQrImage       String?         @map("payment_qr_image")
   paymentQrType        String?         @map("payment_qr_type")
   paymentInstructions  String?         @db.Text @map("payment_instructions")
+  /// Who buyers pay with the QR, shown beside it at checkout: the name on
+  /// the GCash or bank account, and its number (a GCash number is a phone).
+  paymentAccountName   String?         @db.VarChar(120) @map("payment_account_name")
+  paymentAccountNumber String?         @db.VarChar(40) @map("payment_account_number")
   acceptsCod           Boolean         @default(true) @map("accepts_cod")
   /// What this store charges per delivery order. Null: the platform's
   /// default delivery fee (AppSetting.deliveryFee) applies.

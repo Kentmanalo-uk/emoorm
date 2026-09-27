@@ -231,7 +231,9 @@ function AppRoutes() {
           <Route path="analytics" element={<SellerAnalytics />} />
           <Route path="finance" element={<SellerFinance />} />
           <Route path="store" element={<SellerStore />} />
+          <Route path="store/:part" element={<SellerStore />} />
           <Route path="fulfillment" element={<SellerFulfillment />} />
+          <Route path="fulfillment/:part" element={<SellerFulfillment />} />
           <Route path="settings" element={<SellerSettings />} />
         </Route>
         {/* Admin — MUNICIPAL_ADMIN / SUPER_ADMIN only */}

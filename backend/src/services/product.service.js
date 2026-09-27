@@ -253,6 +253,9 @@ const PUBLIC_STORE_FIELDS = [
 ];
 const PRIVATE_PRODUCT_FIELDS = ['moderationNote', 'approvedById', 'imageHash'];
 
+/** The QR a shop takes payment with: none until it has put its QR up. */
+const shownQrType = (store) => (store.paymentQrImage ? store.paymentQrType ?? null : null);
+
 /**
  * Reduce a full product record to what an anonymous buyer may see.
  * @param {Object} product - Full record from the repository
@@ -270,6 +273,7 @@ const toPublicProduct = (product, { withOwner = false } = {}) => {
     for (const field of PUBLIC_STORE_FIELDS) {
       if (product.store[field] !== undefined) store[field] = product.store[field];
     }
+    if (store.paymentQrType !== undefined) store.paymentQrType = shownQrType(product.store);
     if (withOwner && product.store.owner) {
       store.owner = { id: product.store.owner.id, fullName: product.store.owner.fullName };
     }
@@ -278,10 +282,14 @@ const toPublicProduct = (product, { withOwner = false } = {}) => {
   return out;
 };
 
-/** Strip the internal-only store field that rides along for the visibility rule. */
+/** Strip the internal-only store fields that ride along for the visibility and QR rules. */
 const stripStoreInternals = (product) => {
   if (!product?.store) return product;
   const store = { ...product.store };
+  if (store.paymentQrImage !== undefined) {
+    store.paymentQrType = shownQrType(store);
+    delete store.paymentQrImage;
+  }
   delete store.deletedAt;
   return { ...product, store };
 };

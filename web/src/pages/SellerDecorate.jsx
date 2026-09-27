@@ -76,7 +76,7 @@ export default function SellerDecorate() {
       title: 'Logo & banner',
       heading: 'Add your logo and a cover photo',
       text: 'A clear logo and a bright banner make your shop easy to recognise.',
-      to: '/seller/store#branding',
+      to: '/seller/store/branding',
       note: store?.logo ? 'Logo added' : 'No logo yet',
       art: (
         <div className="sdc-brand-art">
@@ -94,7 +94,7 @@ export default function SellerDecorate() {
       title: 'Your own colours',
       heading: 'Choose exact colours',
       text: 'Already have brand colours? Set them yourself.',
-      to: '/seller/store#theme',
+      to: '/seller/store/colors',
       note: null,
       art: (
         <div className="sdc-swatches">

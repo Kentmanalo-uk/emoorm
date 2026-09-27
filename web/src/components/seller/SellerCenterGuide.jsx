@@ -31,15 +31,17 @@ const GUIDES = {
     { target: '.msgr-composer', title: 'Reply with context', text: 'Send clear updates and attach images when they help explain products, delivery, or returns.' },
   ],
   '/seller/store': [
+    { target: '.scm-setlist', title: 'Your shop profile, in parts', text: 'Each row is one part of your shop profile with what is set now. Tap one to change just that part.' },
     { target: '.store-form', title: 'Public store information', text: 'Your store name and description are visible to buyers. Keep them accurate and easy to understand.' },
     { target: '.store-branding-body', title: 'Store branding', text: 'Upload a clear logo and banner so buyers can recognize your storefront.' },
     { target: '.store-theme-body', title: 'Brand color', text: 'Choose an accessible accent color that keeps storefront text and actions readable.' },
     { target: '.store-preview-card', title: 'Preview your storefront', text: 'Use this link to check the buyer-facing store after saving changes.' },
   ],
   '/seller/fulfillment': [
+    { target: '.scm-setlist', title: 'Delivery & payment, in parts', text: 'Each row is one part: how buyers get orders, the pickup spot, delivery areas and fees, and payment. Tap one to change just that part.' },
     { target: '.sf-mode-grid', title: 'Choose fulfillment methods', text: 'Offer delivery, pickup, or both depending on how your store can serve buyers.' },
     { target: '#delivery-areas .sf-q', title: 'Where and how much', text: 'Answer two questions: where you deliver (your town, some towns, or all around Mindoro), then how much delivery costs.' },
-    { target: '.sf-payment-grid', title: 'Configure payments', text: 'Select the payment method and upload the correct payment QR image shown at checkout.' },
+    { target: '.sf-payment-grid', title: 'Configure payments', text: 'Pick GCash or QR Ph, upload your QR, and add the account name and number buyers see beside it at checkout.' },
     { target: '.sf-footer-actions', title: 'Save fulfillment settings', text: 'Save after changing coverage, fees, pickup instructions, or payment information.' },
   ],
   '/seller/analytics': [

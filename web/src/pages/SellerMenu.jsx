@@ -3,11 +3,12 @@ import { Link, useOutletContext } from 'react-router-dom';
 import {
   CaretRight, Storefront, PaintBrush, Wallet, QrCode, Headset, Lifebuoy, ChatText, User, Truck,
   ListChecks, IdentificationCard, Bell, Globe, Gear, ArrowsLeftRight, SignOut, ShareNetwork,
-  PencilSimple, Heartbeat, Coins,
+  PencilSimple, Heartbeat, MapPin,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import { resolveImg } from '../lib/media';
+import { qrMethod } from '../lib/qrPayment';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTranslate';
 import { useShare } from '../components/ShareSheet';
 import FeedbackDialog from '../components/feedback/FeedbackDialog';
@@ -16,8 +17,11 @@ import './SellerDashboard.css';
 /*
  * "Me" (phone), drawn like the buyer's Profile: the shop card with its
  * numbers, how the shop is doing, View shop / Decorate, then Finance,
- * Contact & help and Settings as plain lists, and Log out.
+ * Delivery & payment (each part straight to its page), Contact & help and
+ * Settings as plain lists, and Log out.
  */
+
+const MODE_HINTS = { DELIVERY: 'Delivery', PICKUP: 'Pickup', BOTH: 'Both' };
 
 const HEALTH = {
   EXCELLENT: { label: 'Excellent', tone: 'good' },
@@ -25,13 +29,13 @@ const HEALTH = {
   NEEDS_ATTENTION: { label: 'Needs attention', tone: 'bad' },
 };
 
-function Row({ to, href, onClick, icon: Icon, label, hint, badge }) {
+function Row({ to, href, onClick, icon: Icon, label, hint, badge, warn = false }) {
   const body = (
     <>
       <span className="sme-row-icon"><Icon size={19} weight="fill" /></span>
       <span className="sme-row-label">{label}</span>
       {badge > 0 && <span className="sm-badge">{badge > 9 ? '9+' : badge}</span>}
-      {hint != null && !badge && <span className="sme-row-hint">{hint}</span>}
+      {hint != null && !badge && <span className={`sme-row-hint${warn ? ' is-warn' : ''}`}>{hint}</span>}
       <CaretRight size={16} className="sh-chev" />
     </>
   );
@@ -70,6 +74,18 @@ export default function SellerMenu() {
     url: `${window.location.origin}/store/${store.slug}`,
   });
   const stat = (value) => (health ? value : '–');
+
+  // Delivery & payment: what is set now, and the parts still missing
+  // (the checklist says whether the delivery areas and fees are done).
+  const mode = store?.fulfillmentMode || 'DELIVERY';
+  const delivers = mode !== 'PICKUP';
+  const picksUp = mode !== 'DELIVERY';
+  const pickupSet = Boolean(String(store?.pickupAddress || '').trim());
+  const stepDone = (key) => setup?.steps?.find((step) => step.key === key)?.done;
+  const deliverySet = !setup || (stepDone('delivery-areas') !== false && stepDone('delivery-fee') !== false);
+  const fee = store?.deliveryFee == null ? null : Number(store.deliveryFee);
+  const feeHint = fee === null ? 'Per place' : fee === 0 ? 'Free' : `₱${fee.toLocaleString('en-PH')}`;
+  const ways = [store?.acceptsCod !== false && 'Cash', store?.paymentQrImage && qrMethod(store.paymentQrType).label].filter(Boolean);
 
   return (
     <div className="seller-dashboard sme">
@@ -148,7 +164,37 @@ export default function SellerMenu() {
         <section className="sh-card sme-list">
           <h2>Finance</h2>
           <Row to="/seller/finance" icon={Wallet} label="My earnings" />
-          <Row to="/seller/fulfillment#payment" icon={QrCode} label="Payment methods" />
+        </section>
+
+        {/* How buyers get and pay for orders: each part opens its own page. */}
+        <section className="sh-card sme-list">
+          <h2>Delivery &amp; payment</h2>
+          <Row to="/seller/fulfillment/method" icon={Truck} label="Delivery & pickup" hint={MODE_HINTS[mode] || 'Delivery'} />
+          {picksUp && (
+            <Row
+              to="/seller/fulfillment/pickup"
+              icon={Storefront}
+              label="Pickup spot"
+              hint={pickupSet ? null : 'Not set'}
+              warn={!pickupSet}
+            />
+          )}
+          {delivers && (
+            <Row
+              to="/seller/fulfillment/delivery"
+              icon={MapPin}
+              label="Delivery areas & fees"
+              hint={deliverySet ? feeHint : 'Not set'}
+              warn={!deliverySet}
+            />
+          )}
+          <Row
+            to="/seller/fulfillment/payment"
+            icon={QrCode}
+            label="Payment options"
+            hint={ways.length ? ways.join(' · ') : 'Not set'}
+            warn={!ways.length}
+          />
         </section>
 
         <section className="sh-card sme-list">
@@ -161,10 +207,6 @@ export default function SellerMenu() {
         <section className="sh-card sme-list">
           <h2>Settings</h2>
           <Row to="/seller/store" icon={User} label="Shop profile" />
-          <Row to="/seller/fulfillment" icon={Truck} label="Delivery & pickup" />
-          {store?.fulfillmentMode !== 'PICKUP' && (
-            <Row to="/seller/fulfillment#delivery-fee" icon={Coins} label="Delivery fees" />
-          )}
           {setup && !setup.complete && (
             <Row to="/seller/setup" icon={ListChecks} label="Shop setup" hint={`${setup.doneCount}/${setup.total}`} />
           )}

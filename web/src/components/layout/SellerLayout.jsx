@@ -205,6 +205,8 @@ export default function SellerLayout() {
   const goBack = () => {
     if (window.history.state?.idx > 0) navigate(-1);
     else if (cleanPath.startsWith('/seller/decorate/templates/')) navigate('/seller/decorate/templates');
+    // A settings part opened directly: back to its list of parts.
+    else if (/^\/seller\/(store|fulfillment)\/[a-z]+$/.test(cleanPath)) navigate(cleanPath.replace(/\/[a-z]+$/, ''));
     else if (/^\/seller\/(products|orders|returns|reviews|analytics|finance)/.test(cleanPath)) navigate('/seller');
     else navigate('/seller/menu');
   };
@@ -629,7 +631,15 @@ const PHONE_TITLES = {
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop profile',
+  '/seller/store/about': 'Name & description',
+  '/seller/store/branding': 'Logo & banner',
+  '/seller/store/location': 'Location',
+  '/seller/store/colors': 'Shop colors',
   '/seller/fulfillment': 'Delivery & payment',
+  '/seller/fulfillment/method': 'Delivery & pickup',
+  '/seller/fulfillment/pickup': 'Pickup spot',
+  '/seller/fulfillment/delivery': 'Delivery areas & fees',
+  '/seller/fulfillment/payment': 'Payment options',
   '/seller/settings': 'Settings',
   '/seller/setup': 'Shop setup',
   '/seller/verification': 'Verify identity',

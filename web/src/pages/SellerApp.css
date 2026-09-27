@@ -1042,6 +1042,11 @@ a.sh-setup-row:active {
   font-size: 13px;
 }
 
+/* A part not set yet (Delivery & payment). */
+.sme-row-hint.is-warn {
+  color: var(--t-warning-700, #b45309);
+}
+
 /* The row's own height; the global 46px tap size is for form selects. */
 .sme-row.sm-lang select {
   max-width: 45%;
@@ -2083,6 +2088,74 @@ a.sh-setup-row:active {
   color: var(--t-primary-700, #047857);
 }
 
+/* Chat tab on phones: the list runs edge to edge (as on the buyer's
+   Messages), with the search and the chips on the same white panel and
+   16px inside it. */
+@media (max-width: 768px) {
+  .sc-shell .sc-content .seller-card.seller-chat-card {
+    width: auto;
+    max-width: none;
+    margin: 0 -16px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .sc-shell .seller-chat-card .msgr-list-search {
+    gap: 10px;
+    min-height: 46px;
+    margin: 14px 16px 8px;
+    padding: 0 8px 0 14px;
+    border-radius: 12px;
+  }
+
+  .sc-shell .seller-chat-card .msgr-list-search > svg {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+  }
+
+  .sc-shell .seller-chat-card .msgr-list-search input,
+  .sc-shell .seller-chat-card .msgr-list-search input:not([type='checkbox']) {
+    height: 46px;
+    font-size: 16px;
+    font-weight: 400;
+  }
+
+  /* One clear button: the app's, not the browser's as well. */
+  .sc-shell .seller-chat-card .msgr-list-search input::-webkit-search-cancel-button {
+    display: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .sc-shell .seller-chat-card .msgr-list-search-clear {
+    width: 24px;
+    height: 24px;
+    margin-right: 4px;
+    background: var(--t-neutral-300, #d1d5db);
+  }
+
+  .sc-shell .seller-chat-card .msgr-chips {
+    padding: 2px 16px 10px;
+  }
+
+  .sc-shell .seller-chat-card .msgr-convo-item {
+    padding: 12px 16px;
+  }
+
+  .sc-shell .seller-chat-card .msgr-convo-time,
+  .sc-shell .seller-chat-card .msgr-badge {
+    right: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sc-shell .sc-content .seller-card.seller-chat-card {
+    margin: 0 -12px;
+  }
+}
+
 /* ── Phones ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .sc-shell .sc-content > .sh > .sh-body,
@@ -2095,4 +2168,182 @@ a.sh-setup-row:active {
   .sdc-row {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   }
+}
+
+/* ── Settings in parts (phones) ──────────────────────────────────
+   Delivery & payment and Shop profile list their parts, one row each
+   with what is set now; each part opens its own page with Cancel and
+   Save changes pinned to the bottom. */
+.scm-setlist {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  list-style: none;
+}
+
+.scm-setlist > li + li {
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.scm-setrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 12px 14px 12px 16px;
+  color: var(--t-neutral-800, #1f2937);
+  text-decoration: none;
+}
+
+.scm-setrow:active {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.scm-setrow-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: var(--t-neutral-900, #111827);
+}
+
+.scm-setrow-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.scm-setrow-text strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.scm-setrow-value {
+  overflow: hidden;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.scm-setrow.is-missing .scm-setrow-value {
+  color: var(--t-warning-700, #b45309);
+}
+
+.scm-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+  vertical-align: -1px;
+}
+
+.scm-swatch + .scm-swatch {
+  margin-right: 8px;
+}
+
+.scm-setrow-tag {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--t-accent-50, #fdf2f8);
+  color: var(--t-accent-700, #be185d);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.scm-setrow-chev {
+  flex-shrink: 0;
+  color: var(--t-neutral-300, #d1d5db);
+}
+
+.scm-savebar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  display: flex;
+  gap: 10px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -1px 0 var(--t-neutral-100, #f1f5f9), 0 -6px 18px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.scm-savebar-btn {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.scm-savebar-cancel {
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+}
+
+.scm-savebar-save {
+  flex-grow: 1.6;
+  border: 0;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.scm-savebar-btn:disabled {
+  cursor: default;
+}
+
+.scm-savebar-save:disabled {
+  background: var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-500, #6b7280);
+}
+
+/* A part's own page: its card only, without the heading the bar above
+   already shows, and room below for the Save bar. */
+.scm-part .seller-card-header {
+  display: none;
+}
+
+.scm-part .seller-container {
+  padding-bottom: 76px;
+}
+
+.scm-part-note {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.scm-part-note a {
+  color: var(--t-primary-700, #047857);
+  font-weight: 500;
+  text-decoration: none;
 }

@@ -60,6 +60,8 @@ const PUBLIC_STORE_SELECT = {
   fulfillmentMode: true,
   acceptsCod: true,
   paymentQrType: true,
+  // Tells whether QR payment is on; the service drops it again.
+  paymentQrImage: true,
   pickupAddress: true,
   isActive: true,
   isSuspended: true,

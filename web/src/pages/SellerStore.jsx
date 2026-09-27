@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useOutletContext } from 'react-router-dom';
+import {
+  Link, Navigate, useLocation, useNavigate, useOutletContext, useParams,
+} from 'react-router-dom';
 import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, Gear as Settings, MapPin } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -9,7 +11,11 @@ import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
 import SellerPageHead from '../components/seller/SellerPageHead';
+import PhoneSaveBar from '../components/seller/PhoneSaveBar';
+import PickupAddressField, { pickupGap } from '../components/seller/PickupAddressField';
+import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import { useMunicipalities } from '../hooks/useReferenceData';
 import './SellerDashboard.css';
 import './SellerStore.css';
 
@@ -18,17 +24,51 @@ const DEFAULT_SECONDARY = 'var(--t-warning-500, #f59e0b)';
 const DESCRIPTION_MAX = 500;
 const PH_MOBILE_REGEX = /^(09\d{9}|\+639\d{9})$/;
 
-export default function SellerStore() {
+/**
+ * Phones: each part of the shop profile on a page of its own
+ * (/seller/store/<part>), saving only its own fields.
+ */
+const PARTS = {
+  about: { anchor: 'shop-info', fields: ['name', 'description', 'contactNumber', 'isActive'] },
+  branding: { anchor: 'branding', fields: ['logo', 'bannerImage', 'coverImage'] },
+  location: { anchor: 'shop-location', fields: ['pickupAddress', 'latitude', 'longitude'] },
+  colors: { anchor: 'theme', fields: ['primaryColor', 'secondaryColor'] },
+};
+// Links written for the one-page layout (/seller/store#branding).
+const PART_OF_ANCHOR = {
+  'shop-info': 'about',
+  branding: 'branding',
+  'shop-location': 'location',
+  theme: 'colors',
+};
+const partPath = (part) => `/seller/store/${part}`;
+
+/**
+ * /seller/store, and on phones /seller/store/<part>. Each part starts from
+ * the saved profile: nothing unsaved carries over between them.
+ */
+export default function SellerStorePage() {
+  const { part } = useParams();
+  return <SellerStore key={part || 'all'} part={part || null} />;
+}
+
+/**
+ * Computers: the whole profile on one page, as before. Phones: its parts as
+ * a list (Name & description, Logo & banner, Location, Shop colors), each on
+ * its own page with Cancel and Save changes at the bottom.
+ */
+function SellerStore({ part }) {
   const [store, setStore] = useState(null);
   const layoutCtx = useOutletContext();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingField, setUploadingField] = useState(null);
   // Phones fold the shop colours away until asked for.
   const isPhone = usePhoneLayout();
   // "Your own colours" in Decorate links here with #theme: open straight away.
-  const { hash } = useLocation();
-  const [themeOpen, setThemeOpen] = useState(hash === '#theme');
+  const [themeOpen, setThemeOpen] = useState(location.hash === '#theme');
   const showTheme = !isPhone || themeOpen;
   const [form, setForm] = useState({
     name: '',
@@ -47,6 +87,9 @@ export default function SellerStore() {
   const [savedSnapshot, setSavedSnapshot] = useState(null);
   const [isNew, setIsNew] = useState(false);
   const [deactivateConfirm, setDeactivateConfirm] = useState(false);
+  // Phones: the address as picked (town, barangay, street), once changed.
+  const [pickupDraft, setPickupDraft] = useState(null);
+  const { municipalities } = useMunicipalities();
 
   useEffect(() => {
     loadStore();
@@ -82,6 +125,17 @@ export default function SellerStore() {
   };
 
   const isDirty = savedSnapshot !== null && JSON.stringify(form) !== savedSnapshot;
+  // What a part's page saves: its own fields ('all' on the one-page layout).
+  const scope = part && PARTS[part] && isPhone && !isNew ? part : 'all';
+  const saved = savedSnapshot ? JSON.parse(savedSnapshot) : null;
+  const partDirty = scope !== 'all' && Boolean(saved)
+    && PARTS[scope].fields.some((f) => JSON.stringify(form[f] ?? null) !== JSON.stringify(saved[f] ?? null));
+
+  // Back to where the part was opened from (the list, Me, Shop setup…).
+  const leave = () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate('/seller/store', { replace: true });
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -115,10 +169,17 @@ export default function SellerStore() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
+    e?.preventDefault?.();
+    const checksAbout = scope === 'all' || scope === 'about';
+    if (checksAbout && !validate()) return;
+    // Phones pick the address: the barangay and a street or landmark as well.
+    const addressProblem = scope === 'location' && pickupDraft ? pickupGap(pickupDraft) : null;
+    if (addressProblem) {
+      toast.error(addressProblem);
+      return;
+    }
     // Deactivating an existing, currently-active store hides it from all buyers — confirm first.
-    if (!isNew && store?.isActive && !form.isActive) {
+    if (checksAbout && !isNew && store?.isActive && !form.isActive) {
       setDeactivateConfirm(true);
       return;
     }
@@ -137,13 +198,18 @@ export default function SellerStore() {
         setIsNew(false);
         toast.success('Store created successfully!');
       } else {
-        const res = await axios.put(`/stores/${store.id}`, form);
+        // A part's page sends only its own fields.
+        const changes = scope === 'all'
+          ? form
+          : Object.fromEntries(PARTS[scope].fields.map((f) => [f, form[f]]));
+        const res = await axios.put(`/stores/${store.id}`, changes);
         saved = res.data;
         setStore(saved);
         layoutCtx?.setStore?.((prev) => ({ ...prev, ...saved }));
-        toast.success('Store updated!');
+        toast.success(scope === 'all' ? 'Store updated!' : 'Saved');
       }
       setSavedSnapshot(JSON.stringify(form));
+      if (scope !== 'all') leave();
     } catch (err) {
       toast.error(err.message || 'Failed to save store');
     } finally {
@@ -160,35 +226,31 @@ export default function SellerStore() {
     setForm((p) => ({ ...p, primaryColor: DEFAULT_PRIMARY, secondaryColor: DEFAULT_SECONDARY }));
   };
 
-  return (
-    <div className="seller-dashboard">
-      <div className="seller-container">
-        <SellerPageHead
-          title={isNew ? 'Create Your Store' : 'Store Settings'}
-          subtitle="Your public storefront details"
-          actions={!isNew && isDirty && (
-            <span className="store-unsaved-badge">
-              <AlertCircle size={13} /> Unsaved changes
-            </span>
-          )}
-        />
+  // Parts have their own pages on phones only: computers show the whole
+  // profile (scrolled to the part), and phones turn one-page links
+  // (/seller/store#branding) into the part's page.
+  if (part && !PARTS[part]) return <Navigate to="/seller/store" replace />;
+  if (part && !isPhone) {
+    return <Navigate to={`/seller/store${location.hash || `#${PARTS[part].anchor}`}`} replace />;
+  }
+  const anchorPart = PART_OF_ANCHOR[location.hash.slice(1)];
+  if (!part && isPhone && anchorPart) return <Navigate to={partPath(anchorPart)} replace />;
 
-        {isLoading ? (
-          <div className="seller-card">
-            <Skeleton.Text lines={2} height={14} />
-            <div style={{ height: 12 }} />
-            <Skeleton.Text lines={4} height={12} />
-            <div style={{ height: 12 }} />
-            <Skeleton height={38} width={140} radius={8} />
-          </div>
-        ) : (
-          <div className="store-settings-grid">
-            <div className="store-settings-main">
-              <div className="seller-card" id="shop-info">
-                <div className="seller-card-header">
-                  <h2><Store size={18} /> Store Information</h2>
-                </div>
-                <form onSubmit={handleSubmit} className="store-form">
+  const deactivateDialog = (
+    <ConfirmDialog
+      open={deactivateConfirm}
+      title="Deactivate your store?"
+      message="Buyers won't see your store or any of your products while it's inactive. You can reactivate anytime from this page."
+      confirmLabel="Deactivate & Save"
+      danger
+      loading={isSaving}
+      onConfirm={confirmDeactivateAndSave}
+      onCancel={() => setDeactivateConfirm(false)}
+    />
+  );
+
+  // The fields, shared by the one-page layout and the parts' pages.
+  const nameField = (
                   <div className="form-group">
                     <label>Store Name <span className="required">*</span></label>
                     <input
@@ -200,7 +262,9 @@ export default function SellerStore() {
                       className="form-input"
                     />
                   </div>
+  );
 
+  const descriptionField = (
                   <div className="form-group">
                     <label>Description</label>
                     <textarea
@@ -216,7 +280,9 @@ export default function SellerStore() {
                       {form.description.length}/{DESCRIPTION_MAX}
                     </span>
                   </div>
+  );
 
+  const addressField = (
                   <div className="form-group">
                     <label>Store / Pickup Address</label>
                     <input
@@ -228,8 +294,10 @@ export default function SellerStore() {
                       className="form-input"
                     />
                   </div>
+  );
 
-                  <div className="form-group">
+  const mapField = (
+                  <div className="form-group" id="shop-location">
                     <label><MapPin size={14} /> Pin Store Location</label>
                     <StoreLocationMap
                       value={{ latitude: form.latitude, longitude: form.longitude }}
@@ -237,7 +305,9 @@ export default function SellerStore() {
                       height={330}
                     />
                   </div>
+  );
 
+  const contactField = (
                   <div className="form-group">
                     <label>Contact Number</label>
                     <input
@@ -249,8 +319,9 @@ export default function SellerStore() {
                       className="form-input"
                     />
                   </div>
+  );
 
-                  {!isNew && (
+  const activeField = !isNew && (
                     <div className="form-group form-toggle">
                       <label className="toggle-label">
                         <input
@@ -269,23 +340,9 @@ export default function SellerStore() {
                         </span>
                       </label>
                     </div>
-                  )}
+  );
 
-                  <div className="form-actions">
-                    <button type="submit" className="btn-seller-primary" disabled={isSaving}>
-                      <Save size={16} />
-                      {isSaving ? 'Saving…' : isNew ? 'Create Store' : 'Save Changes'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Branding: logo + banner */}
-              {!isNew && (
-                <div className="seller-card" id="branding">
-                  <div className="seller-card-header">
-                    <h2><ImageIcon size={16} /> Branding</h2>
-                  </div>
+  const brandingBody = (
                   <div className="store-branding-body">
                     <div className="branding-row">
                       <div className="branding-label">
@@ -317,6 +374,229 @@ export default function SellerStore() {
                       />
                     </div>
                   </div>
+  );
+
+  const themeBody = (
+                  <div className="store-theme-body">
+                    <div className="theme-picker-row">
+                      <ColorPicker
+                        label="Primary color"
+                        hint="Used for buttons, links, and highlights."
+                        value={form.primaryColor}
+                        onChange={(v) => setForm((p) => ({ ...p, primaryColor: v }))}
+                      />
+                      <ColorPicker
+                        label="Accent color"
+                        hint="Used for secondary highlights and badges."
+                        value={form.secondaryColor}
+                        onChange={(v) => setForm((p) => ({ ...p, secondaryColor: v }))}
+                      />
+                    </div>
+
+                    <ThemePreview
+                      name={form.name || 'Your Store'}
+                      logo={form.logo}
+                      banner={form.bannerImage || form.coverImage}
+                      primary={form.primaryColor}
+                      secondary={form.secondaryColor}
+                    />
+                  </div>
+  );
+
+  // Phones: the list of parts, then each part on its own page.
+  if (isPhone && !isNew) {
+    if (isLoading) {
+      return (
+        <div className="seller-dashboard">
+          <div className="seller-container">
+            <div className="seller-card">
+              <Skeleton.Text lines={3} height={14} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!part) {
+      const hasLogo = Boolean(form.logo);
+      const hasBanner = Boolean(form.bannerImage || form.coverImage);
+      const pinned = form.latitude != null && form.longitude != null;
+      const ownColors = form.primaryColor !== DEFAULT_PRIMARY || form.secondaryColor !== DEFAULT_SECONDARY;
+      return (
+        <div className="seller-dashboard">
+          <div className="seller-container">
+            <SettingsList label="Shop profile">
+              <SettingsRow
+                to={partPath('about')}
+                icon={Store}
+                label="Name & description"
+                value={form.description.trim() ? form.name : `${form.name} · Add a description`}
+                missing={!form.description.trim()}
+              />
+              <SettingsRow
+                to={partPath('branding')}
+                icon={ImageIcon}
+                label="Logo & banner"
+                value={hasLogo && hasBanner
+                  ? 'Logo and banner added'
+                  : !hasLogo && !hasBanner ? 'Add a logo and a banner' : !hasLogo ? 'Add a logo' : 'Add a banner'}
+                missing={!hasLogo || !hasBanner}
+              />
+              <SettingsRow
+                to={partPath('location')}
+                icon={MapPin}
+                label="Location"
+                value={pinned ? (form.pickupAddress.trim() || 'Pinned on the map') : 'Pin your shop on the map'}
+                missing={!pinned}
+              />
+              <SettingsRow
+                to={partPath('colors')}
+                icon={Palette}
+                label="Shop colors"
+                value={(
+                  <>
+                    <span className="scm-swatch" style={{ background: form.primaryColor }} />
+                    <span className="scm-swatch" style={{ background: form.secondaryColor }} />
+                    {ownColors ? 'Your own colors' : 'Emoorm colors'}
+                  </>
+                )}
+              />
+            </SettingsList>
+          </div>
+        </div>
+      );
+    }
+
+    const card = {
+      about: (
+        <div className="seller-card" id="shop-info">
+          <div className="seller-card-header">
+            <h2><Store size={18} /> Store Information</h2>
+          </div>
+          <div className="store-form">
+            {nameField}
+            {descriptionField}
+            {contactField}
+            {activeField}
+          </div>
+        </div>
+      ),
+      branding: (
+        <div className="seller-card" id="branding">
+          <div className="seller-card-header">
+            <h2><ImageIcon size={16} /> Branding</h2>
+          </div>
+          {brandingBody}
+        </div>
+      ),
+      location: (
+        <div className="seller-card" id="shop-info">
+          <div className="seller-card-header">
+            <h2><MapPin size={16} /> Location</h2>
+          </div>
+          <div className="store-form">
+            <div className="form-group">
+              <label>Store / Pickup Address</label>
+              <PickupAddressField
+                value={form.pickupAddress}
+                shopTown={store?.municipality?.name}
+                municipalities={municipalities}
+                onChange={(text, parts) => {
+                  setForm((p) => ({ ...p, pickupAddress: text }));
+                  setPickupDraft(parts);
+                }}
+              />
+            </div>
+            {mapField}
+          </div>
+        </div>
+      ),
+      colors: (
+        <div className="seller-card" id="theme">
+          <div className="seller-card-header">
+            <h2><Palette size={16} /> Shop colors</h2>
+          </div>
+          {themeBody}
+          <div className="form-actions branding-actions">
+            <button type="button" className="btn-seller-outline" onClick={resetColors}>
+              Reset to Emoorm colors
+            </button>
+          </div>
+        </div>
+      ),
+    }[part];
+
+    return (
+      <div className="seller-dashboard scm-part">
+        <div className="seller-container">{card}</div>
+        <PhoneSaveBar
+          onCancel={leave}
+          onSave={() => handleSubmit()}
+          saving={isSaving}
+          canSave={partDirty && !uploadingField}
+        />
+        {deactivateDialog}
+      </div>
+    );
+  }
+
+  return (
+    <div className="seller-dashboard">
+      <div className="seller-container">
+        <SellerPageHead
+          title={isNew ? 'Create Your Store' : 'Store Settings'}
+          subtitle="Your public storefront details"
+          actions={!isNew && isDirty && (
+            <span className="store-unsaved-badge">
+              <AlertCircle size={13} /> Unsaved changes
+            </span>
+          )}
+        />
+
+        {isLoading ? (
+          <div className="seller-card">
+            <Skeleton.Text lines={2} height={14} />
+            <div style={{ height: 12 }} />
+            <Skeleton.Text lines={4} height={12} />
+            <div style={{ height: 12 }} />
+            <Skeleton height={38} width={140} radius={8} />
+          </div>
+        ) : (
+          <div className="store-settings-grid">
+            <div className="store-settings-main">
+              <div className="seller-card" id="shop-info">
+                <div className="seller-card-header">
+                  <h2><Store size={18} /> Store Information</h2>
+                </div>
+                <form onSubmit={handleSubmit} className="store-form">
+                  {nameField}
+
+                  {descriptionField}
+
+                  {addressField}
+
+                  {mapField}
+
+                  {contactField}
+
+                  {activeField}
+
+                  <div className="form-actions">
+                    <button type="submit" className="btn-seller-primary" disabled={isSaving}>
+                      <Save size={16} />
+                      {isSaving ? 'Saving…' : isNew ? 'Create Store' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Branding: logo + banner */}
+              {!isNew && (
+                <div className="seller-card" id="branding">
+                  <div className="seller-card-header">
+                    <h2><ImageIcon size={16} /> Branding</h2>
+                  </div>
+                  {brandingBody}
                   <div className="form-actions branding-actions">
                     <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
                       <Save size={16} />
@@ -342,30 +622,7 @@ export default function SellerStore() {
                     )}
                   </div>
                   {showTheme && (<>
-                  <div className="store-theme-body">
-                    <div className="theme-picker-row">
-                      <ColorPicker
-                        label="Primary color"
-                        hint="Used for buttons, links, and highlights."
-                        value={form.primaryColor}
-                        onChange={(v) => setForm((p) => ({ ...p, primaryColor: v }))}
-                      />
-                      <ColorPicker
-                        label="Accent color"
-                        hint="Used for secondary highlights and badges."
-                        value={form.secondaryColor}
-                        onChange={(v) => setForm((p) => ({ ...p, secondaryColor: v }))}
-                      />
-                    </div>
-
-                    <ThemePreview
-                      name={form.name || 'Your Store'}
-                      logo={form.logo}
-                      banner={form.bannerImage || form.coverImage}
-                      primary={form.primaryColor}
-                      secondary={form.secondaryColor}
-                    />
-                  </div>
+                  {themeBody}
                   <div className="form-actions branding-actions">
                     <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
                       <Save size={16} />
@@ -417,16 +674,7 @@ export default function SellerStore() {
         )}
       </div>
 
-      <ConfirmDialog
-        open={deactivateConfirm}
-        title="Deactivate your store?"
-        message="Buyers won't see your store or any of your products while it's inactive. You can reactivate anytime from this page."
-        confirmLabel="Deactivate & Save"
-        danger
-        loading={isSaving}
-        onConfirm={confirmDeactivateAndSave}
-        onCancel={() => setDeactivateConfirm(false)}
-      />
+      {deactivateDialog}
     </div>
   );
 }

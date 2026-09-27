@@ -374,6 +374,29 @@ const normalizeDeliveryFee = (value) => {
   return fee;
 };
 
+const QR_TYPES = ['GCASH', 'QRPH'];
+
+/**
+ * The number buyers pay to with the shop's QR, spaces and dashes removed. A
+ * GCash number is a Philippine mobile number, kept as 09XXXXXXXXX; a QR Ph
+ * account is a bank or e-wallet account number. Blank clears it.
+ */
+const normalizeAccountNumber = (value, qrType) => {
+  if (value === null) return null;
+  const text = String(value).replace(/[\s-]/g, '');
+  if (!text) return null;
+  const mobile = text.match(/^(?:\+?63|0)(9\d{9})$/);
+  if (qrType === 'GCASH') {
+    if (!mobile) throw new ApiError('Enter your GCash number, like 0917 123 4567', 400);
+    return `0${mobile[1]}`;
+  }
+  if (mobile) return `0${mobile[1]}`;
+  if (!/^\d{6,20}$/.test(text)) {
+    throw new ApiError('Account number must be 6 to 20 digits', 400);
+  }
+  return text;
+};
+
 /**
  * Update store (Owner only)
  * @param {String} storeId - Store ID
@@ -384,7 +407,14 @@ const normalizeDeliveryFee = (value) => {
 const updateStore = async (storeId, userId, rawData) => {
   // Shop text is rendered as plain text by every client; strip markup on the
   // way in so a stored payload can never be executed by a future consumer.
-  const data = cleanFields(rawData, { name: 120, description: 2000, pickupInstructions: 1000, paymentInstructions: 1000 });
+  const data = cleanFields(rawData, {
+    name: 120,
+    description: 2000,
+    pickupInstructions: 1000,
+    paymentInstructions: 1000,
+    paymentAccountName: 120,
+    paymentAccountNumber: 40,
+  });
   const store = await storeRepository.findById(storeId);
 
   if (!store || store.deletedAt) {
@@ -418,6 +448,8 @@ const updateStore = async (storeId, userId, rawData) => {
     'paymentQrImage',
     'paymentQrType',
     'paymentInstructions',
+    'paymentAccountName',
+    'paymentAccountNumber',
     'acceptsCod',
     'deliveryFee',
     'primaryColor',
@@ -441,10 +473,23 @@ const updateStore = async (storeId, userId, rawData) => {
     }
   }
 
-  for (const field of ['pickupAddress', 'paymentQrImage']) {
+  for (const field of ['pickupAddress', 'paymentQrImage', 'paymentQrType', 'paymentAccountName']) {
     if (typeof updateData[field] === 'string') {
       updateData[field] = updateData[field].trim() || null;
     }
+  }
+
+  // Buyers pay by QR with GCash or QR Ph, and see the account's number
+  // beside the QR, checked against the kind of QR it is.
+  if (typeof updateData.paymentQrType === 'string') {
+    updateData.paymentQrType = updateData.paymentQrType.toUpperCase();
+    if (!QR_TYPES.includes(updateData.paymentQrType)) {
+      throw new ApiError('QR payments can be GCash or QR Ph', 400);
+    }
+  }
+  if (updateData.paymentAccountNumber !== undefined) {
+    const qrType = updateData.paymentQrType !== undefined ? updateData.paymentQrType : store.paymentQrType;
+    updateData.paymentAccountNumber = normalizeAccountNumber(updateData.paymentAccountNumber, qrType);
   }
 
   // The platform serves one province, so a shop cannot be placed outside it.

@@ -1,5 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
+  Link, Navigate, useLocation, useNavigate, useOutletContext, useParams,
+} from 'react-router-dom';
+import {
   Truck,
   MapPin,
   QrCode,
@@ -11,16 +14,48 @@ import {
   Storefront as StoreIcon,
   Check,
   CheckCircle,
+  Money,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
+import { QR_METHODS, qrMethod, checkAccountNumber } from '../lib/qrPayment';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerFulfillment.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import SellerPageHead from '../components/seller/SellerPageHead';
+import PhoneSaveBar from '../components/seller/PhoneSaveBar';
+import PickupAddressField, { pickupGap } from '../components/seller/PickupAddressField';
+import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+
+/**
+ * Phones: each part of this page on a page of its own
+ * (/seller/fulfillment/<part>), with the card it shows on computers.
+ */
+const PARTS = {
+  method: { anchor: 'method' },
+  pickup: { anchor: 'pickup' },
+  delivery: { anchor: 'delivery-areas' },
+  payment: { anchor: 'payment' },
+};
+// Links written for the one-page layout (/seller/fulfillment#payment).
+const PART_OF_ANCHOR = {
+  method: 'method',
+  pickup: 'pickup',
+  'delivery-areas': 'delivery',
+  'delivery-fee': 'delivery',
+  payment: 'payment',
+};
+const partPath = (part, hash = '') => `/seller/fulfillment/${part}${hash}`;
+
+const MODE_LABELS = {
+  DELIVERY: 'Delivery only',
+  PICKUP: 'Pickup only',
+  BOTH: 'Delivery and pickup',
+};
 
 const MODES = [
   {
@@ -38,11 +73,6 @@ const MODES = [
     label: 'Both',
     desc: 'Buyers can choose delivery or pickup.',
   },
-];
-
-const QR_TYPES = [
-  { key: 'GCASH', label: 'GCash' },
-  { key: 'QRPH', label: 'QR Ph' },
 ];
 
 // PSGC (Philippine Standard Geographic Code) — free public API for Philippine locations
@@ -128,7 +158,25 @@ const normalizeName = (s) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
-export default function SellerFulfillment() {
+/**
+ * /seller/fulfillment, and on phones /seller/fulfillment/<part>. Each part
+ * starts from the saved settings: nothing unsaved carries over between them.
+ */
+export default function SellerFulfillmentPage() {
+  const { part } = useParams();
+  return <SellerFulfillment key={part || 'all'} part={part || null} />;
+}
+
+/**
+ * Computers: every part on one page, as before. Phones: the parts as a list
+ * (Delivery & pickup, Pickup spot, Delivery areas & fees, Payment options),
+ * each on its own page with Cancel and Save changes at the bottom.
+ */
+function SellerFulfillment({ part }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const layoutCtx = useOutletContext();
+  const isPhone = usePhoneLayout();
   const [store, setStore] = useState(null);
   const { municipalities } = useMunicipalities();
   // Delivery is two questions: where (coverage) and how much (feeMode).
@@ -142,6 +190,10 @@ export default function SellerFulfillment() {
   const [someTowns, setSomeTowns] = useState([]);
   // The saved areas, until the town list is loaded to tell which answer they match.
   const [savedAreas, setSavedAreas] = useState(null);
+  // Phones: the pickup address as picked (town, barangay, street), once changed.
+  const [pickupDraft, setPickupDraft] = useState(null);
+  // Phones switch QR payment on and off; computers take it while a QR is up.
+  const [qrOn, setQrOn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -159,6 +211,8 @@ export default function SellerFulfillment() {
     paymentQrImage: '',
     paymentQrType: 'GCASH',
     paymentInstructions: '',
+    paymentAccountName: '',
+    paymentAccountNumber: '',
     acceptsCod: true,
     // The fee when it is the same everywhere.
     deliveryFee: '',
@@ -220,9 +274,12 @@ export default function SellerFulfillment() {
           paymentQrImage: s.paymentQrImage || '',
           paymentQrType: s.paymentQrType || 'GCASH',
           paymentInstructions: s.paymentInstructions || '',
+          paymentAccountName: s.paymentAccountName || '',
+          paymentAccountNumber: s.paymentAccountNumber || '',
           acceptsCod: s.acceptsCod ?? true,
           deliveryFee: mode === 'FREE' ? '' : amount,
         });
+        setQrOn(Boolean(s.paymentQrImage));
       } catch (err) {
         toast.error(err.message || 'Failed to load store');
       } finally {
@@ -393,20 +450,56 @@ export default function SellerFulfillment() {
   const showDeliveryAreas = form.fulfillmentMode === 'DELIVERY' || form.fulfillmentMode === 'BOTH';
   const showPickup = form.fulfillmentMode === 'PICKUP' || form.fulfillmentMode === 'BOTH';
 
-  const saveSettings = async () => {
+  // A part's own settings, to tell whether its page changed anything.
+  const partState = (p) => JSON.stringify(
+    p === 'method' ? [form.fulfillmentMode]
+      : p === 'pickup' ? [form.pickupAddress.trim(), form.pickupInstructions.trim()]
+        : p === 'payment' ? [form.acceptsCod, qrOn, ...(qrOn ? [
+          form.paymentQrImage, form.paymentQrType, form.paymentAccountName.trim(),
+          form.paymentAccountNumber.replace(/[\s-]/g, ''), form.paymentInstructions.trim(),
+        ] : [])]
+          : [coverage, feeMode, feeMode === 'SAME' ? form.deliveryFee : '',
+            places.map((pl) => [pl.municipalityId, pl.barangay, feeMode === 'PLACE' ? pl.fee : ''])],
+  );
+  const partReady = !loading && (part !== 'delivery' || !savedAreas);
+  const [baseline, setBaseline] = useState(null);
+  useEffect(() => {
+    if (part && partReady && baseline === null) setBaseline(partState(part));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [part, partReady, baseline]);
+  const dirty = baseline !== null && partState(part) !== baseline;
+
+  // Back to where the part was opened from (the list, Me, Shop setup…).
+  const leave = () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate('/seller/fulfillment', { replace: true });
+  };
+
+  /**
+   * @param {String} [scope] - 'all' (the one-page layout) or the part being
+   *   saved: only its settings are checked and sent.
+   */
+  const saveSettings = async (scope = 'all') => {
     if (!store) return;
+    const has = (p) => scope === 'all' || scope === p;
     // Saving before the saved areas are matched to an answer would clear them.
-    if (savedAreas) {
+    if (has('delivery') && savedAreas) {
       toast.error('Your delivery areas are still loading. Try again in a moment.');
       return;
     }
     // Validation
-    if (showPickup && !form.pickupAddress.trim()) {
+    if (has('pickup') && showPickup && !form.pickupAddress.trim()) {
       toast.error('Please provide a pickup address.');
       return;
     }
+    // Phones pick the address: the barangay and a street or landmark as well.
+    const pickupProblem = has('pickup') && showPickup && pickupDraft ? pickupGap(pickupDraft) : null;
+    if (pickupProblem) {
+      toast.error(pickupProblem);
+      return;
+    }
     // Delivery answers are checked while delivery is on; with pickup only they are kept as they are.
-    if (showDeliveryAreas) {
+    if (has('delivery') && showDeliveryAreas) {
       if (coverage === 'SOME' && coveredIds.length === 0) {
         toast.error('Tap at least one town you deliver to.');
         return;
@@ -428,9 +521,24 @@ export default function SellerFulfillment() {
         return;
       }
     }
-    if (!form.acceptsCod && !form.paymentQrImage) {
-      toast.error('Enable COD or upload a QR image so buyers can pay.');
-      return;
+    // QR payment needs the QR, and the account buyers pay to.
+    const qr = scope === 'payment' ? qrOn : Boolean(form.paymentQrImage);
+    if (has('payment')) {
+      const method = qrMethod(form.paymentQrType);
+      let problem = null;
+      if (!form.acceptsCod && !qr) problem = 'Accept cash on delivery or add a QR code so buyers can pay.';
+      else if (qr && !form.paymentQrImage) problem = `Upload your ${method.label} QR code so buyers can scan it.`;
+      else if (qr && !form.paymentAccountName.trim()) problem = `Enter the name on your ${method.label} account.`;
+      else if (qr && !form.paymentAccountNumber.trim()) {
+        problem = method.key === 'GCASH' ? 'Enter your GCash number.' : 'Enter your account number.';
+      } else if (qr || scope === 'all') {
+        // Computers send the account even with no QR up: a typed number is checked either way.
+        problem = checkAccountNumber(form.paymentAccountNumber, form.paymentQrType).error;
+      }
+      if (problem) {
+        toast.error(problem);
+        return;
+      }
     }
 
     // One fee (0 when free) lives on the shop; a fee per place lives on each place.
@@ -440,17 +548,47 @@ export default function SellerFulfillment() {
       barangay: p.barangay,
       fee: feeMode === 'PLACE' ? parseFee(p.fee) ?? null : null,
     }));
+    // A part's page sends only its own settings, so it never touches the others.
+    const changes = {
+      all: { ...form, deliveryFee },
+      method: { fulfillmentMode: form.fulfillmentMode },
+      pickup: { pickupAddress: form.pickupAddress, pickupInstructions: form.pickupInstructions },
+      // QR payment off takes the QR down; its details stay for next time.
+      payment: qr ? {
+        acceptsCod: form.acceptsCod,
+        paymentQrImage: form.paymentQrImage,
+        paymentQrType: form.paymentQrType,
+        paymentAccountName: form.paymentAccountName,
+        paymentAccountNumber: form.paymentAccountNumber,
+        paymentInstructions: form.paymentInstructions,
+      } : { acceptsCod: form.acceptsCod, paymentQrImage: null },
+      delivery: { deliveryFee },
+    }[scope];
 
     setSaving(true);
     try {
-      await axios.put(`/stores/${store.id}`, {
-        ...form,
-        deliveryFee,
-      });
-      await axios.put('/stores/my/service-areas', { areas });
+      const res = await axios.put(`/stores/${store.id}`, changes);
+      if (has('delivery')) await axios.put('/stores/my/service-areas', { areas });
+      // Me and Home show what is saved now.
+      layoutCtx?.setStore?.((prev) => (prev ? { ...prev, ...res.data } : prev));
+      layoutCtx?.refreshSetup?.();
       // "Some towns" starts from what is saved now, as it would after a reload.
       if (coverage) setSomeTowns(coveredIds);
-      toast.success('Settings saved');
+      if (scope === 'all') {
+        toast.success('Settings saved');
+        return;
+      }
+      // A new way to hand orders over may need its part set up next.
+      const next = scope !== 'method' ? null
+        : showPickup && !form.pickupAddress.trim() ? 'pickup'
+          : showDeliveryAreas && !places.length ? 'delivery' : null;
+      if (next) {
+        toast.success(next === 'pickup' ? 'Saved. Now add your pickup spot.' : 'Saved. Now choose where you deliver.');
+        navigate(partPath(next), { replace: true });
+      } else {
+        toast.success('Saved');
+        leave();
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to save');
     } finally {
@@ -511,11 +649,24 @@ export default function SellerFulfillment() {
     );
   };
 
+  // Parts have their own pages on phones only: computers show every part on
+  // one page (scrolled to the part), and phones turn one-page links
+  // (/seller/fulfillment#payment) into the part's page.
+  if (part && !PARTS[part]) return <Navigate to="/seller/fulfillment" replace />;
+  if (part && !isPhone) {
+    return <Navigate to={`/seller/fulfillment${location.hash || `#${PARTS[part].anchor}`}`} replace />;
+  }
+  const anchorPart = PART_OF_ANCHOR[location.hash.slice(1)];
+  if (!part && isPhone && anchorPart) {
+    return <Navigate to={partPath(anchorPart, location.hash === '#delivery-fee' ? '#delivery-fee' : '')} replace />;
+  }
+
   if (loading) {
     return (
       <div className="seller-dashboard">
         <div className="seller-container">
           <SellerPageHead
+            className="sf-head"
             title="Fulfillment & Payment"
             subtitle="Configure how buyers receive and pay for their orders."
           />
@@ -527,26 +678,9 @@ export default function SellerFulfillment() {
     );
   }
 
-  return (
-    <div className="seller-dashboard">
-      <div className="seller-container">
-        <SellerPageHead
-          className="sf-head"
-          title="Fulfillment & Payment"
-          subtitle="Configure how buyers receive and pay for their orders."
-          actions={(
-            <button
-              className="btn-seller-primary"
-              onClick={saveSettings}
-              disabled={saving}
-            >
-              <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
-            </button>
-          )}
-        />
-
-        {/* Fulfillment Mode */}
-        <div className="seller-card">
+  // The parts, as cards: all on one page on computers, one per page on phones.
+  const methodCard = (
+        <div className="seller-card" id="method">
           <div className="seller-card-header">
             <h2>
               <Truck size={16} /> Fulfillment Method
@@ -583,9 +717,9 @@ export default function SellerFulfillment() {
             </div>
           </div>
         </div>
+  );
 
-        {/* Pickup Info */}
-        {showPickup && (
+  const pickupCard = (
           <div className="seller-card" id="pickup">
             <div className="seller-card-header">
               <h2>
@@ -597,14 +731,26 @@ export default function SellerFulfillment() {
                 <label>
                   Pickup address <span className="required">*</span>
                 </label>
-                <input
-                  type="text"
-                  name="pickupAddress"
-                  value={form.pickupAddress}
-                  onChange={handleChange}
-                  placeholder="e.g. 123 Rizal St., Brgy. Poblacion, Calapan City"
-                  className="form-input"
-                />
+                {isPhone ? (
+                  <PickupAddressField
+                    value={form.pickupAddress}
+                    shopTown={store?.municipality?.name}
+                    municipalities={municipalities}
+                    onChange={(text, parts) => {
+                      setForm((p) => ({ ...p, pickupAddress: text }));
+                      setPickupDraft(parts);
+                    }}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    name="pickupAddress"
+                    value={form.pickupAddress}
+                    onChange={handleChange}
+                    placeholder="e.g. 123 Rizal St., Brgy. Poblacion, Calapan City"
+                    className="form-input"
+                  />
+                )}
               </div>
               <div className="form-group">
                 <label>Pickup instructions (optional)</label>
@@ -619,10 +765,9 @@ export default function SellerFulfillment() {
               </div>
             </div>
           </div>
-        )}
+  );
 
-        {/* Delivery: where, then how much */}
-        {showDeliveryAreas && (
+  const deliveryCard = (
           <div className="seller-card" id="delivery-areas">
             <div className="seller-card-header">
               <h2>
@@ -774,9 +919,184 @@ export default function SellerFulfillment() {
               )}
             </div>
           </div>
-        )}
+  );
 
-        {/* Payment */}
+  // Payment: the QR buyers scan, and the account it pays into.
+  const qrKind = qrMethod(form.paymentQrType);
+  const qrFile = (
+    <input
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+      onChange={handleQrUpload}
+      disabled={uploading}
+      hidden
+    />
+  );
+
+  // Phones: each way to pay is a card to switch on; QR payment opens up to
+  // pick GCash or QR Ph and fill in its account.
+  const cashLabel = form.fulfillmentMode === 'PICKUP' ? 'Cash on pickup' : 'Cash on delivery';
+  const phonePaymentCard = (
+    <div className="seller-card" id="payment">
+      <div className="seller-card-header">
+        <h2>
+          <QrCode size={16} /> Payment Options
+        </h2>
+      </div>
+      <div className="sf-body sf-pay">
+        <p className="sf-pay-lead">Choose how buyers can pay you.</p>
+
+        <section className={`sf-pay-way${form.acceptsCod ? ' is-on' : ''}`}>
+          <label className="sf-pay-head">
+            <Money size={28} weight="fill" className="sf-pay-icon is-cash" />
+            <span className="sf-pay-text">
+              <strong>{cashLabel}</strong>
+              <small>Buyers pay in cash when they get their order.</small>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              name="acceptsCod"
+              aria-label={cashLabel}
+              checked={form.acceptsCod}
+              onChange={handleChange}
+            />
+            <span className="sf-switch" aria-hidden="true"><span /></span>
+          </label>
+        </section>
+
+        <section className={`sf-pay-way${qrOn ? ' is-on' : ''}`}>
+          <label className="sf-pay-head">
+            <QrCode size={28} weight="fill" className="sf-pay-icon is-qr" />
+            <span className="sf-pay-text">
+              <strong>QR payment</strong>
+              <small>Buyers scan your GCash or QR Ph code to pay.</small>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              aria-label="QR payment"
+              checked={qrOn}
+              onChange={(e) => setQrOn(e.target.checked)}
+            />
+            <span className="sf-switch" aria-hidden="true"><span /></span>
+          </label>
+
+          {qrOn && (
+            <div className="sf-pay-body">
+              <div className="sf-pay-field">
+                <span className="sf-pay-label" id="sf-qr-kind">Which QR do you have?</span>
+                <div className="sf-qr-kinds" role="radiogroup" aria-labelledby="sf-qr-kind">
+                  {QR_METHODS.map((m) => {
+                    const active = form.paymentQrType === m.key;
+                    return (
+                      <label key={m.key} className={`sf-qr-kind${active ? ' is-active' : ''}`}>
+                        <input
+                          type="radio"
+                          name="paymentQrType"
+                          value={m.key}
+                          aria-label={m.label}
+                          checked={active}
+                          onChange={handleChange}
+                        />
+                        <img src={m.logo} alt="" />
+                        {active && (
+                          <span className="sf-qr-kind-check" aria-hidden="true">
+                            <Check size={12} weight="bold" />
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="sf-pay-field">
+                <label className="sf-pay-label" htmlFor="sf-pay-name">Account name</label>
+                <input
+                  id="sf-pay-name"
+                  type="text"
+                  name="paymentAccountName"
+                  value={form.paymentAccountName}
+                  onChange={handleChange}
+                  maxLength={120}
+                  autoComplete="name"
+                  placeholder={`Name on your ${qrKind.label} account`}
+                  className="form-input"
+                />
+              </div>
+              <div className="sf-pay-field">
+                <label className="sf-pay-label" htmlFor="sf-pay-number">{qrKind.numberLabel}</label>
+                <input
+                  id="sf-pay-number"
+                  type="text"
+                  name="paymentAccountNumber"
+                  value={form.paymentAccountNumber}
+                  onChange={handleChange}
+                  maxLength={24}
+                  inputMode={qrKind.key === 'GCASH' ? 'tel' : 'numeric'}
+                  autoComplete={qrKind.key === 'GCASH' ? 'tel' : 'off'}
+                  placeholder={qrKind.numberPlaceholder}
+                  className="form-input"
+                />
+                <small className="sf-pay-help">Buyers see this name and number beside your QR, so they know they are paying you.</small>
+              </div>
+
+              <div className="sf-pay-field">
+                <span className="sf-pay-label">Your {qrKind.label} QR code</span>
+                {form.paymentQrImage ? (
+                  <div className="sf-qr-card">
+                    <img src={resolveImg(form.paymentQrImage)} alt={`${qrKind.label} QR code`} />
+                    <div className="sf-qr-card-actions">
+                      <label className="sf-qr-action">
+                        <Upload size={16} /> {uploading ? 'Uploading…' : 'Change'}
+                        {qrFile}
+                      </label>
+                      <button
+                        type="button"
+                        className="sf-qr-action is-remove"
+                        onClick={() => setForm((p) => ({ ...p, paymentQrImage: '' }))}
+                      >
+                        <Trash2 size={16} /> Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="sf-qr-drop">
+                    <Upload size={24} />
+                    <strong>{uploading ? 'Uploading…' : `Upload your ${qrKind.label} QR`}</strong>
+                    <small>
+                      {qrKind.key === 'GCASH'
+                        ? 'Save your QR from the GCash app, then add it here.'
+                        : 'Save your QR Ph code from your bank or e-wallet app, then add it here.'}
+                    </small>
+                    {qrFile}
+                  </label>
+                )}
+              </div>
+
+              <div className="sf-pay-field">
+                <label className="sf-pay-label" htmlFor="sf-pay-note">
+                  Note to buyers <span className="sf-pay-optional">(optional)</span>
+                </label>
+                <textarea
+                  id="sf-pay-note"
+                  name="paymentInstructions"
+                  value={form.paymentInstructions}
+                  onChange={handleChange}
+                  rows={3}
+                  className="form-input form-textarea"
+                  placeholder="e.g. Include your order number as the payment reference."
+                />
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+
+  const desktopPaymentCard = (
         <div className="seller-card" id="payment">
           <div className="seller-card-header">
             <h2>
@@ -810,7 +1130,7 @@ export default function SellerFulfillment() {
                   onChange={handleChange}
                   className="form-input"
                 >
-                  {QR_TYPES.map((t) => (
+                  {QR_METHODS.map((t) => (
                     <option key={t.key} value={t.key}>
                       {t.label}
                     </option>
@@ -840,15 +1160,39 @@ export default function SellerFulfillment() {
                   <label className="sf-qr-uploader">
                     <Upload size={16} />
                     <span>{uploading ? 'Uploading…' : 'Upload QR image'}</span>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      onChange={handleQrUpload}
-                      disabled={uploading}
-                      hidden
-                    />
+                    {qrFile}
                   </label>
                 )}
+              </div>
+            </div>
+
+            <div className="sf-account-grid">
+              <div className="form-group">
+                <label htmlFor="sf-account-name">Account name</label>
+                <input
+                  id="sf-account-name"
+                  type="text"
+                  name="paymentAccountName"
+                  value={form.paymentAccountName}
+                  onChange={handleChange}
+                  maxLength={120}
+                  placeholder={`Name on your ${qrKind.label} account`}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="sf-account-number">{qrKind.numberLabel}</label>
+                <input
+                  id="sf-account-number"
+                  type="text"
+                  name="paymentAccountNumber"
+                  value={form.paymentAccountNumber}
+                  onChange={handleChange}
+                  maxLength={24}
+                  inputMode={qrKind.key === 'GCASH' ? 'tel' : 'numeric'}
+                  placeholder={qrKind.numberPlaceholder}
+                  className="form-input"
+                />
               </div>
             </div>
 
@@ -865,11 +1209,132 @@ export default function SellerFulfillment() {
             </div>
           </div>
         </div>
+  );
+
+  const paymentCard = isPhone ? phonePaymentCard : desktopPaymentCard;
+
+  // Phones, the list: each part with what is set now; the parts buyers need
+  // before the shop can sell say so while they are missing.
+  if (isPhone && !part) {
+    const amount = parseFee(form.deliveryFee);
+    const where = coverage === 'ALL'
+      ? 'All around Mindoro'
+      : coverage === 'TOWN'
+        ? (townOf(homeId).whole ? `Only in ${homeName}` : `${plural(places.length, 'barangay')} in ${homeName}`)
+        : coverage === 'SOME' ? plural(coveredIds.length, 'town') : '';
+    const cost = feeMode === 'FREE' || (feeMode === 'SAME' && amount === 0)
+      ? 'Free delivery'
+      : feeMode === 'SAME' && amount ? pesos(amount)
+        : feeMode === 'PLACE' && places.length && places.every((p) => parseFee(p.fee) != null) ? 'A fee for each place' : '';
+    const deliveryMissing = !where || !places.length || !cost;
+    const ways = [form.acceptsCod && 'Cash on delivery', form.paymentQrImage && `${qrKind.label} QR`].filter(Boolean);
+    const pickupSet = Boolean(form.pickupAddress.trim());
+    return (
+      <div className="seller-dashboard">
+        <div className="seller-container">
+          <SettingsList label="Delivery & payment">
+            <SettingsRow
+              to={partPath('method')}
+              icon={Truck}
+              label="Delivery & pickup"
+              value={MODE_LABELS[form.fulfillmentMode] || 'Delivery only'}
+            />
+            {showPickup && (
+              <SettingsRow
+                to={partPath('pickup')}
+                icon={StoreIcon}
+                label="Pickup spot"
+                value={pickupSet ? form.pickupAddress.trim() : 'Not set yet'}
+                missing={!pickupSet}
+                tag={pickupSet ? null : 'Needed to sell'}
+              />
+            )}
+            {showDeliveryAreas && (
+              <SettingsRow
+                to={partPath('delivery')}
+                icon={MapPin}
+                label="Delivery areas & fees"
+                value={deliveryMissing
+                  ? (!where || !places.length ? 'Choose where you deliver' : 'Set your delivery fee')
+                  : `${where} · ${cost}`}
+                missing={deliveryMissing}
+                tag={deliveryMissing ? 'Needed to sell' : null}
+              />
+            )}
+            <SettingsRow
+              to={partPath('payment')}
+              icon={QrCode}
+              label="Payment options"
+              value={ways.length ? ways.join(' · ') : 'No way to pay yet'}
+              missing={!ways.length}
+              tag={ways.length ? null : 'Needed to sell'}
+            />
+          </SettingsList>
+        </div>
+      </div>
+    );
+  }
+
+  // Phones, one part: its card only, and Cancel / Save changes at the bottom.
+  if (isPhone) {
+    const off = (part === 'pickup' && !showPickup) || (part === 'delivery' && !showDeliveryAreas);
+    const card = {
+      method: methodCard, pickup: pickupCard, delivery: deliveryCard, payment: paymentCard,
+    }[part];
+    return (
+      <div className="seller-dashboard scm-part">
+        <div className="seller-container">
+          {off ? (
+            <div className="scm-part-note">
+              <span>
+                {part === 'pickup'
+                  ? 'Pickup is off: buyers get their orders delivered.'
+                  : 'Delivery is off: buyers pick up their orders.'}
+              </span>
+              <Link to={partPath('method')} replace>Change how buyers get their orders</Link>
+            </div>
+          ) : card}
+        </div>
+        {!off && (
+          <PhoneSaveBar
+            onCancel={leave}
+            onSave={() => saveSettings(part)}
+            saving={saving}
+            canSave={dirty}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Computers: every part on one page, as before.
+  return (
+    <div className="seller-dashboard">
+      <div className="seller-container">
+        <SellerPageHead
+          className="sf-head"
+          title="Fulfillment & Payment"
+          subtitle="Configure how buyers receive and pay for their orders."
+          actions={(
+            <button
+              className="btn-seller-primary"
+              onClick={() => saveSettings()}
+              disabled={saving}
+            >
+              <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          )}
+        />
+
+        {methodCard}
+        {showPickup && pickupCard}
+        {showDeliveryAreas && deliveryCard}
+        {paymentCard}
 
         <div className="sf-footer-actions">
           <button
             className="btn-seller-primary"
-            onClick={saveSettings}
+            onClick={() => saveSettings()}
             disabled={saving}
           >
             <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}

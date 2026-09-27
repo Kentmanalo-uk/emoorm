@@ -62,6 +62,9 @@ const dayLabel = (iso) => {
   return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 };
 
+/** Text for matching: lower case, accents dropped ("Niño" matches "nino"). */
+const foldText = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
 const formatMoney = (n) =>
   `₱${Number(n || 0).toLocaleString('en-PH', {
     minimumFractionDigits: 2,
@@ -456,6 +459,15 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     const q = searchQuery.trim().toLowerCase();
     const scoped = unreadOnly ? roleScoped.filter((c) => c.unreadCount > 0) : roleScoped;
     if (!q) return scoped;
+    // Sellers find a chat by the buyer's name or by the message shown in the
+    // list: every word typed, whatever the case or accents.
+    if (role === 'seller') {
+      const words = foldText(q).split(/\s+/);
+      return scoped.filter((c) => {
+        const text = foldText(`${c.buyer?.fullName || ''} ${c.lastMessage?.body || ''}`);
+        return words.every((w) => text.includes(w));
+      });
+    }
     return scoped.filter((c) => {
       const name = c.role === 'seller'
         ? (c.buyer?.fullName || '')
@@ -719,7 +731,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={role === 'seller' ? 'Search buyers' : 'Search stores'}
+            placeholder={role === 'seller' ? 'Search name or message' : 'Search stores'}
             aria-label="Search conversations"
             autoFocus={searchOpen}
           />

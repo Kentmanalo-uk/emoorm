@@ -61,7 +61,7 @@ export const describeStep = (step, { municipality } = {}) => {
           : `Add ${joinWords(missing)} so buyers recognise your shop.`,
         action: 'Add images',
         icon: ImageIcon,
-        to: '/seller/store#branding',
+        to: '/seller/store/branding',
       };
     }
 
@@ -76,7 +76,8 @@ export const describeStep = (step, { municipality } = {}) => {
           : `Add ${joinWords(missing)} so buyers know and find your shop.`,
         action: 'Edit shop profile',
         icon: Storefront,
-        to: '/seller/store#shop-info',
+        // The description, or else the map pin, whichever is missing.
+        to: (step.missing || []).includes('description') || step.done ? '/seller/store/about' : '/seller/store/location',
       };
     }
 
@@ -96,7 +97,7 @@ export const describeStep = (step, { municipality } = {}) => {
           : 'Only in your town, some towns, or all around Mindoro.',
         action: 'Choose where',
         icon: MapPin,
-        to: '/seller/fulfillment#delivery-areas',
+        to: '/seller/fulfillment/delivery',
       };
 
     case 'delivery-fee': {
@@ -113,7 +114,7 @@ export const describeStep = (step, { municipality } = {}) => {
           : 'Free, the same fee everywhere, or a fee for each place.',
         action: 'Set delivery fees',
         icon: Truck,
-        to: '/seller/fulfillment#delivery-fee',
+        to: '/seller/fulfillment/delivery#delivery-fee',
       };
     }
 
@@ -125,7 +126,7 @@ export const describeStep = (step, { municipality } = {}) => {
         text: step.done ? 'Buyers know where to collect their orders.' : 'Tell buyers where to collect their orders.',
         action: 'Set pickup spot',
         icon: HandCoins,
-        to: '/seller/fulfillment#pickup',
+        to: '/seller/fulfillment/pickup',
       };
 
     case 'payment':
@@ -136,11 +137,11 @@ export const describeStep = (step, { municipality } = {}) => {
         text: step.done
           ? 'Buyers can pay you by QR.'
           : step.optional
-            ? 'Upload your GCash or Maya QR so buyers can pay online. Buyers can still pay cash.'
-            : 'Upload your GCash or Maya QR. Cash is off, so this is how buyers pay you.',
+            ? 'Add your GCash or QR Ph code so buyers can pay online. Buyers can still pay cash.'
+            : 'Add your GCash or QR Ph code. Cash is off, so this is how buyers pay you.',
         action: 'Add QR code',
         icon: QrCode,
-        to: '/seller/fulfillment#payment',
+        to: '/seller/fulfillment/payment',
       };
 
     case 'product':
