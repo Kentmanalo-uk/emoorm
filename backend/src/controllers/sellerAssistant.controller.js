@@ -12,7 +12,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * @access Private (SELLER)
  */
 const getIntro = asyncHandler(async (req, res) => {
-  successResponse(res, await sellerAssistantService.getIntro(req.user), 'Ate Moormy is ready');
+  successResponse(res, await sellerAssistantService.getIntro(req.user, req.query.lang), 'Ate Moormy is ready');
 });
 
 /**

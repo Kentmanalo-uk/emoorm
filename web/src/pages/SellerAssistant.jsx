@@ -7,14 +7,60 @@ import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import { getCurrentLanguage } from '../lib/googleTranslate';
 import './SellerDashboard.css';
 import './SellerAssistant.css';
 
 /*
  * Ate Moormy: the sellers' AI assistant. Answers questions about selling on
- * Emoorm only; suggested questions to tap; links to the page an answer is
- * about. The chat stays on this device (per account) until "New chat".
+ * Emoorm only, in English or Tagalog; suggested questions to tap; links to
+ * the page an answer is about. The chat stays on this device (per account)
+ * until "New chat".
  */
+
+/** Her page's own words, in each language she speaks. */
+const UI = {
+  en: {
+    subtitle: 'Your AI assistant for selling on Emoorm',
+    role: 'AI seller assistant',
+    note: 'She answers questions about selling on Emoorm only, and can make mistakes. Check important details.',
+    language: 'Language',
+    suggested: 'Suggested questions',
+    placeholder: 'Ask Ate Moormy about your shop…',
+    newChat: 'New chat',
+    retry: 'Try again',
+    cantLoad: "Ate Moormy can't load right now.",
+    offline: "I couldn't reach Emoorm just now. Check your connection and try again.",
+    typing: 'Ate Moormy is typing',
+  },
+  tl: {
+    subtitle: 'Ang AI assistant mo sa pagbebenta sa Emoorm',
+    role: 'AI seller assistant',
+    note: 'Tungkol lang sa pagbebenta sa Emoorm ang sinasagot niya, at puwede siyang magkamali. Suriin ang mahahalagang detalye.',
+    language: 'Wika',
+    suggested: 'Mga puwedeng itanong',
+    placeholder: 'Magtanong kay Ate Moormy…',
+    newChat: 'Bagong chat',
+    retry: 'Subukan ulit',
+    cantLoad: 'Hindi ma-load si Ate Moormy ngayon.',
+    offline: 'Hindi ko maabot ang Emoorm ngayon. Tingnan ang koneksyon mo at subukan ulit.',
+    typing: 'Nagta-type si Ate Moormy',
+  },
+};
+const LANG_KEY = 'emoorm-moormy-lang';
+
+/** The language chosen here before, else Tagalog when the app is in Tagalog. */
+const loadLang = () => {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved === 'en' || saved === 'tl') return saved;
+  } catch { /* falls back to the app's language */ }
+  return getCurrentLanguage() === 'tl' ? 'tl' : 'en';
+};
+
+/** Her own Tagalog is left alone by the app's page translation (Google Translate). */
+const tlAttrs = (lang) => (lang === 'tl' ? { translate: 'no' } : {});
+const tlClass = (lang) => (lang === 'tl' ? ' notranslate' : '');
 
 const MAX_KEPT = 40;
 const storeKey = (userId) => `emoorm-moormy-${userId || 'me'}`;
@@ -75,6 +121,7 @@ function Avatar({ size = 32 }) {
 export default function SellerAssistant() {
   const user = useAuthStore((s) => s.user);
   const isPhone = usePhoneLayout();
+  const [lang, setLang] = useState(loadLang);
   const [intro, setIntro] = useState(null); // null loading, false failed
   const [messages, setMessages] = useState(() => loadChat(user?.id)?.messages || []);
   const [asked, setAsked] = useState(() => loadChat(user?.id)?.asked || []);
@@ -82,13 +129,22 @@ export default function SellerAssistant() {
   const [busy, setBusy] = useState(false);
   const endRef = useRef(null);
   const inputRef = useRef(null);
+  const t = UI[lang];
 
   const loadIntro = useCallback(() => {
     setIntro(null);
-    axios.get('/seller-assistant')
+    axios.get('/seller-assistant', { params: { lang } })
       .then((res) => setIntro(res.data))
       .catch(() => setIntro(false));
-  }, []);
+  }, [lang]);
+
+  const chooseLang = (next) => {
+    if (next === lang) return;
+    setLang(next);
+    try {
+      localStorage.setItem(LANG_KEY, next);
+    } catch { /* chosen for this visit only */ }
+  };
 
   useEffect(() => { loadIntro(); }, [loadIntro]);
 
@@ -118,13 +174,14 @@ export default function SellerAssistant() {
     setBusy(true);
     try {
       const res = await axios.post('/seller-assistant/chat', request.presetId
-        ? { presetId: request.presetId, history: request.history, asked }
-        : { question: request.question, history: request.history, asked });
+        ? { presetId: request.presetId, history: request.history, asked, lang: request.lang }
+        : { question: request.question, history: request.history, asked, lang: request.lang });
       const d = res.data || {};
       setMessages((prev) => [...prev, {
         id: `a${Date.now()}`,
         role: 'assistant',
         text: d.reply,
+        lang: d.lang,
         links: d.links || [],
         suggestions: d.suggestions || [],
       }]);
@@ -134,9 +191,7 @@ export default function SellerAssistant() {
         id: `e${Date.now()}`,
         role: 'assistant',
         error: true,
-        text: err.message && !/network/i.test(err.message)
-          ? err.message
-          : "I couldn't reach Emoorm just now. Check your connection and try again.",
+        text: err.message && !/network/i.test(err.message) ? err.message : UI[request.lang]?.offline || UI.en.offline,
         retry: request,
       }]);
     } finally {
@@ -161,7 +216,7 @@ export default function SellerAssistant() {
       setDraft('');
       if (inputRef.current) inputRef.current.style.height = '';
     }
-    ask({ question, presetId, history });
+    ask({ question, presetId, history, lang });
   };
 
   // The question is already in the chat: only the failed answer goes.
@@ -191,8 +246,8 @@ export default function SellerAssistant() {
   };
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && !m.error);
-  const chips = (list) => (
-    <div className="sa-chips">
+  const chips = (list, listLang) => (
+    <div className={`sa-chips${tlClass(listLang)}`} {...tlAttrs(listLang)}>
       {list.map((p) => (
         <button key={p.id} type="button" className="sa-chip" disabled={busy} onClick={() => send({ presetId: p.id, text: p.question })}>
           {p.question}
@@ -207,10 +262,10 @@ export default function SellerAssistant() {
         {!isPhone && (
           <SellerPageHead
             title="Ate Moormy"
-            subtitle="Your AI assistant for selling on Emoorm"
+            subtitle={t.subtitle}
             actions={(
               <button type="button" className="btn-seller-outline" onClick={newChat} disabled={busy || !messages.length}>
-                <NotePencil size={16} /> New chat
+                <NotePencil size={16} /> {t.newChat}
               </button>
             )}
           />
@@ -218,19 +273,27 @@ export default function SellerAssistant() {
 
         <div className="seller-card sa-card">
           <div className="sa-scroll" role="log" aria-live="polite" aria-label="Chat with Ate Moormy">
-            <div className="sa-hero">
+            <div className={`sa-hero${tlClass(lang)}`} {...tlAttrs(lang)}>
               <Avatar size={56} />
               <strong>Ate Moormy</strong>
-              <span>AI seller assistant</span>
-              <small>She answers questions about selling on Emoorm only, and can make mistakes. Check important details.</small>
+              <span>{t.role}</span>
+              <small>{t.note}</small>
+              {/* The language she answers in: English or Tagalog. */}
+              <div className="sa-lang" role="group" aria-label={t.language}>
+                {[['en', 'English'], ['tl', 'Tagalog']].map(([code, label]) => (
+                  <button key={code} type="button" aria-pressed={lang === code} onClick={() => chooseLang(code)} disabled={busy}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {intro === false && (
               <div className="sa-row is-assistant">
                 <Avatar />
                 <div className="sa-bubble is-error">
-                  <p>Ate Moormy can't load right now.</p>
-                  <button type="button" className="sa-retry" onClick={loadIntro}><ArrowClockwise size={14} /> Try again</button>
+                  <p>{t.cantLoad}</p>
+                  <button type="button" className="sa-retry" onClick={loadIntro}><ArrowClockwise size={14} /> {t.retry}</button>
                 </div>
               </div>
             )}
@@ -238,13 +301,13 @@ export default function SellerAssistant() {
             {intro && (
               <div className="sa-row is-assistant">
                 <Avatar />
-                <div className="sa-bubble"><ReplyText text={intro.greeting} /></div>
+                <div className={`sa-bubble${tlClass(intro.lang)}`} {...tlAttrs(intro.lang)}><ReplyText text={intro.greeting} /></div>
               </div>
             )}
             {intro && !messages.length && (
               <div className="sa-suggest">
-                <span className="sa-suggest-label">Suggested questions</span>
-                {chips(intro.presets)}
+                <span className={`sa-suggest-label${tlClass(intro.lang)}`} {...tlAttrs(intro.lang)}>{UI[intro.lang]?.suggested || t.suggested}</span>
+                {chips(intro.presets, intro.lang)}
               </div>
             )}
 
@@ -252,11 +315,11 @@ export default function SellerAssistant() {
               <div key={m.id} className={`sa-row is-${m.role}`}>
                 {m.role === 'assistant' && <Avatar />}
                 <div className="sa-message">
-                  <div className={`sa-bubble${m.error ? ' is-error' : ''}`}>
+                  <div className={`sa-bubble${m.error ? ' is-error' : ''}${tlClass(m.role === 'assistant' ? m.lang : null)}`} {...tlAttrs(m.role === 'assistant' ? m.lang : null)}>
                     {m.role === 'user' ? <p>{m.text}</p> : <ReplyText text={m.text} />}
                     {m.error && m.retry && (
                       <button type="button" className="sa-retry" onClick={() => retry(m)} disabled={busy}>
-                        <ArrowClockwise size={14} /> Try again
+                        <ArrowClockwise size={14} /> {t.retry}
                       </button>
                     )}
                   </div>
@@ -269,7 +332,7 @@ export default function SellerAssistant() {
                       ))}
                     </div>
                   )}
-                  {m === lastAssistant && !busy && m.suggestions?.length > 0 && chips(m.suggestions)}
+                  {m === lastAssistant && !busy && m.suggestions?.length > 0 && chips(m.suggestions, m.lang)}
                 </div>
               </div>
             ))}
@@ -277,7 +340,7 @@ export default function SellerAssistant() {
             {busy && (
               <div className="sa-row is-assistant">
                 <Avatar />
-                <div className="sa-bubble sa-typing" aria-label="Ate Moormy is typing">
+                <div className="sa-bubble sa-typing" aria-label={t.typing}>
                   <span /><span /><span />
                 </div>
               </div>
@@ -293,8 +356,8 @@ export default function SellerAssistant() {
               onChange={onInput}
               onKeyDown={onKeyDown}
               maxLength={500}
-              placeholder="Ask Ate Moormy about your shop…"
-              aria-label="Ask Ate Moormy"
+              placeholder={t.placeholder}
+              aria-label={t.placeholder}
               enterKeyHint="send"
               disabled={intro === false}
             />

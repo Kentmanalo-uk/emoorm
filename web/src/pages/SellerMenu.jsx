@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   CaretRight, Storefront, PaintBrush, Wallet, QrCode, Headset, Lifebuoy, ChatText, User, Truck,
-  ListChecks, IdentificationCard, Bell, Globe, Gear, ArrowsLeftRight, SignOut, ShareNetwork,
+  IdentificationCard, Bell, Globe, Gear, ArrowsLeftRight, SignOut, ShareNetwork,
   PencilSimple, Heartbeat, MapPin,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
@@ -18,7 +18,8 @@ import './SellerDashboard.css';
  * "Me" (phone), drawn like the buyer's Profile: the shop card with its
  * numbers, how the shop is doing, View shop / Decorate, then Finance,
  * Delivery & payment (each part straight to its page), Contact & help and
- * Settings as plain lists, and Log out.
+ * Settings as plain lists, and Log out. Setup steps live on Home ("Complete
+ * your shop"), so Settings does not repeat them.
  */
 
 const MODE_HINTS = { DELIVERY: 'Delivery', PICKUP: 'Pickup', BOTH: 'Both' };
@@ -207,9 +208,6 @@ export default function SellerMenu() {
         <section className="sh-card sme-list">
           <h2>Settings</h2>
           <Row to="/seller/store" icon={User} label="Shop profile" />
-          {setup && !setup.complete && (
-            <Row to="/seller/setup" icon={ListChecks} label="Shop setup" hint={`${setup.doneCount}/${setup.total}`} />
-          )}
           {identity && <Row to="/seller/verification" icon={IdentificationCard} label="Verify identity" hint={identityHint} />}
           <Row to="/seller/notifications" icon={Bell} label="Notifications" badge={unreadCount} />
           <label className="sme-row sm-lang notranslate" translate="no">

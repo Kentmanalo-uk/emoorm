@@ -53,6 +53,38 @@
   line-height: 1.45;
 }
 
+/* English | Tagalog */
+.sa-lang {
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.sa-lang button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t-neutral-600, #475569);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sa-lang button[aria-pressed='true'] {
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #047857);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.sa-lang button:disabled {
+  cursor: default;
+}
+
 .sa-avatar {
   display: inline-grid;
   flex-shrink: 0;
@@ -330,6 +362,15 @@
 .sa-page.is-phone .sa-bubble {
   background: var(--t-neutral-0, #fff);
   font-size: 15px;
+}
+
+.sa-page.is-phone .sa-lang {
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.sa-page.is-phone .sa-lang button {
+  min-height: 34px;
+  font-size: 14px;
 }
 
 .sa-page.is-phone .sa-row.is-user .sa-bubble {
