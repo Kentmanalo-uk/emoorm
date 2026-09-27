@@ -246,50 +246,280 @@
   to { transform: rotate(360deg); }
 }
 
-/* Camera */
-.idv-camera {
+/* The ID camera: full screen, an ID-shaped guide in the middle with the
+   rest dimmed, the live tip under it, the shutter at the bottom. */
+.idv-cam {
   position: fixed;
   inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(17, 24, 39, 0.7);
-}
-
-.idv-camera-panel {
-  width: 100%;
-  max-width: 640px;
-  padding: 16px;
-  background: var(--t-neutral-0, #fff);
+  z-index: 1200;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  animation: idv-cam-in 0.18s ease-out;
 }
 
-.idv-camera-video {
+@keyframes idv-cam-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.idv-cam-video {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  max-height: 60vh;
-  background: var(--t-neutral-900, #111827);
+  height: 100%;
+  object-fit: cover;
+}
+
+.idv-cam-top,
+.idv-cam-center,
+.idv-cam-bottom {
+  position: relative;
+  z-index: 1;
+}
+
+.idv-cam-top {
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+}
+
+.idv-cam-top strong {
+  font-size: 17px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.idv-cam-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  cursor: pointer;
+}
+
+.idv-cam-center {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 0;
+  padding: 0 6vw;
+}
+
+/* The guide: its huge shadow is the dim over everything around it. */
+.idv-cam-guide {
+  position: relative;
+  width: min(88vw, 640px, calc((100dvh - 300px) * 1.586));
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  color: #fff;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.58);
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.idv-cam-guide.is-adjust {
+  border-color: rgba(251, 191, 36, 0.95);
+  color: #fbbf24;
+}
+
+.idv-cam-guide.is-good {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.idv-cam-corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 0 solid currentColor;
+}
+
+.idv-cam-corner.is-tl { top: -3px; left: -3px; border-top-width: 6px; border-left-width: 6px; border-top-left-radius: 16px; }
+.idv-cam-corner.is-tr { top: -3px; right: -3px; border-top-width: 6px; border-right-width: 6px; border-top-right-radius: 16px; }
+.idv-cam-corner.is-bl { bottom: -3px; left: -3px; border-bottom-width: 6px; border-left-width: 6px; border-bottom-left-radius: 16px; }
+.idv-cam-corner.is-br { bottom: -3px; right: -3px; border-bottom-width: 6px; border-right-width: 6px; border-bottom-right-radius: 16px; }
+
+/* Above the guide's dimming shadow. */
+.idv-cam-tip,
+.idv-cam-help,
+.idv-cam-note,
+.idv-cam-warning,
+.idv-cam-photo,
+.idv-cam-error {
+  position: relative;
+  z-index: 1;
+}
+
+.idv-cam-tip {
+  max-width: 88vw;
+  margin: 0;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.78);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.idv-cam-tip.is-adjust {
+  color: #fde68a;
+}
+
+.idv-cam-tip.is-good {
+  background: #16a34a;
+}
+
+.idv-cam-help,
+.idv-cam-note {
+  max-width: 88vw;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  text-align: center;
+}
+
+.idv-cam-bottom {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px calc(24px + env(safe-area-inset-bottom));
+}
+
+.idv-cam-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.idv-cam-shutter {
+  width: 74px;
+  height: 74px;
+  padding: 5px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.idv-cam-shutter span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.idv-cam-shutter.is-good {
+  border-color: #22c55e;
+}
+
+.idv-cam-shutter:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Keep or retake */
+.idv-cam-photo {
+  max-width: min(92vw, 720px);
+  max-height: calc(100dvh - 280px);
+  border-radius: 12px;
+  background: #111;
   object-fit: contain;
 }
 
-.idv-camera-hint,
-.idv-camera-error {
-  margin: 0;
-  font-size: 14px;
-  color: var(--t-neutral-600, #4b5563);
-}
-
-.idv-camera-error {
-  color: var(--t-danger-600, #dc2626);
-}
-
-.idv-camera-actions {
+.idv-cam-warning {
   display: flex;
-  justify-content: flex-end;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: min(92vw, 560px);
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.16);
+  color: #fde68a;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.idv-cam-warning svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.idv-cam-bottom.is-review {
+  grid-template-columns: 1fr 1fr;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.idv-cam-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.idv-cam-btn.is-primary {
+  border-color: #16a34a;
+  background: #16a34a;
+}
+
+.idv-cam-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 360px;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+}
+
+.idv-cam-error p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idv-cam {
+    animation: none;
+  }
 }
 
 @media (max-width: 768px) {
@@ -458,33 +688,6 @@
 
   .profile-main .idv-actions {
     gap: 8px;
-  }
-
-  /* Camera: full-screen sheet on phones. */
-  .idv-camera {
-    align-items: flex-end;
-    padding: 0;
-  }
-
-  .idv-camera-panel {
-    max-height: 100dvh;
-    overflow: auto;
-    border-radius: 16px 16px 0 0;
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
-  }
-
-  .idv-camera-video {
-    border-radius: 10px;
-  }
-
-  .idv-camera-actions {
-    gap: 8px;
-  }
-
-  .idv-camera-actions .idv-btn {
-    flex: 1 1 0;
-    min-height: 44px;
-    border-radius: 10px;
   }
 }
 

@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, ShieldWarning, IdentificationCard, Camera, UploadSimple,
-  CircleNotch, XCircle, ArrowClockwise, LockSimple, ChatsCircle,
+  CircleNotch, XCircle, ArrowClockwise, LockSimple, ChatsCircle, X, WarningCircle,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import { fetchIdentityStatus, submitIdentityVerification } from '../../lib/identity';
-import { useSheetClose } from '../../hooks/useSheetMotion';
+import { checkIdFrame, ID_RATIO } from '../../lib/idCardCheck';
 import Skeleton from '../ui/Skeleton';
 import '../../pages/ProfileVerification.css';
 
@@ -38,59 +38,279 @@ const STATUS_META = {
   },
 };
 
-// Webcam capture for desktops; phones use the native camera through the file input.
-function CameraCapture({ onCapture, onClose: onCloseProp }) {
-  const [sheetClosing, onClose] = useSheetClose(onCloseProp);
-  const videoRef = useRef(null);
-  const [error, setError] = useState('');
+/** Checks a few times a second: quick enough to feel live, light on phones. */
+const CHECK_EVERY_MS = 180;
+/** Good this long (in a row) and the photo is taken by itself. */
+const AUTO_AFTER_MS = 900;
 
+/** What a photo that did not look right is told on the review screen. */
+const REVIEW_WARNINGS = {
+  blurry: 'It looks blurry. Retake it for a better chance of passing.',
+  dark: 'It looks dark. Retake it in better light.',
+  bright: 'It looks washed out. Retake it away from direct light.',
+  glare: 'There is glare on your ID. Retake it without direct light on it.',
+  place: 'Your ID may not be fully in the photo. Retake it inside the frame.',
+  fit: 'Your ID may not be fully in the photo. Retake it inside the frame.',
+  closer: 'Your ID looks small. Retake it closer, filling the frame.',
+  back: 'Part of your ID may be cut off. Retake it a little farther away.',
+  center: 'Your ID may not be fully in the photo. Retake it inside the frame.',
+};
+
+/** Where the on-screen guide falls in the camera image (the video fills the screen: object-fit cover). */
+const guideInVideo = (video, guide) => {
+  const vr = video.getBoundingClientRect();
+  const gr = guide.getBoundingClientRect();
+  const scale = Math.max(vr.width / video.videoWidth, vr.height / video.videoHeight);
+  const offX = (vr.width - video.videoWidth * scale) / 2;
+  const offY = (vr.height - video.videoHeight * scale) / 2;
+  return {
+    x: (gr.left - vr.left - offX) / scale,
+    y: (gr.top - vr.top - offY) / scale,
+    w: gr.width / scale,
+    h: gr.height / scale,
+  };
+};
+
+/** The guide and a margin around it, clamped to the camera image. */
+const around = (frame, share, video) => {
+  const x0 = Math.max(0, Math.floor(frame.x - frame.w * share));
+  const y0 = Math.max(0, Math.floor(frame.y - frame.h * share));
+  const x1 = Math.min(video.videoWidth, Math.ceil(frame.x + frame.w * (1 + share)));
+  const y1 = Math.min(video.videoHeight, Math.ceil(frame.y + frame.h * (1 + share)));
+  return { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
+};
+
+/**
+ * The ID camera, full screen: the camera behind an ID-shaped guide (the rest
+ * dimmed), a live tip under it (move closer, hold steady, too dark, glare…)
+ * from checks run on this phone, and the guide turning green when the photo
+ * will read well. It takes the photo by itself once it has looked good for
+ * a moment (the shutter works any time), then shows it to keep or retake.
+ * Only the guide's area (plus a margin) is kept.
+ */
+function CameraCapture({ side, onCapture, onClose }) {
+  const videoRef = useRef(null);
+  const guideRef = useRef(null);
+  const uploadRef = useRef(null);
+  const canvasRef = useRef(null);
+  const recentRef = useRef([]);
+  const goodSinceRef = useRef(null);
+  const [phase, setPhase] = useState('starting'); // starting | live | review | error
+  const [result, setResult] = useState(null);
+  const [placeHelp, setPlaceHelp] = useState(false);
+  const [review, setReview] = useState(null); // { file, url, check }
+  const title = side === 'back' ? 'Back of your ID' : 'Front of your ID';
+
+  // The back camera, as sharp as the phone gives.
   useEffect(() => {
     let stream;
+    let stopped = false;
     (async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1920 } },
+          audio: false,
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
         });
+        if (stopped) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         if (videoRef.current) videoRef.current.srcObject = stream;
+        setPhase('live');
       } catch {
-        setError('Camera is unavailable. Allow camera access or upload a photo instead.');
+        if (!stopped) setPhase('error');
       }
     })();
-    return () => stream?.getTracks().forEach((track) => track.stop());
+    return () => {
+      stopped = true;
+      stream?.getTracks().forEach((track) => track.stop());
+    };
   }, []);
 
-  const capture = () => {
+  // Full screen: nothing behind it scrolls, and Escape closes it.
+  useEffect(() => {
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  const takePhoto = useCallback((check) => {
     const video = videoRef.current;
-    if (!video?.videoWidth) return;
+    const guide = guideRef.current;
+    if (!video?.videoWidth || !guide) return;
+    // The guide's area and a little around it, at the camera's full size.
+    const crop = around(guideInVideo(video, guide), 0.07, video);
+    const scale = Math.min(1, 2000 / crop.w);
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.width = Math.round(crop.w * scale);
+    canvas.height = Math.round(crop.h * scale);
+    canvas.getContext('2d').drawImage(video, crop.x, crop.y, crop.w, crop.h, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => {
-      if (blob) onCapture(new File([blob], 'id-capture.jpg', { type: 'image/jpeg' }));
+      if (!blob) return;
+      const file = new File([blob], `id-${side || 'front'}.jpg`, { type: 'image/jpeg' });
+      setReview({ file, url: URL.createObjectURL(file), check });
+      setPhase('review');
     }, 'image/jpeg', 0.92);
+  }, [side]);
+
+  // The live checks, on a small copy of the guide's area.
+  useEffect(() => {
+    if (phase !== 'live') return undefined;
+    recentRef.current = [];
+    goodSinceRef.current = null;
+    let placeSince = null;
+    const timer = setInterval(() => {
+      const video = videoRef.current;
+      const guide = guideRef.current;
+      if (!video?.videoWidth || !guide) return;
+      const frame = guideInVideo(video, guide);
+      const region = around(frame, 0.22, video);
+      const scale = Math.min(1, 400 / region.w);
+      const canvas = canvasRef.current || (canvasRef.current = document.createElement('canvas'));
+      canvas.width = Math.max(1, Math.round(region.w * scale));
+      canvas.height = Math.max(1, Math.round(region.h * scale));
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, region.x, region.y, region.w, region.h, 0, 0, canvas.width, canvas.height);
+      const check = checkIdFrame(ctx.getImageData(0, 0, canvas.width, canvas.height), {
+        x: (frame.x - region.x) * scale,
+        y: (frame.y - region.y) * scale,
+        w: frame.w * scale,
+        h: frame.h * scale,
+      });
+      // The tip changes only when the last three checks agree: no flicker.
+      const recent = [...recentRef.current, check].slice(-3);
+      recentRef.current = recent;
+      const steady = recent.length === 3 && recent.every((r) => r.check === check.check);
+      if (steady) setResult(check);
+      const now = Date.now();
+      placeSince = check.check === 'place' ? (placeSince ?? now) : null;
+      setPlaceHelp(Boolean(placeSince) && now - placeSince > 3000);
+      if (steady && check.ok) {
+        goodSinceRef.current = goodSinceRef.current ?? now;
+        if (now - goodSinceRef.current >= AUTO_AFTER_MS) {
+          clearInterval(timer);
+          takePhoto('good');
+        }
+      } else {
+        goodSinceRef.current = null;
+      }
+    }, CHECK_EVERY_MS);
+    return () => clearInterval(timer);
+  }, [phase, takePhoto]);
+
+  useEffect(() => () => {
+    if (review?.url) URL.revokeObjectURL(review.url);
+  }, [review]);
+
+  const retake = () => {
+    setReview(null);
+    setResult(null);
+    setPhase('live');
   };
 
+  // The guide: white while looking for the card, amber while it needs a
+  // change, green when the photo will read well.
+  const state = !result || result.check === 'place' ? 'search' : result.ok ? 'good' : 'adjust';
+  const tip = phase === 'starting' ? 'Starting camera…' : result ? result.tip : 'Place your ID inside the frame';
+  const warning = review && review.check !== 'good' ? REVIEW_WARNINGS[review.check] : null;
+
   return (
-    <div className={`idv-camera ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} role="dialog" aria-modal="true" aria-label="Capture ID photo">
-      <div className="idv-camera-panel ui-sheet-panel">
-        {error ? (
-          <p className="idv-camera-error">{error}</p>
-        ) : (
-          <>
-            <video ref={videoRef} autoPlay playsInline muted className="idv-camera-video" />
-            <p className="idv-camera-hint">Fit the whole card inside the frame and avoid glare.</p>
-          </>
-        )}
-        <div className="idv-camera-actions">
-          <button type="button" className="idv-btn idv-btn-ghost" onClick={onClose}>Cancel</button>
-          {!error && (
-            <button type="button" className="idv-btn idv-btn-primary" onClick={capture}>
-              <Camera size={18} /> Capture
-            </button>
-          )}
-        </div>
+    <div className="idv-cam" role="dialog" aria-modal="true" aria-label={`Take a photo: ${title}`}>
+      <video ref={videoRef} autoPlay playsInline muted className="idv-cam-video" hidden={phase === 'review'} />
+
+      <div className="idv-cam-top">
+        <button type="button" className="idv-cam-close" onClick={onClose} aria-label="Close camera">
+          <X size={22} weight="bold" />
+        </button>
+        <strong>{phase === 'review' ? 'Check your photo' : title}</strong>
+        <span aria-hidden="true" />
       </div>
+
+      {phase === 'error' && (
+        <div className="idv-cam-center">
+          <div className="idv-cam-error">
+            <Camera size={36} />
+            <p>The camera is not available. Allow camera access in your browser, or upload a photo of your ID instead.</p>
+            <button type="button" className="idv-cam-btn is-primary" onClick={() => uploadRef.current?.click()}>
+              <UploadSimple size={18} /> Upload a photo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(phase === 'starting' || phase === 'live') && (
+        <>
+          <div className="idv-cam-center">
+            <div
+              ref={guideRef}
+              className={`idv-cam-guide is-${state}`}
+              style={{ aspectRatio: String(ID_RATIO) }}
+              aria-hidden="true"
+            >
+              <span className="idv-cam-corner is-tl" />
+              <span className="idv-cam-corner is-tr" />
+              <span className="idv-cam-corner is-bl" />
+              <span className="idv-cam-corner is-br" />
+            </div>
+            <p className={`idv-cam-tip is-${state}`} role="status" aria-live="polite">{tip}</p>
+            {placeHelp && <p className="idv-cam-help">Tip: lay your ID on a plain, darker surface.</p>}
+          </div>
+          <div className="idv-cam-bottom">
+            <button type="button" className="idv-cam-upload" onClick={() => uploadRef.current?.click()}>
+              <UploadSimple size={18} /> Upload
+            </button>
+            <button
+              type="button"
+              className={`idv-cam-shutter is-${state}`}
+              onClick={() => takePhoto(result?.check || 'place')}
+              disabled={phase !== 'live'}
+              aria-label="Take photo"
+            >
+              <span />
+            </button>
+            <span className="idv-cam-spacer" aria-hidden="true" />
+          </div>
+        </>
+      )}
+
+      {phase === 'review' && review && (
+        <>
+          <div className="idv-cam-center">
+            <img src={review.url} alt={`${title}, as taken`} className="idv-cam-photo" />
+            {warning ? (
+              <p className="idv-cam-warning"><WarningCircle size={18} weight="fill" /> {warning}</p>
+            ) : (
+              <p className="idv-cam-note">Is your whole ID in the photo, sharp and easy to read?</p>
+            )}
+          </div>
+          {/* A photo that did not look right: Retake is the main button. */}
+          <div className="idv-cam-bottom is-review">
+            <button type="button" className={`idv-cam-btn${warning ? ' is-primary' : ''}`} onClick={retake}>
+              <ArrowClockwise size={18} /> Retake
+            </button>
+            <button type="button" className={`idv-cam-btn${warning ? '' : ' is-primary'}`} onClick={() => onCapture(review.file)}>
+              Use photo
+            </button>
+          </div>
+        </>
+      )}
+
+      <input
+        ref={uploadRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        onChange={(e) => {
+          const picked = e.target.files?.[0];
+          e.target.value = '';
+          if (picked) onCapture(picked);
+        }}
+      />
     </div>
   );
 }
@@ -166,6 +386,7 @@ export default function IdentityVerifier({
   const [cameraSide, setCameraSide] = useState(null);
   const [contacting, setContacting] = useState(false);
   const navigate = useNavigate();
+  const closeCamera = useCallback(() => setCameraSide(null), []);
 
   const setStatus = useCallback((next) => {
     setStatusState(next);
@@ -407,7 +628,8 @@ export default function IdentityVerifier({
 
       {cameraSide && (
         <CameraCapture
-          onClose={() => setCameraSide(null)}
+          side={cameraSide}
+          onClose={closeCamera}
           onCapture={(captured) => {
             pickFile(cameraSide, captured);
             setCameraSide(null);
