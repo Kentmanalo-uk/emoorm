@@ -226,7 +226,6 @@
 .register-form-input:focus {
   outline: none;
   border-color: var(--t-primary-600, #059669);
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
 }
 
 select.register-form-input {
@@ -250,7 +249,6 @@ select.register-form-input:disabled {
 
 .register-form-input-error:focus {
   border-color: var(--t-danger-500, #ef4444);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 .register-form-toggle-password {

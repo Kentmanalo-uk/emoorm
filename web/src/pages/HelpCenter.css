@@ -89,7 +89,6 @@
 .hc-field input:focus,
 .hc-field textarea:focus {
   border-color: var(--t-primary-600, #059669);
-  box-shadow: 0 0 0 3px var(--t-primary-50, #ecfdf5);
 }
 
 .hc-form-foot {

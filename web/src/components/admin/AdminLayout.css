@@ -697,7 +697,6 @@
 
 .admin-input:focus {
   border-color: var(--t-primary-600, #059669);
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
 }
 
 .admin-input:disabled {
@@ -741,6 +740,10 @@
   outline: none;
   cursor: pointer;
   color: var(--t-neutral-700, #374151);
+}
+
+.admin-select:focus {
+  border-color: var(--t-primary-600, #059669);
 }
 
 /* Pagination */

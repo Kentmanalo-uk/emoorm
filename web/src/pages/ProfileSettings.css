@@ -134,7 +134,6 @@
 .ps-input:focus {
   outline: none;
   border-color: var(--t-primary-600, #059669);
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
 }
 
 .ps-input:disabled {

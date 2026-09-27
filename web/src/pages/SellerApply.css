@@ -259,7 +259,6 @@
 .apply-field textarea:focus,
 .apply-field select:focus {
   border-color: var(--t-secondary-500, #29a366);
-  box-shadow: 0 0 0 3px rgba(41, 163, 102, 0.1);
 }
 
 .apply-field textarea {

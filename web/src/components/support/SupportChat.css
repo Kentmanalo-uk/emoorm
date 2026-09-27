@@ -1091,7 +1091,7 @@
   }
 
   .sc-composer textarea:focus {
-    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+    box-shadow: 0 0 0 1px var(--t-primary-600, #059669);
   }
 
   .sc-composer .sc-send {

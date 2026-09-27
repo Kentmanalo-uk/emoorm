@@ -646,7 +646,6 @@
 .municipality-select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
 }
 
 .products-section .products-grid {

@@ -325,6 +325,11 @@
     background: var(--t-neutral-50, #f9fafb);
   }
 
+  /* Chat: Ate Moormy, the AI assistant */
+  .scm-ai {
+    color: #8b5cf6;
+  }
+
   .scm-badge {
     position: absolute;
     top: -3px;

@@ -331,7 +331,7 @@
 }
 
 .cd-composer input:focus {
-  box-shadow: 0 0 0 2px var(--t-primary-200, #a7f3d0);
+  box-shadow: 0 0 0 1px var(--t-primary-600, #059669);
 }
 
 .cd-composer button {

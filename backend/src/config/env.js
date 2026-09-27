@@ -191,6 +191,19 @@ const config = {
     // Development only: return raw OCR text in the submit response.
     debugOcr: process.env.IDENTITY_OCR_DEBUG === 'true' && process.env.NODE_ENV !== 'production',
   },
+
+  // Ate Moormy, the sellers' assistant: a small open model on Hugging Face
+  // (Inference Providers, OpenAI-style chat). Without HF_TOKEN she answers
+  // from her built-in seller guide only.
+  ai: {
+    hfToken: process.env.HF_TOKEN || '',
+    model: process.env.AI_MODEL || 'Qwen/Qwen3-4B-Instruct-2507',
+    // Tried once when the first model is unavailable.
+    fallbackModel: process.env.AI_FALLBACK_MODEL || 'meta-llama/Llama-3.1-8B-Instruct',
+    apiUrl: process.env.AI_API_URL || 'https://router.huggingface.co/v1/chat/completions',
+    // Per answer; the web app stops waiting at 30s.
+    timeoutMs: parseInt(process.env.AI_TIMEOUT_MS || '20000', 10),
+  },
 };
 
 // Validate required environment variables

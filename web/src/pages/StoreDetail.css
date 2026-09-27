@@ -380,7 +380,6 @@
 
 .shop-search input:focus {
   border-color: var(--shop-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--shop-primary) 15%, transparent);
 }
 
 .shop-search-clear {

@@ -1,0 +1,363 @@
+/* Ate Moormy, the sellers' AI assistant (SellerAssistant.jsx) */
+
+.sa-card {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 210px);
+  min-height: 520px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.sa-scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 20px 20px 12px;
+  overflow-y: auto;
+}
+
+.sa-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 4px auto 8px;
+  max-width: 340px;
+  text-align: center;
+}
+
+.sa-hero > .sa-avatar {
+  margin-bottom: 6px;
+}
+
+.sa-hero strong {
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.sa-hero > span:not(.sa-avatar) {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.sa-hero small {
+  margin-top: 4px;
+  color: var(--t-neutral-400, #94a3b8);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.sa-avatar {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+}
+
+.sa-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sa-row.is-user {
+  justify-content: flex-end;
+}
+
+.sa-message {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  max-width: 82%;
+}
+
+.sa-row.is-user .sa-message {
+  align-items: flex-end;
+}
+
+.sa-row.is-assistant > .sa-bubble {
+  max-width: 82%;
+}
+
+.sa-bubble {
+  padding: 10px 14px;
+  border-radius: 16px 16px 16px 6px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 14.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.sa-row.is-user .sa-bubble {
+  border-radius: 16px 16px 6px 16px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.sa-bubble p {
+  margin: 0;
+}
+
+.sa-bubble p + p,
+.sa-bubble p + ul,
+.sa-bubble p + ol,
+.sa-bubble ul + p,
+.sa-bubble ol + p {
+  margin-top: 8px;
+}
+
+.sa-bubble ul,
+.sa-bubble ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.sa-bubble li + li {
+  margin-top: 4px;
+}
+
+.sa-bubble strong {
+  font-weight: 600;
+}
+
+.sa-bubble.is-error {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.sa-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Where an answer points: the page it is about */
+.sa-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sa-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* Questions to tap */
+.sa-suggest {
+  margin-left: 40px;
+}
+
+.sa-suggest-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.sa-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sa-chip {
+  padding: 8px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-800, #1e293b);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sa-chip:hover:not(:disabled) {
+  border-color: var(--t-primary-600, #059669);
+  color: var(--t-primary-700, #047857);
+}
+
+.sa-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* "…" while she answers */
+.sa-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 16px;
+}
+
+.sa-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--t-neutral-400, #94a3b8);
+  animation: sa-dot 1.2s infinite ease-in-out;
+}
+
+.sa-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.sa-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes sa-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sa-typing span {
+    animation: none;
+  }
+}
+
+.sa-end {
+  height: 1px;
+  flex-shrink: 0;
+}
+
+/* The question box */
+.sa-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+  background: var(--t-neutral-0, #fff);
+}
+
+.sa-composer textarea {
+  flex: 1;
+  min-width: 0;
+  /* One line to start (phones otherwise give text boxes 104px); it grows as the seller types. */
+  height: 44px;
+  min-height: 44px;
+  max-height: 120px;
+  padding: 10px 14px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 20px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-900, #0f172a);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+}
+
+.sa-composer textarea:focus {
+  border-color: var(--t-primary-600, #059669);
+}
+
+.sa-send {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  cursor: pointer;
+}
+
+.sa-send:disabled {
+  background: var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-400, #94a3b8);
+  cursor: default;
+}
+
+/* Phones: the whole page is the chat (grey, white answers), and the
+   question box stays at the bottom of the screen. */
+.sa-page.is-phone .sa-card {
+  display: block;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sa-page.is-phone .sa-scroll {
+  gap: 10px;
+  padding: 8px 0 calc(84px + env(safe-area-inset-bottom));
+  overflow: visible;
+}
+
+.sa-page.is-phone .sa-bubble {
+  background: var(--t-neutral-0, #fff);
+  font-size: 15px;
+}
+
+.sa-page.is-phone .sa-row.is-user .sa-bubble {
+  background: var(--t-primary-600, #059669);
+}
+
+.sa-page.is-phone .sa-bubble.is-error {
+  background: var(--t-danger-50, #fef2f2);
+}
+
+.sa-page.is-phone .sa-message {
+  max-width: 86%;
+}
+
+.sa-page.is-phone .sa-chip {
+  font-size: 14px;
+}
+
+.sa-page.is-phone .sa-composer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--t-neutral-200, #e5e7eb);
+}
+
+.sa-page.is-phone .sa-composer textarea {
+  font-size: 16px;
+}

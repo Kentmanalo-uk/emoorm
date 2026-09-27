@@ -24,6 +24,7 @@ import SellerStore from './pages/SellerStore';
 import SellerProducts from './pages/SellerProducts';
 import SellerOrders from './pages/SellerOrders';
 import SellerMessages from './pages/SellerMessages';
+import SellerAssistant from './pages/SellerAssistant';
 import SellerSupport from './pages/SellerSupport';
 import SellerReviews from './pages/SellerReviews';
 import SellerAnalytics from './pages/SellerAnalytics';
@@ -223,6 +224,7 @@ function AppRoutes() {
           <Route path="orders" element={<SellerOrders />} />
           <Route path="returns" element={<SellerReturns />} />
           <Route path="messages" element={<SellerMessages />} />
+          <Route path="assistant" element={<SellerAssistant />} />
           <Route path="support" element={<SellerSupport />} />
           <Route path="notifications" element={<Notifications mode="SELLER" bare shell="seller" />} />
           <Route path="products" element={<SellerProducts />} />

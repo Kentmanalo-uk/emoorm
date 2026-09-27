@@ -54,7 +54,6 @@
 
 .voucher-input:focus {
   border-color: var(--color-accent-pink);
-  box-shadow: 0 0 0 3px var(--color-accent-pink-soft);
 }
 
 /* ── Featured product tag ─────────────────────────────────────── */

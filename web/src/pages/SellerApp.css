@@ -2347,3 +2347,8 @@ a.sh-setup-row:active {
   font-weight: 500;
   text-decoration: none;
 }
+
+/* Messages (computers): "Ask Ate Moormy", the AI assistant */
+.sa-open svg {
+  color: #8b5cf6;
+}

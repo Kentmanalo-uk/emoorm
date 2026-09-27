@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ChatCircleDots, X } from '@phosphor-icons/react';
+import { Link } from 'react-router-dom';
+import { ChatCircleDots, Sparkle, X } from '@phosphor-icons/react';
 import Messenger from '../components/messenger/Messenger';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -26,6 +27,12 @@ export default function SellerMessages() {
         <SellerPageHead
           title="Messages"
           subtitle="Conversations with your buyers"
+          // Phones have Ate Moormy's button in the Chat header instead.
+          actions={isPhone ? null : (
+            <Link to="/seller/assistant" className="btn-seller-outline sa-open" title="Ate Moormy, your AI assistant">
+              <Sparkle size={16} weight="fill" /> Ask Ate Moormy
+            </Link>
+          )}
         />
         {/* Phones (the Chat tab): a one-time tip. */}
         {isPhone && showTip && (

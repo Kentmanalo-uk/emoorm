@@ -4,7 +4,8 @@ import {
   SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
   ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X, ListChecks, ArrowLeft,
-  CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check,
+  CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check, Sparkle,
+  NotePencil,
 } from '@phosphor-icons/react';
 import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
@@ -208,6 +209,7 @@ export default function SellerLayout() {
     // A settings part opened directly: back to its list of parts.
     else if (/^\/seller\/(store|fulfillment)\/[a-z]+$/.test(cleanPath)) navigate(cleanPath.replace(/\/[a-z]+$/, ''));
     else if (/^\/seller\/(products|orders|returns|reviews|analytics|finance)/.test(cleanPath)) navigate('/seller');
+    else if (cleanPath === '/seller/assistant') navigate('/seller/messages');
     else navigate('/seller/menu');
   };
   const chatUnread = waiting['/seller/messages']?.count || 0;
@@ -430,6 +432,11 @@ export default function SellerLayout() {
               <h1 className="scm-title">{phoneTitle}</h1>
             )}
             <div className="scm-actions">
+              {cleanPath === '/seller/messages' && (
+                <Link to="/seller/assistant" className="scm-icon scm-ai" aria-label="Ask Ate Moormy, your AI assistant" title="Ate Moormy (AI assistant)">
+                  <Sparkle size={21} weight="fill" />
+                </Link>
+              )}
               <Link to="/seller/notifications" className="scm-icon" aria-label="Notifications">
                 <Bell size={20} />
                 {unreadCount > 0 && <span className="scm-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
@@ -447,6 +454,17 @@ export default function SellerLayout() {
               <Link to="/seller/products/new" state={{ fromList: true }} className="scm-icon scm-icon--bar" aria-label="Add product">
                 <Plus size={20} weight="bold" />
               </Link>
+            )}
+            {cleanPath === '/seller/assistant' && (
+              <button
+                type="button"
+                className="scm-icon scm-icon--bar"
+                aria-label="New chat"
+                title="New chat"
+                onClick={() => window.dispatchEvent(new Event('moormy:new-chat'))}
+              >
+                <NotePencil size={20} />
+              </button>
             )}
           </header>
         )}
@@ -592,6 +610,7 @@ const LABELS = {
   '/seller/orders': 'My Orders',
   '/seller/returns': 'Returns & refunds',
   '/seller/messages': 'Messages',
+  '/seller/assistant': 'Ate Moormy',
   '/seller/support': 'Admin Messages',
   '/seller/products': 'Products',
   '/seller/products/new': 'Add Product',
@@ -620,6 +639,7 @@ const PHONE_TITLES = {
   '/seller/products': 'My products',
   '/seller/products/new': 'Add product',
   '/seller/messages': 'Chat',
+  '/seller/assistant': 'Ate Moormy',
   '/seller/marketing': 'Marketing',
   '/seller/menu': 'Me',
   '/seller/decorate': 'Decorate my shop',

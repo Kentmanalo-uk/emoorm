@@ -34,7 +34,6 @@
 .ph-input:focus {
   outline: none;
   border-color: var(--t-success-500, #22c55e);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
 }
 
 .ph-input:disabled {
@@ -65,7 +64,7 @@
 }
 
 .ph-input.error:focus {
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+  border-color: var(--t-danger-600, #dc2626);
 }
 
 .ph-error {

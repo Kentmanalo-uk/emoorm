@@ -701,6 +701,11 @@
   display: none;
 }
 
+/* Typing in the list search: a green edge, as on every field. */
+.msgr-list-search:focus-within {
+  box-shadow: inset 0 0 0 1px var(--t-primary-600, #059669);
+}
+
 /* Mobile thread header controls (hidden by default). */
 .msgr-thread-back,
 .msgr-thread-menu {
@@ -1086,7 +1091,7 @@
 
   .msgr-composer-input:focus {
     border: 0;
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+    box-shadow: 0 0 0 1px var(--t-primary-600, #059669);
   }
 
   .msgr-composer-send {
