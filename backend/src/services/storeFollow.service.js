@@ -1,4 +1,5 @@
 const followRepository = require('../repositories/storeFollow.repository');
+const shopReadiness = require('./shopReadiness.service');
 const storeRepository = require('../repositories/store.repository');
 const notificationRepository = require('../repositories/notification.repository');
 const { ApiError } = require('../middleware/errorHandler');
@@ -61,6 +62,8 @@ const getFollowStatus = async (buyerId, storeId) => {
 
 const listFollowing = async (buyerId, opts = {}) => {
   const rows = await followRepository.listByBuyer(buyerId, opts);
+  // A shop that is not ready to sell has no products to show yet.
+  const ready = await shopReadiness.readyIds(rows.map((r) => r.store.id));
   return rows.map((r) => ({
     id: r.id,
     followedAt: r.createdAt,
@@ -74,7 +77,7 @@ const listFollowing = async (buyerId, opts = {}) => {
       coverImage: r.store.coverImage,
       description: r.store.description,
       municipality: r.store.municipality,
-      productCount: r.store._count?.products || 0,
+      productCount: ready.has(r.store.id) ? (r.store._count?.products || 0) : 0,
       followerCount: r.store._count?.followers || 0,
     },
   }));

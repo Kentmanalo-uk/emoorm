@@ -7,7 +7,8 @@ const voucherRepository = require('../repositories/voucher.repository');
 const voucherService = require('./voucher.service');
 const notificationService = require('./notification.service');
 const identityVerificationService = require('./identityVerification.service');
-const appSettingService = require('./appSetting.service');
+const deliveryQuoteService = require('./deliveryQuote.service');
+const shopReadiness = require('./shopReadiness.service');
 const { ApiError } = require('../middleware/errorHandler');
 const { priceForSelection, stockForSelection } = require('../utils/variantPricing');
 
@@ -99,6 +100,9 @@ const createOrder = async (userId, data) => {
   if (store.ownerId === userId) {
     throw new ApiError('You cannot purchase from your own store', 400);
   }
+  if (!(await shopReadiness.isReady(storeId))) {
+    throw new ApiError("This shop isn't taking orders yet. Please check back soon.", 400);
+  }
 
   // Fulfillment method must be supported by the store
   const mode = store.fulfillmentMode || 'DELIVERY';
@@ -126,15 +130,17 @@ const createOrder = async (userId, data) => {
     throw new ApiError('This store has not set up QR payment', 400);
   }
 
-  // Delivery-only validations
+  // Delivery-only validations. The quote also carries the fee for this
+  // address: the barangay's or town's own fee, else the store's standard fee.
+  let deliveryQuote = null;
   if (fulfillmentMethod === 'DELIVERY') {
     if (!deliveryAddress) {
       throw new ApiError('Delivery address is required', 400);
     }
     const muniForCoverage = buyerMunicipalityId || buyer.municipalityId;
     const brgyForCoverage = buyerBarangay || buyer.barangay;
-    const covered = await storeRepository.isAreaCovered(storeId, muniForCoverage, brgyForCoverage);
-    if (!covered) {
+    deliveryQuote = await deliveryQuoteService.quote(store, muniForCoverage, brgyForCoverage);
+    if (!deliveryQuote.covered) {
       throw new ApiError('Delivery is not available for your address. Please choose Pickup instead.', 400);
     }
   }
@@ -199,12 +205,9 @@ const createOrder = async (userId, data) => {
     });
   }
 
-  // Each store sets its own delivery fee; stores that have not set one use
-  // the platform default. There is no free-shipping threshold.
-  const { deliveryFee: platformDeliveryFee } = await appSettingService.getCheckoutPricing();
-  const DELIVERY_FEE = fulfillmentMethod === 'PICKUP'
-    ? 0
-    : (store.deliveryFee != null ? Number(store.deliveryFee) : platformDeliveryFee);
+  // Pickup is free; delivery costs what the store charges for the buyer's
+  // area (see deliveryQuote.service). There is no free-shipping threshold.
+  const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0 : deliveryQuote.fee;
   let voucherRecord = null;
   let discountAmount = 0;
   if (voucherCode) {

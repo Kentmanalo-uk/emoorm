@@ -488,6 +488,128 @@
   background: var(--sa-green);
 }
 
+/* ── Home: "Complete your shop" — a tick or an empty circle per step ── */
+.sh-setup .sh-card-head {
+  margin-bottom: 10px;
+}
+
+.sh-setup-count {
+  color: var(--sa-muted);
+  font-size: 13px;
+}
+
+.sh-setup-bar {
+  height: 6px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.sh-setup-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sa-green);
+  transition: width 0.3s;
+}
+
+.sh-setup-list {
+  margin: 0 -16px -6px;
+  padding: 0;
+  list-style: none;
+}
+
+.sh-setup-list li + li {
+  border-top: 1px solid var(--sa-line);
+}
+
+.sh-setup-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  padding: 0 16px;
+  color: var(--sa-text);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+a.sh-setup-row:active {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.sh-setup-mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 50%;
+  color: #fff;
+}
+
+.sh-setup-mark.is-done {
+  border-color: var(--sa-green);
+  background: var(--sa-green);
+}
+
+.sh-setup-mark.is-waiting {
+  border-color: var(--t-warning-500, #f59e0b);
+  background: var(--t-warning-500, #f59e0b);
+}
+
+.sh-setup-mark.is-failed {
+  border-color: var(--t-danger-500, #ef4444);
+  background: var(--t-danger-500, #ef4444);
+}
+
+.sh-setup-label {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Read out, not shown: whether a step is done. */
+.sh-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.sh-setup-row.is-done .sh-setup-label {
+  color: var(--sa-muted);
+}
+
+.sh-setup-tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--sa-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.sh-setup-tag.is-sell {
+  background: var(--t-accent-50, #fdf2f8);
+  color: var(--t-accent-700, #be185d);
+}
+
+.sh-setup-tag.is-waiting {
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-700, #b45309);
+}
+
+.sh-setup-tag.is-failed {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-700, #b91c1c);
+}
+
 /* ── Home: sales, the green card of the desktop dashboard ────── */
 .sh-sales {
   background: var(--sa-green-dark);
@@ -1031,6 +1153,15 @@
 .smk-note svg {
   flex-shrink: 0;
   color: var(--t-warning-600, #d97706);
+}
+
+.smk-note-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.smk-note .sh-notice-cta {
+  text-decoration: none;
 }
 
 .smk-left {

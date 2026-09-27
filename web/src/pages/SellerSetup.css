@@ -368,6 +368,18 @@ a.ss-step-link:hover {
   font-weight: 600;
 }
 
+.ss-tag--sell {
+  background: var(--t-accent-50, #fdf2f8);
+  color: var(--t-accent-700, #be185d);
+}
+
+.ss-hero-sell {
+  margin: 8px 0 0;
+  color: var(--t-accent-700, #be185d);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
 .ss-step-state {
   display: inline-flex;
   align-items: center;

@@ -1,5 +1,6 @@
 import {
   PaperPlaneTilt, Storefront, Truck, MapPin, HandCoins, QrCode, Package, IdentificationCard, SealCheck,
+  Image as ImageIcon,
 } from '@phosphor-icons/react';
 import axios from './axios';
 
@@ -7,6 +8,7 @@ import axios from './axios';
  * The new-shop checklist. The API (GET /stores/my/setup) sends only facts:
  * step keys, done flags and what is missing. This file turns them into the
  * words, icons and links sellers see, for the setup page and the dashboard.
+ * `label` is the short name the phone Home's "Complete your shop" list uses.
  */
 
 export const fetchSellerSetup = () => axios.get('/stores/my/setup').then((res) => res.data);
@@ -17,71 +19,103 @@ const joinWords = (list) => (list.length <= 1
   ? list[0] || ''
   : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`);
 
-const PROFILE_PARTS = { logo: 'a logo', description: 'a short description', location: 'your map pin' };
+const BRANDING_PARTS = { logo: 'a logo', banner: 'a cover banner' };
+const PROFILE_PARTS = { description: 'a short description', location: 'your map pin' };
 
 /**
  * @param {Object} step - One step from the API
  * @param {{municipality?: String}} context
- * @returns {{title, text, action, to, icon, tone, group, optional}}
+ * @returns {{title, label, text, action, to, icon, tone, group, optional}}
  *   tone: 'done' | 'todo' | 'failed' | 'waiting'
  *   group: 'ready' (get the shop ready) | 'live' (go public)
  */
 export const describeStep = (step, { municipality } = {}) => {
-  const base = { optional: Boolean(step.optional), tone: step.done ? 'done' : 'todo', group: 'ready' };
+  const base = {
+    optional: Boolean(step.optional),
+    // Until these are done the shop's products are not live (see the API's
+    // shopReadiness.service).
+    neededToSell: Boolean(step.neededToSell),
+    tone: step.done ? 'done' : 'todo',
+    group: 'ready',
+  };
 
   switch (step.key) {
     case 'apply':
       return {
         ...base,
         title: 'Apply to sell',
+        label: 'Apply to sell',
         text: 'Your seller application is in.',
         icon: PaperPlaneTilt,
         to: null,
       };
 
-    case 'profile': {
-      const missing = (step.missing || []).map((part) => PROFILE_PARTS[part]).filter(Boolean);
-      const onlyLogo = step.missing?.length === 1 && step.missing[0] === 'logo';
+    case 'branding': {
+      const missing = (step.missing || []).map((part) => BRANDING_PARTS[part]).filter(Boolean);
       return {
         ...base,
-        title: 'Make your shop look good',
+        title: 'Add your logo and banner',
+        label: 'Shop logo and banner',
         text: step.done
-          ? 'Logo, description and map pin are set.'
-          : `Add ${joinWords(missing)} so buyers know and find your shop.`,
-        action: 'Edit shop profile',
-        icon: Storefront,
-        to: onlyLogo ? '/seller/store#branding' : '/seller/store#shop-info',
+          ? 'Your logo and cover banner are up.'
+          : `Add ${joinWords(missing)} so buyers recognise your shop.`,
+        action: 'Add images',
+        icon: ImageIcon,
+        to: '/seller/store#branding',
       };
     }
 
-    case 'delivery-fee':
+    case 'profile': {
+      const missing = (step.missing || []).map((part) => PROFILE_PARTS[part]).filter(Boolean);
       return {
         ...base,
-        title: 'Set your delivery fee',
+        title: 'Describe your shop',
+        label: 'Shop description and map pin',
         text: step.done
-          ? (step.fee > 0 ? `${peso(step.fee)} per delivery order.` : 'Free delivery.')
-          : 'How much you charge per delivery. Enter 0 for free delivery.',
-        action: 'Set delivery fee',
-        icon: Truck,
-        to: '/seller/fulfillment#delivery-fee',
+          ? 'Your description and map pin are set.'
+          : `Add ${joinWords(missing)} so buyers know and find your shop.`,
+        action: 'Edit shop profile',
+        icon: Storefront,
+        to: '/seller/store#shop-info',
       };
+    }
 
     case 'delivery-areas':
       return {
         ...base,
         title: 'Choose where you deliver',
+        label: 'Where you deliver',
         text: step.done
           ? `You deliver to ${plural(step.count, 'area')}.`
-          : 'Pick the towns and barangays you can deliver to.',
+          : 'Pick the towns you deliver to, and the barangays if not all of them.',
         action: 'Choose areas',
         icon: MapPin,
         to: '/seller/fulfillment#delivery-areas',
       };
 
+    case 'delivery-fee': {
+      const own = step.pricedAreas || 0;
+      const ownText = own > 0 ? ` ${plural(own, 'area')} ${own === 1 ? 'has' : 'have'} its own fee.` : '';
+      return {
+        ...base,
+        title: 'Set your delivery fees',
+        label: 'Delivery fees',
+        text: step.done
+          ? (step.fee == null
+            ? 'Every area has its own fee.'
+            : `${step.fee > 0 ? `${peso(step.fee)} standard fee.` : 'Free delivery as standard.'}${ownText}`)
+          : 'One fee for everywhere, or a fee for each town or barangay. Delivery can be free.',
+        action: 'Set delivery fees',
+        icon: Truck,
+        to: '/seller/fulfillment#delivery-fee',
+      };
+    }
+
     case 'pickup':
       return {
         ...base,
         title: 'Set your pickup spot',
+        label: 'Pickup spot',
         text: step.done ? 'Buyers know where to collect their orders.' : 'Tell buyers where to collect their orders.',
         action: 'Set pickup spot',
         icon: HandCoins,
@@ -92,6 +126,7 @@ export const describeStep = (step, { municipality } = {}) => {
       return {
         ...base,
         title: 'Add your payment QR',
+        label: 'Payment options',
         text: step.done
           ? 'Buyers can pay you by QR.'
           : step.optional
@@ -106,6 +141,7 @@ export const describeStep = (step, { municipality } = {}) => {
       return {
         ...base,
         title: 'Add your first product',
+        label: 'Add your first product',
         text: step.done
           ? `${plural(step.count, 'product')} added.`
           : 'Photos, a price and how many you have. It takes about two minutes.',
@@ -122,6 +158,7 @@ export const describeStep = (step, { municipality } = {}) => {
         group: 'live',
         tone: step.done ? 'done' : failed ? 'failed' : checking ? 'waiting' : 'todo',
         title: 'Verify your identity',
+        label: 'Verify your identity',
         text: step.done
           ? 'Your ID is confirmed.'
           : failed
@@ -143,6 +180,7 @@ export const describeStep = (step, { municipality } = {}) => {
         group: 'live',
         tone: step.done ? 'done' : rejected ? 'failed' : 'waiting',
         title: step.done ? 'Your shop is public' : 'Get approved',
+        label: 'Admin approval',
         text: step.done
           ? 'Buyers can find and order from your shop.'
           : rejected
@@ -154,8 +192,23 @@ export const describeStep = (step, { municipality } = {}) => {
     }
 
     default:
-      return { ...base, title: step.key, text: '', icon: SealCheck, to: null };
+      return { ...base, title: step.key, label: step.key, text: '', icon: SealCheck, to: null };
   }
+};
+
+/**
+ * What still keeps the shop's products off the public listings, as
+ * { key, label, to } in checklist order; empty once it is ready to sell.
+ */
+export const sellBlockers = (setup) => {
+  if (!setup || setup.readyToSell !== false) return [];
+  const context = { municipality: setup.municipality };
+  return (setup.steps || [])
+    .filter((step) => step.neededToSell && !step.done)
+    .map((step) => {
+      const meta = describeStep(step, context);
+      return { key: step.key, label: meta.label, to: meta.to };
+    });
 };
 
 /** The one step to do next: the first open, required step the seller can act on. */

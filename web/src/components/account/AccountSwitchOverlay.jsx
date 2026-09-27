@@ -32,7 +32,7 @@ export default function AccountSwitchOverlay() {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const switchMs = reduced ? 150 : SWITCH_MS;
     const toPage = setTimeout(() => {
-      navigate(request.path);
+      navigate(request.path, { replace: Boolean(request.replace) });
       setLeavingId(request.id);
     }, switchMs);
     const done = setTimeout(finish, switchMs + EXIT_MS);

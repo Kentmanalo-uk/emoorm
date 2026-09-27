@@ -8,6 +8,7 @@ import {
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
+import useAccountSwitchStore from '../store/accountSwitchStore';
 import { fetchIdentityStatus } from '../lib/identity';
 import './Profile.css';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -54,6 +55,18 @@ const Profile = () => {
   const [followedStores, setFollowedStores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [identityStatus, setIdentityStatus] = useState('NOT_VERIFIED');
+
+  // Phones: "My shop" switches to the Seller Center with the same animation
+  // as the header's Seller Center links. Modified clicks keep the browser's
+  // default (new tab etc.).
+  const startAccountSwitch = useAccountSwitchStore((s) => s.start);
+  const cachedShop = useAccountSwitchStore((s) => s.shop);
+  const shop = cachedShop && (!cachedShop.ownerId || cachedShop.ownerId === user?.id) ? cachedShop : null;
+  const enterShop = (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    startAccountSwitch('seller', '/seller');
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -233,7 +246,16 @@ const Profile = () => {
 
         <section className="pf-m-section pf-m-list">
           <h2>More</h2>
-          <Row to="/sell" icon={ShoppingBag} label="Sell on Emoorm" />
+          {user?.role === 'SELLER' ? (
+            <Link to="/seller" className="pf-m-row" onClick={enterShop}>
+              <span className="pf-m-row-icon"><Store size={19} weight="fill" /></span>
+              <span className="pf-m-row-label">My shop</span>
+              {shop?.name && <span className="pf-m-row-hint">{shop.name}</span>}
+              <ChevronRight size={16} className="pf-m-row-chev" />
+            </Link>
+          ) : (
+            <Row to="/sell" icon={ShoppingBag} label="Sell on Emoorm" />
+          )}
           <Row to="/profile/support" icon={Lifebuoy} label="Help & Support" />
           <Row to="/profile/reports" icon={Flag} label="My Reports" />
           <Row to="/profile/settings" icon={Settings} label="Settings" />

@@ -111,7 +111,11 @@ const mergeChoices = (existing, raw) => {
   return out;
 };
 
-export default function ProductForm({ product = null, categories = [], onCancel, onSaved }) {
+/**
+ * @param {Array<{key, label}>} [sellBlockers] - What the shop still needs
+ *   before it can sell; while any are left, a product saves as a draft.
+ */
+export default function ProductForm({ product = null, categories = [], onCancel, onSaved, sellBlockers = [] }) {
   const editing = !!product;
   const [initial] = useState(() => toFormState(product));
   const [form, setForm] = useState(initial);
@@ -342,7 +346,15 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         <ArrowLeft size={16} /> Back to products
       </button>
 
-      {editing && product.status === 'APPROVED' && (
+      {sellBlockers?.length > 0 ? (
+        <div className="pf-note pf-note--draft">
+          <Info size={16} />
+          <span>
+            Your shop isn't ready to sell yet, so this product is saved as a draft buyers can't see.
+            {' '}It goes live by itself once you finish: {sellBlockers.map((b) => b.label).join(', ')}.
+          </span>
+        </div>
+      ) : editing && product.status === 'APPROVED' && (
         <div className="pf-note">
           <Info size={16} />
           <span>This product is live. Your changes show to buyers as soon as you save.</span>
@@ -567,7 +579,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         </button>
         <button type="submit" className="pf-btn pf-btn--primary" disabled={saving}>
           {saving ? <CircleNotch size={17} className="pf-spin" /> : <Check size={17} weight="bold" />}
-          {saving ? 'Saving…' : editing ? 'Save changes' : 'Add product'}
+          {saving ? 'Saving…' : editing ? 'Save changes' : sellBlockers?.length ? 'Save as draft' : 'Add product'}
         </button>
       </div>
 

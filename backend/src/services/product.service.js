@@ -8,6 +8,7 @@ const followService = require('./storeFollow.service');
 const { cached } = require('../lib/cachePolicy');
 const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
+const shopReadiness = require('./shopReadiness.service');
 const { bufferToDHash, hammingDistance, hashFromSource, HASH_BIT_LENGTH } = require('../utils/imageHash');
 const { stockedVariation } = require('../utils/variantPricing');
 
@@ -296,9 +297,10 @@ const isPubliclyVisible = (product) =>
 /**
  * Apply the detail visibility rule and shape the record for the viewer.
  * The owner and admins see the full record; everyone else sees the public
- * shape and only when the listing is live.
+ * shape and only when the listing is live: approved, in a public shop that
+ * is ready to sell (shopReadiness.service).
  */
-const presentDetail = (product, viewerId, viewerRole) => {
+const presentDetail = async (product, viewerId, viewerRole) => {
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);
   }
@@ -306,7 +308,7 @@ const presentDetail = (product, viewerId, viewerRole) => {
   if (isOwner || isAdminRole(viewerRole)) {
     return stripStoreInternals(product);
   }
-  if (!isPubliclyVisible(product)) {
+  if (!isPubliclyVisible(product) || !(await shopReadiness.isReady(product.storeId || product.store?.id))) {
     throw new ApiError('Product not found', 404);
   }
   return toPublicProduct(product, { withOwner: true });
@@ -460,17 +462,24 @@ const getProducts = async (rawOptions) => {
     options.storeIsActive = true;
     options.storeIsSuspended = false;
     options.storeIsApproved = true;
-    options.excludeOwnerId = options.userId;
+    // A seller's feed leaves out their own products. A shop's own page
+    // (storeId) lists all of that shop's products for everyone, its owner
+    // included; it showed the owner an empty shop. Buyers own no products,
+    // so their feed is the shared one (and comes from the cache).
+    options.excludeOwnerId = options.userRole === 'SELLER' && !options.storeId
+      ? options.userId
+      : undefined;
+    // Only shops that can take orders (shopReadiness.service).
+    options.storeWhere = shopReadiness.READY_STORE;
   }
 
   const shape = (result) => (options.isAdmin
     ? { ...result, products: result.products.map(stripStoreInternals) }
     : { ...result, products: result.products.map((p) => toPublicProduct(p)) });
 
-  // Only the anonymous public catalogue is shared between callers. An admin
-  // listing is private and must be fresh for moderation; a signed-in seller's
-  // listing hides their own products, which makes it caller-specific. Both go
-  // straight to the database.
+  // Only the public catalogue is shared between callers. An admin listing is
+  // private and must be fresh for moderation; a seller's feed hides their own
+  // products, which makes it caller-specific. Both go straight to the database.
   const isSharedPublicView = !options.isAdmin && !options.excludeOwnerId;
   if (!isSharedPublicView) {
     return shape(await productRepository.findAll(options));
@@ -890,7 +899,7 @@ const searchByImageBuffer = async (buffer, { threshold = 20, limit = 24 } = {}) 
       deletedAt: null,
       status: 'APPROVED',
       imageHash: { not: null },
-      store: { isActive: true, isSuspended: false, isApproved: true },
+      store: { isActive: true, isSuspended: false, isApproved: true, ...shopReadiness.READY_STORE },
     },
     include: {
       store: { select: { id: true, name: true, slug: true } },
@@ -953,6 +962,11 @@ const bulkUpdateProducts = async (userId, ids, action) => {
   const bulkAction = BULK_ACTIONS[action];
   if (!bulkAction) {
     throw new ApiError('Invalid bulk action', 400);
+  }
+  // Showing a product is publishing it: not before buyers can order from the
+  // shop (shopReadiness.service). Hiding is always allowed.
+  if (action === 'UNHIDE' && !(await shopReadiness.isReady(store.id))) {
+    throw new ApiError('Finish setting up your shop first. Buyers can see your products once it is ready to sell.', 400);
   }
 
   const updatedCount = await productRepository.bulkUpdateStatus(

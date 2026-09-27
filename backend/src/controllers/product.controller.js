@@ -81,6 +81,7 @@ const getProducts = asyncHandler(async (req, res) => {
     sortBy,
     sortOrder,
     userId: req.user?.id,
+    userRole: req.user?.role,
     isAdmin: !!req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN'),
   };
 

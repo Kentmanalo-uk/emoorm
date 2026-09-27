@@ -4,7 +4,7 @@ import {
   Plus, Clock, Truck, CheckCircle, Package,
   ShoppingBag, TrendUp as TrendingUp, Star, ChartBar as BarChart2, User, Users, WarningCircle, X,
   IdentificationCard, ArrowRight, Wallet, CaretRight, LockSimple, Bell, Receipt,
-  ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, ListChecks, PlusCircle,
+  ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, PlusCircle, Check, ExclamationMark,
 } from '@phosphor-icons/react';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -15,7 +15,7 @@ import Skeleton from '../components/ui/Skeleton';
 import UserAvatar from '../components/ui/UserAvatar';
 import { getSellerFollowerStats, subscribeToFollowChanges } from '../lib/follow';
 import { completeGuide, shouldShowGuide } from '../lib/sellerGuides';
-import { describeStep } from '../lib/sellerSetup';
+import { describeStep, sellBlockers } from '../lib/sellerSetup';
 
 const DASHBOARD_GUIDE = 'dashboard';
 import './SellerDashboard.css';
@@ -73,7 +73,11 @@ export default function SellerDashboard() {
   // overall progress until the shop is ready (the seller may hide that one).
   const identityStep = setup?.steps?.find((step) => step.key === 'identity') || null;
   const identityMeta = identityStep && !identityStep.done ? describeStep(identityStep) : null;
-  const showSetupCard = Boolean(setup && !setup.complete && shouldShowGuide(store, 'setup-card'));
+  // While the shop cannot sell, buyers see none of its products: the card
+  // says so and stays up until it can.
+  const blockers = sellBlockers(setup);
+  const showSetupCard = Boolean(setup && !setup.complete
+    && (blockers.length > 0 || shouldShowGuide(store, 'setup-card')));
   const setupNext = setup?.steps?.find(
     (step) => !step.done && !step.optional && !step.waiting && step.key !== 'identity',
   ) || null;
@@ -276,20 +280,28 @@ export default function SellerDashboard() {
           <section className="sd-setup" aria-label="Shop setup">
             <div className="sd-setup-body">
               <div className="sd-setup-head">
-                <strong>Finish setting up your shop</strong>
-                <button
-                  type="button"
-                  className="sd-card-hide"
-                  aria-label="Hide shop setup from the dashboard"
-                  title="Hide (Shop setup stays in the menu)"
-                  onClick={() => completeGuide('setup-card', setStore)}
-                >
-                  <X size={16} weight="bold" />
-                </button>
+                <strong>{blockers.length ? "Your products aren't live yet" : 'Finish setting up your shop'}</strong>
+                {!blockers.length && (
+                  <button
+                    type="button"
+                    className="sd-card-hide"
+                    aria-label="Hide shop setup from the dashboard"
+                    title="Hide (Shop setup stays in the menu)"
+                    onClick={() => completeGuide('setup-card', setStore)}
+                  >
+                    <X size={16} weight="bold" />
+                  </button>
+                )}
               </div>
               <p>
-                {setup.doneCount} of {setup.total} done
-                {setupNext ? ` · Next: ${describeStep(setupNext, { municipality: setup.municipality }).title}` : ''}
+                {blockers.length
+                  ? `Buyers can see them once you finish: ${blockers.map((b) => b.label).join(', ')}.`
+                  : (
+                    <>
+                      {setup.doneCount} of {setup.total} done
+                      {setupNext ? ` · Next: ${describeStep(setupNext, { municipality: setup.municipality }).title}` : ''}
+                    </>
+                  )}
               </p>
               <div className="sd-setup-bar" aria-hidden="true">
                 <span style={{ width: `${Math.round((setup.doneCount / Math.max(1, setup.total)) * 100)}%` }} />
@@ -364,7 +376,7 @@ export default function SellerDashboard() {
                 <div className="sd-kpi-side">
                   <div className="sd-kpi-metrics">
                     <StatCard label="Completed Orders" value={analyticsAvailable ? formatNumber(stats.completedOrders) : '—'} compact />
-                    <StatCard label="Active Products" value={formatNumber(stats.activeProducts)} compact />
+                    <StatCard label="Active Products" value={formatNumber(liveProducts(stats, setup))} compact />
                     <StatCard label="Avg. Order Value" value={analyticsAvailable ? `₱${formatNumber(stats.avgOrderValue)}` : '—'} compact />
                   </div>
                   <section className="sd-stat sd-kpi-quick" aria-label="Quick Actions">
@@ -668,7 +680,14 @@ const HOME_TOOLS = [
   { to: '/seller/products/new', label: 'Add product', Icon: PlusCircle, tone: 'teal', tour: 'add-product' },
 ];
 
-/** The one thing Home asks for first, or null: shop private, ID, then setup. */
+/** Products buyers can see: none while the shop is not ready to sell. */
+const liveProducts = (stats, setup) => (setup?.readyToSell === false ? 0 : stats.activeProducts);
+
+/**
+ * The one thing Home asks for first, or null: the shop is private, its
+ * products are not live yet because something buyers need to order is
+ * missing, or the ID needs doing. The rest is the "Complete your shop" card.
+ */
 const homeNotice = (store, setup) => {
   const identity = setup?.steps?.find((step) => step.key === 'identity');
   if (store?.isApproved === false) {
@@ -681,6 +700,17 @@ const homeNotice = (store, setup) => {
       to: '/seller/setup',
     };
   }
+  const blockers = sellBlockers(setup);
+  if (blockers.length) {
+    return {
+      Icon: WarningCircle,
+      tone: 'amber',
+      title: "Your products aren't live yet",
+      hint: `Finish: ${blockers.map((b) => b.label).join(', ')}`,
+      cta: 'Finish',
+      to: blockers[0].to || '/seller/setup',
+    };
+  }
   if (identity && !identity.done) {
     if (identity.status === 'FAILED') {
       return { Icon: IdentificationCard, tone: 'red', title: "We couldn't confirm your ID", hint: 'Send a clear photo of a valid ID.', cta: 'Retry', to: '/seller/verification' };
@@ -690,18 +720,64 @@ const homeNotice = (store, setup) => {
     }
     return { Icon: IdentificationCard, tone: 'amber', title: 'Verify your identity', hint: 'Buyers and admins trust verified shops.', cta: 'Verify', to: '/seller/verification' };
   }
-  if (setup && !setup.complete) {
-    return {
-      Icon: ListChecks,
-      tone: 'green',
-      title: 'Finish setting up your shop',
-      hint: `${setup.doneCount} of ${setup.total} done`,
-      cta: 'Continue',
-      to: '/seller/setup',
-    };
-  }
   return null;
 };
+
+/**
+ * Phones: "Complete your shop", every setup step on one line with a tick
+ * (done) or an empty circle (to do), in the order a shop gets ready for
+ * orders. Each line opens the card where it is done. Gone once complete.
+ */
+function HomeSetupCard({ setup }) {
+  const context = { municipality: setup.municipality };
+  const rows = setup.steps.map((step) => ({ step, meta: describeStep(step, context) }));
+  // The same count as Shop setup and the menu (optional steps left out).
+  const { doneCount: done, total } = setup;
+  const percent = Math.round((done / Math.max(1, total)) * 100);
+
+  return (
+    <section className="sh-card sh-setup" aria-label="Complete your shop">
+      <div className="sh-card-head">
+        <h2>Complete your shop</h2>
+        <span className="sh-setup-count">{done} of {total} done</span>
+      </div>
+      <div className="sh-setup-bar" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label="Shop setup progress">
+        <span style={{ width: `${percent}%` }} />
+      </div>
+      <ul className="sh-setup-list">
+        {rows.map(({ step, meta }) => {
+          const tag = meta.tone === 'waiting' ? 'Waiting'
+            : meta.tone === 'failed' ? 'Needs attention'
+              : meta.tone === 'done' ? null
+                : meta.optional ? 'Optional'
+                  : meta.neededToSell ? 'Needed to sell' : null;
+          const body = (
+            <>
+              <span className={`sh-setup-mark is-${meta.tone}`} aria-hidden="true">
+                {meta.tone === 'done' && <Check size={12} weight="bold" />}
+                {meta.tone === 'waiting' && <Clock size={12} weight="bold" />}
+                {meta.tone === 'failed' && <ExclamationMark size={12} weight="bold" />}
+              </span>
+              <span className="sh-setup-label">
+                {meta.label}
+                <span className="sh-sr">{meta.tone === 'done' ? ' (done)' : ' (not done yet)'}</span>
+              </span>
+              {tag && <em className={`sh-setup-tag is-${meta.tone}${tag === 'Needed to sell' ? ' is-sell' : ''}`}>{tag}</em>}
+              {meta.to && <CaretRight size={16} className="sh-chev" />}
+            </>
+          );
+          return (
+            <li key={step.key} data-step={step.key}>
+              {meta.to
+                ? <Link to={meta.to} className={`sh-setup-row is-${meta.tone}`}>{body}</Link>
+                : <div className={`sh-setup-row is-${meta.tone}`}>{body}</div>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 /** Tips: real things a seller can do, each one tap away. Swipe or wait. */
 function HomeTips({ onShare }) {
@@ -768,6 +844,7 @@ function PhoneHome({
 }) {
   const { share, shareSheet } = useShare();
   const notice = homeNotice(store, setup);
+  const live = liveProducts(stats, setup);
   const name = store?.name || 'My shop';
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
   const trend = salesByDay.slice(-14).map((day) => Number(day.total || 0));
@@ -846,6 +923,8 @@ function PhoneHome({
 
         <HomeTips onShare={shareShop} />
 
+        {setup && !setup.complete && <HomeSetupCard setup={setup} />}
+
         <section className="sh-card sh-sales" data-tour="store-overview">
           <div className="sh-card-head">
             <h2>Sales</h2>
@@ -868,7 +947,7 @@ function PhoneHome({
           </div>
           <div className="sh-sales-stats">
             <span><strong>{isLoading ? '–' : formatNumber(stats.completedOrders)}</strong> {Number(stats.completedOrders) === 1 ? 'order' : 'orders'} done</span>
-            <span><strong>{isLoading ? '–' : formatNumber(stats.activeProducts)}</strong> live {Number(stats.activeProducts) === 1 ? 'product' : 'products'}</span>
+            <span><strong>{isLoading ? '–' : formatNumber(live)}</strong> live {Number(live) === 1 ? 'product' : 'products'}</span>
           </div>
         </section>
 

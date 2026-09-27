@@ -841,12 +841,19 @@ export default function StoreDetail() {
             <div className="shop-empty">
               <span className="shop-empty-icon"><Package size={isPhone ? 30 : 40} weight="fill" /></span>
               <p>
-                {search
-                  ? `No products match “${search}”.`
-                  : activeCategory !== 'all'
-                    ? 'No products in this category yet.'
-                    : 'This store has no products yet.'}
+                {store.readyToSell === false && !search && activeCategory === 'all'
+                  ? (isOwnStore
+                    ? "Buyers can't see your products yet. Finish setting up your shop in the Seller Center to start selling."
+                    : 'This shop is getting ready. Its products will show here soon.')
+                  : search
+                    ? `No products match “${search}”.`
+                    : activeCategory !== 'all'
+                      ? 'No products in this category yet.'
+                      : 'This store has no products yet.'}
               </p>
+              {store.readyToSell === false && isOwnStore && (
+                <Link to="/seller/setup" className="shop-empty-btn">Finish shop setup</Link>
+              )}
               {(search || activeCategory !== 'all') && (
                 <button
                   type="button"

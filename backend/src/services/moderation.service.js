@@ -4,6 +4,7 @@ const auditLogService = require('./auditLog.service');
 const notificationService = require('./notification.service');
 const identityVerificationService = require('./identityVerification.service');
 const { storeHealthIssues } = require('../utils/storeHealth');
+const shopReadiness = require('./shopReadiness.service');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -273,7 +274,7 @@ const reviewIdentity = async (actor, userId, { decision, note } = {}, req = null
 };
 
 /**
- * Stores that may need a follow-up, with the reasons:
+ * Stores that may need a follow-up, with the reasons: not ready to sell,
  * no live products, high cancellation rate, low ratings, or no sales lately.
  */
 const getStoreHealth = async (actor, { municipalityId, limit = 8 } = {}) => {
@@ -287,12 +288,14 @@ const getStoreHealth = async (actor, { municipalityId, limit = 8 } = {}) => {
   if (stores.length === 0) return [];
   const storeIds = stores.map((s) => s.id);
 
-  const [liveProducts, recentOrders, ratings] = await Promise.all([
+  const [liveProducts, ready, recentOrders, ratings] = await Promise.all([
+    // Live: what buyers can see (see shopReadiness.countLiveProducts).
     prisma.product.groupBy({
       by: ['storeId'],
-      where: { storeId: { in: storeIds }, status: 'APPROVED', deletedAt: null },
+      where: { storeId: { in: storeIds }, status: 'APPROVED', deletedAt: null, store: shopReadiness.VISIBLE_STORE },
       _count: { _all: true },
     }),
+    shopReadiness.readyIds(storeIds),
     prisma.order.groupBy({
       by: ['storeId', 'status'],
       where: { storeId: { in: storeIds }, createdAt: { gte: since } },
@@ -329,6 +332,7 @@ const getStoreHealth = async (actor, { municipalityId, limit = 8 } = {}) => {
     const avgRating = rating ? rating.sum / rating.count : null;
     const issues = storeHealthIssues({
       live,
+      readyToSell: ready.has(store.id),
       ordersTotal: orders.total,
       ordersCancelled: orders.cancelled,
       ratingCount: rating?.count || 0,
@@ -351,7 +355,7 @@ const getStoreHealth = async (actor, { municipalityId, limit = 8 } = {}) => {
   }
 
   // Most issues first; cancellations and low ratings outrank inactivity.
-  const weight = { HIGH_CANCELLATIONS: 3, LOW_RATING: 3, NO_PRODUCTS: 1, NO_SALES: 1 };
+  const weight = { HIGH_CANCELLATIONS: 3, LOW_RATING: 3, NOT_READY: 2, NO_PRODUCTS: 1, NO_SALES: 1 };
   const score = (s) => s.issues.reduce((sum, i) => sum + (weight[i.code] || 1), 0);
   return flagged.sort((a, b) => score(b) - score(a)).slice(0, Math.min(20, Number(limit) || 8));
 };

@@ -30,9 +30,23 @@ const errorHandler = (err, req, res, next) => {
   // ENOENT, which fell through to the Prisma branch below and was reported as
   // "Database operation failed" with a 500 — misleading in the response and
   // in monitoring.
+  // The database was briefly unreachable, its connections all taken, or the
+  // pool wait ran out. Nothing about the request was wrong: say "busy, try
+  // again" (503 + Retry-After, which the web app retries once for reads)
+  // rather than a 500 carrying Prisma's text, which names the database host.
+  const dbCode = err.errorCode || err.code;
+  const dbUnavailable = ['P1001', 'P1002', 'P1008', 'P1017', 'P2024'].includes(dbCode)
+    || err.name === 'PrismaClientInitializationError'
+    || err.name === 'PrismaClientRustPanicError';
+
   if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
     statusCode = 404;
     message = 'Not found';
+  } else if (dbUnavailable) {
+    statusCode = 503;
+    message = 'The service is busy right now. Please try again.';
+    errors = null;
+    res.set('Retry-After', '1');
   } else if (err.code && String(err.code).startsWith('P')) {
     // Prisma error codes are all P-prefixed (P1xxx, P2xxx). Matching on the
     // presence of `code` alone swept in every Node system error too.

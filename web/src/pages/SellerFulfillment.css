@@ -395,6 +395,155 @@
   padding: 8px 0 4px;
 }
 
+/* Delivery fees: the standard fee, then a fee box (or Free) per town or
+   barangay. An empty box uses the fee from the level above. */
+.sf-standard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.sf-standard-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sf-standard-text label {
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sf-standard-text small {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+}
+
+.sf-fee {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.sf-fee-box {
+  display: inline-flex;
+  align-items: center;
+  width: 112px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.sf-fee-box:focus-within {
+  border-color: var(--t-primary-500, #10b981);
+}
+
+.sf-fee-peso {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 14px;
+}
+
+.sf-fee-box input {
+  width: 100%;
+  min-width: 0;
+  padding: 0 0 0 4px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--t-neutral-900, #0f172a);
+  font: inherit;
+  font-size: 14px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.sf-fee-box input::-webkit-outer-spin-button,
+.sf-fee-box input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.sf-fee.is-free .sf-fee-box {
+  border-color: var(--t-primary-200, #a7f3d0);
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.sf-fee.is-free .sf-fee-box input::placeholder {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+  opacity: 1;
+}
+
+.sf-free {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-600, #475569);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sf-free[aria-pressed='true'] {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff);
+}
+
+.sf-fee-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.sf-fee-row-name {
+  flex: 1 1 60px;
+  min-width: 0;
+  color: var(--t-neutral-800, #1e293b);
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+
+.sf-brgy-fees {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--t-neutral-100, #f1f5f9);
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.sf-brgy-fees .sf-fee-row {
+  padding: 8px 6px 8px 12px;
+}
+
+.sf-brgy-fees .sf-fee-row + .sf-fee-row {
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.sf-fee-remove {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  color: var(--t-neutral-400, #94a3b8);
+}
+
 @media (max-width: 640px) {
   .sf-payment-grid {
     grid-template-columns: 1fr;
@@ -586,6 +735,30 @@
   .sc-content .sf-qr-preview img {
     width: 140px;
     height: 140px;
+  }
+
+  .sc-content .sf-standard {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .sc-content .sf-fee-box {
+    width: 92px;
+    height: 40px;
+    border-radius: 10px;
+  }
+
+  .sc-content .sf-free {
+    height: 40px;
+    padding: 0 11px;
+  }
+
+  .sc-content .sf-brgy-fees .sf-fee-row {
+    padding: 6px 4px 6px 12px;
+  }
+
+  .sc-content .sf-brgy-fees {
+    border-radius: 10px;
   }
 
   .sc-content .sf-footer-actions {

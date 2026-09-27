@@ -31,7 +31,8 @@ function useShopFacts(storeId) {
       if (cancelled) return;
       setFacts({
         products,
-        productCount: health?.liveProducts ?? null,
+        // The approved products it shows (live once the shop can sell).
+        productCount: health?.approvedProducts ?? health?.liveProducts ?? null,
         rating: health?.rating ?? null,
         followers: health?.followers ?? 0,
         loaded: true,

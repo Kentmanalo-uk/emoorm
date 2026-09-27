@@ -988,16 +988,35 @@
     display: none;
   }
 
-  /* Analytics & Finance: dates on one row, no refresh/export buttons,
-     one chart instead of three. */
+  /* Analytics & Finance: dates on one row, Refresh and Export sharing the
+     row below. The revenue trend repeats "Sales analytics", so phones keep
+     just the orders trend beside the growth callout. */
   .sc-shell .sc-content .an-daterange-wrap .an-daterange-btn {
     flex: 1 1 0;
     padding: 6px 2px;
   }
 
-  .sc-shell .sc-content .an-actions > .an-icon-btn,
-  .sc-shell .sc-content .an-growth,
-  .sc-shell .sc-content .an-trends {
+  .sc-shell .sc-content .an-actions {
+    display: flex;
+    width: 100%;
+  }
+
+  .sc-shell .sc-content .an-actions > .an-icon-btn {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 40px;
+    border-radius: 12px;
+    background: var(--t-neutral-0, #fff);
+  }
+
+  .sc-shell .sc-content .an-growth {
+    margin-bottom: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    box-shadow: none;
+  }
+
+  .sc-shell .sc-content .an-trends > .an-card:first-child {
     display: none;
   }
 

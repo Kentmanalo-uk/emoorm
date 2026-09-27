@@ -1065,3 +1065,9 @@
     gap: 6px;
   }
 }
+
+/* The shop cannot sell yet: the product saves as a draft. */
+.pf-note--draft {
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-800, #92400e);
+}

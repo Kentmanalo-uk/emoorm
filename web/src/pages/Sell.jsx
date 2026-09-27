@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import useSeo from '../lib/seo';
 import {
   ArrowRight, Star, List as Menu, X, CaretDown as ChevronDown,
@@ -7,6 +7,7 @@ import {
   IdentificationCard, Camera, Package,  Plus, Minus, Money,
 } from '@phosphor-icons/react';
 import useAuthStore from '../store/authStore';
+import useAccountSwitchStore from '../store/accountSwitchStore';
 import Footer from '../components/layout/Footer';
 import AppLogo from '../components/AppLogo';
 import EmptyArt from '../components/ui/EmptyArt';
@@ -147,6 +148,11 @@ export default function Sell() {
 
   const { isAuthenticated, user } = useAuthStore();
   const navigate = useNavigate();
+  const startAccountSwitch = useAccountSwitchStore((s) => s.start);
+  const isSeller = isAuthenticated && user?.role === 'SELLER';
+  useEffect(() => {
+    if (isSeller) startAccountSwitch('seller', '/seller', { replace: true });
+  }, [isSeller, startAccountSwitch]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [activeNav, setActiveNav] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -196,13 +202,12 @@ export default function Sell() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Sellers already have a shop, so this page is not for them. The check sits
-  // below every hook: returning above one changes the hook count between
-  // renders, which React reports as a render error the moment a visitor signs
-  // in as a seller while this page is mounted.
-  if (isAuthenticated && user?.role === 'SELLER') {
-    return <Navigate to="/seller" replace />;
-  }
+  // Sellers already have a shop, so this page is not for them: it switches
+  // them to it (the same animation as the Seller Center links) in place of
+  // itself. The return sits below every hook: returning above one changes the
+  // hook count between renders, which React reports as a render error the
+  // moment a visitor signs in as a seller while this page is mounted.
+  if (isSeller) return null;
 
   return (
     <div className="sell-page">

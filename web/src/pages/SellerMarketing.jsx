@@ -9,6 +9,7 @@ import { resolveImg } from '../lib/media';
 import { getSellerFollowerStats } from '../lib/follow';
 import { useShare } from '../components/ShareSheet';
 import PhoneSheet from '../components/seller/PhoneSheet';
+import { sellBlockers } from '../lib/sellerSetup';
 import Skeleton from '../components/ui/Skeleton';
 import './SellerDashboard.css';
 
@@ -24,7 +25,7 @@ const MESSAGE_MAX = 280;
 const when = (value) => new Date(value).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 
 export default function SellerMarketing() {
-  const { store } = useOutletContext() || {};
+  const { store, setup } = useOutletContext() || {};
   const { share, shareSheet } = useShare();
   const [followers, setFollowers] = useState(null);
   const [feed, setFeed] = useState(null);
@@ -53,12 +54,15 @@ export default function SellerMarketing() {
   }, [store?.id]);
 
   const canSend = feed?.canSend !== false;
+  // Why sending is off: the shop is private, closed, or cannot sell yet.
+  const blockedReason = feed?.blockedReason || 'You can message followers once your shop is public.';
+  const finishTo = feed?.blocked === 'NOT_READY' ? sellBlockers(setup)[0]?.to || '/seller/setup' : null;
   const followerCount = followers ? followers.total : 0;
   const newThisWeek = followers ? followers.last7Days : 0;
 
   const open = (mode) => {
     if (!canSend) {
-      toast('You can message followers once your shop is public.');
+      toast(blockedReason);
       return;
     }
     if (feed && feed.remaining === 0) {
@@ -121,7 +125,11 @@ export default function SellerMarketing() {
         </section>
 
         {!canSend && (
-          <p className="smk-note"><LockSimple size={18} weight="fill" /> You can message followers once your shop is public.</p>
+          <p className="smk-note">
+            <LockSimple size={18} weight="fill" />
+            <span className="smk-note-text">{blockedReason}</span>
+            {finishTo && <Link to={finishTo} className="sh-notice-cta">Finish</Link>}
+          </p>
         )}
 
         {/* Tools */}

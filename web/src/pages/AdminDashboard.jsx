@@ -365,7 +365,7 @@ export default function AdminDashboard() {
   const figures = [
     { key: 'buyers', label: 'Buyers', value: Number(byRole.BUYER || 0) },
     { key: 'sellers', label: 'Sellers', value: Number(byRole.SELLER || 0) },
-    { key: 'live', label: 'Live products', value: Number(byStatus.APPROVED || 0) },
+    { key: 'live', label: 'Live products', value: Number(kpis.liveProducts?.value ?? byStatus.APPROVED ?? 0) },
     { key: 'queued', label: 'Awaiting review', value: Number(byStatus.PENDING || 0), warn: true },
   ];
 

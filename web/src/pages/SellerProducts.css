@@ -613,3 +613,60 @@
     padding: 0 14px;
   }
 }
+
+/* Not live yet: the shop cannot sell, so its products are drafts buyers
+   can't see. The banner says what is left and links to each step. */
+.products-notlive {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--t-warning-200, #fde68a);
+  border-radius: 12px;
+  background: var(--t-warning-50, #fffbeb);
+}
+
+.products-notlive-icon {
+  flex-shrink: 0;
+  color: var(--t-warning-600, #d97706);
+}
+
+.products-notlive-text {
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--t-neutral-700, #374151);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.products-notlive-text strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 14.5px;
+}
+
+.products-notlive-text a {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+}
+
+.products-notlive-btn {
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .sc-content .products-notlive {
+    border-radius: 16px;
+  }
+
+  .sc-content .products-notlive-btn {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+  }
+}

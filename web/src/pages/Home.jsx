@@ -177,31 +177,41 @@ const Home = () => {
   const { municipalities } = useMunicipalities();
   const { categories: sharedCategories } = useCategories();
 
+  // Each section loads on its own and shows as soon as its answer arrives: a
+  // slow or failed store list must not keep the products off the page (they
+  // used to wait for all four requests, and one failure blanked them all).
   useEffect(() => {
-    const fetchHomeData = async () => {
-      try {
-        const [suggestedRes, exploreRes, storesRes, mappedStoresRes] = await Promise.all([
-          axios.get('/products', { params: { pageSize: 6, sortBy: 'createdAt', sortOrder: 'desc' } }),
-          axios.get('/products', { params: { ...EXPLORE_QUERY, page: 1, pageSize: exploreBatch } }),
-          axios.get('/stores', {
-            params: {
-              pageSize: 6,
-              municipalityId: user?.municipalityId || undefined,
-            },
-          }),
-          axios.get('/stores', { params: { pageSize: 100 } }),
-        ]);
-        setFeaturedProducts(suggestedRes.data || []);
-        setExploreProducts(exploreRes.data || []);
+    let cancelled = false;
+    const load = (request, show) => request
+      .then((res) => { if (!cancelled) show(res); })
+      .catch((err) => console.error('Failed to load home data:', err));
+
+    load(
+      axios.get('/products', { params: { pageSize: 6, sortBy: 'createdAt', sortOrder: 'desc' } }),
+      (res) => setFeaturedProducts(res.data || []),
+    );
+    load(
+      axios.get('/products', { params: { ...EXPLORE_QUERY, page: 1, pageSize: exploreBatch } }),
+      (res) => {
+        setExploreProducts(res.data || []);
         setExplorePage(1);
-        setExploreHasMore(Boolean(exploreRes.pagination?.hasNext));
-        setNearbyStores(storesRes.data || []);
-        setMappedStores((mappedStoresRes.data || []).filter((store) => store.latitude != null && store.longitude != null));
-      } catch (err) {
-        console.error('Failed to load home data:', err);
-      }
-    };
-    fetchHomeData();
+        setExploreHasMore(Boolean(res.pagination?.hasNext));
+      },
+    );
+    load(
+      axios.get('/stores', {
+        params: {
+          pageSize: 6,
+          municipalityId: user?.municipalityId || undefined,
+        },
+      }),
+      (res) => setNearbyStores(res.data || []),
+    );
+    load(
+      axios.get('/stores', { params: { pageSize: 100 } }),
+      (res) => setMappedStores((res.data || []).filter((store) => store.latitude != null && store.longitude != null)),
+    );
+    return () => { cancelled = true; };
   }, [user?.municipalityId, exploreBatch]);
 
   const loadMoreExplore = async () => {

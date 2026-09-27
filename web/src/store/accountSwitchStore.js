@@ -4,7 +4,9 @@ import useCartStore from './cartStore';
 
 /**
  * Drives the account-switching overlay (personal ⇄ seller).
- * `request` is { id, target: 'seller' | 'personal', path } while a switch runs.
+ * `request` is { id, target: 'seller' | 'personal', path, replace } while a
+ * switch runs; `replace` swaps out the page it started from (e.g. /sell,
+ * which only forwards a seller to their shop), so Back does not return there.
  * `shop` caches the seller's shop name/logo so the overlay can show it
  * immediately when entering the Seller Center.
  */
@@ -24,11 +26,11 @@ let nextId = 1;
 const useAccountSwitchStore = create((set, get) => ({
   request: null,
   shop: readShop(),
-  start: (target, path) => {
+  start: (target, path, { replace = false } = {}) => {
     if (get().request) return;
     // Re-point the cart at the signed-in account so no other bucket leaks across the switch.
     useCartStore.getState().setOwner(useAuthStore.getState().user?.id || null);
-    set({ request: { id: nextId++, target, path } });
+    set({ request: { id: nextId++, target, path, replace } });
   },
   finish: () => set({ request: null }),
   setShop: (shop) => {

@@ -3,7 +3,8 @@
  * seller's own "Shop health" so the two never disagree.
  *
  * @param {Object} facts
- * @param {Number} facts.live - approved, not deleted products
+ * @param {Number} facts.live - live products, the ones buyers can see
+ * @param {Boolean} [facts.readyToSell] - false while buyers cannot order from the shop yet
  * @param {Number} facts.ordersTotal - orders in the last 30 days
  * @param {Number} facts.ordersCancelled - of those, cancelled
  * @param {Number} facts.ratingCount - reviews on the store's products
@@ -11,9 +12,13 @@
  * @param {Boolean} facts.olderThan30Days - the store is over 30 days old
  * @returns {Array<{code: String, label: String}>}
  */
-const storeHealthIssues = ({ live, ordersTotal, ordersCancelled, ratingCount, avgRating, olderThan30Days }) => {
+const storeHealthIssues = ({
+  live, readyToSell, ordersTotal, ordersCancelled, ratingCount, avgRating, olderThan30Days,
+}) => {
   const issues = [];
-  if (live === 0) issues.push({ code: 'NO_PRODUCTS', label: 'No live products' });
+  // A shop that cannot sell yet shows buyers nothing: name that, not the empty list.
+  if (readyToSell === false) issues.push({ code: 'NOT_READY', label: 'Not ready to sell yet' });
+  else if (live === 0) issues.push({ code: 'NO_PRODUCTS', label: 'No live products' });
   if (ordersTotal >= 3 && ordersCancelled / ordersTotal >= 0.3) {
     issues.push({ code: 'HIGH_CANCELLATIONS', label: `${Math.round((ordersCancelled / ordersTotal) * 100)}% cancelled` });
   }
@@ -26,8 +31,11 @@ const storeHealthIssues = ({ live, ordersTotal, ordersCancelled, ratingCount, av
   return issues;
 };
 
-/** Issues buyers feel (cancellations, low ratings) versus ones that only slow a shop down. */
-const SERIOUS = new Set(['HIGH_CANCELLATIONS', 'LOW_RATING']);
+/**
+ * Issues that cost orders (cancellations and low ratings put buyers off; a
+ * shop that is not ready takes none) versus ones that only slow a shop down.
+ */
+const SERIOUS = new Set(['HIGH_CANCELLATIONS', 'LOW_RATING', 'NOT_READY']);
 
 /** EXCELLENT (no issues), GOOD (only quiet-shop issues) or NEEDS_ATTENTION. */
 const storeHealthLevel = (issues) => {

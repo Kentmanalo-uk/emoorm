@@ -36,9 +36,10 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
 
     // Read-only requests retry once after a short pause when the server is
-    // rate limiting (429) or briefly unreachable (e.g. dev server restarting).
+    // rate limiting (429), busy (502/503/504, e.g. its database connections
+    // all taken) or briefly unreachable (e.g. dev server restarting).
     const status = error.response?.status;
-    const retryable = status === 429 || (!error.response && error.code !== 'ECONNABORTED');
+    const retryable = [429, 502, 503, 504].includes(status) || (!error.response && error.code !== 'ECONNABORTED');
     if (retryable && originalRequest && !originalRequest._retriedTransient
       && (originalRequest.method || 'get').toLowerCase() === 'get') {
       originalRequest._retriedTransient = true;

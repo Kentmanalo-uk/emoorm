@@ -1,4 +1,5 @@
 const express = require('express');
+const { VISIBLE_STORE } = require('../services/shopReadiness.service');
 const prisma = require('../config/database');
 const config = require('../config/env');
 const seoService = require('../services/seo.service');
@@ -62,7 +63,7 @@ const buildSitemap = async () => {
 
   const [products, stores, municipalities, categories] = await Promise.all([
     prisma.product.findMany({
-      where: { deletedAt: null, status: 'APPROVED', store: { isActive: true, isSuspended: false, isApproved: true } },
+      where: { deletedAt: null, status: 'APPROVED', store: VISIBLE_STORE },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: 'desc' },
       // Google accepts 50,000 per sitemap; this stays well inside it while

@@ -2,6 +2,8 @@ const storeRepository = require('../repositories/store.repository');
 const userRepository = require('../repositories/user.repository');
 const prisma = require('../config/database');
 const notificationService = require('./notification.service');
+const deliveryQuoteService = require('./deliveryQuote.service');
+const shopReadiness = require('./shopReadiness.service');
 const { cleanFields } = require('../utils/sanitize');
 const { cached } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
@@ -207,6 +209,27 @@ const getStorefront = async (slug) => {
  * @returns {Promise<Object>} Storefront payload
  */
 const buildStorefront = async (store) => {
+  // A shop that is not ready to sell shows no products (shopReadiness.service).
+  const readyToSell = await shopReadiness.isReady(store.id);
+  if (!readyToSell) {
+    const ratingAgg = await prisma.review.aggregate({
+      where: { deletedAt: null, product: { storeId: store.id, deletedAt: null } },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+    return {
+      ...withPublicOwner(store),
+      readyToSell,
+      stats: {
+        productCount: 0,
+        averageRating: Number(ratingAgg._avg.rating || 0),
+        reviewCount: ratingAgg._count._all || 0,
+        followerCount: store._count?.followers || 0,
+      },
+      categories: [],
+      _count: undefined,
+    };
+  }
 
   const productWhere = {
     storeId: store.id,
@@ -247,6 +270,7 @@ const buildStorefront = async (store) => {
 
   return {
     ...withPublicOwner(store),
+    readyToSell,
     stats: {
       productCount: store._count?.products || 0,
       averageRating: Number(ratingAgg._avg.rating || 0),
@@ -320,7 +344,17 @@ const getStores = async (options = {}) => {
       isActive: options.isActive,
       isSuspended: options.isSuspended,
     },
-    () => storeRepository.findAll(options)
+    async () => {
+      // A shop that is not ready to sell is listed without its products.
+      const result = await storeRepository.findAll(options);
+      const ready = await shopReadiness.readyIds(result.stores.map((s) => s.id));
+      return {
+        ...result,
+        stores: result.stores.map((s) => (ready.has(s.id)
+          ? { ...s, readyToSell: true }
+          : { ...s, readyToSell: false, products: [], _count: { ...(s._count || {}), products: 0 } })),
+      };
+    }
   );
 };
 
@@ -404,6 +438,12 @@ const updateStore = async (storeId, userId, rawData) => {
       } else {
         updateData[field] = data[field];
       }
+    }
+  }
+
+  for (const field of ['pickupAddress', 'paymentQrImage']) {
+    if (typeof updateData[field] === 'string') {
+      updateData[field] = updateData[field].trim() || null;
     }
   }
 
@@ -563,14 +603,18 @@ const replaceMyServiceAreas = async (userId, areas) => {
     .map((a) => ({
       municipalityId: String(a.municipalityId),
       barangay: a.barangay ? String(a.barangay).trim() : null,
+      // Blank: the store's standard fee applies. 0: free delivery here.
+      fee: a.fee === undefined ? null : normalizeDeliveryFee(a.fee),
     }));
   return storeRepository.replaceServiceAreas(store.id, normalized);
 };
 
+/** Whether the store delivers to this address, and the fee it charges there. */
 const checkCoverage = async (storeId, municipalityId, barangay) => {
-  if (!municipalityId) return { covered: false, reason: 'municipality required' };
-  const covered = await storeRepository.isAreaCovered(storeId, municipalityId, barangay);
-  return { covered };
+  if (!municipalityId) return { covered: false, fee: null, reason: 'municipality required' };
+  const store = await storeRepository.findById(storeId);
+  if (!store || store.deletedAt) throw new ApiError('Store not found', 404);
+  return deliveryQuoteService.quote(store, municipalityId, barangay);
 };
 
 module.exports = {

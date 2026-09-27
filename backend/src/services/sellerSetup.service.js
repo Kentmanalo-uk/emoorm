@@ -2,6 +2,7 @@ const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
 const storeRepository = require('../repositories/store.repository');
 const identityVerificationService = require('./identityVerification.service');
+const shopReadiness = require('./shopReadiness.service');
 
 /**
  * Seller Setup Service
@@ -28,33 +29,42 @@ const getSetup = async (userId) => {
   const delivers = store.fulfillmentMode !== 'PICKUP';
   const picksUp = store.fulfillmentMode !== 'DELIVERY';
 
-  const [productCount, areaCount, identity, owner] = await Promise.all([
+  const [productCount, areaCount, areasWithoutFee, identity, owner] = await Promise.all([
     prisma.product.count({ where: { storeId: store.id, deletedAt: null } }),
     delivers ? prisma.storeServiceArea.count({ where: { storeId: store.id } }) : Promise.resolve(0),
+    delivers ? prisma.storeServiceArea.count({ where: { storeId: store.id, fee: null } }) : Promise.resolve(0),
     identityVerificationService.getStatus(userId),
     prisma.user.findUnique({ where: { id: userId }, select: { sellerApplicationStatus: true } }),
   ]);
 
-  const profileMissing = [
+  const brandingMissing = [
     !store.logo && 'logo',
+    !(store.bannerImage || store.coverImage) && 'banner',
+  ].filter(Boolean);
+  const profileMissing = [
     !hasText(store.description) && 'description',
     (store.latitude == null || store.longitude == null) && 'location',
   ].filter(Boolean);
+  const standardFee = store.deliveryFee == null ? null : Number(store.deliveryFee);
 
   const steps = [
     // Already done by the time the checklist exists, so it opens with a tick.
     { key: 'apply', done: true },
+    { key: 'branding', done: brandingMissing.length === 0, missing: brandingMissing },
     { key: 'profile', done: profileMissing.length === 0, missing: profileMissing },
     ...(delivers
       ? [
-        // Blank means "use the platform default" at checkout; the step asks
-        // the seller to choose their own fee (0 for free delivery counts).
+        { key: 'delivery-areas', done: areaCount > 0, count: areaCount },
+        // Each area may have its own fee; the rest use the standard fee, and
+        // a store without one uses the platform default. The step asks the
+        // seller to decide: a standard fee (0 is free), or a fee on every area.
         {
           key: 'delivery-fee',
-          done: store.deliveryFee !== null && store.deliveryFee !== undefined,
-          fee: store.deliveryFee == null ? null : Number(store.deliveryFee),
+          done: standardFee !== null || (areaCount > 0 && areasWithoutFee === 0),
+          fee: standardFee,
+          areaCount,
+          pricedAreas: areaCount - areasWithoutFee,
         },
-        { key: 'delivery-areas', done: areaCount > 0, count: areaCount },
       ]
       : []),
     ...(picksUp ? [{ key: 'pickup', done: hasText(store.pickupAddress) }] : []),
@@ -77,6 +87,14 @@ const getSetup = async (userId) => {
     },
   ];
 
+  // The steps buyers depend on to order (shopReadiness.service): until they
+  // are done the shop's products are not live. An optional step (the QR while
+  // cash is on) never holds selling back.
+  for (const step of steps) {
+    if (shopReadiness.SELL_STEPS.includes(step.key) && !step.optional) step.neededToSell = true;
+  }
+  const sellMissing = steps.filter((step) => step.neededToSell && !step.done).map((step) => step.key);
+
   const counted = steps.filter((step) => !step.optional);
   const doneCount = counted.filter((step) => step.done).length;
 
@@ -85,6 +103,9 @@ const getSetup = async (userId) => {
     doneCount,
     total: counted.length,
     complete: doneCount === counted.length,
+    // The same rule the public listings use, so the two cannot disagree.
+    readyToSell: await shopReadiness.isReady(store.id),
+    sellMissing,
     municipality: store.municipality?.name || null,
   };
 };

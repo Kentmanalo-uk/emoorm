@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import {
   CaretRight, Storefront, PaintBrush, Wallet, QrCode, Headset, Lifebuoy, ChatText, User, Truck,
   ListChecks, IdentificationCard, Bell, Globe, Gear, ArrowsLeftRight, SignOut, ShareNetwork,
-  PencilSimple, Heartbeat,
+  PencilSimple, Heartbeat, Coins,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -121,7 +121,10 @@ export default function SellerMenu() {
 
         {/* How the shop is doing, in one row. */}
         {health !== false && (
-          <Link to="/seller/analytics" className={`sh-notice sme-health is-${healthMeta?.tone || 'none'}`}>
+          <Link
+            to={health?.readyToSell === false ? '/seller/setup' : '/seller/analytics'}
+            className={`sh-notice sme-health is-${healthMeta?.tone || 'none'}`}
+          >
             <span className="sh-notice-icon"><Heartbeat size={22} weight="fill" /></span>
             <span className="sh-notice-text">
               <b>Shop health: <strong>{health === null ? '…' : healthMeta?.label || '—'}</strong></b>
@@ -159,6 +162,9 @@ export default function SellerMenu() {
           <h2>Settings</h2>
           <Row to="/seller/store" icon={User} label="Shop profile" />
           <Row to="/seller/fulfillment" icon={Truck} label="Delivery & pickup" />
+          {store?.fulfillmentMode !== 'PICKUP' && (
+            <Row to="/seller/fulfillment#delivery-fee" icon={Coins} label="Delivery fees" />
+          )}
           {setup && !setup.complete && (
             <Row to="/seller/setup" icon={ListChecks} label="Shop setup" hint={`${setup.doneCount}/${setup.total}`} />
           )}

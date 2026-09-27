@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const shopReadiness = require('./shopReadiness.service');
 const { ApiError } = require('../middleware/errorHandler');
 const storeRepository = require('../repositories/store.repository');
 const followService = require('./storeFollow.service');
@@ -26,15 +27,18 @@ const ownStore = async (userId) => {
 };
 
 /**
- * @returns {Promise<Object>} { level, issues, liveProducts, ordersLast30Days,
- *   cancelledLast30Days, rating, reviewCount, followers }
+ * @returns {Promise<Object>} { level, issues, liveProducts (buyers can see
+ *   them), approvedProducts (live once the shop can sell), readyToSell,
+ *   ordersLast30Days, cancelledLast30Days, rating, reviewCount, followers }
  */
 const getMyHealth = async (userId) => {
   const store = await ownStore(userId);
   const since = new Date(Date.now() - 30 * DAY_MS);
 
-  const [live, orders, reviews, followers] = await Promise.all([
+  const [live, approved, readyToSell, orders, reviews, followers] = await Promise.all([
+    shopReadiness.countLiveProducts({ storeId: store.id }),
     prisma.product.count({ where: { storeId: store.id, deletedAt: null, status: 'APPROVED' } }),
+    shopReadiness.isReady(store.id),
     prisma.order.groupBy({
       by: ['status'],
       where: { storeId: store.id, createdAt: { gte: since } },
@@ -55,6 +59,7 @@ const getMyHealth = async (userId) => {
 
   const issues = storeHealthIssues({
     live,
+    readyToSell,
     ordersTotal,
     ordersCancelled,
     ratingCount: reviewCount,
@@ -66,6 +71,8 @@ const getMyHealth = async (userId) => {
     level: storeHealthLevel(issues),
     issues,
     liveProducts: live,
+    approvedProducts: approved,
+    readyToSell,
     ordersLast30Days: ordersTotal,
     cancelledLast30Days: ordersCancelled,
     rating: avgRating === null ? null : Number(avgRating.toFixed(1)),
@@ -94,10 +101,33 @@ const announcementSelect = {
   product: { select: { id: true, name: true, slug: true, images: true, price: true } },
 };
 
-/** @returns {Promise<Object>} { announcements, dailyLimit, remaining, nextAllowedAt, canSend } */
+/**
+ * Why the shop cannot message its followers right now, or null if it can.
+ * Announcements send buyers to the shop, so it must be public, open and able
+ * to sell.
+ * @returns {Promise<{code: String, message: String}|null>}
+ */
+const sendBlock = async (store) => {
+  if (store.isApproved === false) {
+    return { code: 'PRIVATE', message: 'Your shop is still private. You can message followers once it is approved.' };
+  }
+  if (!store.isActive || store.isSuspended) {
+    return { code: 'CLOSED', message: 'Your shop is not open, so it cannot send announcements right now.' };
+  }
+  if (!(await shopReadiness.isReady(store.id))) {
+    return { code: 'NOT_READY', message: 'Finish setting up your shop first: buyers cannot order from it yet.' };
+  }
+  return null;
+};
+
+/**
+ * @returns {Promise<Object>} { announcements, dailyLimit, remaining,
+ *   nextAllowedAt, canSend, blocked (PRIVATE, CLOSED, NOT_READY or null),
+ *   blockedReason }
+ */
 const listAnnouncements = async (userId) => {
   const store = await ownStore(userId);
-  const [announcements, limits] = await Promise.all([
+  const [announcements, limits, block] = await Promise.all([
     prisma.storeAnnouncement.findMany({
       where: { storeId: store.id },
       orderBy: { createdAt: 'desc' },
@@ -105,9 +135,15 @@ const listAnnouncements = async (userId) => {
       select: announcementSelect,
     }),
     quota(store.id),
+    sendBlock(store),
   ]);
-  const canSend = store.isActive && !store.isSuspended && store.isApproved !== false;
-  return { announcements, ...limits, canSend };
+  return {
+    announcements,
+    ...limits,
+    canSend: !block,
+    blocked: block?.code || null,
+    blockedReason: block?.message || null,
+  };
 };
 
 /**
@@ -119,12 +155,8 @@ const listAnnouncements = async (userId) => {
  */
 const sendAnnouncement = async (userId, data = {}) => {
   const store = await ownStore(userId);
-  if (store.isApproved === false) {
-    throw new ApiError('Your shop is still private. You can message followers once it is approved.', 403);
-  }
-  if (!store.isActive || store.isSuspended) {
-    throw new ApiError('Your shop is not open, so it cannot send announcements right now.', 403);
-  }
+  const block = await sendBlock(store);
+  if (block) throw new ApiError(block.message, 403);
 
   const message = cleanText(String(data.message || ''), { maxLength: MESSAGE_MAX + 1 });
   if (message.length < MESSAGE_MIN) throw new ApiError('Write a short message (at least 5 characters).', 400);

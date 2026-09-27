@@ -1895,3 +1895,18 @@
     border-radius: 999px;
   }
 }
+
+/* The owner's own shop, not ready to sell yet: a way to finish setup. */
+.shop-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--shop-primary, #059669);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}

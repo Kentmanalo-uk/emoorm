@@ -674,6 +674,9 @@ model StoreServiceArea {
   municipalityId String   @map("municipality_id")
   municipality   Municipality @relation(fields: [municipalityId], references: [id])
   barangay       String?  // null means "all barangays in this municipality"
+  /// What delivery to this area costs (0: free). Null: the store's standard
+  /// delivery fee applies, or the platform default when it has none.
+  fee            Decimal? @db.Decimal(10, 2)
 
   createdAt      DateTime @default(now()) @map("created_at")
 

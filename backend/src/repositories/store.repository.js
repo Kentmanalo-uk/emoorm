@@ -342,7 +342,7 @@ const getServiceAreas = async (storeId) => {
 };
 
 const replaceServiceAreas = async (storeId, areas) => {
-  // areas: [{ municipalityId, barangay|null }]
+  // areas: [{ municipalityId, barangay|null, fee|null }]
   return prisma.$transaction(async (tx) => {
     await tx.storeServiceArea.deleteMany({ where: { storeId } });
     if (!areas.length) return [];
@@ -350,6 +350,7 @@ const replaceServiceAreas = async (storeId, areas) => {
       storeId,
       municipalityId: a.municipalityId,
       barangay: a.barangay || null,
+      fee: a.fee ?? null,
     }));
     // createMany doesn't return records on MySQL, then re-fetch
     await tx.storeServiceArea.createMany({ data: rows, skipDuplicates: true });
@@ -358,20 +359,11 @@ const replaceServiceAreas = async (storeId, areas) => {
       include: { municipality: { select: { id: true, name: true, code: true } } },
       orderBy: [{ municipality: { name: 'asc' } }, { barangay: 'asc' }],
     });
+  }).then(async (saved) => {
+    // Areas decide whether the shop is ready to sell, so its listings change.
+    await invalidateStore({ id: storeId });
+    return saved;
   });
-};
-
-const isAreaCovered = async (storeId, municipalityId, barangay) => {
-  const matchBarangay = (barangay || '').trim().toLowerCase();
-  const areas = await prisma.storeServiceArea.findMany({
-    where: { storeId, municipalityId },
-    select: { barangay: true },
-  });
-  if (!areas.length) return false;
-  // If any area for this muni has barangay=null, whole municipality is covered
-  if (areas.some((a) => !a.barangay)) return true;
-  if (!matchBarangay) return false;
-  return areas.some((a) => (a.barangay || '').trim().toLowerCase() === matchBarangay);
 };
 
 module.exports = {
@@ -388,5 +380,4 @@ module.exports = {
   unsuspendStore,
   getServiceAreas,
   replaceServiceAreas,
-  isAreaCovered,
 };

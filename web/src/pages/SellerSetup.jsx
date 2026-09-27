@@ -35,6 +35,7 @@ function StepRow({ step, meta }) {
         <strong>
           {meta.title}
           {meta.optional && meta.tone !== 'done' && <em className="ss-tag">Optional</em>}
+          {meta.neededToSell && meta.tone === 'todo' && <em className="ss-tag ss-tag--sell">Needed to sell</em>}
         </strong>
         <span>{meta.text}</span>
       </span>
@@ -107,6 +108,9 @@ export default function SellerSetup() {
                 ? 'Everything is set and your shop is public. Buyers can find and order from it now.'
                 : 'A few quick steps and your shop is ready for buyers. Tap a step to do it.'}
             </p>
+            {!setup.complete && setup.readyToSell === false && (
+              <p className="ss-hero-sell">Your products go live once the steps marked “Needed to sell” are done.</p>
+            )}
           </div>
           <div className="ss-progress">
             <div className="ss-progress-top">

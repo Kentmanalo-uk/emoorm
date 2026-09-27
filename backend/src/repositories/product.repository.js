@@ -222,6 +222,7 @@ const findAll = async (options = {}) => {
     storeIsActive,
     storeIsSuspended,
     storeIsApproved,
+    storeWhere,
     excludeOwnerId,
     minPrice,
     maxPrice,
@@ -250,6 +251,10 @@ const findAll = async (options = {}) => {
       ...(where.store || {}),
       ownerId: { not: excludeOwnerId },
     };
+  }
+  // e.g. the "ready to sell" rule for public listings (shopReadiness.service).
+  if (storeWhere) {
+    where.store = { ...(where.store || {}), ...storeWhere };
   }
 
   const min = Number(minPrice);

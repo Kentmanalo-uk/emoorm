@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Truck,
   MapPin,
@@ -50,6 +50,55 @@ const QR_TYPES = [
 const PSGC_BASE = 'https://psgc.gitlab.io/api';
 const ORIENTAL_MINDORO_CODE = '175200000';
 
+/** A fee as the form holds it: '' (none set) or the amount as text. */
+const feeText = (value) => (value === null || value === undefined || value === '' ? '' : String(Number(value)));
+
+/** A form fee for the API: null (none set), a number, or undefined if invalid. */
+const parseFee = (text) => {
+  const t = String(text ?? '').trim();
+  if (t === '') return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 0 || n > 10000) return undefined;
+  return Math.round(n * 100) / 100;
+};
+
+/**
+ * A delivery fee box: an amount in pesos, or Free. Empty means the fee from
+ * the level above applies (the standard fee, or the Emoorm default), which
+ * the placeholder names.
+ */
+function FeeInput({ id, value, onChange, placeholder, label }) {
+  const free = value !== '' && Number(value) === 0;
+  return (
+    <div className={`sf-fee${free ? ' is-free' : ''}`}>
+      <span className="sf-fee-box">
+        <span className="sf-fee-peso" aria-hidden="true">₱</span>
+        <input
+          id={id}
+          type="number"
+          min="0"
+          max="10000"
+          step="0.01"
+          inputMode="decimal"
+          value={free ? '' : value}
+          placeholder={free ? 'Free' : placeholder}
+          disabled={free}
+          aria-label={label}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </span>
+      <button
+        type="button"
+        className="sf-free"
+        aria-pressed={free}
+        onClick={() => onChange(free ? '' : '0')}
+      >
+        Free
+      </button>
+    </div>
+  );
+}
+
 const normalizeName = (s) =>
   (s || '')
     .toLowerCase()
@@ -61,7 +110,8 @@ const normalizeName = (s) =>
 export default function SellerFulfillment() {
   const [store, setStore] = useState(null);
   const { municipalities } = useMunicipalities();
-  // areas: [{ municipalityId, municipalityName, barangay: string|null }]
+  // areas: [{ municipalityId, municipalityName, barangay: string|null, fee: string }]
+  // fee: '' uses the standard fee below, '0' is free delivery, else ₱ amount.
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -102,6 +152,7 @@ export default function SellerFulfillment() {
             municipalityId: a.municipalityId,
             municipalityName: a.municipality?.name,
             barangay: a.barangay || null,
+            fee: feeText(a.fee),
           }))
         );
         setForm({
@@ -112,7 +163,7 @@ export default function SellerFulfillment() {
           paymentQrType: s.paymentQrType || 'GCASH',
           paymentInstructions: s.paymentInstructions || '',
           acceptsCod: s.acceptsCod ?? true,
-          deliveryFee: s.deliveryFee === null || s.deliveryFee === undefined ? '' : String(Number(s.deliveryFee)),
+          deliveryFee: feeText(s.deliveryFee),
         });
       } catch (err) {
         toast.error(err.message || 'Failed to load store');
@@ -212,12 +263,17 @@ export default function SellerFulfillment() {
           municipalityId: a.municipalityId,
           municipalityName: a.municipalityName,
           wholeMuni: false,
+          townFee: '',
           barangays: [],
         });
       }
       const g = map.get(a.municipalityId);
-      if (a.barangay === null) g.wholeMuni = true;
-      else g.barangays.push(a.barangay);
+      if (a.barangay === null) {
+        g.wholeMuni = true;
+        g.townFee = a.fee;
+      } else {
+        g.barangays.push({ name: a.barangay, fee: a.fee });
+      }
     }
     return Array.from(map.values());
   }, [areas]);
@@ -234,7 +290,7 @@ export default function SellerFulfillment() {
     // Default: whole municipality
     setAreas((prev) => [
       ...prev,
-      { municipalityId: muni.id, municipalityName: muni.name, barangay: null },
+      { municipalityId: muni.id, municipalityName: muni.name, barangay: null, fee: '' },
     ]);
     setMuniPicker('');
   };
@@ -266,7 +322,7 @@ export default function SellerFulfillment() {
       if (whole) {
         return [
           ...filtered,
-          { municipalityId, municipalityName: muni.name, barangay: null },
+          { municipalityId, municipalityName: muni.name, barangay: null, fee: '' },
         ];
       }
       return filtered;
@@ -294,10 +350,20 @@ export default function SellerFulfillment() {
       }
       return [
         ...filtered,
-        { municipalityId, municipalityName: muni.name, barangay: raw },
+        { municipalityId, municipalityName: muni.name, barangay: raw, fee: '' },
       ];
     });
     setBarangayInputs((p) => ({ ...p, [municipalityId]: '' }));
+  };
+
+  /** One area's fee: the whole town (barangay null) or one barangay. */
+  const setAreaFee = (municipalityId, barangay, fee) => {
+    setAreas((prev) => prev.map((a) => (
+      a.municipalityId === municipalityId
+        && (barangay === null ? a.barangay === null : (a.barangay || '').toLowerCase() === barangay.toLowerCase())
+        ? { ...a, fee }
+        : a
+    )));
   };
 
   const removeBarangay = (municipalityId, barangay) => {
@@ -319,10 +385,12 @@ export default function SellerFulfillment() {
       toast.error('Please provide a pickup address.');
       return;
     }
-    const feeText = String(form.deliveryFee ?? '').trim();
-    const fee = Number(feeText);
-    if (feeText !== '' && (!Number.isFinite(fee) || fee < 0 || fee > 10000)) {
-      toast.error('Delivery fee must be between ₱0 and ₱10,000.');
+    const standardFee = parseFee(form.deliveryFee);
+    const badArea = areas.find((a) => parseFee(a.fee) === undefined);
+    if (standardFee === undefined || badArea) {
+      toast.error(badArea
+        ? `Check the fee for ${badArea.barangay || badArea.municipalityName}: use ₱0 to ₱10,000.`
+        : 'The standard delivery fee must be between ₱0 and ₱10,000.');
       return;
     }
     if (!form.acceptsCod && !form.paymentQrImage) {
@@ -333,12 +401,13 @@ export default function SellerFulfillment() {
     try {
       await axios.put(`/stores/${store.id}`, {
         ...form,
-        deliveryFee: feeText === '' ? null : Math.round(fee * 100) / 100,
+        deliveryFee: standardFee,
       });
       await axios.put('/stores/my/service-areas', {
         areas: areas.map((a) => ({
           municipalityId: a.municipalityId,
           barangay: a.barangay,
+          fee: parseFee(a.fee),
         })),
       });
       toast.success('Settings saved');
@@ -350,6 +419,10 @@ export default function SellerFulfillment() {
   };
 
   const showDeliveryAreas = form.fulfillmentMode === 'DELIVERY' || form.fulfillmentMode === 'BOTH';
+  // What an area without its own fee charges, shown in its empty fee box.
+  const standardHint = form.deliveryFee === ''
+    ? `₱${platformFee.toFixed(0)}`
+    : Number(form.deliveryFee) === 0 ? 'Free' : `₱${Number(form.deliveryFee).toFixed(0)}`;
   const showPickup = form.fulfillmentMode === 'PICKUP' || form.fulfillmentMode === 'BOTH';
 
   if (loading) {
@@ -462,51 +535,32 @@ export default function SellerFulfillment() {
           </div>
         )}
 
-        {/* Delivery fee */}
-        {showDeliveryAreas && (
-          <div className="seller-card" id="delivery-fee">
-            <div className="seller-card-header">
-              <h2>
-                <Truck size={16} /> Delivery Fee
-              </h2>
-            </div>
-            <div className="sf-body">
-              <div className="form-group">
-                <label htmlFor="sf-delivery-fee">Delivery fee per order (₱)</label>
-                <input
-                  id="sf-delivery-fee"
-                  type="number"
-                  name="deliveryFee"
-                  min="0"
-                  max="10000"
-                  step="0.01"
-                  inputMode="decimal"
-                  value={form.deliveryFee}
-                  onChange={handleChange}
-                  placeholder={`Platform default: ₱${platformFee.toFixed(2)}`}
-                  className="form-input"
-                />
-              </div>
-              <p className="sf-note">
-                <Info size={14} /> Added to delivery orders at checkout. Enter 0 for free delivery,
-                {' '}or leave blank to use ₱{platformFee.toFixed(2)}. Pickup is always free.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Delivery Coverage */}
+        {/* Delivery areas & fees */}
         {showDeliveryAreas && (
           <div className="seller-card" id="delivery-areas">
             <div className="seller-card-header">
               <h2>
-                <MapPin size={16} /> Delivery Coverage
+                <Truck size={16} /> Delivery areas &amp; fees
               </h2>
             </div>
             <div className="sf-body">
+              <div className="sf-standard" id="delivery-fee">
+                <div className="sf-standard-text">
+                  <label htmlFor="sf-delivery-fee">Standard delivery fee</label>
+                  <small>For every area below that has no fee of its own.</small>
+                </div>
+                <FeeInput
+                  id="sf-delivery-fee"
+                  value={form.deliveryFee}
+                  onChange={(fee) => setForm((p) => ({ ...p, deliveryFee: fee }))}
+                  placeholder={`Default ₱${platformFee.toFixed(0)}`}
+                  label="Standard delivery fee"
+                />
+              </div>
               <p className="sf-note">
-                <Info size={14} /> Pick the towns you deliver to, then choose
-                {' '}<strong>all barangays</strong> or <strong>specific barangays</strong>.
+                <Info size={14} /> Add the towns you deliver to. Keep <strong>All barangays</strong>, or
+                {' '}<strong>choose barangays</strong> and give each its own fee (e.g. Hagan ₱30, Poblacion ₱20).
+                {' '}Tap <strong>Free</strong> for free delivery. Pickup is always free.
               </p>
 
               <div className="sf-picker-row">
@@ -515,11 +569,12 @@ export default function SellerFulfillment() {
                   value={muniPicker}
                   onChange={(e) => setMuniPicker(e.target.value)}
                   disabled={availableMunicipalities.length === 0}
+                  aria-label="Town to deliver to"
                 >
                   <option value="">
                     {availableMunicipalities.length === 0
                       ? 'All municipalities added'
-                      : 'Choose a municipality…'}
+                      : 'Add a town you deliver to…'}
                   </option>
                   {availableMunicipalities.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -540,9 +595,9 @@ export default function SellerFulfillment() {
               {groupedAreas.length === 0 ? (
                 <div className="sf-empty">
                   <MapPin size={22} weight="fill" />
-                  <p>No service areas yet.</p>
+                  <p>No delivery areas yet.</p>
                   <small>
-                    Delivery orders will be blocked until you add coverage.
+                    Buyers can't order delivery until you add a town.
                   </small>
                 </div>
               ) : (
@@ -559,6 +614,7 @@ export default function SellerFulfillment() {
                           className="sf-icon-btn"
                           onClick={() => requestRemoveMunicipality(g.municipalityId, g.municipalityName)}
                           title="Remove municipality"
+                          aria-label={`Remove ${g.municipalityName}`}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -585,19 +641,30 @@ export default function SellerFulfillment() {
                               setWholeMunicipality(g.municipalityId, false)
                             }
                           />
-                          <span>Specific barangays</span>
+                          <span>Choose barangays</span>
                         </label>
                       </div>
 
-                      {!g.wholeMuni && (
+                      {g.wholeMuni ? (
+                        <div className="sf-fee-row">
+                          <span className="sf-fee-row-name">Fee for all of {g.municipalityName}</span>
+                          <FeeInput
+                            value={g.townFee}
+                            onChange={(fee) => setAreaFee(g.municipalityId, null, fee)}
+                            placeholder={standardHint}
+                            label={`Delivery fee for ${g.municipalityName}`}
+                          />
+                        </div>
+                      ) : (
                         <BarangayPicker
-                          municipalityId={g.municipalityId}
                           municipalityName={g.municipalityName}
                           catalog={barangayCatalog[g.municipalityId]}
                           selected={g.barangays}
+                          standardHint={standardHint}
                           onLoad={() => loadBarangays(g.municipalityId, g.municipalityName)}
                           onAdd={(name) => addBarangay(g.municipalityId, name)}
                           onRemove={(name) => removeBarangay(g.municipalityId, name)}
+                          onFee={(name, fee) => setAreaFee(g.municipalityId, name, fee)}
                         />
                       )}
                     </div>
@@ -723,13 +790,14 @@ export default function SellerFulfillment() {
 }
 
 function BarangayPicker({
-  municipalityId,
   municipalityName,
   catalog,
   selected,
+  standardHint,
   onLoad,
   onAdd,
   onRemove,
+  onFee,
 }) {
   const [query, setQuery] = useState('');
 
@@ -742,7 +810,7 @@ function BarangayPicker({
   const isLoading = catalog?.loading;
   const error = catalog?.error;
   const selectedLower = useMemo(
-    () => new Set(selected.map((s) => s.toLowerCase())),
+    () => new Set(selected.map((s) => s.name.toLowerCase())),
     [selected]
   );
 
@@ -823,21 +891,27 @@ function BarangayPicker({
       )}
 
       {selected.length > 0 ? (
-        <div className="sf-chip-list">
+        <ul className="sf-brgy-fees" aria-label={`Barangays in ${municipalityName}`}>
           {selected.map((b) => (
-            <span key={b} className="sf-chip">
-              {b}
+            <li key={b.name} className="sf-fee-row">
+              <span className="sf-fee-row-name">{b.name}</span>
+              <FeeInput
+                value={b.fee}
+                onChange={(fee) => onFee(b.name, fee)}
+                placeholder={standardHint}
+                label={`Delivery fee for ${b.name}`}
+              />
               <button
                 type="button"
-                className="sf-chip-x"
-                onClick={() => onRemove(b)}
-                aria-label={`Remove ${b}`}
+                className="sf-chip-x sf-fee-remove"
+                onClick={() => onRemove(b.name)}
+                aria-label={`Remove ${b.name}`}
               >
-                <X size={12} />
+                <X size={14} />
               </button>
-            </span>
+            </li>
           ))}
-        </div>
+        </ul>
       ) : (
         <p className="sf-hint">
           Select at least one barangay to accept delivery orders here.

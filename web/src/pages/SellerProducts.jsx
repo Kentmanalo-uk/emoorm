@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye, ArrowSquareOut,
   MagnifyingGlass as Search, WarningCircle as AlertCircle, CheckCircle, Clock, X, CircleNotch as Loader2,
@@ -18,6 +18,7 @@ import './SellerProducts.css';
 import { useCategories } from '../hooks/useReferenceData';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import ProductForm from '../components/seller/ProductForm';
+import { sellBlockers } from '../lib/sellerSetup';
 
 const STATUS_LABELS = {
   PENDING: { label: 'Pending Approval', cls: 'status-pending', icon: <Clock size={12} /> },
@@ -26,6 +27,9 @@ const STATUS_LABELS = {
   SUSPENDED: { label: 'Suspended', cls: 'status-cancelled', icon: <AlertCircle size={12} /> },
   ARCHIVED: { label: 'Archived', cls: 'status-cancelled', icon: <Archive size={12} /> },
 };
+
+// A live product in a shop that cannot sell yet is not shown to buyers.
+const NOT_LIVE = { label: 'Not live yet', cls: 'status-pending', icon: <Clock size={12} /> };
 
 // Status filter tabs; the key is sent as `status` to GET /products/my/products.
 const PRODUCT_TABS = [
@@ -57,6 +61,16 @@ export default function SellerProducts() {
 
   const [products, setProducts] = useState([]);
   const { categories } = useCategories();
+  // Until the shop is ready to sell, products are drafts buyers cannot see.
+  const blockers = sellBlockers(useOutletContext()?.setup);
+  const notReady = blockers.length > 0;
+  const statusOf = (product) => (notReady && product.status === 'APPROVED'
+    ? NOT_LIVE
+    : STATUS_LABELS[product.status] || STATUS_LABELS.PENDING);
+  // "Live" would be wrong while buyers can see none of them.
+  const tabLabel = (key) => (key === 'APPROVED' && notReady
+    ? 'Approved'
+    : PRODUCT_TABS.find((t) => t.key === key)?.label);
   const [isLoading, setIsLoading] = useState(true);
   // Seeded from ?search= so a top-bar search result opens filtered.
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -203,9 +217,11 @@ export default function SellerProducts() {
 
   const handleSaved = (saved, { created }) => {
     if (created) {
-      toast.success(saved?.status === 'APPROVED'
-        ? 'Product added. It is now live.'
-        : 'Product added. It will go live once approved.');
+      toast.success(notReady
+        ? 'Saved as a draft. It goes live once your shop is ready to sell.'
+        : saved?.status === 'APPROVED'
+          ? 'Product added. It is now live.'
+          : 'Product added. It will go live once approved.');
     } else {
       toast.success('Changes saved');
     }
@@ -291,6 +307,7 @@ export default function SellerProducts() {
             categories={categories}
             onCancel={closeForm}
             onSaved={handleSaved}
+            sellBlockers={blockers}
           />
         </div>
       </div>
@@ -337,7 +354,7 @@ export default function SellerProducts() {
               <button className="btn-seller-outline" disabled={bulkLoading} onClick={() => runBulkAction('HIDE')}>
                 <EyeOff size={14} /> Hide
               </button>
-              <button className="btn-seller-outline" disabled={bulkLoading} onClick={() => runBulkAction('UNHIDE')}>
+              <button className="btn-seller-outline" disabled={bulkLoading || notReady} title={notReady ? 'Finish your shop setup first' : undefined} onClick={() => runBulkAction('UNHIDE')}>
                 <Eye size={14} /> Unhide
               </button>
               <button
@@ -354,6 +371,26 @@ export default function SellerProducts() {
           </div>
         )}
 
+        {notReady && (
+          <div className="seller-card products-notlive" role="status">
+            <AlertCircle size={20} weight="fill" className="products-notlive-icon" />
+            <div className="products-notlive-text">
+              <strong>Buyers can't see your products yet</strong>
+              <span>
+                They go live by themselves once your shop is ready to sell. Still to do:{' '}
+                {blockers.map((b, i) => (
+                  <React.Fragment key={b.key}>
+                    {i > 0 && ', '}
+                    {b.to ? <Link to={b.to}>{b.label}</Link> : b.label}
+                  </React.Fragment>
+                ))}
+                .
+              </span>
+            </div>
+            <Link to="/seller/setup" className="btn-seller-primary products-notlive-btn">Finish setup</Link>
+          </div>
+        )}
+
         {isPhone && searchBar}
 
         {/* Status filter tabs */}
@@ -366,7 +403,7 @@ export default function SellerProducts() {
                 className={`scm-chip${statusFilter === key ? ' is-on' : ''}`}
                 onClick={() => selectStatusTab(key)}
               >
-                {PRODUCT_TABS.find((t) => t.key === key)?.label}
+                {tabLabel(key)}
               </button>
             ))}
             <button
@@ -375,7 +412,7 @@ export default function SellerProducts() {
               onClick={() => setStatusSheet(true)}
             >
               <SlidersHorizontal size={16} weight="bold" />
-              {PHONE_QUICK_TABS.includes(statusFilter) ? 'More' : PRODUCT_TABS.find((t) => t.key === statusFilter)?.label}
+              {PHONE_QUICK_TABS.includes(statusFilter) ? 'More' : tabLabel(statusFilter)}
             </button>
           </div>
         ) : (
@@ -387,7 +424,7 @@ export default function SellerProducts() {
                 className={`seller-tab ${statusFilter === t.key ? 'seller-tab--active' : ''}`}
                 onClick={() => selectStatusTab(t.key)}
               >
-                {t.label}
+                {tabLabel(t.key)}
               </button>
             ))}
           </div>
@@ -431,7 +468,7 @@ export default function SellerProducts() {
                 </thead>
                 <tbody>
                   {products.map(product => {
-                    const s = STATUS_LABELS[product.status] || { label: product.status, cls: '' };
+                    const s = statusOf(product);
                     const thumb = product.images?.[0];
                     const level = stockLevel(product);
                     const showNote = Boolean(product.moderationNote)
@@ -547,9 +584,11 @@ export default function SellerProducts() {
                             {(product.status === 'APPROVED' || product.status === 'HIDDEN') && (
                               <button
                                 className="seller-icon-btn product-action"
-                                title={product.status === 'HIDDEN' ? 'Show to buyers again' : 'Hide from buyers'}
+                                title={product.status === 'HIDDEN'
+                                  ? (notReady ? 'Finish your shop setup first' : 'Show to buyers again')
+                                  : 'Hide from buyers'}
                                 onClick={() => handleToggleVisibility(product)}
-                                disabled={bulkLoading}
+                                disabled={bulkLoading || (notReady && product.status === 'HIDDEN')}
                               >
                                 {product.status === 'HIDDEN' ? <Eye size={15} /> : <EyeOff size={15} />}
                                 <span>{product.status === 'HIDDEN' ? 'Show' : 'Hide'}</span>
@@ -629,7 +668,7 @@ export default function SellerProducts() {
             className={`scm-choice${statusFilter === t.key ? ' is-on' : ''}`}
             onClick={() => { selectStatusTab(t.key); setStatusSheet(false); }}
           >
-            {t.label}
+            {tabLabel(t.key)}
             {statusFilter === t.key && <Check size={18} weight="bold" />}
           </button>
         ))}
@@ -641,10 +680,12 @@ export default function SellerProducts() {
           <button
             type="button"
             className="scm-choice"
-            disabled={bulkLoading}
+            disabled={bulkLoading || (notReady && moreFor.status === 'HIDDEN')}
             onClick={() => { const p = moreFor; setMoreFor(null); handleToggleVisibility(p); }}
           >
-            {moreFor.status === 'HIDDEN' ? 'Show to buyers again' : 'Hide from buyers'}
+            {moreFor.status === 'HIDDEN'
+              ? (notReady ? 'Show to buyers (after shop setup)' : 'Show to buyers again')
+              : 'Hide from buyers'}
             {moreFor.status === 'HIDDEN' ? <Eye size={18} /> : <EyeOff size={18} />}
           </button>
         )}

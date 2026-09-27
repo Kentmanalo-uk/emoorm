@@ -119,7 +119,7 @@ const Checkout = () => {
   const [addressesLoaded, setAddressesLoaded] = useState(false);
 
   // Per-store settings + coverage
-  const [storeInfo, setStoreInfo] = useState({}); // { [storeId]: { store, error, covered, checked } }
+  const [storeInfo, setStoreInfo] = useState({}); // { [storeId]: { store, error, covered, fee, checked } }
   const [storesLoading, setStoresLoading] = useState(false);
   const [storeLoadAttempt, setStoreLoadAttempt] = useState(0);
 
@@ -270,7 +270,9 @@ const Checkout = () => {
     [storesLoading, storeIds, storeInfo]
   );
 
-  // Coverage check on delivery address change (debounced by simple effect)
+  // Coverage check on delivery address change (debounced by simple effect).
+  // The answer also carries the fee for this address: stores can price each
+  // town or barangay on its own.
   const checkCoverage = useCallback(async () => {
     if (fulfillmentMethod !== 'DELIVERY') return;
     if (!deliveryForm.municipalityId) return;
@@ -280,16 +282,16 @@ const Checkout = () => {
       storeIds.map(async (id) => {
         try {
           const res = await axios.get(`/stores/${id}/coverage`, { params });
-          return { id, covered: !!res.data?.covered };
+          return { id, covered: !!res.data?.covered, fee: res.data?.fee ?? null };
         } catch {
-          return { id, covered: false };
+          return { id, covered: false, fee: null };
         }
       })
     );
     setStoreInfo((prev) => {
       const next = { ...prev };
-      for (const { id, covered } of results) {
-        next[id] = { ...(next[id] || {}), covered, checked: true };
+      for (const { id, covered, fee } of results) {
+        next[id] = { ...(next[id] || {}), covered, fee, checked: true };
       }
       return next;
     });
@@ -348,9 +350,14 @@ const Checkout = () => {
     [fulfillmentMethod, storeIds, storeInfo]
   );
 
-  // Checkout holds one store's items; its own delivery fee applies.
+  // Checkout holds one store's items. Delivery costs what that store charges
+  // for this address (its quote), or its standard fee until the quote is in.
   const checkoutStore = storeInfo[storeIds[0]]?.store || null;
-  const shippingFee = orderableItems.length > 0 ? storeDeliveryFee(checkoutStore, settings, fulfillmentMethod) : 0;
+  const quoted = storeInfo[storeIds[0]];
+  const deliveryFee = quoted?.checked && quoted.covered && quoted.fee != null
+    ? Number(quoted.fee)
+    : storeDeliveryFee(checkoutStore, settings, 'DELIVERY');
+  const shippingFee = orderableItems.length > 0 && fulfillmentMethod === 'DELIVERY' ? deliveryFee : 0;
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount);
 
@@ -686,7 +693,7 @@ const Checkout = () => {
                           <strong>Delivery</strong>
                           <p>
                             {fulfillmentAvailability.delivery
-                              ? `Delivered to your address · ${peso(storeDeliveryFee(checkoutStore, settings, 'DELIVERY'))} delivery fee`
+                              ? `Delivered to your address · ${deliveryFee === 0 ? 'free delivery' : `${peso(deliveryFee)} delivery fee`}`
                               : 'Not available for this store'}
                           </p>
                         </div>

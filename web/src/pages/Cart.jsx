@@ -191,9 +191,41 @@ const Cart = () => {
   }, [feeStoreId, feeStores]);
   const feeStore = feeStoreId ? feeStores[feeStoreId] : undefined;
   const pickupOnly = feeStore?.fulfillmentMode === 'PICKUP';
+  // Shops can price each town or barangay on its own, so quote the address
+  // checkout will start from: the default saved address, else the profile's
+  // town and barangay (checkout confirms it for whichever address is chosen).
+  const user = useAuthStore((s) => s.user);
+  const [savedAddress, setSavedAddress] = useState(undefined); // undefined: loading
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let cancelled = false;
+    axios.get('/addresses')
+      .then((res) => {
+        if (cancelled) return;
+        const list = res.data || [];
+        setSavedAddress(list.find((a) => a.isDefault) || list[0] || null);
+      })
+      .catch(() => { if (!cancelled) setSavedAddress(null); });
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
+  const addressReady = !isAuthenticated || savedAddress !== undefined;
+  const quoteTown = savedAddress ? savedAddress.municipalityId : user?.municipalityId;
+  const quoteBarangay = savedAddress ? savedAddress.barangay : user?.barangay;
+  const [feeQuotes, setFeeQuotes] = useState({});
+  const quoteKey = addressReady && feeStoreId && quoteTown ? `${feeStoreId}|${quoteTown}|${quoteBarangay || ''}` : null;
+  useEffect(() => {
+    if (!quoteKey || feeQuotes[quoteKey] !== undefined) return undefined;
+    let cancelled = false;
+    const params = { municipalityId: quoteTown, ...(quoteBarangay ? { barangay: quoteBarangay } : {}) };
+    axios.get(`/stores/${feeStoreId}/coverage`, { params })
+      .then((res) => { if (!cancelled) setFeeQuotes((cur) => ({ ...cur, [quoteKey]: res.data || null })); })
+      .catch(() => { if (!cancelled) setFeeQuotes((cur) => ({ ...cur, [quoteKey]: null })); });
+    return () => { cancelled = true; };
+  }, [quoteKey, feeQuotes, feeStoreId, quoteTown, quoteBarangay]);
+  const quote = quoteKey ? feeQuotes[quoteKey] : null;
   // null: not known yet (nothing selected, several shops, or still loading).
   const shippingFee = subtotal > 0 && feeStore !== undefined
-    ? (pickupOnly ? 0 : storeDeliveryFee(feeStore, settings, 'DELIVERY'))
+    ? (pickupOnly ? 0 : (quote?.covered && quote.fee != null ? Number(quote.fee) : storeDeliveryFee(feeStore, settings, 'DELIVERY')))
     : null;
   const shippingLabel = shippingFee === null
     ? '—'

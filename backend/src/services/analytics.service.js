@@ -2,6 +2,7 @@ const analyticsRepository = require('../repositories/analytics.repository');
 const storeRepository = require('../repositories/store.repository');
 const municipalityRepository = require('../repositories/municipality.repository');
 const { ApiError } = require('../middleware/errorHandler');
+const shopReadiness = require('./shopReadiness.service');
 
 /**
  * Analytics Service
@@ -142,7 +143,6 @@ const getSellerAnalytics = async (userId, query = {}) => {
       avgOrderValue: kpi(avgOrderValue, previousAvg),
       completionRate: { value: Math.round(completionRate), previous: null, delta: null },
       cancelRate: { value: Math.round(cancelRate), previous: null, delta: null },
-      activeProducts: { value: productStatus.counts.APPROVED, previous: null, delta: null },
       totalProducts: { value: productStatus.total, previous: null, delta: null },
       lifetimeRevenue: { value: Number(raw.lifetimeRevenue._sum.total || 0), previous: null, delta: null },
       unitsSold: { value: Number(raw.lifetimeUnitsSold._sum.quantity || 0), previous: null, delta: null },
@@ -181,7 +181,10 @@ const getMunicipalityAnalytics = async (actor, query = {}) => {
   const municipality = await municipalityRepository.findById(municipalityId);
   if (!municipality) throw new ApiError('Municipality not found', 404);
 
-  const raw = await analyticsRepository.getMunicipalityStats(municipalityId, query);
+  const [raw, liveProducts] = await Promise.all([
+    analyticsRepository.getMunicipalityStats(municipalityId, query),
+    shopReadiness.countLiveProducts({ municipalityId }),
+  ]);
   const orderStatus = toCountMap(raw.ordersByStatus, ORDER_STATUSES);
   const productStatus = toCountMap(raw.productsByStatus, PRODUCT_STATUSES);
 
@@ -235,7 +238,7 @@ const getMunicipalityAnalytics = async (actor, query = {}) => {
       sellers: { value: raw.approvedSellers, previous: null, delta: null },
       activeStores: { value: raw.activeStores, previous: null, delta: null },
       suspendedStores: { value: raw.suspendedStores, previous: null, delta: null },
-      liveProducts: { value: productStatus.counts.APPROVED, previous: null, delta: null },
+      liveProducts: { value: liveProducts, previous: null, delta: null },
       lifetimeRevenue: { value: Number(raw.lifetimeRevenue._sum.total || 0), previous: null, delta: null },
       buyers: { value: raw.uniqueBuyers, previous: null, delta: null },
     },
@@ -259,7 +262,10 @@ const getMunicipalityAnalytics = async (actor, query = {}) => {
 
 // ---------- PLATFORM ----------
 const getPlatformAnalytics = async (query = {}) => {
-  const raw = await analyticsRepository.getPlatformStats(query, query.municipalityId || null);
+  const [raw, liveProducts] = await Promise.all([
+    analyticsRepository.getPlatformStats(query, query.municipalityId || null),
+    shopReadiness.countLiveProducts(query.municipalityId ? { municipalityId: query.municipalityId } : {}),
+  ]);
   const orderStatus = toCountMap(raw.ordersByStatus, ORDER_STATUSES);
   const productStatus = toCountMap(raw.productsByStatus, PRODUCT_STATUSES);
 
@@ -351,7 +357,7 @@ const getPlatformAnalytics = async (query = {}) => {
       totalStores: { value: raw.stores.total, previous: null, delta: null },
       activeStores: { value: raw.stores.active, previous: null, delta: null },
       totalProducts: { value: productStatus.total, previous: null, delta: null },
-      liveProducts: { value: productStatus.counts.APPROVED, previous: null, delta: null },
+      liveProducts: { value: liveProducts, previous: null, delta: null },
       lifetimeRevenue: { value: Number(raw.lifetimeRevenue._sum.total || 0), previous: null, delta: null },
       windowBuyers: { value: raw.uniqueBuyers, previous: null, delta: null },
     },
@@ -430,9 +436,16 @@ const withCache = (key, fn) => async (...args) => {
   return value;
 };
 
+/**
+ * Seller analytics, cached, plus the shop's live products counted on every
+ * call: they follow its setup at once (it just became ready to sell, or
+ * stopped being), not a minute later.
+ */
 const cachedSeller = async (userId, query = {}) => {
   const key = cacheKey('seller', userId, query.from, query.to, query.granularity);
-  return withCache(key, () => getSellerAnalytics(userId, query))();
+  const data = await withCache(key, () => getSellerAnalytics(userId, query))();
+  const live = await shopReadiness.countLiveProducts({ storeId: data.store.id });
+  return { ...data, kpis: { ...data.kpis, activeProducts: { value: live, previous: null, delta: null } } };
 };
 
 const cachedMunicipality = async (actor, query = {}) => {
