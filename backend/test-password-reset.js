@@ -198,13 +198,15 @@ async function main() {
 
     // -----------------------------------------------------------------------
     section('8. A wrong current password changes nothing');
+    // 400, not 401: the web app answers a 401 by treating the session as
+    // expired, which would sign the person out over a typo.
     let wrongRejected = false;
     try {
       await authService.changePassword(user.id, 'NotThePassword!', 'Whatever123!');
     } catch (err) {
-      wrongRejected = err.statusCode === 401;
+      wrongRejected = err.statusCode === 400;
     }
-    check('it is rejected with 401', wrongRejected);
+    check('it is rejected with 400', wrongRejected);
     const untouched = await prisma.user.findUnique({
       where: { id: user.id },
       select: { tokenVersion: true },

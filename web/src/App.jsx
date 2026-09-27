@@ -195,6 +195,7 @@ function AppRoutes() {
           <Route path="messages" element={<ProfileMessages />} />
           <Route path="notifications" element={<Notifications bare />} />
           <Route path="settings" element={<ProfileSettings />} />
+          <Route path="settings/:part" element={<ProfileSettings />} />
           <Route path="verification" element={<ProfileVerification />} />
           <Route path="support" element={<ProfileSupport />} />
           <Route path="reports" element={<ProfileReports />} />

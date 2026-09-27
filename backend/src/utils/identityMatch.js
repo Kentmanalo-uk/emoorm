@@ -1,6 +1,7 @@
 /**
  * Pure helpers for reading OCR text from Philippine government IDs and
- * comparing it with a user's registered account details. No I/O here so the
+ * comparing it with a user's name (the name only: an ID's address is not
+ * compared). No I/O here so the
  * rules can be tested in isolation.
  *
  * OCR output from phone photos is noisy ("ApetydolLast Nome" for
@@ -10,8 +11,6 @@
 
 // Supported Philippine government IDs. `keywords` help pick the best OCR
 // read; `numberPatterns` match the ID number after OCR spacing is removed.
-// `hasAddress: false` marks cards that do not print the holder's address —
-// those are verified on name and ID number only.
 const ID_TYPES = {
   PHILSYS: {
     label: 'Philippine National ID (PhilSys)',
@@ -79,23 +78,18 @@ const ID_TYPES = {
     label: 'Philippine Passport',
     keywords: [['PASAPORTE'], ['PASSPORT']],
     numberPatterns: [/[A-Z]{1,2}\d{7}[A-Z]?/],
-    hasAddress: false,
   },
   PRC_ID: {
     label: 'PRC ID',
     keywords: [['PROFESSIONAL', 'REGULATION'], ['PRC']],
     numberPatterns: [/^\d{7}$/],
-    hasAddress: false,
   },
   SSS_ID: {
     label: 'SSS ID',
     keywords: [['SOCIAL', 'SECURITY', 'SYSTEM'], ['SSS']],
     numberPatterns: [/\d{2}-?\d{7}-?\d/],
-    hasAddress: false,
   },
 };
-
-const idTypeHasAddress = (idType) => ID_TYPES[idType]?.hasAddress !== false;
 
 const COUNTRY_KEYWORDS = [['REPUBLIKA', 'PILIPINAS'], ['REPUBLIC', 'PHILIPPINES'], ['PILIPINAS'], ['PHILIPPINES']];
 
@@ -113,8 +107,6 @@ const COMBINED_NAME_LABEL = ['LAST', 'NAME', 'FIRST', 'NAME'];
 const OTHER_LABELS = [['SEX'], ['KASARIAN'], ['NATIONALITY'], ['BLOOD'], ['HEIGHT'], ['WEIGHT'], ['EXPIRATION'], ['AGENCY', 'CODE'], ['CIVIL', 'STATUS'], ['PLACE', 'BIRTH'], ['SIGNATURE'], ['LAGDA']];
 
 const NAME_SUFFIXES = new Set(['JR', 'SR', 'II', 'III', 'IV', 'V']);
-const ADDRESS_NOISE = new Set(['BARANGAY', 'BRGY', 'BGY', 'CITY', 'OF', 'MUNICIPALITY', 'MUN', 'PROVINCE', 'PROV', 'PHILIPPINES', 'PH']);
-const ADDRESS_ABBREVIATIONS = { POB: 'POBLACION', STA: 'SANTA', STO: 'SANTO', SN: 'SAN', 'OR': 'ORIENTAL', ORL: 'ORIENTAL' };
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
 const normalize = (value) => String(value || '')
@@ -370,7 +362,7 @@ const nameTokens = (value) => tokenize(value).filter((t) => t.length >= 2 && !NA
 
 const contentLines = (text) => String(text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
-// Minimum share of matching words for a name or address to count as a match.
+// Minimum share of matching words for a name to count as a match.
 // Kept at half so a partly unreadable ID photo can still verify.
 const MATCH_THRESHOLD = 0.5;
 
@@ -426,62 +418,6 @@ const matchName = (accountName, fields, ocrText) => {
   return { matched: score >= MATCH_THRESHOLD, score, idName: normalize(idName) || null };
 };
 
-/**
- * OCR sometimes breaks a word across lines ("POBLAC" … "ION"). Accept a word
- * of 7+ letters when it appears whole in the de-spaced text, or when a token
- * ends with its first part and another token starts with the rest.
- */
-const containsSplitWord = (text, word) => {
-  if (word.length < 7) return false;
-  if (normalize(text).replace(/\s/g, '').includes(word)) return true;
-  const tokens = tokenize(text);
-  for (let k = 3; k <= word.length - 3; k += 1) {
-    const head = word.slice(0, k);
-    const tail = word.slice(k);
-    if (tokens.some((t) => t.endsWith(head)) && tokens.some((t) => t.startsWith(tail))) return true;
-  }
-  return false;
-};
-
-const addressTokens = (value) => tokenize(value)
-  .map((t) => ADDRESS_ABBREVIATIONS[t] || t)
-  .filter((t) => !ADDRESS_NOISE.has(t));
-
-/**
- * Address text read from the ID: lines after "Address"/"Tirahan" labels,
- * plus lines around the municipality name (recovers words OCR split across
- * lines). Falls back to the whole card when neither was found.
- */
-const findAddressText = (municipality, fields, ocrText) => {
-  const lines = contentLines(ocrText);
-  const nearby = [];
-  lines.forEach((line, index) => {
-    const lineTokens = buildCandidates(addressTokens(line));
-    if (municipality.length === 0 || !municipality.every((t) => containsToken(lineTokens, t))) return;
-    nearby.push(lines.slice(Math.max(0, index - 1), index + 2).filter((l) => !isLabelLine(l)).join('\n'));
-  });
-  const text = [fields.addressText, ...nearby].filter(Boolean).join('\n');
-  return text || String(ocrText || '');
-};
-
-/**
- * Address rule: at least 50% of the registered address words (street,
- * barangay, municipality, province) must appear in the ID's address.
- */
-const matchAddress = ({ municipalityName, barangay, province, street }, fields, ocrText) => {
-  const words = [...new Set([
-    ...addressTokens(street).filter((t) => t.length >= 3 || /\d/.test(t)),
-    ...addressTokens(barangay),
-    ...addressTokens(municipalityName),
-    ...addressTokens(province),
-  ])];
-  const text = findAddressText(addressTokens(municipalityName), fields, ocrText);
-  const pool = buildCandidates(addressTokens(text));
-  const found = words.filter((t) => containsToken(pool, t) || containsSplitWord(text, t)).length;
-  const score = words.length === 0 ? 0 : found / words.length;
-  return { matched: score >= MATCH_THRESHOLD, score };
-};
-
 /** Heuristic OCR quality score used to pick the best rotation/variant. */
 const scoreText = (text) => {
   const candidates = buildCandidates(tokenize(text));
@@ -496,11 +432,9 @@ const scoreText = (text) => {
 
 module.exports = {
   ID_TYPES,
-  idTypeHasAddress,
   normalize,
   extractIdNumber,
   extractFields,
   matchName,
-  matchAddress,
   scoreText,
 };

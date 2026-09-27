@@ -254,7 +254,7 @@ const Footer = () => {
               <p>
                 To protect sellers from fake orders, buyers verify their identity once before checking out by
                 scanning a valid Philippine government ID, such as a PhilSys National ID, driver&apos;s license,
-                UMID, or passport. The ID photo is only used to read your name and address and is not stored. If
+                UMID, or passport. The ID photo is only used to read your name and is not stored. If
                 automatic verification does not work, your municipal admin can help.
               </p>
 

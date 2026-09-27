@@ -1,0 +1,26 @@
+/* Settings on phones (ProfileSettingsPhone.jsx): the account's parts as
+   lists in cards, and each part on a page of its own with Cancel and Save
+   changes pinned at the bottom. */
+.pst-group {
+  overflow: hidden;
+}
+
+.pst-group .scm-setlist {
+  border-radius: 0;
+}
+
+/* Room for the save bar. */
+.pst-part {
+  padding-bottom: 84px;
+}
+
+.pst-note {
+  margin: 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ps-help.pst-warn {
+  color: var(--t-warning-700, #b45309);
+}

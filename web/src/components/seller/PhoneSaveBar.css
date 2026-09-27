@@ -1,0 +1,51 @@
+/* Cancel and Save changes, pinned to the bottom of a part's page (phones). */
+.scm-savebar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  display: flex;
+  gap: 10px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -1px 0 var(--t-neutral-100, #f1f5f9), 0 -6px 18px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.scm-savebar-btn {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.scm-savebar-cancel {
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+}
+
+.scm-savebar-save {
+  flex-grow: 1.6;
+  border: 0;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.scm-savebar-btn:disabled {
+  cursor: default;
+}
+
+.scm-savebar-save:disabled {
+  background: var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-500, #6b7280);
+}

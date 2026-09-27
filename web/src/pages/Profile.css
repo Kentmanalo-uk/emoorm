@@ -1212,8 +1212,9 @@
 
 /* ════════════════════════════════════════════════════════════════════
    Profile on phones (rendered only at ≤768px, see Profile.jsx)
-   Account card (tap to edit) with tappable counts, a one-line identity
-   row, My Purchase, grouped lists reaching every account page, Log out.
+   Account card (tap to edit) with tappable counts, My Purchase, grouped
+   lists reaching every account page, Log out. (Verify your identity is in
+   Settings.)
    ════════════════════════════════════════════════════════════════════ */
 .pf-m {
   display: flex;
@@ -1223,8 +1224,7 @@
 }
 
 .pf-m-card,
-.pf-m-section,
-.pf-m-identity {
+.pf-m-section {
   border-radius: 16px;
   background: var(--t-neutral-0, #fff);
 }
@@ -1333,71 +1333,6 @@
 .pf-m-stats span {
   color: var(--t-neutral-500, #6b7280);
   font-size: 12px;
-}
-
-/* ── identity row ── */
-.pf-m-identity {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.pf-m-identity-icon {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--t-warning-50, #fffbeb);
-  color: var(--t-warning-600, #d97706);
-}
-
-.pf-m-identity.is-success .pf-m-identity-icon {
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-primary-600, #059669);
-}
-
-.pf-m-identity.is-error .pf-m-identity-icon {
-  background: var(--t-danger-50, #fef2f2);
-  color: var(--t-danger-600, #dc2626);
-}
-
-.pf-m-identity.is-pending .pf-m-identity-icon {
-  background: var(--t-info-50, #eff6ff);
-  color: var(--t-info-600, #2563eb);
-}
-
-.pf-m-identity-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  flex: 1;
-  min-width: 0;
-}
-
-.pf-m-identity-text strong {
-  color: var(--t-neutral-900, #111827);
-  font-size: 14.5px;
-  font-weight: 700;
-}
-
-.pf-m-identity-text span {
-  color: var(--t-neutral-500, #6b7280);
-  font-size: 12.5px;
-}
-
-.pf-m-identity-cta {
-  flex-shrink: 0;
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: var(--t-primary-600, #059669);
-  color: var(--t-neutral-0, #fff);
-  font-size: 13px;
-  font-weight: 700;
 }
 
 /* ── sections ── */

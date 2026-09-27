@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import PhAddressPicker from '../common/PhAddressPicker';
 import {
   SERVICE_PROVINCE,
   listServiceMunicipalities,
-  listBarangaysByMunicipality,
   normalizeName,
 } from '../../lib/phAddress';
 
@@ -63,20 +62,8 @@ export const pickupGap = (parts) => {
  * `onChange(text, parts)` gets the new line and its parts.
  */
 export default function PickupAddressField({ value, shopTown, municipalities, onChange }) {
+  // The picker finds the saved barangay on its list by itself.
   const [parts, setParts] = useState(() => splitPickup(value, shopTown));
-
-  // The barangay list selects by code: find it for a saved address.
-  useEffect(() => {
-    if (!parts.municipalityCode || !parts.barangay || parts.barangayCode) return undefined;
-    let cancelled = false;
-    listBarangaysByMunicipality(parts.municipalityCode)
-      .then((list) => {
-        const match = list.find((b) => normalizeName(b.name) === normalizeName(parts.barangay));
-        if (!cancelled && match) setParts((prev) => ({ ...prev, barangayCode: match.code }));
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [parts.municipalityCode, parts.barangay, parts.barangayCode]);
 
   const handleChange = (next) => {
     const merged = { ...parts, ...next };

@@ -364,10 +364,10 @@ function PhotoSlot({ side, label, hint, previewUrl, disabled, optional, onPick, 
 }
 
 /**
- * The OCR identity check: pick the ID type, photograph the front (and back),
- * and the server reads the card and matches it to the account (name and
- * address at 50% or better). Used by Profile → Verification and by the
- * Seller Center's Verify identity page.
+ * The OCR identity check: pick the ID type, photograph the front (the back
+ * is optional), and the server reads the card and matches the name on it to
+ * the account's name (50% or better; the address is not compared). Used by
+ * Profile → Verification and by the Seller Center's Verify identity page.
  *
  * verifiedText: what the verified state says in this context.
  * onStatus(status): every status the server returns.
@@ -430,9 +430,6 @@ export default function IdentityVerifier({
   };
 
   const current = submitting ? 'PENDING' : (status?.status || 'NOT_VERIFIED');
-  const selectedType = status?.supportedIdTypes?.find((option) => option.value === idType);
-  // Cards that print an address carry it on the back, so both sides are needed.
-  const backRequired = Boolean(idType) && selectedType?.hasAddress !== false;
   const outOfAttempts = status?.attemptsRemaining === 0;
 
   const handleSubmit = async (e) => {
@@ -443,10 +440,6 @@ export default function IdentityVerifier({
     }
     if (!files.front) {
       toast.error('Capture or upload a photo of the front of your ID');
-      return;
-    }
-    if (backRequired && !files.back) {
-      toast.error('Capture or upload a photo of the back of your ID');
       return;
     }
     setSubmitting(true);
@@ -586,10 +579,8 @@ export default function IdentityVerifier({
           <PhotoSlot
             side="back"
             label="Photo of the back of your ID"
-            hint={backRequired
-              ? 'Most IDs print the address on the back. Make sure the address is readable.'
-              : 'Add the back of the card if it has printed details.'}
-            optional={!backRequired}
+            hint="Add the back of the card if your name or ID number is printed there."
+            optional
             previewUrl={backPreview}
             disabled={submitting}
             onPick={pickFile}
@@ -598,12 +589,8 @@ export default function IdentityVerifier({
           />
 
           <ul className="idv-rules">
-            <li>The name on your ID must closely match your account name. <Link to="/profile/settings">Edit profile</Link></li>
-            {selectedType?.hasAddress === false ? (
-              <li>This ID has no printed address, so only your name and ID number are checked. The back photo is optional.</li>
-            ) : (
-              <li>The address on your ID must closely match your registered address. It is usually printed on the back.</li>
-            )}
+            <li>The name on your ID must closely match your account name. <Link to="/profile/settings/profile">Edit your name</Link></li>
+            <li>Only your name is checked, not your address.</li>
             <li>Each ID can verify only one account.</li>
           </ul>
 
@@ -617,7 +604,7 @@ export default function IdentityVerifier({
               type={as === 'form' ? 'submit' : 'button'}
               onClick={as === 'form' ? undefined : handleSubmit}
               className="idv-btn idv-btn-primary"
-              disabled={submitting || !files.front || (backRequired && !files.back) || !idType || outOfAttempts}
+              disabled={submitting || !files.front || !idType || outOfAttempts}
             >
               {submitting ? <><CircleNotch size={18} className="idv-spin" /> Verifying...</> : 'Verify identity'}
             </button>

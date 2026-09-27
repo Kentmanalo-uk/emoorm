@@ -1,0 +1,213 @@
+/* Checkout on phones: paying the shop with GCash by hand (GcashPhonePay.jsx).
+   Only phones render it; computers keep the QR panel. */
+.co-gcash {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.co-gcash-title {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Who to pay: the amount, the number and the name, on a white card. */
+.co-gcash-payee {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.co-gcash-send {
+  margin: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14px;
+}
+
+.co-gcash-send strong {
+  color: var(--t-neutral-900, #111827);
+  font-weight: 500;
+}
+
+.co-gcash-number {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.co-gcash-digits {
+  min-width: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 22px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+  /* Pressing and holding selects the whole number. */
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.co-gcash-copy {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-accent-600, #db2777);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.co-gcash-copy.is-copied {
+  border-color: var(--t-primary-200, #a7f3d0);
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+/* Read out by screen readers, not shown. */
+.co-gcash-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.co-gcash-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.co-gcash-name span {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+}
+
+.co-gcash-name strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* Opening the GCash app, in GCash's own blue. */
+.co-gcash-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: #007cff;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.co-gcash-open:visited,
+.co-gcash-open:hover {
+  color: #fff;
+}
+
+.co-gcash-open:active {
+  background: #0066d6;
+}
+
+.co-gcash-hint {
+  margin: -4px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-800, #92400e);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.co-gcash-note {
+  margin: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.co-gcash-instructions {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+/* The shop's QR, for paying from another phone or by uploading it in GCash. */
+.co-gcash-qr summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--t-accent-600, #db2777);
+  font-size: 13.5px;
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+
+.co-gcash-qr summary::-webkit-details-marker {
+  display: none;
+}
+
+.co-gcash-qr img {
+  display: block;
+  width: 200px;
+  max-width: 100%;
+  margin: 10px auto 0;
+  padding: 8px;
+  aspect-ratio: 1;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+  object-fit: contain;
+}
+
+/* The reference number and the screenshot, as before. */
+.co-gcash-proof {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.co-gcash-proof .form-group {
+  margin: 0;
+}

@@ -40,7 +40,7 @@ const QUICK_REPLIES = [
   },
   {
     label: 'Ask for ID photo',
-    text: 'To continue with your verification, please send a clear photo of the front of your valid government-issued ID. Make sure your full name, photo and address are readable and not covered.',
+    text: 'To continue with your verification, please send a clear photo of the front of your valid government-issued ID. Make sure your full name and photo are readable and not covered.',
   },
   {
     label: 'Visit municipal hall',
@@ -252,10 +252,10 @@ function IdentityPanel({ userId, onClose }) {
         open={!!dialog}
         title={dialog === 'VERIFIED' ? 'Mark this user as verified?' : 'Reject this verification?'}
         message={dialog === 'VERIFIED'
-          ? 'Confirm that the ID matches the registered name and address. Your note is kept for the audit trail.'
+          ? 'Confirm that the name on the ID matches the registered name. Your note is kept for the audit trail.'
           : 'Explain why the verification was rejected. The user will see this note.'}
         confirmLabel={dialog === 'VERIFIED' ? 'Mark verified' : 'Reject'}
-        placeholder={dialog === 'VERIFIED' ? 'e.g. Checked PhilSys ID in chat, name and address match' : 'e.g. ID photo is blurry, please resend'}
+        placeholder={dialog === 'VERIFIED' ? 'e.g. Checked PhilSys ID in chat, name matches' : 'e.g. ID photo is blurry, please resend'}
         required
         danger={dialog === 'REJECTED'}
         loading={saving}

@@ -91,10 +91,17 @@ const run = async () => {
   await check('New buyer starts not verified', () => request('/identity-verification', token), 200,
     (body) => body.data.status === 'NOT_VERIFIED');
 
-  await check('Unverified buyer cannot place an order', () => request('/orders', token, {
-    method: 'POST',
-    body: JSON.stringify({ storeId: 'any', items: [] }),
-  }), 403, (body) => body.errors?.[0]?.code === 'IDENTITY_VERIFICATION_REQUIRED');
+  // The checkout gate is on only when the app settings require verification.
+  const requiredForCheckout = (await request('/identity-verification', token)).body?.data?.requiredForCheckout !== false;
+  if (requiredForCheckout) {
+    await check('Unverified buyer cannot place an order', () => request('/orders', token, {
+      method: 'POST',
+      // Well formed (the request checks run first), for a product that does not exist.
+      body: JSON.stringify({ storeId: 'any', contactNumber: '09171234567', items: [{ productId: 'missing-product', quantity: 1 }] }),
+    }), 403, (body) => body.errors?.[0]?.code === 'IDENTITY_VERIFICATION_REQUIRED');
+  } else {
+    results.push({ name: 'Unverified buyer cannot place an order', status: 'SKIPPED (verification is optional in the app settings)' });
+  }
 
   await check('Status cannot be set directly', () => request('/identity-verification', token, {
     method: 'PUT',
@@ -114,22 +121,26 @@ const run = async () => {
   await check('Unreadable photo fails', () => submitId(token, blank), 200,
     (body) => body.data.status === 'FAILED' && /couldn't read/i.test(body.data.failureReason) && !body.data.attempt);
 
-  // Split card: the name and ID number are on the front, the address on the back.
+  // Only the name is checked: the front alone verifies (no address on it)...
   const frontOnly = await renderIdCard({ lastName: 'DELA CRUZ', givenNames: 'JUAN', idNumber, address: '' });
-  await check('Front alone fails when the address is on the back', () => submitId(token, frontOnly), 200,
-    (body) => body.data.status === 'FAILED' && /address/i.test(body.data.failureReason));
+  await check('Front alone verifies (the address is not checked)', () => submitId(token, frontOnly), 200,
+    (body) => body.data.status === 'VERIFIED');
 
-  const backOnly = await renderIdCard({ address });
-  await check('Front + back verifies', () => submitId(token, frontOnly, 'PHILSYS', backOnly), 200,
+  // ...and an address somewhere else entirely, on the back, changes nothing.
+  const thirdBuyer = await createBuyer(municipality.id, 'Maria Clara Santos');
+  const thirdIdNumber = `${crypto.randomInt(1000, 9999)}-${crypto.randomInt(1000, 9999)}-${crypto.randomInt(1000, 9999)}-${crypto.randomInt(1000, 9999)}`;
+  const thirdFront = await renderIdCard({ lastName: 'SANTOS', givenNames: 'MARIA CLARA', idNumber: thirdIdNumber });
+  const elsewhere = await renderIdCard({ address: 'BRGY SAN ISIDRO, QUEZON CITY, METRO MANILA' });
+  await check('Front + back with another address verifies', () => submitId(generateTokens(thirdBuyer).accessToken, thirdFront, 'PHILSYS', elsewhere), 200,
     (body) => body.data.status === 'VERIFIED');
 
   // Same ID, printed on a single side — used by the checks below.
   const matching = await renderIdCard({ lastName: 'DELA CRUZ', givenNames: 'JUAN', idNumber, address });
 
-  // The payload is invalid on purpose; any error other than the identity gate proves the gate passed.
+  // The order cannot be filled on purpose; any error other than the identity gate proves the gate passed.
   const gated = await request('/orders', token, {
     method: 'POST',
-    body: JSON.stringify({ storeId: 'missing-store', items: [] }),
+    body: JSON.stringify({ storeId: 'missing-store', contactNumber: '09171234567', items: [{ productId: 'missing-product', quantity: 1 }] }),
   });
   assert(gated.body?.errors?.[0]?.code !== 'IDENTITY_VERIFICATION_REQUIRED', 'Verified buyer should pass the checkout gate');
   results.push({ name: 'Verified buyer passes the checkout gate', status: 'PASS', httpStatus: gated.status });
@@ -146,6 +157,11 @@ const run = async () => {
 
   await check('Same ID cannot verify a second account', () => submitId(otherToken, matching), 200,
     (body) => body.data.status === 'FAILED' && /another account/i.test(body.data.failureReason));
+
+  await check('Changing the address keeps verification', async () => {
+    await request('/auth/profile', token, { method: 'PUT', body: JSON.stringify({ barangay: 'Lalud', address: '12 Rizal St' }) });
+    return request('/identity-verification', token);
+  }, 200, (body) => body.data.status === 'VERIFIED');
 
   await check('Changing profile name revokes verification', async () => {
     await request('/auth/profile', token, { method: 'PUT', body: JSON.stringify({ fullName: 'Juan Cruz Reyes' }) });

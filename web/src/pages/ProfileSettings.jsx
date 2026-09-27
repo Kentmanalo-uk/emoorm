@@ -1,37 +1,57 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CircleNotch as Loader2, FloppyDisk as Save, Eye, EyeSlash as EyeOff, CheckCircle, SignOut } from '@phosphor-icons/react';
+import { Camera, CircleNotch as Loader2, FloppyDisk as Save, CheckCircle, SignOut } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useAuthStore from '../store/authStore';
-import { API_CONFIG } from '../config/api';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
-import { useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import './ProfileSettings.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import useFreshAccount from '../hooks/useFreshAccount';
 import UserAvatar from '../components/ui/UserAvatar';
-
-const USERNAME_RE = /^[a-z0-9][a-z0-9._]{2,19}$/;
-
-// Keep what the person types inside what the server will accept, so the
-// only surprise left is "that username is taken" (409).
-const cleanUsername = (value) => value.toLowerCase().replace(/[^a-z0-9._]/g, '').slice(0, 20);
+import PhAddressPicker from '../components/common/PhAddressPicker';
+import PasswordField from '../components/account/PasswordField';
+import PhoneSettings from './ProfileSettingsPhone';
+import {
+  cleanUsername, fullNameProblem, usernameProblem, contactProblem, passwordProblem, uploadProfilePhoto,
+} from '../lib/profileForm';
 
 const initialProfileState = (user) => ({
   fullName: user?.fullName || '',
   username: user?.username || '',
   contactNumber: user?.contactNumber || '',
-  barangay: user?.barangay || '',
-  address: user?.address || '',
-  province: user?.province || 'Oriental Mindoro',
   profilePhoto: user?.profilePhoto || '',
+  // The home address, as the address picker takes it.
+  municipalityId: user?.municipalityId || '',
+  municipalityName: user?.municipality?.name || '',
+  barangay: user?.barangay || '',
+  street: user?.address || '',
 });
 
-export default function ProfileSettings() {
+// What a save would change (the picker also keeps codes, which are not saved).
+const SAVED_FIELDS = ['fullName', 'username', 'contactNumber', 'profilePhoto', 'municipalityId', 'barangay', 'street'];
+
+/**
+ * /profile/settings. Phones: the settings as a list, each part on a page of
+ * its own (/profile/settings/<part>). Computers: everything on one page.
+ */
+export default function ProfileSettingsPage() {
+  const { part } = useParams();
+  const isPhone = usePhoneLayout();
+  // The account as saved now; the forms below start from it.
+  const fresh = useFreshAccount();
+  if (isPhone) return <PhoneSettings key={part || 'list'} part={part || null} fresh={fresh} />;
+  if (part) return <Navigate to="/profile/settings" replace />;
+  return <ProfileSettings />;
+}
+
+function ProfileSettings() {
   const { user, updateUser, logout, setTokens } = useAuthStore();
   const navigate = useNavigate();
   const [signOutOpen, setSignOutOpen] = useState(false);
-  const { municipalities } = useMunicipalities();
+  const { municipalities, isLoading: municipalitiesLoading } = useMunicipalities();
 
   const [form, setForm] = useState(() => initialProfileState(user));
   const original = useMemo(() => initialProfileState(user), [user]);
@@ -49,32 +69,26 @@ export default function ProfileSettings() {
     setForm(initialProfileState(user));
   }, [user]);
 
-  const municipalityName = useMemo(() => {
-    const id = user?.municipalityId || user?.municipality?.id;
-    if (!id) return user?.municipality?.name || '—';
-    return municipalities.find((m) => m.id === id)?.name || user?.municipality?.name || '—';
-  }, [user, municipalities]);
+  const [addressErrors, setAddressErrors] = useState({});
 
   const isDirty = useMemo(
-    () => Object.keys(form).some((k) => (form[k] || '') !== (original[k] || '')),
+    () => SAVED_FIELDS.some((k) => (form[k] || '') !== (original[k] || '')),
     [form, original],
   );
 
   const validate = () => {
-    if (!form.fullName || form.fullName.trim().length < 2) {
-      toast.error('Please enter your full name');
+    const problem = fullNameProblem(form.fullName) || usernameProblem(form.username) || contactProblem(form.contactNumber);
+    if (problem) {
+      toast.error(problem);
       return false;
     }
-    if (form.username && (!USERNAME_RE.test(form.username) || form.username.includes('..'))) {
-      toast.error('Username must be 3–20 characters: letters, numbers, dot or underscore');
+    // A changed address needs its barangay (an older account without one
+    // can still save its other details).
+    const addressChanged = ['barangay', 'street'].some((k) => (form[k] || '') !== (original[k] || ''));
+    if (addressChanged && !form.barangay?.trim()) {
+      setAddressErrors({ barangay: 'Choose your barangay.' });
+      toast.error('Choose your barangay');
       return false;
-    }
-    if (form.contactNumber) {
-      const digits = form.contactNumber.replace(/\D/g, '');
-      if (!/^09\d{9}$/.test(digits)) {
-        toast.error('Contact number must be 11 digits starting with 09');
-        return false;
-      }
     }
     return true;
   };
@@ -92,9 +106,9 @@ export default function ProfileSettings() {
       const payload = {
         fullName: form.fullName.trim(),
         contactNumber: form.contactNumber?.trim() || null,
-        province: form.province?.trim() || null,
+        province: 'Oriental Mindoro',
         barangay: form.barangay?.trim() || null,
-        address: form.address?.trim() || null,
+        address: form.street?.trim() || null,
         profilePhoto: form.profilePhoto || null,
       };
       // Only send the username when it actually changed: sending the same
@@ -113,37 +127,17 @@ export default function ProfileSettings() {
     }
   };
 
-  const handleReset = () => setForm(original);
+  const handleReset = () => {
+    setForm(original);
+    setAddressErrors({});
+  };
 
   const handlePhoto = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Photo must be under 5 MB');
-      return;
-    }
-    if (!/^image\/(jpe?g|png|webp)$/.test(file.type)) {
-      toast.error('Only JPEG, PNG, or WebP images allowed');
-      return;
-    }
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      // Use raw fetch so the browser sets multipart/form-data with a proper boundary.
-      // (The shared axios instance defaults Content-Type: application/json, which breaks uploads.)
-      const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const resp = await fetch(`${API_CONFIG.BASE_URL}/upload/image`, {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: fd,
-      });
-      const json = await resp.json().catch(() => ({}));
-      if (!resp.ok || !json?.success) {
-        throw new Error(json?.message || `Upload failed (${resp.status})`);
-      }
-      const url = json?.data?.url;
-      if (!url) throw new Error('Upload succeeded but no URL returned');
+      const url = await uploadProfilePhoto(file);
       setForm((f) => ({ ...f, profilePhoto: url }));
       toast.success('Photo uploaded — click Save to apply');
     } catch (err) {
@@ -158,30 +152,10 @@ export default function ProfileSettings() {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (!pw.currentPassword || !pw.newPassword || !pw.confirmPassword) {
-      toast.error('Fill in all password fields');
+    const problem = passwordProblem(pw);
+    if (problem) {
+      toast.error(problem);
       return;
-    }
-    if (pw.newPassword === pw.currentPassword) {
-      toast.error('New password must be different from current password');
-      return;
-    }
-    if (pw.newPassword !== pw.confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-    const rules = [
-      { re: /.{8,}/, msg: 'Password must be at least 8 characters' },
-      { re: /[A-Z]/, msg: 'Password must contain an uppercase letter' },
-      { re: /[a-z]/, msg: 'Password must contain a lowercase letter' },
-      { re: /[0-9]/, msg: 'Password must contain a number' },
-      { re: /[!@#$%^&*(),.?":{}|<>]/, msg: 'Password must contain a special character' },
-    ];
-    for (const r of rules) {
-      if (!r.re.test(pw.newPassword)) {
-        toast.error(r.msg);
-        return;
-      }
     }
     setChangingPw(true);
     try {
@@ -321,43 +295,24 @@ export default function ProfileSettings() {
             <span className="ps-help">Format: 11 digits starting with 09</span>
           </label>
 
-          <label className="ps-field">
-            <span className="ps-label">Province</span>
-            <input value={form.province || 'Oriental Mindoro'} disabled className="ps-input" />
-            <span className="ps-help">Determined by your municipality.</span>
-          </label>
-
-          <label className="ps-field">
-            <span className="ps-label">Municipality</span>
-            <input value={municipalityName} disabled className="ps-input" />
-            <span className="ps-help">Contact support to change your municipality.</span>
-          </label>
-
-          <label className="ps-field">
-            <span className="ps-label">Barangay</span>
-            <input
-              name="barangay"
-              value={form.barangay}
-              onChange={handleChange}
-              placeholder="Barangay Poblacion"
-              maxLength={60}
-              className="ps-input"
+          {/* The home address, from the address lists (province, town, barangay, street). */}
+          <div className="ps-field ps-field-full ps-address">
+            <PhAddressPicker
+              value={form}
+              onChange={(next) => {
+                setForm((f) => ({ ...f, ...next }));
+                setAddressErrors({});
+              }}
+              dbMunicipalities={municipalities}
+              dbLoading={municipalitiesLoading}
+              errors={addressErrors}
+              lockTown
+              townHint="Contact support to change your municipality."
             />
-          </label>
-
-          <label className="ps-field ps-field-full">
-            <span className="ps-label">Delivery address</span>
-            <textarea
-              name="address"
-              value={form.address}
-              onChange={handleChange}
-              placeholder="Street, house number, landmarks…"
-              rows={3}
-              maxLength={300}
-              className="ps-input ps-textarea"
-            />
-            <span className="ps-help">{(form.address || '').length} / 300</span>
-          </label>
+            <span className="ps-help">
+              Your home address. Orders go to your <Link to="/profile/addresses">delivery addresses</Link>.
+            </span>
+          </div>
         </div>
 
         <footer className="ps-actions">
@@ -462,27 +417,6 @@ export default function ProfileSettings() {
         onCancel={() => setSignOutOpen(false)}
       />
     </div>
-  );
-}
-
-function PasswordField({ label, value, visible, onToggle, onChange, help }) {
-  return (
-    <label className="ps-field">
-      <span className="ps-label">{label}</span>
-      <div className="ps-input-wrap">
-        <input
-          type={visible ? 'text' : 'password'}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="ps-input"
-          autoComplete="new-password"
-        />
-        <button type="button" className="ps-input-eye" onClick={onToggle} tabIndex={-1}>
-          {visible ? <EyeOff size={15} /> : <Eye size={15} />}
-        </button>
-      </div>
-      {help && <span className="ps-help">{help}</span>}
-    </label>
   );
 }
 

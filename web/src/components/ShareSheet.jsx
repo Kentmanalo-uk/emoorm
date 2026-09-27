@@ -3,13 +3,10 @@ import {
   FacebookLogo, MessengerLogo, WhatsappLogo, TelegramLogo, XLogo,
   EnvelopeSimple, ChatText, ChatCircleDots, LinkSimple, Check, X,
 } from '@phosphor-icons/react';
+import { isTouchPhone } from '../lib/device';
 import './ShareSheet.css';
 
 const CLOSE_MS = 220;
-
-const isTouchPhone = () => typeof window !== 'undefined'
-  && window.matchMedia('(pointer: coarse)').matches
-  && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 /** Where each target sends the link. Phone-only apps are hidden on desktop. */
 const targets = ({ url, title, text }) => {

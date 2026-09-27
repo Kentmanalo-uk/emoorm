@@ -8,6 +8,7 @@ import Skeleton from '../components/ui/Skeleton';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import './Addresses.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
+import useFreshAccount from '../hooks/useFreshAccount';
 
 const emptyForm = {
   label: '',
@@ -30,6 +31,8 @@ const emptyForm = {
 const Addresses = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
+  // A new address starts from the account's (as saved now).
+  useFreshAccount();
   const { municipalities, isLoading: municipalitiesLoading } = useMunicipalities();
   const [addresses, setAddresses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,15 +83,25 @@ const Addresses = () => {
 
   const openAddForm = () => {
     setEditingId(null);
+    // The first address starts from the account's own address.
+    const fromProfile = addresses.length === 0 && user?.municipalityId;
     setFormData({
       ...emptyForm,
       fullName: user?.fullName || '',
       contactNumber: user?.contactNumber || '',
+      ...(fromProfile ? {
+        label: 'Home',
+        municipalityId: user.municipalityId,
+        municipalityName: user.municipality?.name || '',
+        barangay: user.barangay || '',
+        street: user.address || '',
+      } : {}),
     });
     setFormErrors({});
     setFormOpen(true);
   };
 
+  // The picker finds the saved town and barangay on its lists by name.
   const openEditForm = (addr) => {
     setEditingId(addr.id);
     setFormData({

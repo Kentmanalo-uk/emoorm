@@ -2,6 +2,7 @@ const authService = require('../services/auth.service');
 const userPurgeService = require('../services/userPurge.service');
 const auditLog = require('../services/auditLog.service');
 const identityVerificationService = require('../services/identityVerification.service');
+const addressService = require('../services/address.service');
 const {
   successResponse,
   createdResponse,
@@ -85,12 +86,17 @@ const updateProfile = asyncHandler(async (req, res) => {
   const before = await authService.getProfile(req.user.id);
   const user = await authService.updateProfile(req.user.id, req.body);
 
-  // Identity verification was matched against these fields; changing them revokes it.
-  const changedFields = ['fullName', 'barangay', 'address', 'province'].filter(
+  // Identity verification was matched against the name (only); changing it revokes it.
+  const changedFields = ['fullName'].filter(
     (field) => (before?.[field] || '') !== (user?.[field] || '')
   );
   if (changedFields.length > 0) {
     await identityVerificationService.invalidateIfVerified(req.user, changedFields, req);
+  }
+
+  // The "Home" delivery address made from the profile address follows it.
+  if (['BUYER', 'SELLER'].includes(req.user.role)) {
+    await addressService.followProfileAddress(req.user.id, before, user);
   }
 
   successResponse(res, user, 'Profile updated successfully');

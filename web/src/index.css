@@ -479,7 +479,6 @@ img {
   ),
   html body #root .login-form-title,
   html body #root .register-form-title,
-  html body #root .pf-m-identity-text strong,
   html body #root .shop-m-note-text strong {
     font-weight: 400 !important;
   }

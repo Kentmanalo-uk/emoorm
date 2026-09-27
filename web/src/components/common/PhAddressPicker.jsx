@@ -25,6 +25,11 @@ import './PhAddressPicker.css';
  * change), cross-referenced against the platform's own `municipalities`
  * catalogue (`dbMunicipalities`) so the emitted `municipalityId` is a valid FK.
  * Barangays still come from PSGC, with manual entry as the fallback.
+ *
+ * A saved address can be passed as it is stored (the town's name or id, the
+ * barangay's name): the lists select by PSGC code, which the picker works out
+ * from the names each time it renders, so a page resetting its form cannot
+ * leave them blank. A barangay that is not on the list shows as typed.
  */
 const emptyValue = {
   province: '',
@@ -40,6 +45,9 @@ const emptyValue = {
 const isServiceProvince = (name, code) =>
   normalizeName(name) === normalizeName(SERVICE_PROVINCE.name) && code === SERVICE_PROVINCE.code;
 
+// A barangay's name for comparing, without a typed "Brgy." or "Barangay" in front.
+const barangayKey = (name) => normalizeName(String(name || '').replace(/^(brgy\.?|bgy\.?|barangay)\s+/i, ''));
+
 const PhAddressPicker = ({
   value,
   onChange,
@@ -51,13 +59,27 @@ const PhAddressPicker = ({
   streetLabel = 'Street / House No.',
   streetPlaceholder = '123 Rizal St.',
   compact = false,
+  // The town is set and cannot be changed here (an account's own town):
+  // shown as a fixed field, with `townHint` under it.
+  lockTown = false,
+  townHint = '',
 }) => {
   const v = { ...emptyValue, ...(value || {}) };
 
   const municipalities = useMemo(() => listServiceMunicipalities(), []);
   const [barangays, setBarangays] = useState([]);
+  // The town the barangay list was loaded for.
+  const [barangaysFor, setBarangaysFor] = useState('');
   const [brgyLoading, setBrgyLoading] = useState(false);
   const [manualBarangay, setManualBarangay] = useState(false);
+
+  // The town selected on the list, from its name (or the id of a saved one).
+  const savedTown = v.municipalityName
+    || (v.municipalityId && (dbMunicipalities || []).find((m) => m.id === v.municipalityId)?.name)
+    || '';
+  const townCode = (savedTown && municipalities.find((x) => normalizeName(x.name) === normalizeName(savedTown))?.code)
+    || v.municipalityCode
+    || '';
 
   // Pin the province. For a fresh form this runs once (the consumers seed the
   // name but not the code). It runs again only if something upstream puts a
@@ -84,16 +106,21 @@ const PhAddressPicker = ({
 
   // Load barangays whenever municipality changes.
   useEffect(() => {
-    if (!v.municipalityCode) {
+    if (!townCode) {
       setBarangays([]);
+      setBarangaysFor('');
       return;
     }
     let cancelled = false;
+    const code = townCode;
     setBrgyLoading(true);
     (async () => {
       try {
-        const list = await listBarangaysByMunicipality(v.municipalityCode);
-        if (!cancelled) setBarangays(list);
+        const list = await listBarangaysByMunicipality(code);
+        if (!cancelled) {
+          setBarangays(list);
+          setBarangaysFor(code);
+        }
       } catch {
         if (!cancelled) {
           setBarangays([]);
@@ -104,7 +131,7 @@ const PhAddressPicker = ({
       }
     })();
     return () => { cancelled = true; };
-  }, [v.municipalityCode]);
+  }, [townCode]);
 
   const dbMuniByNormName = useMemo(() => {
     const map = new Map();
@@ -127,6 +154,28 @@ const PhAddressPicker = ({
     if (match) onChange({ ...v, municipalityId: match.id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbMuniByNormName, v.municipalityName, v.municipalityId]);
+
+  // The barangay selected on the list, by name, once the town's barangays are in.
+  const listReady = Boolean(townCode) && barangaysFor === townCode && barangays.length > 0;
+  const namedBarangay = listReady && v.barangay
+    ? barangays.find((b) => barangayKey(b.name) === barangayKey(v.barangay))
+    : null;
+  const barangayCode = namedBarangay?.code || '';
+
+  // A saved barangay the list does not have shows as typed.
+  const offList = listReady && Boolean(v.barangay) && !namedBarangay;
+  const typing = manualBarangay || offList;
+
+  const toggleManual = () => {
+    if (!typing) {
+      setManualBarangay(true);
+      return;
+    }
+    setManualBarangay(false);
+    // Back to the list: a typed name on it is selected there, one it does
+    // not have is cleared.
+    if (offList) onChange({ barangay: '', barangayCode: '' });
+  };
 
   const handleMunicipality = (e) => {
     const code = e.target.value;
@@ -181,24 +230,37 @@ const PhAddressPicker = ({
 
       <div className="ph-field">
         <label className="ph-label">City / Municipality</label>
-        <select
-          className={`ph-input ${errors.municipality || errors.municipalityId ? 'error' : ''}`}
-          value={v.municipalityCode || ''}
-          onChange={handleMunicipality}
-          disabled={disabled || dbLoading}
-        >
-          <option value="">
-            {dbLoading ? 'Loading municipalities…' : 'Select city / municipality'}
-          </option>
-          {municipalities.map((m) => {
-            const supported = dbMuniByNormName.has(normalizeName(m.name));
-            return (
-              <option key={m.code} value={m.code} disabled={dbMunicipalities.length > 0 && !supported}>
-                {m.name}{dbMunicipalities.length > 0 && !supported ? ' (unavailable)' : ''}
-              </option>
-            );
-          })}
-        </select>
+        {lockTown ? (
+          // Set once and kept: shown like the province, not as a choice.
+          <input
+            type="text"
+            className="ph-input ph-input-locked"
+            value={savedTown}
+            readOnly
+            aria-readonly="true"
+            tabIndex={-1}
+          />
+        ) : (
+          <select
+            className={`ph-input ${errors.municipality || errors.municipalityId ? 'error' : ''}`}
+            value={townCode}
+            onChange={handleMunicipality}
+            disabled={disabled || dbLoading}
+          >
+            <option value="">
+              {dbLoading ? 'Loading municipalities…' : 'Select city / municipality'}
+            </option>
+            {municipalities.map((m) => {
+              const supported = dbMuniByNormName.has(normalizeName(m.name));
+              return (
+                <option key={m.code} value={m.code} disabled={dbMunicipalities.length > 0 && !supported}>
+                  {m.name}{dbMunicipalities.length > 0 && !supported ? ' (unavailable)' : ''}
+                </option>
+              );
+            })}
+          </select>
+        )}
+        {lockTown && townHint && <span className="ph-hint">{townHint}</span>}
         {(errors.municipality || errors.municipalityId) && (
           <span className="ph-error">{errors.municipality || errors.municipalityId}</span>
         )}
@@ -211,17 +273,17 @@ const PhAddressPicker = ({
 
       <div className="ph-field">
         <label className="ph-label">Barangay</label>
-        {!manualBarangay && barangays.length > 0 ? (
+        {!typing && barangays.length > 0 ? (
           <select
             className={`ph-input ${errors.barangay ? 'error' : ''}`}
-            value={v.barangayCode || ''}
+            value={barangayCode}
             onChange={handleBarangay}
-            disabled={disabled || !v.municipalityCode || brgyLoading}
+            disabled={disabled || !townCode || brgyLoading}
           >
             <option value="">
               {brgyLoading
                 ? 'Loading barangays…'
-                : !v.municipalityCode
+                : !townCode
                   ? 'Select a municipality first'
                   : 'Select barangay'}
             </option>
@@ -240,13 +302,13 @@ const PhAddressPicker = ({
           />
         )}
         {errors.barangay && <span className="ph-error">{errors.barangay}</span>}
-        {v.municipalityCode && (
+        {townCode && (
           <button
             type="button"
             className="ph-toggle-manual"
-            onClick={() => setManualBarangay((m) => !m)}
+            onClick={toggleManual}
           >
-            {manualBarangay ? 'Use dropdown' : "Barangay not listed? Enter manually"}
+            {typing ? 'Use dropdown' : "Barangay not listed? Enter manually"}
           </button>
         )}
       </div>

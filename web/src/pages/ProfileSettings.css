@@ -195,6 +195,39 @@
   pointer-events: none;
 }
 
+/* Home address: the address picker's fields laid out like the rest of the form. */
+.ps-address .ph-address-picker {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.ps-address .ph-field {
+  gap: 6px;
+}
+
+.ps-address .ph-label {
+  font-size: 14px;
+}
+
+.ps-address .ph-input {
+  min-height: 47px;
+  padding: 11px 13px;
+  border-radius: 0;
+  font-size: 15px;
+}
+
+.ps-address .ps-help a {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .ps-address .ph-address-picker {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Actions */
 .ps-actions {
   display: flex;

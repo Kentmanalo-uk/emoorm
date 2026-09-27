@@ -10,18 +10,16 @@ const { recognizeId } = require('../utils/identityOcr');
 const { encryptJson, hashIdNumber } = require('../utils/identityCrypto');
 const {
   ID_TYPES,
-  idTypeHasAddress,
   extractIdNumber,
   extractFields,
   matchName,
-  matchAddress,
 } = require('../utils/identityMatch');
 
 /**
  * Identity Verification Service
  * Verifies a buyer by OCR-reading a Philippine government ID and matching it
- * against the account's registered name and address. The ID image is only
- * held in memory for the duration of the request.
+ * against the account's name (the name only: not the address). The ID image
+ * is only held in memory for the duration of the request.
  */
 
 const PENDING_TIMEOUT_MS = 2 * 60 * 1000;
@@ -32,15 +30,10 @@ const FAILURE_MESSAGES = {
   UNREADABLE: "We couldn't read your ID. Retake the photo in good lighting, without glare, and with the whole card in frame.",
   ID_NUMBER_NOT_FOUND: "We couldn't read the ID number. Make sure it is clearly visible and try again.",
   NAME_MISMATCH: 'The name on your ID does not match the name on your account. Update your profile name to match your ID, then try again.',
-  ADDRESS_MISMATCH: 'The address on your ID does not match the address on your account. Update your profile address to match your ID, then try again.',
   ID_ALREADY_USED: 'This ID has already been used to verify another account.',
 };
 
-const idTypeOptions = () => Object.entries(ID_TYPES).map(([value, { label }]) => ({
-  value,
-  label,
-  hasAddress: idTypeHasAddress(value),
-}));
+const idTypeOptions = () => Object.entries(ID_TYPES).map(([value, { label }]) => ({ value, label }));
 
 const toPublicStatus = (record, attemptsUsed = 0, requiredForCheckout = true) => {
   let status = record?.status || 'NOT_VERIFIED';
@@ -148,7 +141,7 @@ const assertVerifiedForCheckout = async (userId) => {
 
 /**
  * Extracts the ID fields from OCR text and checks them against the account:
- * readable text, an ID number, and name/address at least 50% similar.
+ * readable text, an ID number, and the name at least 50% similar.
  * Returns { verified, failureCode, checks, scores, extracted, idNumber }.
  */
 /** Text of both sides, kept as separate lines for the line-based checks. */
@@ -163,43 +156,32 @@ const evaluate = (text, idType, user) => {
   // The selected ID type only hints at the ID number format; the decision
   // rests on the extracted text, not on recognising the card design.
   const idNumber = extractIdNumber(text, idType);
+  // Only the name is checked against the account, whatever the ID: an
+  // address on the card is not compared (nor kept).
   const name = matchName(user.fullName, fields, text);
-  // Passports, PRC and SSS cards carry no address; they rely on name + ID number.
-  const address = idTypeHasAddress(idType)
-    ? matchAddress({
-      municipalityName: user.municipality?.name,
-      barangay: user.barangay,
-      province: user.province,
-      street: user.address,
-    }, fields, text)
-    : { matched: true, score: 1, skipped: true };
 
   // Kept for the audit log only; never returned to the client.
   const checks = [
     { key: 'readable', passed: readable },
     { key: 'idNumber', passed: readable && Boolean(idNumber) },
     { key: 'name', passed: readable && name.matched },
-    { key: 'address', passed: readable && address.matched },
   ];
 
   let failureCode = null;
   if (!readable) failureCode = 'UNREADABLE';
   else if (!idNumber) failureCode = 'ID_NUMBER_NOT_FOUND';
   else if (!name.matched) failureCode = 'NAME_MISMATCH';
-  else if (!address.matched) failureCode = 'ADDRESS_MISMATCH';
 
   return {
     verified: failureCode === null,
     failureCode,
     idNumber,
     nameMatched: name.matched,
-    addressMatched: address.matched,
     checks,
-    scores: { name: Math.round(name.score * 100), address: Math.round(address.score * 100) },
+    scores: { name: Math.round(name.score * 100) },
     // Stored encrypted on success; never returned to the client.
     extracted: {
       fullName: name.idName,
-      address: fields.address,
       dateOfBirth: fields.dateOfBirth,
     },
   };
@@ -207,8 +189,8 @@ const evaluate = (text, idType, user) => {
 
 /**
  * Runs OCR on the uploaded ID and updates the user's verification status.
- * Both sides are read when a back photo is sent (many IDs print the address
- * there) and the checks run against the two sides together.
+ * Both sides are read when a back photo is sent (optional) and the checks
+ * run against the two sides together.
  * @param {Object} actor - req.user
  * @param {String} idType - key of ID_TYPES
  * @param {Buffer|{front: Buffer, back?: Buffer}} images - in-memory uploads; never persisted
@@ -268,7 +250,7 @@ const submit = async (actor, idType, images, req) => {
     outcome = evaluate(combined, idType, user);
   } catch (err) {
     console.error('[identity] OCR failed:', err.message);
-    outcome = { verified: false, failureCode: 'UNREADABLE', nameMatched: false, addressMatched: false };
+    outcome = { verified: false, failureCode: 'UNREADABLE', nameMatched: false };
   }
 
   let idNumberHash = null;
@@ -340,7 +322,7 @@ const submit = async (actor, idType, images, req) => {
 };
 
 /**
- * Revokes a verification when the name/address it was matched against changes.
+ * Revokes a verification when the name it was matched against changes.
  */
 const invalidateIfVerified = async (actor, changedFields, req) => {
   const record = await identityRepository.findByUserId(actor.id);
@@ -371,7 +353,7 @@ const invalidateIfVerified = async (actor, changedFields, req) => {
         type: 'SYSTEM_ANNOUNCEMENT',
         audience: 'SELLER',
         title: 'Please verify your ID again',
-        message: 'You changed your name or address, so your ID check was reset. It only takes a minute.',
+        message: 'You changed your name, so your ID check was reset. It only takes a minute.',
         relatedId: actor.id,
         target: { kind: 'seller-verification' },
       });

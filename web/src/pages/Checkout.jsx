@@ -30,12 +30,33 @@ import useAppSettings, { storeDeliveryFee } from '../hooks/useAppSettings';
 import { isIdentityRequiredError } from '../lib/identity';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { qrMethod, formatAccountNumber } from '../lib/qrPayment';
+import { isTouchPhone } from '../lib/device';
+import GcashPhonePay from '../components/checkout/GcashPhonePay';
 import './Checkout.css';
 
 // Same rules the server applies at POST /orders.
 const CONTACT_NUMBER_RE = /^(09\d{9}|\+639\d{9})$/;
 const PAYMENT_REFERENCE_RE = /^[A-Za-z0-9 -]{4,64}$/;
 const normalizeContact = (value) => String(value || '').replace(/[\s-]/g, '');
+
+// Phones: the shop a buyer left for the GCash app to pay. Coming back to a
+// checkout the browser reloaded meanwhile, GCash is picked again for them.
+const GCASH_RETURN_KEY = 'emoorm-checkout-gcash';
+const readGcashReturn = () => {
+  try {
+    return sessionStorage.getItem(GCASH_RETURN_KEY);
+  } catch {
+    return null;
+  }
+};
+const writeGcashReturn = (storeId) => {
+  try {
+    if (storeId) sessionStorage.setItem(GCASH_RETURN_KEY, storeId);
+    else sessionStorage.removeItem(GCASH_RETURN_KEY);
+  } catch {
+    // Private browsing: nothing to remember then.
+  }
+};
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -45,6 +66,8 @@ const Checkout = () => {
   const { requireVerifiedIdentity, showIdentityRequired, identityDialog } = useIdentityGate();
   const { settings } = useAppSettings();
   const isPhone = usePhoneLayout();
+  // A real phone (not a narrow computer window): it can open the GCash app.
+  const touchPhone = useMemo(() => isTouchPhone(), []);
 
   // Refresh price / stock / availability of every line before anything is placed.
   const [revalidating, setRevalidating] = useState(false);
@@ -235,6 +258,7 @@ const Checkout = () => {
   }, [user, addressesLoaded, savedAddresses.length]);
 
   // Fetch each store's settings once (Retry bumps the attempt counter)
+  const gcashRestored = useRef(false);
   useEffect(() => {
     let cancelled = false;
     if (storeIds.length === 0) return undefined;
@@ -259,6 +283,15 @@ const Checkout = () => {
         return next;
       });
       setStoresLoading(false);
+      // Back from the GCash app to a reloaded checkout: GCash is picked
+      // again (once, and only while the shop still takes it).
+      const only = results.length === 1 ? results[0] : null;
+      if (!gcashRestored.current && only?.store) {
+        gcashRestored.current = true;
+        if (readGcashReturn() === only.id && only.store.paymentQrImage && only.store.paymentQrType === 'GCASH') {
+          setPaymentMethod('GCASH');
+        }
+      }
     })();
     return () => {
       cancelled = true;
@@ -344,6 +377,11 @@ const Checkout = () => {
       else if (paymentAvailability.qrph) setPaymentMethod('QRPH');
     }
   }, [paymentAvailability, paymentMethod]);
+
+  const pickPayment = (value) => {
+    setPaymentMethod(value);
+    if (value !== 'GCASH') writeGcashReturn(null);
+  };
 
   const anyCoverageMissing = useMemo(
     () =>
@@ -569,6 +607,7 @@ const Checkout = () => {
       const firstOrder = responses[0]?.data;
       if (firstOrder?.id) setOrderId(firstOrder.id);
 
+      writeGcashReturn(null);
       setOrderSuccess(true);
       toast.success('Order placed successfully!');
     } catch (error) {
@@ -624,6 +663,54 @@ const Checkout = () => {
   const activeQrStore = (paymentMethod === 'GCASH' || paymentMethod === 'QRPH')
     ? storeIds.map((id) => storeInfo[id]?.store).find((s) => s?.paymentQrImage)
     : null;
+
+  // Phones pay GCash by hand: the shop's number, copied into the GCash app.
+  // Computers (and a narrow computer window) keep the QR panel.
+  const gcashByHand = isPhone && touchPhone && paymentMethod === 'GCASH'
+    && activeQrStore?.paymentQrType === 'GCASH' && Boolean(activeQrStore?.paymentAccountNumber);
+
+  // The payment's reference number and screenshot, needed for GCash and QR Ph.
+  const proofFields = (
+    <>
+      <div className="form-group">
+        <label className="form-label">Reference / Transaction ID</label>
+        <input
+          type="text"
+          className="form-input"
+          placeholder="Enter reference number from your payment app"
+          value={paymentReference}
+          onChange={(e) => setPaymentReference(e.target.value)}
+        />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Payment proof <span style={{ color: 'var(--t-danger-600, #dc2626)' }}>*</span></label>
+        {paymentProofUrl ? (
+          <div className="proof-preview">
+            <img src={resolveImg(paymentProofUrl)} alt="Payment proof" />
+            <button
+              type="button"
+              className="btn-back"
+              onClick={() => setPaymentProofUrl('')}
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <label className="proof-uploader">
+            <Upload size={16} />
+            <span>{uploadingProof ? 'Uploading…' : 'Upload screenshot'}</span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleProofUpload}
+              disabled={uploadingProof}
+              hidden
+            />
+          </label>
+        )}
+      </div>
+    </>
+  );
 
   return (
     <Layout>
@@ -942,14 +1029,14 @@ const Checkout = () => {
                         <div
                           key={value}
                           className={`payment-card ${paymentMethod === value ? 'selected' : ''} ${!enabled ? 'disabled' : ''}`}
-                          onClick={() => enabled && setPaymentMethod(value)}
+                          onClick={() => enabled && pickPayment(value)}
                         >
                           <input
                             type="radio"
                             name="payment"
                             value={value}
                             checked={paymentMethod === value}
-                            onChange={() => enabled && setPaymentMethod(value)}
+                            onChange={() => enabled && pickPayment(value)}
                             disabled={!enabled}
                           />
                           <span className={`payment-icon payment-icon-${value.toLowerCase()}`} aria-hidden="true">
@@ -963,7 +1050,18 @@ const Checkout = () => {
                       ))}
                     </div>
 
-                    {(paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && activeQrStore && (
+                    {gcashByHand ? (
+                      <GcashPhonePay
+                        amount={peso(total)}
+                        number={activeQrStore.paymentAccountNumber}
+                        accountName={activeQrStore.paymentAccountName}
+                        qrImage={activeQrStore.paymentQrImage ? resolveImg(activeQrStore.paymentQrImage) : ''}
+                        instructions={activeQrStore.paymentInstructions}
+                        onOpen={() => writeGcashReturn(storeIds[0])}
+                      >
+                        {proofFields}
+                      </GcashPhonePay>
+                    ) : (paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && activeQrStore && (
                       <div className="qr-payment-panel">
                         <div className="qr-payment-image">
                           <img src={resolveImg(activeQrStore.paymentQrImage)} alt="Payment QR code" />
@@ -998,43 +1096,7 @@ const Checkout = () => {
                           {activeQrStore.paymentInstructions && (
                             <p className="qr-instructions">{activeQrStore.paymentInstructions}</p>
                           )}
-                          <div className="form-group">
-                            <label className="form-label">Reference / Transaction ID</label>
-                            <input
-                              type="text"
-                              className="form-input"
-                              placeholder="Enter reference number from your payment app"
-                              value={paymentReference}
-                              onChange={(e) => setPaymentReference(e.target.value)}
-                            />
-                          </div>
-                          <div className="form-group">
-                            <label className="form-label">Payment proof <span style={{ color: 'var(--t-danger-600, #dc2626)' }}>*</span></label>
-                            {paymentProofUrl ? (
-                              <div className="proof-preview">
-                                <img src={resolveImg(paymentProofUrl)} alt="Payment proof" />
-                                <button
-                                  type="button"
-                                  className="btn-back"
-                                  onClick={() => setPaymentProofUrl('')}
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            ) : (
-                              <label className="proof-uploader">
-                                <Upload size={16} />
-                                <span>{uploadingProof ? 'Uploading…' : 'Upload screenshot'}</span>
-                                <input
-                                  type="file"
-                                  accept="image/png,image/jpeg,image/webp"
-                                  onChange={handleProofUpload}
-                                  disabled={uploadingProof}
-                                  hidden
-                                />
-                              </label>
-                            )}
-                          </div>
+                          {proofFields}
                         </div>
                       </div>
                     )}

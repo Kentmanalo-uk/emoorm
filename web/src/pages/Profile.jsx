@@ -4,7 +4,7 @@ import {
   PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Question,
-  Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut, SealCheck,
+  Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -171,9 +171,9 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Account card: tap to edit. */}
+        {/* Account card: tap to edit the name and photo. */}
         <section className="pf-m-card">
-          <Link to="/profile/settings" className="pf-m-id" aria-label="Edit profile">
+          <Link to="/profile/settings/profile" className="pf-m-id" aria-label="Edit profile">
             <span className="pf-m-avatar">
               <UserAvatar
                 src={profile?.profilePhoto}
@@ -196,20 +196,7 @@ const Profile = () => {
           </div>
         </section>
 
-        {/* Identity: one compact row. */}
-        <Link to="/profile/verification" className={`pf-m-identity is-${identityMeta.tone}`}>
-          <span className="pf-m-identity-icon">
-            {identityStatus === 'VERIFIED' ? <SealCheck size={22} weight="fill" /> : <IdentityIcon size={22} weight="fill" />}
-          </span>
-          <span className="pf-m-identity-text">
-            <strong>{identityStatus === 'VERIFIED' ? 'Identity verified' : identityStatus === 'NOT_VERIFIED' ? 'Verify your identity' : identityMeta.label}</strong>
-            <span>{identityMeta.hint}</span>
-          </span>
-          {identityStatus === 'VERIFIED'
-            ? <ChevronRight size={16} className="pf-m-row-chev" />
-            : <span className="pf-m-identity-cta">{identityStatus === 'NOT_VERIFIED' ? 'Verify' : identityStatus === 'FAILED' ? 'Retry' : 'View'}</span>}
-        </Link>
-
+        {/* Verify your identity lives in Settings (Security). */}
         <section className="pf-m-section">
           <div className="pf-m-section-head">
             <h2>My Purchase</h2>

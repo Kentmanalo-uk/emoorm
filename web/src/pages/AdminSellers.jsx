@@ -451,7 +451,7 @@ export default function AdminSellers() {
                     <CheckCircle size={16} weight="fill" />
                     <span>
                       <strong>ID verified automatically</strong>
-                      {' '}— the scanned ID matched this account's name and address
+                      {' '}— the name on the scanned ID matched this account's name
                       {identity.idType && identity.idType !== 'IN_PERSON' ? ` (${identity.idType.replace(/_/g, ' ')})` : ''}
                       {identity.idType === 'IN_PERSON' ? ' (verified in person by an admin)' : ''}
                       {identity.verifiedAt ? `, ${new Date(identity.verifiedAt).toLocaleDateString('en-PH')}` : ''}.

@@ -1083,11 +1083,6 @@
     text-decoration: none;
   }
 
-  .sm-setup .pf-m-identity-icon {
-    background: var(--t-primary-50, #ecfdf5);
-    color: var(--t-primary-600, #059669);
-  }
-
   .sm-badge {
     min-width: 20px;
     height: 20px;

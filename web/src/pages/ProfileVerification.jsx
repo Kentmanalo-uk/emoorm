@@ -24,7 +24,7 @@ export default function ProfileVerification() {
 
       {status?.status === 'VERIFIED' && (
         <p className="idv-note">
-          Changing your name or barangay in <Link to="/profile/settings">Settings</Link> will require you to verify again.
+          Changing your name in <Link to="/profile/settings">Settings</Link> will require you to verify again.
         </p>
       )}
     </div>

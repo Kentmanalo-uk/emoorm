@@ -624,12 +624,12 @@ const TOPICS = [
     links: [{ label: 'Verify identity', to: '/seller/verification' }],
     answer: {
       en: [
-        '**Verify identity** (Me › Settings › Verify identity) reads a Philippine government ID: take a photo of the front (the back is optional). The name on it, and the address if it shows one, must match your account.',
-        "It isn't required to sell, but admins approve verified shops faster. You can try 5 times a day, and one ID can verify only one account. Changing your profile name or address means verifying again.",
+        '**Verify identity** (Me › Settings › Verify identity) reads a Philippine government ID: take a photo of the front (the back is optional). The name on it must match your account name; the address is not checked.',
+        "It isn't required to sell, but admins approve verified shops faster. You can try 5 times a day, and one ID can verify only one account. Changing your profile name means verifying again.",
       ].join('\n'),
       tl: [
-        'Binabasa ng **Verify identity** (Me › Settings › Verify identity) ang Philippine government ID: kunan ng litrato ang harap (optional ang likod). Dapat tugma sa account mo ang pangalan dito, at ang address kung mayroon.',
-        'Hindi ito kailangan para makapagbenta, pero mas mabilis inaaprubahan ng mga admin ang verified na shop. May 5 subok ka bawat araw, at isang account lang ang puwedeng i-verify ng isang ID. Kapag pinalitan mo ang pangalan o address sa profile, kailangan mong mag-verify ulit.',
+        'Binabasa ng **Verify identity** (Me › Settings › Verify identity) ang Philippine government ID: kunan ng litrato ang harap (optional ang likod). Dapat tugma ang pangalan dito sa pangalan ng account mo; hindi tinitingnan ang address.',
+        'Hindi ito kailangan para makapagbenta, pero mas mabilis inaaprubahan ng mga admin ang verified na shop. May 5 subok ka bawat araw, at isang account lang ang puwedeng i-verify ng isang ID. Kapag pinalitan mo ang pangalan sa profile, kailangan mong mag-verify ulit.',
       ].join('\n'),
     },
   },

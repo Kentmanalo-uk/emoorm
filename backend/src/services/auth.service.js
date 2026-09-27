@@ -8,6 +8,7 @@ const storeService = require('./store.service');
 const notificationService = require('./notification.service');
 const identityVerificationService = require('./identityVerification.service');
 const identityVerificationRepository = require('../repositories/identityVerification.repository');
+const addressService = require('./address.service');
 const googleService = require('./google.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateTokens, verifyRefreshToken, generateMfaToken, generateGoogleProfileToken, verifyGoogleProfileToken } = require('../utils/jwt');
@@ -99,6 +100,9 @@ const register = async (userData) => {
     isActive: true,
     isVerified: false,
   });
+
+  // A full address is also the first delivery address (My Addresses, checkout).
+  await addressService.saveProfileAddress(user.id, { fullName, contactNumber, municipalityId, barangay, address });
 
   sendInBackground('welcome', () => sendWelcomeEmail({ user }));
 
@@ -252,11 +256,30 @@ const updateProfile = async (userId, updateData) => {
     }
   }
 
+  // The address, as the address picker gives it: one province, a barangay
+  // and a street line, each trimmed and capped (blank clears it).
+  if (filteredData.province !== undefined) filteredData.province = 'Oriental Mindoro';
+  for (const [field, max] of [['barangay', 100], ['address', 300]]) {
+    if (typeof filteredData[field] === 'string') filteredData[field] = filteredData[field].trim().slice(0, max) || null;
+  }
+
+  // The town is the account's municipality: it decides which municipal admin
+  // looks after the account, so it is not changed from the profile (support
+  // does that). Sending the one already set is fine.
+  let current = null;
+  let townUnchanged = false;
+  if (updateData.municipalityId) {
+    current = await userRepository.findById(userId);
+    if (!current) throw new ApiError('User not found', 404);
+    townUnchanged = updateData.municipalityId === current.municipalityId;
+    if (!townUnchanged) throw new ApiError('Contact support to change your town.', 403);
+  }
+
   // Username is public and unique, so it is checked rather than just copied.
   let usernameUnchanged = false;
   if (updateData.username !== undefined) {
     const username = normalizeUsername(updateData.username);
-    const current = await userRepository.findById(userId);
+    current = current || await userRepository.findById(userId);
     if (!current) throw new ApiError('User not found', 404);
 
     // Re-submitting the handle they already have is not an error.
@@ -274,8 +297,8 @@ const updateProfile = async (userId, updateData) => {
   }
 
   if (Object.keys(filteredData).length === 0) {
-    // Only an unchanged username was sent: nothing to write, nothing to fail.
-    if (usernameUnchanged) return getProfile(userId);
+    // Only an unchanged username or town was sent: nothing to write, nothing to fail.
+    if (usernameUnchanged || townUnchanged) return getProfile(userId);
     throw new ApiError('No valid fields to update', 400);
   }
 
@@ -315,10 +338,12 @@ const changePassword = async (userId, currentPassword, newPassword) => {
     throw new ApiError('User not found', 404);
   }
 
-  // Verify current password
+  // Verify current password. A wrong one is a mistake in the form, not a
+  // lost session: 400, so the app shows the message instead of treating it
+  // as a sign-in that expired (a 401 makes it try to renew the session).
   const isPasswordValid = await comparePassword(currentPassword, user.password);
   if (!isPasswordValid) {
-    throw new ApiError('Current password is incorrect', 401);
+    throw new ApiError('Current password is incorrect', 400);
   }
 
   // Hash new password
@@ -1145,6 +1170,9 @@ const completeGoogleSignup = async (googleToken, data) => {
   if (!user) {
     throw new ApiError('Unable to complete Google sign-in', 500);
   }
+
+  // A full address is also the first delivery address (My Addresses, checkout).
+  await addressService.saveProfileAddress(user.id, { fullName: String(fullName).trim(), contactNumber, municipalityId, barangay, address });
 
   sendInBackground('welcome', () => sendWelcomeEmail({ user }));
 
