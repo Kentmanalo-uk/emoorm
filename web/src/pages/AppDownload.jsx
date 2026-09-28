@@ -242,53 +242,39 @@ function PreviewViewer({ start, onClose }) {
   );
 }
 
+/**
+ * After Get, what the phone shows next, in its own words (Chrome's "File
+ * downloaded — Open", then Android's "Permission required" for apps from
+ * outside the Play Store the first time).
+ */
+function AfterGetSteps() {
+  return (
+    <>
+      <li>If the browser asks, tap <strong>Download</strong>.</li>
+      <li>
+        When it has downloaded, tap <strong>Open</strong>, or open <strong>{FILE_NAME}</strong> from
+        {' '}<strong>Downloads</strong>.
+      </li>
+      <li>
+        If Android says it can&apos;t install unknown apps from this source, tap <strong>Settings</strong>, turn on
+        {' '}<strong>Allow from this source</strong>, then go back.
+      </li>
+      <li>Tap <strong>Install</strong>, then <strong>Open</strong>.</li>
+    </>
+  );
+}
+
 function AndroidSteps({ computer }) {
   return (
     <>
       <ol className="appdl-steps">
         {computer && (
           <li>
-            On your Android phone, scan the QR code above with the camera, or open
-            {' '}
-            <strong>emoorm.shop/app</strong>
-            .
+            On your Android phone, scan the QR code above with the camera, or open <strong>emoorm.shop/app</strong>.
           </li>
         )}
-        <li>
-          Tap
-          {' '}
-          <strong>Get</strong>
-          . If the browser warns about this type of file, choose
-          {' '}
-          <strong>Download anyway</strong>
-          .
-        </li>
-        <li>
-          Open
-          {' '}
-          <strong>{FILE_NAME}</strong>
-          {' '}
-          from the download notification, or from
-          {' '}
-          <strong>Downloads</strong>
-          .
-        </li>
-        <li>
-          If Android asks, allow your browser to install apps
-          {' '}
-          (
-          <strong>Allow from this source</strong>
-          ), then go back.
-        </li>
-        <li>
-          Tap
-          {' '}
-          <strong>Install</strong>
-          , then
-          {' '}
-          <strong>Open</strong>
-          .
-        </li>
+        <li>Tap <strong>Get</strong>.</li>
+        <AfterGetSteps />
       </ol>
       <p className="appdl-install-note">
         <ShieldCheck size={20} weight="fill" aria-hidden="true" />
@@ -310,27 +296,14 @@ function IphoneSteps() {
       </p>
       <ol className="appdl-steps">
         <li>
-          In Safari, tap
-          {' '}
-          <Export size={17} weight="bold" aria-hidden="true" className="appdl-inline-icon" />
-          {' '}
-          <strong>Share</strong>
-          .
+          In Safari, tap <Export size={17} weight="bold" aria-hidden="true" className="appdl-inline-icon" />
+          {' '}<strong>Share</strong>.
         </li>
         <li>
-          Tap
-          {' '}
-          <PlusSquare size={17} weight="bold" aria-hidden="true" className="appdl-inline-icon" />
-          {' '}
-          <strong>Add to Home Screen</strong>
-          .
+          Tap <PlusSquare size={17} weight="bold" aria-hidden="true" className="appdl-inline-icon" />
+          {' '}<strong>Add to Home Screen</strong>.
         </li>
-        <li>
-          Tap
-          {' '}
-          <strong>Add</strong>
-          .
-        </li>
+        <li>Tap <strong>Add</strong>.</li>
       </ol>
     </>
   );
@@ -610,15 +583,8 @@ export default function AppDownload() {
           {platform.kind === 'computer' ? (
             <div className="appdl-sheet-body">
               <p>
-                It&apos;s an Android app: copy
-                {' '}
-                <strong>{FILE_NAME}</strong>
-                {' '}
-                to your Android phone and open it there. Easier: scan this with the phone&apos;s camera and tap
-                {' '}
-                <strong>Get</strong>
-                {' '}
-                on the phone.
+                It&apos;s an Android app: copy <strong>{FILE_NAME}</strong> to your Android phone and open it there.
+                Easier: scan this with the phone&apos;s camera and tap <strong>Get</strong> on the phone.
               </p>
               <div className="appdl-sheet-qr">
                 <QRCodeSVG
@@ -636,34 +602,7 @@ export default function AppDownload() {
           ) : (
             <div className="appdl-sheet-body">
               <ol className="appdl-steps">
-                <li>
-                  If the browser warns about this type of file, choose
-                  {' '}
-                  <strong>Download anyway</strong>
-                  .
-                </li>
-                <li>
-                  Open
-                  {' '}
-                  <strong>{FILE_NAME}</strong>
-                  {' '}
-                  from the download notification, or from
-                  {' '}
-                  <strong>Downloads</strong>
-                  .
-                </li>
-                <li>
-                  If Android asks, allow installing apps from this source, then go back.
-                </li>
-                <li>
-                  Tap
-                  {' '}
-                  <strong>Install</strong>
-                  , then
-                  {' '}
-                  <strong>Open</strong>
-                  .
-                </li>
+                <AfterGetSteps />
               </ol>
             </div>
           )}
