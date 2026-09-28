@@ -1,0 +1,116 @@
+/* Phones: "Install the E-MOORM app", floating just above the bottom
+   navigation (InstallAppBar.jsx renders it on phones only). */
+.install-bar {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  /* The bottom navigation is 68px, or taller on phones with a home bar. */
+  bottom: calc(max(68px, 47px + env(safe-area-inset-bottom, 0px)) + 8px);
+  z-index: 119;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 8px 6px 8px 8px;
+  border: 0.5px solid rgba(15, 23, 42, .08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .9);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .12), 0 1px 3px rgba(15, 23, 42, .06);
+  animation: install-bar-in .45s cubic-bezier(.25, .8, .25, 1) both;
+}
+
+.install-bar-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.install-bar-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.install-bar-text strong {
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.install-bar-text span {
+  overflow: hidden;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.install-bar-btn {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-primary-600, #059669);
+  color: var(--t-neutral-0, #fff);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform .12s ease, opacity .15s ease;
+}
+
+.install-bar-btn:active {
+  transform: scale(.95);
+}
+
+.install-bar-close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: pointer;
+}
+
+.install-bar-close:active {
+  background: rgba(15, 23, 42, .06);
+}
+
+/* Room for it under the page while it shows. */
+@media (max-width: 768px) {
+  body.has-install-bar .layout-main {
+    padding-bottom: calc(72px + 66px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@keyframes install-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .install-bar {
+    animation: none;
+  }
+}

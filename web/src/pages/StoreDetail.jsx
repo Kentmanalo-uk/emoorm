@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import useSeo, { storeSchema, breadcrumbs, clampText } from '../lib/seo';
 import {
@@ -44,10 +44,13 @@ import {
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useEntryState from '../hooks/useEntryState';
+import { readCache, writeCache } from '../lib/pageCache';
 import MoreMenu from '../components/MoreMenu';
 import { useShare } from '../components/ShareSheet';
 import './StoreDetail.css';
 import { StoreSkeleton } from '../components/ui/PageSkeletons';
+import Spinner, { BusyLabel } from '../components/ui/Spinner';
 
 const SORTS = [
   { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -58,6 +61,11 @@ const SORTS = [
 ];
 
 const PAGE_SIZE = 16;
+// A shop as it showed last time, and each list of its products.
+const storeKey = (slug) => `store:${slug}`;
+const productsKey = (storeId, page, category, sort, search) => (
+  `store-products:${storeId}:${JSON.stringify([page, category, sort, search.trim()])}`
+);
 const DEFAULT_PRIMARY = 'var(--t-primary-600, #059669)';
 const DEFAULT_SECONDARY = 'var(--t-warning-500, #f59e0b)';
 
@@ -78,35 +86,45 @@ export default function StoreDetail() {
   const { addItem, getItemCount } = useCartStore();
   const cartCount = getItemCount();
   const isPhone = usePhoneLayout();
-  // Phones: Products / Categories / About, list or grid, product search.
-  const [mobileTab, setMobileTab] = useState('products');
-  const [mobileLayout, setMobileLayout] = useState('list');
-  const [searchOpen, setSearchOpen] = useState(false);
+  // What was picked on this visit of the shop, so Back finds it as it was
+  // left. Phones: Products / Categories / About, list or grid, product search.
+  const [mobileTab, setMobileTab] = useEntryState('tab', 'products');
+  const [mobileLayout, setMobileLayout] = useEntryState('layout', 'list');
+  const [searchOpen, setSearchOpen] = useEntryState('searchOpen', false);
+  // Only a search opened just now takes the keyboard, not one Back reopens.
+  const [focusSearch, setFocusSearch] = useState(false);
+  const [page, setPage] = useEntryState('page', 1);
+  const [activeCategory, setActiveCategory] = useEntryState('category', 'all');
+  const [sortKey, setSortKey] = useEntryState('sort', 'newest');
+  const [rawSearch, setRawSearch] = useEntryState('search', '');
+  const search = useDebounce(rawSearch, 350);
 
-  const [store, setStore] = useState(null);
-  const [products, setProducts] = useState([]);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
-  const [isLoadingStore, setIsLoadingStore] = useState(true);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  // The shop and its products as they showed last time: shown at once while
+  // they are asked for again.
+  const [store, setStore] = useState(() => readCache(storeKey(slug)) || null);
+  const [keptProducts] = useState(() => (store
+    ? readCache(productsKey(store.id, page, activeCategory, sortKey, search))
+    : undefined));
+  const [products, setProducts] = useState(() => keptProducts?.products || []);
+  const [pagination, setPagination] = useState(() => keptProducts?.pagination || { total: 0, totalPages: 0 });
+  const [isLoadingStore, setIsLoadingStore] = useState(() => !store);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(() => !keptProducts);
   const [showReport, setShowReport] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const { share, shareSheet } = useShare();
+  // Only the latest request is shown: an earlier one can answer after it.
+  const storeRequest = useRef(0);
+  const productsRequest = useRef(0);
 
-  const [page, setPage] = useState(1);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [sortKey, setSortKey] = useState('newest');
-  const [rawSearch, setRawSearch] = useState('');
-  const search = useDebounce(rawSearch, 350);
+  // Changes the shop shown, and what is remembered of it.
+  const updateStore = useCallback((change) => setStore((cur) => {
+    const next = typeof change === 'function' ? change(cur) : change;
+    if (next?.slug) writeCache(storeKey(next.slug), next);
+    return next;
+  }), []);
 
   useEffect(() => {
     fetchStore();
-    // Reset UI state when slug changes
-    setPage(1);
-    setActiveCategory('all');
-    setSortKey('newest');
-    setRawSearch('');
-    setMobileTab('products');
-    setSearchOpen(false);
   }, [slug]);
 
   useEffect(() => {
@@ -116,33 +134,61 @@ export default function StoreDetail() {
   }, [store?.id, page, activeCategory, sortKey, search]);
 
   const fetchStore = async () => {
-    setIsLoadingStore(true);
+    const request = ++storeRequest.current;
+    const kept = readCache(storeKey(slug));
+    if (kept) {
+      setStore(kept);
+      setIsLoadingStore(false);
+    } else {
+      setIsLoadingStore(true);
+    }
     try {
       const res = await axios.get(`/stores/slug/${slug}/storefront`);
+      if (request !== storeRequest.current) return;
+      const fresh = res.data;
       // The storefront is cached for everyone, so it carries no "you follow
-      // this" and its count can lag; the live values come just below.
-      setStore({
-        ...res.data,
-        isFollowing: false,
-        followerCount: res.data?.stats?.followerCount ?? 0,
+      // this" and its count can lag; the live values come just below (until
+      // then, what this account saw last time).
+      updateStore((cur) => {
+        const seen = cur && cur.id === fresh?.id ? cur : null;
+        return {
+          ...fresh,
+          isFollowing: seen ? !!seen.isFollowing : false,
+          followerCount: seen ? seen.followerCount : (fresh?.stats?.followerCount ?? 0),
+        };
       });
-      if (res.data?.id) {
-        getFollowStatus(res.data.id)
-          .then((st) => setStore((cur) => (cur && cur.id === res.data.id
+      if (fresh?.id) {
+        getFollowStatus(fresh.id)
+          .then((st) => updateStore((cur) => (cur && cur.id === fresh.id
             ? { ...cur, isFollowing: !!st.following, followerCount: st.followerCount ?? cur.followerCount }
             : cur)))
           .catch(() => { /* keep the cached count */ });
       }
     } catch (err) {
-      if (err.status === 404) navigate('/stores');
-      else toast.error('Failed to load store');
+      if (request !== storeRequest.current) return;
+      if (err.status === 404) {
+        // Gone (or hidden now): forget the saved copy too.
+        writeCache(storeKey(slug), null);
+        navigate('/stores');
+      } else {
+        toast.error('Failed to load store');
+      }
     } finally {
-      setIsLoadingStore(false);
+      if (request === storeRequest.current) setIsLoadingStore(false);
     }
   };
 
   const fetchProducts = async () => {
-    setIsLoadingProducts(true);
+    const request = ++productsRequest.current;
+    const key = productsKey(store.id, page, activeCategory, sortKey, search);
+    const kept = readCache(key);
+    if (kept) {
+      setProducts(kept.products || []);
+      if (kept.pagination) setPagination(kept.pagination);
+      setIsLoadingProducts(false);
+    } else {
+      setIsLoadingProducts(true);
+    }
     try {
       const isNewTab = activeCategory === 'new';
       const sortForRequest = isNewTab
@@ -164,12 +210,21 @@ export default function StoreDetail() {
       if (search.trim()) params.search = search.trim();
 
       const res = await axios.get('/products', { params });
-      setProducts(res.data || []);
+      if (request !== productsRequest.current) return;
+      const list = res.data || [];
+      setProducts(list);
       if (res.pagination) setPagination(res.pagination);
+      // The shop's first page is saved on the device; a category, a search
+      // or another page, for this visit.
+      const firstView = page === 1 && activeCategory === 'all' && sortKey === 'newest' && !search.trim();
+      writeCache(key, {
+        products: list,
+        pagination: res.pagination || { total: list.length, totalPages: 1 },
+      }, { visitOnly: !firstView });
     } catch (err) {
-      toast.error('Failed to load products');
+      if (request === productsRequest.current) toast.error('Failed to load products');
     } finally {
-      setIsLoadingProducts(false);
+      if (request === productsRequest.current) setIsLoadingProducts(false);
     }
   };
 
@@ -230,7 +285,7 @@ export default function StoreDetail() {
       const res = wasFollowing
         ? await apiUnfollowStore(store.id)
         : await apiFollowStore(store.id);
-      setStore((s) => (s ? { ...s, isFollowing: res.following, followerCount: res.followerCount } : s));
+      updateStore((s) => (s ? { ...s, isFollowing: res.following, followerCount: res.followerCount } : s));
       toast.success(res.following ? `You now follow ${store.name}` : `Unfollowed ${store.name}`);
     } catch (err) {
       toast.error(err.message || 'Failed to update follow');
@@ -244,18 +299,18 @@ export default function StoreDetail() {
     if (!store) return undefined;
     return subscribeToFollowChanges((msg) => {
       if (!msg || msg.storeId !== store.id) return;
-      setStore((s) => (s ? {
+      updateStore((s) => (s ? {
         ...s,
         isFollowing: msg.type === 'follow' ? true : msg.type === 'unfollow' ? false : s.isFollowing,
         followerCount: msg.data?.followerCount ?? s.followerCount,
       } : s));
     });
-  }, [store?.id]);
+  }, [store?.id, updateStore]);
 
   const onCategoryChange = useCallback((id) => {
     setActiveCategory(id);
     setPage(1);
-  }, []);
+  }, [setActiveCategory, setPage]);
 
   const onSortChange = (key) => {
     setSortKey(key);
@@ -370,6 +425,7 @@ export default function StoreDetail() {
   const openSearch = () => {
     setMobileTab('products');
     setSearchOpen(true);
+    setFocusSearch(true);
   };
   const pickCategory = (id) => {
     onCategoryChange(id);
@@ -454,7 +510,9 @@ export default function StoreDetail() {
                       onClick={handleToggleFollow}
                       disabled={followBusy}
                     >
-                      {isFollowing ? 'Following' : 'Follow'}
+                      {followBusy
+                        ? <BusyLabel size={14}>{isFollowing ? 'Following' : 'Follow'}</BusyLabel>
+                        : isFollowing ? 'Following' : 'Follow'}
                     </button>
                   )}
                   <button type="button" className="shop-m-message" onClick={openChat}>Message</button>
@@ -611,7 +669,7 @@ export default function StoreDetail() {
                       onChange={(e) => onSearchChange(e.target.value)}
                       placeholder={`Search ${store.name}`}
                       aria-label="Search this shop"
-                      autoFocus={searchOpen && !rawSearch}
+                      autoFocus={focusSearch && !rawSearch}
                     />
                     <button
                       type="button"
@@ -716,7 +774,7 @@ export default function StoreDetail() {
                     onClick={handleToggleFollow}
                     disabled={followBusy}
                   >
-                    <Heart size={14} weight={isFollowing ? 'fill' : 'regular'} />
+                    {followBusy ? <Spinner size={14} /> : <Heart size={14} weight={isFollowing ? 'fill' : 'regular'} />}
                     {isFollowing ? 'Following' : 'Follow'}
                   </button>
                 )}

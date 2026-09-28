@@ -5,6 +5,7 @@ import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import './ReviewModal.css';
 import { useSheetClose } from '../hooks/useSheetMotion';
+import { BusyLabel } from './ui/Spinner';
 
 const MAX_IMAGES = 5;
 const MAX_VIDEO_MB = 50;
@@ -242,7 +243,7 @@ export default function ReviewModal({ product, orderId, onClose: onCloseProp, on
               Cancel
             </button>
             <button type="submit" className="review-btn-submit" disabled={submitting || !rating}>
-              {submitting ? 'Saving…' : editing ? 'Save changes' : 'Submit Review'}
+              {submitting ? <BusyLabel>Saving…</BusyLabel> : editing ? 'Save changes' : 'Submit Review'}
             </button>
           </div>
         </form>

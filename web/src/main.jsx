@@ -5,8 +5,23 @@ import './index.css';
 import App from './App.jsx';
 import { loadGoogleTranslate } from './lib/googleTranslate';
 import { bootTheme } from './hooks/useTheme';
+import { setupPwaInstall } from './lib/pwaInstall';
 
 loadGoogleTranslate();
+
+// React Router calls the page a fresh load opens "default", on every fresh
+// load. Each load gets a name of its own instead, so what a page remembers
+// of one visit (where it was scrolled, the tab picked) stays with that
+// visit; a reload keeps the name, and so finds the page as it was.
+if (!window.history.state?.key) {
+  window.history.replaceState({
+    usr: null, idx: 0, ...window.history.state, key: Math.random().toString(36).slice(2, 10),
+  }, '');
+}
+
+// Listen for the browser's offer to install the app (it can come early) and
+// register the service worker that makes the site installable.
+setupPwaInstall();
 
 // The saved palette, from this browser's copy, before React renders. The
 // server's version still wins once it arrives; this only stops the first

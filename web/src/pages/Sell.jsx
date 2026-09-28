@@ -4,9 +4,10 @@ import useSeo from '../lib/seo';
 import {
   ArrowRight, Star, List as Menu, X, CaretDown as ChevronDown,
   Storefront, Users, Truck, ChatCircleDots, ChartLineUp, SealCheck,
-  IdentificationCard, Camera, Package,  Plus, Minus, Money,
+  IdentificationCard, Camera, Package,  Plus, Minus, Money, House,
 } from '@phosphor-icons/react';
 import useAuthStore from '../store/authStore';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import useAccountSwitchStore from '../store/accountSwitchStore';
 import Footer from '../components/layout/Footer';
 import AppLogo from '../components/AppLogo';
@@ -148,6 +149,7 @@ export default function Sell() {
 
   const { isAuthenticated, user } = useAuthStore();
   const navigate = useNavigate();
+  const isPhone = usePhoneLayout();
   const startAccountSwitch = useAccountSwitchStore((s) => s.start);
   const isSeller = isAuthenticated && user?.role === 'SELLER';
   useEffect(() => {
@@ -628,6 +630,15 @@ export default function Sell() {
       </section>
 
       <Footer />
+
+      {/* Phones: this page has no bottom bar, so a way back to shopping
+          stays in reach. */}
+      {isPhone && (
+        <Link to="/" className="sell-home-fab" aria-label="Back to home">
+          <House size={20} weight="fill" aria-hidden="true" />
+          <span>Home</span>
+        </Link>
+      )}
     </div>
   );
 }

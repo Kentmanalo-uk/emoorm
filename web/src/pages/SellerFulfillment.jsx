@@ -30,6 +30,7 @@ import PhoneSaveBar from '../components/seller/PhoneSaveBar';
 import PickupAddressField, { pickupGap } from '../components/seller/PickupAddressField';
 import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import { BusyLabel } from '../components/ui/Spinner';
 
 /**
  * Phones: each part of this page on a page of its own
@@ -1321,7 +1322,7 @@ function SellerFulfillment({ part }) {
               onClick={() => saveSettings()}
               disabled={saving}
             >
-              <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? <BusyLabel>Saving…</BusyLabel> : <><Save size={16} /> Save Changes</>}
             </button>
           )}
         />
@@ -1337,7 +1338,7 @@ function SellerFulfillment({ part }) {
             onClick={() => saveSettings()}
             disabled={saving}
           >
-            <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
+            {saving ? <BusyLabel>Saving…</BusyLabel> : <><Save size={16} /> Save Changes</>}
           </button>
         </div>
       </div>

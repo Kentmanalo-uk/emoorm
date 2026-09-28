@@ -142,6 +142,52 @@ const verifyGoogleProfileToken = (token) => {
   return decoded;
 };
 
+/**
+ * "Continue with Google" in the Android app (apk/) runs in the phone's
+ * browser, since Google blocks its sign-in inside the app's web view. The
+ * app starts it with a PKCE-style challenge (SHA-256 of a secret only the app
+ * holds); these two short-lived JWTs carry that challenge through Google and
+ * back:
+ *  - the OAuth `state` sent to Google (the challenge, 10 minutes);
+ *  - the one-time pass handed back to the app after Google (the verified
+ *    Google profile and the challenge, 5 minutes). Only the app's secret
+ *    turns it into a session, so a pass caught on the way is useless.
+ * Typed, so neither is ever accepted as a session token.
+ */
+const verifyTyped = (token, type) => {
+  let decoded;
+  try {
+    decoded = jwt.verify(token, config.jwt.secret);
+  } catch {
+    throw new Error('Invalid or expired Google sign-in');
+  }
+  if (decoded?.type !== type) throw new Error('Invalid Google sign-in');
+  return decoded;
+};
+
+const generateGoogleAppState = (challenge) => jwt.sign(
+  { challenge, type: 'google-app-state' },
+  config.jwt.secret,
+  { expiresIn: '10m' }
+);
+
+const verifyGoogleAppState = (token) => verifyTyped(token, 'google-app-state');
+
+const generateGoogleAppTicket = (profile, challenge) => jwt.sign(
+  {
+    googleId: profile.googleId,
+    email: profile.email,
+    fullName: profile.fullName,
+    profilePhoto: profile.profilePhoto,
+    challenge,
+    type: 'google-app-ticket',
+  },
+  config.jwt.secret,
+  { expiresIn: '5m' }
+);
+
+const verifyGoogleAppTicket = (token) => verifyTyped(token, 'google-app-ticket');
+
 module.exports = {
   generateAccessToken,
   generateRefreshToken,
@@ -152,4 +198,8 @@ module.exports = {
   verifyMfaToken,
   generateGoogleProfileToken,
   verifyGoogleProfileToken,
+  generateGoogleAppState,
+  verifyGoogleAppState,
+  generateGoogleAppTicket,
+  verifyGoogleAppTicket,
 };

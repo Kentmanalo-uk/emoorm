@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Minus, Plus, Truck } from '@phosphor-icons/react';
 import ProductImage from './ProductImage';
+import { BusyLabel } from './ui/Spinner';
 import {
   pricedVariation, priceForSelection, priceRange, stockedVariation, stockForSelection,
 } from '../lib/variantPricing';
@@ -207,7 +208,7 @@ export default function ProductOptionSheet({
             onClick={confirm}
             disabled={outOfStock || busy}
           >
-            {outOfStock ? 'Out of stock' : busy ? 'Please wait…' : (
+            {outOfStock ? 'Out of stock' : busy ? <BusyLabel size={18}>Please wait…</BusyLabel> : (
               <>
                 <span>{label}</span>
                 {shown === 'buy' && <small>{peso(total)}</small>}

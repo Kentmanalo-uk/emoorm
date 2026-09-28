@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../config/api';
+import { beginActivity, endActivity } from './activity';
 
 /**
  * Account settings: the checks and the photo upload shared by the Settings
@@ -59,12 +60,19 @@ export const uploadProfilePhoto = async (file) => {
   // Use raw fetch so the browser sets multipart/form-data with a proper boundary.
   // (The shared axios instance defaults Content-Type: application/json, which breaks uploads.)
   const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-  const resp = await fetch(`${API_CONFIG.BASE_URL}/upload/image`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: fd,
-  });
-  const json = await resp.json().catch(() => ({}));
+  beginActivity();
+  let resp;
+  let json;
+  try {
+    resp = await fetch(`${API_CONFIG.BASE_URL}/upload/image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    });
+    json = await resp.json().catch(() => ({}));
+  } finally {
+    endActivity();
+  }
   if (!resp.ok || !json?.success) {
     throw new Error(json?.message || `Upload failed (${resp.status})`);
   }

@@ -1,3 +1,4 @@
+import { BusyLabel } from '../ui/Spinner';
 import './PhoneSaveBar.css';
 
 /**
@@ -22,7 +23,7 @@ export default function PhoneSaveBar({
         onClick={onSave}
         disabled={saving || !canSave}
       >
-        {saving ? 'Saving…' : saveLabel}
+        {saving ? <BusyLabel>Saving…</BusyLabel> : saveLabel}
       </button>
     </div>
   );

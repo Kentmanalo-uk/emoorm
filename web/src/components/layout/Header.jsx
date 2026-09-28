@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   House as HomeIcon, MagnifyingGlass as Search, ShoppingCart, BellSlash as BellOff, List as Menu, X,
@@ -15,6 +15,7 @@ import { notificationHref } from '../../lib/notificationLink';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import ImageSearchModal from './ImageSearchModal';
+import InstallAppBar from './InstallAppBar';
 import './Header.css';
 import UserAvatar from '../ui/UserAvatar';
 import { isBottomNavTab } from '../../lib/navTabs';
@@ -88,7 +89,8 @@ const Header = () => {
   // Phones: the bottom navigation belongs to the five tab pages; every other
   // page has its own back button and gets the full height.
   const isTabPage = isBottomNavTab(location.pathname);
-  useEffect(() => {
+  // Before the page shows, so it is laid out (and scrolled back) with it.
+  useLayoutEffect(() => {
     document.body.classList.toggle('no-bottom-nav', !isTabPage);
     return () => document.body.classList.remove('no-bottom-nav');
   }, [isTabPage]);
@@ -636,6 +638,7 @@ const Header = () => {
         </div>
       )}
 
+      {isTabPage && <InstallAppBar />}
       {isTabPage && <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <Link className={location.pathname === '/' ? 'is-active' : ''} to="/">
           <HomeIcon size={21} weight={location.pathname === '/' ? 'fill' : 'regular'} />

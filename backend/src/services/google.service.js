@@ -64,10 +64,12 @@ const verifyIdToken = async (idToken) => {
 };
 
 /**
- * Exchange an authorization code (from the popup auth-code flow) for tokens
- * and return the verified profile.
+ * Exchange an authorization code for tokens and return the verified profile.
+ * @param {String} code
+ * @param {String} [redirectUri] - Where Google sent the code: the popup
+ *   flow's `postmessage` (the website), or the Android app's callback URL
  */
-const exchangeCodeForProfile = async (code) => {
+const exchangeCodeForProfile = async (code, redirectUri = POPUP_REDIRECT_URI) => {
   if (!code || typeof code !== 'string') {
     throw new ApiError('Google authorization code is required', 400);
   }
@@ -76,7 +78,7 @@ const exchangeCodeForProfile = async (code) => {
   try {
     const response = await client.getToken({
       code,
-      redirect_uri: POPUP_REDIRECT_URI,
+      redirect_uri: redirectUri,
     });
     tokens = response.tokens;
   } catch {
@@ -88,5 +90,20 @@ const exchangeCodeForProfile = async (code) => {
   return verifyIdToken(tokens.id_token);
 };
 
-module.exports = { verifyIdToken, exchangeCodeForProfile };
+/**
+ * Google's sign-in page for the Android app, opened in the phone's browser:
+ * it always shows the account chooser, then sends the code to `redirectUri`.
+ * @param {String} state - Carried through Google and back
+ * @param {String} redirectUri - Must be listed on the OAuth client in Google Cloud
+ */
+const authorizationUrl = (state, redirectUri) => getClient().generateAuthUrl({
+  access_type: 'online',
+  scope: ['openid', 'email', 'profile'],
+  prompt: 'select_account',
+  include_granted_scopes: true,
+  redirect_uri: redirectUri,
+  state,
+});
+
+module.exports = { verifyIdToken, exchangeCodeForProfile, authorizationUrl };
 

@@ -1,5 +1,19 @@
 import axios from 'axios';
 import { API_CONFIG } from '../config/api';
+import { beginActivity, endActivity } from './activity';
+
+// Requests that change something (saves, sends, deletes) show the activity
+// bar while they run; plain reads do not (pages show skeletons for those),
+// nor background ones the person did not ask for (`{ quiet: true }`).
+const counted = new WeakSet();
+const isAction = (config) => !config?.quiet
+  && !['get', 'head', 'options'].includes(String(config?.method || 'get').toLowerCase());
+const settle = (config) => {
+  if (config && counted.has(config)) {
+    counted.delete(config);
+    endActivity();
+  }
+};
 
 // Create axios instance
 const axiosInstance = axios.create({
@@ -19,7 +33,12 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
+    if (isAction(config) && !counted.has(config)) {
+      counted.add(config);
+      beginActivity();
+    }
+
     return config;
   },
   (error) => {
@@ -30,10 +49,13 @@ axiosInstance.interceptors.request.use(
 // Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => {
+    settle(response.config);
     return response.data;
   },
   async (error) => {
     const originalRequest = error.config;
+    // A retry below counts again from the start.
+    settle(originalRequest);
 
     // Read-only requests retry once after a short pause when the server is
     // rate limiting (429), busy (502/503/504, e.g. its database connections

@@ -3018,3 +3018,57 @@
     padding: 0;
   }
 }
+
+
+/* Phones: back to shopping, floating at the bottom right (Sell.jsx renders
+   it on phones only). Above the page, below the header's menus. */
+.sell-home-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 18px 0 16px;
+  border-radius: 999px;
+  background: var(--t-secondary-500, #29a366);
+  color: var(--t-neutral-0, #fff);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2), 0 2px 6px rgba(15, 23, 42, 0.12);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease;
+  animation: sell-home-fab-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+}
+
+.sell-home-fab:active {
+  transform: scale(0.95);
+}
+
+@keyframes sell-home-fab-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Room under the footer so the button never covers its last line. */
+@media (max-width: 768px) {
+  .sell-page > .footer {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sell-home-fab {
+    animation: none;
+  }
+}

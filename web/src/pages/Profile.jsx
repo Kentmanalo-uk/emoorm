@@ -17,6 +17,7 @@ import useWishlistStore from '../store/wishlistStore';
 import { listMyFollowing } from '../lib/follow';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { ProfileSkeleton } from '../components/ui/PageSkeletons';
+import { usePageCache } from '../lib/pageCache';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -42,19 +43,7 @@ const Profile = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
   const isPhone = usePhoneLayout();
   const wishlistCount = useWishlistStore((st) => st.items.length);
-  const [reviewCount, setReviewCount] = useState(0);
   const [signOutOpen, setSignOutOpen] = useState(false);
-  const [profile, setProfile] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [stats, setStats] = useState({
-    toPayCount: 0,
-    toShipCount: 0,
-    toReceiveCount: 0,
-    toPickupCount: 0,
-  });
-  const [followedStores, setFollowedStores] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [identityStatus, setIdentityStatus] = useState('NOT_VERIFIED');
 
   // Phones: "My shop" switches to the Seller Center with the same animation
   // as the header's Seller Center links. Modified clicks keep the browser's
@@ -69,61 +58,45 @@ const Profile = () => {
   };
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
-    fetchProfileData();
+    if (!isAuthenticated) navigate('/login');
   }, [isAuthenticated, navigate]);
 
-  const fetchProfileData = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch user profile
-      const profileResponse = await axios.get('/auth/profile');
-      setProfile(profileResponse.data);
-
-      // Fetch orders
-      const ordersResponse = await axios.get('/orders/my/orders');
-      setOrders(ordersResponse.data || []);
-
-      // Calculate order stats
-      const orderData = ordersResponse.data || [];
-      const toPayCount = orderData.filter(o => o.status === 'PENDING').length;
-      const toShipCount = orderData.filter(o => o.status === 'CONFIRMED').length;
-      const preparingCount = orderData.filter(o => o.status === 'PREPARING').length;
-      const readyCount = orderData.filter(o => o.status === 'READY').length;
-
-      setStats({
-        toPayCount,
-        toShipCount,
-        toReceiveCount: preparingCount,
-        toPickupCount: readyCount,
-      });
-
-      try {
-        const identity = await fetchIdentityStatus();
-        setIdentityStatus(identity?.status || 'NOT_VERIFIED');
-      } catch {
-        // non-fatal — the section falls back to "Not Verified"
-      }
-
-      // Followed stores and review count; neither blocks the page.
-      const [following, reviews] = await Promise.allSettled([
-        listMyFollowing(),
-        axios.get('/reviews/my/reviews', { params: { page: 1, pageSize: 1 } }),
-      ]);
-      setFollowedStores(following.status === 'fulfilled' && Array.isArray(following.value) ? following.value : []);
-      if (reviews.status === 'fulfilled') {
-        setReviewCount(reviews.value?.pagination?.total ?? (reviews.value?.data || []).length);
-      }
-    } catch (error) {
-      console.error('Failed to fetch profile data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Everything the page shows, from what it showed last time while it is
+  // asked for again. The account and its orders come first; the ID check,
+  // followed shops and review count never hold the page up.
+  const { data: summary, loading: isLoading } = usePageCache('profile', async () => {
+    const [profileResponse, ordersResponse] = await Promise.all([
+      axios.get('/auth/profile'),
+      axios.get('/orders/my/orders'),
+    ]);
+    const orderData = ordersResponse.data || [];
+    const count = (status) => orderData.filter((o) => o.status === status).length;
+    const [identity, following, reviews] = await Promise.allSettled([
+      fetchIdentityStatus(),
+      listMyFollowing(),
+      axios.get('/reviews/my/reviews', { params: { page: 1, pageSize: 1 } }),
+    ]);
+    return {
+      profile: profileResponse.data,
+      stats: {
+        toPayCount: count('PENDING'),
+        toShipCount: count('CONFIRMED'),
+        toReceiveCount: count('PREPARING'),
+        toPickupCount: count('READY'),
+      },
+      // Non-fatal: the section falls back to "Not Verified".
+      identityStatus: identity.status === 'fulfilled' ? identity.value?.status || 'NOT_VERIFIED' : 'NOT_VERIFIED',
+      followedStores: following.status === 'fulfilled' && Array.isArray(following.value) ? following.value : [],
+      reviewCount: reviews.status === 'fulfilled'
+        ? reviews.value?.pagination?.total ?? (reviews.value?.data || []).length
+        : 0,
+    };
+  }, { enabled: isAuthenticated });
+  const profile = summary?.profile || null;
+  const stats = summary?.stats || { toPayCount: 0, toShipCount: 0, toReceiveCount: 0, toPickupCount: 0 };
+  const followedStores = summary?.followedStores || [];
+  const reviewCount = summary?.reviewCount || 0;
+  const identityStatus = summary?.identityStatus || 'NOT_VERIFIED';
 
   const getOrderStatusBadge = (status) => {
     const badges = {

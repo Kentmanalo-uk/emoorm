@@ -1,0 +1,50 @@
+/* Activity indicator (Spinner.jsx): eight bars around a circle, each fading
+   a moment after the one before, so the brightness seems to turn. */
+.ui-spinner {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--ui-spinner-size, 16px);
+  height: var(--ui-spinner-size, 16px);
+  vertical-align: middle;
+}
+
+.ui-spinner i {
+  position: absolute;
+  top: 0;
+  left: calc(50% - var(--ui-spinner-size, 16px) * 0.055);
+  width: calc(var(--ui-spinner-size, 16px) * 0.11);
+  height: calc(var(--ui-spinner-size, 16px) * 0.29);
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.18;
+  transform: rotate(calc(var(--ui-spinner-i) * 45deg));
+  transform-origin: 50% calc(var(--ui-spinner-size, 16px) * 0.5);
+  animation: ui-spinner-fade 0.8s linear infinite;
+  animation-delay: calc(var(--ui-spinner-i) * 0.1s - 0.8s);
+}
+
+@keyframes ui-spinner-fade {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-spinner i {
+    animation-duration: 1.6s;
+  }
+}
+
+/* BusyLabel: the spinner and the text on one line, in any button. */
+.ui-busy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  vertical-align: middle;
+}

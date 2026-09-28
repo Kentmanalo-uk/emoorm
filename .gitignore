@@ -9,3 +9,8 @@ mobile/node_modules/
 backend/uploads/
 backend/uploads-private/
 .claude/
+
+# The Android app's project (built and signed on this PC; its signing key
+# lives in apk/keystore/). The site offers the finished APK from
+# web/public/downloads/ (apk/publish.cjs puts it there).
+apk/

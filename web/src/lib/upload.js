@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../config/api';
+import { beginActivity, endActivity } from './activity';
 
 /**
  * Upload an image file to the backend. Uses raw fetch so the browser sets the
@@ -21,13 +22,20 @@ export async function uploadImage(file) {
   const fd = new FormData();
   fd.append('file', file);
 
-  const resp = await fetch(`${API_CONFIG.BASE_URL}/upload/image`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: fd,
-  });
-
-  const json = await resp.json().catch(() => ({}));
+  // The activity bar shows while the photo goes up.
+  beginActivity();
+  let resp;
+  let json;
+  try {
+    resp = await fetch(`${API_CONFIG.BASE_URL}/upload/image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    });
+    json = await resp.json().catch(() => ({}));
+  } finally {
+    endActivity();
+  }
   if (!resp.ok || !json?.success) {
     throw new Error(json?.message || `Upload failed (${resp.status})`);
   }

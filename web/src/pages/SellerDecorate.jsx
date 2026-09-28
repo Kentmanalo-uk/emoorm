@@ -9,6 +9,7 @@ import {
   SHOP_TEMPLATES, findTemplate, recommendTemplate, templateInUse,
 } from '../lib/shopTemplates';
 import './SellerDashboard.css';
+import { BusyLabel } from '../components/ui/Spinner';
 
 /*
  * Decorate my shop: pick a ready-made look for the shop page (a template is
@@ -219,7 +220,7 @@ export function SellerTemplatePreview() {
       </div>
       <div className="stp-apply-bar">
         <button type="button" className={`scm-btn${inUse ? ' is-done' : ''}`} onClick={apply} disabled={applying || inUse}>
-          {inUse ? <><Check size={17} weight="bold" /> In use</> : applying ? 'Applying…' : `Apply ${template.name}`}
+          {inUse ? <><Check size={17} weight="bold" /> In use</> : applying ? <BusyLabel>Applying…</BusyLabel> : `Apply ${template.name}`}
         </button>
       </div>
     </div>

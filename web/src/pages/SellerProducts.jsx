@@ -19,6 +19,7 @@ import { useCategories } from '../hooks/useReferenceData';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import ProductForm from '../components/seller/ProductForm';
 import { sellBlockers } from '../lib/sellerSetup';
+import { readCache, writeCache } from '../lib/pageCache';
 
 const STATUS_LABELS = {
   PENDING: { label: 'Pending Approval', cls: 'status-pending', icon: <Clock size={12} /> },
@@ -59,7 +60,6 @@ export default function SellerProducts() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [products, setProducts] = useState([]);
   const { categories } = useCategories();
   // Until the shop is ready to sell, products are drafts buyers cannot see.
   const blockers = sellBlockers(useOutletContext()?.setup);
@@ -71,14 +71,19 @@ export default function SellerProducts() {
   const tabLabel = (key) => (key === 'APPROVED' && notReady
     ? 'Approved'
     : PRODUCT_TABS.find((t) => t.key === key)?.label);
-  const [isLoading, setIsLoading] = useState(true);
   // Seeded from ?search= so a top-bar search result opens filtered.
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(() => {
     const fromUrl = searchParams.get('status');
     return PRODUCT_TABS.some((t) => t.key === fromUrl) ? fromUrl : 'all';
   });
-  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1 });
+  // Each tab's first page as it showed last time: shown at once while it is
+  // asked for again. Editing waits for the fresh list (productsFresh).
+  const [saved] = useState(() => (search ? undefined : readCache(`seller:products:${statusFilter}`)));
+  const [products, setProducts] = useState(() => saved?.products || []);
+  const [productsFresh, setProductsFresh] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => !saved);
+  const [pagination, setPagination] = useState(() => ({ total: 0, page: 1, totalPages: 1, ...(saved?.pagination || {}) }));
   // Inline restock: per-row draft quantity and the row currently saving.
   const [restockDrafts, setRestockDrafts] = useState({});
   const [restockingId, setRestockingId] = useState(null);
@@ -126,10 +131,12 @@ export default function SellerProducts() {
       return;
     }
     if (editingProduct?.id === editParam) return;
+    // The form starts from the fresh product, never the saved copy.
+    if (!productsFresh) return;
     const found = products.find((p) => p.id === editParam);
     if (found) setEditingProduct(found);
     else if (!isLoading) navigate('/seller/products', { replace: true });
-  }, [editParam, products, isLoading]);
+  }, [editParam, products, productsFresh, isLoading]);
 
   // Opening or closing the form starts at the top of the page.
   useEffect(() => {
@@ -137,7 +144,14 @@ export default function SellerProducts() {
   }, [showForm]);
 
   const loadProducts = async () => {
-    setIsLoading(true);
+    const viewKey = pagination.page === 1 && !search ? `seller:products:${statusFilter}` : null;
+    const kept = viewKey ? readCache(viewKey) : undefined;
+    if (kept) {
+      setProducts(kept.products || []);
+      if (kept.pagination) setPagination((p) => ({ ...p, ...kept.pagination }));
+    } else {
+      setIsLoading(true);
+    }
     try {
       const res = await axios.get('/products/my/products', {
         params: {
@@ -148,8 +162,15 @@ export default function SellerProducts() {
         },
       });
       setProducts(res.data || []);
+      setProductsFresh(true);
       if (res.pagination) {
         setPagination(p => ({ ...p, total: res.pagination.total, totalPages: res.pagination.totalPages }));
+      }
+      if (viewKey) {
+        writeCache(viewKey, {
+          products: res.data || [],
+          pagination: res.pagination ? { total: res.pagination.total, totalPages: res.pagination.totalPages } : null,
+        });
       }
     } catch (err) {
       toast.error(err.message || 'Failed to load products');

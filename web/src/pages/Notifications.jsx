@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell, BellSlash as BellOff, Checks as CheckCheck, Trash as Trash2, Package, ShoppingBag,
@@ -15,8 +15,10 @@ import EmptyArt from '../components/ui/EmptyArt';
 import EmptyState from '../components/ui/EmptyState';
 import MoreMenu from '../components/MoreMenu';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useEntryState from '../hooks/useEntryState';
 import './SellerDashboard.css';
 import './Notifications.css';
+import { readCache, writeCache } from '../lib/pageCache';
 
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
@@ -70,15 +72,24 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   const audience = mode === 'SELLER' ? 'SELLER' : 'BUYER';
   const notificationsPath = audience === 'SELLER' ? '/seller/notifications' : '/notifications';
 
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all | unread
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ totalPages: 0, total: 0 });
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [search, setSearch] = useState('');
+  // The first view ("All", page 1) as it showed last time: shown at once
+  // while it is asked for again.
+  const cacheKey = `notifications:${audience}`;
+  const [saved] = useState(() => readCache(cacheKey));
+  const [notifications, setNotifications] = useState(() => saved?.items || []);
+  const [unreadCount, setUnreadCount] = useState(() => saved?.unreadCount ?? 0);
+  const [isLoading, setIsLoading] = useState(() => !saved);
+  // The filter, page and search of this visit: Back from a notification
+  // finds the list as it was left.
+  const [filter, setFilter] = useEntryState('filter', 'all'); // all | unread
+  const [page, setPage] = useEntryState('page', 1);
+  const [pagination, setPagination] = useState(() => saved?.pagination || { totalPages: 0, total: 0 });
+  const firstViewFresh = useRef(false);
+  const [searchText, setSearchText] = useEntryState('searchText', '');
+  const [search, setSearch] = useEntryState('search', '');
+  // A search Back returns to stays open, without taking the keyboard.
+  const [searchOpen, setSearchOpen] = useState(() => Boolean(searchText));
+  const [focusSearch, setFocusSearch] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -88,7 +99,12 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       setPage(1);
     }, 350);
     return () => clearTimeout(t);
-  }, [searchText, search]);
+  }, [searchText, search, setSearch, setPage]);
+
+  const openSearch = () => {
+    setSearchOpen(true);
+    setFocusSearch(true);
+  };
 
   const closeSearch = () => {
     setSearchOpen(false);
@@ -101,7 +117,16 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   }, [isAuthenticated, filter, page, audience, search]);
 
   const fetchNotifications = async () => {
-    setIsLoading(true);
+    const firstView = filter === 'all' && page === 1 && !search;
+    const kept = firstView ? readCache(cacheKey) : undefined;
+    firstViewFresh.current = false;
+    if (kept) {
+      setNotifications(kept.items || []);
+      setUnreadCount(kept.unreadCount ?? 0);
+      if (kept.pagination) setPagination(kept.pagination);
+    } else {
+      setIsLoading(true);
+    }
     try {
       const params = { page, pageSize: 20, audience };
       if (filter === 'unread') params.isRead = false;
@@ -111,6 +136,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       setNotifications(response.data || []);
       setUnreadCount(response.unreadCount ?? 0);
       if (response.pagination) setPagination(response.pagination);
+      firstViewFresh.current = firstView;
     } catch (err) {
       console.error(err);
       toast.error('Failed to load notifications');
@@ -118,6 +144,12 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       setIsLoading(false);
     }
   };
+
+  // Marked read, deleted…: the saved first view follows what is shown.
+  useEffect(() => {
+    if (!firstViewFresh.current || isLoading) return;
+    writeCache(cacheKey, { items: notifications, unreadCount, pagination });
+  }, [cacheKey, isLoading, notifications, unreadCount, pagination]);
 
   const handleMarkRead = async (notif) => {
     if (notif.isRead) return;
@@ -193,7 +225,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       <button
         type="button"
         className={`notif-tool-btn${searchOpen ? ' is-active' : ''}`}
-        onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
+        onClick={() => (searchOpen ? closeSearch() : openSearch())}
         aria-label={searchOpen ? 'Close search' : 'Search notifications'}
         aria-expanded={searchOpen}
       >
@@ -222,7 +254,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
         onChange={(e) => setSearchText(e.target.value)}
         placeholder="Search notifications"
         aria-label="Search notifications"
-        autoFocus
+        autoFocus={focusSearch}
       />
       {searchText && (
         <button type="button" onClick={() => setSearchText('')} aria-label="Clear search">

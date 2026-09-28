@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import useSeo, { productSchema, breadcrumbs, clampText } from '../lib/seo';
 import {
@@ -12,6 +12,8 @@ import Layout from '../components/layout/Layout';
 import ReportModal from '../components/ReportModal';
 import Skeleton from '../components/ui/Skeleton';
 import ProductImage from '../components/ProductImage';
+import { BusyLabel } from '../components/ui/Spinner';
+import { readCache, writeCache } from '../lib/pageCache';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
@@ -104,8 +106,10 @@ const ProductDetails = () => {
   const setActiveSlide = (index) => setSlideState({ slug, index });
 
   // The page brings its own top and bottom bars on phones, so the site header
-  // and bottom navigation step aside while it is open.
-  useEffect(() => {
+  // and bottom navigation step aside while it is open. Before the page shows
+  // (a layout effect), so the page it goes back to is not laid out without
+  // its header, and not scrolled back to the wrong spot.
+  useLayoutEffect(() => {
     if (!isPhone) return undefined;
     document.body.classList.add('pdp-phone-mode');
     return () => document.body.classList.remove('pdp-phone-mode');
@@ -124,8 +128,9 @@ const ProductDetails = () => {
   const { toggleItem, isInWishlist } = useWishlistStore();
   const { requireVerifiedIdentity, identityDialog } = useIdentityGate();
 
-  const [product, setProduct] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // A product seen before shows at once while it is asked for again.
+  const [product, setProduct] = useState(() => readCache(`product:${slug}`) || null);
+  const [isLoading, setIsLoading] = useState(() => !readCache(`product:${slug}`));
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariations, setSelectedVariations] = useState({});
@@ -171,27 +176,45 @@ const ProductDetails = () => {
     return () => { cancelled = true; unsub(); };
   }, [followStoreId, isAuthenticated]);
 
+  // Where the page opens (its top, or where it was left on Back) is up to
+  // ScrollMemory.
   useEffect(() => {
     fetchProduct();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   const fetchProduct = async () => {
-    setIsLoading(true);
+    // Another product: its own start (first photo, one piece, nothing picked),
+    // from its saved copy when it has one. The fresh copy then only updates
+    // it, so a choice already made is kept.
+    setSelectedImage(0);
+    setQuantity(1);
+    setSelectedVariations({});
+    setVariationError('');
+    const kept = readCache(`product:${slug}`);
+    const loadAround = (item) => {
+      if (item?.categoryId) fetchRelated(item.categoryId, item.id);
+      if (item?.storeId) fetchSameShop(item.storeId, item.id);
+      if (item?.id) fetchReviews(item.id);
+    };
+    if (kept) {
+      setProduct(kept);
+      setIsLoading(false);
+      loadAround(kept);
+    } else {
+      setProduct(null);
+      setIsLoading(true);
+    }
     try {
       const res = await axios.get(`/products/slug/${slug}`);
       setProduct(res.data);
-      setSelectedImage(0);
-      setQuantity(1);
-      setSelectedVariations({});
-      setVariationError('');
-      if (res.data?.categoryId) fetchRelated(res.data.categoryId, res.data.id);
-      if (res.data?.storeId) fetchSameShop(res.data.storeId, res.data.id);
-      if (res.data?.id) fetchReviews(res.data.id);
+      writeCache(`product:${slug}`, res.data);
+      if (!kept) loadAround(res.data);
     } catch (error) {
       console.error('Failed to fetch product:', error);
       if (error.status === 404) {
+        // Gone (or hidden now): forget the saved copy too.
+        writeCache(`product:${slug}`, null);
         toast.error('Product not found');
         navigate('/products', { replace: true });
       }
@@ -924,7 +947,7 @@ const ProductDetails = () => {
                   disabled={isOutOfStock || isAddingToCart}
                   className="pdp-btn pdp-btn-primary"
                 >
-                  {isAddingToCart ? 'Adding…' : 'Add to Cart'}
+                  {isAddingToCart ? <BusyLabel>Adding…</BusyLabel> : 'Add to Cart'}
                 </button>
                 <button
                   type="button"

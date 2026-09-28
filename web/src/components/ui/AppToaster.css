@@ -1,43 +1,52 @@
+/* Notifications, Apple style: a frosted banner that drops in from the top
+   with a small spring and lifts away when it closes. Only one shows at a
+   time (AppToaster). */
 .app-toast {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: min(360px, calc(100vw - 32px));
-  padding: 10px 12px;
+  gap: 11px;
+  width: min(380px, calc(100vw - 24px));
+  padding: 10px 10px 10px 11px;
   overflow: hidden;
-  border-radius: 10px;
-  background: var(--t-neutral-0, #fff);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, .12), 0 1px 2px rgba(15, 23, 42, .06);
-  opacity: 0;
-  transform: translateY(-10px) scale(.96);
-  transition: opacity .22s cubic-bezier(.16, 1, .3, 1), transform .32s cubic-bezier(.16, 1, .3, 1);
+  border: 0.5px solid rgba(15, 23, 42, .08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .84);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, .14), 0 2px 8px rgba(15, 23, 42, .06);
+  transform-origin: 50% 0;
+  will-change: transform, opacity;
+}
+
+/* Browsers without the frosted glass get a plain white banner. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-toast {
+    background: var(--t-neutral-0, #fff);
+  }
 }
 
 .app-toast.is-visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+  animation: app-toast-drop-in .6s cubic-bezier(.25, .8, .25, 1) both;
 }
 
 .app-toast.is-hidden {
-  opacity: 0;
-  transform: translateY(-6px) scale(.97);
-  transition-duration: .16s;
+  animation: app-toast-lift-out .32s cubic-bezier(.45, 0, .85, .35) forwards;
 }
 
 .app-toast-icon {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   background: var(--t-secondary-50, #e9f8ef);
   color: var(--t-primary-600, #059669);
 }
 
 .app-toast.is-visible .app-toast-icon {
-  animation: app-toast-icon-pop .32s cubic-bezier(.34, 1.56, .64, 1);
+  animation: app-toast-icon-pop .5s cubic-bezier(.34, 1.56, .64, 1) .08s both;
 }
 
 .app-toast--error .app-toast-icon {
@@ -58,7 +67,7 @@
   flex: 1;
   min-width: 0;
   color: var(--t-secondary-950, #17231c);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -67,8 +76,8 @@
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -79,10 +88,12 @@
 }
 
 .app-toast-close:hover {
-  background: var(--t-neutral-100, #f1f5f4);
+  background: rgba(15, 23, 42, .06);
   color: var(--t-neutral-600, #475569);
 }
 
+/* Added to cart / wishlist: a dark frosted box in the middle, like the
+   iPhone's own confirmations. */
 .app-toast-commerce {
   display: flex;
   width: 184px;
@@ -93,32 +104,31 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 7px;
-  background: rgba(0, 0, 0, .70);
+  border-radius: 18px;
+  background: rgba(28, 28, 30, .74);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
   color: var(--t-neutral-0, #fff);
   text-align: center;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  opacity: 0;
-  transform: scale(.92);
-  transition: opacity .2s cubic-bezier(.16, 1, .3, 1), transform .28s cubic-bezier(.16, 1, .3, 1);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .18);
+  will-change: transform, opacity;
 }
 
 .app-toast-commerce.is-visible {
-  opacity: 1;
-  transform: scale(1);
+  animation: app-toast-hud-in .5s cubic-bezier(.25, .8, .25, 1) both;
 }
 
 .app-toast-commerce.is-hidden {
-  opacity: 0;
-  transform: scale(.94);
-  transition-duration: .16s;
+  animation: app-toast-hud-out .26s cubic-bezier(.45, 0, .85, .35) forwards;
 }
 
 .app-toast-commerce>svg {
   margin-bottom: 3px;
   color: var(--t-neutral-0, #fff);
+}
+
+.app-toast-commerce.is-visible>svg {
+  animation: app-toast-icon-pop .55s cubic-bezier(.34, 1.56, .64, 1) .1s both;
 }
 
 .app-toast-commerce strong {
@@ -131,6 +141,77 @@
   color: rgba(255, 255, 255, .82);
   font-size: 12px;
   line-height: 1.4;
+}
+
+/* Drops in from above the screen, overshoots a little, settles. */
+@keyframes app-toast-drop-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-120%) scale(.88);
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  62% {
+    transform: translateY(5px) scale(1.012);
+  }
+
+  82% {
+    transform: translateY(-1.5px) scale(.998);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Lifts back up and away. */
+@keyframes app-toast-lift-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-115%) scale(.9);
+  }
+}
+
+@keyframes app-toast-hud-in {
+  0% {
+    opacity: 0;
+    transform: scale(.78);
+  }
+
+  55% {
+    opacity: 1;
+    transform: scale(1.035);
+  }
+
+  80% {
+    transform: scale(.992);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes app-toast-hud-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(.9);
+  }
 }
 
 @keyframes app-toast-spin {
@@ -146,7 +227,7 @@
   }
 
   60% {
-    transform: scale(1.1);
+    transform: scale(1.12);
   }
 
   100% {
@@ -157,7 +238,7 @@
 
 @media (max-width: 480px) {
   .app-toast {
-    width: calc(100vw - 24px);
+    width: calc(100vw - 20px);
   }
 
   .app-toast-commerce {
@@ -167,13 +248,41 @@
   }
 }
 
+/* Reduced motion: a plain fade in and out. */
 @media (prefers-reduced-motion: reduce) {
+  .app-toast.is-visible,
+  .app-toast-commerce.is-visible {
+    animation: app-toast-fade-in .2s ease both;
+  }
 
-  .app-toast,
-  .app-toast-commerce,
+  .app-toast.is-hidden,
+  .app-toast-commerce.is-hidden {
+    animation: app-toast-fade-out .16s ease forwards;
+  }
+
   .app-toast.is-visible .app-toast-icon,
+  .app-toast-commerce.is-visible>svg,
   .app-toast--loading .app-toast-icon svg {
     animation: none;
-    transition: none;
+  }
+}
+
+@keyframes app-toast-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes app-toast-fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
   }
 }

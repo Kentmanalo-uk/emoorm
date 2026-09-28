@@ -14,6 +14,8 @@ import ReportModal from '../components/ReportModal';
 import './SellerDashboard.css';
 import './SellerOrders.css';
 import ProofPhotoSheet, { OrderProof } from '../components/orders/ProofPhotoSheet';
+import Spinner from '../components/ui/Spinner';
+import { readCache, writeCache } from '../lib/pageCache';
 
 // Phones show these as chips; the rest of TABS sit in the filter sheet.
 const PHONE_QUICK_TABS = ['all', 'PENDING', 'TO_SHIP'];
@@ -115,12 +117,15 @@ export default function SellerOrders() {
   // The buyer a seller is filing a report against, or null when the dialog is
   // closed. Reports route to the buyer's own municipal admin.
   const [reportBuyer, setReportBuyer] = useState(null);
-  const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState(() => {
     const fromUrl = searchParams.get('status');
     return TABS.some((t) => t.key === fromUrl) ? fromUrl : 'all';
   });
-  const [isLoading, setIsLoading] = useState(true);
+  // Each tab's first page as it showed last time: shown at once while it is
+  // asked for again.
+  const [saved] = useState(() => readCache(`seller:orders:${activeTab}`));
+  const [orders, setOrders] = useState(() => saved?.orders || []);
+  const [isLoading, setIsLoading] = useState(() => !saved);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
   // Server-side filters: order number search, created-at range and payment
@@ -131,7 +136,7 @@ export default function SellerOrders() {
   const [to, setTo] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 1, hasNext: false });
+  const [pagination, setPagination] = useState(() => saved?.pagination || { total: 0, totalPages: 1, hasNext: false });
   const [cancelConfirm, setCancelConfirm] = useState(null); // { orderId }
   const [rejectConfirm, setRejectConfirm] = useState(null); // { orderId }
   const [refundConfirm, setRefundConfirm] = useState(null); // { orderId }
@@ -173,7 +178,16 @@ export default function SellerOrders() {
   };
 
   const loadOrders = async () => {
-    setIsLoading(true);
+    const viewKey = page === 1 && !debouncedSearch && !from && !to && !paymentFilter
+      ? `seller:orders:${activeTab}`
+      : null;
+    const kept = viewKey ? readCache(viewKey) : undefined;
+    if (kept) {
+      setOrders(kept.orders || []);
+      if (kept.pagination) setPagination(kept.pagination);
+    } else {
+      setIsLoading(true);
+    }
     try {
       const params = {
         page,
@@ -188,6 +202,7 @@ export default function SellerOrders() {
       const loaded = res.data || [];
       setOrders(loaded);
       if (res.pagination) setPagination(res.pagination);
+      if (viewKey) writeCache(viewKey, { orders: loaded, pagination: res.pagination || null });
       // Deep-link support: /seller/orders?id=<orderId> opens that order's detail panel
       const targetId = searchParams.get('id');
       if (targetId) {
@@ -591,7 +606,7 @@ export default function SellerOrders() {
                                   title="Update status"
                                 >
                                   <span className="so-action-label">{isUpdating ? 'Updating…' : 'Update status'}</span>
-                                  {isUpdating ? <span className="so-action-dots">…</span> : <ChevronDown size={14} />}
+                                  {isUpdating ? <Spinner size={14} /> : <ChevronDown size={14} />}
                                 </button>
                                 <div className="status-dropdown-menu">
                                   {nextStatuses.map(ns => {

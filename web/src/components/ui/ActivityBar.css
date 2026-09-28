@@ -1,0 +1,54 @@
+/* The top-of-screen activity line (ActivityBar.jsx): a soft green glow
+   gliding across while an action runs. */
+.ui-activity {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10000;
+  height: 3px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.ui-activity.is-on {
+  opacity: 1;
+}
+
+.ui-activity::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(90deg, transparent, var(--t-primary-500, #10b981) 55%, var(--t-primary-400, #34d399));
+  box-shadow: 0 0 8px var(--t-primary-400, #34d399);
+  content: '';
+  transform: translateX(-100%);
+}
+
+.ui-activity.is-on::before {
+  animation: ui-activity-glide 1.15s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+
+@keyframes ui-activity-glide {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(240%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-activity.is-on::before {
+    width: 100%;
+    animation: none;
+    transform: none;
+    opacity: 0.6;
+  }
+}

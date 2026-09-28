@@ -9,6 +9,7 @@ import { SUPPORT_CATEGORIES, SUBJECT_MAX, MESSAGE_MAX } from '../lib/supportCate
 import useAuthStore from '../store/authStore';
 import './Profile.css';
 import './HelpCenter.css';
+import { BusyLabel } from '../components/ui/Spinner';
 
 const topics = [
   {
@@ -158,7 +159,7 @@ function GetHelpPanel() {
                 {submitting
                   ? <CircleNotch size={15} className="hc-spin" />
                   : <PaperPlaneRight size={15} weight="fill" />}
-                {submitting ? 'Sending…' : 'Start a case'}
+                {submitting ? <BusyLabel>Sending…</BusyLabel> : 'Start a case'}
               </button>
             </div>
           </div>

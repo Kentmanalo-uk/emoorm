@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star, WarningCircle,
@@ -15,6 +15,7 @@ import './Products.css';
 import { useCategories } from '../hooks/useReferenceData';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm, clearRecent } from '../lib/buyerSearch';
+import { readCache, writeCache } from '../lib/pageCache';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 const parseImages = (raw) => {
@@ -58,16 +59,55 @@ const renderRating = (product, size = 14) => {
   );
 };
 
+// The API's sortBy and sortOrder for each sort choice.
+const SORTS = {
+  newest: { sortBy: 'createdAt', sortOrder: 'desc' },
+  oldest: { sortBy: 'createdAt', sortOrder: 'asc' },
+  'price-low': { sortBy: 'price', sortOrder: 'asc' },
+  'price-high': { sortBy: 'price', sortOrder: 'desc' },
+  'name-asc': { sortBy: 'name', sortOrder: 'asc' },
+  'name-desc': { sortBy: 'name', sortOrder: 'desc' },
+};
+
+/** GET /products parameters for the list as filtered and paged. */
+const listParams = ({ page, pageSize, category, municipalityId, search, minPrice, maxPrice, sort }) => {
+  const params = { page, pageSize };
+  if (category) params.categoryId = category;
+  if (municipalityId) params.municipalityId = municipalityId;
+  if (search) params.search = search;
+  if (minPrice) params.minPrice = minPrice;
+  if (maxPrice) params.maxPrice = maxPrice;
+  if (sort && SORTS[sort]) Object.assign(params, SORTS[sort]);
+  return params;
+};
+
+// Each filtered page remembers what it showed (pageCache).
+const listKey = (params) => `products:${JSON.stringify(params)}`;
+
 const Products = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const isPhone = usePhoneLayout();
-  const [products, setProducts] = useState([]);
+  // The list as it showed last time for these filters: shown at once while
+  // it is asked for again (and Back finds it, and the spot in it, as left).
+  const [saved] = useState(() => (searchParams.get('imageSearch') === '1' ? undefined : readCache(listKey(listParams({
+    page: parseInt(searchParams.get('page')) || 1,
+    pageSize: 20,
+    category: searchParams.get('category') || '',
+    municipalityId: searchParams.get('municipalityId') || '',
+    search: searchParams.get('q') || '',
+    minPrice: searchParams.get('minPrice') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
+    sort: searchParams.get('sort') || 'newest',
+  })))));
+  const [products, setProducts] = useState(() => saved?.products || []);
   const [imageSearchPreview, setImageSearchPreview] = useState('');
   const { categories } = useCategories();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !saved);
   const [loadError, setLoadError] = useState('');
+  // Only the latest request is shown: an earlier one can answer after it.
+  const latestRequest = useRef(0);
   const [viewMode, setViewMode] = useState('grid');
   const addItem = useCartStore((s) => s.addItem);
 
@@ -116,12 +156,12 @@ const Products = () => {
   });
 
   // Pagination
-  const [pagination, setPagination] = useState({
+  const [pagination, setPagination] = useState(() => ({
     page: parseInt(searchParams.get('page')) || 1,
     pageSize: 20,
-    total: 0,
-    totalPages: 0,
-  });
+    total: saved?.total || 0,
+    totalPages: saved?.totalPages || 0,
+  }));
 
   // Sync local search state whenever the URL query string changes (e.g. header re-search).
   useEffect(() => {
@@ -134,6 +174,7 @@ const Products = () => {
 
   useEffect(() => {
     if (imageSearch) {
+      latestRequest.current += 1;
       try {
         const stored = JSON.parse(sessionStorage.getItem('emoorm.image-search') || '{}');
         setProducts(Array.isArray(stored.results) ? stored.results : []);
@@ -153,35 +194,31 @@ const Products = () => {
   }, [selectedCategory, searchQuery, sortBy, priceRange, pagination.page, municipalityId, imageSearch]);
 
   const fetchProducts = async () => {
-    setIsLoading(true);
+    const params = listParams({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      category: selectedCategory,
+      municipalityId,
+      search: searchQuery,
+      minPrice: priceRange.min,
+      maxPrice: priceRange.max,
+      sort: sortBy,
+    });
+    const key = listKey(params);
+    const request = ++latestRequest.current;
+    // Shown before: at once, then refreshed. New filters: the skeleton.
+    const kept = readCache(key);
+    if (kept) {
+      setProducts(kept.products || []);
+      setPagination((prev) => ({ ...prev, total: kept.total || 0, totalPages: kept.totalPages || 0 }));
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
     setLoadError('');
     try {
-      const params = {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-      };
-
-      if (selectedCategory) params.categoryId = selectedCategory;
-      if (municipalityId) params.municipalityId = municipalityId;
-      if (searchQuery) params.search = searchQuery;
-      if (priceRange.min) params.minPrice = priceRange.min;
-      if (priceRange.max) params.maxPrice = priceRange.max;
-
-      // API expects separate sortBy and sortOrder params
-      const sortMapping = {
-        newest: { sortBy: 'createdAt', sortOrder: 'desc' },
-        oldest: { sortBy: 'createdAt', sortOrder: 'asc' },
-        'price-low': { sortBy: 'price', sortOrder: 'asc' },
-        'price-high': { sortBy: 'price', sortOrder: 'desc' },
-        'name-asc': { sortBy: 'name', sortOrder: 'asc' },
-        'name-desc': { sortBy: 'name', sortOrder: 'desc' },
-      };
-      if (sortBy && sortMapping[sortBy]) {
-        params.sortBy = sortMapping[sortBy].sortBy;
-        params.sortOrder = sortMapping[sortBy].sortOrder;
-      }
-
       const response = await axios.get('/products', { params });
+      if (request !== latestRequest.current) return;
       setProducts(response.data || []);
       if (response.pagination) {
         setPagination(prev => ({
@@ -190,12 +227,26 @@ const Products = () => {
           totalPages: response.pagination.totalPages,
         }));
       }
+      // All products, page 1, is saved on the device; a search, a filter or
+      // another page, for this visit.
+      const firstView = params.page === 1 && !params.categoryId && !params.municipalityId
+        && !params.search && !params.minPrice && !params.maxPrice
+        && params.sortBy === SORTS.newest.sortBy && params.sortOrder === SORTS.newest.sortOrder;
+      writeCache(key, {
+        products: response.data || [],
+        total: response.pagination?.total || 0,
+        totalPages: response.pagination?.totalPages || 0,
+      }, { visitOnly: !firstView });
     } catch (error) {
+      if (request !== latestRequest.current) return;
       console.error('Failed to fetch products:', error);
-      setProducts([]);
-      setLoadError(error?.message || 'Failed to load products');
+      // Offline and the like: the list shown last time stays.
+      if (!kept) {
+        setProducts([]);
+        setLoadError(error?.message || 'Failed to load products');
+      }
     } finally {
-      setIsLoading(false);
+      if (request === latestRequest.current) setIsLoading(false);
     }
   };
 

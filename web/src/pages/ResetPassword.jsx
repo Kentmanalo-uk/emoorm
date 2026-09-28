@@ -7,6 +7,7 @@ import AuthSheetBar from '../components/AuthSheetBar';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import './ResetPassword.css';
 import './AuthSheet.css';
+import { BusyLabel } from '../components/ui/Spinner';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -206,7 +207,7 @@ const ResetPassword = () => {
                 )}
 
                 <button type="submit" className="rp-submit" disabled={isLoading}>
-                  {isLoading ? 'Resetting…' : 'Reset password'}
+                  {isLoading ? <BusyLabel>Resetting…</BusyLabel> : 'Reset password'}
                 </button>
               </form>
 

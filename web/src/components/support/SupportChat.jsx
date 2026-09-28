@@ -15,6 +15,7 @@ import NewMessageDialog from './NewMessageDialog';
 import SafetyNotice from '../common/SafetyNotice';
 import './SupportChat.css';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
+import { BusyLabel } from '../ui/Spinner';
 
 const THREAD_POLL_MS = 5000;
 const LIST_POLL_MS = 15000;
@@ -339,7 +340,7 @@ function NewCaseDialog({ open, onClose, onOpened }) {
             <button type="button" className="sc-btn sc-btn-ghost" onClick={onClose} disabled={saving}>Cancel</button>
             <button type="submit" className="sc-btn sc-btn-green" disabled={saving}>
               {saving ? <CircleNotch size={14} className="sc-spin" /> : <PaperPlaneRight size={14} weight="fill" />}
-              {saving ? 'Sending…' : 'Start case'}
+              {saving ? <BusyLabel>Sending…</BusyLabel> : 'Start case'}
             </button>
           </div>
         </form>
@@ -424,7 +425,7 @@ function RatingPrompt({ conversation, onRated }) {
         placeholder="Anything you want to add? (optional)"
       />
       <button type="button" className="sc-btn sc-btn-green" onClick={submit} disabled={!picked || saving}>
-        {saving ? 'Sending…' : 'Send rating'}
+        {saving ? <BusyLabel>Sending…</BusyLabel> : 'Send rating'}
       </button>
     </div>
   );

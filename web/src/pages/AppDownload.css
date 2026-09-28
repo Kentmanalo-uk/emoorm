@@ -1,0 +1,1131 @@
+/* ════════════════════════════════════════════════════════════════════
+   The E-MOORM app's download page (/app), after an app's page in Apple's
+   App Store: its tint, hairlines, pill Get button and quiet greys.
+   Wide screens: inside the site's header and footer, in two columns.
+   Phones: full screen with its own top bar (see AppDownload.jsx).
+   ════════════════════════════════════════════════════════════════════ */
+
+.appdl-page {
+  --appdl-tint: #007aff;
+  --appdl-tint-hover: #0a6fe0;
+  --appdl-text: #1c1c1e;
+  --appdl-muted: #8e8e93;
+  --appdl-value: #6e6e73;
+  --appdl-sep: rgba(60, 60, 67, 0.16);
+  --appdl-fill: #f2f2f7;
+  background: #ffffff;
+  color: var(--appdl-text);
+}
+
+.appdl {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 40px 32px 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  /* The install card beside What's New and the description may be the
+     taller of the two: the room it leaves goes below the description. */
+  grid-template-rows: auto auto auto auto 1fr auto;
+  grid-template-areas:
+    "head head"
+    "facts facts"
+    "preview preview"
+    "news install"
+    "about install"
+    "info info";
+  column-gap: 56px;
+}
+
+/* ── Header: icon, name, Get ─────────────────────────────────────────── */
+
+.appdl-head {
+  grid-area: head;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 32px;
+  padding-bottom: 32px;
+}
+
+.appdl-icon {
+  width: 180px;
+  height: 180px;
+  border-radius: 22.5%;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 10px 30px rgba(0, 72, 12, 0.22);
+}
+
+.appdl-titles {
+  min-width: 0;
+}
+
+.appdl-titles h1 {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.1;
+  color: var(--appdl-text);
+}
+
+.appdl-subtitle {
+  margin: 6px 0 22px;
+  font-size: 19px;
+  line-height: 1.35;
+  color: var(--appdl-muted);
+}
+
+.appdl-get-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.appdl-get {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 92px;
+  height: 36px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--appdl-tint);
+  color: #ffffff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.26);
+  transition: background-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.appdl-get:hover {
+  background: var(--appdl-tint-hover);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(0, 122, 255, 0.32);
+}
+
+.appdl-get:active {
+  transform: scale(0.95);
+}
+
+.appdl-get:focus-visible,
+.appdl-round:focus-visible,
+.appdl-share:focus-visible,
+.appdl-shot:focus-visible,
+.appdl-more:focus-visible {
+  outline: 3px solid rgba(0, 122, 255, 0.45);
+  outline-offset: 2px;
+}
+
+.appdl-get.is-installed {
+  background: var(--appdl-fill);
+  color: var(--appdl-value);
+  box-shadow: none;
+  cursor: default;
+  transform: none;
+}
+
+.appdl-get-note {
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--appdl-muted);
+}
+
+.appdl-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: var(--appdl-tint);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.appdl-share:hover {
+  color: var(--appdl-tint-hover);
+}
+
+.appdl-qr {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: 340px;
+  padding: 18px 20px;
+  border: 1px solid var(--appdl-sep);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.appdl-qr svg {
+  flex: none;
+  display: block;
+}
+
+.appdl-qr p {
+  margin: 0;
+}
+
+.appdl-qr strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--appdl-text);
+}
+
+.appdl-qr span {
+  display: block;
+  margin-top: 5px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--appdl-muted);
+}
+
+/* ── The strip of facts ──────────────────────────────────────────────── */
+
+.appdl-facts {
+  grid-area: facts;
+  display: flex;
+  margin: 0;
+  padding: 14px 0;
+  list-style: none;
+  border-top: 1px solid var(--appdl-sep);
+  border-bottom: 1px solid var(--appdl-sep);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.appdl-facts::-webkit-scrollbar {
+  display: none;
+}
+
+.appdl-fact {
+  position: relative;
+  flex: 1 0 auto;
+  min-width: 112px;
+  padding: 2px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.appdl-fact + .appdl-fact::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14%;
+  bottom: 14%;
+  width: 1px;
+  background: var(--appdl-sep);
+}
+
+.appdl-fact-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--appdl-muted);
+}
+
+.appdl-fact-value {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--appdl-value);
+}
+
+.appdl-fact-sub {
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--appdl-muted);
+}
+
+/* ── Sections ────────────────────────────────────────────────────────── */
+
+.appdl-section {
+  min-width: 0;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--appdl-sep);
+}
+
+.appdl-section h2 {
+  margin: 0 0 14px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--appdl-text);
+}
+
+.appdl-news {
+  grid-area: news;
+}
+
+.appdl-version-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  color: var(--appdl-muted);
+}
+
+.appdl-notes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.15em;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.appdl-notes li::marker {
+  color: var(--appdl-muted);
+}
+
+/* Preview */
+
+.appdl-preview {
+  grid-area: preview;
+}
+
+.appdl-shots {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding: 2px 2px 6px;
+}
+
+.appdl-shots::-webkit-scrollbar {
+  display: none;
+}
+
+.appdl-shot {
+  flex: 0 0 auto;
+  width: 234px;
+  aspect-ratio: 9 / 16;
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--appdl-fill);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.07);
+  cursor: zoom-in;
+  scroll-snap-align: start;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.appdl-shot:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.07), 0 14px 30px rgba(0, 0, 0, 0.1);
+}
+
+.appdl-shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.appdl-device {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--appdl-muted);
+}
+
+/* Description */
+
+.appdl-about {
+  grid-area: about;
+  align-self: start;
+}
+
+.appdl-desc {
+  position: relative;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.appdl-desc p {
+  margin: 0 0 12px;
+}
+
+.appdl-desc:not(.is-open) {
+  max-height: calc(1.55em * 3);
+  overflow: hidden;
+}
+
+.appdl-more {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 0 0 0 44px;
+  border: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), #ffffff 36px);
+  color: var(--appdl-tint);
+  font: inherit;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.appdl-developer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 4px 0;
+  color: var(--appdl-muted);
+  text-decoration: none;
+}
+
+.appdl-developer strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--appdl-tint);
+}
+
+.appdl-developer small {
+  display: block;
+  margin-top: 1px;
+  font-size: 13px;
+  color: var(--appdl-muted);
+}
+
+.appdl-developer:hover strong {
+  color: var(--appdl-tint-hover);
+}
+
+/* How to install: a card of its own beside What's New */
+
+.appdl-install {
+  grid-area: install;
+  align-self: start;
+  margin-top: 28px;
+  padding: 24px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--appdl-fill);
+}
+
+.appdl-install-lead {
+  margin: 0 0 14px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.appdl-steps {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: appdl-step;
+}
+
+p + .appdl-steps {
+  margin-top: 16px;
+}
+
+.appdl-steps li {
+  counter-increment: appdl-step;
+  position: relative;
+  min-height: 26px;
+  padding-left: 38px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.appdl-steps li::before {
+  content: counter(appdl-step);
+  position: absolute;
+  top: -2px;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--appdl-tint);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.appdl-inline-icon {
+  vertical-align: -3px;
+  color: var(--appdl-tint);
+}
+
+.appdl-install-note {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #ffffff;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--appdl-value);
+}
+
+.appdl-install-note svg {
+  flex: none;
+  color: #34c759;
+}
+
+/* Information */
+
+.appdl-info {
+  grid-area: info;
+  border-bottom: 0;
+}
+
+.appdl-info-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 32px;
+  margin: 0;
+}
+
+.appdl-info-list > div {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--appdl-sep);
+}
+
+.appdl-info-list dt {
+  margin-bottom: 3px;
+  font-size: 13px;
+  color: var(--appdl-muted);
+}
+
+.appdl-info-list dd {
+  margin: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.appdl-verify {
+  margin-top: 20px;
+  padding: 0 16px;
+  border-radius: 16px;
+  background: var(--appdl-fill);
+}
+
+.appdl-verify summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 0;
+  font-size: 15px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.appdl-verify summary::-webkit-details-marker {
+  display: none;
+}
+
+.appdl-verify summary > svg:first-child {
+  color: #34c759;
+}
+
+.appdl-verify-caret {
+  margin-left: auto;
+  color: var(--appdl-muted);
+  transition: transform 0.2s ease;
+}
+
+.appdl-verify[open] .appdl-verify-caret {
+  transform: rotate(90deg);
+}
+
+.appdl-verify > p {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--appdl-value);
+}
+
+.appdl-verify dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-bottom: 16px;
+}
+
+.appdl-verify dt {
+  margin-bottom: 3px;
+  font-size: 12.5px;
+  color: var(--appdl-muted);
+}
+
+.appdl-verify dd {
+  margin: 0;
+}
+
+.appdl-verify code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
+  color: var(--appdl-text);
+}
+
+.appdl-links {
+  display: grid;
+  margin-top: 14px;
+}
+
+.appdl-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--appdl-sep);
+  color: var(--appdl-tint);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.appdl-links a:hover {
+  color: var(--appdl-tint-hover);
+}
+
+.appdl-links a svg {
+  color: var(--appdl-muted);
+}
+
+/* ── Sheets: a dialog here, a bottom sheet on phones ─────────────────── */
+
+.appdl-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.appdl-sheet {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 20px 22px 22px;
+  border-radius: 24px;
+  background: #ffffff;
+  color: var(--appdl-text);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+  outline: none;
+}
+
+.appdl-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.appdl-sheet-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.appdl-sheet-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(120, 120, 128, 0.14);
+  color: var(--appdl-value);
+  cursor: pointer;
+}
+
+.appdl-sheet-body > p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.appdl-sheet-qr {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--appdl-fill);
+}
+
+.appdl-sheet-qr svg {
+  display: block;
+  padding: 10px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-sizing: content-box;
+}
+
+.appdl-sheet-done {
+  width: 100%;
+  height: 48px;
+  margin-top: 22px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--appdl-tint);
+  color: #ffffff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.appdl-sheet-done:hover {
+  background: var(--appdl-tint-hover);
+}
+
+/* ── Screenshots, full screen ────────────────────────────────────────── */
+
+.appdl-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  animation: appdl-fade-in 0.2s ease-out;
+}
+
+@keyframes appdl-fade-in {
+  from { opacity: 0; }
+}
+
+.appdl-viewer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 18px 8px;
+  font-size: 15px;
+  color: var(--appdl-muted);
+}
+
+.appdl-viewer-done {
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: var(--appdl-tint);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.appdl-viewer-track {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.appdl-viewer-track::-webkit-scrollbar {
+  display: none;
+}
+
+.appdl-viewer-slide {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 8px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  scroll-snap-align: center;
+}
+
+.appdl-viewer-slide img {
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 9 / 16;
+  object-fit: contain;
+  border-radius: 28px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 16px 48px rgba(0, 0, 0, 0.14);
+}
+
+.appdl-viewer-nav {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-top: -24px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--appdl-fill);
+  color: var(--appdl-text);
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.appdl-viewer-nav:hover {
+  background: #e5e5ea;
+}
+
+.appdl-viewer-nav:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.appdl-viewer-nav.is-prev {
+  left: 24px;
+}
+
+.appdl-viewer-nav.is-next {
+  right: 24px;
+}
+
+/* ── Tablets and narrow windows: one column ──────────────────────────── */
+
+@media (max-width: 1024px) {
+  .appdl {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      "head"
+      "facts"
+      "news"
+      "preview"
+      "about"
+      "install"
+      "info";
+  }
+
+  .appdl-head {
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+
+  .appdl-icon {
+    width: 140px;
+    height: 140px;
+  }
+
+  .appdl-qr {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+
+  .appdl-install {
+    margin-top: 0;
+    padding: 28px 0;
+    border-bottom: 1px solid var(--appdl-sep);
+    border-radius: 0;
+    background: none;
+  }
+
+  .appdl-install-note {
+    background: var(--appdl-fill);
+  }
+
+  .appdl-info-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── Phones: full screen, as in the App Store ────────────────────────── */
+
+@media (max-width: 768px) {
+  /* The page brings its own bar. */
+  body.appdl-phone-mode .header,
+  body.appdl-phone-mode .header-spacer,
+  body.appdl-phone-mode .topbar,
+  body.appdl-phone-mode .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  .appdl-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .appdl-bar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    height: calc(54px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 14px 0;
+    background: rgba(255, 255, 255, 0);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .appdl-bar.is-compact {
+    background: rgba(255, 255, 255, 0.88);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    box-shadow: 0 0.5px 0 var(--appdl-sep);
+  }
+
+  .appdl-round {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(120, 120, 128, 0.12);
+    color: var(--appdl-text);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .appdl-round:active {
+    background: rgba(120, 120, 128, 0.22);
+  }
+
+  .appdl-bar-mid {
+    opacity: 0;
+    transform: translateY(8px) scale(0.85);
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .appdl-bar.is-compact .appdl-bar-mid {
+    opacity: 1;
+    transform: none;
+  }
+
+  .appdl-bar-mid img {
+    display: block;
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1);
+  }
+
+  .appdl-bar-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .appdl-bar-end .appdl-get {
+    animation: appdl-pop-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes appdl-pop-in {
+    from { opacity: 0; transform: scale(0.8); }
+  }
+
+  .appdl {
+    display: block;
+    padding: 0 0 calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .appdl-head {
+    grid-template-columns: 118px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    padding: 6px 20px 22px;
+  }
+
+  .appdl-icon {
+    width: 118px;
+    height: 118px;
+    box-shadow:
+      0 0 0 0.5px rgba(0, 0, 0, 0.08),
+      0 6px 18px rgba(0, 72, 12, 0.2);
+  }
+
+  .appdl-titles h1 {
+    margin-top: 6px;
+    font-size: 23px;
+    letter-spacing: -0.015em;
+  }
+
+  .appdl-subtitle {
+    margin: 3px 0 14px;
+    font-size: 15px;
+  }
+
+  .appdl-get-row {
+    gap: 8px 12px;
+  }
+
+  .appdl-get {
+    min-width: 78px;
+    height: 30px;
+    padding: 0 20px;
+    font-size: 15px;
+    box-shadow: none;
+  }
+
+  .appdl-get.is-compact {
+    min-width: 62px;
+    height: 28px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+
+  .appdl-get-note {
+    font-size: 11.5px;
+  }
+
+  .appdl-facts {
+    margin: 0 20px;
+    padding: 10px 0;
+  }
+
+  .appdl-fact {
+    min-width: 98px;
+    padding: 2px 8px;
+  }
+
+  .appdl-fact-value {
+    font-size: 20px;
+  }
+
+  .appdl-section {
+    margin: 0 20px;
+    padding: 20px 0 22px;
+  }
+
+  .appdl-section h2 {
+    margin-bottom: 12px;
+    font-size: 21px;
+  }
+
+  /* Screenshots run edge to edge; the heading and hairline stay inset. */
+  .appdl-preview {
+    margin: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .appdl-preview h2,
+  .appdl-device {
+    padding: 0 20px;
+  }
+
+  .appdl-preview::after {
+    content: '';
+    display: block;
+    margin: 20px 20px 0;
+    border-bottom: 1px solid var(--appdl-sep);
+  }
+
+  .appdl-shots {
+    gap: 10px;
+    padding: 2px 20px 6px;
+    scroll-padding: 0 20px;
+  }
+
+  .appdl-shot {
+    width: min(62vw, 250px);
+    border-radius: 20px;
+  }
+
+  .appdl-shot:hover {
+    transform: none;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.07);
+  }
+
+  .appdl-install {
+    margin: 0 20px;
+    padding: 20px 0 22px;
+  }
+
+  .appdl-info-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .appdl-info-list > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .appdl-info-list dt {
+    flex: none;
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .appdl-info-list dd {
+    text-align: right;
+  }
+
+  .appdl-sheet-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .appdl-sheet {
+    width: 100%;
+    max-height: 88vh;
+    padding: 8px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+    border-radius: 24px 24px 0 0;
+  }
+
+  .appdl-sheet::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 5px;
+    margin: 0 auto 12px;
+    border-radius: 3px;
+    background: rgba(60, 60, 67, 0.3);
+  }
+
+  .appdl-viewer-nav {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appdl-get,
+  .appdl-shot,
+  .appdl-bar,
+  .appdl-bar-mid,
+  .appdl-verify-caret {
+    transition: none;
+  }
+
+  .appdl-viewer,
+  .appdl-bar-end .appdl-get {
+    animation: none;
+  }
+}

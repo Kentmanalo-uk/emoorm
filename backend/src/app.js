@@ -235,6 +235,7 @@ app.use(`${config.apiPrefix}/auth/login`, authLimiter);
 app.use(`${config.apiPrefix}/auth/register`, authLimiter);
 app.use(`${config.apiPrefix}/auth/forgot-password`, authLimiter);
 app.use(`${config.apiPrefix}/auth/qr/create`, authLimiter);
+app.use(`${config.apiPrefix}/auth/google/app/exchange`, authLimiter);
 app.use(config.apiPrefix, apiRoutes);
 
 // Health check endpoint (includes database ping)

@@ -161,6 +161,10 @@ const config = {
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    // Where Google sends the Android app's sign-ins (it must be listed as an
+    // authorized redirect URI on the OAuth client). Default: this site's
+    // /api/auth/google/app/callback.
+    appCallbackUrl: process.env.GOOGLE_APP_CALLBACK_URL || '',
   },
 
   // Pagination Configuration

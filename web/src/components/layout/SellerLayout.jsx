@@ -31,6 +31,7 @@ import '../../pages/SellerSetup.css';
 import './SellerMobile.css';
 import '../../pages/SellerApp.css';
 import UserAvatar from '../ui/UserAvatar';
+import { readCache, writeCache } from '../../lib/pageCache';
 
 /**
  * Persistent shell for /seller/* routes.
@@ -41,7 +42,9 @@ export default function SellerLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [store, setStore] = useState(null);
+  // The shop as it was last time: every seller page shows at once while it
+  // is asked for again. (Pages that edit it load their own fresh copy.)
+  const [store, setStore] = useState(() => readCache('seller:store') || null);
   const [storedCollapsed, toggleCollapsed] = useSidebarCollapse();
   const isCompact = useCompactLayout();
   const isPhone = usePhoneLayout();
@@ -56,7 +59,7 @@ export default function SellerLayout() {
     || location.pathname.startsWith('/seller/settings')
     || location.pathname === '/seller/shop-profile'
   );
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(() => readCache('seller:unread') ?? 0);
 
   // New orders, returns to review, unread messages and low stock, counted
   // once on the server so the sidebar can point at the work. The endpoint is
@@ -85,12 +88,18 @@ export default function SellerLayout() {
       try {
         const res = await axios.get('/stores/my/store');
         if (!cancelled) setStore(res.data);
-      } catch {
-        /* no store yet */
+      } catch (err) {
+        // No shop (any more): forget the saved one. Offline and the like
+        // keep it on screen.
+        if (!cancelled && err?.status === 404) {
+          setStore(null);
+          writeCache('seller:store', null);
+        }
       }
       try {
         const n = await axios.get('/notifications/unread/count', { params: { audience: 'SELLER' } });
         if (!cancelled) setUnreadCount(n.data?.count ?? 0);
+        writeCache('seller:unread', n.data?.count ?? 0);
       } catch {
         /* ignore */
       }
@@ -100,17 +109,24 @@ export default function SellerLayout() {
 
   // Keep the switch animation's shop logo in sync (also after profile edits).
   useEffect(() => {
-    if (store) rememberShop(store);
+    if (!store) return;
+    rememberShop(store);
+    writeCache('seller:store', store);
   }, [store, rememberShop]);
 
   // The new-shop checklist (Shop setup). Re-read on every page change until
   // it is complete, so the sidebar's progress follows what the seller just
   // saved; once complete it stops asking.
-  const [setup, setSetup] = useState(null);
+  const [setup, setSetup] = useState(() => readCache('seller:setup') || null);
+  // Asked once this visit even when the saved copy says complete: a step
+  // can come undone (a payment option switched off, say).
+  const setupChecked = useRef(false);
   const refreshSetup = useCallback(async () => {
     try {
       const next = await fetchSellerSetup();
       setSetup(next);
+      setupChecked.current = true;
+      writeCache('seller:setup', next);
       return next;
     } catch {
       return null;
@@ -118,7 +134,7 @@ export default function SellerLayout() {
   }, []);
   const setupComplete = setup?.complete === true;
   useEffect(() => {
-    if (!store?.id || user?.role !== 'SELLER' || setupComplete) return;
+    if (!store?.id || user?.role !== 'SELLER' || (setupComplete && setupChecked.current)) return;
     refreshSetup();
   }, [store?.id, user?.role, location.pathname, setupComplete, refreshSetup]);
 

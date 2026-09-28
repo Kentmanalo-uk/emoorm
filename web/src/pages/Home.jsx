@@ -7,6 +7,7 @@ import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
 import ChatDock from '../components/chat/ChatDock';
+import { readCache, patchCache } from '../lib/pageCache';
 import EmptyArt from '../components/ui/EmptyArt';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import axios from '../lib/axios';
@@ -45,9 +46,11 @@ const Home = () => {
     { id: 'fallback-2', imageUrl: '/assets/banners/buy-now-qoute.png', linkUrl: null, title: 'Buy now' },
     { id: 'fallback-3', imageUrl: '/assets/banners/discover-mindoro.png', linkUrl: null, title: 'Discover Mindoro' },
   ];
-  const [bannerData, setBannerData] = useState(fallbackBanners);
-  const [sideBanners, setSideBanners] = useState({ top: null, bottom: null });
-  const [sideBannersReady, setSideBannersReady] = useState(false);
+  // What Home showed last time: shown at once, then refreshed.
+  const [homeCache] = useState(() => readCache('home') || {});
+  const [bannerData, setBannerData] = useState(() => homeCache.banners || fallbackBanners);
+  const [sideBanners, setSideBanners] = useState(() => homeCache.sideBanners || { top: null, bottom: null });
+  const [sideBannersReady, setSideBannersReady] = useState(() => Boolean(homeCache.sideBanners));
   const [promotionPopup, setPromotionPopup] = useState(null);
   const [popupOpen, setPopupOpen] = useState(false);
 
@@ -70,8 +73,10 @@ const Home = () => {
           const top = list.find((b) => b.placement === 'HOME_SIDEBAR_TOP');
           const bottom = list.find((b) => b.placement === 'HOME_SIDEBAR_BOTTOM');
           const popup = list.find((b) => b.placement === 'HOME_POPUP');
+          const side = { top: top ? mapBanner(top) : null, bottom: bottom ? mapBanner(bottom) : null };
           if (carousel.length > 0) setBannerData(carousel.map(mapBanner));
-          setSideBanners({ top: top ? mapBanner(top) : null, bottom: bottom ? mapBanner(bottom) : null });
+          setSideBanners(side);
+          patchCache('home', { banners: carousel.length > 0 ? carousel.map(mapBanner) : null, sideBanners: side });
           if (popup) {
             const mappedPopup = mapBanner(popup);
             const sessionKey = `emoorm.promotion-popup.${mappedPopup.id}.${mappedPopup.updatedAt || ''}`;
@@ -165,15 +170,19 @@ const Home = () => {
   const { addItem } = useCartStore();
   const { user } = useAuthStore();
 
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [exploreProducts, setExploreProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState(() => homeCache.featured || []);
   // One batch fills 5 rows of the grid at the current width; fixed per visit so pages line up.
   const [exploreBatch] = useState(() => EXPLORE_ROWS * exploreColumns());
-  const [explorePage, setExplorePage] = useState(1);
-  const [exploreHasMore, setExploreHasMore] = useState(false);
+  // Everything "Load more" had brought in, so coming back finds the same
+  // long list (and the spot in it). Only with the same batch size: the pages
+  // must line up with the next one asked for.
+  const [exploreSaved] = useState(() => (homeCache.exploreBatch === exploreBatch ? homeCache : {}));
+  const [exploreProducts, setExploreProducts] = useState(() => exploreSaved.explore || homeCache.explore || []);
+  const [explorePage, setExplorePage] = useState(() => exploreSaved.explorePage || 1);
+  const [exploreHasMore, setExploreHasMore] = useState(() => Boolean(exploreSaved.exploreHasMore ?? homeCache.exploreHasMore));
   const [exploreLoading, setExploreLoading] = useState(false);
-  const [nearbyStores, setNearbyStores] = useState([]);
-  const [mappedStores, setMappedStores] = useState([]);
+  const [nearbyStores, setNearbyStores] = useState(() => homeCache.nearbyStores || []);
+  const [mappedStores, setMappedStores] = useState(() => homeCache.mappedStores || []);
   const { municipalities } = useMunicipalities();
   const { categories: sharedCategories } = useCategories();
 
@@ -188,14 +197,32 @@ const Home = () => {
 
     load(
       axios.get('/products', { params: { pageSize: 6, sortBy: 'createdAt', sortOrder: 'desc' } }),
-      (res) => setFeaturedProducts(res.data || []),
+      (res) => {
+        setFeaturedProducts(res.data || []);
+        patchCache('home', { featured: res.data || [] });
+      },
     );
     load(
       axios.get('/products', { params: { ...EXPLORE_QUERY, page: 1, pageSize: exploreBatch } }),
       (res) => {
-        setExploreProducts(res.data || []);
+        const fresh = res.data || [];
+        if ((exploreSaved.explorePage || 1) > 1) {
+          // More was loaded last time: the first batch is refreshed in
+          // place and the rest stays, so the list keeps its length.
+          const freshIds = new Set(fresh.map((p) => p.id));
+          setExploreProducts((prev) => {
+            const merged = [...fresh, ...prev.slice(fresh.length).filter((p) => !freshIds.has(p.id))];
+            patchCache('home', { explore: merged });
+            return merged;
+          });
+          return;
+        }
+        setExploreProducts(fresh);
         setExplorePage(1);
         setExploreHasMore(Boolean(res.pagination?.hasNext));
+        patchCache('home', {
+          explore: fresh, explorePage: 1, exploreHasMore: Boolean(res.pagination?.hasNext), exploreBatch,
+        });
       },
     );
     load(
@@ -205,14 +232,21 @@ const Home = () => {
           municipalityId: user?.municipalityId || undefined,
         },
       }),
-      (res) => setNearbyStores(res.data || []),
+      (res) => {
+        setNearbyStores(res.data || []);
+        patchCache('home', { nearbyStores: res.data || [] });
+      },
     );
     load(
       axios.get('/stores', { params: { pageSize: 100 } }),
-      (res) => setMappedStores((res.data || []).filter((store) => store.latitude != null && store.longitude != null)),
+      (res) => {
+        const mapped = (res.data || []).filter((store) => store.latitude != null && store.longitude != null);
+        setMappedStores(mapped);
+        patchCache('home', { mappedStores: mapped });
+      },
     );
     return () => { cancelled = true; };
-  }, [user?.municipalityId, exploreBatch]);
+  }, [user?.municipalityId, exploreBatch, exploreSaved]);
 
   const loadMoreExplore = async () => {
     setExploreLoading(true);
@@ -221,12 +255,15 @@ const Home = () => {
       const res = await axios.get('/products', {
         params: { ...EXPLORE_QUERY, page: nextPage, pageSize: exploreBatch },
       });
-      setExploreProducts((prev) => {
-        const seen = new Set(prev.map((p) => p.id));
-        return [...prev, ...(res.data || []).filter((p) => !seen.has(p.id))];
-      });
+      const seen = new Set(exploreProducts.map((p) => p.id));
+      const next = [...exploreProducts, ...(res.data || []).filter((p) => !seen.has(p.id))];
+      setExploreProducts(next);
       setExplorePage(nextPage);
       setExploreHasMore(Boolean(res.pagination?.hasNext));
+      // Remembered, so coming back finds everything loaded so far.
+      patchCache('home', {
+        explore: next, explorePage: nextPage, exploreHasMore: Boolean(res.pagination?.hasNext), exploreBatch,
+      });
     } catch (err) {
       toast.error(err.message || 'Failed to load more products');
     } finally {

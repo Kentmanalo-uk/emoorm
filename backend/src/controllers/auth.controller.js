@@ -450,11 +450,44 @@ const completeGoogleSignup = asyncHandler(async (req, res) => {
   createdResponse(res, result, 'Account created successfully');
 });
 
+/**
+ * "Continue with Google" in the Android app: its browser tab opens this and
+ * is sent on to Google's sign-in page.
+ * @route GET /api/auth/google/app/start?challenge=…
+ * @access Public
+ */
+const googleAppStart = (req, res) => {
+  res.redirect(302, authService.googleAppStartUrl(req.query.challenge));
+};
+
+/**
+ * Google's answer for the Android app: back to the app with a one-time pass.
+ * @route GET /api/auth/google/app/callback
+ * @access Public
+ */
+const googleAppCallback = asyncHandler(async (req, res) => {
+  res.redirect(302, await authService.googleAppFinishUrl(req.query));
+});
+
+/**
+ * The Android app's page swaps the pass, with the app's secret, for the
+ * same answer as POST /api/auth/google.
+ * @route POST /api/auth/google/app/exchange
+ * @access Public
+ */
+const googleAppExchange = asyncHandler(async (req, res) => {
+  const result = await authService.exchangeGoogleAppTicket(req.body || {});
+  successResponse(res, result, 'Google sign-in successful');
+});
+
 module.exports = {
   register,
   login,
   googleLogin,
   completeGoogleSignup,
+  googleAppStart,
+  googleAppCallback,
+  googleAppExchange,
   refreshToken,
   logout,
   getProfile,

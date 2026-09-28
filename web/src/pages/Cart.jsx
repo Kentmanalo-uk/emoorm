@@ -13,6 +13,7 @@ import ProductImage from '../components/ProductImage';
 import MoreMenu from '../components/MoreMenu';
 import EmptyState from '../components/ui/EmptyState';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import { BusyLabel } from '../components/ui/Spinner';
 import './Cart.css';
 
 const SUGGESTION_COUNT = 12;
@@ -884,7 +885,7 @@ const Cart = () => {
                       disabled={voucherLoading || !voucherInput.trim() || subtotal === 0}
                       type="button"
                     >
-                      {voucherLoading ? 'Checking…' : 'Apply'}
+                      {voucherLoading ? <BusyLabel size={14}>Checking…</BusyLabel> : 'Apply'}
                     </button>
                   )}
                 </div>

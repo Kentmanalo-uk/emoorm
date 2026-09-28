@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "shop.emoorm.app",
+      "sha256_cert_fingerprints": [
+        "9F:60:02:EF:10:02:55:0F:51:DA:63:3E:B5:CF:3B:0D:37:28:2C:B8:08:6C:AF:0F:57:0C:C4:AD:8F:A0:AB:22"
+      ]
+    }
+  }
+]

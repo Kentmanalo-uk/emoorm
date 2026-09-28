@@ -6,6 +6,7 @@ import axios from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
 import './FeedbackDialog.css';
 import { useSheetClose } from '../../hooks/useSheetMotion';
+import { BusyLabel } from '../ui/Spinner';
 
 /**
  * Feedback about E-MOORM itself, addressed to the people who run it.
@@ -161,7 +162,7 @@ export default function FeedbackDialog({ onClose: onCloseProp }) {
               <button type="button" className="fbd-btn-ghost" onClick={onClose}>Cancel</button>
               <button type="submit" className="fbd-btn" disabled={submitting || !message.trim()}>
                 <PaperPlaneTilt size={16} weight="fill" />
-                {submitting ? 'Sending…' : 'Send feedback'}
+                {submitting ? <BusyLabel>Sending…</BusyLabel> : 'Send feedback'}
               </button>
             </div>
           </form>

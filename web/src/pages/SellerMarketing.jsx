@@ -12,6 +12,7 @@ import PhoneSheet from '../components/seller/PhoneSheet';
 import { sellBlockers } from '../lib/sellerSetup';
 import Skeleton from '../components/ui/Skeleton';
 import './SellerDashboard.css';
+import { readCache, writeCache } from '../lib/pageCache';
 
 /*
  * Marketing: ways a seller brings buyers back. Tell followers something new
@@ -27,9 +28,10 @@ const when = (value) => new Date(value).toLocaleDateString('en-PH', { month: 'sh
 export default function SellerMarketing() {
   const { store, setup } = useOutletContext() || {};
   const { share, shareSheet } = useShare();
-  const [followers, setFollowers] = useState(null);
-  const [feed, setFeed] = useState(null);
-  const [products, setProducts] = useState([]);
+  // As they were last time, while they are asked for again.
+  const [followers, setFollowers] = useState(() => readCache('seller:followers') || null);
+  const [feed, setFeed] = useState(() => readCache('seller:announcements') || null);
+  const [products, setProducts] = useState(() => readCache('seller:approved-products') || []);
   const [composer, setComposer] = useState(null); // 'announce' | 'promote' | null
   const [message, setMessage] = useState('');
   const [productId, setProductId] = useState('');
@@ -40,16 +42,28 @@ export default function SellerMarketing() {
   useEffect(() => {
     let cancelled = false;
     axios.get('/stores/my/announcements')
-      .then((res) => { if (!cancelled) setFeed(res.data); })
+      .then((res) => {
+        if (cancelled) return;
+        setFeed(res.data);
+        writeCache('seller:announcements', res.data);
+      })
       .catch(() => { if (!cancelled) setFeed({ announcements: [], remaining: 0, dailyLimit: 2, canSend: false }); });
     return () => { cancelled = true; };
   }, [feedVersion]);
 
   useEffect(() => {
     if (!store?.id) return;
-    getSellerFollowerStats(store.id).then(setFollowers).catch(() => setFollowers(false));
+    getSellerFollowerStats(store.id)
+      .then((data) => {
+        setFollowers(data);
+        writeCache('seller:followers', data);
+      })
+      .catch(() => setFollowers(false));
     axios.get('/products/my/products', { params: { status: 'APPROVED', pageSize: 50 } })
-      .then((res) => setProducts(res.data || []))
+      .then((res) => {
+        setProducts(res.data || []);
+        writeCache('seller:approved-products', res.data || []);
+      })
       .catch(() => setProducts([]));
   }, [store?.id]);
 

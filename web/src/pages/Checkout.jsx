@@ -32,6 +32,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import { qrMethod, formatAccountNumber } from '../lib/qrPayment';
 import { isTouchPhone } from '../lib/device';
 import GcashPhonePay from '../components/checkout/GcashPhonePay';
+import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import './Checkout.css';
 
 // Same rules the server applies at POST /orders.
@@ -658,7 +659,9 @@ const Checkout = () => {
     : '');
 
   const placeDisabled = isSubmitting || revalidating || storesLoading || unavailableItems.length > 0 || storeLoadFailed;
-  const placeLabel = isSubmitting ? 'Placing Order…' : storesLoading ? 'Loading store details…' : 'Place Order';
+  const placeLabel = isSubmitting
+    ? <BusyLabel size={18}>Placing Order…</BusyLabel>
+    : storesLoading ? 'Loading store details…' : 'Place Order';
 
   const activeQrStore = (paymentMethod === 'GCASH' || paymentMethod === 'QRPH')
     ? storeIds.map((id) => storeInfo[id]?.store).find((s) => s?.paymentQrImage)
@@ -697,7 +700,7 @@ const Checkout = () => {
           </div>
         ) : (
           <label className="proof-uploader">
-            <Upload size={16} />
+            {uploadingProof ? <Spinner size={16} /> : <Upload size={16} />}
             <span>{uploadingProof ? 'Uploading…' : 'Upload screenshot'}</span>
             <input
               type="file"

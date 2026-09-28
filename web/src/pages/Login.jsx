@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle, X, Storefront, ShoppingBag } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from '../lib/axios';
+import { useAppGoogleSignIn } from '../lib/appGoogle';
 import useAuthStore from '../store/authStore';
 import useAccountSwitchStore from '../store/accountSwitchStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
@@ -12,6 +13,7 @@ import AuthSheetBar from '../components/AuthSheetBar';
 import './AuthSheet.css';
 import './Login.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
+import { BusyLabel } from '../components/ui/Spinner';
 
 const QR_POLL_INTERVAL_MS = 2000;
 
@@ -279,6 +281,26 @@ const Login = ({ seller = false }) => {
 
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // Google's answer, from the pop-up here or from the Android app's browser.
+  const applyGoogleAnswer = (data) => {
+    if (data?.requiresProfile) {
+      setGoogleProfile(data);
+      setGoogleForm((prev) => ({ ...prev, fullName: data.fullName || '' }));
+      setGoogleFormErrors({});
+      setMfaStage('google-profile');
+      return;
+    }
+    if (data?.requiresMfa || data?.requiresMfaSetup) {
+      setApiError('Admin accounts must sign in with the standard admin flow to complete MFA.');
+      return;
+    }
+    if (!data?.user || !data?.accessToken) {
+      setApiError('Unexpected response from server.');
+      return;
+    }
+    finishLogin(data.user, data.accessToken, data.refreshToken);
+  };
+
   const startGoogleLogin = useGoogleLogin({
     flow: 'auth-code',
     onError: () => setApiError('Google sign-in failed. Please try again.'),
@@ -293,23 +315,7 @@ const Login = ({ seller = false }) => {
       setApiError('');
       try {
         const res = await axios.post('/auth/google', { code });
-        const data = res.data;
-        if (data?.requiresProfile) {
-          setGoogleProfile(data);
-          setGoogleForm((prev) => ({ ...prev, fullName: data.fullName || '' }));
-          setGoogleFormErrors({});
-          setMfaStage('google-profile');
-          return;
-        }
-        if (data?.requiresMfa || data?.requiresMfaSetup) {
-          setApiError('Admin accounts must sign in with the standard admin flow to complete MFA.');
-          return;
-        }
-        if (!data?.user || !data?.accessToken) {
-          setApiError('Unexpected response from server.');
-          return;
-        }
-        finishLogin(data.user, data.accessToken, data.refreshToken);
+        applyGoogleAnswer(res.data);
       } catch (err) {
         setApiError(err?.response?.data?.message || 'Google sign-in failed.');
       } finally {
@@ -318,8 +324,27 @@ const Login = ({ seller = false }) => {
     },
   });
 
+  // In the Android app Google can't open here: the app runs it in the
+  // phone's browser and brings the answer back.
+  const appGoogle = useAppGoogleSignIn({
+    onAnswer: (data) => {
+      setGoogleLoading(false);
+      applyGoogleAnswer(data);
+    },
+    onError: (message) => {
+      setGoogleLoading(false);
+      setApiError(message);
+    },
+    onCancel: () => setGoogleLoading(false),
+  });
+
   const handleGoogleLogin = () => {
     setApiError('');
+    if (appGoogle.available) {
+      setGoogleLoading(true);
+      appGoogle.start();
+      return;
+    }
     startGoogleLogin();
   };
 
@@ -562,7 +587,7 @@ const Login = ({ seller = false }) => {
                     className="login-form-submit"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Signing in...' : seller ? 'Log in to Seller Center' : 'Log in'}
+                    {isLoading ? <BusyLabel>Signing in…</BusyLabel> : seller ? 'Log in to Seller Center' : 'Log in'}
                   </button>
 
                   {/* API Error Message */}
@@ -720,7 +745,7 @@ function GoogleCompleteProfile({
       </div>
 
       <button type="submit" className="login-form-submit" disabled={isLoading}>
-        {isLoading ? 'Creating account…' : 'Create account & continue'}
+        {isLoading ? <BusyLabel>Creating account…</BusyLabel> : 'Create account & continue'}
       </button>
 
       {apiError && <div className="login-form-error-message">{apiError}</div>}
@@ -758,7 +783,7 @@ function MfaVerify({ email, code, onCodeChange, onSubmit, onCancel, isLoading, a
         />
       </div>
       <button type="submit" className="login-form-submit" disabled={isLoading}>
-        {isLoading ? 'Verifying…' : 'Verify & continue'}
+        {isLoading ? <BusyLabel>Verifying…</BusyLabel> : 'Verify & continue'}
       </button>
       {apiError && <div className="login-form-error-message">{apiError}</div>}
       <button type="button" className="login-mfa-link" onClick={onCancel}>
@@ -820,7 +845,7 @@ function MfaSetup({
         />
       </div>
       <button type="submit" className="login-form-submit" disabled={isLoading}>
-        {isLoading ? 'Verifying…' : 'Enable & continue'}
+        {isLoading ? <BusyLabel>Verifying…</BusyLabel> : 'Enable & continue'}
       </button>
       {apiError && <div className="login-form-error-message">{apiError}</div>}
       <p className="login-mfa-hint" style={{ marginTop: 8 }}>Signed in as <strong>{email}</strong>.</p>

@@ -8,6 +8,7 @@ import { uploadImage } from '../../lib/upload';
 import { resolveImg } from '../../lib/media';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import './ProductForm.css';
+import { BusyLabel } from '../ui/Spinner';
 
 /*
  * Add / edit a product, written for sellers who are not "techy": five short
@@ -579,7 +580,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         </button>
         <button type="submit" className="pf-btn pf-btn--primary" disabled={saving}>
           {saving ? <CircleNotch size={17} className="pf-spin" /> : <Check size={17} weight="bold" />}
-          {saving ? 'Saving…' : editing ? 'Save changes' : sellBlockers?.length ? 'Save as draft' : 'Add product'}
+          {saving ? <BusyLabel>Saving…</BusyLabel> : editing ? 'Save changes' : sellBlockers?.length ? 'Save as draft' : 'Add product'}
         </button>
       </div>
 

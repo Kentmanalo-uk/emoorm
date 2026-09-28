@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Toaster, resolveValue, toast, useToasterStore } from 'react-hot-toast';
 import {
   CheckCircle,
@@ -9,6 +9,7 @@ import {
   Heart,
   X,
 } from '@phosphor-icons/react';
+import { playSound } from '../../lib/uiSound';
 import './AppToaster.css';
 
 const TOAST_META = {
@@ -39,11 +40,24 @@ const TOAST_META = {
   },
 };
 
+/** The message as text, or the type's stand-in when it is not text. */
+const messageOf = (item) => {
+  const resolved = resolveValue(item.message, item);
+  return typeof resolved === 'string' ? resolved : (TOAST_META[item.type] || TOAST_META.blank).description;
+};
+
+/** The sound a notification makes as it appears (none while loading). */
+const soundOf = (item) => {
+  if (item.type === 'loading') return null;
+  if (item.type === 'success') return 'success';
+  if (item.type === 'error') return 'error';
+  return 'info';
+};
+
 function AppToast({ item }) {
   const meta = TOAST_META[item.type] || TOAST_META.blank;
   const Icon = meta.Icon;
-  const resolvedMessage = resolveValue(item.message, item);
-  const message = typeof resolvedMessage === 'string' ? resolvedMessage : meta.description;
+  const message = messageOf(item);
   const normalizedMessage = message.toLowerCase();
   const isCart = normalizedMessage.includes('cart');
   const isWishlist = normalizedMessage.includes('wishlist');
@@ -89,19 +103,34 @@ function AppToast({ item }) {
 
 export default function AppToaster() {
   const { toasts } = useToasterStore();
+  // Each notification chimes once as it appears, and again only when a
+  // "loading" one turns into its result.
+  const chimed = useRef(new Set());
 
   useEffect(() => {
     const visible = toasts
       .filter((item) => item.visible)
       .sort((first, second) => (second.createdAt || 0) - (first.createdAt || 0));
     visible.slice(1).forEach((item) => toast.dismiss(item.id));
+
+    const newest = visible[0];
+    const sound = newest && soundOf(newest);
+    if (sound && !chimed.current.has(`${newest.id}:${newest.type}`)) {
+      chimed.current.add(`${newest.id}:${newest.type}`);
+      playSound(sound);
+    }
+    // Forget notifications that are gone.
+    const live = new Set(toasts.map((item) => item.id));
+    for (const key of chimed.current) {
+      if (!live.has(key.slice(0, key.lastIndexOf(':')))) chimed.current.delete(key);
+    }
   }, [toasts]);
 
   return (
     <Toaster
       position="top-center"
       gutter={0}
-      containerStyle={{ top: 18 }}
+      containerStyle={{ top: 'calc(12px + env(safe-area-inset-top, 0px))' }}
       toastOptions={{
         duration: 3600,
         style: {

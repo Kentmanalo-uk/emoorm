@@ -50,6 +50,12 @@ router.post(
   authController.completeGoogleSignup
 );
 
+// "Continue with Google" in the Android app (in the phone's browser; see
+// googleAppStartUrl in auth.service).
+router.get('/google/app/start', authController.googleAppStart);
+router.get('/google/app/callback', authController.googleAppCallback);
+router.post('/google/app/exchange', authController.googleAppExchange);
+
 router.post(
   '/refresh-token',
   refreshTokenValidation,

@@ -104,6 +104,12 @@ const STATIC_PAGES = {
     priority: '0.5',
     changefreq: 'monthly',
   },
+  '/app': {
+    title: `${SITE} app for Android`,
+    description: `Get the ${SITE} app for Android, free: shop local from ${REGION}, chat with sellers and track your orders.`,
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
   '/help': {
     title: `Help & Support — ${SITE}`,
     description: `Answers about buying, payments, delivery and returns on ${SITE}, plus a direct line to your municipal support team.`,

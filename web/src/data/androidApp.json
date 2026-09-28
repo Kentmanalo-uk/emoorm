@@ -1,0 +1,17 @@
+{
+  "name": "E-MOORM",
+  "package": "shop.emoorm.app",
+  "version": "1.3.0",
+  "versionCode": 4,
+  "minAndroid": "7.0",
+  "file": "/downloads/E-MOORM-1.3.0.apk",
+  "size": 1106554,
+  "sha256": "a5db4bfeff13f32c118eb1faed13f3fce4932805154f1365b25b4881cd175326",
+  "certificateSha256": "9F:60:02:EF:10:02:55:0F:51:DA:63:3E:B5:CF:3B:0D:37:28:2C:B8:08:6C:AF:0F:57:0C:C4:AD:8F:A0:AB:22",
+  "released": "2026-09-28",
+  "notes": [
+    "Picks up where you left off: close the app and it reopens on the same page, scrolled to the same spot.",
+    "Links to emoorm.shop open straight in the app.",
+    "Always up to date: anything new on emoorm.shop shows up in the app right away."
+  ]
+}

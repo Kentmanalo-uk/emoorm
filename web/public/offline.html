@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f3f4f6" />
+  <title>You're offline · E-MOORM</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      display: grid;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      place-items: center;
+      background: #f3f4f6;
+      color: #111827;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      text-align: center;
+    }
+    main { max-width: 340px; }
+    img { width: 72px; height: 72px; margin-bottom: 16px; border-radius: 18px; }
+    h1 { margin: 0 0 8px; font-size: 20px; font-weight: 600; }
+    p { margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.5; }
+    button {
+      min-width: 160px;
+      height: 46px;
+      padding: 0 22px;
+      border: 0;
+      border-radius: 999px;
+      background: #059669;
+      color: #fff;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/icon-192x192.png" alt="" />
+    <h1>You're offline</h1>
+    <p>E-MOORM needs an internet connection. Check your data or Wi-Fi, then try again.</p>
+    <button type="button" id="retry">Try again</button>
+  </main>
+  <script>
+    document.getElementById('retry').addEventListener('click', function () { location.reload(); });
+  </script>
+</body>
+</html>

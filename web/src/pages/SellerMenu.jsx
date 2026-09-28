@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import {
   CaretRight, Storefront, PaintBrush, Wallet, QrCode, Headset, Lifebuoy, ChatText, User, Truck,
   IdentificationCard, Bell, Globe, Gear, ArrowsLeftRight, SignOut, ShareNetwork,
-  PencilSimple, Heartbeat, MapPin,
+  Heartbeat, MapPin,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -13,6 +13,7 @@ import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTransla
 import { useShare } from '../components/ShareSheet';
 import FeedbackDialog from '../components/feedback/FeedbackDialog';
 import './SellerDashboard.css';
+import { readCache, writeCache } from '../lib/pageCache';
 
 /*
  * "Me" (phone), drawn like the buyer's Profile: the shop card with its
@@ -51,14 +52,19 @@ export default function SellerMenu() {
   } = useOutletContext() || {};
   const user = useAuthStore((s) => s.user);
   const { share, shareSheet } = useShare();
-  const [health, setHealth] = useState(null);
+  // Shop health as it was last time, while it is asked for again.
+  const [health, setHealth] = useState(() => readCache('seller:health') ?? null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [language, setLanguageState] = useState(() => getCurrentLanguage());
 
   useEffect(() => {
     let cancelled = false;
     axios.get('/stores/my/health')
-      .then((res) => { if (!cancelled) setHealth(res.data); })
+      .then((res) => {
+        if (cancelled) return;
+        setHealth(res.data);
+        writeCache('seller:health', res.data);
+      })
       .catch(() => { if (!cancelled) setHealth(false); });
     return () => { cancelled = true; };
   }, []);
@@ -113,10 +119,8 @@ export default function SellerMenu() {
             </span>
             <span className="sme-id-text">
               <strong>{name}</strong>
-              <span>{[user?.username && `@${user.username}`, store?.municipality?.name].filter(Boolean).join(' · ')}</span>
-              {store?.isApproved === false
-                ? <em className="sme-private">Private until approved</em>
-                : <em><PencilSimple size={12} weight="bold" /> Edit shop profile</em>}
+              {user?.username && <span>@{user.username}</span>}
+              {store?.isApproved === false && <em className="sme-private">Private until approved</em>}
             </span>
             <CaretRight size={18} className="sh-chev" />
           </Link>

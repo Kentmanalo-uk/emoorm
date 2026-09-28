@@ -18,6 +18,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import './SellerDashboard.css';
 import './SellerStore.css';
+import { BusyLabel } from '../components/ui/Spinner';
 
 const DEFAULT_PRIMARY = 'var(--t-primary-600, #059669)';
 const DEFAULT_SECONDARY = 'var(--t-warning-500, #f59e0b)';
@@ -584,7 +585,7 @@ function SellerStore({ part }) {
                   <div className="form-actions">
                     <button type="submit" className="btn-seller-primary" disabled={isSaving}>
                       <Save size={16} />
-                      {isSaving ? 'Saving…' : isNew ? 'Create Store' : 'Save Changes'}
+                      {isSaving ? <BusyLabel>Saving…</BusyLabel> : isNew ? 'Create Store' : 'Save Changes'}
                     </button>
                   </div>
                 </form>
@@ -600,7 +601,7 @@ function SellerStore({ part }) {
                   <div className="form-actions branding-actions">
                     <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
                       <Save size={16} />
-                      {isSaving ? 'Saving…' : 'Save Branding'}
+                      {isSaving ? <BusyLabel>Saving…</BusyLabel> : 'Save Branding'}
                     </button>
                   </div>
                 </div>
@@ -626,7 +627,7 @@ function SellerStore({ part }) {
                   <div className="form-actions branding-actions">
                     <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
                       <Save size={16} />
-                      {isSaving ? 'Saving…' : 'Save Theme'}
+                      {isSaving ? <BusyLabel>Saving…</BusyLabel> : 'Save Theme'}
                     </button>
                   </div>
                   </>)}

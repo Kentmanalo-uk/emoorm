@@ -142,6 +142,30 @@ const mountWebApp = (app) => {
 
   readTemplate();
 
+  // Files meant to be public under /.well-known (the Android app's
+  // assetlinks.json, which lets emoorm.shop links open in the app).
+  // express.static skips folders starting with a dot unless told otherwise.
+  app.use('/.well-known', express.static(path.join(root, '.well-known'), {
+    index: false,
+    dotfiles: 'allow',
+    etag: true,
+    setHeaders: (res) => res.set('Cache-Control', 'public, max-age=3600'),
+  }));
+
+  // The Android app (the /app page's Get button): always saved as a file,
+  // under the name it was published with. Each version has its own name.
+  app.use('/downloads', express.static(path.join(root, 'downloads'), {
+    index: false,
+    etag: true,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.apk')) {
+        res.attachment(path.basename(filePath));
+        res.set('Content-Type', 'application/vnd.android.package-archive');
+      }
+      res.set('Cache-Control', 'public, max-age=3600');
+    },
+  }));
+
   // Hashed bundles under /assets are immutable; everything else in the build
   // (icons, manifest, robots) may be replaced in place, so it revalidates.
   app.use(express.static(root, {

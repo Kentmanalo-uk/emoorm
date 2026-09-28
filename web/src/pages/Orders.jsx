@@ -15,8 +15,11 @@ import useAuthStore from '../store/authStore';
 import useCartStore from '../store/cartStore';
 import './Orders.css';
 import { useSheetPresence } from '../hooks/useSheetMotion';
+import useEntryState from '../hooks/useEntryState';
 import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
 import { OrderProof } from '../components/orders/ProofPhotoSheet';
+import Spinner, { BusyLabel } from '../components/ui/Spinner';
+import { readCache, writeCache } from '../lib/pageCache';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 const parseImages = (raw) => {
@@ -71,10 +74,13 @@ const Orders = () => {
   const { isAuthenticated } = useAuthStore();
   const addItem = useCartStore((s) => s.addItem);
 
-  const [orders, setOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
+  // The list as it showed last time: shown at once while it is asked for again.
+  const [orders, setOrders] = useState(() => readCache('orders') || []);
+  const [ordersFresh, setOrdersFresh] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => !readCache('orders'));
+  // The tab this visit was on (Back finds it again); a link can name one.
+  const statusParam = searchParams.get('status');
+  const [activeTab, setActiveTab] = useEntryState('tab', statusParam ? statusParam.toUpperCase() : 'all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   // Phones: the details sheet slides away instead of vanishing.
@@ -140,17 +146,10 @@ const Orders = () => {
       return;
     }
 
-    const status = searchParams.get('status');
-    if (status) {
-      setActiveTab(status.toUpperCase());
-    }
-
     fetchOrders();
   }, [isAuthenticated, navigate, searchParams]);
 
-  useEffect(() => {
-    filterOrders();
-  }, [activeTab, orders]);
+  const filteredOrders = activeTab === 'all' ? orders : orders.filter((order) => orderMatchesTab(order, activeTab));
 
   // Deep link from a notification: /profile/orders?id=<orderId> opens that
   // order once the list has loaded. The id is remembered rather than stripped
@@ -159,37 +158,33 @@ const Orders = () => {
   const openedOrderId = useRef(null);
   useEffect(() => {
     const targetId = searchParams.get('id');
-    if (!targetId || orders.length === 0 || openedOrderId.current === targetId) return;
+    // The fresh list, not the saved one: the order may have moved on.
+    if (!targetId || !ordersFresh || orders.length === 0 || openedOrderId.current === targetId) return;
     openedOrderId.current = targetId;
     const match = orders.find((order) => order.id === targetId);
     if (match) {
       setSelectedOrder(match);
       setShowOrderDetails(true);
     }
-  }, [orders, searchParams]);
+  }, [orders, ordersFresh, searchParams]);
 
   useEffect(() => {
     if (isAuthenticated) loadPendingReviews();
   }, [isAuthenticated]);
 
   const fetchOrders = async () => {
-    setIsLoading(true);
+    // Nothing on screen yet: the skeleton. Otherwise the list stays while it refreshes.
+    if (!readCache('orders')) setIsLoading(true);
     try {
       const response = await axios.get('/orders/my/orders', { params: { pageSize: 100 } });
       setOrders(response.data || []);
+      setOrdersFresh(true);
+      writeCache('orders', response.data || []);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
       toast.error('Failed to load orders');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const filterOrders = () => {
-    if (activeTab === 'all') {
-      setFilteredOrders(orders);
-    } else {
-      setFilteredOrders(orders.filter((order) => orderMatchesTab(order, activeTab)));
     }
   };
 
@@ -619,7 +614,7 @@ const Orders = () => {
                       className="order-action-btn is-primary"
                     >
                       <RotateCcw size={16} />
-                      {reorderingId === order.id ? 'Adding…' : 'Buy again'}
+                      {reorderingId === order.id ? <BusyLabel>Adding…</BusyLabel> : 'Buy again'}
                     </button>
                   )}
 
@@ -697,7 +692,7 @@ const Orders = () => {
                         </span>
                       ) : (
                         <label className="order-action-btn order-proof-upload">
-                          <Upload size={16} />
+                          {proofForm.uploading ? <Spinner size={16} /> : <Upload size={16} />}
                           <span>{proofForm.uploading ? 'Uploading…' : 'Upload screenshot'}</span>
                           <input
                             type="file"
@@ -712,7 +707,7 @@ const Orders = () => {
                     <div className="order-proof-actions">
                       <button type="button" className="order-action-btn" onClick={() => setProofForm(null)} disabled={proofForm.submitting}>Cancel</button>
                       <button type="submit" className="order-action-btn is-primary" disabled={proofForm.submitting || proofForm.uploading}>
-                        {proofForm.submitting ? 'Submitting…' : 'Submit proof'}
+                        {proofForm.submitting ? <BusyLabel>Submitting…</BusyLabel> : 'Submit proof'}
                       </button>
                     </div>
                   </form>

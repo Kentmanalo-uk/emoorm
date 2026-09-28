@@ -7,6 +7,7 @@ import AuthSheetBar from '../components/AuthSheetBar';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import './ForgotPassword.css';
 import './AuthSheet.css';
+import { BusyLabel } from '../components/ui/Spinner';
 
 const ForgotPassword = () => {
   const location = useLocation();
@@ -86,7 +87,7 @@ const ForgotPassword = () => {
                   onClick={handleResend}
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Resending…' : 'Resend link'}
+                  {isLoading ? <BusyLabel>Resending…</BusyLabel> : 'Resend link'}
                 </button>
                 <Link to="/login" className="fp-secondary" {...loginLinkProps}>
                   Back to log in
@@ -118,7 +119,7 @@ const ForgotPassword = () => {
                 </div>
 
                 <button type="submit" className="fp-submit" disabled={isLoading}>
-                  {isLoading ? 'Sending…' : 'Send reset link'}
+                  {isLoading ? <BusyLabel>Sending…</BusyLabel> : 'Send reset link'}
                 </button>
               </form>
 

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import './ReportModal.css';
 import { useSheetClose } from '../hooks/useSheetMotion';
+import { BusyLabel } from './ui/Spinner';
 
 /**
  * Reasons are sent as the API's enum value, not as the label.
@@ -131,7 +132,7 @@ export default function ReportModal({ type, productId, storeId, reportedBuyerId,
           <div className="report-actions">
             <button type="button" className="report-btn-cancel" onClick={onClose}>Cancel</button>
             <button type="submit" className="report-btn-submit" disabled={submitting}>
-              {submitting ? 'Submitting…' : 'Submit Report'}
+              {submitting ? <BusyLabel>Submitting…</BusyLabel> : 'Submit Report'}
             </button>
           </div>
         </form>

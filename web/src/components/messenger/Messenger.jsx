@@ -19,6 +19,7 @@ import EmptyState from '../ui/EmptyState';
 import { useSheetClose } from '../../hooks/useSheetMotion';
 import './Messenger.css';
 import { ConversationListSkeleton } from '../ui/PageSkeletons';
+import { readCache, writeCache } from '../../lib/pageCache';
 
 const POLL_INTERVAL_MS = 5000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -331,8 +332,10 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
   const initialStoreId = searchParams.get('store');
   const initialConversationId = searchParams.get('c');
 
-  const [conversations, setConversations] = useState([]);
-  const [loadingList, setLoadingList] = useState(true);
+  // The inbox as it showed last time: shown at once while it is asked for again.
+  const listKey = `messages:${role}`;
+  const [conversations, setConversations] = useState(() => readCache(listKey) || []);
+  const [loadingList, setLoadingList] = useState(() => !readCache(listKey));
   const [activeId, setActiveId] = useState(initialConversationId || null);
   const [activeConvo, setActiveConvo] = useState(null);
   const [loadingConvo, setLoadingConvo] = useState(false);
@@ -367,13 +370,14 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     try {
       const res = await axiosInstance.get('/messages/conversations');
       setConversations(res.data || []);
+      writeCache(listKey, res.data || []);
     } catch (err) {
       // Silent — main error surface is per-conversation
       console.error('Failed to load conversations', err);
     } finally {
       setLoadingList(false);
     }
-  }, []);
+  }, [listKey]);
 
   const fetchConversation = useCallback(
     async (id, { silent = false } = {}) => {
@@ -428,8 +432,8 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     if (!activeId) return;
     fetchConversation(activeId).then((convo) => {
       if (convo) scrollToBottom();
-      // mark read
-      axiosInstance.post(`/messages/conversations/${activeId}/read`).catch(() => { });
+      // mark read (in the background: no activity line)
+      axiosInstance.post(`/messages/conversations/${activeId}/read`, undefined, { quiet: true }).catch(() => { });
     });
   }, [activeId, fetchConversation, scrollToBottom]);
 
@@ -442,7 +446,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
       const next = await fetchConversation(activeId, { silent: true });
       if (next && (next.messages?.length || 0) > prevCount) {
         scrollToBottom();
-        axiosInstance.post(`/messages/conversations/${activeId}/read`).catch(() => { });
+        axiosInstance.post(`/messages/conversations/${activeId}/read`, undefined, { quiet: true }).catch(() => { });
         fetchConversations();
       }
     }, POLL_INTERVAL_MS);

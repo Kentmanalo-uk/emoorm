@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MagnifyingGlass as Search, Storefront as Store, MapPin, Package, CaretLeft as ChevronLeft, CaretRight as ChevronRight, X,
@@ -7,47 +7,74 @@ import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import { readCache, writeCache } from '../lib/pageCache';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useEntryState from '../hooks/useEntryState';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import './Stores.css';
 import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
+
+const PAGE_SIZE = 20;
+// Each list as it showed last time.
+const listKey = (page, q, municipalityId) => `stores:${JSON.stringify([page, q, municipalityId])}`;
 
 export default function Stores() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const isPhone = usePhoneLayout();
   const { municipalities } = useMunicipalities();
-  const [stores, setStores] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const searchQuery = searchParams.get('q') || '';
   const [inputValue, setInputValue] = useState(searchQuery);
   const municipalityId = searchParams.get('municipalityId') || '';
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
+  // The page this visit was on, so Back from a shop finds it again.
+  const [page, setPage] = useEntryState('page', 1);
+  // Shown at once while it is asked for again.
+  const [kept] = useState(() => readCache(listKey(page, searchQuery, municipalityId)));
+  const [stores, setStores] = useState(() => kept?.stores || []);
+  const [isLoading, setIsLoading] = useState(() => !kept);
+  const [pagination, setPagination] = useState(() => kept?.pagination || { total: 0, totalPages: 0 });
+  // Only the latest request is shown: an earlier one can answer after it.
+  const latestRequest = useRef(0);
 
   const fetchStores = async () => {
-    setIsLoading(true);
+    const request = ++latestRequest.current;
+    const key = listKey(page, searchQuery, municipalityId);
+    const saved = readCache(key);
+    if (saved) {
+      setStores(saved.stores || []);
+      if (saved.pagination) setPagination(saved.pagination);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
     try {
-      const params = { page: pagination.page, pageSize: pagination.pageSize };
+      const params = { page, pageSize: PAGE_SIZE };
       // The API filters on `search`; the page keeps `q` in its own URL.
       if (searchQuery) params.search = searchQuery;
       if (municipalityId) params.municipalityId = municipalityId;
 
       const response = await axios.get('/stores', { params });
-      setStores(response.data || []);
-      if (response.pagination) {
-        setPagination((prev) => ({ ...prev, ...response.pagination }));
-      }
+      if (request !== latestRequest.current) return;
+      const list = response.data || [];
+      setStores(list);
+      if (response.pagination) setPagination(response.pagination);
+      // All stores, page 1, is saved on the device; a search, a town or
+      // another page, for this visit.
+      writeCache(key, {
+        stores: list,
+        pagination: response.pagination || { total: list.length, totalPages: 1 },
+      }, { visitOnly: page !== 1 || Boolean(searchQuery || municipalityId) });
     } catch (err) {
       console.error('Failed to fetch stores:', err);
     } finally {
-      setIsLoading(false);
+      if (request === latestRequest.current) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchStores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, pagination.page, municipalityId]);
+  }, [searchQuery, page, municipalityId]);
 
   // Changes the URL's q / municipalityId, keeping the other, from page 1.
   // Built from the live URL, not this render's copy (React Router's updater
@@ -59,7 +86,7 @@ export default function Stores() {
       if (value) next.set(key, value); else next.delete(key);
     });
     if (next.toString() === new URLSearchParams(window.location.search).toString()) return;
-    setPagination((prev) => ({ ...prev, page: 1 }));
+    setPage(1);
     setSearchParams(next, { replace: true });
   };
 
@@ -84,7 +111,7 @@ export default function Stores() {
   };
 
   const handlePageChange = (newPage) => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
+    setPage(newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -236,18 +263,18 @@ export default function Stores() {
             <div className="stores-pagination">
               <button
                 className="stores-page-btn"
-                disabled={pagination.page <= 1}
-                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={page <= 1}
+                onClick={() => handlePageChange(page - 1)}
               >
                 <ChevronLeft size={16} /> Prev
               </button>
               <span className="stores-page-info">
-                Page {pagination.page} of {pagination.totalPages}
+                Page {page} of {pagination.totalPages}
               </span>
               <button
                 className="stores-page-btn"
-                disabled={pagination.page >= pagination.totalPages}
-                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={page >= pagination.totalPages}
+                onClick={() => handlePageChange(page + 1)}
               >
                 Next <ChevronRight size={16} />
               </button>

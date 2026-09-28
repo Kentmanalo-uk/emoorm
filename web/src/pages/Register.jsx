@@ -3,11 +3,13 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from '../lib/axios';
+import { useAppGoogleSignIn } from '../lib/appGoogle';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import AppLogo from '../components/AppLogo';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import AuthSheetBar from '../components/AuthSheetBar';
+import { BusyLabel } from '../components/ui/Spinner';
 import './AuthSheet.css';
 import './Register.css';
 
@@ -204,6 +206,30 @@ const Register = () => {
 
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // Google's answer, from the pop-up here or from the Android app's browser.
+  const applyGoogleAnswer = (data) => {
+    if (data?.requiresProfile) {
+      setGoogleProfile(data);
+      setFormData((prev) => ({
+        ...prev,
+        fullName: data.fullName || prev.fullName,
+        email: data.email || prev.email,
+      }));
+      setErrors({});
+      return;
+    }
+    if (data?.requiresMfa || data?.requiresMfaSetup) {
+      setApiError('Admin accounts must sign in with the standard admin flow to complete MFA.');
+      return;
+    }
+    if (!data?.user || !data?.accessToken) {
+      setApiError('Unexpected response from server.');
+      return;
+    }
+    storeLogin(data.user, data.accessToken, data.refreshToken);
+    navigate(safeRedirect || '/', { replace: true });
+  };
+
   const startGoogleSignup = useGoogleLogin({
     flow: 'auth-code',
     onError: () => setApiError('Google sign-up failed. Please try again.'),
@@ -216,27 +242,7 @@ const Register = () => {
       setApiError('');
       try {
         const res = await axios.post('/auth/google', { code });
-        const data = res.data;
-        if (data?.requiresProfile) {
-          setGoogleProfile(data);
-          setFormData((prev) => ({
-            ...prev,
-            fullName: data.fullName || prev.fullName,
-            email: data.email || prev.email,
-          }));
-          setErrors({});
-          return;
-        }
-        if (data?.requiresMfa || data?.requiresMfaSetup) {
-          setApiError('Admin accounts must sign in with the standard admin flow to complete MFA.');
-          return;
-        }
-        if (!data?.user || !data?.accessToken) {
-          setApiError('Unexpected response from server.');
-          return;
-        }
-        storeLogin(data.user, data.accessToken, data.refreshToken);
-        navigate(safeRedirect || '/', { replace: true });
+        applyGoogleAnswer(res.data);
       } catch (err) {
         setApiError(err?.response?.data?.message || 'Google sign-up failed.');
       } finally {
@@ -245,8 +251,27 @@ const Register = () => {
     },
   });
 
+  // In the Android app Google can't open here: the app runs it in the
+  // phone's browser and brings the answer back.
+  const appGoogle = useAppGoogleSignIn({
+    onAnswer: (data) => {
+      setGoogleLoading(false);
+      applyGoogleAnswer(data);
+    },
+    onError: (message) => {
+      setGoogleLoading(false);
+      setApiError(message);
+    },
+    onCancel: () => setGoogleLoading(false),
+  });
+
   const handleGoogleSignup = () => {
     setApiError('');
+    if (appGoogle.available) {
+      setGoogleLoading(true);
+      appGoogle.start();
+      return;
+    }
     startGoogleSignup();
   };
 
@@ -448,7 +473,7 @@ const Register = () => {
                   className="register-form-submit"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Creating account...' : googleProfile ? 'Create account & continue' : 'Create account'}
+                  {isLoading ? <BusyLabel>Creating account…</BusyLabel> : googleProfile ? 'Create account & continue' : 'Create account'}
                 </button>
 
                 {!googleProfile && (

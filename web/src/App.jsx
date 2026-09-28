@@ -78,6 +78,7 @@ import About from './pages/About';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import CookiePolicy from './pages/CookiePolicy';
+import AppDownload from './pages/AppDownload';
 import SearchByImage from './pages/SearchByImage';
 import Returns from './pages/Returns';
 import ReturnRequest from './pages/ReturnRequest';
@@ -87,9 +88,10 @@ import { WishlistContent } from './pages/Wishlist';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import RoleGate from './components/RoleGate';
-import ScrollToTop from './components/ScrollToTop';
+import ScrollMemory from './components/ScrollMemory';
 import StatusBarTint from './components/StatusBarTint';
 import AppToaster from './components/ui/AppToaster';
+import ActivityBar from './components/ui/ActivityBar';
 import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import useAuthStore from './store/authStore';
 import { ThemeRuntime } from './hooks/useTheme';
@@ -169,6 +171,8 @@ function AppRoutes() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/cookies" element={<CookiePolicy />} />
+        {/* The Android app's download page */}
+        <Route path="/app" element={<AppDownload />} />
         {/* Customer Care and Feedback folded into Help & Support. Both
             paths are still linked from the wild, so they redirect. */}
         <Route path="/customer-care" element={<Navigate to="/help" replace />} />
@@ -290,13 +294,16 @@ function App() {
           provider because the theme arrives with the app settings. */}
       <ThemeRuntime />
       <Router>
-        <ScrollToTop />
         <StatusBarTint />
         <AppToaster />
+        <ActivityBar />
         <AccountSwitchOverlay />
         <RoleGate>
           <AppRoutes />
         </RoleGate>
+        {/* After the pages: it puts a page back where it was scrolled once
+            the page has laid itself out (its body classes and all). */}
+        <ScrollMemory />
       </Router>
     </QueryClientProvider>
   );

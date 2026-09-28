@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Plus, Clock, Truck, CheckCircle, Package,
@@ -20,6 +20,7 @@ import { describeStep, sellBlockers } from '../lib/sellerSetup';
 const DASHBOARD_GUIDE = 'dashboard';
 import './SellerDashboard.css';
 import './Profile.css';
+import { readCache, writeCache } from '../lib/pageCache';
 
 const STATUS_META = {
   PENDING: { label: 'New', tint: 'sc-tint-amber', Icon: Clock },
@@ -82,22 +83,25 @@ export default function SellerDashboard() {
     (step) => !step.done && !step.optional && !step.waiting && step.key !== 'identity',
   ) || null;
 
-  const [recentOrders, setRecentOrders] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
-  const [lowStock, setLowStock] = useState([]);
-  const [salesByDay, setSalesByDay] = useState([]);
-  const [stats, setStats] = useState({
+  // What Home showed last time: shown at once while it is asked for again.
+  const [saved] = useState(() => readCache('seller:home') || null);
+  const [recentOrders, setRecentOrders] = useState(() => saved?.recentOrders || []);
+  const [topProducts, setTopProducts] = useState(() => saved?.topProducts || []);
+  const [lowStock, setLowStock] = useState(() => saved?.lowStock || []);
+  const [salesByDay, setSalesByDay] = useState(() => saved?.salesByDay || []);
+  const [stats, setStats] = useState(() => saved?.stats || {
     lifetimeSales: 0,
     completedOrders: 0,
     activeProducts: 0,
     avgOrderValue: 0,
   });
-  const [followerStats, setFollowerStats] = useState(null);
-  const [followerStatsLoading, setFollowerStatsLoading] = useState(true);
+  const [followerStats, setFollowerStats] = useState(() => readCache('seller:followers') || null);
+  const [followerStatsLoading, setFollowerStatsLoading] = useState(() => !readCache('seller:followers'));
   const [followerStatsError, setFollowerStatsError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !saved);
   const [loadError, setLoadError] = useState(false);
-  const [analyticsAvailable, setAnalyticsAvailable] = useState(true);
+  const [analyticsAvailable, setAnalyticsAvailable] = useState(() => saved?.analyticsAvailable ?? true);
+  const hasFollowerStats = useRef(Boolean(readCache('seller:followers')));
   const [showTour, setShowTour] = useState(false);
 
   // Shown once, only after the shop exists; progress is saved on the shop.
@@ -110,8 +114,6 @@ export default function SellerDashboard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setIsLoading(true);
-      setLoadError(false);
       const [analyticsRes, ordersRes, productsRes] = await Promise.allSettled([
         axios.get('/analytics/seller'),
         axios.get('/orders/store/orders', { params: { pageSize: 5 } }),
@@ -123,42 +125,43 @@ export default function SellerDashboard() {
       const orders = ordersRes.status === 'fulfilled' ? (ordersRes.value.data || []) : [];
       const products = productsRes.status === 'fulfilled' ? (productsRes.value.data || []) : [];
 
-      if (analyticsRes.status === 'rejected' && ordersRes.status === 'rejected') {
-        setLoadError(true);
-      }
-      setAnalyticsAvailable(Boolean(analytics?.kpis));
+      const failed = analyticsRes.status === 'rejected' && ordersRes.status === 'rejected';
+      setLoadError(failed);
 
-      setRecentOrders(orders.slice(0, 5));
-      setLowStock(analytics?.lowStock?.slice(0, 5) || []);
-      setSalesByDay(analytics?.salesByDay?.slice(-14) || []);
-
-      if (analytics?.kpis) {
-        setStats({
-          lifetimeSales: analytics.kpis.lifetimeRevenue?.value ?? 0,
-          completedOrders: analytics.kpis.orders?.value ?? 0,
-          activeProducts: analytics.kpis.activeProducts?.value ?? products.length,
-          avgOrderValue: analytics.kpis.avgOrderValue?.value ?? 0,
-        });
-      } else {
-        setStats({
-          lifetimeSales: 0,
-          completedOrders: 0,
-          activeProducts: products.filter((p) => p.status === 'APPROVED').length,
-          avgOrderValue: 0,
-        });
-      }
-
-      // Product performance is only meaningful when supplied by seller analytics.
-      if (analytics?.topProducts?.length) {
-        const byId = Object.fromEntries(products.map((p) => [p.id, p]));
-        setTopProducts(
-          analytics.topProducts
-            .slice(0, 3)
-            .map((tp) => byId[tp.id] || tp)
-        );
-      } else {
-        setTopProducts([]);
-      }
+      const next = {
+        analyticsAvailable: Boolean(analytics?.kpis),
+        recentOrders: orders.slice(0, 5),
+        lowStock: analytics?.lowStock?.slice(0, 5) || [],
+        salesByDay: analytics?.salesByDay?.slice(-14) || [],
+        stats: analytics?.kpis
+          ? {
+            lifetimeSales: analytics.kpis.lifetimeRevenue?.value ?? 0,
+            completedOrders: analytics.kpis.orders?.value ?? 0,
+            activeProducts: analytics.kpis.activeProducts?.value ?? products.length,
+            avgOrderValue: analytics.kpis.avgOrderValue?.value ?? 0,
+          }
+          : {
+            lifetimeSales: 0,
+            completedOrders: 0,
+            activeProducts: products.filter((p) => p.status === 'APPROVED').length,
+            avgOrderValue: 0,
+          },
+        // Product performance is only meaningful when supplied by seller analytics.
+        topProducts: analytics?.topProducts?.length
+          ? (() => {
+            const byId = Object.fromEntries(products.map((p) => [p.id, p]));
+            return analytics.topProducts.slice(0, 3).map((tp) => byId[tp.id] || tp);
+          })()
+          : [],
+      };
+      setAnalyticsAvailable(next.analyticsAvailable);
+      setRecentOrders(next.recentOrders);
+      setLowStock(next.lowStock);
+      setSalesByDay(next.salesByDay);
+      setStats(next.stats);
+      setTopProducts(next.topProducts);
+      // A failed load is not remembered: the saved copy stays as it was.
+      if (!failed) writeCache('seller:home', next);
 
       setIsLoading(false);
     })();
@@ -170,11 +173,16 @@ export default function SellerDashboard() {
     if (!store?.id) return undefined;
     let cancelled = false;
     const load = async () => {
-      setFollowerStatsLoading(true);
+      // With stats on screen they stay while fresh ones load.
+      if (!hasFollowerStats.current) setFollowerStatsLoading(true);
       setFollowerStatsError(false);
       try {
         const data = await getSellerFollowerStats(store.id);
-        if (!cancelled) setFollowerStats(data);
+        if (!cancelled) {
+          setFollowerStats(data);
+          hasFollowerStats.current = true;
+          writeCache('seller:followers', data);
+        }
       } catch {
         if (!cancelled) setFollowerStatsError(true);
       } finally {
@@ -196,7 +204,7 @@ export default function SellerDashboard() {
 
   // Phones: the counts on Home (orders to confirm / ship, reviews to answer).
   const isPhone = usePhoneLayout();
-  const [homeCounts, setHomeCounts] = useState({});
+  const [homeCounts, setHomeCounts] = useState(() => readCache('seller:home-counts') || {});
   useEffect(() => {
     if (!isPhone) return undefined;
     let cancelled = false;
@@ -209,7 +217,12 @@ export default function SellerDashboard() {
       axios.get('/reviews/seller/mine', { params: { unrepliedOnly: true, pageSize: 1 } })
         .then((res) => ['reviews', total(res)])
         .catch(() => ['reviews', 0]),
-    ]).then((entries) => { if (!cancelled) setHomeCounts(Object.fromEntries(entries)); });
+    ]).then((entries) => {
+      if (cancelled) return;
+      const counts = Object.fromEntries(entries);
+      setHomeCounts(counts);
+      writeCache('seller:home-counts', counts);
+    });
     return () => { cancelled = true; };
   }, [isPhone]);
 

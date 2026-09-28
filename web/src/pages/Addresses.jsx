@@ -9,6 +9,7 @@ import PhAddressPicker from '../components/common/PhAddressPicker';
 import './Addresses.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import useFreshAccount from '../hooks/useFreshAccount';
+import { BusyLabel } from '../components/ui/Spinner';
 
 const emptyForm = {
   label: '',
@@ -310,7 +311,7 @@ const Addresses = () => {
           <div className="address-edit-actions">
             <button type="button" onClick={closeForm} className="btn-modal-cancel">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="btn-modal-submit">
-              {isSubmitting ? 'Saving...' : editingId ? 'Save Changes' : 'Add Address'}
+              {isSubmitting ? <BusyLabel>Saving…</BusyLabel> : editingId ? 'Save Changes' : 'Add Address'}
             </button>
           </div>
         </form>

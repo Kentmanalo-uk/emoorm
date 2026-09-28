@@ -475,7 +475,7 @@ img {
   html body #root .layout-main :is(h1, h2, h3, h4):not(
     .product-name, .pdp-title, .store-card-name, .followed-store-name,
     .cart-suggestion-name, .address-name, .profile-name, .pp-name,
-    .shop-m-name h1, .stores-m-card h3
+    .shop-m-name h1, .stores-m-card h3, .appdl-titles h1
   ),
   html body #root .login-form-title,
   html body #root .register-form-title,

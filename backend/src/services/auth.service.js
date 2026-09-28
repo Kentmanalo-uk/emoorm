@@ -11,7 +11,17 @@ const identityVerificationRepository = require('../repositories/identityVerifica
 const addressService = require('./address.service');
 const googleService = require('./google.service');
 const { hashPassword, comparePassword } = require('../utils/password');
-const { generateTokens, verifyRefreshToken, generateMfaToken, generateGoogleProfileToken, verifyGoogleProfileToken } = require('../utils/jwt');
+const {
+  generateTokens,
+  verifyRefreshToken,
+  generateMfaToken,
+  generateGoogleProfileToken,
+  verifyGoogleProfileToken,
+  generateGoogleAppState,
+  verifyGoogleAppState,
+  generateGoogleAppTicket,
+  verifyGoogleAppTicket,
+} = require('../utils/jwt');
 const {
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
@@ -1045,7 +1055,15 @@ const loginWithGoogle = async ({ code, idToken }) => {
   const profile = code
     ? await googleService.exchangeCodeForProfile(code)
     : await googleService.verifyIdToken(idToken);
+  return loginWithGoogleProfile(profile);
+};
 
+/**
+ * The E-MOORM side of a Google sign-in, once Google has vouched for the
+ * profile (the website's pop-up, or the Android app's browser sign-in).
+ * @param {{ googleId, email, fullName, profilePhoto }} profile - Verified by Google
+ */
+const loginWithGoogleProfile = async (profile) => {
   // 1) Existing Google-linked account.
   let user = await userRepository.findByGoogleId(profile.googleId);
 
@@ -1107,6 +1125,90 @@ const loginWithGoogle = async ({ code, idToken }) => {
 
   const tokens = generateTokens(user);
   return { user, ...tokens };
+};
+
+// ── "Continue with Google" in the Android app (apk/) ──
+// Google blocks its sign-in inside the app's web view, so the app opens
+// /google/app/start in the phone's browser with a PKCE challenge (SHA-256 of
+// a secret it keeps). Google comes back to /google/app/callback, which sends
+// the browser back to the app with a one-time pass; the app's page swaps the
+// pass and the secret at /google/app/exchange for the same answer as
+// POST /auth/google. The website's pop-up sign-in is untouched.
+const GOOGLE_APP_RETURN = 'shop.emoorm.app:/google-signin';
+const PKCE_CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
+const PKCE_VERIFIER = /^[A-Za-z0-9_-]{43,128}$/;
+
+const googleAppCallbackUrl = () => config.google.appCallbackUrl
+  || `${config.frontendUrl.replace(/\/$/, '')}${config.apiPrefix}/auth/google/app/callback`;
+
+/** Back to the app: the pass, or what stopped the sign-in. */
+const googleAppReturn = (params) => `${GOOGLE_APP_RETURN}?${new URLSearchParams(params)}`;
+
+/**
+ * Where the app's browser tab goes first: Google's sign-in page, carrying
+ * the app's challenge. A request the app didn't make goes back to it.
+ * @param {String} challenge - base64url SHA-256 of the app's secret
+ * @returns {String} URL to redirect to
+ */
+const googleAppStartUrl = (challenge) => {
+  if (typeof challenge !== 'string' || !PKCE_CHALLENGE.test(challenge)) {
+    return googleAppReturn({ error: 'invalid_request' });
+  }
+  try {
+    return googleService.authorizationUrl(generateGoogleAppState(challenge), googleAppCallbackUrl());
+  } catch {
+    // Google sign-in isn't set up on this server.
+    return googleAppReturn({ error: 'unavailable' });
+  }
+};
+
+/**
+ * Google's answer, in the phone's browser: back to the app with a one-time
+ * pass (the verified Google profile and the app's challenge).
+ * @param {{ code?: String, state?: String, error?: String }} query
+ * @returns {Promise<String>} URL to redirect to (the app)
+ */
+const googleAppFinishUrl = async ({ code, state, error } = {}) => {
+  if (error) return googleAppReturn({ error: error === 'access_denied' ? 'cancelled' : 'google' });
+  let challenge;
+  try {
+    ({ challenge } = verifyGoogleAppState(state));
+  } catch {
+    return googleAppReturn({ error: 'expired' });
+  }
+  try {
+    const profile = await googleService.exchangeCodeForProfile(code, googleAppCallbackUrl());
+    return googleAppReturn({ ticket: generateGoogleAppTicket(profile, challenge) });
+  } catch {
+    return googleAppReturn({ error: 'google' });
+  }
+};
+
+/**
+ * The app's page swaps the pass, with the app's secret, for the same answer
+ * as POST /auth/google. A pass caught on its way to the app is useless
+ * without the secret. (400s, not 401s: nobody is signed in yet.)
+ * @param {{ ticket: String, verifier: String }} body
+ */
+const exchangeGoogleAppTicket = async ({ ticket, verifier } = {}) => {
+  let pass;
+  try {
+    pass = verifyGoogleAppTicket(ticket);
+  } catch {
+    throw new ApiError('This Google sign-in has expired. Please try again.', 400);
+  }
+  const matches = typeof verifier === 'string' && PKCE_VERIFIER.test(verifier) && (() => {
+    const expected = Buffer.from(String(pass.challenge));
+    const actual = Buffer.from(crypto.createHash('sha256').update(verifier).digest('base64url'));
+    return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+  })();
+  if (!matches) throw new ApiError('This Google sign-in could not be confirmed. Please try again.', 400);
+  return loginWithGoogleProfile({
+    googleId: pass.googleId,
+    email: pass.email,
+    fullName: pass.fullName,
+    profilePhoto: pass.profilePhoto,
+  });
 };
 
 /**
@@ -1184,6 +1286,9 @@ module.exports = {
   register,
   login,
   loginWithGoogle,
+  googleAppStartUrl,
+  googleAppFinishUrl,
+  exchangeGoogleAppTicket,
   completeGoogleSignup,
   refreshToken,
   getProfile,
