@@ -1,11 +1,10 @@
 import {
   useCallback, useEffect, useLayoutEffect, useRef, useState,
 } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  AndroidLogo, CaretLeft, CaretRight, Check, Export, PlusSquare, ShieldCheck,
-  ShoppingBagOpen, UserSquare, X,
+  CaretDown, CaretLeft, CaretRight, CheckCircle, DownloadSimple, Export, PlusSquare, ShareNetwork, ShieldCheck, X,
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import { useShare } from '../components/ShareSheet';
@@ -17,26 +16,26 @@ import release from '../data/androidApp.json';
 import './AppDownload.css';
 
 /**
- * The E-MOORM Android app's download page (/app), laid out like an app's page
- * in Apple's App Store: the icon, name and Get button, a strip of facts,
- * What's New, the preview screenshots, the description, how to install, and
- * the details.
+ * The E-MOORM Android app's download page (/app): E-MOORM's green and pink,
+ * laid out plainly. The icon with the name and the one button that matters,
+ * the app's screens, then a few titled lines on what it does, how to
+ * install it and what's new. Once the hero has scrolled away, a bar at the
+ * bottom keeps the app and its Get button at hand.
  *
  * What it says about the app comes from the APK itself (data/androidApp.json,
- * written by apk/publish.cjs); there are no ratings or rankings, as there are
- * none to show.
+ * written by apk/publish.cjs).
  *
- * Get downloads the APK on Android phones and on computers (which also get a
- * QR code to open this page on a phone). An iPhone can't install it, so there
- * Get explains adding E-MOORM to the Home Screen instead. Inside the app the
- * button says Installed, or Update once a newer version is out.
+ * "Get the app" downloads the APK on Android phones and on computers (where
+ * the sheet that follows offers a QR code to open this page on a phone); the
+ * sheet walks through installing it. An iPhone can't install it, so there
+ * the button explains adding E-MOORM to the Home Screen. Inside the app it
+ * says Installed, or Update once a newer version is out.
  */
 
 const ICON = '/icon-512x512-maskable.png';
 const ICON_SMALL = '/icon-192x192-maskable.png';
 const FILE_NAME = release.file.split('/').pop();
 const SIZE_MB = (release.size / 1e6).toFixed(1);
-const LANGUAGES = ['English', 'Tagalog', 'Bisaya'];
 
 const PREVIEWS = [
   { src: '/app-preview/preview-1.jpg', alt: 'The marketplace of Mindoreño is here: the E-MOORM home page' },
@@ -44,6 +43,37 @@ const PREVIEWS = [
   { src: '/app-preview/preview-3.jpg', alt: 'Manage your shop: the Seller Center' },
   { src: '/app-preview/preview-4.jpg', alt: 'Personalize and own it: shop templates' },
 ];
+
+// About the app: the first lines show; the arrow opens the rest.
+const ABOUT = [
+  'Emoorm is Oriental Mindoro\'s own online marketplace. It brings you the farmers, fishers, artisans and food '
+    + 'producers of every town, so fresh produce, local delicacies and handcrafted goods are only a few taps away.',
+  'Browse by category or municipality, chat with sellers about products and orders, and follow each order from '
+    + 'confirmed to completed, with delivery or pickup. Pay the way the seller accepts: cash on delivery, GCash, '
+    + 'QR Ph or bank transfer.',
+  'Selling? Open a free shop and run it from the Seller Center: your products, orders, messages and earnings, all '
+    + 'in one place.',
+  'The app picks up where you left off, opens emoorm.shop links straight away, and is always as up to date as the '
+    + 'site itself.',
+];
+
+const FEATURES = [
+  { title: 'Shop local', text: 'Fresh finds from every town in Oriental Mindoro.' },
+  { title: 'Chat with sellers', text: 'Ask about a product or an order, right in the app.' },
+  { title: 'Follow your orders', text: 'From confirmed to completed.' },
+  { title: 'Sell with a free shop', text: 'Run it all from your phone.' },
+];
+
+const ANDROID_STEPS = ['Tap Get the app', 'Open the file', 'Tap Install'];
+const IPHONE_STEPS = ['Tap Share in Safari', 'Add to Home Screen', 'Tap Add'];
+
+/** A release note "Title: more words" as its title and the rest. */
+const splitNote = (note) => {
+  const at = note.indexOf(': ');
+  if (at < 0) return { title: note, text: '' };
+  const rest = note.slice(at + 2);
+  return { title: note.slice(0, at), text: rest.charAt(0).toUpperCase() + rest.slice(1) };
+};
 
 /** Where the page is open: the app itself, an iPhone, an Android phone or a computer. */
 const platformOf = () => {
@@ -65,54 +95,48 @@ const isOlder = (a, b) => {
   return false;
 };
 
-const releasedOn = (() => {
-  const [y, m, d] = release.released.split('-').map(Number);
-  return new Date(y, m - 1, d);
-})();
-const releasedLabel = releasedOn.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-/** "Today", "3d ago", "2w ago"… as the App Store puts it. */
-const sinceRelease = () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((today - releasedOn) / 86400000);
-  if (days <= 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
-};
-
-const getNote = (platform) => {
-  if (platform.kind === 'app') {
-    return isOlder(platform.version, release.version)
-      ? `You have ${platform.version} · new: ${release.version}`
-      : 'You have the latest version';
-  }
-  if (platform.kind === 'ios') return 'For Android phones';
-  if (platform.kind === 'computer') return `Android app · ${SIZE_MB} MB`;
-  return `Free · ${SIZE_MB} MB`;
-};
+function QrCode({ size }) {
+  const icon = Math.round(size * 0.22);
+  return (
+    <QRCodeSVG
+      value={`${window.location.origin}/app`}
+      size={size}
+      level="Q"
+      marginSize={0}
+      imageSettings={{
+        src: ICON_SMALL, width: icon, height: icon, excavate: true,
+      }}
+      title="QR code for emoorm.shop/app"
+    />
+  );
+}
 
 function GetButton({
   platform, onGet, onIphone, compact = false, buttonRef = null,
 }) {
   const className = `appdl-get${compact ? ' is-compact' : ''}`;
   if (platform.kind === 'ios') {
-    return <button ref={buttonRef} type="button" className={className} onClick={onIphone}>Get</button>;
+    return (
+      <button ref={buttonRef} type="button" className={className} onClick={onIphone}>
+        <DownloadSimple size={compact ? 17 : 20} weight="bold" aria-hidden="true" />
+        {compact ? 'Get' : 'Get the app'}
+      </button>
+    );
   }
   if (platform.kind === 'app' && !isOlder(platform.version, release.version)) {
     return (
       <span ref={buttonRef} className={`${className} is-installed`}>
-        <Check size={compact ? 12 : 14} weight="bold" aria-hidden="true" />
+        <CheckCircle size={compact ? 17 : 20} weight="fill" aria-hidden="true" />
         Installed
       </span>
     );
   }
+  const update = platform.kind === 'app';
   return (
     <a ref={buttonRef} className={className} href={release.file} download={FILE_NAME} onClick={onGet}>
-      {platform.kind === 'app' ? 'Update' : 'Get'}
+      <DownloadSimple size={compact ? 17 : 20} weight="bold" aria-hidden="true" />
+      {update && (compact ? 'Update' : `Update to ${release.version}`)}
+      {!update && (compact ? 'Get' : 'Get the app')}
     </a>
   );
 }
@@ -155,13 +179,14 @@ function Sheet({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="appdl-sheet-head">
+          <img src={ICON_SMALL} alt="" className="appdl-sheet-icon" />
           <h2>{title}</h2>
           <button type="button" className="appdl-sheet-close" onClick={onClose} aria-label="Close">
             <X size={15} weight="bold" />
           </button>
         </div>
         {children}
-        <button type="button" className="appdl-sheet-done" onClick={onClose}>Done</button>
+        <button type="button" className="appdl-sheet-done" onClick={onClose}>Got it</button>
       </div>
     </div>
   );
@@ -249,7 +274,7 @@ function PreviewViewer({ start, onClose }) {
  */
 function AfterGetSteps() {
   return (
-    <>
+    <ol className="appdl-sheet-steps">
       <li>If the browser asks, tap <strong>Download</strong>.</li>
       <li>
         When it has downloaded, tap <strong>Open</strong>, or open <strong>{FILE_NAME}</strong> from
@@ -260,66 +285,29 @@ function AfterGetSteps() {
         {' '}<strong>Allow from this source</strong>, then go back.
       </li>
       <li>Tap <strong>Install</strong>, then <strong>Open</strong>.</li>
-    </>
-  );
-}
-
-function AndroidSteps({ computer }) {
-  return (
-    <>
-      <ol className="appdl-steps">
-        {computer && (
-          <li>
-            On your Android phone, scan the QR code above with the camera, or open <strong>emoorm.shop/app</strong>.
-          </li>
-        )}
-        <li>Tap <strong>Get</strong>.</li>
-        <AfterGetSteps />
-      </ol>
-      <p className="appdl-install-note">
-        <ShieldCheck size={20} weight="fill" aria-hidden="true" />
-        <span>
-          It comes from emoorm.shop, not the Play Store, so Google Play Protect may offer to check it first.
-          New version later? Install it over this one: you stay signed in.
-        </span>
-      </p>
-    </>
-  );
-}
-
-function IphoneSteps() {
-  return (
-    <>
-      <p className="appdl-install-lead">
-        The E-MOORM app is for Android phones. On iPhone, add E-MOORM to your Home Screen: it opens full screen,
-        like an app.
-      </p>
-      <ol className="appdl-steps">
-        <li>
-          In Safari, tap <Export size={17} weight="bold" aria-hidden="true" className="appdl-inline-icon" />
-          {' '}<strong>Share</strong>.
-        </li>
-        <li>
-          Tap <PlusSquare size={17} weight="bold" aria-hidden="true" className="appdl-inline-icon" />
-          {' '}<strong>Add to Home Screen</strong>.
-        </li>
-        <li>Tap <strong>Add</strong>.</li>
-      </ol>
-    </>
+    </ol>
   );
 }
 
 export default function AppDownload() {
   const isPhone = usePhoneLayout();
-  const navigate = useNavigate();
   const [platform] = useState(platformOf);
   const [sheet, setSheet] = useState(null);
   const [viewer, setViewer] = useState(null);
-  const [moreText, setMoreText] = useState(false);
-  const [compact, setCompact] = useState(false);
-  const headGet = useRef(null);
+  const [pastHero, setPastHero] = useState(false);
+  const [atEnd, setAtEnd] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [aboutHeight, setAboutHeight] = useState(0);
+  const heroGet = useRef(null);
+  const end = useRef(null);
+  const aboutText = useRef(null);
   const { share, shareSheet } = useShare();
-  const pageUrl = `${window.location.origin}/app`;
+  const ios = platform.kind === 'ios';
+  const computer = platform.kind === 'computer';
+  const installed = platform.kind === 'app' && !isOlder(platform.version, release.version);
+  const steps = ios ? IPHONE_STEPS : ANDROID_STEPS;
+  // Wide screens have the site footer below: the bar steps aside there.
+  const docked = !installed && pastHero && (isPhone || !atEnd);
 
   useSeo({
     title: 'E-MOORM app for Android',
@@ -342,275 +330,221 @@ export default function AppDownload() {
     },
   });
 
-  // Phones: the page brings its own top bar (Back, Share), as the App Store
-  // does; the site header and bottom navigation step aside meanwhile.
-  useLayoutEffect(() => {
-    if (!isPhone) return undefined;
-    document.body.classList.add('appdl-phone-mode');
-    return () => document.body.classList.remove('appdl-phone-mode');
-  }, [isPhone]);
-
-  // Once the big Get button has scrolled under the top bar, the bar shows
-  // the icon and a small Get button.
+  // Once the hero's button has scrolled away, a bar at the bottom keeps the
+  // app and "Get" at hand.
   useEffect(() => {
-    const target = headGet.current;
-    if (!isPhone || !target || typeof IntersectionObserver === 'undefined') return undefined;
-    const observer = new IntersectionObserver(([entry]) => {
-      setCompact(!entry.isIntersecting && entry.boundingClientRect.top < 80);
-    }, { rootMargin: '-56px 0px 0px 0px' });
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [isPhone]);
+    const hero = heroGet.current;
+    const last = end.current;
+    if (installed || !hero || !last || typeof IntersectionObserver === 'undefined') return undefined;
+    const heroSeen = new IntersectionObserver(([entry]) => {
+      setPastHero(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+    });
+    const endSeen = new IntersectionObserver(([entry]) => setAtEnd(entry.isIntersecting));
+    heroSeen.observe(hero);
+    endSeen.observe(last);
+    return () => {
+      heroSeen.disconnect();
+      endSeen.disconnect();
+    };
+  }, [installed]);
 
   const closeSheet = useCallback(() => setSheet(null), []);
   const closeViewer = useCallback(() => setViewer(null), []);
   // The link itself downloads the file; this only shows what comes next.
   const onGet = () => setSheet('installing');
   const onIphone = () => setSheet('iphone');
-  const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/'));
   const onShare = () => share({
     title: 'E-MOORM app for Android',
     text: 'Get the E-MOORM app: shop local from Oriental Mindoro.',
-    url: pageUrl,
+    url: `${window.location.origin}/app`,
   });
+  // Opening measures the whole text, so it can grow to it smoothly.
+  const toggleAbout = () => {
+    if (aboutText.current) setAboutHeight(aboutText.current.scrollHeight);
+    setAboutOpen((open) => !open);
+  };
 
-  const facts = [
-    { label: 'Size', value: SIZE_MB, sub: 'MB' },
-    { label: 'Requires', value: `${release.minAndroid}+`, sub: 'Android' },
-    { label: 'Category', icon: ShoppingBagOpen, sub: 'Shopping' },
-    { label: 'Developer', icon: UserSquare, sub: 'E-MOORM' },
-    { label: 'Language', value: 'EN', sub: `+ ${LANGUAGES.length - 1} More` },
-    { label: 'Version', value: release.version, sub: sinceRelease() },
-  ];
-  const showQr = !isPhone && platform.kind !== 'app';
+  // Phones: Share sits at the right of the site's back bar.
+  const barShare = (
+    <button type="button" className="appdl-bar-share" onClick={onShare} aria-label="Share">
+      <ShareNetwork size={22} weight="bold" />
+    </button>
+  );
 
   return (
-    <Layout phoneBar={false} showFooter={!isPhone}>
-      <div className="appdl-page">
-        {isPhone && (
-          <div className={`appdl-bar${compact ? ' is-compact' : ''}`}>
-            <button type="button" className="appdl-round" onClick={goBack} aria-label="Back">
-              <CaretLeft size={20} weight="bold" />
-            </button>
-            <div className="appdl-bar-mid" aria-hidden="true">
-              <img src={ICON_SMALL} alt="" width="192" height="192" />
+    <Layout showFooter={!isPhone} phoneBarEnd={barShare}>
+      <div className={`appdl-page${docked ? ' is-docked' : ''}`}>
+        <section className="appdl-hero">
+          <div className="appdl-wrap appdl-hero-inner">
+            <img className="appdl-hero-icon" src={ICON} alt="Emoorm app icon" width="512" height="512" />
+            <div className="appdl-hero-text">
+              <h1 className="appdl-name">Emoorm</h1>
+              <p className="appdl-tagline">The Mindoreño marketplace</p>
             </div>
-            <div className="appdl-bar-end">
-              {compact && <GetButton platform={platform} onGet={onGet} onIphone={onIphone} compact />}
-              <button type="button" className="appdl-round" onClick={onShare} aria-label="Share">
-                <Export size={19} weight="bold" />
+            <div className="appdl-hero-actions">
+              <GetButton platform={platform} onGet={onGet} onIphone={onIphone} buttonRef={heroGet} />
+            </div>
+            {!isPhone && (
+              <button type="button" className="appdl-ghost appdl-hero-share" onClick={onShare}>
+                <ShareNetwork size={17} weight="bold" aria-hidden="true" />
+                Share
               </button>
+            )}
+          </div>
+        </section>
+
+        <section className="appdl-wrap appdl-about" aria-labelledby="appdl-about-title">
+          <h2 id="appdl-about-title" className="appdl-h2">
+            <button
+              type="button"
+              className="appdl-about-toggle"
+              onClick={toggleAbout}
+              aria-expanded={aboutOpen}
+              aria-controls="appdl-about-text"
+            >
+              About the app
+              <CaretDown size={20} weight="bold" className="appdl-about-arrow" aria-hidden="true" />
+            </button>
+          </h2>
+          <div
+            id="appdl-about-text"
+            ref={aboutText}
+            className={`appdl-about-text${aboutOpen ? ' is-open' : ''}`}
+            style={aboutOpen && aboutHeight ? { maxHeight: `${aboutHeight}px` } : undefined}
+            onClick={aboutOpen ? undefined : toggleAbout}
+          >
+            {ABOUT.map((paragraph) => <p key={paragraph.slice(0, 24)}>{paragraph}</p>)}
+          </div>
+        </section>
+
+        <section className="appdl-gallery" aria-labelledby="appdl-preview-title">
+          <h2 id="appdl-preview-title" className="appdl-wrap appdl-h2">Preview</h2>
+          <div className="appdl-shots">
+            {PREVIEWS.map((shot, i) => (
+              <button
+                type="button"
+                key={shot.src}
+                className="appdl-shot"
+                onClick={() => setViewer(i)}
+                aria-label={`Screenshot ${i + 1} of ${PREVIEWS.length}: ${shot.alt}`}
+              >
+                <img
+                  src={shot.src}
+                  alt=""
+                  width="1080"
+                  height="1920"
+                  loading={i < 2 ? 'eager' : 'lazy'}
+                  decoding="async"
+                />
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="appdl-wrap appdl-section" aria-labelledby="appdl-features-title">
+          <h2 id="appdl-features-title" className="appdl-h2">Made for Oriental Mindoro</h2>
+          <ul className="appdl-list">
+            {FEATURES.map(({ title, text }) => (
+              <li key={title}>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {!installed && (
+          <section className="appdl-wrap appdl-section" aria-labelledby="appdl-steps-title">
+            <h2 id="appdl-steps-title" className="appdl-h2">
+              {ios ? 'On iPhone, in three steps' : 'Install in three steps'}
+            </h2>
+            <ol className="appdl-list appdl-steps">
+              {steps.map((label, i) => (
+                <li key={label}>
+                  <span className="appdl-step-number">{`Step ${i + 1}`}</span>
+                  <h3>{label}</h3>
+                </li>
+              ))}
+            </ol>
+            <p className="appdl-section-note">
+              {ios
+                ? 'E-MOORM then opens full screen from your Home Screen.'
+                : 'The first time, Android may ask you to allow installs from your browser.'}
+            </p>
+          </section>
+        )}
+
+        <section className="appdl-wrap appdl-section" aria-labelledby="appdl-news-title">
+          <h2 id="appdl-news-title" className="appdl-h2">{`New in ${release.version}`}</h2>
+          <ul className="appdl-list appdl-news">
+            {release.notes.map((note) => {
+              const { title, text } = splitNote(note);
+              return (
+                <li key={note}>
+                  <h3>{title}</h3>
+                  {text && <p>{text}</p>}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <nav className="appdl-wrap appdl-end" aria-label="Privacy" ref={end}>
+          <Link to="/privacy">Privacy Policy</Link>
+        </nav>
+
+        {docked && (
+          <div className="appdl-dock">
+            <div className="appdl-wrap appdl-dock-inner">
+              <img src={ICON_SMALL} alt="" />
+              <span className="appdl-dock-text">
+                <strong>Emoorm</strong>
+                <small>{`${SIZE_MB} MB`}</small>
+              </span>
+              <GetButton platform={platform} onGet={onGet} onIphone={onIphone} compact />
             </div>
           </div>
         )}
 
-        <div className="appdl">
-          <header className="appdl-head">
-            <img className="appdl-icon" src={ICON} alt="E-MOORM app icon" width="512" height="512" />
-            <div className="appdl-titles">
-              <h1>E-MOORM</h1>
-              <p className="appdl-subtitle">Shop local from Oriental Mindoro</p>
-              <div className="appdl-get-row">
-                <GetButton platform={platform} onGet={onGet} onIphone={onIphone} buttonRef={headGet} />
-                <span className="appdl-get-note">{getNote(platform)}</span>
-                {!isPhone && (
-                  <button type="button" className="appdl-share" onClick={onShare}>
-                    <Export size={17} weight="bold" aria-hidden="true" />
-                    Share
-                  </button>
-                )}
-              </div>
-            </div>
-            {showQr && (
-              <aside className="appdl-qr" aria-label="Get it on your phone">
-                <QRCodeSVG
-                  value={pageUrl}
-                  size={128}
-                  level="Q"
-                  marginSize={0}
-                  imageSettings={{
-                    src: ICON_SMALL, width: 30, height: 30, excavate: true,
-                  }}
-                  title="QR code for emoorm.shop/app"
-                />
-                <p>
-                  <strong>Get it on your phone</strong>
-                  <span>Scan with your Android phone&apos;s camera, then tap Get.</span>
-                </p>
-              </aside>
-            )}
-          </header>
-
-          <ul className="appdl-facts" aria-label="About this app">
-            {facts.map(({
-              label, value, icon: Icon, sub,
-            }) => (
-              <li className="appdl-fact" key={label}>
-                <span className="appdl-fact-label">{label}</span>
-                <span className="appdl-fact-value">
-                  {Icon ? <Icon size={26} weight="fill" aria-hidden="true" /> : value}
-                </span>
-                <span className="appdl-fact-sub">{sub}</span>
-              </li>
-            ))}
-          </ul>
-
-          <section className="appdl-section appdl-news" aria-labelledby="appdl-news-title">
-            <h2 id="appdl-news-title">What&apos;s New</h2>
-            <div className="appdl-version-row">
-              <span>{`Version ${release.version}`}</span>
-              <time dateTime={release.released} title={releasedLabel}>{sinceRelease()}</time>
-            </div>
-            <ul className="appdl-notes">
-              {release.notes.map((note) => <li key={note}>{note}</li>)}
-            </ul>
-          </section>
-
-          <section className="appdl-section appdl-preview" aria-labelledby="appdl-preview-title">
-            <h2 id="appdl-preview-title">Preview</h2>
-            <div className="appdl-shots">
-              {PREVIEWS.map((shot, i) => (
-                <button
-                  type="button"
-                  key={shot.src}
-                  className="appdl-shot"
-                  onClick={() => setViewer(i)}
-                  aria-label={`Screenshot ${i + 1} of ${PREVIEWS.length}: ${shot.alt}`}
-                >
-                  <img
-                    src={shot.src}
-                    alt=""
-                    width="1080"
-                    height="1920"
-                    loading={i < 2 ? 'eager' : 'lazy'}
-                    decoding="async"
-                  />
-                </button>
-              ))}
-            </div>
-            <p className="appdl-device">
-              <AndroidLogo size={16} weight="fill" aria-hidden="true" />
-              Android phones
-            </p>
-          </section>
-
-          <section className="appdl-section appdl-about" aria-label="Description">
-            <div className={`appdl-desc${moreText ? ' is-open' : ''}`}>
-              <p>
-                E-MOORM is Oriental Mindoro&apos;s own marketplace. Order fresh produce, local delicacies and
-                handcrafted goods straight from farmers, fishers, artisans and food producers across the province,
-                with delivery or pickup.
-              </p>
-              <p>
-                Chat with shops about products and orders, follow your favourites, track every order and request a
-                return if something isn&apos;t right. Pay the seller the way they accept: cash on delivery, GCash,
-                QR Ph or bank transfer.
-              </p>
-              <p>
-                Selling? Open a shop for free and run it from the Seller Center: products, orders, messages,
-                earnings and your shop&apos;s look, all in one place.
-              </p>
-              {!moreText && (
-                <button type="button" className="appdl-more" onClick={() => setMoreText(true)}>more</button>
-              )}
-            </div>
-            <Link to="/about" className="appdl-developer">
-              <span>
-                <strong>E-MOORM</strong>
-                <small>Developer</small>
-              </span>
-              <CaretRight size={18} weight="bold" aria-hidden="true" />
-            </Link>
-          </section>
-
-          <section className="appdl-section appdl-install" aria-labelledby="appdl-install-title">
-            <h2 id="appdl-install-title">{platform.kind === 'ios' ? 'On iPhone' : 'How to install'}</h2>
-            {platform.kind === 'ios' ? <IphoneSteps /> : <AndroidSteps computer={platform.kind === 'computer'} />}
-          </section>
-
-          <section className="appdl-section appdl-info" aria-labelledby="appdl-info-title">
-            <h2 id="appdl-info-title">Information</h2>
-            <dl className="appdl-info-list">
-              <div><dt>Provider</dt><dd>E-MOORM</dd></div>
-              <div><dt>Size</dt><dd>{`${SIZE_MB} MB`}</dd></div>
-              <div><dt>Category</dt><dd>Shopping</dd></div>
-              <div><dt>Compatibility</dt><dd>{`Android ${release.minAndroid} or newer`}</dd></div>
-              <div><dt>Languages</dt><dd>{LANGUAGES.join(', ')}</dd></div>
-              <div><dt>Price</dt><dd>Free</dd></div>
-              <div><dt>Version</dt><dd>{release.version}</dd></div>
-              <div><dt>Updated</dt><dd>{releasedLabel}</dd></div>
-              <div><dt>Package</dt><dd>{release.package}</dd></div>
-            </dl>
-            <details className="appdl-verify">
-              <summary>
-                <ShieldCheck size={19} weight="fill" aria-hidden="true" />
-                Verify the download
-                <CaretRight size={16} weight="bold" aria-hidden="true" className="appdl-verify-caret" />
-              </summary>
-              <p>
-                The file you get should have this SHA-256 checksum, and be signed with this certificate. Android
-                also checks the signature itself: an update installs only if it matches.
-              </p>
-              <dl>
-                <div>
-                  <dt>{`${FILE_NAME} · SHA-256`}</dt>
-                  <dd><code>{release.sha256}</code></dd>
-                </div>
-                <div>
-                  <dt>Signing certificate · SHA-256</dt>
-                  <dd><code>{release.certificateSha256}</code></dd>
-                </div>
-              </dl>
-            </details>
-            <nav className="appdl-links" aria-label="More about E-MOORM">
-              <Link to="/privacy">
-                Privacy Policy
-                <CaretRight size={16} weight="bold" aria-hidden="true" />
-              </Link>
-              <Link to="/terms">
-                Terms of Service
-                <CaretRight size={16} weight="bold" aria-hidden="true" />
-              </Link>
-              <Link to="/about">
-                Developer Website
-                <CaretRight size={16} weight="bold" aria-hidden="true" />
-              </Link>
-            </nav>
-          </section>
-        </div>
-
         <Sheet open={sheet === 'installing'} onClose={closeSheet} title="Downloading E-MOORM">
-          {platform.kind === 'computer' ? (
+          {computer ? (
             <div className="appdl-sheet-body">
               <p>
                 It&apos;s an Android app: copy <strong>{FILE_NAME}</strong> to your Android phone and open it there.
-                Easier: scan this with the phone&apos;s camera and tap <strong>Get</strong> on the phone.
+                Easier: scan this with the phone&apos;s camera and tap <strong>Get the app</strong> on the phone.
               </p>
               <div className="appdl-sheet-qr">
-                <QRCodeSVG
-                  value={pageUrl}
-                  size={148}
-                  level="Q"
-                  marginSize={0}
-                  imageSettings={{
-                    src: ICON_SMALL, width: 34, height: 34, excavate: true,
-                  }}
-                  title="QR code for emoorm.shop/app"
-                />
+                <QrCode size={148} />
               </div>
             </div>
           ) : (
             <div className="appdl-sheet-body">
-              <ol className="appdl-steps">
-                <AfterGetSteps />
-              </ol>
+              <AfterGetSteps />
+              <p className="appdl-sheet-note">
+                <ShieldCheck size={18} weight="fill" aria-hidden="true" />
+                It comes from emoorm.shop, not the Play Store, so Google Play Protect may offer to check it first.
+              </p>
             </div>
           )}
         </Sheet>
 
         <Sheet open={sheet === 'iphone'} onClose={closeSheet} title="E-MOORM on iPhone">
           <div className="appdl-sheet-body">
-            <IphoneSteps />
+            <p>
+              The E-MOORM app is for Android phones. On iPhone, add E-MOORM to your Home Screen: it opens full
+              screen, like an app.
+            </p>
+            <ol className="appdl-sheet-steps">
+              <li>
+                In Safari, tap <Export size={17} weight="bold" aria-hidden="true" className="appdl-inline-icon" />
+                {' '}<strong>Share</strong>.
+              </li>
+              <li>
+                Tap <PlusSquare size={17} weight="bold" aria-hidden="true" className="appdl-inline-icon" />
+                {' '}<strong>Add to Home Screen</strong>.
+              </li>
+              <li>Tap <strong>Add</strong>.</li>
+            </ol>
           </div>
         </Sheet>
 

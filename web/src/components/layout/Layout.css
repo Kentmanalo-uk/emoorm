@@ -87,4 +87,12 @@
   [data-in-back-bar] {
     display: none !important;
   }
+
+  /* A page's own action at the right end (Layout's phoneBarEnd). */
+  .layout-back-end {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    margin-left: auto;
+  }
 }

@@ -8,7 +8,7 @@ import { isBottomNavTab } from '../../lib/navTabs';
 import './Layout.css';
 
 // Page headings that are names, not page titles: they stay where they are.
-const NOT_A_TITLE = '.pp-name, .pdp-title, .shop-m-name h1';
+const NOT_A_TITLE = '.pp-name, .pdp-title, .shop-m-name h1, .appdl-name';
 
 /**
  * phoneBar: on phones, pages outside the five bottom-nav tabs get a top bar
@@ -17,8 +17,11 @@ const NOT_A_TITLE = '.pp-name, .pdp-title, .shop-m-name h1';
  * hidden where it was), so every page gets one without a list to maintain.
  * Pages with their own top bar pass false.
  * phoneBackTo: where Back goes when there is no in-app history.
+ * phoneBarEnd: the page's own action at the bar's right end (a Share button…).
  */
-const Layout = ({ children, showFooter = true, phoneBar = true, phoneBackTo = '/' }) => {
+const Layout = ({
+  children, showFooter = true, phoneBar = true, phoneBackTo = '/', phoneBarEnd = null,
+}) => {
   const isPhone = usePhoneLayout();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -60,6 +63,7 @@ const Layout = ({ children, showFooter = true, phoneBar = true, phoneBackTo = '/
               <CaretLeft size={22} weight="bold" />
             </button>
             {barTitle && <h1 className="layout-back-title">{barTitle}</h1>}
+            {phoneBarEnd && <div className="layout-back-end">{phoneBarEnd}</div>}
           </div>
         )}
         {children}
