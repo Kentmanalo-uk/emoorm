@@ -1,95 +1,241 @@
-/* Notifications, Apple style: a frosted banner that drops in from the top
-   with a small spring and lifts away when it closes. Only one shows at a
-   time (AppToaster). */
+/* Pop-ups, iPhone style: a frosted banner that glides down from the top and
+   lifts away (AppToaster.jsx). The outer box moves in and out; the card
+   inside follows a finger swiping it up. Only one shows at a time. */
 .app-toast {
+  width: min(400px, calc(100vw - 20px));
+  will-change: transform, opacity;
+}
+
+.app-toast.is-visible {
+  animation: app-toast-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+.app-toast.is-hidden {
+  animation: app-toast-out 0.36s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.app-toast-card {
   position: relative;
   display: flex;
-  align-items: center;
-  gap: 11px;
-  width: min(380px, calc(100vw - 24px));
-  padding: 10px 10px 10px 11px;
-  overflow: hidden;
-  border: 0.5px solid rgba(15, 23, 42, .08);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, .84);
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, .14), 0 2px 8px rgba(15, 23, 42, .06);
-  transform-origin: 50% 0;
-  will-change: transform, opacity;
+  align-items: flex-start;
+  border: 0.5px solid rgba(15, 23, 42, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.97);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
+  backdrop-filter: saturate(180%) blur(30px);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.05);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.25, 1), opacity 0.32s ease, box-shadow 0.2s ease;
+}
+
+.app-toast-card.is-dragging {
+  transition: none;
 }
 
 /* Browsers without the frosted glass get a plain white banner. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .app-toast {
+  .app-toast-card {
     background: var(--t-neutral-0, #fff);
   }
 }
 
-.app-toast.is-visible {
-  animation: app-toast-drop-in .6s cubic-bezier(.25, .8, .25, 1) both;
+.app-toast-body {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px 12px 12px;
+  border: 0;
+  border-radius: 22px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 
-.app-toast.is-hidden {
-  animation: app-toast-lift-out .32s cubic-bezier(.45, 0, .85, .35) forwards;
+button.app-toast-body {
+  cursor: pointer;
 }
 
+.app-toast-card.is-link:hover {
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.17), 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.app-toast-card.is-link:active:not(.is-dragging) {
+  transform: scale(0.985);
+}
+
+/* What it is about: a small coloured tile, like an app's icon. */
 .app-toast-icon {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: var(--t-secondary-50, #e9f8ef);
-  color: var(--t-primary-600, #059669);
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--t-primary-600, #059669);
+  color: #ffffff;
 }
 
-.app-toast.is-visible .app-toast-icon {
-  animation: app-toast-icon-pop .5s cubic-bezier(.34, 1.56, .64, 1) .08s both;
-}
+.app-toast-icon.is-green { background: var(--t-primary-600, #059669); }
+.app-toast-icon.is-blue { background: #3b82f6; }
+.app-toast-icon.is-orange { background: #f97316; }
+.app-toast-icon.is-amber { background: #f59e0b; }
+.app-toast-icon.is-pink { background: var(--t-accent-500, #ec4899); }
+.app-toast-icon.is-red { background: var(--t-danger-500, #ef4444); }
+.app-toast-icon.is-slate { background: #64748b; }
+.app-toast-icon.is-purple { background: #8b5cf6; }
 
-.app-toast--error .app-toast-icon {
-  background: var(--t-danger-50, #fef0ef);
-  color: var(--t-danger-600, #dc2626);
-}
-
-.app-toast--loading .app-toast-icon {
-  background: var(--t-info-50, #eef4ff);
-  color: var(--t-info-600, #2563eb);
+.app-toast.is-visible .app-toast-icon,
+.app-toast.is-visible .app-toast-avatar {
+  animation: app-toast-icon-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1) 0.08s both;
 }
 
 .app-toast--loading .app-toast-icon svg {
-  animation: app-toast-spin .8s linear infinite;
+  animation: app-toast-spin 0.8s linear infinite;
 }
 
-.app-toast-message {
-  flex: 1;
-  min-width: 0;
-  color: var(--t-secondary-950, #17231c);
-  font-size: 13.5px;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.app-toast-close {
-  display: grid;
+/* A message: who sent it, with the message badge at the picture's corner. */
+.app-toast-avatar {
+  position: relative;
   flex-shrink: 0;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 0;
+  width: 42px;
+  height: 42px;
+}
+
+.app-toast-avatar img,
+.app-toast-initials {
+  display: block;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: transparent;
-  color: var(--t-neutral-400, #94a3b8);
+  object-fit: cover;
+}
+
+.app-toast-initials {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--t-primary-400, #34d399), var(--t-primary-700, #047857));
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.app-toast-avatar-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.app-toast-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.app-toast-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 1px;
+}
+
+.app-toast-label {
+  overflow: hidden;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.app-toast-time {
+  flex-shrink: 0;
+  color: var(--t-neutral-400, #9ca3af);
+  font-size: 11.5px;
+}
+
+.app-toast-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.app-toast-detail {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.app-toast--error .app-toast-title {
+  color: var(--t-danger-700, #b91c1c);
+}
+
+/* Close: on a computer, a small round button at the corner while the
+   pointer is over the banner (as on a Mac); phones swipe it away instead. */
+.app-toast-close {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0.5px solid rgba(15, 23, 42, 0.12);
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--t-neutral-600, #4b5563);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
   cursor: pointer;
-  transition: background .15s ease, color .15s ease;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
 }
 
 .app-toast-close:hover {
-  background: rgba(15, 23, 42, .06);
-  color: var(--t-neutral-600, #475569);
+  color: var(--t-neutral-900, #111827);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .app-toast-card:hover .app-toast-close,
+  .app-toast-close:focus-visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .app-toast-close {
+    display: none;
+  }
 }
 
 /* Added to cart / wishlist: a dark frosted box in the middle, like the
@@ -105,30 +251,30 @@
   justify-content: center;
   gap: 8px;
   border-radius: 18px;
-  background: rgba(28, 28, 30, .74);
+  background: rgba(28, 28, 30, 0.74);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
   color: var(--t-neutral-0, #fff);
   text-align: center;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, .18);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
   will-change: transform, opacity;
 }
 
 .app-toast-commerce.is-visible {
-  animation: app-toast-hud-in .5s cubic-bezier(.25, .8, .25, 1) both;
+  animation: app-toast-hud-in 0.45s cubic-bezier(0.2, 0.9, 0.25, 1) both;
 }
 
 .app-toast-commerce.is-hidden {
-  animation: app-toast-hud-out .26s cubic-bezier(.45, 0, .85, .35) forwards;
+  animation: app-toast-hud-out 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
-.app-toast-commerce>svg {
+.app-toast-commerce > svg {
   margin-bottom: 3px;
   color: var(--t-neutral-0, #fff);
 }
 
-.app-toast-commerce.is-visible>svg {
-  animation: app-toast-icon-pop .55s cubic-bezier(.34, 1.56, .64, 1) .1s both;
+.app-toast-commerce.is-visible > svg {
+  animation: app-toast-icon-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1) 0.1s both;
 }
 
 .app-toast-commerce strong {
@@ -138,28 +284,20 @@
 }
 
 .app-toast-commerce span {
-  color: rgba(255, 255, 255, .82);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 12px;
   line-height: 1.4;
 }
 
-/* Drops in from above the screen, overshoots a little, settles. */
-@keyframes app-toast-drop-in {
+/* Glides down from above the screen and settles, without a bounce. */
+@keyframes app-toast-in {
   0% {
     opacity: 0;
-    transform: translateY(-120%) scale(.88);
+    transform: translateY(calc(-100% - 18px)) scale(0.97);
   }
 
-  40% {
+  35% {
     opacity: 1;
-  }
-
-  62% {
-    transform: translateY(5px) scale(1.012);
-  }
-
-  82% {
-    transform: translateY(-1.5px) scale(.998);
   }
 
   100% {
@@ -169,7 +307,7 @@
 }
 
 /* Lifts back up and away. */
-@keyframes app-toast-lift-out {
+@keyframes app-toast-out {
   0% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -177,23 +315,26 @@
 
   100% {
     opacity: 0;
-    transform: translateY(-115%) scale(.9);
+    transform: translateY(calc(-100% - 14px)) scale(0.97);
+  }
+}
+
+@keyframes app-toast-icon-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
 @keyframes app-toast-hud-in {
   0% {
     opacity: 0;
-    transform: scale(.78);
-  }
-
-  55% {
-    opacity: 1;
-    transform: scale(1.035);
-  }
-
-  80% {
-    transform: scale(.992);
+    transform: scale(0.86);
   }
 
   100% {
@@ -210,7 +351,7 @@
 
   100% {
     opacity: 0;
-    transform: scale(.9);
+    transform: scale(0.92);
   }
 }
 
@@ -220,25 +361,9 @@
   }
 }
 
-@keyframes app-toast-icon-pop {
-  0% {
-    transform: scale(.5);
-    opacity: 0;
-  }
-
-  60% {
-    transform: scale(1.12);
-  }
-
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
 @media (max-width: 480px) {
   .app-toast {
-    width: calc(100vw - 20px);
+    width: calc(100vw - 16px);
   }
 
   .app-toast-commerce {
@@ -252,18 +377,23 @@
 @media (prefers-reduced-motion: reduce) {
   .app-toast.is-visible,
   .app-toast-commerce.is-visible {
-    animation: app-toast-fade-in .2s ease both;
+    animation: app-toast-fade-in 0.2s ease both;
   }
 
   .app-toast.is-hidden,
   .app-toast-commerce.is-hidden {
-    animation: app-toast-fade-out .16s ease forwards;
+    animation: app-toast-fade-out 0.16s ease forwards;
   }
 
   .app-toast.is-visible .app-toast-icon,
-  .app-toast-commerce.is-visible>svg,
+  .app-toast.is-visible .app-toast-avatar,
+  .app-toast-commerce.is-visible > svg,
   .app-toast--loading .app-toast-icon svg {
     animation: none;
+  }
+
+  .app-toast-card {
+    transition: none;
   }
 }
 

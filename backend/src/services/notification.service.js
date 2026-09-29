@@ -36,7 +36,9 @@ const DEFAULT_AUDIENCE = {
  * @returns {Promise<Object>} Created notification
  */
 const createNotification = async (data) => {
-  const { userId, type, title, message, relatedId, audience, target } = data;
+  const {
+    userId, type, title, message, relatedId, audience, target, sender,
+  } = data;
 
   // Must stay in sync with the NotificationType enum in prisma/schema.prisma.
   const validTypes = [
@@ -85,6 +87,16 @@ const createNotification = async (data) => {
   const explicitTarget = target && typeof target.kind === 'string'
     ? { target: { kind: target.kind, id: target.id || null, slug: target.slug || null } }
     : null;
+  // Who it is from, for a message: the pop-up shows their picture.
+  const from = sender && typeof sender.name === 'string' && sender.name.trim()
+    ? {
+      sender: {
+        name: sender.name.trim().slice(0, 120),
+        photo: typeof sender.photo === 'string' && sender.photo ? sender.photo.slice(0, 500) : null,
+      },
+    }
+    : null;
+  const extra = explicitTarget || from ? { data: { ...explicitTarget, ...from } } : {};
 
   return notificationRepository.createNotification({
     userId,
@@ -93,7 +105,7 @@ const createNotification = async (data) => {
     message,
     audience: resolvedAudience,
     relatedId: relatedId || null,
-    ...(explicitTarget ? { data: explicitTarget } : {}),
+    ...extra,
     isRead: false,
   });
 };

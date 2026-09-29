@@ -91,7 +91,7 @@ function GetHelpPanel() {
     setSubmitting(true);
     try {
       const res = await axios.post('/support/cases', { category: form.category, subject, message });
-      toast.success('Your case was sent to your municipal support team.');
+      toast.success('Your case was sent to your municipal support team.', { href: '/profile/support' });
       setForm({ category: 'ORDER', subject: '', message: '' });
       navigate(res.data?.id ? `/profile/support?c=${res.data.id}` : '/profile/support');
     } catch (err) {

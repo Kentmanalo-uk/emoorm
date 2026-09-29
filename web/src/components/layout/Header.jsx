@@ -149,7 +149,12 @@ const Header = () => {
     };
     fetchAll();
     const interval = setInterval(fetchAll, 60000);
-    return () => clearInterval(interval);
+    // A new one just popped up (NotificationWatcher): count it now.
+    window.addEventListener('emoorm:notifications', fetchAll);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('emoorm:notifications', fetchAll);
+    };
   }, [isAuthenticated]);
 
   // The bell preview is a shortcut, not a dead list: a row marks itself read

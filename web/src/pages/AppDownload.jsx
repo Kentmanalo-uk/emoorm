@@ -70,7 +70,7 @@ const IPHONE_STEPS = ['Tap Share in Safari', 'Add to Home Screen', 'Tap Add'];
 /** A release note "Title: more words" as its title and the rest. */
 const splitNote = (note) => {
   const at = note.indexOf(': ');
-  if (at < 0) return { title: note, text: '' };
+  if (at < 0) return { title: note.replace(/\.$/, ''), text: '' };
   const rest = note.slice(at + 2);
   return { title: note.slice(0, at), text: rest.charAt(0).toUpperCase() + rest.slice(1) };
 };
@@ -331,20 +331,30 @@ export default function AppDownload() {
   });
 
   // Once the hero's button has scrolled away, a bar at the bottom keeps the
-  // app and "Get" at hand.
+  // app and "Get" at hand. Read from the positions on each scroll (a jump
+  // straight to the bottom passes the end without ever showing it).
   useEffect(() => {
-    const hero = heroGet.current;
-    const last = end.current;
-    if (installed || !hero || !last || typeof IntersectionObserver === 'undefined') return undefined;
-    const heroSeen = new IntersectionObserver(([entry]) => {
-      setPastHero(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-    });
-    const endSeen = new IntersectionObserver(([entry]) => setAtEnd(entry.isIntersecting));
-    heroSeen.observe(hero);
-    endSeen.observe(last);
+    if (installed) return undefined;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const hero = heroGet.current;
+      const last = end.current;
+      if (!hero || !last) return;
+      setPastHero(hero.getBoundingClientRect().bottom < 0);
+      // At the end, or past it (the site footer below).
+      setAtEnd(last.getBoundingClientRect().top < window.innerHeight);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+    check();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
     return () => {
-      heroSeen.disconnect();
-      endSeen.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame) cancelAnimationFrame(frame);
     };
   }, [installed]);
 

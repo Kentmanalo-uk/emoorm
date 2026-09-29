@@ -95,6 +95,17 @@ export default function AdminLayout({ children }) {
     return () => { cancelled = true; };
   }, [isSuperAdmin]);
 
+  // A new notification just popped up (NotificationWatcher): count it now.
+  useEffect(() => {
+    const refresh = () => {
+      axios.get('/notifications/unread/count', { params: { audience: 'ADMIN' } })
+        .then((n) => setUnreadCount(n.data?.count ?? 0))
+        .catch(() => { /* the next page counts again */ });
+    };
+    window.addEventListener('emoorm:notifications', refresh);
+    return () => window.removeEventListener('emoorm:notifications', refresh);
+  }, []);
+
   useEffect(() => {
     if (isSuperAdmin || !user?.id) return;
     let cancelled = false;

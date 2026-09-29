@@ -107,6 +107,21 @@ export default function SellerLayout() {
     return () => { cancelled = true; };
   }, [allowed]);
 
+  // A new notification just popped up (NotificationWatcher): count it now.
+  useEffect(() => {
+    if (!allowed) return undefined;
+    const refresh = () => {
+      axios.get('/notifications/unread/count', { params: { audience: 'SELLER' } })
+        .then((n) => {
+          setUnreadCount(n.data?.count ?? 0);
+          writeCache('seller:unread', n.data?.count ?? 0);
+        })
+        .catch(() => { /* the next page counts again */ });
+    };
+    window.addEventListener('emoorm:notifications', refresh);
+    return () => window.removeEventListener('emoorm:notifications', refresh);
+  }, [allowed]);
+
   // Keep the switch animation's shop logo in sync (also after profile edits).
   useEffect(() => {
     if (!store) return;

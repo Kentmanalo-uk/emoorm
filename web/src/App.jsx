@@ -91,6 +91,7 @@ import RoleGate from './components/RoleGate';
 import ScrollMemory from './components/ScrollMemory';
 import StatusBarTint from './components/StatusBarTint';
 import AppToaster from './components/ui/AppToaster';
+import NotificationWatcher from './components/NotificationWatcher';
 import ActivityBar from './components/ui/ActivityBar';
 import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import useAuthStore from './store/authStore';
@@ -296,6 +297,7 @@ function App() {
       <Router>
         <StatusBarTint />
         <AppToaster />
+        <NotificationWatcher />
         <ActivityBar />
         <AccountSwitchOverlay />
         <RoleGate>

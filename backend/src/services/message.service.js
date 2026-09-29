@@ -337,6 +337,11 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
         // The recipient reads it in the feed for the role they hold in this
         // conversation: the seller in their dashboard, the buyer in the bell.
         audience: side === 'buyer' ? 'SELLER' : 'BUYER',
+        // The pop-up shows who wrote: the buyer's photo or the shop's logo.
+        sender: {
+          name: senderName,
+          photo: side === 'buyer' ? conversation.buyer?.profilePhoto : conversation.store?.logo,
+        },
       });
     }
   } catch (err) {

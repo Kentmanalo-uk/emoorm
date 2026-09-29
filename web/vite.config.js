@@ -8,17 +8,18 @@ import postcss from 'postcss'
  * phone-only copy at medium (500). Built from the stylesheets themselves, so
  * new styles are covered without a hand-kept list.
  *
- * Left alone: the Seller Center and admin panel, the Sell landing page (its
- * display type is part of the design), keyframes, and rules that only apply
- * on wider screens. Scoped to the buyer app's roots (.layout and the Log in /
- * Sign up pages) so shared components elsewhere are untouched. Headings are
- * set to regular weight separately, in index.css, and win over this.
+ * Left alone: the Seller Center and admin panel, the Sell landing page and the
+ * app's download page (their display type is part of the design), keyframes,
+ * and rules that only apply on wider screens. Scoped to the buyer app's roots
+ * (.layout and the Log in / Sign up pages) so shared components elsewhere are
+ * untouched. Headings are set to regular weight separately, in index.css, and
+ * win over this (except on the download page, whose titles stay bold).
  *
  * Runs only on buyer stylesheets; a file it cannot parse is left as it is.
  */
 function phoneMediumWeights() {
   const SRC_CSS = /[\\/]web[\\/]src[\\/].*\.css$/;
-  const SKIP_FILE = /[\\/]components[\\/](admin|seller)[\\/]|[\\/]pages[\\/](Admin|Seller|Sell)[^\\/]*\.css$|(Admin|Seller)Layout/i;
+  const SKIP_FILE = /[\\/]components[\\/](admin|seller)[\\/]|[\\/]pages[\\/](Admin|Seller|Sell|AppDownload)[^\\/]*\.css$|(Admin|Seller)Layout/i;
   const ROOTS = ':where(.layout, .login-page, .register-page)';
   const OWN_ROOT = /^\.(layout|login-page|register-page)\b/;
   const weightOf = (v) => {

@@ -78,7 +78,7 @@ export default function ReportModal({ type, productId, storeId, reportedBuyerId,
         reason,
         description: description.trim(),
       });
-      toast.success('Report submitted. Our team will review it.');
+      toast.success('Report submitted. Our team will review it.', { href: '/profile/reports' });
       onClose();
     } catch (err) {
       toast.error(err.message || 'Failed to submit report');

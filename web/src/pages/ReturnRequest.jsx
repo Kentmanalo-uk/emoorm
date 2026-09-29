@@ -37,7 +37,7 @@ export default function ReturnRequest() {
         uploaded.push(result.data?.url || result.data?.path);
       }
       const result = await axios.post('/returns', { orderId: order.id, items, reason, buyerNote: note, photos: uploaded });
-      toast.success('Return request submitted');
+      toast.success('Return request submitted', { href: '/profile/returns' });
       navigate(`/profile/returns/${result.data.id}`);
     } catch (err) { toast.error(err.message || 'Could not submit return request'); } finally { setSaving(false); }
   };
