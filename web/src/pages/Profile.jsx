@@ -80,7 +80,10 @@ const Profile = () => {
     return {
       profile: profileResponse.data,
       stats: {
-        toPayCount: count('PENDING'),
+        // QR orders the seller confirmed, waiting for the buyer's payment (My Orders › To Pay).
+        toPayCount: orderData.filter((o) => o.paymentMethod !== 'COD'
+          && ((o.paymentStatus === 'PENDING' && o.status === 'CONFIRMED')
+            || (o.paymentStatus === 'FAILED' && ['PENDING', 'CONFIRMED'].includes(o.status)))).length,
         toShipCount: count('CONFIRMED'),
         toReceiveCount: count('PREPARING'),
         toPickupCount: count('READY'),
@@ -139,7 +142,7 @@ const Profile = () => {
   const name = profile?.fullName || user?.fullName || 'Your account';
   const email = profile?.email || user?.email;
   const purchase = [
-    ['To Pay', ShoppingBag, '/profile/orders?status=pending', stats.toPayCount],
+    ['To Pay', ShoppingBag, '/profile/orders?status=to_pay', stats.toPayCount],
     ['To Ship', Package, '/profile/orders?status=processing', stats.toShipCount],
     ['To Receive', Truck, '/profile/orders?status=shipped', stats.toReceiveCount],
     ['To Pick Up', Store, '/profile/orders?status=ready', stats.toPickupCount],
@@ -372,7 +375,7 @@ const Profile = () => {
           </Link>
         </div>
         <div className="purchase-status-grid">
-          <Link to="/profile/orders?status=pending" className="purchase-status-item">
+          <Link to="/profile/orders?status=to_pay" className="purchase-status-item">
             <div className="purchase-status-icon">
               <ShoppingBag size={24} />
               {stats.toPayCount > 0 && (

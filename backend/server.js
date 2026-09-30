@@ -62,6 +62,10 @@ const startServer = async () => {
         orderService.expirePendingOrders().catch((error) => {
           console.error('[order-expiry] failed:', error.message);
         });
+        // Confirmed QR orders the buyer never paid.
+        orderService.expireUnpaidOrders().catch((error) => {
+          console.error('[order-expiry] unpaid failed:', error.message);
+        });
       }, 5 * 60 * 1000);
       expiryTimer.unref();
 

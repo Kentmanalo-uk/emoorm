@@ -13,6 +13,11 @@ const { ApiError } = require('../middleware/errorHandler');
 const { priceForSelection, stockForSelection } = require('../utils/variantPricing');
 
 const PAYMENT_METHODS = ['COD', 'GCASH', 'QRPH'];
+
+/** A confirmed QR order still waiting for the buyer's payment (or a new proof). */
+const isDueForPayment = (order) => order.paymentMethod !== 'COD'
+  && order.status === 'CONFIRMED'
+  && ['PENDING', 'FAILED'].includes(order.paymentStatus);
 const MAX_ORDER_LINES = 50;
 
 /**
@@ -123,9 +128,9 @@ const createOrder = async (userId, data) => {
   if (paymentMethod === 'COD' && store.acceptsCod === false) {
     throw new ApiError('This store does not accept Cash on Delivery', 400);
   }
-  if (paymentMethod !== 'COD' && (!paymentReference?.trim() || !paymentProofUrl)) {
-    throw new ApiError('Payment reference and proof are required for prepaid orders', 400);
-  }
+  // QR orders are paid after the seller confirms them (To Pay in My Orders).
+  // A reference and proof sent now (older app versions) are still accepted.
+  const paidUpFront = paymentMethod !== 'COD' && Boolean(paymentReference?.trim() && paymentProofUrl);
   if ((paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && !store.paymentQrImage) {
     throw new ApiError('This store has not set up QR payment', 400);
   }
@@ -245,9 +250,9 @@ const createOrder = async (userId, data) => {
         fulfillmentMethod,
         pickupLocation: fulfillmentMethod === 'PICKUP' ? (store.pickupAddress || null) : null,
         paymentMethod,
-        paymentStatus: paymentMethod === 'COD' ? 'PENDING' : 'PENDING_VERIFICATION',
-        paymentReference: paymentReference || null,
-        paymentProofUrl: paymentProofUrl || null,
+        paymentStatus: paidUpFront ? 'PENDING_VERIFICATION' : 'PENDING',
+        paymentReference: paidUpFront ? paymentReference.trim() : null,
+        paymentProofUrl: paidUpFront ? paymentProofUrl : null,
         buyerMunicipalityId: buyerMunicipalityId || buyer.municipalityId || null,
         buyerBarangay: buyerBarangay || buyer.barangay || null,
         buyerProvince: buyerProvince || buyer.province || 'Oriental Mindoro',
@@ -436,12 +441,24 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl } = {}) 
     throw err;
   }
 
-  // Notify the buyer (non-blocking on failure)
+  // Notify the buyer (non-blocking on failure). A confirmed QR order that is
+  // not paid yet asks them to pay now, from To Pay.
   try {
-    await notificationService.notifyOrderUpdated(order.buyerId, orderId, newStatus, {
-      orderNumber: order.orderNumber,
-      refundNote: newStatus === 'CANCELLED' && order.paymentStatus === 'PAID',
-    });
+    if (newStatus === 'CONFIRMED' && isDueForPayment({ ...order, status: 'CONFIRMED' })) {
+      await notificationService.createNotification({
+        userId: order.buyerId,
+        type: 'ORDER_CONFIRMED',
+        title: 'Order confirmed: please pay now',
+        message: `${order.store?.name || 'The seller'} confirmed order ${order.orderNumber}. Pay ₱${Number(order.total).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} with the shop's QR in To Pay, then send your reference number and screenshot within ${PAYMENT_EXPIRY_HOURS} hours.`,
+        relatedId: orderId,
+        target: { kind: 'buyer-order', id: orderId },
+      });
+    } else {
+      await notificationService.notifyOrderUpdated(order.buyerId, orderId, newStatus, {
+        orderNumber: order.orderNumber,
+        refundNote: newStatus === 'CANCELLED' && order.paymentStatus === 'PAID',
+      });
+    }
   } catch (err) {
     console.error('[updateOrderStatus] notification failed:', err.message);
   }
@@ -608,9 +625,10 @@ const verifyPayment = async (orderId, actor, paymentStatus, note = '') => {
 };
 
 /**
- * Buyer submits (or resubmits) a payment reference and proof for a prepaid
- * order. Allowed while the order is PENDING / CONFIRMED and the payment is
- * FAILED or still PENDING_VERIFICATION.
+ * Buyer submits a payment reference and proof for a prepaid order: the first
+ * payment once the seller has confirmed it (payment PENDING, order
+ * CONFIRMED), or a new proof while it is FAILED or still
+ * PENDING_VERIFICATION (order PENDING / CONFIRMED).
  */
 const submitPaymentProof = async (orderId, userId, { paymentReference, paymentProofUrl }) => {
   const order = await orderRepository.findById(orderId);
@@ -624,7 +642,10 @@ const submitPaymentProof = async (orderId, userId, { paymentReference, paymentPr
   if (!['PENDING', 'CONFIRMED'].includes(order.status)) {
     throw new ApiError('Payment proof can no longer be submitted for this order', 409);
   }
-  if (!['FAILED', 'PENDING_VERIFICATION'].includes(order.paymentStatus)) {
+  if (order.paymentStatus === 'PENDING' && order.status === 'PENDING') {
+    throw new ApiError("The seller hasn't confirmed this order yet. We'll let you know when it's time to pay.", 409);
+  }
+  if (!['PENDING', 'FAILED', 'PENDING_VERIFICATION'].includes(order.paymentStatus)) {
     throw new ApiError('This order is not awaiting payment proof', 409);
   }
 
@@ -643,11 +664,14 @@ const submitPaymentProof = async (orderId, userId, { paymentReference, paymentPr
 
   try {
     if (order.store?.ownerId) {
+      const first = order.paymentStatus === 'PENDING';
       await notificationService.createNotification({
         userId: order.store.ownerId,
         type: 'ORDER_RECEIVED',
-        title: 'Payment Proof Submitted',
-        message: `${order.buyer?.fullName || 'The buyer'} submitted a new payment proof for order ${order.orderNumber}. Please verify it.`,
+        title: first ? 'Buyer paid: check the payment' : 'Payment Proof Submitted',
+        message: first
+          ? `${order.buyer?.fullName || 'The buyer'} paid for order ${order.orderNumber}. Check the reference and screenshot against your records, then confirm the payment.`
+          : `${order.buyer?.fullName || 'The buyer'} submitted a new payment proof for order ${order.orderNumber}. Please verify it.`,
         relatedId: orderId,
       });
     }
@@ -754,8 +778,53 @@ const expirePendingOrders = async (ageHours = PENDING_EXPIRY_HOURS) => {
   return expired;
 };
 
+// A confirmed QR order the buyer does not pay (or re-prove after a rejection)
+// within this long of its last change is cancelled, and its stock returns.
+const PAYMENT_EXPIRY_HOURS = Number(process.env.ORDER_PAYMENT_EXPIRY_HOURS) || 48;
+
+const expireUnpaidOrders = async (ageHours = PAYMENT_EXPIRY_HOURS) => {
+  const before = new Date(Date.now() - ageHours * 60 * 60 * 1000);
+  const orders = await orderRepository.findExpiredUnpaid(before);
+  let expired = 0;
+  for (const order of orders) {
+    try {
+      await orderRepository.cancelOrder(order.id, null, {
+        fromStatuses: ['CONFIRMED'],
+        // Re-checked inside the write: a proof sent since the lookup wins.
+        fromPaymentStatuses: orderRepository.EXPIRABLE_PAYMENT_STATUSES,
+        paymentStatus: 'EXPIRED',
+        note: `Not paid within ${ageHours} hours of confirmation`,
+      });
+      expired += 1;
+    } catch (err) {
+      if (err.code !== 'ORDER_NOT_CANCELLABLE') throw err;
+      continue;
+    }
+
+    await Promise.allSettled([
+      notificationService.createNotification({
+        userId: order.buyerId,
+        type: 'ORDER_CANCELLED',
+        title: 'Order cancelled: not paid',
+        message: `Order ${order.orderNumber} was cancelled because it wasn't paid within ${ageHours} hours of the seller confirming it.`,
+        relatedId: order.id,
+      }),
+      order.store?.ownerId && notificationService.createNotification({
+        userId: order.store.ownerId,
+        type: 'ORDER_CANCELLED',
+        title: 'Order cancelled: not paid',
+        message: `Order ${order.orderNumber} was cancelled because the buyer didn't pay within ${ageHours} hours of your confirmation. Its stock is back in your shop.`,
+        relatedId: order.id,
+        audience: 'SELLER',
+      }),
+    ]);
+  }
+  return expired;
+};
+
 module.exports = {
   createOrder,
+  expireUnpaidOrders,
   getOrderById,
   getMyOrders,
   getStoreOrders,

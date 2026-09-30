@@ -130,6 +130,12 @@
   color: var(--t-primary-700, #047857);
 }
 
+/* To pay: the buyer's turn. */
+.order-status-badge.status-warning {
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-700, #b45309);
+}
+
 .order-status-badge.status-danger {
   background: var(--t-danger-50, #fef2f2);
   color: var(--t-danger-700, #b91c1c);
@@ -343,6 +349,122 @@
   padding: 0 20px 16px;
   background: var(--t-neutral-0, #fff);
   border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+/* Paying a confirmed QR order: the shop's QR and account, with the amount. */
+.order-pay-panel {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--t-neutral-50, #fafafa);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+}
+
+.order-pay-qr {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+}
+
+.order-pay-details h4 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--t-neutral-900, #111827);
+}
+
+.order-pay-sub {
+  margin: 2px 0 10px;
+  font-size: 13px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.order-pay-payee {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.order-pay-payee div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 13px;
+}
+
+.order-pay-payee dt {
+  min-width: 96px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.order-pay-payee dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--t-neutral-900, #111827);
+}
+
+.order-pay-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.order-pay-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.order-pay-loading,
+.order-pay-missing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.order-pay-wait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 20px;
+  font-size: 13px;
+  color: var(--t-neutral-600, #4b5563);
+  background: var(--t-neutral-50, #fafafa);
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.order-pay-wait svg {
+  flex-shrink: 0;
+  color: var(--t-warning-500, #f59e0b);
+}
+
+@media (max-width: 640px) {
+  .order-pay-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .order-pay-qr {
+    max-width: 220px;
+    margin: 0 auto;
+  }
 }
 
 .order-proof-hint {

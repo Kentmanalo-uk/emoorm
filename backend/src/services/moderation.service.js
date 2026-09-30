@@ -56,10 +56,12 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
       where: {
         paymentStatus: 'PENDING_VERIFICATION',
         status: { not: 'CANCELLED' },
-        createdAt: { lt: staleBefore },
+        // The proof arrives after the seller confirms, so the wait counts
+        // from the order's last change (the proof), not from checkout.
+        updatedAt: { lt: staleBefore },
         ...(scope && { store: { municipalityId: scope } }),
       },
-      select: { createdAt: true },
+      select: { updatedAt: true },
     }),
     prisma.returnRequest.findMany({
       where: { status: 'REQUESTED', ...(scope && { store: { municipalityId: scope } }) },
@@ -81,7 +83,7 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
     { key: 'pendingProducts', label: 'Products awaiting approval', rows: products, field: 'createdAt', link: '/admin/products' },
     { key: 'openReports', label: 'Open reports', rows: reports, field: 'createdAt', link: '/admin/reports' },
     { key: 'supportAwaiting', label: 'Support messages awaiting reply', rows: awaiting, field: 'lastMessageAt', link: '/admin/support' },
-    { key: 'stalePayments', label: 'Prepaid payments unverified for over 24h', rows: payments, field: 'createdAt', link: '/admin/orders' },
+    { key: 'stalePayments', label: 'Prepaid payments unverified for over 24h', rows: payments, field: 'updatedAt', link: '/admin/orders' },
     { key: 'openReturns', label: 'Return requests awaiting the seller', rows: returns, field: 'createdAt', link: '/admin/returns' },
   ];
 

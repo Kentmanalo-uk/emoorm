@@ -9,19 +9,16 @@ import {
   Truck,
   Storefront as StoreIcon,
   Warning as AlertTriangle,
-  UploadSimple as Upload,
   Money,
   QrCode,
   DeviceMobile,
   NotePencil,
-  Copy,
+  ClockCountdown,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
-import { uploadImage } from '../lib/upload';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
@@ -29,15 +26,12 @@ import useIdentityGate from '../hooks/useIdentityGate';
 import useAppSettings, { storeDeliveryFee } from '../hooks/useAppSettings';
 import { isIdentityRequiredError } from '../lib/identity';
 import { usePhoneLayout } from '../hooks/useMobileNav';
-import { qrMethod, formatAccountNumber } from '../lib/qrPayment';
-import { isTouchPhone } from '../lib/device';
-import GcashPhonePay from '../components/checkout/GcashPhonePay';
-import Spinner, { BusyLabel } from '../components/ui/Spinner';
+import { qrMethod } from '../lib/qrPayment';
+import { BusyLabel } from '../components/ui/Spinner';
 import './Checkout.css';
 
 // Same rules the server applies at POST /orders.
 const CONTACT_NUMBER_RE = /^(09\d{9}|\+639\d{9})$/;
-const PAYMENT_REFERENCE_RE = /^[A-Za-z0-9 -]{4,64}$/;
 const normalizeContact = (value) => String(value || '').replace(/[\s-]/g, '');
 
 // Phones: the shop a buyer left for the GCash app to pay. Coming back to a
@@ -67,8 +61,6 @@ const Checkout = () => {
   const { requireVerifiedIdentity, showIdentityRequired, identityDialog } = useIdentityGate();
   const { settings } = useAppSettings();
   const isPhone = usePhoneLayout();
-  // A real phone (not a narrow computer window): it can open the GCash app.
-  const touchPhone = useMemo(() => isTouchPhone(), []);
 
   // Refresh price / stock / availability of every line before anything is placed.
   const [revalidating, setRevalidating] = useState(false);
@@ -125,9 +117,6 @@ const Checkout = () => {
   const [municipalitiesLoading, setMunicipalitiesLoading] = useState(true);
   const [fulfillmentMethod, setFulfillmentMethod] = useState('DELIVERY');
   const [paymentMethod, setPaymentMethod] = useState('COD');
-  const [paymentReference, setPaymentReference] = useState('');
-  const [paymentProofUrl, setPaymentProofUrl] = useState('');
-  const [uploadingProof, setUploadingProof] = useState(false);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -472,16 +461,6 @@ const Checkout = () => {
     return Object.keys(errs).length === 0;
   };
 
-  // Returns an error message, or '' when the prepaid fields are acceptable.
-  const validatePrepaid = () => {
-    if (paymentMethod !== 'GCASH' && paymentMethod !== 'QRPH') return '';
-    const reference = paymentReference.trim();
-    if (!reference) return 'Please enter your payment reference number.';
-    if (!PAYMENT_REFERENCE_RE.test(reference)) return 'Reference must be 4–64 letters, numbers, spaces or dashes.';
-    if (!paymentProofUrl) return 'Please upload your payment proof screenshot.';
-    return '';
-  };
-
   // One page: point the buyer at the section that needs attention.
   const scrollToSection = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -489,32 +468,6 @@ const Checkout = () => {
 
   const buildDeliveryAddress = () =>
     `${deliveryForm.street}, ${deliveryForm.barangay}, ${deliveryForm.municipality}, ${deliveryForm.province || 'Oriental Mindoro'}`;
-
-  const handleProofUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingProof(true);
-    try {
-      const res = await uploadImage(file);
-      setPaymentProofUrl(res.url);
-      toast.success('Proof uploaded');
-    } catch (err) {
-      toast.error(err.message || 'Upload failed');
-    } finally {
-      setUploadingProof(false);
-      e.target.value = '';
-    }
-  };
-
-  // Buyers on a phone cannot scan their own screen: they send to the number.
-  const copyAccountNumber = async (number) => {
-    try {
-      await navigator.clipboard.writeText(number);
-      toast.success('Number copied');
-    } catch {
-      toast.error('Could not copy. Select the number and copy it instead.');
-    }
-  };
 
   const handlePlaceOrder = async () => {
     if (storeIds.length !== 1) {
@@ -544,12 +497,6 @@ const Checkout = () => {
       scrollToSection('co-address');
       return;
     }
-    const prepaidError = validatePrepaid();
-    if (prepaidError) {
-      toast.error(prepaidError);
-      scrollToSection('co-payment');
-      return;
-    }
     if (!(await requireVerifiedIdentity())) return;
     setIsSubmitting(true);
     if (!checkoutIdRef.current) {
@@ -565,9 +512,8 @@ const Checkout = () => {
           storeId,
           checkoutKey: `${checkoutId}:${storeId}`,
           fulfillmentMethod,
+          // QR orders are paid later, from To Pay, once the seller confirms.
           paymentMethod,
-          paymentReference: paymentMethod === 'COD' ? undefined : paymentReference.trim() || undefined,
-          paymentProofUrl: paymentMethod === 'COD' ? undefined : paymentProofUrl || undefined,
           voucherCode: appliedVoucher?.voucher?.code || undefined,
           deliveryAddress:
             fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
@@ -633,6 +579,12 @@ const Checkout = () => {
               <CheckCircle size={64} className="success-icon" />
               <h1>Order Placed Successfully!</h1>
               <p>Thank you for your order. Your order has been received and is being processed.</p>
+              {paymentMethod !== 'COD' && (
+                <p className="co-pay-later-next">
+                  <ClockCountdown size={18} weight="fill" aria-hidden="true" />
+                  <span>No payment yet. Once the seller confirms your order, we&apos;ll notify you and it moves to <strong>To Pay</strong> in My Orders, where you pay with the shop&apos;s QR.</span>
+                </p>
+              )}
               {orderId && (
                 <div className="order-reference">
                   <strong>Order ID:</strong> {orderId}
@@ -642,7 +594,7 @@ const Checkout = () => {
                 {orderId && (
                   <Link to={`/orders/${orderId}/receipt`} className="btn-view-orders">View Receipt</Link>
                 )}
-                <Link to="/profile/orders" className="btn-view-orders">My Orders</Link>
+                <Link to={paymentMethod !== 'COD' ? '/profile/orders?status=to_pay' : '/profile/orders'} className="btn-view-orders">My Orders</Link>
                 <Link to="/products" className="btn-continue-shopping-success">Continue Shopping</Link>
               </div>
             </div>
@@ -667,53 +619,6 @@ const Checkout = () => {
     ? storeIds.map((id) => storeInfo[id]?.store).find((s) => s?.paymentQrImage)
     : null;
 
-  // Phones pay GCash by hand: the shop's number, copied into the GCash app.
-  // Computers (and a narrow computer window) keep the QR panel.
-  const gcashByHand = isPhone && touchPhone && paymentMethod === 'GCASH'
-    && activeQrStore?.paymentQrType === 'GCASH' && Boolean(activeQrStore?.paymentAccountNumber);
-
-  // The payment's reference number and screenshot, needed for GCash and QR Ph.
-  const proofFields = (
-    <>
-      <div className="form-group">
-        <label className="form-label">Reference / Transaction ID</label>
-        <input
-          type="text"
-          className="form-input"
-          placeholder="Enter reference number from your payment app"
-          value={paymentReference}
-          onChange={(e) => setPaymentReference(e.target.value)}
-        />
-      </div>
-      <div className="form-group">
-        <label className="form-label">Payment proof <span style={{ color: 'var(--t-danger-600, #dc2626)' }}>*</span></label>
-        {paymentProofUrl ? (
-          <div className="proof-preview">
-            <img src={resolveImg(paymentProofUrl)} alt="Payment proof" />
-            <button
-              type="button"
-              className="btn-back"
-              onClick={() => setPaymentProofUrl('')}
-            >
-              Remove
-            </button>
-          </div>
-        ) : (
-          <label className="proof-uploader">
-            {uploadingProof ? <Spinner size={16} /> : <Upload size={16} />}
-            <span>{uploadingProof ? 'Uploading…' : 'Upload screenshot'}</span>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={handleProofUpload}
-              disabled={uploadingProof}
-              hidden
-            />
-          </label>
-        )}
-      </div>
-    </>
-  );
 
   return (
     <Layout>
@@ -1026,8 +931,8 @@ const Checkout = () => {
                     <div className="payment-methods">
                       {[
                         { value: 'COD', label: 'Cash on Delivery / Pickup', desc: 'Pay when you receive/pick up your order', enabled: paymentAvailability.cod, Icon: Money },
-                        { value: 'GCASH', label: 'GCash (QR)', desc: 'Scan and pay via GCash', enabled: paymentAvailability.gcash, Icon: DeviceMobile },
-                        { value: 'QRPH', label: 'QR Ph', desc: 'Scan and pay via QR Ph', enabled: paymentAvailability.qrph, Icon: QrCode },
+                        { value: 'GCASH', label: 'GCash (QR)', desc: 'Pay with GCash after the seller confirms', enabled: paymentAvailability.gcash, Icon: DeviceMobile },
+                        { value: 'QRPH', label: 'QR Ph', desc: 'Pay with QR Ph after the seller confirms', enabled: paymentAvailability.qrph, Icon: QrCode },
                       ].map(({ value, label, desc, enabled, Icon }) => (
                         <div
                           key={value}
@@ -1053,53 +958,16 @@ const Checkout = () => {
                       ))}
                     </div>
 
-                    {gcashByHand ? (
-                      <GcashPhonePay
-                        amount={peso(total)}
-                        number={activeQrStore.paymentAccountNumber}
-                        accountName={activeQrStore.paymentAccountName}
-                        qrImage={activeQrStore.paymentQrImage ? resolveImg(activeQrStore.paymentQrImage) : ''}
-                        instructions={activeQrStore.paymentInstructions}
-                        onOpen={() => writeGcashReturn(storeIds[0])}
-                      >
-                        {proofFields}
-                      </GcashPhonePay>
-                    ) : (paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && activeQrStore && (
-                      <div className="qr-payment-panel">
-                        <div className="qr-payment-image">
-                          <img src={resolveImg(activeQrStore.paymentQrImage)} alt="Payment QR code" />
-                        </div>
-                        <div className="qr-payment-details">
-                          <h4>Scan to pay {peso(total)}</h4>
-                          {(activeQrStore.paymentAccountName || activeQrStore.paymentAccountNumber) && (
-                            <dl className="qr-payee">
-                              {activeQrStore.paymentAccountName && (
-                                <div>
-                                  <dt>Account name</dt>
-                                  <dd>{activeQrStore.paymentAccountName}</dd>
-                                </div>
-                              )}
-                              {activeQrStore.paymentAccountNumber && (
-                                <div>
-                                  <dt>{qrMethod(activeQrStore.paymentQrType).numberLabel}</dt>
-                                  <dd>
-                                    <span>{formatAccountNumber(activeQrStore.paymentAccountNumber)}</span>
-                                    <button
-                                      type="button"
-                                      className="qr-payee-copy"
-                                      onClick={() => copyAccountNumber(activeQrStore.paymentAccountNumber)}
-                                    >
-                                      <Copy size={13} /> Copy
-                                    </button>
-                                  </dd>
-                                </div>
-                              )}
-                            </dl>
-                          )}
-                          {activeQrStore.paymentInstructions && (
-                            <p className="qr-instructions">{activeQrStore.paymentInstructions}</p>
-                          )}
-                          {proofFields}
+                    {activeQrStore && (
+                      <div className="co-pay-later" role="note">
+                        <ClockCountdown size={22} weight="fill" className="co-pay-later-icon" aria-hidden="true" />
+                        <div>
+                          <strong>Pay after the seller confirms your order</strong>
+                          <p>
+                            Nothing to pay now. When {activeQrStore.name || 'the shop'} confirms your order, we&apos;ll notify you
+                            and it moves to <b>To Pay</b> in My Orders. Pay {peso(total)} there with the shop&apos;s {qrMethod(activeQrStore.paymentQrType).label || 'QR'},
+                            then send your reference number and screenshot. The seller checks the payment and prepares your order.
+                          </p>
                         </div>
                       </div>
                     )}

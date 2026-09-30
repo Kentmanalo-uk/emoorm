@@ -458,9 +458,9 @@ const updatePaymentStatus = async (id, paymentStatus, actorId = null, {
 };
 
 /**
- * Buyer replaces a rejected (or still unreviewed) payment proof. Only a
- * prepaid order still at PENDING / CONFIRMED with paymentStatus FAILED or
- * PENDING_VERIFICATION qualifies; the check is part of the write.
+ * Buyer pays (payment PENDING, once the order is CONFIRMED) or replaces a
+ * rejected / still unreviewed proof (FAILED or PENDING_VERIFICATION, order
+ * PENDING / CONFIRMED). The check is part of the write.
  */
 const updatePaymentProof = async (id, { paymentReference, paymentProofUrl }, actorId = null) => {
   return prisma.$transaction(async (tx) => {
@@ -473,8 +473,10 @@ const updatePaymentProof = async (id, { paymentReference, paymentProofUrl }, act
       where: {
         id,
         paymentMethod: { not: 'COD' },
-        status: { in: ['PENDING', 'CONFIRMED'] },
-        paymentStatus: { in: ['FAILED', 'PENDING_VERIFICATION'] },
+        OR: [
+          { status: 'CONFIRMED', paymentStatus: 'PENDING' },
+          { status: { in: ['PENDING', 'CONFIRMED'] }, paymentStatus: { in: ['FAILED', 'PENDING_VERIFICATION'] } },
+        ],
       },
       data: { paymentStatus: 'PENDING_VERIFICATION', paymentReference, paymentProofUrl },
     });
@@ -489,12 +491,36 @@ const updatePaymentProof = async (id, { paymentReference, paymentProofUrl }, act
         fromStatus: current.status,
         toStatus: current.status,
         actorId,
-        note: `Payment proof resubmitted (${current.paymentStatus} -> PENDING_VERIFICATION)`,
+        note: current.paymentStatus === 'PENDING'
+          ? 'Payment proof submitted (PENDING -> PENDING_VERIFICATION)'
+          : `Payment proof resubmitted (${current.paymentStatus} -> PENDING_VERIFICATION)`,
       },
     });
     return tx.order.findUnique({ where: { id } });
   });
 };
+
+/**
+ * Confirmed QR orders still unpaid (or with a rejected proof) whose last
+ * change is older than `before`: the buyer never paid after confirmation.
+ */
+const findExpiredUnpaid = (before) => prisma.order.findMany({
+  where: {
+    status: 'CONFIRMED',
+    paymentMethod: { not: 'COD' },
+    paymentStatus: { in: EXPIRABLE_PAYMENT_STATUSES },
+    updatedAt: { lt: before },
+  },
+  select: {
+    id: true,
+    orderNumber: true,
+    buyerId: true,
+    paymentMethod: true,
+    store: { select: { ownerId: true } },
+  },
+  take: 100,
+  orderBy: { updatedAt: 'asc' },
+});
 
 /**
  * Cancel order, restore product stock and release its voucher (transaction)
@@ -574,6 +600,7 @@ module.exports = {
   createOrderWithItems,
   findByCheckoutKey,
   findExpiredPending,
+  findExpiredUnpaid,
   findById,
   findAll,
   updateStatus,

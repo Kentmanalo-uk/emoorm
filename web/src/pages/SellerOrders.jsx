@@ -85,6 +85,15 @@ const PAYMENT_FILTERS = [
 
 const PAGE_SIZE = 20;
 
+// A QR order is paid after the seller confirms it: before that nothing is
+// due; after it, the buyer pays from To Pay and the seller confirms it.
+const qrUnpaid = (order) => order?.paymentMethod && order.paymentMethod !== 'COD' && order.paymentStatus === 'PENDING';
+const paymentBadge = (order) => {
+  if (qrUnpaid(order) && order.status === 'PENDING') return { label: 'Paid after you confirm', cls: 'status-pending' };
+  if (qrUnpaid(order) && order.status === 'CONFIRMED') return { label: 'Waiting for payment', cls: 'status-pending' };
+  return PAYMENT_LABELS[order?.paymentStatus] || null;
+};
+
 const canMarkRefunded = (order) => order?.paymentStatus === 'PAID' && order?.status === 'CANCELLED';
 
 // Prepaid orders cannot move past confirmation until the payment is verified
@@ -257,7 +266,7 @@ export default function SellerOrders() {
   }
 
   const PAYMENT_TOASTS = {
-    PAID: 'Payment verified',
+    PAID: 'Payment confirmed. You can now prepare the order.',
     FAILED: 'Payment rejected — the buyer will be asked to upload a new proof',
     REFUNDED: 'Refund recorded',
   };
@@ -578,6 +587,9 @@ export default function SellerOrders() {
                           {order.paymentStatus === 'PENDING_VERIFICATION' && order.status !== 'CANCELLED' && (
                             <div className="so-payment-flag">Payment to verify</div>
                           )}
+                          {qrUnpaid(order) && order.status === 'CONFIRMED' && (
+                            <div className="so-payment-flag">Waiting for buyer&apos;s payment</div>
+                          )}
                           {order.paymentStatus === 'FAILED' && order.status !== 'CANCELLED' && (
                             <div className="so-payment-flag">Awaiting new proof</div>
                           )}
@@ -715,15 +727,27 @@ export default function SellerOrders() {
                 {selectedOrder.paymentStatus && (
                   <div className="detail-row">
                     <span>Payment status</span>
-                    <span className={`seller-badge seller-badge--solid ${PAYMENT_LABELS[selectedOrder.paymentStatus]?.cls || ''}`}>
-                      {PAYMENT_LABELS[selectedOrder.paymentStatus]?.label || selectedOrder.paymentStatus}
+                    <span className={`seller-badge seller-badge--solid ${paymentBadge(selectedOrder)?.cls || ''}`}>
+                      {paymentBadge(selectedOrder)?.label || selectedOrder.paymentStatus}
                     </span>
+                  </div>
+                )}
+
+                {qrUnpaid(selectedOrder) && selectedOrder.status === 'PENDING' && (
+                  <div className="so-payment-review">
+                    <p>The buyer pays with your QR after you confirm this order. Confirm it if you can fill it; they&apos;ll be told to pay right away.</p>
+                  </div>
+                )}
+
+                {qrUnpaid(selectedOrder) && selectedOrder.status === 'CONFIRMED' && (
+                  <div className="so-payment-review">
+                    <p>Waiting for the buyer to pay with your QR. You&apos;ll be notified when they send the reference and screenshot, then you confirm the payment and prepare the order. If they don&apos;t pay within 48 hours, the order is cancelled and its stock comes back.</p>
                   </div>
                 )}
 
                 {selectedOrder.paymentStatus === 'PENDING_VERIFICATION' && selectedOrder.status !== 'CANCELLED' && (
                   <div className="so-payment-review">
-                    <p>Check the reference number and proof below against your GCash or bank records first.</p>
+                    <p>The buyer says they paid. Check the reference number and screenshot below against your GCash or bank records, then confirm the payment.</p>
                     <div className="so-payment-actions">
                       <button
                         type="button"
@@ -731,7 +755,7 @@ export default function SellerOrders() {
                         disabled={verifyingId === selectedOrder.id}
                         onClick={() => handlePaymentDecision(selectedOrder.id, 'PAID')}
                       >
-                        <CheckCircle size={16} /> Payment received
+                        <CheckCircle size={16} /> Confirm payment
                       </button>
                       <button
                         type="button"

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Package, MapPin, Eye, ChatText as MessageSquare, ArrowCounterClockwise as RotateCcw, Star, X,
-  UploadSimple as Upload, CheckCircle,
+  UploadSimple as Upload, CheckCircle, QrCode, Copy, ClockCountdown,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
@@ -19,6 +19,9 @@ import useEntryState from '../hooks/useEntryState';
 import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
 import { OrderProof } from '../components/orders/ProofPhotoSheet';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
+import GcashPhonePay from '../components/checkout/GcashPhonePay';
+import { qrMethod, formatAccountNumber } from '../lib/qrPayment';
+import { isTouchPhone } from '../lib/device';
 import { readCache, writeCache } from '../lib/pageCache';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
@@ -42,7 +45,11 @@ const PAYMENT_REFERENCE_RE = /^[A-Za-z0-9 -]{4,64}$/;
 const getPaymentBadge = (order) => {
   const cod = order.paymentMethod === 'COD';
   const map = {
-    PENDING: { label: cod ? 'Unpaid' : 'Awaiting payment', tone: 'neutral' },
+    // A QR order is paid once the seller confirms it.
+    PENDING: {
+      label: cod ? 'Unpaid' : order.status === 'PENDING' ? 'Pay after confirmation' : 'To pay',
+      tone: !cod && order.status === 'CONFIRMED' ? 'warning' : 'neutral',
+    },
     PENDING_VERIFICATION: { label: 'Awaiting verification', tone: 'neutral' },
     PAID: { label: 'Paid', tone: 'success' },
     FAILED: { label: 'Proof rejected — resubmit', tone: 'danger' },
@@ -53,18 +60,34 @@ const getPaymentBadge = (order) => {
   return map[order.paymentStatus] || null;
 };
 
-// A prepaid order whose payment still needs the buyer's attention.
+// "To Pay": a QR order the buyer has to pay now. That is once the seller has
+// confirmed it (payment PENDING), or when a proof was rejected (FAILED).
 const needsPayment = (order) => (
   order.paymentMethod !== 'COD'
-  && ['PENDING', 'PENDING_VERIFICATION', 'FAILED'].includes(order.paymentStatus)
-  && !['CANCELLED', 'COMPLETED'].includes(order.status)
+  && ((order.paymentStatus === 'PENDING' && order.status === 'CONFIRMED')
+    || (order.paymentStatus === 'FAILED' && ['PENDING', 'CONFIRMED'].includes(order.status)))
 );
 
+// Pay, pay again after a rejection, or replace a proof not yet checked.
 const canResubmitProof = (order) => (
-  order.paymentMethod !== 'COD'
-  && ['FAILED', 'PENDING_VERIFICATION'].includes(order.paymentStatus)
-  && ['PENDING', 'CONFIRMED'].includes(order.status)
+  needsPayment(order)
+  || (order.paymentMethod !== 'COD'
+    && order.paymentStatus === 'PENDING_VERIFICATION'
+    && ['PENDING', 'CONFIRMED'].includes(order.status))
 );
+
+// A QR order the seller has not confirmed yet: nothing to pay so far.
+const waitsForConfirmation = (order) => (
+  order.paymentMethod !== 'COD' && order.paymentStatus === 'PENDING' && order.status === 'PENDING'
+);
+
+const payActionLabel = (order) => {
+  if (order.paymentStatus === 'PENDING') return 'Pay now';
+  if (order.paymentStatus === 'FAILED') return 'Pay again / resubmit proof';
+  return 'Replace payment proof';
+};
+
+const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const canConfirmReceipt = (order) => ['DELIVERED', 'PICKED_UP'].includes(order.status);
 
@@ -150,23 +173,6 @@ const Orders = () => {
   }, [isAuthenticated, navigate, searchParams]);
 
   const filteredOrders = activeTab === 'all' ? orders : orders.filter((order) => orderMatchesTab(order, activeTab));
-
-  // Deep link from a notification: /profile/orders?id=<orderId> opens that
-  // order once the list has loaded. The id is remembered rather than stripped
-  // from the URL, so closing the panel does not immediately reopen it while a
-  // different order arriving from another notification still does.
-  const openedOrderId = useRef(null);
-  useEffect(() => {
-    const targetId = searchParams.get('id');
-    // The fresh list, not the saved one: the order may have moved on.
-    if (!targetId || !ordersFresh || orders.length === 0 || openedOrderId.current === targetId) return;
-    openedOrderId.current = targetId;
-    const match = orders.find((order) => order.id === targetId);
-    if (match) {
-      setSelectedOrder(match);
-      setShowOrderDetails(true);
-    }
-  }, [orders, ordersFresh, searchParams]);
 
   useEffect(() => {
     if (isAuthenticated) loadPendingReviews();
@@ -265,9 +271,49 @@ const Orders = () => {
     }
   };
 
+  // The shop's QR and account come from its public profile, as at checkout.
+  // `store` is undefined while loading and null when it could not load.
   const openProofForm = (order) => {
-    setProofForm({ orderId: order.id, reference: order.paymentReference || '', url: '', uploading: false, submitting: false });
+    setProofForm({ orderId: order.id, reference: order.paymentReference || '', url: '', uploading: false, submitting: false, store: undefined });
+    const storeId = order.storeId || order.store?.id;
+    if (!storeId) return;
+    axios.get(`/stores/${storeId}`)
+      .then((res) => setProofForm((f) => (f?.orderId === order.id ? { ...f, store: res.data || null } : f)))
+      .catch(() => setProofForm((f) => (f?.orderId === order.id ? { ...f, store: null } : f)));
   };
+
+  const copyNumber = async (number) => {
+    try {
+      await navigator.clipboard.writeText(number);
+      toast.success('Number copied');
+    } catch {
+      toast.error('Could not copy. Select the number and copy it instead.');
+    }
+  };
+
+  // Deep link from a notification: /profile/orders?id=<orderId> opens that
+  // order once the list has loaded. The id is remembered rather than stripped
+  // from the URL, so closing the panel does not immediately reopen it while a
+  // different order arriving from another notification still does.
+  const openedOrderId = useRef(null);
+  useEffect(() => {
+    const targetId = searchParams.get('id');
+    // The fresh list, not the saved one: the order may have moved on.
+    if (!targetId || !ordersFresh || orders.length === 0 || openedOrderId.current === targetId) return;
+    openedOrderId.current = targetId;
+    const match = orders.find((order) => order.id === targetId);
+    if (!match) return;
+    // "Order confirmed: please pay now" lands on the payment, in To Pay.
+    if (needsPayment(match)) {
+      setActiveTab('TO_PAY');
+      openProofForm(match);
+      requestAnimationFrame(() => document.getElementById(`order-${match.id}`)?.scrollIntoView({ block: 'center' }));
+      return;
+    }
+    setSelectedOrder(match);
+    setShowOrderDetails(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the list or link changes
+  }, [orders, ordersFresh, searchParams]);
 
   const handleProofFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -300,7 +346,7 @@ const Orders = () => {
     setProofForm((f) => ({ ...f, submitting: true }));
     try {
       await axios.patch(`/orders/${proofForm.orderId}/proof`, { paymentReference: reference, paymentProofUrl: proofForm.url });
-      toast.success('Payment proof submitted for verification');
+      toast.success('Payment sent. The seller will check it and then prepare your order.');
       setProofForm(null);
       fetchOrders();
     } catch (err) {
@@ -465,7 +511,7 @@ const Orders = () => {
             const storeId = order.storeId || order.store?.id;
 
             return (
-              <div key={order.id} className="order-card">
+              <div key={order.id} id={`order-${order.id}`} className="order-card">
                 <div className="order-card-header">
                   <Link
                     to={`/store/${order.store?.slug}`}
@@ -582,8 +628,8 @@ const Orders = () => {
                       onClick={() => (proofForm?.orderId === order.id ? setProofForm(null) : openProofForm(order))}
                       className="order-action-btn is-primary"
                     >
-                      <Upload size={16} />
-                      Resubmit payment proof
+                      {order.paymentStatus === 'PENDING_VERIFICATION' ? <Upload size={16} /> : <QrCode size={16} />}
+                      {payActionLabel(order)}
                     </button>
                   )}
 
@@ -669,12 +715,24 @@ const Orders = () => {
                   )}
                 </div>
 
+                {waitsForConfirmation(order) && (
+                  <p className="order-pay-wait">
+                    <ClockCountdown size={16} weight="fill" aria-hidden="true" />
+                    Waiting for the seller to confirm. You&apos;ll pay with the shop&apos;s QR after that; we&apos;ll notify you.
+                  </p>
+                )}
+
                 {proofForm?.orderId === order.id && (
                   <form className="order-proof-form" onSubmit={handleProofSubmit}>
+                    {order.paymentStatus !== 'PENDING_VERIFICATION' && (
+                      <PayPanel order={order} store={proofForm.store} onCopy={copyNumber} />
+                    )}
                     <p className="order-proof-hint">
                       {order.paymentStatus === 'FAILED'
-                        ? 'Your previous proof was rejected. Enter the reference from your payment app and upload a clear screenshot.'
-                        : 'Replace the reference and screenshot you submitted; the seller will verify the new one.'}
+                        ? 'Your previous proof was rejected. Pay if you haven\'t, then enter the reference from your payment app and upload a clear screenshot.'
+                        : order.paymentStatus === 'PENDING'
+                          ? 'After paying, enter the reference number from your payment app and upload a screenshot of the payment.'
+                          : 'Replace the reference and screenshot you submitted; the seller will verify the new one.'}
                     </p>
                     <div className="order-proof-fields">
                       <input
@@ -707,7 +765,7 @@ const Orders = () => {
                     <div className="order-proof-actions">
                       <button type="button" className="order-action-btn" onClick={() => setProofForm(null)} disabled={proofForm.submitting}>Cancel</button>
                       <button type="submit" className="order-action-btn is-primary" disabled={proofForm.submitting || proofForm.uploading}>
-                        {proofForm.submitting ? <BusyLabel>Submitting…</BusyLabel> : 'Submit proof'}
+                        {proofForm.submitting ? <BusyLabel>Submitting…</BusyLabel> : order.paymentStatus === 'PENDING' ? 'I have paid' : 'Submit proof'}
                       </button>
                     </div>
                   </form>
@@ -932,3 +990,63 @@ const Orders = () => {
 };
 
 export default Orders;
+
+/**
+ * How to pay a confirmed QR order: the shop's QR and account with the amount,
+ * or on a phone paying a GCash shop, its number and a button that opens GCash.
+ * @param {Object} order
+ * @param {Object|null|undefined} store - The shop's public profile (undefined while loading)
+ * @param {Function} onCopy - Copies the account number
+ */
+function PayPanel({ order, store, onCopy }) {
+  if (store === undefined) {
+    return <p className="order-pay-loading"><Spinner size={16} /> Loading the shop&apos;s QR…</p>;
+  }
+  if (!store?.paymentQrImage) {
+    return (
+      <p className="order-pay-missing">
+        The shop&apos;s QR isn&apos;t available right now. Message the seller to ask how to pay {peso(order.total)}.
+      </p>
+    );
+  }
+  const method = qrMethod(store.paymentQrType);
+  if (isTouchPhone() && store.paymentQrType === 'GCASH' && store.paymentAccountNumber) {
+    return (
+      <GcashPhonePay
+        amount={peso(order.total)}
+        number={store.paymentAccountNumber}
+        accountName={store.paymentAccountName}
+        qrImage={resolveImg(store.paymentQrImage)}
+        instructions={store.paymentInstructions}
+      />
+    );
+  }
+  return (
+    <div className="order-pay-panel">
+      <img className="order-pay-qr" src={resolveImg(store.paymentQrImage)} alt={`${store.name || 'Shop'} ${method.label} QR code`} />
+      <div className="order-pay-details">
+        <h4>Scan to pay {peso(order.total)}</h4>
+        <p className="order-pay-sub">with {method.label}, to {store.name || 'the shop'}</p>
+        {(store.paymentAccountName || store.paymentAccountNumber) && (
+          <dl className="order-pay-payee">
+            {store.paymentAccountName && (
+              <div><dt>Account name</dt><dd>{store.paymentAccountName}</dd></div>
+            )}
+            {store.paymentAccountNumber && (
+              <div>
+                <dt>{method.numberLabel}</dt>
+                <dd>
+                  <span>{formatAccountNumber(store.paymentAccountNumber)}</span>
+                  <button type="button" className="order-pay-copy" onClick={() => onCopy(store.paymentAccountNumber)}>
+                    <Copy size={13} /> Copy
+                  </button>
+                </dd>
+              </div>
+            )}
+          </dl>
+        )}
+        {store.paymentInstructions && <p className="order-pay-note">{store.paymentInstructions}</p>}
+      </div>
+    </div>
+  );
+}

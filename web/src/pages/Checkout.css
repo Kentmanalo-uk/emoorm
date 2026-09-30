@@ -1983,3 +1983,54 @@
     height: 72px;
   }
 }
+
+/* QR payment happens after the seller confirms: the note that says so. */
+.co-pay-later {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--t-primary-50, #ecfdf5);
+  border: 1px solid var(--t-primary-100, #d1fae5);
+}
+
+.co-pay-later-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--t-primary-600, #059669);
+}
+
+.co-pay-later strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: var(--t-neutral-900, #111827);
+}
+
+.co-pay-later p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--t-neutral-700, #374151);
+}
+
+.order-success-card .co-pay-later-next {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 460px;
+  margin: 0 auto 20px;
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-neutral-700, #374151);
+}
+
+.order-success-card .co-pay-later-next svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--t-primary-600, #059669);
+}
