@@ -4,7 +4,7 @@
  * sites with one) and shows a simple page when a page is opened offline.
  * Nothing else is cached: every page, file and request goes to the network
  * as usual, so a new release is seen right away. */
-const CACHE = 'emoorm-offline-v2';
+const CACHE = 'emoorm-offline-v3';
 const OFFLINE = '/offline.html';
 // The offline page's logo.
 const OFFLINE_LOGO = '/icon-192x192.png';

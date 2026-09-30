@@ -4,7 +4,7 @@ import {
   House as HomeIcon, MagnifyingGlass as Search, ShoppingCart, BellSlash as BellOff, List as Menu, X,
   ChatCircle, Bell, User,
   ShoppingBag, CheckCircle, Package, XCircle, Star, WarningCircle as AlertCircle, Info,
-  Clock, TrendUp as TrendingUp,
+  Clock, TrendUp as TrendingUp, ChatCircleDots, ArrowCounterClockwise, Megaphone, Tag,
 } from '@phosphor-icons/react';
 import useAuthStore from '../../store/authStore';
 import FeedbackDialog from '../feedback/FeedbackDialog';
@@ -18,6 +18,7 @@ import ImageSearchModal from './ImageSearchModal';
 import InstallAppBar from './InstallAppBar';
 import './Header.css';
 import UserAvatar from '../ui/UserAvatar';
+import NotificationPicture from '../NotificationPicture';
 import { isBottomNavTab } from '../../lib/navTabs';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm } from '../../lib/buyerSearch';
 
@@ -34,6 +35,20 @@ const NOTIF_TYPE = {
   REPORT_SUBMITTED: { Icon: AlertCircle, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Report submitted' },
   REPORT_RESOLVED: { Icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Report resolved' },
   SYSTEM_ANNOUNCEMENT: { Icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Announcement' },
+  STORE_MESSAGE: { Icon: ChatCircleDots, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Message' },
+  SUPPORT_MESSAGE: { Icon: ChatCircleDots, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Municipal admin' },
+  SUPPORT_RESOLVED: { Icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Municipal admin' },
+  STORE_NEW_PRODUCT: { Icon: Tag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New product' },
+  STORE_PROMOTION: { Icon: Star, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Promotion' },
+  STORE_ANNOUNCEMENT: { Icon: Megaphone, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Shop news' },
+  RETURN_REQUESTED: { Icon: ArrowCounterClockwise, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Return' },
+  RETURN_APPROVED: { Icon: ArrowCounterClockwise, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Return approved' },
+  RETURN_REJECTED: { Icon: ArrowCounterClockwise, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Return rejected' },
+  RETURN_AWAITING_SHIPMENT: { Icon: ArrowCounterClockwise, color: 'var(--t-orange-500, #f97316)', bg: 'var(--t-orange-100, #ffedd5)', label: 'Return' },
+  RETURN_RECEIVED: { Icon: ArrowCounterClockwise, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Return received' },
+  RETURN_REFUNDED: { Icon: ArrowCounterClockwise, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Refunded' },
+  RETURN_CANCELLED: { Icon: ArrowCounterClockwise, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Return cancelled' },
+  RETURN_CLOSED: { Icon: ArrowCounterClockwise, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Return closed' },
   DEFAULT: { Icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Notification' },
 };
 
@@ -338,12 +353,16 @@ const Header = () => {
                                   }
                                 }}
                               >
-                                <span
-                                  className="notif-dropdown-icon"
-                                  style={{ background: cfg.bg, color: cfg.color }}
-                                >
-                                  <Icon size={14} />
-                                </span>
+                                {/* The product, the person or the shop, or the kind's icon. */}
+                                <NotificationPicture
+                                  picture={n.picture}
+                                  Icon={Icon}
+                                  color={cfg.color}
+                                  bg={cfg.bg}
+                                  size={34}
+                                  iconWeight="regular"
+                                  className="notif-dropdown-picture"
+                                />
                                 <div className="notif-dropdown-body">
                                   <p className="notif-dropdown-title">
                                     {n.title || cfg.label}

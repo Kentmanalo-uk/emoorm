@@ -14,7 +14,8 @@
 .smk,
 .sdc,
 .stp,
-.stp-preview {
+.stp-preview,
+.spm {
   --sa-green: var(--t-primary-600, #059669);
   --sa-green-dark: var(--t-primary-700, #047857);
   --sa-green-soft: var(--t-primary-50, #ecfdf5);

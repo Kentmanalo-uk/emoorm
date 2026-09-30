@@ -3,27 +3,26 @@ const prisma = require('../config/database');
 /**
  * Shop Readiness Service
  *
- * "Ready to sell": what a shop needs before buyers can see and order its
- * products, beyond the admin's approval (which already hides a whole shop).
- * Only what an order depends on, for the way the seller chose to hand orders
- * over:
+ * "Ready to sell": what a shop needs before buyers can order from it, beyond
+ * the admin's approval (which hides a whole shop). Only what an order depends
+ * on, for the way the seller chose to hand orders over:
  *
  *  - Delivering (DELIVERY or BOTH): at least one delivery area, and a fee
  *    decided for every one (a standard fee, or each area's own).
  *  - Pickup (PICKUP or BOTH): a pickup address.
  *  - A way to pay: cash on delivery / pickup, or a payment QR.
  *
- * Until then a seller can add and edit products, but they are not live: no
- * list, search, product page, shop count or checkout shows them. They go live
- * by themselves once the shop is ready, and go quiet again if it stops being
- * ready (e.g. the last delivery area is removed). The rest of the setup
- * checklist (logo, description, identity) is asked for, not enforced here.
+ * Seeing and ordering are separate. Approved products of an approved, open
+ * shop are public (lists, search, product page, shop page) for everyone,
+ * signed in or not, ready or not. Until the shop is ready, checkout refuses
+ * its orders and the product page says it is not taking orders yet
+ * (`readyToSell: false`). The rest of the setup checklist (logo,
+ * description, identity) is asked for, not enforced here.
  *
- * READY_STORE is the rule as a Prisma filter on Store; every public product
- * query uses it, and `isReady` asks the same filter about one shop, so the
- * lists, the product page, checkout and the seller's checklist cannot
- * disagree. The checklist (sellerSetup.service) names the missing steps with
- * the same keys as SELL_STEPS.
+ * READY_STORE is the rule as a Prisma filter on Store, and `isReady` asks the
+ * same filter about one shop, so checkout, the product page and the seller's
+ * checklist cannot disagree. The checklist (sellerSetup.service) names the
+ * missing steps with the same keys as SELL_STEPS.
  *
  * "Live products" everywhere (the seller's stats and shop health, the admins'
  * numbers) are `countLiveProducts`: what buyers can actually see.
@@ -53,8 +52,8 @@ const READY_STORE = {
   ],
 };
 
-/** Shops buyers can see and order from: open, approved and ready to sell. */
-const VISIBLE_STORE = { isActive: true, isSuspended: false, isApproved: true, ...READY_STORE };
+/** Shops buyers can see: open, approved and not suspended (ready or not). */
+const VISIBLE_STORE = { isActive: true, isSuspended: false, isApproved: true };
 
 /**
  * Live products: approved ones in a shop buyers can see.

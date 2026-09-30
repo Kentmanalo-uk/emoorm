@@ -568,12 +568,12 @@
 }
 
 .shop-grid .product-card .product-name {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 400;
   color: var(--t-secondary-950, #212121);
   margin: 0;
   line-height: 1.35;
-  min-height: calc(13px * 1.35 * 2);
+  min-height: calc(16px * 1.35 * 2);
   text-decoration: none;
   display: -webkit-box;
   -webkit-line-clamp: 2;

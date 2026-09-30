@@ -209,27 +209,9 @@ const getStorefront = async (slug) => {
  * @returns {Promise<Object>} Storefront payload
  */
 const buildStorefront = async (store) => {
-  // A shop that is not ready to sell shows no products (shopReadiness.service).
+  // Its products show either way; readyToSell says whether it takes orders
+  // yet (shopReadiness.service).
   const readyToSell = await shopReadiness.isReady(store.id);
-  if (!readyToSell) {
-    const ratingAgg = await prisma.review.aggregate({
-      where: { deletedAt: null, product: { storeId: store.id, deletedAt: null } },
-      _avg: { rating: true },
-      _count: { _all: true },
-    });
-    return {
-      ...withPublicOwner(store),
-      readyToSell,
-      stats: {
-        productCount: 0,
-        averageRating: Number(ratingAgg._avg.rating || 0),
-        reviewCount: ratingAgg._count._all || 0,
-        followerCount: store._count?.followers || 0,
-      },
-      categories: [],
-      _count: undefined,
-    };
-  }
 
   const productWhere = {
     storeId: store.id,
@@ -345,14 +327,13 @@ const getStores = async (options = {}) => {
       isSuspended: options.isSuspended,
     },
     async () => {
-      // A shop that is not ready to sell is listed without its products.
+      // Listed with its products either way; readyToSell says whether it
+      // takes orders yet.
       const result = await storeRepository.findAll(options);
       const ready = await shopReadiness.readyIds(result.stores.map((s) => s.id));
       return {
         ...result,
-        stores: result.stores.map((s) => (ready.has(s.id)
-          ? { ...s, readyToSell: true }
-          : { ...s, readyToSell: false, products: [], _count: { ...(s._count || {}), products: 0 } })),
+        stores: result.stores.map((s) => ({ ...s, readyToSell: ready.has(s.id) })),
       };
     }
   );

@@ -77,6 +77,11 @@ const useCartStore = create(
           const cartKey = product.cartKey || `${product.id}:${variationKey}`;
           const existingItem = items.find((item) => item.id === cartKey);
 
+          // A shop still setting up shows its products but takes no orders.
+          if (product.readyToSell === false || product.store?.readyToSell === false) {
+            throw new Error("This shop isn't taking orders yet");
+          }
+
           // Validate stock
           if (product.stock !== undefined && product.stock === 0) {
             throw new Error('Product is out of stock');

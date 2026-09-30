@@ -18,6 +18,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import useEntryState from '../hooks/useEntryState';
 import './SellerDashboard.css';
 import './Notifications.css';
+import NotificationPicture from '../components/NotificationPicture';
 import { readCache, writeCache } from '../lib/pageCache';
 
 const TYPE_CONFIG = {
@@ -33,6 +34,9 @@ const TYPE_CONFIG = {
   REPORT_SUBMITTED: { icon: AlertCircle, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Report Submitted' },
   REPORT_RESOLVED: { icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Report Resolved' },
   SUPPORT_MESSAGE: { icon: ChatCircleDots, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Municipal Admin' },
+  SUPPORT_RESOLVED: { icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Municipal Admin' },
+  STORE_MESSAGE: { icon: ChatCircleDots, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Message' },
+  ADMIN_MESSAGE: { icon: ChatCircleDots, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Message' },
   SYSTEM_ANNOUNCEMENT: { icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Announcement' },
   STORE_NEW_PRODUCT: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Product' },
   STORE_PROMOTION: { icon: Star, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Promotion' },
@@ -411,12 +415,17 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
                     }
                   }}
                 >
-                  <div
-                    className="notif-icon-wrap"
-                    style={{ background: cfg.bg, color: cfg.color }}
-                  >
-                    <Icon size={18} />
-                  </div>
+                  {/* The product (orders, returns), the person (messages) or the
+                      shop, with a small badge; or the kind's own icon. */}
+                  <NotificationPicture
+                    picture={notif.picture}
+                    Icon={Icon}
+                    color={cfg.color}
+                    bg={cfg.bg}
+                    size={44}
+                    iconWeight="regular"
+                    className="notif-picture"
+                  />
 
                   <div className="notif-content">
                     <div className="notif-title-row">

@@ -1223,6 +1223,105 @@
   padding-bottom: 12px;
 }
 
+/* Email not confirmed yet: a badge by the address, and a way to get the link again. */
+.pf-unverified {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-700, #b45309);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+.pf-resend-link {
+  margin-left: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-primary-600, #059669);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pf-resend-link:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pf-m-id-text .pf-email-line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.pf-m-id-text .pf-email-line .pf-email-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-m-id-text .pf-unverified {
+  margin-left: 6px;
+  font-size: 11px;
+}
+
+.pf-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--t-warning-50, #fffbeb);
+}
+
+.pf-confirm-icon {
+  flex-shrink: 0;
+  color: var(--t-warning-600, #d97706);
+}
+
+.pf-confirm-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--t-neutral-700, #374151);
+}
+
+.pf-confirm-text b {
+  font-weight: 600;
+  color: var(--t-neutral-900, #111827);
+}
+
+.pf-confirm-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-warning-600, #d97706);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pf-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .pf-m-card,
 .pf-m-section {
   border-radius: 16px;

@@ -72,6 +72,8 @@ export default function SellerLayout() {
   // Phone Chat header: "with Buyers ▾" menu.
   const [chatMenuOpen, setChatMenuOpen] = useState(false);
   const accountRef = useRef(null);
+  // Set while signing out: the seller goes home, not to the Seller Login.
+  const [signingOut, setSigningOut] = useState(false);
   const startAccountSwitch = useAccountSwitchStore((s) => s.start);
   const rememberShop = useAccountSwitchStore((s) => s.setShop);
 
@@ -192,6 +194,8 @@ export default function SellerLayout() {
   }, [accountOpen]);
 
   if (!isAuthenticated) {
+    // Just signed out here: the home page.
+    if (signingOut) return <Navigate to="/" replace />;
     // The Seller Login returns to this page (the Seller Center home is its default).
     const back = location.pathname.replace(/\/$/, '') + location.search;
     return <Navigate to={back === '/seller' ? '/seller/login' : `/seller/login?redirect=${encodeURIComponent(back)}`} replace />;
@@ -203,10 +207,13 @@ export default function SellerLayout() {
     startAccountSwitch('personal', '/profile');
   };
 
+  // Signing out goes to the home page (a blank Seller Login sheet left
+  // nowhere to go when closed).
   const handleLogout = () => {
+    setSigningOut(true);
     setLogoutOpen(false);
     logout();
-    navigate('/seller/login');
+    navigate('/', { replace: true });
   };
 
   const shopName = store?.name || 'My Shop';
@@ -221,9 +228,9 @@ export default function SellerLayout() {
 
   const crumbs = buildCrumbs(location.pathname);
 
-  // Phones work like a seller app: four tabs (Home, Chat, Marketing, Me) on
-  // the bottom bar, Home and Me drawing their own shop header, and every
-  // other page a back arrow with its title (and no tab bar).
+  // Phones work like a seller app: five tabs (Home, My products, Chat,
+  // Marketing, Me) on the bottom bar, Home and Me drawing their own shop
+  // header, and every other page a back arrow with its title (and no tab bar).
   const cleanPath = location.pathname.replace(/\/$/, '') || '/seller';
   const editingProduct = cleanPath === '/seller/products' && new URLSearchParams(location.search).has('edit');
   const isTabRoot = PHONE_TABS.includes(cleanPath) && !editingProduct;
@@ -239,7 +246,9 @@ export default function SellerLayout() {
     else if (cleanPath.startsWith('/seller/decorate/templates/')) navigate('/seller/decorate/templates');
     // A settings part opened directly: back to its list of parts.
     else if (/^\/seller\/(store|fulfillment)\/[a-z]+$/.test(cleanPath)) navigate(cleanPath.replace(/\/[a-z]+$/, ''));
-    else if (/^\/seller\/(products|orders|returns|reviews|analytics|finance)/.test(cleanPath)) navigate('/seller');
+    // Adding or editing a product: back to My products (a tab of its own).
+    else if (cleanPath.startsWith('/seller/products')) navigate('/seller/products');
+    else if (/^\/seller\/(orders|returns|reviews|analytics|finance)/.test(cleanPath)) navigate('/seller');
     else if (cleanPath === '/seller/assistant') navigate('/seller/messages');
     else navigate('/seller/menu');
   };
@@ -304,10 +313,10 @@ export default function SellerLayout() {
               className={`sc-nav-item sc-nav-group ${productsOpen && !collapsed ? 'is-open' : ''}`}
               onClick={() => collapsed ? navigate('/seller/products') : setProductsOpen((v) => !v)}
               aria-expanded={productsOpen && !collapsed}
-              title="Products"
+              title="My Products"
             >
               <Package size={17} weight="fill" />
-              <span>Products</span>
+              <span>My Products</span>
               <ChevronDown size={15} className="sc-nav-chevron" />
             </button>
             <div className={`sc-subnav-wrap${productsOpen ? ' is-open' : ''}`}>
@@ -463,6 +472,11 @@ export default function SellerLayout() {
               <h1 className="scm-title">{phoneTitle}</h1>
             )}
             <div className="scm-actions">
+              {cleanPath === '/seller/products' && (
+                <Link to="/seller/products/new" state={{ fromList: true }} className="scm-icon" aria-label="Add product" title="Add product">
+                  <Plus size={21} weight="bold" />
+                </Link>
+              )}
               {cleanPath === '/seller/messages' && (
                 <Link to="/seller/assistant" className="scm-icon scm-ai" aria-label="Ask Ate Moormy, your AI assistant" title="Ate Moormy (AI assistant)">
                   <Sparkle size={21} weight="fill" />
@@ -481,11 +495,6 @@ export default function SellerLayout() {
               <CaretLeft size={22} weight="bold" />
             </button>
             <h1 className="scm-backtitle">{phoneTitle}</h1>
-            {cleanPath === '/seller/products' && !editingProduct && (
-              <Link to="/seller/products/new" state={{ fromList: true }} className="scm-icon scm-icon--bar" aria-label="Add product">
-                <Plus size={20} weight="bold" />
-              </Link>
-            )}
             {cleanPath === '/seller/assistant' && (
               <button
                 type="button"
@@ -590,6 +599,9 @@ export default function SellerLayout() {
         <NavLink to="/seller" end className={tabCls}>
           {({ isActive }) => <><House size={24} weight={isActive ? 'fill' : 'regular'} /><span>Home</span></>}
         </NavLink>
+        <NavLink to="/seller/products" end className={tabCls}>
+          {({ isActive }) => <><Package size={24} weight={isActive ? 'fill' : 'regular'} /><span>My products</span></>}
+        </NavLink>
         <NavLink to="/seller/messages" className={tabCls}>
           {({ isActive }) => (
             <>
@@ -643,7 +655,7 @@ const LABELS = {
   '/seller/messages': 'Messages',
   '/seller/assistant': 'Ate Moormy',
   '/seller/support': 'Admin Messages',
-  '/seller/products': 'Products',
+  '/seller/products': 'My Products',
   '/seller/products/new': 'Add Product',
   '/seller/setup': 'Shop setup',
   '/seller/verification': 'Verify identity',
@@ -658,8 +670,8 @@ const LABELS = {
   '/seller/settings': 'Settings',
 };
 
-/** Phone: the four tabs on the bottom bar. */
-const PHONE_TABS = ['/seller', '/seller/messages', '/seller/marketing', '/seller/menu'];
+/** Phone: the five tabs on the bottom bar. */
+const PHONE_TABS = ['/seller', '/seller/products', '/seller/messages', '/seller/marketing', '/seller/menu'];
 
 /** Phone: tabs whose page draws its own shop header (Home, Me). */
 const PHONE_OWN_HEADER = ['/seller', '/seller/menu'];

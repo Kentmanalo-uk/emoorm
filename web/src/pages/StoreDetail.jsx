@@ -235,8 +235,12 @@ export default function StoreDetail() {
       toast.error('Please login to add items to cart');
       return;
     }
-    addItem({ ...product, quantity: 1 });
-    toast.success(`${product.name} added to cart`);
+    try {
+      addItem({ ...product, readyToSell: store.readyToSell, quantity: 1 });
+      toast.success(`${product.name} added to cart`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to add to cart');
+    }
   };
 
   // Phones: the same rules as the product list (options are picked on the
@@ -256,6 +260,7 @@ export default function StoreDetail() {
         storeId: store.id,
         storeName: store.name,
         storeLogo: store.logo || null,
+        readyToSell: store.readyToSell,
         stock: product.stock,
         slug: product.slug,
         categoryId: product.categoryId,
@@ -899,19 +904,12 @@ export default function StoreDetail() {
             <div className="shop-empty">
               <span className="shop-empty-icon"><Package size={isPhone ? 30 : 40} weight="fill" /></span>
               <p>
-                {store.readyToSell === false && !search && activeCategory === 'all'
-                  ? (isOwnStore
-                    ? "Buyers can't see your products yet. Finish setting up your shop in the Seller Center to start selling."
-                    : 'This shop is getting ready. Its products will show here soon.')
-                  : search
+                {search
                     ? `No products match “${search}”.`
                     : activeCategory !== 'all'
                       ? 'No products in this category yet.'
                       : 'This store has no products yet.'}
               </p>
-              {store.readyToSell === false && isOwnStore && (
-                <Link to="/seller/setup" className="shop-empty-btn">Finish shop setup</Link>
-              )}
               {(search || activeCategory !== 'all') && (
                 <button
                   type="button"
@@ -933,6 +931,7 @@ export default function StoreDetail() {
                   product={product}
                   onAdd={() => addToCartPhone(product)}
                   onBuy={() => buyNowPhone(product)}
+                  closed={store.readyToSell === false}
                 />
               ))}
             </div>
@@ -1039,8 +1038,9 @@ function ProductCard({ product, onAddToCart }) {
 }
 
 /** Phones: one product per row, like the reference: photo, name, rating and
- *  sales, price, then add-to-cart and Buy. */
-function PhoneProductRow({ product, onAdd, onBuy }) {
+ *  sales, price, then add-to-cart and Buy (off while the shop is `closed`,
+ *  i.e. not taking orders yet). */
+function PhoneProductRow({ product, onAdd, onBuy, closed = false }) {
   const price = Number(product.price);
   const images = Array.isArray(product.images) ? product.images : [];
   const rating = Number(product.averageRating || 0);
@@ -1071,11 +1071,11 @@ function PhoneProductRow({ product, onAdd, onBuy }) {
         <div className="shop-m-row-foot">
           <span className="shop-m-row-price">₱{price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           <div className="shop-m-row-actions">
-            <button type="button" className="shop-m-row-cart" onClick={onAdd} disabled={soldOut} aria-label={`Add ${product.name} to cart`}>
+            <button type="button" className="shop-m-row-cart" onClick={onAdd} disabled={soldOut || closed} aria-label={`Add ${product.name} to cart`}>
               <ShoppingCart size={18} />
               <Plus size={9} weight="bold" className="shop-m-row-plus" />
             </button>
-            <button type="button" className="shop-m-row-buy" onClick={onBuy} disabled={soldOut}>
+            <button type="button" className="shop-m-row-buy" onClick={onBuy} disabled={soldOut || closed} title={closed ? "This shop isn't taking orders yet" : undefined}>
               Buy
             </button>
           </div>

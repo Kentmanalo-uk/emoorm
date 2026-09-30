@@ -133,6 +133,7 @@ const Products = () => {
         storeId: product.storeId || product.store?.id,
         storeName: product.store?.name,
         storeLogo: product.store?.logoUrl || product.store?.logo || null,
+        readyToSell: product.store?.readyToSell,
         stock: product.stock,
         slug: product.slug,
         categoryId: product.categoryId,

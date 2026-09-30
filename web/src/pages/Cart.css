@@ -1515,8 +1515,8 @@
   }
 
   .cart-suggestion-name {
-    min-height: calc(13px * 1.35 * 2);
-    font-size: 13px;
+    min-height: calc(16px * 1.35 * 2);
+    font-size: 16px;
     font-weight: 400;
     line-height: 1.35;
     color: var(--t-neutral-800, #1f2937);

@@ -284,6 +284,12 @@ model User {
   passwordResetToken  String?   @map("password_reset_token")
   passwordResetExpiry DateTime? @map("password_reset_expiry")
 
+  // Email confirmation for accounts made with a typed email (Google accounts
+  // come confirmed). isVerified is the "email confirmed" flag; the link in the
+  // welcome email carries the token, stored hashed like the reset token.
+  emailVerificationToken  String?   @map("email_verification_token")
+  emailVerificationExpiry DateTime? @map("email_verification_expiry")
+
   // Bumped whenever the password changes, which invalidates every access and
   // refresh token issued before that point. Sessions are stateless JWTs, so
   // without this counter a thief who already held a session kept it after the

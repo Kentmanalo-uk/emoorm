@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';
+import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { useAppGoogleSignIn } from '../lib/appGoogle';
 import useAuthStore from '../store/authStore';
@@ -176,6 +177,10 @@ const Register = () => {
 
       if (token && userData) {
         storeLogin(userData, token, refreshToken);
+        // A typed email gets a confirmation link in its welcome email.
+        if (!googleProfile && userData.isVerified === false) {
+          toast.success(`Welcome to Emoorm! We sent a link to ${userData.email} to confirm your email.`, { duration: 6000 });
+        }
         navigate(safeRedirect || '/', { replace: true });
       } else {
         throw new Error('Invalid response format from server');

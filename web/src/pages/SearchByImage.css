@@ -289,8 +289,8 @@
   }
 
   .sbi-grid .product-name {
-    min-height: calc(13px * 1.35 * 2);
-    font-size: 13px;
+    min-height: calc(16px * 1.35 * 2);
+    font-size: 16px;
     overflow-wrap: anywhere;
   }
 

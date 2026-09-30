@@ -114,7 +114,7 @@ const mergeChoices = (existing, raw) => {
 
 /**
  * @param {Array<{key, label}>} [sellBlockers] - What the shop still needs
- *   before it can sell; while any are left, a product saves as a draft.
+ *   before it can sell; while any are left, buyers see products but cannot order.
  */
 export default function ProductForm({ product = null, categories = [], onCancel, onSaved, sellBlockers = [] }) {
   const editing = !!product;
@@ -351,8 +351,8 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         <div className="pf-note pf-note--draft">
           <Info size={16} />
           <span>
-            Your shop isn't ready to sell yet, so this product is saved as a draft buyers can't see.
-            {' '}It goes live by itself once you finish: {sellBlockers.map((b) => b.label).join(', ')}.
+            Buyers can see this product, but can't order it until your shop is ready to sell.
+            {' '}Still to do: {sellBlockers.map((b) => b.label).join(', ')}.
           </span>
         </div>
       ) : editing && product.status === 'APPROVED' && (
@@ -580,7 +580,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         </button>
         <button type="submit" className="pf-btn pf-btn--primary" disabled={saving}>
           {saving ? <CircleNotch size={17} className="pf-spin" /> : <Check size={17} weight="bold" />}
-          {saving ? <BusyLabel>Saving…</BusyLabel> : editing ? 'Save changes' : sellBlockers?.length ? 'Save as draft' : 'Add product'}
+          {saving ? <BusyLabel>Saving…</BusyLabel> : editing ? 'Save changes' : 'Add product'}
         </button>
       </div>
 

@@ -614,8 +614,8 @@
   }
 }
 
-/* Not live yet: the shop cannot sell, so its products are drafts buyers
-   can't see. The banner says what is left and links to each step. */
+/* Not ready to sell: buyers see the products but cannot order them yet.
+   The banner says what is left and links to each step. */
 .products-notlive {
   display: flex;
   flex-wrap: wrap;
@@ -669,4 +669,121 @@
     width: 100%;
     min-height: 44px;
   }
+}
+
+/* ── Counts in the filter tabs, chips and the phone's filter sheet ── */
+/* The count starts with a space (read as "All 5"); in the chips the flex
+   gap spaces it instead. */
+.products-tab-count {
+  margin-left: 2px;
+  color: var(--t-neutral-400, #9ca3af);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.seller-tab--active .products-tab-count,
+.scm-chip.is-on .products-tab-count {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.products-choice-label {
+  display: inline;
+}
+
+/* ── First product: what to do, and the button to do it ───────── */
+.products-first {
+  gap: 8px;
+  padding: 36px 20px;
+}
+
+.products-first strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.products-first p {
+  max-width: 320px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.products-first .btn-seller-primary {
+  margin-top: 6px;
+}
+
+/* ── Phones: My products as a tab (Home's look) ───────────────── */
+@media (max-width: 768px) {
+  /* What needs doing: Home's notice rows. */
+  .spm-notices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .spm-notice {
+    width: 100%;
+    border: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .spm-notice:active,
+  .spm-notices a.sh-notice:active {
+    background: var(--t-neutral-50, #f9fafb);
+  }
+
+  /* Chips with counts: a little tighter than Orders' so All, Live and
+     Pending fit beside the filter button; they scroll sideways on narrow
+     phones instead of squeezing. */
+  .sc-content .products-tabs.scm-chips {
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sc-content .products-tabs .scm-chip {
+    gap: 5px;
+    padding: 0 13px;
+  }
+
+  .sc-content .products-tabs .scm-chip .products-tab-count {
+    margin-left: 0;
+  }
+
+  /* The filter button: just its icon until a filter from the sheet is on. */
+  .sc-content .products-tabs .scm-chip--more.is-icon {
+    justify-content: center;
+    width: 40px;
+    padding: 0;
+  }
+
+  .sc-content .products-tabs.scm-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sc-content .products-tabs .scm-chip {
+    flex-shrink: 0;
+  }
+
+  .sc-content .products-first {
+    padding: 32px 18px 28px;
+  }
+
+  .sc-content .products-first .btn-seller-primary {
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+    border-radius: 999px;
+    font-size: 15px;
+  }
+}
+
+/* The empty state greys its picture; the button keeps its white icon. */
+.products-first .btn-seller-primary svg {
+  color: currentColor;
 }

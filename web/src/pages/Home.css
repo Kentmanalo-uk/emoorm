@@ -877,7 +877,7 @@
 }
 
 .product-card .product-name {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 400;
   color: var(--t-secondary-950, #212121);
   margin: 0;
@@ -1605,8 +1605,8 @@
   }
 
   .banner-section ~ .products-section .product-name {
-    min-height: calc(13px * 1.35 * 2);
-    font-size: 13px;
+    min-height: calc(16px * 1.35 * 2);
+    font-size: 16px;
     color: var(--t-neutral-800, #1f2937);
     overflow-wrap: anywhere;
   }

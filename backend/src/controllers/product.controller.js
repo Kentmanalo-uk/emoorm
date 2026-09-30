@@ -108,6 +108,7 @@ const getMyProducts = asyncHandler(async (req, res) => {
     pageSize = 20,
     status,
     search,
+    stock,
     sortBy = 'createdAt',
     sortOrder = 'desc',
   } = req.query;
@@ -117,6 +118,7 @@ const getMyProducts = asyncHandler(async (req, res) => {
     pageSize,
     status,
     search,
+    stock,
     sortBy,
     sortOrder,
   };
@@ -131,6 +133,16 @@ const getMyProducts = asyncHandler(async (req, res) => {
     result.pageSize,
     'Your products retrieved successfully'
   );
+});
+
+/**
+ * My products at a glance (seller): counts per status, out of stock, running low
+ * @route GET /api/products/my/summary
+ * @access Private (Seller only)
+ */
+const getMyProductSummary = asyncHandler(async (req, res) => {
+  const summary = await productService.getMyProductSummary(req.user.id);
+  successResponse(res, summary, 'Product summary retrieved successfully');
 });
 
 /**
@@ -296,6 +308,7 @@ module.exports = {
   createProduct,
   getProducts,
   getMyProducts,
+  getMyProductSummary,
   getProductById,
   getProductBySlug,
   updateProduct,

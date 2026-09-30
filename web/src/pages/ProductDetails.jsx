@@ -570,6 +570,10 @@ const ProductDetails = () => {
   const images = parseImages(product.images);
   const gallery = images.length ? images : ['/placeholder-product.png'];
   const isOutOfStock = product.stock === 0;
+  // The shop is still setting up (shopReadiness on the API): its products
+  // are on show, but checkout refuses them until it is ready to sell.
+  const notTakingOrders = product.store?.readyToSell === false;
+  const cannotBuy = isOutOfStock || notTakingOrders;
   // Per-option pricing: the chosen option's price, or the range until one is chosen.
   const pricedGroup = pricedVariation(product.variations);
   const range = priceRange(product);
@@ -923,8 +927,10 @@ const ProductDetails = () => {
                         <Plus size={14} />
                       </button>
                     </div>
-                    <span className={`pdp-stock ${isOutOfStock ? 'is-out' : ''}`} aria-live="polite">
-                      {isOutOfStock ? 'Out of stock' : `${quantity} ${quantity === 1 ? 'item' : 'items'} selected`}
+                    <span className={`pdp-stock ${cannotBuy ? 'is-out' : ''}`} aria-live="polite">
+                      {notTakingOrders
+                        ? "This shop isn't taking orders yet"
+                        : isOutOfStock ? 'Out of stock' : `${quantity} ${quantity === 1 ? 'item' : 'items'} selected`}
                     </span>
                   </div>
                 </div>
@@ -936,7 +942,7 @@ const ProductDetails = () => {
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  disabled={isOutOfStock || isAddingToCart}
+                  disabled={cannotBuy || isAddingToCart}
                   className="pdp-btn pdp-btn-outline"
                 >
                   Buy Now
@@ -944,7 +950,7 @@ const ProductDetails = () => {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  disabled={isOutOfStock || isAddingToCart}
+                  disabled={cannotBuy || isAddingToCart}
                   className="pdp-btn pdp-btn-primary"
                 >
                   {isAddingToCart ? <BusyLabel>Adding…</BusyLabel> : 'Add to Cart'}
@@ -1152,7 +1158,7 @@ const ProductDetails = () => {
             type="button"
             className="pdp-m-addcart"
             onClick={() => setSheetMode('cart')}
-            disabled={isOutOfStock || isAddingToCart}
+            disabled={cannotBuy || isAddingToCart}
             aria-label="Add to cart"
           >
             <ShoppingCart size={22} />
@@ -1162,10 +1168,10 @@ const ProductDetails = () => {
             type="button"
             className="pdp-m-buy"
             onClick={() => setSheetMode('buy')}
-            disabled={isOutOfStock || isAddingToCart}
+            disabled={cannotBuy || isAddingToCart}
           >
-            <span>{isOutOfStock ? 'Out of stock' : 'Buy now'}</span>
-            {!isOutOfStock && <small>{optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}</small>}
+            <span>{notTakingOrders ? 'Not taking orders yet' : isOutOfStock ? 'Out of stock' : 'Buy now'}</span>
+            {!cannotBuy && <small>{optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}</small>}
           </button>
         </div>
       )}

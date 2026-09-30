@@ -1,17 +1,15 @@
 {
   "name": "E-MOORM",
   "package": "shop.emoorm.app",
-  "version": "1.3.0",
-  "versionCode": 4,
+  "version": "1.3.1",
+  "versionCode": 5,
   "minAndroid": "7.0",
-  "file": "/downloads/E-MOORM-1.3.0.apk",
-  "size": 1106554,
-  "sha256": "a5db4bfeff13f32c118eb1faed13f3fce4932805154f1365b25b4881cd175326",
+  "file": "/downloads/E-MOORM-1.3.1.apk",
+  "size": 1197618,
+  "sha256": "08ebfee3687efe4fab9210c8b4d7a3a3bce9beb600283ffea6397747f3da0a6a",
   "certificateSha256": "9F:60:02:EF:10:02:55:0F:51:DA:63:3E:B5:CF:3B:0D:37:28:2C:B8:08:6C:AF:0F:57:0C:C4:AD:8F:A0:AB:22",
-  "released": "2026-09-28",
+  "released": "2026-09-29",
   "notes": [
-    "Picks up where you left off: close the app and it reopens on the same page, scrolled to the same spot.",
-    "Links to emoorm.shop open straight in the app.",
-    "Always up to date: anything new on emoorm.shop shows up in the app right away."
+    "A fresh look: the E-MOORM basket is now the app's icon, on the home screen and when it opens."
   ]
 }

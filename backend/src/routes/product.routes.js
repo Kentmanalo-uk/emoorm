@@ -43,6 +43,14 @@ router.get(
   productController.getMyProducts
 );
 
+// Seller's products at a glance (counts) — must come before /:id
+router.get(
+  '/my/summary',
+  authenticate,
+  authorize('SELLER'),
+  productController.getMyProductSummary
+);
+
 // Seller-only bulk action route — must come before /:id
 router.patch(
   '/bulk',

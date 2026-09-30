@@ -398,6 +398,16 @@ const resetPassword = asyncHandler(async (req, res) => {
   successResponse(res, null, 'Password has been reset successfully.');
 });
 
+const verifyEmail = asyncHandler(async (req, res) => {
+  const result = await authService.verifyEmail(req.body?.token);
+  successResponse(res, result, 'Your email is confirmed.');
+});
+
+const resendEmailVerification = asyncHandler(async (req, res) => {
+  const result = await authService.resendEmailVerification(req.user.id);
+  successResponse(res, result, `We sent a new link to ${result.email}.`);
+});
+
 const setUserRole = asyncHandler(async (req, res) => {
   const { role, municipalityId } = req.body;
   const ALLOWED = ['BUYER', 'SELLER', 'MUNICIPAL_ADMIN', 'SUPER_ADMIN'];
@@ -495,6 +505,8 @@ module.exports = {
   changePassword,
   forgotPassword,
   resetPassword,
+  verifyEmail,
+  resendEmailVerification,
   applyForSeller,
   getSellerApplication,
   saveSellerApplicationDraft,

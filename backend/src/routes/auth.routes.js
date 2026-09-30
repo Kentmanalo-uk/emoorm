@@ -82,6 +82,21 @@ router.post(
   authController.resetPassword
 );
 
+// Email confirmation: the link from the welcome email (no sign-in needed),
+// and a fresh link for the signed-in account.
+router.post(
+  '/verify-email',
+  passwordResetLimiter,
+  authController.verifyEmail
+);
+
+router.post(
+  '/resend-verification',
+  authenticate,
+  forgotPasswordIpLimiter,
+  authController.resendEmailVerification
+);
+
 // Protected routes (require authentication)
 router.post(
   '/logout',

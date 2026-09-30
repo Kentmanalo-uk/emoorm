@@ -1,6 +1,6 @@
 const prisma = require('../config/database');
 const config = require('../config/env');
-const { READY_STORE } = require('./shopReadiness.service');
+const { VISIBLE_STORE } = require('./shopReadiness.service');
 
 /**
  * SEO Service
@@ -194,7 +194,7 @@ const breadcrumbLd = (crumbs) => ({
  */
 const productMeta = async (slug) => {
   const product = await prisma.product.findFirst({
-    where: { slug, deletedAt: null, status: 'APPROVED', store: { isApproved: true, ...READY_STORE } },
+    where: { slug, deletedAt: null, status: 'APPROVED', store: VISIBLE_STORE },
     select: {
       name: true, slug: true, description: true, price: true, stock: true,
       images: true, updatedAt: true,

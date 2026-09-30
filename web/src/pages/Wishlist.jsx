@@ -25,8 +25,12 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
 
   const handleAddToCart = (product) => {
     if (!isAuthenticated) { navigate('/login'); return; }
-    addItem({ ...product, quantity: 1 });
-    toast.success(`${product.name} added to cart`);
+    try {
+      addItem({ ...product, quantity: 1 });
+      toast.success(`${product.name} added to cart`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to add to cart');
+    }
   };
 
   const handleRemove = (product) => {

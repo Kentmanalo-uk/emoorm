@@ -5,6 +5,7 @@ import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import './OrderReceipt.css';
 import { ReceiptSkeleton } from '../components/ui/PageSkeletons';
+import AppLogo from '../components/AppLogo';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateFmt = (d) => new Date(d).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -87,7 +88,7 @@ export default function OrderReceipt() {
       <div className="receipt-paper">
         <header className="receipt-header">
           <div className="receipt-brand">
-            <img src="/logo.png" alt="Emoorm" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <AppLogo alt="Emoorm" />
             <div>
               <div className="receipt-brand-name">EMOORM</div>
               <div className="receipt-brand-sub">Oriental Mindoro Marketplace</div>

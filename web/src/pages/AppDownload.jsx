@@ -32,8 +32,8 @@ import './AppDownload.css';
  * says Installed, or Update once a newer version is out.
  */
 
-const ICON = '/icon-512x512-maskable.png';
-const ICON_SMALL = '/icon-192x192-maskable.png';
+const ICON = '/icon-512x512.png';
+const ICON_SMALL = '/icon-192x192.png';
 const FILE_NAME = release.file.split('/').pop();
 const SIZE_MB = (release.size / 1e6).toFixed(1);
 

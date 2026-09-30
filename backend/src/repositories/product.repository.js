@@ -208,6 +208,37 @@ const findBySlug = async (slug) => {
 
 const SORTABLE_COLUMNS = new Set(['createdAt', 'price', 'name']);
 
+// Products whose stock a seller should watch (archived and suspended ones cannot sell).
+const STOCK_WATCH_STATUSES = ['APPROVED', 'PENDING', 'HIDDEN'];
+// Out of stock, or at/below the product's own low-stock mark.
+const RESTOCK_WHERE = () => ({
+  OR: [{ stock: { lte: 0 } }, { stock: { lte: prisma.product.fields.lowStockThreshold } }],
+});
+
+/**
+ * A shop's products at a glance, for the seller: how many in each status,
+ * and how many are out of stock or running low.
+ * @param {String} storeId
+ * @returns {Promise<{ total: number, byStatus: Object, outOfStock: number, lowStock: number }>}
+ */
+const getStoreSummary = async (storeId) => {
+  const base = { storeId, deletedAt: null };
+  const watched = { ...base, status: { in: STOCK_WATCH_STATUSES } };
+  const [groups, outOfStock, lowStock] = await Promise.all([
+    prisma.product.groupBy({ by: ['status'], where: base, _count: { _all: true } }),
+    prisma.product.count({ where: { ...watched, stock: { lte: 0 } } }),
+    prisma.product.count({ where: { ...watched, stock: { gt: 0, lte: prisma.product.fields.lowStockThreshold } } }),
+  ]);
+  const byStatus = { APPROVED: 0, PENDING: 0, HIDDEN: 0, SUSPENDED: 0, ARCHIVED: 0 };
+  for (const g of groups) byStatus[g.status] = g._count._all;
+  return {
+    total: Object.values(byStatus).reduce((sum, n) => sum + n, 0),
+    byStatus,
+    outOfStock,
+    lowStock,
+  };
+};
+
 /**
  * Find all products with filters and pagination
  * @param {Object} options - Query options
@@ -229,6 +260,7 @@ const findAll = async (options = {}) => {
     minPrice,
     maxPrice,
     search,
+    stockFilter,
     sortBy = 'createdAt',
     sortOrder = 'desc',
   } = options;
@@ -241,6 +273,13 @@ const findAll = async (options = {}) => {
   if (categoryId) where.categoryId = categoryId;
   if (municipalityId) where.municipalityId = municipalityId;
   if (status) where.status = status;
+
+  // A seller's "needs restock" view: out of stock or at/below the product's
+  // own low-stock mark, among products that can still sell.
+  if (stockFilter) {
+    if (!status) where.status = { in: STOCK_WATCH_STATUSES };
+    where.AND = [...(where.AND || []), stockFilter === 'out' ? { stock: { lte: 0 } } : RESTOCK_WHERE()];
+  }
 
   if (storeIsActive !== undefined || storeIsSuspended !== undefined || storeIsApproved !== undefined) {
     where.store = {};
@@ -532,4 +571,5 @@ module.exports = {
   bulkUpdateStatus,
   bulkSoftDelete,
   getStatsForIds,
+  getStoreSummary,
 };

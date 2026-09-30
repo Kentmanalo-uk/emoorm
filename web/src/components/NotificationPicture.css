@@ -1,0 +1,75 @@
+/* A notification's picture (NotificationPicture.jsx): the product, shop or
+   person, with a small badge in the kind's colour; or the kind's icon. */
+.ntp {
+  --ntp-size: 44px;
+  --ntp-color: var(--t-primary-600, #059669);
+  position: relative;
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: var(--ntp-size);
+  height: var(--ntp-size);
+}
+
+.ntp.is-green { --ntp-color: var(--t-primary-600, #059669); }
+.ntp.is-blue { --ntp-color: #3b82f6; }
+.ntp.is-orange { --ntp-color: #f97316; }
+.ntp.is-amber { --ntp-color: #f59e0b; }
+.ntp.is-pink { --ntp-color: var(--t-accent-500, #ec4899); }
+.ntp.is-red { --ntp-color: var(--t-danger-500, #ef4444); }
+.ntp.is-slate { --ntp-color: #64748b; }
+.ntp.is-purple { --ntp-color: #8b5cf6; }
+
+/* No picture: the icon on its colour. */
+.ntp--icon {
+  border-radius: 28%;
+  background: var(--ntp-bg, var(--ntp-color));
+  color: var(--ntp-ink, #fff);
+}
+
+/* Products and shops: a rounded square; people: a circle. */
+.ntp img,
+.ntp-initials {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.ntp--thing img {
+  border-radius: 24%;
+  outline: 1px solid rgba(15, 23, 42, 0.06);
+  outline-offset: -1px;
+}
+
+.ntp--person img,
+.ntp--person .ntp-initials {
+  border-radius: 50%;
+}
+
+.ntp-initials {
+  display: grid;
+  place-items: center;
+  background: var(--t-primary-100, #d1fae5);
+  color: var(--t-primary-700, #047857);
+  font-size: calc(var(--ntp-size) * 0.36);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* What it is: a small round badge on the corner, ringed in white. */
+.ntp-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: calc(var(--ntp-size) * 0.46);
+  height: calc(var(--ntp-size) * 0.46);
+  min-width: 18px;
+  min-height: 18px;
+  border-radius: 50%;
+  background: var(--ntp-color);
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--ntp-ring, #fff);
+}

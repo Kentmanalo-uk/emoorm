@@ -32,7 +32,7 @@ const PROFILE_PARTS = { description: 'a short description', location: 'your map 
 export const describeStep = (step, { municipality } = {}) => {
   const base = {
     optional: Boolean(step.optional),
-    // Until these are done the shop's products are not live (see the API's
+    // Until these are done buyers cannot order from the shop (see the API's
     // shopReadiness.service).
     neededToSell: Boolean(step.neededToSell),
     tone: step.done ? 'done' : 'todo',

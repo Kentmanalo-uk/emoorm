@@ -1001,7 +1001,7 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 2px;
+  border-radius: 0;
   color: var(--t-neutral-400, #9ca3af);
   opacity: 0;
   transition: opacity 0.15s, background-color 0.15s, color 0.15s;
@@ -1302,7 +1302,7 @@
   display: flex;
   background-color: white;
   border: 1px solid var(--t-neutral-300, #d1d5db);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -1460,7 +1460,7 @@
   .header-search {
     display: flex;
     height: 42px;
-    border-radius: 7px;
+    border-radius: 0;
   }
 
   .header-search-input {
@@ -1538,7 +1538,7 @@
   .header-search {
     display: flex;
     height: 44px;
-    border-radius: 8px;
+    border-radius: 0;
   }
 }
 
@@ -1556,11 +1556,12 @@
 }
 
 
-/* ── Home header on phones: one rounded search pill ─────────────────
-   Logo, then a pill holding the text, the camera and a round green search
-   button, instead of a grey box butted against a square button. On focus
-   the pill turns white with a green edge, and the suggestions open as a
-   full-width sheet under the header with larger rows for thumbs.
+/* ── Home header on phones: one flat search bar ─────────────────────
+   Logo, then a square-cornered grey bar holding the text and the camera,
+   with the square green search button flush against its end, as on
+   desktop. On focus the bar turns white with a green edge, and the
+   suggestions open as a full-width sheet under the header with larger rows
+   for thumbs.
    (The .header box is transformed for hide-on-scroll, so a fixed child is
    placed against the header itself: top: 100% sits right under it.) */
 @media (max-width: 768px) {
@@ -1569,17 +1570,18 @@
   }
 
   .header.is-home .header-search {
-    align-items: center;
+    align-items: stretch;
     height: 44px;
-    padding: 0 4px 0 0;
-    border: 1.5px solid transparent;
-    border-radius: 999px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
     background: var(--t-neutral-100, #f3f4f6);
-    transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    transition: background-color 0.15s, box-shadow 0.15s;
   }
 
+  /* The green edge is a ring outside the bar, so the button stays flush. */
   .header.is-home .header-search:focus-within {
-    border-color: var(--t-primary-500, #10b981);
+    box-shadow: 0 0 0 1.5px var(--t-primary-500, #10b981);
     background: var(--t-neutral-0, #fff);
   }
 
@@ -1597,8 +1599,8 @@
   .header.is-home .header-search-camera {
     width: 40px;
     min-width: 40px;
-    height: 40px;
-    border-radius: 50%;
+    height: auto;
+    border-radius: 0;
   }
 
   .header.is-home .header-search-camera:active {
@@ -1606,11 +1608,11 @@
   }
 
   .header.is-home .header-search-button {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
-    margin-left: 2px;
-    border-radius: 50%;
+    width: 44px;
+    min-width: 44px;
+    height: auto;
+    margin-left: 0;
+    border-radius: 0;
   }
 
   .header.is-home .header-search-button svg {
@@ -1627,7 +1629,7 @@
     padding: 8px 0 12px;
     border: none;
     border-top: 1px solid var(--t-neutral-100, #f3f4f6);
-    border-radius: 0 0 18px 18px;
+    border-radius: 0;
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
     animation: header-suggest-in 180ms ease-out both;
   }

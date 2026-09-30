@@ -44,9 +44,13 @@
     />
     <meta name="twitter:image" content="/icon-512x512.png" />
 
-    <link rel="icon" type="image/png" sizes="96x96" href="/icon-96x96.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
-    <link rel="apple-touch-icon" href="/icon-192x192.png" />
+    <!-- Brand icons (web/scripts/make-brand-icons.cjs makes them from icon/).
+         The tab shows the official logo; the SVG switches to the white logo
+         when the browser is dark. Home screens and the installed app show
+         the app icon: the white logo on the brand green. -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
 
     <!-- Fonts are render-blocking, so the connection is opened early. -->

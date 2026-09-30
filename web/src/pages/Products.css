@@ -413,7 +413,7 @@
 }
 
 .product-name {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 500;
   color: var(--t-neutral-800, #1f2937);
   margin: 0;
@@ -887,8 +887,8 @@
   }
 
   .products-page .products-grid:not(.products-list) .product-name {
-    min-height: calc(13px * 1.35 * 2);
-    font-size: 13px;
+    min-height: calc(16px * 1.35 * 2);
+    font-size: 16px;
     font-weight: 400;
     -webkit-line-clamp: 2;
     overflow-wrap: anywhere;

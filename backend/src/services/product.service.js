@@ -304,22 +304,26 @@ const isPubliclyVisible = (product) =>
 
 /**
  * Apply the detail visibility rule and shape the record for the viewer.
- * The owner and admins see the full record; everyone else sees the public
- * shape and only when the listing is live: approved, in a public shop that
- * is ready to sell (shopReadiness.service).
+ * The owner and admins see the full record; everyone else, signed in or not,
+ * sees the public shape when the product is approved in a public shop.
+ * `store.readyToSell` says whether the shop takes orders yet
+ * (shopReadiness.service); checkout enforces it.
  */
 const presentDetail = async (product, viewerId, viewerRole) => {
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);
   }
   const isOwner = !!viewerId && product.store?.owner?.id === viewerId;
-  if (isOwner || isAdminRole(viewerRole)) {
-    return stripStoreInternals(product);
-  }
-  if (!isPubliclyVisible(product) || !(await shopReadiness.isReady(product.storeId || product.store?.id))) {
+  if (!isOwner && !isAdminRole(viewerRole) && !isPubliclyVisible(product)) {
     throw new ApiError('Product not found', 404);
   }
-  return toPublicProduct(product, { withOwner: true });
+  const shaped = isOwner || isAdminRole(viewerRole)
+    ? stripStoreInternals(product)
+    : toPublicProduct(product, { withOwner: true });
+  if (shaped.store) {
+    shaped.store = { ...shaped.store, readyToSell: await shopReadiness.isReady(product.storeId || product.store.id) };
+  }
+  return shaped;
 };
 
 // ── Listing option normalisation ────────────────────────────────────────
@@ -364,6 +368,8 @@ const normalizeListOptions = (options = {}) => {
     sortBy: SORT_BY.has(options.sortBy) ? options.sortBy : 'createdAt',
     sortOrder: options.sortOrder === 'asc' ? 'asc' : 'desc',
     status: PRODUCT_STATUSES.has(options.status) ? options.status : undefined,
+    // Seller lists only: 'out' (out of stock) or 'restock' (out of stock or running low).
+    stockFilter: options.stock === 'out' || options.stock === 'restock' ? options.stock : undefined,
   };
 };
 
@@ -477,13 +483,22 @@ const getProducts = async (rawOptions) => {
     options.excludeOwnerId = options.userRole === 'SELLER' && !options.storeId
       ? options.userId
       : undefined;
-    // Only shops that can take orders (shopReadiness.service).
-    options.storeWhere = shopReadiness.READY_STORE;
   }
 
-  const shape = (result) => (options.isAdmin
-    ? { ...result, products: result.products.map(stripStoreInternals) }
-    : { ...result, products: result.products.map((p) => toPublicProduct(p)) });
+  // Each product's store says whether it takes orders yet, so cards can hold
+  // back "add to cart". Asked after the cache, one query per page.
+  const shape = async (result) => {
+    const products = options.isAdmin
+      ? result.products.map(stripStoreInternals)
+      : result.products.map((p) => toPublicProduct(p));
+    const ready = await shopReadiness.readyIds(products.map((p) => p.storeId || p.store?.id));
+    return {
+      ...result,
+      products: products.map((p) => (p.store
+        ? { ...p, store: { ...p.store, readyToSell: ready.has(p.storeId || p.store.id) } }
+        : p)),
+    };
+  };
 
   // Only the public catalogue is shared between callers. An admin listing is
   // private and must be fresh for moderation; a seller's feed hides their own
@@ -533,6 +548,18 @@ const getMyProducts = async (userId, rawOptions) => {
   const options = normalizeListOptions(rawOptions);
   const result = await productRepository.findByStore(store.id, options);
   return { ...result, products: result.products.map(stripStoreInternals) };
+};
+
+/**
+ * The seller's products at a glance: counts per status, out of stock, running low.
+ * @param {String} userId - Seller's user ID
+ */
+const getMyProductSummary = async (userId) => {
+  const store = await storeRepository.findByOwnerId(userId);
+  if (!store) {
+    throw new ApiError('You do not have a store', 404);
+  }
+  return productRepository.getStoreSummary(store.id);
 };
 
 /**
@@ -907,7 +934,7 @@ const searchByImageBuffer = async (buffer, { threshold = 20, limit = 24 } = {}) 
       deletedAt: null,
       status: 'APPROVED',
       imageHash: { not: null },
-      store: { isActive: true, isSuspended: false, isApproved: true, ...shopReadiness.READY_STORE },
+      store: shopReadiness.VISIBLE_STORE,
     },
     include: {
       store: { select: { id: true, name: true, slug: true } },
@@ -971,11 +998,6 @@ const bulkUpdateProducts = async (userId, ids, action) => {
   if (!bulkAction) {
     throw new ApiError('Invalid bulk action', 400);
   }
-  // Showing a product is publishing it: not before buyers can order from the
-  // shop (shopReadiness.service). Hiding is always allowed.
-  if (action === 'UNHIDE' && !(await shopReadiness.isReady(store.id))) {
-    throw new ApiError('Finish setting up your shop first. Buyers can see your products once it is ready to sell.', 400);
-  }
 
   const updatedCount = await productRepository.bulkUpdateStatus(
     ids,
@@ -992,6 +1014,7 @@ module.exports = {
   getProductBySlug,
   getProducts,
   getMyProducts,
+  getMyProductSummary,
   updateProduct,
   adjustStock,
   deleteProduct,

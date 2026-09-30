@@ -1,6 +1,7 @@
 /**
- * Small interface sounds, made in the browser (no audio files to load):
- * a soft chime when a notification pops up. Kept quiet and short.
+ * Small interface sounds: soft chimes made in the browser for the pop-ups,
+ * and for a new notification "Moormy!" (a chime and a voice saying the
+ * name, public/sounds/moormy.mp3). Kept quiet and short.
  *
  * Browsers only let a page make sound after the person has touched it, so
  * the audio starts on the first tap or key press; a notification before
@@ -38,10 +39,35 @@ const audio = () => {
   return ctx;
 };
 
+// Recorded sounds, fetched and decoded once (after the first tap, so the
+// first notification is ready to play).
+const CLIPS = { moormy: '/sounds/moormy.mp3' };
+const buffers = {};
+const loading = {};
+const loadClip = (c, name) => {
+  if (buffers[name]) return Promise.resolve(buffers[name]);
+  if (!loading[name]) {
+    loading[name] = fetch(CLIPS[name])
+      .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(`HTTP ${res.status}`))))
+      // The callback form also works on older iPhones.
+      .then((data) => new Promise((resolve, reject) => { c.decodeAudioData(data, resolve, reject); }))
+      .then((buffer) => {
+        buffers[name] = buffer;
+        return buffer;
+      })
+      .catch(() => {
+        delete loading[name];
+        return null;
+      });
+  }
+  return loading[name];
+};
+
 /** Starts (or restarts) the audio; called on the person's own taps and key presses. */
 const unlock = () => {
   const c = audio();
   if (c && c.state !== 'running') c.resume().catch(() => {});
+  if (c) Object.keys(CLIPS).forEach((name) => loadClip(c, name));
 };
 
 if (typeof window !== 'undefined') {
@@ -93,10 +119,27 @@ const SOUNDS = {
   info: (c, t) => {
     note(c, { freq: 1318.5, at: t, length: 0.3, gain: 0.08 });
   },
+  // A new notification: "Moormy!" (a chime, then the name). Until the clip
+  // has loaded, the notice note stands in and the clip loads for next time.
+  moormy: (c, t) => {
+    const buffer = buffers.moormy;
+    if (!buffer) {
+      loadClip(c, 'moormy');
+      SOUNDS.info(c, t);
+      return;
+    }
+    const source = c.createBufferSource();
+    const level = c.createGain();
+    source.buffer = buffer;
+    level.gain.value = 0.3; // near the chimes' loudness: a voice, not an alarm
+    source.connect(level);
+    level.connect(master);
+    source.start(t);
+  },
 };
 
 /**
- * @param {'success'|'error'|'info'} kind
+ * @param {'success'|'error'|'info'|'moormy'} kind
  */
 export const playSound = (kind) => {
   if (muted()) return;

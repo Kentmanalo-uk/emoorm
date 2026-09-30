@@ -123,7 +123,7 @@ const startSelling = (snap, lang = 'en') => {
   } else {
     lines.push(tl ? 'Hindi pa makakaorder ang mga buyer sa shop mo. Kulang pa:' : "Buyers can't order from your shop yet. Still needed:");
     lines.push(...missingList(snap, lang));
-    lines.push(tl ? 'Kusang magiging live ang mga produkto mo kapag natapos ang mga ito.' : 'Your products go live by themselves once these are done.');
+    lines.push(tl ? 'Nakikita na ng mga buyer ang mga produkto mo; makakaorder sila kapag natapos ang mga ito.' : 'Buyers can already see your products; they can order once these are done.');
   }
   if (!s.approved) {
     lines.push(tl
@@ -196,44 +196,45 @@ const notShowing = (snap, lang = 'en') => {
   }
   if (!s.approved) {
     return tl
-      ? '**Private** ang shop mo hangga\'t hindi pa ito naaaprubahan ng municipal admin (karaniwang 1–2 business days), kaya hindi pa ito nakikita ng mga buyer. Puwede ka pa ring magdagdag ng produkto; lalabas ang mga ito kapag naaprubahan ka na at ready to sell.'
-      : 'Your shop is **private** until your municipal admin approves it (usually 1–2 business days), so buyers can\'t see it yet. You can keep adding products meanwhile; they show once you\'re approved and ready to sell.';
+      ? '**Private** ang shop mo hangga\'t hindi pa ito naaaprubahan ng municipal admin (karaniwang 1–2 business days), kaya hindi pa ito nakikita ng mga buyer. Puwede ka pa ring magdagdag ng produkto; lalabas ang mga ito kapag naaprubahan ka na.'
+      : 'Your shop is **private** until your municipal admin approves it (usually 1–2 business days), so buyers can\'t see it yet. You can keep adding products meanwhile; they show once you\'re approved.';
   }
   if (!s.open) {
     return tl
       ? 'Naka-**Inactive** ang shop mo, kaya nakatago ito at ang mga produkto nito. I-on ito sa Me › Shop profile › Name & description (sa computer: ang **Store is Active** switch sa Shop Profile).'
       : 'Your shop is turned **Inactive**, which hides it and its products. Turn it on in Me › Shop profile › Name & description (computers: the **Store is Active** switch in Shop Profile).';
   }
-  if (snap.readyToSell === false) {
-    return [
-      tl
-        ? 'Hindi makita ng mga buyer ang mga produkto mo dahil hindi pa ready to sell ang shop mo. Kulang pa:'
-        : "Buyers can't see your products because your shop isn't ready to sell yet. Still needed:",
-      ...missingList(snap, lang),
-      tl ? 'Kusang magiging live ang mga produkto mo kapag natapos ang mga ito.' : 'Your products go live by themselves once these are done.',
-    ].join('\n');
-  }
   if (!snap.products) {
     return tl
       ? 'Wala ka pang produkto. I-tap ang **Home › Add product** (sa computer: **Products › Add New**); live agad ang mga bagong produkto.'
       : "You haven't added any products yet. Tap **Home › Add product** (computers: **Products › Add New**); new products go live right away.";
   }
+  // Buyers see the products either way; a shop that is not ready to sell
+  // only cannot take orders yet.
+  const orderNote = snap.readyToSell === false
+    ? [
+      tl
+        ? 'Pero hindi pa makakaorder ang mga buyer dahil hindi pa ready to sell ang shop mo. Kulang pa:'
+        : "Buyers can't order yet, though: your shop isn't ready to sell. Still needed:",
+      ...missingList(snap, lang),
+    ]
+    : [];
   if (snap.liveProducts < snap.products) {
-    return tl
+    return [tl
       ? `${snap.liveProducts} sa ${snap.products} produkto mo ang live. Ang iba ay maaaring **hidden** (i-tap ang Show), **suspended** ng admin, o **archived**. Tingnan ang mga tab sa **My products**.`
-      : `${snap.liveProducts} of your ${plural(snap.products, 'product')} ${snap.liveProducts === 1 ? 'is' : 'are'} live. The others may be **hidden** (tap Show), **suspended** by an admin, or **archived**. Check the tabs in **My products**.`;
+      : `${snap.liveProducts} of your ${plural(snap.products, 'product')} ${snap.liveProducts === 1 ? 'is' : 'are'} live. The others may be **hidden** (tap Show), **suspended** by an admin, or **archived**. Check the tabs in **My products**.`, ...orderNote].join('\n');
   }
-  return tl
+  return [tl
     ? `Live ang shop mo at lahat ng ${snap.products} produkto mo. Nakikita sila ng mga buyer sa search, categories at shop page mo. Makakatulong ang malinaw na litrato, magandang pangalan at patas na delivery fee.`
-    : `Your shop and all ${plural(snap.products, 'product')} are live. Buyers find them through search, categories and your shop page. Clear photos, good names and fair delivery fees help them stand out.`;
+    : `Your shop and all ${plural(snap.products, 'product')} are live. Buyers find them through search, categories and your shop page. Clear photos, good names and fair delivery fees help them stand out.`, ...orderNote].join('\n');
 };
 
 const notShowingLinks = (snap) => {
   if (!snap.store) return [{ label: 'Apply to sell', to: '/seller/apply' }];
   if (snap.store.suspended) return ADMIN_LINKS;
   if (!snap.store.open) return [{ label: 'Name & description', to: '/seller/store/about' }];
-  if (snap.readyToSell === false) return uniqueLinks([...snap.missing.map((k) => MISSING[k]?.link).filter(Boolean), { label: 'Shop setup', to: '/seller/setup' }]).slice(0, 3);
   if (!snap.products) return [{ label: 'Add product', to: '/seller/products/new' }];
+  if (snap.readyToSell === false) return uniqueLinks([...snap.missing.map((k) => MISSING[k]?.link).filter(Boolean), { label: 'Shop setup', to: '/seller/setup' }]).slice(0, 3);
   return [{ label: 'My products', to: '/seller/products' }];
 };
 
@@ -247,7 +248,7 @@ const TOPICS = [
     related: ['delivery', 'payments', 'add-product'],
     answer: startSelling,
     links: startSellingLinks,
-    facts: 'A shop is ready to sell when: if it delivers, it has at least one delivery area and a fee decided for every area; if it offers pickup, it has a pickup spot; and buyers have a way to pay (cash on, or a QR uploaded). Until then its products are hidden from buyers and checkout says "This shop isn\'t taking orders yet." Products go live by themselves once the shop is ready. The "Complete your shop" card on Home (computers: Shop setup in the sidebar) lists every step: logo and banner, description and map pin, delivery areas, delivery fees, pickup spot, payment QR (optional while cash is on), first product, verify identity and get approved. Verifying the ID is not needed to sell, but admins approve verified shops faster. A new shop is private until the municipal admin approves it, usually in 1–2 business days.',
+    facts: 'A shop is ready to sell when: if it delivers, it has at least one delivery area and a fee decided for every area; if it offers pickup, it has a pickup spot; and buyers have a way to pay (cash on, or a QR uploaded). Until then buyers can see its products, but checkout says "This shop isn\'t taking orders yet." Orders open by themselves once the shop is ready. The "Complete your shop" card on Home (computers: Shop setup in the sidebar) lists every step: logo and banner, description and map pin, delivery areas, delivery fees, pickup spot, payment QR (optional while cash is on), first product, verify identity and get approved. Verifying the ID is not needed to sell, but admins approve verified shops faster. A new shop is private until the municipal admin approves it, usually in 1–2 business days.',
   },
   {
     id: 'today',
@@ -273,7 +274,7 @@ const TOPICS = [
         '4. **Choices** (optional): e.g. Size, Weight or Color; one type can have its own price per choice and one its own stock.',
         '5. **Price and stock**, then **Returns** (optional: no returns, 7-day returns, perishable goods, or your own words).',
         '6. Tap **Add product**.',
-        'New products go live right away, with no admin review, once your shop is ready to sell. Until then the button says **Save as draft** and the product waits.',
+        'New products go live right away, with no admin review. Buyers can order them once your shop is ready to sell.',
       ].join('\n'),
       tl: [
         'Para magdagdag ng produkto:',
@@ -283,7 +284,7 @@ const TOPICS = [
         '4. **Choices** (optional): hal. Size, Weight o Color; may isang uri na puwedeng may sariling presyo bawat choice, at isa na may sariling stock.',
         '5. **Price and stock**, tapos **Returns** (optional: walang returns, 7-day returns, perishable goods, o sarili mong salita).',
         '6. I-tap ang **Add product**.',
-        'Live agad ang mga bagong produkto, walang review ng admin, basta ready to sell ang shop mo. Kung hindi pa, **Save as draft** ang nakasulat sa button at maghihintay muna ang produkto.',
+        'Live agad ang mga bagong produkto, walang review ng admin. Makakaorder ang mga buyer kapag ready to sell na ang shop mo.',
       ].join('\n'),
     },
   },
@@ -456,7 +457,7 @@ const TOPICS = [
     related: ['start-selling', 'add-product', 'more-sales'],
     answer: notShowing,
     links: notShowingLinks,
-    facts: 'Buyers see a product only when the shop is approved, active (not Inactive), not suspended and ready to sell, and the product itself is live (not hidden, pending approval, suspended or archived). Products of a shop that is not ready to sell show "Not live yet". A new shop is private until the municipal admin approves it.',
+    facts: 'Buyers see a product only when the shop is approved, active (not Inactive) and not suspended, and the product itself is live (not hidden, pending approval, suspended or archived). Signed-in or not makes no difference. A shop that is not ready to sell still shows its products, but buyers cannot order them yet. A new shop is private until the municipal admin approves it.',
   },
   {
     id: 'returns',

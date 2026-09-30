@@ -109,7 +109,7 @@ export default function SellerSetup() {
                 : 'A few quick steps and your shop is ready for buyers. Tap a step to do it.'}
             </p>
             {!setup.complete && setup.readyToSell === false && (
-              <p className="ss-hero-sell">Your products go live once the steps marked “Needed to sell” are done.</p>
+              <p className="ss-hero-sell">Buyers can already see your products. They can order once the steps marked “Needed to sell” are done.</p>
             )}
           </div>
           <div className="ss-progress">

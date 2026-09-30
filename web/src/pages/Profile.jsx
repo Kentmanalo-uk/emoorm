@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
-  ShieldCheck, ShieldWarning, Question,
+  ShieldCheck, ShieldWarning, Question, EnvelopeSimple,
   Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
@@ -110,6 +111,22 @@ const Profile = () => {
     return badges[status] || { label: status, color: 'var(--t-neutral-500, #6b7280)', icon: null };
   };
 
+  // A typed-email account stays "Unverified" until it opens the link in its
+  // welcome email (Google accounts come confirmed).
+  const emailUnverified = (profile?.isVerified ?? user?.isVerified) === false;
+  const [resending, setResending] = useState(false);
+  const resendConfirmation = async () => {
+    setResending(true);
+    try {
+      const res = await axios.post('/auth/resend-verification');
+      toast.success(`We sent a new link to ${res.data?.email || 'your email'}.`);
+    } catch (err) {
+      toast.error(err.message || 'Could not send a new link. Try again in a minute.');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const identityMeta = IDENTITY_META[identityStatus] || IDENTITY_META.NOT_VERIFIED;
   const IdentityIcon = identityMeta.Icon;
 
@@ -157,11 +174,28 @@ const Profile = () => {
             </span>
             <span className="pf-m-id-text">
               <strong>{name}</strong>
-              {email && <span>{email}</span>}
+              {email && (
+                <span className="pf-email-line">
+                  <span className="pf-email-text">{email}</span>
+                  {emailUnverified && <b className="pf-unverified">Unverified</b>}
+                </span>
+              )}
               <em><Edit size={12} weight="bold" /> Edit profile</em>
             </span>
             <ChevronRight size={18} className="pf-m-row-chev" />
           </Link>
+          {emailUnverified && (
+            <div className="pf-confirm" role="status">
+              <EnvelopeSimple size={20} weight="fill" className="pf-confirm-icon" />
+              <span className="pf-confirm-text">
+                <b>Confirm your email</b>
+                <span>Open the link we sent to your inbox.</span>
+              </span>
+              <button type="button" className="pf-confirm-btn" onClick={resendConfirmation} disabled={resending}>
+                {resending ? 'Sending…' : 'Resend'}
+              </button>
+            </div>
+          )}
           <div className="pf-m-stats">
             <Link to="/profile/followed-stores"><strong>{followedStores.length}</strong><span>Following</span></Link>
             <Link to="/profile/wishlist"><strong>{wishlistCount}</strong><span>Wishlist</span></Link>
@@ -269,7 +303,17 @@ const Profile = () => {
           </div>
           <div className="profile-header-info">
             <h2 className="profile-name">{profile?.fullName || user?.fullName}</h2>
-            <p className="profile-email">{profile?.email || user?.email}</p>
+            <p className="profile-email">
+              {profile?.email || user?.email}
+              {emailUnverified && (
+                <>
+                  <b className="pf-unverified">Unverified</b>
+                  <button type="button" className="pf-resend-link" onClick={resendConfirmation} disabled={resending}>
+                    {resending ? 'Sending…' : 'Resend confirmation email'}
+                  </button>
+                </>
+              )}
+            </p>
             <div className="profile-stats">
               <div className="profile-stat-item">
                 <span className="profile-stat-number">{followedStores.length}</span>

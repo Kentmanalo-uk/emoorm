@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const notificationRepository = require('../repositories/notification.repository');
 const notificationTarget = require('../utils/notificationTarget');
+const { attachPictures } = require('../utils/notificationPicture');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -123,7 +124,8 @@ const getUserNotifications = async (userId, options) => {
   const result = await notificationRepository.findByUserId({ ...options, userId });
   return {
     ...result,
-    notifications: await notificationTarget.attachTargets(result.notifications),
+    // Where each one leads, and the picture it shows (product, person or shop).
+    notifications: await attachPictures(await notificationTarget.attachTargets(result.notifications)),
   };
 };
 
@@ -145,7 +147,8 @@ const getNotificationById = async (id, userId) => {
     throw new ApiError('You do not have permission to view this notification', 403);
   }
 
-  return notificationTarget.attachTarget(notification);
+  const [withPicture] = await attachPictures([await notificationTarget.attachTarget(notification)]);
+  return withPicture;
 };
 
 /**

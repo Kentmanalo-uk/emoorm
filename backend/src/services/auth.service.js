@@ -26,6 +26,7 @@ const {
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
   sendWelcomeEmail,
+  sendEmailConfirmationEmail,
   sendSellerApplicationReceivedEmail,
   sendSellerApprovedEmail,
   sendSellerRejectedEmail,
@@ -78,6 +79,79 @@ const { ApiError } = require('../middleware/errorHandler');
  * Contains business logic for authentication operations
  */
 
+// ── Email confirmation ──────────────────────────────────────────────────
+// A typed-email account starts unconfirmed (isVerified false). Its welcome
+// email carries a one-time link; opening it confirms the address. The token
+// is stored hashed, like the password reset token.
+
+const EMAIL_CONFIRM_HOURS = 48;
+// "Resend" is refused until this long after the last link went out.
+const EMAIL_CONFIRM_RESEND_SECONDS = 60;
+
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+/**
+ * A new confirmation link for this account. It replaces any earlier one once
+ * `save()` runs; resend calls it only after the email went out, so a failed
+ * send leaves the earlier link working and the wait untouched.
+ */
+const newEmailConfirmation = (user) => {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiry = new Date(Date.now() + EMAIL_CONFIRM_HOURS * 60 * 60 * 1000);
+  return {
+    url: `${config.frontendUrl.replace(/\/$/, '')}/verify-email?token=${token}`,
+    save: () => userRepository.setEmailVerificationToken(user.id, hashToken(token), expiry),
+  };
+};
+
+/** Issue and store a link at once (sign-up). */
+const issueEmailConfirmation = async (user) => {
+  const link = newEmailConfirmation(user);
+  await link.save();
+  return link.url;
+};
+
+/**
+ * Confirm an email from the link's token.
+ * @param {String} token - Plain token from the email link
+ * @returns {Promise<{email: String}>}
+ */
+const verifyEmail = async (token) => {
+  const user = token ? await userRepository.findByEmailVerificationToken(hashToken(String(token))) : null;
+  if (!user) {
+    throw new ApiError('This confirmation link is invalid or has expired. Sign in and send a new one from your profile.', 400);
+  }
+  await userRepository.markEmailVerified(user.id);
+  return { email: user.email };
+};
+
+/**
+ * Send a fresh confirmation link to the signed-in account's email.
+ * @param {String} userId
+ * @returns {Promise<{email: String}>}
+ */
+const resendEmailVerification = async (userId) => {
+  const user = await userRepository.findEmailVerificationState(userId);
+  if (!user) throw new ApiError('User not found', 404);
+  if (user.isVerified) throw new ApiError('Your email is already confirmed.', 400);
+  const issuedAt = user.emailVerificationExpiry
+    ? user.emailVerificationExpiry.getTime() - EMAIL_CONFIRM_HOURS * 60 * 60 * 1000
+    : 0;
+  const wait = Math.ceil((issuedAt + EMAIL_CONFIRM_RESEND_SECONDS * 1000 - Date.now()) / 1000);
+  if (wait > 0) {
+    throw new ApiError(`We just sent one. You can ask for another in ${wait} second${wait === 1 ? '' : 's'}.`, 429);
+  }
+  const link = newEmailConfirmation(user);
+  try {
+    await sendEmailConfirmationEmail({ user, confirmUrl: link.url });
+  } catch (err) {
+    console.error('[email] confirmation resend failed:', err.message);
+    throw new ApiError("We couldn't send the email right now. Please try again in a few minutes.", 422);
+  }
+  await link.save();
+  return { email: user.email };
+};
+
 /**
  * Register a new user
  * @param {Object} userData - User registration data
@@ -114,7 +188,8 @@ const register = async (userData) => {
   // A full address is also the first delivery address (My Addresses, checkout).
   await addressService.saveProfileAddress(user.id, { fullName, contactNumber, municipalityId, barangay, address });
 
-  sendInBackground('welcome', () => sendWelcomeEmail({ user }));
+  // The welcome email asks them to confirm the address they typed.
+  sendInBackground('welcome', async () => sendWelcomeEmail({ user, confirmUrl: await issueEmailConfirmation(user) }));
 
   // Generate tokens
   const tokens = generateTokens(user);
@@ -1042,6 +1117,8 @@ const resetPassword = async (token, newPassword) => {
     tokenVersion: { increment: 1 },
   });
   await userRepository.clearPasswordResetToken(user.id);
+  // The reset link reached their inbox, so the email is confirmed as well.
+  if (!user.isVerified) await userRepository.markEmailVerified(user.id);
 
   await notifyPasswordChanged(user);
 };
@@ -1296,6 +1373,8 @@ module.exports = {
   changePassword,
   forgotPassword,
   resetPassword,
+  verifyEmail,
+  resendEmailVerification,
   applyForSeller,
   getSellerApplication,
   saveSellerApplicationDraft,

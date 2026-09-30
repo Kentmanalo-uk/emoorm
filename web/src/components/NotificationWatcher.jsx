@@ -9,8 +9,9 @@ import { notificationHref } from '../lib/notificationLink';
  * New notifications pop up while the site is open. Every half minute (and
  * when the tab is looked at again) it asks how many are unread; when that
  * went up, it fetches the newest and shows the new one as a banner
- * (AppToaster): a message with its sender's picture, anything else with its
- * own icon. Tapping it opens where it leads and marks it read.
+ * (AppToaster) with its picture: the product for an order, the sender for a
+ * message, else its own icon; and it says "Moormy!". Tapping it opens where
+ * it leads and marks it read.
  *
  * Nothing pops up for what was already there when the site opened, nor for
  * the page the person is already looking at. The bell and the sidebars
@@ -54,7 +55,10 @@ export default function NotificationWatcher() {
     let newest = null;
     const seen = new Set();
 
-    const check = async () => {
+    // `look`: fetch the newest even if the count did not grow. After a read
+    // (here, the bell, a page) the count drops, so one arriving meanwhile
+    // would leave it level and go unnoticed.
+    const check = async (look = false) => {
       if (stopped || document.visibilityState === 'hidden') return;
       try {
         const countRes = await axios.get('/notifications/unread/count');
@@ -62,7 +66,7 @@ export default function NotificationWatcher() {
         const first = newest === null;
         const grew = lastCount !== null && count > lastCount;
         lastCount = count;
-        if (!first && !grew) return;
+        if (!first && !grew && !look) return;
 
         const listRes = await axios.get('/notifications', { params: { page: 1, pageSize: 5 } });
         if (stopped) return;
@@ -89,6 +93,7 @@ export default function NotificationWatcher() {
             title: n.title,
             message: n.message,
             sender: senderOf(n),
+            picture: n.picture || null,
             href,
             more: fresh.length - 1,
             onOpen: () => {
@@ -104,15 +109,19 @@ export default function NotificationWatcher() {
     };
 
     check();
-    const timer = window.setInterval(check, EVERY_MS);
+    const timer = window.setInterval(() => check(), EVERY_MS);
     const onVisible = () => {
       if (document.visibilityState === 'visible') check();
     };
+    // Something was read or changed somewhere on the site.
+    const onChanged = () => check(true);
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('emoorm:notifications', onChanged);
     return () => {
       stopped = true;
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('emoorm:notifications', onChanged);
     };
   }, [userId]);
 

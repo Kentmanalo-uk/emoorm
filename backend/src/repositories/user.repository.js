@@ -572,6 +572,31 @@ const clearPasswordResetToken = async (userId) => {
   });
 };
 
+const setEmailVerificationToken = async (userId, hashedToken, expiry) => prisma.user.update({
+  where: { id: userId },
+  data: { emailVerificationToken: hashedToken, emailVerificationExpiry: expiry },
+});
+
+const findByEmailVerificationToken = async (hashedToken) => prisma.user.findFirst({
+  where: {
+    emailVerificationToken: hashedToken,
+    emailVerificationExpiry: { gt: new Date() },
+    deletedAt: null,
+  },
+});
+
+/** What resending a confirmation link needs to know. */
+const findEmailVerificationState = async (id) => prisma.user.findFirst({
+  where: { id, deletedAt: null },
+  select: { id: true, email: true, fullName: true, isVerified: true, emailVerificationExpiry: true },
+});
+
+/** The email is confirmed: set the flag and retire any outstanding link. */
+const markEmailVerified = async (userId) => prisma.user.update({
+  where: { id: userId },
+  data: { isVerified: true, emailVerificationToken: null, emailVerificationExpiry: null },
+});
+
 /**
  * Find the minimal fields needed to authorize and resolve a KYC photo request.
  * Deliberately excludes everything not needed for that check.
@@ -635,5 +660,9 @@ module.exports = {
   setPasswordResetToken,
   findByResetToken,
   clearPasswordResetToken,
+  setEmailVerificationToken,
+  findByEmailVerificationToken,
+  findEmailVerificationState,
+  markEmailVerified,
   findKycRecordById,
 };

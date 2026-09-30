@@ -283,19 +283,31 @@ const footer = `
       Emoorm will never ask you for your password, OTP or PIN.
     </p>`;
 
-/** Sent once, right after an account is created (email or Google sign-up). */
-const sendWelcomeEmail = async ({ user }) => {
+/**
+ * Sent once, right after an account is created. A typed-email sign-up gets
+ * `confirmUrl` and the email asks first of all to confirm the address; a
+ * Google sign-up (already confirmed by Google) gets none.
+ */
+const sendWelcomeEmail = async ({ user, confirmUrl = null }) => {
   const name = user.fullName || 'there';
   const shopUrl = appUrl('/products');
   const verifyUrl = appUrl('/profile/verification');
   const sellUrl = appUrl('/seller/apply');
-  const subject = 'Welcome to Emoorm!';
+  const subject = confirmUrl ? 'Welcome to Emoorm! Please confirm your email' : 'Welcome to Emoorm!';
 
   const text = [
     `Hi ${name},`,
     '',
     "Welcome to Emoorm, Oriental Mindoro's local online marketplace.",
-    'Your account is ready. Here is how to get started:',
+    ...(confirmUrl
+      ? [
+        'First, please confirm this is your email address (the link works for 48 hours):',
+        confirmUrl,
+        '',
+        "If you didn't create an Emoorm account, you can ignore this email.",
+      ]
+      : ['Your account is ready.']),
+    'Here is how to get started:',
     '',
     `- Browse fresh produce, local delicacies and crafts: ${shopUrl}`,
     `- Verify your identity once so you can check out: ${verifyUrl}`,
@@ -307,17 +319,44 @@ const sendWelcomeEmail = async ({ user }) => {
 
   const html = layout(`
     ${heading(`Welcome to Emoorm, ${name}!`)}
-    ${para("Your account is ready. Emoorm connects you with farmers, fishers, artisans and food producers across Oriental Mindoro, all in one place.")}
+    ${confirmUrl ? `
+    ${para('Please confirm this is your email address. The link works for 48 hours.')}
+    ${button(confirmUrl, 'Confirm my email')}
+    ${para("If you didn't create an Emoorm account, you can ignore this email.")}` : ''}
+    ${para(`${confirmUrl ? 'Emoorm' : 'Your account is ready. Emoorm'} connects you with farmers, fishers, artisans and food producers across Oriental Mindoro, all in one place.`)}
     <ul style="margin:0 0 16px;padding-left:20px;color:#374151;">
       <li style="margin-bottom:6px;">Browse fresh produce, local delicacies and handmade crafts.</li>
       <li style="margin-bottom:6px;"><a href="${escapeHtml(verifyUrl)}" style="color:#059669;">Verify your identity</a> once so you can check out.</li>
       <li>Have something to sell? <a href="${escapeHtml(sellUrl)}" style="color:#059669;">Open your own shop</a>.</li>
     </ul>
-    ${button(shopUrl, 'Start shopping')}
+    ${confirmUrl ? '' : button(shopUrl, 'Start shopping')}
     ${para('Salamat, and happy shopping!')}
     ${footer}
   `);
 
+  return sendMail({ to: user.email, subject, html, text });
+};
+
+/** A fresh confirmation link, asked for from the profile ("Resend email"). */
+const sendEmailConfirmationEmail = async ({ user, confirmUrl }) => {
+  const name = user.fullName || 'there';
+  const subject = 'Confirm your Emoorm email';
+  const text = [
+    `Hi ${name},`,
+    '',
+    'Please confirm this is your email address (the link works for 48 hours):',
+    confirmUrl,
+    '',
+    "If you didn't ask for this, you can ignore this email.",
+    '— The Emoorm team',
+  ].join('\n');
+  const html = layout(`
+    ${heading('Confirm your email')}
+    ${para(`Hi ${escapeHtml(name)}, please confirm this is your email address. The link works for 48 hours.`)}
+    ${button(confirmUrl, 'Confirm my email')}
+    ${para("If you didn't ask for this, you can ignore this email.")}
+    ${footer}
+  `);
   return sendMail({ to: user.email, subject, html, text });
 };
 
@@ -426,6 +465,7 @@ module.exports = {
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
   sendWelcomeEmail,
+  sendEmailConfirmationEmail,
   sendSellerApplicationReceivedEmail,
   sendSellerApprovedEmail,
   sendSellerRejectedEmail,

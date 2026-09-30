@@ -389,7 +389,7 @@ export default function SellerDashboard() {
                 <div className="sd-kpi-side">
                   <div className="sd-kpi-metrics">
                     <StatCard label="Completed Orders" value={analyticsAvailable ? formatNumber(stats.completedOrders) : '—'} compact />
-                    <StatCard label="Active Products" value={formatNumber(liveProducts(stats, setup))} compact />
+                    <StatCard label="Active Products" value={formatNumber(liveProducts(stats))} compact />
                     <StatCard label="Avg. Order Value" value={analyticsAvailable ? `₱${formatNumber(stats.avgOrderValue)}` : '—'} compact />
                   </div>
                   <section className="sd-stat sd-kpi-quick" aria-label="Quick Actions">
@@ -693,13 +693,13 @@ const HOME_TOOLS = [
   { to: '/seller/products/new', label: 'Add product', Icon: PlusCircle, tone: 'teal', tour: 'add-product' },
 ];
 
-/** Products buyers can see: none while the shop is not ready to sell. */
-const liveProducts = (stats, setup) => (setup?.readyToSell === false ? 0 : stats.activeProducts);
+/** Products buyers can see (ready to sell or not: that only decides ordering). */
+const liveProducts = (stats) => stats.activeProducts;
 
 /**
- * The one thing Home asks for first, or null: the shop is private, its
- * products are not live yet because something buyers need to order is
- * missing, or the ID needs doing. The rest is the "Complete your shop" card.
+ * The one thing Home asks for first, or null: the shop is private, buyers
+ * cannot order yet because something an order needs is missing, or the ID
+ * needs doing. The rest is the "Complete your shop" card.
  */
 const homeNotice = (store, setup) => {
   const identity = setup?.steps?.find((step) => step.key === 'identity');
@@ -718,7 +718,7 @@ const homeNotice = (store, setup) => {
     return {
       Icon: WarningCircle,
       tone: 'amber',
-      title: "Your products aren't live yet",
+      title: "Buyers can't order yet",
       hint: `Finish: ${blockers.map((b) => b.label).join(', ')}`,
       cta: 'Finish',
       to: blockers[0].to || '/seller/setup',
@@ -857,7 +857,7 @@ function PhoneHome({
 }) {
   const { share, shareSheet } = useShare();
   const notice = homeNotice(store, setup);
-  const live = liveProducts(stats, setup);
+  const live = liveProducts(stats);
   const name = store?.name || 'My shop';
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
   const trend = salesByDay.slice(-14).map((day) => Number(day.total || 0));

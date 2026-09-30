@@ -7,14 +7,15 @@ import {
   Package, Prohibit, Receipt, ShoppingCart, SpinnerGap, Star, Storefront, Tag, Ticket, UserCircle,
   UserPlus, WarningCircle, X,
 } from '@phosphor-icons/react';
-import { resolveImg } from '../../lib/media';
+import NotificationPicture from '../NotificationPicture';
 import { playSound } from '../../lib/uiSound';
 import './AppToaster.css';
 
 /**
  * Pop-ups, iPhone style: a frosted banner that glides down from the top.
  * On the left, what it is about (a report's flag, an order's box…) or, for a
- * message, the sender's picture with a small message badge; beside it a
+ * notification, its picture: the product of an order, the sender of a
+ * message, with a small badge saying what it is; beside it a
  * small line saying what kind of news it is, then the news itself in bold
  * and any detail under it. Pop-ups that lead somewhere open it when tapped
  * (the new notifications from NotificationWatcher, and toasts given an
@@ -105,28 +106,12 @@ const splitMessage = (text) => {
 /** The sound a pop-up makes as it appears (none while loading). */
 const soundOf = (item) => {
   if (item.type === 'loading') return null;
+  // A new notification says "Moormy!"; the site's own replies keep their chimes.
+  if (item.notification) return 'moormy';
   if (item.type === 'success') return 'success';
   if (item.type === 'error') return 'error';
   return 'info';
 };
-
-const initialsOf = (name) => String(name || '?').trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('')
-  .toUpperCase();
-
-/** A message's sender: their picture (or initials) with a small message badge. */
-function SenderAvatar({ name, photo, BadgeIcon }) {
-  const [broken, setBroken] = useState(false);
-  return (
-    <span className="app-toast-avatar" aria-hidden="true">
-      {photo && !broken
-        ? <img src={resolveImg(photo)} alt="" onError={() => setBroken(true)} />
-        : <span className="app-toast-initials">{initialsOf(name)}</span>}
-      <span className="app-toast-avatar-badge">
-        <BadgeIcon size={11} weight="fill" />
-      </span>
-    </span>
-  );
-}
 
 /**
  * One banner. The outer box glides in and out; the card inside follows a
@@ -216,13 +201,10 @@ function AppToast({ item }) {
     const n = item.notification;
     const look = NOTIFICATION_LOOK[n.type] || { Icon: Bell, label: 'Notification', tone: 'green' };
     const sender = n.sender;
-    const visual = sender
-      ? <SenderAvatar name={sender.name} photo={sender.photo} BadgeIcon={look.Icon} />
-      : (
-        <span className={`app-toast-icon is-${look.tone}`} aria-hidden="true">
-          <look.Icon size={21} weight="fill" />
-        </span>
-      );
+    // Its picture: the product, the shop or the person (the API's), or the
+    // sender for a message sent before pictures were worked out.
+    const picture = n.picture || (sender ? { url: sender.photo || null, name: sender.name, kind: 'person' } : null);
+    const visual = <NotificationPicture picture={picture} Icon={look.Icon} tone={look.tone} size={42} className="app-toast-picture" />;
     return (
       <Banner
         item={item}
