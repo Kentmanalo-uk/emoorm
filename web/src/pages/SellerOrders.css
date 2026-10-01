@@ -1110,3 +1110,8 @@
   cursor: pointer;
 }
 .so-filter-btn .scm-chip-dot { position: absolute; top: 6px; right: 6px; }
+
+/* The order that just moved to this tab. */
+@keyframes so-moved { from { background: #d1fae5; } to { background: transparent; } }
+tr.is-moved, tr.is-moved > td { animation: so-moved 3s ease-out; }
+tr.is-moved { box-shadow: inset 3px 0 0 var(--t-primary-600, #059669); }

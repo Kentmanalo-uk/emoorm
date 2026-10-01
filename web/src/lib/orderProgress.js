@@ -250,8 +250,8 @@ export const countBuyerTabs = (orders = []) => orders.reduce((acc, o) => {
 export const SELLER_TABS = [
   { key: 'all', label: 'All' },
   { key: 'PENDING', label: 'New' },
-  { key: 'CONFIRMED', label: 'Confirmed' },
-  { key: 'PREPARING', label: 'Preparing' },
+  // Confirmed: being packed (older orders marked "Preparing" are here too).
+  { key: 'CONFIRMED', label: 'Confirmed', status: 'CONFIRMED,PREPARING', counts: ['CONFIRMED', 'PREPARING'] },
   { key: 'TO_SHIP', label: 'To ship' },
   { key: 'SHIPPED', label: 'Shipped' },
   { key: 'OUT_FOR_DELIVERY', label: 'Out for delivery' },
@@ -263,7 +263,7 @@ export const SELLER_TABS = [
 
 // Other ways a link may name a tab (older links, Seller Home).
 const SELLER_ALIASES = {
-  new: 'PENDING', unpaid: 'CONFIRMED', to_ship: 'TO_SHIP', shipping: 'SHIPPED', picked_up: 'DELIVERED', ready: 'READY_FOR_PICKUP',
+  new: 'PENDING', unpaid: 'CONFIRMED', preparing: 'CONFIRMED', to_ship: 'TO_SHIP', shipping: 'SHIPPED', picked_up: 'DELIVERED', ready: 'READY_FOR_PICKUP',
 };
 export const sellerTabFrom = (value) => {
   const v = String(value || '');
@@ -271,6 +271,10 @@ export const sellerTabFrom = (value) => {
   if (hit) return hit.key;
   return SELLER_ALIASES[v.toLowerCase()] || 'all';
 };
+
+/** The tab an order with this status is listed under. */
+export const sellerTabOf = (status) => SELLER_TABS.find((t) => t.key !== 'all'
+  && (t.status || t.key).split(',').includes(status))?.key || 'all';
 
 /** How many orders a tab holds, from the server's per-status counts. */
 export const sellerTabCount = (tab, byStatus = {}) => (tab.counts || [tab.key]).reduce((n, st) => n + (byStatus[st] || 0), 0);
@@ -333,8 +337,8 @@ export const sellerNext = (o) => {
       text: pickup
         ? 'Get it ready, then tap Ready for pickup so the buyer knows to come.'
         : courier
-          ? `Pack it, then hand it to ${courier} and scan the waybill (the buyer chose ${courier}).`
-          : 'Pack it, then tap Out for delivery when you set off.',
+          ? `Pack it, then tap Packed: ready to ship. After that you hand it to ${courier} (the buyer chose ${courier}).`
+          : 'Pack it, then tap Packed: ready to ship.',
       due: '',
     };
   }

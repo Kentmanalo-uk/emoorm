@@ -17,7 +17,7 @@ import ProofPhotoSheet, { OrderProof } from '../components/orders/ProofPhotoShee
 import ShipOrderSheet from '../components/orders/ShipOrderSheet';
 import CourierTracking from '../components/orders/CourierTracking';
 import {
-  SELLER_TABS, sellerTabFrom, sellerTabCount, sellerNext,
+  SELLER_TABS, sellerTabFrom, sellerTabCount, sellerTabOf, sellerNext,
 } from '../lib/orderProgress';
 import '../components/orders/OrderStatusPanel.css';
 import Spinner from '../components/ui/Spinner';
@@ -50,7 +50,7 @@ const STATUS_MAP = {
 const NEXT_STEP = {
   DELIVERY: {
     PENDING: 'CONFIRMED',
-    CONFIRMED: 'PREPARING',
+    CONFIRMED: 'TO_SHIP',
     PREPARING: 'TO_SHIP',
     TO_SHIP: (o) => (o.courierId ? 'SHIPPED' : 'OUT_FOR_DELIVERY'),
     OUT_FOR_DELIVERY: 'DELIVERED',
@@ -58,7 +58,7 @@ const NEXT_STEP = {
   },
   PICKUP: {
     PENDING: 'CONFIRMED',
-    CONFIRMED: 'PREPARING',
+    CONFIRMED: 'READY_FOR_PICKUP',
     PREPARING: 'READY_FOR_PICKUP',
     READY_FOR_PICKUP: 'PICKED_UP',
     READY: 'COMPLETED',
@@ -175,6 +175,22 @@ export default function SellerOrders() {
     setPage(1);
   };
 
+  // After a step the order is in another tab: go there with it, and pick
+  // it out, so the seller sees where it went.
+  const [movedId, setMovedId] = useState(null);
+  const moveToTab = (orderId, status, note) => {
+    const tab = sellerTabOf(status);
+    const label = SELLER_TABS.find((t) => t.key === tab)?.label || STATUS_MAP[status]?.label || status;
+    toast.success(note ? `${note}. Moved to ${label}.` : `Moved to ${label}`);
+    setMovedId(orderId);
+    if (tab !== activeTab) selectTab(tab);
+    setTimeout(() => setMovedId((id) => (id === orderId ? null : id)), 3500);
+  };
+  useEffect(() => {
+    if (!movedId || isLoading) return;
+    document.getElementById(`so-row-${movedId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [movedId, isLoading, orders]);
+
   const applyFilter = (setter) => (value) => {
     setter(value);
     setPage(1);
@@ -246,7 +262,7 @@ export default function SellerOrders() {
     setUpdatingId(orderId);
     try {
       const res = await axios.put(`/orders/${orderId}/status`, { status: newStatus, ...(proofUrl ? { proofUrl } : {}) });
-      toast.success(`Order marked as ${STATUS_MAP[newStatus]?.label || newStatus}`);
+      moveToTab(orderId, res.data?.status || newStatus);
       applyOrderUpdate(orderId, {
         status: res.data?.status || newStatus,
         paymentStatus: res.data?.paymentStatus,
@@ -352,7 +368,7 @@ export default function SellerOrders() {
         shippedAt: res.data?.shippedAt,
         courier,
       });
-      toast.success('Order shipped. The buyer can now track it.');
+      moveToTab(orderId, res.data?.status || 'SHIPPED', 'Shipped. The buyer can now track it');
       setShipRequest(null);
       return true;
     } catch (err) {
@@ -549,7 +565,8 @@ export default function SellerOrders() {
                     return (
                       <tr
                         key={order.id}
-                        className={selectedOrder?.id === order.id ? 'row-selected' : ''}
+                        id={`so-row-${order.id}`}
+                        className={`${selectedOrder?.id === order.id ? 'row-selected' : ''}${movedId === order.id ? ' is-moved' : ''}`.trim()}
                       >
                         <td className="order-num">
                           <div>#{order.orderNumber || order.id.slice(-6).toUpperCase()}</div>
@@ -618,14 +635,6 @@ export default function SellerOrders() {
                           <span className={`seller-badge seller-badge--solid ${s.cls}`}>
                             {s.label}
                           </span>
-                          {(() => {
-                            const next = sellerNext(order);
-                            return next.short && !['completed', 'cancelled'].includes(next.short.toLowerCase()) && next.short !== 'Done' ? (
-                              <div className={`so-next is-${next.tone}`}>
-                                <span>{next.short}</span>{next.due && <small>by {next.due}</small>}
-                              </div>
-                            ) : null;
-                          })()}
                         </td>
                         <td>
                           <div className="order-row-actions">
