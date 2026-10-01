@@ -1,0 +1,102 @@
+{
+  "fill": {
+    "solid": "srgb:0.01961,0.36471,0.02745,1.00000"
+  },
+  "fill-specializations": [
+    {
+      "value": {
+        "solid": "srgb:0.01961,0.36471,0.02745,1.00000"
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": "system-dark"
+    }
+  ],
+  "groups": [
+    {
+      "name": "Letter",
+      "layers": [
+        {
+          "name": "letter-e",
+          "image-name": "letter-e.svg",
+          "glass": true,
+          "hidden": false
+        }
+      ],
+      "lighting": "individual",
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": true,
+        "value": 0.15
+      }
+    },
+    {
+      "name": "Bag",
+      "layers": [
+        {
+          "name": "bag-side",
+          "image-name": "bag-side.svg",
+          "glass": true,
+          "hidden": false
+        },
+        {
+          "name": "bag",
+          "image-name": "bag.svg",
+          "glass": true,
+          "hidden": false
+        }
+      ],
+      "lighting": "individual",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      }
+    },
+    {
+      "name": "Handle",
+      "layers": [
+        {
+          "name": "collars",
+          "image-name": "collars.svg",
+          "glass": true,
+          "hidden": false
+        },
+        {
+          "name": "handle-stripes",
+          "image-name": "handle-stripes.svg",
+          "glass": true,
+          "hidden": false
+        },
+        {
+          "name": "handle",
+          "image-name": "handle.svg",
+          "glass": true,
+          "hidden": false
+        }
+      ],
+      "lighting": "individual",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.4
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": true,
+        "value": 0.35
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}

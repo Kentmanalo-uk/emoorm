@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="side" gradientUnits="userSpaceOnUse" x1="114.8" y1="1453.0" x2="896.2" y2="1012.9">
+      <stop offset="0.021" stop-color="#ACD68F"/>
+      <stop offset="0.063" stop-color="#B6DB9D"/>
+      <stop offset="0.104" stop-color="#BFDEA5"/>
+      <stop offset="0.146" stop-color="#C5E1B1"/>
+      <stop offset="0.229" stop-color="#D0E8C1"/>
+      <stop offset="0.271" stop-color="#D3E9C3"/>
+      <stop offset="0.354" stop-color="#E0EFD5"/>
+      <stop offset="0.396" stop-color="#E4F2D9"/>
+      <stop offset="0.437" stop-color="#EBF4E1"/>
+      <stop offset="0.521" stop-color="#F2F8F0"/>
+      <stop offset="0.604" stop-color="#F9FEF8"/>
+      <stop offset="0.646" stop-color="#FCFEF8"/>
+      <stop offset="0.729" stop-color="#FFFFFF"/>
+      <stop offset="0.979" stop-color="#FFFFFF"/>
+      
+    </linearGradient>
+    <linearGradient id="front" gradientUnits="userSpaceOnUse" x1="601.2" y1="870.4" x2="1623.0" y2="1579.8">
+      <stop offset="0.021" stop-color="#F1FAE7"/>
+      <stop offset="0.188" stop-color="#F4FBED"/>
+      <stop offset="0.229" stop-color="#F7FDF5"/>
+      <stop offset="0.354" stop-color="#FFFFFD"/>
+      <stop offset="0.521" stop-color="#FFFFFF"/>
+      <stop offset="0.979" stop-color="#FFFFFF"/>
+      
+    </linearGradient>
+    <radialGradient id="letter" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="812.3" gradientTransform="translate(1344.9 909.7) rotate(-43.27) scale(1 0.7380)">
+      <stop offset="0.000" stop-color="#329306"/>
+      <stop offset="0.144" stop-color="#329306"/>
+      <stop offset="0.296" stop-color="#288709"/>
+      <stop offset="0.448" stop-color="#1B7807"/>
+      <stop offset="0.509" stop-color="#1A7609"/>
+      <stop offset="0.752" stop-color="#0D6608"/>
+      <stop offset="0.934" stop-color="#065E08"/>
+      <stop offset="0.964" stop-color="#065E08"/>
+      
+    </radialGradient>
+    <clipPath id="handle-clip"><path d="M624.9 529.3C622.4 510.5 634 490 641.7 473.1C665 422.2 699.6 376.6 735.9 334.4C803.9 255.3 916.9 178.9 1021.3 162.7C1104.1 149.9 1190.6 171.4 1261.2 215.2C1294.1 235.6 1324.7 261.3 1350.3 290.4C1395.6 341.9 1432.2 398.7 1456.1 463.3C1460.7 475.5 1476.4 510.3 1475.6 521.4C1475.4 524.6 1473.8 525.9 1472.8 528.6C1470.3 529.9 1468.9 531.6 1465.9 532.1C1459.1 533.3 1404.9 529.2 1398.3 527.1L1393.2 524.1C1383.6 507.3 1380.4 481.2 1372.3 462.3C1356.9 426.4 1335.4 393.5 1309.2 364.5C1280.5 332.7 1249.5 302.6 1213.4 279.2C1194.5 267 1173.8 257.8 1152.5 250.6C1032.5 210.2 918.1 282.9 842.7 371.4C832.5 383.4 821.9 395.4 812.7 408.3C793.7 435.2 778.1 464.8 763.5 494.1L755 512C752.1 519.7 750.5 529.1 746.3 536.1L742.2 540.4L734.9 543.4C719.9 546.4 672.8 540.9 655.4 539.2C641.2 537.7 635.2 540.5 624.9 529.3Z"/></clipPath>
+    <clipPath id="bag-clip"><path d="M434 592L716.2 592L716.2 601L1500 602.4L1634.1 610L1734.7 1340C1741 1385.1 1754 1432.9 1734.5 1476.8C1719.2 1511.1 1684.4 1530.9 1653.6 1549.8C1589.3 1589.5 1523.3 1626.4 1454.2 1657.1C1277.4 1735.7 1093.4 1799.1 906.3 1848.2C797.6 1876.6 685.4 1902.6 573.1 1911.3C534.3 1914.3 502 1902.1 466.5 1888.2C435.8 1876.1 404.9 1864.3 374.2 1852.1C325.1 1832.6 280.9 1818 261.6 1763.3C257.7 1752.3 255.4 1740.7 255.2 1729C254.4 1691.2 271.5 1600.7 278.1 1560Z"/></clipPath>
+  </defs>
+  <g transform="translate(138.15 124.88) scale(0.37385)"><path id="bag" fill="url(#front)" d="M434 592
+           L716.2 592
+           L716.2 601
+           L1500 602.4
+           L1634.1 610
+           L1734.7 1340
+           C1741 1385.1 1754 1432.9 1734.5 1476.8
+           C1719.2 1511.1 1684.4 1530.9 1653.6 1549.8
+           C1589.3 1589.5 1523.3 1626.4 1454.2 1657.1
+           C1277.4 1735.7 1093.4 1799.1 906.3 1848.2
+           C797.6 1876.6 685.4 1902.6 573.1 1911.3
+           C534.3 1914.3 502 1902.1 466.5 1888.2
+           C435.8 1876.1 404.9 1864.3 374.2 1852.1
+           C325.1 1832.6 280.9 1818 261.6 1763.3
+           C257.7 1752.3 255.4 1740.7 255.2 1729
+           C254.4 1691.2 271.5 1600.7 278.1 1560
+           Z"/></g>
+</svg>

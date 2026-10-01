@@ -18,6 +18,10 @@
  *     app's download page): the white logo on the brand green.
  *   - Browser tab: the green logo; with a dark browser theme the SVG favicon
  *     switches to the white logo so it stays visible.
+ *   - Native iOS app (iOS 26 Liquid Glass): mobile/assets/app.icon, the white
+ *     logo split into depth layers ("e", bag, handle) on the green, for Icon
+ *     Composer / Xcode / Expo `ios.icon`. Web apps can't be layered: iOS lays
+ *     its glass over the flat apple-touch-icon, which is tuned for it.
  *
  * Run it again after the logo changes, from the repo root:
  *
@@ -44,6 +48,13 @@ const LOGO_APP = 0.68; // square app icons (any, iPhone, download page)
 const LOGO_MASKABLE = 0.64; // maskable: stays inside the 80% safe circle
 const LOGO_ROUND = 0.62; // round icons (Android 7 launchers)
 const LOGO_ADAPTIVE = 0.453; // Android adaptive layer: 49dp of the 72dp shown
+// iPhone home-screen web app: iOS 26 lays Liquid Glass over this flat icon
+// (web clips can't be layered) and its lower lens band smears what is near
+// the bottom edge, so the logo sits smaller and a little higher.
+const LOGO_IOS_WEB = 0.6;
+const IOS_WEB_LIFT = 0.03; // share of the icon the logo is raised by
+// Native iOS app icon (Icon Composer .icon): the logo's height on the 1024pt canvas.
+const LOGO_IOS_LAYERED = 0.64;
 
 const CLEAR = { r: 0, g: 0, b: 0, alpha: 0 };
 const written = [];
@@ -87,6 +98,28 @@ const rendered = async (m) => {
   return { png: crop, box: { x: x0 / k, y: y0 / k, w: (x1 - x0 + 1) / k, h: (y1 - y0 + 1) / k } };
 };
 
+/**
+ * The logo as one shape with the "e" cut out of the bag, cropped like
+ * `rendered`: one-colour icons (themed Android icons, the manifest's
+ * monochrome icon) would otherwise lose the letter.
+ */
+const knockedOut = async (m) => {
+  const letter = m.svg.match(/<path id="letter-e"[\s\S]*?\/>/);
+  if (!letter) return (await rendered(m)).png;
+  const scale = 2;
+  const render = async (svg) => sharp(Buffer.from(svg), { density: 72 * scale, limitInputPixels: false })
+    .ensureAlpha().extractChannel(3).raw().toBuffer({ resolveWithObject: true });
+  const all = await render(m.svg);
+  const e = await render(m.svg.replace(/<path id="(?!letter-e")[^"]+"[\s\S]*?\/>/g, ''));
+  const alpha = Buffer.alloc(all.data.length);
+  for (let i = 0; i < alpha.length; i += 1) alpha[i] = Math.round(all.data[i] * (1 - e.data[i] / 255));
+  const { width, height } = all.info;
+  const shape = await sharp({ create: { width, height, channels: 3, background: '#ffffff' } })
+    .joinChannel(await sharp(alpha, { raw: { width, height, channels: 1 } }).png().toBuffer())
+    .png().toBuffer();
+  return sharp(shape).trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 1 }).png().toBuffer();
+};
+
 /** A square viewBox around the drawing, with a little room. */
 const squareBox = (box, pad = 0.02) => {
   const side = Math.max(box.w, box.h) * (1 + pad * 2);
@@ -106,15 +139,15 @@ const croppedSvg = (m, box) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/s
 
 /* ── Raster helpers ──────────────────────────────────────────────────── */
 
-/** The logo at a given height, centred on a square canvas. */
-const placed = async (logo, size, share, background = CLEAR) => {
+/** The logo at a given height, centred on a square canvas (raised by `lift` of the size). */
+const placed = async (logo, size, share, background = CLEAR, lift = 0) => {
   const meta = await sharp(logo).metadata();
   let height = Math.round(size * share);
   let width = Math.round((meta.width / meta.height) * height);
   if (width > size) { width = size; height = Math.round((meta.height / meta.width) * width); }
   const art = await sharp(logo).resize(width, height, { kernel: 'lanczos3' }).png().toBuffer();
   return sharp({ create: { width: size, height: size, channels: 4, background } })
-    .composite([{ input: art, left: Math.round((size - width) / 2), top: Math.round((size - height) / 2) }])
+    .composite([{ input: art, left: Math.round((size - width) / 2), top: Math.max(0, Math.round((size - height) / 2 - size * lift)) }])
     .png().toBuffer();
 };
 
@@ -123,8 +156,8 @@ const shapeSvg = (size, fill, shape = 'square') => Buffer.from(`<svg xmlns="http
   : `<rect width="${size}" height="${size}" rx="${shape === 'rounded' ? size * 0.18 : 0}" fill="${fill}"/>`}</svg>`);
 
 /** The app icon: the white logo on the brand green. */
-const appIcon = async (white, green, size, share, shape = 'square') => {
-  const logo = await placed(white, size, share);
+const appIcon = async (white, green, size, share, shape = 'square', lift = 0) => {
+  const logo = await placed(white, size, share, CLEAR, lift);
   const img = sharp(shapeSvg(size, green, shape)).composite([{ input: logo }]);
   // Full-bleed squares have no transparency (iPhone and maskable icons need that).
   return shape === 'square' ? img.flatten({ background: green }).png().toBuffer() : img.png().toBuffer();
@@ -179,7 +212,12 @@ async function web(L) {
     await save(path.join(PUBLIC, `icon-${size}x${size}.png`), await appIcon(white.png, brand, size, LOGO_APP));
     await save(path.join(PUBLIC, `icon-${size}x${size}-maskable.png`), await appIcon(white.png, brand, size, LOGO_MASKABLE));
   }
-  await save(path.join(PUBLIC, 'apple-touch-icon.png'), await appIcon(white.png, brand, 180, LOGO_APP));
+  // iPhone home screen: tuned for the Liquid Glass iOS 26 lays over it.
+  await save(path.join(PUBLIC, 'apple-touch-icon.png'), await appIcon(white.png, brand, 180, LOGO_IOS_WEB, 'square', IOS_WEB_LIFT));
+  // One-colour layer for themed icons (manifest "monochrome": the browser tints it).
+  for (const size of [192, 512]) {
+    await save(path.join(PUBLIC, 'icons', `icon-${size}x${size}-monochrome.png`), await silhouette(L.mono, size, LOGO_MASKABLE));
+  }
   for (const size of [192, 512]) {
     await save(path.join(PUBLIC, 'icons', `icon-${size}x${size}.png`), await appIcon(white.png, brand, size, LOGO_APP));
     await save(path.join(PUBLIC, 'icons', `icon-${size}x${size}-maskable.png`), await appIcon(white.png, brand, size, LOGO_MASKABLE));
@@ -196,6 +234,76 @@ async function web(L) {
 `));
 }
 
+/* ── Layered iOS app icon (Icon Composer .icon, Liquid Glass) ─────────── */
+
+// The white logo's parts, front to back, in the depth groups iOS 26 lights
+// as separate panes of glass: the "e" in front, the bag, then the handle.
+const IOS_GROUPS = [
+  { name: 'Letter', layers: ['letter-e'], translucency: 0.15, shadow: { kind: 'layer-color', opacity: 0.5 } },
+  { name: 'Bag', layers: ['bag-side', 'bag'], translucency: 0.3, shadow: { kind: 'neutral', opacity: 0.5 } },
+  { name: 'Handle', layers: ['collars', 'handle-stripes', 'handle'], translucency: 0.35, shadow: { kind: 'neutral', opacity: 0.4 } },
+];
+
+/** #055D07 → "srgb:0.01961,0.36471,0.02745,1.00000" (Icon Composer's colour strings). */
+const iconColor = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `srgb:${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => (c / 255).toFixed(5)).join(',')},1.00000`;
+};
+
+/**
+ * mobile/assets/app.icon: a package Icon Composer opens and Xcode (or Expo's
+ * `ios.icon`) builds into the app. Each part of the logo is its own SVG on
+ * the 1024-point canvas, already in place, so the layers need no offsets.
+ */
+async function iosLayered(L) {
+  if (!fs.existsSync(MOBILE)) return;
+  const { whiteM, white, brand } = L;
+  const defs = (whiteM.inner.match(/<defs>[\s\S]*?<\/defs>/) || [''])[0];
+  const partOf = (id) => {
+    const m = whiteM.inner.match(new RegExp(`<path id="${id}"[\\s\\S]*?\\/>`));
+    if (!m) throw new Error(`logo-white.svg: no part "${id}"`);
+    return m[0];
+  };
+  const b = white.box;
+  const k = (1024 * LOGO_IOS_LAYERED) / b.h;
+  const tx = 512 - k * (b.x + b.w / 2); const ty = 512 - k * (b.y + b.h / 2);
+  const dir = path.join(MOBILE, 'app.icon');
+  fs.rmSync(dir, { recursive: true, force: true });
+
+  const groups = [];
+  for (const g of IOS_GROUPS) {
+    const layers = [];
+    for (const id of g.layers) {
+      const file = `${id}.svg`;
+      await save(path.join(dir, 'Assets', file), Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  ${defs}
+  <g transform="translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${k.toFixed(5)})">${partOf(id)}</g>
+</svg>
+`));
+      layers.push({ name: id, 'image-name': file, glass: true, hidden: false });
+    }
+    groups.push({
+      name: g.name,
+      layers,
+      lighting: 'individual',
+      shadow: g.shadow,
+      specular: true,
+      translucency: { enabled: true, value: g.translucency },
+    });
+  }
+  const iconJson = {
+    fill: { solid: iconColor(brand) },
+    // Dark mode: the system's dark backdrop behind the same glass panes.
+    'fill-specializations': [
+      { value: { solid: iconColor(brand) } },
+      { appearance: 'dark', value: 'system-dark' },
+    ],
+    groups,
+    'supported-platforms': { squares: 'shared' },
+  };
+  await save(path.join(dir, 'icon.json'), Buffer.from(`${JSON.stringify(iconJson, null, 2)}\n`));
+}
+
 async function mobile(L) {
   if (!fs.existsSync(MOBILE)) return;
   const { green, white, brand } = L;
@@ -203,7 +311,7 @@ async function mobile(L) {
   // Expo's adaptive icon: 1024² layers, same proportions as Android's 108dp.
   await save(path.join(MOBILE, 'android-icon-foreground.png'), await placed(white.png, 1024, LOGO_ADAPTIVE));
   await save(path.join(MOBILE, 'android-icon-background.png'), await sharp(shapeSvg(1024, brand)).png().toBuffer());
-  await save(path.join(MOBILE, 'android-icon-monochrome.png'), await silhouette(white.png, 1024, LOGO_ADAPTIVE));
+  await save(path.join(MOBILE, 'android-icon-monochrome.png'), await silhouette(L.mono, 1024, LOGO_ADAPTIVE));
   await save(path.join(MOBILE, 'favicon.png'), await placed(green.png, 196, 1));
   await save(path.join(MOBILE, 'splash-icon.png'), await placed(green.png, 1024, 0.96));
   await save(path.join(MOBILE, 'brand-icon.png'), await placed(green.png, 1024, 0.96));
@@ -220,7 +328,7 @@ async function android(L) {
     // (drawable/ic_launcher_background.xml), inside every launcher's mask.
     const layer = Math.round(108 * scale);
     await save(path.join(dir, 'ic_launcher_foreground.png'), await placed(white.png, layer, LOGO_ADAPTIVE));
-    await save(path.join(dir, 'ic_launcher_monochrome.png'), await silhouette(white.png, layer, LOGO_ADAPTIVE));
+    await save(path.join(dir, 'ic_launcher_monochrome.png'), await silhouette(L.mono, layer, LOGO_ADAPTIVE));
     // Older launchers (Android 7): a rounded square and a round icon, 48dp.
     const legacy = Math.round(48 * scale);
     const square = await appIcon(white.png, brand, legacy, LOGO_APP, 'square');
@@ -251,10 +359,12 @@ async function android(L) {
     whiteM,
     green: await rendered(greenM),
     white: await rendered(whiteM),
+    mono: await knockedOut(whiteM), // one colour, the "e" cut out
     brand: whiteM.background, // the app icon's green
   };
   await web(L);
   await mobile(L);
+  await iosLayered(L);
   await android(L);
   console.log(`App icon green ${L.brand}; ${written.length} files written:\n  ${written.join('\n  ')}`);
 })().catch((err) => {

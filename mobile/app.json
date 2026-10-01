@@ -20,7 +20,8 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "E-MOORM uses your photos for product images, payment proof, profile photos, and reviews.",
         "NSCameraUsageDescription": "E-MOORM uses the camera for image search and marketplace uploads."
-      }
+      },
+      "icon": "./assets/app.icon"
     },
     "android": {
       "package": "com.emoorm.marketplace",
@@ -32,7 +33,7 @@
         "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#00632F",
+        "backgroundColor": "#055D07",
         "backgroundImage": "./assets/android-icon-background.png",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
