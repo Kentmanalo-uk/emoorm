@@ -59,12 +59,16 @@ const useAuthStore = create(
         useCartStore.getState().setOwner(userData?.id || null);
       },
 
-      logout: () => {
+      // `to`: where the page that signed out is sending the visitor, so route
+      // guards that notice the signed-out state first send them there too.
+      // Not saved: only this visit needs it.
+      logout: (to = null) => {
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
+          signOutTo: to,
         });
 
         // Clear localStorage

@@ -14,6 +14,7 @@ import UserAvatar from '../components/ui/UserAvatar';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import PasswordField from '../components/account/PasswordField';
 import PhoneSettings from './ProfileSettingsPhone';
+import { afterSignOutPath } from '../lib/afterSignOut';
 import {
   cleanUsername, fullNameProblem, usernameProblem, contactProblem, passwordProblem, uploadProfilePhoto,
 } from '../lib/profileForm';
@@ -413,7 +414,7 @@ function ProfileSettings() {
         message="You will need to sign in again to place orders and see your account."
         confirmLabel="Sign out"
         danger
-        onConfirm={() => { setSignOutOpen(false); logout(); navigate('/login'); }}
+        onConfirm={() => { setSignOutOpen(false); logout(); navigate(afterSignOutPath('/login'), { replace: true }); }}
         onCancel={() => setSignOutOpen(false)}
       />
     </div>

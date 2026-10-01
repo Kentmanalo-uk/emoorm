@@ -32,6 +32,7 @@ import './SellerMobile.css';
 import '../../pages/SellerApp.css';
 import UserAvatar from '../ui/UserAvatar';
 import { readCache, writeCache } from '../../lib/pageCache';
+import { afterSignOutPath } from '../../lib/afterSignOut';
 
 /**
  * Persistent shell for /seller/* routes.
@@ -194,8 +195,8 @@ export default function SellerLayout() {
   }, [accountOpen]);
 
   if (!isAuthenticated) {
-    // Just signed out here: the home page.
-    if (signingOut) return <Navigate to="/" replace />;
+    // Just signed out here: the home page (phones: the visitor Profile).
+    if (signingOut) return <Navigate to={afterSignOutPath('/')} replace />;
     // The Seller Login returns to this page (the Seller Center home is its default).
     const back = location.pathname.replace(/\/$/, '') + location.search;
     return <Navigate to={back === '/seller' ? '/seller/login' : `/seller/login?redirect=${encodeURIComponent(back)}`} replace />;
@@ -213,7 +214,7 @@ export default function SellerLayout() {
     setSigningOut(true);
     setLogoutOpen(false);
     logout();
-    navigate('/', { replace: true });
+    navigate(afterSignOutPath('/'), { replace: true });
   };
 
   const shopName = store?.name || 'My Shop';

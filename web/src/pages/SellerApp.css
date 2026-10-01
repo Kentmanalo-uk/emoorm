@@ -379,14 +379,16 @@
   overflow: hidden;
 }
 
-.sh-tools .sh-tool-icon.is-orange svg { fill: url(#sh-grad-orange); }
-.sh-tools .sh-tool-icon.is-blue svg { fill: url(#sh-grad-blue); }
-.sh-tools .sh-tool-icon.is-violet svg { fill: url(#sh-grad-violet); }
-.sh-tools .sh-tool-icon.is-green svg { fill: url(#sh-grad-green); }
-.sh-tools .sh-tool-icon.is-amber svg { fill: url(#sh-grad-amber); }
-.sh-tools .sh-tool-icon.is-rose svg { fill: url(#sh-grad-rose); }
-.sh-tools .sh-tool-icon.is-pink svg { fill: url(#sh-grad-pink); }
-.sh-tools .sh-tool-icon.is-teal svg { fill: url(#sh-grad-teal); }
+/* The tone after the gradient is the fallback: a page without <ToolGradients />
+   still shows the icon in its solid colour instead of nothing. */
+.sh-tools .sh-tool-icon.is-orange svg { fill: url(#sh-grad-orange) #f97316; }
+.sh-tools .sh-tool-icon.is-blue svg { fill: url(#sh-grad-blue) #3b82f6; }
+.sh-tools .sh-tool-icon.is-violet svg { fill: url(#sh-grad-violet) #8b5cf6; }
+.sh-tools .sh-tool-icon.is-green svg { fill: url(#sh-grad-green) #10b981; }
+.sh-tools .sh-tool-icon.is-amber svg { fill: url(#sh-grad-amber) #f59e0b; }
+.sh-tools .sh-tool-icon.is-rose svg { fill: url(#sh-grad-rose) #f43f5e; }
+.sh-tools .sh-tool-icon.is-pink svg { fill: url(#sh-grad-pink) #ec4899; }
+.sh-tools .sh-tool-icon.is-teal svg { fill: url(#sh-grad-teal) #14b8a6; }
 
 /* ── Home: tips in full colour, one in view, swipe or wait ───── */
 .sh-banners {

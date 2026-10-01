@@ -21,6 +21,7 @@ import UserAvatar from '../ui/UserAvatar';
 import NotificationPicture from '../NotificationPicture';
 import { isBottomNavTab } from '../../lib/navTabs';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm } from '../../lib/buyerSearch';
+import { afterSignOutPath } from '../../lib/afterSignOut';
 
 const NOTIF_TYPE = {
   ORDER_RECEIVED: { Icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New order' },
@@ -224,7 +225,7 @@ const Header = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate(afterSignOutPath('/login'), { replace: true });
   };
 
   const handleImageFileSelected = (file) => {

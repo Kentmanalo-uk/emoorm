@@ -26,6 +26,7 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import { AdminShellContext } from './adminShell';
 import useTableCardLabels from '../../hooks/useTableCardLabels';
 import './AdminPhone.css';
+import { afterSignOutPath } from '../../lib/afterSignOut';
 
 /**
  * Persistent shell for /admin/* pages — mirrors SellerLayout look & feel.
@@ -137,9 +138,11 @@ export default function AdminLayout({ children }) {
     return () => { cancelled = true; };
   }, [isSuperAdmin, updateUser, user?.id]);
 
+  // The admin guard notices the sign-out first; it is told where to go.
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    const to = afterSignOutPath('/login');
+    logout(to);
+    navigate(to, { replace: true });
   };
 
   const initial = (user?.fullName || user?.email || 'A').trim().charAt(0).toUpperCase();

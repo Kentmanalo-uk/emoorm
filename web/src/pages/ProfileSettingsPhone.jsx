@@ -22,6 +22,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Skeleton from '../components/ui/Skeleton';
 import './ProfileSettings.css';
 import './ProfileSettingsPhone.css';
+import { afterSignOutPath } from '../lib/afterSignOut';
 
 /**
  * Settings on phones: the account's parts as lists showing what is set now,
@@ -182,7 +183,7 @@ function SettingsHub() {
         message="You will need to log in again to place orders and see your account."
         confirmLabel="Log out"
         danger
-        onConfirm={() => { setSignOutOpen(false); logout(); navigate('/login'); }}
+        onConfirm={() => { setSignOutOpen(false); logout(); navigate(afterSignOutPath('/login'), { replace: true }); }}
         onCancel={() => setSignOutOpen(false)}
       />
     </div>

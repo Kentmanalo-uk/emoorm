@@ -20,6 +20,7 @@ import { listMyFollowing } from '../lib/follow';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { ProfileSkeleton } from '../components/ui/PageSkeletons';
 import { usePageCache } from '../lib/pageCache';
+import { afterSignOutPath } from '../lib/afterSignOut';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -269,7 +270,7 @@ const Profile = () => {
           message="You will need to log in again to place orders and see your account."
           confirmLabel="Log out"
           danger
-          onConfirm={() => { setSignOutOpen(false); logout(); navigate('/login'); }}
+          onConfirm={() => { setSignOutOpen(false); logout(); navigate(afterSignOutPath('/login'), { replace: true }); }}
           onCancel={() => setSignOutOpen(false)}
         />
       </div>

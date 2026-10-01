@@ -12,6 +12,7 @@ import { useShare } from '../components/ShareSheet';
 import PhoneSheet from '../components/seller/PhoneSheet';
 import { sellBlockers } from '../lib/sellerSetup';
 import Skeleton from '../components/ui/Skeleton';
+import ToolGradients from '../components/ui/ToolGradients';
 import './SellerDashboard.css';
 import { readCache, writeCache } from '../lib/pageCache';
 
@@ -147,7 +148,8 @@ export default function SellerMarketing() {
           </p>
         )}
 
-        {/* Tools */}
+        {/* Tools: icons filled with the shared tool gradients. */}
+        <ToolGradients />
         <section className="sh-card">
           <div className="sh-card-head"><h2>Tools</h2></div>
           <div className="sh-tools">
