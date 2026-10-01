@@ -5,6 +5,10 @@ import { priceForSelection, pricedVariation, stockForSelection } from '../lib/va
 
 // Carts are kept per owner (user id or 'guest'). `items` mirrors the active
 // owner's bucket so every existing consumer keeps reading `items` directly.
+/** A cart line's id: the product and its chosen options (Buy Now opens checkout with it). */
+export const cartKeyFor = (product) => product.cartKey
+  || `${product.id}:${product.selectedVariations ? JSON.stringify(product.selectedVariations) : ''}`;
+
 const GUEST = 'guest';
 const ownerKey = (userId) => (userId ? String(userId) : GUEST);
 
@@ -71,10 +75,7 @@ const useCartStore = create(
         // Actions
         addItem: (product, quantity = 1) => {
           const items = get().items;
-          const variationKey = product.selectedVariations
-            ? JSON.stringify(product.selectedVariations)
-            : '';
-          const cartKey = product.cartKey || `${product.id}:${variationKey}`;
+          const cartKey = cartKeyFor(product);
           const existingItem = items.find((item) => item.id === cartKey);
 
           // A shop still setting up shows its products but takes no orders.

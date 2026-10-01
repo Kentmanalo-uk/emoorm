@@ -17,7 +17,7 @@ import { BusyLabel } from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
-import useCartStore from '../store/cartStore';
+import useCartStore, { cartKeyFor } from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import ShippingEstimate from '../components/orders/ShippingEstimate';
 import useWishlistStore from '../store/wishlistStore';
@@ -307,9 +307,16 @@ const ProductDetails = () => {
     }
   };
 
+  // Buy Now: straight to checkout with just this item (and its options).
+  const goToCheckout = () => {
+    const variationDefinitions = Array.isArray(product.variations) ? product.variations : [];
+    const key = cartKeyFor({ id: product.id, selectedVariations: variationDefinitions.length ? selectedVariations : null });
+    navigate('/checkout', { state: { selectedIds: [key] } });
+  };
+
   const handleBuyNow = async () => {
     if (isAuthenticated && !(await requireVerifiedIdentity())) return;
-    if (handleAddToCart() !== false) setTimeout(() => navigate('/cart'), 250);
+    if (handleAddToCart() !== false) goToCheckout();
   };
 
   // Phone sheet: the sheet has already checked every option group.
@@ -321,7 +328,7 @@ const ProductDetails = () => {
     // On failure (e.g. more than the stock) the sheet stays open with the toast.
     if (handleAddToCart() === false) return;
     setSheetMode(null);
-    if (mode === 'buy') setTimeout(() => navigate('/cart'), 250);
+    if (mode === 'buy') goToCheckout();
   };
 
   const changeQty = (delta) => {

@@ -1,4 +1,5 @@
 const orderService = require('../services/order.service');
+const { isStage } = require('../utils/orderStages');
 const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
@@ -97,12 +98,14 @@ const getStoreOrders = asyncHandler(async (req, res) => {
     page = 1,
     pageSize = 20,
     status,
+    stage,
   } = req.query;
 
   const options = {
     ...paging(page, pageSize),
     ...listFilters(req.query),
     status,
+    stage: isStage(stage) ? stage : undefined,
   };
 
   const result = await orderService.getStoreOrders(req.user.id, options);
@@ -284,7 +287,13 @@ const shipOrder = asyncHandler(async (req, res) => {
   successResponse(res, order, 'Order shipped');
 });
 
+/** GET /orders/store/stages: the seller's tab counts. */
+const getStoreStageCounts = asyncHandler(async (req, res) => {
+  successResponse(res, await orderService.getStoreStageCounts(req.user.id), 'Order counts');
+});
+
 module.exports = {
+  getStoreStageCounts,
   shipOrder,
   revealOrderDetails,
   createOrder,

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
- MapPin, Eye, ChatText as MessageSquare, ArrowCounterClockwise as RotateCcw, Star, X,
-  UploadSimple as Upload, CheckCircle, QrCode, Copy, ClockCountdown,
+  Eye, ChatText as MessageSquare, ArrowCounterClockwise as RotateCcw, Star, X,
+  UploadSimple as Upload, CheckCircle, QrCode, Copy,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
@@ -13,13 +13,17 @@ import { resolveImg } from '../lib/media';
 import { uploadImage } from '../lib/upload';
 import ProductImage from '../components/ProductImage';
 import useAuthStore from '../store/authStore';
-import useCartStore from '../store/cartStore';
+import useCartStore, { cartKeyFor } from '../store/cartStore';
 import './Orders.css';
 import { useSheetPresence } from '../hooks/useSheetMotion';
 import useEntryState from '../hooks/useEntryState';
 import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
 import { OrderProof } from '../components/orders/ProofPhotoSheet';
 import CourierTracking, { CourierMark } from '../components/orders/CourierTracking';
+import OrderStatusPanel from '../components/orders/OrderStatusPanel';
+import {
+  BUYER_TABS, buyerBucket, buyerTabFrom, countBuyerTabs, needsPayment,
+} from '../lib/orderProgress';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import GcashPhonePay from '../components/checkout/GcashPhonePay';
 import { qrMethod, formatAccountNumber } from '../lib/qrPayment';
@@ -43,32 +47,8 @@ const parseImages = (raw) => {
 // Same reference rule the server applies.
 const PAYMENT_REFERENCE_RE = /^[A-Za-z0-9 -]{4,64}$/;
 
-// Buyer-facing label + tone for every PaymentStatus value.
-const getPaymentBadge = (order) => {
-  const cod = order.paymentMethod === 'COD';
-  const map = {
-    // A QR order is paid once the seller confirms it.
-    PENDING: {
-      label: cod ? 'Unpaid' : order.status === 'PENDING' ? 'Pay after confirmation' : 'To pay',
-      tone: !cod && order.status === 'CONFIRMED' ? 'warning' : 'neutral',
-    },
-    PENDING_VERIFICATION: { label: 'Awaiting verification', tone: 'neutral' },
-    PAID: { label: 'Paid', tone: 'success' },
-    FAILED: { label: 'Proof rejected — resubmit', tone: 'danger' },
-    EXPIRED: { label: 'Expired', tone: 'danger' },
-    REFUNDED: { label: 'Refunded', tone: 'accent' },
-    PARTIALLY_REFUNDED: { label: 'Partially refunded', tone: 'accent' },
-  };
-  return map[order.paymentStatus] || null;
-};
-
-// "To Pay": a QR order the buyer has to pay now. That is once the seller has
-// confirmed it (payment PENDING), or when a proof was rejected (FAILED).
-const needsPayment = (order) => (
-  order.paymentMethod !== 'COD'
-  && ((order.paymentStatus === 'PENDING' && order.status === 'CONFIRMED')
-    || (order.paymentStatus === 'FAILED' && ['PENDING', 'CONFIRMED'].includes(order.status)))
-);
+// "To Pay" (needsPayment): a QR order the buyer has to pay now, once the
+// seller has confirmed it, or when a proof was rejected (lib/orderProgress).
 
 // Pay, pay again after a rejection, or replace a proof not yet checked.
 const canResubmitProof = (order) => (
@@ -76,11 +56,6 @@ const canResubmitProof = (order) => (
   || (order.paymentMethod !== 'COD'
     && order.paymentStatus === 'PENDING_VERIFICATION'
     && ['PENDING', 'CONFIRMED'].includes(order.status))
-);
-
-// A QR order the seller has not confirmed yet: nothing to pay so far.
-const waitsForConfirmation = (order) => (
-  order.paymentMethod !== 'COD' && order.paymentStatus === 'PENDING' && order.status === 'PENDING'
 );
 
 const payActionLabel = (order) => {
@@ -105,7 +80,9 @@ const Orders = () => {
   const [isLoading, setIsLoading] = useState(() => !readCache('orders'));
   // The tab this visit was on (Back finds it again); a link can name one.
   const statusParam = searchParams.get('status');
-  const [activeTab, setActiveTab] = useEntryState('tab', statusParam ? statusParam.toUpperCase() : 'all');
+  const [savedTab, setActiveTab] = useEntryState('tab', buyerTabFrom(statusParam));
+  // A tab saved by an older version (e.g. 'PENDING') still finds its place.
+  const activeTab = buyerTabFrom(savedTab);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   // Phones: the details sheet slides away instead of vanishing.
@@ -135,35 +112,8 @@ const Orders = () => {
   const [receiveTarget, setReceiveTarget] = useState(null); // order
   const [receiving, setReceiving] = useState(false);
 
-  const orderTabs = [
-    { key: 'all', label: 'All' },
-    { key: 'TO_PAY', label: 'To Pay' },
-    { key: 'PENDING', label: 'Pending' },
-    { key: 'CONFIRMED', label: 'To Ship' },
-    { key: 'PREPARING', label: 'Preparing' },
-    { key: 'READY', label: 'Ready' },
-    { key: 'COMPLETED', label: 'Completed' },
-    { key: 'CANCELLED', label: 'Cancelled' },
-  ];
-
-  // Every order.status resolves to exactly one status tab below. "To Pay" is
-  // a payment view (prepaid orders still awaiting payment / verification).
-  // Statuses like TO_SHIP/OUT_FOR_DELIVERY/READY_FOR_PICKUP/PICKED_UP/DELIVERED
-  // are grouped under "Ready" (order is in transit / awaiting buyer receipt).
-  const TAB_STATUS_GROUPS = {
-    PENDING: ['PENDING'],
-    CONFIRMED: ['CONFIRMED'],
-    PREPARING: ['PREPARING'],
-    READY: ['READY', 'READY_FOR_PICKUP', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'SHIPPED', 'PICKED_UP', 'DELIVERED'],
-    COMPLETED: ['COMPLETED'],
-    CANCELLED: ['CANCELLED'],
-  };
-
-  const orderMatchesTab = (order, tabKey) => {
-    if (tabKey === 'all') return true;
-    if (tabKey === 'TO_PAY') return needsPayment(order);
-    return (TAB_STATUS_GROUPS[tabKey] || [tabKey]).includes(order.status);
-  };
+  const orderMatchesTab = (order, tabKey) => tabKey === 'all' || buyerBucket(order) === tabKey;
+  const tabCounts = countBuyerTabs(orders);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -229,6 +179,7 @@ const Orders = () => {
       );
       let added = 0;
       let skipped = 0;
+      const keys = [];
       results.forEach((result, index) => {
         const line = lines[index];
         const product = result.status === 'fulfilled' ? result.value?.data : null;
@@ -252,6 +203,7 @@ const Orders = () => {
             categoryId: product.categoryId,
             selectedVariations: line.selectedVariations || null,
           }, Math.max(1, Math.min(Number(line.quantity) || 1, stock)));
+          keys.push(cartKeyFor({ id: product.id, selectedVariations: line.selectedVariations || null }));
           added += 1;
         } catch {
           // e.g. the cart already holds the full stock of this line
@@ -265,7 +217,8 @@ const Orders = () => {
       toast.success(skipped > 0
         ? `${added} item${added === 1 ? '' : 's'} added to cart, ${skipped} unavailable`
         : `${added} item${added === 1 ? '' : 's'} added to cart`);
-      navigate('/cart');
+      // Straight to checkout with these items.
+      navigate('/checkout', { state: { selectedIds: keys } });
     } catch (error) {
       toast.error(error.message || 'Failed to add items to cart');
     } finally {
@@ -307,11 +260,13 @@ const Orders = () => {
     if (!match) return;
     // "Order confirmed: please pay now" lands on the payment, in To Pay.
     if (needsPayment(match)) {
-      setActiveTab('TO_PAY');
+      setActiveTab('to_pay');
       openProofForm(match);
       requestAnimationFrame(() => document.getElementById(`order-${match.id}`)?.scrollIntoView({ block: 'center' }));
       return;
     }
+    // Its own tab, so the card is in the list behind the details.
+    setActiveTab(buyerBucket(match));
     setSelectedOrder(match);
     setShowOrderDetails(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the list or link changes
@@ -387,79 +342,16 @@ const Orders = () => {
     }
   };
 
-  const getStatusBadge = (status, fulfillmentMethod) => {
-    const pickup = fulfillmentMethod === 'PICKUP';
-    const badges = {
-      PENDING: { label: 'Pending', tone: 'neutral' },
-      CONFIRMED: { label: 'Confirmed', tone: 'neutral' },
-      PREPARING: { label: 'Preparing', tone: 'neutral' },
-      TO_SHIP: { label: 'To Ship', tone: 'accent' },
-      OUT_FOR_DELIVERY: { label: 'Out for Delivery', tone: 'accent' },
-      SHIPPED: { label: 'Shipped', tone: 'accent' },
-      DELIVERED: { label: 'Delivered', tone: 'accent' },
-      READY: { label: pickup ? 'Ready for Pickup' : 'Ready', tone: 'accent' },
-      READY_FOR_PICKUP: { label: 'Ready for Pickup', tone: 'accent' },
-      PICKED_UP: { label: 'Picked Up', tone: 'accent' },
-      COMPLETED: { label: 'Completed', tone: 'success' },
-      CANCELLED: { label: 'Cancelled', tone: 'danger' },
-    };
-    return badges[status] || { label: status, tone: 'neutral' };
+  // The card's badge: the tab it is in (as on Shopee).
+  const BADGE = {
+    to_pay: { label: 'To Pay', tone: 'warning' },
+    to_ship: { label: 'To Ship', tone: 'neutral' },
+    to_receive: { label: 'To Receive', tone: 'accent' },
+    to_pickup: { label: 'To Pick Up', tone: 'accent' },
+    completed: { label: 'Completed', tone: 'success' },
+    cancelled: { label: 'Cancelled', tone: 'danger' },
   };
-
-  const getOrderTimeline = (order) => {
-    const readyStatuses = ['READY', 'READY_FOR_PICKUP', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'SHIPPED', 'PICKED_UP', 'DELIVERED'];
-    const timeline = [
-      {
-        status: 'PENDING',
-        label: 'Order Placed',
-        date: order.createdAt,
-        active: true
-      },
-      {
-        status: 'CONFIRMED',
-        label: 'Order Confirmed',
-        date: order.confirmedAt,
-        active: ['CONFIRMED', 'PREPARING', ...readyStatuses, 'COMPLETED'].includes(order.status)
-      },
-      {
-        status: 'PREPARING',
-        label: 'Preparing',
-        date: order.preparingAt,
-        active: ['PREPARING', ...readyStatuses, 'COMPLETED'].includes(order.status)
-      },
-      {
-        status: 'READY',
-        label: order.fulfillmentMethod === 'PICKUP' ? 'Ready for Pickup' : 'Ready',
-        date: order.readyAt,
-        active: [...readyStatuses, 'COMPLETED'].includes(order.status)
-      },
-      {
-        status: 'COMPLETED',
-        label: 'Completed',
-        date: order.completedAt,
-        active: order.status === 'COMPLETED'
-      },
-    ];
-
-    if (order.status === 'CANCELLED') {
-      return [
-        {
-          status: 'PENDING',
-          label: 'Order Placed',
-          date: order.createdAt,
-          active: true
-        },
-        {
-          status: 'CANCELLED',
-          label: 'Order Cancelled',
-          date: order.cancelledAt,
-          active: true
-        },
-      ];
-    }
-
-    return timeline;
-  };
+  const stageBadge = (order) => BADGE[buyerBucket(order)];
 
   if (isLoading) {
     return (
@@ -476,10 +368,9 @@ const Orders = () => {
       </header>
 
       <div className="orders-tabs" role="tablist">
-        {orderTabs.map((tab) => {
-          const count = tab.key === 'all'
-            ? orders.length
-            : orders.filter((o) => orderMatchesTab(o, tab.key)).length;
+        {BUYER_TABS.map((tab) => {
+          // Counts on the tabs that need something from the buyer (as on Shopee).
+          const count = ['to_pay', 'to_ship', 'to_receive', 'to_pickup'].includes(tab.key) ? (tabCounts[tab.key] || 0) : 0;
 
           return (
             <button
@@ -509,8 +400,7 @@ const Orders = () => {
       ) : (
         <div className="orders-list">
           {filteredOrders.map((order) => {
-            const statusBadge = getStatusBadge(order.status, order.fulfillmentMethod);
-            const paymentBadge = getPaymentBadge(order);
+            const statusBadge = stageBadge(order);
             const storeId = order.storeId || order.store?.id;
 
             return (
@@ -523,11 +413,6 @@ const Orders = () => {
                     {order.store?.name || 'Store'}
                   </Link>
                   <span className="order-badges">
-                    {paymentBadge && (
-                      <span className={`order-status-badge status-${paymentBadge.tone}`}>
-                        {paymentBadge.label}
-                      </span>
-                    )}
                     <span className={`order-status-badge status-${statusBadge.tone}`}>
                       {statusBadge.label}
                     </span>
@@ -578,6 +463,8 @@ const Orders = () => {
                     </div>
                   </div>
                 </div>
+
+                <OrderStatusPanel order={order} />
 
                 {order.status === 'COMPLETED' && unreviewedItems(order).length > 0 && (
                   <div className="order-review-nudge">
@@ -722,13 +609,6 @@ const Orders = () => {
                   )}
                 </div>
 
-                {waitsForConfirmation(order) && (
-                  <p className="order-pay-wait">
-                    <ClockCountdown size={16} weight="fill" aria-hidden="true" />
-                    Waiting for the seller to confirm. You&apos;ll pay with the shop&apos;s QR after that; we&apos;ll notify you.
-                  </p>
-                )}
-
                 {proofForm?.orderId === order.id && (
                   <form className="order-proof-form" onSubmit={handleProofSubmit}>
                     {order.paymentStatus !== 'PENDING_VERIFICATION' && (
@@ -814,62 +694,13 @@ const Orders = () => {
                   </p>
                 </div>
                 <span className="order-badges">
-                  {getPaymentBadge(selectedOrder) && (
-                    <span className={`order-status-badge status-${getPaymentBadge(selectedOrder).tone}`}>
-                      {getPaymentBadge(selectedOrder).label}
-                    </span>
-                  )}
-                  <span className={`order-status-badge status-${getStatusBadge(selectedOrder.status, selectedOrder.fulfillmentMethod).tone}`}>
-                    {getStatusBadge(selectedOrder.status, selectedOrder.fulfillmentMethod).label}
+                  <span className={`order-status-badge status-${stageBadge(selectedOrder).tone}`}>
+                    {stageBadge(selectedOrder).label}
                   </span>
                 </span>
               </div>
 
-              {/* Order Timeline */}
-              <div className="order-timeline-section">
-                <h3>Order Timeline</h3>
-                <div className="order-timeline">
-                  {getOrderTimeline(selectedOrder).map((step, index) => (
-                    <div
-                      key={index}
-                      className={`timeline-step ${step.active ? 'active' : ''}`}
-                    >
-                      <div className="timeline-marker"></div>
-                      <div className="timeline-content">
-                        <p className="timeline-label">{step.label}</p>
-                        {step.date && (
-                          <p className="timeline-date">
-                            {new Date(step.date).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Delivery Address */}
-              <div className="order-details-section">
-                <h3>Delivery Address</h3>
-                <div className="delivery-address">
-                  <MapPin size={18} />
-                  <div>
-                    <p>{selectedOrder.deliveryAddress}</p>
-                    {selectedOrder.contactNumber && (
-                      <p className="delivery-contact">{selectedOrder.contactNumber}</p>
-                    )}
-                    {selectedOrder.deliveryNotes && (
-                      <p className="delivery-notes">Note: {selectedOrder.deliveryNotes}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <OrderStatusPanel order={selectedOrder} full />
 
               {selectedOrder.fulfillmentProofUrl && (
                 <div className="order-details-section">

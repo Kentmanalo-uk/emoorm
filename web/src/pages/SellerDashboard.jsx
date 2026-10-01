@@ -214,10 +214,9 @@ export default function SellerDashboard() {
     let cancelled = false;
     const total = (res) => res.pagination?.total ?? (res.data || []).length;
     Promise.all([
-      ...HOME_ORDER_STATUSES.map((status) => axios
-        .get('/orders/store/orders', { params: { status, pageSize: 1 } })
-        .then((res) => [status, total(res)])
-        .catch(() => [status, 0])),
+      axios.get('/orders/store/stages')
+        .then((res) => ['stages', res.data || {}])
+        .catch(() => ['stages', {}]),
       axios.get('/reviews/seller/mine', { params: { unrepliedOnly: true, pageSize: 1 } })
         .then((res) => ['reviews', total(res)])
         .catch(() => ['reviews', 0]),
@@ -683,7 +682,6 @@ function DashboardTour({ steps, onFinish, onClose }) {
 }
 
 /** Phones: the order statuses counted on Home. */
-const HOME_ORDER_STATUSES = ['PENDING', 'TO_SHIP'];
 
 /** Phones: Home's shop tools, each a filled icon in its own colour. */
 const HOME_TOOLS = [
@@ -905,8 +903,9 @@ function PhoneHome({
     url: `${window.location.origin}/store/${store.slug}`,
   });
   const numbers = [
-    { label: 'To confirm', value: counts.PENDING, to: '/seller/orders?status=PENDING' },
-    { label: 'To ship', value: counts.TO_SHIP, to: '/seller/orders?status=TO_SHIP' },
+    // The same counts as the Orders tabs they open.
+    { label: 'To confirm', value: counts.stages?.byStatus?.PENDING || 0, to: '/seller/orders?status=PENDING' },
+    { label: 'To ship', value: counts.stages?.byStatus?.TO_SHIP || 0, to: '/seller/orders?status=TO_SHIP' },
     { label: 'Returns', value: waiting['/seller/returns']?.count, to: '/seller/returns' },
     { label: 'Reviews', value: counts.reviews, to: '/seller/reviews?filter=reply' },
   ];

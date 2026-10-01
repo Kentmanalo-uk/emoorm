@@ -476,7 +476,31 @@ const revealOrderDetails = async (orderId, actor, part) => {
  * @returns {Promise<Object>} Orders and pagination
  */
 const getMyOrders = async (userId, options) => {
-  return orderRepository.findAll({ ...options, buyerId: userId });
+  const result = await orderRepository.findAll({ ...options, buyerId: userId, forBuyer: true });
+  return { ...result, orders: result.orders.map(withDeadline) };
+};
+
+/**
+ * The next thing that happens on its own, so the buyer sees it coming:
+ *   confirm      the shop must confirm by then, or the order is cancelled
+ *   pay          a confirmed QR order must be paid by then, or it is cancelled
+ *   autoComplete a shipped / delivered order completes by itself then
+ * Uses the same clocks as the jobs that act on them (expirePendingOrders,
+ * expireUnpaidOrders, autoCompleteOrders).
+ */
+const withDeadline = (order) => {
+  const hours = (from, h) => (from ? new Date(new Date(from).getTime() + h * 3600 * 1000) : null);
+  let deadline = null;
+  if (order.status === 'PENDING' && ['PENDING', 'FAILED'].includes(order.paymentStatus)) {
+    deadline = { kind: 'confirm', at: hours(order.createdAt, PENDING_EXPIRY_HOURS) };
+  } else if (isDueForPayment(order)) {
+    deadline = { kind: 'pay', at: hours(order.updatedAt, PAYMENT_EXPIRY_HOURS) };
+  } else if (order.status === 'SHIPPED') {
+    deadline = { kind: 'autoComplete', at: hours(order.shippedAt, AUTO_COMPLETE_DAYS * 24) };
+  } else if (order.status === 'DELIVERED') {
+    deadline = { kind: 'autoComplete', at: hours(order.fulfillmentProofAt || order.updatedAt, AUTO_COMPLETE_DAYS * 24) };
+  }
+  return { ...order, deadline };
 };
 
 /**
@@ -492,7 +516,15 @@ const getStoreOrders = async (userId, options) => {
     throw new ApiError('You do not have a store', 404);
   }
 
-  return orderRepository.findAll({ ...options, storeId: store.id });
+  const result = await orderRepository.findAll({ ...options, storeId: store.id });
+  return { ...result, orders: result.orders.map(withDeadline) };
+};
+
+/** The seller's tab counts: orders per stage (new, unpaid, to ship…). */
+const getStoreStageCounts = async (userId) => {
+  const store = await storeRepository.findByOwnerId(userId);
+  if (!store) throw new ApiError('You do not have a store', 404);
+  return orderRepository.countStoreStages(store.id);
 };
 
 /**
@@ -1098,6 +1130,7 @@ const expireUnpaidOrders = async (ageHours = PAYMENT_EXPIRY_HOURS) => {
 };
 
 module.exports = {
+  getStoreStageCounts,
   createOrder,
   expireUnpaidOrders,
   getOrderById,

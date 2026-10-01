@@ -21,6 +21,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import { ProfileSkeleton } from '../components/ui/PageSkeletons';
 import { usePageCache } from '../lib/pageCache';
 import { afterSignOutPath } from '../lib/afterSignOut';
+import { countBuyerTabs } from '../lib/orderProgress';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -73,7 +74,7 @@ const Profile = () => {
       axios.get('/orders/my/orders'),
     ]);
     const orderData = ordersResponse.data || [];
-    const count = (status) => orderData.filter((o) => o.status === status).length;
+    const tabs = countBuyerTabs(orderData);
     const [identity, following, reviews] = await Promise.allSettled([
       fetchIdentityStatus(),
       listMyFollowing(),
@@ -82,13 +83,11 @@ const Profile = () => {
     return {
       profile: profileResponse.data,
       stats: {
-        // QR orders the seller confirmed, waiting for the buyer's payment (My Orders › To Pay).
-        toPayCount: orderData.filter((o) => o.paymentMethod !== 'COD'
-          && ((o.paymentStatus === 'PENDING' && o.status === 'CONFIRMED')
-            || (o.paymentStatus === 'FAILED' && ['PENDING', 'CONFIRMED'].includes(o.status)))).length,
-        toShipCount: count('CONFIRMED'),
-        toReceiveCount: count('PREPARING'),
-        toPickupCount: count('READY'),
+        // The same buckets as the My Orders tabs they open.
+        toPayCount: tabs.to_pay || 0,
+        toShipCount: tabs.to_ship || 0,
+        toReceiveCount: tabs.to_receive || 0,
+        toPickupCount: tabs.to_pickup || 0,
       },
       // Non-fatal: the section falls back to "Not Verified".
       identityStatus: identity.status === 'fulfilled' ? identity.value?.status || 'NOT_VERIFIED' : 'NOT_VERIFIED',
@@ -145,9 +144,9 @@ const Profile = () => {
   const email = profile?.email || user?.email;
   const purchase = [
     ['To Pay', ShoppingBag, '/profile/orders?status=to_pay', stats.toPayCount],
-    ['To Ship', Package, '/profile/orders?status=processing', stats.toShipCount],
-    ['To Receive', Truck, '/profile/orders?status=shipped', stats.toReceiveCount],
-    ['To Pick Up', Store, '/profile/orders?status=ready', stats.toPickupCount],
+    ['To Ship', Package, '/profile/orders?status=to_ship', stats.toShipCount],
+    ['To Receive', Truck, '/profile/orders?status=to_receive', stats.toReceiveCount],
+    ['To Pick Up', Store, '/profile/orders?status=to_pickup', stats.toPickupCount],
   ];
   if (isPhone) {
     return (
@@ -386,7 +385,7 @@ const Profile = () => {
             </div>
             <span className="purchase-status-label">To Pay</span>
           </Link>
-          <Link to="/profile/orders?status=processing" className="purchase-status-item">
+          <Link to="/profile/orders?status=to_ship" className="purchase-status-item">
             <div className="purchase-status-icon">
               <Package size={24} />
               {stats.toShipCount > 0 && (
@@ -395,7 +394,7 @@ const Profile = () => {
             </div>
             <span className="purchase-status-label">To Ship</span>
           </Link>
-          <Link to="/profile/orders?status=shipped" className="purchase-status-item">
+          <Link to="/profile/orders?status=to_receive" className="purchase-status-item">
             <div className="purchase-status-icon">
               <Truck size={24} />
               {stats.toReceiveCount > 0 && (
@@ -404,7 +403,7 @@ const Profile = () => {
             </div>
             <span className="purchase-status-label">To Receive</span>
           </Link>
-          <Link to="/profile/orders?status=ready" className="purchase-status-item">
+          <Link to="/profile/orders?status=to_pickup" className="purchase-status-item">
             <div className="purchase-status-icon">
               <Store size={24} />
               {stats.toPickupCount > 0 && (

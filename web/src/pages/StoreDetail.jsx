@@ -42,7 +42,7 @@ import {
   getFollowStatus,
   subscribeToFollowChanges,
 } from '../lib/follow';
-import useCartStore from '../store/cartStore';
+import useCartStore, { cartKeyFor } from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useEntryState from '../hooks/useEntryState';
@@ -281,7 +281,8 @@ export default function StoreDetail() {
   };
 
   const buyNowPhone = (product) => {
-    if (addToCartPhone(product)) setTimeout(() => navigate('/cart'), 250);
+    // Straight to checkout with just this item.
+    if (addToCartPhone(product)) navigate('/checkout', { state: { selectedIds: [cartKeyFor({ id: product.id, selectedVariations: null })] } });
   };
 
   const handleToggleFollow = async () => {

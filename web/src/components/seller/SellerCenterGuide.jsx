@@ -18,7 +18,7 @@ const GUIDES = {
   '/seller/orders': [
     { target: '.seller-tabs', title: 'Filter by order stage', text: 'Move between new, preparing, delivery, pickup, completed, and cancelled orders.' },
     { target: '.orders-list-card', title: 'Review order details', text: 'Open an order to check its buyer, products, payment, and fulfillment method.' },
-    { target: '.status-dropdown-btn', title: 'Update fulfillment', text: 'Choose the next valid status here. Buyers are notified when their order progresses.' },
+    { target: '.so-next-btn', title: 'The next step', text: 'Each order shows one button for its next step. Buyers are notified as their order moves on.' },
   ],
   '/seller/returns': [
     { target: '.seller-return-tabs', title: 'Track return stages', text: 'Start with Requested, then monitor items awaiting shipment, received returns, and refunds.' },

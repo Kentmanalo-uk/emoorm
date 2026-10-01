@@ -57,6 +57,14 @@ router.post(
 );
 
 // Seller routes
+// The seller's tab counts (orders per stage).
+router.get(
+  '/store/stages',
+  authenticate,
+  authorize('SELLER'),
+  orderController.getStoreStageCounts
+);
+
 router.get(
   '/store/orders',
   authenticate,

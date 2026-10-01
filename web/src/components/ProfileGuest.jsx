@@ -12,10 +12,10 @@ import './ProfileGuest.css';
 const needsLogin = (pathname) => ({ to: '/login', state: { from: { pathname } } });
 
 const PURCHASE = [
-  ['To Pay', ShoppingBag, '/profile/orders?status=pending'],
-  ['To Ship', Package, '/profile/orders?status=processing'],
-  ['To Receive', Truck, '/profile/orders?status=shipped'],
-  ['To Pick Up', Store, '/profile/orders?status=ready'],
+  ['To Pay', ShoppingBag, '/profile/orders?status=to_pay'],
+  ['To Ship', Package, '/profile/orders?status=to_ship'],
+  ['To Receive', Truck, '/profile/orders?status=to_receive'],
+  ['To Pick Up', Store, '/profile/orders?status=to_pickup'],
 ];
 
 /**

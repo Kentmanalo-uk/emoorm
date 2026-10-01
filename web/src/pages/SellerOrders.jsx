@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Eye, CheckCircle, XCircle, Clock, Package, Truck, CaretDown as ChevronDown, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag, SlidersHorizontal, Check } from '@phosphor-icons/react';
+import { Eye, CheckCircle, XCircle, Clock, Package, Truck, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag, SlidersHorizontal } from '@phosphor-icons/react';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import PhoneSheet from '../components/seller/PhoneSheet';
 import toast from 'react-hot-toast';
@@ -16,24 +16,15 @@ import './SellerOrders.css';
 import ProofPhotoSheet, { OrderProof } from '../components/orders/ProofPhotoSheet';
 import ShipOrderSheet from '../components/orders/ShipOrderSheet';
 import CourierTracking from '../components/orders/CourierTracking';
+import {
+  SELLER_TABS, sellerTabFrom, sellerTabCount, sellerNext,
+} from '../lib/orderProgress';
+import '../components/orders/OrderStatusPanel.css';
 import Spinner from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
 
-// Phones show these as chips; the rest of TABS sit in the filter sheet.
-const PHONE_QUICK_TABS = ['all', 'PENDING', 'TO_SHIP'];
-
-const TABS = [
-  { key: 'all', label: 'All' },
-  { key: 'PENDING', label: 'New' },
-  { key: 'CONFIRMED', label: 'Confirmed' },
-  { key: 'PREPARING', label: 'Preparing' },
-  { key: 'TO_SHIP', label: 'To Ship' },
-  { key: 'SHIPPED', label: 'Shipped' },
-  { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
-  { key: 'READY_FOR_PICKUP', label: 'Ready for Pickup' },
-  { key: 'COMPLETED', label: 'Completed' },
-  { key: 'CANCELLED', label: 'Cancelled' },
-];
+// How many orders a tab holds (open steps only; not All, Completed, Cancelled).
+const tabCount = (t, byStatus) => (t.key === 'all' || t.final ? 0 : sellerTabCount(t, byStatus));
 
 const STATUS_MAP = {
   PENDING: { label: 'New Order', cls: 'status-pending', icon: <Clock size={13} /> },
@@ -53,24 +44,27 @@ const STATUS_MAP = {
 // Fulfillment-aware next-status resolution. Mirrors the backend map in
 // order.service.js updateOrderStatus exactly: the first entry is the primary
 // "next" action, CANCELLED is offered wherever the server allows it.
-const DELIVERY_FLOW = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['TO_SHIP', 'PREPARING', 'CANCELLED'],
-  PREPARING: ['TO_SHIP', 'READY', 'CANCELLED'],
-  TO_SHIP: ['SHIPPED', 'OUT_FOR_DELIVERY', 'CANCELLED'],
-  OUT_FOR_DELIVERY: ['DELIVERED', 'CANCELLED'],
-  DELIVERED: ['COMPLETED'],
-  READY: ['COMPLETED', 'CANCELLED'],
+// The one next step for each status. Delivery orders the buyer sent with a
+// courier are shipped with it; the rest the seller delivers. Delivered and
+// picked-up orders wait for the buyer (or complete on their own).
+const NEXT_STEP = {
+  DELIVERY: {
+    PENDING: 'CONFIRMED',
+    CONFIRMED: 'PREPARING',
+    PREPARING: 'TO_SHIP',
+    TO_SHIP: (o) => (o.courierId ? 'SHIPPED' : 'OUT_FOR_DELIVERY'),
+    OUT_FOR_DELIVERY: 'DELIVERED',
+    READY: 'COMPLETED',
+  },
+  PICKUP: {
+    PENDING: 'CONFIRMED',
+    CONFIRMED: 'PREPARING',
+    PREPARING: 'READY_FOR_PICKUP',
+    READY_FOR_PICKUP: 'PICKED_UP',
+    READY: 'COMPLETED',
+  },
 };
-
-const PICKUP_FLOW = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['READY_FOR_PICKUP', 'PREPARING', 'CANCELLED'],
-  PREPARING: ['READY_FOR_PICKUP', 'READY', 'CANCELLED'],
-  READY_FOR_PICKUP: ['PICKED_UP', 'CANCELLED'],
-  PICKED_UP: ['COMPLETED'],
-  READY: ['COMPLETED', 'CANCELLED'],
-};
+const CANCELLABLE = ['PENDING', 'CONFIRMED', 'PREPARING', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP', 'READY'];
 
 const PAYMENT_LABELS = {
   PENDING: { label: 'Unpaid', cls: 'status-pending' },
@@ -106,30 +100,29 @@ const isAwaitingPayment = (order) => Boolean(order?.paymentMethod)
   && order.paymentMethod !== 'COD'
   && order.paymentStatus !== 'PAID';
 
-// Packed orders go the way the buyer chose at checkout: with their courier
-// ("Ship with courier"), or delivered by the seller ("Out for delivery").
-function getNextStatuses(order) {
-  const flow = order?.fulfillmentMethod === 'PICKUP' ? PICKUP_FLOW : DELIVERY_FLOW;
-  const next = (flow[order?.status] || []).filter((s) => {
-    if (s === 'SHIPPED') return Boolean(order?.courierId);
-    if (s === 'OUT_FOR_DELIVERY') return !order?.courierId;
-    return true;
-  });
-  return isAwaitingPayment(order) ? next.filter((s) => s === 'CONFIRMED' || s === 'CANCELLED') : next;
+/** The one next step, or null (waiting for the buyer's payment, or for the buyer). */
+function nextStep(order) {
+  const step = NEXT_STEP[order?.fulfillmentMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY'][order?.status];
+  const to = typeof step === 'function' ? step(order) : step;
+  if (!to) return null;
+  // A QR order goes on only once its payment is confirmed.
+  if (to !== 'CONFIRMED' && isAwaitingPayment(order)) return null;
+  return to;
 }
+const canCancel = (order) => CANCELLABLE.includes(order?.status);
 
 const ACTION_LABELS = {
-  CONFIRMED: { label: 'Confirm Order', cls: 'action-confirm' },
-  PREPARING: { label: 'Start Preparing', cls: 'action-prepare' },
-  TO_SHIP: { label: 'Mark Ready to Ship', cls: 'action-prepare' },
-  OUT_FOR_DELIVERY: { label: 'Out for Delivery', cls: 'action-ready' },
+  CONFIRMED: { label: 'Confirm order', cls: 'action-confirm' },
+  PREPARING: { label: 'Start packing', cls: 'action-prepare' },
+  TO_SHIP: { label: 'Packed: ready to ship', cls: 'action-prepare' },
+  OUT_FOR_DELIVERY: { label: 'Out for delivery', cls: 'action-ready' },
   SHIPPED: { label: 'Ship with courier', cls: 'action-ready' },
-  DELIVERED: { label: 'Mark Delivered', cls: 'action-complete' },
-  READY: { label: 'Mark Ready', cls: 'action-ready' },
-  READY_FOR_PICKUP: { label: 'Ready for Pickup', cls: 'action-ready' },
-  PICKED_UP: { label: 'Mark Picked Up', cls: 'action-complete' },
-  COMPLETED: { label: 'Mark Completed', cls: 'action-complete' },
-  CANCELLED: { label: 'Cancel Order', cls: 'action-cancel' },
+  DELIVERED: { label: 'Mark delivered', cls: 'action-complete' },
+  READY: { label: 'Mark ready', cls: 'action-ready' },
+  READY_FOR_PICKUP: { label: 'Ready for pickup', cls: 'action-ready' },
+  PICKED_UP: { label: 'Mark picked up', cls: 'action-complete' },
+  COMPLETED: { label: 'Mark completed', cls: 'action-complete' },
+  CANCELLED: { label: 'Cancel order', cls: 'action-cancel' },
 };
 
 export default function SellerOrders() {
@@ -138,8 +131,7 @@ export default function SellerOrders() {
   // closed. Reports route to the buyer's own municipal admin.
   const [reportBuyer, setReportBuyer] = useState(null);
   const [activeTab, setActiveTab] = useState(() => {
-    const fromUrl = searchParams.get('status');
-    return TABS.some((t) => t.key === fromUrl) ? fromUrl : 'all';
+    return sellerTabFrom(searchParams.get('status'));
   });
   // Each tab's first page as it showed last time: shown at once while it is
   // asked for again.
@@ -147,6 +139,8 @@ export default function SellerOrders() {
   const [orders, setOrders] = useState(() => saved?.orders || []);
   const [isLoading, setIsLoading] = useState(() => !saved);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  // Orders per stage, for the counts on the tabs.
+  const [stageCounts, setStageCounts] = useState({});
   const [updatingId, setUpdatingId] = useState(null);
   // Server-side filters: order number search, created-at range and payment
   // status, all sent as query params to GET /orders/store/orders.
@@ -212,13 +206,15 @@ export default function SellerOrders() {
       const params = {
         page,
         pageSize: PAGE_SIZE,
-        status: activeTab !== 'all' ? activeTab : undefined,
+        status: activeTab !== 'all' ? (SELLER_TABS.find((t) => t.key === activeTab)?.status || activeTab) : undefined,
         search: debouncedSearch || undefined,
         from: from || undefined,
         to: to || undefined,
         paymentStatus: paymentFilter || undefined,
       };
       const res = await axios.get('/orders/store/orders', { params });
+      // The tab counts, fresh with every load.
+      axios.get('/orders/store/stages').then((r) => setStageCounts(r.data?.byStatus || {})).catch(() => {});
       const loaded = res.data || [];
       setOrders(loaded);
       if (res.pagination) setPagination(res.pagination);
@@ -395,61 +391,49 @@ export default function SellerOrders() {
                   <X size={12} weight="bold" />
                 </button>
               )}
+              {isPhone && (
+                <button type="button" className="so-filter-btn" onClick={() => setFilterOpen(true)} aria-label="Filter by date or payment">
+                  <SlidersHorizontal size={17} weight="bold" />
+                  {(from || to || paymentFilter) && <span className="scm-chip-dot" />}
+                </button>
+              )}
             </div>
           )}
         />
 
         {isPhone ? (
           <>
-            <div className="scm-chips" role="group" aria-label="Show orders">
-              {PHONE_QUICK_TABS.map((key) => (
+            <div className="scm-chips so-stage-chips" role="tablist" aria-label="Show orders">
+              {SELLER_TABS.map((t) => (
                 <button
-                  key={key}
+                  key={t.key}
                   type="button"
-                  className={`scm-chip${activeTab === key ? ' is-on' : ''}`}
-                  onClick={() => selectTab(key)}
+                  role="tab"
+                  aria-selected={activeTab === t.key}
+                  className={`scm-chip${activeTab === t.key ? ' is-on' : ''}`}
+                  onClick={() => selectTab(t.key)}
                 >
-                  {TABS.find((t) => t.key === key)?.label}
+                  {t.label}
+                  {tabCount(t, stageCounts) > 0 && <em className="so-tab-count">{tabCount(t, stageCounts)}</em>}
                 </button>
               ))}
-              <button
-                type="button"
-                className={`scm-chip scm-chip--more${PHONE_QUICK_TABS.includes(activeTab) ? '' : ' is-on'}`}
-                onClick={() => setFilterOpen(true)}
-              >
-                <SlidersHorizontal size={16} weight="bold" />
-                {PHONE_QUICK_TABS.includes(activeTab) ? 'More' : TABS.find((t) => t.key === activeTab)?.label}
-                {(from || to || paymentFilter) && <span className="scm-chip-dot" aria-label="Filters on" />}
-              </button>
             </div>
             {!isLoading && pagination.total > 0 && (
               <p className="som-count">{pagination.total} order{pagination.total === 1 ? '' : 's'}</p>
             )}
             <PhoneSheet
               open={filterOpen}
-              title="Show orders"
+              title="Filter orders"
               onClose={() => setFilterOpen(false)}
               footer={(
                 <>
-                  <button type="button" className="scm-btn scm-btn--ghost" onClick={() => { clearFilters(); selectTab('all'); }}>
+                  <button type="button" className="scm-btn scm-btn--ghost" onClick={() => clearFilters()}>
                     Reset
                   </button>
                   <button type="button" className="scm-btn" onClick={() => setFilterOpen(false)}>Done</button>
                 </>
               )}
             >
-              <span className="scm-sheet-label">Status</span>
-              {TABS.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  className={`scm-choice${activeTab === t.key ? ' is-on' : ''}`}
-                  onClick={() => selectTab(t.key)}
-                >
-                  {t.label}
-                  {activeTab === t.key && <Check size={18} weight="bold" />}
-                </button>
-              ))}
               <span className="scm-sheet-label">Date ordered</span>
               <div className="scm-field-row">
                 <label className="scm-field">
@@ -475,13 +459,14 @@ export default function SellerOrders() {
         <>
         {/* Tabs */}
         <div className="seller-tabs">
-          {TABS.map(t => (
+          {SELLER_TABS.map(t => (
             <button
               key={t.key}
               className={`seller-tab ${activeTab === t.key ? 'seller-tab--active' : ''}`}
               onClick={() => selectTab(t.key)}
             >
               {t.label}
+              {tabCount(t, stageCounts) > 0 && <em className="so-tab-count">{tabCount(t, stageCounts)}</em>}
             </button>
           ))}
         </div>
@@ -552,7 +537,7 @@ export default function SellerOrders() {
                 <tbody>
                   {displayed.map(order => {
                     const s = STATUS_MAP[order.status] || { label: order.status, cls: '' };
-                    const nextStatuses = getNextStatuses(order);
+                    const next = nextStep(order);
                     const isUpdating = updatingId === order.id;
                     const items = order.items || [];
                     const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
@@ -633,18 +618,14 @@ export default function SellerOrders() {
                           <span className={`seller-badge seller-badge--solid ${s.cls}`}>
                             {s.label}
                           </span>
-                          {order.paymentStatus === 'PENDING_VERIFICATION' && order.status !== 'CANCELLED' && (
-                            <div className="so-payment-flag">Payment to verify</div>
-                          )}
-                          {qrUnpaid(order) && order.status === 'CONFIRMED' && (
-                            <div className="so-payment-flag">Waiting for buyer&apos;s payment</div>
-                          )}
-                          {order.paymentStatus === 'FAILED' && order.status !== 'CANCELLED' && (
-                            <div className="so-payment-flag">Awaiting new proof</div>
-                          )}
-                          {canMarkRefunded(order) && (
-                            <div className="so-payment-flag">Refund due</div>
-                          )}
+                          {(() => {
+                            const next = sellerNext(order);
+                            return next.short && !['completed', 'cancelled'].includes(next.short.toLowerCase()) && next.short !== 'Done' ? (
+                              <div className={`so-next is-${next.tone}`}>
+                                <span>{next.short}</span>{next.due && <small>by {next.due}</small>}
+                              </div>
+                            ) : null;
+                          })()}
                         </td>
                         <td>
                           <div className="order-row-actions">
@@ -658,32 +639,16 @@ export default function SellerOrders() {
                             >
                               <Eye size={15} /><span className="so-action-label">Details</span>
                             </button>
-                            {nextStatuses.length > 0 && (
-                              <div className="status-dropdown">
-                                <button
-                                  className="status-dropdown-btn"
-                                  disabled={isUpdating}
-                                  aria-label="Update order status"
-                                  title="Update status"
-                                >
-                                  <span className="so-action-label">{isUpdating ? 'Updating…' : 'Update status'}</span>
-                                  {isUpdating ? <Spinner size={14} /> : <ChevronDown size={14} />}
-                                </button>
-                                <div className="status-dropdown-menu">
-                                  {nextStatuses.map(ns => {
-                                    const a = ACTION_LABELS[ns];
-                                    return (
-                                      <button
-                                        key={ns}
-                                        className={`status-dropdown-item ${a?.cls || ''}`}
-                                        onClick={() => requestStatusChange(order.id, ns)}
-                                      >
-                                        {a?.label || ns}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
+                            {next && (
+                              <button
+                                type="button"
+                                className="so-next-btn"
+                                disabled={isUpdating}
+                                onClick={() => requestStatusChange(order.id, next)}
+                              >
+                                {isUpdating ? <Spinner size={14} /> : null}
+                                <span>{ACTION_LABELS[next]?.label || next}</span>
+                              </button>
                             )}
                           </div>
                         </td>
@@ -734,6 +699,18 @@ export default function SellerOrders() {
                     {STATUS_MAP[selectedOrder.status]?.label || selectedOrder.status}
                   </span>
                 </div>
+
+                {(() => {
+                  const next = sellerNext(selectedOrder);
+                  return next.title ? (
+                    <div className={`osp is-full so-next-panel is-${next.tone}`}>
+                      <div className="osp-head-text">
+                        <strong>{next.title}</strong>
+                        {next.text && <p>{next.text}</p>}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
 
                 {/* Buyer */}
                 <div className="detail-row">
@@ -937,22 +914,21 @@ export default function SellerOrders() {
                 </div>
 
                 {/* Action buttons */}
-                {getNextStatuses(selectedOrder).length > 0 && (
+                {nextStep(selectedOrder) && (
                   <div className="detail-actions">
-                    {getNextStatuses(selectedOrder).map(ns => {
-                      const a = ACTION_LABELS[ns];
-                      return (
-                        <button
-                          key={ns}
-                          className={`detail-action-btn ${a?.cls || ''}`}
-                          disabled={updatingId === selectedOrder.id}
-                          onClick={() => requestStatusChange(selectedOrder.id, ns)}
-                        >
-                          {a?.label || ns}
-                        </button>
-                      );
-                    })}
+                    <button
+                      className={`detail-action-btn ${ACTION_LABELS[nextStep(selectedOrder)]?.cls || ''}`}
+                      disabled={updatingId === selectedOrder.id}
+                      onClick={() => requestStatusChange(selectedOrder.id, nextStep(selectedOrder))}
+                    >
+                      {ACTION_LABELS[nextStep(selectedOrder)]?.label || nextStep(selectedOrder)}
+                    </button>
                   </div>
+                )}
+                {canCancel(selectedOrder) && (
+                  <button type="button" className="so-cancel-link" onClick={() => requestStatusChange(selectedOrder.id, 'CANCELLED')}>
+                    Cancel this order
+                  </button>
                 )}
 
                 {/* Receipt link */}

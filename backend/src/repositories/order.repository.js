@@ -1,5 +1,8 @@
 const prisma = require('../config/database');
 const { changeStock } = require('./stockLedger');
+const { stageWhere } = require('../utils/orderStages');
+
+const ORDER_STATUSES = new Set(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP', 'SHIPPED']);
 
 /**
  * Order Repository
@@ -307,13 +310,20 @@ const findAll = async (options = {}) => {
     from,
     to,
     search,
+    stage,
+    forBuyer = false,
   } = options;
 
   const where = {};
 
   if (buyerId) where.buyerId = buyerId;
   if (storeId) where.storeId = storeId;
-  if (status) where.status = status;
+  // One status, or several: "DELIVERED,PICKED_UP".
+  if (status) {
+    const list = String(status).split(',').map((x) => x.trim().toUpperCase()).filter((x) => ORDER_STATUSES.has(x));
+    if (list.length === 1) where.status = list[0];
+    else if (list.length > 1) where.status = { in: list };
+  }
   if (paymentStatus) where.paymentStatus = paymentStatus;
   // `from` / `to` are inclusive calendar days on createdAt.
   if (from || to) {
@@ -325,6 +335,8 @@ const findAll = async (options = {}) => {
   if (municipalityId) {
     where.store = { municipalityId };
   }
+  // Shop-style stage (new, unpaid, to ship…): see utils/orderStages.
+  if (stageWhere(stage)) where.AND = [stageWhere(stage)];
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
@@ -340,9 +352,26 @@ const findAll = async (options = {}) => {
           select: {
             id: true,
             name: true,
+            slug: true,
+            // The buyer's own list: where to collect a pickup order.
+            ...(forBuyer ? {
+              logo: true,
+              pickupAddress: true,
+              pickupInstructions: true,
+              latitude: true,
+              longitude: true,
+              municipality: { select: { name: true } },
+            } : {}),
           },
         },
         courier: { select: { id: true, name: true, logoUrl: true, trackingUrl: true } },
+        // When each step happened, for the buyer's progress line.
+        ...(forBuyer ? {
+          statusHistory: {
+            select: { toStatus: true, note: true, createdAt: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        } : {}),
         items: {
           include: {
             product: {
@@ -621,7 +650,22 @@ const cancelOrder = async (id, actorId = null, {
   });
 };
 
+/** How many of a shop's orders are in each stage (the seller's tabs). */
+const countStoreStages = async (storeId) => {
+  const { STAGES } = require('../utils/orderStages');
+  const [counts, groups] = await Promise.all([
+    Promise.all(STAGES.map((stage) => prisma.order.count({ where: { storeId, AND: [stageWhere(stage)] } }))),
+    prisma.order.groupBy({ by: ['status'], where: { storeId }, _count: { _all: true } }),
+  ]);
+  return {
+    ...Object.fromEntries(STAGES.map((stage, i) => [stage, counts[i]])),
+    // Per status, for the seller's status tabs.
+    byStatus: Object.fromEntries(groups.map((g) => [g.status, g._count._all])),
+  };
+};
+
 module.exports = {
+  countStoreStages,
   createOrder,
   createOrderWithItems,
   findByCheckoutKey,
