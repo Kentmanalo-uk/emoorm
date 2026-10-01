@@ -541,9 +541,9 @@ const Header = () => {
                   aria-label="Search by image"
                 >
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                    <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M7 5L8 3H12L13 5" stroke="currentColor" strokeWidth="1.5" />
+                    <rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                    <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                    <path d="M7 5L8 3H12L13 5" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
                   </svg>
                 </button>
                 <button type="submit" className="header-search-button">
