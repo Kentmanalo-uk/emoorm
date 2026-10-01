@@ -25,6 +25,10 @@
   height: 80px;
 }
 
+.ui-empty-art {
+  margin-bottom: 16px;
+}
+
 .ui-empty-title {
   margin: 0 0 8px;
   color: var(--t-neutral-800, #1f2937);

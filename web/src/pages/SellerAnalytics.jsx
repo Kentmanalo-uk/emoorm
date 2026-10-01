@@ -172,6 +172,7 @@ export default function SellerAnalytics() {
             <TopList
               items={bestSellers}
               renderMetric={(p) => peso(p.revenue)}
+              emptyArt="products"
               emptyMessage="No products sold in this period."
             />
           </div>
@@ -187,6 +188,7 @@ export default function SellerAnalytics() {
                 subtitle: `${c.quantity} sold`,
               }))}
               renderMetric={(c) => peso(c.revenue)}
+              emptyArt="categories"
               emptyMessage="No category data yet."
             />
           </div>
@@ -215,6 +217,7 @@ export default function SellerAnalytics() {
                 stock: p.stock,
               }))}
               renderMetric={(p) => `${p.stock} left`}
+              emptyArt="healthy"
               emptyMessage="All products well-stocked."
             />
           </div>

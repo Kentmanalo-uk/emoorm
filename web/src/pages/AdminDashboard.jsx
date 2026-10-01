@@ -781,7 +781,7 @@ export default function AdminDashboard() {
             ) : null}
           >
             {!analytics ? <Empty>Loading…</Empty> : topStores.length === 0 ? (
-              <Empty art="shopping" title="No top stores yet">Stores with completed sales will rank here.</Empty>
+              <Empty art="stores" title="No top stores yet">Stores with completed sales will rank here.</Empty>
             ) : (
               <ol className="dash-list dash-rank">
                 {topStores.map((st, i) => (
@@ -838,7 +838,7 @@ export default function AdminDashboard() {
           {/* Health, reports and activity */}
           <Section title="Stores to check" span="third" link="/admin/all-sellers" linkLabel="All sellers">
             {health === null ? <Empty>Loading…</Empty> : health.length === 0 ? (
-              <Empty art="maintenance" title="All stores look healthy">No store needs a follow-up right now.</Empty>
+              <Empty art="healthy" title="All stores look healthy">No store needs a follow-up right now.</Empty>
             ) : (
               <ul className="dash-list">
                 {health.map((st) => (
@@ -865,7 +865,7 @@ export default function AdminDashboard() {
 
           <Section title="Open reports" span="third" link="/admin/reports">
             {reports === null ? <Empty>Loading…</Empty> : reports.length === 0 ? (
-              <Empty art="inbox" title="No open reports">Reports from buyers will appear here.</Empty>
+              <Empty art="reports" title="No open reports">Reports from buyers will appear here.</Empty>
             ) : (
               <ul className="dash-list">
                 {reports.map((r) => (

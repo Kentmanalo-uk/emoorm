@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import EmptyArt from './EmptyArt';
 import './EmptyState.css';
 
 /**
@@ -6,13 +7,15 @@ import './EmptyState.css';
  * messages, cart): a large centred card with a soft icon, a title, one line
  * of text and up to two actions.
  *
- * icon:    a Phosphor icon component
+ * art:     an EmptyArt scene name (the glass illustration); preferred
+ * icon:    a Phosphor icon component, used when there is no `art`
  * actions: [{ label, to?, onClick?, variant?: 'primary' | 'outline', icon? }]
  */
-export default function EmptyState({ icon: Icon, title, text, actions = [], className = '' }) {
+export default function EmptyState({ art, icon: Icon, title, text, actions = [], className = '' }) {
   return (
     <div className={`ui-empty ${className}`}>
-      {Icon && (
+      {art && <EmptyArt name={art} size={112} className="ui-empty-art" />}
+      {!art && Icon && (
         <span className="ui-empty-icon" aria-hidden="true">
           <Icon size={80} weight="fill" />
         </span>

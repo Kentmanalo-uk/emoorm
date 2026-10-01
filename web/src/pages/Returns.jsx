@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link } from 'react-router-dom';
-import { ArrowCounterClockwise, CaretRight } from '@phosphor-icons/react';
+import { CaretRight } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import ProductImage from '../components/ProductImage';
@@ -86,7 +87,7 @@ export default function Returns() {
       {visible.length === 0 ? (
         <div className="profile-section">
           <div className="empty-state">
-            <ArrowCounterClockwise size={40} weight="fill" />
+            <EmptyArt name="returns" size={96} />
             <p className="empty-state-text">No return requests found</p>
             <p className="empty-state-hint">
               Completed orders can be returned within the seller&apos;s return policy window.

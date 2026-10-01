@@ -278,7 +278,7 @@ export default function AdminReports() {
           <Skeleton.Table cols={6} rows={6} />
         ) : reports.length === 0 ? (
           <div className="admin-empty">
-            <EmptyArt name="inbox" size={104} />
+            <EmptyArt name="reports" size={104} />
             <p>No {statusFilter.toLowerCase().replace('_', ' ')} reports</p>
           </div>
         ) : (

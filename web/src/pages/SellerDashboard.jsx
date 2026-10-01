@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Plus, Clock, Truck, CheckCircle, Package,
@@ -420,7 +421,7 @@ export default function SellerDashboard() {
                   <Skeleton.OrderList rows={4} />
                 ) : recentOrders.length === 0 ? (
                   <div className="sd-empty">
-                    <ShoppingBag size={28} weight="fill" />
+                    <EmptyArt name="orders" size={84} />
                     <p>No orders yet.</p>
                   </div>
                 ) : (
@@ -447,7 +448,7 @@ export default function SellerDashboard() {
                   </div>
                 ) : salesByDay.length === 0 ? (
                   <div className="sd-empty sd-empty--sm">
-                    <BarChart2 size={22} weight="fill" />
+                    <EmptyArt name="analytics" size={56} />
                     <p>No sales data yet.</p>
                   </div>
                 ) : (
@@ -486,7 +487,7 @@ export default function SellerDashboard() {
                   </div>
                 ) : !followerStats ? (
                   <div className="sd-empty sd-empty--sm">
-                    <Users size={22} weight="fill" />
+                    <EmptyArt name="followers" size={56} />
                     <p>No follower data yet.</p>
                   </div>
                 ) : (
@@ -563,7 +564,7 @@ export default function SellerDashboard() {
                 </header>
                 {topProducts.length === 0 ? (
                   <div className="sd-empty sd-empty--sm">
-                    <Package size={22} weight="fill" />
+                    <EmptyArt name="products" size={56} />
                     <p>No products yet.</p>
                   </div>
                 ) : (
@@ -1039,7 +1040,10 @@ function PhoneHome({
           {isLoading ? (
             <Skeleton.OrderList rows={3} />
           ) : recentOrders.length === 0 ? (
-            <p className="sdm-empty">No orders yet. They show up here as soon as a buyer orders.</p>
+            <div className="sdm-empty">
+              <EmptyArt name="orders" size={72} />
+              <span>No orders yet. They show up here as soon as a buyer orders.</span>
+            </div>
           ) : (
             <ul className="sh-orders">
               {recentOrders.map((o) => <PhoneOrderRow key={o.id} order={o} onClick={() => onOpenOrder(o.id)} />)}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -113,7 +114,7 @@ export default function AdminAuditLogs() {
         {isLoading ? (
           <div className="admin-empty"><p>Loading…</p></div>
         ) : logs.length === 0 ? (
-          <div className="admin-empty"><p>No records match this filter.</p></div>
+          <div className="admin-empty"><EmptyArt name="activity" size={104} /><p>No records match this filter.</p></div>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">

@@ -130,6 +130,7 @@ function PlatformAnalytics() {
                 revenue: s.revenue,
               }))}
               renderMetric={(s) => peso(s.revenue)}
+              emptyArt="stores"
               emptyMessage="No stores with sales yet."
             />
           </div>
@@ -156,6 +157,7 @@ function PlatformAnalytics() {
                 revenue: p.revenue,
               }))}
               renderMetric={(p) => peso(p.revenue)}
+              emptyArt="products"
               emptyMessage="No products sold in this period."
             />
           </div>
@@ -167,6 +169,9 @@ function PlatformAnalytics() {
             <StatusDonut
               counts={usersByRole}
               colors={{ BUYER: 'var(--t-info-500, #3b82f6)', SELLER: 'var(--t-primary-600, #059669)', MUNICIPAL_ADMIN: 'var(--t-violet-500, #8b5cf6)' }}
+              emptyArt="users"
+              emptyTitle="No users yet"
+              emptyMessage="Accounts by role will be charted here."
             />
           </div>
         </div>
@@ -228,7 +233,12 @@ function PlatformAnalytics() {
             <div className="an-card-head">
               <h2 className="an-card-title">Product status</h2>
             </div>
-            <StatusDonut counts={data?.productsByStatus || {}} />
+            <StatusDonut
+              counts={data?.productsByStatus || {}}
+              emptyArt="products"
+              emptyTitle="No products yet"
+              emptyMessage="Products by status will be charted here."
+            />
           </div>
         </div>
       </div>

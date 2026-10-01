@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import EmptyArt from '../ui/EmptyArt';
 import { Link } from 'react-router-dom';
 import {
   ChatCircleDots, X, CaretLeft, PaperPlaneRight, ArrowSquareOut, ChatsCircle, CircleNotch, Storefront,
-  Headset, EnvelopeOpen,
+  Headset,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
@@ -223,7 +224,7 @@ export default function ChatDock() {
       if (tab === 'support') {
         return (
           <div className="cd-empty">
-            <Headset size={56} weight="fill" />
+            <EmptyArt name="support" size={72} />
             <strong>Need help?</strong>
             <span>Start a case about an order, a payment or your account and your municipal admin replies here.</span>
             <Link to="/help#get-help" className="cd-primary" onClick={() => setOpen(false)}>
@@ -235,7 +236,7 @@ export default function ChatDock() {
       if (tab === 'unread') {
         return (
           <div className="cd-empty">
-            <EnvelopeOpen size={56} weight="fill" />
+            <EmptyArt name="inbox" size={72} />
             <strong>All caught up</strong>
             <span>No unread messages.</span>
           </div>
@@ -243,7 +244,7 @@ export default function ChatDock() {
       }
       return (
         <div className="cd-empty">
-          <ChatsCircle size={56} weight="fill" />
+          <EmptyArt name="messages" size={72} />
           <strong>No conversations yet</strong>
           <span>Visit a store and tap Message to start chatting.</span>
           <Link to="/stores" className="cd-primary"><Storefront size={15} weight="fill" /> Browse stores</Link>
@@ -279,7 +280,7 @@ export default function ChatDock() {
     if (!selected) {
       return (
         <div className="cd-empty">
-          <ChatsCircle size={72} weight="fill" />
+          <EmptyArt name="messages" size={88} />
           <strong>Your messages</strong>
           <span>Pick a conversation on the left to start chatting.</span>
         </div>
@@ -367,7 +368,7 @@ export default function ChatDock() {
 
         {!isAuthenticated ? (
           <div className="cd-empty">
-            <ChatsCircle size={72} weight="fill" />
+            <EmptyArt name="messages" size={88} />
             <strong>Chat with local stores</strong>
             <span>Sign in to message sellers and your municipal support team.</span>
             <Link to="/login?redirect=/" className="cd-primary">Sign in</Link>

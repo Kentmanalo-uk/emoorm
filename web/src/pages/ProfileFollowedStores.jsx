@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link } from 'react-router-dom';
-import { Storefront as Store, MagnifyingGlass as Search, Package, Users, Bell, BellSlash as BellOff, X } from '@phosphor-icons/react';
+import { MagnifyingGlass as Search, Package, Users, Bell, BellSlash as BellOff, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import {
   listMyFollowing,
@@ -134,7 +135,7 @@ const ProfileFollowedStores = () => {
         <StoreCardsSkeleton count={4} />
       ) : isEmpty ? (
         <div className="empty-state">
-          <Store size={40} strokeWidth={1.5} weight="fill" />
+          <EmptyArt name={hasFilters ? 'search' : 'following'} size={96} />
           <p className="empty-state-text">
             {hasFilters ? 'No stores match your search' : 'You are not following any stores yet'}
           </p>

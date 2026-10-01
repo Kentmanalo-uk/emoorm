@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye, ArrowSquareOut,
@@ -553,16 +554,16 @@ export default function SellerProducts() {
           ) : products.length === 0 ? (
             statusFilter === 'all' && !search ? (
               <div className="seller-empty products-first">
-                <Package size={40} weight="fill" />
+                <EmptyArt name="products" size={136} />
                 <strong>Add your first product</strong>
-                <p>A photo, a name and a price are enough to start. You can add more details later.</p>
-                <button type="button" className="btn-seller-primary" onClick={openNew}>
-                  <Plus size={16} /> Add product
+                <p>A photo, a name and a price are enough.</p>
+                <button type="button" className="products-first-add" onClick={openNew} aria-label="Add product" title="Add product">
+                  <Plus size={26} weight="bold" />
                 </button>
               </div>
             ) : (
               <div className="seller-empty">
-                <Package size={40} weight="fill" />
+                <EmptyArt name={statusFilter === 'restock' && !search ? 'healthy' : 'search'} size={88} />
                 <p>
                   {statusFilter === 'restock' && !search
                     ? 'All good: every product has enough stock.'

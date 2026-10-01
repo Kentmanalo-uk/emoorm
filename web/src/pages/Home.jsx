@@ -457,6 +457,7 @@ const Home = () => {
             </div>
           ) : (
             <div className="stores-message">
+              <EmptyArt name="stores" size={64} />
               <p>No active stores are available in this area yet.</p>
               <Link to="/stores" className="section-arrow-link" aria-label="Browse all stores" title="Browse all stores"><ArrowRight size={19} /></Link>
             </div>
@@ -487,7 +488,10 @@ const Home = () => {
               ))}
             </div>
           ) : (
-            <div className="municipalities-empty">Municipality showcases are coming soon.</div>
+            <div className="municipalities-empty">
+              <EmptyArt name="places" size={80} />
+              <span>Municipality showcases are coming soon.</span>
+            </div>
           )}
         </div>
       </section>

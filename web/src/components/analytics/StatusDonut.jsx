@@ -20,12 +20,13 @@ const StatusDonut = ({
   size = 140,
   emptyTitle = 'No orders yet',
   emptyMessage = 'Order statuses will be charted here.',
+  emptyArt = 'orders',
 }) => {
   const entries = Object.entries(counts).filter(([, v]) => v > 0);
   const total = entries.reduce((s, [, v]) => s + v, 0);
 
   if (total === 0) {
-    return <EmptyState art="analytics" title={emptyTitle} message={emptyMessage} compact />;
+    return <EmptyState art={emptyArt} title={emptyTitle} message={emptyMessage} compact />;
   }
 
   const radius = size / 2 - 8;

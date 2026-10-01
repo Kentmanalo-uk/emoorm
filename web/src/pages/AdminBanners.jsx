@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Plus, PencilSimple as Edit3, Trash, UploadSimple as Upload, ArrowUp, ArrowDown } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
@@ -378,7 +379,7 @@ export default function AdminBanners() {
         {loading ? (
           <div style={{ padding: 20, color: 'var(--t-neutral-500, #64748b)' }}>Loading banners…</div>
         ) : banners.length === 0 ? (
-          <div style={{ padding: 20, color: 'var(--t-neutral-500, #64748b)' }}>No banners yet. Click “Add banner” to create your first one.</div>
+          <div className="admin-empty"><EmptyArt name="banners" size={104} /><p>No banners yet. Click “Add banner” to create your first one.</p></div>
         ) : (
           <table className="admin-table">
             <thead>

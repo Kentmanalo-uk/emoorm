@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   Megaphone, Tag, ShareNetwork, PaintBrush, Users, LockSimple, Package,
@@ -173,7 +174,10 @@ export default function SellerMarketing() {
           {!feed ? (
             <Skeleton height={60} radius={12} />
           ) : feed.announcements.length === 0 ? (
-            <p className="smk-empty">Nothing sent yet. Tell your followers what&apos;s new, like fresh stock or a new product.</p>
+            <div className="smk-empty">
+              <EmptyArt name="announcements" size={72} />
+              <span>Nothing sent yet. Tell your followers what&apos;s new, like fresh stock or a new product.</span>
+            </div>
           ) : (
             <ul className="smk-list">
               {feed.announcements.map((a) => {

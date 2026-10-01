@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, Package, ShoppingCart, Star, WarningCircle,
+  SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, ShoppingCart, Star, WarningCircle,
   CaretLeft, MagnifyingGlass, X, ClockCounterClockwise, TrendUp,
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
@@ -697,7 +698,7 @@ const Products = () => {
                 </div>
               ) : products.length === 0 && isPhone ? (
                 <div className="srch-m-empty">
-                  <span className="srch-m-empty-icon"><MagnifyingGlass size={30} weight="bold" /></span>
+                  <EmptyArt name="search" size={96} />
                   <h3>{searchQuery ? <>No results for “{searchQuery}”</> : 'No products found'}</h3>
                   <p>
                     {searchQuery
@@ -718,7 +719,7 @@ const Products = () => {
                 </div>
               ) : products.length === 0 ? (
                 <div className="products-empty">
-                  <Package size={64} weight="fill" />
+                  <EmptyArt name="search" size={104} />
                   <h3>No products found</h3>
                   <p>Try adjusting your filters or search terms</p>
                   {hasActiveFilters && (

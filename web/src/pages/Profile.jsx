@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -504,7 +505,7 @@ const Profile = () => {
         </div>
         {followedStores.length === 0 ? (
           <div className="empty-state">
-            <Store size={48} weight="fill" />
+            <EmptyArt name="following" size={88} />
             <p className="empty-state-text">Not following any stores yet</p>
             <Link to="/stores" className="empty-state-button">
               Discover Stores

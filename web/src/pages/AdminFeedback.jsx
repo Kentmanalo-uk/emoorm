@@ -290,7 +290,7 @@ export default function AdminFeedback() {
           <Skeleton.Table cols={5} rows={6} />
         ) : rows.length === 0 ? (
           <div className="admin-empty">
-            <EmptyArt name="inbox" size={104} />
+            <EmptyArt name="feedback" size={104} />
             <p>{debounced ? 'No feedback matches that search' : 'No feedback here yet'}</p>
           </div>
         ) : (

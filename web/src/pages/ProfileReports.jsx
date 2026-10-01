@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
+import EmptyArt from '../components/ui/EmptyArt';
 import { useQuery } from '@tanstack/react-query';
-import { Flag, Storefront, Package, CheckCircle, Clock } from '@phosphor-icons/react';
+import { Storefront, Package, CheckCircle, Clock } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import './ProfileReports.css';
 
@@ -86,7 +87,7 @@ export default function ProfileReports() {
           </div>
         ) : reports.length === 0 ? (
           <div className="empty-state">
-            <Flag size={40} weight="fill" />
+            <EmptyArt name="reports" size={96} />
             <p className="empty-state-text">You have not reported anything</p>
             <p className="empty-state-hint">
               If a listing or a seller looks wrong, use Report on the product or store page. Your

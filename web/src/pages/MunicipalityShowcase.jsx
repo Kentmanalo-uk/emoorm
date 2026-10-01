@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, MapPin, Star } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
@@ -93,7 +94,7 @@ export default function MunicipalityShowcase() {
                       </Link>
                     ))}
                   </div>
-                ) : <div className="municipality-empty">No products are available yet.</div>}
+                ) : <div className="municipality-empty"><EmptyArt name="products" size={80} /><span>No products are available yet.</span></div>}
               </section>
 
               <section className="municipality-content-section">
@@ -107,7 +108,7 @@ export default function MunicipalityShowcase() {
                       </Link>
                     ))}
                   </div>
-                ) : <div className="municipality-empty">No stores are available yet.</div>}
+                ) : <div className="municipality-empty"><EmptyArt name="stores" size={80} /><span>No stores are available yet.</span></div>}
               </section>
             </>
           )}

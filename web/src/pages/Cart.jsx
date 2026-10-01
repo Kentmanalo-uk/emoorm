@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search, WarningCircle, Heart, Check, CaretRight, CaretDown } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -481,6 +482,7 @@ const Cart = () => {
           <div className="container">
             <EmptyState
               className="cart-empty-state"
+              art="cart"
               icon={ShoppingCart}
               title="Your cart is empty"
               text="Items you add from products and shops will show up here."
@@ -545,7 +547,7 @@ const Cart = () => {
               )}
               {cartSearch && visibleItems.length === 0 && (
                 <div className="cart-search-empty">
-                  <Search size={30} weight="fill" />
+                  <EmptyArt name="search" size={84} />
                   <h2>No cart items found</h2>
                   <p>Try another product or store name.</p>
                 </div>
@@ -650,7 +652,7 @@ const Cart = () => {
               )}
               {cartSearch && visibleItems.length === 0 && (
                 <div className="cart-search-empty">
-                  <Search size={30} weight="fill" />
+                  <EmptyArt name="search" size={84} />
                   <h2>No cart items found</h2>
                   <p>Try another product or store name.</p>
                 </div>

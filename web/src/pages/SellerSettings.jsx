@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { ShieldWarning as ShieldAlert, Trash as Trash2, Clock, ArrowCounterClockwise as RotateCcw } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -80,7 +81,8 @@ export default function SellerSettings() {
           </div>
         ) : !store ? (
           <div className="seller-card" style={{ padding: 20 }}>
-            <p>You don't have a shop yet. Create one from Shop Profile first.</p>
+            <EmptyArt name="launch" size={88} />
+            <p style={{ textAlign: 'center' }}>You don't have a shop yet. Create one from Shop Profile first.</p>
           </div>
         ) : pendingDeletion ? (
           <div className="seller-card settings-deletion-pending">

@@ -1,33 +1,32 @@
-/* The illustration is embedded rather than linked, so the wrapper carries the
-   sizing and the <svg> inside simply fills it. Height is set inline by the
-   caller; width follows the drawing's own ratio, which runs from a tall
-   rocket to a very wide row of books. */
+/* The wrapper carries the size: --ea-h is the caller's `size`, a quarter
+   larger (set inline); the scene fills it and keeps its 5:4 shape. */
 .empty-art {
   display: block;
   /* Centres inside a text-align container; a flex column that already
      centres its children is unaffected. */
   margin-inline: auto;
-  width: auto;
+  width: fit-content;
   max-width: 100%;
+  height: var(--ea-h, 120px);
   flex-shrink: 0;
   user-select: none;
   -webkit-user-drag: none;
 }
 
-/* Pages across the app carry rules like `.admin-empty svg { width: 200px }`,
-   written for the outline icons that used to sit in empty states. They never
-   reached this component while it rendered an <img>; now that the drawing is
-   real SVG they all match it, at the same specificity, and whichever
-   stylesheet happens to load last would decide how big it is.
+/* Phones: the scene carries the whole screen, so it is drawn larger (never
+   wider than the card it sits in). */
+@media (max-width: 768px) {
+  .empty-art {
+    height: min(calc(var(--ea-h, 120px) * 1.4), 260px);
+  }
+}
 
-   So the geometry is forced. A caller sets the size through the `size` prop,
-   which is the only thing that should decide it — an ambient rule meant for a
-   24px icon must not stretch a drawing to fill the card.
-
-   `fill` is reset for the same reason: those rules set `fill: currentColor`
-   to tint an icon, and inside an SVG that inherits into any shape that did
-   not name its own fill. Back to initial, the drawing renders exactly as the
-   file does, with its own --art-* colours. */
+/* Pages across the app carry rules like `.admin-empty svg { width: 200px }`
+   or an opacity, written for the outline icons that used to sit in empty
+   states; at the same specificity, whichever stylesheet loads last would
+   decide. So the scene's own geometry is forced: only the `size` prop decides
+   it. (Its inner icons are protected with inline styles in EmptyArt.jsx, and
+   every shape names its own fill, so a page's `fill` never reaches them.) */
 .empty-art > svg {
   display: block;
   height: 100% !important;
@@ -38,7 +37,7 @@
   min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-  fill: initial;
-  opacity: 1;
+  opacity: 1 !important;
+  background: none !important;
   overflow: visible;
 }

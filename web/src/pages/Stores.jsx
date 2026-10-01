@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  MagnifyingGlass as Search, Storefront as Store, MapPin, Package, CaretLeft as ChevronLeft, CaretRight as ChevronRight, X,
+  MagnifyingGlass as Search, MapPin, Package, CaretLeft as ChevronLeft, CaretRight as ChevronRight, X,
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
@@ -222,7 +223,7 @@ export default function Stores() {
           ) : stores.length === 0 ? (
             isPhone ? (
               <div className="stores-m-empty">
-                <span className="stores-m-empty-icon"><Store size={30} weight="fill" /></span>
+                <EmptyArt name="stores" size={96} />
                 <h2>
                   {searchQuery ? `No stores match “${searchQuery}”` : townName ? `No stores in ${townName} yet` : 'No stores yet'}
                 </h2>
@@ -239,7 +240,7 @@ export default function Stores() {
               </div>
             ) : (
               <div className="stores-empty">
-                <Store size={48} weight="fill" />
+                <EmptyArt name="stores" size={104} />
                 <p>No stores found</p>
                 {searchQuery && (
                   <button className="stores-clear-btn" onClick={clearSearch}>

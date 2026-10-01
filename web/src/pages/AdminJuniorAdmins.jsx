@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { UserPlus, X, MagnifyingGlass as Search } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
@@ -88,7 +89,7 @@ export default function AdminJuniorAdmins() {
         {isLoading ? (
           <div className="admin-empty"><p>Loading…</p></div>
         ) : admins.length === 0 ? (
-          <div className="admin-empty"><p>No municipal admins yet.</p></div>
+          <div className="admin-empty"><EmptyArt name="users" size={104} /><p>No municipal admins yet.</p></div>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">

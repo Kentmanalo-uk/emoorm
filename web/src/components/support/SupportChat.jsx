@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import EmptyArt from '../ui/EmptyArt';
 import {
   ChatsCircle, PaperPlaneRight, CaretLeft, CaretDown, Lightning, IdentificationCard,
   LockSimple, LockSimpleOpen, CheckCircle, XCircle, X, CircleNotch, NotePencil, Star,
@@ -626,7 +627,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
           <p className="sc-empty">Loading…</p>
         ) : visibleConversations.length === 0 ? (
           <div className="sc-empty">
-            <ChatsCircle size={36} weight="fill" />
+            <EmptyArt name="support" size={72} />
             <p>
               {!isAdmin
                 ? 'No support cases yet. Start one and your municipal admin will pick it up.'
@@ -691,7 +692,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
       <section className="sc-thread">
         {!active ? (
           <div className="sc-empty sc-thread-empty">
-            <ChatsCircle size={40} weight="fill" />
+            {!activeId && <EmptyArt name="support" size={88} />}
             <p>{activeId ? 'Loading messages…' : 'Select a conversation'}</p>
           </div>
         ) : (

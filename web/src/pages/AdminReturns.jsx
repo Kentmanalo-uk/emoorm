@@ -138,7 +138,7 @@ export default function AdminReturns() {
           <Skeleton.Table cols={7} rows={6} />
         ) : rows.length === 0 ? (
           <div className="admin-empty">
-            <EmptyArt name="delivery" size={104} />
+            <EmptyArt name="returns" size={104} />
             <p>{status ? `No ${statusLabel(status).toLowerCase()} return requests` : 'No return requests yet'}</p>
           </div>
         ) : (

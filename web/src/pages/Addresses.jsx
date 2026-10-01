@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Check, Plus, PencilSimple as Pencil, Trash as Trash2, Star } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -206,7 +207,7 @@ const Addresses = () => {
 
       {addresses.length === 0 && !formOpen && (
         <div className="address-empty">
-          <MapPin size={28} weight="fill" />
+          <EmptyArt name="addresses" size={88} />
           <p>You have no saved addresses yet.</p>
           <button onClick={openAddForm} className="address-action-btn">
             <Plus size={16} /> Add your first address

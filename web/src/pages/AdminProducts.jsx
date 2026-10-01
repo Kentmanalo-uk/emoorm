@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Package, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
@@ -218,7 +219,7 @@ export default function AdminProducts() {
           <Skeleton.Table cols={6} rows={6} />
         ) : products.length === 0 ? (
           <div className="admin-empty">
-            <Package size={36} weight="fill" />
+            <EmptyArt name="products" size={104} />
             <p>No {statusFilter.toLowerCase()} products</p>
           </div>
         ) : (

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Star, PencilSimple as Pencil, Trash, Storefront, ChatCircleText } from '@phosphor-icons/react';
@@ -165,7 +166,7 @@ const ProfileReviews = () => {
         <div className="profile-section">
           {pending.length === 0 ? (
             <div className="empty-state">
-              <Star size={40} weight="fill" />
+              <EmptyArt name="reviews" size={96} />
               <p className="empty-state-text">Nothing waiting for a review</p>
               <p className="empty-state-hint">
                 Once you receive an order, the items you bought show up here so you can rate them.
@@ -220,7 +221,7 @@ const ProfileReviews = () => {
           )}
           {reviews.length === 0 ? (
             <div className="empty-state">
-              <Star size={40} weight="fill" />
+              <EmptyArt name="feedback" size={96} />
               <p className="empty-state-text">No reviews yet</p>
               <p className="empty-state-hint">
                 {pending.length > 0

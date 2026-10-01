@@ -474,7 +474,7 @@ export default function SellerOrders() {
               <Skeleton.Table cols={6} rows={6} />
             ) : displayed.length === 0 ? (
               <div className="seller-empty is-page">
-                <EmptyArt name="shopping" size={168} />
+                <EmptyArt name="orders" size={168} />
                 <strong>{hasFilters ? 'No orders match your filters' : 'No orders in this category'}</strong>
                 <p>
                   {hasFilters

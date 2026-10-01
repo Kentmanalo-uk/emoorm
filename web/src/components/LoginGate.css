@@ -68,3 +68,8 @@
     padding: 0 12px;
   }
 }
+
+/* The tab's picture above the title. */
+.login-gate-art {
+  margin-bottom: 18px;
+}

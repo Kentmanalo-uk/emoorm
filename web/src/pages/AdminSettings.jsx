@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -667,7 +668,7 @@ export default function AdminSettings() {
 
       {!mfaStatus?.enabled && !mfaSetup && (
         <div className="st-empty">
-          <ShieldCheck size={72} weight="fill" />
+          <EmptyArt name="security" size={96} />
           <strong>Protect your admin account</strong>
           <span>Use Google Authenticator, Authy or 1Password to generate sign-in codes.</span>
           <button type="button" className="st-btn st-btn-primary" onClick={beginMfaSetup} disabled={busy}>

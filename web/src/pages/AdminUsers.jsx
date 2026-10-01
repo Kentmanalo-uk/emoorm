@@ -233,7 +233,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
         {isLoading ? (
           <Skeleton.Table cols={6} rows={7} />
         ) : users.length === 0 ? (
-          <div className="admin-empty"><EmptyArt name="inbox" size={104} /><p>No users found</p></div>
+          <div className="admin-empty"><EmptyArt name="users" size={104} /><p>No users found</p></div>
         ) : (
           <>
             <div className="admin-table-wrap">

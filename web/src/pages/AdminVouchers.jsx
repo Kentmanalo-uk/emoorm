@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Plus, PencilSimple as Edit3, Trash } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
@@ -289,7 +290,7 @@ export default function AdminVouchers() {
         {loading ? (
           <div style={{ padding: 20, color: 'var(--t-neutral-500, #64748b)' }}>Loading vouchers…</div>
         ) : items.length === 0 ? (
-          <div style={{ padding: 20, color: 'var(--t-neutral-500, #64748b)' }}>No vouchers found.</div>
+          <div className="admin-empty"><EmptyArt name="vouchers" size={104} /><p>No vouchers found.</p></div>
         ) : (
           <table className="admin-table">
             <thead>

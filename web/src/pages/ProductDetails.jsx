@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import useSeo, { productSchema, breadcrumbs, clampText } from '../lib/seo';
 import {
@@ -1084,7 +1085,10 @@ const ProductDetails = () => {
             <div className="pdp-section-body">
               <div className="pdp-reviews">
                 {reviews.length === 0 ? (
-                  <div className="pdp-empty">No reviews yet. Be the first to review this product.</div>
+                  <div className="pdp-empty">
+                    <EmptyArt name="reviews" size={72} />
+                    <span>No reviews yet. Be the first to review this product.</span>
+                  </div>
                 ) : reviews.slice(0, 10).map((r) => <ReviewItem key={r.id} review={r} />)}
               </div>
             </div>

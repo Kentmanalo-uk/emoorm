@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import useSeo, { storeSchema, breadcrumbs, clampText } from '../lib/seo';
 import {
@@ -559,7 +560,10 @@ export default function StoreDetail() {
             {mobileTab === 'categories' && (
               <div className="shop-m-panel">
                 {categories.length === 0 ? (
-                  <p className="shop-m-muted">This shop hasn&rsquo;t sorted its products into categories yet.</p>
+                  <div className="shop-m-muted shop-m-empty-cats">
+                    <EmptyArt name="categories" size={72} />
+                    <p>This shop hasn&rsquo;t sorted its products into categories yet.</p>
+                  </div>
                 ) : (
                   <div className="shop-m-cats">
                     <button type="button" className="shop-m-cat" onClick={() => pickCategory('all')}>
@@ -902,7 +906,7 @@ export default function StoreDetail() {
             </div>
           ) : products.length === 0 ? (
             <div className="shop-empty">
-              <span className="shop-empty-icon"><Package size={isPhone ? 30 : 40} weight="fill" /></span>
+              <EmptyArt name={search ? 'search' : 'products'} size={isPhone ? 88 : 104} />
               <p>
                 {search
                     ? `No products match “${search}”.`

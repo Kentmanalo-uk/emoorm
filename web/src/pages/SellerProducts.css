@@ -709,8 +709,33 @@
   line-height: 1.5;
 }
 
-.products-first .btn-seller-primary {
-  margin-top: 6px;
+/* Just a round + to add one. */
+.products-first-add {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.products-first-add:hover {
+  background: var(--t-primary-700, #047857);
+}
+
+.products-first-add:active {
+  transform: scale(0.94);
+}
+
+.products-first-add:focus-visible {
+  outline: 3px solid var(--t-primary-200, #a7f3d0);
+  outline-offset: 2px;
 }
 
 /* ── Phones: My products as a tab (Home's look) ───────────────── */
@@ -773,17 +798,12 @@
   .sc-content .products-first {
     padding: 32px 18px 28px;
   }
-
-  .sc-content .products-first .btn-seller-primary {
-    justify-content: center;
-    width: 100%;
-    min-height: 46px;
-    border-radius: 999px;
-    font-size: 15px;
-  }
 }
 
-/* The empty state greys its picture; the button keeps its white icon. */
-.products-first .btn-seller-primary svg {
-  color: currentColor;
+/* The empty state greys its icons; the + stays solid white. */
+.products-first .products-first-add svg {
+  width: 26px;
+  height: 26px;
+  color: #fff;
+  opacity: 1;
 }

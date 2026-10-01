@@ -139,7 +139,7 @@ export default function AdminOrders() {
         {loading ? (
           <Skeleton.Table cols={7} rows={7} />
         ) : orders.length === 0 ? (
-          <div className="admin-empty"><EmptyArt name="shopping" size={104} /><p>No orders found</p></div>
+          <div className="admin-empty"><EmptyArt name="orders" size={104} /><p>No orders found</p></div>
         ) : (
           <>
             <div className="admin-table-wrap">

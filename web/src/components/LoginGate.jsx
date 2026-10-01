@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import Layout from './layout/Layout';
 import ProfileGuest from './ProfileGuest';
+import EmptyArt from './ui/EmptyArt';
 import './LoginGate.css';
 
 /**
@@ -14,16 +15,19 @@ const GATES = {
     heading: 'Cart',
     title: 'Your cart is empty',
     body: 'Log in to add products and check out.',
+    art: 'cart',
   },
   messages: {
     heading: 'Messages',
     title: 'No messages yet',
     body: 'Log in to chat with sellers about their products.',
+    art: 'messages',
   },
   notifications: {
     heading: 'Notifications',
     title: 'No notifications yet',
     body: 'Log in to follow your orders and hear from the shops you like.',
+    art: 'notifications',
   },
   profile: {
     heading: 'Profile',
@@ -44,6 +48,7 @@ export default function LoginGate({ page }) {
       <div className="login-gate-page">
         <h1 className="login-gate-heading">{gate.heading}</h1>
         <section className="login-gate">
+          {gate.art && <EmptyArt name={gate.art} size={112} className="login-gate-art" />}
           <h2 className="login-gate-title">{gate.title}</h2>
           <p className="login-gate-body">{gate.body}</p>
           {/* `from` brings them back to this tab once they are signed in. */}

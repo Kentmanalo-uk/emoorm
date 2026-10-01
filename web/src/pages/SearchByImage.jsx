@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Camera, CircleNotch as Loader2, ShoppingCart, Star, UploadSimple as Upload, ArrowLeft } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
@@ -138,6 +139,7 @@ const SearchByImage = () => {
                 </div>
               ) : results.length === 0 ? (
                 <div className="sbi-status">
+                  <EmptyArt name="search" size={96} />
                   <p>No similar products found. Try a clearer photo of a single product.</p>
                 </div>
               ) : (

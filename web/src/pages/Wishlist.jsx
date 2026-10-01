@@ -1,6 +1,7 @@
 import React from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, ShoppingCart, Trash as Trash2, Package } from '@phosphor-icons/react';
+import { ShoppingCart, Trash as Trash2, Package } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import { resolveImg } from '../lib/media';
@@ -82,7 +83,7 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
           hideBreadcrumbs ? (
             <div className="profile-section">
               <div className="empty-state">
-                <Heart size={40} strokeWidth={1.5} weight="fill" />
+                <EmptyArt name="wishlist" size={96} />
                 <p className="empty-state-text">Your wishlist is empty</p>
                 <p className="empty-state-hint">
                   Save products you love and come back to them anytime.
@@ -92,7 +93,7 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
             </div>
           ) : (
             <div className="wishlist-empty">
-              <Heart size={56} weight="fill" />
+              <EmptyArt name="wishlist" size={112} />
               <h2>Your wishlist is empty</h2>
               <p>Save products you love and come back to them anytime.</p>
               <Link to="/products" className="wishlist-shop-btn">

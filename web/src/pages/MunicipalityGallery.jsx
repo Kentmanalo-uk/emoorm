@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { ArrowLeft, MapPin } from '@phosphor-icons/react';
 import { Link, useParams } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
@@ -35,7 +36,10 @@ export default function MunicipalityGallery() {
         </header>
         <div className="container municipality-gallery-content">
           {loading ? <div className="municipality-gallery-message">Loading gallery…</div> : gallery.length === 0 ? (
-            <div className="municipality-gallery-message">No gallery images have been uploaded yet.</div>
+            <div className="municipality-gallery-message">
+              <EmptyArt name="gallery" size={104} />
+              <span>No gallery images have been uploaded yet.</span>
+            </div>
           ) : (
             <div className="municipality-gallery-full-grid">
               {gallery.map((image, index) => <img key={`${image}-${index}`} src={resolveImg(image)} alt={`${municipality.name} gallery ${index + 1}`} />)}

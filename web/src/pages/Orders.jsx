@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Package, MapPin, Eye, ChatText as MessageSquare, ArrowCounterClockwise as RotateCcw, Star, X,
+ MapPin, Eye, ChatText as MessageSquare, ArrowCounterClockwise as RotateCcw, Star, X,
   UploadSimple as Upload, CheckCircle, QrCode, Copy, ClockCountdown,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -495,7 +496,7 @@ const Orders = () => {
       {filteredOrders.length === 0 ? (
         <div className="profile-section">
           <div className="empty-state">
-            <Package size={40} strokeWidth={1.5} weight="fill" />
+            <EmptyArt name="orders" size={96} />
             <p className="empty-state-text">No orders found</p>
             <p className="empty-state-hint">
               You haven't placed any orders in this category yet.

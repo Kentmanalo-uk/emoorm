@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import EmptyArt from '../ui/EmptyArt';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   PaperPlaneTilt as Send, ChatText as MessageSquare, Storefront as StoreIcon, User as UserIcon,
@@ -773,6 +774,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
           ) : filteredConversations.length === 0 ? (
             <EmptyState
               className="msgr-empty-state"
+              art="messages"
               icon={MessageSquare}
               title={searchQuery
                 ? `No chats match “${searchQuery}”`
@@ -807,7 +809,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
       <section className="msgr-thread">
         {!activeId ? (
           <div className="msgr-thread-empty">
-            <MessageSquare size={40} strokeWidth={1.3} weight="fill" />
+            <EmptyArt name="messages" size={96} />
             <p>Select a conversation to start chatting.</p>
           </div>
         ) : loadingConvo && !activeConvo ? (

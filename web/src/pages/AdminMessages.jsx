@@ -296,7 +296,7 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
               <p className="am-note">Loading…</p>
             ) : threads.length === 0 ? (
               <div className="am-empty">
-                <EmptyArt name="inbox" size={88} />
+                <EmptyArt name="messages" size={88} />
                 <p>
                   {isSuperAdmin
                     ? 'No threads with municipal admins yet.'
@@ -331,7 +331,7 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
           <section className="am-thread">
             {!active ? (
               <div className="am-empty am-thread-empty">
-                <ChatsCircle size={40} weight="fill" />
+                {!activeId && <EmptyArt name="messages" size={96} />}
                 <p>{activeId ? 'Loading messages…' : 'Select a thread'}</p>
               </div>
             ) : (
@@ -393,7 +393,7 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
                 <div className="am-messages">
                   {(active.messages || []).length === 0 && (
                     <div className="am-empty">
-                      <ChatsCircle size={48} weight="fill" />
+                      <EmptyArt name="messages" size={88} />
                       <p>No messages yet.</p>
                     </div>
                   )}
@@ -569,7 +569,7 @@ function AnnouncementsTab({ isSuperAdmin }) {
           <div className="admin-empty"><p>Loading…</p></div>
         ) : sent.length === 0 ? (
           <div className="admin-empty">
-            <Megaphone size={34} color="var(--t-neutral-400, #94a3b8)" weight="fill" />
+            <EmptyArt name="announcements" size={104} />
             <p>No announcements have been sent yet.</p>
           </div>
         ) : (

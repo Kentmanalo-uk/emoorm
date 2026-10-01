@@ -360,6 +360,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
         ) : notifications.length === 0 && !isSeller ? (
           <EmptyState
             className="notif-empty-state"
+            art="notifications"
             icon={BellOff}
             title={search
               ? `No notifications match “${search}”`
@@ -378,7 +379,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
         ) : notifications.length === 0 ? (
           <div className={`notif-empty${sellerLook ? ' is-seller' : ''}`}>
             {isSeller
-              ? <EmptyArt name="inbox" size={150} />
+              ? <EmptyArt name="notifications" size={150} />
               : <BellOff size={48} weight="fill" />}
             <h2>{search
               ? `No notifications match “${search}”`
