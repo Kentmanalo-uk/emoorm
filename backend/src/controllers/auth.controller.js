@@ -521,12 +521,23 @@ const googleAppCallback = asyncHandler(async (req, res) => {
  * @route POST /api/auth/google/app/exchange
  * @access Public
  */
+/**
+ * The website's Google pop-up, opened by the app in the phone's browser:
+ * a one-time pass for the app.
+ * @route POST /api/auth/google/app/ticket
+ */
+const googleAppTicket = asyncHandler(async (req, res) => {
+  const result = await authService.googleAppTicketFromWeb(req.body || {});
+  successResponse(res, result, 'Back to the app');
+});
+
 const googleAppExchange = asyncHandler(async (req, res) => {
   const result = await authService.exchangeGoogleAppTicket(req.body || {});
   successResponse(res, result, 'Google sign-in successful');
 });
 
 module.exports = {
+  googleAppTicket,
   register,
   login,
   googleLogin,

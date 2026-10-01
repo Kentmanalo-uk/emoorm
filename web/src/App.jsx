@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import AppGoogle from './pages/AppGoogle';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -157,6 +158,8 @@ function AppRoutes() {
       <Routes location={background || location}>
         {/* Public routes */}
         <Route path="/" element={<Home />} />
+        {/* The Android app's Google sign-in, opened in the phone's browser. */}
+        <Route path="/app-google" element={<AppGoogle />} />
         <Route path="/login" element={<Login />} />
         <Route path="/seller/login" element={<Login seller />} />
         <Route path="/register" element={<Register />} />

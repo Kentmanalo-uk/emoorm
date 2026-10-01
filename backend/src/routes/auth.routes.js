@@ -55,6 +55,8 @@ router.post(
 router.get('/google/app/start', authController.googleAppStart);
 router.get('/google/app/callback', authController.googleAppCallback);
 router.post('/google/app/exchange', authController.googleAppExchange);
+// The same pass from the website's own Google pop-up (page /app-google).
+router.post('/google/app/ticket', authController.googleAppTicket);
 
 router.post(
   '/refresh-token',

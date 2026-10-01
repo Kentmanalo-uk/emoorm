@@ -1320,6 +1320,26 @@ const googleAppFinishUrl = async ({ code, state, error } = {}) => {
 };
 
 /**
+ * The same pass, from the website's own Google pop-up: the app opens
+ * /app-google?challenge=… in the phone's browser, the page signs in with
+ * Google as the login page does (an authorization code), and sends the
+ * browser back to the app with the pass. This needs no Google setting beyond
+ * the website's own (no Android client, no extra redirect address).
+ * @param {{ code: String, challenge: String }} body
+ * @returns {Promise<{ returnUrl: String }>} Where the page sends the browser
+ */
+const googleAppTicketFromWeb = async ({ code, challenge } = {}) => {
+  if (typeof challenge !== 'string' || !PKCE_CHALLENGE.test(challenge)) {
+    throw new ApiError('Open this page from the E-MOORM app.', 400);
+  }
+  if (typeof code !== 'string' || !code.trim()) {
+    throw new ApiError('Google sign-in did not finish. Please try again.', 400);
+  }
+  const profile = await googleService.exchangeCodeForProfile(code);
+  return { returnUrl: googleAppReturn({ ticket: generateGoogleAppTicket(profile, challenge) }) };
+};
+
+/**
  * The app's page swaps the pass, with the app's secret, for the same answer
  * as POST /auth/google. A pass caught on its way to the app is useless
  * without the secret. (400s, not 401s: nobody is signed in yet.)
@@ -1423,6 +1443,7 @@ module.exports = {
   loginWithGoogle,
   googleAppStartUrl,
   googleAppFinishUrl,
+  googleAppTicketFromWeb,
   exchangeGoogleAppTicket,
   completeGoogleSignup,
   refreshToken,
