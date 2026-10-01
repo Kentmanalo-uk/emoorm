@@ -5,6 +5,7 @@ import {
   ShoppingBag, TrendUp as TrendingUp, Star, ChartBar as BarChart2, User, Users, WarningCircle, X,
   IdentificationCard, ArrowRight, Wallet, CaretRight, LockSimple, Bell, Receipt,
   ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, PlusCircle, Check, ExclamationMark,
+  Sparkle, Palette, Heart, UsersThree, LinkSimple, ChatCircleDots,
 } from '@phosphor-icons/react';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -693,6 +694,38 @@ const HOME_TOOLS = [
   { to: '/seller/products/new', label: 'Add product', Icon: PlusCircle, tone: 'teal', tour: 'add-product' },
 ];
 
+/**
+ * Each tool colour as a gradient: a lighter neighbouring hue at the top left
+ * running into the deeper tone at the bottom right. The icons are filled
+ * with these (SellerApp.css); still no tile or shadow behind them.
+ */
+const TOOL_GRADIENTS = {
+  orange: ['#fbbf24', '#ea580c'],
+  blue: ['#38bdf8', '#2563eb'],
+  violet: ['#c084fc', '#6d28d9'],
+  green: ['#4ade80', '#047857'],
+  amber: ['#fde047', '#ea580c'],
+  rose: ['#fda4af', '#e11d48'],
+  pink: ['#f9a8d4', '#c026d3'],
+  teal: ['#5eead4', '#0e7490'],
+};
+
+/** The gradients, once per page, for the icons to point at (fill: url(#…)). */
+function ToolGradients() {
+  return (
+    <svg className="sh-tool-gradients" width="0" height="0" aria-hidden="true" focusable="false">
+      <defs>
+        {Object.entries(TOOL_GRADIENTS).map(([tone, [from, to]]) => (
+          <linearGradient key={tone} id={`sh-grad-${tone}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor={from} />
+            <stop offset="1" stopColor={to} />
+          </linearGradient>
+        ))}
+      </defs>
+    </svg>
+  );
+}
+
 /** Products buyers can see (ready to sell or not: that only decides ordering). */
 const liveProducts = (stats) => stats.activeProducts;
 
@@ -794,47 +827,80 @@ function HomeSetupCard({ setup }) {
 
 /** Tips: real things a seller can do, each one tap away. Swipe or wait. */
 function HomeTips({ onShare }) {
+  // Each tip is a little poster: a big title, the main icon on a frosted tile,
+  // and two small accents floating around it.
   const slides = [
-    { key: 'decorate', title: 'Decorate your shop', text: 'Pick a ready-made look in one tap.', cta: 'Choose a template', to: '/seller/decorate', Icon: PaintBrush, tone: 'pink' },
-    { key: 'announce', title: 'Tell your followers', text: 'Share news or promote a product.', cta: 'Open Marketing', to: '/seller/marketing', Icon: Megaphone, tone: 'violet' },
-    { key: 'share', title: 'Share your shop', text: 'Send your shop link to friends and groups.', cta: 'Share now', onClick: onShare, Icon: ShareNetwork, tone: 'blue' },
+    { key: 'decorate', title: 'Decorate your shop', text: 'Pick a ready-made look in one tap.', cta: 'Choose a template', to: '/seller/decorate', Icon: PaintBrush, accents: [Palette, Sparkle], tone: 'pink' },
+    { key: 'announce', title: 'Tell your followers', text: 'Share news or promote a product.', cta: 'Open Marketing', to: '/seller/marketing', Icon: Megaphone, accents: [UsersThree, Heart], tone: 'violet' },
+    { key: 'share', title: 'Share your shop', text: 'Send your shop link to friends and groups.', cta: 'Share now', onClick: onShare, Icon: ShareNetwork, accents: [LinkSimple, ChatCircleDots], tone: 'blue' },
   ];
-  const [index, setIndex] = useState(0);
+  // The position in the track: 0…n-1 are the tips, n is a copy of the first
+  // one after the last, so the carousel only ever moves forward.
+  const [pos, setPos] = useState(0);
+  // Set while the copy hands over to the real first tip: no entrance replay.
+  const [looped, setLooped] = useState(false);
   const trackRef = React.useRef(null);
+  const settleTimer = React.useRef(null);
+  const count = slides.length;
+  const index = pos % count;
 
-  // The dots follow whichever slide is in view.
+  // The dots follow whichever tip is in view. Once the scroll comes to rest
+  // on the copy, the track jumps (no animation) to the real first tip.
   const onScroll = () => {
     const el = trackRef.current;
     if (!el) return;
-    setIndex(Math.round(el.scrollLeft / el.clientWidth));
+    const now = Math.round(el.scrollLeft / el.clientWidth);
+    setPos(now);
+    if (now !== 0) setLooped(false);
+    window.clearTimeout(settleTimer.current);
+    settleTimer.current = window.setTimeout(() => {
+      if (Math.round(el.scrollLeft / el.clientWidth) >= count) {
+        setLooped(true);
+        el.scrollTo({ left: 0, behavior: 'instant' });
+      }
+    }, 140);
   };
+  useEffect(() => () => window.clearTimeout(settleTimer.current), []);
   useEffect(() => {
     const timer = window.setInterval(() => {
       const el = trackRef.current;
       if (!el) return;
-      const next = (Math.round(el.scrollLeft / el.clientWidth) + 1) % slides.length;
+      const next = Math.min(Math.round(el.scrollLeft / el.clientWidth) + 1, count);
       el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' });
     }, 6000);
     return () => window.clearInterval(timer);
-  }, [slides.length]);
+  }, [count]);
 
   return (
     <section className="sh-banners" aria-label="Tips">
       <div className="sh-banner-track" ref={trackRef} onScroll={onScroll}>
-        {slides.map(({ key, title, text, cta, to, onClick, Icon, tone }) => {
+        {[...slides, { ...slides[0], key: `${slides[0].key}-again`, copy: true }].map(({ key, title, text, cta, to, onClick, Icon, accents, tone, copy }, i) => {
+          const [AccentA, AccentB] = accents;
           const body = (
             <>
+              <span className="sh-banner-deco" aria-hidden="true">
+                <i className="sh-banner-ring" />
+                <i className="sh-banner-blob" />
+                <i className="sh-banner-dots" />
+              </span>
               <span className="sh-banner-text">
                 <strong>{title}</strong>
                 <span>{text}</span>
                 <em>{cta} <CaretRight size={12} weight="bold" /></em>
               </span>
-              <span className="sh-banner-art" aria-hidden="true"><Icon size={30} weight="fill" /></span>
+              <span className="sh-banner-art" aria-hidden="true">
+                <span className="sh-banner-tile"><Icon size={34} weight="fill" /></span>
+                <span className="sh-banner-accent is-a"><AccentA size={15} weight="fill" /></span>
+                <span className="sh-banner-accent is-b"><AccentB size={13} weight="fill" /></span>
+              </span>
             </>
           );
+          const cls = `sh-banner is-${tone}${i === pos ? ' is-active' : ''}${i === 0 && looped ? ' is-looped' : ''}`;
+          // The copy is only there to slide onto: hidden from screen readers and Tab.
+          const hide = copy ? { 'aria-hidden': true, tabIndex: -1 } : {};
           return to
-            ? <Link key={key} to={to} className={`sh-banner is-${tone}`}>{body}</Link>
-            : <button key={key} type="button" className={`sh-banner is-${tone}`} onClick={onClick}>{body}</button>;
+            ? <Link key={key} to={to} className={cls} {...hide}>{body}</Link>
+            : <button key={key} type="button" className={cls} onClick={onClick} {...hide}>{body}</button>;
         })}
       </div>
       <div className="sh-dots" aria-hidden="true">
@@ -924,6 +990,7 @@ function PhoneHome({
 
         <section className="sh-card">
           <div className="sh-card-head"><h2>Shop tools</h2></div>
+          <ToolGradients />
           <div className="sh-tools">
             {HOME_TOOLS.map(({ to, label, Icon, tone, tour }) => (
               <Link key={to} to={to} className="sh-tool" {...(tour ? { 'data-tour': tour } : {})}>

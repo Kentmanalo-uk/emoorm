@@ -38,10 +38,11 @@
 .sh-tool-icon.is-pink { --tone: #ec4899; }
 .sh-tool-icon.is-teal { --tone: #14b8a6; }
 
-/* Tips carry white text, so their colours are a shade deeper. */
-.sh-banner.is-pink { --tone: #db2777; }
-.sh-banner.is-violet { --tone: #7c3aed; }
-.sh-banner.is-blue { --tone: #2563eb; }
+/* Tips carry white text, so their colours are a shade deeper. --tone is the
+   button's text; --g1…--g3 are the card's gradient, light corner to deep. */
+.sh-banner.is-pink { --tone: #db2777; --g1: #fb7185; --g2: #ec4899; --g3: #a21caf; }
+.sh-banner.is-violet { --tone: #7c3aed; --g1: #a78bfa; --g2: #7c3aed; --g3: #4338ca; }
+.sh-banner.is-blue { --tone: #2563eb; --g1: #22d3ee; --g2: #3b82f6; --g3: #1e40af; }
 
 /* ── Shared: cards, section heads, header buttons ───────────── */
 .sh-body {
@@ -368,6 +369,25 @@
   opacity: 0.7;
 }
 
+/* Home's shop tools: each icon filled with its tone as a gradient (the
+   definitions sit in a hidden SVG beside the grid, SellerDashboard.jsx).
+   The flat --tone colour above stays as the fallback. */
+.sh-tool-gradients {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.sh-tools .sh-tool-icon.is-orange svg { fill: url(#sh-grad-orange); }
+.sh-tools .sh-tool-icon.is-blue svg { fill: url(#sh-grad-blue); }
+.sh-tools .sh-tool-icon.is-violet svg { fill: url(#sh-grad-violet); }
+.sh-tools .sh-tool-icon.is-green svg { fill: url(#sh-grad-green); }
+.sh-tools .sh-tool-icon.is-amber svg { fill: url(#sh-grad-amber); }
+.sh-tools .sh-tool-icon.is-rose svg { fill: url(#sh-grad-rose); }
+.sh-tools .sh-tool-icon.is-pink svg { fill: url(#sh-grad-pink); }
+.sh-tools .sh-tool-icon.is-teal svg { fill: url(#sh-grad-teal); }
+
 /* ── Home: tips in full colour, one in view, swipe or wait ───── */
 .sh-banners {
   display: flex;
@@ -389,18 +409,24 @@
 
 .sh-banner {
   --tone: var(--sa-green);
+  --g1: #34d399;
+  --g2: var(--sa-green);
+  --g3: #065f46;
   position: relative;
   display: flex;
   flex: 0 0 100%;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  min-height: 112px;
-  padding: 16px;
+  gap: 12px;
+  min-height: 132px;
+  padding: 16px 14px 16px 18px;
   overflow: hidden;
+  isolation: isolate;
   border: 0;
   border-radius: 16px;
-  background: var(--tone);
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 45%),
+    linear-gradient(135deg, var(--g1) 0%, var(--g2) 48%, var(--g3) 100%);
   color: #fff;
   font: inherit;
   text-align: left;
@@ -409,20 +435,51 @@
   cursor: pointer;
 }
 
-/* One soft circle behind the icon. */
-.sh-banner::before {
-  content: '';
+/* Behind everything: a ring, a soft blob and a dot pattern. */
+.sh-banner-deco {
   position: absolute;
-  top: -38px;
-  right: -30px;
-  width: 136px;
-  height: 136px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
-.sh-banner > * {
+.sh-banner-deco i {
+  position: absolute;
+  display: block;
+}
+
+.sh-banner-ring {
+  top: -46px;
+  right: -40px;
+  width: 168px;
+  height: 168px;
+  border: 18px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.sh-banner-blob {
+  bottom: -58px;
+  left: 38%;
+  width: 120px;
+  height: 120px;
+  border-radius: 46% 54% 60% 40% / 52% 44% 56% 48%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sh-banner-dots {
+  right: 96px;
+  bottom: 12px;
+  width: 54px;
+  height: 30px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.35) 1.2px, transparent 1.6px);
+  background-size: 9px 9px;
+  opacity: 0.8;
+}
+
+.sh-banner > .sh-banner-text,
+.sh-banner > .sh-banner-art {
   position: relative;
+  z-index: 1;
 }
 
 .sh-banner-text {
@@ -433,13 +490,16 @@
 }
 
 .sh-banner-text strong {
+  margin-bottom: 2px;
   color: #fff;
-  font-size: 15.5px;
-  font-weight: 500;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .sh-banner-text > span {
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -456,18 +516,99 @@
   color: var(--tone);
   font-size: 12.5px;
   font-style: normal;
-  font-weight: 500;
+  font-weight: 600;
 }
 
+/* The art: the icon on a frosted, slightly tilted tile, two accents around it. */
 .sh-banner-art {
   display: grid;
   flex-shrink: 0;
   place-items: center;
+  width: 92px;
+  height: 92px;
+}
+
+.sh-banner-tile {
+  display: grid;
+  place-items: center;
   width: 64px;
   height: 64px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.12));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   color: #fff;
+  transform: rotate(-8deg);
+}
+
+.sh-banner-tile svg {
+  transform: rotate(8deg);
+}
+
+.sh-banner-accent {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--tone);
+}
+
+.sh-banner-accent.is-a {
+  top: 2px;
+  right: 2px;
+  width: 28px;
+  height: 28px;
+}
+
+.sh-banner-accent.is-b {
+  bottom: 6px;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+/* The card in view: the tile settles in, then the accents pop in once. */
+.sh-banner.is-active .sh-banner-tile {
+  animation: sh-banner-tile-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.sh-banner.is-active .sh-banner-accent.is-a {
+  animation: sh-banner-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4) 0.2s both;
+}
+
+.sh-banner.is-active .sh-banner-accent.is-b {
+  animation: sh-banner-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4) 0.32s both;
+}
+
+.sh-banner:active {
+  transform: scale(0.985);
+}
+
+/* Back on the first tip after the loop: it already played on the copy. */
+.sh-banner.is-looped .sh-banner-tile,
+.sh-banner.is-looped .sh-banner-accent {
+  animation: none !important;
+}
+
+@keyframes sh-banner-tile-in {
+  from { opacity: 0; transform: rotate(-20deg) scale(0.7); }
+  to { opacity: 1; transform: rotate(-8deg) scale(1); }
+}
+
+@keyframes sh-banner-pop {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-banner.is-active .sh-banner-tile,
+  .sh-banner.is-active .sh-banner-accent.is-a,
+  .sh-banner.is-active .sh-banner-accent.is-b {
+    animation: none;
+  }
 }
 
 .sh-dots {
