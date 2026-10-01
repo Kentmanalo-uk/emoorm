@@ -14,6 +14,8 @@ export const DEFAULT_APP_SETTINGS = {
   deliveryFee: 50,
   // Whether buyers must verify their ID before checking out.
   requireBuyerVerification: true,
+  // Home's "Shop by Category": 'IMAGE' (pictures) or 'ICON' (gradient icons).
+  categoryStyle: 'IMAGE',
 };
 
 /**

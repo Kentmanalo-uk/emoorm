@@ -1925,3 +1925,18 @@
     border-radius: 0 !important;
   }
 }
+
+/* "Shop by Category", icon style (Settings › Branding): each category's icon,
+   filled with its gradient, centred in the square its picture would take. */
+.categories-section .category-image--icon {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.categories-section .category-image--icon .category-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 46%;
+  height: 46%;
+  transform: translate(-50%, -50%);
+}

@@ -14,6 +14,7 @@ import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import useAppSettings, { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS, resolveAppSettingImage } from '../hooks/useAppSettings';
 import useAuthStore from '../store/authStore';
+import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import './AdminSettings.css';
 
 // Settings row: label and help on the left, controls on the right.
@@ -81,12 +82,14 @@ export default function AdminSettings() {
       productPlaceholder: currentAppSettings.productPlaceholder,
       deliveryFee: String(currentAppSettings.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
       requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
+      categoryStyle: currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE',
     });
   }, [
     currentAppSettings.appLogo,
     currentAppSettings.productPlaceholder,
     currentAppSettings.deliveryFee,
     currentAppSettings.requireBuyerVerification,
+    currentAppSettings.categoryStyle,
   ]);
 
   useEffect(() => {
@@ -189,6 +192,10 @@ export default function AdminSettings() {
     const requireBuyerVerification = brandingForm.requireBuyerVerification !== false;
     if (requireBuyerVerification !== (currentAppSettings.requireBuyerVerification !== false)) {
       changes.requireBuyerVerification = requireBuyerVerification;
+    }
+    const categoryStyle = brandingForm.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE';
+    if (categoryStyle !== (currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE')) {
+      changes.categoryStyle = categoryStyle;
     }
     if (Object.keys(changes).length === 0) {
       toast.success('No changes to save');
@@ -414,6 +421,40 @@ export default function AdminSettings() {
           />
           <span>Require verification before checkout</span>
         </label>
+      </Row>
+
+      <Row
+        label="Homepage categories"
+        help="How “Shop by Category” looks on the homepage. Icons can be chosen per category in Categories; otherwise one is picked from the name."
+      >
+        <CategoryIconGradients />
+        <div className="st-choices" role="radiogroup" aria-label="Homepage categories">
+          {[
+            { value: 'IMAGE', title: 'Pictures', text: "Each category's photo" },
+            { value: 'ICON', title: 'Icons', text: 'Gradient icons, no photos' },
+          ].map(({ value, title, text }) => (
+            <label key={value} className={`st-choice${(brandingForm.categoryStyle || 'IMAGE') === value ? ' is-on' : ''}`}>
+              <input
+                type="radio"
+                name="categoryStyle"
+                value={value}
+                checked={(brandingForm.categoryStyle || 'IMAGE') === value}
+                onChange={() => setBrandingForm((current) => ({ ...current, categoryStyle: value }))}
+              />
+              <span className="st-choice-preview" aria-hidden="true">
+                {value === 'IMAGE'
+                  ? [0, 1, 2].map((i) => <span key={i} className="st-choice-photo"><ImageIcon size={16} /></span>)
+                  : ['fruit', 'vegetable', 'seafood'].map((key) => (
+                    <span key={key} className="st-choice-icon"><CategoryIcon iconKey={key} size={22} /></span>
+                  ))}
+              </span>
+              <span className="st-choice-text">
+                <strong>{title}</strong>
+                <span>{text}</span>
+              </span>
+            </label>
+          ))}
+        </div>
       </Row>
 
       <footer className="st-panel-foot">

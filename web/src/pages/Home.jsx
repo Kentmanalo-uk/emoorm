@@ -16,6 +16,8 @@ import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import './Home.css';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
+import useAppSettings from '../hooks/useAppSettings';
+import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 
 const EXPLORE_ROWS = 5;
 const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
@@ -185,6 +187,8 @@ const Home = () => {
   const [mappedStores, setMappedStores] = useState(() => homeCache.mappedStores || []);
   const { municipalities } = useMunicipalities();
   const { categories: sharedCategories } = useCategories();
+  const { settings: appSettings } = useAppSettings();
+  const categoryIcons = appSettings.categoryStyle === 'ICON';
 
   // Each section loads on its own and shows as soon as its answer arrives: a
   // slow or failed store list must not keep the products off the page (they
@@ -360,10 +364,11 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Categories Section */}
-      <section className="categories-section">
+      {/* Categories Section: pictures, or gradient icons (Settings › Branding) */}
+      <section className={`categories-section${categoryIcons ? ' is-icons' : ''}`}>
         <div className="container">
           <h2 className="section-title">Shop by Category</h2>
+          {categoryIcons && <CategoryIconGradients />}
           <div className="categories-grid">
             {sharedCategories.map((cat) => (
               <Link
@@ -371,9 +376,15 @@ const Home = () => {
                 key={cat.id}
                 className="category-card"
               >
-                <div className="category-image">
-                  <img src={resolveImg(cat.image) || `/categories/${cat.slug}.png`} alt={cat.name} />
-                </div>
+                {categoryIcons ? (
+                  <div className="category-image category-image--icon">
+                    <CategoryIcon category={cat} className="category-icon" />
+                  </div>
+                ) : (
+                  <div className="category-image">
+                    <img src={resolveImg(cat.image) || `/categories/${cat.slug}.png`} alt={cat.name} />
+                  </div>
+                )}
                 <span className="category-name">{cat.name}</span>
               </Link>
             ))}

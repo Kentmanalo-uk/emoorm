@@ -11,7 +11,11 @@ const DEFAULT_SETTINGS = {
   deliveryFee: 50,
   freeDeliveryThreshold: 500,
   requireBuyerVerification: true,
+  categoryStyle: 'IMAGE',
 };
+
+// How the homepage shows its categories.
+const CATEGORY_STYLES = ['IMAGE', 'ICON'];
 
 // A switch is a boolean. "yes", 1 and "" are rejected rather than guessed
 // at, because a mis-set checkout gate is not something to be lenient about.
@@ -171,8 +175,16 @@ const sanitize = (input = {}) => {
     data.requireBuyerVerification = booleanField(input.requireBuyerVerification, 'requireBuyerVerification');
   }
 
+  if (input.categoryStyle !== undefined) {
+    const style = String(input.categoryStyle || '').toUpperCase();
+    if (!CATEGORY_STYLES.includes(style)) {
+      throw new ApiError('categoryStyle must be IMAGE or ICON', 400);
+    }
+    data.categoryStyle = style;
+  }
+
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing or verification setting', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, verification or category style setting', 400);
   }
   return data;
 };

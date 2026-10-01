@@ -1,6 +1,7 @@
 const categoryRepository = require('../repositories/category.repository');
 const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
+const { CATEGORY_ICON_KEYS } = require('../utils/categoryIcons');
 
 /**
  * Category Service
@@ -64,6 +65,16 @@ const getCategoryBySlug = async (slug) => {
   return category;
 };
 
+/** An icon key from the list, or null (pick one from the name). */
+const iconField = (value) => {
+  if (value === null || value === '') return null;
+  const key = String(value).trim().toLowerCase();
+  if (!CATEGORY_ICON_KEYS.includes(key)) {
+    throw new ApiError('Choose one of the listed icons', 400);
+  }
+  return key;
+};
+
 /**
  * Create category (Super Admin only)
  * @param {Object} data - Category data
@@ -85,6 +96,7 @@ const createCategory = async (data) => {
     slug,
     description: data.description ?? null,
     image: data.image ?? null,
+    icon: data.icon === undefined ? null : iconField(data.icon),
   });
   await invalidate(TAGS.categories, TAGS.products);
   return category;
@@ -107,6 +119,7 @@ const updateCategory = async (id, data) => {
   if (data.name !== undefined) update.name = String(data.name).trim();
   if (data.description !== undefined) update.description = data.description;
   if (data.image !== undefined) update.image = data.image;
+  if (data.icon !== undefined) update.icon = iconField(data.icon);
 
   if (data.slug && data.slug !== category.slug) {
     const nextSlug = slugify(data.slug);

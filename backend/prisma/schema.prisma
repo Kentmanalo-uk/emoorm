@@ -32,6 +32,10 @@ model AppSetting {
   /// on later; nothing about a buyer's verification record changes either way.
   requireBuyerVerification Boolean @default(true) @map("require_buyer_verification")
 
+  /// How the homepage shows "Shop by Category": IMAGE (each category's
+  /// picture) or ICON (each category's icon, filled with a gradient).
+  categoryStyle String @default("IMAGE") @db.VarChar(10) @map("category_style")
+
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -702,6 +706,9 @@ model Category {
   slug        String    @unique
   description String?   @db.Text
   image       String?
+  /// Icon key for the homepage's icon style (web/src/lib/categoryIcons.js).
+  /// Null: picked from the category's name.
+  icon        String?   @db.VarChar(40)
   isActive    Boolean   @default(true) @map("is_active")
 
   createdAt   DateTime  @default(now()) @map("created_at")

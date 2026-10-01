@@ -1637,3 +1637,53 @@
     transition-delay: 0s;
   }
 }
+
+/* Admin › Categories: the homepage icon picker. */
+.admin-cat-icon-help {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  color: var(--t-neutral-500, #64748b);
+}
+
+.admin-cat-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 6px;
+}
+
+.admin-cat-icon-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--t-neutral-600, #475569);
+  text-align: center;
+  cursor: pointer;
+}
+
+.admin-cat-icon-opt:hover {
+  border-color: var(--t-neutral-300, #cbd5e1);
+}
+
+.admin-cat-icon-opt.is-on {
+  border-color: var(--t-primary-600, #059669);
+  box-shadow: 0 0 0 1px var(--t-primary-600, #059669);
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.admin-cat-icon-opt.is-auto span {
+  font-weight: 600;
+}
+
+.admin-cat-thumb--icon {
+  display: grid;
+  place-items: center;
+  background: var(--t-neutral-50, #f8fafc);
+}

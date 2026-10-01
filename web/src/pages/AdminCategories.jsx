@@ -7,6 +7,8 @@ import axios from '../lib/axios';
 import { useReferenceInvalidation } from '../hooks/useReferenceData';
 import { resolveImg } from '../lib/media';
 import EmptyArt from '../components/ui/EmptyArt';
+import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
+import { CATEGORY_ICONS, CATEGORY_ICON_KEYS, categoryIconKey } from '../lib/categoryIcons';
 import '../components/admin/AdminLayout.css';
 
 export default function AdminCategories() {
@@ -14,7 +16,8 @@ export default function AdminCategories() {
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null); // null = create, category = edit
-  const [form, setForm] = useState({ name: '', description: '', image: '' });
+  // icon: '' = Auto (picked from the name).
+  const [form, setForm] = useState({ name: '', description: '', image: '', icon: '' });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
@@ -41,13 +44,13 @@ export default function AdminCategories() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', description: '', image: '' });
+    setForm({ name: '', description: '', image: '', icon: '' });
     setShowForm(true);
   };
 
   const openEdit = (cat) => {
     setEditing(cat);
-    setForm({ name: cat.name, description: cat.description || '', image: cat.image || '' });
+    setForm({ name: cat.name, description: cat.description || '', image: cat.image || '', icon: cat.icon || '' });
     setShowForm(true);
   };
 
@@ -147,6 +150,7 @@ export default function AdminCategories() {
 
   return (
     <AdminLayout>
+      <CategoryIconGradients />
       <div className="admin-page-header">
         <h1 className="admin-page-title">Category Management</h1>
       </div>
@@ -233,6 +237,37 @@ export default function AdminCategories() {
                 </div>
               </div>
               <div className="admin-form-field">
+                <label>Homepage icon</label>
+                <p className="admin-cat-icon-help">Shown when Settings › Branding › Homepage categories is set to Icons.</p>
+                <div className="admin-cat-icons" role="radiogroup" aria-label="Homepage icon">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!form.icon}
+                    className={`admin-cat-icon-opt is-auto${!form.icon ? ' is-on' : ''}`}
+                    onClick={() => setForm((f) => ({ ...f, icon: '' }))}
+                    title="Picked from the category's name"
+                  >
+                    <CategoryIcon iconKey={categoryIconKey({ name: form.name })} size={24} />
+                    <span>Auto</span>
+                  </button>
+                  {CATEGORY_ICON_KEYS.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="radio"
+                      aria-checked={form.icon === key}
+                      className={`admin-cat-icon-opt${form.icon === key ? ' is-on' : ''}`}
+                      onClick={() => setForm((f) => ({ ...f, icon: key }))}
+                      title={CATEGORY_ICONS[key].label}
+                    >
+                      <CategoryIcon iconKey={key} size={24} />
+                      <span>{CATEGORY_ICONS[key].label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="admin-form-field">
                 <label>Description</label>
                 <input
                   className="admin-search-input"
@@ -262,6 +297,7 @@ export default function AdminCategories() {
               <thead>
                 <tr>
                   <th>Image</th>
+                  <th>Icon</th>
                   <th>Name</th>
                   <th>Slug</th>
                   <th>Description</th>
@@ -280,6 +316,11 @@ export default function AdminCategories() {
                           <ImageIcon size={16} strokeWidth={1.4} />
                         )}
                       </div>
+                    </td>
+                    <td>
+                      <span className="admin-cat-thumb admin-cat-thumb--icon" title={cat.icon ? CATEGORY_ICONS[cat.icon]?.label : 'Auto, from the name'}>
+                        <CategoryIcon category={cat} size={22} />
+                      </span>
                     </td>
                     <td style={{ fontWeight: 600, color: 'var(--t-neutral-900, #0f172a)' }}>{cat.name}</td>
                     <td><code style={{ fontSize: 12, color: 'var(--t-neutral-500, #64748b)' }}>{cat.slug}</code></td>
