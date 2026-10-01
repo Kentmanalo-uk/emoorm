@@ -62,6 +62,9 @@ const cached = {
   storeList: policy('stores:list', ttl.stores, [TAGS.stores]),
   store: policy('stores:one', ttl.stores, (p) => [TAGS.stores, TAGS.store(p.id || p.slug)]),
   storefront: policy('stores:storefront', ttl.stores, (p) => [TAGS.stores, TAGS.store(p.slug || p.id)]),
+  // The shop's Home tab: its spotlight products' prices and stock move, so
+  // product writes clear it too.
+  storeHome: policy('stores:home', ttl.products, (p) => [TAGS.stores, TAGS.products, TAGS.store(p.slug)]),
 
   // ── Catalogue: short TTL, because stock and price move ──
   productList: policy('products:list', ttl.products, [TAGS.products]),

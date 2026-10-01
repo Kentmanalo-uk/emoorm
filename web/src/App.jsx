@@ -35,6 +35,7 @@ import SellerVerification from './pages/SellerVerification';
 import SellerMenu from './pages/SellerMenu';
 import SellerMarketing from './pages/SellerMarketing';
 import SellerDecorate, { SellerTemplates, SellerTemplatePreview } from './pages/SellerDecorate';
+import SellerShopHome from './pages/SellerShopHome';
 import SellerFulfillment from './pages/SellerFulfillment';
 import SellerSettings from './pages/SellerSettings';
 import Stores from './pages/Stores';
@@ -230,6 +231,7 @@ function AppRoutes() {
           <Route path="menu" element={<SellerMenu />} />
           <Route path="marketing" element={<SellerMarketing />} />
           <Route path="decorate" element={<SellerDecorate />} />
+          <Route path="decorate/home" element={<SellerShopHome />} />
           <Route path="decorate/templates" element={<SellerTemplates />} />
           <Route path="decorate/templates/:key" element={<SellerTemplatePreview />} />
           <Route path="orders" element={<SellerOrders />} />

@@ -50,6 +50,7 @@ import { readCache, writeCache } from '../lib/pageCache';
 import MoreMenu from '../components/MoreMenu';
 import { useShare } from '../components/ShareSheet';
 import './StoreDetail.css';
+import ShopHome from '../components/shop/ShopHome';
 import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 
@@ -89,7 +90,11 @@ export default function StoreDetail() {
   const isPhone = usePhoneLayout();
   // What was picked on this visit of the shop, so Back finds it as it was
   // left. Phones: Products / Categories / About, list or grid, product search.
-  const [mobileTab, setMobileTab] = useEntryState('tab', 'products');
+  const [mobileTab, setMobileTab] = useEntryState('tab', 'home');
+  // Computers: Home (the seller's sections) or the product list.
+  const [deskTab, setDeskTab] = useEntryState('view', 'home');
+  // The shop's Home tab: null while it loads, [] when the seller made none.
+  const [home, setHome] = useState(null);
   const [mobileLayout, setMobileLayout] = useEntryState('layout', 'list');
   const [searchOpen, setSearchOpen] = useEntryState('searchOpen', false);
   // Only a search opened just now takes the keyboard, not one Back reopens.
@@ -328,6 +333,25 @@ export default function StoreDetail() {
     setPage(1);
   };
 
+  useEffect(() => {
+    if (!store?.slug) return undefined;
+    let cancelled = false;
+    axios.get(`/stores/slug/${store.slug}/home`)
+      .then((res) => { if (!cancelled) setHome(res.data?.sections || []); })
+      .catch(() => { if (!cancelled) setHome([]); });
+    return () => { cancelled = true; };
+  }, [store?.slug]);
+  const hasHome = Array.isArray(home) && home.length > 0;
+  // Home while it loads; a shop without one opens on its products.
+  const phoneTab = mobileTab === 'home' ? (home === null || hasHome ? 'home' : 'products') : mobileTab;
+  const deskView = deskTab === 'home' && hasHome ? 'home' : 'products';
+  // Home's product tiles: options are picked on the product page.
+  const addFromHome = (e, product) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    addToCartPhone(product);
+  };
+
   const themeStyle = useMemo(() => {
     const primary = store?.primaryColor || DEFAULT_PRIMARY;
     const secondary = store?.secondaryColor || DEFAULT_SECONDARY;
@@ -540,6 +564,7 @@ export default function StoreDetail() {
 
             <div className="shop-m-tabs" role="tablist">
               {[
+                ...(home === null || hasHome ? [['home', 'Home']] : []),
                 ['products', 'Products'],
                 ['categories', 'Categories'],
                 ['about', 'About'],
@@ -548,8 +573,8 @@ export default function StoreDetail() {
                   type="button"
                   role="tab"
                   key={key}
-                  aria-selected={mobileTab === key}
-                  className={`shop-m-tab${mobileTab === key ? ' is-active' : ''}`}
+                  aria-selected={phoneTab === key}
+                  className={`shop-m-tab${phoneTab === key ? ' is-active' : ''}`}
                   onClick={() => setMobileTab(key)}
                 >
                   {label}
@@ -557,7 +582,15 @@ export default function StoreDetail() {
               ))}
             </div>
 
-            {mobileTab === 'categories' && (
+            {phoneTab === 'home' && (
+              <div className="shop-m-panel shop-m-home">
+                {home === null
+                  ? <div className="shop-m-home-loading" aria-hidden="true"><span /><span /><span /></div>
+                  : <ShopHome sections={home} onAddToCart={addFromHome} />}
+              </div>
+            )}
+
+            {phoneTab === 'categories' && (
               <div className="shop-m-panel">
                 {categories.length === 0 ? (
                   <div className="shop-m-muted shop-m-empty-cats">
@@ -585,7 +618,7 @@ export default function StoreDetail() {
               </div>
             )}
 
-            {mobileTab === 'about' && (
+            {phoneTab === 'about' && (
               <div className="shop-m-panel">
                 {store.description && <p className="shop-m-about-desc">{store.description}</p>}
                 <div className="shop-m-about-stats">
@@ -628,7 +661,7 @@ export default function StoreDetail() {
               </div>
             )}
 
-            {mobileTab === 'products' && (
+            {phoneTab === 'products' && (
               <div className="shop-m-sortbar">
                 <div className="shop-m-sorts" role="toolbar" aria-label="Sort products">
                   <button
@@ -666,7 +699,7 @@ export default function StoreDetail() {
               </div>
             )}
 
-            {mobileTab === 'products' && (searchOpen || rawSearch || activeCategory !== 'all') && (
+            {phoneTab === 'products' && (searchOpen || rawSearch || activeCategory !== 'all') && (
               <div className="shop-m-filters">
                 {(searchOpen || rawSearch) && (
                   <div className="shop-m-search">
@@ -831,7 +864,7 @@ export default function StoreDetail() {
         </div>
 
         {/* Products */}
-        <div className={`shop-container shop-products-section${isPhone && mobileTab !== 'products' ? ' is-hidden-phone' : ''}`}>
+        <div className={`shop-container shop-products-section${isPhone && phoneTab !== 'products' ? ' is-hidden-phone' : ''}`}>
           {/* Toolbar */}
           <div className="shop-toolbar">
             <div className="shop-toolbar-left">
@@ -871,17 +904,26 @@ export default function StoreDetail() {
 
           {/* Category tabs */}
           <div className="shop-tabs">
+            {hasHome && !isPhone && (
+              <button
+                type="button"
+                className={`shop-tab shop-tab-home ${deskView === 'home' ? 'is-active' : ''}`}
+                onClick={() => setDeskTab('home')}
+              >
+                Home
+              </button>
+            )}
             <button
               type="button"
-              className={`shop-tab ${activeCategory === 'all' ? 'is-active' : ''}`}
-              onClick={() => onCategoryChange('all')}
+              className={`shop-tab ${deskView !== 'home' && activeCategory === 'all' ? 'is-active' : ''}`}
+              onClick={() => { setDeskTab('products'); onCategoryChange('all'); }}
             >
               All Products
             </button>
             <button
               type="button"
-              className={`shop-tab ${activeCategory === 'new' ? 'is-active' : ''}`}
-              onClick={() => onCategoryChange('new')}
+              className={`shop-tab ${deskView !== 'home' && activeCategory === 'new' ? 'is-active' : ''}`}
+              onClick={() => { setDeskTab('products'); onCategoryChange('new'); }}
             >
               New Listings
             </button>
@@ -889,16 +931,20 @@ export default function StoreDetail() {
               <button
                 key={c.id}
                 type="button"
-                className={`shop-tab ${activeCategory === c.id ? 'is-active' : ''}`}
-                onClick={() => onCategoryChange(c.id)}
+                className={`shop-tab ${deskView !== 'home' && activeCategory === c.id ? 'is-active' : ''}`}
+                onClick={() => { setDeskTab('products'); onCategoryChange(c.id); }}
               >
                 {c.name}
               </button>
             ))}
           </div>
 
-          {/* Grid */}
-          {isLoadingProducts ? (
+          {/* Home (computers), or the grid */}
+          {!isPhone && deskView === 'home' ? (
+            <div className="shop-desk-home">
+              <ShopHome sections={home} onAddToCart={addFromHome} />
+            </div>
+          ) : isLoadingProducts ? (
             <div className="shop-grid">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="shop-product-skeleton" />
@@ -952,7 +998,7 @@ export default function StoreDetail() {
           )}
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
+          {!(!isPhone && deskView === 'home') && pagination.totalPages > 1 && (
             <div className="shop-pagination">
               <button
                 className="shop-page-btn"

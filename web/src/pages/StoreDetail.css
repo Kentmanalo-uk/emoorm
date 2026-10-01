@@ -1363,7 +1363,9 @@
   /* ── tabs ── */
   .shop-m-tabs {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* Three tabs, or four with the shop's Home: always one even row. */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     margin-top: 12px;
     border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
     background: var(--t-neutral-0, #fff);
@@ -1909,3 +1911,13 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+/* Home tab: the seller's own sections (Decorate my shop → Shop home). */
+.shop-m-home { padding: 12px 12px 4px; }
+.shop-desk-home { padding: 8px 0 24px; }
+.shop-m-home-loading { display: flex; flex-direction: column; gap: 12px; }
+.shop-m-home-loading span { display: block; height: 120px; border-radius: 16px; background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%); background-size: 400% 100%; animation: shop-home-shimmer 1.4s ease infinite; }
+.shop-m-home-loading span:nth-child(2) { height: 180px; }
+.shop-m-home-loading span:nth-child(3) { height: 70px; }
+@keyframes shop-home-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.shop-tab-home { font-weight: 700; }

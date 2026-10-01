@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
-import { Check, CaretRight } from '@phosphor-icons/react';
+import { Check, CaretRight, ImageSquare, Star, ChatText } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
@@ -60,10 +60,27 @@ export default function SellerDecorate() {
 
   const blocks = [
     {
+      key: 'home',
+      title: 'Shop home',
+      heading: 'Build your shop\'s Home tab',
+      text: 'Banners, spotlight products, photos of your place and a message, each in a style you pick. Buyers see it first.',
+      to: '/seller/decorate/home',
+      note: store?.homeLayout?.sections?.length ? `${store.homeLayout.sections.length} section${store.homeLayout.sections.length === 1 ? '' : 's'} on your Home` : 'No Home tab yet',
+      art: (
+        <div className="sdc-home-art" aria-hidden="true">
+          <span className="sdc-home-banner"><ImageSquare size={22} weight="fill" /></span>
+          <span className="sdc-home-row">
+            <i><Star size={14} weight="fill" /></i><i><Star size={14} weight="fill" /></i><i><Star size={14} weight="fill" /></i>
+          </span>
+          <span className="sdc-home-msg"><ChatText size={14} weight="fill" /> Hello, buyers!</span>
+        </div>
+      ),
+    },
+    {
       key: 'look',
       title: 'Shop look',
       heading: 'Give your shop a look buyers remember',
-      text: 'Pick a ready-made colour template for your shop page. You can change it any time.',
+      text: 'Pick a ready-made colour template for your shop page. Your Home tab and buttons follow it.',
       to: '/seller/decorate/templates',
       note: inUse ? `In use: ${inUse.name}` : 'Using your own colours',
       art: (

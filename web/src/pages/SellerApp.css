@@ -1536,6 +1536,13 @@ a.sh-setup-row:active {
   font-size: 12.5px;
 }
 
+/* Shop home: a banner, a row of spotlight picks and a message. */
+.sdc-home-art { display: flex; flex-direction: column; gap: 6px; height: 120px; padding: 8px; border-radius: 14px; background: #f8fafc; }
+.sdc-home-banner { display: grid; place-items: center; flex: 1; border-radius: 10px; background: linear-gradient(135deg, #38bdf8, #2563eb); color: #fff; }
+.sdc-home-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.sdc-home-row i { display: grid; place-items: center; height: 26px; border-radius: 7px; background: linear-gradient(135deg, #fde68a, #f59e0b); color: #fff; }
+.sdc-home-msg { display: flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 8px; background: #ecfdf5; color: #047857; font-size: 11px; font-weight: 600; }
+
 .sdc-brand-art {
   position: relative;
   height: 120px;

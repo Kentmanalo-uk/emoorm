@@ -18,6 +18,13 @@ router.get(
   storeController.getStorefront
 );
 
+// The shop's Home tab, with its spotlight products' current prices.
+router.get(
+  '/slug/:slug/home',
+  publicCache(config.cache.ttl.products),
+  storeController.getStoreHome
+);
+
 router.get(
   '/slug/:slug',
   publicCache(config.cache.ttl.stores),
@@ -74,6 +81,10 @@ router.put(
   authorize('SELLER'),
   storeController.completeGuide
 );
+
+// The shop's Home tab (Decorate my shop → Shop home).
+router.get('/my/home', authenticate, authorize('SELLER'), storeController.getMyHome);
+router.put('/my/home', authenticate, authorize('SELLER'), storeController.saveMyHome);
 
 router.get(
   '/my/service-areas',

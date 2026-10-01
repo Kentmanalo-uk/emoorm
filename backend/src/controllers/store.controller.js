@@ -1,4 +1,5 @@
 const storeService = require('../services/store.service');
+const storeHomeService = require('../services/storeHome.service');
 const sellerAttentionService = require('../services/sellerAttention.service');
 const sellerSetupService = require('../services/sellerSetup.service');
 const sellerMarketingService = require('../services/sellerMarketing.service');
@@ -290,6 +291,19 @@ const getStoreServiceAreas = asyncHandler(async (req, res) => {
   successResponse(res, areas, 'Service areas retrieved successfully');
 });
 
+// Shop home (Decorate my shop → Shop home)
+const getMyHome = asyncHandler(async (req, res) => {
+  successResponse(res, await storeHomeService.getMyHome(req.user.id), 'Shop home retrieved');
+});
+
+const saveMyHome = asyncHandler(async (req, res) => {
+  successResponse(res, await storeHomeService.saveMyHome(req.user.id, req.body), 'Shop home saved');
+});
+
+const getStoreHome = asyncHandler(async (req, res) => {
+  successResponse(res, await storeHomeService.getStoreHome(req.params.slug), 'Shop home retrieved');
+});
+
 const getMyServiceAreas = asyncHandler(async (req, res) => {
   const areas = await storeService.getMyServiceAreas(req.user.id);
   successResponse(res, areas, 'Service areas retrieved successfully');
@@ -307,6 +321,9 @@ const checkStoreCoverage = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getMyHome,
+  saveMyHome,
+  getStoreHome,
   createStore,
   getStores,
   getStoreById,

@@ -601,6 +601,10 @@ model Store {
   /// The seller delivers delivery orders themselves (as before). Couriers
   /// the shop ships with are in `couriers`; a shop can do both.
   selfDelivery         Boolean         @default(true) @map("self_delivery")
+  /// The shop's Home tab: sections the seller arranges in Decorate my shop
+  /// (banners, spotlight products, a gallery, a message), each in its own style.
+  /// { sections: [{ id, type, style, … }] }. Null: no Home tab.
+  homeLayout           Json?           @map("home_layout")
   couriers             StoreCourier[]
 
   // Payment settings
