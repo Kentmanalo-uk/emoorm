@@ -14,6 +14,8 @@ import { resolveImg } from '../lib/media';
 import { formatRelativeTime } from '../lib/time';
 import { actionLabel } from '../lib/auditActions';
 import useAuthStore from '../store/authStore';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import AdminPhoneHome from '../components/admin/AdminPhoneHome';
 import '../components/admin/AdminLayout.css';
 import './AdminDashboard.css';
 
@@ -22,6 +24,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const peso = (v) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
     .format(Number(v || 0));
+// Admins see how sales move and how they divide, not the money itself.
+const share = (v) => {
+  const n = Number(v || 0);
+  return `${n >= 10 || n === 0 ? Math.round(n) : n.toFixed(1)}%`;
+};
+const growth = (d) => (d == null ? '—' : `${d > 0 ? '▲' : d < 0 ? '▼' : ''}${Math.abs(d)}%`);
 const count = (v) => new Intl.NumberFormat('en-PH').format(Number(v || 0));
 const shortDate = (value) => (value
   ? new Date(value).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
@@ -36,6 +44,13 @@ const buildPeriod = (rangeKey, custom) => {
       to: new Date(`${custom.to}T23:59:59`).toISOString(),
     };
   }
+  if (rangeKey === 'month' || rangeKey === 'year') {
+    const now = new Date();
+    const from = rangeKey === 'month'
+      ? new Date(now.getFullYear(), now.getMonth(), 1)
+      : new Date(now.getFullYear(), 0, 1);
+    return { from: from.toISOString(), to: now.toISOString() };
+  }
   const days = RANGES.find((r) => r.key === rangeKey)?.days || 30;
   return { from: new Date(Date.now() - days * DAY_MS).toISOString(), to: new Date().toISOString() };
 };
@@ -44,6 +59,8 @@ const RANGES = [
   { key: '7', label: '7 days', days: 7 },
   { key: '30', label: '30 days', days: 30 },
   { key: '90', label: '90 days', days: 90 },
+  { key: 'month', label: 'This month', title: 'This month' },
+  { key: 'year', label: 'This year', title: 'This year' },
   { key: 'custom', label: 'Custom' },
 ];
 
@@ -78,6 +95,7 @@ const ORDER_FLOW = [
   { key: 'CONFIRMED', label: 'Confirmed', tone: 'blue' },
   { key: 'PREPARING', label: 'Preparing', tone: 'blue' },
   { key: 'READY', label: 'Ready', tone: 'teal' },
+  { key: 'SHIPPED', label: 'Shipped', tone: 'teal' },
   { key: 'COMPLETED', label: 'Completed', tone: 'green' },
   { key: 'CANCELLED', label: 'Cancelled', tone: 'red' },
 ];
@@ -272,6 +290,8 @@ function Thumb({ src, name }) {
 export default function AdminDashboard() {
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  // Phones get the app-style Home (AdminPhoneHome) from the same data.
+  const isPhone = usePhoneLayout();
 
   const [rangeKey, setRangeKey] = useState('30');
   const [custom, setCustom] = useState(() => ({
@@ -291,9 +311,9 @@ export default function AdminDashboard() {
 
   // Card-level view state. These only change what is shown, never what is
   // fetched, so switching them costs nothing.
-  const [salesMetric, setSalesMetric] = useState('revenue');
+  const [salesMetric, setSalesMetric] = useState('index');
   const [muniFilter, setMuniFilter] = useState('all');
-  const [topSort, setTopSort] = useState('revenue');
+  const [topSort, setTopSort] = useState('share');
 
   const [busyId, setBusyId] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null); // { kind: 'seller'|'product', id, name }
@@ -336,7 +356,7 @@ export default function AdminDashboard() {
   const pendingSellers = analytics?.recent?.sellerApplications ?? null;
   const pendingProducts = analytics?.recent?.pendingProducts ?? null;
   const sales = analytics?.salesByDay || [];
-  const salesValue = (d) => Number((salesMetric === 'revenue' ? d.total : d.orders) || 0);
+  const salesValue = (d) => Number((salesMetric === 'index' ? d.index : d.orders) || 0);
   const maxSales = Math.max(1, ...sales.map(salesValue));
   const salesTotal = sales.reduce((n, d) => n + salesValue(d), 0);
   const salesAvg = sales.length ? salesTotal / sales.length : 0;
@@ -348,11 +368,11 @@ export default function AdminDashboard() {
   const municipalities = analytics?.salesByMunicipality || [];
   const staffed = municipalities.filter((m) => m.hasAdmin).length;
   const unstaffed = municipalities.length - staffed;
-  const muniMax = Math.max(1, ...municipalities.map((m) => Number(m.revenue || 0)));
+  const muniMax = Math.max(1, ...municipalities.map((m) => Number(m.share || 0)));
   const shownMunicipalities = (muniFilter === 'gap'
     ? municipalities.filter((m) => !m.hasAdmin)
     : municipalities
-  ).slice().sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0)
+  ).slice().sort((a, b) => Number(b.share || 0) - Number(a.share || 0)
     || String(a.name).localeCompare(String(b.name)));
 
   const pipeline = ORDER_FLOW.map((st) => ({ ...st, value: Number(analytics?.ordersByStatus?.[st.key] || 0) }));
@@ -373,18 +393,18 @@ export default function AdminDashboard() {
   const rankBy = (rows, unitKey) => rows.slice().sort((a, b) => (
     topSort === 'units'
       ? Number(b[unitKey] || 0) - Number(a[unitKey] || 0)
-      : Number(b.revenue || 0) - Number(a.revenue || 0)
+      : Number(b.share || 0) - Number(a.share || 0)
   ));
   const topStores = rankBy(analytics?.topStores || [], 'orders');
   const topProducts = rankBy(analytics?.topProducts || [], 'quantity');
   const rangeLabel = rangeKey === 'custom'
     ? `${shortDate(`${custom.from}T00:00:00`)} – ${shortDate(`${custom.to}T00:00:00`)}`
-    : `Last ${RANGES.find((r) => r.key === rangeKey)?.label}`;
+    : (RANGES.find((r) => r.key === rangeKey)?.title || `Last ${RANGES.find((r) => r.key === rangeKey)?.label}`);
 
   const stats = [
-    { label: 'Revenue', value: peso(kpis.revenue?.value), delta: kpis.revenue?.delta, hint: 'Completed orders' },
+    { label: 'Sales growth', value: growth(kpis.revenue?.delta), hint: 'Completed sales vs the period before' },
     { label: 'Completed orders', value: count(kpis.orders?.value), delta: kpis.orders?.delta, hint: `${count(kpis.totalOrders?.value)} orders placed` },
-    { label: 'Average order', value: peso(kpis.avgOrderValue?.value), delta: kpis.avgOrderValue?.delta, hint: 'Per completed order' },
+    { label: 'Average order', value: growth(kpis.avgOrderValue?.delta), hint: 'Change in average order size' },
     isSuperAdmin
       ? { label: 'Active stores', value: count(kpis.activeStores?.value), hint: `${count(kpis.liveProducts?.value)} live products` }
       : { label: 'Active stores', value: count(kpis.activeStores?.value), hint: `${count(kpis.liveProducts?.value)} live products · ${count(kpis.suspendedStores?.value)} suspended` },
@@ -436,6 +456,18 @@ export default function AdminDashboard() {
   const subtitle = isSuperAdmin
     ? 'All municipalities'
     : analytics?.municipality?.name || user?.municipality?.name || '';
+
+  if (isPhone) {
+    return (
+      <AdminLayout>
+        <AdminPhoneHome
+          attention={attentionFailed ? null : attention}
+          analytics={analytics}
+          activity={activity}
+        />
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -534,14 +566,14 @@ export default function AdminDashboard() {
             title="Sales"
             span="full"
             meta={analytics
-              ? (salesMetric === 'revenue' ? peso(salesTotal) : `${count(salesTotal)} orders`)
+              ? (salesMetric === 'index' ? `${growth(kpis.revenue?.delta)} vs before` : `${count(salesTotal)} orders`)
               : null}
             tools={analytics && sales.length > 0 ? (
               <CardToggle
                 label="Chart metric"
                 value={salesMetric}
                 onChange={setSalesMetric}
-                options={[{ key: 'revenue', label: 'Revenue' }, { key: 'orders', label: 'Orders' }]}
+                options={[{ key: 'index', label: 'Sales' }, { key: 'orders', label: 'Orders' }]}
               />
             ) : null}
           >
@@ -554,20 +586,20 @@ export default function AdminDashboard() {
                 <div
                   className="dash-chart"
                   role="img"
-                  aria-label={`${salesMetric === 'revenue' ? 'Revenue' : 'Orders'} per day, ${rangeLabel}`}
+                  aria-label={`${salesMetric === 'index' ? 'Sales against the busiest day' : 'Orders'} per day, ${rangeLabel}`}
                 >
                   {/* A quiet reference line: a bar means little without
                       something to read it against. */}
                   {salesAvg > 0 && (
                     <span className="dash-chart-avg" style={{ bottom: `${(salesAvg / maxSales) * 100}%` }}>
-                      <em>avg {salesMetric === 'revenue' ? peso(salesAvg) : salesAvg.toFixed(1)}</em>
+                      <em>avg {salesMetric === 'index' ? `${Math.round(salesAvg)}% of peak` : salesAvg.toFixed(1)}</em>
                     </span>
                   )}
                   {sales.map((d) => (
                     <div
                       key={d.date}
                       className={`dash-chart-bar${salesValue(d) === 0 ? ' is-zero' : ''}${peak && salesValue(peak) > 0 && d.date === peak.date ? ' is-peak' : ''}`}
-                      title={`${d.date}: ${peso(d.total)} · ${d.orders || 0} orders`}
+                      title={`${d.date}: ${d.index || 0}% of the busiest day · ${d.orders || 0} orders`}
                       style={{ height: `${Math.max(2, (salesValue(d) / maxSales) * 100)}%` }}
                     />
                   ))}
@@ -577,7 +609,7 @@ export default function AdminDashboard() {
                   {peak && salesValue(peak) > 0 && (
                     <span className="dash-chart-peak">
                       Peak {shortDate(`${peak.date}T00:00:00`)} ·{' '}
-                      {salesMetric === 'revenue' ? peso(peak.total) : `${count(peak.orders)} orders`}
+                      {`${count(peak.orders)} orders`}
                     </span>
                   )}
                   <span>{shortDate(`${sales[sales.length - 1].date}T00:00:00`)}</span>
@@ -594,7 +626,7 @@ export default function AdminDashboard() {
               span="half"
               link="/admin/municipalities"
               linkLabel="Manage"
-              meta={analytics ? `${staffed}/${municipalities.length} staffed` : null}
+              meta={analytics ? `Share of sales · ${staffed}/${municipalities.length} staffed` : null}
               tools={analytics && municipalities.length > 0 ? (
                 <CardToggle
                   label="Filter municipalities"
@@ -627,11 +659,16 @@ export default function AdminDashboard() {
                       <ul className="dash-list dash-list-bars">
                         {shownMunicipalities.map((m) => (
                           <li key={m.id}>
-                            <RowFill pct={(Number(m.revenue || 0) / muniMax) * 100} />
+                            <RowFill pct={(Number(m.share || 0) / muniMax) * 100} />
                             <span className="dash-row-name">{m.name}</span>
                             {!m.hasAdmin && <em className="dash-chip is-warn">No admin</em>}
                             <span className="dash-row-sub">{count(m.orders)} orders</span>
-                            <span className="dash-list-value">{peso(m.revenue)}</span>
+                            <span className="dash-list-value" title="Share of this period's sales · change vs the period before">
+                              {share(m.share)}
+                              {m.growth != null && (
+                                <em className={`dash-muni-growth ${m.growth > 0 ? 'is-up' : m.growth < 0 ? 'is-down' : ''}`}> · {growth(m.growth)}</em>
+                              )}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -776,7 +813,7 @@ export default function AdminDashboard() {
                 label="Rank stores by"
                 value={topSort}
                 onChange={setTopSort}
-                options={[{ key: 'revenue', label: 'Revenue' }, { key: 'units', label: 'Orders' }]}
+                options={[{ key: 'share', label: 'Share' }, { key: 'units', label: 'Orders' }]}
               />
             ) : null}
           >
@@ -794,7 +831,7 @@ export default function AdminDashboard() {
                       ) : <strong>{st.name}</strong>}
                       <span>{count(st.orders)} orders{st.municipalityName ? ` · ${st.municipalityName}` : ''}</span>
                     </div>
-                    <span className="dash-list-value">{topSort === 'units' ? count(st.orders) : peso(st.revenue)}</span>
+                    <span className="dash-list-value">{topSort === 'units' ? count(st.orders) : share(st.share)}</span>
                   </li>
                 ))}
               </ol>
@@ -810,7 +847,7 @@ export default function AdminDashboard() {
                 label="Rank products by"
                 value={topSort}
                 onChange={setTopSort}
-                options={[{ key: 'revenue', label: 'Revenue' }, { key: 'units', label: 'Sold' }]}
+                options={[{ key: 'share', label: 'Share' }, { key: 'units', label: 'Sold' }]}
               />
             ) : null}
           >
@@ -828,7 +865,7 @@ export default function AdminDashboard() {
                       ) : <strong>{p.name}</strong>}
                       <span>{count(p.quantity)} sold{p.storeName ? ` · ${p.storeName}` : ''}</span>
                     </div>
-                    <span className="dash-list-value">{topSort === 'units' ? count(p.quantity) : peso(p.revenue)}</span>
+                    <span className="dash-list-value">{topSort === 'units' ? count(p.quantity) : share(p.share)}</span>
                   </li>
                 ))}
               </ol>

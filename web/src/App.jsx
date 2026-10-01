@@ -57,10 +57,13 @@ import AdminAnalytics from './pages/AdminAnalytics';
 import AdminMessages from './pages/AdminMessages';
 import AdminFeedback from './pages/AdminFeedback';
 import AdminBanners from './pages/AdminBanners';
+import AdminCouriers from './pages/AdminCouriers';
 import AdminVouchers from './pages/AdminVouchers';
 import AdminJuniorAdmins from './pages/AdminJuniorAdmins';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import AdminSettings from './pages/AdminSettings';
+import AdminMenu from './pages/AdminMenu';
+import AdminTools from './pages/AdminTools';
 import ProfileLayout from './components/layout/ProfileLayout';
 import ProfileReviews from './pages/ProfileReviews';
 import ProfileFollowedStores from './pages/ProfileFollowedStores';
@@ -265,6 +268,7 @@ function AppRoutes() {
         <Route path="/admin/feedback" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminFeedback /></AdminRoute>} />
         <Route path="/admin/announcements" element={<Navigate to="/admin/messages?tab=announcements" replace />} />
         <Route path="/admin/banners" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminBanners /></AdminRoute>} />
+        <Route path="/admin/couriers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCouriers /></AdminRoute>} />
         <Route path="/admin/vouchers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminVouchers /></AdminRoute>} />
         <Route path="/admin/junior-admins" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminJuniorAdmins /></AdminRoute>} />
         <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogs /></AdminRoute>} />
@@ -273,6 +277,8 @@ function AppRoutes() {
         <Route path="/admin/reviews" element={<AdminRoute><AdminReviews /></AdminRoute>} />
         <Route path="/admin/returns" element={<AdminRoute><AdminReturns /></AdminRoute>} />
         <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+        <Route path="/admin/menu" element={<AdminRoute><AdminMenu /></AdminRoute>} />
+        <Route path="/admin/tools" element={<AdminRoute><AdminTools /></AdminRoute>} />
 
         {/* Catch-all: unknown URLs */}
         <Route path="*" element={<NotFound />} />

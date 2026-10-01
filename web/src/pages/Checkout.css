@@ -2034,3 +2034,22 @@
   margin-top: 2px;
   color: var(--t-primary-600, #059669);
 }
+
+/* Fulfillment, delivery option and payment: clean selection cards. */
+.co-choices { display: flex; flex-direction: column; gap: 10px; }
+.fulfillment-picker.co-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) {
+  .fulfillment-picker.co-choices { grid-template-columns: 1fr; }
+}
+.co-pay-cod .choice-card-media { color: #059669; }
+.co-pay-gcash .choice-card-media { color: #2563eb; }
+.co-pay-qrph .choice-card-media { color: #b91c1c; }
+.co-delivery-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font-size: 13px;
+  line-height: 1.5;
+}

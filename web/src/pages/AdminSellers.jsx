@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X, Phone, MapPin, Calendar, CreditCard, Warning } from '@phosphor-icons/react';
+import { MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X, MapPin, Calendar, CreditCard, Warning } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
@@ -9,6 +9,7 @@ import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import UserContactReveal from '../components/admin/UserContactReveal';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
@@ -26,9 +27,12 @@ const STATUS_BADGE = {
 // carry the admin's Bearer token, which only axios (not <img>) can attach.
 function KycPhoto({ userId, field, label }) {
   const [imgSrc, setImgSrc] = useState(null);
-  const [status, setStatus] = useState('loading'); // loading | ready | error
+  const [status, setStatus] = useState('idle'); // idle | loading | ready | error
+  // Loaded only when the admin taps View: every view is logged.
+  const [wanted, setWanted] = useState(false);
 
   useEffect(() => {
+    if (!wanted) return undefined;
     let objectUrl;
     let cancelled = false;
     setStatus('loading');
@@ -49,8 +53,15 @@ function KycPhoto({ userId, field, label }) {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [userId, field]);
+  }, [userId, field, wanted]);
 
+  if (status === 'idle') {
+    return (
+      <button type="button" className="admin-btn admin-btn-gray admin-id-view" onClick={() => setWanted(true)}>
+        <Eye size={14} /> View
+      </button>
+    );
+  }
   if (status === 'loading') return <div className="admin-id-missing">Loading…</div>;
   if (status === 'error' || !imgSrc) return <div className="admin-id-missing">No photo</div>;
 
@@ -378,9 +389,8 @@ export default function AdminSellers() {
                 <h4>Personal Information</h4>
                 <div className="admin-detail-grid">
                   <div><label>Full Name</label><p>{selected.fullName}</p></div>
-                  <div><label>Email</label><p>{selected.email}</p></div>
-                  <div><label><Phone size={12} /> Contact</label><p>{selected.contactNumber || '—'}</p></div>
                   <div><label><MapPin size={12} /> Municipality</label><p>{selected.municipality?.name || '—'}</p></div>
+                  <UserContactReveal user={selected} />
                 </div>
               </div>
 
@@ -467,8 +477,13 @@ export default function AdminSellers() {
                     </span>
                   </p>
                 )}
+                {selected.sellerApplicationStatus !== 'PENDING' && (
+                  <div className="admin-id-missing">
+                    ID documents are only shown while an application is under review. They are removed after the decision.
+                  </div>
+                )}
                 <div className="admin-id-photos">
-                  {[
+                  {selected.sellerApplicationStatus === 'PENDING' && [
                     { label: 'Front', field: 'idFront', has: selected.idFrontUrl },
                     { label: 'Back', field: 'idBack', has: selected.idBackUrl },
                     // Legacy applications also captured a selfie; newer ones don't.

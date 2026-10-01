@@ -82,6 +82,20 @@ export const describeStep = (step, { municipality } = {}) => {
     }
 
     case 'delivery-areas':
+      // Couriers only: they go all around Mindoro; nothing to choose.
+      if (step.byCourier) {
+        return {
+          ...base,
+          title: 'Choose your courier',
+          label: 'Who delivers',
+          text: step.done
+            ? 'Couriers deliver all around Mindoro.'
+            : 'Choose a courier with rates, and add your GCash or QR Ph: courier orders are paid online.',
+          action: 'Choose a courier',
+          icon: MapPin,
+          to: '/seller/fulfillment/delivery#delivery-couriers',
+        };
+      }
       return {
         ...base,
         title: 'Choose where you deliver',
@@ -101,6 +115,17 @@ export const describeStep = (step, { municipality } = {}) => {
       };
 
     case 'delivery-fee': {
+      if (step.byCourier) {
+        return {
+          ...base,
+          title: 'Delivery fees',
+          label: 'Delivery fees',
+          text: "Worked out from each product's weight and the courier's rates.",
+          action: 'See couriers',
+          icon: Truck,
+          to: '/seller/fulfillment/delivery#delivery-couriers',
+        };
+      }
       const own = step.pricedAreas || 0;
       const ownText = own > 0 ? ` ${plural(own, 'place')} ${own === 1 ? 'has' : 'have'} its own fee.` : '';
       return {

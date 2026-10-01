@@ -1,22 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Eye, X, CheckCircle, XCircle, DownloadSimple } from '@phosphor-icons/react';
+import { Eye, X, DownloadSimple, LockSimple } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
+import RevealButton from '../components/admin/RevealButton';
 import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
-import { OrderProof } from '../components/orders/ProofPhotoSheet';
+
+/*
+ * Orders, as admins see them: what was ordered, where, and how far it got.
+ * No amounts and no buyer contact by default; for a case (a report, a
+ * dispute, a return) "Show contact" / "Show payment" asks why and the server
+ * logs it. Payments are the seller's to check, so there are no payment
+ * buttons here.
+ */
 
 const STATUSES = [
-  'PENDING', 'CONFIRMED', 'PREPARING', 'TO_SHIP', 'OUT_FOR_DELIVERY',
+  'PENDING', 'CONFIRMED', 'PREPARING', 'TO_SHIP', 'SHIPPED', 'OUT_FOR_DELIVERY',
   'READY_FOR_PICKUP', 'PICKED_UP', 'DELIVERED', 'COMPLETED', 'CANCELLED',
 ];
 
@@ -26,6 +33,8 @@ const statusClass = (status) => {
   if (status === 'PENDING') return 'admin-badge-pending';
   return 'admin-badge-review';
 };
+
+const peso = (v) => `₱${Number(v || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function AdminOrders() {
   const [searchParams] = useSearchParams();
@@ -37,9 +46,10 @@ export default function AdminOrders() {
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [processing, setProcessing] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [confirmRefund, setConfirmRefund] = useState(false);
+  // Details shown for a case, per order (cleared when another opens).
+  const [contact, setContact] = useState(null);
+  const [payment, setPayment] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -73,10 +83,11 @@ export default function AdminOrders() {
         { header: 'Date', value: (o) => csvDate(o.createdAt) },
         { header: 'Buyer', value: (o) => o.buyer?.fullName },
         { header: 'Store', value: (o) => o.store?.name },
+        { header: 'Items', value: (o) => o.itemCount },
+        { header: 'Fulfillment', value: (o) => o.fulfillmentMethod },
         { header: 'Status', value: (o) => o.status },
         { header: 'Payment Method', value: (o) => o.paymentMethod },
         { header: 'Payment Status', value: (o) => o.paymentStatus },
-        { header: 'Total', value: (o) => Number(o.total).toFixed(2) },
       ], rows);
       toast.success(`Exported ${rows.length} rows`);
     } catch (err) {
@@ -89,30 +100,11 @@ export default function AdminOrders() {
   const viewOrder = async (orderId) => {
     try {
       const res = await axios.get(`/orders/${orderId}`);
+      setContact(null);
+      setPayment(null);
       setSelected(res.data);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Unable to view this order');
-    }
-  };
-
-  const PAYMENT_TOASTS = {
-    PAID: 'Payment approved',
-    FAILED: 'Payment rejected — buyer asked to resubmit proof',
-    REFUNDED: 'Refund recorded',
-  };
-
-  const verifyPayment = async (paymentStatus) => {
-    setProcessing(true);
-    try {
-      const res = await axios.patch(`/orders/${selected.id}/payment`, { paymentStatus });
-      setSelected(res.data);
-      toast.success(PAYMENT_TOASTS[paymentStatus] || 'Payment updated');
-      load();
-    } catch (err) {
-      toast.error(err?.message || err?.response?.data?.message || 'Unable to update payment');
-    } finally {
-      setProcessing(false);
-      setConfirmRefund(false);
     }
   };
 
@@ -145,7 +137,7 @@ export default function AdminOrders() {
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
-                  <tr><th>Order</th><th>Buyer</th><th>Store</th><th>Total</th><th>Payment</th><th>Status</th><th>Action</th></tr>
+                  <tr><th>Order</th><th>Buyer</th><th>Store</th><th>Items</th><th>Payment</th><th>Status</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                   {orders.map((order) => (
@@ -159,7 +151,7 @@ export default function AdminOrders() {
                       <td><strong>{order.orderNumber}</strong><div style={{ color: 'var(--t-neutral-400, #94a3b8)', fontSize: 11 }}>{new Date(order.createdAt).toLocaleDateString('en-PH')}</div></td>
                       <td>{order.buyer?.fullName || '—'}</td>
                       <td>{order.store?.name || '—'}</td>
-                      <td>₱{Number(order.total).toFixed(2)}</td>
+                      <td>{order.itemCount ?? '—'}</td>
                       <td><span className={`admin-badge ${order.paymentStatus === 'PAID' ? 'admin-badge-approved' : 'admin-badge-pending'}`}>{order.paymentStatus?.replaceAll('_', ' ')}</span></td>
                       <td><span className={`admin-badge ${statusClass(order.status)}`}>{order.status.replaceAll('_', ' ')}</span></td>
                       <td><button type="button" className="admin-btn admin-btn-gray" onClick={() => viewOrder(order.id)}><Eye size={13} /> View</button></td>
@@ -180,68 +172,93 @@ export default function AdminOrders() {
       </div>
 
       <DetailDrawer item={selected} onClose={() => setSelected(null)}>
-        {(selected) => (
+        {(order) => (
           <>
-            <div className="admin-detail-header"><h3>{selected.orderNumber}</h3><button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button></div>
+            <div className="admin-detail-header"><h3>{order.orderNumber}</h3><button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button></div>
             <div className="admin-detail-body">
               <div className="admin-detail-section">
-                <h4>Order Information</h4>
+                <h4>Order</h4>
                 <div className="admin-detail-grid">
-                  <div><label>Buyer</label><p>{selected.buyer?.fullName}</p></div>
-                  <div><label>Store</label><p>{selected.store?.name}</p></div>
-                  <div><label>Status</label><p>{selected.status?.replaceAll('_', ' ')}</p></div>
-                  <div><label>Total</label><p>₱{Number(selected.total).toFixed(2)}</p></div>
-                  <div><label>Payment</label><p>{selected.paymentMethod} · {selected.paymentStatus?.replaceAll('_', ' ')}</p></div>
-                  <div><label>Contact</label><p>{selected.contactNumber || '—'}</p></div>
-                  <div className="admin-detail-full"><label>Delivery / Pickup Address</label><p>{selected.deliveryAddress || selected.pickupLocation || '—'}</p></div>
-                </div>
-              </div>
-              <div className="admin-detail-section">
-                <h4>Items</h4>
-                {(selected.items || []).map((item) => <p key={item.id}>{item.productName || item.product?.name} × {item.quantity} — ₱{Number(item.subtotal).toFixed(2)}</p>)}
-              </div>
-              {selected.fulfillmentProofUrl && (
-                <div className="admin-detail-section">
-                  <OrderProof order={selected} resolve={resolveImg} />
-                </div>
-              )}
-              {selected.paymentProofUrl && (
-                <div className="admin-detail-section">
-                  <h4>Payment Proof</h4>
-                  <a href={resolveImg(selected.paymentProofUrl)} target="_blank" rel="noopener noreferrer"><img src={resolveImg(selected.paymentProofUrl)} alt="Payment proof" style={{ maxWidth: 300, width: '100%' }} /></a>
-                  {selected.paymentStatus === 'PENDING_VERIFICATION' && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                      <button className="admin-btn admin-btn-green" disabled={processing} onClick={() => verifyPayment('PAID')}><CheckCircle size={14} /> Approve</button>
-                      <button className="admin-btn admin-btn-red" disabled={processing} onClick={() => verifyPayment('FAILED')}><XCircle size={14} /> Reject</button>
-                    </div>
+                  <div><label>Buyer</label><p>{order.buyer?.fullName || '—'}</p></div>
+                  <div><label>Store</label><p>{order.store?.name || '—'}</p></div>
+                  <div><label>Status</label><p>{order.status?.replaceAll('_', ' ')}</p></div>
+                  <div><label>Placed</label><p>{new Date(order.createdAt).toLocaleString('en-PH')}</p></div>
+                  <div><label>Fulfillment</label><p>{order.fulfillmentMethod === 'PICKUP' ? 'Pickup' : 'Delivery'}</p></div>
+                  <div><label>Payment</label><p>{order.paymentMethod} · {order.paymentStatus?.replaceAll('_', ' ')}</p></div>
+                  {order.courierName && (
+                    <div className="admin-detail-full"><label>Courier</label><p>{order.courierName}{order.trackingNumber ? ` · ${order.trackingNumber}` : ''}</p></div>
                   )}
                 </div>
-              )}
-              {selected.paymentStatus === 'PAID' && selected.status === 'CANCELLED' && (
-                <div className="admin-detail-section">
-                  <h4>Refund</h4>
-                  <p>This prepaid order was cancelled after payment. Record the refund once the seller has returned the money.</p>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    <button className="admin-btn admin-btn-green" disabled={processing} onClick={() => setConfirmRefund(true)}>
-                      <CheckCircle size={14} /> Mark refunded
-                    </button>
+              </div>
+
+              <div className="admin-detail-section">
+                <h4>Items</h4>
+                {(order.items || []).map((item) => <p key={item.id}>{item.productName || item.product?.name} × {item.quantity}</p>)}
+              </div>
+
+              <div className="admin-detail-section">
+                <h4><LockSimple size={14} weight="fill" /> Contact &amp; address</h4>
+                {contact ? (
+                  <div className="admin-detail-grid">
+                    <div><label>Contact</label><p>{contact.contactNumber || '—'}</p></div>
+                    <div className="admin-detail-full"><label>{order.fulfillmentMethod === 'PICKUP' ? 'Pickup' : 'Delivery address'}</label><p>{contact.deliveryAddress || order.pickupLocation || '—'}</p></div>
+                    {contact.deliveryNotes && <div className="admin-detail-full"><label>Notes</label><p>{contact.deliveryNotes}</p></div>}
+                    {contact.fulfillmentProofUrl && (
+                      <div className="admin-detail-full">
+                        <label>Hand-over photo</label>
+                        <a href={resolveImg(contact.fulfillmentProofUrl)} target="_blank" rel="noopener noreferrer"><img src={resolveImg(contact.fulfillmentProofUrl)} alt="Hand-over proof" style={{ maxWidth: 300, width: '100%' }} /></a>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <>
+                    <div className="admin-detail-grid">
+                      <div><label>Contact</label><p>{order.contactMasked || '—'}</p></div>
+                      <div><label>Area</label><p>{order.area || order.pickupLocation || '—'}</p></div>
+                    </div>
+                    <RevealButton
+                      endpoint={`/orders/${order.id}/reveal`}
+                      body={{ part: 'contact' }}
+                      label="Show contact"
+                      title="Show this buyer's contact and address?"
+                      onRevealed={setContact}
+                    />
+                  </>
+                )}
+              </div>
+
+              <div className="admin-detail-section">
+                <h4><LockSimple size={14} weight="fill" /> Payment</h4>
+                {payment ? (
+                  <>
+                    <div className="admin-detail-grid">
+                      <div><label>Subtotal</label><p>{peso(payment.subtotal)}</p></div>
+                      <div><label>Delivery fee</label><p>{peso(payment.deliveryFee)}</p></div>
+                      {Number(payment.discountAmount) > 0 && <div><label>Discount</label><p>−{peso(payment.discountAmount)}</p></div>}
+                      <div><label>Total</label><p><strong>{peso(payment.total)}</strong></p></div>
+                      {payment.paymentReference && <div className="admin-detail-full"><label>Reference</label><p>{payment.paymentReference}</p></div>}
+                    </div>
+                    {payment.paymentProofUrl && (
+                      <a href={resolveImg(payment.paymentProofUrl)} target="_blank" rel="noopener noreferrer"><img src={resolveImg(payment.paymentProofUrl)} alt="Payment proof" style={{ maxWidth: 300, width: '100%', marginTop: 8 }} /></a>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="admin-reveal-note">Amounts and the payment screenshot are private to the buyer and the seller. Sellers check their own payments.</p>
+                    <RevealButton
+                      endpoint={`/orders/${order.id}/reveal`}
+                      body={{ part: 'payment' }}
+                      label="Show payment"
+                      title="Show this order's amounts and payment?"
+                      onRevealed={setPayment}
+                    />
+                  </>
+                )}
+              </div>
             </div>
           </>
         )}
       </DetailDrawer>
-
-      <ConfirmDialog
-        open={confirmRefund}
-        title="Mark this order as refunded?"
-        message="Only confirm once the buyer has actually received the money back. This records the refund on the order and cannot be undone."
-        confirmLabel="Mark refunded"
-        loading={processing}
-        onConfirm={() => verifyPayment('REFUNDED')}
-        onCancel={() => setConfirmRefund(false)}
-      />
     </AdminLayout>
   );
 }

@@ -28,6 +28,15 @@ import { useMunicipalities } from '../hooks/useReferenceData';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import PhoneSaveBar from '../components/seller/PhoneSaveBar';
 import PickupAddressField, { pickupGap } from '../components/seller/PickupAddressField';
+import { CourierMark } from '../components/orders/CourierTracking';
+import ChoiceCard from '../components/ui/ChoiceCard';
+
+// "from ₱85": a courier's cheapest fee, for the seller to compare.
+const courierFrom = (c) => {
+  const b = c?.rates?.brackets;
+  if (!Array.isArray(b) || b.length === 0) return null;
+  return Math.min(...b.map((x) => Math.min(Number(x.sameTown), Number(x.otherTown))));
+};
 import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { BusyLabel } from '../components/ui/Spinner';
@@ -170,7 +179,7 @@ export default function SellerFulfillmentPage() {
 
 /**
  * Computers: every part on one page, as before. Phones: the parts as a list
- * (Delivery & pickup, Pickup spot, Delivery areas & fees, Payment options),
+ * (Delivery & pickup, Pickup spot, Delivery, Payment options),
  * each on its own page with Cancel and Save changes at the bottom.
  */
 function SellerFulfillment({ part }) {
@@ -195,6 +204,36 @@ function SellerFulfillment({ part }) {
   const [pickupDraft, setPickupDraft] = useState(null);
   // Phones switch QR payment on and off; computers take it while a QR is up.
   const [qrOn, setQrOn] = useState(false);
+  // Who delivers: the seller themselves, and/or couriers from the list the
+  // super admin keeps (J&T, LBC…).
+  const [courierList, setCourierList] = useState([]);
+  const [shipping, setShipping] = useState({ selfDelivery: true, courierIds: [] });
+  const [shippingLoaded, setShippingLoaded] = useState(false);
+  // Products a courier can't price yet (no weight), and how many in all.
+  const [unweighed, setUnweighed] = useState({ list: [], count: 0 });
+  const loadUnweighed = useCallback(() => axios.get('/couriers/my-store')
+    .then((res) => setUnweighed({ list: res.data?.unweighed || [], count: res.data?.unweighedCount || 0 }))
+    .catch(() => {}), []);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([axios.get('/couriers'), axios.get('/couriers/my-store')])
+      .then(([all, mine]) => {
+        if (cancelled) return;
+        setCourierList(all.data || []);
+        setShipping({
+          selfDelivery: mine.data?.selfDelivery ?? true,
+          courierIds: (mine.data?.couriers || []).map((c) => c.id),
+        });
+        setUnweighed({ list: mine.data?.unweighed || [], count: mine.data?.unweighedCount || 0 });
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setShippingLoaded(true); });
+    return () => { cancelled = true; };
+  }, []);
+  const toggleCourier = (id) => setShipping((prev) => ({
+    ...prev,
+    courierIds: prev.courierIds.includes(id) ? prev.courierIds.filter((x) => x !== id) : [...prev.courierIds, id],
+  }));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -460,9 +499,10 @@ function SellerFulfillment({ part }) {
           form.paymentAccountNumber.replace(/[\s-]/g, ''), form.paymentInstructions.trim(),
         ] : [])]
           : [coverage, feeMode, feeMode === 'SAME' ? form.deliveryFee : '',
-            places.map((pl) => [pl.municipalityId, pl.barangay, feeMode === 'PLACE' ? pl.fee : ''])],
+            places.map((pl) => [pl.municipalityId, pl.barangay, feeMode === 'PLACE' ? pl.fee : '']),
+            shipping.selfDelivery, [...shipping.courierIds].sort()],
   );
-  const partReady = !loading && (part !== 'delivery' || !savedAreas);
+  const partReady = !loading && (part !== 'delivery' || (!savedAreas && shippingLoaded));
   const [baseline, setBaseline] = useState(null);
   useEffect(() => {
     if (part && partReady && baseline === null) setBaseline(partState(part));
@@ -500,7 +540,7 @@ function SellerFulfillment({ part }) {
       return;
     }
     // Delivery answers are checked while delivery is on; with pickup only they are kept as they are.
-    if (has('delivery') && showDeliveryAreas) {
+    if (has('delivery') && showDeliveryAreas && shipping.selfDelivery) {
       if (coverage === 'SOME' && coveredIds.length === 0) {
         toast.error('Tap at least one town you deliver to.');
         return;
@@ -566,10 +606,18 @@ function SellerFulfillment({ part }) {
       delivery: { deliveryFee },
     }[scope];
 
+    if (has('delivery') && showDeliveryAreas && !shipping.selfDelivery && shipping.courierIds.length === 0) {
+      toast.error('Choose a courier, or deliver orders yourself.');
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await axios.put(`/stores/${store.id}`, changes);
-      if (has('delivery')) await axios.put('/stores/my/service-areas', { areas });
+      if (has('delivery')) {
+        await axios.put('/stores/my/service-areas', { areas });
+        if (shippingLoaded) await axios.put('/couriers/my-store', shipping);
+      }
       // Me and Home show what is saved now.
       layoutCtx?.setStore?.((prev) => (prev ? { ...prev, ...res.data } : prev));
       layoutCtx?.refreshSetup?.();
@@ -772,13 +820,61 @@ function SellerFulfillment({ part }) {
           <div className="seller-card" id="delivery-areas">
             <div className="seller-card-header">
               <h2>
-                <Truck size={16} /> Delivery areas &amp; fees
+                <Truck size={16} /> Delivery
               </h2>
             </div>
             <div className="sf-body">
+              <section className="sf-q" id="delivery-couriers" aria-labelledby="sf-q-who">
+                <h3 className="sf-q-title" id="sf-q-who">
+                  <span className="sf-q-num" aria-hidden="true">1</span> Who delivers your orders?
+                </h3>
+                <p className="sf-hint sf-hint-lead">
+                  Tick all that apply. Buyers choose at checkout and see each courier's fee for their parcel's weight.
+                </p>
+                <div className="sf-couriers">
+                  <ChoiceCard
+                    type="checkbox"
+                    name="self-delivery"
+                    value="SELF"
+                    checked={shipping.selfDelivery}
+                    onChange={() => setShipping((prev) => ({ ...prev, selfDelivery: !prev.selfDelivery }))}
+                    media={<span className="sf-courier-self"><Truck size={18} weight="fill" /></span>}
+                    title="I deliver myself"
+                    desc="Your own delivery fee · cash on delivery allowed"
+                  />
+                  {courierList.map((c) => {
+                    const from = courierFrom(c);
+                    return (
+                      <ChoiceCard
+                        key={c.id}
+                        type="checkbox"
+                        name="couriers"
+                        value={c.id}
+                        checked={shipping.courierIds.includes(c.id)}
+                        disabled={!shipping.courierIds.includes(c.id) && (from == null || unweighed.count > 0)}
+                        onChange={() => toggleCourier(c.id)}
+                        media={<CourierMark courier={c} size={30} />}
+                        title={c.name}
+                        desc={from == null ? 'Rates not set yet' : `From ₱${from} · paid online by the buyer`}
+                      />
+                    );
+                  })}
+                </div>
+                {unweighed.count > 0 && (
+                  <WeightFixer products={unweighed.list} total={unweighed.count} onSaved={loadUnweighed} />
+                )}
+                {shipping.courierIds.length > 0 && !form.paymentQrImage && (
+                  <p className="sf-courier-warn" role="status">
+                    Courier orders are paid online, so buyers can only choose a courier once you add your GCash or QR Ph in Payment options.
+                  </p>
+                )}
+              </section>
+
+              {shipping.selfDelivery ? (
+                <>
               <section className="sf-q" aria-labelledby="sf-q-where">
                 <h3 className="sf-q-title" id="sf-q-where">
-                  <span className="sf-q-num" aria-hidden="true">1</span> Where do you deliver?
+                  <span className="sf-q-num" aria-hidden="true">2</span> Where do you deliver?
                 </h3>
                 <div className="sf-mode-grid" role="radiogroup" aria-labelledby="sf-q-where">
                   <Choice
@@ -842,7 +938,7 @@ function SellerFulfillment({ part }) {
 
               <section className="sf-q" id="delivery-fee" aria-labelledby="sf-q-fee">
                 <h3 className="sf-q-title" id="sf-q-fee">
-                  <span className="sf-q-num" aria-hidden="true">2</span> How much is delivery?
+                  <span className="sf-q-num" aria-hidden="true">3</span> How much is your delivery fee?
                 </h3>
                 <div className="sf-mode-grid" role="radiogroup" aria-labelledby="sf-q-fee">
                   <Choice
@@ -913,7 +1009,19 @@ function SellerFulfillment({ part }) {
                 ))}
               </section>
 
-              {summary && (
+                </>
+              ) : (
+                <p className="sf-courier-auto" role="status">
+                  <CheckCircle size={18} weight="fill" />
+                  <span>
+                    <strong>No delivery fee to type.</strong> Couriers deliver all around Oriental Mindoro, and the
+                    shipping fee is worked out from each product&apos;s weight and the courier&apos;s rates. Buyers pay it
+                    online with the order.
+                  </span>
+                </p>
+              )}
+
+              {summary && shipping.selfDelivery && (
                 <p className="sf-summary" role="status">
                   <CheckCircle size={18} weight="fill" /> {summary}
                 </p>
@@ -1254,7 +1362,7 @@ function SellerFulfillment({ part }) {
               <SettingsRow
                 to={partPath('delivery')}
                 icon={MapPin}
-                label="Delivery areas & fees"
+                label="Delivery: couriers, areas &amp; fees"
                 value={deliveryMissing
                   ? (!where || !places.length ? 'Choose where you deliver' : 'Set your delivery fee')
                   : `${where} · ${cost}`}
@@ -1347,6 +1455,70 @@ function SellerFulfillment({ part }) {
 }
 
 /** The barangays chosen in a town (tap × to remove), and a search to add more. */
+/**
+ * Products without a weight, each with a kilogram box: a courier can't
+ * price them, so couriers wait until every product has one.
+ */
+function WeightFixer({ products, total, onSaved }) {
+  const [kg, setKg] = useState({});
+  const [busy, setBusy] = useState(false);
+  const filled = products.filter((p) => Number(kg[p.id]) > 0 && Number(kg[p.id]) <= 100);
+
+  const save = async () => {
+    if (!filled.length || busy) return;
+    setBusy(true);
+    let saved = 0;
+    for (const p of filled) {
+      try {
+        await axios.put(`/products/${p.id}`, { weightGrams: Math.round(Number(kg[p.id]) * 1000) });
+        saved += 1;
+      } catch (err) {
+        toast.error(`${p.name}: ${err.message || 'could not save'}`);
+      }
+    }
+    setBusy(false);
+    if (saved) {
+      toast.success(`Saved ${saved} weight${saved === 1 ? '' : 's'}`);
+      setKg({});
+      onSaved?.();
+    }
+  };
+
+  return (
+    <div className="sf-weigh" role="region" aria-label="Products that need a weight">
+      <p className="sf-weigh-head">
+        <strong>Add a weight to {total === 1 ? 'your product' : `your ${total} products`} to ship with couriers.</strong>
+        <span>Couriers charge by weight with the packaging, so the fee is worked out for each order.</span>
+      </p>
+      <ul className="sf-weigh-list">
+        {products.map((p) => (
+          <li key={p.id}>
+            {p.image ? <img src={resolveImg(p.image)} alt="" /> : <span className="sf-weigh-noimg" aria-hidden="true" />}
+            <span className="sf-weigh-name">{p.name}</span>
+            <label className="sf-weigh-input">
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="0.5"
+                value={kg[p.id] ?? ''}
+                onChange={(e) => setKg((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                aria-label={`Weight of ${p.name} in kilograms`}
+              />
+              <span>kg</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+      {total > products.length && <p className="sf-hint">Showing {products.length} of {total}. Save these to see the rest.</p>}
+      <button type="button" className="sf-weigh-save" onClick={save} disabled={!filled.length || busy}>
+        {busy ? 'Saving…' : filled.length ? `Save ${filled.length} weight${filled.length === 1 ? '' : 's'}` : 'Save weights'}
+      </button>
+    </div>
+  );
+}
+
 function BarangayPicker({
   townName,
   psgcStatus,

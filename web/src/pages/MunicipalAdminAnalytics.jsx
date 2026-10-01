@@ -11,7 +11,7 @@ import BarChart from '../components/analytics/BarChart';
 import TopList from '../components/analytics/TopList';
 import StatusDonut from '../components/analytics/StatusDonut';
 import DateRangePicker from '../components/analytics/DateRangePicker';
-import { peso, num, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
+import { peso, num, pctText, growthText, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
 import '../components/analytics/analytics.css';
 
 const PENDING_ACTIONS = [
@@ -66,7 +66,7 @@ export default function MunicipalAdminAnalytics() {
     if (!data?.salesByDay?.length) return;
     const csv = toCSV(data.salesByDay, [
       { label: 'Date', get: (r) => r.date },
-      { label: 'Revenue', get: (r) => Number(r.total || 0).toFixed(2) },
+      { label: 'Sales (% of busiest day)', get: (r) => r.index },
       { label: 'Orders', get: (r) => r.orders },
     ]);
     downloadCSV(`municipality-analytics-${data.window.from.slice(0, 10)}_${data.window.to.slice(0, 10)}.csv`, csv);
@@ -101,20 +101,20 @@ export default function MunicipalAdminAnalytics() {
         {error && <div className="an-card" style={{ padding: 16, color: 'var(--t-danger-700, #b91c1c)' }}>{error}</div>}
 
         <div className="an-kpi-grid">
-          <KpiCard loading={first} label="Revenue" value={peso(k.revenue?.value)} delta={k.revenue?.delta} hint="Completed orders" />
+          <KpiCard loading={first} label="Sales growth" value={growthText(k.revenue?.delta)} hint="Completed sales vs the period before" />
           <KpiCard loading={first} label="Completed orders" value={num(k.orders?.value)} delta={k.orders?.delta} hint={`${num(k.totalOrders?.value)} placed in total`} />
-          <KpiCard loading={first} label="Average order" value={peso(k.avgOrderValue?.value)} delta={k.avgOrderValue?.delta} />
+          <KpiCard loading={first} label="Average order size" value={growthText(k.avgOrderValue?.delta)} hint="Change vs the period before" />
           <KpiCard loading={first} label="Unique buyers" value={num(k.buyers?.value)} hint="Placed an order this period" />
         </div>
         <div className="an-kpi-grid">
           <KpiCard loading={first} label="Sellers" value={num(k.sellers?.value)} />
           <KpiCard loading={first} label="Active stores" value={num(k.activeStores?.value)} hint={`${num(k.suspendedStores?.value)} suspended`} />
           <KpiCard loading={first} label="Live products" value={num(k.liveProducts?.value)} />
-          <KpiCard loading={first} label="Lifetime revenue" value={peso(k.lifetimeRevenue?.value)} hint="All completed orders" />
+          <KpiCard loading={first} label="Refund rate" value={pctText(k.refundRate?.value)} hint="Of completed sales" />
         </div>
 
-        <Card title="Sales trend" sub={data ? `${data.salesByDay?.length || 0} days` : null}>
-          <BarChart data={data?.salesByDay || []} formatValue={(v) => peso(v)} />
+        <Card title="Sales trend" sub={data ? `Orders per day · ${data.salesByDay?.length || 0} days` : null}>
+          <BarChart data={data?.salesByDay || []} valueKey="orders" formatValue={(v) => num(v)} />
         </Card>
 
         <div className="an-grid-2">
@@ -125,9 +125,9 @@ export default function MunicipalAdminAnalytics() {
                 name: s.name,
                 image: s.logo,
                 subtitle: `${num(s.orders)} orders`,
-                revenue: s.revenue,
+                share: s.share,
               }))}
-              renderMetric={(s) => peso(s.revenue)}
+              renderMetric={(s) => pctText(s.share)}
               emptyArt="shopping"
               emptyTitle="No top stores yet"
               emptyMessage="Stores with completed sales will rank here."
@@ -147,9 +147,9 @@ export default function MunicipalAdminAnalytics() {
                 name: p.name,
                 image: p.image,
                 subtitle: `${num(p.quantity)} sold${p.storeName ? ` · ${p.storeName}` : ''}`,
-                revenue: p.revenue,
+                share: p.share,
               }))}
-              renderMetric={(p) => peso(p.revenue)}
+              renderMetric={(p) => pctText(p.share)}
               emptyArt="products"
               emptyTitle="No products sold yet"
               emptyMessage="Best-selling products will rank here."

@@ -505,3 +505,14 @@
     font-size: 20px;
   }
 }
+
+/* "Track your order here" beside the tracking number (not printed). */
+.receipt-track-link {
+  display: block;
+  margin-top: 2px;
+  color: var(--t-primary-600, #059669);
+  font-weight: 600;
+  text-decoration: none;
+}
+.receipt-track-link:hover { text-decoration: underline; }
+@media print { .receipt-track-link { display: none; } }

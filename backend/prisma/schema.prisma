@@ -73,6 +73,9 @@ enum OrderStatus {
   DELIVERED
   READY_FOR_PICKUP
   PICKED_UP
+  /// Handed to a courier (J&T, LBC…) with a tracking number. Completes when
+  /// the buyer confirms receipt, or on its own a week later.
+  SHIPPED
 }
 
 enum FulfillmentMode {
@@ -595,6 +598,10 @@ model Store {
   fulfillmentMode      FulfillmentMode @default(DELIVERY) @map("fulfillment_mode")
   pickupAddress        String?         @db.Text @map("pickup_address")
   pickupInstructions   String?         @db.Text @map("pickup_instructions")
+  /// The seller delivers delivery orders themselves (as before). Couriers
+  /// the shop ships with are in `couriers`; a shop can do both.
+  selfDelivery         Boolean         @default(true) @map("self_delivery")
+  couriers             StoreCourier[]
 
   // Payment settings
   paymentQrImage       String?         @map("payment_qr_image")
@@ -728,6 +735,8 @@ model Product {
   description String        @db.Text
   price       Decimal       @db.Decimal(10, 2)
   stock       Int           @default(0)
+  /// Packed weight in grams, for courier fees. Null: not set (no courier quote).
+  weightGrams Int?          @map("weight_grams")
   lowStockThreshold Int     @default(5) @map("low_stock_threshold")
   images      Json          // Array of image URLs
   returnPolicy Json?        @map("return_policy")
@@ -835,6 +844,16 @@ model Order {
   fulfillmentProofUrl String?    @map("fulfillment_proof_url")
   fulfillmentProofAt  DateTime?  @map("fulfillment_proof_at")
 
+  // Shipped with a courier: who carries it and the waybill's tracking number.
+  // The name is kept as it was, should the courier be renamed or removed.
+  courierId       String?     @map("courier_id")
+  courier         Courier?    @relation(fields: [courierId], references: [id], onDelete: SetNull)
+  courierName     String?     @db.VarChar(80) @map("courier_name")
+  trackingNumber  String?     @db.VarChar(60) @map("tracking_number")
+  /// The parcel weight the courier fee was priced on.
+  shippingWeightGrams Int?    @map("shipping_weight_grams")
+  shippedAt       DateTime?   @map("shipped_at")
+
   // Delivery Information
   deliveryAddress String      @db.Text @map("delivery_address")
   deliveryNotes   String?     @db.Text @map("delivery_notes")
@@ -868,6 +887,41 @@ model Order {
   @@index([buyerId, createdAt], map: "orders_buyer_idx")
   @@index([storeId, status, createdAt], map: "orders_store_status_idx")
   @@index([status, createdAt], map: "orders_status_created_idx")
+}
+
+/// A delivery company sellers can ship with, kept by the super admin.
+model Courier {
+  id          String   @id @default(uuid())
+  name        String   @unique @db.VarChar(80)
+  logoUrl     String?  @map("logo_url")
+  /// Where a buyer tracks a parcel: a link with {tracking} where the number
+  /// goes. Empty: a general parcel tracker is used.
+  trackingUrl String?  @db.VarChar(255) @map("tracking_url")
+  /// Fees by weight, within the same town and to another town:
+  /// { brackets: [{ upToKg, sameTown, otherTown }], extraPerKg: { sameTown, otherTown } | null,
+  ///   source, asOf }. Null: no rates yet, so buyers cannot choose it.
+  rates       Json?
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  orders      Order[]
+  stores      StoreCourier[]
+
+  @@map("couriers")
+}
+
+/// The couriers a shop ships with.
+model StoreCourier {
+  storeId   String  @map("store_id")
+  store     Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  courierId String  @map("courier_id")
+  courier   Courier @relation(fields: [courierId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, courierId])
+  @@index([courierId], map: "store_couriers_courier_idx")
+  @@map("store_couriers")
 }
 
 model OrderStatusHistory {

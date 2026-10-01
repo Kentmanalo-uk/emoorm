@@ -404,6 +404,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
     revenueAgg,
     previousRevenueAgg,
     salesByStoreAll,
+    salesByStorePrevious,
     windowOrders,
     municipalities,
     pendingReports,
@@ -432,9 +433,17 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
     }),
     revenueAggregate(orderScope),
     revenueAggregate(prevOrderScope),
+    // Sales per store in the chosen period and the one before it, for each
+    // municipality's share and growth.
     prisma.order.groupBy({
       by: ['storeId'],
-      where: { status: 'COMPLETED', ...orderMuniFilter },
+      where: { ...orderScope, ...EARNED },
+      _sum: { total: true },
+      _count: { _all: true },
+    }),
+    prisma.order.groupBy({
+      by: ['storeId'],
+      where: { ...prevOrderScope, ...EARNED },
       _sum: { total: true },
       _count: { _all: true },
     }),
@@ -514,6 +523,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
     revenueAgg,
     previousRevenueAgg,
     salesByStoreAll,
+    salesByStorePrevious,
     salesByDay: bucketByDay(windowOrders),
     municipalities,
     pendingReports,

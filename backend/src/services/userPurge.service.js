@@ -22,7 +22,7 @@ const CONFIRM_WORD = 'DELETE';
 // Orders whose stock is still reserved (not yet handed over or cancelled).
 const OPEN_ORDER_STATUSES = [
   'PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'TO_SHIP',
-  'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP',
+  'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP', 'SHIPPED',
 ];
 
 const loadTarget = async (userId, actor) => {
@@ -181,7 +181,8 @@ const purgeUser = async (userId, actor, confirm, req) => {
     action: 'PURGE_USER',
     entity: 'User',
     entityId: userId,
-    details: { email: user.email, fullName: user.fullName, role: user.role, removed: preview.counts, stores: preview.storeNames },
+    // Who was removed, by name and role; their email goes with the account.
+    details: { fullName: user.fullName, role: user.role, removed: preview.counts, stores: preview.storeNames },
     req,
   });
 

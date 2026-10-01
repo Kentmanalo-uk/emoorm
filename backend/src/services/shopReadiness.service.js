@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
 
 /**
@@ -7,8 +8,10 @@ const prisma = require('../config/database');
  * the admin's approval (which hides a whole shop). Only what an order depends
  * on, for the way the seller chose to hand orders over:
  *
- *  - Delivering (DELIVERY or BOTH): at least one delivery area, and a fee
- *    decided for every one (a standard fee, or each area's own).
+ *  - Delivering (DELIVERY or BOTH): by the seller, at least one delivery
+ *    area and a fee decided for every one (a standard fee, or each area's
+ *    own); or by a courier with rates, which the buyer pays for online, so
+ *    with the shop's payment QR. Courier fees are worked out from weight.
  *  - Pickup (PICKUP or BOTH): a pickup address.
  *  - A way to pay: cash on delivery / pickup, or a payment QR.
  *
@@ -33,18 +36,27 @@ const SELL_STEPS = ['delivery-areas', 'delivery-fee', 'pickup', 'payment'];
 
 const hasValue = (field) => ({ AND: [{ [field]: { not: null } }, { [field]: { not: '' } }] });
 
+// Delivering by the seller: somewhere to deliver to, and a fee for every
+// area (a standard fee, or none left without one).
+const SELF_DELIVERY_READY = {
+  AND: [
+    { selfDelivery: true },
+    { serviceAreas: { some: {} } },
+    { OR: [{ deliveryFee: { not: null } }, { serviceAreas: { none: { fee: null } } }] },
+  ],
+};
+// Delivering by courier: one with rates, paid online with the shop's QR.
+const COURIER_READY = {
+  AND: [
+    { couriers: { some: { courier: { isActive: true, NOT: { rates: { equals: Prisma.DbNull } } } } } },
+    hasValue('paymentQrImage'),
+  ],
+};
+
 const READY_STORE = {
   AND: [
-    // Delivering: somewhere to deliver to…
-    { OR: [{ fulfillmentMode: 'PICKUP' }, { serviceAreas: { some: {} } }] },
-    // …and a fee for every area: a standard fee, or none left without one.
-    {
-      OR: [
-        { fulfillmentMode: 'PICKUP' },
-        { deliveryFee: { not: null } },
-        { serviceAreas: { none: { fee: null } } },
-      ],
-    },
+    // Delivering: by the seller, or by a courier.
+    { OR: [{ fulfillmentMode: 'PICKUP' }, SELF_DELIVERY_READY, COURIER_READY] },
     // Pickup: an address to collect from.
     { OR: [{ fulfillmentMode: 'DELIVERY' }, hasValue('pickupAddress')] },
     // A way to pay.

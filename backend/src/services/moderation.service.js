@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { maskEmail, maskPhone } = require('../utils/privacy');
 const config = require('../config/env');
 const auditLogService = require('./auditLog.service');
 const notificationService = require('./notification.service');
@@ -83,7 +84,7 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
     { key: 'pendingProducts', label: 'Products awaiting approval', rows: products, field: 'createdAt', link: '/admin/products' },
     { key: 'openReports', label: 'Open reports', rows: reports, field: 'createdAt', link: '/admin/reports' },
     { key: 'supportAwaiting', label: 'Support messages awaiting reply', rows: awaiting, field: 'lastMessageAt', link: '/admin/support' },
-    { key: 'stalePayments', label: 'Prepaid payments unverified for over 24h', rows: payments, field: 'updatedAt', link: '/admin/orders' },
+    { key: 'stalePayments', label: 'Payments sellers have not checked in 24h', rows: payments, field: 'updatedAt', link: '/admin/orders' },
     { key: 'openReturns', label: 'Return requests awaiting the seller', rows: returns, field: 'createdAt', link: '/admin/returns' },
   ];
 
@@ -141,7 +142,8 @@ const listReturns = async (actor, { page = 1, pageSize = 20, status, municipalit
     prisma.returnRequest.findMany({
       where,
       include: {
-        buyer: { select: { id: true, fullName: true, email: true } },
+        // The buyer by name: admins see a return's case, not their contact.
+        buyer: { select: { id: true, fullName: true } },
         store: { select: { id: true, name: true, slug: true } },
         order: { select: { id: true, orderNumber: true, total: true } },
         items: { select: { id: true, quantity: true } },
@@ -197,8 +199,10 @@ const getIdentityForReview = async (actor, userId) => {
     where: { userId, action: 'IDENTITY_VERIFICATION_ATTEMPT', createdAt: { gte: new Date(Date.now() - DAY_MS) } },
   });
   const { identityVerification, deletedAt, ...profile } = user;
+  // An in-person check compares the person with their ID: contact details
+  // stay masked, and the street is not needed.
   return {
-    user: profile,
+    user: { ...profile, email: maskEmail(profile.email), contactNumber: maskPhone(profile.contactNumber), address: null },
     verification: identityVerification || { status: 'NOT_VERIFIED' },
     attemptsToday,
     dailyLimit: config.identity.maxAttemptsPerDay || null,

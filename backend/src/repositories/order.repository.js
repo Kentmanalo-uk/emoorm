@@ -195,6 +195,31 @@ const findByCheckoutKey = async (buyerId, checkoutKey) => {
 // PAID and PENDING_VERIFICATION are never touched: the buyer has done their part.
 const EXPIRABLE_PAYMENT_STATUSES = ['PENDING', 'FAILED'];
 
+/**
+ * Shipped (courier) or delivered (seller) orders the buyer never confirmed,
+ * handed over before `before`, with no return in progress.
+ */
+const findUnconfirmedHandedOver = (before) => prisma.order.findMany({
+  where: {
+    OR: [
+      { status: 'SHIPPED', shippedAt: { lt: before } },
+      { status: 'DELIVERED', fulfillmentProofAt: { lt: before } },
+      // Delivered before hand-over photos were kept: go by the last update.
+      { status: 'DELIVERED', fulfillmentProofAt: null, updatedAt: { lt: before } },
+    ],
+    returnRequests: { none: { status: { in: ['REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED'] } } },
+  },
+  select: {
+    id: true,
+    orderNumber: true,
+    status: true,
+    buyerId: true,
+    store: { select: { ownerId: true } },
+  },
+  take: 100,
+  orderBy: { updatedAt: 'asc' },
+});
+
 const findExpiredPending = (before) => prisma.order.findMany({
   where: {
     status: 'PENDING',
@@ -227,6 +252,7 @@ const findById = async (id) => {
           fullName: true,
           email: true,
           contactNumber: true,
+          municipalityId: true,
         },
       },
       store: {
@@ -236,6 +262,7 @@ const findById = async (id) => {
           slug: true,
           ownerId: true,
           municipalityId: true,
+          municipality: { select: { name: true } },
           owner: {
             select: {
               id: true,
@@ -258,6 +285,7 @@ const findById = async (id) => {
           },
         },
       },
+      courier: { select: { id: true, name: true, logoUrl: true, trackingUrl: true } },
     },
   });
 };
@@ -295,10 +323,7 @@ const findAll = async (options = {}) => {
   }
   if (search) where.orderNumber = { contains: search };
   if (municipalityId) {
-    where.OR = [
-      { buyer: { municipalityId } },
-      { store: { municipalityId } },
-    ];
+    where.store = { municipalityId };
   }
 
   const [orders, total] = await Promise.all([
@@ -317,6 +342,7 @@ const findAll = async (options = {}) => {
             name: true,
           },
         },
+        courier: { select: { id: true, name: true, logoUrl: true, trackingUrl: true } },
         items: {
           include: {
             product: {
@@ -600,6 +626,7 @@ module.exports = {
   createOrderWithItems,
   findByCheckoutKey,
   findExpiredPending,
+  findUnconfirmedHandedOver,
   findExpiredUnpaid,
   findById,
   findAll,

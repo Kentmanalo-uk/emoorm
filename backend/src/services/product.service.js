@@ -222,6 +222,17 @@ const validateProductPayload = async (data, { partial }) => {
   if (!partial || has(data, 'lowStockThreshold')) {
     out.lowStockThreshold = validateWholeNumber(partial ? data.lowStockThreshold : data.lowStockThreshold ?? 5, 'Low-stock threshold');
   }
+  // Packed weight for courier fees (grams). Optional: without it a product
+  // can still be delivered by the seller or picked up.
+  if (has(data, 'weightGrams')) {
+    const raw = data.weightGrams;
+    if (raw === null || raw === '') out.weightGrams = null;
+    else {
+      const g = Math.round(Number(raw));
+      if (!Number.isFinite(g) || g < 1 || g > 100000) throw new ApiError('Weight must be between 1 g and 100 kg', 400);
+      out.weightGrams = g;
+    }
+  }
   if (!partial || has(data, 'images')) out.images = validateImages(data.images);
   if (!partial || has(data, 'categoryId')) out.categoryId = await validateCategory(data.categoryId);
 
@@ -408,6 +419,13 @@ const generateSlug = async (name) => {
  * @param {Object} data - Product data
  * @returns {Promise<Object>} Created product
  */
+// A shop that ships with couriers needs every product's weight: it is how
+// the shipping fee is worked out.
+const shipsWithCouriers = async (storeId) => (
+  (await require('../config/database').storeCourier.count({ where: { storeId } })) > 0
+);
+const WEIGHT_NEEDED = 'Add the weight with packaging: your shop ships with couriers, and they charge by weight';
+
 const createProduct = async (userId, rawData) => {
   const data = cleanFields(rawData || {}, PRODUCT_TEXT_FIELDS);
   // Get seller's store
@@ -415,6 +433,9 @@ const createProduct = async (userId, rawData) => {
   assertStoreCanEdit(store, 'create');
 
   const fields = await validateProductPayload(data, { partial: false });
+  if (!fields.weightGrams && await shipsWithCouriers(store.id)) {
+    throw new ApiError(WEIGHT_NEEDED, 400);
+  }
 
   // Generate unique slug — derived from the name only, never client-assignable
   const slug = await generateSlug(fields.name);
@@ -607,6 +628,9 @@ const updateProduct = async (productId, userId, rawData) => {
 
   // Only whitelisted fields, each validated. `slug` is never accepted.
   const updateData = await validateProductPayload(data, { partial: true });
+  if (updateData.weightGrams === null && await shipsWithCouriers(store.id)) {
+    throw new ApiError(WEIGHT_NEEDED, 400);
+  }
 
   // Renaming regenerates the slug; the old slug's cache entry is cleared below.
   let previousSlug = null;

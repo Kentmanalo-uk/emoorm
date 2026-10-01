@@ -19,6 +19,7 @@ import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
+import ShippingEstimate from '../components/orders/ShippingEstimate';
 import useWishlistStore from '../store/wishlistStore';
 import useIdentityGate from '../hooks/useIdentityGate';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -829,6 +830,18 @@ const ProductDetails = () => {
                     )) : (
                       <div className="pdp-row-line pdp-row-muted">Fulfilment and payment options are shown at checkout</div>
                     )}
+                  </div>
+                </div>
+
+                {/* Delivery by the seller and by couriers, priced for the buyer's town. */}
+                <div className="pdp-row pdp-row--shipping">
+                  <div className="pdp-row-label">Shipping:</div>
+                  <div className="pdp-row-content">
+                    <ShippingEstimate
+                      product={product}
+                      unitPrice={unitPrice}
+                      municipalityId={isAuthenticated ? user?.municipalityId : undefined}
+                    />
                   </div>
                 </div>
 

@@ -188,7 +188,7 @@ export default function SellerMenu() {
             <Row
               to="/seller/fulfillment/delivery"
               icon={MapPin}
-              label="Delivery areas & fees"
+              label="Delivery: couriers, areas &amp; fees"
               hint={deliverySet ? feeHint : 'Not set'}
               warn={!deliverySet}
             />

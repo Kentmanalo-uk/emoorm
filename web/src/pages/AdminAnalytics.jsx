@@ -9,7 +9,7 @@ import TopList from '../components/analytics/TopList';
 import StatusDonut from '../components/analytics/StatusDonut';
 import DateRangePicker from '../components/analytics/DateRangePicker';
 import EmptyState from '../components/analytics/EmptyState';
-import { peso, num, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
+import { num, pctText, growthText, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
 import MunicipalAdminAnalytics from './MunicipalAdminAnalytics';
 import '../components/analytics/analytics.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
@@ -47,7 +47,7 @@ function PlatformAnalytics() {
     if (!data?.salesByDay?.length) return;
     const csv = toCSV(data.salesByDay, [
       { label: 'Date', get: (r) => r.date },
-      { label: 'Revenue', get: (r) => r.total.toFixed(2) },
+      { label: 'Sales (% of busiest day)', get: (r) => r.index },
       { label: 'Orders', get: (r) => r.orders },
     ]);
     downloadCSV(`platform-analytics-${data.window.from.slice(0, 10)}_${data.window.to.slice(0, 10)}.csv`, csv);
@@ -96,24 +96,24 @@ function PlatformAnalytics() {
         {error && <div className="an-card" style={{ padding: 16, color: 'var(--t-danger-600, #dc2626)' }}>{error}</div>}
 
         <div className="an-kpi-grid">
-          <KpiCard loading={loading && !data} label="Revenue" value={peso(k.revenue?.value)} delta={k.revenue?.delta} />
+          <KpiCard loading={loading && !data} label="Sales growth" value={growthText(k.revenue?.delta)} hint="Completed sales vs the period before" />
           <KpiCard loading={loading && !data} label="Orders" value={num(k.orders?.value)} delta={k.orders?.delta} />
-          <KpiCard loading={loading && !data} label="Avg. Order" value={peso(k.avgOrderValue?.value)} delta={k.avgOrderValue?.delta} />
+          <KpiCard loading={loading && !data} label="Avg. order size" value={growthText(k.avgOrderValue?.delta)} hint="Change vs the period before" />
           <KpiCard loading={loading && !data} label="Buyers (period)" value={num(k.windowBuyers?.value)} />
           <KpiCard loading={loading && !data} label="Total Buyers" value={num(k.buyers?.value)} />
           <KpiCard loading={loading && !data} label="Sellers" value={num(k.sellers?.value)} />
           <KpiCard loading={loading && !data} label="Municipal Admins" value={num(k.municipalAdmins?.value)} />
           <KpiCard loading={loading && !data} label="Stores" value={num(k.activeStores?.value)} hint={`${num(k.totalStores?.value)} total`} />
           <KpiCard loading={loading && !data} label="Live Products" value={num(k.liveProducts?.value)} hint={`${num(k.totalProducts?.value)} total`} />
-          <KpiCard loading={loading && !data} label="Lifetime Revenue" value={peso(k.lifetimeRevenue?.value)} />
+          <KpiCard loading={loading && !data} label="Refund rate" value={pctText(k.refundRate?.value)} hint="Of completed sales" />
         </div>
 
         <div className="an-card">
           <div className="an-card-head">
             <h2 className="an-card-title">Sales trend</h2>
-            <span className="an-card-sub">{data?.salesByDay?.length || 0} days</span>
+            <span className="an-card-sub">Orders per day · {data?.salesByDay?.length || 0} days</span>
           </div>
-          <BarChart data={data?.salesByDay || []} formatValue={(v) => peso(v)} />
+          <BarChart data={data?.salesByDay || []} valueKey="orders" formatValue={(v) => num(v)} />
         </div>
 
         <div className="an-grid-2">
@@ -127,9 +127,9 @@ function PlatformAnalytics() {
                 name: s.name,
                 image: s.logo,
                 subtitle: s.municipalityName || `${s.orders} orders`,
-                revenue: s.revenue,
+                share: s.share,
               }))}
-              renderMetric={(s) => peso(s.revenue)}
+              renderMetric={(s) => pctText(s.share)}
               emptyArt="stores"
               emptyMessage="No stores with sales yet."
             />
@@ -154,9 +154,9 @@ function PlatformAnalytics() {
                 name: p.name,
                 image: p.image,
                 subtitle: p.storeName,
-                revenue: p.revenue,
+                share: p.share,
               }))}
-              renderMetric={(p) => peso(p.revenue)}
+              renderMetric={(p) => pctText(p.share)}
               emptyArt="products"
               emptyMessage="No products sold in this period."
             />
@@ -179,7 +179,7 @@ function PlatformAnalytics() {
         <div className="an-card">
           <div className="an-card-head">
             <h2 className="an-card-title">Sales by municipality</h2>
-            <span className="an-card-sub">Lifetime</span>
+            <span className="an-card-sub">Share of this period's sales</span>
           </div>
           <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -187,12 +187,13 @@ function PlatformAnalytics() {
                 <th style={{ textAlign: 'left', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Municipality</th>
                 <th style={{ textAlign: 'left', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Admin</th>
                 <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Orders</th>
-                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Revenue</th>
+                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Share</th>
+                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Growth</th>
               </tr>
             </thead>
             <tbody>
               {(data?.salesByMunicipality || []).length === 0 && (
-                <tr><td colSpan={4}><EmptyState art="places" title="No municipality data" message="Sales per municipality will appear here." compact /></td></tr>
+                <tr><td colSpan={5}><EmptyState art="places" title="No municipality data" message="Sales per municipality will appear here." compact /></td></tr>
               )}
               {(data?.salesByMunicipality || []).map((m) => (
                 <tr key={m.id}>
@@ -201,7 +202,8 @@ function PlatformAnalytics() {
                     {m.hasAdmin ? 'Assigned' : '—'}
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{num(m.orders)}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{peso(m.revenue)}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{pctText(m.share)}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, color: m.growth > 0 ? '#15803d' : m.growth < 0 ? '#b91c1c' : 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{growthText(m.growth)}</td>
                 </tr>
               ))}
             </tbody>

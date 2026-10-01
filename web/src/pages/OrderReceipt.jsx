@@ -6,6 +6,7 @@ import { resolveImg } from '../lib/media';
 import './OrderReceipt.css';
 import { ReceiptSkeleton } from '../components/ui/PageSkeletons';
 import AppLogo from '../components/AppLogo';
+import { trackingLink } from '../lib/tracking';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateFmt = (d) => new Date(d).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -27,6 +28,7 @@ const statusLabel = (status, fulfillmentMethod) => ({
   READY_FOR_PICKUP: 'Ready for Pickup',
   TO_SHIP: 'To Ship',
   OUT_FOR_DELIVERY: 'Out for Delivery',
+  SHIPPED: 'Shipped',
   DELIVERED: 'Delivered',
   PICKED_UP: 'Picked Up',
   COMPLETED: 'Completed',
@@ -125,6 +127,18 @@ export default function OrderReceipt() {
           )}
           <div><span className="meta-label">Payment Status</span><span>{paymentStatusLabel(order)}</span></div>
           <div><span className="meta-label">Status</span><span>{statusLabel(order.status, order.fulfillmentMethod)}</span></div>
+          {order.trackingNumber && (
+            <>
+              <div><span className="meta-label">Courier</span><span>{order.courier?.name || order.courierName}</span></div>
+              <div>
+                <span className="meta-label">Tracking No.</span>
+                <span>
+                  {order.trackingNumber}
+                  <a className="receipt-track-link" href={trackingLink(order)} target="_blank" rel="noopener noreferrer">Track your order here</a>
+                </span>
+              </div>
+            </>
+          )}
         </section>
 
         <section className="receipt-items">

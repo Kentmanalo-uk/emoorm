@@ -1,10 +1,11 @@
 const returnRepository = require('../repositories/return.repository');
+const { maskEmail, maskPhone } = require('../utils/privacy');
 const orderRepository = require('../repositories/order.repository');
 const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
 
 const DEFAULT_RETURN_WINDOW_DAYS = 7;
-const ELIGIBLE_ORDER_STATUSES = new Set(['DELIVERED', 'PICKED_UP', 'COMPLETED']);
+const ELIGIBLE_ORDER_STATUSES = new Set(['DELIVERED', 'PICKED_UP', 'SHIPPED', 'COMPLETED']);
 const VALID_REASONS = new Set(['DAMAGED', 'WRONG_ITEM', 'NOT_AS_DESCRIBED', 'MISSING', 'OTHER']);
 const VALID_REFUND_METHODS = new Set(['COD_CASH', 'GCASH', 'BANK', 'MANUAL']);
 
@@ -143,6 +144,13 @@ const getForActor = async (id, actor) => {
   if (!isBuyer && !isSeller && actor.role === 'MUNICIPAL_ADMIN'
     && request.store?.municipalityId !== actor.municipalityId) {
     throw new ApiError('You can only view return requests in your assigned municipality', 403);
+  }
+  // Admins see the case; the buyer's contact stays masked.
+  if (!isBuyer && !isSeller && request.buyer) {
+    return {
+      ...request,
+      buyer: { ...request.buyer, email: maskEmail(request.buyer.email), contactNumber: maskPhone(request.buyer.contactNumber) },
+    };
   }
   return request;
 };

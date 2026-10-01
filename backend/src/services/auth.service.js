@@ -73,6 +73,7 @@ const allocateUsername = async (fullName, email) => {
 };
 const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
+const { maskEmail, maskPhone, maskNumber } = require('../utils/privacy');
 
 /**
  * Authentication Service
@@ -797,7 +798,56 @@ const getUserById = async (userId, actor) => {
     ? { status: record.status, idType: record.idType, verifiedAt: record.verifiedAt, reviewedById: record.reviewedById }
     : { status: 'NOT_VERIFIED' };
 
-  return { ...user, identity };
+  return { ...adminUserView(user), identity };
+};
+
+/* ── People as admins see them ──────────────────────────────────────── */
+
+const KYC_URL_FIELDS = ['idFrontUrl', 'idBackUrl', 'selfieUrl', 'sellerPermitUrl'];
+
+/**
+ * A user as an admin sees them: email and phone masked, no street address,
+ * TIN and payout account masked to the last four, and the ID photos only as
+ * "on file" (opened through the logged kyc-photo route, during review).
+ * Real contact details: revealUserContact, with a reason.
+ */
+const adminUserView = (user) => {
+  if (!user) return user;
+  const out = { ...user };
+  if ('email' in out) out.email = maskEmail(out.email);
+  if ('contactNumber' in out) out.contactNumber = maskPhone(out.contactNumber);
+  if ('address' in out) out.address = null;
+  if ('sellerBirTin' in out) out.sellerBirTin = maskNumber(out.sellerBirTin);
+  if ('payoutAccountNumber' in out) out.payoutAccountNumber = maskNumber(out.payoutAccountNumber);
+  for (const field of KYC_URL_FIELDS) {
+    if (field in out) out[field] = out[field] ? true : null;
+  }
+  out.contactMasked = true;
+  return out;
+};
+
+/**
+ * An admin asks to see someone's real contact details for a case. The
+ * controller requires a reason and writes the reveal to the audit log.
+ */
+const revealUserContact = async (userId, actor) => {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new ApiError('User not found', 404);
+  if (!(await canAdminManageUser(actor, user))) {
+    throw new ApiError('You can only access users in your assigned municipality', 403);
+  }
+  if (actor?.role === 'MUNICIPAL_ADMIN' && !['BUYER', 'SELLER'].includes(user.role)) {
+    throw new ApiError('Municipal admins can only access buyer and seller accounts', 403);
+  }
+  return {
+    user,
+    data: {
+      email: user.email || null,
+      contactNumber: user.contactNumber || null,
+      address: user.address || null,
+      barangay: user.barangay || null,
+    },
+  };
 };
 
 const KYC_FIELD_COLUMNS = {
@@ -828,12 +878,18 @@ const getKycPhoto = async (targetUserId, field, requester) => {
   }
 
   const isSelf = requester.id === record.id;
-  const isSuperAdmin = requester.role === 'SUPER_ADMIN';
-  const isScopedMunicipalAdmin =
-    requester.role === 'MUNICIPAL_ADMIN' && requester.municipalityId && requester.municipalityId === record.municipalityId;
-
-  if (!isSelf && !isSuperAdmin && !isScopedMunicipalAdmin) {
-    throw new ApiError('You are not authorized to view this document', 403);
+  if (!isSelf) {
+    // Admins see ID documents only to review an application that is still
+    // waiting, in the town that reviews it (the shop's), and each view is
+    // logged by the controller. Afterwards they are gone (KYC retention).
+    const isAdmin = requester.role === 'SUPER_ADMIN' || requester.role === 'MUNICIPAL_ADMIN';
+    if (!isAdmin) throw new ApiError('You are not authorized to view this document', 403);
+    if (record.sellerApplicationStatus !== 'PENDING') {
+      throw new ApiError('ID documents can only be viewed while the application is under review', 403);
+    }
+    if (!(await canAdminManageUser(requester, record))) {
+      throw new ApiError('You are not authorized to view this document', 403);
+    }
   }
 
   const storedValue = record[column];
@@ -852,7 +908,7 @@ const getKycPhoto = async (targetUserId, field, requester) => {
     throw new ApiError('Document not found', 404);
   }
 
-  return { absolutePath };
+  return { absolutePath, viewedByAdmin: !isSelf, municipalityId: record.municipalityId };
 };
 
 /**
@@ -861,7 +917,9 @@ const getKycPhoto = async (targetUserId, field, requester) => {
  * @returns {Promise<Object>} Users and pagination
  */
 const getUsers = async (options) => {
-  return userRepository.findAll(options);
+  // Admin route only: every row masked (adminUserView).
+  const result = await userRepository.findAll(options);
+  return { ...result, users: result.users.map(adminUserView) };
 };
 
 /**
@@ -1388,6 +1446,7 @@ module.exports = {
   deleteUser,
   setUserRole,
   getKycPhoto,
+  revealUserContact,
 };
 
 async function setUserRole(userId, role, opts = {}) {

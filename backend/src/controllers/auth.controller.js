@@ -192,9 +192,44 @@ const getUserById = asyncHandler(async (req, res) => {
  * @access Private (self or admin)
  */
 const getKycPhoto = asyncHandler(async (req, res) => {
-  const { absolutePath } = await authService.getKycPhoto(req.params.id, req.params.field, req.user);
-
+  const { absolutePath, viewedByAdmin, municipalityId } = await authService.getKycPhoto(req.params.id, req.params.field, req.user);
+  if (viewedByAdmin) {
+    await auditLog.record({
+      actor: req.user,
+      action: 'VIEW_KYC_DOCUMENT',
+      entity: 'User',
+      entityId: req.params.id,
+      details: { document: req.params.field },
+      municipalityId,
+      req,
+    });
+  }
+  // Never cached: the next look is a new, logged request.
+  res.set('Cache-Control', 'no-store');
   res.sendFile(absolutePath);
+});
+
+/**
+ * Admin: someone's real email, phone and address for a case. Needs a reason
+ * (at least 3 characters); every reveal goes in the audit log.
+ * @route POST /api/auth/users/:id/reveal
+ */
+const revealUserContact = asyncHandler(async (req, res) => {
+  const reason = String(req.body?.reason || '').trim().slice(0, 300);
+  if (reason.length < 3) {
+    return res.status(400).json({ success: false, message: 'Say why you need to see this (at least 3 characters).' });
+  }
+  const { user, data } = await authService.revealUserContact(req.params.id, req.user);
+  await auditLog.record({
+    actor: req.user,
+    action: 'REVEAL_USER_CONTACT',
+    entity: 'User',
+    entityId: user.id,
+    details: { name: user.fullName, reason },
+    municipalityId: user.municipalityId || null,
+    req,
+  });
+  return successResponse(res, data, 'Details shown and logged');
 });
 
 /**
@@ -224,8 +259,9 @@ const getUsers = asyncHandler(async (req, res) => {
   }
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    // At most 200 a page: no one pulls a whole town's people in one go.
+    pageSize: Math.min(200, Math.max(1, parseInt(pageSize, 10) || 20)),
     role: req.user?.role === 'MUNICIPAL_ADMIN' ? (role || ['BUYER', 'SELLER']) : role,
     municipalityId: scopedMunicipalityId,
     isActive: isActive !== undefined ? isActive === 'true' : undefined,
@@ -512,6 +548,7 @@ module.exports = {
   saveSellerApplicationDraft,
   getUserById,
   getKycPhoto,
+  revealUserContact,
   getUsers,
   approveSeller,
   rejectSeller,

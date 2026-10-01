@@ -147,7 +147,7 @@ export default function AdminVouchers() {
       </div>
 
       {showForm && (
-        <div className="admin-card" style={{ padding: 16, marginBottom: 16 }}>
+        <div className="admin-card admin-form-sheet" style={{ padding: 16, marginBottom: 16 }}>
           <div className="admin-card-header">
             <h2 className="admin-card-title">{form.id ? 'Edit voucher' : 'New voucher'}</h2>
           </div>

@@ -1075,3 +1075,86 @@
     min-height: 46px;
   }
 }
+
+/* Who delivers: yourself and/or couriers (selection cards). */
+.sf-couriers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.sf-courier-self {
+  display: grid;
+  place-items: center;
+  width: 49px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #34d399, #059669);
+  color: #fff;
+}
+.sf-courier-warn {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+@media (max-width: 480px) {
+  .sf-couriers { grid-template-columns: 1fr; }
+}
+
+/* Couriers only: nothing to type, the fee comes from weight. */
+.sf-courier-auto {
+  display: flex;
+  gap: 10px;
+  margin: 4px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.sf-courier-auto svg { flex-shrink: 0; margin-top: 1px; color: var(--t-primary-600, #059669); }
+
+/* Products that need a weight before couriers can price them. */
+.sf-weigh {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #fde68a;
+  border-radius: 14px;
+  background: #fffbeb;
+}
+.sf-weigh-head { display: flex; flex-direction: column; gap: 2px; margin: 0 0 10px; }
+.sf-weigh-head strong { color: #92400e; font-size: 14px; }
+.sf-weigh-head span { color: #a16207; font-size: 12.5px; }
+.sf-weigh-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sf-weigh-list li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; background: #fff; }
+.sf-weigh-list img, .sf-weigh-noimg { width: 36px; height: 36px; flex-shrink: 0; border-radius: 8px; object-fit: cover; background: var(--t-neutral-100, #f3f4f6); }
+.sf-weigh-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 500; }
+.sf-weigh-input { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sf-weigh-input input {
+  width: 84px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+}
+.sf-weigh-input span { color: var(--t-neutral-500, #6b7280); font-size: 13px; font-weight: 600; }
+.sf-weigh-save {
+  margin-top: 10px;
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sf-weigh-save:disabled { opacity: 0.5; cursor: not-allowed; }

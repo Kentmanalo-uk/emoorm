@@ -160,6 +160,14 @@ router.get(
   authController.getUserById
 );
 
+// Admin: a user's real contact details, with a reason (logged).
+router.post(
+  '/users/:id/reveal',
+  authenticate,
+  authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
+  authController.revealUserContact
+);
+
 // Access control for the specific document is enforced in the service layer
 // (self, or an authorized admin) since both regular users and admins may call this.
 router.get(

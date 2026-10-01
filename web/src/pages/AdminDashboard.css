@@ -1335,3 +1335,8 @@
     white-space: nowrap;
   }
 }
+
+/* A town's change in sales next to its share. */
+.dash-muni-growth { font-style: normal; font-weight: 600; color: var(--t-neutral-500, #6b7280); }
+.dash-muni-growth.is-up { color: #15803d; }
+.dash-muni-growth.is-down { color: #b91c1c; }

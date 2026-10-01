@@ -1,3 +1,5 @@
+const prisma = require('../config/database');
+const { feeFor } = require('../utils/courierRates');
 const crypto = require('crypto');
 const orderRepository = require('../repositories/order.repository');
 const productRepository = require('../repositories/product.repository');
@@ -8,8 +10,10 @@ const voucherService = require('./voucher.service');
 const notificationService = require('./notification.service');
 const identityVerificationService = require('./identityVerification.service');
 const deliveryQuoteService = require('./deliveryQuote.service');
+const courierService = require('./courier.service');
 const shopReadiness = require('./shopReadiness.service');
 const { ApiError } = require('../middleware/errorHandler');
+const { maskPhone, areaOnly } = require('../utils/privacy');
 const { priceForSelection, stockForSelection } = require('../utils/variantPricing');
 
 const PAYMENT_METHODS = ['COD', 'GCASH', 'QRPH'];
@@ -74,6 +78,7 @@ const createOrder = async (userId, data) => {
     buyerProvince,
     checkoutKey,
     voucherCode,
+    courierId,
   } = data;
 
   // Validate buyer
@@ -135,18 +140,32 @@ const createOrder = async (userId, data) => {
     throw new ApiError('This store has not set up QR payment', 400);
   }
 
-  // Delivery-only validations. The quote also carries the fee for this
-  // address: the barangay's or town's own fee, else the store's standard fee.
+  // Delivery-only validations. Delivered by the seller: the quote carries the
+  // fee for this address (the barangay's or town's own fee, else the store's
+  // standard fee). Delivered by a courier the buyer chose: it goes anywhere in
+  // the province, is priced on the parcel's weight below, and is paid online.
   let deliveryQuote = null;
+  let courier = null;
   if (fulfillmentMethod === 'DELIVERY') {
     if (!deliveryAddress) {
       throw new ApiError('Delivery address is required', 400);
     }
-    const muniForCoverage = buyerMunicipalityId || buyer.municipalityId;
-    const brgyForCoverage = buyerBarangay || buyer.barangay;
-    deliveryQuote = await deliveryQuoteService.quote(store, muniForCoverage, brgyForCoverage);
-    if (!deliveryQuote.covered) {
-      throw new ApiError('Delivery is not available for your address. Please choose Pickup instead.', 400);
+    if (courierId) {
+      courier = await courierService.courierForStore(storeId, courierId);
+      if (!courier) throw new ApiError("This shop doesn't ship with that courier", 400);
+      if (paymentMethod === 'COD') {
+        throw new ApiError("Cash on delivery isn't available with courier delivery. Pay with GCash or QR Ph.", 400);
+      }
+    } else {
+      if (store.selfDelivery === false) {
+        throw new ApiError('This shop ships with couriers. Choose a courier.', 400);
+      }
+      const muniForCoverage = buyerMunicipalityId || buyer.municipalityId;
+      const brgyForCoverage = buyerBarangay || buyer.barangay;
+      deliveryQuote = await deliveryQuoteService.quote(store, muniForCoverage, brgyForCoverage);
+      if (!deliveryQuote.covered) {
+        throw new ApiError('Delivery is not available for your address. Please choose Pickup instead.', 400);
+      }
     }
   }
 
@@ -160,6 +179,8 @@ const createOrder = async (userId, data) => {
 
   let totalAmount = 0;
   const orderItems = [];
+  let parcelGrams = 0;
+  const unweighed = [];
 
   for (const item of items) {
     const quantity = Number(item.quantity);
@@ -195,6 +216,9 @@ const createOrder = async (userId, data) => {
 
     // The chosen option's price when the product is priced per option
     // (e.g. 1kg vs 250g); otherwise the product's single price.
+    if (product.weightGrams) parcelGrams += product.weightGrams * quantity;
+    else unweighed.push(product.name);
+
     const unitPrice = priceForSelection(product, selectedVariations);
     const itemTotal = unitPrice * quantity;
     totalAmount += itemTotal;
@@ -210,9 +234,21 @@ const createOrder = async (userId, data) => {
     });
   }
 
-  // Pickup is free; delivery costs what the store charges for the buyer's
-  // area (see deliveryQuote.service). There is no free-shipping threshold.
-  const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0 : deliveryQuote.fee;
+  // Pickup is free; delivery by the seller costs what the store charges for
+  // the buyer's area (see deliveryQuote.service); by a courier, its rate for
+  // the parcel's weight, within the seller's town or to another town.
+  let courierFee = null;
+  if (courier) {
+    if (unweighed.length) {
+      throw new ApiError(`${unweighed[0]} has no weight yet, so courier delivery can't be priced. Choose delivery by the seller or pickup.`, 400);
+    }
+    const buyerTown = buyerMunicipalityId || buyer.municipalityId;
+    courierFee = feeFor(courier.rates, parcelGrams, buyerTown === store.municipalityId);
+    if (courierFee == null) {
+      throw new ApiError(`This order is too heavy for ${courier.name}. Choose another way to receive it.`, 400);
+    }
+  }
+  const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0 : (courier ? courierFee : deliveryQuote.fee);
   let voucherRecord = null;
   let discountAmount = 0;
   if (voucherCode) {
@@ -256,6 +292,8 @@ const createOrder = async (userId, data) => {
         buyerMunicipalityId: buyerMunicipalityId || buyer.municipalityId || null,
         buyerBarangay: buyerBarangay || buyer.barangay || null,
         buyerProvince: buyerProvince || buyer.province || 'Oriental Mindoro',
+        // The courier the buyer chose; the seller ships with it.
+        ...(courier ? { courierId: courier.id, courierName: courier.name, shippingWeightGrams: parcelGrams } : {}),
       },
       orderItems,
       voucherRecord ? { voucherId: voucherRecord.id, userId, discountAmount } : null,
@@ -309,15 +347,95 @@ const getOrderById = async (id, userId, userRole, userMunicipalityId) => {
   const isBuyer = order.buyerId === userId;
   const isSeller = order.store.ownerId === userId;
   const isAdmin = userRole === 'SUPER_ADMIN';
+  // A municipal admin looks after their town's shops (as every list does).
   const isScopedAdmin = userRole === 'MUNICIPAL_ADMIN'
     && userMunicipalityId
-    && (order.buyer?.municipalityId === userMunicipalityId || order.store?.municipalityId === userMunicipalityId);
+    && order.store?.municipalityId === userMunicipalityId;
 
   if (!isBuyer && !isSeller && !isAdmin && !isScopedAdmin) {
     throw new ApiError('You do not have permission to view this order', 403);
   }
 
+  // The buyer and the seller see the order; an admin sees what moderating
+  // it needs (adminOrderView), and asks to see more with a reason.
+  if (!isBuyer && !isSeller) return adminOrderView(order);
   return order;
+};
+
+/* ── Orders as admins see them ──────────────────────────────────────── */
+
+/** The list: what happened, where, without people's details or amounts. */
+const adminOrderSummary = (order) => ({
+  id: order.id,
+  orderNumber: order.orderNumber,
+  createdAt: order.createdAt,
+  updatedAt: order.updatedAt,
+  status: order.status,
+  paymentStatus: order.paymentStatus,
+  paymentMethod: order.paymentMethod,
+  fulfillmentMethod: order.fulfillmentMethod,
+  buyer: order.buyer ? { id: order.buyer.id, fullName: order.buyer.fullName } : null,
+  store: order.store ? { id: order.store.id, name: order.store.name, slug: order.store.slug || null } : null,
+  itemCount: (order.items || []).reduce((n, it) => n + Number(it.quantity || 0), 0),
+});
+
+/** One order: the summary, the items (no prices), the area, masked contact. */
+const adminOrderView = (order) => ({
+  ...adminOrderSummary(order),
+  items: (order.items || []).map((it) => ({
+    id: it.id,
+    productName: it.productName,
+    quantity: it.quantity,
+    selectedVariations: it.selectedVariations || null,
+    product: it.product ? { id: it.product.id, name: it.product.name, slug: it.product.slug, images: it.product.images } : null,
+  })),
+  area: areaOnly(order.buyerBarangay, order.fulfillmentMethod === 'PICKUP' ? null : order.store?.municipality?.name),
+  contactMasked: maskPhone(order.contactNumber),
+  pickupLocation: order.fulfillmentMethod === 'PICKUP' ? order.pickupLocation : null,
+  hasPaymentProof: Boolean(order.paymentProofUrl),
+  hasDeliveryProof: Boolean(order.fulfillmentProofUrl),
+  courierName: order.courierName || null,
+  trackingNumber: order.trackingNumber || null,
+  shippedAt: order.shippedAt || null,
+  restricted: true,
+});
+
+const REVEAL_PARTS = ['contact', 'payment'];
+
+/**
+ * An admin asks to see an order's contact or payment details for a case
+ * (a report, a dispute, a return). The reason is required and the reveal is
+ * written to the audit log by the controller.
+ * @returns {Promise<{order: Object, part: String, data: Object}>}
+ */
+const revealOrderDetails = async (orderId, actor, part) => {
+  if (!REVEAL_PARTS.includes(part)) throw new ApiError('Choose contact or payment', 400);
+  const order = await orderRepository.findById(orderId);
+  if (!order) throw new ApiError('Order not found', 404);
+  const allowed = actor.role === 'SUPER_ADMIN'
+    || (actor.role === 'MUNICIPAL_ADMIN' && actor.municipalityId && order.store?.municipalityId === actor.municipalityId);
+  if (!allowed) throw new ApiError('You do not have permission to view this order', 403);
+
+  const data = part === 'contact'
+    ? {
+      buyerName: order.buyer?.fullName || null,
+      contactNumber: order.contactNumber || null,
+      deliveryAddress: order.deliveryAddress || null,
+      deliveryNotes: order.deliveryNotes || null,
+      fulfillmentProofUrl: order.fulfillmentProofUrl || null,
+    }
+    : {
+      subtotal: order.subtotal,
+      deliveryFee: order.deliveryFee,
+      discountAmount: order.discountAmount,
+      total: order.total,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      paymentReference: order.paymentReference || null,
+      paymentProofUrl: order.paymentProofUrl || null,
+      items: (order.items || []).map((it) => ({ id: it.id, price: it.price, quantity: it.quantity, subtotal: it.subtotal })),
+    };
+  return { order, part, data };
 };
 
 /**
@@ -352,7 +470,9 @@ const getStoreOrders = async (userId, options) => {
  * @returns {Promise<Object>} Orders and pagination
  */
 const getAllOrders = async (options) => {
-  return orderRepository.findAll(options);
+  // Admin route only: each order as its summary.
+  const result = await orderRepository.findAll(options);
+  return { ...result, orders: result.orders.map(adminOrderSummary) };
 };
 
 /**
@@ -401,9 +521,14 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl } = {}) 
   if (!validTransitions[order.status]?.includes(newStatus)) {
     throw new ApiError(`Cannot transition from ${order.status} to ${newStatus}`, 400);
   }
+  // The buyer chose (and paid for) a courier: it is shipped with it, not
+  // delivered by the seller.
+  if (order.courierId && ['OUT_FOR_DELIVERY', 'DELIVERED'].includes(newStatus)) {
+    throw new ApiError(`Ship this order with ${order.courierName || 'the courier'} the buyer chose`, 400);
+  }
 
   if (order.paymentMethod !== 'COD'
-    && ['PREPARING', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP', 'COMPLETED'].includes(newStatus)
+    && ['PREPARING', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP', 'SHIPPED', 'COMPLETED'].includes(newStatus)
     && order.paymentStatus !== 'PAID') {
     throw new ApiError('Payment must be verified before fulfillment can continue', 409);
   }
@@ -682,8 +807,116 @@ const submitPaymentProof = async (orderId, userId, { paymentReference, paymentPr
   return updated;
 };
 
+// A waybill's tracking number: letters, digits and dashes.
+const TRACKING_NUMBER = /^[A-Za-z0-9-]{6,40}$/;
+const SHIPPABLE_FROM = ['CONFIRMED', 'PREPARING', 'TO_SHIP'];
+
 /**
- * Buyer confirms they have the goods: DELIVERED / PICKED_UP -> COMPLETED.
+ * The seller handed a delivery order to a courier: SHIPPED, with the courier
+ * and the waybill's tracking number (scanned or typed).
+ * @param {String} orderId
+ * @param {String} userId - Seller user ID
+ * @param {{ courierId: String, trackingNumber: String }} input
+ */
+const shipOrder = async (orderId, userId, { courierId, trackingNumber } = {}) => {
+  const order = await orderRepository.findById(orderId);
+  if (!order) throw new ApiError('Order not found', 404);
+  if (order.store.ownerId !== userId) {
+    throw new ApiError('You can only update orders for your store', 403);
+  }
+  if (order.fulfillmentMethod === 'PICKUP') {
+    throw new ApiError('Pickup orders are not shipped', 400);
+  }
+  if (!SHIPPABLE_FROM.includes(order.status)) {
+    throw new ApiError('This order cannot be shipped at this stage', 409);
+  }
+  if (order.paymentMethod !== 'COD' && order.paymentStatus !== 'PAID') {
+    throw new ApiError('Payment must be verified before fulfillment can continue', 409);
+  }
+  const tracking = String(trackingNumber || '').replace(/\s+/g, '').toUpperCase();
+  if (!TRACKING_NUMBER.test(tracking)) {
+    throw new ApiError('Enter the tracking number on the waybill (6-40 letters or digits)', 400);
+  }
+  // The buyer chose (and paid for) the courier at checkout; orders they asked
+  // the seller to deliver are delivered by the seller.
+  if (!order.courierId) {
+    throw new ApiError('The buyer chose delivery by you for this order', 400);
+  }
+  if (courierId && String(courierId) !== order.courierId) {
+    throw new ApiError(`The buyer chose ${order.courierName || 'another courier'} for this order`, 400);
+  }
+  const courier = await prisma.courier.findUnique({ where: { id: order.courierId } })
+    || { id: order.courierId, name: order.courierName };
+
+  let updated;
+  try {
+    updated = await orderRepository.updateStatus(
+      orderId, 'SHIPPED', order.status, userId, `Shipped with ${courier.name} · ${tracking}`,
+      { courierId: courier.id, courierName: courier.name, trackingNumber: tracking, shippedAt: new Date() },
+    );
+  } catch (err) {
+    if (err.code === 'STALE_ORDER_STATUS') {
+      throw new ApiError('This order was updated elsewhere. Refresh and try again.', 409);
+    }
+    throw err;
+  }
+
+  try {
+    await notificationService.createNotification({
+      userId: order.buyerId,
+      type: 'ORDER_READY',
+      title: 'Your order is on its way',
+      message: `${order.store?.name || 'The seller'} shipped order ${order.orderNumber} with ${courier.name}. Tracking number: ${tracking}.`,
+      relatedId: orderId,
+      target: { kind: 'buyer-order', id: orderId },
+    });
+  } catch (err) {
+    console.error('[shipOrder] notification failed:', err.message);
+  }
+  return updated;
+};
+
+// Shipped or delivered orders the buyer never confirmed complete on their own.
+const AUTO_COMPLETE_DAYS = Number(process.env.ORDER_AUTO_COMPLETE_DAYS) || 7;
+
+const autoCompleteOrders = async (days = AUTO_COMPLETE_DAYS) => {
+  const before = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const orders = await orderRepository.findUnconfirmedHandedOver(before);
+  let completed = 0;
+  for (const order of orders) {
+    try {
+      // COMPLETED marks a cash-on-delivery order paid, as receipt does.
+      await orderRepository.updateStatus(
+        order.id, 'COMPLETED', order.status, null, `Completed automatically ${days} days after hand-over`,
+      );
+      completed += 1;
+    } catch (err) {
+      if (err.code !== 'STALE_ORDER_STATUS') throw err;
+      continue;
+    }
+    await Promise.allSettled([
+      notificationService.createNotification({
+        userId: order.buyerId,
+        type: 'ORDER_COMPLETED',
+        title: 'Order completed',
+        message: `Order ${order.orderNumber} was marked complete ${days} days after it was handed over. Something wrong? You can still request a return.`,
+        relatedId: order.id,
+      }),
+      order.store?.ownerId && notificationService.createNotification({
+        userId: order.store.ownerId,
+        type: 'ORDER_COMPLETED',
+        title: 'Order completed',
+        message: `Order ${order.orderNumber} was completed automatically: the buyer didn't confirm receipt within ${days} days.`,
+        relatedId: order.id,
+        audience: 'SELLER',
+      }),
+    ]);
+  }
+  return completed;
+};
+
+/**
+ * Buyer confirms they have the goods: DELIVERED / PICKED_UP / SHIPPED -> COMPLETED.
  * Goes through updateStatus so a COD payment flips to PAID and history is
  * written exactly as it is for the seller.
  */
@@ -693,7 +926,7 @@ const markReceived = async (orderId, userId) => {
   if (order.buyerId !== userId) {
     throw new ApiError('You can only confirm receipt of your own orders', 403);
   }
-  if (!['DELIVERED', 'PICKED_UP'].includes(order.status)) {
+  if (!['DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(order.status)) {
     throw new ApiError('This order is not ready to be marked as received', 409);
   }
 
@@ -829,10 +1062,13 @@ module.exports = {
   getMyOrders,
   getStoreOrders,
   getAllOrders,
+  revealOrderDetails,
   updateOrderStatus,
   cancelOrder,
   verifyPayment,
   submitPaymentProof,
   markReceived,
+  shipOrder,
+  autoCompleteOrders,
   expirePendingOrders,
 };

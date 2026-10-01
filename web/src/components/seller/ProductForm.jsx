@@ -72,6 +72,8 @@ const toFormState = (product) => ({
   description: product?.description || '',
   price: product ? String(Number(product.price) || '') : '',
   stock: product ? String(product.stock ?? '') : '',
+  // Kilograms in the form; the API keeps grams.
+  weightKg: product?.weightGrams ? String(product.weightGrams / 1000) : '',
   categoryId: product?.categoryId || product?.category?.id || '',
   images: Array.isArray(product?.images) ? product.images.filter(Boolean) : [],
   returnPolicy: product?.returnPolicy || '',
@@ -126,6 +128,16 @@ export default function ProductForm({ product = null, categories = [], onCancel,
   const [saving, setSaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // A shop that ships with couriers needs every product's weight: it is how
+  // the shipping fee is worked out.
+  const [couriersOn, setCouriersOn] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    axios.get('/couriers/my-store')
+      .then((res) => { if (!cancelled) setCouriersOn((res.data?.couriers || []).length > 0); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const rootRef = useRef(null);
 
   // Phones: the form takes the whole screen, so the bottom tab bar steps
@@ -275,6 +287,11 @@ export default function ProductForm({ product = null, categories = [], onCancel,
     if (!priced && !(Number(state.price) > 0)) errs.price = 'Enter a price higher than ₱0.';
     const stocked = hasOptions && optionGroups.some((g) => g.stocked && g.choices.length);
     if (!stocked && state.stock !== '' && !isWhole(state.stock)) errs.stock = 'Stock must be a whole number, like 10.';
+    if (state.weightKg !== '' && !(Number(state.weightKg) > 0 && Number(state.weightKg) <= 100)) {
+      errs.weightKg = 'Enter the weight in kilograms, like 0.5 or 2.';
+    } else if (state.weightKg === '' && couriersOn) {
+      errs.weightKg = 'Add the weight: your shop ships with couriers, and they charge by weight.';
+    }
     return errs;
   };
 
@@ -314,6 +331,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
       categoryId: state.categoryId,
       images: state.images,
       returnPolicy: state.returnPolicy.trim() || null,
+      weightGrams: state.weightKg !== '' ? Math.round(Number(state.weightKg) * 1000) : null,
       variations: cleanGroups.map((g) => ({
         name: g.name.trim(),
         options: g.choices,
@@ -528,6 +546,30 @@ export default function ProductForm({ product = null, categories = [], onCancel,
             )}
           </Field>
         </div>
+        <Field
+          label="Weight with packaging"
+          required={couriersOn}
+          error={errors.weightKg}
+          htmlFor="pf-weight"
+          hint={couriersOn
+            ? 'Needed for courier delivery: the shipping fee is worked out from it.'
+            : 'Needed if you ship with couriers: they charge by weight.'}
+        >
+          <div className="pf-unit">
+            <input
+              id="pf-weight"
+              className={`pf-input${errors.weightKg ? ' is-invalid' : ''}`}
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              value={form.weightKg}
+              onChange={(e) => set('weightKg', e.target.value)}
+              placeholder="0.5"
+            />
+            <span>kg</span>
+          </div>
+        </Field>
       </Section>
 
       {/* 5 · Returns */}

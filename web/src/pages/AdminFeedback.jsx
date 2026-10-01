@@ -177,20 +177,19 @@ export default function AdminFeedback() {
       if (statusFilter) params.status = statusFilter;
       if (categoryFilter) params.category = categoryFilter;
       const all = await fetchAllPages('/feedback', params);
-      downloadCsv('feedback', all, [
+      downloadCsv('feedback', [
         { header: 'Submitted', value: (r) => csvDate(r.createdAt) },
         { header: 'Status', value: (r) => r.status },
         { header: 'Category', value: (r) => CATEGORY_LABEL[r.category] || r.category },
         { header: 'Rating', value: (r) => r.rating ?? '' },
         { header: 'From', value: (r) => r.user?.fullName || 'Deleted account' },
-        { header: 'Email', value: (r) => r.user?.email || '' },
         { header: 'Role', value: (r) => ROLE_LABEL[r.role] || r.role || '' },
         { header: 'Municipality', value: (r) => r.municipality?.name || '' },
         { header: 'Page', value: (r) => r.page || '' },
         { header: 'Message', value: (r) => r.message || '' },
         { header: 'Admin notes', value: (r) => r.adminNotes || '' },
         { header: 'Reviewed by', value: (r) => r.reviewedBy?.fullName || '' },
-      ]);
+      ], all);
     } catch {
       toast.error('Export failed');
     } finally {

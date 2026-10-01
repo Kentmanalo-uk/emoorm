@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SquaresFour as LayoutGrid, Users, Package, Flag, Tag, MapPin, ChartPie as PieChart,
   CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
   EnvelopeSimple, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
   Star, ArrowCounterClockwise, List, X, ChatCircleDots,
+  House, Receipt, UserCircle, SquaresFour, Truck,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
-import { useCompactLayout, useMobileNav } from '../../hooks/useMobileNav';
+import { useCompactLayout, useMobileNav, usePhoneLayout } from '../../hooks/useMobileNav';
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import AppRail from '../layout/AppRail';
@@ -21,6 +22,10 @@ import { adminSearchSources } from '../../lib/shellSearchSources';
 import './AdminLayout.css';
 import './AdminShellMobile.css';
 import UserAvatar from '../ui/UserAvatar';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import { AdminShellContext } from './adminShell';
+import useTableCardLabels from '../../hooks/useTableCardLabels';
+import './AdminPhone.css';
 
 /**
  * Persistent shell for /admin/* pages — mirrors SellerLayout look & feel.
@@ -38,6 +43,17 @@ export default function AdminLayout({ children }) {
   // The drawer on small screens always shows full labels.
   const collapsed = storedCollapsed && !isCompact;
   const mobileNav = useMobileNav(location.pathname);
+  const isPhone = usePhoneLayout();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  // Phones: every table's rows become labelled cards (AdminPhone.css).
+  const contentRef = useRef(null);
+  useTableCardLabels(isPhone, contentRef);
+  // Phones: pop-ups (detail panels, forms, dialogs) open as bottom sheets.
+  // Some render outside the shell, so the flag sits on <html>.
+  useEffect(() => {
+    document.documentElement.classList.toggle('admin-phone', isPhone);
+    return () => document.documentElement.classList.remove('admin-phone');
+  }, [isPhone]);
   const [reviewsOpen, setReviewsOpen] = useState(
     location.pathname.startsWith('/admin/sellers') ||
     location.pathname.startsWith('/admin/all-sellers') ||
@@ -138,8 +154,41 @@ export default function AdminLayout({ children }) {
 
   const crumbs = buildCrumbs(location.pathname);
 
+  // Phones: the seller app's shape. Five tabs; Home and Me draw their own
+  // header, the other tabs a title with round buttons, and every other page
+  // a back arrow with its title (and no tab bar).
+  const cleanPath = location.pathname.replace(/\/$/, '') || '/admin';
+  const isTabRoot = PHONE_TABS.includes(cleanPath);
+  const ownHeader = PHONE_OWN_HEADER.includes(cleanPath);
+  const phoneTitle = PHONE_TITLES[cleanPath] || crumbs[crumbs.length - 1]?.label || 'Admin';
+  const goBack = () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else if (cleanPath.startsWith('/admin/notifications/')) navigate('/admin/notifications');
+    else navigate('/admin/menu');
+  };
+  const count = (path) => waiting[path]?.count || 0;
+  // The Tools tab counts what waits in the sections it opens (Orders and
+  // Support have tabs of their own).
+  const toolsWaiting = Object.entries(waiting || {})
+    .filter(([path]) => path !== '/admin/orders' && path !== '/admin/support')
+    .reduce((sum, [, item]) => sum + (Number(item?.count) || 0), 0);
+
+  const shell = useMemo(() => ({
+    waiting,
+    unreadCount,
+    messageUnread,
+    feedbackNew,
+    isSuperAdmin,
+    roleLabel,
+    centerTitle,
+    municipalityName: assignedMunicipalityName,
+    municipalityLogo,
+    requestLogout: () => setLogoutOpen(true),
+  }), [waiting, unreadCount, messageUnread, feedbackNew, isSuperAdmin, roleLabel, centerTitle, assignedMunicipalityName, municipalityLogo]);
+
   return (
-    <div className={`ac-shell ${collapsed ? 'is-collapsed' : ''}${mobileNav.open ? ' is-nav-open' : ''}`}>
+    <AdminShellContext.Provider value={shell}>
+    <div className={`ac-shell ${collapsed ? 'is-collapsed' : ''}${mobileNav.open ? ' is-nav-open' : ''}${isPhone ? ' is-phone' : ''}${isPhone && !isTabRoot ? ' is-subpage' : ''}`}>
       <div className="ac-nav-backdrop" onClick={mobileNav.hide} aria-hidden="true" />
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside className="ac-sidebar" aria-label="Admin navigation">
@@ -296,6 +345,10 @@ export default function AdminLayout({ children }) {
                   <ImageIcon size={17} weight="fill" /> <span>Banners</span>
                 </NavLink>
 
+                <NavLink to="/admin/couriers" className={navCls} title="Couriers">
+                  <Truck size={17} weight="fill" /> <span>Couriers</span>
+                </NavLink>
+
                 <NavLink to="/admin/vouchers" className={navCls} title="Vouchers">
                   <Ticket size={17} weight="fill" /> <span>Vouchers</span>
                 </NavLink>
@@ -375,7 +428,31 @@ export default function AdminLayout({ children }) {
           </div>
         </header>
 
-        <main className="ac-content">{children}</main>
+        {isPhone && isTabRoot && !ownHeader && (
+          <header className="scm-head acm-head">
+            <h1 className="scm-title">{phoneTitle}</h1>
+            <div className="scm-actions">
+              <Link to="/admin/messages" className="scm-icon" aria-label="Messages" title="Messages">
+                <EnvelopeSimple size={20} />
+                {messageUnread > 0 && <span className="scm-badge">{messageUnread > 9 ? '9+' : messageUnread}</span>}
+              </Link>
+              <Link to="/admin/notifications" className="scm-icon" aria-label="Notifications" title="Notifications">
+                <Bell size={20} />
+                {unreadCount > 0 && <span className="scm-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+              </Link>
+            </div>
+          </header>
+        )}
+        {isPhone && !isTabRoot && (
+          <header className="scm-backbar acm-backbar">
+            <button type="button" className="scm-back" onClick={goBack} aria-label="Back">
+              <ChevronLeft size={22} weight="bold" />
+            </button>
+            <h1 className="scm-backtitle">{phoneTitle}</h1>
+          </header>
+        )}
+
+        <main className="ac-content" ref={contentRef}>{children}</main>
       </div>
 
       <AppRail
@@ -386,25 +463,62 @@ export default function AdminLayout({ children }) {
         signOutMessage="You will need to sign in again to open the admin panel."
       />
 
-      {/* Phone tab bar */}
-      <nav className="ac-tabbar" aria-label="Admin sections">
-        <NavLink to="/admin" end className={tabCls}>
-          <LayoutGrid size={22} weight="fill" /><span>Dashboard</span>
-        </NavLink>
-        <NavLink to="/admin/products" className={tabCls}>
-          <Package size={22} weight="fill" /><span>Products</span>
-        </NavLink>
-        <NavLink to="/admin/orders" className={tabCls}>
-          <FileText size={22} weight="fill" /><span>Orders</span>
-        </NavLink>
-        <NavLink to="/admin/support" className={tabCls}>
-          <ChatsCircle size={22} weight="fill" /><span>Support</span>
-        </NavLink>
-        <button type="button" className={`ac-tab${mobileNav.open ? ' is-active' : ''}`} onClick={mobileNav.toggle}>
-          <List size={22} weight="bold" /><span>Menu</span>
-        </button>
-      </nav>
+      {/* Phones: the app tab bar (hidden on pages opened from it). */}
+      {isPhone && (
+        <nav className={`sc-tabbar sc-tabbar--app acm-tabbar${isTabRoot ? '' : ' is-hidden'}`} aria-label="Admin sections">
+          <NavLink to="/admin" end className={tabCls}>
+            {({ isActive }) => <><House size={24} weight={isActive ? 'fill' : 'regular'} /><span>Home</span></>}
+          </NavLink>
+          <NavLink to="/admin/tools" end className={tabCls}>
+            {({ isActive }) => (
+              <>
+                <span className="sc-tab-icon">
+                  <SquaresFour size={24} weight={isActive ? 'fill' : 'regular'} />
+                  {toolsWaiting > 0 && <b className="sc-tab-badge">{toolsWaiting > 99 ? '99+' : toolsWaiting}</b>}
+                </span>
+                <span>Tools</span>
+              </>
+            )}
+          </NavLink>
+          <NavLink to="/admin/orders" end className={tabCls}>
+            {({ isActive }) => (
+              <>
+                <span className="sc-tab-icon">
+                  <Receipt size={24} weight={isActive ? 'fill' : 'regular'} />
+                  {count('/admin/orders') > 0 && <b className="sc-tab-badge">{count('/admin/orders') > 99 ? '99+' : count('/admin/orders')}</b>}
+                </span>
+                <span>Orders</span>
+              </>
+            )}
+          </NavLink>
+          <NavLink to="/admin/support" end className={tabCls}>
+            {({ isActive }) => (
+              <>
+                <span className="sc-tab-icon">
+                  <ChatsCircle size={24} weight={isActive ? 'fill' : 'regular'} />
+                  {count('/admin/support') > 0 && <b className="sc-tab-badge">{count('/admin/support') > 99 ? '99+' : count('/admin/support')}</b>}
+                </span>
+                <span>Support</span>
+              </>
+            )}
+          </NavLink>
+          <NavLink to="/admin/menu" end className={tabCls}>
+            {({ isActive }) => <><UserCircle size={24} weight={isActive ? 'fill' : 'regular'} /><span>Me</span></>}
+          </NavLink>
+        </nav>
+      )}
+
+      <ConfirmDialog
+        open={logoutOpen}
+        title="Sign out?"
+        message="You will need to sign in again to open the admin panel."
+        confirmLabel="Sign out"
+        danger
+        onConfirm={() => { setLogoutOpen(false); handleLogout(); }}
+        onCancel={() => setLogoutOpen(false)}
+      />
     </div>
+    </AdminShellContext.Provider>
   );
 }
 
@@ -419,8 +533,22 @@ function subNavCls({ isActive }) {
 }
 
 function tabCls({ isActive }) {
-  return `ac-tab${isActive ? ' is-active' : ''}`;
+  return `sc-tab${isActive ? ' is-active' : ''}`;
 }
+
+/** Phones: the tab bar's pages; Home and Me draw their own header. */
+const PHONE_TABS = ['/admin', '/admin/tools', '/admin/orders', '/admin/support', '/admin/menu'];
+const PHONE_OWN_HEADER = ['/admin', '/admin/menu'];
+/** Phones: shorter titles for the bar than the desktop crumbs. */
+const PHONE_TITLES = {
+  '/admin/tools': 'Tools',
+  '/admin/products': 'Products',
+  '/admin/orders': 'Orders',
+  '/admin/support': 'Buyer support',
+  '/admin/reports': 'Reports',
+  '/admin/menu': 'Me',
+  '/admin/notifications': 'Notifications',
+};
 
 const LABELS = {
   '/admin': 'Dashboard',
@@ -441,10 +569,13 @@ const LABELS = {
   '/admin/reviews': 'Reviews',
   '/admin/returns': 'Returns',
   '/admin/banners': 'Banners',
+  '/admin/couriers': 'Couriers',
   '/admin/vouchers': 'Vouchers',
   '/admin/junior-admins': 'Municipal Admins',
   '/admin/audit-logs': 'Audit Logs',
   '/admin/settings': 'Settings',
+  '/admin/menu': 'Me',
+  '/admin/tools': 'Tools',
 };
 
 function buildCrumbs(pathname) {

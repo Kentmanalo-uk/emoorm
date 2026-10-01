@@ -64,6 +64,14 @@ router.get(
   orderController.getStoreOrders
 );
 
+// Handed to a courier: the courier and the waybill's tracking number.
+router.patch(
+  '/:id/ship',
+  authenticate,
+  authorize('SELLER'),
+  orderController.shipOrder
+);
+
 router.put(
   '/:id/status',
   authenticate,
@@ -73,10 +81,11 @@ router.put(
   orderController.updateOrderStatus
 );
 
+// Sellers decide their own orders' payments; admins no longer do.
 router.patch(
   '/:id/payment',
   authenticate,
-  authorize('SELLER', 'SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
+  authorize('SELLER'),
   verifyPaymentValidation,
   rejectInvalid,
   orderController.verifyPayment
@@ -88,6 +97,14 @@ router.get(
   authenticate,
   authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
   orderController.getAllOrders
+);
+
+// Admin: an order's contact or payment details, with a reason (logged).
+router.post(
+  '/:id/reveal',
+  authenticate,
+  authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
+  orderController.revealOrderDetails
 );
 
 // Shared routes (buyer, seller, admin)

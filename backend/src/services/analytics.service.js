@@ -24,7 +24,7 @@ const shopReadiness = require('./shopReadiness.service');
 // Every OrderStatus value, so the counts map always carries the full set.
 const ORDER_STATUSES = [
   'PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED',
-  'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP',
+  'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP', 'SHIPPED',
 ];
 const PRODUCT_STATUSES = ['PENDING', 'APPROVED', 'HIDDEN', 'SUSPENDED', 'ARCHIVED'];
 
@@ -282,13 +282,14 @@ const getPlatformAnalytics = async (query = {}) => {
   const avgOrderValue = completedOrders ? revenue / completedOrders : 0;
   const previousAvg = previousCompletedOrders ? previousRevenue / previousCompletedOrders : 0;
 
-  // Sales by municipality (lifetime revenue rollup)
+  // Sales by municipality for the chosen period and the one before it.
   const muniRevenue = new Map();
+  const muniPrevious = new Map();
   const storeMuniMap = new Map();
   // We don't have municipality on salesByStoreAll rows; fetch minimal store->muni lookup lazily.
   // For simplicity, refetch stores in one shot:
   const prisma = require('../config/database');
-  const storeIds = raw.salesByStoreAll.map((r) => r.storeId);
+  const storeIds = [...new Set([...raw.salesByStoreAll, ...raw.salesByStorePrevious].map((r) => r.storeId))];
   const stores = storeIds.length
     ? await prisma.store.findMany({
       where: { id: { in: storeIds } },
@@ -304,12 +305,18 @@ const getPlatformAnalytics = async (query = {}) => {
     cur.orders += row._count._all;
     muniRevenue.set(muniId, cur);
   }
+  for (const row of raw.salesByStorePrevious) {
+    const muniId = storeMuniMap.get(row.storeId);
+    if (!muniId) continue;
+    muniPrevious.set(muniId, (muniPrevious.get(muniId) || 0) + Number(row._sum.total || 0));
+  }
   const salesByMunicipality = raw.municipalities.map((m) => ({
     id: m.id,
     name: m.name,
     code: m.code,
     hasAdmin: !!m.adminId,
     revenue: muniRevenue.get(m.id)?.revenue || 0,
+    previousRevenue: muniPrevious.get(m.id) || 0,
     orders: muniRevenue.get(m.id)?.orders || 0,
   }));
 
@@ -421,6 +428,79 @@ const getSellerDayDetails = async (userId, dateISO) => {
   };
 };
 
+// ---------- ADMIN VIEW: percentages, never pesos ----------
+/*
+ * Admins moderate the marketplace; they do not see what shops earn. Every
+ * peso figure in the municipality and platform analytics is replaced here,
+ * before it leaves the server, by what it means relative to the rest:
+ *   - revenue / average order: the growth vs the previous period (delta %)
+ *   - refunds: the share of sales refunded (%)
+ *   - the sales chart: each day as a % of the busiest day (shape only)
+ *   - stores, products, municipalities: their share of the period's sales,
+ *     and for municipalities their growth too
+ * Order, store, product and user counts stay: they are not money.
+ */
+const pct = (part, whole, digits = 1) => {
+  const w = Number(whole || 0);
+  if (!w) return 0;
+  const f = 10 ** digits;
+  return Math.round((Number(part || 0) / w) * 100 * f) / f;
+};
+
+// Growth only, and none when there was nothing before to grow from.
+const growthOnly = (k) => (k ? { value: null, previous: null, delta: Number(k.previous || 0) > 0 ? k.delta : null } : k);
+
+const toAdminView = (data) => {
+  if (!data) return data;
+  const total = Number(data.kpis?.revenue?.value || 0);
+  const peak = Math.max(0, ...(data.salesByDay || []).map((d) => Number(d.total || 0)));
+  // Product sales count every order not cancelled, so their share is of
+  // whichever is larger: completed sales, or the listed products together.
+  const productTotal = Math.max(total, (data.topProducts || []).reduce((n, p) => n + Number(p.revenue || 0), 0));
+  const kpis = { ...data.kpis };
+  kpis.refundRate = {
+    value: pct(data.kpis?.refunded?.value, total + Number(data.kpis?.refunded?.value || 0)),
+    previous: null,
+    delta: null,
+  };
+  kpis.revenue = growthOnly(kpis.revenue);
+  kpis.avgOrderValue = growthOnly(kpis.avgOrderValue);
+  delete kpis.refunded;
+  delete kpis.lifetimeRevenue;
+
+  const view = {
+    ...data,
+    kpis,
+    salesByDay: (data.salesByDay || []).map((d) => ({
+      date: d.date,
+      index: peak ? Math.round((Number(d.total || 0) / peak) * 100) : 0,
+      orders: d.orders,
+    })),
+    topStores: (data.topStores || []).map(({ revenue, ...s }) => ({ ...s, share: pct(revenue, total) })),
+    topProducts: (data.topProducts || []).map(({ revenue, ...p }) => ({ ...p, share: pct(revenue, productTotal) })),
+  };
+  // Applicants are listed by name and shop; their email stays private.
+  if (data.recent?.sellerApplications) {
+    view.recent = {
+      ...data.recent,
+      sellerApplications: data.recent.sellerApplications.map(({ email, ...applicant }) => applicant),
+    };
+  }
+
+  if (data.salesByMunicipality) {
+    const muniTotal = data.salesByMunicipality.reduce((n, m) => n + Number(m.revenue || 0), 0);
+    const muniPrevTotal = data.salesByMunicipality.reduce((n, m) => n + Number(m.previousRevenue || 0), 0);
+    view.salesByMunicipality = data.salesByMunicipality.map(({ revenue, previousRevenue, ...m }) => ({
+      ...m,
+      share: pct(revenue, muniTotal),
+      previousShare: pct(previousRevenue, muniPrevTotal),
+      // No sales before: there is nothing to grow from, so no figure.
+      growth: Number(previousRevenue || 0) > 0 ? delta(revenue, previousRevenue) : null,
+    }));
+  }
+  return view;
+};
+
 // ---------- Simple in-memory cache (60s TTL) ----------
 const CACHE_TTL_MS = 60 * 1000;
 const cache = new Map();
@@ -450,12 +530,12 @@ const cachedSeller = async (userId, query = {}) => {
 
 const cachedMunicipality = async (actor, query = {}) => {
   const key = cacheKey('muni', actor.id, actor.role, query.municipalityId, query.from, query.to);
-  return withCache(key, () => getMunicipalityAnalytics(actor, query))();
+  return toAdminView(await withCache(key, () => getMunicipalityAnalytics(actor, query))());
 };
 
 const cachedPlatform = async (query = {}) => {
   const key = cacheKey('platform', query.municipalityId, query.from, query.to);
-  return withCache(key, () => getPlatformAnalytics(query))();
+  return toAdminView(await withCache(key, () => getPlatformAnalytics(query))());
 };
 
 module.exports = {

@@ -254,7 +254,39 @@ const markReceived = asyncHandler(async (req, res) => {
   successResponse(res, order, 'Thanks for confirming. Your order is now completed.');
 });
 
+/**
+ * Admin: see an order's contact or payment details for a case. Needs a
+ * reason (at least 3 characters); every reveal goes in the audit log.
+ */
+const revealOrderDetails = asyncHandler(async (req, res) => {
+  const part = String(req.body?.part || '');
+  const reason = String(req.body?.reason || '').trim().slice(0, 300);
+  if (reason.length < 3) {
+    return res.status(400).json({ success: false, message: 'Say why you need to see this (at least 3 characters).' });
+  }
+  const { order, data } = await orderService.revealOrderDetails(req.params.id, req.user, part);
+  await auditLog.record({
+    actor: req.user,
+    action: part === 'contact' ? 'REVEAL_ORDER_CONTACT' : 'REVEAL_ORDER_PAYMENT',
+    entity: 'Order',
+    entityId: order.id,
+    details: { orderNumber: order.orderNumber, reason },
+    municipalityId: order.store?.municipalityId || null,
+    req,
+  });
+  return successResponse(res, data, 'Details shown and logged');
+});
+
+/** PATCH /orders/:id/ship — handed to a courier, with the tracking number. */
+const shipOrder = asyncHandler(async (req, res) => {
+  const { courierId, trackingNumber } = req.body || {};
+  const order = await orderService.shipOrder(req.params.id, req.user.id, { courierId, trackingNumber });
+  successResponse(res, order, 'Order shipped');
+});
+
 module.exports = {
+  shipOrder,
+  revealOrderDetails,
   createOrder,
   getMyOrders,
   getStoreOrders,

@@ -701,7 +701,7 @@ const PHONE_TITLES = {
   '/seller/fulfillment': 'Delivery & payment',
   '/seller/fulfillment/method': 'Delivery & pickup',
   '/seller/fulfillment/pickup': 'Pickup spot',
-  '/seller/fulfillment/delivery': 'Delivery areas & fees',
+  '/seller/fulfillment/delivery': 'Delivery',
   '/seller/fulfillment/payment': 'Payment options',
   '/seller/settings': 'Settings',
   '/seller/setup': 'Shop setup',

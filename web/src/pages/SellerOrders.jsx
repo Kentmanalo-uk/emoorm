@@ -14,6 +14,8 @@ import ReportModal from '../components/ReportModal';
 import './SellerDashboard.css';
 import './SellerOrders.css';
 import ProofPhotoSheet, { OrderProof } from '../components/orders/ProofPhotoSheet';
+import ShipOrderSheet from '../components/orders/ShipOrderSheet';
+import CourierTracking from '../components/orders/CourierTracking';
 import Spinner from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
 
@@ -26,6 +28,7 @@ const TABS = [
   { key: 'CONFIRMED', label: 'Confirmed' },
   { key: 'PREPARING', label: 'Preparing' },
   { key: 'TO_SHIP', label: 'To Ship' },
+  { key: 'SHIPPED', label: 'Shipped' },
   { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
   { key: 'READY_FOR_PICKUP', label: 'Ready for Pickup' },
   { key: 'COMPLETED', label: 'Completed' },
@@ -38,6 +41,7 @@ const STATUS_MAP = {
   PREPARING: { label: 'Preparing', cls: 'status-preparing', icon: <Package size={13} /> },
   TO_SHIP: { label: 'To Ship', cls: 'status-preparing', icon: <Package size={13} /> },
   OUT_FOR_DELIVERY: { label: 'Out for Delivery', cls: 'status-ready', icon: <Truck size={13} /> },
+  SHIPPED: { label: 'Shipped', cls: 'status-ready', icon: <Truck size={13} /> },
   DELIVERED: { label: 'Delivered', cls: 'status-completed', icon: <CheckCircle size={13} /> },
   READY: { label: 'Ready', cls: 'status-ready', icon: <Truck size={13} /> },
   READY_FOR_PICKUP: { label: 'Ready for Pickup', cls: 'status-ready', icon: <StoreIcon size={13} /> },
@@ -53,7 +57,7 @@ const DELIVERY_FLOW = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
   CONFIRMED: ['TO_SHIP', 'PREPARING', 'CANCELLED'],
   PREPARING: ['TO_SHIP', 'READY', 'CANCELLED'],
-  TO_SHIP: ['OUT_FOR_DELIVERY', 'CANCELLED'],
+  TO_SHIP: ['SHIPPED', 'OUT_FOR_DELIVERY', 'CANCELLED'],
   OUT_FOR_DELIVERY: ['DELIVERED', 'CANCELLED'],
   DELIVERED: ['COMPLETED'],
   READY: ['COMPLETED', 'CANCELLED'],
@@ -102,9 +106,15 @@ const isAwaitingPayment = (order) => Boolean(order?.paymentMethod)
   && order.paymentMethod !== 'COD'
   && order.paymentStatus !== 'PAID';
 
+// Packed orders go the way the buyer chose at checkout: with their courier
+// ("Ship with courier"), or delivered by the seller ("Out for delivery").
 function getNextStatuses(order) {
   const flow = order?.fulfillmentMethod === 'PICKUP' ? PICKUP_FLOW : DELIVERY_FLOW;
-  const next = flow[order?.status] || [];
+  const next = (flow[order?.status] || []).filter((s) => {
+    if (s === 'SHIPPED') return Boolean(order?.courierId);
+    if (s === 'OUT_FOR_DELIVERY') return !order?.courierId;
+    return true;
+  });
   return isAwaitingPayment(order) ? next.filter((s) => s === 'CONFIRMED' || s === 'CANCELLED') : next;
 }
 
@@ -113,6 +123,7 @@ const ACTION_LABELS = {
   PREPARING: { label: 'Start Preparing', cls: 'action-prepare' },
   TO_SHIP: { label: 'Mark Ready to Ship', cls: 'action-prepare' },
   OUT_FOR_DELIVERY: { label: 'Out for Delivery', cls: 'action-ready' },
+  SHIPPED: { label: 'Ship with courier', cls: 'action-ready' },
   DELIVERED: { label: 'Mark Delivered', cls: 'action-complete' },
   READY: { label: 'Mark Ready', cls: 'action-ready' },
   READY_FOR_PICKUP: { label: 'Ready for Pickup', cls: 'action-ready' },
@@ -297,6 +308,8 @@ export default function SellerOrders() {
 
   // Handing an order over asks for a photo first: proof of delivery or of pickup.
   const [proofRequest, setProofRequest] = useState(null);
+  // Shipping with a courier asks for the courier and the tracking number.
+  const [shipRequest, setShipRequest] = useState(null);
 
   const requestStatusChange = (orderId, newStatus) => {
     if (newStatus === 'CANCELLED') {
@@ -304,6 +317,14 @@ export default function SellerOrders() {
       return;
     }
     const order = orders.find((o) => o.id === orderId) || (selectedOrder?.id === orderId ? selectedOrder : null);
+    if (newStatus === 'SHIPPED') {
+      setShipRequest({
+        orderId,
+        orderNumber: order?.orderNumber,
+        courier: order?.courier || (order?.courierId ? { id: order.courierId, name: order.courierName } : null),
+      });
+      return;
+    }
     const pickup = order?.fulfillmentMethod === 'PICKUP';
     if ((newStatus === 'DELIVERED' && !pickup) || (newStatus === 'PICKED_UP' && pickup)) {
       setProofRequest({ orderId, status: newStatus, kind: pickup ? 'PICKUP' : 'DELIVERY', orderNumber: order?.orderNumber });
@@ -317,6 +338,34 @@ export default function SellerOrders() {
     const ok = await handleStatusChange(proofRequest.orderId, proofRequest.status, proofUrl);
     if (ok) setProofRequest(null);
     return ok;
+  };
+
+  const confirmShip = async ({ courierId, trackingNumber }) => {
+    if (!shipRequest) return false;
+    const { orderId } = shipRequest;
+    setUpdatingId(orderId);
+    try {
+      const res = await axios.patch(`/orders/${orderId}/ship`, { courierId, trackingNumber });
+      const courier = shipRequest.courier || null;
+      applyOrderUpdate(orderId, {
+        status: res.data?.status || 'SHIPPED',
+        paymentStatus: res.data?.paymentStatus,
+        courierId,
+        courierName: res.data?.courierName,
+        trackingNumber: res.data?.trackingNumber,
+        shippedAt: res.data?.shippedAt,
+        courier,
+      });
+      toast.success('Order shipped. The buyer can now track it.');
+      setShipRequest(null);
+      return true;
+    } catch (err) {
+      toast.error(err.message || 'Could not ship the order');
+      if (err.status === 409) loadOrders();
+      return false;
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const confirmCancelOrder = async () => {
@@ -716,6 +765,17 @@ export default function SellerOrders() {
                   <strong>{selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Store Pickup' : 'Delivery'}</strong>
                 </div>
 
+                {selectedOrder.fulfillmentMethod !== 'PICKUP' && (
+                  <div className="detail-row">
+                    <span>Delivered by</span>
+                    <strong>
+                      {selectedOrder.courierId
+                        ? `${selectedOrder.courierName || selectedOrder.courier?.name} (buyer's choice)${selectedOrder.shippingWeightGrams ? ` · ${(selectedOrder.shippingWeightGrams / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} kg` : ''}`
+                        : 'You'}
+                    </strong>
+                  </div>
+                )}
+
                 <div className="detail-row">
                   <span>Payment</span>
                   <strong>
@@ -816,6 +876,12 @@ export default function SellerOrders() {
                   </div>
                 )}
 
+                {selectedOrder.trackingNumber && (
+                  <div className="detail-row detail-row--col">
+                    <CourierTracking order={selectedOrder} />
+                  </div>
+                )}
+
                 {/* Address */}
                 <div className="detail-row detail-row--col">
                   <span>{selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Pickup Location' : 'Delivery Address'}</span>
@@ -890,7 +956,7 @@ export default function SellerOrders() {
                 )}
 
                 {/* Receipt link */}
-                {['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(selectedOrder.status) && (
+                {['COMPLETED', 'DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(selectedOrder.status) && (
                   <div className="detail-actions">
                     <Link
                       to={`/orders/${selectedOrder.id}/receipt`}
@@ -908,6 +974,13 @@ export default function SellerOrders() {
         </div>
       </div>
 
+      <ShipOrderSheet
+        open={!!shipRequest}
+        couriers={shipRequest?.courier ? [shipRequest.courier] : []}
+        orderNumber={shipRequest?.orderNumber}
+        onCancel={() => setShipRequest(null)}
+        onConfirm={confirmShip}
+      />
       <ProofPhotoSheet
         open={!!proofRequest}
         kind={proofRequest?.kind}

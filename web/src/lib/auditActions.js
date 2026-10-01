@@ -26,6 +26,13 @@ export const ACTION_LABELS = {
   IDENTITY_VERIFICATION_REVOKED: 'Identity verification revoked',
   IDENTITY_MANUAL_VERIFY: 'Identity manually verified',
   IDENTITY_MANUAL_REJECT: 'Identity manually rejected',
+  REVEAL_ORDER_CONTACT: 'Viewed order contact',
+  REVEAL_ORDER_PAYMENT: 'Viewed order payment',
+  REVEAL_USER_CONTACT: 'Viewed contact details',
+  VIEW_KYC_DOCUMENT: 'Viewed ID document',
+  CREATE_COURIER: 'Added courier',
+  UPDATE_COURIER: 'Updated courier',
+  DELETE_COURIER: 'Deleted courier',
 };
 
 export const actionLabel = (code = '') =>

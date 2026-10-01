@@ -19,6 +19,7 @@ import { useSheetPresence } from '../hooks/useSheetMotion';
 import useEntryState from '../hooks/useEntryState';
 import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
 import { OrderProof } from '../components/orders/ProofPhotoSheet';
+import CourierTracking, { CourierMark } from '../components/orders/CourierTracking';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import GcashPhonePay from '../components/checkout/GcashPhonePay';
 import { qrMethod, formatAccountNumber } from '../lib/qrPayment';
@@ -90,7 +91,7 @@ const payActionLabel = (order) => {
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const canConfirmReceipt = (order) => ['DELIVERED', 'PICKED_UP'].includes(order.status);
+const canConfirmReceipt = (order) => ['DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(order.status);
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -153,7 +154,7 @@ const Orders = () => {
     PENDING: ['PENDING'],
     CONFIRMED: ['CONFIRMED'],
     PREPARING: ['PREPARING'],
-    READY: ['READY', 'READY_FOR_PICKUP', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'PICKED_UP', 'DELIVERED'],
+    READY: ['READY', 'READY_FOR_PICKUP', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'SHIPPED', 'PICKED_UP', 'DELIVERED'],
     COMPLETED: ['COMPLETED'],
     CANCELLED: ['CANCELLED'],
   };
@@ -394,6 +395,7 @@ const Orders = () => {
       PREPARING: { label: 'Preparing', tone: 'neutral' },
       TO_SHIP: { label: 'To Ship', tone: 'accent' },
       OUT_FOR_DELIVERY: { label: 'Out for Delivery', tone: 'accent' },
+      SHIPPED: { label: 'Shipped', tone: 'accent' },
       DELIVERED: { label: 'Delivered', tone: 'accent' },
       READY: { label: pickup ? 'Ready for Pickup' : 'Ready', tone: 'accent' },
       READY_FOR_PICKUP: { label: 'Ready for Pickup', tone: 'accent' },
@@ -405,7 +407,7 @@ const Orders = () => {
   };
 
   const getOrderTimeline = (order) => {
-    const readyStatuses = ['READY', 'READY_FOR_PICKUP', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'PICKED_UP', 'DELIVERED'];
+    const readyStatuses = ['READY', 'READY_FOR_PICKUP', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'SHIPPED', 'PICKED_UP', 'DELIVERED'];
     const timeline = [
       {
         status: 'PENDING',
@@ -614,6 +616,10 @@ const Orders = () => {
                   </div>
                 )}
 
+                {order.status === 'SHIPPED' && order.trackingNumber && (
+                  <CourierTracking order={order} />
+                )}
+
                 <div className="order-card-actions">
                   <button
                     onClick={() => handleViewOrder(order)}
@@ -665,13 +671,13 @@ const Orders = () => {
                     </button>
                   )}
 
-                  {['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && (
+                  {['COMPLETED', 'DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(order.status) && (
                     <Link to={`/profile/returns/request?orderId=${order.id}`} className="order-action-btn">
                       <RotateCcw size={16} /> Request return
                     </Link>
                   )}
 
-                  {['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && (
+                  {['COMPLETED', 'DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(order.status) && (
                     <Link
                       to={`/orders/${order.id}/receipt`}
                       className="order-action-btn"
@@ -868,6 +874,24 @@ const Orders = () => {
               {selectedOrder.fulfillmentProofUrl && (
                 <div className="order-details-section">
                   <OrderProof order={selectedOrder} resolve={resolveImg} />
+                </div>
+              )}
+
+              {selectedOrder.trackingNumber ? (
+                <div className="order-details-section">
+                  <h3>Delivery</h3>
+                  <CourierTracking order={selectedOrder} />
+                </div>
+              ) : selectedOrder.courierName && selectedOrder.status !== 'CANCELLED' && (
+                <div className="order-details-section">
+                  <h3>Delivery</h3>
+                  <div className="order-courier-pending">
+                    <CourierMark courier={selectedOrder.courier || { name: selectedOrder.courierName }} size={30} />
+                    <p>
+                      <strong>Ships with {selectedOrder.courierName}</strong>
+                      <span>The tracking number appears here once the seller hands it to the courier.</span>
+                    </p>
+                  </div>
                 </div>
               )}
 

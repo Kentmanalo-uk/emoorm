@@ -28,6 +28,8 @@ import { isIdentityRequiredError } from '../lib/identity';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { qrMethod } from '../lib/qrPayment';
 import { BusyLabel } from '../components/ui/Spinner';
+import ChoiceCard from '../components/ui/ChoiceCard';
+import { CourierMark } from '../components/orders/CourierTracking';
 import './Checkout.css';
 
 // Same rules the server applies at POST /orders.
@@ -326,16 +328,59 @@ const Checkout = () => {
     checkCoverage();
   }, [checkCoverage]);
 
+  // Delivery by the seller (their fee for this address) or by a courier the
+  // shop ships with (its rate for the parcel's weight; paid online only).
+  const [shipQuote, setShipQuote] = useState(null);
+  const [deliveryChoice, setDeliveryChoice] = useState('SELLER'); // 'SELLER' | courier id
+  const quoteKey = JSON.stringify([
+    storeIds[0] || null,
+    orderableItems.map((it) => [it.productId || it.id, it.quantity]),
+    deliveryForm.municipalityId || null,
+    deliveryForm.barangay || null,
+  ]);
+  useEffect(() => {
+    const [storeId, lines, municipalityId, barangay] = JSON.parse(quoteKey);
+    if (fulfillmentMethod !== 'DELIVERY' || !storeId || lines.length === 0) return undefined;
+    let cancelled = false;
+    axios.post('/couriers/quote', {
+      storeId,
+      items: lines.map(([productId, quantity]) => ({ productId, quantity })),
+      municipalityId: municipalityId || undefined,
+      barangay: barangay || undefined,
+    })
+      .then((res) => { if (!cancelled) setShipQuote(res.data || null); })
+      .catch(() => { if (!cancelled) setShipQuote(null); });
+    return () => { cancelled = true; };
+  }, [quoteKey, fulfillmentMethod]);
+
+  const sellerDelivers = shipQuote ? shipQuote.seller?.offered !== false : true;
+  // Offered, but not to this address: a courier is picked instead.
+  const sellerReaches = sellerDelivers && shipQuote?.seller?.covered !== false;
+  const onlineReady = Boolean(shipQuote?.onlinePaymentReady);
+  const courierChoices = shipQuote?.couriers || [];
+  const courierPickable = (c) => c.fee != null && onlineReady;
+  // The pick, or the first way that works when it no longer does.
+  const choiceValid = (choice) => (choice === 'SELLER'
+    ? sellerReaches
+    : courierChoices.some((c) => c.id === choice && courierPickable(c)));
+  const activeChoice = choiceValid(deliveryChoice)
+    ? deliveryChoice
+    : (sellerReaches ? 'SELLER' : courierChoices.find(courierPickable)?.id || 'SELLER');
+  const chosenCourier = fulfillmentMethod === 'DELIVERY' && activeChoice !== 'SELLER'
+    ? courierChoices.find((c) => c.id === activeChoice) || null
+    : null;
+
   // Available payment methods across stores
   const paymentAvailability = useMemo(() => {
     const stores = storeIds.map((id) => storeInfo[id]?.store).filter(Boolean);
     if (stores.length === 0) return { cod: true, gcash: true, qrph: true };
     return {
-      cod: stores.every((s) => s.acceptsCod !== false),
+      // Courier deliveries are paid online.
+      cod: !chosenCourier && stores.every((s) => s.acceptsCod !== false),
       gcash: stores.every((s) => s.paymentQrImage && s.paymentQrType === 'GCASH'),
       qrph: stores.every((s) => s.paymentQrImage && s.paymentQrType === 'QRPH'),
     };
-  }, [storeIds, storeInfo]);
+  }, [storeIds, storeInfo, chosenCourier]);
 
   // Fulfillment availability
   const fulfillmentAvailability = useMemo(() => {
@@ -375,9 +420,9 @@ const Checkout = () => {
 
   const anyCoverageMissing = useMemo(
     () =>
-      fulfillmentMethod === 'DELIVERY' &&
+      fulfillmentMethod === 'DELIVERY' && !chosenCourier &&
       storeIds.some((id) => storeInfo[id]?.checked && !storeInfo[id]?.covered),
-    [fulfillmentMethod, storeIds, storeInfo]
+    [fulfillmentMethod, storeIds, storeInfo, chosenCourier]
   );
 
   // Checkout holds one store's items. Delivery costs what that store charges
@@ -387,7 +432,9 @@ const Checkout = () => {
   const deliveryFee = quoted?.checked && quoted.covered && quoted.fee != null
     ? Number(quoted.fee)
     : storeDeliveryFee(checkoutStore, settings, 'DELIVERY');
-  const shippingFee = orderableItems.length > 0 && fulfillmentMethod === 'DELIVERY' ? deliveryFee : 0;
+  const shippingFee = orderableItems.length > 0 && fulfillmentMethod === 'DELIVERY'
+    ? (chosenCourier ? Number(chosenCourier.fee) : deliveryFee)
+    : 0;
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount);
 
@@ -492,8 +539,15 @@ const Checkout = () => {
       scrollToSection('co-address');
       return;
     }
+    if (fulfillmentMethod === 'DELIVERY' && !sellerDelivers && !chosenCourier) {
+      toast.error('Choose a courier to deliver your order.');
+      scrollToSection('co-delivery');
+      return;
+    }
     if (anyCoverageMissing) {
-      toast.error('This store does not deliver to your address. Choose Pickup or update your address.');
+      toast.error(courierChoices.some(courierPickable)
+        ? 'The seller does not deliver to your address. Choose a courier, Pickup, or another address.'
+        : 'This store does not deliver to your address. Choose Pickup or update your address.');
       scrollToSection('co-address');
       return;
     }
@@ -514,6 +568,8 @@ const Checkout = () => {
           fulfillmentMethod,
           // QR orders are paid later, from To Pay, once the seller confirms.
           paymentMethod,
+          // A courier the buyer chose: priced by weight, paid online.
+          courierId: chosenCourier?.id || undefined,
           voucherCode: appliedVoucher?.voucher?.code || undefined,
           deliveryAddress:
             fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
@@ -683,45 +739,30 @@ const Checkout = () => {
                       <h2>Fulfillment Method</h2>
                     </div>
 
-                    <div className="fulfillment-picker">
-                      <label
-                        className={`fulfillment-option ${fulfillmentMethod === 'DELIVERY' ? 'selected' : ''} ${!fulfillmentAvailability.delivery ? 'disabled' : ''}`}
-                      >
-                        <input
-                          type="radio"
-                          name="fulfillment"
-                          value="DELIVERY"
-                          checked={fulfillmentMethod === 'DELIVERY'}
-                          onChange={() => setFulfillmentMethod('DELIVERY')}
-                          disabled={!fulfillmentAvailability.delivery}
-                        />
-                        <Truck size={18} />
-                        <div>
-                          <strong>Delivery</strong>
-                          <p>
-                            {fulfillmentAvailability.delivery
-                              ? `Delivered to your address · ${deliveryFee === 0 ? 'free delivery' : `${peso(deliveryFee)} delivery fee`}`
-                              : 'Not available for this store'}
-                          </p>
-                        </div>
-                      </label>
-                      <label
-                        className={`fulfillment-option ${fulfillmentMethod === 'PICKUP' ? 'selected' : ''} ${!fulfillmentAvailability.pickup ? 'disabled' : ''}`}
-                      >
-                        <input
-                          type="radio"
-                          name="fulfillment"
-                          value="PICKUP"
-                          checked={fulfillmentMethod === 'PICKUP'}
-                          onChange={() => setFulfillmentMethod('PICKUP')}
-                          disabled={!fulfillmentAvailability.pickup}
-                        />
-                        <StoreIcon size={18} />
-                        <div>
-                          <strong>Pickup</strong>
-                          <p>{fulfillmentAvailability.pickup ? 'Pick up at the store · no delivery fee' : 'Not available for this store'}</p>
-                        </div>
-                      </label>
+                    <div className="fulfillment-picker co-choices">
+                      <ChoiceCard
+                        name="fulfillment"
+                        value="DELIVERY"
+                        className="co-fulfillment-choice"
+                        checked={fulfillmentMethod === 'DELIVERY'}
+                        disabled={!fulfillmentAvailability.delivery}
+                        onChange={setFulfillmentMethod}
+                        media={<Truck size={20} weight="fill" />}
+                        title="Delivery"
+                        desc={fulfillmentAvailability.delivery ? 'Delivered to your address' : 'Not available for this store'}
+                      />
+                      <ChoiceCard
+                        name="fulfillment"
+                        value="PICKUP"
+                        className="co-fulfillment-choice"
+                        checked={fulfillmentMethod === 'PICKUP'}
+                        disabled={!fulfillmentAvailability.pickup}
+                        onChange={setFulfillmentMethod}
+                        media={<StoreIcon size={20} weight="fill" />}
+                        title="Pickup"
+                        desc={fulfillmentAvailability.pickup ? 'Pick up at the store · no delivery fee' : 'Not available for this store'}
+                        aside={fulfillmentAvailability.pickup ? 'Free' : ''}
+                      />
                     </div>
                   </div>
 
@@ -870,7 +911,11 @@ const Checkout = () => {
                               <AlertTriangle size={16} />
                               <div>
                                 <strong>{storeName}</strong>
-                                <p>Does not deliver to your address. Choose Pickup or update your address.</p>
+                                <p>
+                                  {courierChoices.some(courierPickable)
+                                    ? 'The seller does not deliver here, but a courier can. Choose one below.'
+                                    : 'Does not deliver to your address. Choose Pickup or update your address.'}
+                                </p>
                               </div>
                             </div>
                           );
@@ -878,6 +923,61 @@ const Checkout = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* How it is delivered: by the seller or by a courier */}
+                  {fulfillmentMethod === 'DELIVERY' && shipQuote && (sellerDelivers || courierChoices.length > 0) && (
+                    <div className="checkout-section" id="co-delivery">
+                      <div className="section-header">
+                        <Truck size={24} />
+                        <h2>Delivery Option</h2>
+                      </div>
+                      <div className="co-choices">
+                        {sellerDelivers && (() => {
+                          const notHere = quoted?.checked && !quoted.covered;
+                          return (
+                            <ChoiceCard
+                              name="delivery-option"
+                              value="SELLER"
+                              className="co-delivery-choice"
+                              checked={activeChoice === 'SELLER'}
+                              disabled={notHere}
+                              onChange={setDeliveryChoice}
+                              media={<Truck size={20} weight="fill" />}
+                              title="Delivered by the seller"
+                              desc={notHere ? "Doesn't deliver to your address" : 'Cash on delivery or online payment'}
+                              aside={notHere ? '' : deliveryFee === 0 ? 'Free' : peso(deliveryFee)}
+                            />
+                          );
+                        })()}
+                        {courierChoices.map((c) => {
+                          const why = c.fee == null
+                            ? (c.reason === 'NO_WEIGHT' ? "Not available: the seller hasn't set the item weight" : 'Not available for this weight')
+                            : !onlineReady ? "Not available: the shop doesn't take online payment yet" : null;
+                          return (
+                            <ChoiceCard
+                              key={c.id}
+                              name="delivery-option"
+                              value={c.id}
+                              className="co-delivery-choice"
+                              checked={activeChoice === c.id}
+                              disabled={Boolean(why)}
+                              onChange={setDeliveryChoice}
+                              media={<CourierMark courier={c} size={30} />}
+                              title={c.name}
+                              desc={why || `Online payment only · ${(Number(shipQuote.weightGrams || 0) / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} kg`}
+                              aside={why ? '' : peso(c.fee)}
+                            />
+                          );
+                        })}
+                      </div>
+                      {chosenCourier && (
+                        <p className="co-delivery-note">
+                          Courier deliveries are paid online with GCash or QR Ph after the seller confirms your order.
+                          The seller ships it with {chosenCourier.name} and you can track it in My Orders.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Items, per store */}
                   <div className="checkout-section co-items-section" id="co-items">
@@ -913,7 +1013,7 @@ const Checkout = () => {
                           <div className="co-m-ship">
                             <span>
                               {fulfillmentMethod === 'PICKUP' ? <StoreIcon size={16} /> : <Truck size={16} />}
-                              {fulfillmentMethod === 'PICKUP' ? 'Pickup at the store' : 'Delivery fee'}
+                              {fulfillmentMethod === 'PICKUP' ? 'Pickup at the store' : chosenCourier ? `Shipping · ${chosenCourier.name}` : 'Delivery fee'}
                             </span>
                             <span>{fulfillmentMethod === 'PICKUP' ? 'No fee' : peso(shippingFee)}</span>
                           </div>
@@ -928,33 +1028,27 @@ const Checkout = () => {
                       <CreditCard size={24} />
                       <h2>Payment Method</h2>
                     </div>
-                    <div className="payment-methods">
+                    <div className="payment-methods co-choices">
                       {[
-                        { value: 'COD', label: 'Cash on Delivery / Pickup', desc: 'Pay when you receive/pick up your order', enabled: paymentAvailability.cod, Icon: Money },
+                        {
+                          value: 'COD', label: 'Cash on Delivery / Pickup', desc: 'Pay when you receive/pick up your order', enabled: paymentAvailability.cod, Icon: Money,
+                          off: chosenCourier ? 'Not available with courier delivery' : null,
+                        },
                         { value: 'GCASH', label: 'GCash (QR)', desc: 'Pay with GCash after the seller confirms', enabled: paymentAvailability.gcash, Icon: DeviceMobile },
                         { value: 'QRPH', label: 'QR Ph', desc: 'Pay with QR Ph after the seller confirms', enabled: paymentAvailability.qrph, Icon: QrCode },
-                      ].map(({ value, label, desc, enabled, Icon }) => (
-                        <div
+                      ].map(({ value, label, desc, enabled, Icon, off }) => (
+                        <ChoiceCard
                           key={value}
-                          className={`payment-card ${paymentMethod === value ? 'selected' : ''} ${!enabled ? 'disabled' : ''}`}
-                          onClick={() => enabled && pickPayment(value)}
-                        >
-                          <input
-                            type="radio"
-                            name="payment"
-                            value={value}
-                            checked={paymentMethod === value}
-                            onChange={() => enabled && pickPayment(value)}
-                            disabled={!enabled}
-                          />
-                          <span className={`payment-icon payment-icon-${value.toLowerCase()}`} aria-hidden="true">
-                            <Icon size={20} />
-                          </span>
-                          <div className="payment-details">
-                            <strong>{label}</strong>
-                            <p>{enabled ? desc : 'Not available for this store'}</p>
-                          </div>
-                        </div>
+                          name="payment"
+                          value={value}
+                          className={`co-pay-choice co-pay-${value.toLowerCase()}`}
+                          checked={paymentMethod === value}
+                          disabled={!enabled}
+                          onChange={pickPayment}
+                          media={<Icon size={20} weight="fill" />}
+                          title={label}
+                          desc={enabled ? desc : off || 'Not available for this store'}
+                        />
                       ))}
                     </div>
 
@@ -1001,7 +1095,7 @@ const Checkout = () => {
                   <span>{peso(subtotal)}</span>
                 </div>
                 <div className="summary-row">
-                  <span>{fulfillmentMethod === 'PICKUP' ? 'Pickup' : 'Delivery Fee'}</span>
+                  <span>{fulfillmentMethod === 'PICKUP' ? 'Pickup' : chosenCourier ? `Shipping (${chosenCourier.name})` : 'Delivery Fee'}</span>
                   <span>{fulfillmentMethod === 'PICKUP' ? 'No fee' : peso(shippingFee)}</span>
                 </div>
                 {appliedVoucher && discountAmount > 0 && (

@@ -10,6 +10,7 @@ import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import ReasonDialog from '../components/admin/ReasonDialog';
+import UserContactReveal from '../components/admin/UserContactReveal';
 import DeleteUserDialog from '../components/admin/DeleteUserDialog';
 import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import EmptyArt from '../components/ui/EmptyArt';
@@ -129,8 +130,6 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
       const prefix = fixedRole === 'SELLER' ? 'sellers' : fixedRole === 'BUYER' ? 'buyers' : 'users';
       downloadCsv(`${prefix}-${new Date().toISOString().slice(0, 10)}.csv`, [
         { header: 'Name', value: (r) => r.fullName },
-        { header: 'Email', value: (r) => r.email },
-        { header: 'Contact', value: (r) => r.contactNumber },
         { header: 'Municipality', value: (r) => r.municipality?.name },
         { header: 'Role', value: (r) => r.role },
         { header: 'Status', value: (r) => (r.isActive ? 'active' : 'suspended') },
@@ -338,12 +337,10 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                 <h4>Account Info</h4>
                 <div className="admin-detail-grid">
                   <div><label>Full Name</label><p>{selected.fullName}</p></div>
-                  <div><label>Email</label><p>{selected.email}</p></div>
-                  <div><label>Contact</label><p>{selected.contactNumber || '—'}</p></div>
                   <div><label>Municipality</label><p>{selected.municipality?.name || '—'}</p></div>
                   <div><label>Barangay</label><p>{selected.barangay || '—'}</p></div>
                   <div><label>Province</label><p>{selected.province || 'Oriental Mindoro'}</p></div>
-                  <div className="admin-detail-full"><label>Registered Address</label><p>{selected.address || '—'}</p></div>
+                  <UserContactReveal user={selected} withAddress />
                   <div><label>Role</label><p><span className={`admin-badge ${ROLE_BADGE[selected.role]}`}>{selected.role.replace('_', ' ')}</span></p></div>
                   <div><label>Status</label><p><span className={`admin-badge ${selected.isActive ? 'admin-badge-approved' : 'admin-badge-rejected'}`}>{selected.isActive ? 'Active' : 'Suspended'}</span></p></div>
                   <div><label>Joined</label><p>{new Date(selected.createdAt).toLocaleDateString('en-PH')}</p></div>

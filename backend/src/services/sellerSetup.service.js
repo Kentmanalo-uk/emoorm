@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
 const storeRepository = require('../repositories/store.repository');
@@ -54,6 +55,13 @@ const getSetup = async (userId) => {
     (store.latitude == null || store.longitude == null) && 'location',
   ].filter(Boolean);
   const standardFee = store.deliveryFee == null ? null : Number(store.deliveryFee);
+  // Couriers only: they deliver all around the province, and the fee is
+  // worked out from each product's weight. Ready with a priced courier and
+  // the QR buyers pay with.
+  const byCourier = delivers && store.selfDelivery === false;
+  const courierReady = byCourier && hasText(store.paymentQrImage) && (await prisma.storeCourier.count({
+    where: { storeId: store.id, courier: { isActive: true, NOT: { rates: { equals: Prisma.DbNull } } } },
+  })) > 0;
 
   const steps = [
     // Already done by the time the checklist exists, so it opens with a tick.
@@ -62,7 +70,7 @@ const getSetup = async (userId) => {
     { key: 'profile', done: profileMissing.length === 0, missing: profileMissing },
     ...(delivers
       ? [
-        {
+        byCourier ? { key: 'delivery-areas', done: courierReady, byCourier: true } : {
           key: 'delivery-areas',
           done: areaCount > 0,
           count: areaCount,
@@ -74,7 +82,7 @@ const getSetup = async (userId) => {
         // Each area may have its own fee; the rest use the standard fee, and
         // a store without one uses the platform default. The step asks the
         // seller to decide: a standard fee (0 is free), or a fee on every area.
-        {
+        byCourier ? { key: 'delivery-fee', done: true, byCourier: true } : {
           key: 'delivery-fee',
           done: standardFee !== null || (areaCount > 0 && areasWithoutFee === 0),
           fee: standardFee,

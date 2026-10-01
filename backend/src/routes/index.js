@@ -49,6 +49,7 @@ const supportRoutes = require('./support.routes');
 const adminMessageRoutes = require('./adminMessage.routes');
 const feedbackRoutes = require('./feedback.routes');
 const bannerRoutes = require('./banner.routes');
+const courierRoutes = require('./courier.routes');
 const voucherRoutes = require('./voucher.routes');
 const appSettingRoutes = require('./appSetting.routes');
 
@@ -77,6 +78,7 @@ router.use('/support', supportRoutes);
 router.use('/admin-messages', adminMessageRoutes);
 router.use('/feedback', feedbackRoutes);
 router.use('/banners', bannerRoutes);
+router.use('/couriers', courierRoutes);
 router.use('/vouchers', voucherRoutes);
 router.use('/app-settings', appSettingRoutes);
 router.use('/profiles', require('./profile.routes'));

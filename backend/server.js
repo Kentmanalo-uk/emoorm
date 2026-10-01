@@ -66,6 +66,10 @@ const startServer = async () => {
         orderService.expireUnpaidOrders().catch((error) => {
           console.error('[order-expiry] unpaid failed:', error.message);
         });
+        // Shipped or delivered a week ago and never confirmed: complete.
+        orderService.autoCompleteOrders().catch((error) => {
+          console.error('[order-auto-complete] failed:', error.message);
+        });
       }, 5 * 60 * 1000);
       expiryTimer.unref();
 

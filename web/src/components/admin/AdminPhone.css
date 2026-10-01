@@ -1,0 +1,425 @@
+/*
+ * The admin panel on phones (≤768px): the seller app's shape in the admin's
+ * own words. Header with round buttons on the tab pages, a back bar on the
+ * others, the app tab bar, and every page on the soft grey with white 16px
+ * cards. The shared pieces (.scm-*, .sc-tabbar--app, .sh-*, .sme-*) come from
+ * the seller stylesheets; this file only fits them to the admin shell.
+ * Nothing here applies above 768px.
+ */
+@media (max-width: 768px) {
+  .ac-shell.is-phone {
+    --scm-bg: var(--t-neutral-100, #f3f4f6);
+    --scm-ink: var(--t-neutral-900, #111827);
+    --scm-muted: var(--t-neutral-500, #6b7280);
+    background: var(--scm-bg);
+  }
+
+  /* The compact bar (menu, language, bell, sign out) and the drawer give
+     way: Me has every section, and the tab bar the daily ones. */
+  .ac-shell.is-phone .ac-topbar,
+  .ac-shell.is-phone .ac-tabbar,
+  .ac-shell.is-phone .ac-nav-backdrop {
+    display: none;
+  }
+
+  .ac-shell.is-phone .ac-main {
+    background: var(--scm-bg);
+  }
+
+  .ac-shell.is-phone .ac-content {
+    padding: 4px 12px calc(92px + env(safe-area-inset-bottom, 0px));
+    background: var(--scm-bg);
+  }
+
+  /* Pages opened from Me or Home: no tab bar, so no room kept for it. */
+  .ac-shell.is-phone.is-subpage .ac-content {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* The bar already says where you are: the page's own big title goes
+     (and Settings' intro line with it). */
+  .ac-shell.is-phone .ac-content .admin-page-title,
+  .ac-shell.is-phone .ac-content .an-page-title,
+  .ac-shell.is-phone .st-header {
+    display: none;
+  }
+
+  .ac-shell.is-phone .admin-page-header:empty {
+    display: none;
+  }
+
+  /* Cards: white, 16px corners, no border or shadow, as in the seller app. */
+  .ac-shell.is-phone .admin-card {
+    border: 0;
+    border-radius: 16px;
+    box-shadow: none;
+  }
+
+  .ac-shell.is-phone .admin-stat-card,
+  .ac-shell.is-phone .admin-detail-card {
+    border-radius: 16px;
+  }
+
+  /* ── Home: the admin's header ─────────────────────────────── */
+  .ah .sh-avatar img {
+    object-fit: contain;
+  }
+
+  /* A tool with something waiting: a small pink count on its icon. */
+  .ah .sh-tool-icon {
+    position: relative;
+  }
+
+  .ah-tool-badge {
+    position: absolute;
+    top: -5px;
+    left: calc(50% + 8px);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: var(--t-accent-500, #ec4899);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+  }
+
+  /* The summary card's three figures sit in a row. */
+  .ah-summary .sh-sales-stats {
+    flex-wrap: wrap;
+  }
+
+  /* ── Me ───────────────────────────────────────────────────── */
+  .ame .sme-avatar img {
+    object-fit: contain;
+    background: #fff;
+  }
+}
+
+/* ── Every table on a phone: one card per row, nothing sideways ───────
+   The column names are copied onto the cells (useTableCardLabels), so each
+   value sits beside its name. The row's first cell is its title; a cell of
+   buttons becomes the card's action row. Reviews and Returns (.am-table)
+   already have cards of their own. */
+@media (max-width: 768px) {
+  .ac-shell.is-phone .admin-table-wrap,
+  .ac-shell.is-phone .admin-card:has(> table) {
+    overflow: visible !important;
+    margin-inline: 0 !important;
+    padding-inline: 0;
+    border-radius: 16px;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    border: 0;
+    background: transparent;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > thead {
+    display: none;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 12px 14px;
+    border: 1px solid var(--t-neutral-100, #f1f5f9);
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+    cursor: pointer;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    font-size: 13.5px;
+    text-align: right;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    color: var(--t-neutral-500, #64748b);
+    font-size: 12.5px;
+    font-weight: 400;
+    text-align: left;
+  }
+
+  /* The title cell: the row's name, photo or person, full width, no label. */
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:first-child,
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:first-child:has(> input[type="checkbox"]) + td {
+    justify-content: flex-start;
+    padding-right: 30px !important;
+    font-size: 14.5px;
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:first-child::before,
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:first-child:has(> input[type="checkbox"]) + td::before,
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td[data-label=""]::before,
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td[colspan]::before {
+    content: none;
+  }
+
+  /* A row's tick box sits in its top-right corner. */
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:first-child:has(> input[type="checkbox"]) {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 0 !important;
+  }
+
+  /* The buttons cell: the card's action row. */
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:last-child:has(button, .admin-btn, a.admin-btn) {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-top: 2px;
+    padding-top: 9px !important;
+    border-top: 1px solid var(--t-neutral-100, #f1f5f9) !important;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:last-child:has(button, .admin-btn, a.admin-btn)::before {
+    content: none;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:last-child:has(button, .admin-btn) > * {
+    flex-wrap: wrap;
+  }
+
+  /* "Nothing here" / loading rows: one centred line. */
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr:has(> td[colspan]) {
+    padding: 18px 14px;
+    cursor: default;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td[colspan] {
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Cells that hold a block of their own (a person, a product) keep it left. */
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td > div {
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+}
+
+/* Settings on a phone: its sections as chips that wrap (never sideways). */
+@media (max-width: 768px) {
+  .ac-shell.is-phone .st-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+    overflow: visible;
+    border-radius: 16px;
+    box-shadow: none;
+  }
+
+  .ac-shell.is-phone .st-nav-item {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 7px 12px;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 999px;
+  }
+
+  .ac-shell.is-phone .st-nav-item small {
+    display: none;
+  }
+
+  .ac-shell.is-phone .st-nav-item > svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .ac-shell.is-phone .st-nav-item.is-active {
+    border-color: var(--t-primary-600, #059669);
+  }
+}
+
+/* ── Home header: the Emoorm mark (with the municipality's seal) ───── */
+@media (max-width: 768px) {
+  .ah .ah-brand {
+    position: relative;
+    overflow: visible;
+    background: none;
+  }
+
+  .ah .ah-brand > img:first-child {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+  }
+
+  .ah .ah-brand .ah-brand-badge {
+    position: absolute;
+    background: #fff;
+    right: -4px;
+    bottom: -4px;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--scm-bg, #f3f4f6);
+    border-radius: 50%;
+    background: #fff;
+    object-fit: contain;
+  }
+
+  .ah .ah-brand .ah-brand-initial {
+    background: var(--sa-green, #059669);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .ah .sh-shop-text strong {
+    font-size: 19px;
+  }
+
+  .ah .sh-shop-text small {
+    margin-top: 1px;
+    font-size: 13px;
+  }
+}
+
+/* ── Phones: pop-ups open as bottom sheets ──────────────────────────
+   Detail panels, the Messages compose box, and the New / Edit forms
+   (Categories, Municipalities, Banners, Vouchers) rise from the bottom
+   with a grab handle; confirm and reason dialogs already do. */
+@media (max-width: 768px) {
+  html.admin-phone .admin-detail-overlay {
+    align-items: flex-end;
+    justify-content: stretch;
+  }
+
+  html.admin-phone .admin-detail-overlay .admin-detail-panel {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.18);
+    animation-name: admin-sheet-up;
+  }
+
+  html.admin-phone .admin-detail-overlay.is-closing .admin-detail-panel {
+    animation-name: admin-sheet-down;
+  }
+
+  html.admin-phone .admin-detail-panel::before,
+  html.admin-phone .am-dialog::before,
+  html.admin-phone .admin-inline-form::before,
+  html.admin-phone .admin-form-sheet::before {
+    content: '';
+    display: block;
+    flex-shrink: 0;
+    width: 40px;
+    height: 4px;
+    margin: 8px auto 2px;
+    border-radius: 999px;
+    background: var(--t-neutral-300, #d1d5db);
+  }
+
+  html.admin-phone .admin-detail-body {
+    overflow-y: auto;
+  }
+
+  /* Messages: compose a message / announcement. */
+  html.admin-phone .am-dialog-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  html.admin-phone .am-dialog {
+    width: 100%;
+    max-height: 90vh;
+    max-height: 90dvh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-radius: 20px 20px 0 0;
+    animation: admin-sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* New / Edit forms: a sheet over the dimmed page. The page stays behind;
+     the form's own Cancel / close button puts it away. */
+  html.admin-phone .ac-content .admin-inline-form,
+  html.admin-phone .ac-content .admin-form-sheet {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 210;
+    max-height: 88vh;
+    max-height: 88dvh;
+    margin: 0 !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 0;
+    border-radius: 20px 20px 0 0;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: 0 0 0 100vmax rgba(15, 23, 42, 0.45);
+    animation: admin-sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  html.admin-phone .ac-content .admin-inline-form-header {
+    padding: 8px 16px 12px;
+  }
+
+  html.admin-phone .ac-content .admin-inline-form-body {
+    padding: 14px 16px;
+  }
+
+  html.admin-phone .ac-content .admin-inline-form .admin-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  @keyframes admin-sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+  }
+
+  @keyframes admin-sheet-down {
+    from { transform: none; }
+    to { transform: translateY(100%); }
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  html.admin-phone .admin-detail-overlay .admin-detail-panel,
+  html.admin-phone .am-dialog,
+  html.admin-phone .ac-content .admin-inline-form,
+  html.admin-phone .ac-content .admin-form-sheet {
+    animation: none;
+  }
+}

@@ -1,0 +1,36 @@
+/* Admin › Couriers */
+.ac-couriers-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.ac-couriers-sub { margin: 4px 0 0; color: var(--t-neutral-500, #64748b); font-size: 13px; }
+.ac-courier-form { padding: 16px; margin-bottom: 16px; }
+.ac-courier-form form { display: grid; gap: 14px; max-width: 640px; }
+.ac-field { display: grid; gap: 6px; }
+.ac-field > span { font-weight: 600; font-size: 13px; }
+.ac-field small { color: var(--t-neutral-500, #64748b); font-size: 12px; line-height: 1.45; }
+.ac-field code { padding: 0 4px; border-radius: 4px; background: var(--t-neutral-100, #f3f4f6); font-size: 12px; }
+.ac-field-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: end; }
+.ac-check { display: flex; align-items: center; gap: 8px; min-height: 40px; font-weight: 600; font-size: 13px; }
+.ac-logo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ac-logo-row .admin-btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.ac-form-actions { display: flex; gap: 8px; }
+.ac-couriers-loading { padding: 20px; color: var(--t-neutral-500, #64748b); }
+.ac-courier-cell { display: inline-flex; align-items: center; gap: 10px; }
+.ac-tracking-link { display: inline-flex; align-items: center; gap: 4px; color: var(--t-primary-600, #059669); font-size: 13px; text-decoration: none; }
+.ac-muted { color: var(--t-neutral-500, #64748b); font-size: 13px; }
+.ac-row-actions { display: inline-flex; gap: 6px; }
+.ac-danger { color: var(--t-danger-600, #dc2626); }
+@media (max-width: 480px) {
+  .ac-field-row { grid-template-columns: 1fr; }
+}
+
+/* Rate table */
+.ac-rates { display: grid; gap: 6px; margin-top: 4px; }
+.ac-rates-head, .ac-rates-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 36px; gap: 6px; align-items: center; }
+.ac-rates-head span { color: var(--t-neutral-500, #64748b); font-size: 12px; font-weight: 600; }
+.ac-rates-row .admin-input { min-width: 0; }
+.ac-add-bracket { display: inline-flex; align-items: center; gap: 6px; width: max-content; margin-top: 6px; }
+.ac-rates-extra { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+.ac-rates-sum { font-size: 13px; color: var(--t-neutral-700, #334155); }
+.ac-no-rates { color: #b45309; }
+@media (max-width: 480px) {
+  .ac-rates-extra { grid-template-columns: 1fr; }
+}

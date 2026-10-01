@@ -608,7 +608,9 @@ const findKycRecordById = async (id) => {
     where: { id },
     select: {
       id: true,
+      role: true,
       municipalityId: true,
+      sellerApplicationStatus: true,
       idFrontUrl: true,
       idBackUrl: true,
       selfieUrl: true,

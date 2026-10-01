@@ -2,6 +2,15 @@ export const peso = (v) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
     .format(Number(v || 0));
 
+/** A share: "18%", or "4.5%" under ten. */
+export const pctText = (v) => {
+  const n = Number(v || 0);
+  return `${n >= 10 || n === 0 ? Math.round(n) : n.toFixed(1)}%`;
+};
+
+/** A change against the period before: "▲4%", "▼12%", or "—" with nothing to compare. */
+export const growthText = (d) => (d == null ? '—' : `${d > 0 ? '▲' : d < 0 ? '▼' : ''}${Math.abs(d)}%`);
+
 export const num = (v) => Number(v || 0).toLocaleString('en-PH', { maximumFractionDigits: 0 });
 
 export const shortDate = (iso) => {
