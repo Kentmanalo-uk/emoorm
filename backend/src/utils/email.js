@@ -460,7 +460,126 @@ const sendSellerRejectedEmail = async ({ user, reason }) => {
   return sendMail({ to: user.email, subject, html, text });
 };
 
+/* ── Order emails ─────────────────────────────────────────────────────── */
+
+const money = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const PAY_LABEL = { COD: 'Cash on delivery / pickup', GCASH: 'GCash (QR)', QRPH: 'QR Ph', BANK_TRANSFER: 'Bank transfer' };
+
+/** How the order reaches the buyer, in words. */
+const handOverText = (order) => (order.fulfillmentMethod === 'PICKUP'
+  ? 'Pickup at the shop'
+  : order.courierName ? `Delivery by ${order.courierName}` : 'Delivery by the seller');
+
+/** The items and totals as an email table (and as plain text lines). */
+const orderSummary = (order, items) => {
+  const rows = items.map((it) => `
+      <tr>
+        <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;">${escapeHtml(it.productName)} <span style="color:#6b7280;">× ${Number(it.quantity)}</span></td>
+        <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;text-align:right;white-space:nowrap;">${money(it.subtotal)}</td>
+      </tr>`).join('');
+  const line = (label, value, bold = false) => `
+      <tr>
+        <td style="padding:6px 0;color:${bold ? '#111827' : '#6b7280'};font-size:${bold ? 15 : 13}px;${bold ? 'font-weight:700;' : ''}">${escapeHtml(label)}</td>
+        <td style="padding:6px 0;color:#111827;font-size:${bold ? 15 : 13}px;text-align:right;${bold ? 'font-weight:700;' : ''}">${value}</td>
+      </tr>`;
+  const html = `
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">
+      ${rows}
+      ${line('Subtotal', money(order.subtotal))}
+      ${line(order.fulfillmentMethod === 'PICKUP' ? 'Pickup' : 'Delivery fee', Number(order.deliveryFee) > 0 ? money(order.deliveryFee) : 'Free')}
+      ${Number(order.discountAmount) > 0 ? line('Discount', `−${money(order.discountAmount)}`) : ''}
+      ${line('Total', money(order.total), true)}
+    </table>
+    <p style="margin:0 0 16px;color:#374151;font-size:13px;">
+      <strong>${escapeHtml(handOverText(order))}</strong> · ${escapeHtml(PAY_LABEL[order.paymentMethod] || order.paymentMethod)}
+    </p>`;
+  const text = [
+    ...items.map((it) => `- ${it.productName} × ${it.quantity}: ${money(it.subtotal)}`),
+    `Total: ${money(order.total)}`,
+    `${handOverText(order)} · ${PAY_LABEL[order.paymentMethod] || order.paymentMethod}`,
+  ];
+  return { html, text };
+};
+
+/**
+ * To the shop owner: someone ordered. Who and what, with a button to the
+ * order. The buyer's phone and street stay in the Seller Center.
+ * @param {{ seller: {email, fullName}, store: {name}, order: Object, items: Array, buyerName: String, place: String|null, expiryHours: Number }} args
+ */
+const sendNewOrderEmail = async ({ seller, store, order, items, buyerName, place = null, expiryHours = 48 }) => {
+  const subject = `New order ${order.orderNumber} for ${store.name}`;
+  const url = appUrl('/seller/orders?status=PENDING');
+  const summary = orderSummary(order, items);
+  const from = `${buyerName || 'A buyer'}${place ? ` in ${place}` : ''}`;
+  const text = [
+    `Hi ${seller.fullName || 'there'},`,
+    '',
+    `${from} ordered from ${store.name}. Order ${order.orderNumber}:`,
+    ...summary.text,
+    '',
+    `Confirm it within ${expiryHours} hours or it is cancelled automatically: ${url}`,
+    '',
+    '— Emoorm',
+  ].join('\n');
+  const html = layout(`
+    ${heading('You have a new order!')}
+    ${para(`<strong>${escapeHtml(from)}</strong> ordered from <strong>${escapeHtml(store.name)}</strong>. Order <strong>${escapeHtml(order.orderNumber)}</strong>:`)}
+    ${summary.html}
+    ${para(`Confirm it within ${expiryHours} hours, or it is cancelled automatically and the stock goes back to your shop.`)}
+    ${button(url, 'View and confirm the order')}
+    ${footer}
+  `);
+  return sendMail({ to: seller.email, subject, html, text });
+};
+
+/**
+ * To the buyer: the shop accepted their order. A QR order is paid now (To
+ * Pay); cash on delivery waits for the hand-over.
+ * @param {{ buyer: {email, fullName}, store: {name}, order: Object, items: Array, payHours: Number }} args
+ */
+const sendOrderAcceptedEmail = async ({ buyer, store, order, items, payHours = 48 }) => {
+  const payNow = order.paymentMethod !== 'COD' && ['PENDING', 'FAILED'].includes(order.paymentStatus);
+  const subject = payNow
+    ? `${store.name} accepted your order ${order.orderNumber}: please pay now`
+    : `${store.name} accepted your order ${order.orderNumber}`;
+  const url = appUrl(`/profile/orders?id=${encodeURIComponent(order.id)}`);
+  const summary = orderSummary(order, items);
+  const next = payNow
+    ? `Pay ${money(order.total)} with the shop's ${PAY_LABEL[order.paymentMethod] || 'QR'} in To Pay, then send your reference number and screenshot within ${payHours} hours. The seller prepares your order once the payment is checked.`
+    : order.fulfillmentMethod === 'PICKUP'
+      ? "The seller is preparing your order. We'll let you know when it's ready to pick up."
+      : `The seller is preparing your order. We'll let you know when it's on its way${order.courierName ? ` with ${order.courierName}` : ''}.`;
+  const text = [
+    `Hi ${buyer.fullName || 'there'},`,
+    '',
+    `Good news: ${store.name} accepted your order ${order.orderNumber}.`,
+    ...summary.text,
+    '',
+    next,
+    url,
+    '',
+    'Salamat for shopping local!',
+    '— Emoorm',
+  ].join('\n');
+  const html = layout(`
+    ${heading('Your order was accepted!')}
+    ${para(`Good news, ${escapeHtml(buyer.fullName || 'there')}: <strong>${escapeHtml(store.name)}</strong> accepted your order <strong>${escapeHtml(order.orderNumber)}</strong>.`)}
+    ${summary.html}
+    ${payNow
+    ? `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:14px 16px;margin:0 0 16px;">
+        <p style="margin:0;color:#065f46;font-size:14px;">${escapeHtml(next)}</p>
+      </div>`
+    : para(escapeHtml(next))}
+    ${button(url, payNow ? 'Pay now' : 'View my order')}
+    ${para('Salamat for shopping local!')}
+    ${footer}
+  `);
+  return sendMail({ to: buyer.email, subject, html, text });
+};
+
 module.exports = {
+  sendNewOrderEmail,
+  sendOrderAcceptedEmail,
   sendMail,
   sendPasswordResetEmail,
   sendPasswordChangedEmail,

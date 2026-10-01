@@ -8,6 +8,15 @@ const userRepository = require('../repositories/user.repository');
 const voucherRepository = require('../repositories/voucher.repository');
 const voucherService = require('./voucher.service');
 const notificationService = require('./notification.service');
+const { sendNewOrderEmail, sendOrderAcceptedEmail } = require('../utils/email');
+
+// Order emails go out after the response: a slow or failing mail provider
+// never holds up or fails an order.
+const emailInBackground = (label, send) => {
+  Promise.resolve()
+    .then(send)
+    .catch((err) => console.error(`[email] ${label} failed:`, err.message));
+};
 const identityVerificationService = require('./identityVerification.service');
 const deliveryQuoteService = require('./deliveryQuote.service');
 const courierService = require('./courier.service');
@@ -326,6 +335,28 @@ const createOrder = async (userId, data) => {
     console.error('[createOrder] notification failed:', err.message);
   }
 
+  // …and by email: who ordered what, with a link to confirm it.
+  if (store.ownerId) {
+    emailInBackground('new order', async () => {
+      const [seller, town] = await Promise.all([
+        prisma.user.findUnique({ where: { id: store.ownerId }, select: { email: true, fullName: true } }),
+        order.buyerMunicipalityId
+          ? prisma.municipality.findUnique({ where: { id: order.buyerMunicipalityId }, select: { name: true } })
+          : null,
+      ]);
+      if (!seller?.email) return;
+      await sendNewOrderEmail({
+        seller,
+        store,
+        order,
+        items: orderItems,
+        buyerName: buyer.fullName,
+        place: [order.buyerBarangay, town?.name].filter(Boolean).join(', ') || null,
+        expiryHours: PENDING_EXPIRY_HOURS,
+      });
+    });
+  }
+
   return order;
 };
 
@@ -586,6 +617,17 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl } = {}) 
     }
   } catch (err) {
     console.error('[updateOrderStatus] notification failed:', err.message);
+  }
+
+  // The buyer hears it by email too when the shop accepts the order.
+  if (newStatus === 'CONFIRMED' && order.buyer?.email) {
+    emailInBackground('order accepted', () => sendOrderAcceptedEmail({
+      buyer: order.buyer,
+      store: order.store,
+      order: { ...order, status: 'CONFIRMED' },
+      items: order.items || [],
+      payHours: PAYMENT_EXPIRY_HOURS,
+    }));
   }
 
   return updated;
