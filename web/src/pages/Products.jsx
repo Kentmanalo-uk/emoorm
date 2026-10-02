@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, ShoppingCart, Star, WarningCircle,
-  CaretLeft, MagnifyingGlass, X, ClockCounterClockwise, TrendUp,
+  CaretLeft, MagnifyingGlass,
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
@@ -15,7 +15,7 @@ import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 import { useCategories } from '../hooks/useReferenceData';
 import { usePhoneLayout } from '../hooks/useMobileNav';
-import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm, clearRecent } from '../lib/buyerSearch';
+import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
@@ -87,7 +87,6 @@ const listKey = (params) => `products:${JSON.stringify(params)}`;
 
 const Products = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const isPhone = usePhoneLayout();
   // The list as it showed last time for these filters: shown at once while
@@ -304,40 +303,20 @@ const Products = () => {
   const hasActiveFilters = selectedCategory || searchQuery || priceRange.min || priceRange.max || sortBy !== 'newest';
 
   /* ── Phones: the page brings its own search bar (the site header is Home
-     only), a suggestions panel, filter chips and a friendlier empty state. */
-  // The field's text follows the URL query until the shopper edits it.
-  const [draftState, setDraftState] = useState({ q: searchQuery, text: searchQuery });
-  const draft = draftState.q === searchQuery ? draftState.text : searchQuery;
-  const setDraft = (text) => setDraftState({ q: searchQuery, text });
-  // A fresh /search with nothing asked yet opens straight onto suggestions.
-  const [panelOpen, setPanelOpen] = useState(
-    () => location.pathname === '/search' && !searchParams.get('q') && !searchParams.get('category') && !imageSearch,
-  );
-  const [recent, setRecent] = useState(loadRecent);
+     only), filter chips and a friendlier empty state. Tapping the bar opens
+     the search page (SearchStart) with the words already in it. */
   const [priceOpen, setPriceOpen] = useState(false);
+  const openSearchPage = () => navigate('/search', { state: { q: searchQuery } });
   const priceActive = Boolean(searchParams.get('minPrice') || searchParams.get('maxPrice'));
 
   const runSearch = (term) => {
     const q = term.trim();
     if (!q) return;
-    setRecent(saveRecent(q));
-    setDraftState({ q, text: q });
-    setPanelOpen(false);
-    document.activeElement?.blur?.();
+    saveRecent(q);
     navigate(`/search?q=${encodeURIComponent(q)}`);
   };
 
-  const pickCategory = (categoryId) => {
-    setPanelOpen(false);
-    navigate(categoryId ? `/search?category=${categoryId}` : '/search');
-  };
-
   const phoneBack = () => {
-    if (panelOpen && (searchQuery || selectedCategory || imageSearch)) {
-      setPanelOpen(false);
-      setDraft(searchQuery);
-      return;
-    }
     if (window.history.length > 1) navigate(-1); else navigate('/');
   };
 
@@ -348,9 +327,6 @@ const Products = () => {
     updateURL({ minPrice: '', maxPrice: '', page: 1 });
   };
 
-  const typed = draft.trim().toLowerCase();
-  const recentShown = typed ? recent.filter((t) => t.toLowerCase().includes(typed)) : recent;
-  const popularShown = typed ? POPULAR_SUGGESTIONS.filter((t) => t.toLowerCase().includes(typed)) : POPULAR_SUGGESTIONS;
   const activeCategoryName = categories.find((c) => c.id === selectedCategory)?.name;
   const minParam = searchParams.get('minPrice');
   const maxParam = searchParams.get('maxPrice');
@@ -360,103 +336,36 @@ const Products = () => {
 
   return (
     <Layout phoneBar={false}>
-      <div className={`products-page${isPhone ? ' is-phone' : ''}${isPhone && panelOpen ? ' is-suggesting' : ''}`}>
+      <div className={`products-page${isPhone ? ' is-phone' : ''}`}>
         {isPhone && (
-          <div className={`srch-m-bar${panelOpen ? ' is-open' : ''}`}>
+          <div className="srch-m-bar">
             <button type="button" className="srch-m-back" onClick={phoneBack} aria-label="Back">
               <CaretLeft size={22} weight="bold" />
             </button>
             <form
               className="srch-m-field"
               role="search"
-              onSubmit={(e) => { e.preventDefault(); runSearch(draft); }}
+              onSubmit={(e) => { e.preventDefault(); openSearchPage(); }}
             >
-              <MagnifyingGlass size={18} className="srch-m-field-icon" />
               <input
                 type="search"
-                enterKeyHint="search"
-                value={draft}
-                onChange={(e) => { setDraft(e.target.value); setPanelOpen(true); }}
-                onFocus={() => setPanelOpen(true)}
+                value={searchQuery}
+                readOnly
+                onFocus={(e) => { e.currentTarget.blur(); openSearchPage(); }}
                 placeholder="Search products"
                 aria-label="Search products"
-                autoFocus={panelOpen}
               />
-              {draft && (
-                <button type="button" className="srch-m-clear" onClick={() => setDraft('')} aria-label="Clear search">
-                  <X size={13} weight="bold" />
-                </button>
-              )}
+              <button type="button" className="srch-m-camera" onClick={() => navigate('/search/image')} aria-label="Search by image">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                  <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                  <path d="M7 5L8 3H12L13 5" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                </svg>
+              </button>
               <button type="submit" className="srch-m-go" aria-label="Search">
-                <MagnifyingGlass size={18} weight="bold" />
+                <MagnifyingGlass size={18} />
               </button>
             </form>
-          </div>
-        )}
-
-        {isPhone && panelOpen && (
-          <div className="srch-m-panel">
-            {typed && (
-              <button type="button" className="srch-m-typed" onClick={() => runSearch(draft)}>
-                <MagnifyingGlass size={17} />
-                <span>Search for “<strong>{draft.trim()}</strong>”</span>
-              </button>
-            )}
-
-            {recentShown.length > 0 && (
-              <section className="srch-m-group">
-                <div className="srch-m-group-head">
-                  <h2>Recent searches</h2>
-                  {!typed && (
-                    <button type="button" onClick={() => setRecent(clearRecent())}>Clear all</button>
-                  )}
-                </div>
-                <div className="srch-m-rows">
-                  {recentShown.map((term) => (
-                    <div className="srch-m-row" key={`r-${term}`}>
-                      <button type="button" className="srch-m-row-main" onClick={() => runSearch(term)}>
-                        <ClockCounterClockwise size={17} />
-                        <span>{term}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="srch-m-row-remove"
-                        onClick={() => setRecent(removeRecentTerm(term))}
-                        aria-label={`Remove ${term}`}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {popularShown.length > 0 && (
-              <section className="srch-m-group">
-                <div className="srch-m-group-head"><h2>Popular right now</h2></div>
-                <div className="srch-m-chips-wrap">
-                  {popularShown.map((term) => (
-                    <button type="button" key={`p-${term}`} className="srch-m-chip" onClick={() => runSearch(term)}>
-                      <TrendUp size={14} /> {term}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {!typed && categories.length > 0 && (
-              <section className="srch-m-group">
-                <div className="srch-m-group-head"><h2>Browse categories</h2></div>
-                <div className="srch-m-chips-wrap">
-                  {categories.map((c) => (
-                    <button type="button" key={c.id} className="srch-m-chip" onClick={() => pickCategory(c.id)}>
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
         )}
 
@@ -579,7 +488,7 @@ const Products = () => {
                 </div>
               </div>
 
-              {isPhone && !panelOpen && (
+              {isPhone && (
                 <div className="srch-m-tools">
                   <div className="srch-m-summary">
                     {isLoading ? (
@@ -610,7 +519,7 @@ const Products = () => {
                 </div>
               )}
 
-              {isPhone && !panelOpen && !imageSearch && (
+              {isPhone && !imageSearch && (
                 <>
                   <div className="srch-m-filters" role="toolbar" aria-label="Filters">
                     <button

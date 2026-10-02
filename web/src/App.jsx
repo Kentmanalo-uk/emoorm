@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -10,6 +10,7 @@ import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
 import Profile from './pages/Profile';
 import Products from './pages/Products';
+import SearchStart from './pages/SearchStart';
 import ProductDetails from './pages/ProductDetails';
 import ProductTransitions from './lib/productTransition';
 import ProductReviews from './pages/ProductReviews';
@@ -145,6 +146,16 @@ useAuthStore.subscribe((state, previousState) => {
  * Home, when the login link was opened directly) and the form slides up on
  * top. Tablet and desktop show them as pages, as before.
  */
+// Phones: /search with nothing asked yet opens the search page (history,
+// popular products, categories); with a search or filter it shows the results.
+const RESULT_PARAMS = ['q', 'category', 'municipalityId', 'minPrice', 'maxPrice', 'imageSearch'];
+function SearchRoute() {
+  const isPhone = usePhoneLayout();
+  const [params] = useSearchParams();
+  const asked = RESULT_PARAMS.some((key) => params.get(key));
+  return isPhone && !asked ? <SearchStart /> : <Products />;
+}
+
 function AppRoutes() {
   const location = useLocation();
   const isPhone = usePhoneLayout();
@@ -169,7 +180,7 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/products" element={<Products />} />
-        <Route path="/search" element={<Products />} />
+        <Route path="/search" element={<SearchRoute />} />
         <Route path="/product/:slug" element={<ProductDetails />} />
         <Route path="/product/:slug/reviews" element={<ProductReviews />} />
         <Route path="/stores" element={<Stores />} />

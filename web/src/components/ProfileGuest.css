@@ -1,43 +1,25 @@
-/* Signed-out Profile tab (phones). Everything else comes from Profile.css;
-   this styles only the sign-in card that replaces the photo and name. */
-.profile-guest-avatar {
-  display: grid;
-  place-items: center;
-  background: var(--t-neutral-100, #f3f4f6);
-  color: var(--t-neutral-400, #9ca3af);
-}
-
-/* The sign-in text wraps; the real name and email are single-line. */
-.profile-main .profile-guest-card .profile-name,
-.profile-main .profile-guest-card .profile-email {
+/* Signed-out Profile tab (phones). The page is the signed-in phone Profile
+   (the .pf-m styles in Profile.css); this styles only the sign-in card that
+   takes the place of the photo and name. */
+/* The sign-in line wraps; a real name and email stay on one line. */
+.pf-m-id-text.pf-guest-text span {
   overflow: visible;
-  white-space: normal;
-  text-overflow: clip;
-}
-
-.profile-main .profile-guest-card .profile-name {
-  font-size: 17px;
-  line-height: 1.3;
-}
-
-.profile-main .profile-guest-card .profile-email {
-  margin-top: 4px;
   line-height: 1.45;
+  white-space: normal;
 }
 
-.profile-guest-actions {
+.pf-guest-actions {
   display: flex;
   gap: 10px;
-  width: 100%;
-  margin-top: 16px;
+  padding: 0 16px 16px;
 }
 
-.profile-guest-btn {
-  flex: 1;
+.pf-guest-btn {
   display: inline-flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
-  height: 42px;
+  height: 44px;
   border: 1px solid var(--t-primary-600, #059669);
   border-radius: 12px;
   background: var(--t-neutral-0, #fff);
@@ -45,14 +27,15 @@
   font-size: 15px;
   font-weight: 700;
   text-decoration: none;
-  transition: background-color 0.15s;
 }
 
-.profile-guest-btn.is-primary {
-  background: var(--t-primary-600, #059669);
+/* Log in: E-MOORM green with a touch of pink toward its end. */
+.pf-guest-btn.is-primary {
+  border-color: transparent;
+  background: linear-gradient(110deg, #059669 0%, #059669 70%, #E0559B 175%);
   color: var(--t-neutral-0, #fff);
 }
 
-.profile-guest-btn:active {
+.pf-guest-btn:active {
   opacity: 0.9;
 }

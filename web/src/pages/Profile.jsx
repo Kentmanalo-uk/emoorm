@@ -14,6 +14,7 @@ import useAccountSwitchStore from '../store/accountSwitchStore';
 import { fetchIdentityStatus } from '../lib/identity';
 import './Profile.css';
 import UserAvatar from '../components/ui/UserAvatar';
+import GradientUserIcon from '../components/ui/GradientUserIcon';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import useWishlistStore from '../store/wishlistStore';
 import { listMyFollowing } from '../lib/follow';
@@ -174,6 +175,8 @@ const Profile = () => {
                 name={name}
                 alt=""
                 fallbackClassName="profile-avatar-placeholder"
+                fallbackIcon={GradientUserIcon}
+                iconSize={64}
               />
             </span>
             <span className="pf-m-id-text">
@@ -217,7 +220,7 @@ const Profile = () => {
             {purchase.map(([label, Icon, to, count]) => (
               <Link key={label} to={to}>
                 <span className="pf-m-purchase-icon">
-                  <Icon size={24} />
+                  <Icon size={24} weight="bold" />
                   {count > 0 && <b>{count > 99 ? '99+' : count}</b>}
                 </span>
                 <span>{label}</span>

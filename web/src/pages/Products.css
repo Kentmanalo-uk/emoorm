@@ -1471,3 +1471,53 @@
     animation: none;
   }
 }
+
+/* Phones: the results page's search bar matches the home header's (flat grey,
+   square corners, the thin camera, a square green button flush at the end). */
+@media (max-width: 768px) {
+  .srch-m-field {
+    gap: 0;
+    align-items: stretch;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    transition: background-color 0.15s, box-shadow 0.15s;
+  }
+
+  .srch-m-field:focus-within {
+    border-color: transparent;
+    box-shadow: 0 0 0 1.5px var(--t-primary-500, #10b981);
+  }
+
+  .srch-m-field input {
+    padding: 0 8px 0 16px;
+    cursor: pointer;
+  }
+
+  .srch-m-camera {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--t-neutral-500, #6b7280);
+    cursor: pointer;
+  }
+
+  .srch-m-camera svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .srch-m-camera:active {
+    background: var(--t-neutral-200, #e5e7eb);
+  }
+
+  .srch-m-field .srch-m-go {
+    width: 44px;
+    height: auto;
+    border-radius: 0;
+  }
+}

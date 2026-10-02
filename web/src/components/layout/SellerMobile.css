@@ -1122,3 +1122,17 @@
     cursor: pointer;
   }
 }
+
+/* Seller tab bar: the same icon and label size as the buyer bottom navigation
+   (28px icons, 11px labels). The admin tab bar shares these styles and keeps its own. */
+@media (max-width: 768px) {
+  .sc-tabbar--app:not(.acm-tabbar) .sc-tab {
+    gap: 3px;
+    font-size: 11px;
+  }
+
+  .sc-tabbar--app:not(.acm-tabbar) .sc-tab svg {
+    width: 28px;
+    height: 28px;
+  }
+}

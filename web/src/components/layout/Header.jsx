@@ -20,6 +20,7 @@ import './Header.css';
 import UserAvatar from '../ui/UserAvatar';
 import NotificationPicture from '../NotificationPicture';
 import { isBottomNavTab } from '../../lib/navTabs';
+import { usePhoneLayout } from '../../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm } from '../../lib/buyerSearch';
 import { afterSignOutPath } from '../../lib/afterSignOut';
 
@@ -91,6 +92,9 @@ const Header = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifs, setRecentNotifs] = useState([]);
   const [headerHidden, setHeaderHidden] = useState(false);
+  // At the very top of the page: phones drop the header's shadow there, so it
+  // runs into the search suggestions under it (Home).
+  const [atTop, setAtTop] = useState(() => window.scrollY < 4);
   const lastScrollY = useRef(window.scrollY);
   const searchWrapRef = useRef(null);
 
@@ -105,6 +109,7 @@ const Header = () => {
   // Phones: the bottom navigation belongs to the five tab pages; every other
   // page has its own back button and gets the full height.
   const isTabPage = isBottomNavTab(location.pathname);
+  const isPhone = usePhoneLayout();
   // Before the page shows, so it is laid out (and scrolled back) with it.
   useLayoutEffect(() => {
     document.body.classList.toggle('no-bottom-nav', !isTabPage);
@@ -129,6 +134,7 @@ const Header = () => {
         const y = window.scrollY;
         const delta = y - lastScrollY.current;
         lastScrollY.current = y;
+        setAtTop(y < 4);
 
         if (y < 40) {
           setHeaderHidden(false);
@@ -188,7 +194,10 @@ const Header = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     const q = searchQuery.trim();
-    if (!q) return;
+    if (!q) {
+      if (isPhone) navigate('/search');
+      return;
+    }
     setRecentSearches(saveRecent(q));
     setSearchFocused(false);
     navigate(`/search?q=${encodeURIComponent(q)}`);
@@ -495,7 +504,7 @@ const Header = () => {
 
       {/* Main Header */}
       <header
-        className={`header ${location.pathname === '/' ? 'is-home' : ''} ${isCartPage ? 'is-cart' : ''}`}
+        className={`header ${location.pathname === '/' ? 'is-home' : ''} ${isCartPage ? 'is-cart' : ''}${atTop ? ' is-at-top' : ''}`}
         style={{
           transform: headerHidden
             ? 'translateY(calc(-1 * var(--header-hide-offset)))'
@@ -521,7 +530,15 @@ const Header = () => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={() => setSearchFocused(true)}
+                    onFocus={(e) => {
+                      // Phones search on their own page (SearchStart), not in a dropdown.
+                      if (isPhone) {
+                        e.currentTarget.blur();
+                        navigate('/search');
+                        return;
+                      }
+                      setSearchFocused(true);
+                    }}
                     className="header-search-input"
                   />
                   {!searchQuery && !searchFocused && (
