@@ -74,7 +74,8 @@
   margin-bottom: 18px;
 }
 
-/* The title bar, with the tab's tools on the right (each leads to Log in). */
+/* The title bar, with the tab's tools on the right (search leads to Log in;
+   the ⋯ menu's account-only choices do too). */
 .login-gate-head {
   display: flex;
   align-items: center;
@@ -109,4 +110,11 @@
 
 .login-gate-tool:active {
   background: var(--t-neutral-100, #f3f4f6);
+}
+
+button.login-gate-tool {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
 }
