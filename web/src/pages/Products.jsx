@@ -3,7 +3,7 @@ import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, ShoppingCart, Star, WarningCircle,
-  CaretLeft, MagnifyingGlass,
+  CaretLeft, MagnifyingGlass, CaretUp, MapPin,
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
@@ -13,7 +13,8 @@ import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
-import { useCategories } from '../hooks/useReferenceData';
+import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
+import SearchFilterSheet from '../components/search/SearchFilterSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
@@ -66,6 +67,7 @@ const SORTS = {
   oldest: { sortBy: 'createdAt', sortOrder: 'asc' },
   'price-low': { sortBy: 'price', sortOrder: 'asc' },
   'price-high': { sortBy: 'price', sortOrder: 'desc' },
+  'top-sales': { sortBy: 'orderCount', sortOrder: 'desc' },
   'name-asc': { sortBy: 'name', sortOrder: 'asc' },
   'name-desc': { sortBy: 'name', sortOrder: 'desc' },
 };
@@ -305,7 +307,9 @@ const Products = () => {
   /* ── Phones: the page brings its own search bar (the site header is Home
      only), filter chips and a friendlier empty state. Tapping the bar opens
      the search page (SearchStart) with the words already in it. */
-  const [priceOpen, setPriceOpen] = useState(false);
+  // The filter sheet: null, or the chip that opened it ('all' | 'municipality' | 'category' | 'price').
+  const [filterSheet, setFilterSheet] = useState(null);
+  const { municipalities } = useMunicipalities({ enabled: isPhone });
   const openSearchPage = () => navigate('/search', { state: { q: searchQuery } });
   const priceActive = Boolean(searchParams.get('minPrice') || searchParams.get('maxPrice'));
 
@@ -320,14 +324,32 @@ const Products = () => {
     if (window.history.length > 1) navigate(-1); else navigate('/');
   };
 
-  const clearPrice = () => {
-    setPriceRange({ min: '', max: '' });
-    setPriceOpen(false);
+  // Phones: a sort tab, and filters from the sheet; each goes back to page 1.
+  const pickSort = (sort) => {
+    setSortBy(sort);
     setPagination((prev) => ({ ...prev, page: 1 }));
-    updateURL({ minPrice: '', maxPrice: '', page: 1 });
+    updateURL({ sort: sort === 'newest' ? '' : sort, page: 1 });
   };
+  const applyFilters = (changes) => {
+    const next = {};
+    if ('category' in changes) {
+      setSelectedCategory(changes.category);
+      next.category = changes.category;
+    }
+    if ('municipalityId' in changes) next.municipalityId = changes.municipalityId;
+    if ('minPrice' in changes || 'maxPrice' in changes) {
+      setPriceRange({ min: changes.minPrice || '', max: changes.maxPrice || '' });
+      next.minPrice = changes.minPrice || '';
+      next.maxPrice = changes.maxPrice || '';
+    }
+    setPagination((prev) => ({ ...prev, page: 1 }));
+    updateURL({ ...next, page: 1 });
+  };
+  const resetFilters = () => applyFilters({ category: '', municipalityId: '', minPrice: '', maxPrice: '' });
 
   const activeCategoryName = categories.find((c) => c.id === selectedCategory)?.name;
+  const activeMunicipalityName = municipalities.find((m) => m.id === municipalityId)?.name;
+  const filterCount = [selectedCategory, municipalityId, priceActive].filter(Boolean).length;
   const minParam = searchParams.get('minPrice');
   const maxParam = searchParams.get('maxPrice');
   const priceLabel = priceActive
@@ -488,98 +510,81 @@ const Products = () => {
                 </div>
               </div>
 
-              {isPhone && (
+              {isPhone && !imageSearch && (
+                <>
+                  <div className="srch-m-controls">
+                  <div className="srch-m-sorts" role="tablist" aria-label="Sort by">
+                    <button type="button" role="tab" aria-selected={sortBy === 'newest'} className={sortBy === 'newest' ? 'is-on' : ''} onClick={() => pickSort('newest')}>
+                      Newest
+                    </button>
+                    <button type="button" role="tab" aria-selected={sortBy === 'top-sales'} className={sortBy === 'top-sales' ? 'is-on' : ''} onClick={() => pickSort('top-sales')}>
+                      Top Sales
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={sortBy === 'price-low' || sortBy === 'price-high'}
+                      aria-label={sortBy === 'price-low' ? 'Price, low to high' : sortBy === 'price-high' ? 'Price, high to low' : 'Price'}
+                      className={sortBy === 'price-low' || sortBy === 'price-high' ? 'is-on' : ''}
+                      onClick={() => pickSort(sortBy === 'price-low' ? 'price-high' : 'price-low')}
+                    >
+                      Price
+                      <span className="srch-m-sort-dir" aria-hidden="true">
+                        <CaretUp size={10} weight="bold" className={sortBy === 'price-low' ? 'is-on' : ''} />
+                        <ChevronDown size={10} weight="bold" className={sortBy === 'price-high' ? 'is-on' : ''} />
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="srch-m-filters" role="toolbar" aria-label="Filters">
+                    <button type="button" className={`srch-m-fchip${filterCount ? ' is-active' : ''}`} onClick={() => setFilterSheet('all')}>
+                      <SlidersHorizontal size={15} /> Filter{filterCount ? ` (${filterCount})` : ''}
+                    </button>
+                    <button type="button" className={`srch-m-fchip${municipalityId ? ' is-active' : ''}`} onClick={() => setFilterSheet('municipality')}>
+                      <MapPin size={15} /> {activeMunicipalityName || 'Municipality'} <ChevronDown size={12} />
+                    </button>
+                    <button type="button" className={`srch-m-fchip${selectedCategory ? ' is-active' : ''}`} onClick={() => setFilterSheet('category')}>
+                      {activeCategoryName || 'Category'} <ChevronDown size={12} />
+                    </button>
+                    <button type="button" className={`srch-m-fchip${priceActive ? ' is-active' : ''}`} onClick={() => setFilterSheet('price')}>
+                      {priceLabel} <ChevronDown size={12} />
+                    </button>
+                  </div>
+                  </div>
+
+                  <p className="srch-m-count">
+                    {isLoading ? <Skeleton height={11} width={140} /> : (
+                      <>
+                        <strong>{pagination.total}</strong> {pagination.total === 1 ? 'result' : 'results'}
+                        {searchQuery ? <> for “{searchQuery}”</> : null}
+                        {activeMunicipalityName ? <> in {activeMunicipalityName}</> : null}
+                      </>
+                    )}
+                  </p>
+
+                  <SearchFilterSheet
+                    focus={filterSheet}
+                    onClose={() => setFilterSheet(null)}
+                    municipalities={municipalities}
+                    categories={categories}
+                    value={{ municipalityId, category: selectedCategory, minPrice: minParam || '', maxPrice: maxParam || '' }}
+                    onChange={applyFilters}
+                    onReset={resetFilters}
+                  />
+                </>
+              )}
+
+              {isPhone && imageSearch && (
                 <div className="srch-m-tools">
                   <div className="srch-m-summary">
-                    {isLoading ? (
-                      <Skeleton height={12} width={150} />
-                    ) : imageSearch ? (
+                    {isLoading ? <Skeleton height={12} width={150} /> : (
                       <span className="srch-m-image">
                         {imageSearchPreview && <img src={imageSearchPreview} alt="" />}
                         <span><strong>{pagination.total}</strong> matching this photo</span>
                       </span>
-                    ) : (
-                      <span>
-                        <strong>{pagination.total}</strong> {pagination.total === 1 ? 'result' : 'results'}
-                        {searchQuery ? <> for “{searchQuery}”</> : activeCategoryName ? <> in {activeCategoryName}</> : null}
-                      </span>
                     )}
                   </div>
-                  <label className="srch-m-sort">
-                    <select value={sortBy} onChange={(e) => handleSortChange(e.target.value)} aria-label="Sort by">
-                      <option value="newest">Newest</option>
-                      <option value="price-low">Price: Low to High</option>
-                      <option value="price-high">Price: High to Low</option>
-                      <option value="name-asc">Name: A to Z</option>
-                      <option value="name-desc">Name: Z to A</option>
-                      <option value="oldest">Oldest</option>
-                    </select>
-                    <ChevronDown size={13} weight="bold" />
-                  </label>
                 </div>
-              )}
-
-              {isPhone && !imageSearch && (
-                <>
-                  <div className="srch-m-filters" role="toolbar" aria-label="Filters">
-                    <button
-                      type="button"
-                      className={`srch-m-chip srch-m-price-chip${priceActive || priceOpen ? ' is-active' : ''}`}
-                      onClick={() => setPriceOpen((v) => !v)}
-                      aria-expanded={priceOpen}
-                    >
-                      <SlidersHorizontal size={14} />
-                      {priceLabel}
-                    </button>
-                    <button
-                      type="button"
-                      className={`srch-m-chip${!selectedCategory ? ' is-active' : ''}`}
-                      onClick={() => handleCategoryChange('')}
-                    >
-                      All
-                    </button>
-                    {categories.map((c) => (
-                      <button
-                        type="button"
-                        key={c.id}
-                        className={`srch-m-chip${selectedCategory === c.id ? ' is-active' : ''}`}
-                        onClick={() => handleCategoryChange(c.id)}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                  {priceOpen && (
-                    <form
-                      className="srch-m-price"
-                      onSubmit={(e) => { e.preventDefault(); handlePriceFilter(); setPriceOpen(false); }}
-                    >
-                      <div className="srch-m-price-inputs">
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          placeholder="₱ Min"
-                          value={priceRange.min}
-                          onChange={(e) => setPriceRange((prev) => ({ ...prev, min: e.target.value }))}
-                          aria-label="Minimum price"
-                        />
-                        <span aria-hidden="true">–</span>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          placeholder="₱ Max"
-                          value={priceRange.max}
-                          onChange={(e) => setPriceRange((prev) => ({ ...prev, max: e.target.value }))}
-                          aria-label="Maximum price"
-                        />
-                      </div>
-                      <div className="srch-m-price-actions">
-                        <button type="button" className="srch-m-price-reset" onClick={clearPrice}>Reset</button>
-                        <button type="submit" className="srch-m-price-apply">Apply</button>
-                      </div>
-                    </form>
-                  )}
-                </>
               )}
 
               {/* Results Info */}
@@ -614,8 +619,8 @@ const Products = () => {
                       ? 'Check the spelling, or try a shorter or more general word.'
                       : 'Try another category or price range.'}
                   </p>
-                  {(selectedCategory || priceActive) && (
-                    <button type="button" className="srch-m-empty-btn" onClick={clearFilters}>Clear filters</button>
+                  {(selectedCategory || priceActive || municipalityId) && (
+                    <button type="button" className="srch-m-empty-btn" onClick={resetFilters}>Clear filters</button>
                   )}
                   <div className="srch-m-empty-try">
                     <span>Try searching for</span>
@@ -662,14 +667,31 @@ const Products = () => {
                           <ShoppingCart size={16} />
                         </button>
                       </div>
-                      <div className="product-info">
-                        <h3 className="product-name">{product.name}</h3>
-                        <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
-                        {renderRating(product)}
-                        {Number(product.soldCount) > 0 && (
-                          <span className="product-review-count">{product.soldCount} sold</span>
-                        )}
-                      </div>
+                      {isPhone ? (
+                        <div className="product-info srch-card">
+                          <h3 className="product-name">{product.name}</h3>
+                          <span className="srch-card-price">₱{Number(product.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="srch-card-meta">
+                            {Number(product.reviewCount) > 0 && (
+                              <span className="srch-card-rating"><Star size={13} weight="fill" /> {Number(product.averageRating || 0).toFixed(1)}</span>
+                            )}
+                            {Number(product.soldCount) > 0 && <span>{product.soldCount} sold</span>}
+                            {!(Number(product.reviewCount) > 0) && !(Number(product.soldCount) > 0) && <span className="srch-card-new">New</span>}
+                          </span>
+                          {(product.municipality?.name || product.store?.municipality?.name) && (
+                            <span className="srch-card-place"><MapPin size={13} /> {product.municipality?.name || product.store?.municipality?.name}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="product-info">
+                          <h3 className="product-name">{product.name}</h3>
+                          <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
+                          {renderRating(product)}
+                          {Number(product.soldCount) > 0 && (
+                            <span className="product-review-count">{product.soldCount} sold</span>
+                          )}
+                        </div>
+                      )}
                     </Link>
                   ))}
                 </div>

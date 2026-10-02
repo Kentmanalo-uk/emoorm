@@ -119,16 +119,6 @@ const ProductDetails = () => {
     return () => document.body.classList.remove('pdp-phone-mode');
   }, [isPhone]);
 
-  // The top bar floats see-through over the image, then turns solid once the
-  // page scrolls past it, so text never shows through the buttons.
-  const [barSolid, setBarSolid] = useState(false);
-  useEffect(() => {
-    if (!isPhone) return undefined;
-    const onScroll = () => setBarSolid(window.scrollY > window.innerWidth * 0.75);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [isPhone]);
   const { toggleItem, isInWishlist } = useWishlistStore();
   const { requireVerifiedIdentity, identityDialog } = useIdentityGate();
 
@@ -624,7 +614,7 @@ const ProductDetails = () => {
         <div className="container">
           {isPhone && (
             <>
-              <div className={`pdp-m-topbar${barSolid ? ' is-solid' : ''}`}>
+              <div className="pdp-m-topbar">
                 <button type="button" className="pdp-m-icon" onClick={goBack} aria-label="Back">
                   <ChevronLeft size={22} weight="bold" />
                 </button>

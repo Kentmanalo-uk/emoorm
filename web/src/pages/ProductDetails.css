@@ -1973,7 +1973,7 @@
     display: none !important;
   }
 
-  /* ── top bar, floating over the gallery ─────────────────────────── */
+  /* ── top bar (see the solid-header rules at the end) ─────────────── */
   .pdp-m-topbar {
     position: fixed;
     top: 0;
@@ -2340,21 +2340,6 @@
 
   /* ── polish ──────────────────────────────────────────────────── */
 
-  /* Solid once scrolled past the image: nothing shows through. */
-  .pdp-m-topbar {
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .pdp-m-topbar.is-solid {
-    background: #fff;
-    box-shadow: 0 1px 0 var(--t-neutral-200, #e5e7eb);
-  }
-
-  .pdp-m-topbar.is-solid .pdp-m-icon,
-  .pdp-m-topbar.is-solid .pdp-m-search {
-    background: var(--t-neutral-100, #f3f4f6);
-    box-shadow: none;
-  }
 
   /* Two lines, then an ellipsis, as the reference does. The base rule sets
      display: flow-root with higher specificity, so this one matches it. */
@@ -2555,4 +2540,42 @@ div.pdp-store-followers {
   color: #b91c1c;
   font-size: 11px;
   font-weight: 400;
+}
+
+/* Phones: the top bar is a solid white header with its own space (the photo
+   starts under it, nothing floats over it), and it stays at the top while
+   the page scrolls. Plain icons; the search field is the home header's flat
+   grey bar. */
+@media (max-width: 768px) {
+  .pdp-m-topbar {
+    position: sticky;
+    top: 0;
+    left: auto;
+    right: auto;
+    gap: 2px;
+    min-height: 56px;
+    padding: env(safe-area-inset-top, 0px) 4px 0;
+    background: var(--t-neutral-0, #fff);
+    border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
+  }
+
+  .pdp-m-topbar .pdp-m-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .pdp-m-topbar .pdp-m-icon:active {
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .pdp-m-topbar .pdp-m-search {
+    height: 40px;
+    margin: 0 4px;
+    border-radius: 0;
+    background: var(--t-neutral-100, #f3f4f6);
+    box-shadow: none;
+  }
 }

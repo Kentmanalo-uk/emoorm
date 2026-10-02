@@ -470,13 +470,13 @@ export default function AdminLayout({ children }) {
       {isPhone && (
         <nav className={`sc-tabbar sc-tabbar--app acm-tabbar${isTabRoot ? '' : ' is-hidden'}`} aria-label="Admin sections">
           <NavLink to="/admin" end className={tabCls}>
-            {({ isActive }) => <><House size={24} weight={isActive ? 'fill' : 'regular'} /><span>Home</span></>}
+            {({ isActive }) => <><House size={24} weight={isActive ? 'fill' : 'light'} /><span>Home</span></>}
           </NavLink>
           <NavLink to="/admin/tools" end className={tabCls}>
             {({ isActive }) => (
               <>
                 <span className="sc-tab-icon">
-                  <SquaresFour size={24} weight={isActive ? 'fill' : 'regular'} />
+                  <SquaresFour size={24} weight={isActive ? 'fill' : 'light'} />
                   {toolsWaiting > 0 && <b className="sc-tab-badge">{toolsWaiting > 99 ? '99+' : toolsWaiting}</b>}
                 </span>
                 <span>Tools</span>
@@ -487,7 +487,7 @@ export default function AdminLayout({ children }) {
             {({ isActive }) => (
               <>
                 <span className="sc-tab-icon">
-                  <Receipt size={24} weight={isActive ? 'fill' : 'regular'} />
+                  <Receipt size={24} weight={isActive ? 'fill' : 'light'} />
                   {count('/admin/orders') > 0 && <b className="sc-tab-badge">{count('/admin/orders') > 99 ? '99+' : count('/admin/orders')}</b>}
                 </span>
                 <span>Orders</span>
@@ -498,7 +498,7 @@ export default function AdminLayout({ children }) {
             {({ isActive }) => (
               <>
                 <span className="sc-tab-icon">
-                  <ChatsCircle size={24} weight={isActive ? 'fill' : 'regular'} />
+                  <ChatsCircle size={24} weight={isActive ? 'fill' : 'light'} />
                   {count('/admin/support') > 0 && <b className="sc-tab-badge">{count('/admin/support') > 99 ? '99+' : count('/admin/support')}</b>}
                 </span>
                 <span>Support</span>
@@ -506,7 +506,7 @@ export default function AdminLayout({ children }) {
             )}
           </NavLink>
           <NavLink to="/admin/menu" end className={tabCls}>
-            {({ isActive }) => <><UserCircle size={24} weight={isActive ? 'fill' : 'regular'} /><span>Me</span></>}
+            {({ isActive }) => <><UserCircle size={24} weight={isActive ? 'fill' : 'light'} /><span>Me</span></>}
           </NavLink>
         </nav>
       )}

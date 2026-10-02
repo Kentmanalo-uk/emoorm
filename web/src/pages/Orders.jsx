@@ -464,8 +464,6 @@ const Orders = () => {
                   </div>
                 </div>
 
-                <OrderStatusPanel order={order} />
-
                 {order.status === 'COMPLETED' && unreviewedItems(order).length > 0 && (
                   <div className="order-review-nudge">
                     <div className="order-review-nudge-text">
@@ -700,7 +698,7 @@ const Orders = () => {
                 </span>
               </div>
 
-              <OrderStatusPanel order={selectedOrder} full />
+              <OrderStatusPanel order={selectedOrder} />
 
               {selectedOrder.fulfillmentProofUrl && (
                 <div className="order-details-section">

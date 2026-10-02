@@ -598,16 +598,16 @@ export default function SellerLayout() {
       {/* Phone tab bar */}
       <nav className={`sc-tabbar sc-tabbar--app${isPhone && !isTabRoot ? ' is-hidden' : ''}`} aria-label="Seller sections">
         <NavLink to="/seller" end className={tabCls}>
-          {({ isActive }) => <><House size={24} weight={isActive ? 'fill' : 'regular'} /><span>Home</span></>}
+          {({ isActive }) => <><House size={24} weight={isActive ? 'fill' : 'light'} /><span>Home</span></>}
         </NavLink>
         <NavLink to="/seller/products" end className={tabCls}>
-          {({ isActive }) => <><Package size={24} weight={isActive ? 'fill' : 'regular'} /><span>My products</span></>}
+          {({ isActive }) => <><Package size={24} weight={isActive ? 'fill' : 'light'} /><span>My products</span></>}
         </NavLink>
         <NavLink to="/seller/messages" className={tabCls}>
           {({ isActive }) => (
             <>
               <span className="sc-tab-icon">
-                <ChatCircleDots size={24} weight={isActive ? 'fill' : 'regular'} />
+                <ChatCircleDots size={24} weight={isActive ? 'fill' : 'light'} />
                 {chatUnread > 0 && <b className="sc-tab-badge">{chatUnread > 9 ? '9+' : chatUnread}</b>}
               </span>
               <span>Chat</span>
@@ -615,10 +615,10 @@ export default function SellerLayout() {
           )}
         </NavLink>
         <NavLink to="/seller/marketing" className={tabCls}>
-          {({ isActive }) => <><Megaphone size={24} weight={isActive ? 'fill' : 'regular'} /><span>Marketing</span></>}
+          {({ isActive }) => <><Megaphone size={24} weight={isActive ? 'fill' : 'light'} /><span>Marketing</span></>}
         </NavLink>
         <NavLink to="/seller/menu" className={tabCls}>
-          {({ isActive }) => <><UserIcon size={24} weight={isActive ? 'fill' : 'regular'} /><span>Me</span></>}
+          {({ isActive }) => <><UserIcon size={24} weight={isActive ? 'fill' : 'light'} /><span>Me</span></>}
         </NavLink>
       </nav>
 

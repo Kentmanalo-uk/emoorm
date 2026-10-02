@@ -1521,3 +1521,182 @@
     border-radius: 0;
   }
 }
+
+/* ── Phones: results controls and cards (see Products.jsx) ───────────────
+   One white band under the search bar: the sort tabs, then the filter
+   chips (Filter, Municipality, Category, Price; each opens the filter
+   sheet). Cards show only real data: price, rating and sold when there are
+   any, and the municipality. */
+@media (max-width: 768px) {
+  .srch-m-sorts {
+    display: flex;
+    align-items: stretch;
+    gap: 22px;
+    margin: 0 -12px;
+    padding: 0 16px;
+    background: var(--t-neutral-0, #fff);
+  }
+
+  .srch-m-sorts button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 46px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--t-neutral-600, #4b5563);
+    font: inherit;
+    font-size: 15px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .srch-m-sorts button.is-on {
+    color: var(--t-primary-700, #047857);
+    font-weight: 600;
+  }
+
+  .srch-m-sort-dir {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 0;
+    color: var(--t-neutral-300, #d1d5db);
+  }
+
+  .srch-m-sort-dir .is-on {
+    color: var(--t-primary-700, #047857);
+  }
+
+  .products-page.is-phone .srch-m-filters {
+    padding: 2px 16px 12px;
+    background: var(--t-neutral-0, #fff);
+  }
+
+  .srch-m-fchip {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-700, #374151);
+    font: inherit;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .srch-m-fchip svg {
+    flex-shrink: 0;
+    color: var(--t-neutral-500, #6b7280);
+  }
+
+  .srch-m-fchip.is-active {
+    border-color: var(--t-primary-200, #a7f3d0);
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #047857);
+    font-weight: 600;
+  }
+
+  .srch-m-fchip.is-active svg {
+    color: var(--t-primary-600, #059669);
+  }
+
+  .srch-m-count {
+    margin: 0;
+    padding: 12px 4px 10px;
+    overflow: hidden;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 13.5px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .srch-m-count strong {
+    color: var(--t-neutral-900, #111827);
+  }
+
+  /* The old 'N results' line under the grid is replaced by .srch-m-count. */
+  .products-page.is-phone .products-results-info {
+    display: none;
+  }
+
+  .srch-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .srch-card .product-name {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .srch-card-price {
+    color: var(--t-primary-700, #047857);
+    font-size: 17px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .srch-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 12.5px;
+  }
+
+  .srch-card-meta > span + span {
+    padding-left: 8px;
+    border-left: 1px solid var(--t-neutral-200, #e5e7eb);
+  }
+
+  .srch-card-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--t-neutral-700, #374151);
+  }
+
+  .srch-card-rating svg {
+    color: #f59e0b;
+  }
+
+  .srch-card-new {
+    color: var(--t-primary-700, #047857);
+  }
+
+  .srch-card-place {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    overflow: hidden;
+    color: var(--t-neutral-400, #9ca3af);
+    font-size: 12.5px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .srch-card-place svg {
+    flex-shrink: 0;
+  }
+}
+
+/* Phones: the sort tabs and filter chips share one white band. */
+@media (max-width: 768px) {
+  .srch-m-controls {
+    margin: 0 -12px;
+    background: var(--t-neutral-0, #fff);
+  }
+
+  .srch-m-controls .srch-m-sorts,
+  .srch-m-controls .srch-m-filters {
+    margin: 0 !important;
+  }
+}

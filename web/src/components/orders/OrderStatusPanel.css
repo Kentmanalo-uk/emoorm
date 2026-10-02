@@ -1,4 +1,5 @@
-/* An order's status: headline, progress, where it goes, how it is paid. */
+/* .osp: the Seller Center's "next step" panel (SellerOrders.jsx) still uses these.
+   .osd (further down): the buyer's order details (OrderStatusPanel.jsx). */
 .osp {
   --osp: #059669;
   --osp-soft: #ecfdf5;
@@ -75,3 +76,85 @@
 }
 .osp-proof { display: block; width: 120px; max-width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 10px; background: var(--t-neutral-100, #f3f4f6); }
 .osp-proof img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Buyer order details: plain, no colour blocks ───────────────────────
+   A status line, then the steps as a vertical timeline (green dots for what
+   has happened, a hollow ring for the step in progress, small grey dots for
+   what is still to come), then simple grey boxes for
+   where it goes and how it is paid. */
+.osd-title { margin: 0; color: var(--t-neutral-900, #111827); font-size: 16px; font-weight: 600; line-height: 1.35; }
+.osd-text { margin: 4px 0 0; color: var(--t-neutral-500, #6b7280); font-size: 14px; line-height: 1.5; }
+
+.osd-steps { margin: 16px 0 0; padding: 0; list-style: none; }
+.osd-steps li { position: relative; display: flex; gap: 16px; min-height: 40px; padding-bottom: 14px; }
+.osd-steps li:last-child { min-height: 0; padding-bottom: 0; }
+.osd-steps li::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: -2px;
+  left: 6px;
+  width: 2px;
+  background: var(--t-neutral-200, #e5e7eb);
+}
+.osd-steps li:last-child::before { display: none; }
+.osd-dot {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-top: 4px;
+  display: grid;
+  place-items: center;
+}
+.osd-dot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--t-neutral-300, #d1d5db);
+}
+.osd-steps li.is-done .osd-dot::after {
+  width: 12px;
+  height: 12px;
+  background: var(--t-primary-600, #059669);
+  box-shadow: 0 0 0 4px var(--t-primary-50, #ecfdf5);
+}
+/* The step in progress: a hollow ring, not yet done. */
+.osd-steps li.is-current .osd-dot::after {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--t-primary-600, #059669);
+  background: var(--t-neutral-0, #fff);
+  box-sizing: border-box;
+}
+.osd-step { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.osd-step-label { color: var(--t-neutral-400, #9ca3af); font-size: 15px; line-height: 1.4; }
+.osd-steps li.is-done .osd-step-label,
+.osd-steps li.is-current .osd-step-label { color: var(--t-neutral-900, #111827); }
+.osd-step time { color: var(--t-neutral-400, #9ca3af); font-size: 13px; }
+
+.osd-box {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+.osd-box-icon { flex-shrink: 0; margin-top: 2px; color: var(--t-primary-600, #059669); }
+.osd-box-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.osd-box-text p { margin: 0; color: var(--t-neutral-800, #1f2937); font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
+.osd-box-text .osd-sub { color: var(--t-neutral-500, #6b7280); font-size: 13.5px; }
+.osd-line { display: inline-flex; align-items: center; gap: 6px; }
+.osd-line svg { color: var(--t-neutral-400, #9ca3af); }
+.osd-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  color: var(--t-primary-700, #047857);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}

@@ -683,26 +683,26 @@ const Header = () => {
       {isTabPage && <InstallAppBar />}
       {isTabPage && <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <Link className={location.pathname === '/' ? 'is-active' : ''} to="/">
-          <HomeIcon size={21} weight={location.pathname === '/' ? 'fill' : 'regular'} />
+          <HomeIcon size={21} weight={location.pathname === '/' ? 'fill' : 'light'} />
           <span>Home</span>
         </Link>
         <Link className={location.pathname === '/cart' ? 'is-active' : ''} to="/cart">
           <span className="mobile-bottom-icon-wrap">
-            <ShoppingCart size={21} weight={location.pathname === '/cart' ? 'fill' : 'regular'} />
+            <ShoppingCart size={21} weight={location.pathname === '/cart' ? 'fill' : 'light'} />
             {cartCount > 0 && <b>{cartCount > 99 ? '99+' : cartCount}</b>}
           </span>
           <span>Cart</span>
         </Link>
         <Link className={location.pathname.startsWith('/messages') ? 'is-active' : ''} to="/messages">
-          <ChatCircle size={21} weight={location.pathname.startsWith('/messages') ? 'fill' : 'regular'} />
+          <ChatCircle size={21} weight={location.pathname.startsWith('/messages') ? 'fill' : 'light'} />
           <span>Messages</span>
         </Link>
         <Link className={location.pathname.startsWith('/notifications') ? 'is-active' : ''} to="/notifications">
-          <Bell size={21} weight={location.pathname.startsWith('/notifications') ? 'fill' : 'regular'} />
+          <Bell size={21} weight={location.pathname.startsWith('/notifications') ? 'fill' : 'light'} />
           <span>Notifications</span>
         </Link>
         <Link className={location.pathname.startsWith('/profile') ? 'is-active' : ''} to="/profile">
-          <User size={21} weight={location.pathname.startsWith('/profile') ? 'fill' : 'regular'} />
+          <User size={21} weight={location.pathname.startsWith('/profile') ? 'fill' : 'light'} />
           <span>Profile</span>
         </Link>
       </nav>}

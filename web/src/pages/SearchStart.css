@@ -375,9 +375,8 @@
 }
 
 .ss-sug-text {
-  display: flex;
+  display: block;
   flex: 1;
-  flex-direction: column;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -389,6 +388,7 @@
 }
 
 .ss-sug-text small {
+  display: block;
   color: var(--t-neutral-400, #9ca3af);
   font-size: 12px;
 }

@@ -78,8 +78,8 @@ export default function SearchStart() {
   }, [typed]);
 
   const shownCategories = useMemo(() => {
-    const list = [...categories];
-    // Fullest categories first once their counts are in.
+    // Fullest categories first once their counts are in; empty ones are left out.
+    const list = categories.filter((c) => counts[c.id] !== 0);
     if (Object.keys(counts).length) list.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
     return list;
   }, [categories, counts]);
