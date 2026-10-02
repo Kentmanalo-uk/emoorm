@@ -18,13 +18,13 @@ import { androidAppVersion } from './inApp';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 const appBridge = () => (typeof window === 'undefined' ? null : window.EmoormAndroid);
-// Apps before 1.3.2 try Android's account sheet, which Google refuses (the
-// app isn't registered in the site's Google Cloud project), and have no way
-// back from that. They use the browser route instead, which the server now
-// sends to the website's own sign-in page (/app-google).
+// Apps before 1.3.4 can show Android's account sheet where Google won't
+// finish it (the app isn't registered in the site's Google Cloud project):
+// picking an account there does nothing. They use the browser route instead,
+// which the server sends to the website's own sign-in page (/app-google).
 const isOldApp = () => {
   const [a = 0, b = 0, c = 0] = String(androidAppVersion() || '').split('.').map(Number);
-  return a * 10000 + b * 100 + c < 10302;
+  return a * 10000 + b * 100 + c < 10304;
 };
 const hasNativeGoogle = () => typeof appBridge()?.signInWithGoogle === 'function' && Boolean(GOOGLE_CLIENT_ID)
   && !(isOldApp() && typeof appBridge()?.startGoogleSignIn === 'function');

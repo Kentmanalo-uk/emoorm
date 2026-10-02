@@ -1,16 +1,15 @@
 {
   "name": "E-MOORM",
   "package": "shop.emoorm.app",
-  "version": "1.3.3",
-  "versionCode": 7,
+  "version": "1.3.4",
+  "versionCode": 8,
   "minAndroid": "7.0",
-  "file": "/downloads/E-MOORM-1.3.3.apk",
-  "size": 1043046,
-  "sha256": "3cd756c4ff873b2ece3c6a1f92614c8a804bc46abdc835265e951a49b82bba33",
+  "file": "/downloads/E-MOORM-1.3.4.apk",
+  "size": 1040674,
+  "sha256": "266bebdbe8b29988cbfede88e9424a99b73f463be8ebd393e3e763dec2100b5b",
   "certificateSha256": "9F:60:02:EF:10:02:55:0F:51:DA:63:3E:B5:CF:3B:0D:37:28:2C:B8:08:6C:AF:0F:57:0C:C4:AD:8F:A0:AB:22",
   "released": "2026-10-02",
   "notes": [
-    "Sign in with Google right in the app, with Android's own Google account sheet (one tap if you signed in before).",
-    "If Google can't open in the app, it signs you in through your phone's browser and brings you straight back."
+    "Picking a Google account to sign in now always signs you in: where Android's own Google sheet can't finish, Google opens in your phone's browser and brings you straight back."
   ]
 }
