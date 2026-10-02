@@ -1980,3 +1980,14 @@
     background: var(--t-neutral-200, #e5e7eb);
   }
 }
+
+/* The two banners beside the main banner: their pictures are zoomed a touch
+   inside the card, so a thin frame or edge line drawn into the uploaded image
+   is cropped away. */
+.banner-sidebar .banner-card-image {
+  overflow: hidden;
+}
+
+.banner-sidebar .banner-card-image img {
+  transform: scale(1.03);
+}

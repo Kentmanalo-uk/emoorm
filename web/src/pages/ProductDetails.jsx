@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import useSeo, { productSchema, breadcrumbs, clampText } from '../lib/seo';
 import {
   Heart, ShareNetwork as Share2, Storefront as Store, MapPin,
@@ -101,6 +101,8 @@ const ProductDetails = () => {
 
   // Phone layout (≤768px): its own top bar, gallery and action bar.
   const isPhone = usePhoneLayout();
+  // The picture tapped to open this product (see lib/productTransition), shown while it loads.
+  const previewImage = useLocation().state?.previewImage || null;
   // Keyed to the product, so opening another product starts on its first
   // image — no reset effect needed.
   const [slideState, setSlideState] = useState({ slug: null, index: 0 });
@@ -407,8 +409,15 @@ const ProductDetails = () => {
   if (isLoading) {
     return (
       <Layout>
-        <div className="pdp">
+        <div className={`pdp${isPhone && previewImage ? ' pdp-is-phone' : ''}`}>
           <div className="container">
+            {isPhone && previewImage && (
+              <div className="pdp-m-gallery">
+                <div className="pdp-m-track">
+                  <div className="pdp-m-slide"><img src={previewImage} alt="" /></div>
+                </div>
+              </div>
+            )}
             {/* breadcrumbs */}
             <div className="pdp-skel-crumbs">
               <Skeleton width={40} height={12} />
@@ -423,7 +432,13 @@ const ProductDetails = () => {
             {/* hero card */}
             <div className="pdp-hero pdp-hero-skel">
               <div className="pdp-hero-gallery">
-                <Skeleton width="100%" height={460} radius={6} />
+                {previewImage && !isPhone ? (
+                  <div className="pdp-gallery-main">
+                    <img src={previewImage} alt="" className="pdp-gallery-image" />
+                  </div>
+                ) : (
+                  <Skeleton width="100%" height={460} radius={6} />
+                )}
                 <div className="pdp-thumbs-skel">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Skeleton key={i} width={68} height={68} radius={4} />

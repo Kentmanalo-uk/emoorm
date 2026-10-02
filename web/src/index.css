@@ -565,3 +565,57 @@ input[type="radio"] {
     animation: none;
   }
 }
+
+/* Opening a product: the tapped picture glides into the product page's main
+   picture (lib/productTransition.jsx). One long, soft glide that slows into
+   place; early on, the small card picture hands over to the sharp product
+   picture, so it never looks stretched or blurry. The rest of the page
+   cross-fades underneath. */
+::view-transition-group(product-hero) {
+  animation-duration: 480ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::view-transition-image-pair(product-hero) {
+  isolation: auto;
+}
+
+::view-transition-old(product-hero),
+::view-transition-new(product-hero) {
+  height: 100%;
+  object-fit: cover;
+  mix-blend-mode: normal;
+  backface-visibility: hidden;
+}
+
+::view-transition-old(product-hero) {
+  animation: product-hero-out 200ms ease-out both;
+}
+
+::view-transition-new(product-hero) {
+  animation: product-hero-in 240ms ease-out both;
+}
+
+@keyframes product-hero-out {
+  to { opacity: 0; }
+}
+
+@keyframes product-hero-in {
+  from { opacity: 0; }
+}
+
+::view-transition-old(root) {
+  animation: product-page-out 220ms ease-out both;
+}
+
+::view-transition-new(root) {
+  animation: product-page-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes product-page-out {
+  to { opacity: 0; }
+}
+
+@keyframes product-page-in {
+  from { opacity: 0; }
+}

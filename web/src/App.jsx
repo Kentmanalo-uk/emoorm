@@ -11,6 +11,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import Profile from './pages/Profile';
 import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';
+import ProductTransitions from './lib/productTransition';
 import ProductReviews from './pages/ProductReviews';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
@@ -155,6 +156,7 @@ function AppRoutes() {
 
   return (
     <>
+      <ProductTransitions />
       <Routes location={background || location}>
         {/* Public routes */}
         <Route path="/" element={<Home />} />
