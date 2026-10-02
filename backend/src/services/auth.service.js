@@ -1289,6 +1289,14 @@ const googleAppStartUrl = (challenge) => {
   if (typeof challenge !== 'string' || !PKCE_CHALLENGE.test(challenge)) {
     return googleAppReturn({ error: 'invalid_request' });
   }
+  // Unless GOOGLE_APP_CALLBACK_URL says Google lists this server's callback
+  // as a redirect address (it didn't, and Google showed "Error 400:
+  // redirect_uri_mismatch"), apps that start here (1.3.1 and older) go to
+  // the website's sign-in page for the app instead, which uses the site's
+  // own Google pop-up and hands the same pass back.
+  if (!config.google.appCallbackUrl) {
+    return `${config.frontendUrl.replace(/\/$/, '')}/app-google?${new URLSearchParams({ challenge })}`;
+  }
   try {
     return googleService.authorizationUrl(generateGoogleAppState(challenge), googleAppCallbackUrl());
   } catch {

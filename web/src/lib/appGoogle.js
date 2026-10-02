@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import axios from './axios';
+import { androidAppVersion } from './inApp';
 
 /**
  * "Continue with Google" inside the E-MOORM Android app (apk/). Google blocks
@@ -17,7 +18,16 @@ import axios from './axios';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 const appBridge = () => (typeof window === 'undefined' ? null : window.EmoormAndroid);
-const hasNativeGoogle = () => typeof appBridge()?.signInWithGoogle === 'function' && Boolean(GOOGLE_CLIENT_ID);
+// Apps before 1.3.2 try Android's account sheet, which Google refuses (the
+// app isn't registered in the site's Google Cloud project), and have no way
+// back from that. They use the browser route instead, which the server now
+// sends to the website's own sign-in page (/app-google).
+const isOldApp = () => {
+  const [a = 0, b = 0, c = 0] = String(androidAppVersion() || '').split('.').map(Number);
+  return a * 10000 + b * 100 + c < 10302;
+};
+const hasNativeGoogle = () => typeof appBridge()?.signInWithGoogle === 'function' && Boolean(GOOGLE_CLIENT_ID)
+  && !(isOldApp() && typeof appBridge()?.startGoogleSignIn === 'function');
 const hasBrowserGoogle = () => typeof appBridge()?.startGoogleSignIn === 'function';
 
 export const hasAppGoogle = () => hasNativeGoogle() || hasBrowserGoogle();
