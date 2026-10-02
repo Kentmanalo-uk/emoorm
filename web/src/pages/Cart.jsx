@@ -435,29 +435,33 @@ const Cart = () => {
     if (value.trim()) next.set('cartSearch', value); else next.delete('cartSearch');
     setSearchParams(next, { replace: true });
   };
+  // Phones: the title bar stays at the top while the cart scrolls; the
+  // search field under it scrolls away with the items.
   const phoneHead = (
-    <div className="cart-m-head">
-      <div className="cart-m-titlebar">
-        <h1 className="cart-m-title">
-          Cart
-          {itemCount > 0 && <span className="cart-m-count">{itemCount}</span>}
-        </h1>
-        <MoreMenu
-          className="cart-m-more"
-          buttonClassName="cart-m-more-btn"
-          label="Cart options"
-          items={[
-            { key: 'shop', icon: <Storefront size={17} />, label: 'Continue shopping', to: '/products' },
-            { key: 'wish', icon: <Heart size={17} />, label: 'My wishlist', to: '/wishlist' },
-            items.length > 0 && {
-              key: 'clear',
-              icon: <Trash2 size={17} />,
-              label: 'Clear cart',
-              danger: true,
-              onClick: handleClearCart,
-            },
-          ]}
-        />
+    <>
+      <div className="cart-m-head">
+        <div className="cart-m-titlebar">
+          <h1 className="cart-m-title">
+            Cart
+            {itemCount > 0 && <span className="cart-m-count">{itemCount}</span>}
+          </h1>
+          <MoreMenu
+            className="cart-m-more"
+            buttonClassName="cart-m-more-btn"
+            label="Cart options"
+            items={[
+              { key: 'shop', icon: <Storefront size={17} />, label: 'Continue shopping', to: '/products' },
+              { key: 'wish', icon: <Heart size={17} />, label: 'My wishlist', to: '/wishlist' },
+              items.length > 0 && {
+                key: 'clear',
+                icon: <Trash2 size={17} />,
+                label: 'Clear cart',
+                danger: true,
+                onClick: handleClearCart,
+              },
+            ]}
+          />
+        </div>
       </div>
       {items.length > 0 && (
         <label className="cart-m-search">
@@ -471,7 +475,7 @@ const Cart = () => {
           />
         </label>
       )}
-    </div>
+    </>
   );
 
   if (items.length === 0) {

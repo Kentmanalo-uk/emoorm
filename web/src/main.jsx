@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import './index.css';
+import './styles/phone-app.css';
 import App from './App.jsx';
 import { loadGoogleTranslate } from './lib/googleTranslate';
 import { bootTheme } from './hooks/useTheme';

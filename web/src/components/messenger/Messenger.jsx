@@ -21,8 +21,12 @@ import { useSheetClose } from '../../hooks/useSheetMotion';
 import './Messenger.css';
 import { ConversationListSkeleton } from '../ui/PageSkeletons';
 import { readCache, writeCache } from '../../lib/pageCache';
+import MoormyEntry from '../moormy/MoormyEntry';
+import MoormyThread from '../moormy/MoormyThread';
 
 const POLL_INTERVAL_MS = 5000;
+// Ate Moormy's chat (buyers only): opened like a conversation, as ?c=moormy.
+const MOORMY_ID = 'moormy';
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const QUICK_QUESTIONS = [
@@ -352,6 +356,9 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [unreadOnly, setUnreadOnly] = useState(false);
+  // A question typed in Ate Moormy's intro card, asked as her chat opens.
+  const [moormyAsk, setMoormyAsk] = useState(null);
+  const withMoormy = role === 'buyer';
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -430,7 +437,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
 
   // Load active conversation whenever activeId changes
   useEffect(() => {
-    if (!activeId) return;
+    if (!activeId || activeId === MOORMY_ID) return;
     fetchConversation(activeId).then((convo) => {
       if (convo) scrollToBottom();
       // mark read (in the background: no activity line)
@@ -440,7 +447,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
 
   // Poll for new messages every few seconds
   useEffect(() => {
-    if (!activeId) return undefined;
+    if (!activeId || activeId === MOORMY_ID) return undefined;
     const interval = setInterval(async () => {
       if (activeIdRef.current !== activeId) return;
       const prevCount = activeConvo?.messages?.length || 0;
@@ -519,6 +526,11 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     setActiveId(id);
     resetComposer();
     setSearchParams({ c: id }, { replace: true });
+  };
+
+  const openMoormy = (question) => {
+    if (question) setMoormyAsk({ id: Date.now(), text: question });
+    handleSelect(MOORMY_ID);
   };
 
   const handleBackToList = () => {
@@ -769,6 +781,14 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
           </div>
         )}
         <div className="msgr-list-scroll">
+          {withMoormy && !searchQuery && !unreadOnly && (
+            <MoormyEntry
+              userId={currentUser?.id}
+              firstName={String(currentUser?.fullName || '').trim().split(/\s+/)[0]}
+              active={activeId === MOORMY_ID}
+              onOpen={openMoormy}
+            />
+          )}
           {loadingList ? (
             <ConversationListSkeleton />
           ) : filteredConversations.length === 0 ? (
@@ -807,7 +827,14 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
       </aside>
 
       <section className="msgr-thread">
-        {!activeId ? (
+        {activeId === MOORMY_ID && withMoormy ? (
+          <MoormyThread
+            userId={currentUser?.id}
+            pendingAsk={moormyAsk}
+            onAsked={() => setMoormyAsk(null)}
+            onBack={handleBackToList}
+          />
+        ) : !activeId ? (
           <div className="msgr-thread-empty">
             <EmptyArt name="messages" size={96} />
             <p>Select a conversation to start chatting.</p>

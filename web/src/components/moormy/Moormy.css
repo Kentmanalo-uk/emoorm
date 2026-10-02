@@ -1,0 +1,518 @@
+/*
+ * Ate Moormy in the buyer's Messages: Emoorm's pink and green, with a little
+ * motion to say she is new (a drifting gradient edge, a typed greeting, a
+ * question box that suggests what to ask). Quiet again for anyone who asks
+ * for reduced motion.
+ */
+.mmy-intro,
+.mmy-convo,
+.mmy-thread {
+  --mmy-pink: var(--t-accent-500, #ec4899);
+  --mmy-pink-soft: #fdf2f8;
+  --mmy-pink-line: #fbcfe8;
+  --mmy-pink-ink: #be185d;
+  --mmy-green: var(--t-primary-500, #10b981);
+  --mmy-gradient: linear-gradient(135deg, var(--mmy-pink), var(--mmy-green));
+}
+
+/* ── Her picture ─────────────────────────────────────────────────── */
+.mmy-avatar {
+  position: relative;
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--t-accent-500, #ec4899), var(--t-primary-500, #10b981));
+  color: #fff;
+  isolation: isolate;
+}
+
+.mmy-avatar svg {
+  animation: mmy-twinkle 4.8s ease-in-out infinite;
+}
+
+/* A soft halo that breathes pink to green. */
+.mmy-avatar.is-glow::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--t-accent-500, #ec4899), var(--t-primary-500, #10b981));
+  opacity: 0.28;
+  filter: blur(8px);
+  animation: mmy-breathe 3.2s ease-in-out infinite;
+}
+
+.mmy-ai-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--t-accent-500, #ec4899), var(--t-primary-500, #10b981));
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  line-height: 15px;
+  vertical-align: 2px;
+}
+
+/* ── The introduction, before the first question ─────────────────── */
+.mmy-intro {
+  position: relative;
+  margin: 10px 12px 6px;
+  padding: 14px 14px 12px;
+  border: 1.5px solid transparent;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, #fff 0%, #fff 100%) padding-box,
+    linear-gradient(120deg, var(--mmy-pink), var(--mmy-green), var(--mmy-pink), var(--mmy-green)) border-box;
+  background-size: 100% 100%, 300% 300%;
+  box-shadow: 0 6px 20px -12px rgba(236, 72, 153, 0.45);
+  animation:
+    mmy-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    mmy-edge 7s linear infinite;
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+/* A faint pink-to-green wash over the white. */
+.mmy-intro::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.06), rgba(16, 185, 129, 0.06));
+  pointer-events: none;
+}
+
+.mmy-intro.is-sending {
+  transform: scale(0.985);
+  box-shadow: 0 10px 28px -12px rgba(16, 185, 129, 0.55);
+}
+
+.mmy-intro-head {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.mmy-intro-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.mmy-intro-name {
+  display: flex;
+  align-items: center;
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+}
+
+.mmy-intro-name strong {
+  font-weight: 600;
+}
+
+.mmy-intro-text p {
+  min-height: 2.9em;
+  margin: 3px 0 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.mmy-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: -2px;
+  background: var(--mmy-gradient);
+  animation: mmy-blink 0.9s steps(2, start) infinite;
+}
+
+.mmy-ask {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mmy-ask-field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.mmy-ask-field input {
+  width: 100%;
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-900, #111827);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.mmy-ask-field input:focus {
+  border-color: var(--mmy-pink-line);
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.12);
+}
+
+/* The suggested question, sliding in one at a time while the box is empty. */
+.mmy-ask-hint {
+  position: absolute;
+  top: 50%;
+  left: 17px;
+  right: 12px;
+  overflow: hidden;
+  color: var(--t-neutral-400, #9ca3af);
+  font-size: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: mmy-hint 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mmy-ask-send {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mmy-gradient);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
+}
+
+.mmy-ask-send:not(:disabled) {
+  box-shadow: 0 4px 12px -4px rgba(236, 72, 153, 0.6);
+}
+
+.mmy-ask-send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mmy-ask-send:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.mmy-intro.is-sending .mmy-ask-send svg {
+  animation: mmy-fly 260ms ease-in both;
+}
+
+/* ── Her row in the list, after the first question ──────────────── */
+.mmy-convo {
+  background: linear-gradient(90deg, rgba(236, 72, 153, 0.05), rgba(16, 185, 129, 0.05));
+  animation: mmy-rise 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mmy-convo .msgr-avatar {
+  overflow: visible;
+  background: transparent;
+}
+
+.mmy-convo .msgr-convo-title {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── Her chat ─────────────────────────────────────────────────────── */
+.mmy-thread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.mmy-thread .msgr-thread-name {
+  display: flex;
+  align-items: center;
+}
+
+.mmy-messages {
+  scroll-behavior: smooth;
+}
+
+.mmy-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px 6px;
+  text-align: center;
+}
+
+.mmy-hero strong {
+  margin-top: 4px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.mmy-hero small {
+  max-width: 300px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* Her picture beside the start of what she says, not its end. */
+.mmy-row {
+  align-items: flex-start;
+  animation: mmy-pop 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mmy-row > .mmy-avatar {
+  margin-top: 2px;
+}
+
+.mmy-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  max-width: 82%;
+}
+
+.mmy-row.is-self .mmy-message {
+  align-items: flex-end;
+}
+
+.mmy-thread .mmy-bubble {
+  max-width: 100%;
+  border-color: var(--mmy-pink-line);
+  background: var(--mmy-pink-soft);
+}
+
+.mmy-thread .msgr-bubble-row.is-self .mmy-bubble {
+  border-color: var(--t-primary-700, #047857);
+  background: var(--t-primary-600, #059669);
+}
+
+.mmy-thread > .mmy-messages > .msgr-bubble-row > .mmy-bubble {
+  max-width: 82%;
+}
+
+.mmy-bubble p {
+  margin: 0;
+}
+
+.mmy-bubble p + p,
+.mmy-bubble p + ul,
+.mmy-bubble p + ol,
+.mmy-bubble ul + p,
+.mmy-bubble ol + p {
+  margin-top: 6px;
+}
+
+.mmy-bubble ul,
+.mmy-bubble ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.mmy-bubble li + li {
+  margin-top: 3px;
+}
+
+.mmy-thread .mmy-bubble.is-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.mmy-retry {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fff;
+  color: #991b1b;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.mmy-suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 34px;
+}
+
+.mmy-suggest-label {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+}
+
+.mmy-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mmy-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--mmy-pink-line);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--mmy-pink-ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  animation: mmy-pop 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: background 140ms ease;
+}
+
+.mmy-chip:nth-child(2) { animation-delay: 50ms; }
+.mmy-chip:nth-child(3) { animation-delay: 100ms; }
+.mmy-chip:nth-child(4) { animation-delay: 150ms; }
+.mmy-chip:nth-child(n + 5) { animation-delay: 200ms; }
+
+.mmy-chip:active,
+.mmy-chip:hover:not(:disabled) {
+  background: var(--mmy-pink-soft);
+}
+
+.mmy-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mmy-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mmy-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* Typing: three dots, pink and green in turn. */
+.mmy-typing {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 4px !important;
+  padding: 12px 14px !important;
+}
+
+.mmy-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mmy-pink);
+  animation: mmy-dot 1s ease-in-out infinite;
+}
+
+.mmy-typing span:nth-child(2) {
+  background: var(--mmy-green);
+  animation-delay: 0.15s;
+}
+
+.mmy-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Send: the pink-to-green circle (phones draw the messenger's plain icon). */
+.mmy-thread .msgr-composer-send.mmy-send {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--mmy-gradient);
+  color: #fff;
+}
+
+.mmy-thread .msgr-composer-send.mmy-send:disabled {
+  background: var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-0, #fff);
+}
+
+/* ── Motion ──────────────────────────────────────────────────────── */
+@keyframes mmy-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mmy-edge {
+  from { background-position: 0 0, 0% 50%; }
+  to { background-position: 0 0, 300% 50%; }
+}
+
+@keyframes mmy-twinkle {
+  0%, 82%, 100% { transform: none; }
+  88% { transform: rotate(18deg) scale(1.18); }
+  94% { transform: rotate(-6deg) scale(0.96); }
+}
+
+@keyframes mmy-breathe {
+  0%, 100% { opacity: 0.2; transform: scale(0.96); }
+  50% { opacity: 0.45; transform: scale(1.06); }
+}
+
+@keyframes mmy-blink {
+  to { visibility: hidden; }
+}
+
+@keyframes mmy-hint {
+  from { opacity: 0; transform: translateY(calc(-50% + 8px)); }
+  to { opacity: 1; transform: translateY(-50%); }
+}
+
+@keyframes mmy-fly {
+  to { opacity: 0; transform: translate(10px, -10px) scale(0.8); }
+}
+
+@keyframes mmy-pop {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mmy-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.55; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mmy-intro,
+  .mmy-convo,
+  .mmy-row,
+  .mmy-chip,
+  .mmy-ask-hint,
+  .mmy-avatar svg,
+  .mmy-avatar.is-glow::after,
+  .mmy-caret,
+  .mmy-intro.is-sending .mmy-ask-send svg {
+    animation: none;
+  }
+}

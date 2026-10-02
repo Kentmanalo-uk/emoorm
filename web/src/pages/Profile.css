@@ -1627,7 +1627,7 @@
 /* Phones: My Purchase icons in grey; the avatar circle behind the green-to-pink
    person icon (visitors, and accounts with no photo yet) gets a soft tint. */
 @media (max-width: 768px) {
-  .profile-page .pf-m-purchase-icon { color: var(--t-neutral-500, #6b7280); }
+  .profile-page .pf-m-purchase-icon { color: var(--t-primary-600, #059669); }
   .profile-page .pf-m-avatar,
   .profile-page .pf-m-avatar .profile-avatar-placeholder { background: linear-gradient(135deg, #ecfdf5 0%, #fdf2f8 100%); }
 }
@@ -1640,4 +1640,18 @@
     width: 100%;
     height: 100%;
   }
+}
+
+/* My Purchase icons (signed in, and visitors): filled, in the green gradient
+   (ToolGradients' green; the solid green stays as the fallback). The
+   gradient definitions sit in a hidden SVG beside the icons. */
+.pf-m .sh-tool-gradients {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.pf-m-purchase-icon svg {
+  fill: url(#sh-grad-green) var(--t-primary-600, #059669);
 }

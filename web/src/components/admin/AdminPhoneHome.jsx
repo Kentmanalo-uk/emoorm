@@ -10,6 +10,7 @@ import { actionLabel } from '../../lib/auditActions';
 import { useAdminShell } from './adminShell';
 import { QuickToolsCard } from './AdminToolCards';
 import '../../pages/SellerApp.css';
+import PageMenu from '../layout/PageMenu';
 
 /*
  * Admin Home on a phone: the seller app's Home, in the admin's words, kept to
@@ -80,6 +81,7 @@ export default function AdminPhoneHome({ attention, analytics, activity }) {
             <Bell size={20} />
             {unreadCount > 0 && <b className="sh-badge">{unreadCount > 9 ? '9+' : unreadCount}</b>}
           </Link>
+          <PageMenu area="admin" />
         </div>
       </header>
 

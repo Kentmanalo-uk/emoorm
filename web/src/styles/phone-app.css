@@ -1,0 +1,255 @@
+/*
+ * Phones (≤768px) only: the app look shared by buyer, seller and admin pages.
+ *
+ * 1. Page headers are solid white bars with a hairline under them, held at
+ *    the top while the page scrolls. Their buttons are plain icons (the bar
+ *    is their background), ending with the page menu (⋯, PageMenu).
+ * 2. Pages are white, and their sections run the full screen width instead
+ *    of sitting as rounded cards on grey: a section ends with an 8px grey
+ *    band, a list row with a hairline.
+ *
+ * Page stylesheets load after this one (route by route), so the overrides
+ * here are marked !important. Desktop is untouched.
+ */
+@media (max-width: 768px) {
+  :root {
+    --pa-bar: var(--t-neutral-0, #fff);
+    --pa-line: var(--t-neutral-200, #e5e7eb);
+    --pa-band: var(--t-neutral-100, #f3f4f6);
+    --pa-ink: var(--t-neutral-900, #111827);
+    --pa-icon: var(--t-neutral-700, #374151);
+    --pa-gutter: 12px;
+  }
+
+  /* ── 1. Header bars ──────────────────────────────────────────────── */
+
+  /* Bars that already span the screen. */
+  .layout-back-bar,
+  .scm-head,
+  .scm-backbar,
+  .stores-m-bar,
+  .srch-m-bar,
+  .shop-m-topbar,
+  .cart-m-head,
+  .msgr-page-head,
+  .login-gate-head {
+    position: sticky !important;
+    top: 0;
+    z-index: 120;
+    background: var(--pa-bar) !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid var(--pa-line);
+  }
+
+  /* Bars drawn inside the page's 12px gutter: pulled out to the edges. */
+  .sh-head,
+  .sme-head,
+  .profile-mobile-page-header,
+  .layout--flat .notif-page-header,
+  .layout--flat .notif-header,
+  .prv-top {
+    position: sticky !important;
+    top: 0;
+    z-index: 120;
+    margin-left: calc(-1 * var(--pa-gutter)) !important;
+    margin-right: calc(-1 * var(--pa-gutter)) !important;
+    padding-left: var(--pa-gutter) !important;
+    padding-right: calc(var(--pa-gutter) - 4px) !important;
+    background: var(--pa-bar) !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid var(--pa-line);
+  }
+
+  /* Plain icons: the bar is their background. */
+  .layout-back-btn,
+  .scm-icon,
+  .scm-back,
+  .sh-icon,
+  .profile-mobile-header-action,
+  .cart-m-more-btn,
+  .msgr-page-tool,
+  .notif-tool-btn,
+  .page-menu-btn,
+  .stores-m-back,
+  .srch-m-back,
+  .prv-back,
+  .shop-m-icon {
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--pa-icon);
+  }
+
+  .layout-back-btn:active,
+  .scm-icon:active,
+  .scm-back:active,
+  .sh-icon:active,
+  .profile-mobile-header-action:active,
+  .cart-m-more-btn:active,
+  .msgr-page-tool:active,
+  .notif-tool-btn:active,
+  .page-menu-btn:active,
+  .stores-m-back:active,
+  .srch-m-back:active,
+  .prv-back:active,
+  .shop-m-icon:active {
+    background: var(--pa-band) !important;
+  }
+
+  /* An open search or menu: the icon turns green rather than filling in. */
+  .msgr-page-tool.is-active,
+  .msgr-page-tool[aria-expanded='true'],
+  .notif-tool-btn.is-active,
+  .notif-tool-btn[aria-expanded='true'],
+  .page-menu-btn[aria-expanded='true'] {
+    color: var(--t-primary-700, #047857);
+  }
+
+  .layout-back-btn,
+  .scm-back {
+    color: var(--pa-ink);
+  }
+
+  /* The shop page's icons were white, for its dark banner. */
+  .shop-m-topbar .shop-m-icon {
+    color: var(--pa-icon) !important;
+  }
+
+  .shop-m-topbar .shop-m-icon:first-child {
+    color: var(--pa-ink) !important;
+  }
+
+  /* The shop page's bar sits above its banner now, not over it. */
+  .shop-m-topbar {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-bottom: 0 !important;
+    min-height: 56px;
+  }
+
+  /* Counts on the icons: ringed in the bar's white. */
+  .scm-badge,
+  .sh-badge {
+    border-color: var(--pa-bar) !important;
+  }
+
+  /* The page menu button: the size of the other header icons. */
+  .page-menu {
+    flex-shrink: 0;
+  }
+
+  .page-menu-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .layout-back-end {
+    gap: 2px;
+  }
+
+  /* ── 2. White pages, full-width sections ─────────────────────────── */
+
+  .layout--flat,
+  .layout--flat .layout-main,
+  .layout--flat .layout-main :is([class$='-page'], [class*='-page ']),
+  .sc-shell,
+  .sc-shell .sc-main,
+  .sc-shell .sc-content,
+  .ac-shell.is-phone,
+  .ac-shell.is-phone .ac-main,
+  .ac-shell.is-phone .ac-content {
+    background: var(--t-neutral-0, #fff) !important;
+  }
+
+  /* Sections: edge to edge, square, an 8px grey band under each. */
+  .layout--flat :is(
+    .pf-m-card, .pf-m-section, .orders-tabs, .profile-section, .address-empty,
+    .idv-status, .idv-card, .sc-chat, .ui-empty, .hc-panel, .prv-card,
+    .legal-page, .wishlist-empty, .municipality-feature-grid, .empty-state,
+    .about-hero, .about-steps > li, .about-feature
+  ),
+  :is(.sc-content, .ac-content) :is(
+    .sh-card:not(.sh-sales), .sh-notice, .seller-card, .smk-note, .sdc-block,
+    .seller-return-empty, .scm-tip, .an-growth, .scm-setlist, .sv-privacy, .admin-card,
+    .admin-home-banner-preview, .st-nav, .st-panel, .idv-status, .idv-card, .sc-chat, .ui-empty
+  ) {
+    margin-left: calc(-1 * var(--pa-gutter)) !important;
+    margin-right: calc(-1 * var(--pa-gutter)) !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border: 0 !important;
+    border-bottom: 8px solid var(--pa-band) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  /* The last section of a page needs no band under it. */
+  .layout--flat :is(.orders-tabs, .profile-section, .address-empty, .idv-card, .sc-chat, .ui-empty,
+    .hc-panel, .prv-card, .legal-page, .wishlist-empty, .empty-state, .about-feature):last-child,
+  :is(.sc-content, .ac-content) :is(.sh-card, .seller-card, .sdc-block, .seller-return-empty,
+    .scm-setlist, .admin-card, .st-panel, .idv-card, .sc-chat, .ui-empty):last-child {
+    border-bottom: 0 !important;
+  }
+
+  /* List rows: edge to edge, a hairline between them. */
+  .layout--flat :is(.stores-m-card, .help-topic-card, .municipality-store-card, .shop-m-row),
+  :is(.sc-content, .ac-content) .admin-side-banner-slot {
+    margin-left: calc(-1 * var(--pa-gutter)) !important;
+    margin-right: calc(-1 * var(--pa-gutter)) !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--pa-line) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  /* The sign-out row closes the Profile and Me pages. */
+  .layout--flat .pf-m-signout,
+  :is(.sc-content, .ac-content) .sme-logout {
+    margin-left: calc(-1 * var(--pa-gutter)) !important;
+    margin-right: calc(-1 * var(--pa-gutter)) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    width: auto !important;
+  }
+
+  /* Admin tables (one block per row on phones): rows run edge to edge with a
+     hairline between them, not as cards inside the list. */
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody {
+    gap: 0 !important;
+    padding: 0 !important;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr {
+    padding: 14px var(--pa-gutter) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--pa-line) !important;
+    border-radius: 0 !important;
+  }
+
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .ac-shell.is-phone .admin-table-wrap,
+  .ac-shell.is-phone .admin-card:has(> table) {
+    border-radius: 0 !important;
+  }
+}
+
+/* The page menu is a phone control; wider screens have their own menus. */
+@media (min-width: 769px) {
+  .page-menu {
+    display: none;
+  }
+}

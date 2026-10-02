@@ -19,6 +19,7 @@ import useEntryState from '../hooks/useEntryState';
 import './SellerDashboard.css';
 import './Notifications.css';
 import NotificationPicture from '../components/NotificationPicture';
+import ToolGradients from '../components/ui/ToolGradients';
 import { readCache, writeCache } from '../lib/pageCache';
 
 const TYPE_CONFIG = {
@@ -57,6 +58,16 @@ const TYPE_CONFIG = {
 function getConfig(type) {
   return TYPE_CONFIG[type] || TYPE_CONFIG.DEFAULT;
 }
+
+/** Phones: the gradient (ToolGradients) a kind's icon is filled with, from its colour. */
+const gradientOf = (color = '') => {
+  if (color.includes('primary')) return 'green';
+  if (color.includes('info')) return 'blue';
+  if (color.includes('orange')) return 'orange';
+  if (color.includes('danger')) return 'rose';
+  if (color.includes('warning')) return 'amber';
+  return 'slate';
+};
 
 /**
  * `bare` says a layout already wraps this page. `shell` says whose layout,
@@ -398,6 +409,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
           </div>
         ) : (
           <div className="notif-list">
+            {isPhone && <ToolGradients />}
             {notifications.map((notif) => {
               const cfg = getConfig(notif.type);
               const Icon = cfg.icon;
@@ -422,20 +434,30 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
                     picture={notif.picture}
                     Icon={Icon}
                     color={cfg.color}
-                    bg={cfg.bg}
+                    bg={isPhone ? 'var(--t-neutral-100, #f3f4f6)' : cfg.bg}
                     size={44}
-                    iconWeight="regular"
-                    className="notif-picture"
+                    iconWeight={isPhone ? 'fill' : 'regular'}
+                    className={`notif-picture${isPhone ? ` is-grad-${gradientOf(cfg.color)}` : ''}`}
                   />
 
                   <div className="notif-content">
-                    <div className="notif-title-row">
-                      <span className="notif-type-label" style={{ color: cfg.color }}>
-                        {cfg.label}
-                      </span>
-                      {!notif.isRead && <span className="notif-dot" />}
-                    </div>
-                    {notif.title && <p className="notif-heading">{notif.title}</p>}
+                    {/* Phones: no kind label above the title (the icon says
+                        it); the unread dot sits after the title instead. */}
+                    {!isPhone && (
+                      <div className="notif-title-row">
+                        <span className="notif-type-label" style={{ color: cfg.color }}>
+                          {cfg.label}
+                        </span>
+                        {!notif.isRead && <span className="notif-dot" />}
+                      </div>
+                    )}
+                    {notif.title && (
+                      <p className="notif-heading">
+                        {notif.title}
+                        {isPhone && !notif.isRead && <span className="notif-dot" />}
+                      </p>
+                    )}
+                    {isPhone && !notif.title && !notif.isRead && <span className="notif-dot" />}
                     <p className="notif-message">{notif.message}</p>
                     <span className="notif-time">{formatTime(notif.createdAt)}</span>
                   </div>

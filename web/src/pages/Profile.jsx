@@ -23,6 +23,8 @@ import { ProfileSkeleton } from '../components/ui/PageSkeletons';
 import { usePageCache } from '../lib/pageCache';
 import { afterSignOutPath } from '../lib/afterSignOut';
 import { countBuyerTabs } from '../lib/orderProgress';
+import PageMenu from '../components/layout/PageMenu';
+import ToolGradients from '../components/ui/ToolGradients';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -163,6 +165,7 @@ const Profile = () => {
             <Link to="/profile/settings" className="profile-mobile-header-action" aria-label="Settings">
               <Settings size={19} />
             </Link>
+            <PageMenu />
           </div>
         </div>
 
@@ -216,11 +219,12 @@ const Profile = () => {
             <h2>My Purchase</h2>
             <Link to="/profile/orders">See all <ChevronRight size={13} weight="bold" /></Link>
           </div>
+          <ToolGradients />
           <div className="pf-m-purchase">
             {purchase.map(([label, Icon, to, count]) => (
               <Link key={label} to={to}>
                 <span className="pf-m-purchase-icon">
-                  <Icon size={24} weight="bold" />
+                  <Icon size={24} weight="fill" />
                   {count > 0 && <b>{count > 99 ? '99+' : count}</b>}
                 </span>
                 <span>{label}</span>

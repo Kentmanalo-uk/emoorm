@@ -4,7 +4,9 @@ import {
   CaretRight as ChevronRight, Star, Question, MapPin, ArrowCounterClockwise, Lifebuoy,
 } from '@phosphor-icons/react';
 import Layout from './layout/Layout';
+import PageMenu from './layout/PageMenu';
 import GradientUserIcon from './ui/GradientUserIcon';
+import ToolGradients from './ui/ToolGradients';
 import '../pages/Profile.css';
 import './ProfileGuest.css';
 
@@ -49,6 +51,7 @@ export default function ProfileGuest() {
                     <Link to="/help" className="profile-mobile-header-action" aria-label="Help and support">
                       <Question size={19} />
                     </Link>
+                    <PageMenu />
                   </div>
                 </div>
 
@@ -71,10 +74,11 @@ export default function ProfileGuest() {
                     <h2>My Purchase</h2>
                     <Link {...needsLogin('/profile/orders')}>See all <ChevronRight size={13} weight="bold" /></Link>
                   </div>
+                  <ToolGradients />
                   <div className="pf-m-purchase">
                     {PURCHASE.map(([label, Icon, to]) => (
                       <Link key={label} {...needsLogin(to)}>
-                        <span className="pf-m-purchase-icon"><Icon size={24} weight="bold" /></span>
+                        <span className="pf-m-purchase-icon"><Icon size={24} weight="fill" /></span>
                         <span>{label}</span>
                       </Link>
                     ))}

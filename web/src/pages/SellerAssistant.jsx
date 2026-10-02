@@ -1,9 +1,10 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowClockwise, CaretRight, NotePencil, PaperPlaneRight, Sparkle,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
+import ReplyText from '../components/moormy/ReplyText';
 import useAuthStore from '../store/authStore';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -77,38 +78,6 @@ const saveChat = (userId, chat) => {
     localStorage.setItem(storeKey(userId), JSON.stringify(chat));
   } catch { /* the chat just starts fresh next time */ }
 };
-
-/** **bold** inside a line. */
-const inline = (text) => text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => (
-  /^\*\*[^*]+\*\*$/.test(part) ? <strong key={i}>{part.slice(2, -2)}</strong> : <Fragment key={i}>{part}</Fragment>
-));
-
-/** A reply as paragraphs and lists (the little markdown answers use). */
-function ReplyText({ text }) {
-  const blocks = [];
-  let list = null;
-  for (const raw of String(text || '').split('\n')) {
-    const line = raw.trim();
-    const bullet = /^[-*•]\s+(.*)$/.exec(line);
-    const step = /^(\d+)[.)]\s+(.*)$/.exec(line);
-    if (bullet || step) {
-      const type = bullet ? 'ul' : 'ol';
-      if (!list || list.type !== type) {
-        list = { type, items: [] };
-        blocks.push(list);
-      }
-      list.items.push(bullet ? bullet[1] : step[2]);
-      continue;
-    }
-    list = null;
-    if (line) blocks.push({ type: 'p', text: line.replace(/^#{1,6}\s*/, '') });
-  }
-  return blocks.map((b, i) => {
-    if (b.type === 'p') return <p key={i}>{inline(b.text)}</p>;
-    const Tag = b.type;
-    return <Tag key={i}>{b.items.map((item, j) => <li key={j}>{inline(item)}</li>)}</Tag>;
-  });
-}
 
 function Avatar({ size = 32 }) {
   return (

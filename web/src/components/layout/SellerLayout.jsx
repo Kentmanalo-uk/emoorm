@@ -17,6 +17,7 @@ import useSidebarCollapse from '../../hooks/useSidebarCollapse';
 import { useCompactLayout, useMobileNav, usePhoneLayout } from '../../hooks/useMobileNav';
 import LanguageSwitcher from '../LanguageSwitcher';
 import ShellSearch from './ShellSearch';
+import PageMenu from './PageMenu';
 import NavBadge from './NavBadge';
 import useAttention from '../../hooks/useAttention';
 import { sellerSearchSources } from '../../lib/shellSearchSources';
@@ -487,6 +488,7 @@ export default function SellerLayout() {
                 <Bell size={20} />
                 {unreadCount > 0 && <span className="scm-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
               </Link>
+              <PageMenu area="seller" />
             </div>
           </header>
         )}
@@ -507,6 +509,7 @@ export default function SellerLayout() {
                 <NotePencil size={20} />
               </button>
             )}
+            <PageMenu area="seller" />
           </header>
         )}
         <header className="sc-topbar">

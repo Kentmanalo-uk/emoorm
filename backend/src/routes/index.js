@@ -85,5 +85,6 @@ router.use('/profiles', require('./profile.routes'));
 router.use('/identity-verification', require('./identityVerification.routes'));
 router.use('/moderation', require('./moderation.routes'));
 router.use('/seller-assistant', require('./sellerAssistant.routes'));
+router.use('/buyer-assistant', require('./buyerAssistant.routes'));
 
 module.exports = router;

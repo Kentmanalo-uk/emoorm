@@ -14,6 +14,7 @@ import { useShare } from '../components/ShareSheet';
 import FeedbackDialog from '../components/feedback/FeedbackDialog';
 import './SellerDashboard.css';
 import { readCache, writeCache } from '../lib/pageCache';
+import PageMenu from '../components/layout/PageMenu';
 
 /*
  * "Me" (phone), drawn like the buyer's Profile: the shop card with its
@@ -107,6 +108,7 @@ export default function SellerMenu() {
           <Link to="/seller/settings" className="sh-icon" aria-label="Shop settings" title="Shop settings">
             <Gear size={19} />
           </Link>
+          <PageMenu area="seller" />
         </div>
       </header>
 

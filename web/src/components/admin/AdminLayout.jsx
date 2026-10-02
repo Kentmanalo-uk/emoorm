@@ -27,6 +27,7 @@ import { AdminShellContext } from './adminShell';
 import useTableCardLabels from '../../hooks/useTableCardLabels';
 import './AdminPhone.css';
 import { afterSignOutPath } from '../../lib/afterSignOut';
+import PageMenu from '../layout/PageMenu';
 
 /**
  * Persistent shell for /admin/* pages — mirrors SellerLayout look & feel.
@@ -443,6 +444,7 @@ export default function AdminLayout({ children }) {
                 <Bell size={20} />
                 {unreadCount > 0 && <span className="scm-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
               </Link>
+              <PageMenu area="admin" />
             </div>
           </header>
         )}
@@ -452,6 +454,7 @@ export default function AdminLayout({ children }) {
               <ChevronLeft size={22} weight="bold" />
             </button>
             <h1 className="scm-backtitle">{phoneTitle}</h1>
+            <PageMenu area="admin" />
           </header>
         )}
 

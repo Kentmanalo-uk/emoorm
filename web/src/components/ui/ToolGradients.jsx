@@ -14,6 +14,7 @@ const TOOL_GRADIENTS = {
   rose: ['#fda4af', '#e11d48'],
   pink: ['#f9a8d4', '#c026d3'],
   teal: ['#5eead4', '#0e7490'],
+  slate: ['#cbd5e1', '#475569'],
 };
 
 /** The gradients, once per page, for the icons to point at (fill: url(#…)). */

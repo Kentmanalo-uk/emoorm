@@ -12,6 +12,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import { resolveImg } from '../lib/media';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTranslate';
 import './SellerApp.css';
+import PageMenu from '../components/layout/PageMenu';
 
 /*
  * "Me" for admins on a phone (the tab bar's last tab), drawn like the seller
@@ -50,6 +51,7 @@ function MenuBody() {
           <Link to="/admin/settings" className="sh-icon" aria-label="Settings" title="Settings">
             <Gear size={19} />
           </Link>
+          <PageMenu area="admin" />
         </div>
       </header>
 

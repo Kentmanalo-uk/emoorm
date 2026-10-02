@@ -19,6 +19,7 @@ import UserAvatar from '../components/ui/UserAvatar';
 import { getSellerFollowerStats, subscribeToFollowChanges } from '../lib/follow';
 import { completeGuide, shouldShowGuide } from '../lib/sellerGuides';
 import { describeStep, sellBlockers } from '../lib/sellerSetup';
+import PageMenu from '../components/layout/PageMenu';
 
 const DASHBOARD_GUIDE = 'dashboard';
 import './SellerDashboard.css';
@@ -930,6 +931,7 @@ function PhoneHome({
           <button type="button" className="sh-icon sh-me" onClick={switchToPersonal} aria-label="Switch to my buyer account" title="Switch to my buyer account">
             <UserAvatar src={user?.profilePhoto} name={(user?.fullName || 'U').charAt(0)} alt="" imgClassName="sh-me-img" fallbackClassName="sh-me-img sh-me-fallback" />
           </button>
+          <PageMenu area="seller" />
         </div>
       </header>
 

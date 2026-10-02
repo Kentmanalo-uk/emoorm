@@ -3,12 +3,18 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CaretLeft } from '@phosphor-icons/react';
 import Header from './Header';
 import Footer from './Footer';
+import PageMenu from './PageMenu';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import { isBottomNavTab } from '../../lib/navTabs';
 import './Layout.css';
 
 // Page headings that are names, not page titles: they stay where they are.
 const NOT_A_TITLE = '.pp-name, .pdp-title, .shop-m-name h1, .appdl-name';
+
+// Phones: a few pages keep their grey, card-on-grey look (Home, search,
+// a product); every other page is white, its sections running the full
+// width (styles/phone-app.css).
+const KEEPS_GREY = /^\/($|search|products|product\/[^/]+$)/;
 
 /**
  * phoneBar: on phones, pages outside the five bottom-nav tabs get a top bar
@@ -17,7 +23,8 @@ const NOT_A_TITLE = '.pp-name, .pdp-title, .shop-m-name h1, .appdl-name';
  * hidden where it was), so every page gets one without a list to maintain.
  * Pages with their own top bar pass false.
  * phoneBackTo: where Back goes when there is no in-app history.
- * phoneBarEnd: the page's own action at the bar's right end (a Share button…).
+ * phoneBarEnd: the page's own action at the bar's right end (a Share button…),
+ * before the page menu (⋯, PageMenu) that every bar ends with.
  */
 const Layout = ({
   children, showFooter = true, phoneBar = true, phoneBackTo = '/', phoneBarEnd = null,
@@ -54,7 +61,7 @@ const Layout = ({
   }, [showBackBar, pathname]);
 
   return (
-    <div className="layout">
+    <div className={`layout${KEEPS_GREY.test(pathname) ? '' : ' layout--flat'}`}>
       <Header />
       <main className="layout-main" ref={mainRef}>
         {showBackBar && (
@@ -63,7 +70,10 @@ const Layout = ({
               <CaretLeft size={22} weight="bold" />
             </button>
             {barTitle && <h1 className="layout-back-title">{barTitle}</h1>}
-            {phoneBarEnd && <div className="layout-back-end">{phoneBarEnd}</div>}
+            <div className="layout-back-end">
+              {phoneBarEnd}
+              <PageMenu />
+            </div>
           </div>
         )}
         {children}

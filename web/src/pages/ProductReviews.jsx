@@ -9,6 +9,7 @@ import { resolveImg } from '../lib/media';
 import { useSeo } from '../lib/seo';
 import './ProductDetails.css';
 import './ProductReviews.css';
+import PageMenu from '../components/layout/PageMenu';
 
 const PAGE_SIZE = 10;
 const STARS = [5, 4, 3, 2, 1];
@@ -108,6 +109,7 @@ function ReviewsPage({ slug }) {
               Reviews
               {total > 0 && <span className="pdp-section-count">{total}</span>}
             </h1>
+            <PageMenu />
           </div>
 
           {product ? (

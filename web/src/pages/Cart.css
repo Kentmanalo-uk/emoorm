@@ -2215,3 +2215,28 @@
     font-size: 16px; /* keeps iOS from zooming in on focus */
   }
 }
+
+/* Phones: the cart search sits under the title bar (which stays at the top)
+   and scrolls away with the items; a dim grey field with no outline. */
+.cart-m-search {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .cart-m-head {
+    margin-bottom: 0;
+  }
+
+  .cart-m-titlebar {
+    margin-bottom: 0;
+  }
+
+  .cart-m-search {
+    display: flex;
+    margin: 10px 12px 12px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--t-neutral-100, #f3f4f6);
+    box-shadow: none;
+  }
+}

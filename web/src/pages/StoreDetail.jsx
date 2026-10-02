@@ -467,11 +467,8 @@ export default function StoreDetail() {
     <Layout phoneBar={false}>
       <div className={`shop-page${isPhone ? ' is-phone' : ''}`} style={themeStyle}>
         {isPhone && (
-          <div className="shop-m-hero">
-            <div className="shop-m-backdrop" aria-hidden="true">
-              {banner ? <img src={resolveImg(banner)} alt="" /> : null}
-            </div>
-
+          <>
+            {/* Solid, and held at the top while the page scrolls. */}
             <div className="shop-m-topbar">
               <button type="button" className="shop-m-icon" onClick={goBack} aria-label="Back">
                 <ChevronLeft size={24} weight="bold" />
@@ -501,236 +498,242 @@ export default function StoreDetail() {
               </div>
             </div>
 
-            <div className="shop-m-card">
-              <button type="button" className="shop-m-band" onClick={() => setMobileTab('about')}>
-                <span className="shop-m-band-brand">
-                  <Storefront size={15} weight="fill" /> Local shop
-                  {store.owner?.identityVerified && <SealCheck size={14} weight="fill" className="shop-m-band-seal" />}
-                </span>
-                <span className="shop-m-band-perks">
-                  {perkLabels.length ? perkLabels.join(' · ') : (store.municipality?.name || 'Oriental Mindoro')}
-                  <ChevronRight size={13} weight="bold" />
-                </span>
-              </button>
-
-              <div className="shop-m-main">
-                <div className="shop-m-logo">
-                  {store.logo ? <img src={resolveImg(store.logo)} alt="" /> : <span>{initials}</span>}
-                </div>
-                <div className="shop-m-id-text">
-                  <button type="button" className="shop-m-name" onClick={() => setMobileTab('about')}>
-                    <h1>{store.name}</h1>
-                    <ChevronRight size={15} weight="bold" />
-                  </button>
-                  <div className="shop-m-rating-row">
-                    {rating > 0 ? (
-                      <span className="shop-m-rating"><Star size={12} weight="fill" /> {rating.toFixed(1)}</span>
-                    ) : (
-                      <span className="shop-m-rating is-new">New</span>
-                    )}
-                    <span className="shop-m-counts">
-                      {productCount} {productCount === 1 ? 'product' : 'products'} · {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
-                    </span>
-                  </div>
-                </div>
-                <div className="shop-m-cta">
-                  {!isOwnStore && (
-                    <button
-                      type="button"
-                      className={`shop-m-follow${isFollowing ? ' is-following' : ''}`}
-                      onClick={handleToggleFollow}
-                      disabled={followBusy}
-                    >
-                      {followBusy
-                        ? <BusyLabel size={14}>{isFollowing ? 'Following' : 'Follow'}</BusyLabel>
-                        : isFollowing ? 'Following' : 'Follow'}
-                    </button>
-                  )}
-                  <button type="button" className="shop-m-message" onClick={openChat}>Message</button>
-                </div>
+            <div className="shop-m-hero">
+              <div className="shop-m-backdrop" aria-hidden="true">
+                {banner ? <img src={resolveImg(banner)} alt="" /> : null}
               </div>
 
-              {(store.description || store.municipality?.name) && (
-                <div className="shop-m-note">
-                  <div className="shop-m-note-text">
-                    <strong>
-                      <MapPin size={13} weight="fill" /> {store.municipality?.name || 'Oriental Mindoro'}
-                    </strong>
-                    {store.description && <span>{store.description}</span>}
+              <div className="shop-m-card">
+                <button type="button" className="shop-m-band" onClick={() => setMobileTab('about')}>
+                  <span className="shop-m-band-brand">
+                    <Storefront size={15} weight="fill" /> Local shop
+                    {store.owner?.identityVerified && <SealCheck size={14} weight="fill" className="shop-m-band-seal" />}
+                  </span>
+                  <span className="shop-m-band-perks">
+                    {perkLabels.length ? perkLabels.join(' · ') : (store.municipality?.name || 'Oriental Mindoro')}
+                    <ChevronRight size={13} weight="bold" />
+                  </span>
+                </button>
+
+                <div className="shop-m-main">
+                  <div className="shop-m-logo">
+                    {store.logo ? <img src={resolveImg(store.logo)} alt="" /> : <span>{initials}</span>}
                   </div>
-                  <button type="button" onClick={() => setMobileTab('about')}>View</button>
+                  <div className="shop-m-id-text">
+                    <button type="button" className="shop-m-name" onClick={() => setMobileTab('about')}>
+                      <h1>{store.name}</h1>
+                      <ChevronRight size={15} weight="bold" />
+                    </button>
+                    <div className="shop-m-rating-row">
+                      {rating > 0 ? (
+                        <span className="shop-m-rating"><Star size={12} weight="fill" /> {rating.toFixed(1)}</span>
+                      ) : (
+                        <span className="shop-m-rating is-new">New</span>
+                      )}
+                      <span className="shop-m-counts">
+                        {productCount} {productCount === 1 ? 'product' : 'products'} · {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="shop-m-cta">
+                    {!isOwnStore && (
+                      <button
+                        type="button"
+                        className={`shop-m-follow${isFollowing ? ' is-following' : ''}`}
+                        onClick={handleToggleFollow}
+                        disabled={followBusy}
+                      >
+                        {followBusy
+                          ? <BusyLabel size={14}>{isFollowing ? 'Following' : 'Follow'}</BusyLabel>
+                          : isFollowing ? 'Following' : 'Follow'}
+                      </button>
+                    )}
+                    <button type="button" className="shop-m-message" onClick={openChat}>Message</button>
+                  </div>
+                </div>
+
+                {(store.description || store.municipality?.name) && (
+                  <div className="shop-m-note">
+                    <div className="shop-m-note-text">
+                      <strong>
+                        <MapPin size={13} weight="fill" /> {store.municipality?.name || 'Oriental Mindoro'}
+                      </strong>
+                      {store.description && <span>{store.description}</span>}
+                    </div>
+                    <button type="button" onClick={() => setMobileTab('about')}>View</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="shop-m-tabs" role="tablist">
+                {[
+                  ...(home === null || hasHome ? [['home', 'Home']] : []),
+                  ['products', 'Products'],
+                  ['categories', 'Categories'],
+                  ['about', 'About'],
+                ].map(([key, label]) => (
+                  <button
+                    type="button"
+                    role="tab"
+                    key={key}
+                    aria-selected={phoneTab === key}
+                    className={`shop-m-tab${phoneTab === key ? ' is-active' : ''}`}
+                    onClick={() => setMobileTab(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {phoneTab === 'home' && (
+                <div className="shop-m-panel shop-m-home">
+                  {home === null
+                    ? <div className="shop-m-home-loading" aria-hidden="true"><span /><span /><span /></div>
+                    : <ShopHome sections={home} onAddToCart={addFromHome} />}
+                </div>
+              )}
+
+              {phoneTab === 'categories' && (
+                <div className="shop-m-panel">
+                  {categories.length === 0 ? (
+                    <div className="shop-m-muted shop-m-empty-cats">
+                      <EmptyArt name="categories" size={72} />
+                      <p>This shop hasn&rsquo;t sorted its products into categories yet.</p>
+                    </div>
+                  ) : (
+                    <div className="shop-m-cats">
+                      <button type="button" className="shop-m-cat" onClick={() => pickCategory('all')}>
+                        <span className="shop-m-cat-all"><SquaresFour size={26} weight="fill" /></span>
+                        <strong>All products</strong>
+                        <small>{productCount}</small>
+                      </button>
+                      {categories.map((c) => (
+                        <button type="button" key={c.id} className="shop-m-cat" onClick={() => pickCategory(c.id)}>
+                          <span className="shop-m-cat-img">
+                            {c.image ? <img src={resolveImg(c.image)} alt="" /> : <Package size={24} />}
+                          </span>
+                          <strong>{c.name}</strong>
+                          <small>{c.count ?? ''}</small>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {phoneTab === 'about' && (
+                <div className="shop-m-panel">
+                  {store.description && <p className="shop-m-about-desc">{store.description}</p>}
+                  <div className="shop-m-about-stats">
+                    <div><strong>{rating > 0 ? rating.toFixed(1) : '—'}</strong><span>{reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}</span></div>
+                    <div><strong>{productCount}</strong><span>{productCount === 1 ? 'product' : 'products'}</span></div>
+                    <div><strong>{followerCount}</strong><span>{followerCount === 1 ? 'follower' : 'followers'}</span></div>
+                  </div>
+                  {(offersDelivery || offersPickup || store.acceptsCod) && (
+                    <div className="shop-m-perks">
+                      {offersDelivery && <span><Truck size={14} /> Delivery</span>}
+                      {offersPickup && <span><Storefront size={14} /> Pickup</span>}
+                      {store.acceptsCod && <span><Money size={14} /> Cash on delivery</span>}
+                    </div>
+                  )}
+                  <ul className="shop-m-details">
+                    {store.owner?.fullName && (
+                      <li><User size={15} /><span className="shop-m-details-label">Seller</span><span>{store.owner.fullName}</span></li>
+                    )}
+                    {store.owner?.identityVerified && (
+                      <li><SealCheck size={15} /><span className="shop-m-details-label">ID</span><span>Seller identity verified</span></li>
+                    )}
+                    {store.municipality?.name && (
+                      <li><MapPin size={15} /><span className="shop-m-details-label">Town</span><span>{store.municipality.name}</span></li>
+                    )}
+                    {store.pickupAddress && (
+                      <li><Storefront size={15} /><span className="shop-m-details-label">Pickup</span><span>{store.pickupAddress}</span></li>
+                    )}
+                    {store.businessHours && (
+                      <li><Clock size={15} /><span className="shop-m-details-label">Hours</span><span>{store.businessHours}</span></li>
+                    )}
+                    {store.createdAt && (
+                      <li><Package size={15} /><span className="shop-m-details-label">Joined</span><span>{new Date(store.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span></li>
+                    )}
+                  </ul>
+                  {!isOwnStore && (
+                    <button type="button" className="shop-m-report" onClick={openReport}>
+                      <Flag size={15} /> Report this shop
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {phoneTab === 'products' && (
+                <div className="shop-m-sortbar">
+                  <div className="shop-m-sorts" role="toolbar" aria-label="Sort products">
+                    <button
+                      type="button"
+                      className={sortKey === 'newest' ? 'is-active' : ''}
+                      onClick={() => onSortChange('newest')}
+                    >
+                      Newest
+                    </button>
+                    <button
+                      type="button"
+                      className={sortKey === 'popular' || sortKey === 'best' ? 'is-active' : ''}
+                      onClick={() => onSortChange('popular')}
+                    >
+                      Popular
+                    </button>
+                    <button
+                      type="button"
+                      className={priceSort ? 'is-active' : ''}
+                      onClick={() => onSortChange(sortKey === 'price_asc' ? 'price_desc' : 'price_asc')}
+                      aria-label={sortKey === 'price_desc' ? 'Price, high to low' : 'Price, low to high'}
+                    >
+                      Price
+                      {priceSort && (sortKey === 'price_desc' ? <ArrowDown size={12} weight="bold" /> : <ArrowUp size={12} weight="bold" />)}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="shop-m-layout"
+                    onClick={() => setMobileLayout((v) => (v === 'list' ? 'grid' : 'list'))}
+                    aria-label={mobileLayout === 'list' ? 'Show as grid' : 'Show as list'}
+                  >
+                    {mobileLayout === 'list' ? <GridFour size={20} /> : <Rows size={20} />}
+                  </button>
+                </div>
+              )}
+
+              {phoneTab === 'products' && (searchOpen || rawSearch || activeCategory !== 'all') && (
+                <div className="shop-m-filters">
+                  {(searchOpen || rawSearch) && (
+                    <div className="shop-m-search">
+                      <Search size={17} />
+                      <input
+                        type="search"
+                        enterKeyHint="search"
+                        value={rawSearch}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        placeholder={`Search ${store.name}`}
+                        aria-label="Search this shop"
+                        autoFocus={focusSearch && !rawSearch}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { onSearchChange(''); setSearchOpen(false); }}
+                        aria-label="Close search"
+                      >
+                        <X size={14} weight="bold" />
+                      </button>
+                    </div>
+                  )}
+                  {activeCategory !== 'all' && activeCategory !== 'new' && activeCategoryName && (
+                    <button type="button" className="shop-m-activecat" onClick={() => onCategoryChange('all')}>
+                      {activeCategoryName} <X size={12} weight="bold" />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-
-            <div className="shop-m-tabs" role="tablist">
-              {[
-                ...(home === null || hasHome ? [['home', 'Home']] : []),
-                ['products', 'Products'],
-                ['categories', 'Categories'],
-                ['about', 'About'],
-              ].map(([key, label]) => (
-                <button
-                  type="button"
-                  role="tab"
-                  key={key}
-                  aria-selected={phoneTab === key}
-                  className={`shop-m-tab${phoneTab === key ? ' is-active' : ''}`}
-                  onClick={() => setMobileTab(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {phoneTab === 'home' && (
-              <div className="shop-m-panel shop-m-home">
-                {home === null
-                  ? <div className="shop-m-home-loading" aria-hidden="true"><span /><span /><span /></div>
-                  : <ShopHome sections={home} onAddToCart={addFromHome} />}
-              </div>
-            )}
-
-            {phoneTab === 'categories' && (
-              <div className="shop-m-panel">
-                {categories.length === 0 ? (
-                  <div className="shop-m-muted shop-m-empty-cats">
-                    <EmptyArt name="categories" size={72} />
-                    <p>This shop hasn&rsquo;t sorted its products into categories yet.</p>
-                  </div>
-                ) : (
-                  <div className="shop-m-cats">
-                    <button type="button" className="shop-m-cat" onClick={() => pickCategory('all')}>
-                      <span className="shop-m-cat-all"><SquaresFour size={26} weight="fill" /></span>
-                      <strong>All products</strong>
-                      <small>{productCount}</small>
-                    </button>
-                    {categories.map((c) => (
-                      <button type="button" key={c.id} className="shop-m-cat" onClick={() => pickCategory(c.id)}>
-                        <span className="shop-m-cat-img">
-                          {c.image ? <img src={resolveImg(c.image)} alt="" /> : <Package size={24} />}
-                        </span>
-                        <strong>{c.name}</strong>
-                        <small>{c.count ?? ''}</small>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {phoneTab === 'about' && (
-              <div className="shop-m-panel">
-                {store.description && <p className="shop-m-about-desc">{store.description}</p>}
-                <div className="shop-m-about-stats">
-                  <div><strong>{rating > 0 ? rating.toFixed(1) : '—'}</strong><span>{reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}</span></div>
-                  <div><strong>{productCount}</strong><span>{productCount === 1 ? 'product' : 'products'}</span></div>
-                  <div><strong>{followerCount}</strong><span>{followerCount === 1 ? 'follower' : 'followers'}</span></div>
-                </div>
-                {(offersDelivery || offersPickup || store.acceptsCod) && (
-                  <div className="shop-m-perks">
-                    {offersDelivery && <span><Truck size={14} /> Delivery</span>}
-                    {offersPickup && <span><Storefront size={14} /> Pickup</span>}
-                    {store.acceptsCod && <span><Money size={14} /> Cash on delivery</span>}
-                  </div>
-                )}
-                <ul className="shop-m-details">
-                  {store.owner?.fullName && (
-                    <li><User size={15} /><span className="shop-m-details-label">Seller</span><span>{store.owner.fullName}</span></li>
-                  )}
-                  {store.owner?.identityVerified && (
-                    <li><SealCheck size={15} /><span className="shop-m-details-label">ID</span><span>Seller identity verified</span></li>
-                  )}
-                  {store.municipality?.name && (
-                    <li><MapPin size={15} /><span className="shop-m-details-label">Town</span><span>{store.municipality.name}</span></li>
-                  )}
-                  {store.pickupAddress && (
-                    <li><Storefront size={15} /><span className="shop-m-details-label">Pickup</span><span>{store.pickupAddress}</span></li>
-                  )}
-                  {store.businessHours && (
-                    <li><Clock size={15} /><span className="shop-m-details-label">Hours</span><span>{store.businessHours}</span></li>
-                  )}
-                  {store.createdAt && (
-                    <li><Package size={15} /><span className="shop-m-details-label">Joined</span><span>{new Date(store.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span></li>
-                  )}
-                </ul>
-                {!isOwnStore && (
-                  <button type="button" className="shop-m-report" onClick={openReport}>
-                    <Flag size={15} /> Report this shop
-                  </button>
-                )}
-              </div>
-            )}
-
-            {phoneTab === 'products' && (
-              <div className="shop-m-sortbar">
-                <div className="shop-m-sorts" role="toolbar" aria-label="Sort products">
-                  <button
-                    type="button"
-                    className={sortKey === 'newest' ? 'is-active' : ''}
-                    onClick={() => onSortChange('newest')}
-                  >
-                    Newest
-                  </button>
-                  <button
-                    type="button"
-                    className={sortKey === 'popular' || sortKey === 'best' ? 'is-active' : ''}
-                    onClick={() => onSortChange('popular')}
-                  >
-                    Popular
-                  </button>
-                  <button
-                    type="button"
-                    className={priceSort ? 'is-active' : ''}
-                    onClick={() => onSortChange(sortKey === 'price_asc' ? 'price_desc' : 'price_asc')}
-                    aria-label={sortKey === 'price_desc' ? 'Price, high to low' : 'Price, low to high'}
-                  >
-                    Price
-                    {priceSort && (sortKey === 'price_desc' ? <ArrowDown size={12} weight="bold" /> : <ArrowUp size={12} weight="bold" />)}
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  className="shop-m-layout"
-                  onClick={() => setMobileLayout((v) => (v === 'list' ? 'grid' : 'list'))}
-                  aria-label={mobileLayout === 'list' ? 'Show as grid' : 'Show as list'}
-                >
-                  {mobileLayout === 'list' ? <GridFour size={20} /> : <Rows size={20} />}
-                </button>
-              </div>
-            )}
-
-            {phoneTab === 'products' && (searchOpen || rawSearch || activeCategory !== 'all') && (
-              <div className="shop-m-filters">
-                {(searchOpen || rawSearch) && (
-                  <div className="shop-m-search">
-                    <Search size={17} />
-                    <input
-                      type="search"
-                      enterKeyHint="search"
-                      value={rawSearch}
-                      onChange={(e) => onSearchChange(e.target.value)}
-                      placeholder={`Search ${store.name}`}
-                      aria-label="Search this shop"
-                      autoFocus={focusSearch && !rawSearch}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => { onSearchChange(''); setSearchOpen(false); }}
-                      aria-label="Close search"
-                    >
-                      <X size={14} weight="bold" />
-                    </button>
-                  </div>
-                )}
-                {activeCategory !== 'all' && activeCategory !== 'new' && activeCategoryName && (
-                  <button type="button" className="shop-m-activecat" onClick={() => onCategoryChange('all')}>
-                    {activeCategoryName} <X size={12} weight="bold" />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          </>
         )}
 
         {/* Hero */}

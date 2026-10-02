@@ -14,6 +14,7 @@ import useEntryState from '../hooks/useEntryState';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import './Stores.css';
 import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
+import PageMenu from '../components/layout/PageMenu';
 
 const PAGE_SIZE = 20;
 // Each list as it showed last time.
@@ -143,6 +144,7 @@ export default function Stores() {
                 </button>
               )}
             </form>
+            <PageMenu />
           </div>
         )}
 
