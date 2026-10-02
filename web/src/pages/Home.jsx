@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import useSeo from '../lib/seo';
 import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ShoppingCart, Star, Storefront, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -17,6 +17,7 @@ import useAuthStore from '../store/authStore';
 import './Home.css';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import useAppSettings from '../hooks/useAppSettings';
+import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 
 const EXPLORE_ROWS = 5;
@@ -190,6 +191,20 @@ const Home = () => {
   const { settings: appSettings } = useAppSettings();
   const categoryIcons = appSettings.categoryStyle === 'ICON';
 
+  // Phones: quick search words under the header (your recent searches first,
+  // then popular ones and the category names). They scroll away with the page.
+  const navigate = useNavigate();
+  const [recentTerms] = useState(loadRecent);
+  const quickTerms = [...new Set([
+    ...recentTerms,
+    ...POPULAR_SUGGESTIONS,
+    ...(sharedCategories || []).map((c) => c.name).filter(Boolean),
+  ])].slice(0, 16);
+  const searchFor = (term) => {
+    saveRecent(term);
+    navigate(`/search?q=${encodeURIComponent(term)}`);
+  };
+
   // Each section loads on its own and shows as soon as its answer arrives: a
   // slow or failed store list must not keep the products off the page (they
   // used to wait for all four requests, and one failure blanked them all).
@@ -289,6 +304,13 @@ const Home = () => {
     <Layout>
       {popupOpen && promotionPopup && (
         <PromotionPopup banner={promotionPopup} onClose={() => setPopupOpen(false)} />
+      )}
+      {isPhone && quickTerms.length > 0 && (
+        <nav className="home-quick-search" aria-label="Search suggestions">
+          {quickTerms.map((term) => (
+            <button key={term} type="button" onClick={() => searchFor(term)}>{term}</button>
+          ))}
+        </nav>
       )}
       {/* Banner Section */}
       <section className="banner-section">

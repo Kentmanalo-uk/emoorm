@@ -14,9 +14,9 @@
   width: 100%;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .layout-main {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
 }
 

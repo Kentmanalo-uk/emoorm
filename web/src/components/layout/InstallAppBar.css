@@ -5,7 +5,7 @@
   left: 10px;
   right: 10px;
   /* The bottom navigation is 68px, or taller on phones with a home bar. */
-  bottom: calc(max(68px, 47px + env(safe-area-inset-bottom, 0px)) + 8px);
+  bottom: calc(max(74px, 53px + env(safe-area-inset-bottom, 0px)) + 8px);
   z-index: 119;
   display: flex;
   align-items: center;
@@ -93,7 +93,7 @@
 /* Room for it under the page while it shows. */
 @media (max-width: 768px) {
   body.has-install-bar .layout-main {
-    padding-bottom: calc(72px + 66px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(80px + 66px + env(safe-area-inset-bottom, 0px));
   }
 }
 

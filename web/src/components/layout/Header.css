@@ -1746,3 +1746,29 @@
     height: 34px;
   }
 }
+
+/* Phones: the Home header (logo and search) stays at the top while the page
+   scrolls, instead of sliding away. */
+@media (max-width: 768px) {
+  .header.is-home {
+    transform: none !important;
+  }
+}
+
+/* Phones: bigger bottom-navigation icons. */
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    min-height: 74px;
+  }
+
+  .mobile-bottom-nav a {
+    gap: 3px;
+    font-size: 11px;
+  }
+
+  .mobile-bottom-nav a>svg,
+  .mobile-bottom-icon-wrap>svg {
+    width: 28px;
+    height: 28px;
+  }
+}

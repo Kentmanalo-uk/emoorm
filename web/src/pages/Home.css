@@ -1940,3 +1940,43 @@
   height: 46%;
   transform: translate(-50%, -50%);
 }
+
+/* Phones: a row of search words right under the header. It is part of the
+   page, so it scrolls away while the header stays. Swipe sideways for more. */
+.home-quick-search {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .home-quick-search {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 12px;
+    background: var(--t-neutral-0, #fff);
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .home-quick-search::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-quick-search button {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 0;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-600, #4b5563);
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .home-quick-search button:active {
+    background: var(--t-neutral-200, #e5e7eb);
+  }
+}
