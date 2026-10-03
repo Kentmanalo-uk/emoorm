@@ -3044,41 +3044,90 @@ div.pdp-store-followers {
     font-size: 14px;
   }
 
-  /* ── action bar: Shop, Chat, then Buy now and Add to cart ────────── */
-  .pdp-m-actionbar .pdp-m-buy,
+  /* ── action bar: Shop (its logo), Chat (unread from this shop), the
+     add-to-cart button, then a wide Buy now with the price under it ──── */
+  .pdp-m-actionbar {
+    gap: 8px;
+  }
+
+  .pdp-m-shoplogo {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0 0 1px var(--t-neutral-200, #e5e7eb);
+  }
+
+  .pdp-m-action-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+
+  .pdp-m-action-badge {
+    position: absolute;
+    top: -7px;
+    left: 13px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border: 1.5px solid #fff;
+    border-radius: 999px;
+    background: var(--t-accent-500, #ec4899);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
+  }
+
   .pdp-m-actionbar .pdp-m-addcart {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 48px;
+    border-radius: 999px;
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #047857);
+  }
+
+  /* The + inside the cart's basket. */
+  .pdp-m-actionbar .pdp-m-plus {
+    top: 17.5px;
+    right: 25.5px;
+  }
+
+  .pdp-m-actionbar .pdp-m-buy {
     flex: 1;
     min-width: 0;
     height: 48px;
-    border-radius: 12px;
-  }
-
-  .pdp-m-actionbar .pdp-m-addcart {
-    display: grid;
-    place-items: center;
-    width: auto;
-    padding: 0 6px;
-    background: var(--t-accent-500, #ec4899);
-    color: #fff;
-    font: inherit;
-    font-size: 15px;
-    font-weight: 700;
+    border-radius: 999px;
   }
 
   .pdp-m-actionbar .pdp-m-buy span {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .pdp-m-actionbar .pdp-m-buy small {
-    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     max-width: 100%;
-    padding: 0 6px;
+    padding: 0 8px;
+    overflow: hidden;
     white-space: nowrap;
-    text-overflow: ellipsis;
+  }
+
+  .pdp-m-actionbar .pdp-m-buy small i {
+    flex-shrink: 0;
+    width: 1px;
+    height: 10px;
+    background: currentColor;
+    opacity: 0.6;
   }
 
   .pdp-m-actionbar .pdp-m-closed {
     flex: 1;
+    border-radius: 999px;
     background: var(--t-neutral-300, #d1d5db);
     color: var(--t-neutral-700, #374151);
   }

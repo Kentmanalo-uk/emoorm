@@ -6,7 +6,7 @@ import {
   Heart, ShareNetwork as Share2, Storefront as Store, MapPin,
   Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck, Info, CalendarCheck,
   CaretRight as ChevronRightSm, ChatCircle as MessageCircle, Money, QrCode, Flag,
-  MagnifyingGlass, ShoppingCart, CaretDown,
+  MagnifyingGlass, ShoppingCart, ShoppingCartSimple, CaretDown,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -177,6 +177,26 @@ const ProductDetails = () => {
   const [sameShopProducts, setSameShopProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [ratingStats, setRatingStats] = useState(null);
+
+  // Phones' action bar: unread messages from this shop on Chat, the shop's
+  // logo on Shop (the icon when it has none or it fails to load), and the
+  // shipping quote for "Free shipping" under Buy now.
+  const shopId = product?.store?.id;
+  const [shopUnread, setShopUnread] = useState({ shopId: null, count: 0 });
+  const [failedLogo, setFailedLogo] = useState('');
+  const [shipQuote, setShipQuote] = useState(null);
+  useEffect(() => {
+    if (!isPhone || !isAuthenticated || !shopId) return undefined;
+    let cancelled = false;
+    axios.get('/messages/conversations', { quiet: true })
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        const convo = list.find((c) => c.role === 'buyer' && c.store?.id === shopId);
+        if (!cancelled) setShopUnread({ shopId, count: Number(convo?.unreadCount || 0) });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isPhone, isAuthenticated, shopId]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showReport, setShowReport] = useState(false);
   // Phone: 'cart' | 'buy' while the options sheet is open.
@@ -709,6 +729,14 @@ const ProductDetails = () => {
   };
   const avgRating = Number(product.averageRating ?? ratingStats?.averageRating ?? 0);
   const reviewCount = Number(product.reviewCount ?? ratingStats?.totalReviews ?? reviews.length);
+  const shopLogo = product.store && (product.store.logoUrl || product.store.logo)
+    ? resolveImg(product.store.logoUrl || product.store.logo) : '';
+  const chatUnread = isAuthenticated && shopUnread.shopId === product.store?.id ? shopUnread.count : 0;
+  // Under Buy now: free shipping only when the shop's own delivery quote is
+  // free, otherwise cash on delivery when the shop takes it.
+  const sellerQuote = shipQuote?.productId === product.id && shipQuote.seller?.offered ? shipQuote.seller : null;
+  const freeShipping = Boolean(sellerQuote && sellerQuote.covered !== false && sellerQuote.fee != null && Number(sellerQuote.fee) === 0);
+  const buyNote = freeShipping ? 'Free shipping' : product.store?.acceptsCod ? 'Cash on delivery' : '';
 
   return (
     <Layout phoneBar={false} showFooter={!isPhone}>
@@ -982,6 +1010,7 @@ const ProductDetails = () => {
                       product={product}
                       unitPrice={unitPrice}
                       municipalityId={isAuthenticated ? user?.municipalityId : undefined}
+                      onQuote={setShipQuote}
                     />
                   </div>
                 </div>
@@ -1361,11 +1390,16 @@ const ProductDetails = () => {
       {isPhone && (
         <div className="pdp-m-actionbar">
           <Link to={product.store ? `/store/${product.store.slug}` : '/stores'} className="pdp-m-action">
-            <Store size={21} />
+            {shopLogo && failedLogo !== shopLogo
+              ? <img className="pdp-m-shoplogo" src={shopLogo} alt="" onError={() => setFailedLogo(shopLogo)} />
+              : <Store size={21} />}
             <span>Shop</span>
           </Link>
           <Link to={product.store ? `/messages?store=${product.store.id}` : '/messages'} className="pdp-m-action">
-            <MessageCircle size={21} />
+            <span className="pdp-m-action-icon">
+              <MessageCircle size={21} />
+              {chatUnread > 0 && <b className="pdp-m-action-badge">{chatUnread > 99 ? '99+' : chatUnread}</b>}
+            </span>
             <span>Chat</span>
           </Link>
           {cannotBuy ? (
@@ -1376,20 +1410,25 @@ const ProductDetails = () => {
             <>
               <button
                 type="button"
+                className="pdp-m-addcart"
+                onClick={() => setSheetMode('cart')}
+                disabled={isAddingToCart}
+                aria-label="Add to cart"
+              >
+                <ShoppingCartSimple size={26} />
+                <Plus size={11} weight="bold" className="pdp-m-plus" />
+              </button>
+              <button
+                type="button"
                 className="pdp-m-buy"
                 onClick={() => setSheetMode('buy')}
                 disabled={isAddingToCart}
               >
                 <span>Buy now</span>
-                <small>{optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}</small>
-              </button>
-              <button
-                type="button"
-                className="pdp-m-addcart"
-                onClick={() => setSheetMode('cart')}
-                disabled={isAddingToCart}
-              >
-                Add to cart
+                <small>
+                  {optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}
+                  {buyNote && <><i aria-hidden="true" />{buyNote}</>}
+                </small>
               </button>
             </>
           )}

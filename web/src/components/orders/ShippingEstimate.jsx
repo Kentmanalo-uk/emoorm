@@ -12,9 +12,10 @@ const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFracti
  * rate for the product's weight), with the total. Without the buyer's town,
  * courier fees are "from" prices.
  *
- * @param {{ product: Object, unitPrice: Number, municipalityId?: String }} props
+ * @param {{ product: Object, unitPrice: Number, municipalityId?: String, onQuote?: Function }} props
+ *   onQuote receives the quote (with productId) once it arrives; pass a stable function.
  */
-export default function ShippingEstimate({ product, unitPrice, municipalityId }) {
+export default function ShippingEstimate({ product, unitPrice, municipalityId, onQuote }) {
   const storeId = product?.store?.id || product?.storeId;
   const [quote, setQuote] = useState(null);
 
@@ -26,10 +27,14 @@ export default function ShippingEstimate({ product, unitPrice, municipalityId })
       items: [{ productId: product.id, quantity: 1 }],
       municipalityId: municipalityId || undefined,
     })
-      .then((res) => { if (!cancelled) setQuote(res.data || null); })
+      .then((res) => {
+        if (cancelled) return;
+        setQuote(res.data || null);
+        onQuote?.(res.data ? { ...res.data, productId: product.id } : null);
+      })
       .catch(() => { if (!cancelled) setQuote(null); });
     return () => { cancelled = true; };
-  }, [storeId, product?.id, municipalityId]);
+  }, [storeId, product?.id, municipalityId, onQuote]);
 
   if (!quote) return null;
   const couriers = (quote.couriers || []).filter((c) => c.fee != null);
