@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
@@ -199,7 +199,7 @@ function PinSelector({ onSelect }) {
   return null;
 }
 
-export default function StoreLocationMap({ stores = [], value = null, onChange = null, height = 380, lockToPhilippines = false }) {
+export default function StoreLocationMap({ stores = [], value = null, onChange = null, height = 380, lockToPhilippines = false, hint = 'Click the map to pin your store location.' }) {
   const points = useMemo(
     () => stores
       .map((store) => ({ ...store, latitude: Number(store.latitude), longitude: Number(store.longitude) }))
@@ -230,7 +230,9 @@ export default function StoreLocationMap({ stores = [], value = null, onChange =
   }, []);
   useEffect(() => cancelClose, [cancelClose]);
 
-  const selected = value && Number.isFinite(Number(value.latitude)) && Number.isFinite(Number(value.longitude))
+  // No pin yet (null or empty): Number(null) is 0, which would pin the sea off Africa.
+  const pinned = (v) => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
+  const selected = value && pinned(value.latitude) && pinned(value.longitude)
     ? { latitude: Number(value.latitude), longitude: Number(value.longitude) }
     : null;
   const center = selected
@@ -323,7 +325,7 @@ export default function StoreLocationMap({ stores = [], value = null, onChange =
         <div className="store-map-coordinates">
           {selected
             ? `Pinned at ${selected.latitude.toFixed(6)}, ${selected.longitude.toFixed(6)}`
-            : 'Click the map to pin your store location.'}
+            : hint}
         </div>
       )}
     </div>

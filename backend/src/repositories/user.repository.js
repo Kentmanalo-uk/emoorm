@@ -1,4 +1,5 @@
 const { Prisma } = require('@prisma/client');
+const { ApiError } = require('../middleware/errorHandler');
 const prisma = require('../config/database');
 
 /**
@@ -86,6 +87,8 @@ const findByEmail = async (email, includePassword = false) => {
     sellerApplicationStatus: true,
     sellerApplicationDate: true,
     mfaEnabled: true,
+    phoneVerifiedAt: true,
+    phoneVerifiedNumber: true,
     tokenVersion: true,
     createdAt: true,
     updatedAt: true,
@@ -149,6 +152,9 @@ const findById = async (id) => {
       sellerApplicationDate: true,
       sellerRejectionReason: true,
       sellerReviewedAt: true,
+      // A mobile number proven by SMS (Account Settings).
+      phoneVerifiedAt: true,
+      phoneVerifiedNumber: true,
       tokenVersion: true,
       createdAt: true,
       updatedAt: true,
@@ -256,11 +262,12 @@ const findAll = async (options = {}) => {
     search,
     sellerApplicationStatus,
     includeShopMunicipality = false,
+    closing = false,
   } = options;
 
-  const where = {
-    deletedAt: null,
-  };
+  const where = closing
+    ? { deletionRequestedAt: { not: null } }
+    : { deletedAt: null };
 
   if (Array.isArray(role)) where.role = { in: role };
   else if (role) where.role = role;
@@ -327,6 +334,7 @@ const findAll = async (options = {}) => {
         sellerApplicationHistory: true,
         sellerTermsVersion: true,
         sellerTermsAcceptedAt: true,
+        deletionRequestedAt: true,
         shopName: true,
         shopDescription: true,
         shopAddress: true,
@@ -481,29 +489,41 @@ const applyForSeller = async (userId, data = {}, history = []) => {
 };
 
 /**
+ * Decide a seller application that is still waiting. Only one decision
+ * lands: two admins approving and rejecting at the same moment cannot leave
+ * the account and its application disagreeing.
+ * @throws {ApiError} 409 when it was already decided
+ */
+const decidePending = async (userId, data) => {
+  const changed = await prisma.user.updateMany({
+    where: { id: userId, sellerApplicationStatus: 'PENDING' },
+    data,
+  });
+  if (changed.count === 0) {
+    throw new ApiError('This application was already decided. Refresh to see the result.', 409);
+  }
+  return prisma.user.findUnique({ where: { id: userId } });
+};
+
+/**
  * Approve seller application — this is the only place the SELLER role is
  * granted, so an applicant has no seller access until an admin says yes.
  * @param {String} userId - User ID
  * @param {Object} review - { reviewedById, reviewerName, history }
  * @returns {Promise<Object>} Updated user
  */
-const approveSeller = async (userId, review = {}) => {
-  return prisma.user.update({
-    where: { id: userId },
-    data: {
-      role: 'SELLER',
-      sellerApplicationStatus: 'APPROVED',
-      sellerRejectionReason: null,
-      sellerReviewedById: review.reviewedById ?? null,
-      sellerReviewedAt: new Date(),
-      sellerApplicationHistory: appendHistory(review.history, {
-        action: 'APPROVED',
-        by: review.reviewedById ?? null,
-        byName: review.reviewerName ?? null,
-      }),
-    },
+const approveSeller = async (userId, review = {}) => decidePending(userId, {
+    role: 'SELLER',
+    sellerApplicationStatus: 'APPROVED',
+    sellerRejectionReason: null,
+    sellerReviewedById: review.reviewedById ?? null,
+    sellerReviewedAt: new Date(),
+    sellerApplicationHistory: appendHistory(review.history, {
+      action: 'APPROVED',
+      by: review.reviewedById ?? null,
+      byName: review.reviewerName ?? null,
+    }),
   });
-};
 
 /**
  * Reject seller application. The reason is stored so both the admin and the
@@ -513,24 +533,19 @@ const approveSeller = async (userId, review = {}) => {
  * @param {Object} review - { reason, reviewedById, reviewerName, history }
  * @returns {Promise<Object>} Updated user
  */
-const rejectSeller = async (userId, review = {}) => {
-  return prisma.user.update({
-    where: { id: userId },
-    data: {
-      role: 'BUYER',
-      sellerApplicationStatus: 'REJECTED',
-      sellerRejectionReason: review.reason || null,
-      sellerReviewedById: review.reviewedById ?? null,
-      sellerReviewedAt: new Date(),
-      sellerApplicationHistory: appendHistory(review.history, {
-        action: 'REJECTED',
-        by: review.reviewedById ?? null,
-        byName: review.reviewerName ?? null,
-        reason: review.reason || null,
-      }),
-    },
+const rejectSeller = async (userId, review = {}) => decidePending(userId, {
+    role: 'BUYER',
+    sellerApplicationStatus: 'REJECTED',
+    sellerRejectionReason: review.reason || null,
+    sellerReviewedById: review.reviewedById ?? null,
+    sellerReviewedAt: new Date(),
+    sellerApplicationHistory: appendHistory(review.history, {
+      action: 'REJECTED',
+      by: review.reviewedById ?? null,
+      byName: review.reviewerName ?? null,
+      reason: review.reason || null,
+    }),
   });
-};
 
 /**
  * Get users by municipality

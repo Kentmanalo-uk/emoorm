@@ -8,6 +8,10 @@ router.post('/', authenticate, authorize('BUYER', 'SELLER'), controller.create);
 router.get('/my', authenticate, authorize('BUYER', 'SELLER'), controller.myList);
 router.post('/:id/cancel', authenticate, authorize('BUYER', 'SELLER'), controller.cancel);
 router.post('/:id/close', authenticate, authorize('BUYER', 'SELLER'), controller.close);
+router.post('/:id/dispute', authenticate, authorize('BUYER', 'SELLER'), controller.dispute);
+
+// Admin: decide a disputed rejection (the shop's town, or any for a super admin).
+router.post('/:id/resolve-dispute', authenticate, authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'), controller.resolveDispute);
 
 // Seller endpoints
 router.get('/store', authenticate, authorize('SELLER'), controller.storeList);

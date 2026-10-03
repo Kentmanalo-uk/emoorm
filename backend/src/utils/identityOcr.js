@@ -1,4 +1,7 @@
 const path = require('path');
+// A small file can claim enormous dimensions; decoding it would take the
+// server's memory. 40 megapixels covers any phone photo.
+const MAX_INPUT_PIXELS = 40e6;
 const fs = require('fs');
 const sharp = require('sharp');
 const { createWorker, PSM } = require('tesseract.js');
@@ -39,7 +42,7 @@ const exclusive = (task) => {
 };
 
 const baseImage = async (buffer) => {
-  const { data, info } = await sharp(buffer)
+  const { data, info } = await sharp(buffer, { limitInputPixels: MAX_INPUT_PIXELS })
     .rotate() // honour EXIF orientation from phone cameras
     .resize({ width: 2200, height: 2200, fit: 'inside' })
     .grayscale()

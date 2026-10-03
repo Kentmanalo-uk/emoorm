@@ -1,4 +1,3 @@
-import React from 'react';
 import './analytics.css';
 
 const TrendLine = ({ data = [], height = 60, valueKey = 'total', color = 'var(--t-primary-600, #059669)' }) => {

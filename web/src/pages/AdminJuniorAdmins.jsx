@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { UserPlus, X, MagnifyingGlass as Search } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -6,7 +6,7 @@ import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
 import './AdminJuniorAdmins.css';
-import { useMunicipalities } from '../hooks/useReferenceData';
+import { confirmAction } from '../lib/confirm';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const toDateInput = (date) => {
@@ -34,7 +34,7 @@ function AccessBadge({ admin }) {
 
 export default function AdminJuniorAdmins() {
   const [admins, setAdmins] = useState([]);
-  const [municipalities, setMunicipalities] = useState([]);
+  const [municipalities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
@@ -60,7 +60,7 @@ export default function AdminJuniorAdmins() {
   useEffect(() => { load(); }, []);
 
   const handleRemove = async (id) => {
-    if (!confirm('Remove admin role from this user? They become a regular buyer.')) return;
+    if (!(await confirmAction({ title: 'Remove admin role?', message: 'They become a regular buyer.', confirmLabel: 'Remove', danger: true }))) return;
     try {
       await axios.delete(`/admin/junior-admins/${id}`);
       toast.success('Admin removed');
@@ -209,7 +209,7 @@ function AssignAdminModal({ municipalities, onClose, onAssigned }) {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
           <h3 style={{ margin: 0 }}>Assign Municipal Admin</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+          <button type="button" aria-label="Close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <X size={18} />
           </button>
         </div>

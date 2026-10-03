@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   MapPin,
@@ -134,6 +134,7 @@ const Checkout = () => {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null); // null = manual entry
   const [addressesLoaded, setAddressesLoaded] = useState(false);
+  const pinnedAddress = savedAddresses.find((a) => a.id === selectedAddressId) || null;
 
   // Per-store settings + coverage
   const [storeInfo, setStoreInfo] = useState({}); // { [storeId]: { store, error, covered, fee, checked } }
@@ -228,7 +229,6 @@ const Checkout = () => {
         setAddressesLoaded(true);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -444,7 +444,7 @@ const Checkout = () => {
     if (subtotal <= 0) return toast.error('No items to apply a voucher to');
     setVoucherLoading(true);
     try {
-      const res = await axios.post('/vouchers/validate', { code, subtotal });
+      const res = await axios.post('/vouchers/validate', { code, subtotal, storeId: storeIds[0] });
       setAppliedVoucher(res.data);
       setVoucherInput(res.data.voucher.code);
       toast.success(`Voucher ${res.data.voucher.code} applied`);
@@ -551,55 +551,52 @@ const Checkout = () => {
       scrollToSection('co-address');
       return;
     }
-    if (!(await requireVerifiedIdentity())) return;
+    // Locked before the identity check (a network call), so a second tap
+    // in the meantime cannot send the order twice.
+    if (isSubmitting) return;
     setIsSubmitting(true);
+    if (!(await requireVerifiedIdentity())) {
+      setIsSubmitting(false);
+      return;
+    }
+    // One key per checkout: a retry after a lost response finds the order
+    // already placed instead of placing it again.
     if (!checkoutIdRef.current) {
       checkoutIdRef.current = window.crypto?.randomUUID?.()
         || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
     const checkoutId = checkoutIdRef.current;
     try {
-      const orderPromises = Object.entries(itemsByStore).map(([storeId, storeItems]) => {
-        const info = storeInfo[storeId];
-        const pickupAddr = info?.store?.pickupAddress || '';
-        return axios.post('/orders', {
-          storeId,
-          checkoutKey: `${checkoutId}:${storeId}`,
-          fulfillmentMethod,
-          // QR orders are paid later, from To Pay, once the seller confirms.
-          paymentMethod,
-          // A courier the buyer chose: priced by weight, paid online.
-          courierId: chosenCourier?.id || undefined,
-          voucherCode: appliedVoucher?.voucher?.code || undefined,
-          deliveryAddress:
-            fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
-          contactNumber: normalizeContact(deliveryForm.contactNumber),
-          deliveryNotes: notes || undefined,
-          buyerMunicipalityId: deliveryForm.municipalityId || undefined,
-          buyerBarangay: deliveryForm.barangay || undefined,
-          buyerProvince: deliveryForm.province || undefined,
-          items: storeItems.filter((item) => !item.unavailable).map((item) => ({
-            productId: item.productId || item.id,
-            quantity: item.quantity,
-            selectedVariations: item.selectedVariations || undefined,
-          })),
-        });
+      // One shop per order (the cart sends only one here).
+      const [storeId, storeItems] = Object.entries(itemsByStore)[0];
+      const info = storeInfo[storeId];
+      const pickupAddr = info?.store?.pickupAddress || '';
+      const response = await axios.post('/orders', {
+        storeId,
+        checkoutKey: `${checkoutId}:${storeId}`,
+        fulfillmentMethod,
+        // QR orders are paid later, from To Pay, once the seller confirms.
+        paymentMethod,
+        // A courier the buyer chose: priced by weight, paid online.
+        courierId: chosenCourier?.id || undefined,
+        voucherCode: appliedVoucher?.voucher?.code || undefined,
+        deliveryAddress:
+          fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
+        contactNumber: normalizeContact(deliveryForm.contactNumber),
+        deliveryNotes: notes || undefined,
+        // The saved address's map pin, if it has one.
+        ...(fulfillmentMethod === 'DELIVERY' && pinnedAddress?.latitude != null
+          ? { deliveryLatitude: pinnedAddress.latitude, deliveryLongitude: pinnedAddress.longitude }
+          : {}),
+        buyerMunicipalityId: deliveryForm.municipalityId || undefined,
+        buyerBarangay: deliveryForm.barangay || undefined,
+        buyerProvince: deliveryForm.province || undefined,
+        items: storeItems.filter((item) => !item.unavailable).map((item) => ({
+          productId: item.productId || item.id,
+          quantity: item.quantity,
+          selectedVariations: item.selectedVariations || undefined,
+        })),
       });
-
-      const settled = await Promise.allSettled(orderPromises);
-      const responses = settled
-        .filter((result) => result.status === 'fulfilled')
-        .map((result) => result.value);
-      const failed = settled.find((result) => result.status === 'rejected');
-      if (failed) {
-        await Promise.allSettled(
-          responses
-            .map((response) => response.data?.id)
-            .filter(Boolean)
-            .map((id) => axios.post(`/orders/${id}/cancel`)),
-        );
-        throw failed.reason;
-      }
       // Only remove the items that were part of this order — leave any unselected items in the cart.
       if (Array.isArray(selectedIds) && selectedIds.length > 0) {
         selectedIds.forEach((id) => useCartStore.getState().removeItem(id));
@@ -607,13 +604,15 @@ const Checkout = () => {
         clearCart();
       }
 
-      const firstOrder = responses[0]?.data;
-      if (firstOrder?.id) setOrderId(firstOrder.id);
+      if (response?.data?.id) setOrderId(response.data.id);
 
       writeGcashReturn(null);
       setOrderSuccess(true);
       toast.success('Order placed successfully!');
     } catch (error) {
+      // The server refused this attempt (stock, address…): the next one is a
+      // new checkout, with what is in the cart then.
+      if (error?.status && error.status < 500) checkoutIdRef.current = null;
       if (isIdentityRequiredError(error)) {
         showIdentityRequired();
         return;

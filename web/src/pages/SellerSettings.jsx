@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { ShieldWarning as ShieldAlert, Trash as Trash2, Clock, ArrowCounterClockwise as RotateCcw } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -6,13 +6,15 @@ import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import SellerPageHead from '../components/seller/SellerPageHead';
+import ShopHoursCards from '../components/seller/ShopHoursCards';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import './SellerSettings.css';
 
 /**
- * Dedicated shop settings — account-level controls (not the public Shop Profile).
- * Currently: shop deletion with a 15-day cancellable grace period.
+ * Dedicated shop settings — account-level controls (not the public Shop Profile):
+ * away mode, opening hours and preparation days, and shop deletion with a
+ * 15-day cancellable grace period.
  */
 export default function SellerSettings() {
   const [store, setStore] = useState(null);
@@ -111,6 +113,8 @@ export default function SellerSettings() {
             </div>
           </div>
         ) : (
+          <>
+          <ShopHoursCards store={store} onSaved={(next) => setStore((s) => ({ ...s, ...next }))} />
           <div className="seller-card store-danger-card">
             <div className="seller-card-header">
               <h2><ShieldAlert size={16} /> Delete This Shop</h2>
@@ -133,6 +137,7 @@ export default function SellerSettings() {
               </button>
             </div>
           </div>
+          </>
         )}
       </div>
 

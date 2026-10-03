@@ -5,7 +5,7 @@ import {
   ArrowCounterClockwise, Bell, ChatCircleDots, ChatsCircle, ChatText, CheckCircle, Copy, FileArrowDown,
   Flag, GearSix, Headset, Heart, IdentificationCard, ImageSquare, Info, LockKey, MapPin, Megaphone,
   Package, Prohibit, Receipt, ShoppingCart, SpinnerGap, Star, Storefront, Tag, Ticket, UserCircle,
-  UserPlus, WarningCircle, X,
+  UserPlus, WarningCircle, X, Question, Scales,
 } from '@phosphor-icons/react';
 import NotificationPicture from '../NotificationPicture';
 import { playSound } from '../../lib/uiSound';
@@ -82,6 +82,12 @@ const NOTIFICATION_LOOK = {
   RETURN_REFUNDED: { Icon: ArrowCounterClockwise, label: 'Return', tone: 'green' },
   RETURN_CANCELLED: { Icon: ArrowCounterClockwise, label: 'Return', tone: 'slate' },
   RETURN_CLOSED: { Icon: ArrowCounterClockwise, label: 'Return', tone: 'slate' },
+  LOW_STOCK: { Icon: WarningCircle, label: 'Low stock', tone: 'amber' },
+  PRICE_DROP: { Icon: Tag, label: 'On sale', tone: 'green' },
+  PRODUCT_QUESTION: { Icon: Question, label: 'Question', tone: 'blue' },
+  PRODUCT_ANSWER: { Icon: ChatText, label: 'Answer', tone: 'green' },
+  RETURN_DISPUTED: { Icon: Scales, label: 'Return dispute', tone: 'red' },
+  RETURN_DISPUTE_RESOLVED: { Icon: Scales, label: 'Return', tone: 'blue' },
   SUPPORT_MESSAGE: { Icon: Headset, label: 'Support', tone: 'blue' },
   SUPPORT_RESOLVED: { Icon: Headset, label: 'Support', tone: 'green' },
   ADMIN_MESSAGE: { Icon: ChatsCircle, label: 'Message', tone: 'blue' },

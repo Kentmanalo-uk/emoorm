@@ -441,6 +441,11 @@
     color: var(--t-danger-700, #b91c1c);
   }
 
+  .sc-content .seller-status.status-disputed {
+    background: var(--t-warning-100, #fef3c7);
+    color: var(--t-warning-800, #92400e);
+  }
+
   .sc-content .seller-return-empty {
     padding: 36px 16px;
     border: 0;
@@ -614,4 +619,10 @@
     min-height: 320px;
     padding: 36px 16px 44px;
   }
+}
+
+/* A disputed rejection: the municipal admin decides. */
+.seller-status.status-disputed {
+  background: var(--t-warning-100, #fef3c7);
+  color: var(--t-warning-800, #92400e);
 }

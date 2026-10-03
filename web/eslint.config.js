@@ -17,5 +17,15 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // React Compiler readiness checks (eslint-plugin-react-hooks 6). They
+      // flag effect patterns that work today (a loading flag set before a
+      // fetch, a fetch helper declared below its effect); rewriting all of
+      // them at once would risk more than it fixes. Warnings, to clear as
+      // the files are touched.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/refs': 'warn',
+    },
   },
 ])

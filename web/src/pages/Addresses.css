@@ -445,3 +445,39 @@
     margin-bottom: 0;
   }
 }
+
+/* Optional map pin for the rider. */
+.address-pin-add,
+.address-pin-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px dashed var(--t-neutral-300, #d1d5db);
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--t-primary-700, #047857);
+  cursor: pointer;
+}
+
+.address-pin-clear {
+  margin-top: 8px;
+  border-style: solid;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.address-pin-help {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.address-pinned {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--t-primary-700, #047857);
+}

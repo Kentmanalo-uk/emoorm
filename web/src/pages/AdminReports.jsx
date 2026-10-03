@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Eye, X, CheckCircle, ChatText as MessageSquare,
@@ -135,7 +135,7 @@ export default function AdminReports() {
       const res = await axios.get('/reports', { params });
       setReports(res.data || []);
       if (res.pagination) setPagination(res.pagination);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load reports');
     } finally {
       setIsLoading(false);

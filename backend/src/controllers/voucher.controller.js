@@ -3,10 +3,11 @@ const { successResponse } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 const validate = asyncHandler(async (req, res) => {
-  const { code, subtotal } = req.body || {};
+  const { code, subtotal, storeId } = req.body || {};
   const result = await voucherService.validate({
     code,
     subtotal,
+    storeId: typeof storeId === 'string' ? storeId : undefined,
     userId: req.user?.id,
   });
   successResponse(res, result, 'Voucher applied');
@@ -35,4 +36,23 @@ const remove = asyncHandler(async (req, res) => {
   successResponse(res, null, 'Voucher deleted');
 });
 
-module.exports = { validate, listAdmin, create, update, remove };
+// A seller's own vouchers.
+const listShop = asyncHandler(async (req, res) => {
+  successResponse(res, await voucherService.listShop(req.user.id), 'Vouchers retrieved');
+});
+const createShop = asyncHandler(async (req, res) => {
+  successResponse(res, await voucherService.createShop(req.user.id, req.body), 'Voucher created', 201);
+});
+const updateShop = asyncHandler(async (req, res) => {
+  successResponse(res, await voucherService.updateShop(req.user.id, req.params.id, req.body), 'Voucher updated');
+});
+const removeShop = asyncHandler(async (req, res) => {
+  const kept = await voucherService.removeShop(req.user.id, req.params.id);
+  successResponse(res, kept, kept ? 'Voucher turned off (it was already used)' : 'Voucher deleted');
+});
+// A shop's vouchers buyers can use now (public).
+const liveForStore = asyncHandler(async (req, res) => {
+  successResponse(res, await voucherService.liveForStore(req.params.storeId), 'Vouchers retrieved');
+});
+
+module.exports = { validate, listAdmin, create, update, remove, listShop, createShop, updateShop, removeShop, liveForStore };

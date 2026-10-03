@@ -7,6 +7,11 @@ const listConversations = asyncHandler(async (req, res) => {
   successResponse(res, items, 'Conversations retrieved successfully');
 });
 
+// GET /messages/unread-count: chats with a message the buyer hasn't read.
+const unreadCount = asyncHandler(async (req, res) => {
+  successResponse(res, { count: await messageService.countUnreadChats(req.user.id) }, 'Unread chats');
+});
+
 const openConversation = asyncHandler(async (req, res) => {
   const { storeId, buyerId } = req.body;
   // A buyer names the store; a seller names one of their buyers.
@@ -23,9 +28,14 @@ const openConversation = asyncHandler(async (req, res) => {
 });
 
 const getConversation = asyncHandler(async (req, res) => {
+  // ?before=<ISO time>: the page of messages before that one.
+  const before = typeof req.query.before === 'string' && !Number.isNaN(Date.parse(req.query.before))
+    ? new Date(req.query.before)
+    : null;
   const conversation = await messageService.getConversation(
     req.params.id,
     req.user.id,
+    { before },
   );
   successResponse(res, conversation, 'Conversation retrieved successfully');
 });
@@ -55,6 +65,7 @@ const rateService = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  unreadCount,
   listConversations,
   openConversation,
   getConversation,

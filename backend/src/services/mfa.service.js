@@ -169,6 +169,18 @@ const regenerateBackupCodes = async (userId, code) => {
  * Verify a TOTP or backup code during the login MFA step and issue final tokens.
  * `mfaToken` is a short-lived JWT emitted by /auth/login when MFA is required.
  */
+// A six-digit code just accepted for an account is not accepted again while
+// it could still be valid (someone who saw it over a shoulder, or a second
+// send of the same request). One process: kept in memory.
+const recentCodes = new Map(); // userId -> { code, until }
+const REUSE_WINDOW_MS = 2 * 60 * 1000;
+const codeWasJustUsed = (userId, code) => {
+  const now = Date.now();
+  for (const [id, entry] of recentCodes) if (entry.until < now) recentCodes.delete(id);
+  const entry = recentCodes.get(userId);
+  return Boolean(entry && entry.code === code && entry.until >= now);
+};
+
 const verifyLogin = async (mfaToken, code) => {
   let decoded;
   try {
@@ -188,20 +200,22 @@ const verifyLogin = async (mfaToken, code) => {
   let usedBackup = false;
 
   if (/^\d{6}$/.test(trimmed)) {
-    ok = verifyTotp(user.mfaSecret, trimmed);
+    ok = !codeWasJustUsed(user.id, trimmed) && verifyTotp(user.mfaSecret, trimmed);
+    if (ok) recentCodes.set(user.id, { code: trimmed, until: Date.now() + REUSE_WINDOW_MS });
   } else {
-    // Treat as backup code
+    // Treat as backup code. It is crossed off only if the list is still the
+    // one it was found in, so two requests cannot both spend the same code.
     const hashed = hashBackupCode(trimmed);
     const list = user.mfaBackupCodes ? JSON.parse(user.mfaBackupCodes) : [];
     const idx = list.indexOf(hashed);
     if (idx !== -1) {
       list.splice(idx, 1);
-      await prisma.user.update({
-        where: { id: user.id },
+      const spent = await prisma.user.updateMany({
+        where: { id: user.id, mfaBackupCodes: user.mfaBackupCodes },
         data: { mfaBackupCodes: JSON.stringify(list) },
       });
-      ok = true;
-      usedBackup = true;
+      ok = spent.count === 1;
+      usedBackup = ok;
     }
   }
 

@@ -44,8 +44,8 @@ const getAllReports = asyncHandler(async (req, res) => {
       : municipalityId;
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     type,
     status,
     municipalityId: scopedMunicipalityId,
@@ -76,8 +76,8 @@ const getMyReports = asyncHandler(async (req, res) => {
   } = req.query;
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     status,
   };
 

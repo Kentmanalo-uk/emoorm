@@ -11,6 +11,7 @@ import { CASE_STATUS_LABELS } from '../../lib/supportCategories';
 import useAuthStore from '../../store/authStore';
 import SafetyNotice from '../common/SafetyNotice';
 import './ChatDock.css';
+import { pollWhileVisible } from '../../lib/visiblePoll';
 
 const LIST_POLL_MS = 30000;
 const THREAD_POLL_MS = 5000;
@@ -112,8 +113,8 @@ export default function ChatDock() {
   useEffect(() => {
     if (!isAuthenticated) return undefined;
     loadLists();
-    const timer = setInterval(loadLists, LIST_POLL_MS);
-    return () => clearInterval(timer);
+    const timer = pollWhileVisible(loadLists, LIST_POLL_MS);
+    return () => timer();
   }, [isAuthenticated, loadLists]);
 
   useEffect(() => {
@@ -140,10 +141,10 @@ export default function ChatDock() {
       })
       .catch((err) => { if (!cancelled) setError(err.message || 'Could not load messages'); });
     fetchThread();
-    const timer = setInterval(fetchThread, THREAD_POLL_MS);
+    const timer = pollWhileVisible(fetchThread, THREAD_POLL_MS);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      timer();
     };
   }, [open, selected]);
 

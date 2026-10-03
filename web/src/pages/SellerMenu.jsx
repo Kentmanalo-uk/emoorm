@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import {
   CaretRight, Storefront, PaintBrush, Wallet, QrCode, Headset, Lifebuoy, ChatText, User, Truck,
   IdentificationCard, Bell, Globe, Gear, ArrowsLeftRight, SignOut, ShareNetwork,
-  Heartbeat, MapPin,
+  Heartbeat, MapPin, Question,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -206,6 +206,7 @@ export default function SellerMenu() {
 
         <section className="sh-card sme-list">
           <h2>Contact &amp; help</h2>
+          <Row to="/seller/questions" icon={Question} label="Buyer questions" />
           <Row to="/seller/support" icon={Headset} label="Message the admin" badge={count('/seller/support')} />
           <Row to="/help" icon={Lifebuoy} label="Help center" />
           <Row onClick={() => setFeedbackOpen(true)} icon={ChatText} label="Send feedback" />

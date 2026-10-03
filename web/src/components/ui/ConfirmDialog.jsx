@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Warning as AlertTriangle, Question as HelpCircle, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import './ConfirmDialog.css';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 /**
  * Shared confirmation dialog for destructive/important actions.
@@ -29,9 +30,12 @@ export default function ConfirmDialog({
   loading = false,
   onConfirm,
   onCancel,
+  // Optional extra content under the message (e.g. a choice to make).
+  children = null,
 }) {
   // Phones: stays up while it slides away after closing.
   const { mounted, closing } = useSheetPresence(open);
+  const trapRef = useFocusTrap(open);
 
   useEffect(() => {
     if (!open) return;
@@ -52,7 +56,7 @@ export default function ConfirmDialog({
       aria-modal="true"
       aria-labelledby="cf-dialog-title"
     >
-      <div className="cf-dialog ui-sheet-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="cf-dialog ui-sheet-panel" ref={trapRef} onClick={(e) => e.stopPropagation()}>
         <div className="cf-dialog-body">
           <div className={`cf-dialog-icon ${!danger ? 'cf-dialog-icon--neutral' : ''}`}>
             {danger ? <AlertTriangle size={20} /> : <HelpCircle size={20} />}
@@ -60,6 +64,7 @@ export default function ConfirmDialog({
           <div className="cf-dialog-text">
             <h3 id="cf-dialog-title">{title}</h3>
             {message && <p>{message}</p>}
+            {children}
           </div>
         </div>
         <div className="cf-dialog-actions">

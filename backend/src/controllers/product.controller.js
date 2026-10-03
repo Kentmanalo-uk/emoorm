@@ -93,7 +93,9 @@ const getProducts = asyncHandler(async (req, res) => {
     result.total,
     result.page,
     result.pageSize,
-    'Products retrieved successfully'
+    'Products retrieved successfully',
+    // A search with a typo found nothing; these are results for the corrected words.
+    result.correctedSearch ? { correctedSearch: result.correctedSearch } : {},
   );
 });
 

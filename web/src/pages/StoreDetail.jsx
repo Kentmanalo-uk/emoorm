@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import useSeo, { storeSchema, breadcrumbs, clampText } from '../lib/seo';
@@ -29,6 +29,8 @@ import {
   SquaresFour,
   Info,
   Plus,
+  AirplaneTilt,
+  Ticket,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -51,6 +53,10 @@ import MoreMenu from '../components/MoreMenu';
 import { useShare } from '../components/ShareSheet';
 import './StoreDetail.css';
 import ShopHome from '../components/shop/ShopHome';
+import { awayUntil, shortDate, nowLabel, weekLines } from '../lib/shopHours';
+import { saleInfo } from '../lib/variantPricing';
+import { voucherSummary } from '../lib/vouchers';
+import { SaleWas } from '../components/ui/SaleTag';
 import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 
@@ -88,6 +94,25 @@ export default function StoreDetail() {
   const { addItem, getItemCount } = useCartStore();
   const cartCount = getItemCount();
   const isPhone = usePhoneLayout();
+  // Phones: the top bar lies over the cover photo, and turns white (smoothly)
+  // once the page is scrolled past it.
+  const [barSolid, setBarSolid] = useState(false);
+  useEffect(() => {
+    if (!isPhone) return undefined;
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setBarSolid(window.scrollY > 120));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [isPhone]);
+  // The shop's own voucher codes buyers can use now.
+  const [shopVouchers, setShopVouchers] = useState([]);
   // What was picked on this visit of the shop, so Back finds it as it was
   // left. Phones: Products / Categories / About, list or grid, product search.
   const [mobileTab, setMobileTab] = useEntryState('tab', 'home');
@@ -227,7 +252,7 @@ export default function StoreDetail() {
         products: list,
         pagination: res.pagination || { total: list.length, totalPages: 1 },
       }, { visitOnly: !firstView });
-    } catch (err) {
+    } catch {
       if (request === productsRequest.current) toast.error('Failed to load products');
     } finally {
       if (request === productsRequest.current) setIsLoadingProducts(false);
@@ -242,7 +267,7 @@ export default function StoreDetail() {
       return;
     }
     try {
-      addItem({ ...product, readyToSell: store.readyToSell, quantity: 1 });
+      addItem({ ...product, readyToSell: store.readyToSell, vacationUntil: store.vacationUntil, quantity: 1 });
       toast.success(`${product.name} added to cart`);
     } catch (error) {
       toast.error(error.message || 'Failed to add to cart');
@@ -261,12 +286,13 @@ export default function StoreDetail() {
         id: product.id,
         productId: product.id,
         name: product.name,
-        price: product.price,
+        price: saleInfo(product).price,
         image: (Array.isArray(product.images) ? product.images[0] : null) || '/placeholder-product.png',
         storeId: store.id,
         storeName: store.name,
         storeLogo: store.logo || null,
         readyToSell: store.readyToSell,
+        vacationUntil: store.vacationUntil,
         stock: product.stock,
         slug: product.slug,
         categoryId: product.categoryId,
@@ -318,6 +344,15 @@ export default function StoreDetail() {
       } : s));
     });
   }, [store?.id, updateStore]);
+
+  useEffect(() => {
+    if (!store?.id) return undefined;
+    let cancelled = false;
+    axios.get('/vouchers/store/' + store.id)
+      .then((res) => { if (!cancelled) setShopVouchers(res.data || []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [store?.id]);
 
   const onCategoryChange = useCallback((id) => {
     setActiveCategory(id);
@@ -418,6 +453,35 @@ export default function StoreDetail() {
   const followerCount = store.followerCount || 0;
   const isFollowing = !!store.isFollowing;
   const isOwnStore = user?.id && store.ownerId === user.id;
+  // Away: products on show, no orders until the date (Shop Settings).
+  const away = awayUntil(store);
+  const hoursNow = nowLabel(store);
+  const week = weekLines(store);
+  const copyCode = (code) => {
+    navigator.clipboard?.writeText(code).then(() => toast.success(code + ' copied. Paste it at checkout.')).catch(() => toast(code));
+  };
+  const voucherStrip = shopVouchers.length > 0 && (
+    <div className="shop-vouchers" aria-label="Shop vouchers">
+      {shopVouchers.map((v) => (
+        <button type="button" key={v.id} className="shop-voucher" onClick={() => copyCode(v.code)}>
+          <Ticket size={18} weight="fill" />
+          <span>
+            <b>{voucherSummary(v)}</b>
+            <small>{v.code} · Tap to copy</small>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+  const awayNotice = away && (
+    <div className="shop-away" role="status">
+      <AirplaneTilt size={18} weight="fill" />
+      <div>
+        <strong>Away until {shortDate(away)}</strong>
+        <span>{store.vacationNote || 'You can look around and follow the shop. Ordering opens when they are back.'}</span>
+      </div>
+    </div>
+  );
   const categories = Array.isArray(store.categories) ? store.categories : [];
   const offersDelivery = store.fulfillmentMode === 'DELIVERY' || store.fulfillmentMode === 'BOTH';
   const offersPickup = store.fulfillmentMode === 'PICKUP' || store.fulfillmentMode === 'BOTH';
@@ -469,7 +533,7 @@ export default function StoreDetail() {
         {isPhone && (
           <>
             {/* Solid, and held at the top while the page scrolls. */}
-            <div className="shop-m-topbar">
+            <div className={`shop-m-topbar${barSolid ? ' is-solid' : ''}`}>
               <button type="button" className="shop-m-icon" onClick={goBack} aria-label="Back">
                 <ChevronLeft size={24} weight="bold" />
               </button>
@@ -565,6 +629,9 @@ export default function StoreDetail() {
                 )}
               </div>
 
+              {awayNotice}
+              {voucherStrip}
+
               <div className="shop-m-tabs" role="tablist">
                 {[
                   ...(home === null || hasHome ? [['home', 'Home']] : []),
@@ -649,7 +716,15 @@ export default function StoreDetail() {
                     {store.pickupAddress && (
                       <li><Storefront size={15} /><span className="shop-m-details-label">Pickup</span><span>{store.pickupAddress}</span></li>
                     )}
-                    {store.businessHours && (
+                    {week.length > 0 ? (
+                      <li>
+                        <Clock size={15} /><span className="shop-m-details-label">Hours</span>
+                        <span className="shop-hours">
+                          {hoursNow && <b className={hoursNow.startsWith('Open') ? 'is-open' : ''}>{hoursNow}</b>}
+                          {week.map((line) => <span key={line}>{line}</span>)}
+                        </span>
+                      </li>
+                    ) : store.businessHours && (
                       <li><Clock size={15} /><span className="shop-m-details-label">Hours</span><span>{store.businessHours}</span></li>
                     )}
                     {store.createdAt && (
@@ -845,6 +920,8 @@ export default function StoreDetail() {
 
         {/* Contact + seller info strip */}
         <div className="shop-container">
+          {!isPhone && awayNotice}
+          {!isPhone && voucherStrip}
           <div className="shop-info-strip">
             {store.owner?.fullName && (
               <div className="shop-info-item">
@@ -858,7 +935,15 @@ export default function StoreDetail() {
                 <span>{store.pickupAddress}</span>
               </div>
             )}
-            {store.businessHours && (
+            {week.length > 0 ? (
+              <div className="shop-info-item">
+                <span className="shop-info-label">Hours</span>
+                <span className="shop-hours is-inline">
+                  {hoursNow && <b className={hoursNow.startsWith('Open') ? 'is-open' : ''}>{hoursNow}</b>}
+                  <span>{week.join(' · ')}</span>
+                </span>
+              </div>
+            ) : store.businessHours && (
               <div className="shop-info-item">
                 <span className="shop-info-label">Hours</span>
                 <span>{store.businessHours}</span>
@@ -985,7 +1070,7 @@ export default function StoreDetail() {
                   product={product}
                   onAdd={() => addToCartPhone(product)}
                   onBuy={() => buyNowPhone(product)}
-                  closed={store.readyToSell === false}
+                  closed={store.readyToSell === false || Boolean(away)}
                 />
               ))}
             </div>
@@ -1044,7 +1129,7 @@ export default function StoreDetail() {
 }
 
 function ProductCard({ product, onAddToCart }) {
-  const price = Number(product.price);
+  const { price } = saleInfo(product);
   const images = Array.isArray(product.images) ? product.images : [];
   const image = images[0] || null;
 
@@ -1063,7 +1148,7 @@ function ProductCard({ product, onAddToCart }) {
       </div>
       <div className="product-info">
         <span className="product-name">{product.name}</span>
-        <span className="product-price">₱{price.toFixed(2)}</span>
+        <span className="product-price">₱{price.toFixed(2)} <SaleWas product={product} compact /></span>
         {/* Stars only from real review data; an unrated product says "New". */}
         {Number(product.reviewCount ?? 0) > 0 ? (
           <div className="product-rating-row">
@@ -1095,7 +1180,7 @@ function ProductCard({ product, onAddToCart }) {
  *  sales, price, then add-to-cart and Buy (off while the shop is `closed`,
  *  i.e. not taking orders yet). */
 function PhoneProductRow({ product, onAdd, onBuy, closed = false }) {
-  const price = Number(product.price);
+  const { price } = saleInfo(product);
   const images = Array.isArray(product.images) ? product.images : [];
   const rating = Number(product.averageRating || 0);
   const reviews = Number(product.reviewCount || 0);
@@ -1123,7 +1208,7 @@ function PhoneProductRow({ product, onAdd, onBuy, closed = false }) {
           {sold > 0 && <span className="shop-m-row-sold">{sold} sold</span>}
         </div>
         <div className="shop-m-row-foot">
-          <span className="shop-m-row-price">₱{price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <span className="shop-m-row-price">₱{price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <SaleWas product={product} compact /></span>
           <div className="shop-m-row-actions">
             <button type="button" className="shop-m-row-cart" onClick={onAdd} disabled={soldOut || closed} aria-label={`Add ${product.name} to cart`}>
               <ShoppingCart size={18} />

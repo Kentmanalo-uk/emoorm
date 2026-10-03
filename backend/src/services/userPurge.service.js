@@ -13,17 +13,40 @@ const { changeStock } = require('../repositories/stockLedger');
  * (a voucher or banner they created, a report they resolved, the
  * municipality they administer) are kept and the reference is cleared.
  *
- * Stock held by the user's open orders at other shops goes back to those
- * products, with an inventory movement, as a cancellation would.
+ * Orders the user placed at other shops belong to those shops' records too:
+ * - not yet handed over (stock still at the shop): cancelled away, their stock
+ *   going back with an inventory movement, as a cancellation would;
+ * - handed over, completed or cancelled: kept for the shop's sales history,
+ *   moved to a "Deleted account" placeholder with the address and number
+ *   removed.
  */
 
 const CONFIRM_WORD = 'DELETE';
 
-// Orders whose stock is still reserved (not yet handed over or cancelled).
+// Orders whose goods are still at the shop (stock reserved, not handed over).
+// Out for delivery or shipped goods have left: their stock is not given back.
 const OPEN_ORDER_STATUSES = [
-  'PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'TO_SHIP',
-  'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP', 'SHIPPED',
+  'PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'TO_SHIP', 'READY_FOR_PICKUP',
 ];
+
+// Holds other shops' orders (and returns) once their buyer's account is gone.
+const PLACEHOLDER_EMAIL = 'deleted-account@emoorm.invalid';
+const placeholderUser = async (tx, municipalityId) => tx.user.upsert({
+  where: { email: PLACEHOLDER_EMAIL },
+  update: {},
+  create: {
+    email: PLACEHOLDER_EMAIL,
+    // Nobody can sign in as it: a random hash no password matches.
+    password: `!${require('crypto').randomBytes(24).toString('hex')}`,
+    fullName: 'Deleted account',
+    role: 'BUYER',
+    isActive: false,
+    isVerified: false,
+    deletedAt: new Date(),
+    municipality: { connect: { id: municipalityId } },
+  },
+  select: { id: true },
+});
 
 const loadTarget = async (userId, actor) => {
   const user = await prisma.user.findUnique({
@@ -46,9 +69,14 @@ const scope = async (db, userId) => {
   const productIds = products.map((p) => p.id);
   const orders = await db.order.findMany({
     where: { OR: [{ buyerId: userId }, ...(storeIds.length ? [{ storeId: { in: storeIds } }] : [])] },
-    select: { id: true, buyerId: true, status: true, voucherId: true },
+    select: { id: true, buyerId: true, storeId: true, status: true, voucherId: true },
   });
-  return { stores, storeIds, productIds, orders, orderIds: orders.map((o) => o.id) };
+  const atOwnShop = (o) => storeIds.includes(o.storeId);
+  // Kept for other shops' records (anonymized), not deleted.
+  const kept = orders.filter((o) => o.buyerId === userId && !atOwnShop(o) && !OPEN_ORDER_STATUSES.includes(o.status));
+  const keptIds = new Set(kept.map((o) => o.id));
+  const removed = orders.filter((o) => !keptIds.has(o.id));
+  return { stores, storeIds, productIds, orders: removed, orderIds: removed.map((o) => o.id), keptIds: kept.map((o) => o.id) };
 };
 
 const previewPurge = async (userId, actor) => {
@@ -67,6 +95,7 @@ const previewPurge = async (userId, actor) => {
       stores: s.stores.length,
       products: s.productIds.length,
       orders: s.orderIds.length,
+      ordersKeptForOtherShops: s.keptIds.length,
       openOrdersRestocked: s.orders.filter((o) => o.buyerId === userId && OPEN_ORDER_STATUSES.includes(o.status)).length,
       conversations,
       messages,
@@ -88,8 +117,32 @@ const purgeUser = async (userId, actor, confirm, req) => {
 
   await prisma.$transaction(async (tx) => {
     const s = await scope(tx, userId);
-    const { storeIds, productIds, orderIds } = s;
+    const { storeIds, productIds, orderIds, keptIds } = s;
     const inIds = (ids) => ({ in: ids.length ? ids : ['__none__'] });
+
+    // 0. Other shops' sales stay in their records, without the buyer.
+    if (keptIds.length) {
+      const holder = await placeholderUser(tx, user.municipalityId);
+      await tx.order.updateMany({
+        where: { id: { in: keptIds } },
+        data: {
+          buyerId: holder.id,
+          deliveryAddress: 'Removed (account deleted)',
+          deliveryNotes: null,
+          contactNumber: '',
+          buyerBarangay: null,
+        },
+      });
+      await tx.returnRequest.updateMany({
+        where: { orderId: { in: keptIds } },
+        data: { buyerId: holder.id, buyerNote: null },
+      });
+      await tx.voucherRedemption.updateMany({
+        where: { orderId: { in: keptIds } },
+        data: { userId: holder.id },
+      });
+      await tx.message.updateMany({ where: { orderId: { in: keptIds } }, data: { orderId: null } });
+    }
 
     // 1. Give back stock the user's open orders at other shops still hold.
     const openElsewhere = s.orders.filter((o) => o.buyerId === userId

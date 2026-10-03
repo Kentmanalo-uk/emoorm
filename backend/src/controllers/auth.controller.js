@@ -246,6 +246,7 @@ const getUsers = asyncHandler(async (req, res) => {
     isActive,
     search,
     sellerApplicationStatus,
+    closing,
   } = req.query;
 
   // Municipal admins can only see users in their assigned municipality.
@@ -270,6 +271,8 @@ const getUsers = asyncHandler(async (req, res) => {
     // Only the seller-applications view widens the scope to shops located in
     // the admin's municipality; the general user list stays strictly scoped.
     includeShopMunicipality: Boolean(sellerApplicationStatus),
+    // Accounts their owners closed, waiting to be erased (super admin only).
+    closing: req.user?.role === 'SUPER_ADMIN' && closing === '1',
   };
 
   const result = await authService.getUsers(options);

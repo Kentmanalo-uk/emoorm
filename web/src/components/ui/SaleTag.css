@@ -1,0 +1,78 @@
+/* Sale prices: the regular price crossed out, the percent off, a countdown. */
+.sale-was {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.sale-was s {
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+.sale-was b {
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t-danger-700, #b91c1c);
+  background: var(--t-danger-50, #fef2f2);
+}
+
+.sale-was.is-compact {
+  gap: 4px;
+  font-size: 11px;
+}
+
+.sale-was.is-compact b {
+  padding: 1px 4px;
+  font-size: 10px;
+}
+
+.sale-ends {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  background: linear-gradient(90deg, var(--t-danger-600, #dc2626), #f97316);
+}
+
+/* On the product page's coloured price band (phones). */
+.pdp-m-price .sale-was s {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.pdp-m-price .sale-was {
+  margin-left: 8px;
+}
+
+/* Bulk prices under the price. */
+.sale-bulk {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--t-primary-800, #065f46);
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.sale-bulk b {
+  font-weight: 600;
+}
+
+.sale-bulk span + span::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--t-primary-400, #34d399);
+}

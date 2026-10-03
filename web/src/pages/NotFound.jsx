@@ -2,11 +2,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, House, MagnifyingGlass } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import AppLogo from '../components/AppLogo';
+import useSeo from '../lib/seo';
 import './NotFound.css';
 
 export default function NotFound() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  // Not a page to list in search results.
+  useSeo({ title: 'Page not found', noindex: true });
 
   return (
     <Layout>

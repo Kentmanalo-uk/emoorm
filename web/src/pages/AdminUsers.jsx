@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MagnifyingGlass as Search, ShieldCheck, ShieldSlash as ShieldOff, UserMinus as UserX, UserCheck, CaretDown as ChevronDown, X, Eye, DownloadSimple, Storefront, Trash } from '@phosphor-icons/react';
+import { MagnifyingGlass as Search, ShieldCheck, UserMinus as UserX, UserCheck, X, Eye, DownloadSimple, Storefront, Trash } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
@@ -16,6 +16,7 @@ import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
+import { confirmAction } from '../lib/confirm';
 
 const ROLE_BADGE = {
   BUYER: 'admin-badge-active',
@@ -25,6 +26,8 @@ const ROLE_BADGE = {
 };
 
 const ROLES = ['BUYER', 'SELLER', 'MUNICIPAL_ADMIN'];
+// The filter for accounts their owners closed (waiting to be erased).
+const CLOSING = '__closing';
 
 export default function AdminUsers({ fixedRole = '', title = 'User Management' }) {
   const navigate = useNavigate();
@@ -66,12 +69,13 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
     try {
       const params = { page, pageSize: 20 };
       if (search) params.search = search;
-      if (fixedRole || roleFilter) params.role = fixedRole || roleFilter;
+      if (roleFilter === CLOSING) params.closing = '1';
+      else if (fixedRole || roleFilter) params.role = fixedRole || roleFilter;
 
       const res = await axios.get('/auth/users', { params });
       setUsers(res.data || []);
       if (res.pagination) setPagination(res.pagination);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load users');
     } finally {
       setIsLoading(false);
@@ -79,7 +83,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
   };
 
   const handleSuspend = async (userId) => {
-    if (!window.confirm('Suspend this user? They will not be able to log in.')) return;
+    if (!(await confirmAction({ title: 'Suspend this user?', message: 'They will not be able to log in.', confirmLabel: 'Suspend', danger: true }))) return;
     setProcessing(userId);
     try {
       await axios.post(`/auth/users/${userId}/suspend`);
@@ -105,8 +109,23 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
     }
   };
 
+  // The owner closed the account and asked support to undo it.
+  const handleRestore = async (userId) => {
+    if (!(await confirmAction({ title: 'Restore this account?', message: 'It opens again and will not be erased. Its shop stays closed until the owner reopens it.', confirmLabel: 'Restore' }))) return;
+    setProcessing(userId);
+    try {
+      await axios.post(`/account/users/${userId}/restore`);
+      toast.success('Account restored');
+      fetchUsers();
+    } catch (err) {
+      toast.error(err.message || 'Failed to restore the account');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   const handleSetRole = async (userId, role) => {
-    if (!window.confirm(`Change this user's role to ${role}?`)) return;
+    if (!(await confirmAction({ title: `Change this user's role to ${role}?`, confirmLabel: 'Change role' }))) return;
     setProcessing(userId);
     try {
       await axios.post(`/auth/users/${userId}/set-role`, { role });
@@ -221,6 +240,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                 {['BUYER', 'SELLER', 'MUNICIPAL_ADMIN', 'SUPER_ADMIN'].map((r) => (
                   <option key={r} value={r}>{r.replace('_', ' ')}</option>
                 ))}
+                {isSuperAdmin && <option value={CLOSING}>Closed by owner</option>}
               </select>
             )}
             <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
@@ -272,9 +292,15 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                       </td>
                       <td style={{ fontSize: 13 }}>{u.municipality?.name || '—'}</td>
                       <td>
-                        <span className={`admin-badge ${u.isActive ? 'admin-badge-approved' : 'admin-badge-rejected'}`}>
-                          {u.isActive ? 'Active' : 'Suspended'}
-                        </span>
+                        {u.deletionRequestedAt ? (
+                          <span className="admin-badge admin-badge-rejected" title="Closed by its owner">
+                            Erased {new Date(new Date(u.deletionRequestedAt).getTime() + 30 * 864e5).toLocaleDateString('en-PH')}
+                          </span>
+                        ) : (
+                          <span className={`admin-badge ${u.isActive ? 'admin-badge-approved' : 'admin-badge-rejected'}`}>
+                            {u.isActive ? 'Active' : 'Suspended'}
+                          </span>
+                        )}
                       </td>
                       <td style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
                         {new Date(u.createdAt).toLocaleDateString('en-PH')}
@@ -284,7 +310,15 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                           <button className="admin-btn admin-btn-gray" onClick={() => openDetails(u.id)}>
                             <Eye size={13} /> Details
                           </button>
-                          {u.isActive ? (
+                          {u.deletionRequestedAt ? (
+                            <button
+                              className="admin-btn admin-btn-green"
+                              disabled={processing === u.id}
+                              onClick={() => handleRestore(u.id)}
+                            >
+                              <UserCheck size={13} /> Restore
+                            </button>
+                          ) : u.isActive ? (
                             <button
                               className="admin-btn admin-btn-red"
                               disabled={processing === u.id || u.role === 'SUPER_ADMIN'}

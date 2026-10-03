@@ -1,0 +1,64 @@
+/* Verifying the mobile number by SMS. */
+.pv {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pv-help,
+.pv-done {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.pv-done {
+  margin-top: 6px;
+  color: var(--t-primary-700, #047857);
+}
+
+.pv-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pv-row input {
+  flex: 1;
+  min-width: 140px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.pv-row button {
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--t-primary-600, #059669);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+}
+
+.pv-row button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pv-row .pv-link {
+  background: none;
+  color: var(--t-neutral-600, #4b5563);
+  font-weight: 500;
+}

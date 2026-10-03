@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, ShoppingCart, Quotes, Storefront } from '@phosphor-icons/react';
 import { resolveImg } from '../../lib/media';
+import { saleInfo } from '../../lib/variantPricing';
+import { SaleWas } from '../ui/SaleTag';
 import ProductImage from '../ProductImage';
 import './ShopHome.css';
 
@@ -168,7 +170,7 @@ function ProductTile({ product: p, preview, big = false, row = false, onAddToCar
           {reviews > 0 ? <><Star size={12} weight="fill" /> {rating.toFixed(1)}</> : <span className="shh-tile-new">New</span>}
           {sold > 0 && <span className="shh-tile-sold">· {sold} sold</span>}
         </span>
-        <span className="shh-tile-price">{peso(p.price)}</span>
+        <span className="shh-tile-price">{peso(saleInfo(p).price)} <SaleWas product={p} compact /></span>
       </span>
     </>
   );

@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const manila = require('../utils/manilaTime');
 
 /**
  * Analytics Repository — unified aggregations
@@ -48,7 +49,7 @@ const refundedAggregate = (scope) => prisma.returnRequest.aggregate({
 const bucketByDay = (orders) => {
   const map = new Map();
   for (const o of orders) {
-    const day = o.createdAt.toISOString().slice(0, 10);
+    const day = manila.dayKey(o.createdAt);
     const cur = map.get(day) || { total: 0, orders: 0 };
     cur.total += Number(o.total || 0);
     cur.orders += 1;
@@ -60,11 +61,11 @@ const bucketByDay = (orders) => {
 };
 
 const bucketBy = (orders, granularity = 'day') => {
+  // Manila days, months and years: the calendar the shops and buyers live by.
   const keyOf = (d) => {
-    const iso = d.toISOString();
-    if (granularity === 'month') return iso.slice(0, 7);
-    if (granularity === 'year') return iso.slice(0, 4);
-    return iso.slice(0, 10);
+    if (granularity === 'month') return manila.monthKey(d);
+    if (granularity === 'year') return manila.yearKey(d);
+    return manila.dayKey(d);
   };
   const map = new Map();
   for (const o of orders) {
@@ -80,7 +81,7 @@ const bucketBy = (orders, granularity = 'day') => {
 };
 
 const getSellerDayDetails = async (storeId, dateISO) => {
-  const start = new Date(`${dateISO}T00:00:00.000Z`);
+  const start = manila.dayStart(dateISO);
   const end = new Date(start.getTime() + 86400000);
   const orders = await prisma.order.findMany({
     where: { storeId, createdAt: { gte: start, lt: end } },

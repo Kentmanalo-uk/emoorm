@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Check, Plus, PencilSimple as Pencil, Trash as Trash2, Star } from '@phosphor-icons/react';
@@ -7,10 +7,12 @@ import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import Skeleton from '../components/ui/Skeleton';
 import PhAddressPicker from '../components/common/PhAddressPicker';
+import StoreLocationMap from '../components/maps/StoreLocationMap';
 import './Addresses.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import useFreshAccount from '../hooks/useFreshAccount';
 import { BusyLabel } from '../components/ui/Spinner';
+import { confirmAction } from '../lib/confirm';
 
 const emptyForm = {
   label: '',
@@ -24,6 +26,9 @@ const emptyForm = {
   barangay: '',
   barangayCode: '',
   street: '',
+  // Optional pin for the rider.
+  latitude: null,
+  longitude: null,
 };
 
 /**
@@ -42,6 +47,7 @@ const Addresses = () => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState({});
+  const [pinOpen, setPinOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [busyId, setBusyId] = useState(null);
 
@@ -55,14 +61,13 @@ const Addresses = () => {
     const fetchData = async () => {
       try {
         await loadAddresses();
-      } catch (err) {
+      } catch {
         toast.error('Failed to load address data');
       } finally {
         setIsLoading(false);
       }
     };
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => {
@@ -85,6 +90,7 @@ const Addresses = () => {
 
   const openAddForm = () => {
     setEditingId(null);
+    setPinOpen(false);
     // The first address starts from the account's own address.
     const fromProfile = addresses.length === 0 && user?.municipalityId;
     setFormData({
@@ -118,7 +124,10 @@ const Addresses = () => {
       barangay: addr.barangay || '',
       barangayCode: '',
       street: addr.street || '',
+      latitude: addr.latitude ?? null,
+      longitude: addr.longitude ?? null,
     });
+    setPinOpen(addr.latitude != null);
     setFormErrors({});
     setFormOpen(true);
   };
@@ -128,6 +137,7 @@ const Addresses = () => {
     setEditingId(null);
     setFormData(emptyForm);
     setFormErrors({});
+    setPinOpen(false);
   };
 
   const handleSave = async (e) => {
@@ -166,7 +176,7 @@ const Addresses = () => {
   };
 
   const handleDelete = async (addr) => {
-    if (!window.confirm('Delete this address? This cannot be undone.')) return;
+    if (!(await confirmAction({ title: 'Delete this address?', message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return;
     setBusyId(addr.id);
     try {
       await axios.delete(`/addresses/${addr.id}`);
@@ -231,6 +241,7 @@ const Addresses = () => {
                   <div>
                     <p>{addr.street || '—'}</p>
                     <p>{addr.barangay || '—'}</p>
+                    {addr.latitude != null && <p className="address-pinned"><MapPin size={13} weight="fill" /> Pinned on the map</p>}
                     <p>{addr.municipality?.name || '—'}, {addr.province || 'Oriental Mindoro'}</p>
                   </div>
                 </div>
@@ -303,11 +314,36 @@ const Addresses = () => {
 
           <PhAddressPicker
             value={formData}
-            onChange={(next) => setFormData((prev) => ({ ...prev, ...next }))}
+            // The picker hands back the whole value it last saw; the pin is not its to change.
+            onChange={(next) => setFormData((prev) => ({ ...prev, ...next, latitude: prev.latitude, longitude: prev.longitude }))}
             dbMunicipalities={municipalities}
             dbLoading={municipalitiesLoading}
             errors={formErrors}
           />
+
+          <div className="form-group address-pin">
+            {pinOpen ? (
+              <>
+                <label className="form-label">Pin it on the map (optional)</label>
+                <p className="address-pin-help">Tap where the house is. The rider gets a map link with your order.</p>
+                <StoreLocationMap
+                  value={{ latitude: formData.latitude, longitude: formData.longitude }}
+                  onChange={({ latitude, longitude }) => setFormData((prev) => ({ ...prev, latitude, longitude }))}
+                  height={260}
+                  hint="Tap the map where the house is."
+                />
+                {formData.latitude != null && (
+                  <button type="button" className="address-pin-clear" onClick={() => setFormData((prev) => ({ ...prev, latitude: null, longitude: null }))}>
+                    Remove the pin
+                  </button>
+                )}
+              </>
+            ) : (
+              <button type="button" className="address-pin-add" onClick={() => setPinOpen(true)}>
+                <MapPin size={16} /> Pin it on the map (optional)
+              </button>
+            )}
+          </div>
 
           <div className="address-edit-actions">
             <button type="button" onClick={closeForm} className="btn-modal-cancel">Cancel</button>

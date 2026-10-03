@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from '../lib/axios';
+import { pollWhileVisible } from '../lib/visiblePoll';
 
 /**
  * What is waiting on this account, keyed by the route it lives at.
@@ -52,9 +53,9 @@ export default function useAttention(endpoint, intervalMs = 60000) {
     load(controller.signal);
     if (!intervalMs) return () => controller.abort();
 
-    const timer = setInterval(() => load(controller.signal), intervalMs);
+    const timer = pollWhileVisible(() => load(controller.signal), intervalMs);
     return () => {
-      clearInterval(timer);
+      timer();
       controller.abort();
     };
   }, [endpoint, intervalMs, load]);

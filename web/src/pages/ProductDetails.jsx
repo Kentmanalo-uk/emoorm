@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import useSeo, { productSchema, breadcrumbs, clampText } from '../lib/seo';
 import {
   Heart, ShareNetwork as Share2, Storefront as Store, MapPin,
-  Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck, Info,
+  Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck, Info, CalendarCheck,
   CaretRight as ChevronRightSm, ChatCircle as MessageCircle, Money, QrCode, Flag,
   MagnifyingGlass, ShoppingCart, BookmarkSimple,
 } from '@phosphor-icons/react';
@@ -16,7 +16,7 @@ import ProductImage from '../components/ProductImage';
 import { BusyLabel } from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, parseImages } from '../lib/media';
 import useCartStore, { cartKeyFor } from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import ShippingEstimate from '../components/orders/ShippingEstimate';
@@ -32,24 +32,18 @@ import {
 } from '../lib/follow';
 import './ProductDetails.css';
 import {
-  pricedVariation, priceForSelection, priceRange, stockedVariation, stockForSelection,
+  pricedVariation, priceForSelection, priceRange, stockedVariation, stockForSelection, unitPriceFor, priceTiersOf,
 } from '../lib/variantPricing';
+import { awayUntil, shortDate } from '../lib/shopHours';
+import { saleInfo } from '../lib/variantPricing';
+import { recordView } from '../lib/recentlyViewed';
+import { estimate, readyDay, rangeLabel, dayLabel } from '../lib/eta';
+import ProductQuestions from '../components/product/ProductQuestions';
+import { SaleWas, SaleEnds, BulkPrices } from '../components/ui/SaleTag';
 
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const peso =(n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
-const parseImages = (raw) => {
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [raw];
-    } catch {
-      return [raw];
-    }
-  }
-  return [];
-};
 
 const renderStars = (rating, size = 14) => (
   [...Array(5)].map((_, i) => (
@@ -170,6 +164,18 @@ const ProductDetails = () => {
     return () => { cancelled = true; unsub(); };
   }, [followStoreId, isAuthenticated]);
 
+  // Recently viewed (Home): a product buyers can see, once it has loaded.
+  useEffect(() => {
+    if (product?.slug === slug && product.status === 'APPROVED') recordView(user?.id, product);
+  }, [product, slug, user?.id]);
+
+  // A page view for the shop's analytics (the server counts a visitor once
+  // per half hour, and not the shop itself).
+  const viewedId = product?.status === 'APPROVED' && product.slug === slug ? product.id : null;
+  useEffect(() => {
+    if (viewedId) axios.post(`/views/product/${viewedId}`).catch(() => {});
+  }, [viewedId]);
+
   // Where the page opens (its top, or where it was left on Back) is up to
   // ScrollMemory.
   useEffect(() => {
@@ -279,6 +285,7 @@ const ProductDetails = () => {
         id: product.id,
         name: product.name,
         price: priceForSelection(product, selectedVariations),
+        priceTiers: product.priceTiers,
         image: parseImages(product.images)[0] || '/placeholder-product.png',
         storeId: product.storeId,
         storeName: product.store?.name,
@@ -353,6 +360,17 @@ const ProductDetails = () => {
   const soldCount = useMemo(() => Number(product?.soldCount ?? 0), [product]);
 
   const serviceLines = useMemo(() => storeServiceLines(product?.store), [product]);
+  // When it would come: from the shop's preparation days and week (lib/eta).
+  const etaLines = useMemo(() => {
+    const st = product?.store;
+    if (!st || st.readyToSell === false || awayUntil(st)) return [];
+    const mode = st.fulfillmentMode || 'DELIVERY';
+    const lower = (t) => t.replace(/Today|Tomorrow/g, (w) => w.toLowerCase());
+    return [
+      ...(mode !== 'PICKUP' ? [`Arrives ${lower(rangeLabel(estimate(st, { method: 'DELIVERY', townId: user?.municipalityId })))} if delivered by the shop`] : []),
+      ...(mode !== 'DELIVERY' ? [`Ready for pickup ${lower(dayLabel(readyDay(st)))}`] : []),
+    ];
+  }, [product, user?.municipalityId]);
 
   // Tab title follows the product while this page is mounted.
   useEffect(() => {
@@ -586,14 +604,18 @@ const ProductDetails = () => {
   const isOutOfStock = product.stock === 0;
   // The shop is still setting up (shopReadiness on the API): its products
   // are on show, but checkout refuses them until it is ready to sell.
-  const notTakingOrders = product.store?.readyToSell === false;
+  const away = awayUntil(product.store);
+  const notTakingOrders = product.store?.readyToSell === false || Boolean(away);
+  const closedLabel = away ? `Shop away until ${shortDate(away)}` : 'Not taking orders yet';
   const cannotBuy = isOutOfStock || notTakingOrders;
   // Per-option pricing: the chosen option's price, or the range until one is chosen.
   const pricedGroup = pricedVariation(product.variations);
   const range = priceRange(product);
   const optionPriced = !!pricedGroup && range.min !== range.max;
   const optionChosen = !!(pricedGroup && selectedVariations[pricedGroup.name]);
-  const unitPrice = priceForSelection(product, selectedVariations);
+  // Options, a sale, and a bulk price for the quantity chosen.
+  const unitPrice = unitPriceFor(product, selectedVariations, quantity);
+  const tiers = priceTiersOf(product);
   const fmt = (n) => Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const priceLabel = () => (optionPriced && !optionChosen ? `${fmt(range.min)} – ₱${fmt(range.max)}` : fmt(unitPrice));
   const wishlisted = isInWishlist(product.id);
@@ -690,7 +712,10 @@ const ProductDetails = () => {
                 <div className="pdp-m-price-main">
                   <span className="pdp-m-peso">₱</span>
                   {priceLabel(false)}
+                  <SaleWas product={product} />
                 </div>
+                <SaleEnds product={product} />
+                {tiers.length > 0 && <BulkPrices tiers={tiers} />}
                 <div className="pdp-m-price-side">
                   <span className="pdp-m-badge"><Store size={13} weight="fill" /> Local seller</span>
                   <span className="pdp-m-place"><MapPin size={12} /> {place}</span>
@@ -820,7 +845,9 @@ const ProductDetails = () => {
 
               {/* Price band */}
               <div className="pdp-price-band">
-                <div className="pdp-price">₱{priceLabel(false)}</div>
+                <div className="pdp-price">₱{priceLabel(false)} <SaleWas product={product} /></div>
+                <SaleEnds product={product} />
+                {tiers.length > 0 && <BulkPrices tiers={tiers} />}
               </div>
 
               {/* Row attributes */}
@@ -834,6 +861,12 @@ const ProductDetails = () => {
                         {product.municipality?.name || product.store?.municipality?.name || 'Oriental Mindoro'}
                       </span>
                     </div>
+                    {etaLines.map((text) => (
+                      <div className="pdp-row-line pdp-eta" key={text}>
+                        <CalendarCheck size={14} className="pdp-row-icon" />
+                        <span>{text}</span>
+                      </div>
+                    ))}
                     {serviceLines.length > 0 ? serviceLines.map(({ icon: Icon, text }) => (
                       <div className="pdp-row-line" key={text}>
                         <Icon size={14} className="pdp-row-icon" />
@@ -955,7 +988,7 @@ const ProductDetails = () => {
                     </div>
                     <span className={`pdp-stock ${cannotBuy ? 'is-out' : ''}`} aria-live="polite">
                       {notTakingOrders
-                        ? "This shop isn't taking orders yet"
+                        ? (away ? `This shop is away until ${shortDate(away)}` : "This shop isn't taking orders yet")
                         : isOutOfStock ? 'Out of stock' : `${quantity} ${quantity === 1 ? 'item' : 'items'} selected`}
                     </span>
                   </div>
@@ -1119,6 +1152,11 @@ const ProductDetails = () => {
             </div>
           </div>
 
+          {/* Questions and the shop's answers */}
+          {product.status === 'APPROVED' && (
+            <ProductQuestions product={product} isOwnProduct={Boolean(user?.id && product.store?.owner?.id === user.id)} />
+          )}
+
           {/* From the same shop */}
           {sameShopProducts.length > 0 && product.store && (
             <div className="pdp-shelf pdp-shelf-card">
@@ -1136,7 +1174,7 @@ const ProductDetails = () => {
                     </div>
                     <div className="product-info">
                       <span className="product-name">{p.name}</span>
-                      <span className="product-price">{peso(p.price)}</span>
+                      <span className="product-price">{peso(saleInfo(p).price)} <SaleWas product={p} compact /></span>
                       {renderShelfRating(p)}
                     </div>
                   </Link>
@@ -1162,7 +1200,7 @@ const ProductDetails = () => {
                     </div>
                     <div className="product-info">
                       <span className="product-name">{p.name}</span>
-                      <span className="product-price">{peso(p.price)}</span>
+                      <span className="product-price">{peso(saleInfo(p).price)} <SaleWas product={p} compact /></span>
                       {renderShelfRating(p)}
                     </div>
                   </Link>
@@ -1199,7 +1237,7 @@ const ProductDetails = () => {
             onClick={() => setSheetMode('buy')}
             disabled={cannotBuy || isAddingToCart}
           >
-            <span>{notTakingOrders ? 'Not taking orders yet' : isOutOfStock ? 'Out of stock' : 'Buy now'}</span>
+            <span>{notTakingOrders ? closedLabel : isOutOfStock ? 'Out of stock' : 'Buy now'}</span>
             {!cannotBuy && <small>{optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}</small>}
           </button>
         </div>

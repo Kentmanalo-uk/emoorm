@@ -1,4 +1,7 @@
 const sharp = require('sharp');
+// A small file can claim enormous dimensions; decoding it would take the
+// server's memory. 40 megapixels covers any phone photo.
+const MAX_INPUT_PIXELS = 40e6;
 const path = require('path');
 const fs = require('fs/promises');
 const config = require('../config/env');
@@ -9,7 +12,7 @@ const HASH_HEIGHT = 8;
 const HASH_BITS = HASH_WIDTH - 1; // per row → 8 * 8 = 64 bits
 
 const bufferToDHash = async (buffer) => {
-  const raw = await sharp(buffer)
+  const raw = await sharp(buffer, { limitInputPixels: MAX_INPUT_PIXELS })
     .removeAlpha()
     .grayscale()
     .resize(HASH_WIDTH, HASH_HEIGHT, { fit: 'fill' })

@@ -49,6 +49,26 @@ const inspect = () => {
     warnings.push('CACHE_REDIS_URL is not set. The in-process cache works, but is not shared between instances.');
   }
 
+  // Uploads inside the app folder are replaced by the next deploy: every
+  // product photo and ID document would be lost.
+  const path = require('path');
+  const appDir = path.resolve(__dirname, '..', '..');
+  for (const [name, dir] of [['UPLOAD_DIR', config.upload.uploadDir], ['PRIVATE_UPLOAD_DIR', config.upload.privateUploadDir]]) {
+    const abs = path.resolve(dir);
+    if (!process.env[name] || abs === appDir || abs.startsWith(appDir + path.sep)) {
+      warnings.push(`${name} is ${process.env[name] ? `inside the app (${abs})` : 'not set'}. Uploaded files there are lost on the next deploy: point it at a folder outside the app (see HOSTINGER.md).`);
+    }
+  }
+
+  // Without a mail transport, password resets and email confirmations look
+  // sent but never arrive.
+  const { isResendConfigured, isSmtpConfigured } = require('../utils/email');
+  if (!isResendConfigured() && !isSmtpConfigured()) {
+    warnings.push('No email transport (RESEND_API_KEY or SMTP_*). Password resets and email confirmations will not be delivered.');
+  } else if (/onboarding@resend\.dev/i.test(process.env.EMAIL_FROM || process.env.RESEND_FROM || '')) {
+    warnings.push('Email is sent from Resend\'s sandbox sender (onboarding@resend.dev), which only delivers to your own address.');
+  }
+
   if (!config.site.indexable) {
     warnings.push('SITE_INDEXABLE=false — robots.txt disallows everything and the sitemap returns 404. Correct for staging, wrong for production.');
   }

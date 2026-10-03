@@ -30,7 +30,7 @@ export const API_ENDPOINTS = {
     LOGIN: '/auth/login',
     LOGOUT: '/auth/logout',
     PROFILE: '/auth/profile',
-    REFRESH: '/auth/refresh',
+    REFRESH: '/auth/refresh-token',
     APPLY_SELLER: '/auth/apply-seller',
     PENDING_SELLERS: '/auth/pending-sellers',
     APPROVE_SELLER: (id) => `/auth/approve-seller/${id}`,

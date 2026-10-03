@@ -10,6 +10,7 @@ import { resolveImg } from '../lib/media';
 import { getSellerFollowerStats } from '../lib/follow';
 import { useShare } from '../components/ShareSheet';
 import PhoneSheet from '../components/seller/PhoneSheet';
+import ShopVouchers from '../components/seller/ShopVouchers';
 import { sellBlockers } from '../lib/sellerSetup';
 import Skeleton from '../components/ui/Skeleton';
 import ToolGradients from '../components/ui/ToolGradients';
@@ -166,6 +167,8 @@ export default function SellerMarketing() {
             })}
           </div>
         </section>
+
+        <ShopVouchers />
 
         {/* Sent */}
         <section className="sh-card smk-sent">

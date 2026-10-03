@@ -4,11 +4,14 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import './index.css';
 import './styles/phone-app.css';
 import App from './App.jsx';
-import { loadGoogleTranslate } from './lib/googleTranslate';
+import { loadGoogleTranslate, getCurrentLanguage } from './lib/googleTranslate';
+import { startCuratedTagalog } from './lib/tagalog';
 import { bootTheme } from './hooks/useTheme';
 import { setupPwaInstall } from './lib/pwaInstall';
 
 loadGoogleTranslate();
+// Tagalog: our own wording for the app's buttons and labels, ahead of Google's.
+if (getCurrentLanguage() === 'tl') startCuratedTagalog();
 
 // React Router calls the page a fresh load opens "default", on every fresh
 // load. Each load gets a name of its own instead, so what a page remembers

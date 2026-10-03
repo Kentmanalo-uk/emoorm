@@ -178,31 +178,6 @@
   margin-bottom: var(--spacing-5);
 }
 
-.address-card {
-  display: flex;
-  gap: var(--spacing-3);
-  padding: var(--spacing-4);
-  border: 2px solid var(--t-neutral-200, #e5e7eb);
-  border-radius: 0;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.address-card:hover {
-  border-color: var(--t-primary-600, #059669);
-  background-color: var(--t-success-50, #f0fdf4);
-}
-
-.address-card.selected {
-  border-color: var(--t-primary-600, #059669);
-  background-color: var(--t-success-50, #f0fdf4);
-}
-
-.address-card input[type="radio"] {
-  margin-top: 4px;
-  cursor: pointer;
-}
-
 .address-details {
   flex: 1;
 }
@@ -1327,8 +1302,7 @@
 
   .fulfillment-option,
   .payment-card,
-  .saved-address-option,
-  .address-card {
+  .saved-address-option {
     min-height: 56px;
     padding: 12px 14px;
     border-radius: 12px;

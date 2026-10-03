@@ -1,6 +1,7 @@
 const addressRepository = require('../repositories/address.repository');
 const municipalityRepository = require('../repositories/municipality.repository');
 const { ApiError } = require('../middleware/errorHandler');
+const { normalizePin } = require('../utils/mapPin');
 
 /**
  * Address Service
@@ -13,6 +14,10 @@ const pickAllowed = (data) => {
   const result = {};
   for (const field of ALLOWED_FIELDS) {
     if (data[field] !== undefined) result[field] = data[field];
+  }
+  // An optional map pin for the rider.
+  if (data.latitude !== undefined || data.longitude !== undefined) {
+    Object.assign(result, normalizePin(data.latitude, data.longitude));
   }
   return result;
 };

@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import AppGoogle from './pages/AppGoogle';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import VerifyEmail from './pages/VerifyEmail';
 import Profile from './pages/Profile';
 import Products from './pages/Products';
 import SearchStart from './pages/SearchStart';
@@ -20,54 +18,12 @@ import OrderReceipt from './pages/OrderReceipt';
 import Orders from './pages/Orders';
 import Messages from './pages/Messages';
 import Addresses from './pages/Addresses';
-import Sell from './pages/Sell';
-import SellerApply from './pages/SellerApply';
-import SellerLayout from './components/layout/SellerLayout';
-import SellerDashboard from './pages/SellerDashboard';
-import SellerStore from './pages/SellerStore';
-import SellerProducts from './pages/SellerProducts';
-import SellerOrders from './pages/SellerOrders';
-import SellerMessages from './pages/SellerMessages';
-import SellerAssistant from './pages/SellerAssistant';
-import SellerSupport from './pages/SellerSupport';
-import SellerReviews from './pages/SellerReviews';
-import SellerAnalytics from './pages/SellerAnalytics';
-import SellerFinance from './pages/SellerFinance';
-import SellerSetup from './pages/SellerSetup';
-import SellerVerification from './pages/SellerVerification';
-import SellerMenu from './pages/SellerMenu';
-import SellerMarketing from './pages/SellerMarketing';
-import SellerDecorate, { SellerTemplates, SellerTemplatePreview } from './pages/SellerDecorate';
-import SellerShopHome from './pages/SellerShopHome';
-import SellerFulfillment from './pages/SellerFulfillment';
-import SellerSettings from './pages/SellerSettings';
 import Stores from './pages/Stores';
 import StoreDetail from './pages/StoreDetail';
 import PublicProfile from './pages/PublicProfile';
 import MunicipalityShowcase from './pages/MunicipalityShowcase';
-import MunicipalityGallery from './pages/MunicipalityGallery';
 import Wishlist from './pages/Wishlist';
 import Notifications from './pages/Notifications';
-import NotificationDetail from './pages/NotificationDetail';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminSellers from './pages/AdminSellers';
-import AdminProducts from './pages/AdminProducts';
-import AdminReports from './pages/AdminReports';
-import AdminUsers from './pages/AdminUsers';
-import AdminOrders from './pages/AdminOrders';
-import AdminCategories from './pages/AdminCategories';
-import AdminMunicipalities from './pages/AdminMunicipalities';
-import AdminAnalytics from './pages/AdminAnalytics';
-import AdminMessages from './pages/AdminMessages';
-import AdminFeedback from './pages/AdminFeedback';
-import AdminBanners from './pages/AdminBanners';
-import AdminCouriers from './pages/AdminCouriers';
-import AdminVouchers from './pages/AdminVouchers';
-import AdminJuniorAdmins from './pages/AdminJuniorAdmins';
-import AdminAuditLogs from './pages/AdminAuditLogs';
-import AdminSettings from './pages/AdminSettings';
-import AdminMenu from './pages/AdminMenu';
-import AdminTools from './pages/AdminTools';
 import ProfileLayout from './components/layout/ProfileLayout';
 import ProfileReviews from './pages/ProfileReviews';
 import ProfileFollowedStores from './pages/ProfileFollowedStores';
@@ -76,22 +32,11 @@ import ProfileSettings from './pages/ProfileSettings';
 import ProfileVerification from './pages/ProfileVerification';
 import ProfileSupport from './pages/ProfileSupport';
 import ProfileReports from './pages/ProfileReports';
-import AdminSupport from './pages/AdminSupport';
-import AdminNotifications from './pages/AdminNotifications';
-import AdminReviews from './pages/AdminReviews';
-import AdminReturns from './pages/AdminReturns';
 import NotFound from './pages/NotFound';
 import HelpCenter from './pages/HelpCenter';
-import About from './pages/About';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsOfService from './pages/TermsOfService';
-import CookiePolicy from './pages/CookiePolicy';
-import AppDownload from './pages/AppDownload';
-import SearchByImage from './pages/SearchByImage';
 import Returns from './pages/Returns';
 import ReturnRequest from './pages/ReturnRequest';
 import ReturnDetail from './pages/ReturnDetail';
-import SellerReturns from './pages/SellerReturns';
 import { WishlistContent } from './pages/Wishlist';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
@@ -109,6 +54,81 @@ import { isAuthSheetPath, HOME_BACKGROUND } from './lib/authSheet';
 import './App.css';
 import './styles/responsive.css';
 import './styles/accent.css';
+import Spinner from './components/ui/Spinner';
+import { RouteTitles } from './lib/routeTitles';
+import ConfirmHost from './components/ui/ConfirmHost';
+import OfflineBanner from './components/ui/OfflineBanner';
+
+// Pages most shoppers never open (the Seller Center, the admin panel, legal
+// and app pages) load when first visited instead of with every page.
+const AppGoogle = lazy(() => import('./pages/AppGoogle'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const Sell = lazy(() => import('./pages/Sell'));
+const SellerApply = lazy(() => import('./pages/SellerApply'));
+const SellerLayout = lazy(() => import('./components/layout/SellerLayout'));
+// Also the admin's notification page, so it brings the admin shell only when opened.
+const NotificationDetail = lazy(() => import('./pages/NotificationDetail'));
+const SellerDashboard = lazy(() => import('./pages/SellerDashboard'));
+const SellerStore = lazy(() => import('./pages/SellerStore'));
+const SellerProducts = lazy(() => import('./pages/SellerProducts'));
+const SellerOrders = lazy(() => import('./pages/SellerOrders'));
+const SellerMessages = lazy(() => import('./pages/SellerMessages'));
+const SellerAssistant = lazy(() => import('./pages/SellerAssistant'));
+const SellerSupport = lazy(() => import('./pages/SellerSupport'));
+const SellerReviews = lazy(() => import('./pages/SellerReviews'));
+const SellerQuestions = lazy(() => import('./pages/SellerQuestions'));
+const SellerAnalytics = lazy(() => import('./pages/SellerAnalytics'));
+const SellerFinance = lazy(() => import('./pages/SellerFinance'));
+const SellerSetup = lazy(() => import('./pages/SellerSetup'));
+const SellerVerification = lazy(() => import('./pages/SellerVerification'));
+const SellerMenu = lazy(() => import('./pages/SellerMenu'));
+const SellerMarketing = lazy(() => import('./pages/SellerMarketing'));
+const SellerDecorate = lazy(() => import('./pages/SellerDecorate'));
+const SellerTemplates = lazy(() => import('./pages/SellerDecorate').then((m) => ({ default: m.SellerTemplates })));
+const SellerTemplatePreview = lazy(() => import('./pages/SellerDecorate').then((m) => ({ default: m.SellerTemplatePreview })));
+const SellerShopHome = lazy(() => import('./pages/SellerShopHome'));
+const SellerFulfillment = lazy(() => import('./pages/SellerFulfillment'));
+const SellerSettings = lazy(() => import('./pages/SellerSettings'));
+const MunicipalityGallery = lazy(() => import('./pages/MunicipalityGallery'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminSellers = lazy(() => import('./pages/AdminSellers'));
+const AdminProducts = lazy(() => import('./pages/AdminProducts'));
+const AdminReports = lazy(() => import('./pages/AdminReports'));
+const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const AdminOrders = lazy(() => import('./pages/AdminOrders'));
+const AdminCategories = lazy(() => import('./pages/AdminCategories'));
+const AdminMunicipalities = lazy(() => import('./pages/AdminMunicipalities'));
+const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
+const AdminMessages = lazy(() => import('./pages/AdminMessages'));
+const AdminFeedback = lazy(() => import('./pages/AdminFeedback'));
+const AdminBanners = lazy(() => import('./pages/AdminBanners'));
+const AdminCouriers = lazy(() => import('./pages/AdminCouriers'));
+const AdminVouchers = lazy(() => import('./pages/AdminVouchers'));
+const AdminJuniorAdmins = lazy(() => import('./pages/AdminJuniorAdmins'));
+const AdminAuditLogs = lazy(() => import('./pages/AdminAuditLogs'));
+const AdminSettings = lazy(() => import('./pages/AdminSettings'));
+const AdminMenu = lazy(() => import('./pages/AdminMenu'));
+const AdminTools = lazy(() => import('./pages/AdminTools'));
+const AdminSupport = lazy(() => import('./pages/AdminSupport'));
+const AdminNotifications = lazy(() => import('./pages/AdminNotifications'));
+const AdminReviews = lazy(() => import('./pages/AdminReviews'));
+const AdminReturns = lazy(() => import('./pages/AdminReturns'));
+const About = lazy(() => import('./pages/About'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const CookiePolicy = lazy(() => import('./pages/CookiePolicy'));
+const AppDownload = lazy(() => import('./pages/AppDownload'));
+const SearchByImage = lazy(() => import('./pages/SearchByImage'));
+const SellerReturns = lazy(() => import('./pages/SellerReturns'));
+
+/** Shown for the moment a page loaded on demand is on its way. */
+function RouteLoading() {
+  return (
+    <div className="route-loading" role="status" aria-label="Loading">
+      <Spinner size={22} />
+    </div>
+  );
+}
 
 /**
  * Shared query client.
@@ -168,6 +188,10 @@ function AppRoutes() {
   return (
     <>
       <ProductTransitions />
+      <RouteTitles />
+      <ConfirmHost />
+      <OfflineBanner />
+      <Suspense fallback={<RouteLoading />}>
       <Routes location={background || location}>
         {/* Public routes */}
         <Route path="/" element={<Home />} />
@@ -259,6 +283,7 @@ function AppRoutes() {
           <Route path="products" element={<SellerProducts />} />
           <Route path="products/new" element={<SellerProducts />} />
           <Route path="reviews" element={<SellerReviews />} />
+          <Route path="questions" element={<SellerQuestions />} />
           <Route path="analytics" element={<SellerAnalytics />} />
           <Route path="finance" element={<SellerFinance />} />
           <Route path="store" element={<SellerStore />} />
@@ -301,6 +326,7 @@ function AppRoutes() {
         {/* Catch-all: unknown URLs */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
       {background && (
         <Routes>
           <Route path="/login" element={<Login />} />

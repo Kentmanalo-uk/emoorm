@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CaretDown as ChevronDown, Globe, Check } from '@phosphor-icons/react';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTranslate';
 import './LanguageSwitcher.css';

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Star, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { Link, useSearchParams } from 'react-router-dom';

@@ -1,0 +1,124 @@
+/* "Your data" in Account Settings (desktop card and phone page). */
+.ad {
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+}
+
+.ad-row + .ad-row {
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.ad-text {
+  min-width: 0;
+}
+
+.ad-title {
+  margin: 0 0 3px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--t-neutral-900, #111827);
+}
+
+.ad-desc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.ad-btn {
+  flex-shrink: 0;
+}
+
+.ad-btn-danger {
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-danger-700, #b91c1c);
+  border-color: var(--t-danger-200, #fecaca);
+}
+
+.ad-btn-danger:hover:not(:disabled) {
+  background: var(--t-danger-50, #fef2f2);
+}
+
+.ad-btn-solid-danger {
+  background: var(--t-danger-600, #dc2626);
+  color: #fff;
+}
+
+.ad-btn-solid-danger:hover:not(:disabled) {
+  background: var(--t-danger-700, #b91c1c);
+}
+
+.ad-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  margin-top: 4px;
+  background: var(--t-neutral-50, #f9fafb);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+}
+
+.ad-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--t-neutral-700, #374151);
+}
+
+.ad-note {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--t-warning-800, #92400e);
+}
+
+.ad-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ad-note ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+}
+
+.ad-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.ad-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Phones: buttons are full width (ProfileSettings.css), so each row stacks. */
+@media (max-width: 640px) {
+  .ad-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .ad-actions .ps-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

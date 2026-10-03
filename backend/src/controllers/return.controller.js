@@ -27,8 +27,8 @@ const getOne = asyncHandler(async (req, res) => {
 const myList = asyncHandler(async (req, res) => {
   const { page = 1, pageSize = 20, status } = req.query;
   const result = await returnService.listForBuyer(req.user.id, {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     status,
   });
   paginatedResponse(res, result.rows, result.total, result.page, result.pageSize);
@@ -38,8 +38,8 @@ const storeList = asyncHandler(async (req, res) => {
   const { storeId } = await getSellerContext(req);
   const { page = 1, pageSize = 20, status } = req.query;
   const result = await returnService.listForStore(storeId, {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     status,
   });
   paginatedResponse(res, result.rows, result.total, result.page, result.pageSize);
@@ -73,4 +73,14 @@ const close = asyncHandler(async (req, res) => {
   successResponse(res, result, 'Return request closed');
 });
 
-module.exports = { create, getOne, myList, storeList, decide, received, refund, cancel, close };
+const dispute = asyncHandler(async (req, res) => {
+  const result = await returnService.dispute(req.params.id, req.user.id, req.body);
+  successResponse(res, result, 'Sent to the municipal admin');
+});
+
+const resolveDispute = asyncHandler(async (req, res) => {
+  const result = await returnService.resolveDispute(req.params.id, req.user, req.body);
+  successResponse(res, result, 'Dispute decided');
+});
+
+module.exports = { create, getOne, myList, storeList, decide, received, refund, cancel, close, dispute, resolveDispute };

@@ -7,6 +7,8 @@ const shopReadiness = require('./shopReadiness.service');
 const { cleanFields } = require('../utils/sanitize');
 const { cached } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
+const shopHours = require('../utils/shopHours');
+const { Prisma } = require('@prisma/client');
 
 /**
  * Store Service
@@ -311,9 +313,12 @@ const completeGuide = async (userId, key) => {
  */
 const getStores = async (options = {}) => {
   // Admin listings include suspended/inactive shops and must stay fresh for
-  // moderation, so only the public directory is cached.
-  if (options.includeInactive || options.isAdmin) {
-    return storeRepository.findAll(options);
+  // moderation, and a signed-in seller's list leaves out their own shop: only
+  // the public directory everyone sees is cached.
+  if (options.includeInactive || options.isAdmin || options.excludeOwnerId) {
+    const result = await storeRepository.findAll(options);
+    const ready = await shopReadiness.readyIds(result.stores.map((s) => s.id));
+    return { ...result, stores: result.stores.map((s) => ({ ...s, readyToSell: ready.has(s.id) })) };
   }
   return cached.storeList(
     {
@@ -325,6 +330,7 @@ const getStores = async (options = {}) => {
       sortOrder: options.sortOrder,
       isActive: options.isActive,
       isSuspended: options.isSuspended,
+      isApproved: options.isApproved,
     },
     async () => {
       // Listed with its products either way; readyToSell says whether it
@@ -407,6 +413,10 @@ const updateStore = async (storeId, userId, rawData) => {
     throw new ApiError('You can only update your own store', 403);
   }
 
+  // The address (slug) always comes from the shop's name, never from the
+  // request: a hand-picked one could impersonate another shop or break links.
+  delete data.slug;
+
   // If updating name, regenerate slug
   if (data.name && data.name !== store.name) {
     data.slug = await generateSlug(data.name);
@@ -437,6 +447,10 @@ const updateStore = async (storeId, userId, rawData) => {
     'secondaryColor',
     'bannerImage',
     'isActive',
+    'openingHours',
+    'vacationUntil',
+    'vacationNote',
+    'prepDays',
   ];
 
   const updateData = {};
@@ -448,6 +462,14 @@ const updateStore = async (storeId, userId, rawData) => {
         updateData[field] = normalizeCoordinate(data[field], -180, 180, 'Longitude');
       } else if (field === 'deliveryFee') {
         updateData[field] = normalizeDeliveryFee(data[field]);
+      } else if (field === 'openingHours') {
+        updateData[field] = shopHours.normalizeOpeningHours(data[field]) ?? Prisma.DbNull;
+      } else if (field === 'vacationUntil') {
+        updateData[field] = shopHours.normalizeVacationUntil(data[field]);
+      } else if (field === 'vacationNote') {
+        updateData[field] = shopHours.normalizeVacationNote(data[field]);
+      } else if (field === 'prepDays') {
+        updateData[field] = shopHours.normalizePrepDays(data[field]);
       } else {
         updateData[field] = data[field];
       }
@@ -506,6 +528,19 @@ const requestStoreDeletion = async (storeId, userId) => {
 
   if (store.deletionRequestedAt) {
     throw new ApiError('Store deletion has already been requested', 409);
+  }
+
+  // Buyers with orders or returns still in progress are owed a finish.
+  const [openOrders, openReturns] = await Promise.all([
+    prisma.order.count({ where: { storeId, status: { notIn: ['COMPLETED', 'CANCELLED'] } } }),
+    prisma.returnRequest.count({ where: { storeId, status: { in: ['REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED', 'DISPUTED'] } } }),
+  ]);
+  if (openOrders || openReturns) {
+    const parts = [
+      openOrders && `${openOrders} open order${openOrders === 1 ? '' : 's'}`,
+      openReturns && `${openReturns} open return${openReturns === 1 ? '' : 's'}`,
+    ].filter(Boolean).join(' and ');
+    throw new ApiError(`Finish or cancel your ${parts} before deleting the shop.`, 409);
   }
 
   const updated = await storeRepository.updateStore(storeId, {

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import useCartStore from './cartStore';
+import useWishlistStore from './wishlistStore';
+import { setAuthHandlers } from '../lib/axios';
 
 // Initialize auth state from localStorage
 const initializeAuth = () => {
@@ -55,8 +57,10 @@ const useAuthStore = create(
           localStorage.setItem('refreshToken', refreshToken);
         }
 
-        // Switch to this user's cart (merging anything added as a guest).
+        // Switch to this user's cart (merging anything added as a guest) and
+        // saved list.
         useCartStore.getState().setOwner(userData?.id || null);
+        useWishlistStore.getState().setOwner(userData?.id || null);
       },
 
       // `to`: where the page that signed out is sending the visitor, so route
@@ -77,8 +81,10 @@ const useAuthStore = create(
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
 
-        // Leave the user's cart behind; the visible cart becomes the guest one.
+        // Leave the user's cart and saved list behind; the visible ones
+        // become the guest's.
         useCartStore.getState().setOwner(null);
+        useWishlistStore.getState().setOwner(null);
       },
 
       updateUser: (userData) => {
@@ -133,7 +139,40 @@ const useAuthStore = create(
   )
 );
 
-// Point the cart at whoever is already signed in on this device.
+// Point the cart and saved list at whoever is already signed in on this device.
 useCartStore.getState().setOwner(useAuthStore.getState().user?.id || null);
+useWishlistStore.getState().setOwner(useAuthStore.getState().user?.id || null);
+
+// The API client saves renewed tokens here, and signs out through here when
+// the session cannot be renewed.
+setAuthHandlers({
+  setTokens: (accessToken, refreshToken) => useAuthStore.getState().setTokens(accessToken, refreshToken),
+  signOut: () => useAuthStore.getState().logout(),
+});
+
+// Other tabs: signing in, out or as someone else there shows here too
+// (requests already read the token from storage, so the screen must follow).
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'token' && e.key !== 'user') return;
+    const { user } = useAuthStore.getState();
+    const token = localStorage.getItem('token');
+    let stored;
+    try { stored = JSON.parse(localStorage.getItem('user') || 'null'); } catch { stored = null; }
+    if (!token || !stored) {
+      if (user) {
+        useAuthStore.setState({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+        useCartStore.getState().setOwner(null);
+        useWishlistStore.getState().setOwner(null);
+      }
+      return;
+    }
+    if (stored.id !== user?.id || token !== useAuthStore.getState().accessToken) {
+      useAuthStore.setState({ user: stored, accessToken: token, isAuthenticated: true });
+      useCartStore.getState().setOwner(stored.id);
+      useWishlistStore.getState().setOwner(stored.id);
+    }
+  });
+}
 
 export default useAuthStore;

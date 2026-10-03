@@ -1,30 +1,83 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from '../lib/axios';
-import { priceForSelection, pricedVariation, stockForSelection } from '../lib/variantPricing';
+import { priceForSelection, pricedVariation, stockForSelection, priceTiersOf } from '../lib/variantPricing';
+import { firstImage } from '../lib/media';
+import { awayUntil, shortDate } from '../lib/shopHours';
 
 // Carts are kept per owner (user id or 'guest'). `items` mirrors the active
 // owner's bucket so every existing consumer keeps reading `items` directly.
+// Options in a fixed order, so one choice always gives the same line id
+// (the account's saved cart stores them sorted).
+const sortedOptions = (selected) => (selected && typeof selected === 'object'
+  ? Object.fromEntries(Object.keys(selected).sort().map((k) => [k, selected[k]]))
+  : selected);
+
 /** A cart line's id: the product and its chosen options (Buy Now opens checkout with it). */
 export const cartKeyFor = (product) => product.cartKey
-  || `${product.id}:${product.selectedVariations ? JSON.stringify(product.selectedVariations) : ''}`;
+  || `${product.id}:${product.selectedVariations ? JSON.stringify(sortedOptions(product.selectedVariations)) : ''}`;
 
 const GUEST = 'guest';
 const ownerKey = (userId) => (userId ? String(userId) : GUEST);
 
-// The DB stores `images` as JSON; some rows come back stringified.
-const firstImage = (raw) => {
-  if (Array.isArray(raw)) return raw[0] || null;
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed[0] || null : raw;
-    } catch {
-      return raw;
-    }
-  }
-  return null;
+// Bulk prices: a line keeps its one-unit price (basePrice) and the product's
+// tiers, and its price follows the quantity. The server prices it the same way.
+const withTierPrice = (line) => {
+  const tiers = Array.isArray(line.priceTiers) ? line.priceTiers : [];
+  if (!tiers.length) return line;
+  const base = Number(line.basePrice ?? line.price);
+  const tier = tiers.filter((t) => line.quantity >= t.minQty).pop();
+  const price = tier && tier.price < base ? tier.price : base;
+  return price === line.price && line.basePrice != null ? line : { ...line, basePrice: base, price };
 };
+
+// A line rebuilt from the account's saved cart (GET /me/cart).
+const lineFromSaved = (row) => withTierPrice(savedLine(row));
+const savedLine = ({ product, selectedVariations, quantity }) => {
+  const stock = stockForSelection(product, selectedVariations);
+  const gone = Boolean(product.deletedAt) || product.status !== 'APPROVED';
+  return {
+    id: cartKeyFor({ id: product.id, selectedVariations }),
+    productId: product.id,
+    name: product.name,
+    slug: product.slug,
+    price: priceForSelection(product, selectedVariations) || Number(product.price),
+    basePrice: priceForSelection(product, selectedVariations) || Number(product.price),
+    priceTiers: priceTiersOf(product),
+    image: firstImage(product.images),
+    images: product.images,
+    stock,
+    storeId: product.storeId,
+    storeName: product.store?.name,
+    storeLogo: product.store?.logo || null,
+    categoryId: product.categoryId,
+    variations: product.variations,
+    selectedVariations: selectedVariations || null,
+    quantity,
+    unavailable: gone || stock <= 0,
+    unavailableReason: gone ? 'This product is not available right now' : stock <= 0 ? 'Out of stock' : null,
+  };
+};
+
+// The same line on two devices: the larger quantity wins, nothing is added twice.
+const unionLines = (saved, local) => {
+  const byId = new Map(saved.map((line) => [line.id, line]));
+  local.forEach((line) => {
+    const id = cartKeyFor({ id: line.productId || line.id, selectedVariations: line.selectedVariations });
+    const have = byId.get(id);
+    byId.set(id, have ? { ...have, quantity: Math.max(have.quantity, line.quantity) } : { ...line, id });
+  });
+  return [...byId.values()];
+};
+
+// What the account stores of a cart: products, options and quantities. Price
+// and stock refreshes change lines without changing this.
+const savedShape = (items) => items
+  .map((line) => `${line.productId || line.id}|${JSON.stringify(sortedOptions(line.selectedVariations) || null)}|${line.quantity}`)
+  .join(',');
+
+// Saving to the account waits for a pause in changes (a few taps on +).
+let saveTimer = null;
 
 // Merge two line lists by line id, summing quantities (capped to known stock).
 const mergeLines = (base, incoming) => {
@@ -46,10 +99,58 @@ const mergeLines = (base, incoming) => {
 const useCartStore = create(
   persist(
     (set, get) => {
-      // Write the active bucket and its mirror in one update.
-      const commit = (items) => {
-        const { owner, carts } = get();
+      // Send the signed-in owner's cart to the account.
+      const save = async () => {
+        const { owner, items } = get();
+        if (owner === GUEST) return;
+        try {
+          await axios.put('/me/cart', {
+            items: items.map((line) => ({
+              productId: line.productId || line.id,
+              selectedVariations: line.selectedVariations || null,
+              quantity: line.quantity,
+            })),
+          });
+          // Saved, unless the account changed or the cart moved on meanwhile.
+          if (get().owner === owner && savedShape(get().items) === savedShape(items)) {
+            set({ unsaved: { ...get().unsaved, [owner]: false } });
+          }
+        } catch {
+          // Stays unsaved: the next change or sign-in sends it again.
+        }
+      };
+      const scheduleSave = () => {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(save, 800);
+      };
+
+      // Write the active bucket and its mirror in one update. A signed-in
+      // owner's change is saved to the account shortly after.
+      const commit = (rawItems) => {
+        const items = rawItems.map(withTierPrice);
+        const { owner, carts, unsaved, items: before } = get();
         set({ items, carts: { ...carts, [owner]: items } });
+        if (owner !== GUEST && savedShape(items) !== savedShape(before)) {
+          if (!unsaved[owner]) set({ unsaved: { ...unsaved, [owner]: true } });
+          scheduleSave();
+        }
+      };
+
+      // Read the account's saved cart. Changes made here and not yet saved
+      // are kept alongside it; otherwise the saved cart is the cart.
+      const loadSaved = async (key) => {
+        let saved;
+        try {
+          const res = await axios.get('/me/cart');
+          saved = (res.data || []).filter((row) => row?.product).map(lineFromSaved);
+        } catch {
+          return;
+        }
+        if (get().owner !== key) return;
+        const pending = get().unsaved[key];
+        const items = pending ? unionLines(saved, get().items) : saved;
+        set({ items, carts: { ...get().carts, [key]: items } });
+        if (pending) scheduleSave();
       };
 
       return {
@@ -57,19 +158,27 @@ const useCartStore = create(
         owner: GUEST,
         carts: { [GUEST]: [] },
         items: [],
+        // Owners whose cart here has changes the account has not saved yet.
+        unsaved: {},
 
         // Switch the active bucket. Logging in merges the guest cart into the
-        // user's cart; logging out returns to the (now empty) guest bucket.
+        // user's cart and brings in the account's saved cart; logging out
+        // returns to the (now empty) guest bucket.
         setOwner: (userId) => {
           const key = ownerKey(userId);
           const { owner, carts } = get();
           const nextCarts = { ...carts };
           if (!nextCarts[key]) nextCarts[key] = [];
+          const unsaved = { ...get().unsaved };
           if (key !== owner && key !== GUEST && (nextCarts[GUEST] || []).length) {
             nextCarts[key] = mergeLines(nextCarts[key], nextCarts[GUEST]);
             nextCarts[GUEST] = [];
+            unsaved[key] = true;
           }
-          set({ owner: key, carts: nextCarts, items: nextCarts[key] });
+          // A save still waiting belongs to the account being left.
+          if (key !== owner) clearTimeout(saveTimer);
+          set({ owner: key, carts: nextCarts, items: nextCarts[key], unsaved });
+          if (key !== GUEST) loadSaved(key);
         },
 
         // Actions
@@ -82,6 +191,10 @@ const useCartStore = create(
           if (product.readyToSell === false || product.store?.readyToSell === false) {
             throw new Error("This shop isn't taking orders yet");
           }
+
+          // Away (Shop Settings): no orders until the date.
+          const away = awayUntil(product.store || product);
+          if (away) throw new Error(`This shop is away until ${shortDate(away)}`);
 
           // Validate stock
           if (product.stock !== undefined && product.stock === 0) {
@@ -97,7 +210,7 @@ const useCartStore = create(
 
             commit(items.map((item) => (
               item.id === cartKey
-                ? { ...item, quantity: newQuantity, stock: product.stock, price: Number(product.price), unavailable: false, unavailableReason: null }
+                ? { ...item, quantity: newQuantity, stock: product.stock, price: Number(product.price), basePrice: Number(product.price), priceTiers: priceTiersOf(product), unavailable: false, unavailableReason: null }
                 : item
             )));
           } else {
@@ -112,6 +225,8 @@ const useCartStore = create(
               id: cartKey,
               productId: product.productId || product.id,
               price: Number(product.price),
+              basePrice: Number(product.price),
+              priceTiers: priceTiersOf(product),
               quantity,
               unavailable: false,
               unavailableReason: null,
@@ -185,6 +300,7 @@ const useCartStore = create(
 
             const gone = !product || status === 404;
             const notApproved = !gone && product.status !== 'APPROVED';
+            const away = !gone && awayUntil(product.store);
             // Per-option stock: the line's own option's quantity.
             const stock = gone ? 0 : stockForSelection(product, line.selectedVariations);
             const patch = { unavailable: false, unavailableReason: null };
@@ -193,6 +309,8 @@ const useCartStore = create(
               // The line's chosen option sets its price when the product is
               // priced per option.
               patch.price = priceForSelection(product, line.selectedVariations) || Number(line.price);
+              patch.basePrice = patch.price;
+              patch.priceTiers = priceTiersOf(product);
               patch.image = firstImage(product.images) || line.image;
               patch.stock = stock;
               patch.slug = product.slug || line.slug;
@@ -214,6 +332,9 @@ const useCartStore = create(
             } else if (notApproved) {
               patch.unavailable = true;
               patch.unavailableReason = 'This product is not available right now';
+            } else if (away) {
+              patch.unavailable = true;
+              patch.unavailableReason = `The shop is away until ${shortDate(away)}`;
             } else if (stock <= 0) {
               patch.unavailable = true;
               patch.unavailableReason = 'Out of stock';
@@ -273,7 +394,7 @@ const useCartStore = create(
     {
       name: 'emoorm-cart',
       version: 1,
-      partialize: (state) => ({ owner: state.owner, carts: state.carts }),
+      partialize: (state) => ({ owner: state.owner, carts: state.carts, unsaved: state.unsaved }),
       // v0 stored a single `{ items }` list: it becomes the guest bucket.
       migrate: (persisted, version) => {
         if (version === 0 || !persisted?.carts) {
@@ -285,7 +406,8 @@ const useCartStore = create(
         const owner = persisted?.owner || GUEST;
         const carts = persisted?.carts && typeof persisted.carts === 'object' ? persisted.carts : { [GUEST]: [] };
         if (!carts[owner]) carts[owner] = [];
-        return { ...current, owner, carts, items: carts[owner] };
+        const unsaved = persisted?.unsaved && typeof persisted.unsaved === 'object' ? persisted.unsaved : {};
+        return { ...current, owner, carts, unsaved, items: carts[owner] };
       },
     }
   )

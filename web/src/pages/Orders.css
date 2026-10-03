@@ -1225,3 +1225,22 @@
     max-width: 100%;
   }
 }
+
+/* "Show more orders" under the list. */
+.orders-more {
+  display: block;
+  margin: 14px auto 8px;
+  padding: 10px 22px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.orders-more:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

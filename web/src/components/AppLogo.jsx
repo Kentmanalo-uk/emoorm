@@ -1,4 +1,3 @@
-import React from 'react';
 import useAppSettings, { resolveAppSettingImage } from '../hooks/useAppSettings';
 
 export default function AppLogo({ alt = 'Emoorm', onError, ...props }) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeSlash as EyeOff, Check, CheckCircle } from '@phosphor-icons/react';
 import axios from '../lib/axios';

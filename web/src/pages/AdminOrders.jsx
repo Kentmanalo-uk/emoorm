@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Eye, X, DownloadSimple, LockSimple } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';

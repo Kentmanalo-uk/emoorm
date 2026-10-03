@@ -210,11 +210,24 @@ const register = async (userData) => {
  * @param {String} password - User password
  * @returns {Promise<Object>} User and tokens
  */
+// A hash no password matches, compared against when the email is unknown so
+// that answer takes as long as a wrong password (no telling accounts apart
+// by timing).
+let dummyHash = null;
+const getDummyHash = async () => {
+  if (!dummyHash) dummyHash = await hashPassword(crypto.randomBytes(16).toString('hex'));
+  return dummyHash;
+};
+
 const login = async (email, password) => {
   // Find user with password
   const user = await userRepository.findByEmail(email, true);
 
-  if (!user) {
+  // The password is checked first, and the same answer given whether the
+  // account does not exist or the password is wrong: only someone who knows
+  // the password learns anything about the account.
+  const isPasswordValid = await comparePassword(password, user?.password || await getDummyHash());
+  if (!user || !isPasswordValid) {
     throw new ApiError('Invalid email or password', 401);
   }
 
@@ -228,14 +241,16 @@ const login = async (email, password) => {
     throw new ApiError('Account is suspended. Please contact support.', 403);
   }
 
-  // Compare password
-  const isPasswordValid = await comparePassword(password, user.password);
-  if (!isPasswordValid) {
-    throw new ApiError('Invalid email or password', 401);
-  }
-
-  // Admin accounts must clear a second factor before a full session is issued.
+  // Admin accounts must clear a second factor before a full session is
+  // issued; so does anyone else who turned MFA on.
   const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'MUNICIPAL_ADMIN';
+  if (!isAdmin && user.mfaEnabled) {
+    return {
+      requiresMfa: true,
+      mfaToken: generateMfaToken(user, 'mfa-verify'),
+      email: user.email,
+    };
+  }
   if (isAdmin) {
     if (user.mfaEnabled) {
       return {
@@ -291,6 +306,15 @@ const refreshToken = async (refreshToken) => {
     // an access token dies in minutes, but the refresh token it came with
     // would go on issuing replacements for weeks.
     if ((decoded.tokenVersion ?? 0) !== (user.tokenVersion ?? 0)) {
+      throw new ApiError('Session expired', 401);
+    }
+
+    // Admin access comes only from a sign-in with MFA: a session opened
+    // under another role (or municipality) is not renewed into it.
+    const ADMIN = ['MUNICIPAL_ADMIN', 'SUPER_ADMIN'];
+    if ((ADMIN.includes(user.role) || ADMIN.includes(decoded.role))
+      && (decoded.role !== user.role
+        || (user.role === 'MUNICIPAL_ADMIN' && (decoded.municipalityId || null) !== (user.municipalityId || null)))) {
       throw new ApiError('Session expired', 401);
     }
 
@@ -762,6 +786,21 @@ const saveSellerApplicationDraft = async (userId, draft) => {
  * @param {Object} user - The target user
  * @returns {Promise<Boolean>} True if the actor may manage this user
  */
+/**
+ * Reviewing a seller application (approving, rejecting, viewing its ID
+ * photos) belongs to the town the shop is in, and only that town: where the
+ * applicant lives does not count once a shop location is on file.
+ * @param {Object} actor - The acting admin (req.user)
+ * @param {Object} user - The applicant
+ * @returns {Promise<Boolean>}
+ */
+const canReviewSellerApplication = async (actor, user) => {
+  if (actor?.role !== 'MUNICIPAL_ADMIN') return true;
+  const application = user.sellerApplicationStatus ? await userRepository.findSellerApplication(user.id) : null;
+  if (application?.shopMunicipalityId) return application.shopMunicipalityId === actor.municipalityId;
+  return user.municipalityId === actor.municipalityId;
+};
+
 const canAdminManageUser = async (actor, user) => {
   if (actor?.role !== 'MUNICIPAL_ADMIN') return true;
   if (user.municipalityId === actor.municipalityId) return true;
@@ -887,7 +926,7 @@ const getKycPhoto = async (targetUserId, field, requester) => {
     if (record.sellerApplicationStatus !== 'PENDING') {
       throw new ApiError('ID documents can only be viewed while the application is under review', 403);
     }
-    if (!(await canAdminManageUser(requester, record))) {
+    if (!(await canReviewSellerApplication(requester, record))) {
       throw new ApiError('You are not authorized to view this document', 403);
     }
   }
@@ -935,7 +974,7 @@ const approveSeller = async (userId, actor) => {
     throw new ApiError('User not found', 404);
   }
 
-  if (!(await canAdminManageUser(actor, user))) {
+  if (!(await canReviewSellerApplication(actor, user))) {
     throw new ApiError('You can only manage sellers in your assigned municipality', 403);
   }
 
@@ -984,7 +1023,7 @@ const rejectSeller = async (userId, actor, reason) => {
     throw new ApiError('User not found', 404);
   }
 
-  if (!(await canAdminManageUser(actor, user))) {
+  if (!(await canReviewSellerApplication(actor, user))) {
     throw new ApiError('You can only manage sellers in your assigned municipality', 403);
   }
 
@@ -1067,6 +1106,11 @@ const activateUser = async (userId, actor) => {
   if (actor?.role === 'MUNICIPAL_ADMIN' && target.municipalityId !== actor.municipalityId) {
     throw new ApiError('You can only manage users in your assigned municipality', 403);
   }
+  // The same limits as suspending: a municipal admin a super admin
+  // suspended stays suspended until a super admin says otherwise.
+  if (actor?.role === 'MUNICIPAL_ADMIN' && ['MUNICIPAL_ADMIN', 'SUPER_ADMIN'].includes(target.role)) {
+    throw new ApiError('Only a super admin can reactivate an admin', 403);
+  }
 
   const user = await userRepository.updateUser(userId, {
     isActive: true,
@@ -1082,6 +1126,12 @@ const activateUser = async (userId, actor) => {
  */
 const deleteUser = async (userId) => {
   await userRepository.softDeleteUser(userId);
+  // A seller who can no longer sign in cannot run a shop: it closes, so
+  // buyers stop ordering from it (open orders still expire or finish as usual).
+  const store = await storeRepository.findByOwnerId(userId);
+  if (store && store.isActive) {
+    await storeRepository.updateStore(store.id, { isActive: false });
+  }
 };
 
 /**
@@ -1212,11 +1262,24 @@ const loginWithGoogleProfile = async (profile) => {
       if (!byEmail.isActive) {
         throw new ApiError('Account is suspended. Please contact support.', 403);
       }
+      // Google has just proved who owns this email. If the account's email
+      // was never confirmed, whoever chose its password may not be that
+      // person (someone can sign up with another's address first), so the
+      // old password stops working and every session it opened ends; the
+      // owner can set a password of their own with "Forgot password".
+      const unconfirmed = !byEmail.isVerified;
       await userRepository.updateUser(byEmail.id, {
         googleId: profile.googleId,
         isVerified: true,
         profilePhoto: byEmail.profilePhoto || profile.profilePhoto || null,
+        ...(unconfirmed ? {
+          password: await hashPassword(crypto.randomBytes(32).toString('hex')),
+          tokenVersion: { increment: 1 },
+          passwordResetToken: null,
+          passwordResetExpiry: null,
+        } : {}),
       });
+      if (unconfirmed) console.warn(`[auth] Google sign-in took over unconfirmed account ${byEmail.id}: old password and sessions revoked`);
       user = await userRepository.findByGoogleId(profile.googleId);
     }
   }

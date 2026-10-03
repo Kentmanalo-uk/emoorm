@@ -1069,3 +1069,116 @@
   background: var(--t-warning-50, #fffbeb);
   color: var(--t-warning-800, #92400e);
 }
+
+/* On sale: a lower price, optionally timed. */
+.pf-sale {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border: 1px dashed var(--t-neutral-300, #d1d5db);
+  border-radius: 12px;
+}
+
+.pf-sale.is-on {
+  border-style: solid;
+  border-color: var(--t-danger-200, #fecaca);
+  background: var(--t-danger-50, #fef2f2);
+}
+
+.pf-sale-toggle {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.pf-sale-toggle input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--t-danger-600, #dc2626);
+}
+
+.pf-sale-toggle strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t-neutral-900, #111827);
+}
+
+.pf-sale-toggle small {
+  font-size: 12.5px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+/* Bulk prices: rows of "from N units, ₱ each". */
+.pf-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pf-tiers-head strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t-neutral-900, #111827);
+}
+
+.pf-tiers-head small {
+  font-size: 12.5px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.pf-tier {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pf-tier label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.pf-tier label .pf-input {
+  width: 80px;
+}
+
+.pf-tier .pf-money {
+  flex: 1;
+  min-width: 0;
+}
+
+.pf-tier-remove {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--t-neutral-100, #f3f4f6);
+  font-size: 18px;
+  color: var(--t-neutral-500, #6b7280);
+  cursor: pointer;
+}
+
+.pf-tier-add {
+  align-self: flex-start;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t-primary-700, #047857);
+  cursor: pointer;
+}
+
+.pf-tier-error {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--t-danger-700, #b91c1c);
+}

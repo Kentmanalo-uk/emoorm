@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, CircleNotch as Loader2, FloppyDisk as Save, CheckCircle, SignOut } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -13,6 +13,9 @@ import useFreshAccount from '../hooks/useFreshAccount';
 import UserAvatar from '../components/ui/UserAvatar';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import PasswordField from '../components/account/PasswordField';
+import AccountData from '../components/account/AccountData';
+import PushSetting from '../components/account/PushSetting';
+import PhoneVerify from '../components/account/PhoneVerify';
 import PhoneSettings from './ProfileSettingsPhone';
 import { afterSignOutPath } from '../lib/afterSignOut';
 import {
@@ -295,6 +298,7 @@ function ProfileSettings() {
             />
             <span className="ps-help">Format: 11 digits starting with 09</span>
           </label>
+          <PhoneVerify frame={(body) => <div className="ps-field ps-field-full">{body}</div>} />
 
           {/* The home address, from the address lists (province, town, barangay, street). */}
           <div className="ps-field ps-field-full ps-address">
@@ -377,6 +381,26 @@ function ProfileSettings() {
           </button>
         </footer>
       </form>
+
+      {/* ── Notifications on this device (shown when push is set up) ── */}
+      <PushSetting frame={(row) => (
+        <div className="ps-card">
+          <div className="ps-card-head">
+            <h2 className="ps-card-title">Notifications</h2>
+          </div>
+          {row}
+        </div>
+      )}
+      />
+
+      {/* ── Your data ────────────────────────────────────── */}
+      <div className="ps-card">
+        <div className="ps-card-head">
+          <h2 className="ps-card-title">Your Data</h2>
+          <span className="ps-card-hint">A copy of your account, or delete it.</span>
+        </div>
+        <AccountData />
+      </div>
 
       {/* ── Account meta ─────────────────────────────────── */}
       <div className="ps-card ps-card-meta">

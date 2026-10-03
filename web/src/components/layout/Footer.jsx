@@ -12,7 +12,7 @@ import './Footer.css';
 // navigation. They now share the app-wide query cache with the rest of the
 // screens, which replaced the per-module request dedupe that used to live here.
 
-const PAYMENT_OPTIONS = ['Cash on Delivery', 'GCash', 'QR Ph', 'Bank Transfer'];
+const PAYMENT_OPTIONS = ['Cash on Delivery', 'GCash', 'QR Ph'];
 const LANGUAGE_NAMES = ['English', 'Tagalog', 'Bisaya'];
 
 const BUYER_GUIDES = [
@@ -240,8 +240,8 @@ const Footer = () => {
               <h4>Payment Arranged with the Seller</h4>
               <p>
                 Emoorm does not process or hold payments. Depending on what each seller accepts, you can pay by
-                Cash on Delivery, GCash, QR Ph, or bank transfer. For online payments, the seller confirms your
-                payment before preparing the order, and you can follow each step from My Orders.
+                Cash on Delivery, GCash or QR Ph. For GCash and QR Ph, you pay once the seller confirms your order
+                (My Orders, To Pay) and the seller checks your payment before preparing it.
               </p>
 
               <h4>Delivery or Store Pickup</h4>

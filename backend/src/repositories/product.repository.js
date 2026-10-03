@@ -1,4 +1,6 @@
 const prisma = require('../config/database');
+const { termsOf, whereFor, scoreOf, correct, vocabularyOf } = require('../utils/searchTerms');
+const { stockedVariation, totalOptionStock } = require('../utils/variantPricing');
 const { invalidate, TAGS } = require('../lib/cachePolicy');
 
 /**
@@ -22,6 +24,22 @@ const invalidateProducts = async (products) => {
     if (product.storeId) tags.push(TAGS.store(product.storeId));
   }
   await invalidate(tags);
+};
+
+/**
+ * The same, from product ids alone (stock taken by an order, given back by a
+ * cancellation or a return): looks up their slugs and shops first. Never
+ * throws; a cache that stays stale a little longer is not worth failing for.
+ */
+const invalidateProductIds = async (ids) => {
+  const unique = [...new Set((ids || []).filter(Boolean))];
+  if (!unique.length) return;
+  try {
+    const rows = await prisma.product.findMany({ where: { id: { in: unique } }, select: { id: true, slug: true, storeId: true } });
+    await invalidateProducts(rows);
+  } catch (err) {
+    console.error('[cache] product invalidation failed:', err.message);
+  }
 };
 
 // Some legacy rows stored `images` as a JSON-encoded string; return a real array to callers.
@@ -63,6 +81,11 @@ const PUBLIC_STORE_SELECT = {
   // Tells whether QR payment is on; the service drops it again.
   paymentQrImage: true,
   pickupAddress: true,
+  // Away (no orders until then) and the week's hours, for the product page.
+  vacationUntil: true,
+  vacationNote: true,
+  openingHours: true,
+  prepDays: true,
   isActive: true,
   isSuspended: true,
   isApproved: true,
@@ -306,11 +329,22 @@ const findAll = async (options = {}) => {
     if (Number.isFinite(max)) where.price.lte = max;
   }
 
-  if (search) {
+  // Every word found somewhere (name, description, category, shop), each
+  // through its Tagalog/English synonyms and plural (utils/searchTerms).
+  const words = search ? termsOf(search) : [];
+  if (words.length) {
+    where.AND = [...(where.AND || []), ...whereFor(words)];
+  } else if (search) {
     where.OR = [
       { name: { contains: search } },
       { description: { contains: search } },
     ];
+  }
+
+  // Best match: rank the matches by where the words were found.
+  if (words.length && sortBy === 'relevance') {
+    const result = await rankedSearch(where, words, search, page, pageSize);
+    return result.total || options.noCorrection ? result : correctedSearch(options, words, result);
   }
 
   // Sort by aggregate order count (popularity) or a whitelisted column.
@@ -333,12 +367,55 @@ const findAll = async (options = {}) => {
     prisma.product.count({ where }),
   ]);
 
-  return {
+  const result = {
     products: await withStatsList(products),
     total,
     page,
     pageSize,
   };
+  return total || !words.length || options.noCorrection ? result : correctedSearch(options, words, result);
+};
+
+const RANK_POOL = 300;
+
+/** One page of matches in best-match order. */
+const rankedSearch = async (where, words, search, page, pageSize) => {
+  const pool = await prisma.product.findMany({
+    where,
+    select: { id: true, name: true, createdAt: true, _count: { select: { orderItems: true } } },
+    take: RANK_POOL,
+  });
+  const ranked = pool
+    .map((p) => ({ id: p.id, score: scoreOf(p, words, search) }))
+    .sort((a, b) => b.score - a.score);
+  const ids = ranked.slice((page - 1) * pageSize, page * pageSize).map((r) => r.id);
+  const rows = ids.length ? await prisma.product.findMany({ where: { id: { in: ids } }, include: LIST_INCLUDE }) : [];
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const total = pool.length < RANK_POOL ? pool.length : await prisma.product.count({ where });
+  return { products: await withStatsList(ids.map((id) => byId.get(id)).filter(Boolean)), total, page, pageSize };
+};
+
+// Words of live product names, for correcting typos; rebuilt every 10 minutes.
+let vocabulary = { at: 0, words: null };
+const searchVocabulary = async () => {
+  if (vocabulary.words && Date.now() - vocabulary.at < 10 * 60 * 1000) return vocabulary.words;
+  const rows = await prisma.product.findMany({
+    where: { status: 'APPROVED', deletedAt: null },
+    select: { name: true },
+    take: 5000,
+    orderBy: { createdAt: 'desc' },
+  });
+  const categories = await prisma.category.findMany({ select: { name: true } });
+  vocabulary = { at: Date.now(), words: vocabularyOf([...rows.map((r) => r.name), ...categories.map((c) => c.name)]) };
+  return vocabulary.words;
+};
+
+/** Nothing found: try again with the typos corrected, and say so. */
+const correctedSearch = async (options, words, empty) => {
+  const fixed = correct(words, await searchVocabulary());
+  if (!fixed) return empty;
+  const again = await findAll({ ...options, search: fixed.join(' '), noCorrection: true });
+  return again.total ? { ...again, correctedSearch: fixed.join(' ') } : empty;
 };
 
 /**
@@ -350,12 +427,16 @@ const findAll = async (options = {}) => {
  * @param {Object} [meta]
  * @param {String} [meta.actorId] - User performing the change (for the movement)
  * @param {String} [meta.previousSlug] - Slug before a rename, so its cache entry is cleared too
+ * @param {Object} [meta.stockBase] - The stock the editor showed when it opened
+ *   ({ stock, stocks }): the seller's change is applied on top of the stock
+ *   now, so units sold while the form was open are not put back.
  * @returns {Promise<Object>} Updated product
  */
-const updateProduct = async (id, data, { actorId = null, previousSlug = null } = {}) => {
+const updateProduct = async (id, data, { actorId = null, previousSlug = null, stockBase = null } = {}) => {
   const hasStock = Object.prototype.hasOwnProperty.call(data, 'stock') && data.stock !== undefined;
 
   const p = await prisma.$transaction(async (tx) => {
+    if (hasStock && stockBase) Object.assign(data, await rebaseStock(tx, id, data, stockBase));
     let delta = 0;
     if (hasStock) {
       const current = await tx.product.findUnique({ where: { id }, select: { stock: true } });
@@ -390,6 +471,37 @@ const updateProduct = async (id, data, { actorId = null, previousSlug = null } =
   await invalidateProducts({ ...p, previousSlug });
   return withStats(p);
 };
+
+/**
+ * The stock to write when a seller saves an edit: what they changed (sent
+ * minus what the form showed) on top of the stock now. The row is locked, so
+ * a checkout cannot slip in between. Per-option products rebase each option
+ * and the total follows.
+ */
+async function rebaseStock(tx, id, data, base) {
+  const rows = await tx.$queryRaw`SELECT stock, variations FROM products WHERE id = ${id} FOR UPDATE`;
+  if (!rows.length) return {};
+  let currentVariations = rows[0].variations;
+  if (typeof currentVariations === 'string') {
+    try { currentVariations = JSON.parse(currentVariations); } catch { currentVariations = null; }
+  }
+  const nextGroup = stockedVariation(data.variations);
+  if (nextGroup && base.stocks && typeof base.stocks === 'object') {
+    const currentGroup = stockedVariation(currentVariations);
+    const stocks = { ...nextGroup.stocks };
+    for (const [option, sent] of Object.entries(stocks)) {
+      const was = Number(base.stocks[option]);
+      const now = Number(currentGroup?.name === nextGroup.name ? currentGroup.stocks?.[option] : NaN);
+      if (Number.isFinite(was) && Number.isFinite(now)) stocks[option] = Math.max(0, now + (Number(sent) - was));
+    }
+    const group = { ...nextGroup, stocks };
+    return { variations: data.variations.map((v) => (v === nextGroup ? group : v)), stock: totalOptionStock(group) };
+  }
+  if (!nextGroup && Number.isFinite(Number(base.stock))) {
+    return { stock: Math.max(0, Number(rows[0].stock || 0) + (Number(data.stock) - Number(base.stock))) };
+  }
+  return {};
+}
 
 /**
  * Apply a relative stock change atomically. A negative delta is refused when
@@ -556,6 +668,7 @@ const findByMunicipality = async (municipalityId, options = {}) => {
 };
 
 module.exports = {
+  invalidateProductIds,
   createProduct,
   findById,
   findBySlug,

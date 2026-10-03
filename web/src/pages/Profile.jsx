@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
-  ShoppingBag, Clock, Truck, CheckCircle, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
+  ShoppingBag, Truck, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Question, EnvelopeSimple,
   Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut,
 } from '@phosphor-icons/react';
@@ -105,18 +105,6 @@ const Profile = () => {
   const followedStores = summary?.followedStores || [];
   const reviewCount = summary?.reviewCount || 0;
   const identityStatus = summary?.identityStatus || 'NOT_VERIFIED';
-
-  const getOrderStatusBadge = (status) => {
-    const badges = {
-      PENDING: { label: 'Pending', color: 'var(--t-warning-500, #f59e0b)', icon: Clock },
-      CONFIRMED: { label: 'Confirmed', color: 'var(--t-info-500, #3b82f6)', icon: Package },
-      PREPARING: { label: 'Preparing', color: 'var(--t-violet-500, #8b5cf6)', icon: Package },
-      READY: { label: 'Ready', color: 'var(--t-orange-500, #f97316)', icon: Store },
-      COMPLETED: { label: 'Completed', color: 'var(--t-primary-500, #10b981)', icon: CheckCircle },
-      CANCELLED: { label: 'Cancelled', color: 'var(--t-danger-500, #ef4444)', icon: null },
-    };
-    return badges[status] || { label: status, color: 'var(--t-neutral-500, #6b7280)', icon: null };
-  };
 
   // A typed-email account stays "Unverified" until it opens the link in its
   // welcome email (Google accounts come confirmed).

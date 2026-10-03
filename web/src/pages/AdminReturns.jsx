@@ -14,7 +14,7 @@ import './AdminModeration.css';
 
 const PAGE_SIZE = 20;
 
-const STATUSES = ['REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED', 'REFUNDED', 'REJECTED', 'CANCELLED', 'CLOSED'];
+const STATUSES = ['DISPUTED', 'REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED', 'REFUNDED', 'REJECTED', 'CANCELLED', 'CLOSED'];
 
 const STATUS_BADGE = {
   REQUESTED: 'admin-badge-pending',
@@ -25,6 +25,7 @@ const STATUS_BADGE = {
   REJECTED: 'admin-badge-rejected',
   CANCELLED: 'admin-badge-dismissed',
   CLOSED: 'admin-badge-neutral',
+  DISPUTED: 'admin-badge-pending',
 };
 
 const OPEN_STATUSES = new Set(['REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED']);
@@ -65,6 +66,9 @@ export default function AdminReturns() {
   const [result, setResult] = useState({ key: null, rows: [], pagination: { total: 0, totalPages: 0 }, now: 0 });
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
+  // Deciding a dispute: for whom, how much, and why.
+  const [verdict, setVerdict] = useState({ decision: '', amount: '', physical: true, note: '' });
+  const [deciding, setDeciding] = useState(false);
 
   const queryKey = `${status}|${page}`;
   const isLoading = result.key !== queryKey;
@@ -104,7 +108,26 @@ export default function AdminReturns() {
     return () => { cancelled = true; };
   }, [selectedId]);
 
-  const closePanel = () => { setSelectedId(null); setDetail(null); };
+  const closePanel = () => { setSelectedId(null); setDetail(null); setVerdict({ decision: '', amount: '', physical: true, note: '' }); };
+
+  const decideDispute = async () => {
+    setDeciding(true);
+    try {
+      const res = await axios.post(`/returns/${selectedId}/resolve-dispute`, {
+        decision: verdict.decision,
+        note: verdict.note,
+        ...(verdict.decision === 'BUYER' ? { approvedAmount: Number(verdict.amount), requiresPhysicalReturn: verdict.physical } : {}),
+      });
+      toast.success('Dispute decided. Both sides are told.');
+      setDetail((d) => ({ ...d, ...res.data }));
+      setVerdict({ decision: '', amount: '', physical: true, note: '' });
+      setResult((r) => ({ ...r, key: null }));
+    } catch (err) {
+      toast.error(err.message || 'Could not decide the dispute');
+    } finally {
+      setDeciding(false);
+    }
+  };
   const summary = result.rows.find((r) => r.id === selectedId);
   const shown = detail && detail.id === selectedId ? detail : null;
   const { rows, pagination, now } = result;
@@ -132,7 +155,7 @@ export default function AdminReturns() {
             </select>
           </div>
         </div>
-        <p className="am-note">Read-only oversight. Sellers approve, receive and refund returns from their dashboard.</p>
+        <p className="am-note">Sellers approve, receive and refund returns from their dashboard. When a buyer disputes a rejection, you decide it here.</p>
 
         {isLoading ? (
           <Skeleton.Table cols={7} rows={6} />
@@ -240,6 +263,58 @@ export default function AdminReturns() {
                     )}
                   </div>
                 </div>
+
+                {(shown.status === 'DISPUTED' || shown.disputeReason) && (
+                  <div className="admin-detail-section am-dispute">
+                    <h4>Dispute</h4>
+                    <div className="admin-detail-grid">
+                      <div><label>Disputed</label><p>{dateTime(shown.disputedAt)}</p></div>
+                      <div className="admin-detail-full"><label>Buyer says</label><p className="am-pre">{shown.disputeReason}</p></div>
+                      {shown.disputeResolution && (
+                        <div className="admin-detail-full"><label>Decision</label><p className="am-pre">{shown.disputeResolution}</p></div>
+                      )}
+                    </div>
+                    {shown.status === 'DISPUTED' && (
+                      <div className="am-verdict">
+                        <div className="am-verdict-choice" role="radiogroup" aria-label="Decide for">
+                          {[['BUYER', 'For the buyer (approve the return)'], ['SELLER', 'For the seller (keep the rejection)']].map(([key, label]) => (
+                            <label key={key} className={verdict.decision === key ? 'is-on' : ''}>
+                              <input
+                                type="radio"
+                                name="verdict"
+                                checked={verdict.decision === key}
+                                onChange={() => setVerdict((v) => ({ ...v, decision: key, amount: v.amount || String(Number(shown.requestedAmount)) }))}
+                              />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
+                        {verdict.decision === 'BUYER' && (
+                          <div className="am-verdict-row">
+                            <label>Refund amount (₱)
+                              <input type="number" min="0" max={Number(shown.requestedAmount)} value={verdict.amount} onChange={(e) => setVerdict((v) => ({ ...v, amount: e.target.value }))} />
+                            </label>
+                            <label className="am-verdict-check">
+                              <input type="checkbox" checked={verdict.physical} onChange={(e) => setVerdict((v) => ({ ...v, physical: e.target.checked }))} />
+                              Items go back to the shop first
+                            </label>
+                          </div>
+                        )}
+                        <label className="am-verdict-note">Reason (both sides see it)
+                          <textarea rows={3} value={verdict.note} onChange={(e) => setVerdict((v) => ({ ...v, note: e.target.value }))} placeholder="e.g. The photos show the item arrived broken." />
+                        </label>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-green"
+                          disabled={!verdict.decision || verdict.note.trim().length < 5 || deciding}
+                          onClick={decideDispute}
+                        >
+                          {deciding ? 'Deciding…' : 'Decide'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="admin-detail-section">
                   <h4>Parties</h4>

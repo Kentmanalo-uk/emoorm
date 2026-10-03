@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search, WarningCircle, Heart, Check, CaretRight, CaretDown } from '@phosphor-icons/react';
@@ -16,6 +16,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { BusyLabel } from '../components/ui/Spinner';
 import './Cart.css';
+import { confirmAction } from '../lib/confirm';
 
 const SUGGESTION_COUNT = 12;
 
@@ -242,7 +243,7 @@ const Cart = () => {
     if (subtotal <= 0) return toast.error('Select items before applying a voucher');
     setVoucherLoading(true);
     try {
-      const res = await axios.post('/vouchers/validate', { code, subtotal });
+      const res = await axios.post('/vouchers/validate', { code, subtotal, storeId: selectedStoreIds.length === 1 ? selectedStoreIds[0] : undefined });
       setAppliedVoucher(res.data);
       toast.success(`Voucher ${res.data.voucher.code} applied`);
     } catch (err) {
@@ -267,6 +268,7 @@ const Cart = () => {
         const res = await axios.post('/vouchers/validate', {
           code: appliedVoucher.voucher.code,
           subtotal,
+          storeId: selectedStoreIds.length === 1 ? selectedStoreIds[0] : undefined,
         });
         if (!cancelled) setAppliedVoucher(res.data);
       } catch {
@@ -319,14 +321,14 @@ const Cart = () => {
     }
   };
 
-  const handleRemoveItem = (itemId) => {
-    if (window.confirm('Remove this item from cart?')) {
+  const handleRemoveItem = async (itemId) => {
+    if (await confirmAction({ title: 'Remove this item from your cart?', confirmLabel: 'Remove', danger: true })) {
       removeItem(itemId);
     }
   };
 
-  const handleClearCart = () => {
-    if (window.confirm('Remove all items from cart?')) {
+  const handleClearCart = async () => {
+    if (await confirmAction({ title: 'Remove everything from your cart?', confirmLabel: 'Remove all', danger: true })) {
       clearCart();
     }
   };
@@ -856,7 +858,7 @@ const Cart = () => {
                   <div className="payment-icons">
                     <div className="payment-icon">Cash</div>
                     <div className="payment-icon">GCash</div>
-                    <div className="payment-icon">Bank</div>
+                    <div className="payment-icon">QR Ph</div>
                   </div>
                 </div>
 

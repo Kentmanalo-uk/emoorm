@@ -1,4 +1,5 @@
 const reviewRepository = require('../repositories/review.repository');
+const prisma = require('../config/database');
 const productRepository = require('../repositories/product.repository');
 const orderRepository = require('../repositories/order.repository');
 const storeRepository = require('../repositories/store.repository');
@@ -64,17 +65,27 @@ const createReview = async (userId, data) => {
     throw new ApiError('Rating must be between 1 and 5', 400);
   }
 
-  // Create review
-  const review = await reviewRepository.createReview({
-    userId,
-    productId,
-    rating: numericRating,
-    comment: cleanText(comment, { maxLength: 2000 }) || null,
-    images: Array.isArray(images) && images.length ? images : undefined,
-    videoUrl: videoUrl || undefined,
+  // Create review. The buyer's row is locked while it is checked and
+  // written, so a double tap cannot leave two reviews of the same product.
+  const createdId = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+    const already = await tx.review.findFirst({ where: { userId, productId, deletedAt: null }, select: { id: true } });
+    if (already) throw new ApiError('You have already reviewed this product', 409);
+    const row = await tx.review.create({
+      data: {
+        userId,
+        productId,
+        rating: numericRating,
+        comment: cleanText(comment, { maxLength: 2000 }) || null,
+        images: Array.isArray(images) && images.length ? images : undefined,
+        videoUrl: videoUrl || undefined,
+      },
+      select: { id: true },
+    });
+    return row.id;
   });
 
-  return review;
+  return reviewRepository.findById(createdId);
 };
 
 /**

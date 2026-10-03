@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { rangeLabel } from '../lib/eta';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -9,7 +10,7 @@ import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, parseImages } from '../lib/media';
 import { uploadImage } from '../lib/upload';
 import ProductImage from '../components/ProductImage';
 import useAuthStore from '../store/authStore';
@@ -31,18 +32,6 @@ import { isTouchPhone } from '../lib/device';
 import { readCache, writeCache } from '../lib/pageCache';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
-const parseImages = (raw) => {
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [raw];
-    } catch {
-      return [raw];
-    }
-  }
-  return [];
-};
 
 // Same reference rule the server applies.
 const PAYMENT_REFERENCE_RE = /^[A-Za-z0-9 -]{4,64}$/;
@@ -67,6 +56,11 @@ const payActionLabel = (order) => {
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const canConfirmReceipt = (order) => ['DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(order.status);
+
+// While the shop checks a payment the order is held, until that check is
+// overdue (the backend's paymentCheck deadline); then the buyer may cancel.
+const canBuyerCancel = (order) => order.paymentStatus !== 'PENDING_VERIFICATION'
+  || (order.deadline?.kind === 'paymentCheck' && new Date(order.deadline.at) <= new Date());
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -111,6 +105,14 @@ const Orders = () => {
   // "Order received" confirmation.
   const [receiveTarget, setReceiveTarget] = useState(null); // order
   const [receiving, setReceiving] = useState(false);
+  // The list could not be loaded (and nothing was shown from before).
+  const [loadFailed, setLoadFailed] = useState(false);
+  // Orders come 50 at a time; "Show more" loads the next page.
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState(null); // order id
+  const [cancelling, setCancelling] = useState(false);
 
   const orderMatchesTab = (order, tabKey) => tabKey === 'all' || buyerBucket(order) === tabKey;
   const tabCounts = countBuyerTabs(orders);
@@ -130,19 +132,42 @@ const Orders = () => {
     if (isAuthenticated) loadPendingReviews();
   }, [isAuthenticated]);
 
+  const ORDERS_PAGE = 50;
   const fetchOrders = async () => {
     // Nothing on screen yet: the skeleton. Otherwise the list stays while it refreshes.
     if (!readCache('orders')) setIsLoading(true);
     try {
-      const response = await axios.get('/orders/my/orders', { params: { pageSize: 100 } });
+      const response = await axios.get('/orders/my/orders', { params: { page: 1, pageSize: ORDERS_PAGE } });
       setOrders(response.data || []);
+      setPage(1);
+      setHasMore(Boolean(response.pagination?.hasNext));
       setOrdersFresh(true);
+      setLoadFailed(false);
       writeCache('orders', response.data || []);
-    } catch (error) {
-      console.error('Failed to fetch orders:', error);
+    } catch {
+      setLoadFailed(true);
       toast.error('Failed to load orders');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadMoreOrders = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = page + 1;
+      const response = await axios.get('/orders/my/orders', { params: { page: next, pageSize: ORDERS_PAGE } });
+      setOrders((cur) => {
+        const have = new Set(cur.map((o) => o.id));
+        return [...cur, ...(response.data || []).filter((o) => !have.has(o.id))];
+      });
+      setPage(next);
+      setHasMore(Boolean(response.pagination?.hasNext));
+    } catch {
+      toast.error('Could not load more orders');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -151,19 +176,21 @@ const Orders = () => {
     setShowOrderDetails(true);
   };
 
-  const handleCancelOrder = async (orderId) => {
-    if (!window.confirm('Are you sure you want to cancel this order?')) {
-      return;
-    }
-
+  // Cancel asks first (the app's dialog), then stays locked until it is done.
+  const handleCancelOrder = (orderId) => setCancelTarget(orderId);
+  const confirmCancelOrder = async () => {
+    if (!cancelTarget || cancelling) return;
+    setCancelling(true);
     try {
-      await axios.post(`/orders/${orderId}/cancel`);
+      await axios.post(`/orders/${cancelTarget}/cancel`);
       toast.success('Order cancelled successfully');
-      fetchOrders();
+      setCancelTarget(null);
       setShowOrderDetails(false);
+      fetchOrders();
     } catch (error) {
-      console.error('Failed to cancel order:', error);
       toast.error(error.message || 'Failed to cancel order');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -386,7 +413,16 @@ const Orders = () => {
         })}
       </div>
 
-      {filteredOrders.length === 0 ? (
+      {loadFailed && orders.length === 0 ? (
+        <div className="profile-section">
+          <div className="empty-state">
+            <EmptyArt name="orders" size={96} />
+            <p className="empty-state-text">Your orders couldn&rsquo;t be loaded</p>
+            <p className="empty-state-hint">Check your connection and try again.</p>
+            <button type="button" className="empty-state-button" onClick={fetchOrders}>Try again</button>
+          </div>
+        </div>
+      ) : filteredOrders.length === 0 ? (
         <div className="profile-section">
           <div className="empty-state">
             <EmptyArt name="orders" size={96} />
@@ -455,6 +491,12 @@ const Orders = () => {
                         })}
                       </span>
                     </div>
+                    {order.etaFrom && !['COMPLETED', 'CANCELLED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && (
+                      <div className="order-info-item">
+                        <span className="order-info-label">{order.fulfillmentMethod === 'PICKUP' ? 'Ready for pickup' : 'Expected'}</span>
+                        <span className="order-info-value order-eta">{rangeLabel({ from: order.etaFrom, to: order.etaTo || order.etaFrom })}</span>
+                      </div>
+                    )}
                     <div className="order-info-item">
                       <span className="order-info-label">Total amount</span>
                       <span className="order-info-value order-total">
@@ -536,7 +578,7 @@ const Orders = () => {
                     </button>
                   )}
 
-                  {['PENDING', 'CONFIRMED'].includes(order.status) && (
+                  {['PENDING', 'CONFIRMED'].includes(order.status) && canBuyerCancel(order) && (
                     <button
                       onClick={() => handleCancelOrder(order.id)}
                       className="order-action-btn is-danger"
@@ -659,6 +701,13 @@ const Orders = () => {
             );
           })}
         </div>
+      )}
+
+      {/* Older orders, 50 at a time. */}
+      {hasMore && !loadFailed && (
+        <button type="button" className="orders-more" onClick={loadMoreOrders} disabled={loadingMore}>
+          {loadingMore ? 'Loading…' : 'Show more orders'}
+        </button>
       )}
 
       {/* Order Details Modal */}
@@ -800,7 +849,7 @@ const Orders = () => {
                   Order received
                 </button>
               )}
-              {['PENDING', 'CONFIRMED'].includes(selectedOrder.status) && (
+              {['PENDING', 'CONFIRMED'].includes(selectedOrder.status) && canBuyerCancel(selectedOrder) && (
                 <button
                   onClick={() => handleCancelOrder(selectedOrder.id)}
                   className="btn-modal-cancel"
@@ -829,6 +878,18 @@ const Orders = () => {
           onSuccess={() => { fetchOrders(); loadPendingReviews(); }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!cancelTarget}
+        title="Cancel this order?"
+        message="The shop will be told, and anything you paid will be refunded by the shop."
+        confirmLabel="Cancel order"
+        cancelLabel="Keep order"
+        danger
+        loading={cancelling}
+        onConfirm={confirmCancelOrder}
+        onCancel={() => { if (!cancelling) setCancelTarget(null); }}
+      />
 
       <ConfirmDialog
         open={!!receiveTarget}

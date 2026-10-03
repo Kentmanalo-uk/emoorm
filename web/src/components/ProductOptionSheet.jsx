@@ -3,9 +3,10 @@ import { X, Minus, Plus, Truck } from '@phosphor-icons/react';
 import ProductImage from './ProductImage';
 import { BusyLabel } from './ui/Spinner';
 import {
-  pricedVariation, priceForSelection, priceRange, stockedVariation, stockForSelection,
+  pricedVariation, priceRange, stockedVariation, stockForSelection, unitPriceFor,
 } from '../lib/variantPricing';
 import './ProductOptionSheet.css';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const CLOSE_MS = 220;
 
@@ -36,6 +37,7 @@ export default function ProductOptionSheet({
   const [missing, setMissing] = useState('');
   const timer = useRef(null);
   const bodyRef = useRef(null);
+  const trapRef = useFocusTrap(Boolean(mode));
 
   // Keep the sheet mounted while it slides away.
   useEffect(() => {
@@ -78,7 +80,8 @@ export default function ProductOptionSheet({
   const pricedGroup = pricedVariation(product.variations);
   const range = priceRange(product);
   const chosen = !!(pricedGroup && selected[pricedGroup.name]);
-  const unit = priceForSelection(product, selected);
+  // Options, a sale, and a bulk price for this many.
+  const unit = unitPriceFor(product, selected, quantity);
   const showRange = !!pricedGroup && range.min !== range.max && !chosen;
   const total = unit * quantity;
 
@@ -100,7 +103,7 @@ export default function ProductOptionSheet({
   return (
     <div className={`pos-root${closing ? ' is-closing' : ''}`}>
       <button type="button" className="pos-scrim" onClick={onClose} aria-label="Close" tabIndex={-1} />
-      <div className="pos-sheet" role="dialog" aria-modal="true" aria-label={`${label}: choose options`}>
+      <div className="pos-sheet" ref={trapRef} role="dialog" aria-modal="true" aria-label={`${label}: choose options`}>
         <button type="button" className="pos-close" onClick={onClose} aria-label="Close">
           <X size={18} weight="bold" />
         </button>

@@ -221,3 +221,17 @@ after that, or immediately after a restart.
 
 **Never run `prisma migrate dev` or `prisma db push` against production** —
 both can drop data to reconcile the schema.
+
+## Tests
+
+Every push runs `.github/workflows/ci.yml` on GitHub: the web app must lint
+and build, and the API tests (`backend/tests/`) must pass against a fresh
+MySQL with every migration applied. To run the API tests locally, point them
+at a scratch database; they refuse any database whose name lacks "test" or "ci":
+
+```bash
+mysql -u root -e "CREATE DATABASE emoorm_ci_test"
+cd backend
+DATABASE_URL="mysql://root@127.0.0.1:3306/emoorm_ci_test" npx prisma migrate deploy
+DATABASE_URL="mysql://root@127.0.0.1:3306/emoorm_ci_test" npm test
+```

@@ -10,18 +10,22 @@ const prisma = new PrismaClient();
  * That is fine for a local sandbox and catastrophic anywhere reachable, so
  * the script refuses to run unless NODE_ENV says development or test.
  *
- * To seed a shared environment, set SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD
- * to values of your own. There is no default for those: if you want accounts
- * somewhere that is not your laptop, you choose the credentials.
+ * It also creates demo shops, products and reviews. Those must never reach
+ * the live site, so outside development/test it runs only when asked for on
+ * purpose (SEED_DEMO_DATA=yes, for a staging copy) and with both passwords
+ * set to values of your own. Production gets its reference data
+ * (municipalities, categories) from a database dump instead.
  */
 const ENVIRONMENT = process.env.NODE_ENV || 'development';
 const IS_LOCAL = ['development', 'test'].includes(ENVIRONMENT);
 
-if (!IS_LOCAL && !process.env.SEED_ADMIN_PASSWORD) {
+if (!IS_LOCAL && (process.env.SEED_DEMO_DATA !== 'yes'
+  || !process.env.SEED_ADMIN_PASSWORD || !process.env.SEED_USER_PASSWORD)) {
   throw new Error(
-    `Refusing to seed with NODE_ENV="${ENVIRONMENT}". This script creates accounts whose `
-    + 'passwords are committed to a public repository. Run it only against a local '
-    + 'database, or set SEED_ADMIN_PASSWORD and SEED_USER_PASSWORD to your own values.'
+    `Refusing to seed with NODE_ENV="${ENVIRONMENT}". This script creates demo shops and `
+    + 'accounts whose default passwords are in a public repository. For the live site, import '
+    + 'the reference data (municipalities, categories) from a database dump instead. For a '
+    + 'staging copy, set SEED_DEMO_DATA=yes plus SEED_ADMIN_PASSWORD and SEED_USER_PASSWORD.'
   );
 }
 

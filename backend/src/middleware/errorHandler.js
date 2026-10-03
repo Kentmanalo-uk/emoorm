@@ -14,6 +14,13 @@ class ApiError extends Error {
   }
 }
 
+// An optional error tracker (lib/errorTracking.js) gets every 5xx too.
+let reportError = null;
+try {
+  // eslint-disable-next-line global-require
+  ({ reportError } = require('../lib/errorTracking'));
+} catch { /* no tracker */ }
+
 /**
  * Global error handler middleware
  */
@@ -118,7 +125,25 @@ const errorHandler = (err, req, res, next) => {
     message = err.message;
   }
 
-  // Log error in development
+  // A query the database layer could not even build (a list where one value
+  // was expected, e.g. ?storeId=a&storeId=b) is a bad request, not a fault.
+  if (err.name === 'PrismaClientValidationError') {
+    statusCode = 400;
+    message = 'Invalid request';
+    errors = null;
+  }
+
+  // Our own failures (not an ApiError we raised on purpose) say nothing about
+  // the inside: Prisma's text, file paths and model names stay in the log.
+  const unexpected = statusCode >= 500 && !(err instanceof ApiError);
+  if (unexpected && !dbUnavailable) {
+    message = 'Something went wrong on our side. Please try again.';
+    errors = null;
+  }
+
+  // Every server-side failure is logged, in production too (one JSON line, so
+  // the host's log viewer and any log tool can read it); in development the
+  // readable form for every error.
   if (config.nodeEnv !== 'production') {
     console.error('Error:', {
       message: err.message,
@@ -126,7 +151,21 @@ const errorHandler = (err, req, res, next) => {
       stack: err.stack,
       errors,
     });
+  } else if (statusCode >= 500) {
+    console.error(JSON.stringify({
+      level: 'error',
+      time: new Date().toISOString(),
+      status: statusCode,
+      method: req.method,
+      path: req.originalUrl?.split('?')[0],
+      user: req.user?.id || null,
+      name: err.name,
+      code: err.code || err.errorCode || null,
+      message: err.message,
+      stack: String(err.stack || '').split('\n').slice(0, 8).join('\n'),
+    }));
   }
+  reportError?.(err, req, statusCode);
 
   // Send error response
   const response = {

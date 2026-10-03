@@ -20,7 +20,11 @@ export function downloadCsv(filename, columns, rows) {
     ...rows.map((row) => columns.map((c) => escapeCell(c.value(row))).join(',')),
   ];
   // BOM so Excel opens UTF-8 (₱, ñ) correctly.
-  const blob = new Blob([`${BOM}${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' });
+  downloadBlob(filename, new Blob([`${BOM}${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' }));
+}
+
+/** Save a Blob as a file (the Android app's bridge catches the same link). */
+export function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

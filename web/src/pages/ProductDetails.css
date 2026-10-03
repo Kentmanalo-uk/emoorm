@@ -2579,3 +2579,9 @@ div.pdp-store-followers {
     box-shadow: none;
   }
 }
+
+/* Ready-by / arrival estimate (lib/eta). */
+.pdp-eta {
+  color: var(--t-primary-700, #047857);
+  font-weight: 500;
+}

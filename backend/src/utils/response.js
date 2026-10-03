@@ -114,7 +114,7 @@ const noContentResponse = (res) => {
  * @param {Number} pageSize - Items per page
  * @param {String} message - Success message
  */
-const paginatedResponse = (res, data, total, page, pageSize, message = 'Data retrieved successfully') => {
+const paginatedResponse = (res, data, total, page, pageSize, message = 'Data retrieved successfully', extra = {}) => {
   const totalPages = Math.ceil(total / pageSize);
   
   return res.status(200).json({
@@ -129,6 +129,7 @@ const paginatedResponse = (res, data, total, page, pageSize, message = 'Data ret
       hasNext: page < totalPages,
       hasPrev: page > 1,
     },
+    ...extra,
   });
 };
 

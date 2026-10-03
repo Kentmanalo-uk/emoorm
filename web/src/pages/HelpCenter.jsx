@@ -17,14 +17,14 @@ const topics = [
     items: [
       { label: 'Tracking an order', to: '/profile/orders' },
       { label: 'Cancelling an order', to: '/profile/orders' },
-      { label: 'Pickup locations', to: '/' },
+      { label: 'Pickup locations', to: '/help?topic=delivery' },
     ],
   },
   {
     title: 'Payments',
     items: [
-      { label: 'Accepted payment methods', to: '/' },
-      { label: 'Refund status', to: '/profile/orders' },
+      { label: 'Accepted payment methods', to: '/help?topic=payments' },
+      { label: 'Refund status', to: '/profile/returns' },
     ],
   },
   {
@@ -51,7 +51,7 @@ const topicGuides = {
   },
   returns: {
     title: 'Returns & Refunds',
-    text: 'Open My Orders after delivery or pickup to request a return for eligible items. The seller reviews your request and records any refund in the return timeline.',
+    text: 'Open My Orders after delivery or pickup and tap Request return (usually within 7 days, or as the product\'s return policy says). The seller reviews your request and records any refund, which you can follow in Returns & refunds.',
   },
   delivery: {
     title: 'Shipping & Delivery',
@@ -59,7 +59,7 @@ const topicGuides = {
   },
   payments: {
     title: 'Payment Methods',
-    text: 'Sellers may offer Cash on Delivery, GCash, or QR Ph. For prepaid checkout, enter the reference number and upload the payment proof requested by the seller.',
+    text: 'Sellers may offer Cash on Delivery, GCash or QR Ph. Nothing is paid at checkout: once the seller confirms your order it moves to To Pay in My Orders, where you scan the shop\'s QR, enter the reference number and upload a screenshot. The seller checks it before preparing your order.',
   },
 };
 

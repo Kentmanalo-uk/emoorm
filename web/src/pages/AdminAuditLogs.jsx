@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';

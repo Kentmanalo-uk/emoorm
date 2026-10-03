@@ -65,6 +65,8 @@ router.get(
   orderController.getStoreStageCounts
 );
 
+router.get('/:id/buyer-record', authenticate, authorize('SELLER'), orderController.buyerRecord);
+
 router.get(
   '/store/orders',
   authenticate,

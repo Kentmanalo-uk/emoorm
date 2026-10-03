@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Bell, BellSlash as BellOff, Checks as CheckCheck, Trash as Trash2, Package, ShoppingBag,
+  BellSlash as BellOff, Checks as CheckCheck, Trash as Trash2, Package, ShoppingBag,
   CheckCircle, XCircle, Star, WarningCircle as AlertCircle, Info, ChatCircleDots,
-  MagnifyingGlass, X, Storefront,
+  MagnifyingGlass, X, Storefront, Tag, Question, Scales,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -21,6 +21,7 @@ import './Notifications.css';
 import NotificationPicture from '../components/NotificationPicture';
 import ToolGradients from '../components/ui/ToolGradients';
 import { readCache, writeCache } from '../lib/pageCache';
+import { confirmAction } from '../lib/confirm';
 
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
@@ -52,6 +53,12 @@ const TYPE_CONFIG = {
   RETURN_CLOSED: { icon: CheckCircle, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Return Closed' },
   SELLER_APPLICATION_SUBMITTED: { icon: Info, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Seller Application' },
   ADMIN_ALERT: { icon: AlertCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Alert' },
+  LOW_STOCK: { icon: AlertCircle, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Low Stock' },
+  PRICE_DROP: { icon: Tag, color: 'var(--t-primary-500, #10b981)', bg: 'var(--t-primary-100, #d1fae5)', label: 'On Sale' },
+  PRODUCT_QUESTION: { icon: Question, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Question' },
+  PRODUCT_ANSWER: { icon: ChatCircleDots, color: 'var(--t-primary-500, #10b981)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Answer' },
+  RETURN_DISPUTED: { icon: Scales, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Return Dispute' },
+  RETURN_DISPUTE_RESOLVED: { icon: Scales, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Dispute Decided' },
   DEFAULT: { icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Notification' },
 };
 
@@ -193,7 +200,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       toast.success('All notifications marked as read');
-    } catch (err) {
+    } catch {
       toast.error('Failed to mark all as read');
     }
   };
@@ -203,19 +210,19 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       await axios.delete(`/notifications/${id}`);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       toast.success('Notification deleted');
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete notification');
     }
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm('Delete all notifications?')) return;
+    if (!(await confirmAction({ title: 'Delete all notifications?', confirmLabel: 'Delete all', danger: true }))) return;
     try {
       await axios.delete('/notifications', { params: { audience } });
       setNotifications([]);
       setUnreadCount(0);
       toast.success('All notifications deleted');
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete notifications');
     }
   };

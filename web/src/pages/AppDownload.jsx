@@ -49,8 +49,8 @@ const ABOUT = [
   'Emoorm is Oriental Mindoro\'s own online marketplace. It brings you the farmers, fishers, artisans and food '
     + 'producers of every town, so fresh produce, local delicacies and handcrafted goods are only a few taps away.',
   'Browse by category or municipality, chat with sellers about products and orders, and follow each order from '
-    + 'confirmed to completed, with delivery or pickup. Pay the way the seller accepts: cash on delivery, GCash, '
-    + 'QR Ph or bank transfer.',
+    + 'confirmed to completed, with delivery or pickup. Pay the way the seller accepts: cash on delivery, GCash '
+    + 'or QR Ph.',
   'Selling? Open a free shop and run it from the Seller Center: your products, orders, messages and earnings, all '
     + 'in one place.',
   'The app picks up where you left off, opens emoorm.shop links straight away, and is always as up to date as the '

@@ -153,6 +153,14 @@ enum NotificationType {
   STORE_MESSAGE
   SELLER_APPLICATION_SUBMITTED
   ADMIN_ALERT
+  /// A product fell to its low-stock threshold.
+  LOW_STOCK
+  /// A wishlisted product went on sale.
+  PRICE_DROP
+  PRODUCT_QUESTION
+  PRODUCT_ANSWER
+  RETURN_DISPUTED
+  RETURN_DISPUTE_RESOLVED
 }
 
 enum NotificationAudience {
@@ -170,6 +178,8 @@ enum ReturnStatus {
   REJECTED
   CANCELLED
   CLOSED
+  /// The buyer asked the municipal admin to review a rejection.
+  DISPUTED
 }
 
 enum ReturnReason {
@@ -322,6 +332,11 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
+  // Closed at the owner's request; erased for good 30 days later.
+  deletionRequestedAt DateTime? @map("deletion_requested_at")
+  // The contact number proven by an SMS code, and when.
+  phoneVerifiedAt     DateTime? @map("phone_verified_at")
+  phoneVerifiedNumber String?   @db.VarChar(20) @map("phone_verified_number")
 
   // Relations
   store         Store?
@@ -332,6 +347,7 @@ model User {
   notifications Notification[]
   reports       Report[]
   managedMunicipality Municipality? @relation("MunicipalAdmin")
+  productQuestions ProductQuestion[]
   buyerConversations Conversation[] @relation("BuyerConversations")
   sentMessages  Message[]      @relation("MessageSender")
   followedStores StoreFollow[]
@@ -510,6 +526,9 @@ model Address {
   municipality   Municipality @relation(fields: [municipalityId], references: [id])
   barangay      String
   street        String   @db.Text
+  // Optional pin dropped on the map, for the rider.
+  latitude      Float?
+  longitude     Float?
 
   isDefault     Boolean  @default(false) @map("is_default")
 
@@ -582,6 +601,13 @@ model Store {
   logo          String?
   coverImage    String?  @map("cover_image")
   businessHours String?  @db.Text @map("business_hours")
+  // Weekly hours: { mon: [["08:00","17:00"]], …, sun: [] }; empty = not set.
+  openingHours  Json?    @map("opening_hours")
+  // Away (no new orders) until this time, with a note for buyers.
+  vacationUntil DateTime? @map("vacation_until")
+  vacationNote  String?  @db.VarChar(200) @map("vacation_note")
+  // Days the shop needs to get an order ready; empty = the default (1).
+  prepDays      Int?     @map("prep_days")
 
   // Owner
   ownerId       String   @unique @map("owner_id")
@@ -653,6 +679,8 @@ model Store {
   followers     StoreFollow[]
   returnRequests ReturnRequest[] @relation("StoreReturns")
   announcements StoreAnnouncement[]
+  vouchers      Voucher[]
+  productQuestions ProductQuestion[]
 
   @@map("stores")
   @@index([deletedAt, isActive, isSuspended, municipalityId, createdAt], map: "stores_public_idx")
@@ -738,6 +766,12 @@ model Product {
   slug        String        @unique
   description String        @db.Text
   price       Decimal       @db.Decimal(10, 2)
+  // A lower price for a time (no dates = until removed).
+  salePrice    Decimal?     @db.Decimal(10, 2) @map("sale_price")
+  saleStartsAt DateTime?    @map("sale_starts_at")
+  saleEndsAt   DateTime?    @map("sale_ends_at")
+  // Bulk prices: [{ minQty: 10, price: 90 }, …], lowest quantity first.
+  priceTiers   Json?        @map("price_tiers")
   stock       Int           @default(0)
   /// Packed weight in grams, for courier fees. Null: not set (no courier quote).
   weightGrams Int?          @map("weight_grams")
@@ -782,6 +816,8 @@ model Product {
   messages    Message[]
   inventoryMovements InventoryMovement[]
   announcements StoreAnnouncement[]
+  questions   ProductQuestion[]
+  views       ProductView[]
 
   @@map("products")
   // Composite indexes matching the browse/filter/sort shapes in
@@ -861,6 +897,9 @@ model Order {
   // Delivery Information
   deliveryAddress String      @db.Text @map("delivery_address")
   deliveryNotes   String?     @db.Text @map("delivery_notes")
+  // The delivery address's map pin, for the rider (optional).
+  deliveryLatitude  Float?    @map("delivery_latitude")
+  deliveryLongitude Float?    @map("delivery_longitude")
   contactNumber   String      @map("contact_number")
 
   // Buyer address parts (for coverage/receipts)
@@ -873,6 +912,12 @@ model Order {
   updatedAt       DateTime    @updatedAt @map("updated_at")
   completedAt     DateTime?   @map("completed_at")
   cancelledAt     DateTime?   @map("cancelled_at")
+  // BUYER_CANCELLED, SELLER_CANCELLED, NO_SHOW, REFUSED, UNPAID, EXPIRED, ADMIN
+  cancelReason    String?     @db.VarChar(40) @map("cancel_reason")
+  cancelledBy     String?     @db.VarChar(10) @map("cancelled_by")
+  // When the buyer can expect it (delivered, or ready to pick up).
+  etaFrom         DateTime?   @map("eta_from")
+  etaTo           DateTime?   @map("eta_to")
 
   // Relations
   items           OrderItem[]
@@ -889,6 +934,7 @@ model Order {
   @@unique([buyerId, checkoutKey], map: "orders_buyer_checkout_key_unique")
   @@map("orders")
   @@index([buyerId, createdAt], map: "orders_buyer_idx")
+  @@index([buyerId, cancelReason], map: "orders_buyer_cancel_idx")
   @@index([storeId, status, createdAt], map: "orders_store_status_idx")
   @@index([status, createdAt], map: "orders_status_created_idx")
 }
@@ -977,11 +1023,14 @@ model CartItem {
   product   Product  @relation(fields: [productId], references: [id])
 
   quantity  Int      @default(1)
+  // The chosen options as canonical JSON ("" = none): one line per product and options.
+  variationKey       String @default("") @db.VarChar(191) @map("variation_key")
+  selectedVariations Json?  @map("selected_variations")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@unique([userId, productId])
+  @@unique([userId, productId, variationKey], map: "cart_items_user_product_variation_key")
   @@map("cart_items")
 }
 
@@ -1113,6 +1162,9 @@ model PushToken {
 
   token     String   @unique
   platform  String?  // 'ios' | 'android' | 'web'
+  // Browser push: where to send it, and its keys (p256dh, auth). token = a hash of endpoint.
+  endpoint  String?  @db.Text
+  keys      Json?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1249,6 +1301,12 @@ model ReturnRequest {
   refundedAt  DateTime? @map("refunded_at")
   closedAt    DateTime? @map("closed_at")
   cancelledAt DateTime? @map("cancelled_at")
+  // Rejected, then taken to the municipal admin by the buyer.
+  disputeReason     String?   @db.Text @map("dispute_reason")
+  disputedAt        DateTime? @map("disputed_at")
+  disputeResolution String?   @db.Text @map("dispute_resolution")
+  disputeResolvedAt DateTime? @map("dispute_resolved_at")
+  disputeResolvedBy String?   @map("dispute_resolved_by")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1331,6 +1389,9 @@ model Voucher {
   isActive        Boolean             @default(true) @map("is_active")
   createdById     String?             @map("created_by_id")
   createdBy       User?               @relation("VoucherCreator", fields: [createdById], references: [id])
+  // A shop's own voucher, valid only on its orders. Empty = platform voucher.
+  storeId         String?             @map("store_id")
+  store           Store?              @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
 
@@ -1339,6 +1400,7 @@ model Voucher {
 
   @@index([code])
   @@index([isActive, expiresAt])
+  @@index([storeId, isActive], map: "vouchers_store_idx")
   @@map("vouchers")
 }
 
@@ -1415,4 +1477,39 @@ model Feedback {
   @@index([municipalityId, createdAt], map: "feedback_municipality_idx")
   @@index([userId], map: "feedback_user_idx")
   @@map("feedback")
+}
+
+/// A buyer's question on a product page, answered by the shop.
+model ProductQuestion {
+  id         String    @id @default(uuid())
+  productId  String    @map("product_id")
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeId    String    @map("store_id")
+  store      Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  askerId    String    @map("asker_id")
+  asker      User      @relation(fields: [askerId], references: [id], onDelete: Cascade)
+  question   String    @db.Text
+  answer     String?   @db.Text
+  answeredAt DateTime? @map("answered_at")
+  // Hidden by the shop or a moderator (spam, rudeness).
+  isHidden   Boolean   @default(false) @map("is_hidden")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([productId, isHidden, createdAt], map: "product_questions_product_idx")
+  @@index([storeId, answeredAt], map: "product_questions_store_idx")
+  @@index([askerId], map: "product_questions_asker_idx")
+  @@map("product_questions")
+}
+
+/// Product page views per Manila day, for the seller's analytics.
+model ProductView {
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  day       DateTime @db.Date
+  views     Int      @default(0)
+
+  @@id([productId, day])
+  @@index([day], map: "product_views_day_idx")
+  @@map("product_views")
 }

@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { Prisma } = require('@prisma/client');
 const config = require('../config/env');
 const productRepository = require('../repositories/product.repository');
 const storeRepository = require('../repositories/store.repository');
@@ -10,7 +11,7 @@ const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
 const shopReadiness = require('./shopReadiness.service');
 const { bufferToDHash, hammingDistance, hashFromSource, HASH_BIT_LENGTH } = require('../utils/imageHash');
-const { stockedVariation } = require('../utils/variantPricing');
+const { stockedVariation, pricedVariation, activeSalePrice } = require('../utils/variantPricing');
 
 const computeImageHashSafe = async (images) => {
   const first = Array.isArray(images) ? images[0] : null;
@@ -42,7 +43,7 @@ const IMAGE_PATTERN = /^\/uploads\/[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif)$/i;
 const STOCK_DELTA_MAX = 100000;
 const STOCK_REASON_MAX = 120;
 const SEARCH_MAX = 100;
-const SORT_BY = new Set(['createdAt', 'price', 'name', 'orderCount']);
+const SORT_BY = new Set(['createdAt', 'price', 'name', 'orderCount', 'relevance']);
 const PRODUCT_STATUSES = new Set(['PENDING', 'APPROVED', 'HIDDEN', 'SUSPENDED', 'ARCHIVED']);
 const ADMIN_ROLES = new Set(['SUPER_ADMIN', 'MUNICIPAL_ADMIN']);
 
@@ -203,6 +204,59 @@ const validateCategory = async (categoryId) => {
 
 const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined;
 
+const optionalDate = (value, label) => {
+  if (value === null || value === '') return null;
+  const at = new Date(value);
+  if (Number.isNaN(at.getTime())) throw new ApiError(`${label} is not a valid date and time`, 400);
+  return at;
+};
+
+/** Bulk prices: up to 4, each for more units at a lower price than the last. */
+const validatePriceTiers = (value) => {
+  if (value === null || (Array.isArray(value) && value.length === 0)) return Prisma.DbNull;
+  if (!Array.isArray(value) || value.length > 4) throw new ApiError('Up to 4 bulk prices', 400);
+  const tiers = value.map((t) => ({ minQty: Number(t?.minQty), price: Math.round(Number(t?.price) * 100) / 100 }));
+  tiers.sort((a, b) => a.minQty - b.minQty);
+  let lastPrice = Infinity;
+  let lastQty = 1;
+  for (const t of tiers) {
+    if (!Number.isInteger(t.minQty) || t.minQty < 2 || t.minQty > QUANTITY_MAX) throw new ApiError('A bulk price starts at 2 or more units', 400);
+    if (t.minQty === lastQty) throw new ApiError('Each bulk price needs its own quantity', 400);
+    if (!(t.price > 0) || t.price >= lastPrice) throw new ApiError('Each bulk price must be lower than the one before', 400);
+    lastPrice = t.price;
+    lastQty = t.minQty;
+  }
+  return tiers;
+};
+
+/** Bulk prices on the product as it will be saved: below the price, one-price products only. */
+const checkTiers = (p) => {
+  if (!Array.isArray(p.priceTiers) || !p.priceTiers.length) return;
+  if (pricedVariation(p.variations)) throw new ApiError('Bulk prices are for products with one price', 400);
+  if (p.priceTiers[0].price >= Number(p.price)) throw new ApiError('Bulk prices must be lower than the regular price', 400);
+};
+
+/**
+ * A sale on the product as it will be saved: a lower price than the regular
+ * one, for a product with one price, ending after it starts.
+ * @param {Object} p - price, variations, salePrice, saleStartsAt, saleEndsAt
+ */
+const checkSale = (p) => {
+  if (p.salePrice === null || p.salePrice === undefined) return;
+  if (pricedVariation(p.variations)) {
+    throw new ApiError('A sale price is for products with one price. For option prices, lower the option prices instead.', 400);
+  }
+  if (Number(p.salePrice) >= Number(p.price)) {
+    throw new ApiError('The sale price must be lower than the regular price', 400);
+  }
+  if (p.saleStartsAt && p.saleEndsAt && new Date(p.saleEndsAt) <= new Date(p.saleStartsAt)) {
+    throw new ApiError('The sale must end after it starts', 400);
+  }
+  if (p.saleEndsAt && new Date(p.saleEndsAt) <= new Date()) {
+    throw new ApiError('The sale end is already past', 400);
+  }
+};
+
 /**
  * Validate a create (all required) or update (partial) payload.
  * @param {Object} data - Sanitised payload
@@ -233,6 +287,17 @@ const validateProductPayload = async (data, { partial }) => {
       out.weightGrams = g;
     }
   }
+  if (has(data, 'salePrice')) {
+    out.salePrice = data.salePrice === null || data.salePrice === '' ? null : validatePrice(data.salePrice);
+    // No sale price: no sale dates either.
+    if (out.salePrice === null) {
+      out.saleStartsAt = null;
+      out.saleEndsAt = null;
+    }
+  }
+  if (has(data, 'saleStartsAt') && out.saleStartsAt === undefined) out.saleStartsAt = optionalDate(data.saleStartsAt, 'Sale start');
+  if (has(data, 'saleEndsAt') && out.saleEndsAt === undefined) out.saleEndsAt = optionalDate(data.saleEndsAt, 'Sale end');
+  if (has(data, 'priceTiers')) out.priceTiers = validatePriceTiers(data.priceTiers);
   if (!partial || has(data, 'images')) out.images = validateImages(data.images);
   if (!partial || has(data, 'categoryId')) out.categoryId = await validateCategory(data.categoryId);
 
@@ -261,6 +326,7 @@ const assertStoreCanEdit = (store, action) => {
 const PUBLIC_STORE_FIELDS = [
   'id', 'name', 'slug', 'logo', 'fulfillmentMode', 'acceptsCod', 'paymentQrType',
   'pickupAddress', 'isActive', 'isSuspended', 'municipality',
+  'vacationUntil', 'vacationNote', 'openingHours', 'prepDays',
 ];
 const PRIVATE_PRODUCT_FIELDS = ['moderationNote', 'approvedById', 'imageHash'];
 
@@ -447,6 +513,8 @@ const createProduct = async (userId, rawData) => {
   // Create product
   const imageHash = await computeImageHashSafe(fields.images);
   const options = normalizeProductOptions(data);
+  checkSale({ ...fields, ...options });
+  checkTiers({ ...fields, ...options });
   const product = await productRepository.createProduct({
     ...fields,
     slug,
@@ -604,6 +672,39 @@ const notifyRestock = async (store, before, after) => {
 };
 
 /**
+ * A new sale (or a new sale price) on a product: the buyers who saved it in
+ * their wishlist hear about it, once per change, while it is on or ahead.
+ */
+const notifySale = async (store, before, after) => {
+  try {
+    if (after.status !== 'APPROVED' || after.salePrice === null) return;
+    const same = Number(before.salePrice) === Number(after.salePrice)
+      && String(before.saleStartsAt || '') === String(after.saleStartsAt || '');
+    if (same) return;
+    const onNow = activeSalePrice(after) !== null;
+    const startsLater = after.saleStartsAt && new Date(after.saleStartsAt) > new Date();
+    if (!onNow && !startsLater) return;
+    const fans = await prisma.wishlistItem.findMany({ where: { productId: after.id }, select: { userId: true }, take: 2000 });
+    const peso = (n) => `₱${Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const when = startsLater
+      ? ` from ${new Date(after.saleStartsAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' })}`
+      : '';
+    for (const { userId } of fans) {
+      if (userId === store.ownerId) continue;
+      await notificationService.createNotification({
+        userId,
+        type: 'PRICE_DROP',
+        title: `On sale: ${after.name}`,
+        message: `Now ${peso(after.salePrice)} (was ${peso(after.price)})${when} at ${store.name}.`,
+        relatedId: after.id,
+      });
+    }
+  } catch (err) {
+    console.error('[product] sale notification failed:', err.message);
+  }
+};
+
+/**
  * Update product (Owner only)
  * @param {String} productId - Product ID
  * @param {String} userId - User ID
@@ -646,6 +747,13 @@ const updateProduct = async (productId, userId, rawData) => {
     }));
   }
 
+  const SALE_FIELDS = ['salePrice', 'saleStartsAt', 'saleEndsAt', 'price', 'variations', 'priceTiers'];
+  if (SALE_FIELDS.some((k) => updateData[k] !== undefined)) {
+    const merged = { ...product, ...updateData };
+    checkSale(merged);
+    checkTiers({ ...merged, priceTiers: Array.isArray(merged.priceTiers) ? merged.priceTiers : null });
+  }
+
   // If product was suspended/archived and is being edited, send it back for review
   if (product.status === 'SUSPENDED' || product.status === 'ARCHIVED') {
     updateData.status = 'PENDING';
@@ -659,13 +767,25 @@ const updateProduct = async (productId, userId, rawData) => {
     throw new ApiError('No valid fields to update', 400);
   }
 
+  // The stock the editor opened with, so sales made meanwhile are kept.
+  const stockBase = rawData && (rawData.stockWas != null || rawData.stocksWas)
+    ? {
+      stock: Number.isFinite(Number(rawData.stockWas)) ? Number(rawData.stockWas) : null,
+      stocks: rawData.stocksWas && typeof rawData.stocksWas === 'object' && !Array.isArray(rawData.stocksWas) ? rawData.stocksWas : null,
+    }
+    : null;
+
   const updated = await productRepository.updateProduct(productId, updateData, {
     actorId: userId,
     previousSlug,
+    stockBase,
   });
 
   if (updateData.stock !== undefined) {
     await notifyRestock(store, product, updated);
+  }
+  if (updateData.salePrice !== undefined || updateData.saleStartsAt !== undefined) {
+    await notifySale(store, product, updated);
   }
 
   return stripStoreInternals(updated);

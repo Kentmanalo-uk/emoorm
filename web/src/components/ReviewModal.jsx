@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Star, Image as ImageIcon, Video, Trash as Trash2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -6,6 +6,7 @@ import { resolveImg } from '../lib/media';
 import './ReviewModal.css';
 import { useSheetClose } from '../hooks/useSheetMotion';
 import { BusyLabel } from './ui/Spinner';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const MAX_IMAGES = 5;
 const MAX_VIDEO_MB = 50;
@@ -23,6 +24,13 @@ const MAX_VIDEO_MB = 50;
 export default function ReviewModal({ product, orderId, onClose: onCloseProp, onSuccess, initialRating = 0, intro, existing }) {
   // Phones: slide down before the parent removes the sheet.
   const [sheetClosing, onClose] = useSheetClose(onCloseProp);
+  const trapRef = useFocusTrap(true);
+  // Escape closes it, as every other dialog.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
   const editing = Boolean(existing?.id);
   const [rating, setRating] = useState(existing?.rating || initialRating || 0);
   const [hovered, setHovered] = useState(0);
@@ -116,10 +124,10 @@ export default function ReviewModal({ product, orderId, onClose: onCloseProp, on
 
   return (
     <div className={`review-overlay ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} onClick={() => onClose()}>
-      <div className="review-modal ui-sheet-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="review-modal ui-sheet-panel" ref={trapRef} role="dialog" aria-modal="true" aria-labelledby="review-modal-title" onClick={(e) => e.stopPropagation()}>
         <div className="review-modal-header">
-          <h2>{editing ? 'Edit your review' : 'Rate & Review'}</h2>
-          <button className="review-close" onClick={onClose}><X size={20} /></button>
+          <h2 id="review-modal-title">{editing ? 'Edit your review' : 'Rate & Review'}</h2>
+          <button type="button" className="review-close" onClick={onClose} aria-label="Close"><X size={20} /></button>
         </div>
         {intro && <p className="review-intro">{intro}</p>}
 

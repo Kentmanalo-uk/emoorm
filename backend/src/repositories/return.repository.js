@@ -1,4 +1,6 @@
 const prisma = require('../config/database');
+const { withDeadlockRetry } = require('../lib/dbRetry');
+const { invalidateProductIds } = require('./product.repository');
 const { changeStock } = require('./stockLedger');
 
 const REQUEST_INCLUDE = {
@@ -12,6 +14,7 @@ const REQUEST_INCLUDE = {
       status: true,
       total: true,
       subtotal: true,
+      discountAmount: true,
       deliveryFee: true,
       completedAt: true,
       updatedAt: true,
@@ -29,14 +32,39 @@ const REQUEST_INCLUDE = {
   },
 };
 
-const createRequest = async ({ request, items }) => {
-  return prisma.$transaction(async (tx) => {
+/**
+ * Create a return request. With `limits` (order item id → quantity bought),
+ * the order is locked and the quantities already under return are counted
+ * inside the same transaction, so two requests sent at once cannot together
+ * return more than was bought.
+ */
+// A deadlock with another write on the same order is retried (lib/dbRetry).
+const createRequest = async ({ request, items, limits = null }) => {
+  return withDeadlockRetry(() => prisma.$transaction(async (tx) => {
+    if (limits) {
+      await tx.$queryRaw`SELECT id FROM orders WHERE id = ${request.orderId} FOR UPDATE`;
+      const rows = await tx.returnRequestItem.findMany({
+        where: { returnRequest: { orderId: request.orderId, status: { notIn: ['CANCELLED', 'REJECTED'] } } },
+        select: { orderItemId: true, quantity: true },
+      });
+      const used = new Map();
+      rows.forEach((r) => used.set(r.orderItemId, (used.get(r.orderItemId) || 0) + r.quantity));
+      for (const it of items) {
+        const remaining = (limits.get(it.orderItemId) || 0) - (used.get(it.orderItemId) || 0);
+        if (it.quantity > remaining) {
+          const err = new Error('Return quantity exceeds what is left');
+          err.code = 'RETURN_QUANTITY_EXCEEDED';
+          err.remaining = Math.max(0, remaining);
+          throw err;
+        }
+      }
+    }
     const created = await tx.returnRequest.create({ data: request });
     await tx.returnRequestItem.createMany({
       data: items.map((it) => ({ ...it, returnRequestId: created.id })),
     });
     return tx.returnRequest.findUnique({ where: { id: created.id }, include: REQUEST_INCLUDE });
-  });
+  }));
 };
 
 const findById = (id) =>
@@ -93,8 +121,27 @@ const getUsedQuantitiesForOrder = async (orderId) => {
   return totals;
 };
 
-const updateRequest = (id, data) =>
-  prisma.returnRequest.update({ where: { id }, data, include: REQUEST_INCLUDE });
+/**
+ * Update a return request. With `fromStatus` (one status or several) the
+ * write happens only if the request is still in it, so a buyer cancelling
+ * while the seller approves cannot overwrite each other.
+ * @throws {Error} code STALE_RETURN_STATUS when the status moved on
+ */
+const updateRequest = async (id, data, { fromStatus } = {}) => {
+  if (fromStatus) {
+    const changed = await prisma.returnRequest.updateMany({
+      where: { id, status: { in: [].concat(fromStatus) } },
+      data,
+    });
+    if (changed.count === 0) {
+      const err = new Error('Return request changed');
+      err.code = 'STALE_RETURN_STATUS';
+      throw err;
+    }
+    return prisma.returnRequest.findUnique({ where: { id }, include: REQUEST_INCLUDE });
+  }
+  return prisma.returnRequest.update({ where: { id }, data, include: REQUEST_INCLUDE });
+};
 
 /**
  * Total actually refunded on an order across its REFUNDED return requests.
@@ -122,7 +169,7 @@ const generateRequestNumber = async () => {
 const incrementProductStock = (productId, quantity) =>
   prisma.product.update({ where: { id: productId }, data: { stock: { increment: quantity } } });
 
-const receiveAndRestock = async (id, itemRestocks) => {
+const receiveAndRestockTx = async (id, itemRestocks) => {
   return prisma.$transaction(async (tx) => {
     const changed = await tx.returnRequest.updateMany({
       where: { id, status: 'AWAITING_SHIPMENT' },
@@ -134,7 +181,8 @@ const receiveAndRestock = async (id, itemRestocks) => {
       throw error;
     }
 
-    for (const item of itemRestocks) {
+    // Same lock order as checkouts (by product), so they cannot deadlock.
+    for (const item of [...itemRestocks].sort((a, b) => (a.productId < b.productId ? -1 : a.productId > b.productId ? 1 : 0))) {
       if (item.restockOnReceive) {
         const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, item.quantity);
         await tx.inventoryMovement.create({
@@ -151,6 +199,13 @@ const receiveAndRestock = async (id, itemRestocks) => {
 
     return tx.returnRequest.findUnique({ where: { id }, include: REQUEST_INCLUDE });
   });
+};
+
+/** Mark a return received and put the chosen items back in stock (product pages follow). */
+const receiveAndRestock = async (id, itemRestocks) => {
+  const result = await receiveAndRestockTx(id, itemRestocks);
+  invalidateProductIds(itemRestocks.filter((i) => i.restockOnReceive).map((i) => i.productId));
+  return result;
 };
 
 module.exports = {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Link, Navigate, useLocation, useNavigate, useOutletContext, useParams,
 } from 'react-router-dom';
@@ -12,7 +12,8 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import PhoneSaveBar from '../components/seller/PhoneSaveBar';
-import PickupAddressField, { pickupGap } from '../components/seller/PickupAddressField';
+import PickupAddressField from '../components/seller/PickupAddressField';
+import { pickupGap } from '../lib/pickupAddress';
 import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useMunicipalities } from '../hooks/useReferenceData';

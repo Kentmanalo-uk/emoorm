@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   House as HomeIcon, MagnifyingGlass as Search, ShoppingCart, BellSlash as BellOff, List as Menu, X,
   ChatCircle, Bell, User,
   ShoppingBag, CheckCircle, Package, XCircle, Star, WarningCircle as AlertCircle, Info,
-  Clock, TrendUp as TrendingUp, ChatCircleDots, ArrowCounterClockwise, Megaphone, Tag,
+  Clock, TrendUp as TrendingUp, ChatCircleDots, ArrowCounterClockwise, Megaphone, Tag, Question, Scales,
 } from '@phosphor-icons/react';
 import useAuthStore from '../../store/authStore';
 import FeedbackDialog from '../feedback/FeedbackDialog';
@@ -23,6 +23,7 @@ import { isBottomNavTab } from '../../lib/navTabs';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm } from '../../lib/buyerSearch';
 import { afterSignOutPath } from '../../lib/afterSignOut';
+import { pollWhileVisible } from '../../lib/visiblePoll';
 
 const NOTIF_TYPE = {
   ORDER_RECEIVED: { Icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New order' },
@@ -51,6 +52,12 @@ const NOTIF_TYPE = {
   RETURN_REFUNDED: { Icon: ArrowCounterClockwise, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Refunded' },
   RETURN_CANCELLED: { Icon: ArrowCounterClockwise, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Return cancelled' },
   RETURN_CLOSED: { Icon: ArrowCounterClockwise, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Return closed' },
+  LOW_STOCK: { Icon: AlertCircle, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Low stock' },
+  PRICE_DROP: { Icon: Tag, color: 'var(--t-primary-500, #10b981)', bg: 'var(--t-primary-100, #d1fae5)', label: 'On sale' },
+  PRODUCT_QUESTION: { Icon: Question, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Question' },
+  PRODUCT_ANSWER: { Icon: ChatCircleDots, color: 'var(--t-primary-500, #10b981)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Answer' },
+  RETURN_DISPUTED: { Icon: Scales, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Return dispute' },
+  RETURN_DISPUTE_RESOLVED: { Icon: Scales, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Dispute decided' },
   DEFAULT: { Icon: Info, color: 'var(--t-neutral-500, #6b7280)', bg: 'var(--t-neutral-100, #f3f4f6)', label: 'Notification' },
 };
 
@@ -90,6 +97,8 @@ const Header = () => {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  // Chats with a message from a shop not read yet (the Messages tab's badge).
+  const [unreadChats, setUnreadChats] = useState(0);
   const [recentNotifs, setRecentNotifs] = useState([]);
   const [headerHidden, setHeaderHidden] = useState(false);
   // At the very top of the page: phones drop the header's shadow there, so it
@@ -156,28 +165,39 @@ const Header = () => {
   useEffect(() => {
     if (!isAuthenticated) {
       setUnreadCount(0);
+      setUnreadChats(0);
       setRecentNotifs([]);
       return;
     }
     const fetchAll = async () => {
       try {
-        const [countRes, listRes] = await Promise.all([
-          axios.get('/notifications/unread/count', { params: { audience: 'BUYER' } }),
-          axios.get('/notifications', { params: { page: 1, pageSize: 5, audience: 'BUYER' } }),
+        const [countRes, listRes, chatRes] = await Promise.all([
+          axios.get('/notifications/unread/count', { params: { audience: 'BUYER' }, quiet: true }),
+          axios.get('/notifications', { params: { page: 1, pageSize: 5, audience: 'BUYER' }, quiet: true }),
+          axios.get('/messages/unread-count', { quiet: true }).catch(() => null),
         ]);
         setUnreadCount(countRes.data?.count ?? 0);
         setRecentNotifs(listRes.data || []);
+        if (chatRes) setUnreadChats(chatRes.data?.count ?? 0);
       } catch { /* silent */ }
     };
     fetchAll();
-    const interval = setInterval(fetchAll, 60000);
+    const interval = pollWhileVisible(fetchAll, 5 * 60 * 1000);
     // A new one just popped up (NotificationWatcher): count it now.
     window.addEventListener('emoorm:notifications', fetchAll);
     return () => {
-      clearInterval(interval);
+      interval();
       window.removeEventListener('emoorm:notifications', fetchAll);
     };
   }, [isAuthenticated]);
+
+  // Opening a tab (reading chats there, say) refreshes the chat badge.
+  useEffect(() => {
+    if (!isAuthenticated || !isTabPage) return;
+    axios.get('/messages/unread-count', { quiet: true })
+      .then((res) => setUnreadChats(res.data?.count ?? 0))
+      .catch(() => {});
+  }, [isAuthenticated, isTabPage, location.pathname, location.search]);
 
   // The bell preview is a shortcut, not a dead list: a row marks itself read
   // and goes wherever the notification points.
@@ -244,14 +264,14 @@ const Header = () => {
 
   // Rotating placeholder — swap every 3s with a small fade.
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = pollWhileVisible(() => {
       setPlaceholderVisible(false);
       setTimeout(() => {
         setPlaceholderIdx((i) => (i + 1) % PLACEHOLDER_SUGGESTIONS.length);
         setPlaceholderVisible(true);
       }, 220);
     }, 3000);
-    return () => clearInterval(interval);
+    return () => interval();
   }, []);
 
   // Close suggestions dropdown on outside click.
@@ -563,7 +583,7 @@ const Header = () => {
                     <path d="M7 5L8 3H12L13 5" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
                   </svg>
                 </button>
-                <button type="submit" className="header-search-button">
+                <button type="submit" className="header-search-button" aria-label="Search">
                   <Search size={20} />
                 </button>
               </form>
@@ -660,7 +680,7 @@ const Header = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="header-search-input"
               />
-              <button type="submit" className="header-search-button">
+              <button type="submit" className="header-search-button" aria-label="Search">
                 <Search size={20} />
               </button>
             </form>
@@ -682,26 +702,32 @@ const Header = () => {
 
       {isTabPage && <InstallAppBar />}
       {isTabPage && <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
-        <Link className={location.pathname === '/' ? 'is-active' : ''} to="/">
+        <Link className={location.pathname === '/' ? 'is-active' : ''} to="/" aria-current={location.pathname === '/' ? 'page' : undefined}>
           <HomeIcon size={21} weight={location.pathname === '/' ? 'fill' : 'light'} />
           <span>Home</span>
         </Link>
-        <Link className={location.pathname === '/cart' ? 'is-active' : ''} to="/cart">
+        <Link className={location.pathname === '/cart' ? 'is-active' : ''} to="/cart" aria-current={location.pathname === '/cart' ? 'page' : undefined}>
           <span className="mobile-bottom-icon-wrap">
             <ShoppingCart size={21} weight={location.pathname === '/cart' ? 'fill' : 'light'} />
-            {cartCount > 0 && <b>{cartCount > 99 ? '99+' : cartCount}</b>}
+            {cartCount > 0 && <b aria-label={`${cartCount} in cart`}>{cartCount > 99 ? '99+' : cartCount}</b>}
           </span>
           <span>Cart</span>
         </Link>
-        <Link className={location.pathname.startsWith('/messages') ? 'is-active' : ''} to="/messages">
-          <ChatCircle size={21} weight={location.pathname.startsWith('/messages') ? 'fill' : 'light'} />
+        <Link className={location.pathname.startsWith('/messages') ? 'is-active' : ''} to="/messages" aria-current={location.pathname.startsWith('/messages') ? 'page' : undefined}>
+          <span className="mobile-bottom-icon-wrap">
+            <ChatCircle size={21} weight={location.pathname.startsWith('/messages') ? 'fill' : 'light'} />
+            {unreadChats > 0 && <b aria-label={`${unreadChats} unread chats`}>{unreadChats > 99 ? '99+' : unreadChats}</b>}
+          </span>
           <span>Messages</span>
         </Link>
-        <Link className={location.pathname.startsWith('/notifications') ? 'is-active' : ''} to="/notifications">
-          <Bell size={21} weight={location.pathname.startsWith('/notifications') ? 'fill' : 'light'} />
+        <Link className={location.pathname.startsWith('/notifications') ? 'is-active' : ''} to="/notifications" aria-current={location.pathname.startsWith('/notifications') ? 'page' : undefined}>
+          <span className="mobile-bottom-icon-wrap">
+            <Bell size={21} weight={location.pathname.startsWith('/notifications') ? 'fill' : 'light'} />
+            {unreadCount > 0 && <b aria-label={`${unreadCount} unread notifications`}>{unreadCount > 99 ? '99+' : unreadCount}</b>}
+          </span>
           <span>Notifications</span>
         </Link>
-        <Link className={location.pathname.startsWith('/profile') ? 'is-active' : ''} to="/profile">
+        <Link className={location.pathname.startsWith('/profile') ? 'is-active' : ''} to="/profile" aria-current={location.pathname.startsWith('/profile') ? 'page' : undefined}>
           <User size={21} weight={location.pathname.startsWith('/profile') ? 'fill' : 'light'} />
           <span>Profile</span>
         </Link>

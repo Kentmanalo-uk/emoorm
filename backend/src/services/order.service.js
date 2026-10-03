@@ -22,8 +22,13 @@ const deliveryQuoteService = require('./deliveryQuote.service');
 const courierService = require('./courier.service');
 const shopReadiness = require('./shopReadiness.service');
 const { ApiError } = require('../middleware/errorHandler');
+const { snapshotReturnPolicy } = require('../utils/returnPolicy');
+const shopHours = require('../utils/shopHours');
+const { estimate } = require('../utils/eta');
+const { normalizePin } = require('../utils/mapPin');
+const phoneVerify = require('./phoneVerify.service');
 const { maskPhone, areaOnly } = require('../utils/privacy');
-const { priceForSelection, stockForSelection } = require('../utils/variantPricing');
+const { unitPriceFor, stockForSelection } = require('../utils/variantPricing');
 
 const PAYMENT_METHODS = ['COD', 'GCASH', 'QRPH'];
 
@@ -32,6 +37,10 @@ const isDueForPayment = (order) => order.paymentMethod !== 'COD'
   && order.status === 'CONFIRMED'
   && ['PENDING', 'FAILED'].includes(order.paymentStatus);
 const MAX_ORDER_LINES = 50;
+// A shop that leaves a payment proof unchecked this long lets the buyer cancel.
+const PAYMENT_CHECK_HOURS = Number(process.env.ORDER_PAYMENT_CHECK_HOURS) || 48;
+const paymentCheckOverdue = (order) => order.paymentStatus === 'PENDING_VERIFICATION'
+  && Date.now() - new Date(order.updatedAt).getTime() > PAYMENT_CHECK_HOURS * 3600 * 1000;
 
 /**
  * Order Service
@@ -71,12 +80,76 @@ const normalizeSelectedVariations = (product, selectedVariations) => {
  * @param {Object} data - Order data
  * @returns {Promise<Object>} Created order
  */
+/** The seller's reason, checked against where the order is. */
+const sellerCancelReason = (order, reason) => {
+  const key = reason ? String(reason).toUpperCase() : 'SELLER_CANCELLED';
+  if (!(key in SELLER_CANCEL_REASONS)) throw new ApiError('Choose why the order is cancelled', 400);
+  const only = SELLER_CANCEL_REASONS[key];
+  if (only && !only.includes(order.status)) {
+    throw new ApiError(key === 'NO_SHOW'
+      ? 'A no-show is for an order that was ready for pickup'
+      : 'Refused is for an order that was out for delivery', 400);
+  }
+  return key;
+};
+
+// Cancellations that were the buyer's doing (an order taken back after the
+// shop accepted it, not collected, refused at the door, or not paid).
+const BUYER_FAULT = ['NO_SHOW', 'REFUSED', 'UNPAID'];
+
+/**
+ * A buyer's record over the last year, for the shop deciding on an order:
+ * finished orders, and the ones that fell through on the buyer's side.
+ * Counts only; no other shop's name or details.
+ */
+const buyerRecord = async (orderId, sellerId) => {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { buyerId: true, store: { select: { ownerId: true } } } });
+  if (!order) throw new ApiError('Order not found', 404);
+  if (order.store.ownerId !== sellerId) throw new ApiError('You can only see buyers of your own orders', 403);
+  const since = new Date(Date.now() - 365 * 86400e3);
+  const rows = await prisma.order.groupBy({
+    by: ['status', 'cancelReason'],
+    where: { buyerId: order.buyerId, createdAt: { gte: since } },
+    _count: { _all: true },
+  });
+  const count = (fn) => rows.filter(fn).reduce((n, r) => n + r._count._all, 0);
+  const user = await prisma.user.findUnique({ where: { id: order.buyerId }, select: { createdAt: true, phoneVerifiedAt: true } });
+  return {
+    completed: count((r) => r.status === 'COMPLETED'),
+    noShows: count((r) => r.cancelReason === 'NO_SHOW'),
+    refused: count((r) => r.cancelReason === 'REFUSED'),
+    unpaid: count((r) => r.cancelReason === 'UNPAID'),
+    cancelledByBuyer: count((r) => r.cancelReason === 'BUYER_CANCELLED'),
+    fellThrough: count((r) => BUYER_FAULT.includes(r.cancelReason)),
+    memberSince: user?.createdAt || null,
+    phoneVerified: Boolean(user?.phoneVerifiedAt),
+  };
+};
+
+/**
+ * After an order: the products whose stock went from above their low-stock
+ * threshold to at or below it. Only the crossing is told, so a product that
+ * keeps selling while low does not send a notice with every order.
+ */
+const notifyStockCrossings = async (sellerId, items) => {
+  const ordered = new Map();
+  for (const item of items) ordered.set(item.productId, (ordered.get(item.productId) || 0) + item.quantity);
+  const products = await prisma.product.findMany({
+    where: { id: { in: [...ordered.keys()] } },
+    select: { id: true, name: true, stock: true, lowStockThreshold: true },
+  });
+  const crossed = products.filter((p) => p.stock <= p.lowStockThreshold && p.stock + ordered.get(p.id) > p.lowStockThreshold);
+  if (crossed.length) await notificationService.notifyLowStock(sellerId, crossed);
+};
+
 const createOrder = async (userId, data) => {
   const {
     storeId,
     items,
     deliveryAddress,
     deliveryNotes,
+    deliveryLatitude,
+    deliveryLongitude,
     contactNumber,
     fulfillmentMethod = 'DELIVERY',
     paymentMethod = 'COD',
@@ -100,11 +173,33 @@ const createOrder = async (userId, data) => {
 
   if (checkoutKey) {
     const existing = await orderRepository.findByCheckoutKey(userId, String(checkoutKey));
+    // The same checkout sent again (a lost response): the order it placed.
+    // Unless that order was cancelled since: then this is not a success.
+    if (existing && existing.status === 'CANCELLED') {
+      throw new ApiError('That order was cancelled. Check your cart and place the order again.', 409);
+    }
     if (existing) return existing;
   }
 
   if (!['DELIVERY', 'PICKUP'].includes(fulfillmentMethod)) {
     throw new ApiError('Invalid fulfillment method', 400);
+  }
+
+  // Delivery is priced and checked by the town and barangay given with the
+  // order; the address the shop will go to must be in that same place, so a
+  // cheaper town cannot be claimed for an address somewhere else.
+  if (fulfillmentMethod === 'DELIVERY') {
+    const townId = buyerMunicipalityId || buyer.municipalityId;
+    const town = townId
+      ? await prisma.municipality.findUnique({ where: { id: String(townId) }, select: { name: true } })
+      : null;
+    if (!town) throw new ApiError('Choose your town for delivery again.', 400);
+    const fold = (t) => ` ${String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()} `;
+    const address = fold(deliveryAddress);
+    const barangay = buyerBarangay || buyer.barangay;
+    if (!address.includes(fold(town.name)) || (barangay && !address.includes(fold(barangay)))) {
+      throw new ApiError("The delivery address doesn't match the town and barangay you chose. Choose them again.", 400);
+    }
   }
 
   if (!contactNumber) {
@@ -121,6 +216,10 @@ const createOrder = async (userId, data) => {
   }
   if (!(await shopReadiness.isReady(storeId))) {
     throw new ApiError("This shop isn't taking orders yet. Please check back soon.", 400);
+  }
+  const away = shopHours.awayUntil(store);
+  if (away) {
+    throw new ApiError(`This shop is away until ${shopHours.manilaDate(away)} and is not taking orders until then.`, 400);
   }
 
   // Fulfillment method must be supported by the store
@@ -142,6 +241,8 @@ const createOrder = async (userId, data) => {
   if (paymentMethod === 'COD' && store.acceptsCod === false) {
     throw new ApiError('This store does not accept Cash on Delivery', 400);
   }
+  // Optional: cash on delivery only with a number proven by SMS.
+  if (paymentMethod === 'COD') await phoneVerify.assertCodAllowed(userId);
   // QR orders are paid after the seller confirms them (To Pay in My Orders).
   // A reference and proof sent now (older app versions) are still accepted.
   const paidUpFront = paymentMethod !== 'COD' && Boolean(paymentReference?.trim() && paymentProofUrl);
@@ -228,7 +329,8 @@ const createOrder = async (userId, data) => {
     if (product.weightGrams) parcelGrams += product.weightGrams * quantity;
     else unweighed.push(product.name);
 
-    const unitPrice = priceForSelection(product, selectedVariations);
+    // Options, a sale and a bulk price for this quantity (utils/variantPricing).
+    const unitPrice = unitPriceFor(product, selectedVariations, quantity);
     const itemTotal = unitPrice * quantity;
     totalAmount += itemTotal;
 
@@ -239,7 +341,7 @@ const createOrder = async (userId, data) => {
       price: unitPrice,
       subtotal: itemTotal,
       selectedVariations,
-      returnPolicySnapshot: product.returnPolicy || null,
+      returnPolicySnapshot: snapshotReturnPolicy(product.returnPolicy),
     });
   }
 
@@ -264,12 +366,24 @@ const createOrder = async (userId, data) => {
     const normalized = String(voucherCode).trim().toUpperCase();
     if (normalized) {
       voucherRecord = await voucherRepository.findByCode(normalized);
-      await voucherService.assertUsable(voucherRecord, { userId, subtotal: totalAmount });
+      await voucherService.assertUsable(voucherRecord, { userId, subtotal: totalAmount, storeId });
       discountAmount = voucherService.computeDiscount(voucherRecord, totalAmount);
     }
   }
 
   const grandTotal = Math.max(0, totalAmount + DELIVERY_FEE - discountAmount);
+
+  // When the buyer can expect it, from the shop's preparation days and week.
+  const eta = estimate(store, {
+    method: fulfillmentMethod,
+    courier: Boolean(courier),
+    townId: buyerMunicipalityId || buyer.municipalityId || null,
+  });
+
+  // The delivery address's map pin, for the rider (none for pickup).
+  const pin = fulfillmentMethod === 'DELIVERY'
+    ? normalizePin(deliveryLatitude, deliveryLongitude)
+    : { latitude: null, longitude: null };
 
   // Create order with items (stock is decremented atomically in the transaction)
   let order;
@@ -290,8 +404,12 @@ const createOrder = async (userId, data) => {
           ? (store.pickupAddress || deliveryAddress || 'Store pickup')
           : deliveryAddress,
         deliveryNotes: deliveryNotes || null,
+        deliveryLatitude: pin.latitude,
+        deliveryLongitude: pin.longitude,
         contactNumber,
         status: 'PENDING',
+        etaFrom: eta.from,
+        etaTo: eta.to,
         fulfillmentMethod,
         pickupLocation: fulfillmentMethod === 'PICKUP' ? (store.pickupAddress || null) : null,
         paymentMethod,
@@ -333,6 +451,12 @@ const createOrder = async (userId, data) => {
     }
   } catch (err) {
     console.error('[createOrder] notification failed:', err.message);
+  }
+
+  // Products this order brought down to their low-stock line.
+  if (store.ownerId) {
+    notifyStockCrossings(store.ownerId, orderItems)
+      .catch((err) => console.error('[createOrder] low-stock notice failed:', err.message));
   }
 
   // …and by email: who ordered what, with a link to confirm it.
@@ -497,8 +621,11 @@ const withDeadline = (order) => {
     deadline = { kind: 'pay', at: hours(order.updatedAt, PAYMENT_EXPIRY_HOURS) };
   } else if (order.status === 'SHIPPED') {
     deadline = { kind: 'autoComplete', at: hours(order.shippedAt, AUTO_COMPLETE_DAYS * 24) };
-  } else if (order.status === 'DELIVERED') {
+  } else if (order.status === 'DELIVERED' || order.status === 'PICKED_UP') {
     deadline = { kind: 'autoComplete', at: hours(order.fulfillmentProofAt || order.updatedAt, AUTO_COMPLETE_DAYS * 24) };
+  } else if (order.paymentStatus === 'PENDING_VERIFICATION' && ['PENDING', 'CONFIRMED'].includes(order.status)) {
+    // After this the buyer may cancel if the shop still hasn't checked it.
+    deadline = { kind: 'paymentCheck', at: hours(order.updatedAt, PAYMENT_CHECK_HOURS) };
   }
   return { ...order, deadline };
 };
@@ -545,7 +672,15 @@ const getAllOrders = async (options) => {
  * @param {String} newStatus - New status
  * @returns {Promise<Object>} Updated order
  */
-const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl } = {}) => {
+// What a seller may give as the reason for cancelling, and when.
+const SELLER_CANCEL_REASONS = {
+  SELLER_CANCELLED: null,
+  OUT_OF_STOCK: null,
+  NO_SHOW: ['READY_FOR_PICKUP', 'READY'],
+  REFUSED: ['OUT_FOR_DELIVERY'],
+};
+
+const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelReason } = {}) => {
   const order = await orderRepository.findById(orderId);
 
   if (!order) {
@@ -557,25 +692,27 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl } = {}) 
     throw new ApiError('You can only update orders for your store', 403);
   }
 
-  // Validate status transition (fulfillment-aware)
+  // Validate status transition (fulfillment-aware). READY is an older state:
+  // orders still in it move on through hand-over (with its proof photo), never
+  // straight to COMPLETED.
   const deliveryTransitions = {
     PENDING: ['CONFIRMED', 'CANCELLED'],
     CONFIRMED: ['TO_SHIP', 'PREPARING', 'CANCELLED'],
-    PREPARING: ['TO_SHIP', 'READY', 'CANCELLED'],
+    PREPARING: ['TO_SHIP', 'CANCELLED'],
     TO_SHIP: ['OUT_FOR_DELIVERY', 'CANCELLED'],
     OUT_FOR_DELIVERY: ['DELIVERED', 'CANCELLED'],
     DELIVERED: ['COMPLETED'],
-    READY: ['COMPLETED', 'CANCELLED'],
+    READY: ['TO_SHIP', 'OUT_FOR_DELIVERY', 'CANCELLED'],
     COMPLETED: [],
     CANCELLED: [],
   };
   const pickupTransitions = {
     PENDING: ['CONFIRMED', 'CANCELLED'],
     CONFIRMED: ['READY_FOR_PICKUP', 'PREPARING', 'CANCELLED'],
-    PREPARING: ['READY_FOR_PICKUP', 'READY', 'CANCELLED'],
+    PREPARING: ['READY_FOR_PICKUP', 'CANCELLED'],
     READY_FOR_PICKUP: ['PICKED_UP', 'CANCELLED'],
     PICKED_UP: ['COMPLETED'],
-    READY: ['COMPLETED', 'CANCELLED'],
+    READY: ['PICKED_UP', 'CANCELLED'],
     COMPLETED: [],
     CANCELLED: [],
   };
@@ -620,6 +757,8 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl } = {}) 
       ? await orderRepository.cancelOrder(orderId, userId, {
         fromStatuses: [order.status],
         note: 'Cancelled by seller',
+        reason: sellerCancelReason(order, cancelReason),
+        by: 'SELLER',
       })
       : await orderRepository.updateStatus(orderId, newStatus, order.status, userId, null, proofFields);
   } catch (err) {
@@ -688,9 +827,20 @@ const cancelOrder = async (orderId, userId) => {
     throw new ApiError('Order cannot be cancelled at this stage', 400);
   }
 
+  // A payment the shop is still checking holds the order, unless the shop
+  // has left it unchecked too long; the shop then records the refund.
+  const overdueCheck = paymentCheckOverdue(order);
+  if (order.paymentStatus === 'PENDING_VERIFICATION' && !overdueCheck) {
+    throw new ApiError(`The shop is checking your payment. If it hasn't within ${PAYMENT_CHECK_HOURS} hours of your proof, you can cancel; until then, message the shop.`, 409);
+  }
+
   let cancelled;
   try {
-    cancelled = await orderRepository.cancelOrder(orderId, userId);
+    cancelled = await orderRepository.cancelOrder(orderId, userId, {
+      fromPaymentStatuses: ['PENDING', 'PAID', 'FAILED', 'EXPIRED', ...(overdueCheck ? ['PENDING_VERIFICATION'] : [])],
+      reason: 'BUYER_CANCELLED',
+      by: 'BUYER',
+    });
   } catch (err) {
     if (err.code === 'ORDER_NOT_CANCELLABLE') {
       throw new ApiError('Order cannot be cancelled at this stage', 409);
@@ -703,7 +853,9 @@ const cancelOrder = async (orderId, userId) => {
     if (order.store?.owner?.id || order.store?.ownerId) {
       const refund = order.paymentStatus === 'PAID'
         ? ' The payment was already verified — please arrange the refund with the buyer.'
-        : '';
+        : order.paymentStatus === 'PENDING_VERIFICATION'
+          ? ` Their payment proof waited more than ${PAYMENT_CHECK_HOURS} hours unchecked. If you received the money, return it and mark the order refunded.`
+          : '';
       await notificationService.createNotification({
         userId: order.store.owner?.id || order.store.ownerId,
         type: 'ORDER_CANCELLED',
@@ -728,8 +880,9 @@ const cancelOrder = async (orderId, userId) => {
  *  - FAILED:   proof rejected (from PENDING_VERIFICATION). The order and its
  *              stock stay as they are; the buyer is asked to resubmit. The
  *              expiry job cancels it later if it stays unpaid.
- *  - REFUNDED: the seller has returned the money for a cancelled, already
- *              verified order (paymentStatus PAID and status CANCELLED).
+ *  - REFUNDED: the seller has returned the money for a cancelled order that
+ *              was paid (PAID), or whose proof they never checked
+ *              (PENDING_VERIFICATION, cancelled by the buyer after the deadline).
  */
 const verifyPayment = async (orderId, actor, paymentStatus, note = '') => {
   const order = await orderRepository.findById(orderId);
@@ -738,7 +891,7 @@ const verifyPayment = async (orderId, actor, paymentStatus, note = '') => {
   const isAdmin = actor.role === 'SUPER_ADMIN';
   const isScopedAdmin = actor.role === 'MUNICIPAL_ADMIN'
     && actor.municipalityId
-    && (order.buyer?.municipalityId === actor.municipalityId || order.store?.municipalityId === actor.municipalityId);
+    && order.store?.municipalityId === actor.municipalityId;
   if (!isSeller && !isAdmin && !isScopedAdmin) throw new ApiError('Not authorized to verify this payment', 403);
   if (!['PAID', 'FAILED', 'REFUNDED'].includes(paymentStatus)) {
     throw new ApiError('Payment status must be PAID, FAILED or REFUNDED', 400);
@@ -750,12 +903,12 @@ const verifyPayment = async (orderId, actor, paymentStatus, note = '') => {
 
   let updated;
   if (paymentStatus === 'REFUNDED') {
-    if (order.paymentStatus !== 'PAID' || order.status !== 'CANCELLED') {
-      throw new ApiError('Only a verified payment on a cancelled order can be marked as refunded', 409);
+    if (!['PAID', 'PENDING_VERIFICATION'].includes(order.paymentStatus) || order.status !== 'CANCELLED') {
+      throw new ApiError('Only a paid, cancelled order can be marked as refunded', 409);
     }
     try {
       updated = await orderRepository.updatePaymentStatus(orderId, 'REFUNDED', actor.id, {
-        fromPaymentStatus: 'PAID',
+        fromPaymentStatus: order.paymentStatus,
         orderStatus: 'CANCELLED',
         note: trimmedNote || 'Refund recorded by seller',
       });
@@ -965,7 +1118,7 @@ const autoCompleteOrders = async (days = AUTO_COMPLETE_DAYS) => {
       );
       completed += 1;
     } catch (err) {
-      if (err.code !== 'STALE_ORDER_STATUS') throw err;
+      if (err.code !== 'STALE_ORDER_STATUS') console.error(`[orders] auto-complete ${order.orderNumber} failed:`, err.message);
       continue;
     }
     await Promise.allSettled([
@@ -1057,6 +1210,9 @@ const expirePendingOrders = async (ageHours = PENDING_EXPIRY_HOURS) => {
   for (const order of orders) {
     try {
       await orderRepository.cancelOrder(order.id, null, {
+        // The shop never confirmed it: not the buyer's doing.
+        reason: 'EXPIRED',
+        by: 'SYSTEM',
         fromStatuses: ['PENDING'],
         // Re-checked inside the write: a proof uploaded (or verified) since
         // the lookup must not be swept away.
@@ -1066,7 +1222,7 @@ const expirePendingOrders = async (ageHours = PENDING_EXPIRY_HOURS) => {
       });
       expired += 1;
     } catch (err) {
-      if (err.code !== 'ORDER_NOT_CANCELLABLE') throw err;
+      if (err.code !== 'ORDER_NOT_CANCELLABLE') console.error(`[orders] expiry of ${order.orderNumber} failed:`, err.message);
       continue;
     }
 
@@ -1096,6 +1252,9 @@ const expireUnpaidOrders = async (ageHours = PAYMENT_EXPIRY_HOURS) => {
   for (const order of orders) {
     try {
       await orderRepository.cancelOrder(order.id, null, {
+        // Confirmed, but the buyer never paid.
+        reason: 'UNPAID',
+        by: 'SYSTEM',
         fromStatuses: ['CONFIRMED'],
         // Re-checked inside the write: a proof sent since the lookup wins.
         fromPaymentStatuses: orderRepository.EXPIRABLE_PAYMENT_STATUSES,
@@ -1104,7 +1263,7 @@ const expireUnpaidOrders = async (ageHours = PAYMENT_EXPIRY_HOURS) => {
       });
       expired += 1;
     } catch (err) {
-      if (err.code !== 'ORDER_NOT_CANCELLABLE') throw err;
+      if (err.code !== 'ORDER_NOT_CANCELLABLE') console.error(`[orders] expiry of ${order.orderNumber} failed:`, err.message);
       continue;
     }
 
@@ -1130,6 +1289,7 @@ const expireUnpaidOrders = async (ageHours = PAYMENT_EXPIRY_HOURS) => {
 };
 
 module.exports = {
+  buyerRecord,
   getStoreStageCounts,
   createOrder,
   expireUnpaidOrders,

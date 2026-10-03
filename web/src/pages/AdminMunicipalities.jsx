@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, PencilSimple as Pencil, Check, X, UserGear as UserCog, Camera } from '@phosphor-icons/react';
+import { Plus, Check, X, UserGear as UserCog, Camera } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
@@ -9,6 +9,7 @@ import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
+import { confirmAction } from '../lib/confirm';
 
 export default function AdminMunicipalities() {
   const [municipalities, setMunicipalities] = useState([]);
@@ -43,7 +44,7 @@ export default function AdminMunicipalities() {
         // Only BUYER / MUNICIPAL_ADMIN are valid choices for admin assignment
         setAdminUsers(all.filter((u) => ['BUYER', 'MUNICIPAL_ADMIN'].includes(u.role)));
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load data');
     } finally {
       setIsLoading(false);
@@ -99,7 +100,7 @@ export default function AdminMunicipalities() {
   };
 
   const handleRemoveAdmin = async (mun) => {
-    if (!window.confirm(`Remove admin from ${mun.name}?`)) return;
+    if (!(await confirmAction({ title: `Remove the admin of ${mun.name}?`, confirmLabel: 'Remove', danger: true }))) return;
     setSaving(true);
     try {
       await axios.put(`/municipalities/${mun.id}`, { adminId: null });

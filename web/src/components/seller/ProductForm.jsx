@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Camera, X, Plus, Trash, CircleNotch, Info, ArrowLeft, Check,
@@ -40,19 +40,19 @@ const RETURN_POLICIES = [
   {
     key: 'none',
     title: 'No returns',
-    hint: 'Only if the item is wrong or damaged',
+    hint: 'Only wrong or damaged items, asked for within 3 days',
     text: 'No returns or refunds accepted unless the item is incorrect or damaged on arrival.',
   },
   {
     key: '7day',
     title: '7-day returns',
-    hint: 'For wrong or damaged items, with proof',
+    hint: 'Wrong or damaged items, within 7 days, with proof',
     text: 'Returns or refunds accepted within 7 days for incorrect or damaged items. Buyer must provide proof.',
   },
   {
     key: 'perishable',
     title: 'Perishable goods',
-    hint: 'Report problems on delivery with a photo',
+    hint: 'Problems reported within 2 days, with a photo',
     text: 'For perishable goods, report incorrect or damaged items on delivery with photo proof.',
   },
 ];
@@ -67,10 +67,27 @@ const asStrings = (obj) => (obj && typeof obj === 'object'
   ? Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, String(v)]))
   : {});
 
+// A stored time as the value of a datetime-local input (the device's time).
+const toLocalInput = (value) => {
+  if (!value) return '';
+  const d = new Date(value);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const toFormState = (product) => ({
   name: product?.name || '',
   description: product?.description || '',
   price: product ? String(Number(product.price) || '') : '',
+  // A sale: a lower price, optionally from / until a time (a flash sale).
+  saleOn: product?.salePrice !== null && product?.salePrice !== undefined,
+  salePrice: product?.salePrice ? String(Number(product.salePrice)) : '',
+  saleStartsAt: toLocalInput(product?.saleStartsAt),
+  saleEndsAt: toLocalInput(product?.saleEndsAt),
+  // Bulk prices: more units, lower price each.
+  priceTiers: Array.isArray(product?.priceTiers)
+    ? product.priceTiers.map((t) => ({ minQty: String(t.minQty), price: String(t.price) }))
+    : [],
   stock: product ? String(product.stock ?? '') : '',
   // Kilograms in the form; the API keeps grams.
   weightKg: product?.weightGrams ? String(product.weightGrams / 1000) : '',
@@ -285,6 +302,26 @@ export default function ProductForm({ product = null, categories = [], onCancel,
 
     const priced = hasOptions && optionGroups.some((g) => g.priced && g.choices.length);
     if (!priced && !(Number(state.price) > 0)) errs.price = 'Enter a price higher than ₱0.';
+    if (!priced && state.priceTiers.length) {
+      const rows = state.priceTiers.filter((t) => t.minQty !== '' || t.price !== '');
+      let lastQty = 1;
+      let lastPrice = Number(state.price);
+      for (const t of [...rows].sort((a, b) => Number(a.minQty) - Number(b.minQty))) {
+        if (!isWhole(t.minQty) || Number(t.minQty) <= lastQty) { errs.priceTiers = 'Each bulk price needs a quantity of 2 or more, all different.'; break; }
+        if (!(Number(t.price) > 0) || Number(t.price) >= lastPrice) { errs.priceTiers = 'Each bulk price must be lower than the price before it.'; break; }
+        lastQty = Number(t.minQty);
+        lastPrice = Number(t.price);
+      }
+    }
+    if (!priced && state.saleOn) {
+      if (!(Number(state.salePrice) > 0) || Number(state.salePrice) >= Number(state.price)) {
+        errs.salePrice = 'The sale price must be lower than the regular price.';
+      } else if (state.saleEndsAt && new Date(state.saleEndsAt) <= new Date()) {
+        errs.salePrice = 'The sale end is already past.';
+      } else if (state.saleStartsAt && state.saleEndsAt && new Date(state.saleEndsAt) <= new Date(state.saleStartsAt)) {
+        errs.salePrice = 'The sale must end after it starts.';
+      }
+    }
     const stocked = hasOptions && optionGroups.some((g) => g.stocked && g.choices.length);
     if (!stocked && state.stock !== '' && !isWhole(state.stock)) errs.stock = 'Stock must be a whole number, like 10.';
     if (state.weightKg !== '' && !(Number(state.weightKg) > 0 && Number(state.weightKg) <= 100)) {
@@ -327,6 +364,13 @@ export default function ProductForm({ product = null, categories = [], onCancel,
       name: state.name.trim(),
       description: state.description.trim(),
       price: pGroup ? minPrice : parseFloat(state.price),
+      // Option prices have no sale price: lower the option prices instead.
+      salePrice: !pGroup && state.saleOn ? parseFloat(state.salePrice) : null,
+      saleStartsAt: !pGroup && state.saleOn && state.saleStartsAt ? new Date(state.saleStartsAt).toISOString() : null,
+      saleEndsAt: !pGroup && state.saleOn && state.saleEndsAt ? new Date(state.saleEndsAt).toISOString() : null,
+      priceTiers: pGroup ? null : state.priceTiers
+        .filter((t) => t.minQty !== '' && t.price !== '')
+        .map((t) => ({ minQty: parseInt(t.minQty, 10), price: parseFloat(t.price) })),
       stock: sGroup ? total : (state.stock !== '' ? parseInt(state.stock, 10) : 0),
       categoryId: state.categoryId,
       images: state.images,
@@ -339,6 +383,15 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         ...(g.stocked ? { stocks: Object.fromEntries(g.choices.map((c) => [c, parseInt(g.stocks[c] || '0', 10) || 0])) } : {}),
       })),
     };
+
+    // Editing: the stock this form opened with, so the server applies only
+    // the change made here (units sold meanwhile are not put back).
+    if (editing) {
+      payload.stockWas = Number(product.stock) || 0;
+      const opened = (Array.isArray(product.variations) ? product.variations : [])
+        .find((v) => v && v.stocks && typeof v.stocks === 'object');
+      if (opened) payload.stocksWas = opened.stocks;
+    }
 
     setSaving(true);
     try {
@@ -546,6 +599,87 @@ export default function ProductForm({ product = null, categories = [], onCancel,
             )}
           </Field>
         </div>
+        {!pricedGroup && (
+          <div className={`pf-sale${form.saleOn ? ' is-on' : ''}`}>
+            <label className="pf-sale-toggle">
+              <input type="checkbox" checked={form.saleOn} onChange={(e) => set('saleOn', e.target.checked)} />
+              <span>
+                <strong>Put it on sale</strong>
+                <small>Buyers see the lower price with the regular one crossed out. Saved by buyers? They are told.</small>
+              </span>
+            </label>
+            {form.saleOn && (
+              <div className="pf-grid-2">
+                <Field label="Sale price" required error={errors.salePrice} htmlFor="pf-sale-price">
+                  <div className={`pf-money${errors.salePrice ? ' is-invalid' : ''}`}>
+                    <em>₱</em>
+                    <input
+                      id="pf-sale-price"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      value={form.salePrice}
+                      onChange={(e) => set('salePrice', e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </Field>
+                <Field label="Starts" htmlFor="pf-sale-start" hint="Empty: right away.">
+                  <input id="pf-sale-start" className="pf-input" type="datetime-local" value={form.saleStartsAt} onChange={(e) => set('saleStartsAt', e.target.value)} />
+                </Field>
+                <Field label="Ends" htmlFor="pf-sale-end" hint="Empty: until you turn it off. Set it for a flash sale.">
+                  <input id="pf-sale-end" className="pf-input" type="datetime-local" value={form.saleEndsAt} onChange={(e) => set('saleEndsAt', e.target.value)} />
+                </Field>
+              </div>
+            )}
+          </div>
+        )}
+        {!pricedGroup && (
+          <div className="pf-tiers">
+            <div className="pf-tiers-head">
+              <strong>Bulk prices</strong>
+              <small>Lower prices when a buyer orders more, like 10 or more at ₱90 each.</small>
+            </div>
+            {form.priceTiers.map((t, i) => (
+              <div className="pf-tier" key={i}>
+                <label>
+                  <span>From</span>
+                  <input
+                    className="pf-input"
+                    type="number"
+                    inputMode="numeric"
+                    min="2"
+                    step="1"
+                    value={t.minQty}
+                    placeholder="10"
+                    aria-label={`Bulk price ${i + 1}: from how many`}
+                    onChange={(e) => set('priceTiers', form.priceTiers.map((x, j) => (j === i ? { ...x, minQty: e.target.value } : x)))}
+                  />
+                  <span>units</span>
+                </label>
+                <div className="pf-money">
+                  <em>₱</em>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={t.price}
+                    placeholder="0.00"
+                    aria-label={`Bulk price ${i + 1}: price each`}
+                    onChange={(e) => set('priceTiers', form.priceTiers.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))}
+                  />
+                </div>
+                <button type="button" className="pf-tier-remove" aria-label="Remove this bulk price" onClick={() => set('priceTiers', form.priceTiers.filter((_, j) => j !== i))}>×</button>
+              </div>
+            ))}
+            {errors.priceTiers && <p className="pf-tier-error">{errors.priceTiers}</p>}
+            {form.priceTiers.length < 4 && (
+              <button type="button" className="pf-tier-add" onClick={() => set('priceTiers', [...form.priceTiers, { minQty: '', price: '' }])}>+ Add a bulk price</button>
+            )}
+          </div>
+        )}
         <Field
           label="Weight with packaging"
           required={couriersOn}
@@ -611,6 +745,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
               onChange={(e) => set('returnPolicy', e.target.value)}
               placeholder="e.g. Returns accepted within 7 days for damaged or wrong items."
             />
+            <small className="pf-hint">Buyers can ask for a return for as many days as your words say (for example &ldquo;within 14 days&rdquo;); 7 days when they don&rsquo;t say.</small>
             <button type="button" className="pf-link" onClick={clearPolicy}>No return policy</button>
           </div>
         )}

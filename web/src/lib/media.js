@@ -31,3 +31,34 @@ export const resolveImg = (path) => {
 };
 
 export default resolveImg;
+
+/**
+ * A product's images as a list, whatever shape the API gave them in: a list,
+ * a JSON list in a string (older rows), or one plain path.
+ */
+export const parseImages = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [raw];
+    } catch {
+      return [raw];
+    }
+  }
+  return [];
+};
+
+/** A product's first image (any of the shapes above), or null. */
+export const firstImage = (raw) => {
+  if (Array.isArray(raw)) return raw[0] || null;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed[0] || null : raw;
+    } catch {
+      return raw;
+    }
+  }
+  return null;
+};

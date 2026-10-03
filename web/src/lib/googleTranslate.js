@@ -74,7 +74,6 @@ export function loadGoogleTranslate() {
 
   window.googleTranslateElementInit = function googleTranslateElementInit() {
     if (!window.google?.translate?.TranslateElement) return;
-    // eslint-disable-next-line no-new
     new window.google.translate.TranslateElement(
       {
         pageLanguage: PAGE_LANG,

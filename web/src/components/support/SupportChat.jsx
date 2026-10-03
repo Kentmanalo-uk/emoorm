@@ -17,6 +17,7 @@ import SafetyNotice from '../common/SafetyNotice';
 import './SupportChat.css';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import { BusyLabel } from '../ui/Spinner';
+import { pollWhileVisible } from '../../lib/visiblePoll';
 
 const THREAD_POLL_MS = 5000;
 const LIST_POLL_MS = 15000;
@@ -470,8 +471,8 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
 
   useEffect(() => {
     refreshList();
-    const timer = setInterval(refreshList, LIST_POLL_MS);
-    return () => clearInterval(timer);
+    const timer = pollWhileVisible(refreshList, LIST_POLL_MS);
+    return () => timer();
   }, [refreshList]);
 
   useEffect(() => {
@@ -485,10 +486,10 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
       })
       .catch((err) => toast.error(err.message || 'Failed to load messages'));
     fetchThread();
-    const timer = setInterval(fetchThread, THREAD_POLL_MS);
+    const timer = pollWhileVisible(fetchThread, THREAD_POLL_MS);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      timer();
     };
   }, [activeId]);
 

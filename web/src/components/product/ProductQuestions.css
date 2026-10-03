@@ -1,0 +1,108 @@
+/* Product page: questions and the shop's answers. */
+.pq-ask {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.pq-ask input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.pq-ask button {
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--t-primary-600, #059669);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+}
+
+.pq-ask button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pq-empty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.pq-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pq-item {
+  padding: 12px 0;
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.pq-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.pq-q,
+.pq-a {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--t-neutral-900, #111827);
+}
+
+.pq-a {
+  margin-top: 8px;
+  color: var(--t-neutral-700, #374151);
+}
+
+.pq-q b,
+.pq-a b {
+  display: inline-flex;
+  flex: 0 0 22px;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t-neutral-600, #4b5563);
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.pq-a b {
+  color: var(--t-primary-700, #047857);
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.pq-q small,
+.pq-a small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.pq-waiting {
+  margin: 6px 0 0 32px;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--t-neutral-500, #6b7280);
+}

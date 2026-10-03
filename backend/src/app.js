@@ -37,7 +37,11 @@ app.disable('x-powered-by');
 // header value on every request, which silently defeats every limiter —
 // including the one protecting login and MFA. In development the socket
 // address is the honest one.
-app.set('trust proxy', config.nodeEnv === 'production' ? 1 : false);
+// TRUST_PROXY_HOPS: how many proxies stand in front of the app (Hostinger's
+// web server is one; a CDN in front of it makes two). Check once in
+// production that req.ip is the visitor's address, not the proxy's.
+const proxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS ?? '', 10);
+app.set('trust proxy', config.nodeEnv === 'production' ? (Number.isInteger(proxyHops) && proxyHops >= 0 ? proxyHops : 1) : false);
 
 // Third parties the web app genuinely loads. Kept as one list so the policy
 // below reads as "these, and nothing else".
@@ -236,6 +240,37 @@ app.use(`${config.apiPrefix}/auth/register`, authLimiter);
 app.use(`${config.apiPrefix}/auth/forgot-password`, authLimiter);
 app.use(`${config.apiPrefix}/auth/qr/create`, authLimiter);
 app.use(`${config.apiPrefix}/auth/google/app/exchange`, authLimiter);
+// Google sign-in steps (one of them hashes a new password), changing the
+// password (a stolen session guessing the current one).
+app.use(`${config.apiPrefix}/auth/google`, authLimiter);
+app.use(`${config.apiPrefix}/auth/change-password`, authLimiter);
+
+// Renewing a session: a generous limit (each tab renews on its own), but a
+// limit.
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many sign-in renewals, try again later' },
+});
+app.use(`${config.apiPrefix}/auth/refresh-token`, refreshLimiter);
+
+// Things people send that reach someone else (a seller, the municipal
+// admins): chat messages, reports, support cases and feedback. Plenty for a
+// person, a stop for a script.
+const sendLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'You are sending too fast. Please wait a moment.' },
+});
+// Marking a chat read is not sending anything.
+const onlyWrites = (limiter) => (req, res, next) => (req.method === 'POST' && !req.path.endsWith('/read') ? limiter(req, res, next) : next());
+for (const area of ['/messages', '/reports', '/support', '/feedback']) {
+  app.use(`${config.apiPrefix}${area}`, onlyWrites(sendLimiter));
+}
 app.use(config.apiPrefix, apiRoutes);
 
 // Health check endpoint (includes database ping)
@@ -248,12 +283,24 @@ app.get('/health', async (req, res) => {
   } catch {
     db = 'down';
   }
-  // Cache health is reported but never gates the check: a cache outage
-  // degrades performance, it does not make the service unhealthy.
-  res.status(db === 'up' ? 200 : 503).json({
-    success: db === 'up',
-    message: db === 'up' ? 'Server is healthy' : 'Database unreachable',
+  // Unhealthy (503) when the database is down, the migrations failed (new
+  // code on an old schema) or the order jobs stopped running; an uptime
+  // monitor on /health then notices. Cache and email are reported only: they
+  // degrade the service, they don't stop it.
+  const runtime = require('./lib/runtimeStatus').snapshot();
+  const problems = [
+    db !== 'up' && 'Database unreachable',
+    runtime.migrations === 'failed' && 'Database migrations failed',
+    runtime.lateJobs.length > 0 && `Background jobs late: ${runtime.lateJobs.join(', ')}`,
+  ].filter(Boolean);
+  const { isResendConfigured, isSmtpConfigured } = require('./utils/email');
+  res.status(problems.length ? 503 : 200).json({
+    success: problems.length === 0,
+    message: problems.length ? problems.join('; ') : 'Server is healthy',
     database: db,
+    migrations: runtime.migrations,
+    jobs: runtime.jobs,
+    email: isResendConfigured() ? 'resend' : isSmtpConfigured() ? 'smtp' : 'none',
     cache: require('./lib/cache').getStats(),
     timestamp: new Date().toISOString(),
   });

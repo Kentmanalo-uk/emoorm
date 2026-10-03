@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, MapPin, Star } from '@phosphor-icons/react';

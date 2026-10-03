@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Plus, PencilSimple as Pencil, Trash as Trash2, ToggleLeft, ToggleRight, X, Check, UploadSimple as Upload, Image as ImageIcon, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
@@ -10,6 +10,7 @@ import EmptyArt from '../components/ui/EmptyArt';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import { CATEGORY_ICONS, CATEGORY_ICON_KEYS, categoryIconKey } from '../lib/categoryIcons';
 import '../components/admin/AdminLayout.css';
+import { confirmAction } from '../lib/confirm';
 
 export default function AdminCategories() {
   const [categories, setCategories] = useState([]);
@@ -35,7 +36,7 @@ export default function AdminCategories() {
     try {
       const res = await axios.get('/categories', { params: { includeInactive: true } });
       setCategories(res.data || []);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load categories');
     } finally {
       setIsLoading(false);
@@ -133,7 +134,7 @@ export default function AdminCategories() {
   };
 
   const handleDelete = async (cat) => {
-    if (!window.confirm(`Delete "${cat.name}"? This cannot be undone.`)) return;
+    if (!(await confirmAction({ title: `Delete "${cat.name}"?`, message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return;
     setDeleting(cat.id);
     try {
       await axios.delete(`/categories/${cat.id}`);

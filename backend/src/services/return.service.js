@@ -1,10 +1,11 @@
+const prisma = require('../config/database');
 const returnRepository = require('../repositories/return.repository');
 const { maskEmail, maskPhone } = require('../utils/privacy');
 const orderRepository = require('../repositories/order.repository');
 const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
 
-const DEFAULT_RETURN_WINDOW_DAYS = 7;
+const { returnWindowDays } = require('../utils/returnPolicy');
 const ELIGIBLE_ORDER_STATUSES = new Set(['DELIVERED', 'PICKED_UP', 'SHIPPED', 'COMPLETED']);
 const VALID_REASONS = new Set(['DAMAGED', 'WRONG_ITEM', 'NOT_AS_DESCRIBED', 'MISSING', 'OTHER']);
 const VALID_REFUND_METHODS = new Set(['COD_CASH', 'GCASH', 'BANK', 'MANUAL']);
@@ -16,12 +17,20 @@ const withHistory = (existing, entry) => {
   return [...list, { ...entry, at: new Date().toISOString() }];
 };
 
-const getReturnWindowDays = (returnPolicySnapshot) => {
-  const raw = returnPolicySnapshot?.daysAllowed ?? returnPolicySnapshot?.days;
-  const n = Number(raw);
-  if (Number.isFinite(n) && n > 0) return Math.floor(n);
-  return DEFAULT_RETURN_WINDOW_DAYS;
+// The window comes from the item's return policy (utils/returnPolicy.js).
+const getReturnWindowDays = (returnPolicySnapshot) => returnWindowDays(returnPolicySnapshot);
+
+// Another write got there first (a cancel and an approval at the same time).
+const staleReturn = (err) => {
+  if (err.code === 'STALE_RETURN_STATUS') {
+    throw new ApiError('This return was just updated. Refresh to see where it stands.', 409);
+  }
+  throw err;
 };
+
+// Photos come from our own uploads (the request page uploads them first);
+// any other address would be loaded by the seller's browser.
+const OWN_UPLOAD = /^\/uploads\/[A-Za-z0-9._-]+$/;
 
 const getOrderDeliveredAt = (order) => {
   if (order.completedAt) return new Date(order.completedAt);
@@ -114,13 +123,19 @@ const createRequest = async (buyerId, payload) => {
       storeId: order.storeId,
       status: 'REQUESTED',
       reason,
-      buyerNote: buyerNote?.slice(0, 2000) || null,
-      photos: Array.isArray(photos) ? photos.slice(0, 5) : null,
+      buyerNote: typeof buyerNote === 'string' ? buyerNote.slice(0, 2000) || null : null,
+      photos: Array.isArray(photos) ? photos.filter((p) => typeof p === 'string' && OWN_UPLOAD.test(p)).slice(0, 5) : null,
       requestedAmount,
       returnPolicySnapshot: requestedItems[0]?.orderItem?.returnPolicySnapshot || null,
       history: withHistory(null, { status: 'REQUESTED', by: buyerId }),
     },
     items: itemsData,
+    limits: new Map(requestedItems.map((r) => [r.orderItem.id, r.orderItem.quantity])),
+  }).catch((err) => {
+    if (err.code === 'RETURN_QUANTITY_EXCEEDED') {
+      throw new ApiError(`You already have a return in progress for these items. Only ${err.remaining} left.`, 400);
+    }
+    throw err;
   });
 
   await notify(
@@ -179,7 +194,7 @@ const decide = async (id, seller, payload) => {
       decidedAt: new Date(),
       decidedBy: seller.id,
       history: withHistory(request.history, { status: 'REJECTED', by: seller.id, note: sellerNote }),
-    }).then(async (updated) => {
+    }, { fromStatus: 'REQUESTED' }).catch(staleReturn).then(async (updated) => {
       await notify(
         request.buyerId,
         'RETURN_REJECTED',
@@ -228,7 +243,7 @@ const decide = async (id, seller, payload) => {
       approvedAmount,
       requiresPhysicalReturn,
     }),
-  });
+  }, { fromStatus: 'REQUESTED' }).catch(staleReturn);
 
   await notify(
     request.buyerId,
@@ -290,9 +305,11 @@ const markRefunded = async (id, seller, payload) => {
 
   const method = String(payload.refundMethod || '').toUpperCase();
   if (!VALID_REFUND_METHODS.has(method)) throw new ApiError('Invalid refund method', 400);
-  const refundedAmount = money(payload.refundedAmount ?? request.approvedAmount ?? request.requestedAmount);
+  // An approved amount of 0 is a decision, not a missing value.
+  const approved = request.approvedAmount != null ? Number(request.approvedAmount) : Number(request.requestedAmount);
+  const refundedAmount = money(payload.refundedAmount ?? approved);
   if (refundedAmount <= 0) throw new ApiError('Refund amount must be greater than zero', 400);
-  if (refundedAmount > Number(request.approvedAmount || request.requestedAmount)) {
+  if (refundedAmount > approved) {
     throw new ApiError('Refund amount exceeds approved amount', 400);
   }
 
@@ -309,15 +326,17 @@ const markRefunded = async (id, seller, payload) => {
       method,
       reference: payload.refundReference || null,
     }),
-  });
+  }, { fromStatus: ['APPROVED', 'RECEIVED'] }).catch(staleReturn);
 
-  // Reflect the refund on the order itself: fully refunded once the sum of
-  // its refunded returns covers the order total, partially until then.
+  // Reflect the refund on the order itself: fully refunded once the refunded
+  // returns cover what was paid for the items (after any voucher; returns
+  // never include the delivery fee), partially until then.
   try {
     const totalRefunded = await returnRepository.sumRefundedForOrder(request.orderId);
-    const orderTotal = Number(updated.order?.total ?? request.order?.total ?? 0);
+    const order = updated.order || request.order || {};
+    const itemsPaid = Math.max(0, Number(order.subtotal ?? order.total ?? 0) - Number(order.discountAmount || 0));
     await orderRepository.updateOrder(request.orderId, {
-      paymentStatus: totalRefunded >= orderTotal ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+      paymentStatus: totalRefunded + 0.005 >= itemsPaid ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
     });
   } catch (err) {
     console.error('[markRefunded] order payment status update failed:', err.message);
@@ -344,7 +363,7 @@ const cancelByBuyer = async (id, buyerId) => {
     status: 'CANCELLED',
     cancelledAt: new Date(),
     history: withHistory(request.history, { status: 'CANCELLED', by: buyerId }),
-  });
+  }, { fromStatus: 'REQUESTED' }).catch(staleReturn);
   return updated;
 };
 
@@ -359,10 +378,136 @@ const closeByBuyer = async (id, buyerId) => {
     status: 'CLOSED',
     closedAt: new Date(),
     history: withHistory(request.history, { status: 'CLOSED', by: buyerId }),
-  });
+  }, { fromStatus: 'REFUNDED' }).catch(staleReturn);
+};
+
+/* ── Disputes: a rejected return taken to the town's admin ─────────── */
+
+const DISPUTE_DAYS = 7;
+
+/**
+ * The buyer asks the municipal admin of the shop's town to look at a
+ * rejection, within a week of it, saying why.
+ */
+const dispute = async (id, buyerId, payload = {}) => {
+  const request = await returnRepository.findById(id);
+  if (!request || request.buyerId !== buyerId) throw new ApiError('Return request not found', 404);
+  if (request.status !== 'REJECTED') throw new ApiError('Only a rejected return can be taken to the admin', 400);
+  if (request.decidedAt && Date.now() - new Date(request.decidedAt).getTime() > DISPUTE_DAYS * 86400e3) {
+    throw new ApiError(`A rejection can be disputed within ${DISPUTE_DAYS} days`, 400);
+  }
+  const reason = typeof payload.reason === 'string' ? payload.reason.trim() : '';
+  if (reason.length < 10) throw new ApiError('Say in a sentence or two why the rejection is wrong', 400);
+
+  const updated = await returnRepository.updateRequest(id, {
+    status: 'DISPUTED',
+    disputeReason: reason.slice(0, 2000),
+    disputedAt: new Date(),
+    history: withHistory(request.history, { status: 'DISPUTED', by: buyerId, note: reason.slice(0, 500) }),
+  }, { fromStatus: 'REJECTED' }).catch(staleReturn);
+
+  const number = request.order?.orderNumber;
+  try {
+    const store = await prisma.store.findUnique({ where: { id: request.storeId }, select: { ownerId: true, municipalityId: true } });
+    await notificationService.createNotification({
+      userId: store.ownerId,
+      type: 'RETURN_DISPUTED',
+      audience: 'SELLER',
+      title: 'A buyer disputed your rejection',
+      message: `The return for order #${number} goes to the municipal admin, who will decide.`,
+      relatedId: request.id,
+    });
+    await notificationService.notifyMunicipalAdmins(store.municipalityId, {
+      type: 'RETURN_DISPUTED',
+      title: 'Return dispute to decide',
+      message: `A buyer disputes a rejected return (order #${number}).`,
+      relatedId: request.id,
+    });
+  } catch (err) {
+    console.error('Failed to send dispute notifications', err);
+  }
+  return updated;
+};
+
+/**
+ * The admin decides a dispute: for the seller (the rejection stands and the
+ * return closes) or for the buyer (approved, as if the seller had approved
+ * it; the seller then receives and refunds as usual).
+ */
+const resolveDispute = async (id, admin, payload = {}) => {
+  const request = await returnRepository.findById(id);
+  if (!request) throw new ApiError('Return request not found', 404);
+  if (admin.role === 'MUNICIPAL_ADMIN' && request.store?.municipalityId !== admin.municipalityId) {
+    throw new ApiError('You can only decide disputes in your assigned municipality', 403);
+  }
+  if (request.status !== 'DISPUTED') throw new ApiError('This return is not waiting for a decision', 400);
+  const decision = String(payload.decision || '').toUpperCase();
+  if (!['BUYER', 'SELLER'].includes(decision)) throw new ApiError('Decide for the BUYER or the SELLER', 400);
+  const note = typeof payload.note === 'string' ? payload.note.trim() : '';
+  if (note.length < 5) throw new ApiError('Write the reason for your decision; both sides will see it', 400);
+
+  const resolved = {
+    disputeResolution: `${decision === 'BUYER' ? 'For the buyer' : 'For the seller'}: ${note.slice(0, 2000)}`,
+    disputeResolvedAt: new Date(),
+    disputeResolvedBy: admin.id,
+  };
+  let data;
+  if (decision === 'SELLER') {
+    data = {
+      ...resolved,
+      status: 'CLOSED',
+      closedAt: new Date(),
+      history: withHistory(request.history, { status: 'CLOSED', by: admin.id, note: `Dispute decided for the seller: ${note.slice(0, 500)}` }),
+    };
+  } else {
+    const approvedAmount = payload.approvedAmount != null ? money(payload.approvedAmount) : money(request.requestedAmount);
+    if (!(approvedAmount >= 0) || approvedAmount > Number(request.requestedAmount)) {
+      throw new ApiError('The amount must be between 0 and the requested amount', 400);
+    }
+    const requiresPhysicalReturn = payload.requiresPhysicalReturn !== undefined
+      ? payload.requiresPhysicalReturn !== false
+      : request.requiresPhysicalReturn;
+    const status = requiresPhysicalReturn ? 'AWAITING_SHIPMENT' : 'APPROVED';
+    data = {
+      ...resolved,
+      status,
+      approvedAmount,
+      requiresPhysicalReturn,
+      history: withHistory(request.history, { status, by: admin.id, approvedAmount, note: `Dispute decided for the buyer: ${note.slice(0, 500)}` }),
+    };
+  }
+  const updated = await returnRepository.updateRequest(id, data, { fromStatus: 'DISPUTED' }).catch(staleReturn);
+
+  const number = request.order?.orderNumber;
+  const forBuyer = decision === 'BUYER';
+  await notify(request.buyerId, 'RETURN_DISPUTE_RESOLVED',
+    forBuyer ? 'Your return dispute was decided for you' : 'Your return dispute was decided',
+    forBuyer
+      ? `The admin approved your return for order #${number}. ${data.status === 'AWAITING_SHIPMENT' ? 'Ship the items back, then the shop refunds you.' : 'The shop will refund you.'}`
+      : `The admin kept the shop's rejection for order #${number}: ${note.slice(0, 200)}`,
+    request.id);
+  try {
+    const store = await prisma.store.findUnique({ where: { id: request.storeId }, select: { ownerId: true } });
+    await notificationService.createNotification({
+      userId: store.ownerId,
+      type: 'RETURN_DISPUTE_RESOLVED',
+      audience: 'SELLER',
+      title: forBuyer ? 'The admin approved a disputed return' : 'The admin kept your rejection',
+      message: forBuyer
+        ? `Order #${number}: the return is approved for ${money(data.approvedAmount).toFixed(2)}. Receive it and refund the buyer.`
+        : `Order #${number}: the return is closed.`,
+      relatedId: request.id,
+    });
+  } catch (err) {
+    console.error('Failed to send dispute decision to the seller', err);
+  }
+  return updated;
 };
 
 module.exports = {
+  dispute,
+  resolveDispute,
+  DISPUTE_DAYS,
   createRequest,
   getForActor,
   listForBuyer,
@@ -372,5 +517,4 @@ module.exports = {
   markRefunded,
   cancelByBuyer,
   closeByBuyer,
-  DEFAULT_RETURN_WINDOW_DAYS,
 };

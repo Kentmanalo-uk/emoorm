@@ -1,3 +1,4 @@
+const prisma = require('../config/database');
 const voucherRepository = require('../repositories/voucher.repository');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -116,9 +117,13 @@ const computeDiscount = (voucher, subtotal) => {
   return Math.round(discount * 100) / 100;
 };
 
-const assertUsable = async (voucher, { userId, subtotal }) => {
+const assertUsable = async (voucher, { userId, subtotal, storeId }) => {
   if (!voucher) throw new ApiError('Voucher not found', 404);
   if (!voucher.isActive) throw new ApiError('Voucher is not active', 400);
+  // A shop's voucher is only for its own orders.
+  if (voucher.storeId && storeId && voucher.storeId !== storeId) {
+    throw new ApiError(`This voucher is for ${voucher.store?.name || 'another shop'} only`, 400);
+  }
   const now = new Date();
   if (voucher.startsAt && voucher.startsAt > now) throw new ApiError('Voucher is not yet active', 400);
   if (voucher.expiresAt && voucher.expiresAt < now) throw new ApiError('Voucher has expired', 400);
@@ -136,11 +141,11 @@ const assertUsable = async (voucher, { userId, subtotal }) => {
   }
 };
 
-const validate = async ({ code, userId, subtotal }) => {
+const validate = async ({ code, userId, subtotal, storeId }) => {
   const normalized = String(code || '').trim().toUpperCase();
   if (!normalized) throw new ApiError('Voucher code is required', 400);
   const voucher = await voucherRepository.findByCode(normalized);
-  await assertUsable(voucher, { userId, subtotal });
+  await assertUsable(voucher, { userId, subtotal, storeId });
   const discount = computeDiscount(voucher, subtotal);
   return {
     voucher: {
@@ -151,6 +156,8 @@ const validate = async ({ code, userId, subtotal }) => {
       discountValue: Number(voucher.discountValue),
       minOrderAmount: voucher.minOrderAmount != null ? Number(voucher.minOrderAmount) : null,
       maxDiscount: voucher.maxDiscount != null ? Number(voucher.maxDiscount) : null,
+      storeId: voucher.storeId || null,
+      storeName: voucher.store?.name || null,
     },
     discountAmount: discount,
   };
@@ -183,7 +190,68 @@ const remove = async (id) => {
   return voucherRepository.remove(id);
 };
 
+/* ── A shop's own vouchers (the seller pays the discount) ─────────── */
+
+const SHOP_FIELDS = ['code', 'description', 'discountType', 'discountValue', 'minOrderAmount', 'maxDiscount', 'usageLimit', 'perUserLimit', 'startsAt', 'expiresAt', 'isActive'];
+const pick = (input = {}) => Object.fromEntries(SHOP_FIELDS.filter((k) => input[k] !== undefined).map((k) => [k, input[k]]));
+
+const ownStore = async (userId) => {
+  const store = await prisma.store.findUnique({ where: { ownerId: userId }, select: { id: true, deletedAt: true } });
+  if (!store || store.deletedAt) throw new ApiError('You do not have a shop', 403);
+  return store;
+};
+
+const ownVoucher = async (userId, id) => {
+  const store = await ownStore(userId);
+  const voucher = await voucherRepository.findById(id);
+  if (!voucher || voucher.storeId !== store.id) throw new ApiError('Voucher not found', 404);
+  return voucher;
+};
+
+const listShop = async (userId) => {
+  const store = await ownStore(userId);
+  return voucherRepository.findAll({ storeId: store.id, pageSize: 100 });
+};
+
+const createShop = async (userId, input) => {
+  const store = await ownStore(userId);
+  const data = sanitize(pick(input), { creating: true });
+  if (await voucherRepository.findByCode(data.code)) throw new ApiError('That code is taken. Try another one.', 409);
+  return voucherRepository.create({ ...data, storeId: store.id, createdById: userId });
+};
+
+const updateShop = async (userId, id, input) => {
+  const existing = await ownVoucher(userId, id);
+  const data = sanitize(pick(input));
+  if (data.code && data.code !== existing.code && await voucherRepository.findByCode(data.code)) {
+    throw new ApiError('That code is taken. Try another one.', 409);
+  }
+  return voucherRepository.update(id, data);
+};
+
+// A voucher already used on orders stays in their records: it is turned off.
+const removeShop = async (userId, id) => {
+  const existing = await ownVoucher(userId, id);
+  if (existing.timesUsed > 0) return voucherRepository.update(id, { isActive: false });
+  await voucherRepository.remove(id);
+  return null;
+};
+
+const liveForStore = async (storeId) => (await voucherRepository.findLiveForStore(storeId)).map((v) => ({
+  ...v,
+  discountValue: Number(v.discountValue),
+  minOrderAmount: v.minOrderAmount != null ? Number(v.minOrderAmount) : null,
+  maxDiscount: v.maxDiscount != null ? Number(v.maxDiscount) : null,
+  usageLimit: undefined,
+  timesUsed: undefined,
+}));
+
 module.exports = {
+  listShop,
+  createShop,
+  updateShop,
+  removeShop,
+  liveForStore,
   computeDiscount,
   assertUsable,
   validate,

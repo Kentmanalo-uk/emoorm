@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Camera, CircleNotch as Loader2, ShoppingCart, Star, UploadSimple as Upload, ArrowLeft } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import toast from 'react-hot-toast';
 import './SearchByImage.css';
@@ -18,7 +17,7 @@ const SearchByImage = () => {
   const [file, setFile] = useState(location.state?.file || null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState([]);
+  const [results] = useState([]);
   const [error, setError] = useState('');
 
   const runSearch = useCallback(async (imageFile) => {

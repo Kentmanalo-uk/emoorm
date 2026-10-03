@@ -55,6 +55,12 @@ const appSettingRoutes = require('./appSetting.routes');
 
 // Mount routes
 router.use('/auth', authRoutes);
+router.use('/account', require('./account.routes'));
+router.use('/me', require('./savedItems.routes'));
+router.use('/questions', require('./productQuestion.routes'));
+router.use('/views', require('./productView.routes'));
+router.use('/push', require('./push.routes'));
+router.use('/auth/phone', require('./phoneVerify.routes'));
 router.use('/municipalities', municipalityRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/stores', storeRoutes);

@@ -29,8 +29,13 @@ const redact = (text) => String(text || '').replace(/(\w+:\/\/[^:\s/]+:)[^@\s]+@
 // long. Migrations then run in the background; with none pending (the usual
 // case) this changes nothing.
 require('./backend/server.js');
+// What /health reports about the migrations below.
+const runtimeStatus = require('./backend/src/lib/runtimeStatus');
 
-if (process.env.RUN_MIGRATIONS !== 'false') {
+if (process.env.RUN_MIGRATIONS === 'false') {
+  runtimeStatus.setMigrations('skipped');
+} else {
+  runtimeStatus.setMigrations('running');
   // Prisma's CLI, run with this same Node binary: Hostinger's runtime has no
   // npx on its PATH (only the build step does).
   const prismaCli = require.resolve('prisma/build/index.js', { paths: [backendDir] });
@@ -41,10 +46,14 @@ if (process.env.RUN_MIGRATIONS !== 'false') {
     if (err) {
       // Print Prisma's own explanation (P1001 can't reach the server, P3005
       // database not empty...) line by line, not only "Command failed".
+      // The new code may now be running on the old schema: /health says so
+      // (503), so the host's checks and an uptime monitor notice.
       console.error('[migrate] prisma migrate deploy failed:');
       lines.forEach((line) => console.error(`[migrate]   ${line}`));
+      runtimeStatus.setMigrations('failed');
       return;
     }
     lines.forEach((line) => console.log(`[migrate] ${line}`));
+    runtimeStatus.setMigrations('ok');
   });
 }

@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { invalidateProductIds } = require('./product.repository');
 const { changeStock } = require('./stockLedger');
 const { stageWhere } = require('../utils/orderStages');
 
@@ -50,6 +51,13 @@ const createOrder = async (data) => {
   });
 };
 
+// Two checkouts locking the same products: the loser runs again (lib/dbRetry).
+const { withDeadlockRetry } = require('../lib/dbRetry');
+
+// Lock products always in the same order (by id), so two orders for the same
+// products wait for each other instead of deadlocking.
+const byProductId = (a, b) => (a.productId < b.productId ? -1 : a.productId > b.productId ? 1 : 0);
+
 /**
  * Create order with items (transaction)
  * @param {Object} orderData - Order data
@@ -57,10 +65,16 @@ const createOrder = async (data) => {
  * @returns {Promise<Object>} Created order with items
  */
 const createOrderWithItems = async (orderData, itemsData, voucherRedemption = null) => {
-  return prisma.$transaction(async (tx) => {
+  const created = await createOrderTx(orderData, itemsData, voucherRedemption);
+  // Product pages show the stock now left.
+  invalidateProductIds(itemsData.map((i) => i.productId));
+  return created;
+};
+
+const createOrderTx = (orderData, itemsData, voucherRedemption) => withDeadlockRetry(() => prisma.$transaction(async (tx) => {
     // Take stock under a row lock (per option when the product keeps stock
     // per option); fails if there is not enough.
-    for (const item of itemsData) {
+    for (const item of [...itemsData].sort(byProductId)) {
       const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, -item.quantity);
       await tx.inventoryMovement.create({
         data: {
@@ -179,8 +193,7 @@ const createOrderWithItems = async (orderData, itemsData, voucherRedemption = nu
         },
       },
     });
-  });
-};
+  }));
 
 const findByCheckoutKey = async (buyerId, checkoutKey) => {
   if (!checkoutKey) return null;
@@ -199,18 +212,19 @@ const findByCheckoutKey = async (buyerId, checkoutKey) => {
 const EXPIRABLE_PAYMENT_STATUSES = ['PENDING', 'FAILED'];
 
 /**
- * Shipped (courier) or delivered (seller) orders the buyer never confirmed,
- * handed over before `before`, with no return in progress.
+ * Shipped (courier), delivered (seller) or picked-up orders the buyer never
+ * confirmed, handed over before `before`, with no return in progress.
  */
 const findUnconfirmedHandedOver = (before) => prisma.order.findMany({
   where: {
     OR: [
       { status: 'SHIPPED', shippedAt: { lt: before } },
       { status: 'DELIVERED', fulfillmentProofAt: { lt: before } },
-      // Delivered before hand-over photos were kept: go by the last update.
-      { status: 'DELIVERED', fulfillmentProofAt: null, updatedAt: { lt: before } },
+      { status: 'PICKED_UP', fulfillmentProofAt: { lt: before } },
+      // Handed over before hand-over photos were kept: go by the last update.
+      { status: { in: ['DELIVERED', 'PICKED_UP'] }, fulfillmentProofAt: null, updatedAt: { lt: before } },
     ],
-    returnRequests: { none: { status: { in: ['REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED'] } } },
+    returnRequests: { none: { status: { in: ['REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED', 'DISPUTED'] } } },
   },
   select: {
     id: true,
@@ -586,17 +600,21 @@ const findExpiredUnpaid = (before) => prisma.order.findMany({
  * @param {String[]} [options.fromPaymentStatuses] - payment statuses the order may be cancelled from
  * @param {String} [options.paymentStatus] - payment status to record alongside
  * @param {String} [options.note] - status history note
+ * @param {String} [options.reason] - why (BUYER_CANCELLED, SELLER_CANCELLED, NO_SHOW, REFUSED, UNPAID, EXPIRED)
+ * @param {String} [options.by] - BUYER, SELLER, SYSTEM or ADMIN
  * @returns {Promise<Object>} Cancelled order
  */
-const cancelOrder = async (id, actorId = null, {
+const cancelOrderTx = async (id, actorId = null, {
   fromStatuses = ['PENDING', 'CONFIRMED'],
   fromPaymentStatuses,
   paymentStatus,
   note,
+  reason = null,
+  by = null,
 } = {}) => {
   return prisma.$transaction(async (tx) => {
     const current = await tx.order.findUnique({ where: { id }, select: { status: true, voucherId: true } });
-    const data = { status: 'CANCELLED', cancelledAt: new Date() };
+    const data = { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: reason, cancelledBy: by };
     if (paymentStatus) data.paymentStatus = paymentStatus;
     const changed = await tx.order.updateMany({
       where: {
@@ -616,6 +634,7 @@ const cancelOrder = async (id, actorId = null, {
     const items = await tx.orderItem.findMany({
       where: { orderId: id },
       select: { productId: true, quantity: true, selectedVariations: true },
+      orderBy: { productId: 'asc' },
     });
 
     for (const item of items) {
@@ -662,6 +681,17 @@ const countStoreStages = async (storeId) => {
     // Per status, for the seller's status tabs.
     byStatus: Object.fromEntries(groups.map((g) => [g.status, g._count._all])),
   };
+};
+
+/**
+ * Cancel an order and give its stock back (see cancelOrderTx), retried when
+ * MySQL resolves a deadlock against it; product pages then show the stock.
+ */
+const cancelOrder = async (id, actorId = null, options = {}) => {
+  const result = await withDeadlockRetry(() => cancelOrderTx(id, actorId, options));
+  const items = await prisma.orderItem.findMany({ where: { orderId: id }, select: { productId: true } });
+  invalidateProductIds(items.map((i) => i.productId));
+  return result;
 };
 
 module.exports = {

@@ -5,8 +5,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const listJuniorAdmins = asyncHandler(async (req, res) => {
   const { page = 1, pageSize = 25, search, municipalityId } = req.query;
   const result = await adminMgmtService.listJuniorAdmins({
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     search,
     municipalityId,
   });

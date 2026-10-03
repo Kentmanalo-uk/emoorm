@@ -107,7 +107,7 @@ const About = () => {
           <p>
             Sellers list and manage their own products, and buyers arrange payment and delivery directly with the
             seller of their choice. Emoorm does not process or hold payments; depending on the seller, buyers can
-            pay by Cash on Delivery, GCash, QR Ph or bank transfer.
+            pay by Cash on Delivery, GCash or QR Ph.
           </p>
         </div>
       </section>

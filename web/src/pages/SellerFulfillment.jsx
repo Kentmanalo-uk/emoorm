@@ -27,7 +27,8 @@ import './SellerFulfillment.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import PhoneSaveBar from '../components/seller/PhoneSaveBar';
-import PickupAddressField, { pickupGap } from '../components/seller/PickupAddressField';
+import PickupAddressField from '../components/seller/PickupAddressField';
+import { pickupGap } from '../lib/pickupAddress';
 import { CourierMark } from '../components/orders/CourierTracking';
 import ChoiceCard from '../components/ui/ChoiceCard';
 

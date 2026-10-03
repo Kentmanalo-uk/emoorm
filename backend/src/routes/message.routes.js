@@ -7,6 +7,7 @@ const { authenticate } = require('../middleware/auth');
 // conversations is enforced in the service (buyer OR store owner only).
 router.use(authenticate);
 
+router.get('/unread-count', messageController.unreadCount);
 router.get('/conversations', messageController.listConversations);
 router.post('/conversations', messageController.openConversation);
 router.get('/conversations/:id', messageController.getConversation);

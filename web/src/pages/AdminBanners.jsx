@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Plus, PencilSimple as Edit3, Trash, UploadSimple as Upload, ArrowUp, ArrowDown } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -9,6 +9,7 @@ import { uploadImage } from '../lib/upload';
 import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
 import './AdminBanners.css';
+import { confirmAction } from '../lib/confirm';
 
 const EMPTY_FORM = {
   id: null,
@@ -181,7 +182,7 @@ export default function AdminBanners() {
   };
 
   const remove = async (banner) => {
-    if (!window.confirm(`Delete banner "${banner.title}"? This cannot be undone.`)) return;
+    if (!(await confirmAction({ title: `Delete banner "${banner.title}"?`, message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return;
     try {
       await axios.delete(`/banners/${banner.id}`);
       toast.success('Banner deleted');

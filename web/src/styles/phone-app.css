@@ -120,11 +120,43 @@
     color: var(--pa-ink) !important;
   }
 
-  /* The shop page's bar sits above its banner now, not over it. */
+  /* The shop page's bar lies over its cover photo: clear with white icons
+     at the top, white with dark icons once scrolled (StoreDetail sets
+     .is-solid), fading between the two. */
   .shop-m-topbar {
     padding-top: env(safe-area-inset-top, 0px) !important;
     padding-bottom: 0 !important;
     min-height: 56px;
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+  }
+
+  .shop-m-topbar:not(.is-solid) {
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+  }
+
+  .shop-m-topbar .shop-m-icon {
+    transition: color 0.25s ease;
+  }
+
+  .shop-m-topbar:not(.is-solid) .shop-m-icon,
+  .shop-m-topbar:not(.is-solid) .shop-m-icon:first-child {
+    color: #fff !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  }
+
+  .shop-m-topbar:not(.is-solid) .shop-m-cart b {
+    border-color: transparent !important;
+  }
+
+  /* The cover runs up under the bar; the shop card stays where it was. */
+  .shop-m-topbar + .shop-m-hero {
+    margin-top: calc(-56px - env(safe-area-inset-top, 0px));
+    padding-top: calc(56px + env(safe-area-inset-top, 0px));
+  }
+
+  .shop-m-topbar + .shop-m-hero .shop-m-backdrop {
+    height: calc(190px + 56px + env(safe-area-inset-top, 0px));
   }
 
   /* Counts on the icons: ringed in the bar's white. */
@@ -173,7 +205,7 @@
     .about-hero, .about-steps > li, .about-feature
   ),
   :is(.sc-content, .ac-content) :is(
-    .sh-card:not(.sh-sales), .sh-notice, .seller-card, .smk-note, .sdc-block,
+    .sh-card:not(.sh-sales), .sh-notice, .seller-card:not(.order-detail-panel), .smk-note, .sdc-block,
     .seller-return-empty, .scm-tip, .an-growth, .scm-setlist, .sv-privacy, .admin-card,
     .admin-home-banner-preview, .st-nav, .st-panel, .idv-status, .idv-card, .sc-chat, .ui-empty
   ) {

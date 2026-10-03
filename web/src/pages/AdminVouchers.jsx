@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Plus, PencilSimple as Edit3, Trash } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
+import { confirmAction } from '../lib/confirm';
 
 const EMPTY_FORM = {
   id: null,
@@ -110,7 +111,7 @@ export default function AdminVouchers() {
   };
 
   const remove = async (v) => {
-    if (!window.confirm(`Delete voucher "${v.code}"? This cannot be undone.`)) return;
+    if (!(await confirmAction({ title: `Delete voucher "${v.code}"?`, message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return;
     try {
       await axios.delete(`/vouchers/${v.id}`);
       toast.success('Voucher deleted');

@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   UserCircle, EnvelopeSimple, Phone, House, MapPin, ShieldCheck, LockKey, CalendarBlank,
-  SignOut, Camera, CircleNotch as Loader2,
+  SignOut, Camera, CircleNotch as Loader2, Database,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -17,6 +17,9 @@ import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
 import PhoneSaveBar from '../components/seller/PhoneSaveBar';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import PasswordField from '../components/account/PasswordField';
+import AccountData from '../components/account/AccountData';
+import PushSetting from '../components/account/PushSetting';
+import PhoneVerify from '../components/account/PhoneVerify';
 import UserAvatar from '../components/ui/UserAvatar';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Skeleton from '../components/ui/Skeleton';
@@ -34,6 +37,7 @@ const PARTS = {
   contact: 'Contact number',
   address: 'Home address',
   password: 'Change password',
+  data: 'Your data',
 };
 
 const partPath = (part) => `/profile/settings/${part}`;
@@ -52,7 +56,7 @@ const IDENTITY_VALUES = {
  */
 export default function PhoneSettings({ part, fresh }) {
   if (!part) return <SettingsHub />;
-  const Page = { profile: ProfilePart, contact: ContactPart, address: AddressPart, password: PasswordPart }[part];
+  const Page = { profile: ProfilePart, contact: ContactPart, address: AddressPart, password: PasswordPart, data: DataPart }[part];
   if (!Page) return <Navigate to="/profile/settings" replace />;
   if (!fresh) {
     return (
@@ -170,8 +174,17 @@ function SettingsHub() {
         <h2>Account</h2>
         <SettingsList label="Account">
           <SettingsRow icon={CalendarBlank} label="Member since" value={memberSince} />
+          <SettingsRow to={partPath('data')} icon={Database} label="Your data" value="Download a copy, or delete your account" />
         </SettingsList>
       </section>
+
+      <PushSetting frame={(row) => (
+        <section className="pf-m-section pst-group pst-push">
+          <h2>Notifications</h2>
+          {row}
+        </section>
+      )}
+      />
 
       <button type="button" className="pf-m-signout" onClick={() => setSignOutOpen(true)}>
         <SignOut size={18} weight="bold" /> Log out
@@ -216,6 +229,20 @@ function PartPage({ title, children, onSave, saving, canSave }) {
         {children}
       </form>
       <PhoneSaveBar onCancel={leave} onSave={() => onSave(leave)} saving={saving} canSave={canSave} />
+    </div>
+  );
+}
+
+/** Download a copy of the account, or delete it: no Save bar, each acts at once. */
+function DataPart({ title }) {
+  return (
+    <div className="profile-page-wrap pst-part">
+      <header className="profile-page-header">
+        <h1 className="profile-page-title">{title}</h1>
+      </header>
+      <div className="ps-card">
+        <AccountData />
+      </div>
     </div>
   );
 }
@@ -406,6 +433,7 @@ function ContactPart({ title }) {
         />
         <span className="ps-help">11 digits starting with 09. Sellers and riders use it to reach you about your orders.</span>
       </label>
+      <PhoneVerify />
     </PartPage>
   );
 }

@@ -1,0 +1,76 @@
+/* Account Settings: push notifications for this browser. */
+.push-setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.push-setting > svg {
+  flex-shrink: 0;
+  color: var(--t-primary-600, #059669);
+}
+
+.push-setting-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.push-setting-text b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--t-neutral-900, #111827);
+}
+
+.push-setting-text small {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.push-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+}
+
+.push-switch input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.push-switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--t-neutral-300, #d1d5db);
+  transition: background 0.15s;
+}
+
+.push-switch span::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.push-switch input:checked + span {
+  background: var(--t-primary-600, #059669);
+}
+
+.push-switch input:checked + span::after {
+  transform: translateX(18px);
+}

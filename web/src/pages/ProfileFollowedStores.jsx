@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link } from 'react-router-dom';
 import { MagnifyingGlass as Search, Package, Users, Bell, BellSlash as BellOff, X } from '@phosphor-icons/react';

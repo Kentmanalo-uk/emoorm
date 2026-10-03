@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -10,7 +10,8 @@ import ProductImage from '../components/ProductImage';
 import useCartStore from '../store/cartStore';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { saleInfo } from '../lib/variantPricing';
+import { SaleWas } from '../components/ui/SaleTag';
 import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
@@ -19,20 +20,9 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
 import PageMenu from '../components/layout/PageMenu';
+import { parseImages } from '../lib/media';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
-const parseImages = (raw) => {
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [raw];
-    } catch {
-      return [raw];
-    }
-  }
-  return [];
-};
 
 // Stars only from real review data; a product with no reviews shows "New".
 const renderRating = (product, size = 14) => {
@@ -64,6 +54,8 @@ const renderRating = (product, size = 14) => {
 
 // The API's sortBy and sortOrder for each sort choice.
 const SORTS = {
+  // A search's default: the words in the name first (the API ranks them).
+  relevance: { sortBy: 'relevance', sortOrder: 'desc' },
   newest: { sortBy: 'createdAt', sortOrder: 'desc' },
   oldest: { sortBy: 'createdAt', sortOrder: 'asc' },
   'price-low': { sortBy: 'price', sortOrder: 'asc' },
@@ -131,7 +123,7 @@ const Products = () => {
         id: product.id,
         productId: product.id,
         name: product.name,
-        price: product.price,
+        price: saleInfo(product).price,
         image: parseImages(product.images)[0] || '/placeholder-product.png',
         storeId: product.storeId || product.store?.id,
         storeName: product.store?.name,
@@ -153,7 +145,9 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const municipalityId = searchParams.get('municipalityId') || '';
   const imageSearch = searchParams.get('imageSearch') === '1';
-  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || (searchParams.get('q') ? 'relevance' : 'newest'));
+  // The words the results are for, when the search had a typo.
+  const [corrected, setCorrected] = useState('');
   const [priceRange, setPriceRange] = useState({
     min: searchParams.get('minPrice') || '',
     max: searchParams.get('maxPrice') || '',
@@ -172,6 +166,8 @@ const Products = () => {
     const q = searchParams.get('q') || '';
     const cat = searchParams.get('category') || '';
     setSearchQuery((prev) => (prev === q ? prev : q));
+    // No sort chosen: a search ranks by best match, browsing by newest.
+    if (!searchParams.get('sort')) setSortBy(q ? 'relevance' : 'newest');
     setSelectedCategory((prev) => (prev === cat ? prev : cat));
     setPagination((p) => ({ ...p, page: parseInt(searchParams.get('page')) || 1 }));
   }, [searchParams]);
@@ -224,6 +220,7 @@ const Products = () => {
       const response = await axios.get('/products', { params });
       if (request !== latestRequest.current) return;
       setProducts(response.data || []);
+      setCorrected(response.correctedSearch || '');
       if (response.pagination) {
         setPagination(prev => ({
           ...prev,
@@ -478,7 +475,7 @@ const Products = () => {
                 <div className="products-results-context">
                   {imageSearch ? (
                     <span className="products-image-context"><img src={imageSearchPreview} alt="Image search" /> Results matching this image</span>
-                  ) : searchQuery ? <>Results for <strong>“{searchQuery}”</strong></> : 'All products'}
+                  ) : searchQuery ? <>Results for <strong>“{corrected || searchQuery}”</strong>{corrected && <span className="srch-corrected"> (you searched “{searchQuery}”)</span>}</> : 'All products'}
                 </div>
 
                 <div className="products-actions">
@@ -487,6 +484,7 @@ const Products = () => {
                     onChange={(e) => handleSortChange(e.target.value)}
                     className="sort-select"
                   >
+                    {searchQuery && <option value="relevance">Best match</option>}
                     <option value="newest">Newest</option>
                     <option value="oldest">Oldest</option>
                     <option value="price-low">Price: Low to High</option>
@@ -516,6 +514,11 @@ const Products = () => {
                 <>
                   <div className="srch-m-controls">
                   <div className="srch-m-sorts" role="tablist" aria-label="Sort by">
+                    {searchQuery && (
+                      <button type="button" role="tab" aria-selected={sortBy === 'relevance'} className={sortBy === 'relevance' ? 'is-on' : ''} onClick={() => pickSort('relevance')}>
+                        Best match
+                      </button>
+                    )}
                     <button type="button" role="tab" aria-selected={sortBy === 'newest'} className={sortBy === 'newest' ? 'is-on' : ''} onClick={() => pickSort('newest')}>
                       Newest
                     </button>
@@ -558,7 +561,8 @@ const Products = () => {
                     {isLoading ? <Skeleton height={11} width={140} /> : (
                       <>
                         <strong>{pagination.total}</strong> {pagination.total === 1 ? 'result' : 'results'}
-                        {searchQuery ? <> for “{searchQuery}”</> : null}
+                        {searchQuery ? <> for “{corrected || searchQuery}”</> : null}
+                        {corrected ? <span className="srch-corrected"> (you searched “{searchQuery}”)</span> : null}
                         {activeMunicipalityName ? <> in {activeMunicipalityName}</> : null}
                       </>
                     )}
@@ -672,7 +676,7 @@ const Products = () => {
                       {isPhone ? (
                         <div className="product-info srch-card">
                           <h3 className="product-name">{product.name}</h3>
-                          <span className="srch-card-price">₱{Number(product.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="srch-card-price">₱{saleInfo(product).price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <SaleWas product={product} compact /></span>
                           <span className="srch-card-meta">
                             {Number(product.reviewCount) > 0 && (
                               <span className="srch-card-rating"><Star size={13} weight="fill" /> {Number(product.averageRating || 0).toFixed(1)}</span>
@@ -687,7 +691,7 @@ const Products = () => {
                       ) : (
                         <div className="product-info">
                           <h3 className="product-name">{product.name}</h3>
-                          <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
+                          <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
                           {renderRating(product)}
                           {Number(product.soldCount) > 0 && (
                             <span className="product-review-count">{product.soldCount} sold</span>

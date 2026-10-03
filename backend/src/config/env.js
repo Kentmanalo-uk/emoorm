@@ -1,8 +1,11 @@
 require('dotenv').config();
 
 const config = {
-  // Node Environment
-  nodeEnv: process.env.NODE_ENV || 'development',
+  // Node Environment. Unset on a deployment with a public https SITE_URL, it
+  // is production: forgetting the variable must not switch off the
+  // production guards (trust proxy, HSTS, CORS and the startup checks).
+  nodeEnv: process.env.NODE_ENV
+    || (/^https:\/\/(?!localhost|127\.0\.0\.1)/i.test(process.env.SITE_URL || '') ? 'production' : 'development'),
 
   // Server Configuration
   port: parseInt(process.env.PORT || '3000', 10),
@@ -91,7 +94,6 @@ const config = {
 
   // CORS Configuration
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173', 'http://localhost:19006'],
     allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:19006'],
   },
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
@@ -71,7 +71,7 @@ export default function AdminProducts() {
       const res = await axios.get('/products', { params });
       setProducts(res.data || []);
       if (res.pagination) setPagination(res.pagination);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load products');
     } finally {
       setIsLoading(false);

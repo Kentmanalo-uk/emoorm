@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Warning as AlertTriangle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import './ReportModal.css';
 import { useSheetClose } from '../hooks/useSheetMotion';
 import { BusyLabel } from './ui/Spinner';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 /**
  * Reasons are sent as the API's enum value, not as the label.
@@ -57,6 +58,13 @@ const DESTINATION = {
 export default function ReportModal({ type, productId, storeId, reportedBuyerId, targetName, onClose: onCloseProp }) {
   // Phones: slide down before the parent removes the sheet.
   const [sheetClosing, onClose] = useSheetClose(onCloseProp);
+  const trapRef = useFocusTrap(true);
+  // Escape closes it, as every other dialog.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -89,13 +97,13 @@ export default function ReportModal({ type, productId, storeId, reportedBuyerId,
 
   return (
     <div className={`report-overlay ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} onClick={() => onClose()}>
-      <div className="report-modal ui-sheet-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="report-modal ui-sheet-panel" ref={trapRef} role="dialog" aria-modal="true" aria-labelledby="report-modal-title" onClick={(e) => e.stopPropagation()}>
         <div className="report-modal-header">
           <div className="report-modal-title">
             <AlertTriangle size={20} className="report-icon" />
-            <h2>{HEADING[type] || 'Report'}</h2>
+            <h2 id="report-modal-title">{HEADING[type] || 'Report'}</h2>
           </div>
-          <button className="report-close" onClick={onClose}><X size={20} /></button>
+          <button type="button" className="report-close" onClick={onClose} aria-label="Close"><X size={20} /></button>
         </div>
 
         {targetName && (

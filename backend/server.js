@@ -1,10 +1,12 @@
 require('dotenv').config();
+const errorTracking = require('./src/lib/errorTracking');
 const app = require('./src/app');
 const config = require('./src/config/env');
 const prisma = require('./src/config/database');
 const orderService = require('./src/services/order.service');
 const kycRetentionService = require('./src/services/kycRetention.service');
 const { assertSafeToStart } = require('./src/config/startupChecks');
+const runtimeStatus = require('./src/lib/runtimeStatus');
 
 const PORT = config.port;
 
@@ -58,31 +60,39 @@ const startServer = async () => {
       // instance, so it should never be a silent surprise.
       console.log(`  Cache: ${describeCache()}`);
       console.log('================================================');
-      const expiryTimer = setInterval(() => {
-        orderService.expirePendingOrders().catch((error) => {
-          console.error('[order-expiry] failed:', error.message);
-        });
-        // Confirmed QR orders the buyer never paid.
-        orderService.expireUnpaidOrders().catch((error) => {
-          console.error('[order-expiry] unpaid failed:', error.message);
-        });
-        // Shipped or delivered a week ago and never confirmed: complete.
-        orderService.autoCompleteOrders().catch((error) => {
-          console.error('[order-auto-complete] failed:', error.message);
-        });
-      }, 5 * 60 * 1000);
+      // Order clocks: unconfirmed orders expire, unpaid QR orders expire,
+      // handed-over orders complete. Once shortly after boot (a restart must
+      // not push them back), then every five minutes; /health shows when
+      // each last ran.
+      const ORDER_JOBS_MS = 5 * 60 * 1000;
+      const runOrderJobs = () => Promise.all([
+        runtimeStatus.runJob('order-expiry', () => orderService.expirePendingOrders(), ORDER_JOBS_MS),
+        runtimeStatus.runJob('order-unpaid-expiry', () => orderService.expireUnpaidOrders(), ORDER_JOBS_MS),
+        runtimeStatus.runJob('order-auto-complete', () => orderService.autoCompleteOrders(), ORDER_JOBS_MS),
+      ]);
+      setTimeout(runOrderJobs, 20 * 1000).unref();
+      const expiryTimer = setInterval(runOrderJobs, ORDER_JOBS_MS);
       expiryTimer.unref();
 
       // Delete ID photos / permits once a decided application is past the
       // retention window. Runs at boot, then once a day.
-      const purgeKyc = () => {
-        kycRetentionService.purgeExpiredKycDocuments().catch((error) => {
-          console.error('[kyc-retention] failed:', error.message);
-        });
-      };
+      const purgeKyc = () => runtimeStatus.runJob(
+        'kyc-retention',
+        () => kycRetentionService.purgeExpiredKycDocuments(),
+        24 * 60 * 60 * 1000,
+      );
       purgeKyc();
       const retentionTimer = setInterval(purgeKyc, 24 * 60 * 60 * 1000);
       retentionTimer.unref();
+
+      // Accounts their owners closed are erased 30 days later.
+      const eraseClosed = () => runtimeStatus.runJob(
+        'account-erasure',
+        () => require('./src/services/account.service').eraseClosedAccounts(),
+        24 * 60 * 60 * 1000,
+      );
+      setTimeout(eraseClosed, 60 * 1000).unref();
+      setInterval(eraseClosed, 24 * 60 * 60 * 1000).unref();
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -131,14 +141,19 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 
 // An unhandled rejection leaves the process in an unknown state. Log it and
 // shut down cleanly so the supervisor restarts into a known-good one.
+// A promise nobody waited on failed: a bug to fix, but the request it
+// belonged to is already over, so the site stays up (a restart loop would
+// take every shopper down and push the order jobs back each time).
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled promise rejection:', reason);
-  shutdown('unhandledRejection');
+  errorTracking.reportCrash(reason instanceof Error ? reason : new Error(String(reason)), { kind: 'unhandledRejection' });
 });
 
+// The process itself is in an unknown state: report, then restart cleanly.
 process.on('uncaughtException', (error) => {
   console.error('Uncaught exception:', error);
-  shutdown('uncaughtException');
+  errorTracking.reportCrash(error, { kind: 'uncaughtException' });
+  errorTracking.flush().finally(() => shutdown('uncaughtException'));
 });
 
 // Start the server

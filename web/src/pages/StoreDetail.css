@@ -1921,3 +1921,101 @@
 .shop-m-home-loading span:nth-child(3) { height: 70px; }
 @keyframes shop-home-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 .shop-tab-home { font-weight: 700; }
+
+/* Away (Shop Settings): no orders until the date, products still on show. */
+.shop-away {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 12px 16px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-900, #78350f);
+}
+
+.shop-away svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--t-warning-600, #d97706);
+}
+
+.shop-away strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.shop-away span {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.shop-container > .shop-away {
+  margin: 16px 0 0;
+}
+
+/* Opening hours: "Open now" in green, then the week. */
+.shop-hours {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shop-hours.is-inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.shop-hours b {
+  font-weight: 600;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.shop-hours b.is-open {
+  color: var(--t-primary-700, #047857);
+}
+
+/* The shop's voucher codes: tap to copy. */
+.shop-vouchers {
+  display: flex;
+  gap: 8px;
+  margin: 12px 16px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.shop-vouchers::-webkit-scrollbar {
+  display: none;
+}
+
+.shop-container > .shop-vouchers {
+  margin: 12px 0 0;
+}
+
+.shop-voucher {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px dashed var(--t-danger-300, #fca5a5);
+  border-radius: 10px;
+  background: var(--t-danger-50, #fef2f2);
+  font: inherit;
+  text-align: left;
+  color: var(--t-danger-700, #b91c1c);
+  cursor: pointer;
+}
+
+.shop-voucher b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.shop-voucher small {
+  font-size: 11.5px;
+  color: var(--t-danger-600, #dc2626);
+}

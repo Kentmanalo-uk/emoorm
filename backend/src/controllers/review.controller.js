@@ -5,7 +5,25 @@ const {
   noContentResponse,
   paginatedResponse,
 } = require('../utils/response');
-const { asyncHandler } = require('../middleware/errorHandler');
+const fs = require('fs');
+const { asyncHandler, ApiError } = require('../middleware/errorHandler');
+const { assertRealImage } = require('../middleware/upload');
+
+// A video's first bytes: MP4/MOV boxes ("ftyp", "moov"…) at offset 4, or
+// WebM's EBML header. The declared type alone is chosen by the uploader.
+const VIDEO_BOXES = new Set(['ftyp', 'moov', 'wide', 'mdat', 'free', 'skip']);
+const isRealVideo = async (file) => {
+  const handle = await fs.promises.open(file.path, 'r');
+  try {
+    const buf = Buffer.alloc(12);
+    await handle.read(buf, 0, 12, 0);
+    return VIDEO_BOXES.has(buf.toString('ascii', 4, 8))
+      || (buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3);
+  } finally {
+    await handle.close();
+  }
+};
+const removeFiles = (files) => Promise.all(files.map((f) => fs.promises.unlink(f.path).catch(() => {})));
 
 /**
  * Review Controller
@@ -19,18 +37,32 @@ const { asyncHandler } = require('../middleware/errorHandler');
  */
 const createReview = asyncHandler(async (req, res) => {
   const files = req.files || {};
-  const uploadedImages = (files.images || []).map((f) => `/uploads/${f.filename}`);
-  const uploadedVideo = files.video?.[0] ? `/uploads/${files.video[0].filename}` : undefined;
+  const uploaded = [...(files.images || []), ...(files.video || [])];
+  let review;
+  try {
+    // The bytes must really be photos and a video before they stay public.
+    for (const image of files.images || []) {
+      // 50 MB is for the video; a photo needs far less.
+      if (image.size > 10 * 1024 * 1024) throw new ApiError('Each photo must be 10 MB or smaller', 400);
+      const verdict = await assertRealImage(image);
+      if (!verdict.ok) throw new ApiError('One of the photos is not a JPEG, PNG or WebP image', 400);
+    }
+    if (files.video?.[0] && !(await isRealVideo(files.video[0]))) {
+      throw new ApiError('The video must be an MP4, WebM or MOV file', 400);
+    }
 
-  const payload = {
-    productId: req.body.productId,
-    rating: req.body.rating,
-    comment: req.body.comment,
-    images: uploadedImages,
-    videoUrl: uploadedVideo,
-  };
-
-  const review = await reviewService.createReview(req.user.id, payload);
+    review = await reviewService.createReview(req.user.id, {
+      productId: req.body.productId,
+      rating: req.body.rating,
+      comment: req.body.comment,
+      images: (files.images || []).map((f) => `/uploads/${f.filename}`),
+      videoUrl: files.video?.[0] ? `/uploads/${files.video[0].filename}` : undefined,
+    });
+  } catch (err) {
+    // No review, no files: nothing is left behind on the server's disk.
+    await removeFiles(uploaded);
+    throw err;
+  }
 
   createdResponse(res, review, 'Review created successfully');
 });
@@ -48,8 +80,8 @@ const getProductReviews = asyncHandler(async (req, res) => {
   } = req.query;
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     rating: rating ? parseInt(rating) : undefined,
   };
 
@@ -84,8 +116,8 @@ const getMyReviews = asyncHandler(async (req, res) => {
   } = req.query;
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
   };
 
   const result = await reviewService.getMyReviews(req.user.id, options);
@@ -156,8 +188,8 @@ const getSellerReviews = asyncHandler(async (req, res) => {
   } = req.query;
 
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     rating: rating ? parseInt(rating) : undefined,
     unrepliedOnly: unrepliedOnly === 'true',
   };

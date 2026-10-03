@@ -15,6 +15,55 @@ const settle = (config) => {
   }
 };
 
+/*
+ * The signed-in session. The auth store registers how to save renewed tokens
+ * and how to sign out (setAuthHandlers), so this file need not import it.
+ */
+let authHandlers = { setTokens: null, signOut: null };
+export const setAuthHandlers = (handlers) => {
+  authHandlers = { ...authHandlers, ...handlers };
+};
+
+const readToken = () => localStorage.getItem('token') || localStorage.getItem('accessToken');
+
+// Sign-in steps answer 401 for a wrong password or code: a form mistake, not
+// a lapsed session, so they never renew or sign out.
+const SIGN_IN_STEP = /\/auth\/(login|register|google|refresh-token|forgot-password|reset-password|verify-email|resend-verification|logout|mfa|qr)(\/|$|\?)/;
+
+// One renewal at a time: every request that fails meanwhile waits for it.
+let refreshing = null;
+const renewSession = () => {
+  if (!refreshing) {
+    const refreshToken = localStorage.getItem('refreshToken');
+    refreshing = (refreshToken
+      ? axios.post(`${API_CONFIG.BASE_URL}/auth/refresh-token`, { refreshToken }).then((res) => {
+        const { accessToken, refreshToken: next } = res.data?.data || {};
+        if (!accessToken) throw new Error('No token');
+        if (authHandlers.setTokens) authHandlers.setTokens(accessToken, next || refreshToken);
+        else {
+          localStorage.setItem('token', accessToken);
+          localStorage.setItem('accessToken', accessToken);
+          if (next) localStorage.setItem('refreshToken', next);
+        }
+        return accessToken;
+      })
+      : Promise.reject(new Error('No refresh token')))
+      .finally(() => { refreshing = null; });
+  }
+  return refreshing;
+};
+
+/** The session is over: sign out everywhere it is kept, then to Log in. */
+let signingOut = false;
+const endSession = () => {
+  if (signingOut) return;
+  signingOut = true;
+  if (authHandlers.signOut) authHandlers.signOut();
+  else ['token', 'accessToken', 'refreshToken', 'user'].forEach((k) => localStorage.removeItem(k));
+  const here = window.location.pathname + window.location.search;
+  window.location.href = here.startsWith('/login') ? '/login' : `/login?redirect=${encodeURIComponent(here)}`;
+};
+
 // Create axios instance
 const axiosInstance = axios.create({
   baseURL: API_CONFIG.BASE_URL,
@@ -28,8 +77,8 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     // Get token from localStorage (check both keys for compatibility)
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
+    const token = readToken();
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -71,37 +120,20 @@ axiosInstance.interceptors.response.use(
       return axiosInstance(originalRequest);
     }
 
-    // Handle 401 Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 401 on a signed-in request: renew the session once and try again; if
+    // it cannot be renewed, the session is over.
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry
+      && readToken() && !SIGN_IN_STEP.test(originalRequest.url || '')) {
       originalRequest._retry = true;
-      
       try {
-        // Try to refresh token
-        const refreshToken = localStorage.getItem('refreshToken');
-        
-        if (refreshToken) {
-          const response = await axios.post(
-            `${API_CONFIG.BASE_URL}/auth/refresh`,
-            { refreshToken }
-          );
-          
-          const { accessToken } = response.data.data;
-          localStorage.setItem('accessToken', accessToken);
-          
-          // Retry original request
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return axiosInstance(originalRequest);
-        }
-      } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
+        const accessToken = await renewSession();
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return axiosInstance(originalRequest);
+      } catch {
+        endSession();
       }
     }
-    
+
     // Return formatted error
     const formattedError = {
       message: error.response?.data?.message

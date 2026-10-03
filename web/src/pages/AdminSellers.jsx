@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X, MapPin, Calendar, CreditCard, Warning } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import EmptyArt from '../components/ui/EmptyArt';
+import { confirmAction } from '../lib/confirm';
 
 const STATUS_BADGE = {
   PENDING: 'admin-badge-pending',
@@ -140,7 +141,7 @@ export default function AdminSellers() {
       const data = (res.data || []).filter((u) => u.sellerApplicationStatus);
       setApplicants(data);
       if (res.pagination) setPagination(res.pagination);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load applications');
     } finally {
       setIsLoading(false);
@@ -148,7 +149,7 @@ export default function AdminSellers() {
   };
 
   const handleApprove = async (userId) => {
-    if (!window.confirm('Approve this seller application? Their shop will be created and go live.')) return;
+    if (!(await confirmAction({ title: 'Approve this seller application?', message: 'Their shop will be created and go live.', confirmLabel: 'Approve' }))) return;
     setProcessing(userId);
     try {
       await axios.post(`/auth/users/${userId}/approve-seller`);
@@ -169,7 +170,7 @@ export default function AdminSellers() {
       toast.error('Please provide a reason for rejection');
       return;
     }
-    if (!window.confirm('Reject this seller application? The applicant will be notified and can fix it and re-apply.')) return;
+    if (!(await confirmAction({ title: 'Reject this seller application?', message: 'The applicant will be notified and can fix it and re-apply.', confirmLabel: 'Reject', danger: true }))) return;
     setProcessing(userId);
     try {
       await axios.post(`/auth/users/${userId}/reject-seller`, { reason });

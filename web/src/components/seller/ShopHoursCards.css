@@ -1,0 +1,178 @@
+/* Shop Settings: Away mode and Opening hours. */
+.shc-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 4px 20px 20px;
+}
+
+.shc-help,
+.shc-status {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.shc-card.is-away {
+  border: 1px solid var(--t-warning-200, #fde68a);
+  background: var(--t-warning-50, #fffbeb);
+}
+
+.shc-card.is-away .shc-status {
+  color: var(--t-warning-900, #78350f);
+}
+
+.shc-note {
+  margin: 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--t-warning-800, #92400e);
+}
+
+.shc-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+.shc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t-neutral-700, #374151);
+}
+
+.shc-grow {
+  flex: 1;
+  min-width: 220px;
+}
+
+.shc-field input,
+.shc-field select,
+.shc-times input {
+  height: 40px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--t-neutral-900, #111827);
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 8px;
+}
+
+.shc-field small {
+  font-weight: 400;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.shc-week {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+}
+
+.shc-day {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.shc-day-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--t-neutral-900, #111827);
+  cursor: pointer;
+}
+
+.shc-day-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--seller-primary, var(--t-primary-600, #059669));
+}
+
+.shc-day.is-closed .shc-day-toggle span {
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.shc-times {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.shc-times input {
+  width: 118px;
+  height: 36px;
+}
+
+.shc-closed {
+  font-size: 13px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.shc-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.shc-prep {
+  margin-top: 4px;
+}
+
+.shc-actions {
+  display: flex;
+  gap: 8px;
+  align-self: flex-end;
+}
+
+@media (max-width: 768px) {
+  .shc-body {
+    align-items: stretch;
+    padding: 4px 16px 16px;
+  }
+
+  /* The times go under the day, full width, so they are not cut off. */
+  .shc-day {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 10px 0;
+  }
+
+  .shc-times {
+    width: 100%;
+    padding-left: 28px;
+  }
+
+  .shc-times input {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+  }
+
+  .shc-actions {
+    align-self: stretch;
+  }
+
+  .shc-actions button,
+  .shc-body > .btn-seller-primary,
+  .shc-body > .btn-seller-outline {
+    flex: 1;
+    justify-content: center;
+    min-height: 46px;
+  }
+}

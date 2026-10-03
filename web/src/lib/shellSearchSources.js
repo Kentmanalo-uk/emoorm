@@ -1,4 +1,5 @@
 import axios from './axios';
+import { firstImage } from './media';
 
 /**
  * What the Seller Center and Admin top-bar search boxes actually look through.
@@ -36,18 +37,6 @@ const titleCase = (value = '') => value.charAt(0) + value.slice(1).toLowerCase()
  * A product's images are a JSON column. Prisma hands back an array, but
  * older rows can still arrive as the raw string, so both are accepted.
  */
-const firstImage = (images) => {
-  if (Array.isArray(images)) return images[0] || null;
-  if (typeof images === 'string') {
-    try {
-      const parsed = JSON.parse(images);
-      return Array.isArray(parsed) ? parsed[0] || null : images;
-    } catch {
-      return images;
-    }
-  }
-  return null;
-};
 
 /* ── Seller Center ─────────────────────────────────────────── */
 

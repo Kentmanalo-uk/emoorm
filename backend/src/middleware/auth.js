@@ -64,6 +64,16 @@ const authenticate = async (req, res, next) => {
     }
     delete user.tokenVersion;
 
+    // Admin access is only granted through a sign-in that passed MFA. A
+    // session opened under another role (a buyer just made an admin), or for
+    // another municipality, must sign in again rather than carry over.
+    if (adminAccessChanged(decoded, user)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Your access has changed. Please sign in again.',
+      });
+    }
+
     // Temporary (backup) municipal admin whose access has ended → plain buyer again.
     if (user.role === 'MUNICIPAL_ADMIN' && user.adminAccessExpiresAt && user.adminAccessExpiresAt <= new Date()) {
       await prisma.user.update({
@@ -101,6 +111,17 @@ const authenticate = async (req, res, next) => {
     });
   }
 };
+
+/**
+ * Whether a session's token was issued for a different admin access than the
+ * account has now (role, or municipality for a municipal admin).
+ */
+const ADMIN_ROLES = ['MUNICIPAL_ADMIN', 'SUPER_ADMIN'];
+function adminAccessChanged(decoded, user) {
+  if (!ADMIN_ROLES.includes(user.role) && !ADMIN_ROLES.includes(decoded.role)) return false;
+  if (decoded.role !== user.role) return true;
+  return user.role === 'MUNICIPAL_ADMIN' && (decoded.municipalityId || null) !== (user.municipalityId || null);
+}
 
 /**
  * Middleware to check if user has required role(s)
@@ -172,10 +193,10 @@ const checkMunicipalityAccess = (municipalityIdParam = 'municipalityId') => {
 
       next();
     } catch (error) {
+      console.error('[auth] municipality access check failed:', error.message);
       return res.status(500).json({
         success: false,
         message: 'Error checking municipality access.',
-        error: error.message,
       });
     }
   };
@@ -234,10 +255,10 @@ const checkStoreOwnership = async (req, res, next) => {
 
     next();
   } catch (error) {
+    console.error('[auth] store ownership check failed:', error.message);
     return res.status(500).json({
       success: false,
       message: 'Error checking store ownership.',
-      error: error.message,
     });
   }
 };

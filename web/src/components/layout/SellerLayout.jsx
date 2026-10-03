@@ -5,7 +5,7 @@ import {
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
   ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X, ListChecks, ArrowLeft,
   CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check, Sparkle,
-  NotePencil,
+  NotePencil, Question,
 } from '@phosphor-icons/react';
 import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
@@ -31,6 +31,18 @@ import './SellerPhoneFit.css';
 import '../../pages/SellerSetup.css';
 import './SellerMobile.css';
 import '../../pages/SellerApp.css';
+// Every Seller Center page's styles, in one place: the pages share classes
+// across their stylesheets (they all used to load together, with the whole
+// app), so each page finds the others' rules as before.
+import '../../pages/SellerDashboard.css';
+import '../../pages/SellerStore.css';
+import '../../pages/SellerProducts.css';
+import '../../pages/SellerOrders.css';
+import '../../pages/SellerAssistant.css';
+import '../../pages/SellerShopHome.css';
+import '../../pages/SellerFulfillment.css';
+import '../../pages/SellerSettings.css';
+import '../../pages/SellerReturns.css';
 import UserAvatar from '../ui/UserAvatar';
 import { readCache, writeCache } from '../../lib/pageCache';
 import { afterSignOutPath } from '../../lib/afterSignOut';
@@ -338,6 +350,9 @@ export default function SellerLayout() {
             </NavLink>
             <NavLink to="/seller/reviews" className={navCls} title="Reviews">
               <Star size={17} weight="fill" /> <span>Reviews</span>
+            </NavLink>
+            <NavLink to="/seller/questions" className={navCls} title="Buyer questions">
+              <Question size={17} weight="fill" /> <span>Questions</span>
             </NavLink>
             <NavLink to="/seller/analytics" className={navCls} title="Analytics">
               <PieChart size={17} weight="fill" /> <span>Analytics</span>
@@ -668,6 +683,7 @@ const LABELS = {
   '/seller/decorate': 'Decorate my shop',
   '/seller/decorate/home': 'Shop home',
   '/seller/reviews': 'Reviews',
+  '/seller/questions': 'Buyer questions',
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop Profile',
@@ -697,6 +713,7 @@ const PHONE_TITLES = {
   '/seller/support': 'Admin messages',
   '/seller/notifications': 'Notifications',
   '/seller/reviews': 'Reviews',
+  '/seller/questions': 'Questions',
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop profile',

@@ -92,7 +92,40 @@ const paymentBadge = (order) => {
   return PAYMENT_LABELS[order?.paymentStatus] || null;
 };
 
-const canMarkRefunded = (order) => order?.paymentStatus === 'PAID' && order?.status === 'CANCELLED';
+// A cancelled order the buyer paid for (verified, or a proof left unchecked
+// past its deadline): the shop records the refund once the money is back.
+// Why a seller cancels; a no-show and a refusal count on the buyer's record.
+const cancelReasonsFor = (status) => [
+  ['SELLER_CANCELLED', 'I can\'t fill this order'],
+  ['OUT_OF_STOCK', 'Out of stock'],
+  ...(['READY_FOR_PICKUP', 'READY'].includes(status) ? [['NO_SHOW', 'The buyer didn\'t come to pick it up']] : []),
+  ...(status === 'OUT_FOR_DELIVERY' ? [['REFUSED', 'The buyer refused the delivery']] : []),
+];
+
+/** The buyer's last year at a glance: finished orders, and any that fell through on their side. */
+function BuyerRecord({ orderId }) {
+  const [record, setRecord] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    axios.get(`/orders/${orderId}/buyer-record`)
+      .then((res) => { if (!cancelled) setRecord(res.data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [orderId]);
+  if (!record) return null;
+  const issues = [
+    record.noShows && `${record.noShows} no-show${record.noShows === 1 ? '' : 's'}`,
+    record.refused && `${record.refused} refused`,
+    record.unpaid && `${record.unpaid} unpaid`,
+  ].filter(Boolean);
+  return (
+    <span className={`so-buyer-record${issues.length ? ' is-warn' : ''}`} title="This buyer's orders in the last 12 months, at any shop">
+      {record.completed} order{record.completed === 1 ? '' : 's'} completed{issues.length ? ` · ${issues.join(' · ')}` : ''}{record.phoneVerified ? ' · verified number' : ''}
+    </span>
+  );
+}
+
+const canMarkRefunded = (order) => ['PAID', 'PENDING_VERIFICATION'].includes(order?.paymentStatus) && order?.status === 'CANCELLED';
 
 // Prepaid orders cannot move past confirmation until the payment is verified
 // (the backend enforces the same rule).
@@ -151,7 +184,8 @@ export default function SellerOrders() {
   const [paymentFilter, setPaymentFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(() => saved?.pagination || { total: 0, totalPages: 1, hasNext: false });
-  const [cancelConfirm, setCancelConfirm] = useState(null); // { orderId }
+  const [cancelConfirm, setCancelConfirm] = useState(null); // { orderId, status }
+  const [cancelReason, setCancelReason] = useState('SELLER_CANCELLED');
   const [rejectConfirm, setRejectConfirm] = useState(null); // { orderId }
   const [refundConfirm, setRefundConfirm] = useState(null); // { orderId }
   const [verifyingId, setVerifyingId] = useState(null);
@@ -258,10 +292,10 @@ export default function SellerOrders() {
     }
   };
 
-  const handleStatusChange = async (orderId, newStatus, proofUrl) => {
+  const handleStatusChange = async (orderId, newStatus, proofUrl, extra = {}) => {
     setUpdatingId(orderId);
     try {
-      const res = await axios.put(`/orders/${orderId}/status`, { status: newStatus, ...(proofUrl ? { proofUrl } : {}) });
+      const res = await axios.put(`/orders/${orderId}/status`, { status: newStatus, ...(proofUrl ? { proofUrl } : {}), ...extra });
       moveToTab(orderId, res.data?.status || newStatus);
       applyOrderUpdate(orderId, {
         status: res.data?.status || newStatus,
@@ -325,7 +359,9 @@ export default function SellerOrders() {
 
   const requestStatusChange = (orderId, newStatus) => {
     if (newStatus === 'CANCELLED') {
-      setCancelConfirm({ orderId });
+      const target = orders.find((o) => o.id === orderId) || (selectedOrder?.id === orderId ? selectedOrder : null);
+      setCancelConfirm({ orderId, status: target?.status });
+      setCancelReason('SELLER_CANCELLED');
       return;
     }
     const order = orders.find((o) => o.id === orderId) || (selectedOrder?.id === orderId ? selectedOrder : null);
@@ -382,7 +418,7 @@ export default function SellerOrders() {
 
   const confirmCancelOrder = async () => {
     if (!cancelConfirm) return;
-    await handleStatusChange(cancelConfirm.orderId, 'CANCELLED');
+    await handleStatusChange(cancelConfirm.orderId, 'CANCELLED', null, { cancelReason });
     setCancelConfirm(null);
   };
 
@@ -728,6 +764,7 @@ export default function SellerOrders() {
                     {selectedOrder.buyer?.id
                       ? <Link to={`/u/${selectedOrder.buyer.id}`} className="profile-link" title="View buyer profile">{selectedOrder.buyer.fullName || '—'}</Link>
                       : (selectedOrder.buyer?.fullName || '—')}
+                    <BuyerRecord orderId={selectedOrder.id} />
                     {selectedOrder.buyer?.id && (
                       <button
                         type="button"
@@ -872,6 +909,16 @@ export default function SellerOrders() {
                 <div className="detail-row detail-row--col">
                   <span>{selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Pickup Location' : 'Delivery Address'}</span>
                   <p className="detail-address">{selectedOrder.deliveryAddress || '—'}</p>
+                  {selectedOrder.deliveryLatitude != null && (
+                    <a
+                      className="so-map-link"
+                      href={`https://www.google.com/maps/search/?api=1&query=${selectedOrder.deliveryLatitude},${selectedOrder.deliveryLongitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open the buyer's pin in Maps
+                    </a>
+                  )}
                 </div>
 
                 {selectedOrder.deliveryNotes && (
@@ -982,7 +1029,16 @@ export default function SellerOrders() {
         loading={updatingId === cancelConfirm?.orderId}
         onConfirm={confirmCancelOrder}
         onCancel={() => setCancelConfirm(null)}
-      />
+      >
+        <div className="so-cancel-reasons" role="radiogroup" aria-label="Why">
+          {cancelReasonsFor(cancelConfirm?.status).map(([key, label]) => (
+            <label key={key} className={cancelReason === key ? 'is-on' : ''}>
+              <input type="radio" name="cancel-reason" checked={cancelReason === key} onChange={() => setCancelReason(key)} />
+              {label}
+            </label>
+          ))}
+        </div>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={!!rejectConfirm}

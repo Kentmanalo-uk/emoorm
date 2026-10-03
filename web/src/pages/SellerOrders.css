@@ -760,13 +760,18 @@
     box-shadow: inset 0 0 0 2px var(--t-primary-600, #059669);
   }
 
-  .sc-content .so-orders-table td,
-  .sc-content .so-orders-table tr:hover td,
-  .sc-content .so-orders-table tr.row-selected td {
+  .sc-content .so-orders-table td {
     display: block;
     min-width: 0;
     padding: 0;
     border: 0;
+    background: transparent !important;
+  }
+
+  /* Tapping a card (hover, selected) only marks it with its ring: the cells
+     keep their padding, so the card does not change size. */
+  .sc-content .so-orders-table tr:hover td:not(:nth-child(2)),
+  .sc-content .so-orders-table tr.row-selected td:not(:nth-child(2)) {
     background: transparent !important;
   }
 
@@ -1115,3 +1120,49 @@
 @keyframes so-moved { from { background: #d1fae5; } to { background: transparent; } }
 tr.is-moved, tr.is-moved > td { animation: so-moved 3s ease-out; }
 tr.is-moved { box-shadow: inset 3px 0 0 var(--t-primary-600, #059669); }
+
+/* Cancelling: why (a no-show or a refusal goes on the buyer's record). */
+.so-cancel-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.so-cancel-reasons label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.so-cancel-reasons label.is-on {
+  border-color: var(--t-danger-300, #fca5a5);
+  background: var(--t-danger-50, #fef2f2);
+}
+
+/* The buyer's record under their name. */
+.so-buyer-record {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.so-buyer-record.is-warn {
+  color: var(--t-warning-800, #92400e);
+}
+
+/* The buyer pinned their address: a map link for the rider. */
+.so-map-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t-primary-700, #047857);
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { EnvelopeSimple } from '@phosphor-icons/react';
 import axios from '../lib/axios';

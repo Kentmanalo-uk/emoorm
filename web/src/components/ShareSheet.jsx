@@ -5,6 +5,7 @@ import {
 } from '@phosphor-icons/react';
 import { isTouchPhone } from '../lib/device';
 import './ShareSheet.css';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const CLOSE_MS = 220;
 
@@ -38,6 +39,7 @@ const targets = ({ url, title, text }) => {
  *   <button onClick={() => share({ title, url })}>Share</button>
  *   {shareSheet}
  */
+// eslint-disable-next-line react-refresh/only-export-components -- the hook returns this file's sheet
 export function useShare() {
   const [payload, setPayload] = useState(null);
 
@@ -68,6 +70,7 @@ export function useShare() {
 }
 
 function ShareSheet({ open, payload, onClose }) {
+  const trapRef = useFocusTrap(open);
   const [shown, setShown] = useState(null);
   const [closing, setClosing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -127,7 +130,7 @@ function ShareSheet({ open, payload, onClose }) {
   return (
     <div className={`share-root${closing ? ' is-closing' : ''}`}>
       <button type="button" className="share-scrim" onClick={onClose} aria-label="Close" tabIndex={-1} />
-      <div className="share-sheet" role="dialog" aria-modal="true" aria-label="Share">
+      <div className="share-sheet" ref={trapRef} role="dialog" aria-modal="true" aria-label="Share">
         <div className="share-head">
           <span className="share-grabber" aria-hidden="true" />
           <h2>Share</h2>

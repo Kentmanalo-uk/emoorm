@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+﻿import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Navigate, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, CheckCircle, UploadSimple as Upload, X, User,
@@ -13,19 +13,6 @@ import { inspectImage } from "../lib/imageQuality";
 import resolveImg from "../lib/media";
 import "./SellerApply.css";
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
-
-const ID_TYPES = [
-  "Philippine Statistics Authority (PhilSys) National ID",
-  "Passport",
-  "Driver License (LTO)",
-  "PRC Professional ID",
-  "SSS / GSIS ID",
-  "Unified Multi-Purpose ID (UMID)",
-  "Voter ID",
-  "Postal ID",
-  "PhilHealth ID",
-  "Barangay ID",
-];
 
 const BUSINESS_TYPES = [
   { value: "INDIVIDUAL", label: "Individual seller", hint: "Selling under your own name" },
@@ -120,6 +107,7 @@ function UploadBox({ label, hint, fileId, previewUrl, onChange, required, endpoi
             type="button"
             className="upload-remove"
             onClick={handleRemove}
+            aria-label={`Remove ${label}`}
           >
             <X size={14} />
           </button>

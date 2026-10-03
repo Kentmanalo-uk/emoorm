@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useSeo from '../lib/seo';
 import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ShoppingCart, Star, Storefront, X } from '@phosphor-icons/react';
@@ -11,6 +11,9 @@ import { readCache, patchCache } from '../lib/pageCache';
 import EmptyArt from '../components/ui/EmptyArt';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import axios from '../lib/axios';
+import { saleInfo } from '../lib/variantPricing';
+import { SaleWas } from '../components/ui/SaleTag';
+import { recentlyViewed, clearRecentlyViewed, onRecentChange } from '../lib/recentlyViewed';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
@@ -45,9 +48,9 @@ const Home = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const fallbackBanners = [
-    { id: 'fallback-1', imageUrl: '/assets/banners/banner-qoute.png', linkUrl: null, title: 'Emoorm' },
-    { id: 'fallback-2', imageUrl: '/assets/banners/buy-now-qoute.png', linkUrl: null, title: 'Buy now' },
-    { id: 'fallback-3', imageUrl: '/assets/banners/discover-mindoro.png', linkUrl: null, title: 'Discover Mindoro' },
+    { id: 'fallback-1', imageUrl: '/assets/banners/banner-qoute.webp', linkUrl: null, title: 'Emoorm' },
+    { id: 'fallback-2', imageUrl: '/assets/banners/buy-now-qoute.webp', linkUrl: null, title: 'Buy now' },
+    { id: 'fallback-3', imageUrl: '/assets/banners/discover-mindoro.webp', linkUrl: null, title: 'Discover Mindoro' },
   ];
   // What Home showed last time: shown at once, then refreshed.
   const [homeCache] = useState(() => readCache('home') || {});
@@ -172,6 +175,11 @@ const Home = () => {
 
   const { addItem } = useCartStore();
   const { user } = useAuthStore();
+  // Recently viewed: this browser's list for whoever is signed in.
+  // A small localStorage read; the tick re-renders when the list changes.
+  const [, setRecentTick] = useState(0);
+  useEffect(() => onRecentChange(() => setRecentTick((n) => n + 1)), []);
+  const recent = recentlyViewed(user?.id);
 
   const [featuredProducts, setFeaturedProducts] = useState(() => homeCache.featured || []);
   // One batch fills 5 rows of the grid at the current width; fixed per visit so pages line up.
@@ -349,10 +357,10 @@ const Home = () => {
               </div>
 
               {/* Carousel Controls */}
-              <button className="banner-control banner-control-prev" onClick={handlePrev}>
+              <button type="button" className="banner-control banner-control-prev" onClick={handlePrev} aria-label="Previous banner">
                 <ChevronLeft size={20} />
               </button>
-              <button className="banner-control banner-control-next" onClick={handleNext}>
+              <button type="button" className="banner-control banner-control-next" onClick={handleNext} aria-label="Next banner">
                 <ChevronRight size={20} />
               </button>
 
@@ -390,7 +398,7 @@ const Home = () => {
       <section className={`categories-section${categoryIcons ? ' is-icons' : ''}`}>
         <div className="container">
           <h2 className="section-title">Shop by Category</h2>
-          {categoryIcons && <CategoryIconGradients />}
+          {(categoryIcons || sharedCategories.some((c) => !c.image)) && <CategoryIconGradients />}
           <div className="categories-grid">
             {sharedCategories.map((cat) => (
               <Link
@@ -398,13 +406,14 @@ const Home = () => {
                 key={cat.id}
                 className="category-card"
               >
-                {categoryIcons ? (
+                {/* A category without a picture shows its icon. */}
+                {categoryIcons || !cat.image ? (
                   <div className="category-image category-image--icon">
                     <CategoryIcon category={cat} className="category-icon" />
                   </div>
                 ) : (
                   <div className="category-image">
-                    <img src={resolveImg(cat.image) || `/categories/${cat.slug}.png`} alt={cat.name} />
+                    <img src={resolveImg(cat.image)} alt={cat.name} loading="lazy" />
                   </div>
                 )}
                 <span className="category-name">{cat.name}</span>
@@ -413,6 +422,31 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Recently viewed: back to what was being looked at. */}
+      {recent.length > 0 && (
+        <section className="products-section recent-section">
+          <div className="container">
+            <div className="section-header">
+              <h2 className="section-title">Recently Viewed</h2>
+              <button type="button" className="recent-clear" onClick={() => clearRecentlyViewed(user?.id)}>Clear</button>
+            </div>
+            <div className="recent-row">
+              {recent.slice(0, 12).map((product) => (
+                <Link key={product.id} to={`/product/${product.slug}`} className="product-card recent-card">
+                  <div className="product-image">
+                    <ProductImage src={product.images?.[0]} alt={product.name} />
+                  </div>
+                  <div className="product-info">
+                    <span className="product-name">{product.name}</span>
+                    <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Featured Products Section */}
       <section className="products-section">
@@ -437,7 +471,7 @@ const Home = () => {
                   </div>
                   <div className="product-info">
                     <span className="product-name">{product.name}</span>
-                    <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
+                    <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
                     <ProductStats product={product} />
                   </div>
                 </Link>
@@ -665,7 +699,7 @@ function HomeProductCard({ product, onAddToCart }) {
       </div>
       <div className="product-info">
         <span className="product-name">{product.name}</span>
-        <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
+        <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
         <ProductStats product={product} />
       </div>
     </Link>

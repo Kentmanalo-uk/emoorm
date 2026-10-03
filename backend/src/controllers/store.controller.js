@@ -45,18 +45,22 @@ const getStores = asyncHandler(async (req, res) => {
 
   const isAdmin = req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN');
 
+  const str = (v) => (typeof v === 'string' ? v : undefined);
   const options = {
-    page: parseInt(page),
-    pageSize: parseInt(pageSize),
-    municipalityId,
+    page: Math.max(1, parseInt(page, 10) || 1),
+    pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
+    municipalityId: str(municipalityId),
+    isAdmin,
     // Non-admin callers only see active, non-suspended stores. Admins can
     // pass explicit filters to review pending/inactive stores.
     isActive: isAdmin ? (isActive !== undefined ? isActive === 'true' : undefined) : true,
     isSuspended: isAdmin ? (isSuspended !== undefined ? isSuspended === 'true' : undefined) : false,
     // Shops awaiting approval stay private.
     isApproved: isAdmin ? undefined : true,
-    excludeOwnerId: isAdmin ? undefined : req.user?.id,
-    search,
+    // A seller browsing doesn't see their own shop (only sellers own one, so
+    // everyone else shares the cached public list).
+    excludeOwnerId: !isAdmin && req.user?.role === 'SELLER' ? req.user.id : undefined,
+    search: str(search),
   };
 
   const result = await storeService.getStores(options);

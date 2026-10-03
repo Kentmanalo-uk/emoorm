@@ -3,6 +3,7 @@ const notificationRepository = require('../repositories/notification.repository'
 const notificationTarget = require('../utils/notificationTarget');
 const { attachPictures } = require('../utils/notificationPicture');
 const { ApiError } = require('../middleware/errorHandler');
+const pushService = require('./push.service');
 
 /**
  * Notification Service
@@ -28,6 +29,8 @@ const DEFAULT_AUDIENCE = {
   RETURN_CLOSED: 'SELLER',
   SELLER_APPLICATION_SUBMITTED: 'ADMIN',
   ADMIN_MESSAGE: 'ADMIN',
+  LOW_STOCK: 'SELLER',
+  PRODUCT_QUESTION: 'SELLER',
   ADMIN_ALERT: 'ADMIN',
 };
 
@@ -72,6 +75,12 @@ const createNotification = async (data) => {
     'STORE_MESSAGE',
     'SELLER_APPLICATION_SUBMITTED',
     'ADMIN_ALERT',
+    'LOW_STOCK',
+    'PRICE_DROP',
+    'PRODUCT_QUESTION',
+    'PRODUCT_ANSWER',
+    'RETURN_DISPUTED',
+    'RETURN_DISPUTE_RESOLVED',
   ];
 
   if (!validTypes.includes(type)) {
@@ -99,7 +108,7 @@ const createNotification = async (data) => {
     : null;
   const extra = explicitTarget || from ? { data: { ...explicitTarget, ...from } } : {};
 
-  return notificationRepository.createNotification({
+  const created = await notificationRepository.createNotification({
     userId,
     type,
     title,
@@ -109,6 +118,11 @@ const createNotification = async (data) => {
     ...extra,
     isRead: false,
   });
+  // Also to the person's browsers, when they turned push on (never blocks).
+  if (pushService.enabled()) {
+    pushService.sendToUser(userId, created).catch((err) => console.error('[push]', err.message));
+  }
+  return created;
 };
 
 /**
@@ -295,6 +309,26 @@ const notifyProductApproved = async (sellerId, productId, productName) => {
 };
 
 /**
+ * Tell the seller which products an order just brought down to their
+ * low-stock threshold (only when it crossed it, so not on every sale).
+ * @param {String} sellerId
+ * @param {Array<{ id, name, stock }>} products
+ */
+const notifyLowStock = async (sellerId, products) => {
+  for (const p of products) {
+    await createNotification({
+      userId: sellerId,
+      type: 'LOW_STOCK',
+      title: p.stock > 0 ? 'Running low' : 'Sold out',
+      message: p.stock > 0
+        ? `Only ${p.stock} left of "${p.name}". Add stock so buyers can keep ordering.`
+        : `"${p.name}" is sold out. Add stock so buyers can order it again.`,
+      relatedId: p.id,
+    });
+  }
+};
+
+/**
  * Notify product rejected
  * @param {String} sellerId - Seller user ID
  * @param {String} productId - Product ID
@@ -416,6 +450,7 @@ const notifySuperAdmins = async (notice, { excludeUserId } = {}) => {
 };
 
 module.exports = {
+  notifyLowStock,
   findResponsibleAdmins,
   notifyMunicipalAdmins,
   notifySuperAdmins,

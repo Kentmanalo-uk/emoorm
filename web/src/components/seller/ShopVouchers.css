@@ -1,0 +1,146 @@
+/* Marketing: the shop's voucher codes. */
+.svc .sh-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.svc-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--seller-primary, var(--t-primary-700, #047857));
+  cursor: pointer;
+}
+
+.svc-empty {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.svc-empty svg {
+  flex-shrink: 0;
+  color: var(--t-danger-500, #ef4444);
+}
+
+.svc-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.svc-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.svc-item:first-child {
+  border-top: 0;
+}
+
+.svc-item.is-off {
+  opacity: 0.55;
+}
+
+.svc-code {
+  padding: 6px 10px;
+  border: 1px dashed var(--t-danger-300, #fca5a5);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--t-danger-700, #b91c1c);
+  background: var(--t-danger-50, #fef2f2);
+}
+
+.svc-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.svc-text b {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--t-neutral-900, #111827);
+}
+
+.svc-text small {
+  font-size: 12px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.svc-switch {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.svc-switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.svc-switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--t-neutral-300, #d1d5db);
+  transition: background 0.15s;
+  pointer-events: none;
+}
+
+.svc-switch span::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.svc-switch input:checked + span {
+  background: var(--seller-primary, var(--t-primary-600, #059669));
+}
+
+.svc-switch input:checked + span::after {
+  transform: translateX(16px);
+}
+
+.svc-del {
+  padding: 6px;
+  border: 0;
+  background: none;
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: pointer;
+}
+
+.svc-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}

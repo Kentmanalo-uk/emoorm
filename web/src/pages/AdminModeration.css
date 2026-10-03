@@ -288,3 +288,75 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* Returns: deciding a disputed rejection. */
+.am-dispute {
+  border-left: 0;
+  background: var(--t-warning-50, #fffbeb);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.am-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.am-verdict-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-verdict-choice label,
+.am-verdict-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.am-verdict-choice label {
+  padding: 8px 10px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.am-verdict-choice label.is-on {
+  border-color: var(--t-primary-500, #10b981);
+}
+
+.am-verdict-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.am-verdict-row > label:first-child,
+.am-verdict-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.am-verdict input[type="number"],
+.am-verdict textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.am-verdict > .admin-btn {
+  align-self: flex-start;
+}

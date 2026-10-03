@@ -14,7 +14,7 @@ const { createAssistant, firstName } = require('./assistantCore');
 
 /* ── The buyer's orders, as the answers need them ───────────────────── */
 
-const OPEN_RETURN = ['REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED'];
+const OPEN_RETURN = ['REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED', 'DISPUTED'];
 
 /**
  * The My Orders tab an open order sits in (as web/src/lib/orderProgress.js

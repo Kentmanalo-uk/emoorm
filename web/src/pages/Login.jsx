@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle, X, Storefront, ShoppingBag } from '@phosphor-icons/react';
+import { ArrowLeft, CheckCircle as CheckCircle2, Clock, Eye, EyeSlash as EyeOff, QrCode, DeviceMobile as Smartphone, XCircle, Storefront, ShoppingBag } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from '../lib/axios';
 import { useAppGoogleSignIn } from '../lib/appGoogle';
@@ -887,7 +887,7 @@ function QrLoginPanel({ onBack, onApproved }) {
       setToken(newToken);
       setExpiresAt(expiry);
       setStatus('pending');
-    } catch (err) {
+    } catch {
       setStatus('error');
     }
   }, []);

@@ -361,6 +361,7 @@ const findPendingForBuyer = async (buyerId) => {
         },
       },
       orderBy: { order: { updatedAt: 'desc' } },
+      take: 500,
     }),
     prisma.review.findMany({
       where: { userId: buyerId, deletedAt: null },

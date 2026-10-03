@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { DownloadSimple as Download, ArrowsClockwise as RefreshCw, TrendUp as TrendingUp, TrendDown as TrendingDown, Minus } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import KpiCard from '../components/analytics/KpiCard';
@@ -192,6 +192,26 @@ export default function SellerAnalytics() {
               emptyMessage="No category data yet."
             />
           </div>
+        </div>
+
+        {/* Product page views and how many became orders */}
+        <div className="an-card">
+          <div className="an-card-head">
+            <h2 className="an-card-title">Views to orders</h2>
+            <span className="an-card-sub">{num(data?.views || 0)} product page views in this period</span>
+          </div>
+          <TopList
+            items={(data?.productFunnel || []).map((p) => ({
+              id: p.id,
+              name: p.name,
+              image: p.image,
+              subtitle: `${num(p.views)} views · ${num(p.orders)} order${p.orders === 1 ? '' : 's'}`,
+              conversion: p.conversion,
+            }))}
+            renderMetric={(p) => `${p.conversion}%`}
+            emptyArt="analytics"
+            emptyMessage="No product views yet in this period."
+          />
         </div>
 
         {/* Order status donut + low stock */}

@@ -13,6 +13,7 @@ import { formatRelativeTime } from '../lib/time';
 import '../components/admin/AdminLayout.css';
 import './AdminNotifications.css';
 import './AdminMessages.css';
+import { pollWhileVisible } from '../lib/visiblePoll';
 
 const LIST_POLL_MS = 20000;
 const THREAD_POLL_MS = 6000;
@@ -195,8 +196,8 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
 
   useEffect(() => {
     refreshList();
-    const timer = setInterval(refreshList, LIST_POLL_MS);
-    return () => clearInterval(timer);
+    const timer = pollWhileVisible(refreshList, LIST_POLL_MS);
+    return () => timer();
   }, [refreshList]);
 
   // Desktop opens the newest thread when nothing is picked yet.
@@ -214,10 +215,10 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
       })
       .catch((err) => toast.error(err.message || 'Failed to load the thread'));
     fetchThread();
-    const timer = setInterval(fetchThread, THREAD_POLL_MS);
+    const timer = pollWhileVisible(fetchThread, THREAD_POLL_MS);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      timer();
     };
   }, [activeId]);
 

@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import { notificationHref } from '../lib/notificationLink';
+import { pollWhileVisible } from '../lib/visiblePoll';
 
 /**
  * New notifications pop up while the site is open. Every half minute (and
@@ -109,7 +110,7 @@ export default function NotificationWatcher() {
     };
 
     check();
-    const timer = window.setInterval(() => check(), EVERY_MS);
+    const timer = pollWhileVisible(() => check(), EVERY_MS);
     const onVisible = () => {
       if (document.visibilityState === 'visible') check();
     };
@@ -119,7 +120,7 @@ export default function NotificationWatcher() {
     window.addEventListener('emoorm:notifications', onChanged);
     return () => {
       stopped = true;
-      window.clearInterval(timer);
+      timer();
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('emoorm:notifications', onChanged);
     };

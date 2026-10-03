@@ -22,6 +22,7 @@ const ROUTES = {
   'seller-product': ({ id }) => (id ? `/seller/products?id=${enc(id)}` : '/seller/products'),
   'admin-product': ({ id }) => (id ? `/admin/products?id=${enc(id)}` : '/admin/products'),
   product: ({ slug }) => (slug ? `/product/${enc(slug)}` : null),
+  'seller-questions': ({ id }) => (id ? `/seller/questions?id=${enc(id)}` : '/seller/questions'),
 
   // Stores
   store: ({ slug }) => (slug ? `/store/${enc(slug)}` : null),

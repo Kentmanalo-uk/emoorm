@@ -1,14 +1,15 @@
-import React from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Trash as Trash2, Package } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import { resolveImg } from '../lib/media';
+import { saleInfo } from '../lib/variantPricing';
 import useWishlistStore from '../store/wishlistStore';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import './Wishlist.css';
+import { confirmAction } from '../lib/confirm';
 
 export default function Wishlist() {
   return (
@@ -39,8 +40,8 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
     toast.success('Removed from wishlist');
   };
 
-  const handleClearAll = () => {
-    if (!window.confirm('Remove all items from your wishlist?')) return;
+  const handleClearAll = async () => {
+    if (!(await confirmAction({ title: 'Remove everything from your wishlist?', confirmLabel: 'Remove all', danger: true }))) return;
     clear();
     toast.success('Wishlist cleared');
   };
@@ -119,8 +120,9 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
 }
 
 function WishlistCard({ product, onAddToCart, onRemove }) {
-  const price = Number(product.price);
-  const compareAt = product.compareAtPrice ? Number(product.compareAtPrice) : null;
+  const sale = saleInfo(product);
+  const price = sale.price;
+  const compareAt = sale.regular ?? (product.compareAtPrice ? Number(product.compareAtPrice) : null);
   const discount = compareAt && compareAt > price
     ? Math.round(((compareAt - price) / compareAt) * 100)
     : null;

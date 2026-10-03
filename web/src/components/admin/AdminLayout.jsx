@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  SquaresFour as LayoutGrid, Users, Package, Flag, Tag, MapPin, ChartPie as PieChart,
+  SquaresFour as LayoutGrid, Users, Package, Flag, ChartPie as PieChart,
   CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
   EnvelopeSimple, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
   Star, ArrowCounterClockwise, List, X, ChatCircleDots,
@@ -19,6 +19,25 @@ import NavBadge from '../layout/NavBadge';
 import useAttention from '../../hooks/useAttention';
 import ShellSearch from '../layout/ShellSearch';
 import { adminSearchSources } from '../../lib/shellSearchSources';
+// The admin shell on phones is drawn with the Seller Center's app styles
+// (headers, tab bar, cards). They used to arrive with the Seller Center's
+// code; it now loads only for sellers, so the admin shell brings its own.
+import '../layout/SellerLayout.css';
+import '../layout/SellerShellMobile.css';
+import '../layout/SellerPhoneFit.css';
+import '../../pages/SellerSetup.css';
+import '../layout/SellerMobile.css';
+import '../../pages/SellerApp.css';
+// ...and every Seller Center page's styles, which the admin pages share.
+import '../../pages/SellerDashboard.css';
+import '../../pages/SellerStore.css';
+import '../../pages/SellerProducts.css';
+import '../../pages/SellerOrders.css';
+import '../../pages/SellerAssistant.css';
+import '../../pages/SellerShopHome.css';
+import '../../pages/SellerFulfillment.css';
+import '../../pages/SellerSettings.css';
+import '../../pages/SellerReturns.css';
 import './AdminLayout.css';
 import './AdminShellMobile.css';
 import UserAvatar from '../ui/UserAvatar';
@@ -26,6 +45,19 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import { AdminShellContext } from './adminShell';
 import useTableCardLabels from '../../hooks/useTableCardLabels';
 import './AdminPhone.css';
+// Every admin page's styles, after the shell's (the order they always had):
+// the pages share classes across their stylesheets.
+import '../../pages/AdminDashboard.css';
+import '../../pages/AdminSellers.css';
+import '../../pages/AdminNotifications.css';
+import '../../pages/AdminMessages.css';
+import '../../pages/AdminFeedback.css';
+import '../../pages/AdminBanners.css';
+import '../../pages/AdminCouriers.css';
+import '../../pages/AdminJuniorAdmins.css';
+import '../../pages/AdminSettings.css';
+import '../../pages/AdminSupport.css';
+import '../../pages/AdminModeration.css';
 import { afterSignOutPath } from '../../lib/afterSignOut';
 import PageMenu from '../layout/PageMenu';
 

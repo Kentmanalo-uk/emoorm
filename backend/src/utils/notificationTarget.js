@@ -37,6 +37,8 @@ const RETURN_TYPES = new Set([
   'RETURN_REFUNDED',
   'RETURN_CANCELLED',
   'RETURN_CLOSED',
+  'RETURN_DISPUTED',
+  'RETURN_DISPUTE_RESOLVED',
 ]);
 
 /** Kinds whose id is a database id that has to become a public slug. */
@@ -48,7 +50,7 @@ const SLUG_KINDS = { product: 'product', store: 'store' };
  */
 const KINDS = [
   'buyer-order', 'seller-order', 'admin-order',
-  'seller-product', 'admin-product', 'product',
+  'seller-product', 'admin-product', 'product', 'seller-questions',
   'store', 'seller-store', 'seller-dashboard',
   'buyer-return', 'seller-return', 'admin-return',
   'admin-report', 'buyer-reports',
@@ -106,8 +108,16 @@ const resolveRef = (notification) => {
       return { kind: isAdmin ? 'admin-product' : 'seller-product', id, slug: null };
 
     // Follower fan-out — send the shopper to the public product page.
+    case 'PRODUCT_QUESTION':
+      return { kind: 'seller-questions', id, slug: null };
+
+    case 'LOW_STOCK':
+      return id ? { kind: 'seller-product', id, slug: null } : null;
+
     case 'STORE_NEW_PRODUCT':
     case 'STORE_PROMOTION':
+    case 'PRICE_DROP':
+    case 'PRODUCT_ANSWER':
       return id ? { kind: 'product', id, slug: null } : null;
 
     case 'STORE_ANNOUNCEMENT':

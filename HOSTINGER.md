@@ -60,7 +60,6 @@ key use `randomBytes(32)`.
 | `DATABASE_URL` | the MySQL string from step 1 |
 | `SITE_URL` | `https://emoorm.shop` |
 | `FRONTEND_URL` | `https://emoorm.shop` |
-| `CORS_ORIGIN` | `https://emoorm.shop` |
 | `ALLOWED_ORIGINS` | `https://emoorm.shop` |
 | `JWT_SECRET` | random, 96 hex chars |
 | `JWT_REFRESH_SECRET` | random, different from `JWT_SECRET` |
@@ -78,7 +77,19 @@ key use `randomBytes(32)`.
 | `RESEND_API_KEY` | a **new** Resend key |
 | `RESEND_FROM` | e.g. `E-MOORM <noreply@emoorm.shop>` (domain verified in Resend) |
 
-**Optional**: `SITE_NAME=E-MOORM`, `OCR_CACHE_PATH=/home/<your-user>/emoorm-data/.ocr-cache`.
+**Optional**: `SITE_NAME=E-MOORM`, `OCR_CACHE_PATH=/home/<your-user>/emoorm-data/.ocr-cache`,
+`SENTRY_DSN` (error alerts; see step 6). `TRUST_PROXY_HOPS` defaults to 1, which is
+right for Hostinger alone; set it to 2 only if you put a CDN such as Cloudflare
+in front. A wrong value makes every visitor share one login rate limit.
+**Optional, off until set**:
+
+- Browser push notifications: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (make a pair once with
+  `npx web-push generate-vapid-keys`, on your computer) and `VAPID_SUBJECT=mailto:support@emoorm.shop`.
+  The Android app cannot receive these; it would need Firebase (FCM).
+- SMS verification of mobile numbers: `SEMAPHORE_API_KEY` from semaphore.co (and
+  `SEMAPHORE_SENDER_NAME` once approved). `COD_REQUIRES_VERIFIED_PHONE=true` then makes
+  cash on delivery need a verified number.
+
 Leave `CACHE_REDIS_URL` empty: Hostinger web hosting has no Redis and the
 app uses its in-memory cache instead. Do **not** set `PORT` unless hPanel
 tells you to; Hostinger provides it.
@@ -93,12 +104,46 @@ Authorized JavaScript origins: `https://emoorm.shop` (and
 1. Deploy from hPanel and watch the build log (it builds the web app, then
    installs the backend and generates the Prisma client).
 2. On a brand-new database, load the reference data once (municipalities,
-   categories, ...) with the seed, or import a database dump (step 7).
+   categories, ...) by importing a database dump (step 8). Do not run the
+   seed here: it creates demo shops and accounts with published passwords,
+   and refuses to run outside development unless SEED_DEMO_DATA=yes.
 3. Open `https://emoorm.shop/health`: it should say `"database":"up"`.
 4. Open the site, sign in, upload a product photo, and redeploy once: the
    photo must still be there (proves `UPLOAD_DIR` is outside the app).
+5. Set up an uptime monitor (free: UptimeRobot or Better Stack) that opens
+   `https://emoorm.shop/health` every 5 minutes and emails you when it fails.
+   It answers 503, not 200, when the database is down, a migration failed,
+   or a background job (auto-complete, unpaid-order expiry) stopped running,
+   so one monitor covers all of them. It also shows "email": "none" when
+   mail is not set up; check that once after each change of keys.
+6. Optional error alerts: create a free Sentry project, add its DSN as
+   `SENTRY_DSN`, and add `@sentry/node` to the backend dependencies. Without
+   it, unexpected errors are still logged (one JSON line each) in hPanel's logs.
 
-## 7. Moving existing data (optional)
+## 7. Backups (do this before real orders come in)
+
+What to keep, and where it lives:
+
+| What | Where | Why |
+|---|---|---|
+| The database | MySQL (hPanel → Databases) | users, shops, orders, messages |
+| Product, shop and review photos | `/home/<your-user>/emoorm-data/uploads` | not in git, not rebuilt by a deploy |
+| ID documents (encrypted) | `/home/<your-user>/emoorm-data/uploads-private` | needed until the retention purge |
+| The environment variables, above all `IDENTITY_ENCRYPTION_KEY` and the JWT secrets | your password manager | without the key, stored ID data cannot be read |
+
+1. In hPanel → **Backups**, check that automatic backups are on for the
+   site and the database, and how many days they keep.
+2. Also run the app's own backup daily: hPanel → **Advanced → Cron Jobs**,
+   command `cd /home/<your-user>/<app-folder>/backend && npm run backup`,
+   once a day (e.g. 03:00). It writes the database (`database.sql.gz`) and
+   the two upload folders (`.tar.gz`) to `emoorm-data/backups/emoorm-<date>/`
+   and keeps the newest 7 (`BACKUP_KEEP`, `BACKUP_DIR` to change).
+3. Once a week, download the newest backup folder (File Manager) and keep it
+   off the server.
+4. Test a restore once, on a local copy: `gunzip -c database.sql.gz | mysql -u root emoorm_restore`,
+   extract `uploads.tar.gz`, point a local `.env` at them and open the site.
+
+## 8. Moving existing data (optional)
 
 Export the source database (phpMyAdmin/Laragon → Export → SQL), import it in
 hPanel → phpMyAdmin, and upload the matching `backend/uploads/` files into

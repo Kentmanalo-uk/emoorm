@@ -147,6 +147,22 @@ const listMyConversations = async (userId) => {
 };
 
 /**
+ * The one conversation between a buyer and a store, made the first time.
+ * Opened from both sides at the same moment, one insert wins the unique
+ * (buyer, store) pair and the other reads it back.
+ */
+const findOrCreateConversation = async (buyerId, storeId) => {
+  const found = await messageRepository.findConversationByPair(buyerId, storeId);
+  if (found) return found;
+  try {
+    return await messageRepository.createConversation(buyerId, storeId);
+  } catch (err) {
+    if (err.code !== 'P2002') throw err;
+    return messageRepository.findConversationByPair(buyerId, storeId);
+  }
+};
+
+/**
  * Find or create a conversation between the current user (buyer) and a store.
  * Sellers cannot start conversations with their own store; they always reply.
  */
@@ -159,11 +175,7 @@ const openConversationWithStore = async (userId, storeId) => {
     throw new ApiError('You cannot start a conversation with your own store', 400);
   }
 
-  let conversation = await messageRepository.findConversationByPair(userId, storeId);
-  if (!conversation) {
-    conversation = await messageRepository.createConversation(userId, storeId);
-  }
-
+  const conversation = await findOrCreateConversation(userId, storeId);
   return getConversation(conversation.id, userId);
 };
 
@@ -188,25 +200,21 @@ const openConversationWithBuyer = async (sellerUserId, buyerId) => {
     throw new ApiError('You can only message buyers who have ordered from your store', 403);
   }
 
-  let conversation = await messageRepository.findConversationByPair(buyerId, store.id);
-  if (!conversation) {
-    conversation = await messageRepository.createConversation(buyerId, store.id);
-  }
-
+  const conversation = await findOrCreateConversation(buyerId, store.id);
   return getConversation(conversation.id, sellerUserId);
 };
 
 /**
  * Get conversation details, messages, and pinned orders for the viewer.
  */
-const getConversation = async (conversationId, userId) => {
+const getConversation = async (conversationId, userId, { before = null } = {}) => {
   const conversation = await messageRepository.findConversationById(conversationId);
   if (!conversation) {
     throw new ApiError('Conversation not found', 404);
   }
 
   const role = resolveRole(conversation, userId);
-  const messages = await messageRepository.listMessages(conversationId);
+  const { messages, hasEarlier } = await messageRepository.listMessages(conversationId, { before });
   const orders = await messageRepository.findBuyerOrdersForStore(
     conversation.buyerId,
     conversation.storeId,
@@ -229,6 +237,8 @@ const getConversation = async (conversationId, userId) => {
     serviceRating: conversation.serviceRating,
     serviceRatingAt: conversation.serviceRatingAt,
     pinnedOrders: shapePinnedOrders(orders),
+    // The newest messages; earlier ones come a page at a time (?before=).
+    hasEarlier,
     messages: messages.map((m) => ({
       id: m.id,
       body: m.body,
@@ -408,7 +418,23 @@ const rateConversationService = async (conversationId, userId, rating) => {
   return { serviceRating: updated.serviceRating, serviceRatingAt: updated.serviceRatingAt };
 };
 
+/**
+ * How many of a buyer's chats have a message from the shop they have not
+ * read yet (the badge on the Messages tab). One query, no conversation list.
+ */
+const countUnreadChats = async (userId) => {
+  const rows = await prisma.$queryRaw`
+    SELECT COUNT(DISTINCT c.id) AS n
+    FROM conversations c
+    JOIN messages m ON m.conversation_id = c.id
+    WHERE c.buyer_id = ${userId}
+      AND m.sender_id <> ${userId}
+      AND (c.buyer_last_read_at IS NULL OR m.created_at > c.buyer_last_read_at)`;
+  return Number(rows[0]?.n || 0);
+};
+
 module.exports = {
+  countUnreadChats,
   listMyConversations,
   openConversationWithStore,
   openConversationWithBuyer,

@@ -1,4 +1,3 @@
-import React from 'react';
 import './analytics.css';
 
 const OPTIONS = [

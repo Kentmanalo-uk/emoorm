@@ -1,4 +1,5 @@
 const orderService = require('../services/order.service');
+const manila = require('../utils/manilaTime');
 const { isStage } = require('../utils/orderStages');
 const auditLog = require('../services/auditLog.service');
 const {
@@ -20,12 +21,12 @@ const PAYMENT_STATUSES = new Set([
 ]);
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-// A calendar day as a Date at its UTC start (or its end when `endOfDay`).
-// Anything that is not YYYY-MM-DD or not a real date is ignored.
+// A calendar day in Manila as the moment it starts (or ends, with
+// `endOfDay`). Anything that is not YYYY-MM-DD or not a real date is ignored.
 const dayBoundary = (value, endOfDay = false) => {
   const s = String(value || '').trim();
   if (!DATE_ONLY.test(s)) return undefined;
-  const d = new Date(`${s}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}Z`);
+  const d = endOfDay ? manila.dayEnd(s) : manila.dayStart(s);
   return Number.isNaN(d.getTime()) ? undefined : d;
 };
 
@@ -182,13 +183,13 @@ const getOrderById = asyncHandler(async (req, res) => {
  * @access Private (Seller only)
  */
 const updateOrderStatus = asyncHandler(async (req, res) => {
-  const { status, proofUrl } = req.body;
+  const { status, proofUrl, cancelReason } = req.body;
 
   const order = await orderService.updateOrderStatus(
     req.params.id,
     req.user.id,
     status,
-    { proofUrl }
+    { proofUrl, cancelReason }
   );
 
   successResponse(res, order, 'Order status updated successfully');
@@ -292,7 +293,16 @@ const getStoreStageCounts = asyncHandler(async (req, res) => {
   successResponse(res, await orderService.getStoreStageCounts(req.user.id), 'Order counts');
 });
 
+/**
+ * The buyer's record, for the shop deciding on an order
+ * @route GET /api/orders/:id/buyer-record
+ */
+const buyerRecord = asyncHandler(async (req, res) => {
+  successResponse(res, await orderService.buyerRecord(req.params.id, req.user.id));
+});
+
 module.exports = {
+  buyerRecord,
   getStoreStageCounts,
   shipOrder,
   revealOrderDetails,

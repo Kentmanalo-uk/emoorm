@@ -1,8 +1,10 @@
 const analyticsRepository = require('../repositories/analytics.repository');
+const manila = require('../utils/manilaTime');
 const storeRepository = require('../repositories/store.repository');
 const municipalityRepository = require('../repositories/municipality.repository');
 const { ApiError } = require('../middleware/errorHandler');
 const shopReadiness = require('./shopReadiness.service');
+const { funnelForStore } = require('./productView.service');
 
 /**
  * Analytics Service
@@ -56,45 +58,15 @@ const kpi = (value, previous) => ({
 // Fill missing days so a chart of last N days shows an unbroken axis.
 const padDays = (series, from, to) => {
   const byDate = new Map(series.map((s) => [s.date, s]));
-  const days = [];
-  const cur = new Date(from);
-  cur.setUTCHours(0, 0, 0, 0);
-  const end = new Date(to);
-  end.setUTCHours(0, 0, 0, 0);
-  while (cur <= end) {
-    const key = cur.toISOString().slice(0, 10);
-    days.push(byDate.get(key) || { date: key, total: 0, orders: 0 });
-    cur.setUTCDate(cur.getUTCDate() + 1);
-  }
-  return days;
+  return manila.daysBetween(from, to).map((key) => byDate.get(key) || { date: key, total: 0, orders: 0 });
 };
 
 const padBuckets = (series, from, to, granularity) => {
   if (granularity === 'day') return padDays(series, from, to);
 
   const values = new Map(series.map((item) => [item.date, item]));
-  const buckets = [];
-  const cursor = new Date(from);
-  const end = new Date(to);
-  cursor.setUTCDate(1);
-  cursor.setUTCHours(0, 0, 0, 0);
-  end.setUTCDate(1);
-  end.setUTCHours(0, 0, 0, 0);
-
-  if (granularity === 'year') {
-    cursor.setUTCMonth(0);
-    end.setUTCMonth(0);
-  }
-
-  while (cursor <= end) {
-    const key = granularity === 'year'
-      ? String(cursor.getUTCFullYear())
-      : cursor.toISOString().slice(0, 7);
-    buckets.push(values.get(key) || { date: key, total: 0, orders: 0 });
-    if (granularity === 'year') cursor.setUTCFullYear(cursor.getUTCFullYear() + 1);
-    else cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-  }
-  return buckets;
+  return manila.periodsBetween(from, to, granularity)
+    .map((key) => values.get(key) || { date: key, total: 0, orders: 0 });
 };
 
 // ---------- SELLER ----------
@@ -103,6 +75,8 @@ const getSellerAnalytics = async (userId, query = {}) => {
   if (!store) throw new ApiError('You do not have a store', 404);
 
   const raw = await analyticsRepository.getSellerStats(store.id, query);
+  // Product page views in the window, and how many turned into orders.
+  const funnel = await funnelForStore(store.id, raw.window.from, raw.window.to);
   const orderStatus = toCountMap(raw.ordersByStatus, ORDER_STATUSES);
   const productStatus = toCountMap(raw.productsByStatus, PRODUCT_STATUSES);
 
@@ -156,6 +130,8 @@ const getSellerAnalytics = async (userId, query = {}) => {
     topProducts,
     topCategories: raw.topCategories,
     lowStock: raw.lowStock,
+    views: funnel.totalViews,
+    productFunnel: funnel.products,
   };
 };
 

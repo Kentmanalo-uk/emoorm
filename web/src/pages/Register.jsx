@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';

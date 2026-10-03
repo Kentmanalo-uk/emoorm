@@ -578,6 +578,7 @@ const sendOrderAcceptedEmail = async ({ buyer, store, order, items, payHours = 4
 };
 
 module.exports = {
+  escapeHtml,
   sendNewOrderEmail,
   sendOrderAcceptedEmail,
   sendMail,

@@ -78,13 +78,20 @@ const listConversationsForStore = async (storeId) =>
     ],
   });
 
-const listMessages = async (conversationId, { take = 100 } = {}) =>
-  prisma.message.findMany({
-    where: { conversationId },
+/**
+ * The newest `take` messages of a conversation (or those before `before`),
+ * oldest first, and whether there are earlier ones.
+ */
+const listMessages = async (conversationId, { take = 100, before = null } = {}) => {
+  const rows = await prisma.message.findMany({
+    where: { conversationId, ...(before ? { createdAt: { lt: before } } : {}) },
     include: messageInclude,
-    orderBy: { createdAt: 'asc' },
-    take,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: take + 1,
   });
+  const hasEarlier = rows.length > take;
+  return { messages: rows.slice(0, take).reverse(), hasEarlier };
+};
 
 const createMessage = async ({ conversationId, senderId, body, imageUrl = null, orderId = null, productId = null }) =>
   prisma.message.create({

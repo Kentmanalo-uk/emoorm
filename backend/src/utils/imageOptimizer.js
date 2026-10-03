@@ -1,4 +1,7 @@
 const fs = require('fs');
+// A small file can claim enormous dimensions; decoding it would take the
+// server's memory. 40 megapixels covers any phone photo.
+const MAX_INPUT_PIXELS = 40e6;
 const path = require('path');
 const sharp = require('sharp');
 const config = require('../config/env');
@@ -49,7 +52,7 @@ const optimizeUpload = async (file) => {
     const webpName = `${path.basename(file.filename, path.extname(file.filename))}.webp`;
     const webpPath = path.join(dir, webpName);
 
-    const info = await sharp(file.path)
+    const info = await sharp(file.path, { limitInputPixels: MAX_INPUT_PIXELS })
       // withoutEnlargement keeps small images untouched rather than upscaling.
       .rotate() // honour EXIF orientation before stripping metadata
       .resize({ width: MAX_EDGE, height: MAX_EDGE, fit: 'inside', withoutEnlargement: true })

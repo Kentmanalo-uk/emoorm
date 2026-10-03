@@ -706,3 +706,79 @@
     padding: 14px;
   }
 }
+
+/* Return request: how many of an item (when more than one was bought). */
+.request-item-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.request-qty {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 10px;
+  margin: 0 0 8px 28px;
+  font-size: 13px;
+  color: var(--t-neutral-700, #374151);
+}
+
+.request-qty button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-800, #1f2937);
+  cursor: pointer;
+}
+
+.request-qty button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* With the municipal admin (a disputed rejection). */
+.status-disputed {
+  background: var(--t-warning-100, #fef3c7);
+  color: var(--t-warning-800, #92400e);
+}
+
+.return-note.is-decision {
+  border-color: var(--t-info-200, #bfdbfe);
+  background: var(--t-info-50, #eff6ff);
+}
+
+.return-dispute h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.return-dispute p {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.return-dispute textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.return-dispute-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}

@@ -28,6 +28,7 @@ const STATUS_BADGES = {
   REJECTED: { label: 'Rejected', tone: 'danger' },
   CANCELLED: { label: 'Cancelled', tone: 'danger' },
   CLOSED: { label: 'Closed', tone: 'neutral' },
+  DISPUTED: { label: 'With the admin', tone: 'accent' },
 };
 
 const formatDate = (value) => new Date(value).toLocaleDateString('en-US', {

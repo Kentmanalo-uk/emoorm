@@ -23,6 +23,7 @@ import { ConversationListSkeleton } from '../ui/PageSkeletons';
 import { readCache, writeCache } from '../../lib/pageCache';
 import MoormyEntry from '../moormy/MoormyEntry';
 import MoormyThread from '../moormy/MoormyThread';
+import { pollWhileVisible } from '../../lib/visiblePoll';
 
 const POLL_INTERVAL_MS = 5000;
 // Ate Moormy's chat (buyers only): opened like a conversation, as ?c=moormy.
@@ -356,6 +357,10 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [unreadOnly, setUnreadOnly] = useState(false);
+  // Messages older than the newest page, loaded on request ("Load earlier
+  // messages"), for the conversation `id`.
+  const [earlier, setEarlier] = useState({ id: null, messages: [], hasMore: null, loading: false });
+  const messagesBoxRef = useRef(null);
   // A question typed in Ate Moormy's intro card, asked as her chat opens.
   const [moormyAsk, setMoormyAsk] = useState(null);
   const withMoormy = role === 'buyer';
@@ -448,7 +453,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
   // Poll for new messages every few seconds
   useEffect(() => {
     if (!activeId || activeId === MOORMY_ID) return undefined;
-    const interval = setInterval(async () => {
+    const interval = pollWhileVisible(async () => {
       if (activeIdRef.current !== activeId) return;
       const prevCount = activeConvo?.messages?.length || 0;
       const next = await fetchConversation(activeId, { silent: true });
@@ -458,7 +463,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
         fetchConversations();
       }
     }, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    return () => interval();
   }, [activeId, activeConvo, fetchConversation, fetchConversations, scrollToBottom]);
 
   const filteredConversations = useMemo(() => {
@@ -657,10 +662,41 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     : null;
 
   // Messages with a separator before the first message of each day.
+  const earlierHere = earlier.id && earlier.id === activeConvo?.id ? earlier : null;
+  const hasEarlier = earlierHere && earlierHere.hasMore !== null ? earlierHere.hasMore : Boolean(activeConvo?.hasEarlier);
+
+  const loadEarlier = async () => {
+    if (!activeConvo || earlierHere?.loading) return;
+    const id = activeConvo.id;
+    const oldest = earlierHere?.messages[0] || activeConvo.messages?.[0];
+    if (!oldest) return;
+    const box = messagesBoxRef.current;
+    const fromBottom = box ? box.scrollHeight - box.scrollTop : 0;
+    setEarlier((cur) => ({ ...(cur.id === id ? cur : { id, messages: [] }), id, loading: true, hasMore: cur.id === id ? cur.hasMore : null }));
+    try {
+      const res = await axiosInstance.get(`/messages/conversations/${id}`, { params: { before: oldest.createdAt } });
+      setEarlier((cur) => {
+        const have = new Set((cur.id === id ? cur.messages : []).map((m) => m.id));
+        const page = (res.data?.messages || []).filter((m) => !have.has(m.id));
+        return { id, messages: [...page, ...(cur.id === id ? cur.messages : [])], hasMore: Boolean(res.data?.hasEarlier), loading: false };
+      });
+      // Keep the message you were reading where it was.
+      requestAnimationFrame(() => {
+        if (box) box.scrollTop = box.scrollHeight - fromBottom;
+      });
+    } catch {
+      setEarlier((cur) => ({ ...cur, loading: false }));
+      toast.error('Could not load earlier messages');
+    }
+  };
+
   const timeline = useMemo(() => {
     const out = [];
     let lastDay = null;
-    (activeConvo?.messages || []).forEach((m) => {
+    const newest = activeConvo?.messages || [];
+    const seen = new Set(newest.map((m) => m.id));
+    const older = (earlierHere?.messages || []).filter((m) => !seen.has(m.id));
+    [...older, ...newest].forEach((m) => {
       const day = new Date(m.createdAt).toDateString();
       if (day !== lastDay) {
         out.push({ kind: 'day', key: `day-${day}`, label: dayLabel(m.createdAt) });
@@ -669,7 +705,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
       out.push({ kind: 'msg', key: m.id, message: m });
     });
     return out;
-  }, [activeConvo]);
+  }, [activeConvo, earlierHere]);
 
   const canSend = !sending && Boolean(draft.trim() || pendingImage || pendingProduct || attachedOrderId);
 
@@ -902,7 +938,12 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
               </div>
             )}
 
-            <div className="msgr-messages">
+            <div className="msgr-messages" ref={messagesBoxRef}>
+              {hasEarlier && (
+                <button type="button" className="msgr-earlier" onClick={loadEarlier} disabled={earlierHere?.loading}>
+                  {earlierHere?.loading ? 'Loading…' : 'Load earlier messages'}
+                </button>
+              )}
               {timeline.length === 0 ? (
                 <div className="msgr-messages-empty">
                   <div className="msgr-intro-avatar">
