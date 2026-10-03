@@ -7,6 +7,7 @@ import Layout from './layout/Layout';
 import PageMenu from './layout/PageMenu';
 import GradientUserIcon from './ui/GradientUserIcon';
 import ToolGradients from './ui/ToolGradients';
+import RecentlyViewed from './account/RecentlyViewed';
 import '../pages/Profile.css';
 import './ProfileGuest.css';
 
@@ -84,6 +85,8 @@ export default function ProfileGuest() {
                     ))}
                   </div>
                 </section>
+
+                <RecentlyViewed />
 
                 <section className="pf-m-section pf-m-list">
                   <h2>Orders &amp; shopping</h2>

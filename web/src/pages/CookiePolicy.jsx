@@ -44,7 +44,7 @@ const CookiePolicy = () => (
       <h2>Contact us</h2>
       <p>
         Questions about this policy can be sent to{' '}
-        <a href="mailto:support@emoorm.com">support@emoorm.com</a>. See also our{' '}
+        <a href="mailto:support@emoorm.shop">support@emoorm.shop</a>. See also our{' '}
         <Link to="/privacy">Privacy Policy</Link>.
       </p>
     </div>

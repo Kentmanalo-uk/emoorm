@@ -7,6 +7,7 @@ import { useMunicipalities, useCategories } from '../../hooks/useReferenceData';
 import { queryKeys, policy } from '../../lib/queryKeys';
 import AppLogo from '../AppLogo';
 import './Footer.css';
+import { SUPPORT_EMAIL, FACEBOOK_URL } from '../../lib/contact';
 
 // The footer renders on every page, so these three reads used to fire on every
 // navigation. They now share the app-wide query cache with the rest of the
@@ -177,12 +178,12 @@ const Footer = () => {
                 <span>Oriental Mindoro, Philippines</span>
               </li>
               <li>
-                <span className="footer-contact-label">Phone:</span>
-                <a href="tel:+639151931262">+63 915 193 1262</a>
+                <span className="footer-contact-label">Email:</span>
+                <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
               </li>
               <li>
-                <span className="footer-contact-label">Email:</span>
-                <a href="mailto:support@emoorm.com">support@emoorm.com</a>
+                <span className="footer-contact-label">Facebook:</span>
+                <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer">Emoorm on Facebook</a>
               </li>
               <li>
                 <span className="footer-contact-label">Hours:</span>

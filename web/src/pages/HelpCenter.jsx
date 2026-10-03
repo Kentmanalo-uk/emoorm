@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import useSeo from '../lib/seo';
-import { Lifebuoy, PaperPlaneRight, CircleNotch } from '@phosphor-icons/react';
+import { Lifebuoy, PaperPlaneRight, CircleNotch, EnvelopeSimple, FacebookLogo } from '@phosphor-icons/react';
+import { SUPPORT_EMAIL, FACEBOOK_URL } from '../lib/contact';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
@@ -165,6 +166,12 @@ function GetHelpPanel() {
           </div>
         </form>
       )}
+
+      <div className="hc-reach">
+        <span>Other ways to reach us:</span>
+        <a href={`mailto:${SUPPORT_EMAIL}`}><EnvelopeSimple size={16} weight="fill" /> {SUPPORT_EMAIL}</a>
+        <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer"><FacebookLogo size={16} weight="fill" /> Message us on Facebook</a>
+      </div>
     </section>
   );
 }

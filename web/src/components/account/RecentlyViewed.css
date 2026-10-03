@@ -1,0 +1,78 @@
+/* Profile: recently viewed products, one scrolling row. */
+.pvw-clear {
+  padding: 4px 0 4px 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--t-neutral-500, #6b7280);
+  cursor: pointer;
+}
+
+.pvw-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+
+.pvw-card {
+  display: flex;
+  flex: 0 0 112px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+
+.pvw-img {
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.pvw-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pvw-name {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--t-neutral-800, #1f2937);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.pvw-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-primary-700, #047857);
+}
+
+@media (max-width: 768px) {
+  .pvw-row {
+    padding: 0 4px 4px;
+    scroll-padding-left: 4px;
+    scrollbar-width: none;
+  }
+
+  .pvw-row::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .pvw-card {
+    flex-basis: 140px;
+  }
+}

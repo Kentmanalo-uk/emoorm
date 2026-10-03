@@ -25,6 +25,7 @@ import { afterSignOutPath } from '../lib/afterSignOut';
 import { countBuyerTabs } from '../lib/orderProgress';
 import PageMenu from '../components/layout/PageMenu';
 import ToolGradients from '../components/ui/ToolGradients';
+import RecentlyViewed from '../components/account/RecentlyViewed';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -221,6 +222,8 @@ const Profile = () => {
           </div>
         </section>
 
+        <RecentlyViewed userId={user?.id} />
+
         <section className="pf-m-section pf-m-list">
           <h2>Orders &amp; shopping</h2>
           <Row to="/profile/orders" icon={Package} label="My Orders" />
@@ -409,6 +412,8 @@ const Profile = () => {
           </Link>
         </div>
       </div>
+
+      <RecentlyViewed userId={user?.id} variant="desktop" />
 
       {/* Services Section */}
       <div className="profile-section">

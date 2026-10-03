@@ -89,7 +89,7 @@ const PrivacyPolicy = () => (
       <h2>Contact us</h2>
       <p>
         Questions about this policy or your data can be sent to{' '}
-        <a href="mailto:support@emoorm.com">support@emoorm.com</a>, or visit our{' '}
+        <a href="mailto:support@emoorm.shop">support@emoorm.shop</a>, or visit our{' '}
         <Link to="/help">Help Centre</Link>.
       </p>
     </div>
