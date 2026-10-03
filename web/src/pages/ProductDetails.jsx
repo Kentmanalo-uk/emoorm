@@ -6,7 +6,7 @@ import {
   Heart, ShareNetwork as Share2, Storefront as Store, MapPin,
   Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck, Info, CalendarCheck,
   CaretRight as ChevronRightSm, ChatCircle as MessageCircle, Money, QrCode, Flag,
-  MagnifyingGlass, ShoppingCart, BookmarkSimple,
+  MagnifyingGlass, ShoppingCart, CaretDown,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -86,6 +86,20 @@ const storeServiceLines = (store) => {
   return lines;
 };
 
+// Phones: the section tabs (key, element id, label).
+const PHONE_SECTIONS = [
+  ['overview', 'pdp-overview', 'Overview'],
+  ['reviews', 'pdp-reviews', 'Reviews'],
+  ['details', 'pdp-details', 'Details'],
+  ['foryou', 'pdp-foryou', 'For you'],
+];
+
+// The phone header's height, counting the section tabs that hang under it.
+const phoneHeadHeight = () => {
+  const head = document.querySelector('.pdp-m-head');
+  return head ? head.offsetHeight + (head.querySelector('.pdp-m-tabs')?.offsetHeight || 0) : 100;
+};
+
 const ProductDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -112,6 +126,42 @@ const ProductDetails = () => {
     document.body.classList.add('pdp-phone-mode');
     return () => document.body.classList.remove('pdp-phone-mode');
   }, [isPhone]);
+
+  // Phones: section tabs under the top bar once the photos are scrolled past,
+  // marking the section being read; a tap scrolls to it.
+  const [phoneTab, setPhoneTab] = useState({ on: false, key: 'overview' });
+  const [descOpen, setDescOpen] = useState(false);
+  const [shelfTab, setShelfTab] = useState('same');
+  useEffect(() => {
+    if (!isPhone) return undefined;
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const head = phoneHeadHeight();
+        const gallery = document.querySelector('.pdp-m-gallery')?.offsetHeight || 300;
+        let key = 'overview';
+        for (const [k, id] of PHONE_SECTIONS) {
+          const el = document.getElementById(id);
+          if (el && el.getBoundingClientRect().top - head - 12 <= 0) key = k;
+        }
+        const on = window.scrollY > gallery * 0.6;
+        setPhoneTab((cur) => (cur.on === on && cur.key === key ? cur : { on, key }));
+      });
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [isPhone, slug]);
+  const goToSection = (key) => {
+    const id = PHONE_SECTIONS.find(([k]) => k === key)?.[1];
+    const el = id && document.getElementById(id);
+    const head = phoneHeadHeight();
+    window.scrollTo({ top: key === 'overview' || !el ? 0 : el.getBoundingClientRect().top + window.scrollY - head + 1, behavior: 'smooth' });
+  };
 
   const { toggleItem, isInWishlist } = useWishlistStore();
   const { requireVerifiedIdentity, identityDialog } = useIdentityGate();
@@ -627,6 +677,36 @@ const ProductDetails = () => {
   };
   const place = product.municipality?.name || product.store?.municipality?.name || 'Oriental Mindoro';
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate('/'));
+  // The row under the shop: straight into the cart, or to the product to
+  // choose its options first.
+  const quickAdd = (p) => {
+    if (Array.isArray(p.variations) && p.variations.length) {
+      navigate(`/product/${p.slug}`);
+      return;
+    }
+    try {
+      addItem({
+        id: p.id,
+        productId: p.id,
+        name: p.name,
+        price: saleInfo(p).price,
+        priceTiers: p.priceTiers,
+        image: parseImages(p.images)[0] || '/placeholder-product.png',
+        storeId: p.storeId || p.store?.id,
+        storeName: p.store?.name,
+        storeLogo: p.store?.logo || null,
+        readyToSell: p.store?.readyToSell,
+        vacationUntil: p.store?.vacationUntil,
+        stock: p.stock,
+        slug: p.slug,
+        categoryId: p.categoryId,
+        selectedVariations: null,
+      }, 1);
+      toast.success('Added to cart');
+    } catch (err) {
+      toast.error(err.message || 'Could not add to cart');
+    }
+  };
   const avgRating = Number(product.averageRating ?? ratingStats?.averageRating ?? 0);
   const reviewCount = Number(product.reviewCount ?? ratingStats?.totalReviews ?? reviews.length);
 
@@ -636,6 +716,7 @@ const ProductDetails = () => {
         <div className="container">
           {isPhone && (
             <>
+              <div className="pdp-m-head">
               <div className="pdp-m-topbar">
                 <button type="button" className="pdp-m-icon" onClick={goBack} aria-label="Back">
                   <ChevronLeft size={22} weight="bold" />
@@ -644,9 +725,6 @@ const ProductDetails = () => {
                   <MagnifyingGlass size={17} />
                   <span>{product.category?.name || 'Search products'}</span>
                 </Link>
-                <button type="button" className="pdp-m-icon" onClick={handleShare} aria-label="Share">
-                  <Share2 size={21} />
-                </button>
                 <Link to="/cart" className="pdp-m-icon pdp-m-cart" aria-label={`Cart, ${cartCount} items`}>
                   <ShoppingCart size={22} />
                   {cartCount > 0 && <b>{cartCount > 99 ? '99+' : cartCount}</b>}
@@ -680,8 +758,22 @@ const ProductDetails = () => {
                   ]}
                 />
               </div>
+              <nav className={`pdp-m-tabs${phoneTab.on ? ' is-on' : ''}`} aria-label="Sections" aria-hidden={!phoneTab.on}>
+                {PHONE_SECTIONS.map(([key, , label]) => (
+                  <button
+                    type="button"
+                    key={key}
+                    tabIndex={phoneTab.on ? 0 : -1}
+                    className={phoneTab.key === key ? 'is-active' : ''}
+                    onClick={() => goToSection(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </nav>
+              </div>
 
-              <div className="pdp-m-gallery">
+              <div className="pdp-m-gallery" id="pdp-overview">
                 <div
                   key={slug}
                   className="pdp-m-track"
@@ -717,7 +809,6 @@ const ProductDetails = () => {
                 <SaleEnds product={product} />
                 {tiers.length > 0 && <BulkPrices tiers={tiers} />}
                 <div className="pdp-m-price-side">
-                  <span className="pdp-m-badge"><Store size={13} weight="fill" /> Local seller</span>
                   <span className="pdp-m-place"><MapPin size={12} /> {place}</span>
                 </div>
               </div>
@@ -798,15 +889,20 @@ const ProductDetails = () => {
               )}
               <h1 className="pdp-title">{product.name}</h1>
               {isPhone && (
-                <button
-                  type="button"
-                  className={`pdp-m-bookmark${wishlisted ? ' is-active' : ''}`}
-                  onClick={toggleWishlist}
-                  aria-label={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
-                  aria-pressed={wishlisted}
-                >
-                  <BookmarkSimple size={24} weight={wishlisted ? 'fill' : 'regular'} />
-                </button>
+                <div className="pdp-m-title-tools">
+                  <button
+                    type="button"
+                    className={`pdp-m-bookmark${wishlisted ? ' is-active' : ''}`}
+                    onClick={toggleWishlist}
+                    aria-label={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+                    aria-pressed={wishlisted}
+                  >
+                    <Heart size={23} weight={wishlisted ? 'fill' : 'regular'} />
+                  </button>
+                  <button type="button" className="pdp-m-bookmark" onClick={handleShare} aria-label="Share">
+                    <Share2 size={22} />
+                  </button>
+                </div>
               )}
 
               <div className="pdp-meta-row">
@@ -1097,21 +1193,26 @@ const ProductDetails = () => {
           )}
 
           {/* Description */}
-          <div className="pdp-detail-card">
+          <div className="pdp-detail-card pdp-card-desc">
             <div className="pdp-section-head">
               <h2 className="pdp-section-title">Product Description</h2>
             </div>
             <div className="pdp-section-body">
-              <div className="pdp-desc">
+              <div className={`pdp-desc${isPhone && !descOpen && (product.description || '').length > 260 ? ' is-clamped' : ''}`}>
                 {product.description
                   ? product.description.split(/\n{2,}/).map((para, i) => <p key={i}>{para}</p>)
                   : <p className="pdp-empty">No description provided by the seller.</p>}
               </div>
+              {isPhone && (product.description || '').length > 260 && (
+                <button type="button" className="pdp-m-seemore" onClick={() => setDescOpen((v) => !v)} aria-expanded={descOpen}>
+                  {descOpen ? 'See less' : 'See more'} <CaretDown size={14} className={descOpen ? 'is-up' : ''} />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Specifications */}
-          <div className="pdp-detail-card">
+          <div className="pdp-detail-card pdp-card-specs" id="pdp-details">
             <div className="pdp-section-head">
               <h2 className="pdp-section-title">Specifications</h2>
             </div>
@@ -1140,6 +1241,22 @@ const ProductDetails = () => {
                 </Link>
               )}
             </div>
+            {isPhone && reviewCount > 0 && (
+              <div className="pdp-m-rating-sum">
+                <strong>{avgRating.toFixed(1)}</strong>
+                <span className="pdp-rating-stars">{renderStars(avgRating)}</span>
+                <span>{reviewCount} {reviewCount === 1 ? 'rating' : 'ratings'}</span>
+              </div>
+            )}
+            {product.status === 'APPROVED' && (
+              <button
+                type="button"
+                className="pdp-ask-link"
+                onClick={() => document.getElementById('pdp-questions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              >
+                <MessageCircle size={15} /> Ask the shop about this product <ChevronRightSm size={14} />
+              </button>
+            )}
             <div className="pdp-section-body">
               <div className="pdp-reviews">
                 {reviews.length === 0 ? (
@@ -1157,8 +1274,38 @@ const ProductDetails = () => {
             <ProductQuestions product={product} isOwnProduct={Boolean(user?.id && product.store?.owner?.id === user.id)} />
           )}
 
+          {/* Phones: the same shop's products, or similar ones, in a row. */}
+          {isPhone && (sameShopProducts.length > 0 || relatedProducts.length > 0) && (
+            <div className="pdp-m-shelf">
+              <div className="pdp-m-shelf-tabs" role="tablist">
+                {[['same', 'Same store', sameShopProducts], ['similar', 'Similar items', relatedProducts]]
+                  .filter(([, , list]) => list.length > 0)
+                  .map(([key, label], i, all) => {
+                    const active = shelfTab === key || (all.length === 1) || (!all.some(([k]) => k === shelfTab) && i === 0);
+                    return (
+                      <button type="button" role="tab" key={key} aria-selected={active} className={active ? 'is-active' : ''} onClick={() => setShelfTab(key)}>
+                        {label}
+                      </button>
+                    );
+                  })}
+              </div>
+              <div className="pdp-m-shelf-row">
+                {((shelfTab === 'similar' && relatedProducts.length) || !sameShopProducts.length ? relatedProducts : sameShopProducts).slice(0, 12).map((p) => (
+                  <div key={p.id} className="pdp-m-shelf-card">
+                    <Link to={`/product/${p.slug}`} className="pdp-m-shelf-img"><ProductImage src={parseImages(p.images)[0]} alt={p.name} /></Link>
+                    <Link to={`/product/${p.slug}`} className="pdp-m-shelf-name">{p.name}</Link>
+                    <span className="pdp-m-shelf-foot">
+                      <b>{peso(saleInfo(p).price)}</b>
+                      <button type="button" aria-label={`Add ${p.name} to cart`} onClick={() => quickAdd(p)}><Plus size={14} weight="bold" /></button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* From the same shop */}
-          {sameShopProducts.length > 0 && product.store && (
+          {!isPhone && sameShopProducts.length > 0 && product.store && (
             <div className="pdp-shelf pdp-shelf-card">
               <div className="pdp-shelf-head">
                 <h2>From the Same Store</h2>
@@ -1185,7 +1332,7 @@ const ProductDetails = () => {
 
           {/* You may also like */}
           {relatedProducts.length > 0 && (
-            <div className="pdp-shelf">
+            <div className="pdp-shelf pdp-shelf-related" id="pdp-foryou">
               <div className="pdp-shelf-head">
                 <h2>You may also like</h2>
                 <Link to={`/products?category=${product.categoryId}`} className="pdp-shelf-more">
@@ -1221,25 +1368,31 @@ const ProductDetails = () => {
             <MessageCircle size={21} />
             <span>Chat</span>
           </Link>
-          <button
-            type="button"
-            className="pdp-m-addcart"
-            onClick={() => setSheetMode('cart')}
-            disabled={cannotBuy || isAddingToCart}
-            aria-label="Add to cart"
-          >
-            <ShoppingCart size={22} />
-            <Plus size={11} weight="bold" className="pdp-m-plus" />
-          </button>
-          <button
-            type="button"
-            className="pdp-m-buy"
-            onClick={() => setSheetMode('buy')}
-            disabled={cannotBuy || isAddingToCart}
-          >
-            <span>{notTakingOrders ? closedLabel : isOutOfStock ? 'Out of stock' : 'Buy now'}</span>
-            {!cannotBuy && <small>{optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}</small>}
-          </button>
+          {cannotBuy ? (
+            <button type="button" className="pdp-m-buy pdp-m-closed" disabled>
+              <span>{notTakingOrders ? closedLabel : 'Out of stock'}</span>
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="pdp-m-buy"
+                onClick={() => setSheetMode('buy')}
+                disabled={isAddingToCart}
+              >
+                <span>Buy now</span>
+                <small>{optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}</small>
+              </button>
+              <button
+                type="button"
+                className="pdp-m-addcart"
+                onClick={() => setSheetMode('cart')}
+                disabled={isAddingToCart}
+              >
+                Add to cart
+              </button>
+            </>
+          )}
         </div>
       )}
 

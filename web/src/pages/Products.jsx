@@ -19,7 +19,6 @@ import SearchFilterSheet from '../components/search/SearchFilterSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
-import PageMenu from '../components/layout/PageMenu';
 import { parseImages } from '../lib/media';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
@@ -386,7 +385,6 @@ const Products = () => {
                 <MagnifyingGlass size={18} />
               </button>
             </form>
-            <PageMenu />
           </div>
         )}
 
