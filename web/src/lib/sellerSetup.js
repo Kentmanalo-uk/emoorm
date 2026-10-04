@@ -247,3 +247,15 @@ export const sellBlockers = (setup) => {
 export const nextStep = (setup) => (setup?.steps || []).find(
   (step) => !step.done && !step.optional && !step.waiting && !(step.key === 'identity' && step.status === 'PENDING'),
 ) || null;
+
+/**
+ * The page for what to finish first: the first thing stopping orders, else
+ * the next open step, else Home (whose "Complete your shop" card lists the
+ * steps).
+ */
+export const setupNextTo = (setup) => {
+  const blocker = sellBlockers(setup).find((b) => b.to);
+  if (blocker) return blocker.to;
+  const next = nextStep(setup);
+  return (next && describeStep(next, { municipality: setup?.municipality }).to) || '/seller';
+};

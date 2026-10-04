@@ -18,7 +18,7 @@ import Skeleton from '../components/ui/Skeleton';
 import UserAvatar from '../components/ui/UserAvatar';
 import { getSellerFollowerStats, subscribeToFollowChanges } from '../lib/follow';
 import { completeGuide, shouldShowGuide } from '../lib/sellerGuides';
-import { describeStep, sellBlockers } from '../lib/sellerSetup';
+import { describeStep, sellBlockers, setupNextTo } from '../lib/sellerSetup';
 import PageMenu from '../components/layout/PageMenu';
 
 const DASHBOARD_GUIDE = 'dashboard';
@@ -67,13 +67,7 @@ export default function SellerDashboard() {
   const setup = ctx?.setup;
   const navigate = useNavigate();
 
-  // A new seller sees Shop setup before the dashboard: the first visit goes
-  // there (it marks itself seen), and the tour waits until after it.
-  const setupUnseen = shouldShowGuide(store, 'setup-intro');
-  useEffect(() => {
-    if (setupUnseen && setup && !setup.complete) navigate('/seller/setup', { replace: true });
-  }, [setupUnseen, setup, navigate]);
-  const tourEligible = shouldShowGuide(store, DASHBOARD_GUIDE) && (!setupUnseen || setup?.complete === true);
+  const tourEligible = shouldShowGuide(store, DASHBOARD_GUIDE);
 
   // Reminders from the setup checklist: the ID check until it is done, and
   // overall progress until the shop is ready (the seller may hide that one).
@@ -325,7 +319,7 @@ export default function SellerDashboard() {
               </div>
             </div>
             <div className="sd-setup-actions">
-              <Link to="/seller/setup" className="sd-card-btn">
+              <Link to={setupNextTo(setup)} className="sd-card-btn">
                 Continue setup <ArrowRight size={15} weight="bold" />
               </Link>
             </div>
@@ -713,7 +707,7 @@ const homeNotice = (store, setup) => {
       title: 'Your shop is private',
       hint: "It's hidden from buyers until the admin approves it.",
       cta: 'Set up',
-      to: '/seller/setup',
+      to: setupNextTo(setup),
     };
   }
   const blockers = sellBlockers(setup);
@@ -724,7 +718,7 @@ const homeNotice = (store, setup) => {
       title: "Buyers can't order yet",
       hint: `Finish: ${blockers.map((b) => b.label).join(', ')}`,
       cta: 'Finish',
-      to: blockers[0].to || '/seller/setup',
+      to: setupNextTo(setup),
     };
   }
   if (identity && !identity.done) {

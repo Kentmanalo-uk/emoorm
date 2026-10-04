@@ -11,7 +11,7 @@ import { getSellerFollowerStats } from '../lib/follow';
 import { useShare } from '../components/ShareSheet';
 import PhoneSheet from '../components/seller/PhoneSheet';
 import ShopVouchers from '../components/seller/ShopVouchers';
-import { sellBlockers } from '../lib/sellerSetup';
+import { setupNextTo } from '../lib/sellerSetup';
 import Skeleton from '../components/ui/Skeleton';
 import ToolGradients from '../components/ui/ToolGradients';
 import './SellerDashboard.css';
@@ -73,7 +73,7 @@ export default function SellerMarketing() {
   const canSend = feed?.canSend !== false;
   // Why sending is off: the shop is private, closed, or cannot sell yet.
   const blockedReason = feed?.blockedReason || 'You can message followers once your shop is public.';
-  const finishTo = feed?.blocked === 'NOT_READY' ? sellBlockers(setup)[0]?.to || '/seller/setup' : null;
+  const finishTo = feed?.blocked === 'NOT_READY' ? setupNextTo(setup) : null;
   const followerCount = followers ? followers.total : 0;
   const newThisWeek = followers ? followers.last7Days : 0;
 

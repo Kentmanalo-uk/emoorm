@@ -50,7 +50,7 @@ const ADMIN_LINKS = [{ label: 'Message the admin', to: '/seller/support' }];
 const OVERVIEW = [
   'Emoorm is free to sell on, takes no commission and never holds money: buyers pay the seller directly (cash, or the seller\'s GCash / QR Ph code).',
   'Phones: the Seller Center has tabs Home (tools: My products, My orders, Performance, Finance, Reviews, Returns, Decorate, Add product; and, until the shop is set up, the "Complete your shop" card with every setup step), Chat, Marketing and Me (Finance: My earnings; Delivery & payment: Delivery & pickup, Pickup spot, Delivery areas & fees, Payment options; Contact & help: Message the admin, Help center, Send feedback; Settings: Shop profile, Verify identity, Notifications, Language, Shop settings, Switch to my buyer account).',
-  'Computers: the sidebar has Shop setup, Dashboard, My Orders, Returns & refunds, Messages, Admin, Products (All Products, Add New), Notifications, Reviews, Analytics, Finance, and My Shop (Shop Profile, Fulfillment & Payment, Settings, View Storefront).',
+  'Computers: the sidebar has Dashboard, My Orders, Returns & refunds, Messages, Admin, Products (All Products, Add New), Notifications, Reviews, Analytics, Finance, and My Shop (Shop Profile, Fulfillment & Payment, Settings, View Storefront).',
 ].join('\n');
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -143,7 +143,7 @@ const startSellingLinks = (snap) => {
   const links = snap.readyToSell
     ? (snap.liveProducts ? [] : [{ label: 'Add product', to: '/seller/products/new' }])
     : snap.missing.map((key) => MISSING[key]?.link).filter(Boolean);
-  return uniqueLinks([...links, { label: 'Shop setup', to: '/seller/setup' }]).slice(0, 3);
+  return uniqueLinks([...links, { label: 'Complete your shop', to: '/seller' }]).slice(0, 3);
 };
 
 /** What can be waiting on a seller: [key, English, Tagalog, link]. */
@@ -181,7 +181,7 @@ const today = (snap, lang = 'en') => {
 const todayLinks = (snap) => {
   if (!snap.store) return [];
   const links = WAITING.filter(([key]) => snap.waiting[key] > 0).map(([, , , link]) => link);
-  if (snap.readyToSell === false) links.unshift({ label: 'Shop setup', to: '/seller/setup' });
+  if (snap.readyToSell === false) links.unshift({ label: 'Complete your shop', to: '/seller' });
   return links.slice(0, 3);
 };
 
@@ -234,7 +234,7 @@ const notShowingLinks = (snap) => {
   if (snap.store.suspended) return ADMIN_LINKS;
   if (!snap.store.open) return [{ label: 'Name & description', to: '/seller/store/about' }];
   if (!snap.products) return [{ label: 'Add product', to: '/seller/products/new' }];
-  if (snap.readyToSell === false) return uniqueLinks([...snap.missing.map((k) => MISSING[k]?.link).filter(Boolean), { label: 'Shop setup', to: '/seller/setup' }]).slice(0, 3);
+  if (snap.readyToSell === false) return uniqueLinks([...snap.missing.map((k) => MISSING[k]?.link).filter(Boolean), { label: 'Complete your shop', to: '/seller' }]).slice(0, 3);
   return [{ label: 'My products', to: '/seller/products' }];
 };
 
@@ -248,7 +248,7 @@ const TOPICS = [
     related: ['delivery', 'payments', 'add-product'],
     answer: startSelling,
     links: startSellingLinks,
-    facts: 'A shop is ready to sell when: if it delivers, it has at least one delivery area and a fee decided for every area; if it offers pickup, it has a pickup spot; and buyers have a way to pay (cash on, or a QR uploaded). Until then buyers can see its products, but checkout says "This shop isn\'t taking orders yet." Orders open by themselves once the shop is ready. The "Complete your shop" card on Home (computers: Shop setup in the sidebar) lists every step: logo and banner, description and map pin, delivery areas, delivery fees, pickup spot, payment QR (optional while cash is on), first product, verify identity and get approved. Verifying the ID is not needed to sell, but admins approve verified shops faster. A new shop is private until the municipal admin approves it, usually in 1–2 business days.',
+    facts: 'A shop is ready to sell when: if it delivers, it has at least one delivery area and a fee decided for every area; if it offers pickup, it has a pickup spot; and buyers have a way to pay (cash on, or a QR uploaded). Until then buyers can see its products, but checkout says "This shop isn\'t taking orders yet." Orders open by themselves once the shop is ready. The "Complete your shop" card on Home lists every step (computers: the setup card on the Dashboard opens the next one): logo and banner, description and map pin, delivery areas, delivery fees, pickup spot, payment QR (optional while cash is on), first product, verify identity and get approved. Verifying the ID is not needed to sell, but admins approve verified shops faster. A new shop is private until the municipal admin approves it, usually in 1–2 business days.',
   },
   {
     id: 'today',
@@ -603,7 +603,7 @@ const TOPICS = [
     title: 'Seller application and approval',
     keywords: ['approval', 'approve', 'approved', 'application', 'apply', 'applied', 'private', 'under review', 'when approved', 'rejected', 'not approved', 'reapply', 'sell on emoorm', 'naaprubahan', 'aprubahan', 'maaprubahan'],
     related: ['start-selling', 'not-showing', 'add-product'],
-    links: [{ label: 'Shop setup', to: '/seller/setup' }],
+    links: [{ label: 'Complete your shop', to: '/seller' }],
     answer: {
       en: [
         'After you apply, your shop is **private** until your municipal admin approves it (usually 1–2 business days). Meanwhile you can set it up and add products.',

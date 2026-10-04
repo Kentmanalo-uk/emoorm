@@ -23,6 +23,13 @@ const readShop = () => {
 
 let nextId = 1;
 
+// The Seller Center's code (layout and Home) starts downloading the moment a
+// switch to it begins, both at once, so the overlay waits less for it.
+const warmSellerCenter = () => Promise.all([
+  import('../components/layout/SellerLayout'),
+  import('../pages/SellerDashboard'),
+]).catch(() => {});
+
 const useAccountSwitchStore = create((set, get) => ({
   request: null,
   shop: readShop(),
@@ -30,6 +37,7 @@ const useAccountSwitchStore = create((set, get) => ({
     if (get().request) return;
     // Re-point the cart at the signed-in account so no other bucket leaks across the switch.
     useCartStore.getState().setOwner(useAuthStore.getState().user?.id || null);
+    if (target === 'seller') warmSellerCenter();
     set({ request: { id: nextId++, target, path, replace } });
   },
   finish: () => set({ request: null }),

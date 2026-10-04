@@ -79,7 +79,6 @@ const SellerReviews = lazy(() => import('./pages/SellerReviews'));
 const SellerQuestions = lazy(() => import('./pages/SellerQuestions'));
 const SellerAnalytics = lazy(() => import('./pages/SellerAnalytics'));
 const SellerFinance = lazy(() => import('./pages/SellerFinance'));
-const SellerSetup = lazy(() => import('./pages/SellerSetup'));
 const SellerVerification = lazy(() => import('./pages/SellerVerification'));
 const SellerMenu = lazy(() => import('./pages/SellerMenu'));
 const SellerMarketing = lazy(() => import('./pages/SellerMarketing'));
@@ -266,7 +265,8 @@ function AppRoutes() {
         {/* Seller Center — SELLER role only (guarded inside SellerLayout) */}
         <Route path="/seller" element={<SellerLayout />}>
           <Route index element={<SellerDashboard />} />
-          <Route path="setup" element={<SellerSetup />} />
+          {/* Shop setup was removed; old links land on Home. */}
+          <Route path="setup" element={<Navigate to="/seller" replace />} />
           <Route path="verification" element={<SellerVerification />} />
           <Route path="menu" element={<SellerMenu />} />
           <Route path="marketing" element={<SellerMarketing />} />

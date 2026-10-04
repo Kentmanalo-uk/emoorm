@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Storefront } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
@@ -9,11 +9,12 @@ import './AccountSwitch.css';
 
 const SWITCH_MS = 750;
 const EXIT_MS = 220;
+const MAX_WAIT_MS = 10000;
 
 /**
  * Full-screen "switching account" transition. Shows the shop logo when
  * entering the Seller Center and the personal photo when leaving it.
- * Navigates while covered, then fades away over the new page.
+ * Navigates while covered, then fades away once the new page is showing.
  */
 export default function AccountSwitchOverlay() {
   const request = useAccountSwitchStore((s) => s.request);
@@ -22,25 +23,59 @@ export default function AccountSwitchOverlay() {
   const setShop = useAccountSwitchStore((s) => s.setShop);
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationKey = useRef(location.key);
+  useEffect(() => { locationKey.current = location.key; }, [location.key]);
+  const [navigated, setNavigated] = useState(null);
   const [leavingId, setLeavingId] = useState(null);
 
   const toSeller = request?.target === 'seller';
   const shop = cachedShop && (!cachedShop.ownerId || cachedShop.ownerId === user?.id) ? cachedShop : null;
 
+  // Navigate once the overlay has had its moment; it then stays until the
+  // other role's page is really on screen (see below).
   useEffect(() => {
     if (!request) return undefined;
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const switchMs = reduced ? 150 : SWITCH_MS;
     const toPage = setTimeout(() => {
+      setNavigated({ id: request.id, fromKey: locationKey.current });
       navigate(request.path, { replace: Boolean(request.replace) });
-      setLeavingId(request.id);
     }, switchMs);
-    const done = setTimeout(finish, switchMs + EXIT_MS);
-    return () => {
-      clearTimeout(toPage);
-      clearTimeout(done);
+    return () => clearTimeout(toPage);
+  }, [request, navigate]);
+
+  // The router keeps the old page up while the new one's code loads, so a
+  // fixed timer could fade out over the old role. Leave only after the
+  // location has moved and no page is still loading (the route spinner), a
+  // couple of frames later so it has painted. Never longer than MAX_WAIT_MS.
+  const navigatedNow = Boolean(request && navigated?.id === request.id);
+  const moved = navigatedNow && location.key !== navigated.fromKey;
+  useEffect(() => {
+    if (!navigatedNow) return undefined;
+    const id = request.id;
+    let timer = 0;
+    let frame = 0;
+    const leave = () => {
+      clearTimeout(timer);
+      setLeavingId(id);
+      timer = setTimeout(finish, EXIT_MS);
     };
-  }, [request, navigate, finish]);
+    const cap = setTimeout(leave, MAX_WAIT_MS);
+    const check = () => {
+      if (document.querySelector('.route-loading')) {
+        timer = setTimeout(check, 80);
+        return;
+      }
+      frame = requestAnimationFrame(() => { frame = requestAnimationFrame(leave); });
+    };
+    if (moved) check();
+    return () => {
+      clearTimeout(cap);
+      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+    };
+  }, [navigatedNow, moved, request, finish]);
 
   // First switch on this device: fetch the shop so its logo can appear.
   useEffect(() => {

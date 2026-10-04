@@ -407,8 +407,8 @@ export default function SellerApply() {
         sellerApplicationStatus: updated?.sellerApplicationStatus || "PENDING",
       });
       toast.success("Application sent! Let's set up your shop.");
-      // First stop: the Shop setup checklist, not the dashboard.
-      navigate("/seller/setup", { replace: true });
+      // First stop: Home, whose "Complete your shop" card lists the steps.
+      navigate("/seller", { replace: true });
     } catch (err) {
       toast.error(err.message || "Submission failed");
     } finally {

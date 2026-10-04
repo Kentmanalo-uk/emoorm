@@ -61,7 +61,7 @@ const ROUTES = {
   // Account and platform
   'buyer-verification': () => '/profile/verification',
   'seller-verification': () => '/seller/verification',
-  'seller-setup': () => '/seller/setup',
+  'seller-setup': () => '/seller',
   municipality: ({ id }) => (id ? `/municipality/${enc(id)}` : null),
   'admin-dashboard': () => '/admin',
 

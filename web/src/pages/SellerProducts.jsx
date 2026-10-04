@@ -274,8 +274,6 @@ export default function SellerProducts() {
 
   const closeForm = () => {
     if (location.state?.fromList) navigate(-1);
-    // Opened from Shop setup ("Add your first product"): go back to it.
-    else if (location.state?.fromSetup) navigate('/seller/setup', { replace: true });
     else navigate('/seller/products', { replace: true });
   };
 
@@ -452,7 +450,7 @@ export default function SellerProducts() {
         {isPhone && (notReady || restockCount > 0 || suspendedCount > 0) && (
           <div className="spm spm-notices">
             {notReady && (
-              <Link to={blockers[0]?.to || '/seller/setup'} className="sh-notice is-amber" role="status">
+              <Link to={blockers[0]?.to || '/seller'} className="sh-notice is-amber" role="status">
                 <span className="sh-notice-icon"><AlertCircle size={22} weight="fill" /></span>
                 <span className="sh-notice-text">
                   <b>Buyers can't order yet</b>
@@ -500,7 +498,7 @@ export default function SellerProducts() {
                 .
               </span>
             </div>
-            <Link to="/seller/setup" className="btn-seller-primary products-notlive-btn">Finish setup</Link>
+            <Link to={blockers[0]?.to || '/seller'} className="btn-seller-primary products-notlive-btn">Finish setup</Link>
           </div>
         )}
 

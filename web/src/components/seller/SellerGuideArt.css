@@ -1,0 +1,66 @@
+/* Seller Center first-visit pictures (SellerGuideArt.jsx): minimal glass
+   over soft glows, the icon in the pink-to-green brand gradient. */
+.sga {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* The bright brand sweep, as on Profile's My Purchase icons. */
+.sga-stop-p { stop-color: #ff4fa7; }
+.sga-stop-g { stop-color: #14d27c; }
+
+.sga-glow-g { fill: var(--t-primary-300, #6ee7b7); opacity: 0.7; }
+.sga-glow-p { fill: var(--t-accent-300, #f9a8d4); opacity: 0.8; }
+.sga-ground { fill: var(--t-primary-900, #064e3b); opacity: 0.08; }
+.sga-lift { flood-color: var(--t-primary-900, #064e3b); flood-opacity: 0.14; }
+
+/* Movement: the glass floats, the pane behind sways, the glows drift. */
+.sga-float,
+.sga-sway,
+.sga-glow,
+.sga-ground {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.sga-float { animation: sga-float 4.2s ease-in-out infinite; }
+.sga-sway { animation: sga-sway 6s ease-in-out infinite; }
+.sga-glow-g { animation: sga-drift-a 7s ease-in-out infinite; }
+.sga-glow-p { animation: sga-drift-b 8s ease-in-out infinite; }
+.sga-ground { animation: sga-ground 4.2s ease-in-out infinite; }
+
+@keyframes sga-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes sga-sway {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  50% { transform: rotate(-3deg) translateY(3px); }
+}
+
+@keyframes sga-drift-a {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(10px, 6px); }
+}
+
+@keyframes sga-drift-b {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-10px, -6px); }
+}
+
+@keyframes sga-ground {
+  0%, 100% { transform: scaleX(1); opacity: 0.08; }
+  50% { transform: scaleX(0.9); opacity: 0.05; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sga-float,
+  .sga-sway,
+  .sga-glow,
+  .sga-ground {
+    animation: none;
+  }
+}

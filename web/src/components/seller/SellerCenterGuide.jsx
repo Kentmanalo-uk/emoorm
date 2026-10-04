@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 import { useLocation } from 'react-router-dom';
 import { completeGuide, shouldShowGuide } from '../../lib/sellerGuides';
+import { usePhoneLayout } from '../../hooks/useMobileNav';
+import SellerPhoneGuide from './SellerPhoneGuide';
 import './SellerCenterGuide.css';
 
 const GUIDES = {
@@ -66,14 +68,21 @@ const GUIDES = {
   ],
 };
 
+/** Phones get one sheet per page (SellerPhoneGuide); computers the tour. */
 export default function SellerCenterGuide({ store, setStore }) {
+  const isPhone = usePhoneLayout();
+  return isPhone
+    ? <SellerPhoneGuide store={store} setStore={setStore} />
+    : <SellerCenterTour store={store} setStore={setStore} />;
+}
+
+function SellerCenterTour({ store, setStore }) {
   const location = useLocation();
   const steps = useMemo(() => GUIDES[location.pathname] || [], [location.pathname]);
   const guideKey = location.pathname;
-  // A seller sent here by Shop setup (or any link to one card) came to do
-  // one thing; the page tour waits for a later visit instead of pulling
-  // them away from it.
-  const focused = Boolean(location.hash) || Boolean(location.state?.fromSetup);
+  // A seller sent here by a link to one card came to do one thing; the page
+  // tour waits for a later visit instead of pulling them away from it.
+  const focused = Boolean(location.hash);
   const eligible = shouldShowGuide(store, guideKey) && !focused;
   const [active, setActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);

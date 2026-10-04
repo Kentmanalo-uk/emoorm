@@ -38,10 +38,9 @@ export default function SellerVerification() {
 
         {verified && (
           <div className="sv-after">
-            <Link to="/seller/setup" className="ss-next-btn">
-              Back to shop setup <ArrowRight size={17} weight="bold" />
+            <Link to="/seller" className="ss-next-btn">
+              Go to dashboard <ArrowRight size={17} weight="bold" />
             </Link>
-            <Link to="/seller" className="sv-after-link">Go to dashboard</Link>
           </div>
         )}
       </div>

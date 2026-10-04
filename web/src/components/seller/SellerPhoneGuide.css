@@ -1,0 +1,98 @@
+/* Phones: the Seller Center's first-visit sheet (SellerPhoneGuide.jsx). */
+.spg {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+}
+
+.spg-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(15, 23, 42, 0.38);
+  animation: spg-fade-in 200ms ease-out both;
+  cursor: default;
+}
+
+.spg-sheet {
+  position: relative;
+  width: 100%;
+  padding: 10px 24px calc(18px + env(safe-area-inset-bottom, 0px));
+  border-radius: 20px 20px 0 0;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.12);
+  animation: spg-up 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.spg.is-closing .spg-backdrop {
+  animation: spg-fade-out 220ms ease-in both;
+}
+
+.spg.is-closing .spg-sheet {
+  animation: spg-down 220ms ease-in both;
+}
+
+.spg-handle {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 6px;
+  border-radius: 999px;
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.spg-art {
+  max-width: 280px;
+  margin: 0 auto 6px;
+}
+
+/* Regular weight, like every phone heading. */
+.spg-title {
+  margin: 0 0 6px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.spg-text {
+  max-width: 320px;
+  margin: 0 auto 18px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.spg-ok {
+  width: 100%;
+  min-height: 46px;
+  border: none;
+  border-radius: 999px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.spg-ok:active {
+  background: var(--t-primary-700, #047857);
+}
+
+@keyframes spg-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes spg-down { from { transform: none; } to { transform: translateY(100%); } }
+@keyframes spg-fade-in { from { opacity: 0; } }
+@keyframes spg-fade-out { to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .spg-backdrop,
+  .spg-sheet,
+  .spg.is-closing .spg-backdrop,
+  .spg.is-closing .spg-sheet {
+    animation: none;
+  }
+}

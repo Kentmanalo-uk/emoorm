@@ -145,7 +145,7 @@ export default function SellerMenu() {
         {/* How the shop is doing, in one row. */}
         {health !== false && (
           <Link
-            to={health?.readyToSell === false ? '/seller/setup' : '/seller/analytics'}
+            to={health?.readyToSell === false ? '/seller' : '/seller/analytics'}
             className={`sh-notice sme-health is-${healthMeta?.tone || 'none'}`}
           >
             <span className="sh-notice-icon"><Heartbeat size={22} weight="fill" /></span>

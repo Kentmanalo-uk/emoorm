@@ -3,13 +3,13 @@ import { NavLink, Link, Outlet, Navigate, useLocation, useNavigate } from 'react
 import {
   SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
-  ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X, ListChecks, ArrowLeft,
+  ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X,
   CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check, Sparkle,
   NotePencil, Question,
 } from '@phosphor-icons/react';
 import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
-import { fetchSellerSetup } from '../../lib/sellerSetup';
+import { fetchSellerSetup, setupNextTo } from '../../lib/sellerSetup';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
@@ -297,14 +297,6 @@ export default function SellerLayout() {
           </div>
 
           <nav className="sc-nav">
-            {setup && !setup.complete && (
-              <NavLink to="/seller/setup" className={navCls} title="Shop setup">
-                <ListChecks size={17} weight="fill" /> <span>Shop setup</span>
-                <span className="sc-nav-progress" aria-label={`${setup.doneCount} of ${setup.total} done`}>
-                  {setup.doneCount}/{setup.total}
-                </span>
-              </NavLink>
-            )}
             <NavLink to="/seller" end className={navCls} title="Dashboard">
               <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
@@ -570,17 +562,10 @@ export default function SellerLayout() {
         </header>
 
         <main className="sc-content">
-          {location.state?.fromSetup && location.pathname !== '/seller/setup' && (
-            <Link to="/seller/setup" className="sc-back-setup">
-              <ArrowLeft size={15} weight="bold" />
-              <span>Back to shop setup</span>
-              {setup && <em>{setup.doneCount} of {setup.total} done</em>}
-            </Link>
-          )}
-          {store && store.isApproved === false && location.pathname !== '/seller/setup' && !(isPhone && ownHeader) && (
+          {store && store.isApproved === false && !(isPhone && ownHeader) && (
             isPhone ? (
-              // Phones: one short line that opens Shop setup, not a paragraph.
-              <Link to="/seller/setup" className="scm-private" role="status">
+              // Phones: one short line that opens what to finish, not a paragraph.
+              <Link to={setupNextTo(setup)} className="scm-private" role="status">
                 <LockSimple size={15} weight="fill" />
                 <span>Private until approved</span>
                 <ChevronRight size={14} weight="bold" />
@@ -676,7 +661,6 @@ const LABELS = {
   '/seller/support': 'Admin Messages',
   '/seller/products': 'My Products',
   '/seller/products/new': 'Add Product',
-  '/seller/setup': 'Shop setup',
   '/seller/verification': 'Verify identity',
   '/seller/menu': 'Menu',
   '/seller/marketing': 'Marketing',
@@ -727,7 +711,6 @@ const PHONE_TITLES = {
   '/seller/fulfillment/delivery': 'Delivery',
   '/seller/fulfillment/payment': 'Payment options',
   '/seller/settings': 'Settings',
-  '/seller/setup': 'Shop setup',
   '/seller/verification': 'Verify identity',
 };
 
