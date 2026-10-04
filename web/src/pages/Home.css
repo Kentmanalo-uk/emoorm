@@ -827,12 +827,9 @@
   border-radius: 2px;
   overflow: hidden;
   text-decoration: none;
-  transition: background-color 0.15s;
+  transition: box-shadow 0.15s ease;
 }
 
-.product-card:hover {
-  background-color: var(--t-neutral-50, #fafafa);
-}
 
 .product-card .product-image {
   position: relative;
@@ -944,11 +941,6 @@
   transition: all 0.2s ease;
 }
 
-.store-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--color-primary);
-}
 
 .store-image {
   position: relative;

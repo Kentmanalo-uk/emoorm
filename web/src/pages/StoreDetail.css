@@ -508,9 +508,6 @@
   transition: background-color 0.15s;
 }
 
-.shop-grid .product-card:hover {
-  background-color: var(--t-neutral-50, #fafafa);
-}
 
 .shop-grid .product-card .product-image {
   position: relative;

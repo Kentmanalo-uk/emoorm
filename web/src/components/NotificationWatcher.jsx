@@ -84,6 +84,9 @@ export default function NotificationWatcher() {
         const n = fresh[0];
         const href = notificationHref(n) || inboxFor(n);
         if (href === here.current) return;
+        // The guided setup after applying asks for the same things (the ID
+        // check, ...): no pop-ups over it; they wait in the notification list.
+        if (here.current.startsWith('/seller/welcome')) return;
         // A plain toast carrying the notification: AppToaster draws it
         // (toast.custom would skip AppToaster and show only the title).
         toast(n.title, {

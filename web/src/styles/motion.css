@@ -1,0 +1,125 @@
+/*
+ * Motion: spring physics, the Apple / Airbnb way.
+ *
+ * Three damped springs (mass 1), sampled into CSS linear() easings, so
+ * things move like real objects: fast off the mark, slowing into place.
+ *   smooth  (stiffness 240, damping 31): settles in 596ms, overshoot 0.0%. Sheets,
+ *           dialogs, things arriving on the page.
+ *   snappy  (stiffness 400, damping 34): settles in 437ms, overshoot 0.6%. Chips,
+ *           hover lifts.
+ *   bouncy  (stiffness 320, damping 24): settles in 579ms, overshoot 5.8%. Small things
+ *           that deserve a little life: the active tab's icon, a chosen chip.
+ * Browsers without linear() get close cubic-bezier curves. Everything here
+ * switches off for people who ask for less motion.
+ *
+ * Only opacity and the individual translate / scale properties are animated:
+ * they compose with an element's own transform, and stay off the main
+ * thread.
+ */
+:root {
+  --spring-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring-snappy: cubic-bezier(0.25, 1.1, 0.5, 1);
+  --spring-bouncy: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --spring-smooth-ms: 600ms;
+  --spring-snappy-ms: 440ms;
+  --spring-bouncy-ms: 580ms;
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring-smooth: linear(0, 0.0192, 0.0669, 0.1317, 0.2054, 0.2823, 0.3586, 0.4317, 0.5001, 0.563, 0.62, 0.6711, 0.7164, 0.7564, 0.7914, 0.8219, 0.8483, 0.8711, 0.8907, 0.9075, 0.9218, 0.9341, 0.9445, 0.9533, 0.9608, 0.9671, 0.9724, 0.9769, 0.9807, 0.9839, 0.9865, 0.9888, 0.9906, 0.9922, 0.9935, 0.9946, 0.9955, 0.9963, 0.9969, 0.9974, 0.9979, 0.9982, 0.9985, 0.9988, 1);
+    --spring-snappy: linear(0, 0.0176, 0.063, 0.1266, 0.2012, 0.281, 0.362, 0.441, 0.5161, 0.5858, 0.6493, 0.7064, 0.7569, 0.801, 0.8391, 0.8717, 0.8992, 0.9222, 0.9412, 0.9567, 0.9693, 0.9792, 0.987, 0.993, 0.9975, 1.0008, 1.0031, 1.0047, 1.0057, 1.0061, 1.0063, 1.0062, 1.0059, 1.0055, 1.005, 1.0045, 1.004, 1.0035, 1.0031, 1.0026, 1.0022, 1.0019, 1.0015, 1.0013, 1);
+    --spring-bouncy: linear(0, 0.0249, 0.0892, 0.1791, 0.2835, 0.3935, 0.5025, 0.6054, 0.6991, 0.7817, 0.8523, 0.9107, 0.9575, 0.9937, 1.0203, 1.0388, 1.0504, 1.0566, 1.0583, 1.0569, 1.0531, 1.0479, 1.0418, 1.0353, 1.029, 1.023, 1.0175, 1.0127, 1.0086, 1.0052, 1.0025, 1.0004, 0.9988, 0.9977, 0.9971, 0.9967, 0.9966, 0.9967, 0.9969, 0.9972, 0.9976, 0.9979, 0.9983, 0.9987, 1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* ── Bottom sheets (phones): rise on the smooth spring ────────────── */
+  @media (max-width: 768px) {
+    .ui-sheet-backdrop:not(.is-closing) .ui-sheet-panel {
+      animation: ui-sheet-up 560ms var(--spring-smooth) both;
+    }
+
+    .ui-sheet-backdrop.is-closing .ui-sheet-panel {
+      animation: ui-sheet-down 240ms cubic-bezier(0.4, 0, 0.8, 0.6) both;
+    }
+  }
+
+  /* ── Dialogs (computers): grow in from 96% as they fade in ────────── */
+  @media (min-width: 769px) {
+    [role='dialog'][aria-modal='true'] {
+      animation: motion-dialog-in 420ms var(--spring-smooth) both;
+    }
+  }
+
+  @keyframes motion-dialog-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+      translate: 0 8px;
+    }
+  }
+
+  /* ── A new page fades in (opacity only: fixed bars stay put) ──────── */
+  .layout-main,
+  :is(.sc-content, .ac-content) > * {
+    animation: motion-page-in 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  /* The product picture's glide (lib/productTransition.jsx) is the
+     transition there. */
+  html.is-view-transition :is(.layout-main, .sc-content > *, .ac-content > *) {
+    animation: none;
+  }
+
+  @keyframes motion-page-in {
+    from { opacity: 0; }
+  }
+
+  @keyframes motion-rise {
+    from {
+      opacity: 0;
+      translate: 0 14px;
+    }
+  }
+
+  /* ── Chips and tabs: colours ease; the chosen one pops ────────────── */
+  html :is(.scm-chip, .msgr-chip, .avt-chip, .avt-m-fchip, .stw-tabs button, .seller-tab, .sq-tabs button, .srch-m-fchip) {
+    transition:
+      background-color 0.22s ease,
+      color 0.22s ease,
+      border-color 0.22s ease,
+      box-shadow 0.22s ease;
+  }
+
+  :is(.scm-chip, .msgr-chip, .avt-chip, .stw-tabs button):is(.is-on, [aria-selected='true']) {
+    animation: motion-pop var(--spring-bouncy-ms) var(--spring-bouncy) both;
+  }
+
+  @keyframes motion-pop {
+    from { scale: 0.9; }
+  }
+
+  /* ── Switches: the knob slides on a spring ────────────────────────── */
+  html .pf-switch-track span {
+    transition: transform var(--spring-snappy-ms) var(--spring-snappy);
+  }
+
+  /* ── Saved / liked: the heart pops ────────────────────────────────── */
+  .pdp-m-bookmark.is-active svg,
+  .pdp-cta-icon.is-active svg {
+    animation: motion-heart var(--spring-bouncy-ms) var(--spring-bouncy) both;
+  }
+
+  @keyframes motion-heart {
+    0% { scale: 0.6; }
+    100% { scale: 1; }
+  }
+
+  /* ── In-page notes slide in softly ────────────────────────────────── */
+  .co-today-ready,
+  .stw-banner,
+  .avt-note {
+    animation: motion-rise 520ms var(--spring-smooth) both;
+  }
+}

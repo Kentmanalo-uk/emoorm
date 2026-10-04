@@ -14,12 +14,9 @@
   background-color: var(--t-neutral-0, #fff);
   color: inherit;
   text-decoration: none;
-  transition: background-color 0.15s;
+  transition: box-shadow 0.15s ease;
 }
 
-.today-card:hover {
-  background-color: var(--t-neutral-50, #fafafa);
-}
 
 .today-card-image {
   position: relative;

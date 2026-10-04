@@ -399,7 +399,7 @@ export default function SellerProducts() {
   }
 
   const searchBar = (
-    <div className="seller-card products-toolbar">
+    <div className={isPhone ? 'products-toolbar' : 'seller-card products-toolbar'}>
       <form onSubmit={handleSearchSubmit} className="products-search-form" role="search">
         <Search size={16} className="products-search-icon" />
         <input
@@ -411,6 +411,11 @@ export default function SellerProducts() {
           enterKeyHint="search"
           aria-label="Search products"
         />
+        {search && (
+          <button type="button" className="products-search-clear" onClick={() => setSearch('')} aria-label="Clear search">
+            <X size={12} weight="bold" />
+          </button>
+        )}
         <button type="submit" className="products-search-btn">Search</button>
       </form>
     </div>
@@ -511,10 +516,10 @@ export default function SellerProducts() {
           </div>
         )}
 
-        {isPhone && searchBar}
-
-        {/* Status filter tabs */}
+        {/* Status filter tabs (phones: under the search, on one panel as in Chat) */}
         {isPhone ? (
+          <div className="spm-filterbar">
+          {searchBar}
           <div className="scm-chips products-tabs" role="group" aria-label="Show products" ref={chipsRef}>
             {PHONE_QUICK_TABS.map((key) => (
               <button
@@ -536,6 +541,7 @@ export default function SellerProducts() {
               <SlidersHorizontal size={17} weight="bold" />
               {!PHONE_QUICK_TABS.includes(statusFilter) && tabWithCount(statusFilter)}
             </button>
+          </div>
           </div>
         ) : (
           <div className="seller-tabs products-tabs">

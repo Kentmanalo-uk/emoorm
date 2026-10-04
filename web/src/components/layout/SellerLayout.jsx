@@ -23,6 +23,7 @@ import useAttention from '../../hooks/useAttention';
 import { sellerSearchSources } from '../../lib/shellSearchSources';
 import AppLogo from '../AppLogo';
 import SellerCenterGuide from '../seller/SellerCenterGuide';
+import SetupReturnPill from '../seller/SetupReturnPill';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import AppRail from './AppRail';
 import './SellerLayout.css';
@@ -600,6 +601,7 @@ export default function SellerLayout() {
           />
         </main>
         <SellerCenterGuide store={store} setStore={setStore} />
+        <SetupReturnPill />
       </div>
 
       <AppRail unreadCount={unreadCount} onLogout={handleLogout} />

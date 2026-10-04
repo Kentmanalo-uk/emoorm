@@ -821,3 +821,121 @@
 a.pm-btn {
   text-decoration: none;
 }
+
+/* The search's clear button (phones; computers keep the Search button). */
+.products-search-clear {
+  display: none;
+}
+
+/*
+ * Phones: the search and the status tabs on one white panel, edge to edge,
+ * styled as the Chat tab's: a grey rounded search field, then grey chips
+ * that turn green when chosen.
+ */
+@media (max-width: 768px) {
+  /* One section of the page (edge to edge, with the grey band under it:
+     styles/phone-app.css). */
+  .sc-shell .sc-content .spm-filterbar {
+    background: var(--t-neutral-0, #fff);
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-toolbar {
+    margin: 0;
+    padding: 14px 16px 8px;
+    border-radius: 0;
+    background: none;
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-search-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 0 8px 0 14px;
+    border-radius: 12px;
+    background: var(--t-neutral-100, #f3f4f6);
+    transition: box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-search-form:focus-within {
+    box-shadow: inset 0 0 0 1px var(--t-primary-600, #059669);
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-search-icon {
+    position: static;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    transform: none;
+    color: var(--t-neutral-500, #6b7280);
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-search-input {
+    flex: 1;
+    min-width: 0;
+    height: 46px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    outline: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--t-neutral-900, #111827);
+    font-size: 16px;
+    font-weight: 400;
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-search-input::placeholder {
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-search-input::-webkit-search-cancel-button {
+    display: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-search-clear {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--t-neutral-300, #d1d5db);
+    color: var(--t-neutral-0, #fff);
+    cursor: pointer;
+  }
+
+  /* Tabs: as Chat's All / Unread. */
+  .sc-shell .sc-content .spm-filterbar .products-tabs.scm-chips {
+    gap: 8px;
+    margin: 0;
+    padding: 2px 16px 10px;
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-tabs .scm-chip {
+    min-height: 34px;
+    padding: 0 14px;
+    border: 0;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-700, #374151);
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-tabs .scm-chip.is-on {
+    background: var(--t-primary-600, #059669);
+    color: #fff;
+  }
+
+  .sc-shell .sc-content .spm-filterbar .products-tabs .scm-chip--more.is-icon {
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+  }
+}

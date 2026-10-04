@@ -2,7 +2,8 @@ import { useId } from 'react';
 import {
   SquaresFour, Package, Camera, ClipboardText, ArrowCounterClockwise, ChatCircleDots, Lightbulb,
   Megaphone, PaintBrush, UserCircle, Storefront, Truck, ChartLineUp, Wallet, Star, Question,
-  Bell, Headset, GearSix, CookingPot,
+  Bell, Headset, GearSix, CookingPot, IdentificationCard, Briefcase, Image as ImageIcon, NotePencil,
+  MapPin, QrCode, RocketLaunch, Confetti,
 } from '@phosphor-icons/react';
 import './SellerGuideArt.css';
 
@@ -19,6 +20,18 @@ const SCENES = {
   newProduct: { Icon: Camera, shape: 'circle', tilt: 0 },
   orders: { Icon: ClipboardText, shape: 'phone', tilt: 10 },
   today: { Icon: CookingPot, shape: 'circle', tilt: 0 },
+  // The guided setup (/seller/welcome).
+  welcome: { Icon: Confetti, shape: 'circle', tilt: 0 },
+  identity: { Icon: IdentificationCard, shape: 'wide', tilt: -7 },
+  business: { Icon: Briefcase, shape: 'square', tilt: 9 },
+  payout: { Icon: Wallet, shape: 'square', tilt: -9 },
+  branding: { Icon: ImageIcon, shape: 'wide', tilt: 7 },
+  about: { Icon: NotePencil, shape: 'bubble', tilt: -8 },
+  delivery: { Icon: Truck, shape: 'wide', tilt: -6 },
+  pickup: { Icon: MapPin, shape: 'circle', tilt: 0 },
+  payment: { Icon: QrCode, shape: 'square', tilt: 8 },
+  product: { Icon: Camera, shape: 'circle', tilt: 0 },
+  ready: { Icon: RocketLaunch, shape: 'circle', tilt: 0 },
   returns: { Icon: ArrowCounterClockwise, shape: 'circle', tilt: 0 },
   messages: { Icon: ChatCircleDots, shape: 'bubble', tilt: 8 },
   assistant: { Icon: Lightbulb, shape: 'bubble', tilt: -8 },

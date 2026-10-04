@@ -1,0 +1,55 @@
+/* "Back to setup" (SetupReturnPill.jsx): floats above the page. */
+.srp {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--t-neutral-900, #111827);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+  transform: translateX(-50%);
+}
+
+.srp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.srp-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+}
+
+/* Phones: above the tab bar. */
+@media (max-width: 768px) {
+  .srp {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  body.pf-open .srp {
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+}

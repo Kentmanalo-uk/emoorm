@@ -733,7 +733,79 @@ const getSellerApplication = async (userId) => {
     history: Array.isArray(record.sellerApplicationHistory) ? record.sellerApplicationHistory : [],
     draft: record.sellerApplicationDraft || null,
     identityVerified: await identityVerificationService.isVerified(userId),
+    // What the seller can still add after applying (guided setup).
+    details: {
+      sellerBusinessType: record.sellerBusinessType || 'INDIVIDUAL',
+      sellerPermitNumber: record.sellerPermitNumber || '',
+      sellerPermitUrl: record.sellerPermitUrl || '',
+      sellerBirTin: record.sellerBirTin || '',
+      payoutMethod: record.payoutMethod || '',
+      payoutAccountName: record.payoutAccountName || '',
+      payoutAccountNumber: record.payoutAccountNumber || '',
+    },
   };
+};
+
+/**
+ * Business and payout details, added or changed after applying: the
+ * application asks only for what is needed to open the shop, and the guided
+ * setup asks for these next. Only these fields change; the rules are the
+ * application's (a registered business needs its permit number; a payout
+ * method other than cash needs the account's name and number).
+ * @param {String} userId
+ * @param {Object} data
+ */
+const updateSellerDetails = async (userId, data = {}) => {
+  const record = await userRepository.findSellerApplication(userId);
+  if (!record) throw new ApiError('User not found', 404);
+  if (record.role !== 'SELLER' || !record.sellerApplicationStatus) {
+    throw new ApiError('Apply to sell first', 400);
+  }
+
+  const has = (key) => Object.prototype.hasOwnProperty.call(data, key);
+  const changes = {};
+
+  if (has('sellerBusinessType')) {
+    const type = trimmed(data.sellerBusinessType).toUpperCase() || 'INDIVIDUAL';
+    if (!BUSINESS_TYPES.includes(type)) throw new ApiError('Invalid business type', 400);
+    changes.sellerBusinessType = type;
+    if (type === 'REGISTERED') {
+      const permit = trimmed(data.sellerPermitNumber);
+      if (!permit) throw new ApiError('Permit or registration number is required', 400);
+      if (permit.length > 60) throw new ApiError('Use 60 characters or fewer for the permit number', 400);
+      const tin = trimmed(data.sellerBirTin);
+      if (tin.length > 30) throw new ApiError('Use 30 characters or fewer for the TIN', 400);
+      changes.sellerPermitNumber = permit;
+      changes.sellerBirTin = tin || null;
+      changes.sellerPermitUrl = trimmed(data.sellerPermitUrl).slice(0, 500) || null;
+    } else {
+      changes.sellerPermitNumber = null;
+      changes.sellerBirTin = null;
+      changes.sellerPermitUrl = null;
+    }
+  }
+
+  if (has('payoutMethod')) {
+    const method = trimmed(data.payoutMethod).toUpperCase();
+    if (!PAYOUT_METHODS.includes(method)) throw new ApiError('Choose how you want to be paid', 400);
+    changes.payoutMethod = method;
+    if (method === 'COD_ONLY') {
+      changes.payoutAccountName = null;
+      changes.payoutAccountNumber = null;
+    } else {
+      const name = trimmed(data.payoutAccountName);
+      const number = trimmed(data.payoutAccountNumber);
+      if (!name) throw new ApiError('Payout account name is required', 400);
+      if (!number) throw new ApiError('Payout account number is required', 400);
+      if (name.length > 100 || number.length > 40) throw new ApiError('That account detail is too long', 400);
+      changes.payoutAccountName = name;
+      changes.payoutAccountNumber = number;
+    }
+  }
+
+  if (!Object.keys(changes).length) throw new ApiError('Nothing to save', 400);
+  await userRepository.updateSellerDetails(userId, changes, record.sellerApplicationHistory);
+  return getSellerApplication(userId);
 };
 
 /** Fields the draft is allowed to carry — anything else is dropped. */
@@ -1528,6 +1600,7 @@ module.exports = {
   applyForSeller,
   getSellerApplication,
   saveSellerApplicationDraft,
+  updateSellerDetails,
   SELLER_TERMS_VERSION,
   getUserById,
   getUsers,

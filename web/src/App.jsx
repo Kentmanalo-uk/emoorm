@@ -89,6 +89,7 @@ const SellerShopHome = lazy(() => import('./pages/SellerShopHome'));
 const SellerFulfillment = lazy(() => import('./pages/SellerFulfillment'));
 const SellerSettings = lazy(() => import('./pages/SellerSettings'));
 const SellerToday = lazy(() => import('./pages/SellerToday'));
+const SellerWelcome = lazy(() => import('./pages/SellerWelcome'));
 const MunicipalityGallery = lazy(() => import('./pages/MunicipalityGallery'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminSellers = lazy(() => import('./pages/AdminSellers'));
@@ -264,6 +265,8 @@ function AppRoutes() {
 
         {/* Seller onboarding */}
         <Route path="/seller/apply" element={<SellerApply />} />
+        {/* Guided setup right after applying (full screen, every step skippable). */}
+        <Route path="/seller/welcome" element={<SellerWelcome />} />
 
         {/* Seller Center — SELLER role only (guarded inside SellerLayout) */}
         <Route path="/seller" element={<SellerLayout />}>

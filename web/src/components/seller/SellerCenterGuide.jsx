@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { completeGuide, shouldShowGuide } from '../../lib/sellerGuides';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import SellerPhoneGuide from './SellerPhoneGuide';
+import { useSetupReturn } from '../../lib/setupReturn';
 import './SellerCenterGuide.css';
 
 const GUIDES = {
@@ -71,6 +72,9 @@ const GUIDES = {
 /** Phones get one sheet per page (SellerPhoneGuide); computers the tour. */
 export default function SellerCenterGuide({ store, setStore }) {
   const isPhone = usePhoneLayout();
+  // On an errand from the guided setup: no page tours on top of it.
+  const fromSetup = useSetupReturn();
+  if (fromSetup) return null;
   return isPhone
     ? <SellerPhoneGuide store={store} setStore={setStore} />
     : <SellerCenterTour store={store} setStore={setStore} />;

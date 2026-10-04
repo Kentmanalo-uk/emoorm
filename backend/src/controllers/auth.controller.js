@@ -174,6 +174,16 @@ const saveSellerApplicationDraft = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Add or change business and payout details after applying
+ * @route PATCH /api/auth/seller-application/details
+ * @access Private (SELLER)
+ */
+const updateSellerDetails = asyncHandler(async (req, res) => {
+  const application = await authService.updateSellerDetails(req.user.id, req.body || {});
+  successResponse(res, application, 'Details saved');
+});
+
+/**
  * Get user by ID (Admin)
  * @route GET /api/auth/users/:id
  * @access Private (ADMIN only)
@@ -560,6 +570,7 @@ module.exports = {
   applyForSeller,
   getSellerApplication,
   saveSellerApplicationDraft,
+  updateSellerDetails,
   getUserById,
   getKycPhoto,
   revealUserContact,

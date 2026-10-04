@@ -438,6 +438,18 @@ const saveSellerApplicationDraft = async (userId, draft) => {
  * @param {Object} entry - { action, by, byName, reason }
  * @returns {Array} New history array
  */
+/**
+ * Business and payout details added after applying (the seller's guided
+ * setup), with a line in the application history.
+ */
+const updateSellerDetails = async (userId, data, history = []) => prisma.user.update({
+  where: { id: userId },
+  data: {
+    ...data,
+    sellerApplicationHistory: appendHistory(history, { action: 'DETAILS_UPDATED', by: userId }),
+  },
+});
+
 const appendHistory = (history, entry) => {
   const list = Array.isArray(history) ? history : [];
   return [...list, { ...entry, at: new Date().toISOString() }].slice(-50);
@@ -635,6 +647,7 @@ const findKycRecordById = async (id) => {
 };
 
 module.exports = {
+  updateSellerDetails,
   createUser,
   findByEmail,
   findByGoogleId: async (googleId) => {

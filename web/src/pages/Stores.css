@@ -192,14 +192,9 @@
   gap: 12px;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  transition: box-shadow 0.15s ease;
 }
 
-.store-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  border-color: var(--t-primary-600, #059669);
-}
 
 .store-card-avatar {
   width: 56px;

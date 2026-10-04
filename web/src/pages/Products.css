@@ -325,14 +325,11 @@
   border-radius: 2px;
   overflow: hidden;
   text-decoration: none;
-  transition: background-color 0.15s;
+  transition: box-shadow 0.15s ease;
   display: flex;
   flex-direction: column;
 }
 
-.product-card:hover {
-  background-color: var(--t-neutral-50, #fafafa);
-}
 
 .product-image {
   position: relative;

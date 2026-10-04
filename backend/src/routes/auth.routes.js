@@ -147,6 +147,14 @@ router.put(
   authController.saveSellerApplicationDraft
 );
 
+// Business and payout details, added after applying (guided setup).
+router.patch(
+  '/seller-application/details',
+  authenticate,
+  authorize('SELLER'),
+  authController.updateSellerDetails
+);
+
 // Admin routes
 router.get(
   '/users',
