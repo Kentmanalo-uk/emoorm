@@ -29,6 +29,11 @@ const PAGES = {
     title: 'Add a product',
     text: 'Clear photos, a fair price and the stock you have. New listings may get a quick check before buyers see them.',
   },
+  '/seller/today': {
+    art: 'today',
+    title: "Today's menu",
+    text: 'Post fresh food or harvests with how many you have and until when. Buyers order until it ends or sells out; you confirm each order quickly.',
+  },
   '/seller/orders': {
     art: 'orders',
     title: 'Orders, step by step',

@@ -59,6 +59,7 @@ router.use('/account', require('./account.routes'));
 router.use('/me', require('./savedItems.routes'));
 router.use('/questions', require('./productQuestion.routes'));
 router.use('/views', require('./productView.routes'));
+router.use('/today', require('./availability.routes'));
 router.use('/push', require('./push.routes'));
 router.use('/auth/phone', require('./phoneVerify.routes'));
 router.use('/municipalities', municipalityRoutes);

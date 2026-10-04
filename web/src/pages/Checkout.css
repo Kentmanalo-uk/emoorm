@@ -1630,7 +1630,7 @@
   .co-phone .section-header h2,
   .co-phone .checkout-summary h3 {
     font-size: 17px;
-    font-weight: 400;
+    font-weight: 500;
     border-bottom: none;
   }
 
@@ -2026,4 +2026,15 @@
   color: var(--t-primary-800, #065f46);
   font-size: 13px;
   line-height: 1.5;
+}
+
+/* Available Today: when the order is ready. */
+.co-today-ready {
+  margin: -4px 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #03684c);
+  font-size: 14px;
+  font-weight: 500;
 }

@@ -99,6 +99,7 @@ const getSellerAttention = async (actor) => {
         storeId: store.id,
         deletedAt: null,
         status: 'APPROVED',
+        listingKind: 'REGULAR',
         stock: { lte: prisma.product.fields.lowStockThreshold },
       },
       select: { updatedAt: true },

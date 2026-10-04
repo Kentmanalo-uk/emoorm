@@ -2,6 +2,7 @@ const prisma = require('../config/database');
 const { invalidateProductIds } = require('./product.repository');
 const { changeStock } = require('./stockLedger');
 const { stageWhere } = require('../utils/orderStages');
+const { isOpen } = require('../utils/availability');
 
 const ORDER_STATUSES = new Set(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP', 'SHIPPED']);
 
@@ -86,6 +87,19 @@ const createOrderTx = (orderData, itemsData, voucherRedemption) => withDeadlockR
           actorId: orderData.buyerId,
         },
       });
+      // Available Today: counted against its window, which must still be
+      // taking orders now (the clock may have ended it since checkout began).
+      if (item.availabilityId) {
+        const counted = await tx.productAvailability.updateMany({
+          where: { id: item.availabilityId, status: 'LIVE', ordersCloseAt: { gt: new Date() } },
+          data: { soldCount: { increment: item.quantity } },
+        });
+        if (counted.count === 0) {
+          const err = new Error('This Available Today window has closed');
+          err.code = 'TODAY_CLOSED';
+          throw err;
+        }
+      }
     }
 
     // Create order
@@ -633,11 +647,23 @@ const cancelOrderTx = async (id, actorId = null, {
 
     const items = await tx.orderItem.findMany({
       where: { orderId: id },
-      select: { productId: true, quantity: true, selectedVariations: true },
+      select: {
+        productId: true, quantity: true, selectedVariations: true, availabilityId: true, availability: true,
+      },
       orderBy: { productId: 'asc' },
     });
 
     for (const item of items) {
+      // Available Today: the window's sold count goes down; its stock comes
+      // back only while it still takes orders (after it ends, the batch is
+      // over and there is nothing to return the units to).
+      if (item.availabilityId) {
+        await tx.productAvailability.updateMany({
+          where: { id: item.availabilityId, soldCount: { gte: item.quantity } },
+          data: { soldCount: { decrement: item.quantity } },
+        });
+        if (!isOpen(item.availability)) continue;
+      }
       const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, item.quantity);
       await tx.inventoryMovement.create({
         data: {

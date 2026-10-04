@@ -88,6 +88,7 @@ const SellerTemplatePreview = lazy(() => import('./pages/SellerDecorate').then((
 const SellerShopHome = lazy(() => import('./pages/SellerShopHome'));
 const SellerFulfillment = lazy(() => import('./pages/SellerFulfillment'));
 const SellerSettings = lazy(() => import('./pages/SellerSettings'));
+const SellerToday = lazy(() => import('./pages/SellerToday'));
 const MunicipalityGallery = lazy(() => import('./pages/MunicipalityGallery'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminSellers = lazy(() => import('./pages/AdminSellers'));
@@ -118,6 +119,7 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const CookiePolicy = lazy(() => import('./pages/CookiePolicy'));
 const AppDownload = lazy(() => import('./pages/AppDownload'));
 const SearchByImage = lazy(() => import('./pages/SearchByImage'));
+const AvailableToday = lazy(() => import('./pages/AvailableToday'));
 const SellerReturns = lazy(() => import('./pages/SellerReturns'));
 
 /** Shown for the moment a page loaded on demand is on its way. */
@@ -207,6 +209,7 @@ function AppRoutes() {
         <Route path="/product/:slug" element={<ProductDetails />} />
         <Route path="/product/:slug/reviews" element={<ProductReviews />} />
         <Route path="/stores" element={<Stores />} />
+        <Route path="/today" element={<AvailableToday />} />
         <Route path="/store/:slug" element={<StoreDetail />} />
         <Route path="/u/:id" element={<PublicProfile />} />
         <Route path="/municipality/:id" element={<MunicipalityShowcase />} />
@@ -282,6 +285,7 @@ function AppRoutes() {
           <Route path="notifications" element={<Notifications mode="SELLER" bare shell="seller" />} />
           <Route path="products" element={<SellerProducts />} />
           <Route path="products/new" element={<SellerProducts />} />
+          <Route path="today" element={<SellerToday />} />
           <Route path="reviews" element={<SellerReviews />} />
           <Route path="questions" element={<SellerQuestions />} />
           <Route path="analytics" element={<SellerAnalytics />} />

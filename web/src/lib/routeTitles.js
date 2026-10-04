@@ -15,6 +15,7 @@ const RULES = [
   [/^\/(products|search)$/, 'Search products'],
   [/^\/search\/image/, 'Search by image'],
   [/^\/stores$/, 'Stores'],
+  [/^\/today$/, 'Available Today'],
   [/^\/municipality\/[^/]+\/gallery/, 'Photo gallery'],
   [/^\/municipality\//, 'Local shops'],
   [/^\/privacy/, 'Privacy Policy'],

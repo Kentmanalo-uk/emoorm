@@ -6,7 +6,7 @@ import {
   Heart, ShareNetwork as Share2, Storefront as Store, MapPin,
   Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck, Info, CalendarCheck,
   CaretRight as ChevronRightSm, ChatCircle as MessageCircle, Money, QrCode, Flag,
-  MagnifyingGlass, ShoppingCart, ShoppingCartSimple, CaretDown,
+  MagnifyingGlass, ShoppingCart, ShoppingCartSimple, CaretDown, Clock,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -38,6 +38,11 @@ import { awayUntil, shortDate } from '../lib/shopHours';
 import { saleInfo } from '../lib/variantPricing';
 import { recordView } from '../lib/recentlyViewed';
 import { estimate, readyDay, rangeLabel, dayLabel } from '../lib/eta';
+import {
+  isTodayProduct, isOpen as windowOpen, windowState, spanLabel, fulfillmentLabel,
+} from '../lib/availability';
+import TimeLeft from '../components/ui/TimeLeft';
+import TodayTag, { ProductTodayTag } from '../components/today/TodayTag';
 import ProductQuestions from '../components/product/ProductQuestions';
 import { SaleWas, SaleEnds, BulkPrices } from '../components/ui/SaleTag';
 
@@ -361,6 +366,8 @@ const ProductDetails = () => {
         storeName: product.store?.name,
         storeLogo: product.store?.logoUrl || product.store?.logo || null,
         stock: stockForSelection(product, selectedVariations),
+        listingKind: product.listingKind,
+        availability: product.availability,
         slug: product.slug,
         categoryId: product.categoryId,
         productId: product.id,
@@ -434,6 +441,10 @@ const ProductDetails = () => {
   const etaLines = useMemo(() => {
     const st = product?.store;
     if (!st || st.readyToSell === false || awayUntil(st)) return [];
+    if (isTodayProduct(product)) {
+      const w = product.availability;
+      return w ? [`Ready ${spanLabel(w.readyFrom, w.readyUntil)}`] : [];
+    }
     const mode = st.fulfillmentMode || 'DELIVERY';
     const lower = (t) => t.replace(/Today|Tomorrow/g, (w) => w.toLowerCase());
     return [
@@ -675,8 +686,14 @@ const ProductDetails = () => {
   // The shop is still setting up (shopReadiness on the API): its products
   // are on show, but checkout refuses them until it is ready to sell.
   const away = awayUntil(product.store);
-  const notTakingOrders = product.store?.readyToSell === false || Boolean(away);
-  const closedLabel = away ? `Shop away until ${shortDate(away)}` : 'Not taking orders yet';
+  // Available Today: orderable only while its window takes orders.
+  const todayItem = isTodayProduct(product);
+  const todayWindow = product.availability || null;
+  const todayClosed = todayItem && !windowOpen(todayWindow);
+  const notTakingOrders = product.store?.readyToSell === false || Boolean(away) || todayClosed;
+  const closedLabel = away
+    ? `Shop away until ${shortDate(away)}`
+    : todayClosed ? windowState(todayWindow).text : 'Not taking orders yet';
   const cannotBuy = isOutOfStock || notTakingOrders;
   // Per-option pricing: the chosen option's price, or the range until one is chosen.
   const pricedGroup = pricedVariation(product.variations);
@@ -718,6 +735,8 @@ const ProductDetails = () => {
         readyToSell: p.store?.readyToSell,
         vacationUntil: p.store?.vacationUntil,
         stock: p.stock,
+        listingKind: p.listingKind,
+        availability: p.availability,
         slug: p.slug,
         categoryId: p.categoryId,
         selectedVariations: null,
@@ -918,7 +937,10 @@ const ProductDetails = () => {
                   aria-hidden="true"
                 />
               )}
-              <h1 className="pdp-title">{product.name}</h1>
+              <h1 className="pdp-title">
+                {isTodayProduct(product) && product.availability && <TodayTag mode={product.availability.mode} className="pdp-title-tag" />}
+                {product.name}
+              </h1>
               {isPhone && (
                 <div className="pdp-m-title-tools">
                   <button
@@ -979,6 +1001,37 @@ const ProductDetails = () => {
 
               {/* Row attributes */}
               <div className="pdp-rows">
+                {todayItem && (
+                  <div className="pdp-row pdp-today">
+                    <div className="pdp-row-label">Available today:</div>
+                    <div className="pdp-row-content">
+                      {todayWindow ? (
+                        <>
+                          <div className="pdp-row-line">
+                            <TodayTag mode={todayWindow.mode} className="pdp-today-tag" />
+                            <span className={`pdp-today-state is-${windowState(todayWindow, product.stock).tone}`}>
+                              {windowState(todayWindow, product.stock).text}
+                            </span>
+                            {windowOpen(todayWindow) && <TimeLeft until={todayWindow.ordersCloseAt} prefix="· ends in" className="pdp-today-left" />}
+                          </div>
+                          {todayWindow.prepMinutes ? (
+                            <div className="pdp-row-line">
+                              <Clock size={14} className="pdp-row-icon" />
+                              <span>Made in about {todayWindow.prepMinutes} min after you order</span>
+                            </div>
+                          ) : null}
+                          <div className="pdp-row-line">
+                            <Truck size={14} className="pdp-row-icon" />
+                            <span>{fulfillmentLabel(todayWindow.fulfillment)}</span>
+                          </div>
+                          {todayWindow.note && <div className="pdp-row-line pdp-today-note">{todayWindow.note}</div>}
+                        </>
+                      ) : (
+                        <div className="pdp-row-line"><span className="pdp-today-state is-ended">Not available now. The shop posts it on the days it has it.</span></div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="pdp-row">
                   <div className="pdp-row-label">Delivery Options:</div>
                   <div className="pdp-row-content">
@@ -1352,7 +1405,7 @@ const ProductDetails = () => {
                       <ProductImage src={parseImages(p.images)[0]} alt={p.name} />
                     </div>
                     <div className="product-info">
-                      <span className="product-name">{p.name}</span>
+                      <span className="product-name"><ProductTodayTag product={p} />{p.name}</span>
                       <span className="product-price">{peso(saleInfo(p).price)} <SaleWas product={p} compact /></span>
                       {renderShelfRating(p)}
                     </div>
@@ -1378,7 +1431,7 @@ const ProductDetails = () => {
                       <ProductImage src={parseImages(p.images)[0]} alt={p.name} />
                     </div>
                     <div className="product-info">
-                      <span className="product-name">{p.name}</span>
+                      <span className="product-name"><ProductTodayTag product={p} />{p.name}</span>
                       <span className="product-price">{peso(saleInfo(p).price)} <SaleWas product={p} compact /></span>
                       {renderShelfRating(p)}
                     </div>

@@ -310,6 +310,29 @@ const TOPICS = [
     },
   },
   {
+    id: 'available-today',
+    title: 'Available Today: fresh food for a limited time',
+    keywords: ['available today', 'today only', 'fresh food', 'cooked food', 'made to order', 'pre-order', 'preorder', 'pre order', 'ready now', 'limited time', 'meal', 'meals', 'ulam', 'luto', 'kakanin', 'ngayong araw', 'sold out'],
+    related: ['how-to-buy', 'delivery', 'cancel'],
+    links: [{ label: 'Available Today', to: '/today' }],
+    answer: {
+      en: [
+        'Available Today shows food and produce local shops have for a limited time: on Home, and in full at **Available Today**.',
+        '- **Ready now**: already made. **Made to order**: cooked after you order. **Pre-order**: order now, ready later (like tomorrow morning).',
+        '- Each one shows how long you can still order, when it is ready and how many are left. Once the time ends or it sells out, it can no longer be ordered.',
+        "- Today items check out on their own (not with other items in your cart), by pickup or the shop's own delivery.",
+        '- The shop confirms your order quickly; if it does not, the order cancels on its own.',
+      ].join('\n'),
+      tl: [
+        'Ang Available Today ay mga pagkain at ani na meron ang mga lokal na shop sa limitadong oras: nasa Home, at kumpleto sa **Available Today**.',
+        '- **Ready now**: luto na. **Made to order**: lulutuin pagka-order mo. **Pre-order**: umorder ngayon, handa mamaya o bukas.',
+        '- Makikita sa bawat isa kung hanggang kailan puwedeng umorder, kailan ito handa at ilan na lang ang natitira. Kapag tapos na ang oras o naubos na, hindi na ito maoorder.',
+        '- Hiwalay na nagche-checkout ang Today items (hindi kasama ang ibang item sa cart), pick up o delivery ng shop mismo.',
+        '- Kinukumpirma agad ng shop ang order mo; kung hindi, kusa itong makakansela.',
+      ].join('\n'),
+    },
+  },
+  {
     id: 'chat',
     title: 'Messaging a shop',
     keywords: ['message', 'chat', 'contact', 'contact seller', 'ask the seller', 'talk to seller', 'seller', 'shop owner', 'inbox', 'messages', 'reply', 'kausapin', 'i-message', 'imessage', 'magtanong sa seller'],

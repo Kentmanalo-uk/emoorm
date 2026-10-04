@@ -597,7 +597,7 @@
 
 .pf-group-title {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--pf-ink);
 }
 
@@ -1188,4 +1188,14 @@
   .pf-back {
     display: none;
   }
+}
+
+/* How it is sold: always available, or Available Today. */
+.pf-kind { margin-bottom: 16px; }
+.pf-kind-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t-text, #111827);
 }

@@ -21,6 +21,8 @@ import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import useAppSettings from '../hooks/useAppSettings';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
+import TodayRail from '../components/today/TodayRail';
+import { ProductTodayTag } from '../components/today/TodayTag';
 
 const EXPLORE_ROWS = 5;
 const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
@@ -395,7 +397,7 @@ const Home = () => {
       {/* Categories Section: pictures, or gradient icons (Settings › Branding) */}
       <section className={`categories-section${categoryIcons ? ' is-icons' : ''}`}>
         <div className="container">
-          <h2 className="section-title">Shop by Category</h2>
+          <h2 className="section-title title-medium">Shop by Category</h2>
           {(categoryIcons || sharedCategories.some((c) => !c.image)) && <CategoryIconGradients />}
           <div className="categories-grid">
             {sharedCategories.map((cat) => (
@@ -421,11 +423,14 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Available Today: fresh items for a limited time (hidden when none). */}
+      <TodayRail />
+
       {/* Featured Products Section */}
       <section className="products-section">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Suggested for You</h2>
+            <h2 className="section-title title-medium">Suggested for You</h2>
           </div>
           {featuredProducts.length > 0 ? (
             <div className="products-grid">
@@ -443,7 +448,7 @@ const Home = () => {
                     </button>
                   </div>
                   <div className="product-info">
-                    <span className="product-name">{product.name}</span>
+                    <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
                     <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
                     <ProductStats product={product} />
                   </div>
@@ -470,7 +475,7 @@ const Home = () => {
       <section className="stores-section">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Stores Near You</h2>
+            <h2 className="section-title title-medium">Stores Near You</h2>
             <Link to="/stores" className="section-arrow-link" aria-label="View all stores" title="View all stores"><ArrowRight size={19} /></Link>
           </div>
           {nearbyStores.length > 0 ? (
@@ -498,7 +503,7 @@ const Home = () => {
       <section className="municipalities-section">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Explore Municipals</h2>
+            <h2 className="section-title title-medium">Explore Municipals</h2>
             <Link to="/stores" className="section-arrow-link" aria-label="View all municipalities" title="View all municipalities"><ArrowRight size={19} /></Link>
           </div>
           {municipalities.length > 0 ? (
@@ -529,7 +534,7 @@ const Home = () => {
       <section className="stores-section discover-stores-section">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Discover Stores</h2>
+            <h2 className="section-title title-medium">Discover Stores</h2>
             <Link to="/stores" className="section-arrow-link" aria-label="Browse all stores" title="Browse all stores"><ArrowRight size={19} /></Link>
           </div>
           <StoreLocationMap stores={mappedStores} height={440} lockToPhilippines />
@@ -543,7 +548,7 @@ const Home = () => {
       <section className="products-section home-explore-section">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Explore Products</h2>
+            <h2 className="section-title title-medium">Explore Products</h2>
             <Link to="/products" className="section-arrow-link" aria-label="View all products" title="View all products"><ArrowRight size={19} /></Link>
           </div>
           {exploreProducts.length > 0 && (
@@ -671,7 +676,7 @@ function HomeProductCard({ product, onAddToCart }) {
         </button>
       </div>
       <div className="product-info">
-        <span className="product-name">{product.name}</span>
+        <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
         <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
         <ProductStats product={product} />
       </div>

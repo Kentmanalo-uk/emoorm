@@ -22,6 +22,25 @@ import {
 import '../components/orders/OrderStatusPanel.css';
 import Spinner from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
+import { momentLabel, spanLabel } from '../lib/availability';
+import TimeLeft from '../components/ui/TimeLeft';
+
+// Available Today orders carry a time to confirm by (respondBy); unconfirmed
+// by then, they cancel on their own.
+const TodayTag = ({ order }) => {
+  if (!order?.respondBy) return null;
+  const waiting = order.status === 'PENDING';
+  return (
+    <div className="so-today">
+      <span className="so-today-badge">Today</span>
+      {waiting
+        ? <TimeLeft until={order.respondBy} prefix="Confirm in" className="so-today-due" />
+        : order.etaFrom && !['CANCELLED', 'DELIVERED', 'COMPLETED'].includes(order.status) && (
+          <span className="so-today-ready">Ready {spanLabel(order.etaFrom, order.etaTo || order.etaFrom)}</span>
+        )}
+    </div>
+  );
+};
 
 // How many orders a tab holds (open steps only; not All, Completed, Cancelled).
 const tabCount = (t, byStatus) => (t.key === 'all' || t.final ? 0 : sellerTabCount(t, byStatus));
@@ -607,6 +626,7 @@ export default function SellerOrders() {
                         <td className="order-num">
                           <div>#{order.orderNumber || order.id.slice(-6).toUpperCase()}</div>
                           {orderDate && <div className="so-order-date">{orderDate}</div>}
+                          <TodayTag order={order} />
                         </td>
                         <td>
                           <div className="so-products">
@@ -744,6 +764,18 @@ export default function SellerOrders() {
                     {STATUS_MAP[selectedOrder.status]?.label || selectedOrder.status}
                   </span>
                 </div>
+
+                {selectedOrder.respondBy && (
+                  <div className="detail-row detail-row--col so-today-detail">
+                    <span>Available Today</span>
+                    <p>
+                      {selectedOrder.status === 'PENDING'
+                        ? `Confirm by ${momentLabel(selectedOrder.respondBy)}, or it cancels on its own. `
+                        : ''}
+                      {selectedOrder.etaFrom ? `The buyer expects it ${spanLabel(selectedOrder.etaFrom, selectedOrder.etaTo || selectedOrder.etaFrom)}.` : ''}
+                    </p>
+                  </div>
+                )}
 
                 {(() => {
                   const next = sellerNext(selectedOrder);

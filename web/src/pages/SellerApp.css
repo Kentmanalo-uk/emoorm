@@ -70,7 +70,7 @@
   margin: 0;
   color: var(--sa-ink);
   font-size: 15.5px;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .sh-card-head a {
@@ -985,7 +985,7 @@ a.sh-setup-row:active {
   margin: 0;
   color: var(--sa-ink);
   font-size: 22px;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: -0.2px;
 }
 
@@ -1475,7 +1475,7 @@ a.sh-setup-row:active {
   padding: 14px 16px 0;
   color: var(--sa-ink);
   font-size: 15.5px;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .sdc-row {

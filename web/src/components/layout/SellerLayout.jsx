@@ -66,7 +66,7 @@ export default function SellerLayout() {
   const collapsed = storedCollapsed && !isCompact;
   const mobileNav = useMobileNav(location.pathname);
   const [productsOpen, setProductsOpen] = useState(
-    location.pathname.startsWith('/seller/products')
+    location.pathname.startsWith('/seller/products') || location.pathname.startsWith('/seller/today')
   );
   const [shopOpen, setShopOpen] = useState(
     location.pathname.startsWith('/seller/store')
@@ -332,6 +332,9 @@ export default function SellerLayout() {
                 </NavLink>
                 <NavLink to="/seller/products/new" className={subNavCls}>
                   Add New
+                </NavLink>
+                <NavLink to="/seller/today" className={subNavCls}>
+                  Today&apos;s menu
                 </NavLink>
               </div>
             </div>
@@ -664,6 +667,7 @@ const LABELS = {
   '/seller/support': 'Admin Messages',
   '/seller/products': 'My Products',
   '/seller/products/new': 'Add Product',
+  '/seller/today': "Today's menu",
   '/seller/verification': 'Verify identity',
   '/seller/menu': 'Menu',
   '/seller/marketing': 'Marketing',
@@ -693,6 +697,7 @@ const PHONE_TITLES = {
   '/seller/orders': 'My orders',
   '/seller/products': 'My products',
   '/seller/products/new': 'Add product',
+  '/seller/today': "Today's menu",
   '/seller/messages': 'Chat',
   '/seller/assistant': 'Ate Moormy',
   '/seller/marketing': 'Marketing',

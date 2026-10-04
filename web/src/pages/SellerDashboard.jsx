@@ -7,7 +7,7 @@ import {
   ShoppingBag, TrendUp as TrendingUp, Star, ChartBar as BarChart2, User, Users, WarningCircle, X,
   IdentificationCard, ArrowRight, Wallet, CaretRight, LockSimple, Bell, Receipt,
   ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, PlusCircle, Check, ExclamationMark,
-  Sparkle, Palette, Heart, UsersThree, LinkSimple, ChatCircleDots,
+  Sparkle, Palette, Heart, UsersThree, LinkSimple, ChatCircleDots, CookingPot,
 } from '@phosphor-icons/react';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -686,7 +686,7 @@ const HOME_TOOLS = [
   { to: '/seller/finance', label: 'Finance', Icon: Wallet, tone: 'green' },
   { to: '/seller/reviews', label: 'Reviews', Icon: Star, tone: 'amber' },
   { to: '/seller/returns', label: 'Returns', Icon: ArrowCounterClockwise, tone: 'rose' },
-  { to: '/seller/decorate', label: 'Decorate', Icon: PaintBrush, tone: 'pink' },
+  { to: '/seller/today', label: "Today's menu", Icon: CookingPot, tone: 'pink' },
   { to: '/seller/products/new', label: 'Add product', Icon: PlusCircle, tone: 'teal', tour: 'add-product' },
 ];
 

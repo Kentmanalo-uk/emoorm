@@ -1,0 +1,103 @@
+/* Home's "Available Today" section (TodayRail.jsx): dressed like the other
+   Home sections, its cards the size of the product cards around it. */
+.today-rail {
+  padding: 48px 0 0;
+  background: var(--t-neutral-100, #f5f5f5);
+}
+
+.today-rail > .container {
+  max-width: 1280px;
+  padding: 0 32px;
+}
+
+.today-rail .section-header {
+  align-items: flex-end;
+}
+
+.today-rail-titles {
+  min-width: 0;
+}
+
+.today-rail .section-title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.today-rail-sub {
+  margin: 4px 0 0;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 14px;
+}
+
+/* Computers: one row, as the "Suggested for You" grid (six, 7px apart). */
+.today-rail-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.today-rail-row > :nth-child(n + 7) {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .today-rail-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .today-rail-row > :nth-child(n + 5) {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Phones: on the page background like "Suggested for You", one
+     swipeable row. */
+  .today-rail {
+    padding: 16px 0 4px;
+    background: transparent;
+  }
+
+  .today-rail > .container {
+    padding: 0 0 0 16px;
+  }
+
+  .today-rail .section-header {
+    align-items: center;
+    padding-right: 16px;
+  }
+
+  .today-rail .section-title {
+    font-size: 18px;
+  }
+
+  .today-rail-sub {
+    display: none;
+  }
+
+  .today-rail-row {
+    display: flex;
+    gap: 8px;
+    padding-right: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .today-rail-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .today-rail-row > :nth-child(n) {
+    display: flex;
+  }
+
+  .today-rail-row > .today-card {
+    flex: 0 0 150px;
+    scroll-snap-align: start;
+  }
+}

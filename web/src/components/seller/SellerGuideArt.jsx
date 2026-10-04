@@ -2,7 +2,7 @@ import { useId } from 'react';
 import {
   SquaresFour, Package, Camera, ClipboardText, ArrowCounterClockwise, ChatCircleDots, Lightbulb,
   Megaphone, PaintBrush, UserCircle, Storefront, Truck, ChartLineUp, Wallet, Star, Question,
-  Bell, Headset, GearSix,
+  Bell, Headset, GearSix, CookingPot,
 } from '@phosphor-icons/react';
 import './SellerGuideArt.css';
 
@@ -18,6 +18,7 @@ const SCENES = {
   products: { Icon: Package, shape: 'square', tilt: 9 },
   newProduct: { Icon: Camera, shape: 'circle', tilt: 0 },
   orders: { Icon: ClipboardText, shape: 'phone', tilt: 10 },
+  today: { Icon: CookingPot, shape: 'circle', tilt: 0 },
   returns: { Icon: ArrowCounterClockwise, shape: 'circle', tilt: 0 },
   messages: { Icon: ChatCircleDots, shape: 'bubble', tilt: 8 },
   assistant: { Icon: Lightbulb, shape: 'bubble', tilt: -8 },

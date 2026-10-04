@@ -89,6 +89,9 @@ const toFormState = (product) => ({
     ? product.priceTiers.map((t) => ({ minQty: String(t.minQty), price: String(t.price) }))
     : [],
   stock: product ? String(product.stock ?? '') : '',
+  // REGULAR: kept in stock. TODAY: posted with a quantity on the days it is
+  // made or harvested (Today's menu), so it has no stock of its own here.
+  listingKind: product?.listingKind === 'TODAY' ? 'TODAY' : 'REGULAR',
   // Kilograms in the form; the API keeps grams.
   weightKg: product?.weightGrams ? String(product.weightGrams / 1000) : '',
   categoryId: product?.categoryId || product?.category?.id || '',
@@ -248,6 +251,20 @@ export default function ProductForm({ product = null, categories = [], onCancel,
     setErrors((e) => ({ ...e, price: '', stock: '', [`group-${key}`]: '' }));
   };
 
+  /* ── how it is sold ──────────────────────────────────────────── */
+  const today = form.listingKind === 'TODAY';
+  const chooseKind = (kind) => {
+    setForm((f) => ({
+      ...f,
+      listingKind: kind,
+      // Today items have no per-choice stock: the day's quantity covers all.
+      variations: kind === 'TODAY' ? f.variations.map((g) => ({ ...g, stocked: false, stocks: {} })) : f.variations,
+    }));
+    setErrors((e) => ({ ...e, stock: '' }));
+    // Fresh food: the perishable returns rule fits, unless one is chosen.
+    if (kind === 'TODAY' && !editing && !form.returnPolicy) pickPolicy('perishable');
+  };
+
   /* ── return policy ───────────────────────────────────────────── */
   const pickPolicy = (key) => {
     setPolicyMode(key);
@@ -323,7 +340,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
       }
     }
     const stocked = hasOptions && optionGroups.some((g) => g.stocked && g.choices.length);
-    if (!stocked && state.stock !== '' && !isWhole(state.stock)) errs.stock = 'Stock must be a whole number, like 10.';
+    if (state.listingKind !== 'TODAY' && !stocked && state.stock !== '' && !isWhole(state.stock)) errs.stock = 'Stock must be a whole number, like 10.';
     if (state.weightKg !== '' && !(Number(state.weightKg) > 0 && Number(state.weightKg) <= 100)) {
       errs.weightKg = 'Enter the weight in kilograms, like 0.5 or 2.';
     } else if (state.weightKg === '' && couriersOn) {
@@ -354,7 +371,8 @@ export default function ProductForm({ product = null, categories = [], onCancel,
       ? optionGroups.filter((g) => g.name.trim() && g.choices.length)
       : [];
     const pGroup = cleanGroups.find((g) => g.priced);
-    const sGroup = cleanGroups.find((g) => g.stocked);
+    const todayKind = state.listingKind === 'TODAY';
+    const sGroup = todayKind ? null : cleanGroups.find((g) => g.stocked);
     const minPrice = pGroup ? Math.min(...pGroup.choices.map((c) => Number(pGroup.prices[c]))) : null;
     const total = sGroup
       ? sGroup.choices.reduce((sum, c) => sum + (parseInt(sGroup.stocks[c] || '0', 10) || 0), 0)
@@ -371,7 +389,9 @@ export default function ProductForm({ product = null, categories = [], onCancel,
       priceTiers: pGroup ? null : state.priceTiers
         .filter((t) => t.minQty !== '' && t.price !== '')
         .map((t) => ({ minQty: parseInt(t.minQty, 10), price: parseFloat(t.price) })),
-      stock: sGroup ? total : (state.stock !== '' ? parseInt(state.stock, 10) : 0),
+      listingKind: state.listingKind,
+      // A Today item's stock is the day's quantity, set in Today's menu.
+      ...(todayKind ? {} : { stock: sGroup ? total : (state.stock !== '' ? parseInt(state.stock, 10) : 0) }),
       categoryId: state.categoryId,
       images: state.images,
       returnPolicy: state.returnPolicy.trim() || null,
@@ -380,13 +400,13 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         name: g.name.trim(),
         options: g.choices,
         ...(g.priced ? { prices: Object.fromEntries(g.choices.map((c) => [c, Number(g.prices[c])])) } : {}),
-        ...(g.stocked ? { stocks: Object.fromEntries(g.choices.map((c) => [c, parseInt(g.stocks[c] || '0', 10) || 0])) } : {}),
+        ...(g.stocked && !todayKind ? { stocks: Object.fromEntries(g.choices.map((c) => [c, parseInt(g.stocks[c] || '0', 10) || 0])) } : {}),
       })),
     };
 
     // Editing: the stock this form opened with, so the server applies only
     // the change made here (units sold meanwhile are not put back).
-    if (editing) {
+    if (editing && !todayKind) {
       payload.stockWas = Number(product.stock) || 0;
       const opened = (Array.isArray(product.variations) ? product.variations : [])
         .find((v) => v && v.stocks && typeof v.stocks === 'object');
@@ -531,6 +551,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
                 onAddChoices={(raw) => addChoices(g.key, raw)}
                 onRemoveChoice={(c) => removeChoice(g.key, c)}
                 onToggle={(flag) => toggleGroupFlag(g.key, flag)}
+                noStock={today}
                 onRemove={() => removeGroup(g.key)}
               />
             ))}
@@ -546,6 +567,31 @@ export default function ProductForm({ product = null, categories = [], onCancel,
 
       {/* 4 · Price and stock */}
       <Section step={4} title="Price and stock" className="pf-section--price">
+        <div className="pf-kind">
+          <span className="pf-kind-label" id="pf-kind-label">How you sell it</span>
+          <div className="pf-yesno" role="radiogroup" aria-labelledby="pf-kind-label">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={!today}
+              className={`pf-yesno-btn${!today ? ' is-on' : ''}`}
+              onClick={() => chooseKind('REGULAR')}
+            >
+              <span className="pf-radio" aria-hidden="true" />
+              <span><strong>Always available</strong><small>You keep it in stock. Buyers order any time.</small></span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={today}
+              className={`pf-yesno-btn${today ? ' is-on' : ''}`}
+              onClick={() => chooseKind('TODAY')}
+            >
+              <span className="pf-radio" aria-hidden="true" />
+              <span><strong>Available Today</strong><small>Fresh food, cooked meals or harvests. You post how many and until when, on the days you have it.</small></span>
+            </button>
+          </div>
+        </div>
         <div className="pf-grid-2">
           <Field label="Price" required error={errors.price} htmlFor="pf-price">
             {pricedGroup ? (
@@ -574,12 +620,17 @@ export default function ProductForm({ product = null, categories = [], onCancel,
             )}
           </Field>
           <Field
-            label="Stock"
+            label={today ? 'How many' : 'Stock'}
             error={errors.stock}
             htmlFor="pf-stock"
-            hint={stockedGroup ? null : 'How many you can sell right now.'}
+            hint={stockedGroup || today ? null : 'How many you can sell right now.'}
           >
-            {stockedGroup ? (
+            {today ? (
+              <div className="pf-derived" aria-live="polite">
+                <strong>Set each day</strong>
+                <small>After saving, post it in Today&apos;s menu with how many you have and until when.</small>
+              </div>
+            ) : stockedGroup ? (
               <div className="pf-derived" aria-live="polite">
                 <strong>{stockTotal} in total</strong>
                 <small>From each {stockedGroup.name || 'choice'} stock above</small>
@@ -826,7 +877,7 @@ function Switch({ checked, onChange, label, sub }) {
   );
 }
 
-function ChoiceGroup({ group, index, count, error, onChange, onAddChoices, onRemoveChoice, onToggle, onRemove }) {
+function ChoiceGroup({ group, index, count, error, onChange, onAddChoices, onRemoveChoice, onToggle, onRemove, noStock = false }) {
   const type = CHOICE_TYPES.find((t) => t.name.toLowerCase() === group.name.trim().toLowerCase());
   const suggestions = (type?.suggestions || []).filter(
     (s) => !group.choices.some((c) => c.toLowerCase() === s.toLowerCase()),
@@ -919,12 +970,14 @@ function ChoiceGroup({ group, index, count, error, onChange, onAddChoices, onRem
           label="Each choice has its own price"
           sub={`e.g. 250g ₱100, 1kg ₱300`}
         />
-        <Switch
-          checked={!!group.stocked}
-          onChange={() => onToggle('stocked')}
-          label="Each choice has its own stock"
-          sub="Count how many of each you have"
-        />
+        {!noStock && (
+          <Switch
+            checked={!!group.stocked}
+            onChange={() => onToggle('stocked')}
+            label="Each choice has its own stock"
+            sub="Count how many of each you have"
+          />
+        )}
       </div>
 
       {(group.priced || group.stocked) && !group.choices.length && (

@@ -10,6 +10,7 @@ const { cached } = require('../lib/cachePolicy');
 const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
 const shopReadiness = require('./shopReadiness.service');
+const availabilityRepository = require('../repositories/availability.repository');
 const { bufferToDHash, hammingDistance, hashFromSource, HASH_BIT_LENGTH } = require('../utils/imageHash');
 const { stockedVariation, pricedVariation, activeSalePrice } = require('../utils/variantPricing');
 
@@ -298,6 +299,10 @@ const validateProductPayload = async (data, { partial }) => {
   if (has(data, 'saleStartsAt') && out.saleStartsAt === undefined) out.saleStartsAt = optionalDate(data.saleStartsAt, 'Sale start');
   if (has(data, 'saleEndsAt') && out.saleEndsAt === undefined) out.saleEndsAt = optionalDate(data.saleEndsAt, 'Sale end');
   if (has(data, 'priceTiers')) out.priceTiers = validatePriceTiers(data.priceTiers);
+  if (has(data, 'listingKind')) {
+    if (!['REGULAR', 'TODAY'].includes(data.listingKind)) throw new ApiError('Choose how you sell it: always available or Available Today', 400);
+    out.listingKind = data.listingKind;
+  }
   if (!partial || has(data, 'images')) out.images = validateImages(data.images);
   if (!partial || has(data, 'categoryId')) out.categoryId = await validateCategory(data.categoryId);
 
@@ -447,6 +452,10 @@ const normalizeListOptions = (options = {}) => {
     status: PRODUCT_STATUSES.has(options.status) ? options.status : undefined,
     // Seller lists only: 'out' (out of stock) or 'restock' (out of stock or running low).
     stockFilter: options.stock === 'out' || options.stock === 'restock' ? options.stock : undefined,
+    // Only Available Today products taking orders now.
+    todayOnly: options.today === '1' || options.today === 'true' || options.today === true,
+    // Seller lists: only always-available or only Available Today products.
+    listingKind: options.kind === 'TODAY' || options.kind === 'REGULAR' ? options.kind : undefined,
   };
 };
 
@@ -492,6 +501,16 @@ const shipsWithCouriers = async (storeId) => (
 );
 const WEIGHT_NEEDED = 'Add the weight with packaging: your shop ships with couriers, and they charge by weight';
 
+/**
+ * Available Today products keep their stock per window, so they cannot also
+ * keep stock per option (prices per option are fine).
+ */
+const assertTodayShape = (variations) => {
+  if (stockedVariation(variations)) {
+    throw new ApiError('Available Today products have one quantity per day: remove the stock per option first', 400);
+  }
+};
+
 const createProduct = async (userId, rawData) => {
   const data = cleanFields(rawData || {}, PRODUCT_TEXT_FIELDS);
   // Get seller's store
@@ -515,10 +534,12 @@ const createProduct = async (userId, rawData) => {
   const options = normalizeProductOptions(data);
   checkSale({ ...fields, ...options });
   checkTiers({ ...fields, ...options });
+  if (fields.listingKind === 'TODAY') assertTodayShape(options.variations);
   const product = await productRepository.createProduct({
     ...fields,
     slug,
     ...options,
+    ...(fields.listingKind === 'TODAY' ? { stock: 0 } : {}),
     imageHash,
     storeId: store.id,
     municipalityId: store.municipalityId,
@@ -562,6 +583,8 @@ const getProducts = async (rawOptions) => {
   // If not admin, only show approved products from active, non-suspended stores.
   if (!options.isAdmin) {
     options.status = 'APPROVED';
+    // Available Today products show only while a window takes orders.
+    options.publicListing = true;
     options.storeIsActive = true;
     options.storeIsSuspended = false;
     options.storeIsApproved = true;
@@ -610,6 +633,8 @@ const getProducts = async (rawOptions) => {
     search: options.search,
     sortBy: options.sortBy,
     sortOrder: options.sortOrder,
+    todayOnly: options.todayOnly,
+    listingKind: options.listingKind,
   };
 
   // Free-text search has a long tail of one-off keys, so it gets a shorter TTL
@@ -754,6 +779,22 @@ const updateProduct = async (productId, userId, rawData) => {
     checkTiers({ ...merged, priceTiers: Array.isArray(merged.priceTiers) ? merged.priceTiers : null });
   }
 
+  // Available Today: the window sets the stock, not the editor; switching
+  // back to always-available ends its windows first (their stock goes to 0,
+  // then whatever stock the seller entered applies).
+  const nextKind = updateData.listingKind || product.listingKind;
+  if (nextKind === 'TODAY') {
+    delete updateData.stock;
+    assertTodayShape(updateData.variations !== undefined ? updateData.variations : product.variations);
+  }
+  if (product.listingKind === 'TODAY' && nextKind === 'REGULAR') {
+    const windows = await prisma.productAvailability.findMany({
+      where: { productId, status: { in: ['LIVE', 'SCHEDULED'] } },
+      select: { id: true },
+    });
+    for (const w of windows) await availabilityRepository.closeWindow(w.id, { actorId: userId });
+  }
+
   // If product was suspended/archived and is being edited, send it back for review
   if (product.status === 'SUSPENDED' || product.status === 'ARCHIVED') {
     updateData.status = 'PENDING';
@@ -780,6 +821,12 @@ const updateProduct = async (productId, userId, rawData) => {
     previousSlug,
     stockBase,
   });
+  // Now sold in Available Today windows: no stock until a window opens.
+  if (product.listingKind !== 'TODAY' && nextKind === 'TODAY' && Number(updated.stock) > 0) {
+    await prisma.$transaction((tx) => availabilityRepository.setStockTx(tx, productId, 0, 'TODAY_SWITCH', productId, userId));
+    await productRepository.invalidateProductIds([productId]);
+    updated.stock = 0;
+  }
 
   if (updateData.stock !== undefined) {
     await notifyRestock(store, product, updated);
@@ -823,6 +870,9 @@ const adjustStock = async (productId, userId, body = {}) => {
   }
 
   const product = await productRepository.findById(productId);
+  if (product?.listingKind === 'TODAY') {
+    throw new ApiError("Available Today products: change the day's quantity in Available Today", 400);
+  }
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);
   }

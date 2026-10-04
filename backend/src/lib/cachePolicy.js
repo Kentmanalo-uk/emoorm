@@ -69,6 +69,9 @@ const cached = {
   // ── Catalogue: short TTL, because stock and price move ──
   productList: policy('products:list', ttl.products, [TAGS.products]),
   productSearch: policy('products:search', ttl.search, [TAGS.products]),
+  // Available Today: short-lived (windows open and close by the clock), and
+  // cleared with the product lists whenever a window or its stock changes.
+  todayList: policy('today:list', ttl.search, [TAGS.products]),
   product: policy('products:one', ttl.productDetail, (p) => [TAGS.products, TAGS.product(p.id || p.slug)]),
   productReviews: policy('reviews:product', ttl.reviews, (p) => [TAGS.reviews, TAGS.product(p.productId)]),
 };

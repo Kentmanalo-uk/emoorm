@@ -1,0 +1,246 @@
+/*
+ * Available Today listing card (TodayCard.jsx): the same card as the other
+ * product cards (Home, Products): square photo, white tile, name in two
+ * lines, price below; plus the kind's tag before the name and the time left.
+ * Kept here so it looks the same on every page that shows it.
+ */
+.today-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: none;
+  border-radius: 2px;
+  background-color: var(--t-neutral-0, #fff);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+
+.today-card:hover {
+  background-color: var(--t-neutral-50, #fafafa);
+}
+
+.today-card-image {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  overflow: hidden;
+  background-color: var(--t-neutral-100, #f3f4f6);
+}
+
+.today-card-image > img,
+.today-card-image > .product-image-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.today-card-left {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(17, 24, 39, 0.72);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.today-card-cover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.today-card-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 10px;
+}
+
+/* Two lines, the kind's tag first (as the product cards' names). */
+.today-card-name {
+  display: -webkit-box;
+  min-height: calc(15px * 1.35 * 2);
+  margin: 0;
+  overflow: hidden;
+  color: var(--t-secondary-950, #212121);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.35;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.today-card-name .today-tag {
+  font-size: 11px;
+  vertical-align: 2px;
+}
+
+.today-card-price {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--t-primary-600, #059669);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The product cards' stats row (stars, sold, "New"), plus the time left. */
+.today-card-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin-top: 2px;
+}
+
+.today-card-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.today-card-count {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.today-card-time {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 11px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-card-time.is-soon {
+  color: var(--t-accent-700, #be185d);
+}
+
+.today-card.is-out .today-card-name,
+.today-card.is-out .today-card-price {
+  color: var(--t-neutral-500, #636b78);
+}
+
+/* Phones: as the phone product tiles. */
+@media (max-width: 768px) {
+  .today-card {
+    border-radius: 12px;
+  }
+
+  .today-card-info {
+    gap: 3px;
+  }
+
+  .today-card-name {
+    min-height: calc(16px * 1.35 * 2);
+    color: var(--t-neutral-800, #1f2937);
+    font-size: 16px;
+  }
+
+  .today-card-name .today-tag {
+    font-size: 10.5px;
+    vertical-align: 1px;
+  }
+
+  .today-card-price {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .today-card-time,
+  .today-card-count {
+    font-size: 11.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-card {
+    transition: none;
+  }
+}
+
+/* Phones' result list (`result`): as the phone search results' card. */
+.today-card-meta,
+.today-card-place {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .today-card.is-result .today-card-price {
+    color: var(--t-primary-700, #047857);
+    font-size: 17px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .today-card.is-result .today-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 12.5px;
+  }
+
+  .today-card.is-result .today-card-meta > span + span:not(.today-card-time) {
+    padding-left: 8px;
+    border-left: 1px solid var(--t-neutral-200, #e5e7eb);
+  }
+
+  .today-card.is-result .today-card-time {
+    font-size: 12px;
+  }
+
+  .today-card-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--t-neutral-700, #374151);
+  }
+
+  .today-card-rating svg {
+    color: #f59e0b;
+  }
+
+  .today-card-new {
+    color: var(--t-primary-700, #047857);
+  }
+
+  .today-card.is-result .today-card-place {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    overflow: hidden;
+    color: var(--t-neutral-500, #636b78);
+    font-size: 12.5px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .today-card-place svg {
+    flex-shrink: 0;
+  }
+}

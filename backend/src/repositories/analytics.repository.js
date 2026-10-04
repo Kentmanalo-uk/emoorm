@@ -134,7 +134,7 @@ const getSellerStats = async (storeId, window) => {
       _count: { _all: true },
     }),
     prisma.product.findMany({
-      where: { storeId, deletedAt: null },
+      where: { storeId, deletedAt: null, listingKind: 'REGULAR' },
       select: { id: true, name: true, slug: true, images: true, stock: true, lowStockThreshold: true, status: true },
       orderBy: { stock: 'asc' },
     }).then((products) => products.filter((product) => product.stock <= product.lowStockThreshold).slice(0, 5)),

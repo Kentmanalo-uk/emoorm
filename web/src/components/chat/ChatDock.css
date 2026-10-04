@@ -125,7 +125,7 @@
   min-width: 0;
   overflow: hidden;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--t-neutral-900, #111827);
   white-space: nowrap;
   text-overflow: ellipsis;

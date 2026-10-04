@@ -34,7 +34,7 @@
 
 .footer-title {
   font-size: 14px;
-  font-weight: var(--font-weight-bold);
+  font-weight: 500;
   color: var(--color-text-primary);
   margin-bottom: 0;
 }

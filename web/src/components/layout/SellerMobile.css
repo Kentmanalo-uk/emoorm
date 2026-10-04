@@ -259,7 +259,7 @@
     overflow: hidden;
     color: var(--scm-ink);
     font-size: 22px;
-    font-weight: 400;
+    font-weight: 500;
     letter-spacing: -0.2px;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -384,7 +384,7 @@
     overflow: hidden;
     color: var(--scm-ink);
     font-size: 19px;
-    font-weight: 400;
+    font-weight: 500;
     line-height: 1.2;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -700,10 +700,10 @@
     color: var(--t-warning-600, #d97706);
   }
 
-  /* Section titles read like the buyer pages: plain, not bold. */
+  /* Section titles read like the buyer pages: medium, not bold. */
   .sc-shell .pf-m-section h2,
   .sc-shell .pf-m-list h2 {
-    font-weight: 400;
+    font-weight: 500;
   }
 
   /* ── Orders ───────────────────────────────────────────────── */

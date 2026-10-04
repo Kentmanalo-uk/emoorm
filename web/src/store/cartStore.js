@@ -4,6 +4,7 @@ import axios from '../lib/axios';
 import { priceForSelection, pricedVariation, stockForSelection, priceTiersOf } from '../lib/variantPricing';
 import { firstImage } from '../lib/media';
 import { awayUntil, shortDate } from '../lib/shopHours';
+import { isTodayProduct, isOpen as windowOpen } from '../lib/availability';
 
 // Carts are kept per owner (user id or 'guest'). `items` mirrors the active
 // owner's bucket so every existing consumer keeps reading `items` directly.
@@ -196,6 +197,12 @@ const useCartStore = create(
           const away = awayUntil(product.store || product);
           if (away) throw new Error(`This shop is away until ${shortDate(away)}`);
 
+          // Available Today: only while its window takes orders (when the
+          // caller knows the window; checkout checks it either way).
+          if (isTodayProduct(product) && product.availability !== undefined && !windowOpen(product.availability)) {
+            throw new Error(`${product.name || 'This item'} isn't taking orders right now`);
+          }
+
           // Validate stock
           if (product.stock !== undefined && product.stock === 0) {
             throw new Error('Product is out of stock');
@@ -318,6 +325,8 @@ const useCartStore = create(
               patch.storeName = product.store?.name || line.storeName;
               patch.storeLogo = product.store?.logo || product.store?.logoUrl || line.storeLogo || null;
               patch.categoryId = product.categoryId || line.categoryId;
+              patch.listingKind = product.listingKind || 'REGULAR';
+              patch.availability = product.availability || null;
             }
             // The chosen option may have been removed since it was added.
             const group = !gone ? pricedVariation(product.variations) : null;
@@ -335,6 +344,9 @@ const useCartStore = create(
             } else if (away) {
               patch.unavailable = true;
               patch.unavailableReason = `The shop is away until ${shortDate(away)}`;
+            } else if (isTodayProduct(product) && !windowOpen(product.availability)) {
+              patch.unavailable = true;
+              patch.unavailableReason = 'No longer taking orders today';
             } else if (stock <= 0) {
               patch.unavailable = true;
               patch.unavailableReason = 'Out of stock';

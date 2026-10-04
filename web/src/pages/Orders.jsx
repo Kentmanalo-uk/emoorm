@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { rangeLabel } from '../lib/eta';
+import { spanLabel, momentLabel } from '../lib/availability';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -494,7 +495,17 @@ const Orders = () => {
                     {order.etaFrom && !['COMPLETED', 'CANCELLED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && (
                       <div className="order-info-item">
                         <span className="order-info-label">{order.fulfillmentMethod === 'PICKUP' ? 'Ready for pickup' : 'Expected'}</span>
-                        <span className="order-info-value order-eta">{rangeLabel({ from: order.etaFrom, to: order.etaTo || order.etaFrom })}</span>
+                        <span className="order-info-value order-eta">
+                          {order.respondBy
+                            ? spanLabel(order.etaFrom, order.etaTo || order.etaFrom)
+                            : rangeLabel({ from: order.etaFrom, to: order.etaTo || order.etaFrom })}
+                        </span>
+                      </div>
+                    )}
+                    {order.respondBy && order.status === 'PENDING' && (
+                      <div className="order-info-item">
+                        <span className="order-info-label">Available Today</span>
+                        <span className="order-info-value">The shop confirms by {momentLabel(order.respondBy)}, or the order cancels on its own</span>
                       </div>
                     )}
                     <div className="order-info-item">

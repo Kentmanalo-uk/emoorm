@@ -2,6 +2,7 @@ const prisma = require('../config/database');
 const { termsOf, whereFor, scoreOf, correct, vocabularyOf } = require('../utils/searchTerms');
 const { stockedVariation, totalOptionStock } = require('../utils/variantPricing');
 const { invalidate, TAGS } = require('../lib/cachePolicy');
+const { liveNow, currentWindow, publicWindow } = require('../utils/availability');
 
 /**
  * Drop the cached copies a product write makes stale. Invalidation lives at
@@ -56,9 +57,17 @@ const normalizeImages = (raw) => {
   return [];
 };
 
+// Available Today: the window to show (taking orders now, else the next
+// scheduled), in place of the list the query brought.
+const withAvailability = (product) => {
+  if (!product || !Array.isArray(product.availabilities)) return product;
+  const { availabilities, ...rest } = product;
+  return { ...rest, availability: publicWindow(currentWindow(availabilities)) };
+};
+
 const withImages = (product) => {
   if (!product) return product;
-  return { ...product, images: normalizeImages(product.images) };
+  return withAvailability({ ...product, images: normalizeImages(product.images) });
 };
 
 const withImagesList = (products) => (products || []).map(withImages);
@@ -96,8 +105,16 @@ const PUBLIC_STORE_SELECT = {
 const CATEGORY_SELECT = { id: true, name: true, slug: true, image: true };
 const MUNICIPALITY_SELECT = { id: true, name: true, code: true };
 
+/** A product's open and upcoming Available Today windows (withAvailability picks one). */
+const AVAILABILITY_INCLUDE = {
+  where: { status: { in: ['LIVE', 'SCHEDULED'] } },
+  orderBy: { ordersOpenAt: 'asc' },
+  take: 3,
+};
+
 /** Include used by every detail-shaped read and write (owner id for the ownership check, no contact number). */
 const DETAIL_INCLUDE = {
+  availabilities: AVAILABILITY_INCLUDE,
   store: {
     select: {
       ...PUBLIC_STORE_SELECT,
@@ -110,6 +127,7 @@ const DETAIL_INCLUDE = {
 
 /** Include used by list reads: same store shape, no owner. */
 const LIST_INCLUDE = {
+  availabilities: AVAILABILITY_INCLUDE,
   store: { select: PUBLIC_STORE_SELECT },
   category: { select: CATEGORY_SELECT },
   municipality: { select: { id: true, name: true } },
@@ -246,7 +264,8 @@ const RESTOCK_WHERE = () => ({
  */
 const getStoreSummary = async (storeId) => {
   const base = { storeId, deletedAt: null };
-  const watched = { ...base, status: { in: STOCK_WATCH_STATUSES } };
+  // Available Today products sit at 0 between windows: never "out of stock".
+  const watched = { ...base, status: { in: STOCK_WATCH_STATUSES }, listingKind: 'REGULAR' };
   const [groups, outOfStock, lowStock] = await Promise.all([
     prisma.product.groupBy({ by: ['status'], where: base, _count: { _all: true } }),
     prisma.product.count({ where: { ...watched, stock: { lte: 0 } } }),
@@ -284,6 +303,9 @@ const findAll = async (options = {}) => {
     maxPrice,
     search,
     stockFilter,
+    publicListing,
+    todayOnly,
+    listingKind,
     sortBy = 'createdAt',
     sortOrder = 'desc',
   } = options;
@@ -296,12 +318,25 @@ const findAll = async (options = {}) => {
   if (categoryId) where.categoryId = categoryId;
   if (municipalityId) where.municipalityId = municipalityId;
   if (status) where.status = status;
+  if (listingKind) where.listingKind = listingKind;
+
+  // Available Today products are on public lists only while a window takes
+  // orders; between windows they wait in the seller's catalogue.
+  if (publicListing || todayOnly) {
+    const now = new Date();
+    where.AND = [
+      ...(where.AND || []),
+      todayOnly
+        ? { listingKind: 'TODAY', availabilities: { some: liveNow(now) } }
+        : { OR: [{ listingKind: 'REGULAR' }, { listingKind: 'TODAY', availabilities: { some: liveNow(now) } }] },
+    ];
+  }
 
   // A seller's "needs restock" view: out of stock or at/below the product's
   // own low-stock mark, among products that can still sell.
   if (stockFilter) {
     if (!status) where.status = { in: STOCK_WATCH_STATUSES };
-    where.AND = [...(where.AND || []), stockFilter === 'out' ? { stock: { lte: 0 } } : RESTOCK_WHERE()];
+    where.AND = [...(where.AND || []), { listingKind: 'REGULAR' }, stockFilter === 'out' ? { stock: { lte: 0 } } : RESTOCK_WHERE()];
   }
 
   if (storeIsActive !== undefined || storeIsSuspended !== undefined || storeIsApproved !== undefined) {
@@ -668,6 +703,8 @@ const findByMunicipality = async (municipalityId, options = {}) => {
 };
 
 module.exports = {
+  AVAILABILITY_INCLUDE,
+  withImages,
   invalidateProductIds,
   createProduct,
   findById,

@@ -96,6 +96,25 @@ const TL = {
   "This shop isn't taking orders yet": 'Hindi pa tumatanggap ng order ang tindahang ito',
   'Buy more, pay less:': 'Mas marami, mas mura:',
 
+  // Available Today
+  'Available Today': 'Available Today',
+  'Available today:': 'Available ngayon:',
+  'Ready now': 'Handa na',
+  'Made to order': 'Gagawin pagka-order',
+  'Pre-order': 'Pre-order',
+  'Sold out': 'Ubos na',
+  'Ended for now': 'Tapos na sa ngayon',
+  'Not available now': 'Wala sa ngayon',
+  'Pickup or delivery': 'Pickup o delivery',
+  'Pickup only': 'Pickup lang',
+  'Delivery only': 'Delivery lang',
+  'Ending soon': 'Malapit nang matapos',
+  'Ready soonest': 'Pinakamabilis maging handa',
+  'Near me': 'Malapit sa akin',
+  'Delivers to me': 'Nagde-deliver sa akin',
+  'All towns': 'Lahat ng bayan',
+  'Nothing available right now': 'Walang available sa ngayon',
+
   // Search and lists
   Newest: 'Pinakabago',
   Oldest: 'Pinakaluma',

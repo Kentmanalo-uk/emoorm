@@ -8,7 +8,7 @@ import { useSheetPresence } from '../../hooks/useSheetMotion';
  * a quick stock change. Slides up and away like the buyer sheets, closes on
  * the backdrop, the X or Escape.
  */
-export default function PhoneSheet({ open, title, onClose, children, footer }) {
+export default function PhoneSheet({ open, title, onClose, children, footer, className = '' }) {
   const { mounted, closing } = useSheetPresence(open);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export default function PhoneSheet({ open, title, onClose, children, footer }) {
       role="presentation"
     >
       <div
-        className="scm-sheet ui-sheet-panel"
+        className={`scm-sheet ui-sheet-panel ${className}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-label={title}

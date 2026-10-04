@@ -29,6 +29,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import { qrMethod } from '../lib/qrPayment';
 import { BusyLabel } from '../components/ui/Spinner';
 import ChoiceCard from '../components/ui/ChoiceCard';
+import { spanLabel } from '../lib/availability';
 import { CourierMark } from '../components/orders/CourierTracking';
 import './Checkout.css';
 
@@ -353,12 +354,22 @@ const Checkout = () => {
     return () => { cancelled = true; };
   }, [quoteKey, fulfillmentMethod]);
 
+  // Available Today items: delivered by the shop or picked up, never by a
+  // courier, in the ways their windows allow; ready in their ready time.
+  const todayLines = useMemo(() => items.filter((it) => it.listingKind === 'TODAY' && it.availability), [items]);
+  const todayReady = todayLines.length
+    ? {
+      from: Math.min(...todayLines.map((it) => new Date(it.availability.readyFrom).getTime())),
+      to: Math.max(...todayLines.map((it) => new Date(it.availability.readyUntil).getTime())),
+    }
+    : null;
+
   const sellerDelivers = shipQuote ? shipQuote.seller?.offered !== false : true;
   // Offered, but not to this address: a courier is picked instead.
   const sellerReaches = sellerDelivers && shipQuote?.seller?.covered !== false;
   const onlineReady = Boolean(shipQuote?.onlinePaymentReady);
   const courierChoices = shipQuote?.couriers || [];
-  const courierPickable = (c) => c.fee != null && onlineReady;
+  const courierPickable = (c) => c.fee != null && onlineReady && !todayLines.length;
   // The pick, or the first way that works when it no longer does.
   const choiceValid = (choice) => (choice === 'SELLER'
     ? sellerReaches
@@ -389,12 +400,12 @@ const Checkout = () => {
     return {
       delivery: stores.every(
         (s) => s.fulfillmentMode === 'DELIVERY' || s.fulfillmentMode === 'BOTH'
-      ),
+      ) && todayLines.every((it) => it.availability.fulfillment !== 'PICKUP'),
       pickup: stores.every(
         (s) => s.fulfillmentMode === 'PICKUP' || s.fulfillmentMode === 'BOTH'
-      ),
+      ) && todayLines.every((it) => it.availability.fulfillment !== 'DELIVERY'),
     };
-  }, [storeIds, storeInfo]);
+  }, [storeIds, storeInfo, todayLines]);
 
   // Ensure selected fulfillmentMethod is available; auto-switch if needed
   useEffect(() => {
@@ -737,6 +748,11 @@ const Checkout = () => {
                       <Truck size={24} />
                       <h2>Fulfillment Method</h2>
                     </div>
+                    {todayReady && (
+                      <p className="co-today-ready">
+                        Available Today: ready {spanLabel(todayReady.from, todayReady.to)}
+                      </p>
+                    )}
 
                     <div className="fulfillment-picker co-choices">
                       <ChoiceCard

@@ -807,3 +807,17 @@
   color: #fff;
   opacity: 1;
 }
+
+/* Available Today products: posted per day in Today's menu, no stock to add. */
+.product-today-badge {
+  background: var(--t-accent-50, #fdf2f8);
+  color: var(--t-accent-700, #be185d);
+}
+
+.product-stock--today .product-stock-label {
+  color: var(--t-neutral-700, #374151);
+}
+
+a.pm-btn {
+  text-decoration: none;
+}

@@ -171,6 +171,7 @@ async function cleanup() {
   await step(() => prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }));
   await step(() => prisma.order.deleteMany({ where: { id: { in: orderIds } } }));
   await step(() => prisma.inventoryMovement.deleteMany({ where: { productId: { in: made.products } } }));
+  await step(() => prisma.productAvailability.deleteMany({ where: { OR: [{ productId: { in: made.products } }, { storeId: { in: made.stores } }] } }));
   await step(() => prisma.product.deleteMany({ where: { id: { in: made.products } } }));
   await step(() => prisma.store.deleteMany({ where: { OR: [{ id: { in: made.stores } }, { ownerId: { in: made.users } }] } }));
   // Notices sent in the background (a low-stock alert after an order) can

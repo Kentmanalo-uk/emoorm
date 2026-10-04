@@ -83,6 +83,7 @@ export default function AdminSettings() {
       productPlaceholder: currentAppSettings.productPlaceholder,
       deliveryFee: String(currentAppSettings.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
       requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
+      availableTodayEnabled: currentAppSettings.availableTodayEnabled !== false,
       categoryStyle: currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE',
     });
   }, [
@@ -90,6 +91,7 @@ export default function AdminSettings() {
     currentAppSettings.productPlaceholder,
     currentAppSettings.deliveryFee,
     currentAppSettings.requireBuyerVerification,
+    currentAppSettings.availableTodayEnabled,
     currentAppSettings.categoryStyle,
   ]);
 
@@ -193,6 +195,10 @@ export default function AdminSettings() {
     const requireBuyerVerification = brandingForm.requireBuyerVerification !== false;
     if (requireBuyerVerification !== (currentAppSettings.requireBuyerVerification !== false)) {
       changes.requireBuyerVerification = requireBuyerVerification;
+    }
+    const availableTodayEnabled = brandingForm.availableTodayEnabled !== false;
+    if (availableTodayEnabled !== (currentAppSettings.availableTodayEnabled !== false)) {
+      changes.availableTodayEnabled = availableTodayEnabled;
     }
     const categoryStyle = brandingForm.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE';
     if (categoryStyle !== (currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE')) {
@@ -421,6 +427,22 @@ export default function AdminSettings() {
             onChange={(e) => setBrandingForm((current) => ({ ...current, requireBuyerVerification: e.target.checked }))}
           />
           <span>Require verification before checkout</span>
+        </label>
+      </Row>
+
+      <Row
+        label="Available Today"
+        help={brandingForm.availableTodayEnabled !== false
+          ? 'On: shops can post fresh food and produce for a limited time, and buyers see them on Home and in Available Today.'
+          : 'Off: Available Today is hidden and shops cannot post. Their posts are kept for when it is back on.'}
+      >
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={brandingForm.availableTodayEnabled !== false}
+            onChange={(e) => setBrandingForm((current) => ({ ...current, availableTodayEnabled: e.target.checked }))}
+          />
+          <span>Turn on Available Today</span>
         </label>
       </Row>
 

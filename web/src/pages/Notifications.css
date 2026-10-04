@@ -51,7 +51,7 @@
 
 .notif-header-left h1 {
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--t-neutral-900, #111827);
   margin: 0;
 }
@@ -178,7 +178,7 @@
 
 .notif-empty h2 {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--t-neutral-700, #374151);
   margin: 0 0 8px;
 }
@@ -871,7 +871,7 @@
 
 .notif-detail-head h1 {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--t-neutral-900, #111827);
   margin: 0 0 4px;
   line-height: 1.35;

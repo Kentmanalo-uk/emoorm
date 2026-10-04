@@ -22,6 +22,7 @@ import SellerPageHead from '../components/seller/SellerPageHead';
 import ProductForm from '../components/seller/ProductForm';
 import { sellBlockers } from '../lib/sellerSetup';
 import { readCache, writeCache } from '../lib/pageCache';
+import { isTodayProduct, isOpen as windowOpen, windowState } from '../lib/availability';
 
 const STATUS_LABELS = {
   PENDING: { label: 'Pending Approval', cls: 'status-pending', icon: <Clock size={12} /> },
@@ -57,6 +58,8 @@ const countFor = (summary, key) => {
 const PHONE_QUICK_TABS = ['all', 'APPROVED', 'PENDING'];
 
 const stockLevel = (product) => {
+  // Available Today: at 0 between posts on purpose, never "out of stock".
+  if (isTodayProduct(product)) return 'ok';
   const stock = Number(product?.stock ?? 0);
   if (stock <= 0) return 'out';
   const threshold = Number(product?.lowStockThreshold ?? 0);
@@ -278,6 +281,12 @@ export default function SellerProducts() {
   };
 
   const handleSaved = (saved, { created }) => {
+    if (created && isTodayProduct(saved)) {
+      toast.success("Product added. Post it in Today's menu when you have it.");
+      closeForm();
+      navigate('/seller/today');
+      return;
+    }
     if (created) {
       toast.success(notReady && saved?.status === 'APPROVED'
         ? 'Product added. Buyers can see it, and can order once your shop is ready to sell.'
@@ -623,6 +632,21 @@ export default function SellerProducts() {
                         <td>{product.category?.name || '—'}</td>
                         <td>₱{Number(product.price).toFixed(2)}</td>
                         <td data-label="Stock">
+                          {isTodayProduct(product) ? (
+                            <div className="product-stock product-stock--today">
+                              <span className="product-stock-line">
+                                <span className="seller-badge product-today-badge">Available Today</span>
+                                <span className="product-stock-label">
+                                  {windowOpen(product.availability)
+                                    ? `${product.stock} left`
+                                    : windowState(product.availability).tone === 'soon' ? windowState(product.availability).text : 'Not posted now'}
+                                </span>
+                              </span>
+                              {!isPhone && (
+                                <Link to="/seller/today" className="btn-seller-outline product-restock-btn">Today&apos;s menu</Link>
+                              )}
+                            </div>
+                          ) : (
                           <div className={`product-stock ${level !== 'ok' ? `product-stock--${level}` : ''}`}>
                             <span className="product-stock-line">
                               <span className="product-stock-label">Stock</span>
@@ -664,6 +688,7 @@ export default function SellerProducts() {
                             </form>
                             )}
                           </div>
+                          )}
                         </td>
                         <td>
                           <span className={`seller-badge ${s.cls}`}>
@@ -677,7 +702,11 @@ export default function SellerProducts() {
                               <button type="button" className="pm-btn" onClick={() => openEdit(product)} aria-label={`Edit ${product.name}`}>
                                 <Edit2 size={16} /> Edit
                               </button>
-                              {hasStockPerChoice(product) ? (
+                              {isTodayProduct(product) ? (
+                                <Link to="/seller/today" className="pm-btn">
+                                  <Plus size={16} /> Post today
+                                </Link>
+                              ) : hasStockPerChoice(product) ? (
                                 <button type="button" className="pm-btn" onClick={() => openEdit(product)}>
                                   <Plus size={16} /> Edit stock
                                 </button>

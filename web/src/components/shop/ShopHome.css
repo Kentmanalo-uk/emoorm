@@ -16,7 +16,7 @@
   padding: 0 2px;
   color: var(--t-neutral-900, #111827);
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: -0.01em;
 }
 .shh-home-title::after {

@@ -44,7 +44,7 @@
 
 .wishlist-header h1 {
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--t-neutral-900, #111827);
   margin: 0 0 4px;
 }
@@ -90,7 +90,7 @@
 
 .wishlist-empty h2 {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--t-neutral-700, #374151);
   margin: 0 0 8px;
 }

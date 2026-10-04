@@ -36,6 +36,10 @@ model AppSetting {
   /// picture) or ICON (each category's icon, filled with a gradient).
   categoryStyle String @default("IMAGE") @db.VarChar(10) @map("category_style")
 
+  /// Available Today (fresh food and produce sold for a limited time). A
+  /// super admin can switch the whole feature off; listings stay stored.
+  availableTodayEnabled Boolean @default(true) @map("available_today_enabled")
+
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -87,6 +91,27 @@ enum FulfillmentMode {
 enum FulfillmentMethod {
   DELIVERY
   PICKUP
+}
+
+/// How a product is sold: always (stock the seller keeps up) or in
+/// Available Today windows (a batch for a limited time, see ProductAvailability).
+enum ListingKind {
+  REGULAR
+  TODAY
+}
+
+/// What an Available Today window offers.
+enum TodayMode {
+  READY_NOW      // made already, ready to collect or deliver now
+  MADE_TO_ORDER  // cooked or prepared after the order, within prepMinutes
+  PRE_ORDER      // order ahead, ready on a later day
+}
+
+enum AvailabilityStatus {
+  SCHEDULED  // orders open later
+  LIVE       // taking orders now (product.stock is this window's remaining)
+  ENDED      // its time passed or the seller ended it
+  CANCELLED  // withdrawn before it opened
 }
 
 enum PaymentMethod {
@@ -673,6 +698,7 @@ model Store {
 
   // Relations
   products      Product[]
+  availabilities ProductAvailability[]
   orders        Order[]
   conversations Conversation[]
   serviceAreas  StoreServiceArea[]
@@ -773,6 +799,9 @@ model Product {
   // Bulk prices: [{ minQty: 10, price: 90 }, …], lowest quantity first.
   priceTiers   Json?        @map("price_tiers")
   stock       Int           @default(0)
+  /// REGULAR: stock the seller keeps up. TODAY: sold in windows; stock is
+  /// the live window's remaining quantity and 0 between windows.
+  listingKind ListingKind   @default(REGULAR) @map("listing_kind")
   /// Packed weight in grams, for courier fees. Null: not set (no courier quote).
   weightGrams Int?          @map("weight_grams")
   lowStockThreshold Int     @default(5) @map("low_stock_threshold")
@@ -818,6 +847,7 @@ model Product {
   announcements StoreAnnouncement[]
   questions   ProductQuestion[]
   views       ProductView[]
+  availabilities ProductAvailability[]
 
   @@map("products")
   // Composite indexes matching the browse/filter/sort shapes in
@@ -827,6 +857,44 @@ model Product {
   @@index([storeId, deletedAt, status, createdAt], map: "products_store_idx")
   @@index([status, deletedAt, price], map: "products_price_idx")
   @@index([deletedAt, status, createdAt], map: "products_moderation_idx")
+}
+
+/// One Available Today window: a batch of a product on sale for a time.
+/// Only one window of a product is LIVE at once; while it is, the product's
+/// stock is the window's remaining quantity, so the cart, checkout and the
+/// stock ledger work exactly as for any product.
+model ProductAvailability {
+  id            String             @id @default(uuid())
+  productId     String             @map("product_id")
+  product       Product            @relation(fields: [productId], references: [id])
+  storeId       String             @map("store_id")
+  store         Store              @relation(fields: [storeId], references: [id])
+
+  mode          TodayMode          @default(READY_NOW)
+  quantity      Int                // the batch made available
+  soldCount     Int                @default(0) @map("sold_count")
+  status        AvailabilityStatus @default(SCHEDULED)
+
+  ordersOpenAt  DateTime           @map("orders_open_at")
+  ordersCloseAt DateTime           @map("orders_close_at")
+  readyFrom     DateTime           @map("ready_from")
+  readyUntil    DateTime           @map("ready_until")
+  prepMinutes   Int?               @map("prep_minutes")
+  /// How buyers can get it: within what the shop offers (DELIVERY, PICKUP, BOTH).
+  fulfillment   FulfillmentMode    @default(BOTH)
+  note          String?            @db.VarChar(200)
+
+  endedAt       DateTime?          @map("ended_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  orderItems    OrderItem[]
+
+  @@index([status, ordersCloseAt], map: "availability_status_close_idx")
+  @@index([status, ordersOpenAt], map: "availability_status_open_idx")
+  @@index([productId, status], map: "availability_product_idx")
+  @@index([storeId, readyFrom], map: "availability_store_idx")
+  @@map("product_availabilities")
 }
 
 model InventoryMovement {
@@ -916,6 +984,8 @@ model Order {
   cancelReason    String?     @db.VarChar(40) @map("cancel_reason")
   cancelledBy     String?     @db.VarChar(10) @map("cancelled_by")
   // When the buyer can expect it (delivered, or ready to pick up).
+  /// Available Today orders: the seller confirms by then or it is cancelled.
+  respondBy       DateTime?   @map("respond_by")
   etaFrom         DateTime?   @map("eta_from")
   etaTo           DateTime?   @map("eta_to")
 
@@ -1004,6 +1074,9 @@ model OrderItem {
   subtotal      Decimal  @db.Decimal(10, 2)
   selectedVariations Json? @map("selected_variations")
   returnPolicySnapshot Json? @map("return_policy_snapshot")
+  /// The Available Today window it was sold from (null: a regular product).
+  availabilityId String?   @map("availability_id")
+  availability  ProductAvailability? @relation(fields: [availabilityId], references: [id])
 
   createdAt     DateTime @default(now()) @map("created_at")
 

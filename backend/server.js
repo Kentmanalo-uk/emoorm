@@ -74,6 +74,18 @@ const startServer = async () => {
       const expiryTimer = setInterval(runOrderJobs, ORDER_JOBS_MS);
       expiryTimer.unref();
 
+      // Available Today clock: windows open and end on the minute (their
+      // stock with them), and Today orders not confirmed or paid in time are
+      // cancelled. Queries check the time too, so a late run sells nothing ended.
+      const TODAY_CLOCK_MS = 60 * 1000;
+      const runTodayClock = () => runtimeStatus.runJob(
+        'today-clock',
+        () => require('./src/services/availability.service').runClock(),
+        TODAY_CLOCK_MS,
+      );
+      setTimeout(runTodayClock, 10 * 1000).unref();
+      setInterval(runTodayClock, TODAY_CLOCK_MS).unref();
+
       // Delete ID photos / permits once a decided application is past the
       // retention window. Runs at boot, then once a day.
       const purgeKyc = () => runtimeStatus.runJob(

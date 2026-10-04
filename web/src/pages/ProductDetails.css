@@ -3132,3 +3132,71 @@ div.pdp-store-followers {
     color: var(--t-neutral-700, #374151);
   }
 }
+
+/* Available Today: the window's kind, until when, ready time, how to get it. */
+.pdp-today .pdp-row-line:first-child {
+  flex-wrap: wrap;
+}
+
+.pdp-today-mode {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--t-primary-600, #047857);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pdp-today-mode.is-made-to-order {
+  background: #b45309;
+}
+
+.pdp-today-mode.is-pre-order {
+  background: var(--t-accent-600, #db2777);
+}
+
+.pdp-today-state {
+  color: var(--t-primary-700, #03684c);
+  font-weight: 600;
+}
+
+.pdp-today-state.is-soon {
+  color: #b45309;
+}
+
+.pdp-today-state.is-ended {
+  color: var(--t-neutral-600, #4b5563);
+  font-weight: 500;
+}
+
+.pdp-today-left {
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13px;
+}
+
+.pdp-today-note {
+  color: var(--t-neutral-600, #4b5563);
+  font-style: italic;
+}
+
+/* Available Today: the kind's tag before the title and in the Today row. */
+.pdp-title .pdp-title-tag {
+  margin-right: 8px;
+  padding: 1px 7px;
+  font-size: 13px;
+  vertical-align: 0.25em;
+}
+
+.pdp-today-tag {
+  margin-right: 0;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .pdp-title .pdp-title-tag {
+    margin-right: 6px;
+    padding: 0 6px;
+    font-size: 11.5px;
+    vertical-align: 0.15em;
+  }
+}

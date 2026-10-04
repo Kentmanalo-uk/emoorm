@@ -59,6 +59,7 @@ import { voucherSummary } from '../lib/vouchers';
 import { SaleWas } from '../components/ui/SaleTag';
 import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
+import { ProductTodayTag } from '../components/today/TodayTag';
 
 const SORTS = [
   { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -294,6 +295,8 @@ export default function StoreDetail() {
         readyToSell: store.readyToSell,
         vacationUntil: store.vacationUntil,
         stock: product.stock,
+        listingKind: product.listingKind,
+        availability: product.availability,
         slug: product.slug,
         categoryId: product.categoryId,
         selectedVariations: null,
@@ -1147,7 +1150,7 @@ function ProductCard({ product, onAddToCart }) {
         </button>
       </div>
       <div className="product-info">
-        <span className="product-name">{product.name}</span>
+        <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
         <span className="product-price">₱{price.toFixed(2)} <SaleWas product={product} compact /></span>
         {/* Stars only from real review data; an unrated product says "New". */}
         {Number(product.reviewCount ?? 0) > 0 ? (

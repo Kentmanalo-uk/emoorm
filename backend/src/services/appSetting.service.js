@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   freeDeliveryThreshold: 500,
   requireBuyerVerification: true,
   categoryStyle: 'IMAGE',
+  availableTodayEnabled: true,
 };
 
 // How the homepage shows its categories.
@@ -183,8 +184,12 @@ const sanitize = (input = {}) => {
     data.categoryStyle = style;
   }
 
+  if (input.availableTodayEnabled !== undefined) {
+    data.availableTodayEnabled = booleanField(input.availableTodayEnabled, 'availableTodayEnabled');
+  }
+
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, verification or category style setting', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, verification, category style or Available Today setting', 400);
   }
   return data;
 };

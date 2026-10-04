@@ -348,6 +348,13 @@ const Cart = () => {
       toast.error('Checkout is limited to one store per order. Select items from one store only.');
       return;
     }
+    // Available Today items are made or picked for a set time: they check out
+    // on their own (the order is ready in their window).
+    const todayCount = selectedItems.filter((item) => item.listingKind === 'TODAY').length;
+    if (todayCount && todayCount !== selectedItems.length) {
+      toast.error('Available Today items check out on their own. Select only those, or only the others.');
+      return;
+    }
     if (!(await requireVerifiedIdentity())) return;
     navigate('/checkout', { state: { selectedIds, voucherCode: appliedVoucher?.voucher?.code || null } });
   };

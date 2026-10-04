@@ -21,6 +21,7 @@ const identityVerificationService = require('./identityVerification.service');
 const deliveryQuoteService = require('./deliveryQuote.service');
 const courierService = require('./courier.service');
 const shopReadiness = require('./shopReadiness.service');
+const availabilityService = require('./availability.service');
 const { ApiError } = require('../middleware/errorHandler');
 const { snapshotReturnPolicy } = require('../utils/returnPolicy');
 const shopHours = require('../utils/shopHours');
@@ -135,7 +136,7 @@ const notifyStockCrossings = async (sellerId, items) => {
   const ordered = new Map();
   for (const item of items) ordered.set(item.productId, (ordered.get(item.productId) || 0) + item.quantity);
   const products = await prisma.product.findMany({
-    where: { id: { in: [...ordered.keys()] } },
+    where: { id: { in: [...ordered.keys()] }, listingKind: 'REGULAR' },
     select: { id: true, name: true, stock: true, lowStockThreshold: true },
   });
   const crossed = products.filter((p) => p.stock <= p.lowStockThreshold && p.stock + ordered.get(p.id) > p.lowStockThreshold);
@@ -289,6 +290,7 @@ const createOrder = async (userId, data) => {
 
   let totalAmount = 0;
   const orderItems = [];
+  const orderedProducts = [];
   let parcelGrams = 0;
   const unweighed = [];
 
@@ -317,6 +319,7 @@ const createOrder = async (userId, data) => {
     }
 
     const selectedVariations = normalizeSelectedVariations(product, item.selectedVariations);
+    orderedProducts.push(product);
 
     // Per-option stock: the chosen option must have enough on its own.
     if (stockForSelection(product, selectedVariations) < quantity) {
@@ -343,6 +346,17 @@ const createOrder = async (userId, data) => {
       selectedVariations,
       returnPolicySnapshot: snapshotReturnPolicy(product.returnPolicy),
     });
+  }
+
+  // Available Today items: a window taking orders now for each, checked out
+  // on their own, one ready day, no courier; each line counts against its
+  // window, and the order is ready in the window's ready time.
+  const today = await availabilityService.checkoutWindows(orderedProducts, {
+    method: fulfillmentMethod,
+    courier: Boolean(courier),
+  });
+  if (today) {
+    for (const line of orderItems) line.availabilityId = today.byProduct.get(line.productId)?.id || null;
   }
 
   // Pickup is free; delivery by the seller costs what the store charges for
@@ -374,7 +388,7 @@ const createOrder = async (userId, data) => {
   const grandTotal = Math.max(0, totalAmount + DELIVERY_FEE - discountAmount);
 
   // When the buyer can expect it, from the shop's preparation days and week.
-  const eta = estimate(store, {
+  const eta = today ? today.eta : estimate(store, {
     method: fulfillmentMethod,
     courier: Boolean(courier),
     townId: buyerMunicipalityId || buyer.municipalityId || null,
@@ -410,6 +424,8 @@ const createOrder = async (userId, data) => {
         status: 'PENDING',
         etaFrom: eta.from,
         etaTo: eta.to,
+        // Available Today: the seller confirms by then or it is cancelled.
+        respondBy: today ? today.respondBy : null,
         fulfillmentMethod,
         pickupLocation: fulfillmentMethod === 'PICKUP' ? (store.pickupAddress || null) : null,
         paymentMethod,
@@ -429,6 +445,9 @@ const createOrder = async (userId, data) => {
   } catch (err) {
     if (err.code === 'INSUFFICIENT_STOCK') {
       throw new ApiError('One or more items no longer have sufficient stock', 400);
+    }
+    if (err.code === 'TODAY_CLOSED') {
+      throw new ApiError('An Available Today item stopped taking orders just now.', 400);
     }
     if (err.code === 'VOUCHER_UNAVAILABLE') {
       throw new ApiError(err.message, 400);

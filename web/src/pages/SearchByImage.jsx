@@ -7,6 +7,7 @@ import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
 import useCartStore from '../store/cartStore';
 import toast from 'react-hot-toast';
+import { ProductTodayTag } from '../components/today/TodayTag';
 import './SearchByImage.css';
 
 const SearchByImage = () => {
@@ -166,7 +167,7 @@ const SearchByImage = () => {
                           </button>
                         </div>
                         <div className="product-info">
-                          <span className="product-name">{product.name}</span>
+                          <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
                           <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
                           <div className="product-rating-row">
                             <div className="product-stars">

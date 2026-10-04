@@ -16,6 +16,7 @@ import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
 import SearchFilterSheet from '../components/search/SearchFilterSheet';
+import { ProductTodayTag } from '../components/today/TodayTag';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
@@ -129,6 +130,8 @@ const Products = () => {
         storeLogo: product.store?.logoUrl || product.store?.logo || null,
         readyToSell: product.store?.readyToSell,
         stock: product.stock,
+        listingKind: product.listingKind,
+        availability: product.availability,
         slug: product.slug,
         categoryId: product.categoryId,
         selectedVariations: null,
@@ -684,7 +687,7 @@ const Products = () => {
                       </div>
                       {isPhone ? (
                         <div className="product-info srch-card">
-                          <h3 className="product-name">{product.name}</h3>
+                          <h3 className="product-name"><ProductTodayTag product={product} />{product.name}</h3>
                           <span className="srch-card-price">₱{saleInfo(product).price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <SaleWas product={product} compact /></span>
                           <span className="srch-card-meta">
                             {Number(product.reviewCount) > 0 && (
@@ -699,7 +702,7 @@ const Products = () => {
                         </div>
                       ) : (
                         <div className="product-info">
-                          <h3 className="product-name">{product.name}</h3>
+                          <h3 className="product-name"><ProductTodayTag product={product} />{product.name}</h3>
                           <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
                           {renderRating(product)}
                           {Number(product.soldCount) > 0 && (
