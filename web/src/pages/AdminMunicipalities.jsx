@@ -255,7 +255,7 @@ export default function AdminMunicipalities() {
                             <p style={{ fontSize: 12, color: 'var(--t-neutral-500, #64748b)', margin: 0 }}>{mun.admin.email}</p>
                           </div>
                         ) : (
-                          <span style={{ fontSize: 13, color: 'var(--t-neutral-400, #94a3b8)' }}>None assigned</span>
+                          <span style={{ fontSize: 13, color: 'var(--t-neutral-500, #636b78)' }}>None assigned</span>
                         )}
                       </td>
                       <td>
@@ -279,6 +279,8 @@ export default function AdminMunicipalities() {
                               className="admin-btn admin-btn-red"
                               disabled={saving}
                               onClick={() => handleRemoveAdmin(mun)}
+                              title="Remove admin"
+                              aria-label={`Remove the admin of ${mun.name}`}
                             >
                               <X size={13} />
                             </button>

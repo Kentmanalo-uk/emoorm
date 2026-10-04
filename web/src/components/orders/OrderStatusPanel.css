@@ -56,7 +56,7 @@
 .osp-steps li.is-current .osp-dot { border-color: var(--osp); box-shadow: 0 0 0 4px color-mix(in srgb, var(--osp) 18%, transparent); }
 .osp-step-label { overflow: hidden; color: var(--t-neutral-500, #6b7280); font-size: 11px; line-height: 1.25; text-overflow: ellipsis; }
 .osp-steps li.is-done .osp-step-label, .osp-steps li.is-current .osp-step-label { color: var(--t-neutral-800, #1f2937); font-weight: 600; }
-.osp-step-time { color: var(--t-neutral-500, #6b7280); font-size: 10.5px; line-height: 1.2; }
+.osp-step-time { color: var(--t-neutral-500, #6b7280); font-size: 11px; line-height: 1.2; }
 
 /* Details */
 .osp-rows { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 11px; background: rgba(255, 255, 255, 0.85); }
@@ -72,7 +72,7 @@
 @media (max-width: 420px) {
   .osp { margin: 0 12px 12px; padding: 12px; }
   .osp-row { grid-template-columns: 1fr; gap: 2px; }
-  .osp-step-label { font-size: 10px; }
+  .osp-step-label { font-size: 11px; }
 }
 .osp-proof { display: block; width: 120px; max-width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 10px; background: var(--t-neutral-100, #f3f4f6); }
 .osp-proof img { width: 100%; height: 100%; object-fit: cover; }
@@ -130,10 +130,10 @@
   box-sizing: border-box;
 }
 .osd-step { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.osd-step-label { color: var(--t-neutral-400, #9ca3af); font-size: 15px; line-height: 1.4; }
+.osd-step-label { color: var(--t-neutral-500, #636b78); font-size: 15px; line-height: 1.4; }
 .osd-steps li.is-done .osd-step-label,
 .osd-steps li.is-current .osd-step-label { color: var(--t-neutral-900, #111827); }
-.osd-step time { color: var(--t-neutral-400, #9ca3af); font-size: 13px; }
+.osd-step time { color: var(--t-neutral-500, #636b78); font-size: 13px; }
 
 .osd-box {
   display: flex;
@@ -147,7 +147,7 @@
 .osd-box-text p { margin: 0; color: var(--t-neutral-800, #1f2937); font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
 .osd-box-text .osd-sub { color: var(--t-neutral-500, #6b7280); font-size: 13.5px; }
 .osd-line { display: inline-flex; align-items: center; gap: 6px; }
-.osd-line svg { color: var(--t-neutral-400, #9ca3af); }
+.osd-line svg { color: var(--t-neutral-500, #636b78); }
 .osd-link {
   display: inline-flex;
   align-items: center;

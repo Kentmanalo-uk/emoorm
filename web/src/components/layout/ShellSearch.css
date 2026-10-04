@@ -47,7 +47,7 @@
 
 .shell-search-icon {
   flex-shrink: 0;
-  color: var(--t-neutral-400, #a8aeb8);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .shell-search-field:focus-within .shell-search-icon {
@@ -90,7 +90,7 @@
 
 .shell-search-spinner {
   flex-shrink: 0;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   animation: shell-search-spin 0.8s linear infinite;
 }
 
@@ -204,7 +204,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .shell-search-result-title {
@@ -297,7 +297,7 @@
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   cursor: pointer;
   opacity: 0;
   transition: opacity .12s, color .12s, background-color .12s;
@@ -324,7 +324,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   background: var(--t-neutral-100, #f3f4f6);
 }
 
@@ -445,7 +445,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   cursor: pointer;
   opacity: 0;
   transition: opacity .12s, color .12s, background-color .12s;
@@ -512,7 +512,7 @@
 
 .shell-search-menu-pop svg {
   flex-shrink: 0;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -549,7 +549,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   cursor: pointer;
   opacity: 0;
   transition: opacity .12s, color .12s, background-color .12s;

@@ -312,7 +312,7 @@
 }
 
 .ac-user-caret {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   flex-shrink: 0;
 }
 
@@ -546,13 +546,18 @@
 
 /* Badges */
 .admin-badge {
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
+  vertical-align: middle;
+  text-transform: lowercase;
   font-size: 11px;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 9999px;
   white-space: nowrap;
+}
+
+.admin-badge::first-letter {
+  text-transform: uppercase;
 }
 
 .admin-badge-pending {
@@ -780,7 +785,7 @@
 .admin-empty {
   padding: 48px 20px;
   text-align: center;
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
 }
 
 /* The spacing below the illustration used to come from an svg-only rule,
@@ -811,7 +816,7 @@
 .admin-loading {
   padding: 40px 20px;
   text-align: center;
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
 }
 
 @media (max-width: 768px) {
@@ -975,7 +980,7 @@
   border-radius: 8px;
   border: 1px solid var(--t-neutral-200, #e5e7eb);
   background: var(--t-neutral-50, #f9fafb);
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -995,7 +1000,7 @@
   border-radius: 6px;
   border: 1px solid var(--t-neutral-200, #e5e7eb);
   background: var(--t-neutral-50, #f9fafb);
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1173,7 +1178,7 @@
 }
 
 .ac-nav-item > svg:not(.ac-nav-chevron) {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .ac-nav-item--active > svg:not(.ac-nav-chevron) {
@@ -1281,6 +1286,7 @@
   /* Filter toolbar: search full width, selects/buttons share the next row. */
   .ac-content .admin-toolbar {
     flex: 1 1 100%;
+    flex-wrap: wrap;
     width: 100%;
     gap: 8px;
   }
@@ -1299,8 +1305,10 @@
     font-size: 15px;
   }
 
+  /* Two to a row at most, so a label like "All Municipalities" stays
+     readable instead of three selects squeezing to "All 1". */
   .ac-content .admin-toolbar .admin-select {
-    flex: 1 1 0;
+    flex: 1 1 calc(50% - 4px);
     min-width: 0;
     min-height: 44px;
     border-radius: 10px;
@@ -1454,7 +1462,7 @@
   }
 
   .ac-content .admin-badge {
-    font-size: 10.5px;
+    font-size: 11px;
     padding: 3px 8px;
   }
 }

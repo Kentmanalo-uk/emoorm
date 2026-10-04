@@ -30,7 +30,9 @@ export const RAMP_STOPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
 export const NEUTRAL_STOPS = [0, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
 export const DEFAULT_RAMPS = {
-  // The brand emerald. #059669 is the colour on almost every button in the app.
+  // The brand emerald. 600 is the colour on almost every button, price and
+  // link: #047857 keeps white labels and green text at 5.5:1 (#059669, the
+  // first choice, was 3.8:1, under WCAG's 4.5:1).
   primary: {
     50: '#ecfdf5',
     100: '#d1fae5',
@@ -38,8 +40,8 @@ export const DEFAULT_RAMPS = {
     300: '#6ee7b7',
     400: '#34d399',
     500: '#10b981',
-    600: '#059669',
-    700: '#047857',
+    600: '#047857',
+    700: '#03684c',
     800: '#065f46',
     900: '#064e3b',
     950: '#052e1f',
@@ -52,7 +54,7 @@ export const DEFAULT_RAMPS = {
     300: '#7cc79b',
     400: '#48ae76',
     500: '#29a366',
-    600: '#1f8a54',
+    600: '#178048',
     700: '#176b3a',
     800: '#006927',
     900: '#0b5c38',
@@ -133,7 +135,7 @@ export const DEFAULT_RAMPS = {
     200: '#e5e7eb',
     300: '#d1d5db',
     400: '#9ca3af',
-    500: '#6b7280',
+    500: '#636b78',
     600: '#4b5563',
     700: '#374151',
     800: '#1f2937',

@@ -89,7 +89,7 @@
 .stores-search-icon {
   position: absolute;
   left: 10px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .stores-search button {
@@ -152,7 +152,7 @@
 .stores-empty {
   text-align: center;
   padding: 80px 0;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .stores-empty svg {
@@ -636,7 +636,7 @@
 
   .stores-m-field-icon {
     flex-shrink: 0;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .stores-m-field input {
@@ -782,7 +782,7 @@
     min-width: 0;
   }
 
-  .stores-m-card-text h3 {
+  .stores-m-card-text h2 {
     margin: 0 0 4px;
     overflow: hidden;
     color: var(--t-neutral-900, #111827);
@@ -813,7 +813,7 @@
 
   .stores-m-chevron {
     flex-shrink: 0;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .stores-m-desc {

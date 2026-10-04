@@ -13,7 +13,7 @@ const PAGE_SIZE = 20;
 
 function Stars({ rating }) {
   return (
-    <span className="am-stars" aria-label={`${rating} out of 5 stars`}>
+    <span className="am-stars" role="img" aria-label={`${rating} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((n) => (
         <Star key={n} size={14} weight={n <= rating ? 'fill' : 'regular'} className={n <= rating ? 'is-on' : ''} />
       ))}
@@ -106,6 +106,7 @@ export default function AdminReviews() {
               />
             </form>
             <select
+              aria-label="Filter by rating"
               className="admin-select"
               value={rating}
               onChange={(e) => { setRating(e.target.value); setPage(1); }}
@@ -137,7 +138,7 @@ export default function AdminReviews() {
                     <th>Store</th>
                     <th>Reviewer</th>
                     <th>Date</th>
-                    <th aria-label="Actions" />
+                    <th><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>

@@ -72,6 +72,7 @@ function PlatformAnalytics() {
           </div>
           <div className="an-actions">
             <select
+              aria-label="Filter by municipality"
               className="an-icon-btn"
               value={muniFilter}
               onChange={(e) => setMuniFilter(e.target.value)}

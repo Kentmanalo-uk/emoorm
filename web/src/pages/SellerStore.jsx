@@ -473,7 +473,7 @@ function SellerStore({ part }) {
       about: (
         <div className="seller-card" id="shop-info">
           <div className="seller-card-header">
-            <h2><Store size={18} /> Store Information</h2>
+            <h2><Store size={18} /> Shop Information</h2>
           </div>
           <div className="store-form">
             {nameField}
@@ -546,7 +546,7 @@ function SellerStore({ part }) {
     <div className="seller-dashboard">
       <div className="seller-container">
         <SellerPageHead
-          title={isNew ? 'Create Your Store' : 'Store Settings'}
+          title={isNew ? 'Create Your Shop' : 'Shop Profile'}
           subtitle="Your public storefront details"
           actions={!isNew && isDirty && (
             <span className="store-unsaved-badge">
@@ -568,7 +568,7 @@ function SellerStore({ part }) {
             <div className="store-settings-main">
               <div className="seller-card" id="shop-info">
                 <div className="seller-card-header">
-                  <h2><Store size={18} /> Store Information</h2>
+                  <h2><Store size={18} /> Shop Information</h2>
                 </div>
                 <form onSubmit={handleSubmit} className="store-form">
                   {nameField}
@@ -651,7 +651,7 @@ function SellerStore({ part }) {
                       rel="noreferrer"
                       className="store-slug-link"
                     >
-                      emoorm.app/store/{store.slug}
+                      {window.location.host}/store/{store.slug}
                     </a>
                   </div>
                 </div>
@@ -745,6 +745,7 @@ function ColorPicker({ label, hint, value, onChange }) {
       </div>
       <div className="color-picker-inputs">
         <input
+          aria-label={`${label} colour`}
           type="color"
           value={safe}
           onChange={(e) => onChange(e.target.value)}

@@ -907,6 +907,7 @@ function PhoneHome({
 
   return (
     <div className="seller-dashboard sh">
+      <h1 className="sr-only">Seller Center home</h1>
       <header className="sh-head">
         <Link to="/seller/menu" className="sh-shop" aria-label="Your shop">
           <span className="sh-avatar">
@@ -1095,7 +1096,7 @@ function StatCard({ label, value, big, compact, featured, meta = [], trend = [] 
       <span className={`sd-stat-value ${big ? 'sd-stat-value--big' : ''}`}>{value}</span>
       <span className="sd-stat-label">{label}</span>
       {trendValues.length > 0 && (
-        <span className="sd-stat-trend" aria-label={`${label} trend for the last ${trendValues.length} days`}>
+        <span className="sd-stat-trend" role="img" aria-label={`${label} trend for the last ${trendValues.length} days`}>
           {trendValues.map((amount, index) => (
             <span
               key={`${amount}-${index}`}

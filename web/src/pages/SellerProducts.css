@@ -38,7 +38,7 @@
 }
 
 .products-search-icon {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   flex-shrink: 0;
 }
 
@@ -176,7 +176,7 @@
 }
 
 .product-stock-badge {
-  font-size: 10.5px;
+  font-size: 11px;
   padding: 2px 8px;
 }
 
@@ -247,7 +247,7 @@
   align-items: center;
   gap: 12px;
   padding: 48px 20px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .seller-empty svg {
@@ -676,7 +676,7 @@
    gap spaces it instead. */
 .products-tab-count {
   margin-left: 2px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }

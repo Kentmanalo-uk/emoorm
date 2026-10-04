@@ -42,7 +42,7 @@
   background-color: white;
   padding: var(--spacing-10);
   border-radius: 0;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .cart-empty h2 {
@@ -1529,7 +1529,7 @@
 
   .cart-suggestion-review-count {
     font-size: 11px;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .cart-suggestion-skel {
@@ -1963,7 +1963,7 @@
 
   .cart-m-store-name svg:last-child {
     flex-shrink: 0;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   /* item row */

@@ -2,6 +2,9 @@ import './analytics.css';
 
 const TrendLine = ({ data = [], height = 60, valueKey = 'total', color = 'var(--t-primary-600, #059669)' }) => {
   const points = data.map((d) => Number(d[valueKey] || 0));
+  // Nothing sold in the period: no flat line along the bottom under the
+  // chart's empty state.
+  if (!points.some((v) => v !== 0)) return null;
   const max = Math.max(1, ...points);
   const min = Math.min(0, ...points);
   const range = max - min || 1;
@@ -28,7 +31,7 @@ const TrendLine = ({ data = [], height = 60, valueKey = 'total', color = 'var(--
       viewBox={`0 0 ${w} ${h}`}
       preserveAspectRatio="none"
       role="img"
-      aria-label="Trend"
+      aria-label="Sales trend over the period"
     >
       {area && <path d={area} fill={color} opacity="0.08" />}
       {path && <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />}

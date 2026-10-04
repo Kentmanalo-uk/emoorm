@@ -196,7 +196,7 @@
   place-items: center;
   width: 28px;
   height: 34px;
-  color: var(--t-neutral-400, #9ca3af) !important;
+  color: var(--t-neutral-500, #636b78) !important;
 }
 
 /* popular */
@@ -256,7 +256,7 @@
 
 .ss-hidden-note {
   margin: 0 0 12px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 13px;
 }
 
@@ -356,7 +356,7 @@
 
 .ss-sug-icon {
   flex-shrink: 0;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .ss-sug-thumb {
@@ -389,6 +389,6 @@
 
 .ss-sug-text small {
   display: block;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 12px;
 }

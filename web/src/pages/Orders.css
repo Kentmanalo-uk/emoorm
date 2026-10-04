@@ -271,7 +271,7 @@
   background: none;
   border: 0;
   padding: 2px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   cursor: pointer;
   transition: transform 0.1s, color 0.1s;
 }
@@ -686,7 +686,7 @@
 
 .timeline-date {
   font-size: 13px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   margin: 0;
 }
 

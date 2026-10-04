@@ -44,7 +44,7 @@ export default function ProfileGuest() {
       <div className="profile-page profile-guest">
         <div className="container">
           <div className="profile-grid">
-            <main className="profile-main">
+            <div className="profile-main">
               <div className="pf-m">
                 <div className="profile-mobile-page-header">
                   <h1>Profile</h1>
@@ -110,7 +110,7 @@ export default function ProfileGuest() {
                   <Row link={{ to: '/help' }} icon={Lifebuoy} label="Help & Support" />
                 </section>
               </div>
-            </main>
+            </div>
           </div>
         </div>
       </div>

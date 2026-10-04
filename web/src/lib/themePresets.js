@@ -22,7 +22,7 @@ export const PRESETS = [
     name: 'Emoorm Green',
     description: 'The original palette. Emerald brand, forest depths, a pink accent.',
     seeds: {
-      primary: '#059669',
+      primary: '#047857',
       secondary: '#176b3a',
       accent: '#ec4899',
       neutral: '#6b7280',

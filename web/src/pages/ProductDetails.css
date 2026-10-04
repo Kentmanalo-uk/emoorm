@@ -516,12 +516,12 @@
 }
 
 .pdp-row-muted {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 12.5px;
 }
 
 .pdp-row-dot {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   padding: 0 4px;
 }
 
@@ -993,7 +993,7 @@
 }
 
 .pdp-empty {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 13.5px;
   padding: 8px 0;
 }
@@ -1087,7 +1087,7 @@
 
 .pdp-review-date {
   font-size: 12px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .pdp-review-comment {
@@ -2081,7 +2081,7 @@
     bottom: 12px;
     padding: 3px 11px;
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.55);
+    background: rgba(15, 23, 42, 0.72);
     color: #fff;
     font-size: 12px;
     font-weight: 600;
@@ -2431,7 +2431,7 @@
 
   .pdp-m-options-caret {
     flex-shrink: 0;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 }
 

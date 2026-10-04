@@ -96,3 +96,11 @@
     min-height: 420px;
   }
 }
+
+/* Inset: inside a card or a list column that is already white. */
+.ui-empty.ui-empty--inset {
+  min-height: 0;
+  padding: 28px 16px;
+  border-radius: 0;
+  background: transparent;
+}

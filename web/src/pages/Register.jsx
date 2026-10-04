@@ -288,12 +288,17 @@ const Register = () => {
   };
 
   return (
-    <div className={`register-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}>
+    <div
+      className={`register-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}
+      role={isPhone ? 'dialog' : undefined}
+      aria-modal={isPhone ? 'true' : undefined}
+      aria-label={isPhone ? 'Sign up' : undefined}
+    >
       {/* Header */}
       <header className="register-header">
         <div className="register-header-container">
           <Link to="/" className="register-logo">
-            <AppLogo className="register-logo-icon" />
+            <AppLogo className="register-logo-icon" alt="" />
             <span className="register-logo-text">emoorm</span>
           </Link>
           <Link to={loginPath} className="register-header-link">Log In</Link>
@@ -301,17 +306,17 @@ const Register = () => {
       </header>
 
       {/* Main Content */}
-      <div className="register-content">
+      <div className="register-content" role={isPhone ? undefined : 'main'}>
         <div className="register-container">
           {/* Left Side - Hero */}
           <div className="register-hero">
             <div className="register-hero-brand">
-              <AppLogo className="register-hero-icon" />
+              <AppLogo className="register-hero-icon" alt="" />
               <span className="register-hero-text">emoorm</span>
             </div>
             <h1 className="register-hero-title">
               Made in Mindoro<br />
-              <span className="register-hero-title-highlight">the place of rich<br />in Agriculture Producers</span>
+              <span className="register-hero-title-highlight">home of its farmers,<br />fishers and makers</span>
             </h1>
 
           </div>
@@ -430,6 +435,8 @@ const Register = () => {
                       type="button"
                       className="register-form-toggle-password"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-pressed={showPassword}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -458,6 +465,8 @@ const Register = () => {
                       type="button"
                       className="register-form-toggle-password"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      aria-pressed={showConfirmPassword}
                     >
                       {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>

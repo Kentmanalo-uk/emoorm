@@ -40,7 +40,7 @@
   max-width: 320px;
   height: 50px;
   border-radius: 12px;
-  background: #059669;
+  background: var(--t-primary-600, #047857);
   color: #fff;
   font-size: 16px;
   font-weight: 600;

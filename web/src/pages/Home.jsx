@@ -304,6 +304,7 @@ const Home = () => {
 
   return (
     <Layout>
+      <h1 className="sr-only">Emoorm, Oriental Mindoro&apos;s local online marketplace</h1>
       {popupOpen && promotionPopup && (
         <PromotionPopup banner={promotionPopup} onClose={() => setPopupOpen(false)} />
       )}
@@ -363,8 +364,11 @@ const Home = () => {
                 {banners.map((_, index) => (
                   <button
                     key={index}
+                    type="button"
                     className={`banner-dot ${getRealIndex() === index ? 'banner-dot-active' : ''}`}
                     onClick={() => goToSlide(index)}
+                    aria-label={`Show banner ${index + 1} of ${banners.length}`}
+                    aria-current={getRealIndex() === index ? 'true' : undefined}
                   />
                 ))}
               </div>
@@ -696,9 +700,14 @@ function HomeStoreCard({ store }) {
         </div>
       </Link>
       <div className="home-store-products">
-        <div className="home-store-product-stack" aria-label="Recent products">
+        <div className="home-store-product-stack" aria-hidden="true">
           {productImages.length > 0 ? productImages.map((image) => (
-            <img key={image.id} src={image.src} alt={image.name} />
+            <img
+              key={image.id}
+              src={image.src}
+              alt=""
+              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder-product.png'; }}
+            />
           )) : (
             <span className="home-store-product-empty"><Storefront size={18} /></span>
           )}

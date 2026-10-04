@@ -58,11 +58,12 @@ export default function AdminPhoneHome({ attention, analytics, activity }) {
 
   return (
     <div className="sh ah">
+      <h1 className="sr-only">Admin home</h1>
       <header className="sh-head">
         <Link to="/admin/menu" className="sh-shop" aria-label="Your admin account">
           {/* The Emoorm mark; a municipal admin's carries the municipality's seal. */}
           <span className="sh-avatar ah-brand">
-            <AppLogo />
+            <AppLogo alt="" />
             {!isSuperAdmin && (municipalityLogo
               ? <img className="ah-brand-badge" src={resolveImg(municipalityLogo)} alt="" />
               : <span className="ah-brand-badge ah-brand-initial">{(municipalityName || 'M').charAt(0).toUpperCase()}</span>)}

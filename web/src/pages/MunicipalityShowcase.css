@@ -404,7 +404,7 @@
 }
 
 .municipality-product-rating>span {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 11px;
   line-height: 1;
 }

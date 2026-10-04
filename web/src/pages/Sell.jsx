@@ -227,7 +227,7 @@ export default function Sell() {
         <header className="sell-header" onMouseLeave={() => setActiveNav(null)}>
           <div className="sell-header-inner">
             <Link to="/" className="sell-logo">
-              <AppLogo className="sell-logo-img" />
+              <AppLogo className="sell-logo-img" alt="" />
               <span className="sell-logo-text">emoorm</span>
             </Link>
 
@@ -358,6 +358,7 @@ export default function Sell() {
         </div>
       )}
 
+      <main className="sell-main">
       {/* Hero */}
       <section className="sell-hero">
         <span className="sell-hero-glow" aria-hidden="true" />
@@ -628,6 +629,7 @@ export default function Sell() {
           </div>
         </div>
       </section>
+      </main>
 
       <Footer />
 

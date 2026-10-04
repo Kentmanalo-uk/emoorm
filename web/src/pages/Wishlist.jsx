@@ -70,7 +70,7 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
           <div className="wishlist-header">
             <div>
               <h1>My Wishlist</h1>
-              <p>{items.length} saved item{items.length !== 1 ? 's' : ''}</p>
+              {items.length > 0 && <p>{items.length} saved item{items.length !== 1 ? 's' : ''}</p>}
             </div>
             {items.length > 0 && (
               <button className="wishlist-clear-btn" onClick={handleClearAll}>

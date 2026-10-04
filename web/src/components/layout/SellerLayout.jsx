@@ -276,7 +276,7 @@ export default function SellerLayout() {
         <div className="sc-sidebar-inner">
           <div className="sc-brand-row">
             <Link to="/seller" className="sc-brand">
-              <AppLogo className="sc-brand-logo" />
+              <AppLogo className="sc-brand-logo" alt="" />
               <span className="sc-brand-text">
                 <strong>Emoorm</strong>
                 <span>Seller Center</span>
@@ -562,10 +562,13 @@ export default function SellerLayout() {
         </header>
 
         <main className="sc-content">
+          {!isPhone && DESKTOP_HIDDEN_TITLES.includes(cleanPath) && (
+            <h1 className="sr-only">{phoneTitle}</h1>
+          )}
           {store && store.isApproved === false && !(isPhone && ownHeader) && (
             isPhone ? (
               // Phones: one short line that opens what to finish, not a paragraph.
-              <Link to={setupNextTo(setup)} className="scm-private" role="status">
+              <Link to={setupNextTo(setup)} className="scm-private">
                 <LockSimple size={15} weight="fill" />
                 <span>Private until approved</span>
                 <ChevronRight size={14} weight="bold" />
@@ -679,6 +682,10 @@ const LABELS = {
 const PHONE_TABS = ['/seller', '/seller/products', '/seller/messages', '/seller/marketing', '/seller/menu'];
 
 /** Phone: tabs whose page draws its own shop header (Home, Me). */
+// Computers: pages with no page header of their own get a heading for
+// screen readers (phones show the title in the top bar).
+const DESKTOP_HIDDEN_TITLES = ['/seller/marketing', '/seller/decorate', '/seller/decorate/home', '/seller/decorate/templates'];
+
 const PHONE_OWN_HEADER = ['/seller', '/seller/menu'];
 
 /** Phone header titles: short, plain names. */

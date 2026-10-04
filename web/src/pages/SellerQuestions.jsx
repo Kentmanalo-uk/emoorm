@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import EmptyState from '../components/ui/EmptyState';
 import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Question, EyeSlash } from '@phosphor-icons/react';
@@ -7,7 +8,6 @@ import { resolveImg, firstImage } from '../lib/media';
 import { confirmAction } from '../lib/confirm';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import Skeleton from '../components/ui/Skeleton';
-import EmptyArt from '../components/ui/EmptyArt';
 import './SellerDashboard.css';
 import './SellerQuestions.css';
 
@@ -71,8 +71,14 @@ export default function SellerQuestions() {
           <div className="seller-card" style={{ padding: 20 }}><Skeleton.Text lines={3} height={14} /></div>
         ) : data.items.length === 0 ? (
           <div className="seller-card sq-empty">
-            <EmptyArt name="messages" size={96} />
-            <p>{tab === 'open' ? 'No questions waiting. Nice!' : 'No questions yet. Buyers can ask on each product page.'}</p>
+            <EmptyState
+              className="ui-empty--inset"
+              art="messages"
+              title={tab === 'open' ? 'No questions waiting' : 'No questions yet'}
+              text={tab === 'open'
+                ? 'New questions from buyers show up here.'
+                : 'Buyers can ask about a product on its page.'}
+            />
           </div>
         ) : (
           <ul className="sq-list">

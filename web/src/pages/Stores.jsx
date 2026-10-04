@@ -320,7 +320,7 @@ function StoreCard({ store }) {
       <StoreLogo store={store} className="store-card-avatar" />
 
       <div className="store-card-body">
-        <h3 className="store-card-name">{store.name}</h3>
+        <h2 className="store-card-name">{store.name}</h2>
         {store.address && (
           <p className="store-card-address">
             <MapPin size={12} /> {store.address}
@@ -356,7 +356,7 @@ function PhoneStoreCard({ store }) {
       <div className="stores-m-card-head">
         <StoreLogo store={store} className="stores-m-logo" />
         <div className="stores-m-card-text">
-          <h3>{store.name}</h3>
+          <h2>{store.name}</h2>
           <p className="stores-m-meta">
             {store.municipality?.name && <span><MapPin size={12} weight="fill" /> {store.municipality.name}</span>}
             <span><Package size={12} weight="fill" /> {count} {count === 1 ? 'product' : 'products'}</span>

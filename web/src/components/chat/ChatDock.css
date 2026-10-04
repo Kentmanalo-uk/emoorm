@@ -235,7 +235,7 @@
 .cd-list-top small {
   flex-shrink: 0;
   font-size: 11px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .cd-list-preview {
@@ -291,8 +291,8 @@
 .cd-msg time {
   align-self: flex-end;
   margin-top: 2px;
-  font-size: 10px;
-  color: var(--t-neutral-400, #9ca3af);
+  font-size: 11px;
+  color: var(--t-neutral-500, #636b78);
 }
 
 .cd-msg.is-mine time {

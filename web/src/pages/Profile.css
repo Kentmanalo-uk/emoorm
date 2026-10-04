@@ -84,7 +84,7 @@
 /* Filled icons: grey by default, green on the active page. */
 .profile-nav-icon {
   flex-shrink: 0;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .profile-nav-item-active .profile-nav-icon {
@@ -398,7 +398,7 @@
   justify-content: center;
   padding: 48px 24px;
   gap: 12px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   text-align: center;
 }
 
@@ -1550,7 +1550,7 @@
 }
 
 .pf-m-row-hint {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 13px;
 }
 

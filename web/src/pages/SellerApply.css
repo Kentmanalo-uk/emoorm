@@ -67,7 +67,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   background: var(--t-neutral-0, #fff);
   flex-shrink: 0;
   transition: border-color 0.2s, background 0.2s, color 0.2s;
@@ -87,7 +87,7 @@
 .apply-step-label {
   font-size: 12px;
   font-weight: 500;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   white-space: nowrap;
 }
 
@@ -312,7 +312,7 @@
 }
 
 .upload-icon {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .upload-label {
@@ -325,7 +325,7 @@
 
 .upload-hint {
   font-size: 11px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   margin: 0;
   text-align: center;
 }
@@ -944,7 +944,7 @@
 
 .apply-preview-list dt {
   font-size: 12.5px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .apply-preview-list dd {
@@ -1142,7 +1142,7 @@
   margin-top: 5px;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 /* ── Category chips ───────────────────────────────────────────── */
@@ -1390,7 +1390,7 @@
   margin: 0;
   font-size: 11.5px;
   text-align: center;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 /* ── Terms checkbox ───────────────────────────────────────────── */
@@ -1486,7 +1486,7 @@
 
 .apply-status-meta {
   font-size: 12.5px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 @keyframes apply-confirm-fade {

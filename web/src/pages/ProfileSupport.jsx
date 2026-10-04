@@ -15,7 +15,7 @@ export default function ProfileSupport() {
         <h1 className="profile-page-title">Help &amp; Support</h1>
         <p className="profile-page-subtitle">
           Your support cases with the municipal team. Looking for an answer instead?{' '}
-          <Link to="/help" className="help-topic-link">Browse Help &amp; Support</Link>.
+          <Link to="/help" className="help-topic-link">Browse Help &amp; Support</Link>
         </p>
       </header>
       <SupportChat

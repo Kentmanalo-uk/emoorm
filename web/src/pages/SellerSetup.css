@@ -409,7 +409,7 @@ a.ss-step-link:hover {
 }
 
 .ss-step-caret {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .ss-footer {
@@ -533,7 +533,7 @@ a.ss-step-link:hover {
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   cursor: pointer;
 }
 

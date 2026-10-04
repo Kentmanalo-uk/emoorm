@@ -139,7 +139,7 @@ function Section({ title, link, linkLabel = 'View all', meta, span = 'half', too
           </Link>
         )}
       </header>
-      <div className="dash-card-body">{children}</div>
+      <div className="dash-card-body" role="region" aria-label={typeof title === 'string' ? title : undefined} tabIndex={0}>{children}</div>
     </section>
   );
 }

@@ -123,7 +123,7 @@ const ProfileFollowedStores = () => {
         </div>
         <div className="followed-sort">
           <label>Sort:</label>
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+          <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort followed stores">
             {SORTS.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>
             ))}

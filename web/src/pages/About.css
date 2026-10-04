@@ -9,10 +9,8 @@
 
 .about-eyebrow {
   margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--t-primary-600, #059669);
 }
 
@@ -146,7 +144,7 @@
   right: 18px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .about-step-icon {

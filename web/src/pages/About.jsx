@@ -85,7 +85,7 @@ const About = () => {
       <section className="about-hero">
         <AppLogo className="about-hero-logo" alt="" />
         <p className="about-eyebrow">About Emoorm</p>
-        <h1>Oriental Mindoro&apos;s local online marketplace</h1>
+        <h1 data-bar-title="About Emoorm">Oriental Mindoro&apos;s local online marketplace</h1>
         <p className="about-lead">
           Emoorm connects buyers with farmers, fishers, artisans and food producers across Oriental Mindoro,
           so fresh produce, local delicacies and handcrafted goods from every town are only a few taps away.

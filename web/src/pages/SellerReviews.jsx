@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
+import EmptyState from '../components/ui/EmptyState';
 import { Star, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { Link, useSearchParams } from 'react-router-dom';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
-import EmptyArt from '../components/ui/EmptyArt';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import './SellerDashboard.css';
@@ -147,6 +147,7 @@ export default function SellerReviews() {
         <div className="seller-card" style={{ padding: '10px 16px', marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <label style={{ fontSize: 13, color: 'var(--t-neutral-600, #475569)', fontWeight: 600 }}>Filter by rating:</label>
           <select
+            aria-label="Filter by rating"
             className="form-select"
             style={{ maxWidth: 160 }}
             value={ratingFilter}
@@ -167,7 +168,7 @@ export default function SellerReviews() {
             Needs reply{awaitingReply > 0 ? ` (${awaitingReply})` : ''}
           </button>
 
-          <span style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--t-neutral-400, #94a3b8)' }}>
+          <span style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--t-neutral-500, #636b78)' }}>
             Showing {visibleReviews.length} of {reviews.length} on this page
           </span>
         </div>
@@ -180,8 +181,14 @@ export default function SellerReviews() {
             </div>
           ) : visibleReviews.length === 0 ? (
             <div className="seller-empty">
-              <EmptyArt name="reviews" size={104} />
-              <p>{unansweredOnly ? 'Every review on this page has a reply.' : 'No reviews yet.'}</p>
+              <EmptyState
+                className="ui-empty--inset"
+                art="reviews"
+                title={unansweredOnly ? 'All caught up' : 'No reviews yet'}
+                text={unansweredOnly
+                  ? 'Every review on this page has a reply.'
+                  : 'Buyers can review a product once their order is completed.'}
+              />
             </div>
           ) : (
             <>

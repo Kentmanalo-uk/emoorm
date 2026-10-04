@@ -7,7 +7,7 @@ import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
-import EmptyArt from '../components/ui/EmptyArt';
+import EmptyState from '../components/ui/EmptyState';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import './AdminModeration.css';
@@ -146,6 +146,7 @@ export default function AdminReturns() {
           </h2>
           <div className="admin-toolbar">
             <select
+              aria-label="Filter by status"
               className="admin-select"
               value={status}
               onChange={(e) => { setStatus(e.target.value); setPage(1); }}
@@ -161,8 +162,12 @@ export default function AdminReturns() {
           <Skeleton.Table cols={7} rows={6} />
         ) : rows.length === 0 ? (
           <div className="admin-empty">
-            <EmptyArt name="returns" size={104} />
-            <p>{status ? `No ${statusLabel(status).toLowerCase()} return requests` : 'No return requests yet'}</p>
+            <EmptyState
+              className="ui-empty--inset"
+              art="returns"
+              title={status ? `No ${statusLabel(status).toLowerCase()} return requests` : 'No return requests yet'}
+              text="Return requests buyers make show up here, with any dispute for you to decide."
+            />
           </div>
         ) : (
           <>

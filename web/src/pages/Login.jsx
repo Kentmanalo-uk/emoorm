@@ -415,12 +415,17 @@ const Login = ({ seller = false }) => {
   };
 
   return (
-    <div className={`login-page${seller ? ' is-seller' : ''}${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}>
+    <div
+      className={`login-page${seller ? ' is-seller' : ''}${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}
+      role={isPhone ? 'dialog' : undefined}
+      aria-modal={isPhone ? 'true' : undefined}
+      aria-label={isPhone ? (seller ? 'Seller log in' : 'Log in') : undefined}
+    >
       {/* Header */}
       <header className="login-header">
         <div className="login-header-container">
           <Link to="/" className="login-logo">
-            <AppLogo className="login-logo-icon" />
+            <AppLogo className="login-logo-icon" alt="" />
             <span className="login-logo-text">emoorm</span>
           </Link>
           <div className="login-header-actions">
@@ -430,12 +435,12 @@ const Login = ({ seller = false }) => {
       </header>
 
       {/* Main Content */}
-      <div className="login-content">
+      <div className="login-content" role={isPhone ? undefined : 'main'}>
         <div className="login-container">
           {/* Left Side - Hero */}
           <div className="login-hero">
             <div className="login-hero-brand">
-              <AppLogo className="login-hero-icon" />
+              <AppLogo className="login-hero-icon" alt="" />
               <span className="login-hero-text">emoorm</span>
             </div>
             {seller ? (
@@ -446,7 +451,7 @@ const Login = ({ seller = false }) => {
             ) : (
               <h1 className="register-hero-title">
                 Made in Mindoro<br />
-                <span className="register-hero-title-highlight">the place of rich<br />in Agriculture Producers</span>
+                <span className="register-hero-title-highlight">home of its farmers,<br />fishers and makers</span>
               </h1>
             )}
 
@@ -572,6 +577,8 @@ const Login = ({ seller = false }) => {
                         type="button"
                         className="login-form-toggle-password"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        aria-pressed={showPassword}
                       >
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
@@ -725,7 +732,13 @@ function GoogleCompleteProfile({
             value={form.password}
             onChange={(e) => onChange('password', e.target.value)}
           />
-          <button type="button" className="login-form-toggle-password" onClick={onTogglePassword}>
+          <button
+            type="button"
+            className="login-form-toggle-password"
+            onClick={onTogglePassword}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-pressed={showPassword}
+          >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>

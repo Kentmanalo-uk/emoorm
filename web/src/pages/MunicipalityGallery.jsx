@@ -26,7 +26,7 @@ export default function MunicipalityGallery() {
 
   return (
     <Layout>
-      <main className="municipality-gallery-page">
+      <div className="municipality-gallery-page">
         <header className="municipality-gallery-header">
           <Link to={`/municipality/${id}`} className="municipality-gallery-back"><ArrowLeft size={16} /> Back to {municipality?.name || 'municipality'}</Link>
           <div className="municipality-gallery-title-row">
@@ -46,7 +46,7 @@ export default function MunicipalityGallery() {
             </div>
           )}
         </div>
-      </main>
+      </div>
     </Layout>
   );
 }

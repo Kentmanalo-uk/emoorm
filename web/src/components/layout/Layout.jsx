@@ -20,7 +20,8 @@ const KEEPS_GREY = /^\/($|search|products|product\/[^/]+$)/;
  * phoneBar: on phones, pages outside the five bottom-nav tabs get a top bar
  * with a back button and the page's title beside it ("← Followed Stores").
  * The title is the page's own first heading, moved up into the bar (and
- * hidden where it was), so every page gets one without a list to maintain.
+ * hidden where it was), so every page gets one without a list to maintain;
+ * a long heading can give a short one for the bar in data-bar-title.
  * Pages with their own top bar pass false.
  * phoneBackTo: where Back goes when there is no in-app history.
  * phoneBarEnd: the page's own action at the bar's right end (a Share button…),
@@ -34,6 +35,8 @@ const Layout = ({
   const navigate = useNavigate();
   const mainRef = useRef(null);
   const [barTitle, setBarTitle] = useState('');
+  // The page's heading stays in the page when it named a shorter bar title.
+  const [barKeepsHeading, setBarKeepsHeading] = useState(false);
   const showBackBar = isPhone && phoneBar && !isBottomNavTab(pathname);
   const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate(phoneBackTo));
 
@@ -45,10 +48,14 @@ const Layout = ({
     const scan = () => {
       const heading = [...main.querySelectorAll('h1')]
         .find((h) => !h.closest('.layout-back-bar') && !h.matches(NOT_A_TITLE));
+      const short = heading?.dataset.barTitle || '';
       if (tagged && tagged !== heading) tagged.removeAttribute('data-in-back-bar');
-      if (heading) heading.setAttribute('data-in-back-bar', '');
+      if (heading && !short) heading.setAttribute('data-in-back-bar', '');
       tagged = heading || null;
-      setBarTitle(heading ? heading.textContent.trim() : '');
+      // A long heading can name a shorter bar title (data-bar-title) and stay
+      // in the page.
+      setBarTitle(heading ? (short || heading.textContent.trim()) : '');
+      setBarKeepsHeading(Boolean(short));
     };
     const frame = requestAnimationFrame(scan);
     const observer = new MutationObserver(scan);
@@ -69,7 +76,9 @@ const Layout = ({
             <button type="button" className="layout-back-btn" onClick={goBack} aria-label="Back">
               <CaretLeft size={22} weight="bold" />
             </button>
-            {barTitle && <h1 className="layout-back-title">{barTitle}</h1>}
+            {barTitle && (barKeepsHeading
+              ? <span className="layout-back-title">{barTitle}</span>
+              : <h1 className="layout-back-title">{barTitle}</h1>)}
             <div className="layout-back-end">
               {phoneBarEnd}
               <PageMenu />

@@ -144,7 +144,7 @@
 }
 
 .meta-label {
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--t-neutral-500, #6b7280);
@@ -183,7 +183,7 @@
 
 .item-unit {
   font-size: 11px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   margin-top: 2px;
 }
 
@@ -293,7 +293,7 @@
 }
 
 .receipt-footer-small {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 /* Print */
@@ -444,7 +444,7 @@
 
   .receipt-items thead th {
     padding: 8px 4px;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.5px;
     white-space: nowrap;
   }

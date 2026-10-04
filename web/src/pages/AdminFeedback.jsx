@@ -59,7 +59,7 @@ const dateTime = (value) => (value ? new Date(value).toLocaleString('en-PH') : '
 const Stars = ({ value }) => {
   if (!value) return <span className="afb-norating">No rating</span>;
   return (
-    <span className="afb-stars" aria-label={`${value} out of 5`}>
+    <span className="afb-stars" role="img" aria-label={`${value} out of 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
         <Star key={n} size={14} weight={n <= value ? 'fill' : 'regular'} className={n <= value ? 'is-on' : ''} />
       ))}
@@ -304,7 +304,7 @@ export default function AdminFeedback() {
                     <th>Rating</th>
                     <th>Received</th>
                     <th>Status</th>
-                    <th />
+                    <th><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>

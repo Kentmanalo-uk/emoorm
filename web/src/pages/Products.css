@@ -25,7 +25,7 @@
 }
 
 .breadcrumb-separator {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .breadcrumb-current {
@@ -447,7 +447,7 @@
 
 .product-review-count {
   font-size: 12px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   line-height: 1;
 }
 
@@ -480,7 +480,7 @@
   gap: var(--spacing-4);
   background-color: white;
   border-radius: 0;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .products-empty h3 {
@@ -562,7 +562,7 @@
 
 .pagination-ellipsis {
   padding: var(--spacing-2) var(--spacing-3);
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 /* Responsive */
@@ -813,7 +813,7 @@
   .products-page .price-range-inputs {
     gap: 6px;
     margin: 0;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .products-page .price-input {
@@ -908,7 +908,7 @@
     right: auto;
     left: 6px;
     padding: 3px 6px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   /* No hover on touch: keep quick add-to-cart visible. */
@@ -1060,7 +1060,7 @@
 
   .srch-m-field-icon {
     flex-shrink: 0;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .srch-m-field input {
@@ -1198,7 +1198,7 @@
 
   .srch-m-row-main svg {
     flex-shrink: 0;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .srch-m-row-main span {
@@ -1214,7 +1214,7 @@
     height: 36px;
     border: none;
     background: none;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
     cursor: pointer;
   }
 
@@ -1244,7 +1244,7 @@
   }
 
   .srch-m-chip svg {
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .srch-m-chip.is-active {
@@ -1346,7 +1346,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .srch-m-price-inputs input {
@@ -1677,7 +1677,7 @@
     align-items: center;
     gap: 3px;
     overflow: hidden;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
     font-size: 12.5px;
     white-space: nowrap;
     text-overflow: ellipsis;

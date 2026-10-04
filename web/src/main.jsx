@@ -9,9 +9,12 @@ import { startCuratedTagalog } from './lib/tagalog';
 import { bootTheme } from './hooks/useTheme';
 import { setupPwaInstall } from './lib/pwaInstall';
 
-loadGoogleTranslate();
+// Google's translator loads only for someone who chose another language
+// (choosing one reloads the page); English pages skip its scripts.
+const language = getCurrentLanguage();
+if (language !== 'en') loadGoogleTranslate();
 // Tagalog: our own wording for the app's buttons and labels, ahead of Google's.
-if (getCurrentLanguage() === 'tl') startCuratedTagalog();
+if (language === 'tl') startCuratedTagalog();
 
 // React Router calls the page a fresh load opens "default", on every fresh
 // load. Each load gets a name of its own instead, so what a page remembers

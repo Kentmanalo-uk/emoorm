@@ -982,7 +982,7 @@ export default function StoreDetail() {
               </div>
               <div className="shop-sort">
                 <label>Sort:</label>
-                <select value={sortKey} onChange={(e) => onSortChange(e.target.value)}>
+                <select value={sortKey} onChange={(e) => onSortChange(e.target.value)} aria-label="Sort products">
                   {SORTS.map((s) => (
                     <option key={s.key} value={s.key}>{s.label}</option>
                   ))}

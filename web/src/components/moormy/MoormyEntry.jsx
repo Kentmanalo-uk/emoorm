@@ -75,7 +75,8 @@ function IntroCard({ firstName, onAsk }) {
             <strong>Ate Moormy</strong>
             <span className="mmy-ai-tag">AI</span>
           </div>
-          <p aria-label={greeting}>
+          <p>
+            <span className="sr-only">{greeting}</span>
             <span aria-hidden="true">{shown}</span>
             {!done && <span className="mmy-caret" aria-hidden="true" />}
           </p>

@@ -29,7 +29,7 @@
 .return-card-caret {
   margin-left: 4px;
   vertical-align: -2px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .returns-heading,
@@ -781,4 +781,17 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 10px;
+}
+
+/* Phones: the top bar already has a back arrow, and its ⋯ menu has My orders. */
+@media (max-width: 768px) {
+  .return-back,
+  .returns-page-header .profile-section-link {
+    display: none;
+  }
+}
+
+/* Inside the profile area the form spans the panel like its other sections. */
+.profile-main .return-form-page {
+  max-width: none;
 }

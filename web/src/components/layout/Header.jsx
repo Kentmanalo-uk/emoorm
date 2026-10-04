@@ -308,7 +308,8 @@ const Header = () => {
   return (
     <>
       {/* Top Bar */}
-      <div
+      <nav
+        aria-label="Quick links"
         className="topbar"
         style={{ transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)' }}
       >
@@ -520,7 +521,7 @@ const Header = () => {
             </div>
           </div>
         </div>
-      </div>
+      </nav>
 
       {/* Main Header */}
       <header
@@ -535,7 +536,7 @@ const Header = () => {
         <div className="header-container">
           <div className={isCartPage ? 'cart-header-context' : undefined}>
             <Link to="/" className="header-logo">
-              <AppLogo className="header-logo-icon" />
+              <AppLogo className="header-logo-icon" alt="" />
               <span className="header-logo-text">emoorm</span>
             </Link>
             {isCartPage && <><span className="cart-header-divider" /><span className="cart-header-title">Shopping Cart</span></>}
@@ -548,6 +549,7 @@ const Header = () => {
                 <div className="header-search-input-wrap">
                   <input
                     type="text"
+                    aria-label="Search products"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={(e) => {
@@ -637,7 +639,7 @@ const Header = () => {
               )}
             </div>
 
-            <Link to="/cart" className="header-cart">
+            <Link to="/cart" className="header-cart" aria-label={cartCount > 0 ? `Cart, ${cartCount} ${cartCount === 1 ? 'item' : 'items'}` : 'Cart'}>
               <ShoppingCart size={24} />
               {cartCount > 0 && <span className="header-cart-badge">{cartCount}</span>}
             </Link>
@@ -675,6 +677,7 @@ const Header = () => {
             <form onSubmit={handleSearch}>
               <input
                 type="text"
+                aria-label="Search products"
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

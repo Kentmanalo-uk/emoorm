@@ -207,7 +207,7 @@
 }
 
 .address-empty svg {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .address-empty p {
@@ -480,4 +480,9 @@
   gap: 4px;
   font-size: 12.5px;
   color: var(--t-primary-700, #047857);
+}
+
+/* Inside the profile area the empty state spans the panel like its other sections. */
+.profile-main .address-empty {
+  max-width: none;
 }

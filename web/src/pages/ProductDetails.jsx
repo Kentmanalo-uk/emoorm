@@ -805,6 +805,9 @@ const ProductDetails = () => {
                 <div
                   key={slug}
                   className="pdp-m-track"
+                  role="region"
+                  aria-label="Product photos"
+                  tabIndex={0}
                   onScroll={(e) => {
                     const el = e.currentTarget;
                     const i = Math.round(el.scrollLeft / el.clientWidth);
@@ -1246,7 +1249,7 @@ const ProductDetails = () => {
               <h2 className="pdp-section-title">Specifications</h2>
             </div>
             <div className="pdp-section-body">
-              <dl className="pdp-specs">
+              <dl className="pdp-specs" tabIndex={0}>
                 <div><dt>Category</dt><dd>{product.category?.name || '—'}</dd></div>
                 <div><dt>Origin</dt><dd>{product.municipality?.name || product.store?.municipality?.name || 'Oriental Mindoro'}</dd></div>
                 <div><dt>Sold by</dt><dd>{product.store?.name || '—'}</dd></div>

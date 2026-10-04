@@ -48,7 +48,7 @@
   place-content: center;
   justify-items: center;
   gap: 6px;
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
   font-size: 11px;
 }
 
@@ -60,7 +60,7 @@
   border-radius: 3px;
   background: rgba(15, 23, 42, .72);
   color: var(--t-neutral-0, #fff);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -118,7 +118,7 @@
   place-content: center;
   justify-items: center;
   gap: 6px;
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
   font-size: 12px;
 }
 
@@ -130,7 +130,7 @@
   border-radius: 999px;
   background: rgba(71, 85, 105, .88);
   color: var(--t-neutral-0, #fff);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -138,10 +138,12 @@
   background: rgba(5, 150, 105, .92);
 }
 
+/* The slot name on its own line, the buttons under it (side by side they
+   squeezed "Right-side banner 1" onto three lines). */
 .admin-side-banner-meta {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 9px;
   padding: 10px;
 }
@@ -166,7 +168,7 @@
   display: flex;
   flex: 0 0 auto;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 6px;
 }
 
@@ -237,7 +239,7 @@
   border-radius: 3px;
   background: rgba(15, 23, 42, .76);
   color: var(--t-neutral-0, #fff);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 

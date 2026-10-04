@@ -342,6 +342,7 @@ export default function AdminCategories() {
                           className={`admin-btn ${cat.isActive ? 'admin-btn-gray' : 'admin-btn-blue'}`}
                           onClick={() => handleToggle(cat)}
                           title={cat.isActive ? 'Deactivate' : 'Activate'}
+                          aria-label={`${cat.isActive ? 'Deactivate' : 'Activate'} ${cat.name}`}
                         >
                           {cat.isActive ? <ToggleLeft size={14} /> : <ToggleRight size={14} />}
                         </button>
@@ -349,6 +350,8 @@ export default function AdminCategories() {
                           className="admin-btn admin-btn-red"
                           disabled={deleting === cat.id}
                           onClick={() => handleDelete(cat)}
+                          title="Delete"
+                          aria-label={`Delete ${cat.name}`}
                         >
                           <Trash2 size={13} />
                         </button>

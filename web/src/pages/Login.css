@@ -217,7 +217,7 @@
 }
 
 .cached-accounts-heading small {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 11px;
   font-weight: 500;
 }
@@ -280,7 +280,7 @@
 }
 
 .cached-account-remove {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   flex: 0 0 auto;
 }
 
@@ -293,7 +293,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 16px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .04em;
@@ -378,7 +378,7 @@
 
 .saved-account-remove-link {
   margin-top: 22px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 11px;
   font-weight: 500;
 }
@@ -545,7 +545,7 @@
   background-color: white;
   font-size: 12px;
   font-weight: 500;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   letter-spacing: 0.05em;
 }
 
@@ -598,7 +598,7 @@
 /* Terms */
 .login-form-terms {
   font-size: 12px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   text-align: center;
   line-height: 1.5;
   margin-top: 16px;
@@ -606,7 +606,8 @@
 
 .login-form-terms-link {
   color: var(--t-primary-600, #059669);
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   transition: color 0.2s;
 }
 
@@ -860,7 +861,7 @@
   gap: 5px;
   margin: 10px 0 0;
   font-size: 12px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .login-qr-loading {
@@ -918,7 +919,7 @@
 }
 
 .login-qr-status-icon-muted {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 /* ── Mobile (≤768px / ≤480px) ── */

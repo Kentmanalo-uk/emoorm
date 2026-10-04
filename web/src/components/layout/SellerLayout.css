@@ -284,7 +284,7 @@
 }
 
 .sc-user-caret {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   flex-shrink: 0;
 }
 
@@ -543,7 +543,7 @@
 }
 
 .sc-nav-item > svg:not(.sc-nav-chevron) {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .sc-nav-item--active > svg:not(.sc-nav-chevron) {
@@ -726,7 +726,7 @@
 
 .sc-account-switch-icon {
   flex-shrink: 0;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 /* ── Sticky sidebar hardening ─────────────────────────────── */

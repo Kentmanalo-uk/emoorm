@@ -294,7 +294,7 @@ export default function AdminCouriers() {
                   <td>
                     {ratesSummary(c.rates) ? (
                       <span className="ac-rates-sum" title={c.rates.source ? `${c.rates.source}${c.rates.asOf ? ` · ${c.rates.asOf}` : ''}` : undefined}>{ratesSummary(c.rates)}</span>
-                    ) : <span className="ac-muted ac-no-rates">Not set: not offered</span>}
+                    ) : <span className="ac-muted ac-no-rates">No rates yet, so sellers can&apos;t offer it</span>}
                   </td>
                   <td>
                     {c.trackingUrl ? (

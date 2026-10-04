@@ -304,14 +304,14 @@
 }
 
 .shop-info-item svg {
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .shop-info-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
   margin-right: 4px;
 }
 
@@ -363,7 +363,7 @@
 .shop-search>svg {
   position: absolute;
   left: 12px;
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
   pointer-events: none;
 }
 
@@ -387,7 +387,7 @@
   right: 8px;
   background: none;
   border: none;
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
   cursor: pointer;
   padding: 4px;
   border-radius: 50%;
@@ -605,7 +605,7 @@
 
 .shop-grid .product-review-count {
   font-size: 11px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   line-height: 1;
 }
 
@@ -613,7 +613,7 @@
 .shop-empty {
   padding: 60px 20px;
   text-align: center;
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
   background: var(--t-neutral-0, #fff);
   border: 1px dashed var(--t-neutral-200, #e2e8f0);
   border-radius: 12px;
@@ -816,7 +816,7 @@
 
   .shop-badge {
     padding: 2px 8px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .shop-username {
@@ -1122,7 +1122,7 @@
     height: 18px;
     padding: 0 5px;
     border-radius: 999px;
-    background: var(--t-accent-500, #ec4899);
+    background: var(--t-accent-600, #db2777);
     color: #fff;
     font-size: 10.5px;
     font-weight: 700;
@@ -1241,7 +1241,7 @@
 
   .shop-m-name svg {
     flex-shrink: 0;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .shop-m-rating-row {
@@ -1482,7 +1482,7 @@
     border: 1.5px solid var(--t-primary-500, #10b981);
     border-radius: 999px;
     background: var(--t-neutral-0, #fff);
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .shop-m-search input {
@@ -1570,7 +1570,7 @@
     overflow: hidden;
     border-radius: 14px;
     background: var(--t-neutral-100, #f3f4f6);
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .shop-m-cat-all {
@@ -1680,7 +1680,7 @@
 
   .shop-m-details svg {
     flex-shrink: 0;
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .shop-m-details-label {

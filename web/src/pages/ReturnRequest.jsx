@@ -135,7 +135,6 @@ export default function ReturnRequest() {
     <div className="return-form-page">
       <Link to="/profile/orders" className="return-back"><ArrowLeft size={18} /> Back to orders</Link>
       <div className="return-form-card">
-        <p className="returns-eyebrow">Request support</p>
         <h1>Return an order</h1>
         {body}
       </div>

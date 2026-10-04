@@ -13,6 +13,7 @@ import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import ReasonDialog from '../components/admin/ReasonDialog';
 import { resolveImg } from '../lib/media';
+import ProductImage from '../components/ProductImage';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -193,7 +194,7 @@ export default function AdminProducts() {
           </h2>
           <div className="admin-toolbar">
             <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-neutral-400, #94a3b8)' }} />
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-neutral-500, #636b78)' }} />
               <input
                 className="admin-search-input"
                 style={{ paddingLeft: 30 }}
@@ -203,6 +204,7 @@ export default function AdminProducts() {
               />
             </div>
             <select
+              aria-label="Filter by status"
               className="admin-select"
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
@@ -286,7 +288,7 @@ export default function AdminProducts() {
                         <td>
                           <div className="admin-product-cell">
                             {img
-                              ? <img src={resolveImg(img) || img} alt={p.name} className="admin-product-thumb" />
+                              ? <ProductImage src={img} alt="" className="admin-product-thumb" />
                               : <div className="admin-product-thumb-placeholder"><Package size={16} /></div>}
                             <span className="admin-product-name">{p.name}</span>
                           </div>

@@ -30,8 +30,8 @@
   --t-primary-300: #6ee7b7;
   --t-primary-400: #34d399;
   --t-primary-500: #10b981;
-  --t-primary-600: #059669;
-  --t-primary-700: #047857;
+  --t-primary-600: #047857; /* 5.5:1 with white, both ways */
+  --t-primary-700: #03684c;
   --t-primary-800: #065f46;
   --t-primary-900: #064e3b;
   --t-primary-950: #052e1f;
@@ -43,7 +43,7 @@
   --t-secondary-300: #7cc79b;
   --t-secondary-400: #48ae76;
   --t-secondary-500: #29a366;
-  --t-secondary-600: #1f8a54;
+  --t-secondary-600: #178048;
   --t-secondary-700: #176b3a;
   --t-secondary-800: #006927;
   --t-secondary-900: #0b5c38;
@@ -121,7 +121,7 @@
   --t-neutral-200: #e5e7eb;
   --t-neutral-300: #d1d5db;
   --t-neutral-400: #9ca3af;
-  --t-neutral-500: #6b7280;
+  --t-neutral-500: #636b78; /* 4.9:1 on the grey pages */
   --t-neutral-600: #4b5563;
   --t-neutral-700: #374151;
   --t-neutral-800: #1f2937;

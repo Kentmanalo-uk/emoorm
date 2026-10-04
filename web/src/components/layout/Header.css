@@ -49,7 +49,7 @@
 
 /* Inherits all .topbar-link styles */
 .topbar-link-sell {
-  color: var(--t-success-700, #00853c);
+  color: var(--t-success-800, #166534);
   /* Your custom color */
 
 }
@@ -495,8 +495,8 @@
 }
 
 .notif-dropdown-time {
-  font-size: 10.5px;
-  color: var(--t-neutral-400, #9ca3af);
+  font-size: 11px;
+  color: var(--t-neutral-500, #636b78);
   margin-top: 2px;
 }
 
@@ -724,7 +724,7 @@
   }
 
   .topbar-link {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 
@@ -816,7 +816,7 @@
     justify-content: center;
     gap: 2px;
     color: var(--t-neutral-500, #6b7280);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     line-height: 1.1;
     text-decoration: none;
@@ -960,7 +960,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   padding: 6px 14px 4px;
 }
 
@@ -984,7 +984,7 @@
 }
 
 .hss-row-icon {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   flex-shrink: 0;
 }
 
@@ -1002,7 +1002,7 @@
   width: 22px;
   height: 22px;
   border-radius: 0;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   opacity: 0;
   transition: opacity 0.15s, background-color 0.15s, color 0.15s;
 }
@@ -1021,7 +1021,7 @@
   border: none;
   padding: 15px;
   cursor: pointer;
-  color: var(--t-neutral-400, #bebebe);
+  color: var(--t-neutral-500, #636b78);
   display: flex;
   align-items: center;
   justify-content: center;

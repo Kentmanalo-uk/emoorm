@@ -235,6 +235,7 @@ export default function AdminReports() {
           </h2>
           <div className="admin-toolbar">
             <select
+              aria-label="Filter by type"
               className="admin-select"
               value={typeFilter}
               onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
@@ -258,6 +259,7 @@ export default function AdminReports() {
               </select>
             )}
             <select
+              aria-label="Filter by status"
               className="admin-select"
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}

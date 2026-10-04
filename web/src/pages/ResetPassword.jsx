@@ -92,7 +92,7 @@ const ResetPassword = () => {
       <header className="rp-header">
         <div className="rp-header-container">
           <Link to="/" className="rp-logo">
-            <AppLogo className="rp-logo-icon" />
+            <AppLogo className="rp-logo-icon" alt="" />
             <span className="rp-logo-text">emoorm</span>
           </Link>
         </div>

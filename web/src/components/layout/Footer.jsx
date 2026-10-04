@@ -118,7 +118,7 @@ const Footer = () => {
         <div className="footer-content">
           {/* Customer Care */}
           <div className="footer-section">
-            <h3 className="footer-title">Customer Care</h3>
+            <h2 className="footer-title">Customer Care</h2>
             <ul className="footer-links">
               <li><Link to="/help">Help &amp; Support</Link></li>
               <li><Link to="/help?topic=buying">How to Buy</Link></li>
@@ -131,7 +131,7 @@ const Footer = () => {
 
           {/* Emoorm */}
           <div className="footer-section">
-            <h3 className="footer-title">Emoorm</h3>
+            <h2 className="footer-title">Emoorm</h2>
             <ul className="footer-links">
               <li><Link to="/about">About Emoorm</Link></li>
               <li><Link to="/about#how-it-works">How Emoorm Works</Link></li>
@@ -144,7 +144,7 @@ const Footer = () => {
 
           {/* My Account */}
           <div className="footer-section">
-            <h3 className="footer-title">My Account</h3>
+            <h2 className="footer-title">My Account</h2>
             <ul className="footer-links">
               <li><Link to="/login">Sign In</Link></li>
               <li><Link to="/register">Create Account</Link></li>
@@ -157,7 +157,7 @@ const Footer = () => {
 
           {/* Shop by Category */}
           <div className="footer-section">
-            <h3 className="footer-title">Shop by Category</h3>
+            <h2 className="footer-title">Shop by Category</h2>
             <ul className="footer-links">
               {categories.length > 0 ? (
                 categories.map((c) => (
@@ -171,7 +171,7 @@ const Footer = () => {
 
           {/* Contact Us */}
           <div className="footer-section">
-            <h3 className="footer-title">Contact Us</h3>
+            <h2 className="footer-title">Contact Us</h2>
             <ul className="footer-contact">
               <li>
                 <span className="footer-contact-label">Address:</span>
@@ -214,7 +214,7 @@ const Footer = () => {
         <div className="footer-bottom">
           <section className="footer-directory" aria-label="About Emoorm">
             <article className="footer-about">
-              <h3 className="footer-about-title">Oriental Mindoro&apos;s Local Online Marketplace</h3>
+              <h2 className="footer-about-title">Oriental Mindoro&apos;s Local Online Marketplace</h2>
               <p>
                 Emoorm is an online marketplace that connects buyers with farmers, fishers, artisans, and
                 food producers across Oriental Mindoro. Instead of travelling between towns or waiting for
@@ -283,7 +283,7 @@ const Footer = () => {
             </article>
 
             <div className="footer-directory-groups">
-              <h3 className="footer-about-title">Shop, Places, and Guides</h3>
+              <h2 className="footer-about-title">Shop, Places, and Guides</h2>
 
               {allCategories.length > 0 && (
                 <div className="footer-directory-group">

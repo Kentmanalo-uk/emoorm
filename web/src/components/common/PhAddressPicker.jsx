@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
   SERVICE_PROVINCE,
   SERVICE_REGION,
@@ -65,6 +65,7 @@ const PhAddressPicker = ({
   townHint = '',
 }) => {
   const v = { ...emptyValue, ...(value || {}) };
+  const uid = useId();
 
   const municipalities = useMemo(() => listServiceMunicipalities(), []);
   const [barangays, setBarangays] = useState([]);
@@ -212,8 +213,9 @@ const PhAddressPicker = ({
   return (
     <div className={`ph-address-picker ${compact ? 'compact' : ''}`}>
       <div className="ph-field">
-        <label className="ph-label">Province</label>
+        <label className="ph-label" htmlFor={`${uid}-province`}>Province</label>
         <input
+          id={`${uid}-province`}
           type="text"
           className={`ph-input ph-input-locked ${errors.province ? 'error' : ''}`}
           value={SERVICE_PROVINCE.name}
@@ -229,10 +231,11 @@ const PhAddressPicker = ({
       </div>
 
       <div className="ph-field">
-        <label className="ph-label">City / Municipality</label>
+        <label className="ph-label" htmlFor={`${uid}-town`}>City / Municipality</label>
         {lockTown ? (
           // Set once and kept: shown like the province, not as a choice.
           <input
+            id={`${uid}-town`}
             type="text"
             className="ph-input ph-input-locked"
             value={savedTown}
@@ -242,6 +245,7 @@ const PhAddressPicker = ({
           />
         ) : (
           <select
+            id={`${uid}-town`}
             className={`ph-input ${errors.municipality || errors.municipalityId ? 'error' : ''}`}
             value={townCode}
             onChange={handleMunicipality}
@@ -272,9 +276,10 @@ const PhAddressPicker = ({
       </div>
 
       <div className="ph-field">
-        <label className="ph-label">Barangay</label>
+        <label className="ph-label" htmlFor={`${uid}-barangay`}>Barangay</label>
         {!typing && barangays.length > 0 ? (
           <select
+            id={`${uid}-barangay`}
             className={`ph-input ${errors.barangay ? 'error' : ''}`}
             value={barangayCode}
             onChange={handleBarangay}
@@ -293,6 +298,7 @@ const PhAddressPicker = ({
           </select>
         ) : (
           <input
+            id={`${uid}-barangay`}
             type="text"
             className={`ph-input ${errors.barangay ? 'error' : ''}`}
             value={v.barangay || ''}
@@ -315,8 +321,9 @@ const PhAddressPicker = ({
 
       {showStreet && (
         <div className="ph-field">
-          <label className="ph-label">{streetLabel}</label>
+          <label className="ph-label" htmlFor={`${uid}-street`}>{streetLabel}</label>
           <input
+            id={`${uid}-street`}
             type="text"
             className={`ph-input ${errors.street ? 'error' : ''}`}
             value={v.street || ''}

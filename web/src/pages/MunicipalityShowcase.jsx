@@ -43,7 +43,7 @@ export default function MunicipalityShowcase() {
 
   return (
     <Layout>
-      <main className="municipality-showcase">
+      <div className="municipality-showcase">
         <section className="municipality-hero" style={logo ? { '--municipality-logo': `url(${logo})` } : undefined}>
           <div className="municipality-hero-content">
             <div className="municipality-hero-logo">
@@ -113,7 +113,7 @@ export default function MunicipalityShowcase() {
             </>
           )}
         </div>
-      </main>
+      </div>
     </Layout>
   );
 }

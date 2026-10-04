@@ -303,7 +303,7 @@
     top: 8px;
     left: 8px;
     border-radius: 6px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   /* Touch screens have no hover: keep quick add-to-cart visible. */
@@ -321,5 +321,12 @@
 @media (max-width: 480px) {
   .sbi-page .sbi-preview {
     height: 180px;
+  }
+}
+
+/* Phones: the top bar already has a back arrow. */
+@media (max-width: 768px) {
+  .sbi-back {
+    display: none;
   }
 }

@@ -475,7 +475,7 @@ img {
   html body #root .layout-main :is(h1, h2, h3, h4):not(
     .product-name, .pdp-title, .store-card-name, .followed-store-name,
     .cart-suggestion-name, .address-name, .profile-name, .pp-name,
-    .shop-m-name h1, .stores-m-card h3, .appdl-page *
+    .shop-m-name h1, .stores-m-card h2, .appdl-page *
   ),
   html body #root .login-form-title,
   html body #root .register-form-title,
@@ -618,4 +618,17 @@ input[type="radio"] {
 
 @keyframes product-page-in {
   from { opacity: 0; }
+}
+
+/* Read by screen readers, not shown. */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }

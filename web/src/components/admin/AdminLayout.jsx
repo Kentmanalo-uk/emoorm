@@ -233,7 +233,7 @@ export default function AdminLayout({ children }) {
             <Link to="/admin" className="ac-brand">
               {!isSuperAdmin ? (
                 <span className="ac-brand-logo-stack">
-                  <AppLogo className="ac-brand-logo ac-brand-logo-base" />
+                  <AppLogo className="ac-brand-logo ac-brand-logo-base" alt="" />
                   {municipalityLogo ? (
                     <img src={resolveImg(municipalityLogo)} alt={assignedMunicipalityName} className="ac-brand-logo ac-brand-logo-badge" />
                   ) : (
@@ -243,7 +243,7 @@ export default function AdminLayout({ children }) {
                   )}
                 </span>
               ) : (
-                <AppLogo className="ac-brand-logo" />
+                <AppLogo className="ac-brand-logo" alt="" />
               )}
               <span className="ac-brand-text">
                 <strong>Emoorm</strong>

@@ -467,7 +467,10 @@ const Products = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="products-main">
+            <div className="products-main">
+              <h1 className="sr-only">
+                {searchQuery ? `Results for “${searchQuery}”` : activeCategoryName || 'Products'}
+              </h1>
               {/* Search and Controls */}
               <div className="products-controls">
                 <div className="products-results-context">
@@ -478,6 +481,7 @@ const Products = () => {
 
                 <div className="products-actions">
                   <select
+                    aria-label="Sort products"
                     value={sortBy}
                     onChange={(e) => handleSortChange(e.target.value)}
                     className="sort-select"
@@ -493,14 +497,20 @@ const Products = () => {
 
                   <div className="view-toggle">
                     <button
+                      type="button"
                       className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
                       onClick={() => setViewMode('grid')}
+                      aria-label="Grid view"
+                      aria-pressed={viewMode === 'grid'}
                     >
                       <Grid size={18} />
                     </button>
                     <button
+                      type="button"
                       className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
                       onClick={() => setViewMode('list')}
+                      aria-label="List view"
+                      aria-pressed={viewMode === 'list'}
                     >
                       <List size={18} />
                     </button>
@@ -749,7 +759,7 @@ const Products = () => {
                   </button>
                 </div>
               )}
-            </main>
+            </div>
           </div>
         </div>
       </div>

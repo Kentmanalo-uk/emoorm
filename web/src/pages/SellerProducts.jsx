@@ -450,7 +450,7 @@ export default function SellerProducts() {
         {isPhone && (notReady || restockCount > 0 || suspendedCount > 0) && (
           <div className="spm spm-notices">
             {notReady && (
-              <Link to={blockers[0]?.to || '/seller'} className="sh-notice is-amber" role="status">
+              <Link to={blockers[0]?.to || '/seller'} className="sh-notice is-amber">
                 <span className="sh-notice-icon"><AlertCircle size={22} weight="fill" /></span>
                 <span className="sh-notice-text">
                   <b>Buyers can't order yet</b>

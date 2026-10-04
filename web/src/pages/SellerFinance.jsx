@@ -238,7 +238,7 @@ export default function SellerFinance() {
           <Info size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--t-sky-600, #0284c7)' }} />
           <p style={{ margin: 0, fontSize: 13, color: 'var(--t-neutral-600, #475569)', lineHeight: 1.5 }}>
             Buyers pay you directly by cash, GCash or QR (set in{' '}
-            <Link to="/seller/fulfillment">Delivery &amp; payment</Link>). This page adds up your sales; it is not a wallet.
+            <Link to="/seller/fulfillment" style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>Delivery &amp; payment</Link>). This page adds up your sales; it is not a wallet.
           </p>
         </div>
 

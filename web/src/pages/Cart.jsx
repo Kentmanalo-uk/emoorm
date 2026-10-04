@@ -485,6 +485,7 @@ const Cart = () => {
       <Layout>
         <div className="cart-page">
           {phoneHead}
+          {!isPhone && <h1 className="sr-only">Shopping cart</h1>}
           <div className="container">
             <EmptyState
               className="cart-empty-state"

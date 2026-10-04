@@ -9,6 +9,28 @@ import { useMunicipalities } from '../hooks/useReferenceData';
 
 const ACTIONS = Object.keys(ACTION_LABELS);
 
+
+// "paymentStatus" → "Payment status"; "PAID" → "Paid".
+const keyLabel = (key) => key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ')
+  .replace(/^./, (c) => c.toUpperCase()).replace(/\b(Id)\b/g, 'ID');
+const valueText = (v) => {
+  if (Array.isArray(v)) return v.length ? v.map(valueText).join(', ') : 'none';
+  if (v && typeof v === 'object') {
+    const parts = Object.entries(v).filter(([, x]) => x !== null && x !== undefined && x !== '').map(([k, x]) => `${keyLabel(k).toLowerCase()} ${valueText(x)}`);
+    return parts.length ? parts.join(', ') : 'none';
+  }
+  if (typeof v === 'boolean') return v ? 'yes' : 'no';
+  const str = String(v);
+  return /^[A-Z][A-Z_]+$/.test(str) ? keyLabel(str.toLowerCase()) : str;
+};
+// A log's details as readable pairs, without the reason/note shown above them.
+const detailPairs = (details) => {
+  if (!details || typeof details !== 'object') return details ? [String(details)] : [];
+  return Object.entries(details)
+    .filter(([k, v]) => !['reason', 'note'].includes(k) && v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => `${keyLabel(k)}: ${valueText(v)}`);
+};
+
 export default function AdminAuditLogs() {
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -60,6 +82,7 @@ export default function AdminAuditLogs() {
         </div>
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', padding: 16 }}>
           <select
+            aria-label="Filter by action"
             value={filters.action}
             onChange={(e) => setFilters((f) => ({ ...f, action: e.target.value }))}
             className="admin-input"
@@ -68,6 +91,7 @@ export default function AdminAuditLogs() {
             {ACTIONS.map((a) => <option key={a} value={a}>{ACTION_LABELS[a]}</option>)}
           </select>
           <select
+            aria-label="Filter by record type"
             value={filters.entity}
             onChange={(e) => setFilters((f) => ({ ...f, entity: e.target.value }))}
             className="admin-input"
@@ -83,6 +107,7 @@ export default function AdminAuditLogs() {
           </select>
           {isSuperAdmin && (
             <select
+              aria-label="Filter by municipality"
               value={filters.municipalityId}
               onChange={(e) => setFilters((f) => ({ ...f, municipalityId: e.target.value }))}
               className="admin-input"
@@ -92,12 +117,14 @@ export default function AdminAuditLogs() {
             </select>
           )}
           <input
+            aria-label="From date"
             type="date"
             value={filters.from}
             onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))}
             className="admin-input"
           />
           <input
+            aria-label="To date"
             type="date"
             value={filters.to}
             onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
@@ -123,8 +150,7 @@ export default function AdminAuditLogs() {
                   <th>When</th>
                   <th>Actor</th>
                   <th>Action</th>
-                  <th>Entity</th>
-                  <th>Entity ID</th>
+                  <th>Record</th>
                   <th>Details</th>
                 </tr>
               </thead>
@@ -132,20 +158,25 @@ export default function AdminAuditLogs() {
                 {logs.map((l) => {
                   const d = l.details && typeof l.details === 'object' ? l.details : null;
                   const note = d?.reason || d?.note;
+                  const pairs = detailPairs(l.details);
                   return (
                     <tr key={l.id}>
                       <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>
                         {new Date(l.createdAt).toLocaleString('en-PH')}
                       </td>
-                      <td style={{ fontSize: 12 }}>{l.userEmail || l.userId || '—'}</td>
+                      <td style={{ fontSize: 12 }}>{l.userEmail || (l.userId ? 'Deleted account' : 'System')}</td>
                       <td>
                         <span className="admin-badge admin-badge-neutral" style={{ fontSize: 11 }} title={l.action}>
                           {actionLabel(l.action)}
                         </span>
                       </td>
-                      <td>{l.entity}</td>
-                      <td style={{ fontSize: 11, fontFamily: 'monospace' }}>
-                        {l.entityId ? l.entityId.slice(0, 8) + '…' : '—'}
+                      <td>
+                        {l.entity}
+                        {l.entityId && (
+                          <div style={{ fontSize: 11, color: 'var(--t-neutral-500, #636b78)' }} title={l.entityId}>
+                            #{l.entityId.slice(0, 6)}
+                          </div>
+                        )}
                       </td>
                       <td style={{ fontSize: 11, maxWidth: 280 }}>
                         {note && (
@@ -153,12 +184,9 @@ export default function AdminAuditLogs() {
                             <strong>{d.reason ? 'Reason' : 'Note'}:</strong> {String(note)}
                           </div>
                         )}
-                        <div
-                          style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--t-neutral-500, #64748b)' }}
-                          title={l.details ? JSON.stringify(l.details) : ''}
-                        >
-                          {l.details ? JSON.stringify(l.details) : '—'}
-                        </div>
+                        {pairs.length > 0 ? pairs.map((p) => (
+                          <div key={p} style={{ color: 'var(--t-neutral-600, #4b5563)', overflowWrap: 'anywhere' }}>{p}</div>
+                        )) : !note && '—'}
                       </td>
                     </tr>
                   );

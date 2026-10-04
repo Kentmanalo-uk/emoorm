@@ -274,29 +274,43 @@
 /* Carousel Dots */
 .banner-dots {
   position: absolute;
-  bottom: 12px;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 8px;
+  gap: 0;
   z-index: 10;
 }
 
+/* Each dot is a 24px target (WCAG 2.2); the dot itself is drawn inside. */
 .banner-dot {
-  width: 8px;
-  height: 8px;
-  background-color: rgba(255, 255, 255, 0.5);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  background: none;
   border: none;
-  border-radius: 50%;
   cursor: pointer;
   padding: 0;
+}
+
+.banner-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
   transition: all 0.2s;
 }
 
 .banner-dot-active {
-  background-color: white;
+  width: 32px;
+}
+
+.banner-dot-active::before {
   width: 24px;
   border-radius: 4px;
+  background-color: white;
 }
 
 /* Banner Sidebar */
@@ -382,7 +396,7 @@
   padding: 3px 10px;
   background-color: rgba(255, 255, 255, 0.25);
   border-radius: 0;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
   width: fit-content;
@@ -397,7 +411,7 @@
   background-color: rgba(255, 255, 255, .14);
   color: var(--t-neutral-0, #fff);
   border-radius: 0;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   z-index: 2;
@@ -480,7 +494,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--t-secondary-700, #087443);
   letter-spacing: 0.08em;
@@ -756,7 +770,7 @@
   border: 3px solid var(--t-neutral-0, #fff);
   border-radius: 50%;
   background: var(--t-neutral-100, #f1f5f3);
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
   object-fit: cover;
   box-shadow: 0 2px 8px rgba(15, 23, 42, .1);
 }
@@ -914,7 +928,7 @@
 
 .product-review-count {
   font-size: 11px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   line-height: 1;
 }
 
@@ -1468,17 +1482,24 @@
   }
 
   .banner-dots {
-    bottom: 10px;
-    gap: 6px;
+    bottom: 2px;
   }
 
   .banner-dot {
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  .banner-dot::before {
     width: 6px;
     height: 6px;
-    min-height: 6px;
   }
 
   .banner-dot-active {
+    width: 26px;
+  }
+
+  .banner-dot-active::before {
     width: 18px;
   }
 

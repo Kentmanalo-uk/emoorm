@@ -54,17 +54,34 @@ const ForgotPassword = () => {
     : {};
 
   return (
-    <div className={`fp-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}>
+    <div
+      className={`fp-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}
+      role={isPhone ? 'dialog' : undefined}
+      aria-modal={isPhone ? 'true' : undefined}
+      aria-label={isPhone ? 'Reset your password' : undefined}
+    >
       <header className="fp-header">
         <div className="fp-header-container">
           <Link to="/" className="fp-logo">
-            <AppLogo className="fp-logo-icon" />
+            <AppLogo className="fp-logo-icon" alt="" />
             <span className="fp-logo-text">emoorm</span>
           </Link>
         </div>
       </header>
 
-      <div className="fp-content">
+      <div className="fp-content" role={isPhone ? undefined : 'main'}>
+        {!isPhone && (
+          <div className="fp-hero" aria-hidden="true">
+            <div className="fp-hero-brand">
+              <AppLogo className="fp-hero-icon" alt="" />
+              <span className="fp-hero-text">emoorm</span>
+            </div>
+            <p className="fp-hero-title">
+              Made in Mindoro<br />
+              <span>home of its farmers,<br />fishers and makers</span>
+            </p>
+          </div>
+        )}
         <div className="fp-card">
           {isPhone && <AuthSheetBar switchTo="/login" switchLabel="Log in" />}
           {submitted ? (
@@ -72,7 +89,7 @@ const ForgotPassword = () => {
               <div className="fp-success-icon" aria-hidden="true">
                 <EnvelopeSimple size={30} weight="fill" />
               </div>
-              <h2 className="fp-title">Check your email</h2>
+              <h1 className="fp-title">Check your email</h1>
               <p className="fp-description">
                 If <strong>{email}</strong> is registered, we've sent a password reset link.
                 The link expires in <strong>1 hour</strong>.
@@ -96,7 +113,7 @@ const ForgotPassword = () => {
             </div>
           ) : (
             <>
-              <h2 className="fp-title">Forgot your password?</h2>
+              <h1 className="fp-title">Forgot your password?</h1>
               <p className="fp-description">
                 Enter your registered email and we'll send you a reset link.
               </p>

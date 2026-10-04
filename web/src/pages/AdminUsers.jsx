@@ -221,7 +221,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
           </h2>
           <div className="admin-toolbar">
             <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-neutral-400, #94a3b8)' }} />
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-neutral-500, #636b78)' }} />
               <input
                 className="admin-search-input"
                 style={{ paddingLeft: 30 }}
@@ -232,6 +232,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
             </div>
             {!fixedRole && (
               <select
+                aria-label="Filter by role"
                 className="admin-select"
                 value={roleFilter}
                 onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
@@ -435,7 +436,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                       </button>
                     ))}
                   </div>
-                  <p style={{ fontSize: 12, color: 'var(--t-neutral-400, #94a3b8)', marginTop: 8 }}>
+                  <p style={{ fontSize: 12, color: 'var(--t-neutral-500, #636b78)', marginTop: 8 }}>
                     Setting MUNICIPAL_ADMIN grants admin panel access. Assign to a municipality on the Municipalities page.
                   </p>
                 </div>

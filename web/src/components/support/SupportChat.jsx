@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import EmptyArt from '../ui/EmptyArt';
+import EmptyState from '../ui/EmptyState';
 import {
   ChatsCircle, PaperPlaneRight, CaretLeft, CaretDown, Lightning, IdentificationCard,
   LockSimple, LockSimpleOpen, CheckCircle, XCircle, X, CircleNotch, NotePencil, Star,
@@ -87,9 +88,12 @@ const matchesFilter = (c, filter) => {
 };
 
 function Avatar({ src, name }) {
+  const [failed, setFailed] = useState(false);
   return (
     <span className="sc-avatar">
-      {src ? <img src={resolveImg(src)} alt="" /> : (name || '?').charAt(0).toUpperCase()}
+      {src && !failed
+        ? <img src={resolveImg(src)} alt="" onError={() => setFailed(true)} />
+        : (name || '?').charAt(0).toUpperCase()}
     </span>
   );
 }
@@ -627,18 +631,22 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
         {loadingList ? (
           <p className="sc-empty">Loading…</p>
         ) : visibleConversations.length === 0 ? (
-          <div className="sc-empty">
-            <EmptyArt name="support" size={72} />
-            <p>
-              {!isAdmin
-                ? 'No support cases yet. Start one and your municipal admin will pick it up.'
-                : filter === 'awaiting'
-                  ? 'Nobody is waiting for a reply.'
-                  : filter === 'closed'
-                    ? 'No closed conversations.'
-                    : 'No support messages yet.'}
-            </p>
-          </div>
+          <EmptyState
+            className="ui-empty--inset"
+            art="support"
+            title={!isAdmin
+              ? 'No support cases yet'
+              : filter === 'awaiting'
+                ? 'Nobody is waiting'
+                : filter === 'closed'
+                  ? 'No closed conversations'
+                  : 'No support messages yet'}
+            text={!isAdmin
+              ? 'Start one and your municipal admin will pick it up.'
+              : filter === 'awaiting'
+                ? 'Every conversation has a reply.'
+                : 'Conversations with buyers and sellers show up here.'}
+          />
         ) : (
           visibleConversations.map((c) => (
             <button

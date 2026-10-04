@@ -118,7 +118,7 @@ export default function AdminOrders() {
         <div className="admin-card-header">
           <h2 className="admin-card-title">Orders {pagination.total > 0 && <span style={{ fontWeight: 400, color: 'var(--t-neutral-500, #64748b)', fontSize: 14 }}>({pagination.total})</span>}</h2>
           <div className="admin-toolbar">
-            <select className="admin-select" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
+            <select aria-label="Filter by status" className="admin-select" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
               <option value="">All statuses</option>
               {STATUSES.map((value) => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}
             </select>
@@ -148,7 +148,7 @@ export default function AdminOrders() {
                       onClick={rowOpen(() => viewOrder(order.id))}
                       onKeyDown={rowKeyOpen(() => viewOrder(order.id))}
                     >
-                      <td><strong>{order.orderNumber}</strong><div style={{ color: 'var(--t-neutral-400, #94a3b8)', fontSize: 11 }}>{new Date(order.createdAt).toLocaleDateString('en-PH')}</div></td>
+                      <td><strong>{order.orderNumber}</strong><div style={{ color: 'var(--t-neutral-500, #636b78)', fontSize: 11 }}>{new Date(order.createdAt).toLocaleDateString('en-PH')}</div></td>
                       <td>{order.buyer?.fullName || '—'}</td>
                       <td>{order.store?.name || '—'}</td>
                       <td>{order.itemCount ?? '—'}</td>

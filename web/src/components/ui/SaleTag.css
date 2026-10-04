@@ -10,7 +10,7 @@
 }
 
 .sale-was s {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .sale-was b {
@@ -29,7 +29,7 @@
 
 .sale-was.is-compact b {
   padding: 1px 4px;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .sale-ends {

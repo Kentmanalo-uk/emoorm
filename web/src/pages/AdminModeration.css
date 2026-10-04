@@ -22,7 +22,7 @@
   padding: 0 10px;
   border: 1px solid var(--t-neutral-200, #e2e8f0);
   background: var(--t-neutral-0, #fff);
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .am-search:focus-within {
@@ -61,7 +61,7 @@
 }
 
 .am-muted {
-  color: var(--t-neutral-400, #94a3b8);
+  color: var(--t-neutral-500, #636b78);
   font-size: 13px;
 }
 

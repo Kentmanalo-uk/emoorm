@@ -1235,6 +1235,7 @@ function SellerFulfillment({ part }) {
               <div className="form-group">
                 <label>QR type</label>
                 <select
+                  aria-label="QR type"
                   name="paymentQrType"
                   value={form.paymentQrType}
                   onChange={handleChange}
