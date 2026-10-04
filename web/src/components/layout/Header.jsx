@@ -535,7 +535,7 @@ const Header = () => {
       >
         <div className="header-container">
           <div className={isCartPage ? 'cart-header-context' : undefined}>
-            <Link to="/" className="header-logo">
+            <Link to="/" className="header-logo" aria-label="Emoorm home">
               <AppLogo className="header-logo-icon" alt="" />
               <span className="header-logo-text">emoorm</span>
             </Link>

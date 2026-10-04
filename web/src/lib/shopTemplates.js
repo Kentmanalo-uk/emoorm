@@ -12,7 +12,7 @@ export const SHOP_TEMPLATES = [
     key: 'fresh',
     name: 'Fresh Market',
     tagline: 'Green and sunny, for farm-fresh food',
-    primary: '#059669',
+    primary: '#047857',
     secondary: '#F59E0B',
     keywords: ['vegetable', 'fruit', 'rice', 'farm', 'produce', 'grocery', 'food', 'meat', 'poultry', 'egg'],
   },

@@ -23,7 +23,7 @@
   --sa-text: var(--t-neutral-800, #1f2937);
   --sa-label: var(--t-neutral-700, #374151);
   --sa-muted: var(--t-neutral-500, #6b7280);
-  --sa-faint: var(--t-neutral-400, #9ca3af);
+  --sa-faint: var(--t-neutral-500, #636b78);
   --sa-chev: var(--t-neutral-300, #d1d5db);
   --sa-line: var(--t-neutral-100, #f3f4f6);
 }
@@ -1934,7 +1934,7 @@ a.sh-setup-row:active {
   align-items: center;
   gap: 4px 8px;
   margin-top: 6px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #636b78);
   font-size: 12.5px;
 }
 
@@ -2045,7 +2045,7 @@ a.sh-setup-row:active {
   display: grid;
   place-items: center;
   height: 48px;
-  color: #6b7280;
+  color: var(--t-neutral-500, #636b78);
   font-size: 15px;
   font-weight: 500;
 }
@@ -2071,7 +2071,7 @@ a.sh-setup-row:active {
   height: 44px;
   padding: 0 18px 0 16px;
   background: #fff;
-  color: #6b7280;
+  color: var(--t-neutral-500, #636b78);
   font-size: 14px;
   font-weight: 500;
 }
@@ -2160,7 +2160,7 @@ a.sh-setup-row:active {
   padding: 32px 16px;
   border-radius: 16px;
   background: #fff;
-  color: #6b7280;
+  color: var(--t-neutral-500, #636b78);
   font-size: 14px;
 }
 

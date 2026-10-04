@@ -116,11 +116,11 @@
 .shb-thumb { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--t-neutral-50, #f9fafb); }
 .shb-thumb-img { fill: #a7f3d0; }
 .shb-thumb-img2 { fill: #d1fae5; }
-.shb-thumb-dot { fill: #059669; }
+.shb-thumb-dot { fill: #047857; }
 .shb-thumb-dot2 { fill: #a7f3d0; }
 .shb-thumb-line { fill: #cbd5e1; }
 .shb-thumb-white { fill: rgba(255, 255, 255, 0.85); }
-.shb-thumb-fill { fill: #059669; }
+.shb-thumb-fill { fill: #047857; }
 .shb-thumb-soft { fill: #ecfdf5; stroke: #a7f3d0; stroke-width: 0.8; }
 .shb-thumb-dash { fill: #fff; stroke: #34d399; stroke-width: 0.8; stroke-dasharray: 2 1.5; }
 .shb-style.is-on .shb-thumb { background: #fff; }

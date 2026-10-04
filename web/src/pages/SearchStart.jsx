@@ -107,6 +107,7 @@ export default function SearchStart() {
   return (
     <Layout phoneBar={false} showFooter={false}>
       <div className="ss">
+        <h1 className="sr-only">Search Emoorm</h1>
         <div className="ss-bar">
           <button type="button" className="ss-back" onClick={back} aria-label="Back">
             <CaretLeft size={24} />

@@ -87,7 +87,7 @@ export default function SellerShopHome() {
 
   const lookup = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const dirty = JSON.stringify(sections) !== saved;
-  const themeVars = { '--shop-primary': store?.primaryColor || '#059669', '--shop-secondary': store?.secondaryColor || '#F59E0B' };
+  const themeVars = { '--shop-primary': store?.primaryColor || '#047857', '--shop-secondary': store?.secondaryColor || '#F59E0B' };
 
   const update = (id, changes) => setSections((list) => list.map((s) => (s.id === id ? { ...s, ...changes } : s)));
   const move = (id, by) => setSections((list) => {

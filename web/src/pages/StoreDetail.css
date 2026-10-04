@@ -171,7 +171,8 @@
   padding: 3px 10px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--shop-primary) 15%, white);
-  color: var(--shop-primary);
+  /* The shop's colour, deepened so the label stays readable on its tint. */
+  color: color-mix(in srgb, var(--shop-primary) 78%, black);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -1294,7 +1295,7 @@
   }
 
   .shop-m-follow {
-    background: var(--t-accent-500, #ec4899);
+    background: var(--t-accent-600, #db2777);
     color: var(--t-neutral-0, #fff);
   }
 

@@ -471,6 +471,7 @@ const Products = () => {
               <h1 className="sr-only">
                 {searchQuery ? `Results for “${searchQuery}”` : activeCategoryName || 'Products'}
               </h1>
+              <h2 className="sr-only">Product list</h2>
               {/* Search and Controls */}
               <div className="products-controls">
                 <div className="products-results-context">

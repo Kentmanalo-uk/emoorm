@@ -2,14 +2,16 @@ import { Fragment } from 'react';
 
 /*
  * Ate Moormy's answers, as paragraphs and lists: the little markdown her
- * replies use (**bold**, "- " bullets, "1. " steps). Shared by her seller
- * page and the buyers' chat.
+ * replies use (**bold**, *italic*, "- " bullets, "1. " steps). Shared by her
+ * seller page and the buyers' chat.
  */
 
-/** **bold** inside a line. */
-const inline = (text) => text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => (
-  /^\*\*[^*]+\*\*$/.test(part) ? <strong key={i}>{part.slice(2, -2)}</strong> : <Fragment key={i}>{part}</Fragment>
-));
+/** **bold** and *italic* inside a line. */
+const inline = (text) => text.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/g).map((part, i) => {
+  if (/^\*\*[^*]+\*\*$/.test(part)) return <strong key={i}>{part.slice(2, -2)}</strong>;
+  if (/^\*[^*\s][^*]*\*$/.test(part)) return <em key={i}>{part.slice(1, -1)}</em>;
+  return <Fragment key={i}>{part}</Fragment>;
+});
 
 /** A reply as paragraphs and lists (the little markdown answers use). */
 export default function ReplyText({ text }) {

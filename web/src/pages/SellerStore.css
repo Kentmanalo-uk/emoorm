@@ -749,7 +749,7 @@
 
 .tp-badge-accent {
   background: color-mix(in srgb, var(--sp-secondary) 15%, white);
-  color: var(--sp-secondary);
+  color: color-mix(in srgb, var(--sp-secondary) 55%, black);
 }
 
 @media (max-width: 640px) {

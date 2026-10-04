@@ -341,8 +341,9 @@
   cursor: default;
 }
 
-/* Phones: the whole page is the chat (grey, white answers), and the
-   question box stays at the bottom of the screen. */
+/* Phones: the whole page is the chat (the card runs edge to edge, so the
+   chat keeps its own side spacing), and the question box stays at the
+   bottom of the screen. */
 .sa-page.is-phone .sa-card {
   display: block;
   height: auto;
@@ -355,12 +356,11 @@
 
 .sa-page.is-phone .sa-scroll {
   gap: 10px;
-  padding: 8px 0 calc(84px + env(safe-area-inset-bottom));
+  padding: 8px 16px calc(84px + env(safe-area-inset-bottom));
   overflow: visible;
 }
 
 .sa-page.is-phone .sa-bubble {
-  background: var(--t-neutral-0, #fff);
   font-size: 15px;
 }
 

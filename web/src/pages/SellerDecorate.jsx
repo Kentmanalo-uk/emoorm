@@ -116,7 +116,7 @@ export default function SellerDecorate() {
       note: null,
       art: (
         <div className="sdc-swatches">
-          <span style={{ background: store?.primaryColor || '#059669' }} />
+          <span style={{ background: store?.primaryColor || '#047857' }} />
           <span style={{ background: store?.secondaryColor || '#F59E0B' }} />
         </div>
       ),

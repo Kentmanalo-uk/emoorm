@@ -1642,8 +1642,8 @@
   }
 }
 
-/* My Purchase icons (signed in, and visitors): filled, in the pink-to-green
-   brand gradient (ToolGradients' brand; solid green stays as the fallback). The
+/* My Purchase icons (signed in, and visitors): filled, in the green gradient
+   (ToolGradients' green; the solid green stays as the fallback). The
    gradient definitions sit in a hidden SVG beside the icons. */
 .pf-m .sh-tool-gradients {
   position: absolute;
@@ -1653,5 +1653,5 @@
 }
 
 .pf-m-purchase-icon svg {
-  fill: url(#sh-grad-brand) var(--t-primary-600, #059669);
+  fill: url(#sh-grad-green) var(--t-primary-600, #047857);
 }

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowClockwise, CaretRight, NotePencil, PaperPlaneRight, Sparkle,
+  ArrowClockwise, CaretRight, NotePencil, PaperPlaneRight,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import ReplyText from '../components/moormy/ReplyText';
+import MoormyFace from '../components/moormy/MoormyFace';
 import useAuthStore from '../store/authStore';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -82,7 +83,7 @@ const saveChat = (userId, chat) => {
 function Avatar({ size = 32 }) {
   return (
     <span className="sa-avatar" style={{ width: size, height: size }} aria-hidden="true">
-      <Sparkle size={Math.round(size * 0.55)} weight="fill" />
+      <MoormyFace size={size} />
     </span>
   );
 }

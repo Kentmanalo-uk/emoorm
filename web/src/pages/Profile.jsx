@@ -276,6 +276,8 @@ const Profile = () => {
 
   return (
     <>
+      {/* The phone header below is hidden on computers; this is the page's heading there. */}
+      <h1 className="sr-only">My profile</h1>
       <div className="profile-mobile-page-header">
         <h1>Profile</h1>
         <div className="profile-mobile-header-actions">

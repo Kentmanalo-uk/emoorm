@@ -219,7 +219,7 @@ export default function Sell() {
         className="sell-sticky"
         style={{ transform: headerVisible ? 'translateY(0)' : 'translateY(-40px)' }}
       >
-        <div className="sell-topbar">
+        <div className="sell-topbar" role="region" aria-label="Announcement">
           <Star size={13} weight="fill" color="white" />
           Free to join. Built for Oriental Mindoro sellers.
         </div>
@@ -636,10 +636,12 @@ export default function Sell() {
       {/* Phones: this page has no bottom bar, so a way back to shopping
           stays in reach. */}
       {isPhone && (
-        <Link to="/" className="sell-home-fab" aria-label="Back to home">
-          <House size={20} weight="fill" aria-hidden="true" />
-          <span>Home</span>
-        </Link>
+        <nav aria-label="Back to shopping">
+          <Link to="/" className="sell-home-fab" aria-label="Back to home">
+            <House size={20} weight="fill" aria-hidden="true" />
+            <span>Home</span>
+          </Link>
+        </nav>
       )}
     </div>
   );

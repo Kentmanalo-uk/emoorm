@@ -396,7 +396,8 @@ export const buildTokens = (palette = {}, mode = 'light') => {
   tokens['--text-strong'] = at('textStrong', n[900]);
   tokens['--text-body'] = n[700];
   tokens['--text-muted'] = at('textMuted', n[500]);
-  tokens['--text-subtle'] = n[400];
+  // Subtle text is still text: kept at AA contrast (4.5:1).
+  tokens['--text-subtle'] = n[500];
   tokens['--text-inverse'] = n[0];
   tokens['--text-link'] = ramps.primary[600];
 

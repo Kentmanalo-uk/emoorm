@@ -192,7 +192,7 @@ const Footer = () => {
             </ul>
 
             <div className="footer-payment">
-              <h4 className="footer-subtitle">Payment Methods</h4>
+              <h3 className="footer-subtitle">Payment Methods</h3>
               <div className="footer-payment-methods">
                 {PAYMENT_OPTIONS.map((method) => (
                   <span key={method} className="footer-payment-badge">{method}</span>
@@ -201,7 +201,7 @@ const Footer = () => {
             </div>
 
             <div className="footer-fulfillment">
-              <h4 className="footer-subtitle">Fulfillment</h4>
+              <h3 className="footer-subtitle">Fulfillment</h3>
               <div className="footer-fulfillment-methods">
                 <span className="footer-fulfillment-badge">Home Delivery</span>
                 <span className="footer-fulfillment-badge">Store Pickup</span>
@@ -223,14 +223,14 @@ const Footer = () => {
                 buyer account and browse for free.
               </p>
 
-              <h4>Shop Local, Direct from the Source</h4>
+              <h3>Shop Local, Direct from the Source</h3>
               <p>
                 Every store on Emoorm is run by a local seller who manages their own listings, stock, orders,
                 and fulfillment from the Seller Center. When you order, you deal directly with the seller, so
                 your purchase supports the people who grow, catch, and make the products.
               </p>
 
-              <h4>Reviewed Sellers and Approved Listings</h4>
+              <h3>Reviewed Sellers and Approved Listings</h3>
               <p>
                 Residents who want to sell submit a seller application that is reviewed by a municipal or
                 platform administrator before their store goes live. New product listings are also checked
@@ -238,21 +238,21 @@ const Footer = () => {
                 rules. If something looks wrong, you can report a product or seller from its page.
               </p>
 
-              <h4>Payment Arranged with the Seller</h4>
+              <h3>Payment Arranged with the Seller</h3>
               <p>
                 Emoorm does not process or hold payments. Depending on what each seller accepts, you can pay by
                 Cash on Delivery, GCash or QR Ph. For GCash and QR Ph, you pay once the seller confirms your order
                 (My Orders, To Pay) and the seller checks your payment before preparing it.
               </p>
 
-              <h4>Delivery or Store Pickup</h4>
+              <h3>Delivery or Store Pickup</h3>
               <p>
                 Sellers choose whether they deliver, offer pickup, or both, and set the municipalities and
                 barangays they deliver to. At checkout you pick the option that suits you, and you are notified
                 as your order is confirmed, prepared, and ready for pickup or on its way.
               </p>
 
-              <h4>Safer Checkout with Identity Verification</h4>
+              <h3>Safer Checkout with Identity Verification</h3>
               <p>
                 To protect sellers from fake orders, buyers verify their identity once before checking out by
                 scanning a valid Philippine government ID, such as a PhilSys National ID, driver&apos;s license,
@@ -260,21 +260,21 @@ const Footer = () => {
                 automatic verification does not work, your municipal admin can help.
               </p>
 
-              <h4>Returns, Refunds, and Reviews</h4>
+              <h3>Returns, Refunds, and Reviews</h3>
               <p>
                 If an item arrives damaged, incorrect, incomplete, or not as described, you can request a return
                 from your order within 7 days, unless the seller&apos;s return policy says otherwise. After your
                 order is completed, you can rate the product and leave a review to help other buyers.
               </p>
 
-              <h4>Talk Directly with Sellers and Support</h4>
+              <h3>Talk Directly with Sellers and Support</h3>
               <p>
                 Message a store to ask about a product, stock, or delivery before you buy, and keep the
                 conversation going after you order. For account or verification concerns, the support chat
                 connects you with the administrator of your municipality.
               </p>
 
-              <h4>Made for Mindoreños</h4>
+              <h3>Made for Mindoreños</h3>
               <p>
                 Browse Emoorm in English, Tagalog, or Bisaya, sign in with your email or Google account, find
                 sellers near you on the store map, and search for products using a photo. Sellers can switch
@@ -287,13 +287,13 @@ const Footer = () => {
 
               {allCategories.length > 0 && (
                 <div className="footer-directory-group">
-                  <h4>Shop by Category</h4>
+                  <h3>Shop by Category</h3>
                   <LinkList items={allCategories.map((c) => ({ key: c.id, to: `/products?category=${c.id}`, label: c.name }))} />
                 </div>
               )}
 
               <div className="footer-directory-group">
-                <h4>Municipalities</h4>
+                <h3>Municipalities</h3>
                 {municipalities.length > 0 ? (
                   <LinkList items={municipalities.map((m) => ({ key: m.id, to: `/municipality/${m.id}`, label: m.name }))} />
                 ) : (
@@ -303,7 +303,7 @@ const Footer = () => {
 
               {stores.length > 0 && (
                 <div className="footer-directory-group">
-                  <h4>Local Stores</h4>
+                  <h3>Local Stores</h3>
                   <LinkList
                     items={[
                       ...stores.map((store) => ({ key: store.id, to: `/store/${store.slug}`, label: store.name })),
@@ -314,32 +314,32 @@ const Footer = () => {
               )}
 
               <div className="footer-directory-group">
-                <h4>Buyer Guides</h4>
+                <h3>Buyer Guides</h3>
                 <LinkList items={BUYER_GUIDES} />
               </div>
 
               <div className="footer-directory-group">
-                <h4>Seller Tools</h4>
+                <h3>Seller Tools</h3>
                 <LinkList items={SELLER_TOOLS} />
               </div>
 
               <div className="footer-directory-group">
-                <h4>Payment Options</h4>
+                <h3>Payment Options</h3>
                 <p className="footer-directory-links">{PAYMENT_OPTIONS.join(', ')}</p>
               </div>
 
               <div className="footer-directory-group">
-                <h4>Fulfillment</h4>
+                <h3>Fulfillment</h3>
                 <p className="footer-directory-links">Home Delivery, Store Pickup</p>
               </div>
 
               <div className="footer-directory-group">
-                <h4>Languages</h4>
+                <h3>Languages</h3>
                 <p className="footer-directory-links">{LANGUAGE_NAMES.join(', ')}</p>
               </div>
 
               <div className="footer-directory-group">
-                <h4>Company</h4>
+                <h3>Company</h3>
                 <LinkList items={COMPANY_LINKS} />
               </div>
             </div>

@@ -161,16 +161,16 @@
   /* ── Text ───────────────────────────────────────────────────────────── */
   --text-strong: #111827;
   --text-body: #374151;
-  --text-muted: #6b7280;
-  --text-subtle: #9ca3af;
+  --text-muted: #636b78;
+  --text-subtle: #636b78; /* text: AA on white and the grey pages */
   --text-inverse: #ffffff;
-  --text-link: #059669;
+  --text-link: #047857;
 
   /* ── Lines ──────────────────────────────────────────────────────────── */
   --border-subtle: #eef0f3;
   --border-default: #e5e7eb;
   --border-strong: #d1d5db;
-  --border-focus: #059669;
+  --border-focus: #047857;
 
   /* ── Text sitting on a filled colour ──────────────────────────────────
      Recomputed for contrast whenever a palette changes, so a pale brand

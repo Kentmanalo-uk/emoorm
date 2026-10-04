@@ -29,7 +29,7 @@ const ProfileLayout = () => {
       <div className="profile-page">
         <div className="container">
           <div className="profile-grid">
-            <aside className="profile-sidebar">
+            <aside className="profile-sidebar" aria-label="Account menu">
               <nav className="profile-nav">
                 {navItems.map(({ to, label, icon: Icon, end }) => (
                   <NavLink

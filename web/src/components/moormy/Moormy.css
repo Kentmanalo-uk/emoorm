@@ -27,8 +27,9 @@
   isolation: isolate;
 }
 
-.mmy-avatar svg {
-  animation: mmy-twinkle 4.8s ease-in-out infinite;
+.mmy-avatar .mmy-face {
+  display: block;
+  border-radius: 50%;
 }
 
 /* A soft halo that breathes pink to green. */
@@ -467,12 +468,6 @@
 @keyframes mmy-edge {
   from { background-position: 0 0, 0% 50%; }
   to { background-position: 0 0, 300% 50%; }
-}
-
-@keyframes mmy-twinkle {
-  0%, 82%, 100% { transform: none; }
-  88% { transform: rotate(18deg) scale(1.18); }
-  94% { transform: rotate(-6deg) scale(0.96); }
 }
 
 @keyframes mmy-breathe {

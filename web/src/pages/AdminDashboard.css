@@ -949,6 +949,10 @@
 }
 
 .dash-legend li.is-zero {
+  color: var(--t-neutral-500, #636b78);
+}
+
+.dash-legend li.is-zero > :not(.dash-legend-label) {
   opacity: 0.45;
 }
 
