@@ -534,15 +534,18 @@ const normalizeSellerApplication = async (data = {}) => {
     throw new ApiError('Invalid business type', 400);
   }
 
-  const payoutMethod = trimmed(data.payoutMethod).toUpperCase();
-  if (payoutMethod && !PAYOUT_METHODS.includes(payoutMethod)) {
-    throw new ApiError('Invalid payout method', 400);
-  }
-  const payoutAccountNumber = trimmed(data.payoutAccountNumber);
-  const payoutAccountName = trimmed(data.payoutAccountName);
-  if (payoutMethod && payoutMethod !== 'COD_ONLY') {
-    if (!payoutAccountName) throw new ApiError('Payout account name is required', 400);
-    if (!payoutAccountNumber) throw new ApiError('Payout account number is required', 400);
+  // Payout is asked in the guided setup after applying now (PATCH
+  // /seller-application/details). An application that still carries one
+  // keeps it when it is complete; a half-filled one (an old saved draft) is
+  // left out rather than holding the application back.
+  let payoutMethod = trimmed(data.payoutMethod).toUpperCase();
+  if (payoutMethod && !PAYOUT_METHODS.includes(payoutMethod)) payoutMethod = '';
+  let payoutAccountNumber = trimmed(data.payoutAccountNumber);
+  let payoutAccountName = trimmed(data.payoutAccountName);
+  if (payoutMethod && payoutMethod !== 'COD_ONLY' && (!payoutAccountName || !payoutAccountNumber)) {
+    payoutMethod = '';
+    payoutAccountNumber = '';
+    payoutAccountName = '';
   }
 
   const fulfillmentPreference = trimmed(data.fulfillmentPreference).toUpperCase() || 'DELIVERY';

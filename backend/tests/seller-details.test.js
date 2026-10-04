@@ -50,3 +50,34 @@ test('the details follow the application rules and are for sellers who applied',
   const neverApplied = await h.user('SELLER');
   assert.equal((await details(neverApplied, { payoutMethod: 'COD_ONLY' })).status, 400);
 });
+
+test('applying is not held back by half-filled payout details from an old draft', async () => {
+  const buyer = await h.user('BUYER', { contactNumber: '09171234567' });
+  const { municipality } = await h.reference();
+  const category = await h.prisma.category.findFirst({ select: { id: true } });
+  const res = await h.api('POST', '/auth/apply-seller', {
+    token: h.token(buyer),
+    body: {
+      shopName: `Ci Draft Shop ${h.RUN}`,
+      shopAddress: 'Stall 4, Public Market',
+      shopMunicipalityId: municipality.id,
+      shopCategories: [category.id],
+      acceptedTerms: true,
+      // What the old, longer form saved: GCash picked, no account number.
+      payoutMethod: 'GCASH',
+      payoutAccountName: 'Ana Reyes',
+      payoutAccountNumber: '',
+    },
+  });
+  assert.ok([200, 201].includes(res.status), res.body?.message);
+  const saved = await h.prisma.user.findUnique({ where: { id: buyer.id }, select: { role: true, payoutMethod: true, payoutAccountName: true } });
+  assert.equal(saved.role, 'SELLER');
+  assert.equal(saved.payoutMethod, null);
+  assert.equal(saved.payoutAccountName, null);
+  const store = await h.prisma.store.findUnique({ where: { ownerId: buyer.id }, select: { id: true } });
+  if (store) {
+    await h.prisma.notification.deleteMany({ where: { relatedId: { in: [store.id, buyer.id] } } });
+    await h.prisma.store.delete({ where: { id: store.id } });
+  }
+  await h.prisma.notification.deleteMany({ where: { relatedId: buyer.id } });
+});

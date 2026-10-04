@@ -15,6 +15,12 @@ import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 
 const MAX_CATEGORIES = 5;
 
+// What applying sends: the shop and where it is.
+const APPLY_FIELDS = [
+  "shopName", "shopCategories", "shopAddress", "municipalityId", "province",
+  "shopTagline", "shopDescription", "shopLogoUrl",
+];
+
 /** Same brand lockup as the Seller Center sidebar. */
 function ApplyBrandHeader() {
   return (
@@ -283,8 +289,12 @@ export default function SellerApply() {
     setConfirming(false);
     setIsSubmitting(true);
     try {
-      // Empty extras are left out: the guided setup asks for them next.
-      const extras = Object.fromEntries(Object.entries(form).filter(([, v]) => (Array.isArray(v) ? v.length : v)));
+      // Only what this form asks for (and shop details an older draft may
+      // hold). Business and payout details come in the guided setup: an old
+      // draft's half-filled payout must not block applying.
+      const extras = Object.fromEntries(APPLY_FIELDS
+        .map((key) => [key, form[key]])
+        .filter(([, v]) => (Array.isArray(v) ? v.length : v)));
       const res = await axios.post("/auth/apply-seller", {
         ...extras,
         shopMunicipalityId: form.municipalityId,
