@@ -1,0 +1,8 @@
+/* Product cards: the words around a price ("from", "/ head") sit smaller
+   and lighter than the amount, in its colour. */
+.kind-price-from,
+.kind-price-unit {
+  font-size: 0.78em;
+  font-weight: 500;
+  white-space: nowrap;
+}

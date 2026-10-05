@@ -274,6 +274,7 @@ const markReceived = async (id, seller) => {
         quantity: item.quantity,
         restockOnReceive: item.restockOnReceive,
         selectedVariations: item.orderItem.selectedVariations || null,
+        stockTaken: item.orderItem.stockTaken,
       })),
     );
   } catch (err) {

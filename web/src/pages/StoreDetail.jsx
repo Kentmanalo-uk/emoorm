@@ -57,6 +57,8 @@ import { awayUntil, shortDate, nowLabel, weekLines } from '../lib/shopHours';
 import { saleInfo } from '../lib/variantPricing';
 import { voucherSummary } from '../lib/vouchers';
 import { SaleWas } from '../components/ui/SaleTag';
+import KindPrice from '../components/product/kinds/KindPrice';
+import { isStockless } from '../lib/productKinds';
 import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import { ProductTodayTag } from '../components/today/TodayTag';
@@ -297,6 +299,10 @@ export default function StoreDetail() {
         stock: product.stock,
         listingKind: product.listingKind,
         availability: product.availability,
+        productType: product.productType,
+        details: product.details,
+        fulfillment: product.fulfillment,
+        weightGrams: product.weightGrams,
         slug: product.slug,
         categoryId: product.categoryId,
         selectedVariations: null,
@@ -1151,7 +1157,7 @@ function ProductCard({ product, onAddToCart }) {
       </div>
       <div className="product-info">
         <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
-        <span className="product-price">₱{price.toFixed(2)} <SaleWas product={product} compact /></span>
+        <span className="product-price"><KindPrice product={product}>₱{price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
         {/* Stars only from real review data; an unrated product says "New". */}
         {Number(product.reviewCount ?? 0) > 0 ? (
           <div className="product-rating-row">
@@ -1188,7 +1194,7 @@ function PhoneProductRow({ product, onAdd, onBuy, closed = false }) {
   const rating = Number(product.averageRating || 0);
   const reviews = Number(product.reviewCount || 0);
   const sold = Number(product.soldCount || 0);
-  const soldOut = Number(product.stock) === 0;
+  const soldOut = Number(product.stock) === 0 && !isStockless(product);
   return (
     <div className="shop-m-row">
       <Link to={`/product/${product.slug}`} className="shop-m-row-img">
@@ -1211,7 +1217,7 @@ function PhoneProductRow({ product, onAdd, onBuy, closed = false }) {
           {sold > 0 && <span className="shop-m-row-sold">{sold} sold</span>}
         </div>
         <div className="shop-m-row-foot">
-          <span className="shop-m-row-price">₱{price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <SaleWas product={product} compact /></span>
+          <span className="shop-m-row-price"><KindPrice product={product}>₱{price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</KindPrice> <SaleWas product={product} compact /></span>
           <div className="shop-m-row-actions">
             <button type="button" className="shop-m-row-cart" onClick={onAdd} disabled={soldOut || closed} aria-label={`Add ${product.name} to cart`}>
               <ShoppingCart size={18} />

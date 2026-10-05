@@ -13,16 +13,24 @@ const { stockedVariation, totalOptionStock } = require('../utils/variantPricing'
  * @param {String} productId
  * @param {Object|null} selectedVariations - the order line's chosen options
  * @param {Number} delta - negative to take stock, positive to return it
- * @returns {Promise<Number>} the product's total stock afterwards
+ * @param {Object} [options]
+ * @param {Boolean} [options.outsideWindow] - units coming back from outside an
+ *   open Available Today window: left out when the product is Available Today
+ *   food now (its stock is its window's)
+ * @returns {Promise<Number|null>} the product's total stock afterwards; null
+ *   for a product that keeps no stock (cooked to order), which is left alone
+ *   and needs no ledger entry
  * @throws {Error} code INSUFFICIENT_STOCK when stock would go below zero
  */
-const changeStock = async (tx, productId, selectedVariations, delta) => {
-  const rows = await tx.$queryRaw`SELECT stock, variations FROM products WHERE id = ${productId} FOR UPDATE`;
+const changeStock = async (tx, productId, selectedVariations, delta, { outsideWindow = false } = {}) => {
+  const rows = await tx.$queryRaw`SELECT stock, variations, product_type, listing_kind FROM products WHERE id = ${productId} FOR UPDATE`;
   if (!rows.length) {
     const err = new Error(`Product ${productId} not found`);
     err.code = 'PRODUCT_NOT_FOUND';
     throw err;
   }
+  if (rows[0].product_type === 'COOK_TO_ORDER') return null;
+  if (outsideWindow && delta > 0 && rows[0].listing_kind === 'TODAY') return null;
   const stock = Number(rows[0].stock || 0);
   let variations = rows[0].variations;
   if (typeof variations === 'string') {
@@ -61,4 +69,21 @@ const changeStock = async (tx, productId, selectedVariations, delta) => {
   return updated.stock;
 };
 
-module.exports = { changeStock };
+/**
+ * Give back what an order line took, for a cancellation, a return or a
+ * deleted account. It goes by what the line took when it was ordered, not by
+ * what the product is now: a paluto line took nothing, even if the product
+ * keeps stock since. Units go back into Available Today food only through its
+ * open window (the caller says so with intoWindow).
+ * @param {Object} tx - Prisma transaction client
+ * @param {{ productId, selectedVariations, quantity, stockTaken? }} line - the order line
+ * @param {Object} [options]
+ * @param {Boolean} [options.intoWindow] - the line's window still takes orders
+ * @returns {Promise<Number|null>} the stock afterwards; null when nothing went back
+ */
+const giveBack = async (tx, line, { intoWindow = false } = {}) => {
+  if (line.stockTaken === false) return null;
+  return changeStock(tx, line.productId, line.selectedVariations || null, line.quantity, { outsideWindow: !intoWindow });
+};
+
+module.exports = { changeStock, giveBack };

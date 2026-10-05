@@ -12,10 +12,11 @@ const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFracti
  * rate for the product's weight), with the total. Without the buyer's town,
  * courier fees are "from" prices.
  *
- * @param {{ product: Object, unitPrice: Number, municipalityId?: String, onQuote?: Function }} props
+ * @param {{ product: Object, unitPrice: Number, municipalityId?: String, onQuote?: Function, compact?: Boolean }} props
+ *   compact: delivered by the seller only, as one line.
  *   onQuote receives the quote (with productId) once it arrives; pass a stable function.
  */
-export default function ShippingEstimate({ product, unitPrice, municipalityId, onQuote }) {
+export default function ShippingEstimate({ product, unitPrice, municipalityId, onQuote, compact = false }) {
   const storeId = product?.store?.id || product?.storeId;
   const [quote, setQuote] = useState(null);
 
@@ -45,6 +46,23 @@ export default function ShippingEstimate({ product, unitPrice, municipalityId, o
   const fees = [sellerFee, ...couriers.map((c) => Number(c.fee))].filter((v) => v != null);
   const lowest = fees.length ? Math.min(...fees) : null;
   const isFrom = !municipalityId || couriers.some((c) => c.from);
+
+  if (compact && seller && !couriers.length) {
+    return (
+      <p className="ship-est-line">
+        <Truck size={14} weight="fill" className="ship-est-line-icon" aria-hidden="true" />
+        Delivered by the seller:{' '}
+        <strong>
+          {seller.covered === false ? 'not to your town'
+            : sellerFee == null ? 'fee at checkout'
+              : sellerFee === 0 ? 'Free' : peso(sellerFee)}
+        </strong>
+        {lowest != null && unitPrice > 0 && (
+          <span> · With shipping <strong className="ship-est-line-total">{isFrom ? 'from ' : ''}{peso(Number(unitPrice) + lowest)}</strong></span>
+        )}
+      </p>
+    );
+  }
 
   return (
     <div className="ship-est">

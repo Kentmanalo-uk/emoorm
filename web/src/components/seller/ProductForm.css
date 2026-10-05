@@ -1,4 +1,4 @@
-/* Add / edit product form. One calm column of numbered steps. */
+/* Add / edit product form: four short steps (one per screen on phones). */
 .pf {
   --pf-green: var(--t-primary-600, #059669);
   --pf-green-dark: var(--t-primary-700, #047857);
@@ -11,7 +11,7 @@
   flex-direction: column;
   gap: 14px;
   width: 100%;
-  max-width: 820px;
+  max-width: 1000px;
   margin: 0 auto;
   min-width: 0;
 }
@@ -19,7 +19,7 @@
 /* The page title lines up with the form column. */
 .seller-header.pf-head {
   width: 100%;
-  max-width: 820px;
+  max-width: 1000px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -452,10 +452,22 @@
 }
 
 /* ── Yes / No and return policy radio cards ──────────────── */
-.pf-yesno {
+.pf-cards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.pf-cards--1 {
+  grid-template-columns: 1fr;
+}
+
+.pf-cards--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pf-cards.is-invalid .pf-card-btn {
+  border-color: var(--t-danger-300, #fca5a5);
 }
 
 .pf-policies {
@@ -464,7 +476,7 @@
   gap: 10px;
 }
 
-.pf-yesno-btn,
+.pf-card-btn,
 .pf-policy {
   display: flex;
   align-items: flex-start;
@@ -481,7 +493,7 @@
   transition: border-color 0.15s, background 0.15s;
 }
 
-.pf-yesno-btn > span:last-child,
+.pf-card-btn > span:last-child,
 .pf-policy > span:last-child {
   display: flex;
   flex-direction: column;
@@ -489,20 +501,20 @@
   min-width: 0;
 }
 
-.pf-yesno-btn strong,
+.pf-card-btn strong,
 .pf-policy strong {
   font-size: 14.5px;
   font-weight: 600;
 }
 
-.pf-yesno-btn small,
+.pf-card-btn small,
 .pf-policy small {
   font-size: 12.5px;
   line-height: 1.4;
   color: var(--pf-muted);
 }
 
-.pf-yesno-btn.is-on,
+.pf-card-btn.is-on,
 .pf-policy.is-on {
   border-color: var(--pf-green);
   background: var(--pf-green-soft);
@@ -1009,12 +1021,12 @@
     grid-template-columns: 1fr;
   }
 
-  .pf-yesno {
+  .pf-cards {
     grid-template-columns: 1fr;
     gap: 8px;
   }
 
-  .pf-yesno-btn,
+  .pf-card-btn,
   .pf-policy {
     padding: 13px 14px;
   }
@@ -1190,12 +1202,970 @@
   }
 }
 
-/* How it is sold: always available, or Available Today. */
-.pf-kind { margin-bottom: 16px; }
-.pf-kind-label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
+
+/* ── Phones: one step per screen ─────────────────────────────── */
+.pf-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 2px 0;
+}
+
+.pf-progress > span {
+  font-size: 13px;
+  color: var(--pf-muted);
+}
+
+.pf-progress strong {
+  color: var(--pf-ink);
   font-weight: 600;
-  color: var(--t-text, #111827);
+}
+
+.pf-progress-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pf-progress-bar i {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.pf-progress-bar i.is-on {
+  background: var(--pf-green);
+}
+
+.pf-bar-space {
+  height: 64px;
+}
+
+/* ── Field extras ────────────────────────────────────────────── */
+.pf-opt {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--pf-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+
+.pf-optional-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  color: var(--pf-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.pf-optional-head::before,
+.pf-optional-head::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--pf-line);
+}
+
+.pf-note-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--pf-muted);
+}
+
+.pf-note-line svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.pf-empty-step {
+  margin: 0;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--pf-muted);
+  font-size: 14px;
+}
+
+.pf-textarea--short {
+  min-height: 72px;
+}
+
+.pf-unit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 260px;
+}
+
+.pf-unit > span {
+  color: var(--pf-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pf-field--price .pf-money,
+.pf-field--price .pf-derived {
+  max-width: 320px;
+}
+
+/* "Create a package" hint at the top of Basics. */
+.pf-package-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px dashed var(--t-neutral-300, #cbd5e1);
+  border-radius: 12px;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pf-package-hint svg {
+  flex-shrink: 0;
+  color: var(--pf-green);
+}
+
+.pf-package-hint strong {
+  color: var(--pf-green-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pf-package-hint:hover {
+  border-color: var(--pf-green);
+  background: var(--pf-green-soft);
+}
+
+/* Tap-to-pick chips (animal, sex, days). */
+.pf-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pf-pick-chip {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1.5px solid var(--pf-line);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pf-pick--sm .pf-pick-chip {
+  min-height: 40px;
+  padding: 0 13px;
+  font-size: 14px;
+}
+
+.pf-pick-chip.is-on {
+  border-color: var(--pf-green);
+  background: var(--pf-green);
+  color: #fff;
+}
+
+.pf-pick-chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.pf-suggest button.is-on {
+  border-style: solid;
+  border-color: var(--pf-green);
+  color: var(--pf-green-dark);
+  background: var(--pf-green-soft);
+}
+
+/* − 3 + */
+.pf-stepper {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) 50px;
+  gap: 8px;
+  max-width: 300px;
+}
+
+.pf-stepper > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--pf-ink);
+  cursor: pointer;
+}
+
+.pf-stepper > button:disabled {
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: default;
+}
+
+.pf-stepper-field {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 48px;
+  padding: 0 10px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.pf-stepper-field:focus-within {
+  border-color: var(--pf-green);
+}
+
+.pf-stepper.is-invalid .pf-stepper-field {
+  border-color: var(--pf-danger);
+}
+
+.pf-stepper-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pf-ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.pf-stepper-field input::-webkit-outer-spin-button,
+.pf-stepper-field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pf-stepper-field span {
+  flex-shrink: 0;
+  color: var(--pf-muted);
+  font-size: 14px;
+}
+
+/* Paluto sizes with their prices. */
+.pf-sizes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 14px;
+  border: 1px dashed var(--t-neutral-300, #d1d5db);
+  border-radius: 12px;
+}
+
+.pf-sizes.is-on {
+  padding-bottom: 14px;
+  border-style: solid;
+  border-color: var(--t-primary-200, #a7f3d0);
+  background: var(--pf-green-soft);
+}
+
+.pf-size-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 150px) 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.pf-size-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-500, #6b7280);
+  cursor: pointer;
+}
+
+.pf-sizes .pf-tier-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pf-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  max-width: 520px;
+}
+
+.pf-range > span {
+  color: var(--pf-muted);
+  font-size: 14px;
+}
+
+.pf-age {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 10px;
+  max-width: 420px;
+}
+
+.pf-close {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.pf-close .pf-select {
+  width: auto;
+  min-width: 160px;
+}
+
+/* Ready to eat: today's post. */
+.pf-today {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.pf-today-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--pf-green-soft);
+  color: var(--pf-green-dark);
+}
+
+.pf-today-box svg {
+  flex-shrink: 0;
+}
+
+.pf-today-box > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.pf-today-box strong {
+  font-size: 14.5px;
+  color: var(--pf-ink);
+}
+
+.pf-today-link {
+  align-self: flex-start;
+  margin-top: 4px;
+  color: var(--pf-green-dark);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── More options: rows that open ────────────────────────────── */
+.pf-more-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pf-more {
+  border: 1px solid var(--pf-line);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.pf-more.has-error {
+  border-color: var(--t-danger-300, #fca5a5);
+}
+
+.pf-more-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--pf-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pf-more-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pf-more-text strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pf-more-text small {
+  overflow: hidden;
+  font-size: 12.5px;
+  color: var(--pf-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-more-caret {
+  flex-shrink: 0;
+  color: var(--pf-muted);
+  transition: transform 0.15s;
+}
+
+.pf-more.is-open .pf-more-caret {
+  transform: rotate(180deg);
+}
+
+.pf-more-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.pf-more-note {
+  padding: 2px 4px;
+}
+
+/* ── Review ──────────────────────────────────────────────────── */
+.pf-preview {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  overflow: hidden;
+  max-width: 560px;
+  border: 1px solid var(--pf-line);
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.pf-preview-img {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.pf-preview-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pf-preview-img > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  color: var(--t-neutral-400, #9ca3af);
+  font-size: 13px;
+}
+
+.pf-preview-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--pf-green-dark);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.pf-preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px 18px;
+}
+
+.pf-preview-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--pf-ink);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.pf-preview-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pf-preview-price b {
+  color: var(--t-danger-600, #dc2626);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.pf-preview-price s {
+  color: var(--pf-muted);
+  font-size: 14px;
+}
+
+.pf-preview-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pf-preview-facts li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.pf-preview-way {
+  margin-top: auto;
+  font-size: 13px;
+  color: var(--pf-muted);
+}
+
+.pf-preview-kind {
+  margin-top: -4px;
+}
+
+.pf-sumup {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--pf-line);
+  border-radius: 14px;
+}
+
+.pf-sumup-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--pf-line);
+}
+
+.pf-sumup-row:first-child {
+  border-top: 0;
+}
+
+.pf-sumup-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--t-neutral-600, #4b5563);
+  overflow-wrap: anywhere;
+}
+
+.pf-sumup-row strong {
+  margin-bottom: 2px;
+  font-size: 14.5px;
+  color: var(--pf-ink);
+}
+
+.pf-sumup-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--pf-line);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--pf-green-dark);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* A new animal saved: list another like it. */
+.pf-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 560px;
+  margin: 12px auto 0;
+  padding: 32px 24px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+  text-align: center;
+}
+
+.pf-done-icon {
+  color: var(--pf-green);
+}
+
+.pf-done h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--pf-ink);
+}
+
+.pf-done p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--pf-muted);
+}
+
+.pf-done .pf-done-facts {
+  color: var(--pf-ink);
+  font-weight: 600;
+}
+
+.pf-done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+  .pf-cards--3 {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-section-head p {
+    font-size: 13px;
+  }
+
+  .pf-size-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 92px) 32px;
+    gap: 6px;
+  }
+
+  .pf-size-remove {
+    width: 36px;
+  }
+
+  .pf-preview {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .pf-preview-img {
+    aspect-ratio: 4 / 3;
+  }
+
+  .pf-stepper,
+  .pf-field--price .pf-money,
+  .pf-field--price .pf-derived {
+    max-width: none;
+  }
+
+  .pf-done {
+    padding: 28px 18px;
+  }
+
+  .pf-done-actions {
+    flex-direction: column-reverse;
+    width: 100%;
+  }
+
+  .pf-done-actions .pf-btn {
+    width: 100%;
+  }
+}
+
+/* ── Clean step layout: one step at a time, everywhere ───────────── */
+.pf--wide {
+  max-width: 760px;
+  gap: 16px;
+}
+
+.seller-header.pf-head {
+  max-width: 760px;
+}
+
+.pf-section-head {
+  display: block;
+  margin-bottom: 22px;
+}
+
+.pf-section-head h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.pf-section-body {
+  gap: 20px;
+}
+
+.pf--wide .pf-section {
+  padding: 28px 32px 0;
+}
+
+/* Back / Next at the bottom of the card (computers). */
+.pf--wide .pf-footer {
+  justify-content: space-between;
+  margin: 28px -32px 0;
+  padding: 14px 32px;
+  border-top: 1px solid var(--pf-line);
+  border-radius: 0 0 16px 16px;
+  box-shadow: none;
+}
+
+/* The steps across the top (computers). */
+.pf-track {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pf-track li {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.pf-track li:last-child {
+  flex: 0 0 auto;
+}
+
+.pf-track li:not(:last-child)::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  margin: 0 12px;
+  border-radius: 2px;
+  background: var(--pf-line);
+}
+
+.pf-track li.is-done::after {
+  background: var(--pf-green);
+}
+
+.pf-track button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--pf-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pf-track button:disabled {
+  cursor: default;
+}
+
+.pf-track-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 50%;
+  background: var(--t-neutral-0, #fff);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pf-track li.is-current button {
+  color: var(--pf-ink);
+  font-weight: 600;
+}
+
+.pf-track li.is-current .pf-track-num {
+  border-color: var(--pf-green);
+  background: var(--pf-green);
+  color: #fff;
+}
+
+.pf-track li.is-done button {
+  color: var(--pf-green-dark);
+}
+
+.pf-track li.is-done .pf-track-num {
+  border-color: var(--pf-green);
+  background: var(--pf-green-soft);
+  color: var(--pf-green-dark);
+}
+
+.pf-track li.is-done button:hover span:last-child {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Two or three short answers side by side. */
+.pf-seg {
+  display: grid;
+  grid-template-columns: repeat(var(--pf-seg-n, 3), minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.pf-seg button {
+  min-height: 42px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--t-neutral-600, #4b5563);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.pf-seg button.is-on {
+  background: var(--t-neutral-0, #fff);
+  color: var(--pf-green-dark);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+/* "Optional" label: what follows can be left empty. */
+.pf-optional-head {
+  margin-top: 6px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pf-optional-head::before {
+  display: none;
+}
+
+/* Fields under "Optional" don't repeat the word. */
+.pf-optional-head ~ .pf-field .pf-opt {
+  display: none;
+}
+
+/* Create a package: one quiet line at the end of Basics. */
+.pf-package-hint {
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 2px;
+  border: 0;
+  border-top: 1px solid var(--pf-line);
+  border-radius: 0;
+  background: none;
+  color: var(--pf-muted);
+  font-size: 13.5px;
+}
+
+.pf-package-hint strong {
+  text-decoration: none;
+}
+
+.pf-package-hint:hover {
+  background: none;
+}
+
+.pf-package-hint:hover strong {
+  text-decoration: underline;
+}
+
+/* Review: Change is a plain link. */
+.pf-sumup-edit {
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+}
+
+@media (max-width: 768px) {
+  /* Phones: the step sits on the page, not in a card. */
+  .pf-section {
+    margin: 0 -16px;
+    padding: 18px 16px 8px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .pf-section[data-invalid="true"] {
+    box-shadow: none;
+  }
+
+  .pf-section-head {
+    margin-bottom: 18px;
+  }
+
+  .pf-section-head h2 {
+    font-size: 20px;
+  }
+
+  .pf-progress > span {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .pf-seg button {
+    font-size: 13.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pf-section {
+    margin: 0 -12px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
 }

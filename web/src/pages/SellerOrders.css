@@ -1196,6 +1196,12 @@ tr.is-moved { box-shadow: inset 3px 0 0 var(--t-primary-600, #059669); }
   font-size: 12px;
 }
 
+/* Paluto orders: cooked after the order, ready at a time. */
+.so-today-badge.so-cook-badge {
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-700, #b45309);
+}
+
 .so-today-detail p {
   margin: 4px 0 0;
   color: var(--t-neutral-700, #374151);

@@ -1,0 +1,112 @@
+/* Admin › Categories: the kind (what sellers are asked when they add a
+   product in the category), as three choices in the form and a pill in the
+   list. */
+.admin-cat-kinds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-cat-kind-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  font: inherit;
+  color: var(--t-neutral-600, #475569);
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-cat-kind-opt:hover {
+  border-color: var(--t-neutral-300, #cbd5e1);
+}
+
+.admin-cat-kind-opt.is-on {
+  border-color: var(--t-primary-600, #059669);
+  box-shadow: 0 0 0 1px var(--t-primary-600, #059669);
+}
+
+.admin-cat-kind-opt:focus-visible {
+  outline: 2px solid var(--border-focus, #047857);
+  outline-offset: 2px;
+}
+
+.admin-cat-kind-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.admin-cat-kind-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-cat-kind-text strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.admin-cat-kind-text span {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--t-neutral-500, #64748b);
+}
+
+.admin-cat-kind-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* One tint per kind: the choice's icon and the list's pill. */
+.admin-cat-kind-opt.is-goods .admin-cat-kind-icon,
+.admin-cat-kind-pill.is-goods {
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--t-neutral-600, #475569);
+}
+
+.admin-cat-kind-opt.is-food .admin-cat-kind-icon,
+.admin-cat-kind-pill.is-food {
+  background: var(--t-orange-100, #ffedd5);
+  color: var(--t-orange-700, #c2410c);
+}
+
+.admin-cat-kind-opt.is-livestock .admin-cat-kind-icon,
+.admin-cat-kind-pill.is-livestock {
+  background: var(--t-sky-100, #e0f2fe);
+  color: var(--t-sky-700, #0e6f95);
+}
+
+/* Phones: the choices stacked, each a full-width tap target; the image
+   buttons wrap instead of pushing the sheet sideways. */
+@media (max-width: 768px) {
+  .admin-cat-kinds {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cat-image-row {
+    flex-wrap: wrap;
+  }
+
+  .admin-cat-kind-opt {
+    align-items: center;
+    min-height: 56px;
+    padding: 10px 12px;
+  }
+}

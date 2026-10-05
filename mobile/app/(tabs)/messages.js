@@ -1,230 +1,231 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, Image, RefreshControl, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChatCircleIcon as MessageCircle, MagnifyingGlassIcon as Search, StorefrontIcon as Store, XIcon as X } from 'phosphor-react-native';
+import {
+  ArrowsClockwiseIcon, ChatTextIcon, EnvelopeOpenIcon, FunnelIcon, MagnifyingGlassIcon, StorefrontIcon, XIcon,
+} from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
-import { ENDPOINTS } from '../../src/api/endpoints';
-import { resolveImg } from '../../src/lib/media';
 import { toast } from '../../src/lib/toast';
-import { getCacheEntry, getCachedData, refreshCachedData } from '../../src/lib/dataCache';
-import EmptyState from '../../src/components/EmptyState';
-import { ListSkeleton } from '../../src/components/SkeletonLayouts';
+import { getCachedData, setCachedData } from '../../src/lib/dataCache';
 import useAuthStore from '../../src/store/authStore';
-import { colors, fontFamily, radius, spacing, typography } from '../../src/theme';
+import { font, t } from '../../src/theme';
+import EmptyState from '../../src/components/EmptyState';
+import ShellBarButton from '../../src/components/ShellBarButton';
+import ShellPageMenu from '../../src/components/ShellPageMenu';
+import InboxPageHead, { InboxTopGap } from '../../src/components/inbox/InboxPageHead';
+import InboxLoginGate from '../../src/components/inbox/InboxLoginGate';
+import ConversationRow from '../../src/components/inbox/ConversationRow';
+import MoormyEntry from '../../src/components/inbox/MoormyEntry';
+import { ConversationListSkeleton } from '../../src/components/inbox/InboxSkeletons';
 
-// Mirrors web/src/pages/Messages.jsx + components/messenger/Messenger.jsx's conversation list
-// (buyer role only — sellers use the web dashboard). Tapping a conversation opens the thread
-// screen at app/conversation/[id].js.
-function timeAgo(iso) {
-  if (!iso) return '';
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60) return 'now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
-  return new Date(iso).toLocaleDateString();
-}
+/*
+ * The buyer's Messages tab (web/src/pages/Messages.jsx →
+ * components/messenger/Messenger.jsx, its conversation list on phones):
+ * the title bar with search and ⋯, Ate Moormy, then the chats. A chat opens
+ * at /conversation/:id (the website's ?c=), Ate Moormy at /conversation/moormy.
+ * ?store=<id> opens (or starts) the chat with that shop, as on the website.
+ */
 
-const BUYER_MESSAGES_CACHE_KEY = 'buyer:messages';
-const BUYER_MESSAGES_CACHE_TTL = 60 * 1000;
+const LIST_KEY = 'messages:buyer';
 
 export default function Messages() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  if (!isAuthenticated) return <InboxLoginGate page="messages" />;
+  return <MessagesList />;
+}
+
+function MessagesList() {
   const router = useRouter();
-  const { store: initialStoreId } = useLocalSearchParams();
-  const insets = useSafeAreaInsets();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const openedStoreRef = useRef(null);
-  const initialConversations = getCacheEntry(BUYER_MESSAGES_CACHE_KEY)?.data;
-  const [conversations, setConversations] = useState(initialConversations || []);
-  const [query, setQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(!initialConversations);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { store: initialStoreId, c: initialConversationId } = useLocalSearchParams();
+  const currentUser = useAuthStore((s) => s.user);
+  const [conversations, setConversations] = useState(() => getCachedData(LIST_KEY) || []);
+  const [loadingList, setLoadingList] = useState(() => !getCachedData(LIST_KEY));
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const openedStore = useRef(null);
+  const searchRef = useRef(null);
 
-  const fetchConversations = useCallback(async ({ silent = false, force = false } = {}) => {
-    if (!isAuthenticated) {
-      setIsLoading(false);
-      return;
-    }
-    if (!force) {
-      const fresh = getCachedData(BUYER_MESSAGES_CACHE_KEY, BUYER_MESSAGES_CACHE_TTL);
-      if (fresh) {
-        setConversations(fresh);
-        setIsLoading(false);
-        return;
-      }
-    }
-    if (!silent && !getCacheEntry(BUYER_MESSAGES_CACHE_KEY)) setIsLoading(true);
+  const fetchConversations = useCallback(async () => {
     try {
-      const data = await refreshCachedData(BUYER_MESSAGES_CACHE_KEY, async () => {
-        const res = await apiClient.get(ENDPOINTS.MESSAGES.CONVERSATIONS);
-        return (res.data || []).filter((item) => item.role !== 'seller');
-      });
-      setConversations(data);
+      const res = await apiClient.get('/messages/conversations');
+      setConversations(res.data || []);
+      setCachedData(LIST_KEY, res.data || []);
     } catch (err) {
-      toast.error('Failed to load messages', err.message);
+      // Silent: the main error surface is per conversation.
+      console.error('Failed to load conversations', err);
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      setLoadingList(false);
     }
-  }, [isAuthenticated]);
+  }, []);
 
-  useFocusEffect(useCallback(() => {
-    if (!isAuthenticated) return undefined;
-    fetchConversations();
-    const interval = setInterval(() => fetchConversations({ silent: true, force: true }), 30000);
-    return () => clearInterval(interval);
-  }, [fetchConversations, isAuthenticated]));
+  // Each visit to the tab (and back from a chat) asks again.
+  useFocusEffect(useCallback(() => { fetchConversations(); }, [fetchConversations]));
 
+  const openChat = useCallback((id, params) => {
+    router.push({ pathname: '/conversation/[id]', params: { id, ...params } });
+  }, [router]);
+
+  // ?store=… opens (or starts) that shop's chat.
   useEffect(() => {
-    if (!isAuthenticated || !initialStoreId || openedStoreRef.current === initialStoreId) return;
-    openedStoreRef.current = initialStoreId;
-    apiClient
-      .post(ENDPOINTS.MESSAGES.CONVERSATIONS, { storeId: initialStoreId })
+    if (!initialStoreId || openedStore.current === initialStoreId) return;
+    openedStore.current = initialStoreId;
+    apiClient.post('/messages/conversations', { storeId: initialStoreId })
       .then((res) => {
-        const conversation = res.data;
-        if (!conversation?.id) throw new Error('Conversation could not be opened');
-        router.replace(`/conversation/${conversation.id}?storeName=${encodeURIComponent(conversation.store?.name || 'Store')}`);
+        router.setParams({ store: undefined });
+        openChat(res.data.id);
+        fetchConversations();
       })
       .catch((err) => {
-        openedStoreRef.current = null;
-        toast.error('Failed to open conversation', err.message);
+        openedStore.current = null;
+        toast.error(err?.message || 'Could not open conversation');
       });
-  }, [initialStoreId, isAuthenticated, router]);
+  }, [initialStoreId, openChat, fetchConversations, router]);
 
-  const onRefresh = () => {
-    setIsRefreshing(true);
-    fetchConversations({ silent: true, force: true });
+  // ?c=… (a notification's link) opens that chat.
+  useEffect(() => {
+    if (!initialConversationId) return;
+    router.setParams({ c: undefined });
+    openChat(initialConversationId);
+  }, [initialConversationId, openChat, router]);
+
+  const buyerChats = useMemo(() => conversations.filter((c) => c.role === 'buyer'), [conversations]);
+  const filtered = useMemo(() => {
+    const scoped = unreadOnly ? buyerChats.filter((c) => c.unreadCount > 0) : buyerChats;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return scoped;
+    return scoped.filter((c) => (c.store?.name || '').toLowerCase().includes(q));
+  }, [buyerChats, searchQuery, unreadOnly]);
+  const unreadChats = buyerChats.filter((c) => c.unreadCount > 0);
+
+  const markAllRead = async () => {
+    const ids = unreadChats.map((c) => c.id);
+    if (ids.length === 0) return;
+    await Promise.allSettled(ids.map((id) => apiClient.post(`/messages/conversations/${id}/read`)));
+    await fetchConversations();
+    toast.success(ids.length === 1 ? 'Chat marked as read' : `${ids.length} chats marked as read`);
   };
 
-  const normalizedQuery = query.trim().toLowerCase();
-  const filteredConversations = normalizedQuery
-    ? conversations.filter((item) => `${item.store?.name || ''} ${item.lastMessage?.body || ''}`.toLowerCase().includes(normalizedQuery))
-    : conversations;
+  const toggleSearch = () => {
+    if (searchOpen) {
+      setSearchOpen(false);
+      setSearchQuery('');
+    } else {
+      setSearchOpen(true);
+    }
+  };
 
-  const renderItem = ({ item }) => (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Conversation with ${item.store?.name || 'Store'}`}
-      style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
-      onPress={() => router.push(`/conversation/${item.id}?storeName=${encodeURIComponent(item.store?.name || 'Store')}`)}
-    >
-      <View style={styles.avatarWrap}>
-        {item.store?.logo ? (
-          <Image source={{ uri: resolveImg(item.store.logo) }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Store size={18} color={colors.secondary} />
-          </View>
-        )}
-        {item.unreadCount > 0 ? <View style={styles.unreadDot} /> : null}
-      </View>
-      <View style={styles.itemBody}>
-        <Text style={styles.storeName} numberOfLines={1}>{item.store?.name || 'Store'}</Text>
-        <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.lastMessageUnread]} numberOfLines={1}>
-          {item.lastMessage?.body || 'Start the conversation'}
-        </Text>
-      </View>
-      <View style={styles.itemMeta}>
-        <Text style={styles.time}>{timeAgo(item.lastMessageAt)}</Text>
-        {item.unreadCount > 0 ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{item.unreadCount}</Text>
-          </View>
-        ) : null}
-      </View>
-    </Pressable>
-  );
+  const openMoormy = (question) => openChat('moormy', question ? { ask: question } : undefined);
 
-  if (isAuthenticated && isLoading) {
-    return <View style={styles.screen}><View style={[styles.header, { paddingTop: insets.top + spacing.md }]}><Text style={styles.headerTitle}>Messages</Text></View><ListSkeleton rows={7} imageSize={48} /></View>;
-  }
+  const menuItems = [
+    unreadChats.length > 0 && { key: 'read', Icon: EnvelopeOpenIcon, label: 'Mark all as read', onPress: markAllRead },
+    { key: 'unread', Icon: FunnelIcon, label: unreadOnly ? 'Show all chats' : 'Show unread only', onPress: () => setUnreadOnly((v) => !v) },
+    { key: 'refresh', Icon: ArrowsClockwiseIcon, label: 'Refresh', onPress: fetchConversations },
+  ].filter(Boolean);
+
+  const firstName = String(currentUser?.fullName || '').trim().split(/\s+/)[0];
+  const empty = !loadingList && filtered.length === 0;
 
   return (
-    <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <Text style={styles.headerTitle}>Messages</Text>
-      </View>
-      {isAuthenticated ? <View style={styles.searchWrap}><Search size={18} color={colors.textMuted} /><TextInput accessibilityLabel="Search store conversations" style={styles.searchInput} value={query} onChangeText={setQuery} placeholder="Search stores" placeholderTextColor={colors.textMuted} returnKeyType="search" />{query ? <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={8} onPress={() => setQuery('')}><X size={18} color={colors.textMuted} /></Pressable> : null}</View> : null}
-      <FlatList
-        data={isAuthenticated ? filteredConversations : []}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={!isAuthenticated || filteredConversations.length === 0 ? styles.emptyContainer : styles.listContainer}
-        refreshControl={isAuthenticated ? <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.primary]} /> : undefined}
-        ListEmptyComponent={
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      stickyHeaderIndices={[1]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <InboxTopGap />
+      <InboxPageHead title="Messages">
+        <ShellBarButton label={searchOpen ? 'Close search' : 'Search chats'} onPress={toggleSearch} accessibilityState={{ expanded: searchOpen }}>
+          {searchOpen
+            ? <XIcon size={19} weight="bold" color={t.primary[700]} />
+            : <MagnifyingGlassIcon size={19} color={t.neutral[700]} />}
+        </ShellBarButton>
+        <ShellPageMenu label="Chat options" items={menuItems} />
+      </InboxPageHead>
+
+      <View style={styles.list}>
+        {searchOpen || searchQuery ? (
+          <View style={styles.search}>
+            <MagnifyingGlassIcon size={16} color={t.neutral[500]} />
+            <TextInput
+              ref={searchRef}
+              autoFocus
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search stores"
+              placeholderTextColor={t.neutral[400]}
+              accessibilityLabel="Search conversations"
+              returnKeyType="search"
+              style={styles.searchInput}
+              underlineColorAndroid="transparent"
+            />
+            {searchQuery ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setSearchQuery('')} style={styles.searchClear}>
+                <XIcon size={12} weight="bold" color={t.neutral[0]} />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
+        {unreadOnly ? (
+          <View style={styles.filterPillWrap}>
+            <Pressable accessibilityRole="button" onPress={() => setUnreadOnly(false)} style={styles.filterPill}>
+              <Text style={styles.filterPillText}>Unread only</Text>
+              <XIcon size={12} weight="bold" color={t.primary[700]} />
+            </Pressable>
+          </View>
+        ) : null}
+
+        {!searchQuery && !unreadOnly ? (
+          <MoormyEntry userId={currentUser?.id} firstName={firstName} onOpen={openMoormy} />
+        ) : null}
+
+        {loadingList ? (
+          <ConversationListSkeleton />
+        ) : empty ? (
           <EmptyState
-            icon={isAuthenticated ? <MessageCircle size={48} color={colors.gray400} /> : null}
-            title={isAuthenticated ? (normalizedQuery ? 'No stores found' : 'No conversations yet') : 'Your messages will appear here'}
-            message={isAuthenticated ? (normalizedQuery ? 'Try another store name or message.' : 'Message a store from a product page to start a conversation.') : undefined}
-            actionLabel={!isAuthenticated ? 'Sign In' : undefined}
-            onAction={!isAuthenticated ? () => router.push({ pathname: '/login', params: { redirect: '/messages' } }) : undefined}
+            art="messages"
+            icon={ChatTextIcon}
+            style={styles.empty}
+            title={searchQuery
+              ? `No chats match “${searchQuery}”`
+              : unreadOnly ? 'No unread chats' : 'No conversations yet'}
+            text={searchQuery
+              ? 'Try another name, or clear the search.'
+              : unreadOnly ? "You're all caught up." : 'Tap Chat on a product or shop to ask the seller anything.'}
+            actions={searchQuery
+              ? [{ label: 'Clear search', onPress: () => setSearchQuery(''), variant: 'outline' }]
+              : unreadOnly
+                ? [{ label: 'Show all chats', onPress: () => setUnreadOnly(false), variant: 'outline' }]
+                : [{ label: 'Browse stores', onPress: () => router.push('/stores'), icon: StorefrontIcon }]}
           />
-        }
-      />
-    </View>
+        ) : (
+          filtered.map((c) => (
+            <ConversationRow key={c.id} item={c} currentUserId={currentUser?.id} onPress={() => openChat(c.id)} />
+          ))
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bgPrimary },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.white,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderLight,
+  screen: { flex: 1, backgroundColor: t.neutral[0] },
+  content: { flexGrow: 1, paddingBottom: 16 },
+  list: { paddingTop: 6 },
+  search: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, marginHorizontal: 12, marginBottom: 8,
+    paddingHorizontal: 12, borderRadius: 10, backgroundColor: t.neutral[100],
   },
-  headerTitle: { ...typography.h2, color: colors.textPrimary },
-  searchWrap: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: spacing.lg, marginBottom: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.lg, backgroundColor: colors.gray100 },
-  searchInput: { ...typography.body, flex: 1, minWidth: 0, paddingVertical: spacing.sm, color: colors.textPrimary, outlineStyle: 'none' },
-  listContainer: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  emptyContainer: { flexGrow: 1 },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 76,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderLight,
+  searchInput: {
+    flex: 1, minWidth: 0, height: 40, padding: 0, fontSize: 16, color: t.neutral[900], ...font(400), outlineStyle: 'none',
   },
-  itemPressed: { backgroundColor: colors.gray50 },
-  avatarWrap: { position: 'relative' },
-  avatar: { width: 48, height: 48, borderRadius: radius.full },
-  avatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.full,
-    backgroundColor: colors.bgGreenLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+  searchClear: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[300] },
+  filterPillWrap: { paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row' },
+  filterPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, height: 30, paddingHorizontal: 12, borderWidth: 1,
+    borderColor: t.primary[600], borderRadius: 999, backgroundColor: t.primary[50],
   },
-  unreadDot: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 12,
-    height: 12,
-    borderRadius: radius.full,
-    backgroundColor: colors.primary,
-  },
-  itemBody: { flex: 1, gap: 2 },
-  storeName: { ...typography.body, fontWeight: '600', fontFamily: fontFamily.semiBold, color: colors.textPrimary },
-  lastMessage: { ...typography.caption, color: colors.textSecondary },
-  lastMessageUnread: { color: colors.textPrimary, fontWeight: '600', fontFamily: fontFamily.semiBold },
-  itemMeta: { alignItems: 'flex-end', gap: spacing.xs },
-  time: { ...typography.caption, color: colors.textMuted },
-  badge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: radius.full,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: { ...typography.caption, fontSize: 10, color: colors.white, fontWeight: '700', fontFamily: fontFamily.bold },
+  filterPillText: { fontSize: 13, lineHeight: 16, color: t.primary[700], ...font(400) },
+  empty: { minHeight: 420, marginTop: 0, marginHorizontal: 12, marginBottom: 16, paddingVertical: 48, paddingHorizontal: 24 },
 });
-

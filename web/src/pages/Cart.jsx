@@ -17,6 +17,12 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import { BusyLabel } from '../components/ui/Spinner';
 import './Cart.css';
 import { confirmAction } from '../lib/confirm';
+import {
+  lineUnit, lineNote, lineMinimum, lineStockless, fewLeftLabel,
+} from '../lib/orderLines';
+
+// Out of stock blocks checkout; a paluto has no stock (it is cooked when ordered).
+const soldOut = (item) => !lineStockless(item) && item.stock === 0;
 
 const SUGGESTION_COUNT = 12;
 
@@ -86,12 +92,13 @@ const Cart = () => {
       if (useCartStore.getState().items.length === 0) return;
       setRevalidating(true);
       try {
-        const { capped, unavailable } = await revalidate();
+        const { capped, unavailable, raised = [] } = await revalidate();
         if (cancelled) return;
         const notes = [];
         if (unavailable.length) notes.push(`${unavailable.length} ${unavailable.length === 1 ? 'item is' : 'items are'} no longer available`);
         if (capped.length) notes.push(`quantity reduced to available stock for ${capped.join(', ')}`);
         if (capped.length) toast(`Quantity reduced to available stock: ${capped.join(', ')}`);
+        if (raised.length) toast(`Changed to the minimum order: ${raised.join(', ')}`);
         setRevalidationNotice(notes.length ? `${notes.join('; ')}.` : '');
       } catch {
         // Leave the cart as it was; the checkout re-checks anyway.
@@ -313,7 +320,8 @@ const Cart = () => {
   };
 
   const handleQuantityChange = (itemId, newQuantity) => {
-    if (newQuantity < 1) return;
+    const line = items.find((it) => it.id === itemId);
+    if (newQuantity < (line ? lineMinimum(line) : 1)) return;
     try {
       updateQuantity(itemId, newQuantity);
     } catch (error) {
@@ -594,6 +602,11 @@ const Cart = () => {
                       const options = item.selectedVariations && Object.keys(item.selectedVariations).length > 0
                         ? Object.values(item.selectedVariations).join(', ')
                         : null;
+                      // A paluto's stepper stops at its minimum order; at it, minus removes.
+                      const least = lineMinimum(item);
+                      const note = lineNote(item);
+                      const unit = lineUnit(item);
+                      const few = fewLeftLabel(item);
                       return (
                         <div key={item.id} className={`cart-m-item${item.unavailable ? ' is-unavailable' : ''}`}>
                           <RoundCheck
@@ -612,8 +625,12 @@ const Cart = () => {
                                 <span>{options}</span> <CaretDown size={12} weight="bold" />
                               </Link>
                             )}
+                            {note && <p className="cart-m-item-includes">{note}</p>}
                             <div className="cart-m-item-foot">
-                              <span className="cart-m-item-price">₱{Number(item.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              <span className="cart-m-item-price">
+                                ₱{Number(item.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {unit && <small className="cart-item-unit">{unit}</small>}
+                              </span>
                               {item.unavailable ? (
                                 <button type="button" className="cart-m-remove" onClick={() => removeItem(item.id)}>
                                   <Trash2 size={15} /> Remove
@@ -622,16 +639,16 @@ const Cart = () => {
                                 <div className="cart-m-stepper">
                                   <button
                                     type="button"
-                                    onClick={() => (item.quantity <= 1 ? handleRemoveItem(item.id) : handleQuantityChange(item.id, item.quantity - 1))}
-                                    aria-label={item.quantity <= 1 ? `Remove ${item.name}` : 'Decrease quantity'}
+                                    onClick={() => (item.quantity <= least ? handleRemoveItem(item.id) : handleQuantityChange(item.id, item.quantity - 1))}
+                                    aria-label={item.quantity <= least ? `Remove ${item.name}` : 'Decrease quantity'}
                                   >
-                                    {item.quantity <= 1 ? <Trash2 size={15} /> : <Minus size={15} />}
+                                    {item.quantity <= least ? <Trash2 size={15} /> : <Minus size={15} />}
                                   </button>
                                   <span>{item.quantity}</span>
                                   <button
                                     type="button"
                                     onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                    disabled={item.quantity >= (item.stock || 999)}
+                                    disabled={item.quantity >= (lineStockless(item) ? 999 : (item.stock || 999))}
                                     aria-label="Increase quantity"
                                   >
                                     <Plus size={15} />
@@ -639,8 +656,11 @@ const Cart = () => {
                                 </div>
                               )}
                             </div>
-                            {!item.unavailable && item.stock !== undefined && item.stock < 10 && item.stock > 0 && (
-                              <span className="cart-m-item-note">Only {item.stock} left</span>
+                            {!item.unavailable && least > 1 && (
+                              <span className="cart-m-item-note is-info">Minimum order: {least}</span>
+                            )}
+                            {!item.unavailable && few && (
+                              <span className="cart-m-item-note">{few}</span>
                             )}
                             {item.unavailable && (
                               <span className="cart-m-item-note is-bad">{item.unavailableReason || 'Unavailable'}</span>
@@ -703,95 +723,107 @@ const Cart = () => {
                     </div>
 
                     <div className="cart-items-list">
-                      {storeData.items.map((item) => (
-                        <div key={item.id} className={`cart-item ${item.unavailable ? 'is-unavailable' : ''}`}>
-                          <label className="cart-item-check">
-                            <input
-                              type="checkbox"
-                              checked={!item.unavailable && selectedSet.has(item.id)}
-                              disabled={!!item.unavailable}
-                              onChange={() => toggleItemSelected(item.id)}
-                              aria-label={`Select ${item.name}`}
-                            />
-                          </label>
-                          <Link
-                            to={`/product/${item.slug || item.id}`}
-                            className="cart-item-image"
-                          >
-                            <ProductImage src={item.image} alt={item.name} />
-                          </Link>
-
-                          <div className="cart-item-details">
+                      {storeData.items.map((item) => {
+                        const least = lineMinimum(item);
+                        const note = lineNote(item);
+                        const unit = lineUnit(item);
+                        const few = fewLeftLabel(item, 'left in stock');
+                        return (
+                          <div key={item.id} className={`cart-item ${item.unavailable ? 'is-unavailable' : ''}`}>
+                            <label className="cart-item-check">
+                              <input
+                                type="checkbox"
+                                checked={!item.unavailable && selectedSet.has(item.id)}
+                                disabled={!!item.unavailable}
+                                onChange={() => toggleItemSelected(item.id)}
+                                aria-label={`Select ${item.name}`}
+                              />
+                            </label>
                             <Link
                               to={`/product/${item.slug || item.id}`}
-                              className="cart-item-name"
+                              className="cart-item-image"
                             >
-                              {item.name}
+                              <ProductImage src={item.image} alt={item.name} />
                             </Link>
-                            <p className="cart-item-price">₱{Number(item.price).toFixed(2)}</p>
-                            {item.selectedVariations && Object.keys(item.selectedVariations).length > 0 && (
-                              <p className="cart-item-variations">
-                                {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
+
+                            <div className="cart-item-details">
+                              <Link
+                                to={`/product/${item.slug || item.id}`}
+                                className="cart-item-name"
+                              >
+                                {item.name}
+                              </Link>
+                              <p className="cart-item-price">
+                                ₱{Number(item.price).toFixed(2)}
+                                {unit && <small className="cart-item-unit">{unit}</small>}
                               </p>
-                            )}
-                            {!item.unavailable && item.stock !== undefined && item.stock < 10 && item.stock > 0 && (
-                              <span className="cart-item-stock-warning">
-                                Only {item.stock} left in stock
-                              </span>
-                            )}
-                            {item.unavailable && (
-                              <span className="cart-item-out-of-stock">
-                                {item.unavailableReason || 'Unavailable'}
-                              </span>
+                              {item.selectedVariations && Object.keys(item.selectedVariations).length > 0 && (
+                                <p className="cart-item-variations">
+                                  {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
+                                </p>
+                              )}
+                              {note && <p className="cart-item-includes">{note}</p>}
+                              {!item.unavailable && least > 1 && (
+                                <span className="cart-item-minimum">Minimum order: {least}</span>
+                              )}
+                              {!item.unavailable && few && (
+                                <span className="cart-item-stock-warning">{few}</span>
+                              )}
+                              {item.unavailable && (
+                                <span className="cart-item-out-of-stock">
+                                  {item.unavailableReason || 'Unavailable'}
+                                </span>
+                              )}
+                            </div>
+
+                            {item.unavailable ? (
+                              <div className="cart-item-actions">
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(item.id)}
+                                  className="btn-remove-item cart-item-remove-unavailable"
+                                >
+                                  <Trash2 size={16} />
+                                  <span>Unavailable — remove</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="cart-item-actions">
+                                <div className="cart-item-quantity">
+                                  <button
+                                    onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                    disabled={item.quantity <= least}
+                                    className="quantity-btn"
+                                    title={least > 1 && item.quantity <= least ? `Minimum order: ${least}` : undefined}
+                                  >
+                                    <Minus size={16} />
+                                  </button>
+                                  <span className="quantity-display">{item.quantity}</span>
+                                  <button
+                                    onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                    disabled={item.quantity >= (lineStockless(item) ? 999 : (item.stock || 999))}
+                                    className="quantity-btn"
+                                  >
+                                    <Plus size={16} />
+                                  </button>
+                                </div>
+
+                                <div className="cart-item-subtotal">
+                                  ₱{(item.price * item.quantity).toFixed(2)}
+                                </div>
+
+                                <button
+                                  onClick={() => handleRemoveItem(item.id)}
+                                  className="btn-remove-item"
+                                  title="Remove item"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
                             )}
                           </div>
-
-                          {item.unavailable ? (
-                            <div className="cart-item-actions">
-                              <button
-                                type="button"
-                                onClick={() => removeItem(item.id)}
-                                className="btn-remove-item cart-item-remove-unavailable"
-                              >
-                                <Trash2 size={16} />
-                                <span>Unavailable — remove</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="cart-item-actions">
-                              <div className="cart-item-quantity">
-                                <button
-                                  onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                  disabled={item.quantity <= 1}
-                                  className="quantity-btn"
-                                >
-                                  <Minus size={16} />
-                                </button>
-                                <span className="quantity-display">{item.quantity}</span>
-                                <button
-                                  onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                  disabled={item.quantity >= (item.stock || 999)}
-                                  className="quantity-btn"
-                                >
-                                  <Plus size={16} />
-                                </button>
-                              </div>
-
-                              <div className="cart-item-subtotal">
-                                ₱{(item.price * item.quantity).toFixed(2)}
-                              </div>
-
-                              <button
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="btn-remove-item"
-                                title="Remove item"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -842,7 +874,7 @@ const Cart = () => {
                 <button
                   onClick={handleCheckout}
                   className="btn-checkout"
-                  disabled={revalidating || selectedItems.length === 0 || multiStoreSelected || selectedItems.some((item) => item.unavailable || item.stock === 0)}
+                  disabled={revalidating || selectedItems.length === 0 || multiStoreSelected || selectedItems.some((item) => item.unavailable || soldOut(item))}
                 >
                   <span className="btn-checkout-label-desktop">Proceed to Checkout</span>
                   <span className="btn-checkout-label-mobile">Checkout</span>
@@ -945,7 +977,7 @@ const Cart = () => {
               type="button"
               className="cart-m-checkout"
               onClick={handleCheckout}
-              disabled={revalidating || selectedItems.length === 0 || multiStoreSelected || selectedItems.some((item) => item.unavailable || item.stock === 0)}
+              disabled={revalidating || selectedItems.length === 0 || multiStoreSelected || selectedItems.some((item) => item.unavailable || soldOut(item))}
             >
               Check out{selectedItems.length > 0 ? ` (${selectedItems.length})` : ''}
             </button>

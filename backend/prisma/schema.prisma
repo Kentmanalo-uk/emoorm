@@ -100,6 +100,23 @@ enum ListingKind {
   TODAY
 }
 
+/// What a product is, which decides the questions its form asks and how it
+/// sells (Product.details holds each kind's facts).
+enum ProductType {
+  REGULAR        // goods kept in stock
+  READY_TO_EAT   // cooked food sold in Available Today windows (listingKind TODAY)
+  COOK_TO_ORDER  // paluto: cooked after the order, never limited by stock
+  LIVESTOCK      // live animals, priced per head; stock is the heads available
+  PACKAGE        // a bundle of the shop's own products at one price
+}
+
+/// Which kinds of product a category's sellers are asked about.
+enum CategoryKind {
+  GOODS
+  FOOD
+  LIVESTOCK
+}
+
 /// What an Available Today window offers.
 enum TodayMode {
   READY_NOW      // made already, ready to collect or deliver now
@@ -774,6 +791,9 @@ model Category {
   /// Icon key for the homepage's icon style (web/src/lib/categoryIcons.js).
   /// Null: picked from the category's name.
   icon        String?   @db.VarChar(40)
+  /// FOOD and LIVESTOCK categories ask the seller what kind of product it is
+  /// (ready to eat, paluto, live animal…); GOODS ones do not.
+  kind        CategoryKind @default(GOODS)
   isActive    Boolean   @default(true) @map("is_active")
 
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -802,7 +822,15 @@ model Product {
   /// REGULAR: stock the seller keeps up. TODAY: sold in windows; stock is
   /// the live window's remaining quantity and 0 between windows.
   listingKind ListingKind   @default(REGULAR) @map("listing_kind")
+  /// What it is (READY_TO_EAT always goes with listingKind TODAY).
+  productType ProductType   @default(REGULAR) @map("product_type")
+  /// The kind's own facts, checked by product.service: a paluto's servings
+  /// and cooking days, an animal's age, sex and weight, a package's occasion.
+  details     Json?
+  /// How buyers can get it, within what the shop offers. Null: as the shop.
+  fulfillment FulfillmentMode?
   /// Packed weight in grams, for courier fees. Null: not set (no courier quote).
+  /// A package's is worked out from its items when it is saved.
   weightGrams Int?          @map("weight_grams")
   lowStockThreshold Int     @default(5) @map("low_stock_threshold")
   images      Json          // Array of image URLs
@@ -848,6 +876,9 @@ model Product {
   questions   ProductQuestion[]
   views       ProductView[]
   availabilities ProductAvailability[]
+  /// A package's items; the packages an item is part of.
+  packageItems PackageItem[] @relation("PackageContents")
+  includedIn   PackageItem[] @relation("PackageIncludes")
 
   @@map("products")
   // Composite indexes matching the browse/filter/sort shapes in
@@ -857,6 +888,23 @@ model Product {
   @@index([storeId, deletedAt, status, createdAt], map: "products_store_idx")
   @@index([status, deletedAt, price], map: "products_price_idx")
   @@index([deletedAt, status, createdAt], map: "products_moderation_idx")
+}
+
+/// One of the shop's products inside a package (a PACKAGE product), and how
+/// many of it. A package keeps its own stock: selling one leaves its items'
+/// stock alone.
+model PackageItem {
+  id        String  @id @default(uuid())
+  packageId String  @map("package_id")
+  package   Product @relation("PackageContents", fields: [packageId], references: [id], onDelete: Cascade)
+  productId String  @map("product_id")
+  product   Product @relation("PackageIncludes", fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+  position  Int     @default(0)
+
+  @@unique([packageId, productId])
+  @@index([productId], map: "package_items_product_idx")
+  @@map("package_items")
 }
 
 /// One Available Today window: a batch of a product on sale for a time.
@@ -1077,6 +1125,11 @@ model OrderItem {
   /// The Available Today window it was sold from (null: a regular product).
   availabilityId String?   @map("availability_id")
   availability  ProductAvailability? @relation(fields: [availabilityId], references: [id])
+  /// A package's items as sold: [{ productId, name, quantity, image }].
+  packageContents Json?    @map("package_contents")
+  /// Whether the line took stock when ordered (a paluto takes none): a
+  /// cancellation or a return gives back only what was taken.
+  stockTaken    Boolean  @default(true) @map("stock_taken")
 
   createdAt     DateTime @default(now()) @map("created_at")
 

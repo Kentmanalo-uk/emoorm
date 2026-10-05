@@ -30,6 +30,9 @@ const { normalizePin } = require('../utils/mapPin');
 const phoneVerify = require('./phoneVerify.service');
 const { maskPhone, areaOnly } = require('../utils/privacy');
 const { unitPriceFor, stockForSelection } = require('../utils/variantPricing');
+const {
+  kindOf, isStockless, minOrderOf, courierRefusal, cookReady,
+} = require('../utils/productKinds');
 
 const PAYMENT_METHODS = ['COD', 'GCASH', 'QRPH'];
 
@@ -73,6 +76,42 @@ const normalizeSelectedVariations = (product, selectedVariations) => {
     normalized[name] = selected;
   }
   return normalized;
+};
+
+/** What a package held when it was ordered: [{ productId, name, quantity, image }]. */
+const packageSnapshot = (product) => (product.packageItems || []).map((it) => ({
+  productId: it.productId,
+  name: it.product?.name || '',
+  quantity: it.quantity,
+  image: it.product?.images?.[0] || null,
+}));
+
+const HOUR_MS = 3600 * 1000;
+
+/**
+ * When the buyer can expect an order that is not Available Today: the shop's
+ * usual estimate for its goods (eta.js), and for cooked-to-order food its
+ * cooking time within the shop's cooking days and hours (cookReady). A mixed
+ * order goes by the later of the two. A package that needs ordering ahead is
+ * ready no sooner than that.
+ */
+const orderEta = (store, products, how, now = new Date()) => {
+  const goods = products.filter((p) => !isStockless(p));
+  const parts = [
+    ...(goods.length ? [estimate(store, how, now)] : []),
+    ...products.filter(isStockless).map((p) => cookReady(p.details, now, store.openingHours)),
+  ];
+  const eta = {
+    from: new Date(Math.max(...parts.map((p) => p.from.getTime()))),
+    to: new Date(Math.max(...parts.map((p) => p.to.getTime()))),
+  };
+  const noticeHours = Math.max(0, ...products
+    .filter((p) => kindOf(p) === 'PACKAGE')
+    .map((p) => Number(p.details?.noticeHours) || 0));
+  const earliest = now.getTime() + noticeHours * HOUR_MS;
+  if (eta.from.getTime() < earliest) eta.from = new Date(earliest);
+  if (eta.to < eta.from) eta.to = eta.from;
+  return eta;
 };
 
 /**
@@ -136,7 +175,7 @@ const notifyStockCrossings = async (sellerId, items) => {
   const ordered = new Map();
   for (const item of items) ordered.set(item.productId, (ordered.get(item.productId) || 0) + item.quantity);
   const products = await prisma.product.findMany({
-    where: { id: { in: [...ordered.keys()] }, listingKind: 'REGULAR' },
+    where: { id: { in: [...ordered.keys()] }, listingKind: 'REGULAR', productType: { not: 'COOK_TO_ORDER' } },
     select: { id: true, name: true, stock: true, lowStockThreshold: true },
   });
   const crossed = products.filter((p) => p.stock <= p.lowStockThreshold && p.stock + ordered.get(p.id) > p.lowStockThreshold);
@@ -314,15 +353,29 @@ const createOrder = async (userId, data) => {
       throw new ApiError(`Product ${product.name} does not belong to this store`, 400);
     }
 
-    if (product.stock < quantity) {
+    // Cooked-to-order food is never short of stock, but has a minimum order.
+    const stockless = isStockless(product);
+    if (!stockless && product.stock < quantity) {
       throw new ApiError(`Insufficient stock for ${product.name}`, 400);
     }
+    const minimum = minOrderOf(product);
+    if (quantity < minimum) {
+      throw new ApiError(`The minimum order for ${product.name} is ${minimum}`, 400);
+    }
+
+    // The product's own way of receiving it, within the shop's.
+    if (product.fulfillment && product.fulfillment !== 'BOTH' && product.fulfillment !== fulfillmentMethod) {
+      throw new ApiError(`${product.name} is ${product.fulfillment === 'PICKUP' ? 'pickup only' : 'delivery only'}`, 400);
+    }
+    // Live animals and cooked food go with the shop, never by courier.
+    const refusal = courier ? courierRefusal(product) : null;
+    if (refusal && kindOf(product) !== 'READY_TO_EAT') throw new ApiError(refusal, 400);
 
     const selectedVariations = normalizeSelectedVariations(product, item.selectedVariations);
     orderedProducts.push(product);
 
     // Per-option stock: the chosen option must have enough on its own.
-    if (stockForSelection(product, selectedVariations) < quantity) {
+    if (!stockless && stockForSelection(product, selectedVariations) < quantity) {
       const option = selectedVariations ? Object.values(selectedVariations).join(', ') : '';
       throw new ApiError(`Insufficient stock for ${product.name}${option ? ` (${option})` : ''}`, 400);
     }
@@ -345,6 +398,8 @@ const createOrder = async (userId, data) => {
       subtotal: itemTotal,
       selectedVariations,
       returnPolicySnapshot: snapshotReturnPolicy(product.returnPolicy),
+      // A package's items as sold, should the seller change it later.
+      ...(kindOf(product) === 'PACKAGE' ? { packageContents: packageSnapshot(product) } : {}),
     });
   }
 
@@ -387,8 +442,9 @@ const createOrder = async (userId, data) => {
 
   const grandTotal = Math.max(0, totalAmount + DELIVERY_FEE - discountAmount);
 
-  // When the buyer can expect it, from the shop's preparation days and week.
-  const eta = today ? today.eta : estimate(store, {
+  // When the buyer can expect it, from the shop's preparation days and week
+  // (and a paluto's cooking time).
+  const eta = today ? today.eta : orderEta(store, orderedProducts, {
     method: fulfillmentMethod,
     courier: Boolean(courier),
     townId: buyerMunicipalityId || buyer.municipalityId || null,
@@ -561,7 +617,10 @@ const adminOrderView = (order) => ({
     productName: it.productName,
     quantity: it.quantity,
     selectedVariations: it.selectedVariations || null,
-    product: it.product ? { id: it.product.id, name: it.product.name, slug: it.product.slug, images: it.product.images } : null,
+    packageContents: it.packageContents || null,
+    product: it.product ? {
+      id: it.product.id, name: it.product.name, slug: it.product.slug, images: it.product.images, productType: it.product.productType,
+    } : null,
   })),
   area: areaOnly(order.buyerBarangay, order.fulfillmentMethod === 'PICKUP' ? null : order.store?.municipality?.name),
   contactMasked: maskPhone(order.contactNumber),

@@ -59,6 +59,9 @@ const getProducts = asyncHandler(async (req, res) => {
     search,
     sortBy = 'createdAt',
     sortOrder = 'desc',
+    type,
+    kind,
+    today,
   } = req.query;
 
   // Municipal admins are scoped to their assigned municipality.
@@ -80,6 +83,11 @@ const getProducts = asyncHandler(async (req, res) => {
     search,
     sortBy,
     sortOrder,
+    // One kind of product (?type=PACKAGE), always-available or Available
+    // Today ones (?kind=TODAY), or only those taking orders today (?today=1).
+    type,
+    kind,
+    today,
     userId: req.user?.id,
     userRole: req.user?.role,
     isAdmin: !!req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN'),
@@ -113,6 +121,8 @@ const getMyProducts = asyncHandler(async (req, res) => {
     stock,
     sortBy = 'createdAt',
     sortOrder = 'desc',
+    type,
+    kind,
   } = req.query;
 
   const options = {
@@ -123,6 +133,8 @@ const getMyProducts = asyncHandler(async (req, res) => {
     stock,
     sortBy,
     sortOrder,
+    type,
+    kind,
   };
 
   const result = await productService.getMyProducts(req.user.id, options);

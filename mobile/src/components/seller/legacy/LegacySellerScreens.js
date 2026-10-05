@@ -1,42 +1,47 @@
+/*
+ * LEGACY: the app's old one-screen Seller Center (app/seller.js before the
+ * Seller Center shell), kept so the new pages keep working until each one is
+ * ported from the website. Each stub page under app/seller renders the matching
+ * piece below; the page's agent replaces it with the website's phone view and
+ * may reuse the logic here (API calls, order status flows, caching).
+ *
+ *   LegacyOverview      Home (/seller): GET /analytics/seller KPIs, low stock
+ *   LegacyOrders        /seller/orders: GET /orders/store, PUT /orders/:id/status,
+ *                       DELIVERY_FLOW / PICKUP_FLOW next statuses, order detail modal
+ *   LegacyProducts      /seller/products: GET /products/my, create/edit/delete, image upload
+ *   LegacyStoreSettings /seller/store: GET /stores/my/store + storefront/follower stats, PUT /stores/:id
+ *   LegacyInsights      /seller/analytics + /seller/reviews: analytics, reviews and replies
+ *
+ * Delete this file once no page imports it.
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Alert, AppState, FlatList, Image, Modal, Pressable, RefreshControl,
+  ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, RefreshControl,
   ScrollView, StyleSheet, Switch, Text, View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChartBarIcon as BarChart3, BellIcon as Bell, CaretRightIcon as ChevronRight, PencilSimpleLineIcon as Edit3, ChatCircleIcon as MessageCircle, PackageIcon as Package, PlusIcon as Plus, ShoppingBagIcon as ShoppingBag,
   GearIcon as Settings, StarIcon as Star, StorefrontIcon as Store, TrashIcon as Trash2, TrendUpIcon as TrendingUp, UploadSimpleIcon as Upload, UserCircleIcon as UserRound, WalletIcon as Wallet, XIcon as X,
 } from 'phosphor-react-native';
-import ScreenHeader from '../src/components/ScreenHeader';
-import SellerMessages from '../src/components/SellerMessages';
-import SellerNotifications from '../src/components/SellerNotifications';
-import RoleSwitchOverlay from '../src/components/RoleSwitchOverlay';
-import TextField from '../src/components/TextField';
-import Select from '../src/components/Select';
-import StatusBadge from '../src/components/StatusBadge';
-import StarRating from '../src/components/StarRating';
-import EmptyState from '../src/components/EmptyState';
-import LoadingSkeleton from '../src/components/LoadingSkeleton';
-import apiClient from '../src/api/client';
-import { ENDPOINTS } from '../src/api/endpoints';
-import useAuthStore from '../src/store/authStore';
-import { resolveImg } from '../src/lib/media';
-import { uploadImage } from '../src/lib/upload';
-import { toast } from '../src/lib/toast';
-import { getCacheEntry, getCachedData, invalidateCachedData, refreshCachedData, setCachedData } from '../src/lib/dataCache';
-import { colors, fontFamily, radius, spacing, typography } from '../src/theme';
-import { fetchCategories } from '../src/lib/referenceData';
+import { useSellerShell } from '../SellerShell';
+import TextField from '../../../components/TextField';
+import Select from '../../../components/Select';
+import StatusBadge from '../../../components/StatusBadge';
+import StarRating from '../../../components/StarRating';
+import EmptyState from '../../../components/EmptyState';
+import LoadingSkeleton from '../../../components/LoadingSkeleton';
+import apiClient from '../../../api/client';
+import { ENDPOINTS } from '../../../api/endpoints';
+import useAuthStore from '../../../store/authStore';
+import { resolveImg } from '../../../lib/media';
+import { uploadImage } from '../../../lib/upload';
+import { toast } from '../../../lib/toast';
+import { getCacheEntry, getCachedData, invalidateCachedData, refreshCachedData, setCachedData } from '../../../lib/dataCache';
+import { colors, fontFamily, radius, spacing, typography } from '../../../theme';
+import { fetchCategories } from '../../../lib/referenceData';
 
-const TABS = [
-  { key: 'overview', label: 'Overview', Icon: TrendingUp },
-  { key: 'orders', label: 'Orders', Icon: ShoppingBag },
-  { key: 'products', label: 'Products', Icon: Package },
-  { key: 'insights', label: 'Insights', Icon: BarChart3 },
-  { key: 'store', label: 'Store', Icon: Store },
-];
 const EMPTY_PRODUCT = { name: '', description: '', price: '', stock: '', categoryId: '', images: [] };
 const peso = (value) => `₱${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const imageOf = (product) => Array.isArray(product?.images) ? product.images[0] : null;
@@ -64,15 +69,6 @@ const ORDER_FILTERS = [
   { key: 'completed', label: 'Completed', statuses: ['DELIVERED', 'PICKED_UP', 'COMPLETED'] },
   { key: 'cancelled', label: 'Cancelled', statuses: ['CANCELLED'] },
 ];
-const SELLER_HEADERS = {
-  overview: 'Seller Center',
-  orders: 'Orders',
-  products: 'Products',
-  notifications: 'Notifications',
-  messages: 'Store Messages',
-  insights: 'Insights',
-  store: 'Store Profile',
-};
 const SELLER_CACHE_TTL = 2 * 60 * 1000;
 const SELLER_CACHE = {
   overview: 'seller:overview',
@@ -82,68 +78,15 @@ const SELLER_CACHE = {
   insights: 'seller:insights',
 };
 
-export default function SellerCenter() {
+// Old tab names → the Seller Center pages.
+const LEGACY_ROUTES = {
+  overview: '/seller', orders: '/seller/orders', products: '/seller/products', insights: '/seller/analytics',
+  store: '/seller/store', notifications: '/seller/notifications', messages: '/seller/messages',
+};
+
+function Overview() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const user = useAuthStore((state) => state.user);
-  const [tab, setTab] = useState('overview');
-  const [orderCount, setOrderCount] = useState(0);
-  const [messageCount, setMessageCount] = useState(0);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const headerTitle = SELLER_HEADERS[tab] || SELLER_HEADERS.overview;
-  const isSeller = user?.role === 'SELLER';
-  const refreshBadges = useCallback(async () => {
-    if (!isSeller) return;
-    try {
-      const [pendingOrders, conversations, notifications] = await Promise.all([
-        apiClient.get(ENDPOINTS.ORDERS.STORE_ORDERS, { params: { status: 'PENDING', pageSize: 1 } }),
-        apiClient.get(ENDPOINTS.MESSAGES.CONVERSATIONS),
-        apiClient.get(ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT),
-      ]);
-      setOrderCount(Number(pendingOrders?.pagination?.total || 0));
-      setMessageCount((conversations.data || [])
-        .filter((item) => item.role === 'seller')
-        .reduce((total, item) => total + Number(item.unreadCount || 0), 0));
-      setNotificationCount(Number(notifications.data?.count || 0));
-    } catch { /* best-effort */ }
-  }, [isSeller]);
-  useEffect(() => {
-    refreshBadges();
-    const interval = setInterval(refreshBadges, 30000);
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refreshBadges();
-    });
-    return () => {
-      clearInterval(interval);
-      subscription.remove();
-    };
-  }, [refreshBadges]);
-  if (!isSeller) return <View style={styles.screen}><ScreenHeader title="Seller Center" /><View style={styles.guard}><Store size={48} color={colors.gray400} /><Text style={styles.guardTitle}>Seller access required</Text><Text style={styles.guardText}>Complete seller verification before opening Seller Center.</Text><Pressable accessibilityRole="button" accessibilityLabel="Apply to sell" style={styles.primaryButton} onPress={() => router.replace('/seller-apply')}><Text style={styles.primaryText}>Apply to sell</Text></Pressable></View></View>;
-  return <View style={styles.screen}>
-    <View style={[styles.sellerHeader, { paddingTop: insets.top, minHeight: 62 + insets.top }]}>
-      <Text style={styles.headerTitle}>{headerTitle}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Seller Notifications" accessibilityState={{ selected: tab === 'notifications' }} style={styles.headerAction} onPress={() => setTab('notifications')}><View style={styles.navIconWrap}><Bell size={21} weight={tab === 'notifications' ? 'fill' : 'regular'} color={tab === 'notifications' ? colors.primary : colors.secondary} /><NavBadge count={notificationCount} compact /></View></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Store Messages" accessibilityState={{ selected: tab === 'messages' }} style={styles.headerAction} onPress={() => setTab('messages')}><View style={styles.navIconWrap}><MessageCircle size={21} weight={tab === 'messages' ? 'fill' : 'regular'} color={tab === 'messages' ? colors.primary : colors.secondary} /><NavBadge count={messageCount} compact /></View></Pressable>
-    </View>
-    <View style={styles.workspace}>
-      {tab === 'overview' && <Overview onNavigate={setTab} />}
-      {tab === 'orders' && <SellerOrders />}
-      {tab === 'products' && <SellerProducts />}
-      {tab === 'notifications' && <SellerNotifications onNavigate={setTab} />}
-      {tab === 'messages' && <SellerMessages />}
-      {tab === 'store' && <StoreSettings />}
-      {tab === 'insights' && <Insights />}
-    </View>
-    <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, spacing.sm), minHeight: 58 + Math.max(insets.bottom, spacing.sm) }]}>{TABS.map(({ key, label, Icon }) => <Pressable accessibilityRole="tab" accessibilityState={{ selected: tab === key }} key={key} style={styles.navItem} onPress={() => setTab(key)}><View style={styles.navIconWrap}><Icon size={25} weight={tab === key ? 'fill' : 'regular'} color={tab === key ? colors.primary : colors.textSecondary} />{key === 'orders' ? <NavBadge count={orderCount} /> : null}</View><Text style={[styles.navLabel, tab === key && styles.navLabelActive]} numberOfLines={1}>{label}</Text></Pressable>)}</View>
-  </View>;
-}
-
-function NavBadge({ count, compact }) {
-  if (!count) return null;
-  return <View style={[styles.navBadge, compact && styles.navBadgeCompact]}><Text style={styles.navBadgeText} numberOfLines={1}>{count > 99 ? '99+' : count}</Text></View>;
-}
-
-function Overview({ onNavigate }) {
+  const onNavigate = (tab) => router.push(LEGACY_ROUTES[tab] || '/seller');
   const initialData = getCacheEntry(SELLER_CACHE.overview)?.data;
   const [data, setData] = useState(initialData || null);
   const [loading, setLoading] = useState(!initialData);
@@ -229,14 +172,13 @@ function StoreSettings() {
   const [loading, setLoading] = useState(!initialStore);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState('');
-  const [switching, setSwitching] = useState(false);
-  const switchToBuyer = () => { setSwitching(true); setTimeout(() => { router.replace('/profile'); setSwitching(false); }, 650); };
+  const { switchToPersonal: switchToBuyer } = useSellerShell();
   useEffect(() => { const fresh = getCachedData(SELLER_CACHE.store, SELLER_CACHE_TTL); if (fresh) { setStore(fresh.store); setForm(storeForm(fresh.store)); setMetrics(fresh.metrics); setLoading(false); return; } refreshCachedData(SELLER_CACHE.store, async () => { const storeResponse = await apiClient.get(ENDPOINTS.SELLER.MY_STORE); const currentStore = storeResponse.data; const [storefrontResponse, followerResponse, analyticsResponse] = await Promise.all([apiClient.get(ENDPOINTS.STORES.STOREFRONT(currentStore.slug)).catch(() => ({ data: {} })), apiClient.get(ENDPOINTS.FOLLOWS.SELLER_STATS(currentStore.id)).catch(() => ({ data: {} })), apiClient.get(ENDPOINTS.SELLER.ANALYTICS).catch(() => ({ data: {} }))]); const storefront = storefrontResponse.data || {}; const followers = followerResponse.data || {}; const analytics = analyticsResponse.data || {}; return { store: currentStore, metrics: { rating: Number(storefront.stats?.averageRating || 0), reviews: storefront.stats?.reviewCount || 0, unitsSold: analytics.kpis?.unitsSold?.value || 0, followers: followers.total ?? storefront.followerCount ?? 0, products: storefront.stats?.productCount || analytics.kpis?.totalProducts?.value || 0, completedOrders: analytics.kpis?.orders?.value || 0, followerGrowth: followers.growthPct || 0 } }; }).then((data) => { setStore(data.store); setForm(storeForm(data.store)); setMetrics(data.metrics); }).catch((error) => toast.error('Failed to load store', error.message)).finally(() => setLoading(false)); }, []);
   if (loading || !form) return <SellerStoreSkeleton />;
   const setField = (name, value) => setForm((current) => ({ ...current, [name]: value }));
   const chooseImage = async (field) => { const permission = await ImagePicker.requestMediaLibraryPermissionsAsync(); if (!permission.granted) return; const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 }); if (result.canceled) return; setUploading(field); try { const uploaded = await uploadImage(result.assets[0]); setField(field, uploaded.url); } catch (error) { toast.error('Upload failed', error.message); } finally { setUploading(''); } };
   const save = async () => { if (!form.name.trim()) return toast.error('Store name is required'); setSaving(true); try { const response = await apiClient.put(ENDPOINTS.STORES.BY_ID(store.id), { ...form, bannerImage: form.coverImage }); setStore(response.data); setForm(storeForm(response.data)); setCachedData(SELLER_CACHE.store, { store: response.data, metrics }); setEditing(false); toast.success('Store settings saved'); } catch (error) { toast.error('Could not save store', error.message); } finally { setSaving(false); } };
-  if (!editing) return <><ScrollView contentContainerStyle={styles.content}><View style={styles.sellerProfile}>{form.coverImage ? <Image source={{ uri: resolveImg(form.coverImage) }} style={styles.profileCover} /> : <View style={[styles.profileCover, styles.coverFallback]} />}{form.logo ? <Image source={{ uri: resolveImg(form.logo) }} style={styles.profileLogo} /> : <View style={[styles.profileLogo, styles.logoFallback]}><Store size={28} color={colors.secondary} /></View>}<Text style={styles.profileName}>{store.name || 'Your Store'}</Text>{store.description ? <Text style={styles.profileDescription}>{store.description}</Text> : null}<View style={styles.profileStats}><ProfileMetric value={metrics.rating.toFixed(1)} label={`${metrics.reviews} reviews`} /><ProfileMetric value={Number(metrics.unitsSold).toLocaleString()} label="items sold" /><ProfileMetric value={Number(metrics.followers).toLocaleString()} label="followers" last /></View></View><View style={styles.section}><Text style={styles.sectionTitle}>Seller Tools</Text><SellerTool Icon={Edit3} label="Edit Store Profile" detail="Storefront, fulfillment, and payment" onPress={() => setEditing(true)} /><SellerTool Icon={Store} label="View Public Store" detail="See what buyers see" onPress={() => store.slug && router.push(`/store/${store.slug}`)} /><SellerTool Icon={Settings} label="Account Settings" detail="Personal details and security" onPress={() => router.push('/settings')} /><SellerTool Icon={UserRound} label="Switch to Personal Account" detail="Return to your buyer profile" onPress={switchToBuyer} last /></View></ScrollView><RoleSwitchOverlay visible={switching} label="Switching to Personal Account..." Icon={UserRound} /></>;
+  if (!editing) return <><ScrollView contentContainerStyle={styles.content}><View style={styles.sellerProfile}>{form.coverImage ? <Image source={{ uri: resolveImg(form.coverImage) }} style={styles.profileCover} /> : <View style={[styles.profileCover, styles.coverFallback]} />}{form.logo ? <Image source={{ uri: resolveImg(form.logo) }} style={styles.profileLogo} /> : <View style={[styles.profileLogo, styles.logoFallback]}><Store size={28} color={colors.secondary} /></View>}<Text style={styles.profileName}>{store.name || 'Your Store'}</Text>{store.description ? <Text style={styles.profileDescription}>{store.description}</Text> : null}<View style={styles.profileStats}><ProfileMetric value={metrics.rating.toFixed(1)} label={`${metrics.reviews} reviews`} /><ProfileMetric value={Number(metrics.unitsSold).toLocaleString()} label="items sold" /><ProfileMetric value={Number(metrics.followers).toLocaleString()} label="followers" last /></View></View><View style={styles.section}><Text style={styles.sectionTitle}>Seller Tools</Text><SellerTool Icon={Edit3} label="Edit Store Profile" detail="Storefront, fulfillment, and payment" onPress={() => setEditing(true)} /><SellerTool Icon={Store} label="View Public Store" detail="See what buyers see" onPress={() => store.slug && router.push(`/store/${store.slug}`)} /><SellerTool Icon={Settings} label="Account Settings" detail="Personal details and security" onPress={() => router.push('/settings')} /><SellerTool Icon={UserRound} label="Switch to Personal Account" detail="Return to your buyer profile" onPress={switchToBuyer} last /></View></ScrollView></>;
   return <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled"><View style={styles.editHeading}><View><Text style={styles.listTitle}>Edit Store Profile</Text><Text style={styles.rowMeta}>Update what buyers see</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Close store editor" style={styles.editClose} onPress={() => setEditing(false)}><X size={19} color={colors.textPrimary} /></Pressable></View><View style={styles.storePreview}>{form.coverImage ? <Image source={{ uri: resolveImg(form.coverImage) }} style={styles.cover} /> : <View style={[styles.cover, styles.coverFallback]} />}{form.logo ? <Image source={{ uri: resolveImg(form.logo) }} style={styles.logo} /> : <View style={[styles.logo, styles.logoFallback]}><Store size={25} color={colors.secondary} /></View>}<Text style={styles.storePreviewName}>{form.name || 'Your Store'}</Text></View><View style={styles.section}><Text style={styles.sectionTitle}>Storefront</Text><TextField label="Store name" value={form.name} onChangeText={(value) => setField('name', value)} autoCapitalize="words" /><TextField label="Description" value={form.description} onChangeText={(value) => setField('description', value)} multiline autoCapitalize="sentences" /><TextField label="Address" value={form.address} onChangeText={(value) => setField('address', value)} autoCapitalize="words" /><TextField label="Contact number" value={form.contactNumber} onChangeText={(value) => setField('contactNumber', value)} keyboardType="phone-pad" /><TextField label="Business hours" value={form.businessHours} onChangeText={(value) => setField('businessHours', value)} placeholder="Mon-Sat, 8:00 AM-5:00 PM" /><View style={styles.brandRow}><BrandButton label="Logo" image={form.logo} loading={uploading === 'logo'} onPress={() => chooseImage('logo')} /><BrandButton label="Cover" image={form.coverImage} loading={uploading === 'coverImage'} onPress={() => chooseImage('coverImage')} /></View></View>
     <View style={styles.section}><Text style={styles.sectionTitle}>Fulfillment & Payment</Text><Select label="Fulfillment mode" value={form.fulfillmentMode} onChange={(value) => setField('fulfillmentMode', value)} options={[{ label: 'Delivery only', value: 'DELIVERY' }, { label: 'Pickup only', value: 'PICKUP' }, { label: 'Delivery and pickup', value: 'BOTH' }]} />{form.fulfillmentMode !== 'DELIVERY' ? <TextField label="Pickup address" value={form.pickupAddress} onChangeText={(value) => setField('pickupAddress', value)} autoCapitalize="words" /> : null}<View style={styles.switchRow}><View><Text style={styles.rowTitle}>Cash on delivery</Text><Text style={styles.rowMeta}>Allow COD or cash on pickup</Text></View><Switch value={form.acceptsCod} onValueChange={(value) => setField('acceptsCod', value)} trackColor={{ true: colors.primary }} /></View><Select label="QR payment type" value={form.paymentQrType} onChange={(value) => setField('paymentQrType', value)} options={[{ label: 'GCash', value: 'GCASH' }, { label: 'QR Ph', value: 'QRPH' }]} /><BrandButton label="Payment QR" image={form.paymentQrImage} loading={uploading === 'paymentQrImage'} onPress={() => chooseImage('paymentQrImage')} /></View><Pressable style={styles.primaryButton} disabled={saving} onPress={save}>{saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryText}>Save store settings</Text>}</Pressable></ScrollView>;
 }
@@ -314,3 +256,12 @@ const styles = StyleSheet.create({
   replySaveButton: { paddingVertical: 8, paddingHorizontal: spacing.md, borderRadius: radius.full, backgroundColor: colors.primary, minWidth: 96, alignItems: 'center' },
   replySaveText: { fontSize: 13, fontWeight: '700', color: colors.white },
 });
+
+export {
+  Overview as LegacyOverview,
+  SellerOrders as LegacyOrders,
+  SellerProducts as LegacyProducts,
+  StoreSettings as LegacyStoreSettings,
+  Insights as LegacyInsights,
+  DELIVERY_FLOW, PICKUP_FLOW, STATUS_ACTION, ORDER_FILTERS, LEGACY_ROUTES,
+};

@@ -30,8 +30,15 @@ const devServerApiUrl = () => {
   return `http://${host}:${API_PORT}/api`;
 };
 
+// The app's web build (used to compare screens with the website): the
+// backend on the same computer the page came from.
+const webPageApiUrl = () => (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname
+  ? `${window.location.protocol}//${window.location.hostname}:${API_PORT}/api`
+  : null);
+
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
+  webPageApiUrl() ||
   (__DEV__ ? devServerApiUrl() : null) ||
   Constants.expoConfig?.extra?.apiBaseUrl ||
   'http://10.0.2.2:3000/api';

@@ -2,6 +2,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 const { CATEGORY_ICON_KEYS } = require('../utils/categoryIcons');
+const { CATEGORY_KINDS } = require('../utils/productKinds');
 
 /**
  * Category Service
@@ -76,6 +77,18 @@ const iconField = (value) => {
 };
 
 /**
+ * Which kinds of product the category's sellers are asked about:
+ * GOODS (none), FOOD (ready to eat, paluto) or LIVESTOCK (live animals).
+ */
+const kindField = (value) => {
+  const kind = String(value || '').trim().toUpperCase();
+  if (!CATEGORY_KINDS.includes(kind)) {
+    throw new ApiError('Choose goods, food or livestock', 400);
+  }
+  return kind;
+};
+
+/**
  * Create category (Super Admin only)
  * @param {Object} data - Category data
  * @returns {Promise<Object>} Created category
@@ -97,6 +110,7 @@ const createCategory = async (data) => {
     description: data.description ?? null,
     image: data.image ?? null,
     icon: data.icon === undefined ? null : iconField(data.icon),
+    ...(data.kind === undefined ? {} : { kind: kindField(data.kind) }),
   });
   await invalidate(TAGS.categories, TAGS.products);
   return category;
@@ -120,6 +134,7 @@ const updateCategory = async (id, data) => {
   if (data.description !== undefined) update.description = data.description;
   if (data.image !== undefined) update.image = data.image;
   if (data.icon !== undefined) update.icon = iconField(data.icon);
+  if (data.kind !== undefined) update.kind = kindField(data.kind);
 
   if (data.slug && data.slug !== category.slug) {
     const nextSlug = slugify(data.slug);
@@ -210,6 +225,7 @@ const seedCategories = async () => {
       slug: 'livestock',
       description: 'Poultry, pork, beef, and other livestock products',
       image: null,
+      kind: 'LIVESTOCK',
     },
     {
       name: 'Seafood',
@@ -222,6 +238,7 @@ const seedCategories = async () => {
       slug: 'processed-foods',
       description: 'Locally processed food products',
       image: null,
+      kind: 'FOOD',
     },
     {
       name: 'Handicrafts',
@@ -234,6 +251,7 @@ const seedCategories = async () => {
       slug: 'local-delicacies',
       description: 'Traditional local food specialties',
       image: null,
+      kind: 'FOOD',
     },
     {
       name: 'Dried Goods',

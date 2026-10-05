@@ -26,6 +26,11 @@ const PRODUCT_CARD = {
   stock: true,
   status: true,
   variations: true,
+  // Its kind: a paluto has no stock but a minimum order, a package its items.
+  listingKind: true,
+  productType: true,
+  details: true,
+  fulfillment: true,
   categoryId: true,
   storeId: true,
   deletedAt: true,

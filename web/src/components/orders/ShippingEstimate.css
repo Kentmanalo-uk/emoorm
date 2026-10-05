@@ -26,3 +26,27 @@
 .ship-est-fee em { font-style: normal; font-weight: 500; color: var(--t-neutral-500, #6b7280); font-size: 12.5px; }
 .ship-est-total { margin: 0; color: var(--t-neutral-600, #4b5563); font-size: 13px; }
 .ship-est-total strong { color: var(--t-primary-700, #047857); font-size: 15px; }
+
+/* One line: delivered by the seller, and the total with it. */
+.ship-est-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 4px;
+  margin: 0;
+  color: var(--t-neutral-700, #374151);
+  font-size: 13px;
+}
+
+.ship-est-line-icon {
+  margin-right: 4px;
+  color: var(--t-primary-600, #059669);
+}
+
+.ship-est-line strong {
+  color: var(--t-neutral-900, #111827);
+}
+
+.ship-est-line .ship-est-line-total {
+  color: var(--t-primary-700, #03684c);
+}

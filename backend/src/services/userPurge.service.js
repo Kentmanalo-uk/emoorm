@@ -1,7 +1,7 @@
 const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
 const auditLogService = require('./auditLog.service');
-const { changeStock } = require('../repositories/stockLedger');
+const { giveBack } = require('../repositories/stockLedger');
 
 /**
  * Permanent user deletion (super admin only).
@@ -150,10 +150,12 @@ const purgeUser = async (userId, actor, confirm, req) => {
     if (openElsewhere.length) {
       const items = await tx.orderItem.findMany({
         where: { orderId: { in: openElsewhere.map((o) => o.id) }, productId: { notIn: productIds.length ? productIds : ['__none__'] } },
-        select: { orderId: true, productId: true, quantity: true, selectedVariations: true },
+        select: { orderId: true, productId: true, quantity: true, selectedVariations: true, stockTaken: true },
       });
       for (const item of items) {
-        const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, item.quantity);
+        // Only what the line took (a paluto line took none).
+        const balanceAfter = await giveBack(tx, item);
+        if (balanceAfter === null) continue;
         await tx.inventoryMovement.create({
           data: {
             productId: item.productId,

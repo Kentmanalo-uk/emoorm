@@ -31,6 +31,13 @@ import { BusyLabel } from '../components/ui/Spinner';
 import ChoiceCard from '../components/ui/ChoiceCard';
 import { spanLabel } from '../lib/availability';
 import { CourierMark } from '../components/orders/CourierTracking';
+import {
+  allowsCourier, allowsMethod, cookDaysLabel, cookReady,
+} from '../lib/productKinds';
+import { orderEta, onDayStart } from '../lib/eta';
+import {
+  lineKind, lineNote, lineUnit, countLabel, whenLabel, orderByLabel,
+} from '../lib/orderLines';
 import './Checkout.css';
 
 // Same rules the server applies at POST /orders.
@@ -74,9 +81,10 @@ const Checkout = () => {
       if (useCartStore.getState().items.length === 0) return;
       setRevalidating(true);
       try {
-        const { capped, unavailable } = await revalidate();
+        const { capped, unavailable, raised = [] } = await revalidate();
         if (cancelled) return;
         if (capped.length) toast(`Quantity reduced to available stock: ${capped.join(', ')}`);
+        if (raised.length) toast(`Changed to the minimum order: ${raised.join(', ')}`);
         if (unavailable.length) toast.error(`${unavailable.length} ${unavailable.length === 1 ? 'item is' : 'items are'} no longer available`);
       } catch {
         // Leave the lines as they are; the server re-checks at order time.
@@ -364,12 +372,29 @@ const Checkout = () => {
     }
     : null;
 
+  // Lines no courier can take: live animals and cooked food go with the shop
+  // or the buyer, and so does a package without a weight (the quote names
+  // these too, once it is in).
+  const noCourierNames = useMemo(() => {
+    const names = new Set(shipQuote?.notByCourier || []);
+    orderableItems.forEach((it) => {
+      const kind = lineKind(it);
+      const weightKnown = it.weightGrams !== undefined;
+      if (['LIVESTOCK', 'COOK_TO_ORDER', 'READY_TO_EAT'].includes(kind) || (kind === 'PACKAGE' && weightKnown && !allowsCourier(it))) {
+        names.add(it.name);
+      }
+    });
+    return [...names];
+  }, [shipQuote, orderableItems]);
+
   const sellerDelivers = shipQuote ? shipQuote.seller?.offered !== false : true;
   // Offered, but not to this address: a courier is picked instead.
   const sellerReaches = sellerDelivers && shipQuote?.seller?.covered !== false;
   const onlineReady = Boolean(shipQuote?.onlinePaymentReady);
   const courierChoices = shipQuote?.couriers || [];
-  const courierPickable = (c) => c.fee != null && onlineReady && !todayLines.length;
+  const courierPickable = (c) => c.fee != null && onlineReady && !todayLines.length && !noCourierNames.length;
+  // A shop that only ships with couriers can't deliver what they won't take.
+  const courierOnlyBlocked = Boolean(shipQuote) && !sellerDelivers && courierChoices.length > 0 && noCourierNames.length > 0;
   // The pick, or the first way that works when it no longer does.
   const choiceValid = (choice) => (choice === 'SELLER'
     ? sellerReaches
@@ -393,19 +418,25 @@ const Checkout = () => {
     };
   }, [storeIds, storeInfo, chosenCourier]);
 
-  // Fulfillment availability
+  // Fulfillment availability: the shop's, each Available Today window's, and
+  // each product's own (pickup only / delivery only), with why when it is off.
   const fulfillmentAvailability = useMemo(() => {
     const stores = storeIds.map((id) => storeInfo[id]?.store).filter(Boolean);
-    if (stores.length === 0) return { delivery: true, pickup: true };
+    const shopDelivers = stores.every((s) => s.fulfillmentMode === 'DELIVERY' || s.fulfillmentMode === 'BOTH');
+    const shopPickup = stores.every((s) => s.fulfillmentMode === 'PICKUP' || s.fulfillmentMode === 'BOTH');
+    const pickupOnly = orderableItems.find((it) => !allowsMethod(it, 'DELIVERY'))
+      || todayLines.find((it) => it.availability.fulfillment === 'PICKUP');
+    const deliveryOnly = orderableItems.find((it) => !allowsMethod(it, 'PICKUP'))
+      || todayLines.find((it) => it.availability.fulfillment === 'DELIVERY');
+    const deliveryWhy = !shopDelivers ? 'Not available for this store'
+      : pickupOnly ? `${pickupOnly.name} is pickup only`
+        : courierOnlyBlocked ? `Couriers can't take ${noCourierNames.join(', ')}` : '';
+    const pickupWhy = !shopPickup ? 'Not available for this store'
+      : deliveryOnly ? `${deliveryOnly.name} is delivery only` : '';
     return {
-      delivery: stores.every(
-        (s) => s.fulfillmentMode === 'DELIVERY' || s.fulfillmentMode === 'BOTH'
-      ) && todayLines.every((it) => it.availability.fulfillment !== 'PICKUP'),
-      pickup: stores.every(
-        (s) => s.fulfillmentMode === 'PICKUP' || s.fulfillmentMode === 'BOTH'
-      ) && todayLines.every((it) => it.availability.fulfillment !== 'DELIVERY'),
+      delivery: !deliveryWhy, pickup: !pickupWhy, deliveryWhy, pickupWhy,
     };
-  }, [storeIds, storeInfo, todayLines]);
+  }, [storeIds, storeInfo, todayLines, orderableItems, courierOnlyBlocked, noCourierNames]);
 
   // Ensure selected fulfillmentMethod is available; auto-switch if needed
   useEffect(() => {
@@ -448,6 +479,44 @@ const Checkout = () => {
     : 0;
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount);
+
+  // Paluto is cooked after the order, and a package may need ordering ahead:
+  // when the order should be ready, by the rules the server sets it with.
+  const readyNote = (() => {
+    const cooked = orderableItems.filter((it) => lineKind(it) === 'COOK_TO_ORDER');
+    const ahead = orderableItems.filter((it) => lineKind(it) === 'PACKAGE' && Number(it.details?.noticeHours) > 0);
+    if (!cooked.length && !ahead.length) return null;
+    const eta = orderEta(checkoutStore, orderableItems, {
+      method: fulfillmentMethod,
+      courier: Boolean(chosenCourier),
+      townId: deliveryForm.municipalityId || null,
+    });
+    if (!eta) return null;
+    const timed = cooked.length > 0 && !onDayStart(eta.from) && !onDayStart(eta.to);
+    const why = [];
+    if (cooked.length) {
+      why.push(cooked.length === 1 ? `${cooked[0].name} is cooked after you order.` : 'Paluto is cooked after you order.');
+      // Past today's order-by time, or not a cooking day: the next one.
+      const later = cooked.find((it) => !cookReady(it.details).today);
+      if (later) {
+        const days = later.details?.cookDays?.length ? cookDaysLabel(later.details) : '';
+        const by = orderByLabel(later.details?.orderBy);
+        if (days && by) why.push(`The shop cooks it on ${days}, for orders by ${by}.`);
+        else if (days) why.push(`The shop cooks it on ${days}.`);
+        else if (by) why.push(`Orders after ${by} are cooked the next day.`);
+      }
+    }
+    ahead.forEach((it) => {
+      const hours = Number(it.details.noticeHours);
+      const notice = hours % 24 === 0 ? `${hours / 24} ${hours === 24 ? 'day' : 'days'}` : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+      why.push(`Order ${it.name} at least ${notice} ahead.`);
+    });
+    return {
+      label: fulfillmentMethod === 'PICKUP' ? 'Ready for pickup' : 'Expected',
+      when: whenLabel(eta.from, eta.to, timed),
+      why: why.join(' '),
+    };
+  })();
 
   const applyVoucher = async (codeOverride) => {
     const code = String(codeOverride ?? voucherInput ?? '').trim();
@@ -543,6 +612,13 @@ const Checkout = () => {
     }
     if (orderableItems.length === 0) {
       toast.error('There is nothing available to order.');
+      return;
+    }
+    // e.g. a pickup-only item with a delivery-only one: order them apart.
+    const methodWhy = fulfillmentMethod === 'DELIVERY' ? fulfillmentAvailability.deliveryWhy : fulfillmentAvailability.pickupWhy;
+    if (methodWhy) {
+      toast.error(`${methodWhy}. Choose another way to get it, or order it on its own.`);
+      scrollToSection('co-fulfillment');
       return;
     }
     if (!validateDelivery()) {
@@ -753,6 +829,12 @@ const Checkout = () => {
                         Available Today: ready {spanLabel(todayReady.from, todayReady.to)}
                       </p>
                     )}
+                    {readyNote && (
+                      <div className="co-today-ready co-ready-note">
+                        <span>{readyNote.label}: {readyNote.when}</span>
+                        <small>{readyNote.why}</small>
+                      </div>
+                    )}
 
                     <div className="fulfillment-picker co-choices">
                       <ChoiceCard
@@ -764,7 +846,7 @@ const Checkout = () => {
                         onChange={setFulfillmentMethod}
                         media={<Truck size={20} weight="fill" />}
                         title="Delivery"
-                        desc={fulfillmentAvailability.delivery ? 'Delivered to your address' : 'Not available for this store'}
+                        desc={fulfillmentAvailability.delivery ? 'Delivered to your address' : fulfillmentAvailability.deliveryWhy}
                       />
                       <ChoiceCard
                         name="fulfillment"
@@ -775,7 +857,7 @@ const Checkout = () => {
                         onChange={setFulfillmentMethod}
                         media={<StoreIcon size={20} weight="fill" />}
                         title="Pickup"
-                        desc={fulfillmentAvailability.pickup ? 'Pick up at the store · no delivery fee' : 'Not available for this store'}
+                        desc={fulfillmentAvailability.pickup ? 'Pick up at the store · no delivery fee' : fulfillmentAvailability.pickupWhy}
                         aside={fulfillmentAvailability.pickup ? 'Free' : ''}
                       />
                     </div>
@@ -964,9 +1046,12 @@ const Checkout = () => {
                             />
                           );
                         })()}
-                        {courierChoices.map((c) => {
+                        {/* Couriers only take goods: none at all when the order has
+                            something they can't carry (the note below says why). */}
+                        {!noCourierNames.length && courierChoices.map((c) => {
                           const why = c.fee == null
-                            ? (c.reason === 'NO_WEIGHT' ? "Not available: the seller hasn't set the item weight" : 'Not available for this weight')
+                            ? (c.reason === 'NO_WEIGHT' ? "Not available: the seller hasn't set the item weight"
+                              : c.reason === 'NOT_BY_COURIER' ? 'Not available for this order' : 'Not available for this weight')
                             : !onlineReady ? "Not available: the shop doesn't take online payment yet" : null;
                           return (
                             <ChoiceCard
@@ -989,6 +1074,11 @@ const Checkout = () => {
                         <p className="co-delivery-note">
                           Courier deliveries are paid online with GCash or QR Ph after the seller confirms your order.
                           The seller ships it with {chosenCourier.name} and you can track it in My Orders.
+                        </p>
+                      )}
+                      {noCourierNames.length > 0 && courierChoices.length > 0 && (
+                        <p className="co-delivery-note">
+                          Couriers can&apos;t take {noCourierNames.join(', ')}. The seller delivers it{fulfillmentAvailability.pickup ? ', or you can pick it up' : ''}.
                         </p>
                       )}
                     </div>
@@ -1014,12 +1104,18 @@ const Checkout = () => {
                               <div className="co-m-item-info">
                                 <p className="co-m-item-name">{item.name}</p>
                                 {variationText(item) && <p className="co-m-item-var">{variationText(item)}</p>}
+                                {lineNote(item) && <p className="co-m-item-var co-m-item-note">{lineNote(item)}</p>}
                                 {item.unavailable ? (
                                   <p className="co-m-item-bad">{item.unavailableReason || 'Unavailable'}</p>
                                 ) : (
                                   <div className="co-m-item-row">
-                                    <span className="co-m-item-price">{peso(item.price)}</span>
-                                    <span className="co-m-item-qty">×{item.quantity}</span>
+                                    <span className="co-m-item-price">
+                                      {peso(item.price)}
+                                      {lineUnit(item) && <small className="co-m-item-unit">{lineUnit(item)}</small>}
+                                    </span>
+                                    <span className="co-m-item-qty">
+                                      {lineKind(item) === 'LIVESTOCK' ? countLabel(item) : `×${item.quantity}`}
+                                    </span>
                                   </div>
                                 )}
                               </div>

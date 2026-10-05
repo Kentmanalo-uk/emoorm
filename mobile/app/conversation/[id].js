@@ -1,503 +1,482 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  TextInput,
-  Pressable,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Image,
-  ScrollView,
-  Modal,
+  AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
-import { useFocusEffect, useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ArrowLeftIcon as ArrowLeft, CheckIcon as Check, ChecksIcon as CheckCheck, DotsThreeVerticalIcon as MoreVert, ImageIcon as ImagePlus, PackageIcon as Package, PaperPlaneTiltIcon as Send, QuestionIcon as Question, StarIcon as Star, StorefrontIcon as Storefront, TagIcon as Tag, XIcon as X } from 'phosphor-react-native';
+import {
+  ArrowsClockwiseIcon, CaretLeftIcon, FlagIcon, PackageIcon, StorefrontIcon, UserIcon, XIcon,
+} from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
-import { ENDPOINTS } from '../../src/api/endpoints';
-import { resolveImg } from '../../src/lib/media';
-import { uploadImage } from '../../src/lib/upload';
 import { toast } from '../../src/lib/toast';
 import useAuthStore from '../../src/store/authStore';
-import useChatAttachmentStore from '../../src/store/chatAttachmentStore';
-import SafetyNotice from '../../src/components/SafetyNotice';
-import { colors, radius, spacing, typography } from '../../src/theme';
+import { font, t } from '../../src/theme';
+import ShellPageMenu from '../../src/components/ShellPageMenu';
+import ChatAvatar from '../../src/components/inbox/ChatAvatar';
+import ChatBubble, { ChatDay } from '../../src/components/inbox/ChatBubble';
+import ChatComposer from '../../src/components/inbox/ChatComposer';
+import ChatPinnedOrders from '../../src/components/inbox/ChatPinnedOrders';
+import ChatPhotoViewer from '../../src/components/inbox/ChatPhotoViewer';
+import ChatProductPicker from '../../src/components/inbox/ChatProductPicker';
+import ChatReportSheet from '../../src/components/inbox/ChatReportSheet';
+import ChatSafetyNotice from '../../src/components/inbox/ChatSafetyNotice';
+import InboxSpinner from '../../src/components/inbox/InboxSpinner';
+import MoormyThread from '../../src/components/inbox/MoormyThread';
+import { dayLabel } from '../../src/components/inbox/inboxFormat';
+import { photoProblem, uploadChatPhoto } from '../../src/components/inbox/chatUpload';
 
-// Thread view for a single conversation — pushed from app/(tabs)/messages.js.
-// Mirrors the message-bubble layout of web's components/messenger/Messenger.jsx.
-export default function ConversationThread() {
-  const { id, storeName } = useLocalSearchParams();
+/*
+ * One chat, full screen (web Messenger.jsx with a conversation open on a
+ * phone: ?c=<id>). Buyers and sellers both land here; `role` in the
+ * conversation says which side this is. /conversation/moormy is Ate
+ * Moormy's chat (buyers), with ?ask=<question> asked as it opens.
+ */
+
+const POLL_INTERVAL_MS = 5000;
+const QUICK_QUESTIONS = [
+  'Hi! Is this still available?',
+  'How much is delivery to my area?',
+  'Can I pick up my order?',
+];
+
+export default function ConversationScreen() {
+  const { id, ask } = useLocalSearchParams();
+  const router = useRouter();
+  const currentUser = useAuthStore((s) => s.user);
+  const back = useCallback(() => (router.canGoBack() ? router.back() : router.replace('/messages')), [router]);
+  if (id === 'moormy') {
+    return <MoormyThread userId={currentUser?.id} pendingAsk={ask || null} onAsked={() => router.setParams({ ask: undefined })} onBack={back} />;
+  }
+  return <StoreChat key={id} id={String(id)} onBack={back} />;
+}
+
+function StoreChat({ id, onBack }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const currentUserId = useAuthStore((s) => s.user?.id);
+  const currentUser = useAuthStore((s) => s.user);
 
-  const [conversation, setConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [activeConvo, setActiveConvo] = useState(null);
+  const [loadingConvo, setLoadingConvo] = useState(true);
   const [draft, setDraft] = useState('');
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [pinnedOrder, setPinnedOrder] = useState(null);
-  const [pinnedProduct, setPinnedProduct] = useState(null);
-  const [isSending, setIsSending] = useState(false);
-  const [ratingDismissed, setRatingDismissed] = useState(false);
-  const [isRating, setIsRating] = useState(false);
-  const [optionsMenuVisible, setOptionsMenuVisible] = useState(false);
-  const [rateModalVisible, setRateModalVisible] = useState(false);
-  const listRef = useRef(null);
-  const consumePendingProduct = useChatAttachmentStore((s) => s.consumePendingProduct);
+  const [attachedOrderId, setAttachedOrderId] = useState(null);
+  const [pendingImage, setPendingImage] = useState(null);
+  const [pendingProduct, setPendingProduct] = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [viewerImage, setViewerImage] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [earlier, setEarlier] = useState({ messages: [], hasMore: null, loading: false });
 
-  const ratingDismissKey = `rateServiceDismissed:${id}`;
+  const scrollRef = useRef(null);
+  const inputRef = useRef(null);
+  const stickToEnd = useRef(true);
+  const scrollY = useRef(0);
+  const contentH = useRef(0);
+  const keepFromBottom = useRef(null);
+  const convoRef = useRef(null);
+  useEffect(() => { convoRef.current = activeConvo; }, [activeConvo]);
 
-  useEffect(() => {
-    let cancelled = false;
-    AsyncStorage.getItem(ratingDismissKey).then((value) => {
-      if (cancelled || !value) return;
-      if (Date.now() - Number(value) < 24 * 60 * 60 * 1000) setRatingDismissed(true);
-    }).catch(() => { });
-    return () => { cancelled = true; };
-  }, [ratingDismissKey]);
+  const scrollToBottom = useCallback(() => {
+    stickToEnd.current = true;
+    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
+  }, []);
+
+  const markRead = useCallback(() => {
+    apiClient.post(`/messages/conversations/${id}/read`).catch(() => { });
+  }, [id]);
 
   const fetchConversation = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setIsLoading(true);
+    if (!silent) setLoadingConvo(true);
     try {
-      const res = await apiClient.get(ENDPOINTS.MESSAGES.CONVERSATION(id));
-      setConversation(res.data || null);
-      setMessages(res.data?.messages || []);
-      apiClient.post(ENDPOINTS.MESSAGES.MARK_READ(id)).catch(() => { });
+      const res = await apiClient.get(`/messages/conversations/${id}`);
+      setActiveConvo(res.data);
+      if (!silent) setError('');
+      return res.data;
     } catch (err) {
-      toast.error('Failed to load conversation', err.message);
+      setError(err?.message || 'Could not load this conversation');
+      return null;
     } finally {
-      setIsLoading(false);
+      if (!silent) setLoadingConvo(false);
     }
   }, [id]);
 
+  // Opened: load it, show the newest message, mark it read.
   useEffect(() => {
-    fetchConversation();
-    const interval = setInterval(() => fetchConversation({ silent: true }), 10000);
-    return () => clearInterval(interval);
-  }, [fetchConversation]);
-
-  const handleSend = async () => {
-    const body = draft.trim();
-    if ((!body && !selectedImage && !pinnedOrder && !pinnedProduct) || isSending) return;
-    setIsSending(true);
-    try {
-      const uploaded = selectedImage ? await uploadImage(selectedImage) : null;
-      const res = await apiClient.post(ENDPOINTS.MESSAGES.SEND(id), { body, imageUrl: uploaded?.url, orderId: pinnedOrder?.id, productId: pinnedProduct?.id });
-      setMessages((prev) => [...prev, res.data]);
-      setDraft('');
-      setSelectedImage(null);
-      setPinnedOrder(null);
-      setPinnedProduct(null);
-      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
-    } catch (err) {
-      toast.error('Failed to send message', err.message);
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const togglePinnedOrder = (order) => {
-    setPinnedOrder((prev) => (prev?.id === order.id ? null : order));
-  };
-
-  const isSendDisabled = (!draft.trim() && !selectedImage && !pinnedOrder && !pinnedProduct) || isSending;
-
-  useFocusEffect(
-    useCallback(() => {
-      const product = consumePendingProduct();
-      if (product) setPinnedProduct(product);
-    }, [consumePendingProduct])
-  );
-
-  const openProductPicker = () => {
-    if (!conversation?.store?.id) return;
-    router.push({
-      pathname: '/conversation/select-product',
-      params: { storeId: conversation.store.id, storeName: conversation.store.name || storeName || '' },
+    fetchConversation().then((convo) => {
+      if (convo) scrollToBottom();
+      markRead();
     });
+  }, [fetchConversation, scrollToBottom, markRead]);
+
+  // New messages every few seconds while the chat is on screen.
+  useFocusEffect(useCallback(() => {
+    let appActive = AppState.currentState === 'active';
+    const sub = AppState.addEventListener('change', (s) => { appActive = s === 'active'; });
+    const timer = setInterval(async () => {
+      if (!appActive) return;
+      const prevCount = convoRef.current?.messages?.length || 0;
+      const next = await fetchConversation({ silent: true });
+      if (next && (next.messages?.length || 0) > prevCount) {
+        scrollToBottom();
+        markRead();
+      }
+    }, POLL_INTERVAL_MS);
+    return () => { clearInterval(timer); sub.remove(); };
+  }, [fetchConversation, scrollToBottom, markRead]));
+
+  const resetComposer = () => {
+    setDraft('');
+    setAttachedOrderId(null);
+    setPendingProduct(null);
+    setPendingImage(null);
   };
 
-  const chooseImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return toast.error('Photo permission is required');
+  const pickPhoto = async () => {
+    if (Platform.OS !== 'web') {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) { setError('Allow photo access to send a photo.'); return; }
+    }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
-    if (!result.canceled) setSelectedImage(result.assets[0]);
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const problem = photoProblem(asset);
+    if (problem) { setError(problem); return; }
+    setError('');
+    setPendingImage(asset);
   };
 
-  const dismissRatingPrompt = () => {
-    setRatingDismissed(true);
-    AsyncStorage.setItem(ratingDismissKey, String(Date.now())).catch(() => { });
-  };
-
-  const submitServiceRating = async (rating) => {
-    if (isRating) return;
-    setIsRating(true);
+  const sendMessage = async (bodyText) => {
+    const body = (bodyText ?? draft).trim();
+    if ((!body && !pendingImage && !pendingProduct && !attachedOrderId) || sending) return;
+    setSending(true);
+    setError('');
     try {
-      await apiClient.post(ENDPOINTS.MESSAGES.RATE_SERVICE(id), { rating });
-      setConversation((prev) => (prev ? { ...prev, serviceRating: rating } : prev));
-      toast.success('Thanks for your feedback!');
-      return true;
+      let imageUrl;
+      if (pendingImage) imageUrl = await uploadChatPhoto(pendingImage);
+      await apiClient.post(`/messages/conversations/${id}/messages`, {
+        body,
+        imageUrl: imageUrl || undefined,
+        orderId: attachedOrderId || undefined,
+        productId: pendingProduct?.id || undefined,
+      });
+      resetComposer();
+      await fetchConversation({ silent: true });
+      scrollToBottom();
     } catch (err) {
-      toast.error('Could not submit rating', err.message);
-      return false;
+      setError(err?.message || 'Could not send message');
     } finally {
-      setIsRating(false);
+      setSending(false);
     }
   };
 
-  const sellerReplied = conversation?.role === 'buyer' && messages.some((m) => m.senderId !== currentUserId);
-  const showRatingPrompt = Boolean(sellerReplied && !conversation?.serviceRating && !ratingDismissed);
+  const attachedOrder = useMemo(() => {
+    if (!attachedOrderId || !activeConvo?.pinnedOrders) return null;
+    return activeConvo.pinnedOrders.find((o) => o.id === attachedOrderId) || null;
+  }, [attachedOrderId, activeConvo]);
 
-  const goToStore = () => {
-    setOptionsMenuVisible(false);
-    if (conversation?.store?.slug) router.push(`/store/${conversation.store.slug}`);
+  const isSellerSide = activeConvo?.role === 'seller';
+
+  const activeHeader = useMemo(() => {
+    if (!activeConvo) return null;
+    if (activeConvo.role === 'seller') {
+      return {
+        title: activeConvo.buyer?.fullName || 'Buyer',
+        subtitle: 'Customer',
+        avatar: activeConvo.buyer?.profilePhoto,
+        Icon: UserIcon,
+        link: activeConvo.buyer?.id ? `/u/${activeConvo.buyer.id}` : null,
+      };
+    }
+    return {
+      title: activeConvo.store?.name || 'Store',
+      subtitle: 'Store · Tap to view shop',
+      avatar: activeConvo.store?.logo,
+      Icon: StorefrontIcon,
+      link: activeConvo.store?.slug ? `/store/${activeConvo.store.slug}` : null,
+    };
+  }, [activeConvo]);
+
+  // When the other side last read the chat: my messages up to then are seen.
+  const otherReadAt = activeConvo ? (isSellerSide ? activeConvo.buyerLastReadAt : activeConvo.sellerLastReadAt) : null;
+  const hasEarlier = earlier.hasMore !== null ? earlier.hasMore : Boolean(activeConvo?.hasEarlier);
+
+  const loadEarlier = async () => {
+    if (!activeConvo || earlier.loading) return;
+    const oldest = earlier.messages[0] || activeConvo.messages?.[0];
+    if (!oldest) return;
+    setEarlier((cur) => ({ ...cur, loading: true }));
+    try {
+      const res = await apiClient.get(`/messages/conversations/${id}`, { params: { before: oldest.createdAt } });
+      // Keep the message you were reading where it was.
+      stickToEnd.current = false;
+      keepFromBottom.current = contentH.current - scrollY.current;
+      setEarlier((cur) => {
+        const have = new Set(cur.messages.map((m) => m.id));
+        const page = (res.data?.messages || []).filter((m) => !have.has(m.id));
+        return { messages: [...page, ...cur.messages], hasMore: Boolean(res.data?.hasEarlier), loading: false };
+      });
+    } catch {
+      setEarlier((cur) => ({ ...cur, loading: false }));
+      toast.error('Could not load earlier messages');
+    }
   };
 
-  const goToHelp = () => {
-    setOptionsMenuVisible(false);
-    router.push('/help-center');
+  const timeline = useMemo(() => {
+    const out = [];
+    let lastDay = null;
+    const newest = activeConvo?.messages || [];
+    const seen = new Set(newest.map((m) => m.id));
+    const older = earlier.messages.filter((m) => !seen.has(m.id));
+    [...older, ...newest].forEach((m) => {
+      const day = new Date(m.createdAt).toDateString();
+      if (day !== lastDay) {
+        out.push({ kind: 'day', key: `day-${day}`, label: dayLabel(m.createdAt) });
+        lastDay = day;
+      }
+      out.push({ kind: 'msg', key: m.id, message: m });
+    });
+    return out;
+  }, [activeConvo, earlier.messages]);
+
+  const canSend = !sending && Boolean(draft.trim() || pendingImage || pendingProduct || attachedOrderId);
+
+  const menuItems = activeConvo ? [
+    activeHeader?.link && {
+      key: 'view',
+      Icon: isSellerSide ? UserIcon : StorefrontIcon,
+      label: isSellerSide ? 'View buyer profile' : 'View shop',
+      to: activeHeader.link,
+    },
+    { key: 'refresh', Icon: ArrowsClockwiseIcon, label: 'Refresh', onPress: () => fetchConversation() },
+    {
+      key: 'report', Icon: FlagIcon, label: isSellerSide ? 'Report buyer' : 'Report shop', danger: true, onPress: () => setReportOpen(true),
+    },
+  ].filter(Boolean) : [];
+
+  const onContentSizeChange = (_w, h) => {
+    contentH.current = h;
+    if (keepFromBottom.current != null) {
+      const y = Math.max(0, h - keepFromBottom.current);
+      keepFromBottom.current = null;
+      scrollRef.current?.scrollTo({ y, animated: false });
+    } else if (stickToEnd.current) {
+      scrollRef.current?.scrollToEnd({ animated: false });
+    }
   };
 
-  const openRateModal = () => {
-    setOptionsMenuVisible(false);
-    setRateModalVisible(true);
+  const onScroll = (e) => {
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+    scrollY.current = contentOffset.y;
+    // Reading older messages: new content no longer pulls the view down.
+    stickToEnd.current = contentSize.height - (contentOffset.y + layoutMeasurement.height) < 40;
   };
 
-  const rateFromModal = async (rating) => {
-    const success = await submitServiceRating(rating);
-    if (success) setRateModalVisible(false);
-  };
-
-  const renderItem = ({ item }) => {
-    const isMine = item.senderId === currentUserId;
-    const recipientReadAt = conversation?.role === 'seller'
-      ? conversation?.buyerLastReadAt
-      : conversation?.sellerLastReadAt;
-    const isSeen = isMine && recipientReadAt && new Date(recipientReadAt) >= new Date(item.createdAt);
+  if (!activeConvo) {
     return (
-      <View style={[styles.bubbleRow, isMine && styles.bubbleRowMine]}>
-        <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
-          {item.order ? <MessageOrder order={item.order} isMine={isMine} /> : null}
-          {item.product ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`View ${item.product.name}`}
-              onPress={() => router.push(`/product/${item.product.slug}`)}
-            >
-              <MessageProduct product={item.product} isMine={isMine} />
-            </Pressable>
-          ) : null}
-          {item.imageUrl ? <Image accessible accessibilityLabel="Message attachment" source={{ uri: resolveImg(item.imageUrl) }} style={styles.messageImage} resizeMode="cover" /> : null}
-          {item.body ? <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>{item.body}</Text> : null}
-          <View style={[styles.messageMeta, isMine && styles.messageMetaMine]}>
-            <Text style={[styles.messageTime, isMine && styles.messageTimeMine]}>{new Date(item.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
-            {isMine ? isSeen
-              ? <CheckCheck accessibilityLabel="Seen" size={15} color={colors.white} />
-              : <Check accessibilityLabel="Delivered" size={15} color="rgba(255,255,255,0.78)" />
-              : null}
-          </View>
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <View style={styles.bareBar}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back to conversations" onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
+            <CaretLeftIcon size={22} color={t.neutral[900]} />
+          </Pressable>
+        </View>
+        <View style={styles.threadEmpty}>
+          {loadingConvo ? (
+            <>
+              <InboxSpinner size={22} weight="fill" color={t.neutral[500]} />
+              <Text style={styles.threadEmptyText}>Loading conversation…</Text>
+            </>
+          ) : (
+            <>
+              <PackageIcon size={32} weight="fill" color={t.neutral[500]} />
+              <Text style={styles.threadEmptyText}>{error || 'Conversation not available.'}</Text>
+            </>
+          )}
         </View>
       </View>
     );
-  };
+  }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/messages'))} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
+      <View style={[styles.head, { paddingTop: 8 + insets.top }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Back to conversations" onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
+          <CaretLeftIcon size={22} color={t.neutral[900]} />
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>{storeName || 'Conversation'}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Conversation options" onPress={() => setOptionsMenuVisible(true)} hitSlop={8}>
-          <MoreVert size={22} color={colors.textPrimary} />
+        <ChatAvatar
+          src={activeHeader.avatar}
+          name={activeHeader.title}
+          size={38}
+          fallbackIcon={null}
+          style={styles.headAvatar}
+          {...(!activeHeader.avatar ? { fallback: <activeHeader.Icon size={16} color={t.neutral[600]} /> } : {})}
+        />
+        <Pressable
+          accessibilityRole={activeHeader.link ? 'link' : undefined}
+          disabled={!activeHeader.link}
+          onPress={() => activeHeader.link && router.push(activeHeader.link)}
+          style={styles.title}
+        >
+          <Text style={styles.name} numberOfLines={1}>{activeHeader.title}</Text>
+          <Text style={styles.sub} numberOfLines={1}>{activeHeader.subtitle}</Text>
         </Pressable>
+        <ShellPageMenu label="Conversation options" items={menuItems} />
       </View>
 
-      {conversation?.pinnedOrders?.length ? (
-        <View style={styles.ordersSection}>
-          <Text style={styles.ordersTitle}>{conversation.role === 'seller' ? 'Customer orders' : 'Your orders'}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ordersList}>
-            {conversation.pinnedOrders.map((order) => (
-              <PinnedOrder key={order.id} order={order} selected={pinnedOrder?.id === order.id} onPress={() => togglePinnedOrder(order)} />
-            ))}
-          </ScrollView>
+      <ChatPinnedOrders orders={activeConvo.pinnedOrders} sellerSide={isSellerSide} />
+
+      <ScrollView
+        ref={scrollRef}
+        style={styles.messagesBox}
+        contentContainerStyle={[styles.messages, timeline.length === 0 && styles.messagesEmptyBox]}
+        onContentSizeChange={onContentSizeChange}
+        onScroll={onScroll}
+        scrollEventThrottle={32}
+        keyboardShouldPersistTaps="handled"
+      >
+        {hasEarlier ? (
+          <Pressable accessibilityRole="button" onPress={loadEarlier} disabled={earlier.loading} style={[styles.earlier, earlier.loading && styles.earlierBusy]}>
+            <Text style={styles.earlierText}>{earlier.loading ? 'Loading…' : 'Load earlier messages'}</Text>
+          </Pressable>
+        ) : null}
+        {timeline.length === 0 ? (
+          <View style={styles.intro}>
+            <ChatAvatar
+              src={activeHeader.avatar}
+              name={activeHeader.title}
+              size={64}
+              bg={t.primary[50]}
+              color={t.primary[600]}
+              {...(!activeHeader.avatar ? { fallback: <activeHeader.Icon size={16} color={t.primary[600]} /> } : {})}
+            />
+            <Text style={styles.introName}>{activeHeader.title}</Text>
+            <Text style={styles.introText}>
+              {isSellerSide
+                ? 'Say hello and let your customer know how you can help.'
+                : 'Ask about a product, delivery or pickup. You can also send a photo or attach a product.'}
+            </Text>
+            {!isSellerSide ? (
+              <View style={styles.quick}>
+                {QUICK_QUESTIONS.map((q) => (
+                  <Pressable
+                    key={q}
+                    accessibilityRole="button"
+                    onPress={() => sendMessage(q)}
+                    disabled={sending}
+                    style={({ pressed }) => [styles.quickChip, sending && styles.quickOff, pressed && styles.quickPressed]}
+                  >
+                    <Text style={styles.quickText}>{q}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : (
+          timeline.map((entry) => (entry.kind === 'day' ? (
+            <ChatDay key={entry.key} label={entry.label} />
+          ) : (
+            <ChatBubble
+              key={entry.key}
+              message={entry.message}
+              isSelf={entry.message.senderId === currentUser?.id}
+              seen={Boolean(otherReadAt) && new Date(otherReadAt) >= new Date(entry.message.createdAt)}
+              onOpenImage={setViewerImage}
+            />
+          )))
+        )}
+      </ScrollView>
+
+      {error ? (
+        <View style={styles.error} accessibilityRole="alert">
+          <Text style={styles.errorText}>{error}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" onPress={() => setError('')} style={styles.errorX}>
+            <XIcon size={14} weight="bold" color={t.danger[800]} />
+          </Pressable>
         </View>
       ) : null}
 
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          ref={listRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={[styles.listContainer, !messages.length && styles.emptyMessages]}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+      <ChatSafetyNotice />
+
+      <ChatComposer
+        ref={inputRef}
+        draft={draft}
+        onChangeDraft={setDraft}
+        onSend={() => sendMessage()}
+        canSend={canSend}
+        sending={sending}
+        pendingImage={pendingImage}
+        onClearImage={() => setPendingImage(null)}
+        pendingProduct={pendingProduct}
+        onClearProduct={() => setPendingProduct(null)}
+        attachedOrder={attachedOrder}
+        onClearOrder={() => setAttachedOrderId(null)}
+        onAttachProduct={() => setPickerOpen(true)}
+        attachProductDisabled={!activeConvo.store?.id}
+        onPickPhoto={pickPhoto}
+      />
+
+      {activeConvo.store?.id ? (
+        <ChatProductPicker
+          open={pickerOpen}
+          storeId={activeConvo.store.id}
+          onClose={() => setPickerOpen(false)}
+          onPick={(p) => { setPendingProduct(p); setPickerOpen(false); setTimeout(() => inputRef.current?.focus(), 300); }}
         />
-      )}
+      ) : null}
 
-      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <SafetyNotice />
-        {showRatingPrompt ? (
-          <View style={styles.ratingPrompt}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Dismiss rating prompt" style={styles.ratingClose} onPress={dismissRatingPrompt} hitSlop={8}>
-              <X size={15} color={colors.textMuted} />
-            </Pressable>
-            <Text style={styles.ratingTitle} numberOfLines={2}>Rate {storeName || 'this seller'}'s customer service</Text>
-            <Text style={styles.ratingSubtitle}>How was your experience chatting with them?</Text>
-            <View style={styles.ratingStars}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Pressable key={n} accessibilityRole="button" accessibilityLabel={`Rate ${n} out of 5`} onPress={() => submitServiceRating(n)} disabled={isRating} hitSlop={6} style={styles.ratingStar}>
-                  <Star size={26} color={colors.star} />
-                </Pressable>
-              ))}
-            </View>
-            <Pressable accessibilityRole="button" onPress={dismissRatingPrompt}><Text style={styles.ratingLater}>Maybe later</Text></Pressable>
-          </View>
-        ) : null}
-        {pinnedOrder ? (
-          <View style={styles.attachedCard}>
-            {pinnedOrder.items?.[0]?.image ? <Image source={{ uri: resolveImg(pinnedOrder.items[0].image) }} style={styles.attachedCardImage} /> : <View style={[styles.attachedCardImage, styles.attachedCardImageFallback]}><Package size={18} color={colors.gray400} /></View>}
-            <View style={styles.attachedCardBody}>
-              <Text style={styles.attachedCardTitle} numberOfLines={1}>{pinnedOrder.name || pinnedOrder.orderNumber}</Text>
-              <Text style={styles.attachedCardSubtitle} numberOfLines={1}>{pinnedOrder.itemCount} {pinnedOrder.itemCount === 1 ? 'item' : 'items'} · ₱{Number(pinnedOrder.total || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</Text>
-              <Text style={styles.attachedCardTag}>Order attached</Text>
-            </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Remove attached order" style={styles.attachedCardRemove} onPress={() => setPinnedOrder(null)} hitSlop={8}><X size={14} color={colors.primaryDark} /></Pressable>
-          </View>
-        ) : null}
-        {pinnedProduct ? (
-          <View style={styles.attachedCard}>
-            {pinnedProduct.image ? <Image source={{ uri: resolveImg(pinnedProduct.image) }} style={styles.attachedCardImage} /> : <View style={[styles.attachedCardImage, styles.attachedCardImageFallback]}><Tag size={18} color={colors.gray400} /></View>}
-            <View style={styles.attachedCardBody}>
-              <Text style={styles.attachedCardTitle} numberOfLines={1}>{pinnedProduct.name}</Text>
-              <Text style={styles.attachedCardSubtitle} numberOfLines={1}>₱{Number(pinnedProduct.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</Text>
-              <Text style={styles.attachedCardTag}>Product attached</Text>
-            </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Remove attached product" style={styles.attachedCardRemove} onPress={() => setPinnedProduct(null)} hitSlop={8}><X size={14} color={colors.primaryDark} /></Pressable>
-          </View>
-        ) : null}
-        {selectedImage ? <View style={styles.selectedImageWrap}><Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} /><Pressable accessibilityRole="button" accessibilityLabel="Remove selected image" style={styles.removeImage} onPress={() => setSelectedImage(null)}><X size={14} color={colors.white} /></Pressable></View> : null}
-        <View style={styles.composerRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Ask about a product" accessibilityHint="Opens this store's products to attach one to your message" style={styles.productButton} onPress={openProductPicker} disabled={isSending} hitSlop={8}><Tag size={22} color={colors.black} /></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Add image" accessibilityHint="Attach a photo from your library to this message" style={styles.imageButton} onPress={chooseImage} disabled={isSending} hitSlop={8}><ImagePlus size={22} color={colors.black} /></Pressable>
-          <TextInput
-            style={styles.input}
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Type a message..."
-            placeholderTextColor={colors.textMuted}
-            multiline
-            accessibilityLabel="Message input"
-            accessibilityHint="Type your message to the store"
-            textAlignVertical="top"
-            returnKeyType="default"
-            blurOnSubmit={false}
-          />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Send message"
-            accessibilityState={{ disabled: isSendDisabled }}
-            style={styles.sendBtn}
-            onPress={handleSend}
-            disabled={isSendDisabled}
-            hitSlop={8}
-          >
-            {isSending ? <ActivityIndicator size="small" color={colors.primary} /> : <Send size={24} weight="fill" color={isSendDisabled ? colors.gray300 : colors.primary} />}
-          </Pressable>
-        </View>
-      </View>
+      <ChatPhotoViewer image={viewerImage} onClose={() => setViewerImage(null)} />
 
-      <Modal visible={optionsMenuVisible} animationType="fade" transparent onRequestClose={() => setOptionsMenuVisible(false)}>
-        <Pressable style={styles.optionsOverlay} onPress={() => setOptionsMenuVisible(false)}>
-          <View style={[styles.optionsSheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
-            <Pressable accessibilityRole="button" accessibilityLabel="View store" style={styles.optionRow} onPress={goToStore}>
-              <Storefront size={20} color={colors.textPrimary} />
-              <Text style={styles.optionLabel}>View store</Text>
-            </Pressable>
-            {conversation?.role === 'buyer' ? (
-              <Pressable accessibilityRole="button" accessibilityLabel="Rate seller" style={styles.optionRow} onPress={openRateModal}>
-                <Star size={20} color={colors.textPrimary} />
-                <Text style={styles.optionLabel}>{conversation?.serviceRating ? 'Update your rating' : 'Rate seller'}</Text>
-              </Pressable>
-            ) : null}
-            <Pressable accessibilityRole="button" accessibilityLabel="Need help?" style={styles.optionRow} onPress={goToHelp}>
-              <Question size={20} color={colors.textPrimary} />
-              <Text style={styles.optionLabel}>Need help?</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" style={styles.optionCancel} onPress={() => setOptionsMenuVisible(false)}>
-              <Text style={styles.optionCancelLabel}>Cancel</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
-
-      <Modal visible={rateModalVisible} animationType="fade" transparent onRequestClose={() => setRateModalVisible(false)}>
-        <Pressable style={styles.optionsOverlay} onPress={() => setRateModalVisible(false)}>
-          <Pressable style={styles.rateSheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.ratingTitle}>Rate {storeName || 'this seller'}'s customer service</Text>
-            <Text style={styles.ratingSubtitle}>How was your experience chatting with them?</Text>
-            <View style={styles.ratingStars}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Pressable key={n} accessibilityRole="button" accessibilityLabel={`Rate ${n} out of 5`} onPress={() => rateFromModal(n)} disabled={isRating} hitSlop={6} style={styles.ratingStar}>
-                  <Star size={30} weight={conversation?.serviceRating >= n ? 'fill' : 'regular'} color={colors.star} />
-                </Pressable>
-              ))}
-            </View>
-            <Pressable accessibilityRole="button" onPress={() => setRateModalVisible(false)}><Text style={styles.ratingLater}>Cancel</Text></Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <ChatReportSheet
+        open={reportOpen}
+        type={isSellerSide ? 'BUYER' : 'SELLER'}
+        storeId={isSellerSide ? undefined : activeConvo.store?.id}
+        reportedBuyerId={isSellerSide ? activeConvo.buyer?.id : undefined}
+        targetName={activeHeader.title}
+        onClose={() => setReportOpen(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
 
-function PinnedOrder({ order, selected, onPress }) {
-  const firstItem = order.items?.[0];
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${selected ? 'Remove' : 'Attach'} ${order.name || order.orderNumber} from message`} style={[styles.pinnedOrder, selected && styles.pinnedOrderSelected]} onPress={onPress}>
-      {firstItem?.image ? <Image source={{ uri: resolveImg(firstItem.image) }} style={styles.orderImage} /> : <View style={[styles.orderImage, styles.orderImageFallback]}><Package size={18} color={colors.gray400} /></View>}
-      <View style={styles.orderBody}>
-        <Text style={styles.orderNumber} numberOfLines={1}>{order.name || order.orderNumber}</Text>
-        <Text style={styles.orderSummary} numberOfLines={1}>{order.itemCount} {order.itemCount === 1 ? 'item' : 'items'} · ₱{Number(order.total || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</Text>
-        <Text style={styles.orderStatus}>{String(order.status || '').replaceAll('_', ' ')}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function MessageOrder({ order, isMine }) {
-  return <View style={[styles.messageOrder, isMine && styles.messageOrderMine]}><Package size={15} color={isMine ? colors.white : colors.secondary} /><View style={styles.orderBody}><Text style={[styles.messageOrderNumber, isMine && styles.bubbleTextMine]}>{order.name || order.orderNumber}</Text><Text style={[styles.messageOrderMeta, isMine && styles.messageTimeMine]}>{order.status} · ₱{Number(order.total || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</Text></View></View>;
-}
-
-function MessageProduct({ product, isMine }) {
-  return (
-    <View style={[styles.messageOrder, isMine && styles.messageOrderMine]}>
-      {product.image ? <Image source={{ uri: resolveImg(product.image) }} style={styles.messageProductImage} /> : <Tag size={15} color={isMine ? colors.white : colors.secondary} />}
-      <View style={styles.orderBody}>
-        <Text style={[styles.messageOrderNumber, isMine && styles.bubbleTextMine]} numberOfLines={1}>{product.name}</Text>
-        <Text style={[styles.messageOrderMeta, isMine && styles.messageTimeMine]}>₱{Number(product.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bgPrimary },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.white,
-    gap: spacing.sm,
+  screen: { flex: 1, backgroundColor: t.neutral[0] },
+  bareBar: { minHeight: 56, paddingHorizontal: 8, justifyContent: 'center' },
+  head: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 56, paddingHorizontal: 8, paddingBottom: 8,
+    borderBottomWidth: 1, borderBottomColor: t.neutral[150], backgroundColor: t.neutral[0],
   },
-  headerTitle: { ...typography.h3, color: colors.textPrimary, flex: 1, textAlign: 'center' },
-  ordersSection: { paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.borderLight, backgroundColor: colors.white },
-  ordersTitle: { ...typography.caption, paddingHorizontal: spacing.lg, marginBottom: spacing.xs, color: colors.textMuted },
-  ordersList: { paddingHorizontal: spacing.lg, gap: spacing.sm },
-  pinnedOrder: { width: 228, minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderLight, borderRadius: radius.lg, backgroundColor: colors.gray50 },
-  pinnedOrderSelected: { borderColor: colors.primary, borderWidth: 1.5, backgroundColor: colors.bgGreenLight },
-  orderImage: { width: 46, height: 46, borderRadius: radius.base, backgroundColor: colors.gray100 },
-  orderImageFallback: { alignItems: 'center', justifyContent: 'center' },
-  orderBody: { flex: 1, minWidth: 0 },
-  orderNumber: { ...typography.caption, color: colors.textPrimary, fontFamily: 'Inter_600SemiBold' },
-  orderSummary: { fontSize: 11, lineHeight: 15, color: colors.textSecondary },
-  orderStatus: { marginTop: 2, fontSize: 10, lineHeight: 13, color: colors.primaryDark, textTransform: 'capitalize' },
-  listContainer: { flexGrow: 1, padding: spacing.lg, gap: spacing.sm },
-  emptyMessages: { justifyContent: 'flex-end' },
-  bubbleRow: { flexDirection: 'row', justifyContent: 'flex-start' },
-  bubbleRowMine: { justifyContent: 'flex-end' },
-  bubble: {
-    maxWidth: '78%',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
+  back: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  pressed: { backgroundColor: t.neutral[100] },
+  headAvatar: { marginHorizontal: 0 },
+  title: { flex: 1, minWidth: 0, paddingHorizontal: 2 },
+  name: { fontSize: 16, lineHeight: 25.6, color: t.neutral[900], ...font(500) },
+  sub: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
+  messagesBox: { flex: 1, backgroundColor: t.neutral[0] },
+  messages: { paddingVertical: 14, paddingHorizontal: 12, gap: 8 },
+  messagesEmptyBox: { flexGrow: 1 },
+  earlier: {
+    alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 999,
+    backgroundColor: t.neutral[0],
   },
-  bubbleTheirs: { backgroundColor: colors.gray100 },
-  bubbleMine: { backgroundColor: colors.primary },
-  bubbleText: { ...typography.body, color: colors.textPrimary },
-  bubbleTextMine: { color: colors.white },
-  messageImage: { width: 220, maxWidth: '100%', aspectRatio: 4 / 3, marginBottom: spacing.xs, borderRadius: radius.base, backgroundColor: colors.gray200 },
-  messageOrder: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderMedium },
-  messageOrderMine: { borderBottomColor: 'rgba(255,255,255,0.35)' },
-  messageOrderNumber: { ...typography.caption, color: colors.textPrimary, fontFamily: 'Inter_600SemiBold' },
-  messageOrderMeta: { fontSize: 11, lineHeight: 15, color: colors.textSecondary },
-  messageMeta: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 3, marginTop: 3 },
-  messageMetaMine: { alignSelf: 'flex-end' },
-  messageTime: { fontSize: 10, lineHeight: 13, color: colors.textMuted },
-  messageTimeMine: { color: 'rgba(255,255,255,0.72)' },
-  composer: {
-    gap: spacing.sm,
-    padding: spacing.md,
-    backgroundColor: colors.bgPrimary,
+  earlierBusy: { opacity: 0.6 },
+  earlierText: { fontSize: 12.5, lineHeight: 20, color: t.neutral[600], ...font(400) },
+  intro: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 24, paddingHorizontal: 16 },
+  introName: { marginTop: 6, fontSize: 16, lineHeight: 18.4, color: t.neutral[900], textAlign: 'center', ...font(500) },
+  introText: { maxWidth: 280, fontSize: 13.5, lineHeight: 20.25, color: t.neutral[500], textAlign: 'center', ...font(400) },
+  quick: { alignItems: 'center', gap: 8, marginTop: 12 },
+  quickChip: {
+    paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: t.primary[200], borderRadius: 999, backgroundColor: t.primary[50],
   },
-  ratingPrompt: {
-    position: 'relative',
-    alignItems: 'center',
-    gap: spacing.xs,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.gray50,
+  quickPressed: { backgroundColor: t.primary[100] },
+  quickOff: { opacity: 0.5 },
+  quickText: { fontSize: 13.5, lineHeight: 16.2, color: t.primary[700], ...font(400) },
+  threadEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingBottom: 56 },
+  threadEmptyText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[500], textAlign: 'center', ...font(400) },
+  error: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingVertical: 8, paddingHorizontal: 14,
+    borderTopWidth: 1, borderTopColor: t.danger[200], backgroundColor: t.danger[100],
   },
-  ratingClose: { position: 'absolute', top: spacing.xs, right: spacing.xs, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  ratingTitle: { ...typography.body, fontFamily: 'Inter_600SemiBold', color: colors.textPrimary, textAlign: 'center', paddingHorizontal: spacing.lg },
-  ratingSubtitle: { ...typography.caption, color: colors.textMuted, textAlign: 'center' },
-  ratingStars: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs },
-  ratingStar: { padding: 2 },
-  ratingLater: { ...typography.caption, color: colors.textSecondary, marginTop: 2, textDecorationLine: 'underline' },
-  optionsOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  optionsSheet: { paddingTop: spacing.sm, paddingHorizontal: spacing.lg, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.white },
-  optionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
-  optionLabel: { ...typography.body, color: colors.textPrimary },
-  optionCancel: { alignItems: 'center', paddingVertical: spacing.md },
-  optionCancelLabel: { ...typography.body, fontFamily: 'Inter_600SemiBold', color: colors.textSecondary },
-  rateSheet: { width: '84%', alignItems: 'center', gap: spacing.xs, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.white },
-  composerRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
-  attachedCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 64, padding: spacing.sm, borderWidth: 1.5, borderColor: colors.primary, borderRadius: radius.lg, backgroundColor: colors.bgGreenLight },
-  attachedCardImage: { width: 46, height: 46, borderRadius: radius.base, backgroundColor: colors.gray100 },
-  attachedCardImageFallback: { alignItems: 'center', justifyContent: 'center' },
-  attachedCardBody: { flex: 1, minWidth: 0 },
-  attachedCardTitle: { ...typography.caption, color: colors.textPrimary, fontFamily: 'Inter_600SemiBold' },
-  attachedCardSubtitle: { fontSize: 11, lineHeight: 15, color: colors.textSecondary },
-  attachedCardTag: { marginTop: 2, fontSize: 10, lineHeight: 13, color: colors.primaryDark, fontFamily: 'Inter_600SemiBold' },
-  attachedCardRemove: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center', borderRadius: radius.full, backgroundColor: colors.white },
-  selectedImageWrap: { position: 'relative', alignSelf: 'flex-start' },
-  selectedImage: { width: 72, height: 72, borderRadius: radius.lg, backgroundColor: colors.gray100 },
-  removeImage: { position: 'absolute', top: -6, right: -6, width: 24, height: 24, alignItems: 'center', justifyContent: 'center', borderRadius: radius.full, backgroundColor: colors.gray800 },
-  productButton: { alignItems: 'center', justifyContent: 'center' },
-  imageButton: { alignItems: 'center', justifyContent: 'center' },
-  input: {
-    flex: 1,
-    maxHeight: 100,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: colors.gray100,
-    color: colors.textPrimary,
-    ...typography.body,
-  },
-  sendBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  messageProductImage: { width: 32, height: 32, borderRadius: radius.base, backgroundColor: colors.gray100 },
+  errorText: { flex: 1, fontSize: 12.5, lineHeight: 20, color: t.danger[800], ...font(400) },
+  errorX: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
 });

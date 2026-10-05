@@ -11,8 +11,12 @@ const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
 const shopReadiness = require('./shopReadiness.service');
 const availabilityRepository = require('../repositories/availability.repository');
+const availabilityService = require('./availability.service');
 const { bufferToDHash, hammingDistance, hashFromSource, HASH_BIT_LENGTH } = require('../utils/imageHash');
 const { stockedVariation, pricedVariation, activeSalePrice } = require('../utils/variantPricing');
+const {
+  PRODUCT_TYPES, FULFILLMENTS, kindOf, isStockless, validateDetails,
+} = require('../utils/productKinds');
 
 const computeImageHashSafe = async (images) => {
   const first = Array.isArray(images) ? images[0] : null;
@@ -258,18 +262,27 @@ const checkSale = (p) => {
   }
 };
 
+const blankText = (value) => value === undefined || value === null || (typeof value === 'string' && !value.trim());
+const noImages = (value) => value === undefined || value === null || (Array.isArray(value) && value.length === 0);
+
 /**
  * Validate a create (all required) or update (partial) payload.
  * @param {Object} data - Sanitised payload
  * @param {Object} options
  * @param {Boolean} options.partial - true for updates
+ * @param {String} [options.kind] - the product's kind as saved; a PACKAGE may
+ *   leave its description, photos and category to its items, and its weight
+ *   always comes from them (packageFields)
  * @returns {Promise<Object>} Only the validated, normalised fields present
  */
-const validateProductPayload = async (data, { partial }) => {
+const validateProductPayload = async (data, { partial, kind = 'REGULAR' }) => {
   const out = {};
+  const pkg = kind === 'PACKAGE';
 
   if (!partial || has(data, 'name')) out.name = validateName(data.name);
-  if (!partial || has(data, 'description')) out.description = validateDescription(data.description);
+  if ((!partial || has(data, 'description')) && !(pkg && blankText(data.description))) {
+    out.description = validateDescription(data.description);
+  }
   if (!partial || has(data, 'price')) out.price = validatePrice(data.price);
   if (!partial || has(data, 'stock')) {
     out.stock = validateWholeNumber(partial ? data.stock : data.stock ?? 0, 'Product stock');
@@ -279,7 +292,7 @@ const validateProductPayload = async (data, { partial }) => {
   }
   // Packed weight for courier fees (grams). Optional: without it a product
   // can still be delivered by the seller or picked up.
-  if (has(data, 'weightGrams')) {
+  if (has(data, 'weightGrams') && !pkg) {
     const raw = data.weightGrams;
     if (raw === null || raw === '') out.weightGrams = null;
     else {
@@ -299,13 +312,171 @@ const validateProductPayload = async (data, { partial }) => {
   if (has(data, 'saleStartsAt') && out.saleStartsAt === undefined) out.saleStartsAt = optionalDate(data.saleStartsAt, 'Sale start');
   if (has(data, 'saleEndsAt') && out.saleEndsAt === undefined) out.saleEndsAt = optionalDate(data.saleEndsAt, 'Sale end');
   if (has(data, 'priceTiers')) out.priceTiers = validatePriceTiers(data.priceTiers);
-  if (has(data, 'listingKind')) {
-    if (!['REGULAR', 'TODAY'].includes(data.listingKind)) throw new ApiError('Choose how you sell it: always available or Available Today', 400);
-    out.listingKind = data.listingKind;
+  if ((!partial || has(data, 'images')) && !(pkg && noImages(data.images))) out.images = validateImages(data.images);
+  if ((!partial || has(data, 'categoryId')) && !(pkg && blankText(data.categoryId))) {
+    out.categoryId = await validateCategory(data.categoryId);
   }
-  if (!partial || has(data, 'images')) out.images = validateImages(data.images);
-  if (!partial || has(data, 'categoryId')) out.categoryId = await validateCategory(data.categoryId);
 
+  return out;
+};
+
+// ── Product kinds ───────────────────────────────────────────────────────
+
+/**
+ * The kind a product will be after this save. Forms send productType; older
+ * ones (and the mobile app) send only listingKind, where TODAY means
+ * ready-to-eat food and REGULAR keeps any other kind as it was.
+ * @param {Object} data - Sanitised payload
+ * @param {String|null} current - The product's kind now (null when creating)
+ */
+const resolveKind = (data, current) => {
+  if (has(data, 'listingKind') && !['REGULAR', 'TODAY'].includes(data.listingKind)) {
+    throw new ApiError('Choose how you sell it: always available or Available Today', 400);
+  }
+  let kind = current || 'REGULAR';
+  if (has(data, 'productType')) {
+    if (!PRODUCT_TYPES.includes(data.productType)) throw new ApiError('Choose what kind of product it is', 400);
+    kind = data.productType;
+    if (has(data, 'listingKind') && (data.listingKind === 'TODAY') !== (kind === 'READY_TO_EAT')) {
+      throw new ApiError('Only ready-to-eat food is sold as Available Today', 400);
+    }
+  } else if (data.listingKind === 'TODAY') {
+    kind = 'READY_TO_EAT';
+  } else if (data.listingKind === 'REGULAR' && kind === 'READY_TO_EAT') {
+    kind = 'REGULAR';
+  }
+  // A package is its items: changing what it is means a new listing.
+  if (current && (current === 'PACKAGE') !== (kind === 'PACKAGE')) {
+    throw new ApiError('Make a new package instead', 400);
+  }
+  return kind;
+};
+
+/** How buyers can get it (null: as the shop offers), within what the shop offers. */
+const validateFulfillment = (value, store) => {
+  if (value === null || value === '') return null;
+  if (!FULFILLMENTS.includes(value)) throw new ApiError('Choose pickup, delivery or both', 400);
+  const shopMode = store.fulfillmentMode || 'DELIVERY';
+  if (shopMode === 'PICKUP' && value === 'DELIVERY') throw new ApiError('Your shop offers pickup only', 400);
+  if (shopMode === 'DELIVERY' && value === 'PICKUP') throw new ApiError('Your shop offers delivery only', 400);
+  return value;
+};
+
+/**
+ * What each kind allows, on the product as it will be saved.
+ * @param {String} kind
+ * @param {Object} p - variations, salePrice, priceTiers
+ */
+const assertKindShape = (kind, p) => {
+  const variations = Array.isArray(p.variations) ? p.variations : [];
+  if (kind === 'READY_TO_EAT') assertTodayShape(variations);
+  if (kind === 'COOK_TO_ORDER' && stockedVariation(variations)) {
+    throw new ApiError('Cooked-to-order food has no stock: remove the stock per choice', 400);
+  }
+  if (kind === 'LIVESTOCK' && variations.length) {
+    throw new ApiError('Live animals have no choices. List animals that differ on their own.', 400);
+  }
+  if (kind === 'PACKAGE') {
+    if (variations.length) throw new ApiError('A package has one price: remove the choices', 400);
+    if (p.salePrice !== null && p.salePrice !== undefined) throw new ApiError('A package has one price: remove the sale price', 400);
+    if (Array.isArray(p.priceTiers) && p.priceTiers.length) throw new ApiError('A package has one price: remove the bulk prices', 400);
+  }
+};
+
+const PACKAGE_ITEMS_MAX = 20;
+const PACKAGE_QUANTITY_MAX = 99;
+const PACKAGE_COVER_MAX = 4;
+const ITEM_FIELDS = {
+  id: true, name: true, storeId: true, deletedAt: true, productType: true, listingKind: true,
+  images: true, weightGrams: true, categoryId: true,
+};
+
+/**
+ * The products a package holds, as the seller chose them: the shop's own,
+ * not deleted, and neither live animals nor other packages.
+ * @returns {Promise<Array<{ productId, quantity, product }>>}
+ */
+const validatePackageItems = async (raw, storeId) => {
+  if (!Array.isArray(raw) || raw.length === 0) throw new ApiError('Choose the products in this package', 400);
+  if (raw.length > PACKAGE_ITEMS_MAX) throw new ApiError(`A package holds up to ${PACKAGE_ITEMS_MAX} different products`, 400);
+  const lines = [];
+  const seen = new Set();
+  for (const line of raw) {
+    const productId = typeof line?.productId === 'string' ? line.productId.trim() : '';
+    if (!productId) throw new ApiError('Choose the products in this package', 400);
+    if (seen.has(productId)) throw new ApiError('Each product goes in once: change how many instead', 400);
+    seen.add(productId);
+    const quantity = typeof line.quantity === 'string' ? Number(line.quantity.trim()) : line.quantity;
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > PACKAGE_QUANTITY_MAX) {
+      throw new ApiError(`How many of each: a whole number from 1 to ${PACKAGE_QUANTITY_MAX}`, 400);
+    }
+    lines.push({ productId, quantity });
+  }
+  if (lines.reduce((sum, l) => sum + l.quantity, 0) < 2) throw new ApiError('A package needs at least 2 items', 400);
+
+  const found = await prisma.product.findMany({ where: { id: { in: [...seen] } }, select: ITEM_FIELDS });
+  const byId = new Map(found.map((p) => [p.id, p]));
+  return lines.map((line) => {
+    const product = byId.get(line.productId);
+    if (!product || product.storeId !== storeId || product.deletedAt) {
+      throw new ApiError('Choose products your shop sells', 400);
+    }
+    const kind = kindOf(product);
+    if (kind === 'PACKAGE') throw new ApiError(`${product.name} is a package. A package can't go inside another.`, 400);
+    if (kind === 'LIVESTOCK') throw new ApiError(`${product.name} is a live animal. Live animals can't go in a package.`, 400);
+    return { ...line, product };
+  });
+};
+
+/**
+ * What a package's items decide. Its weight: the items' total when every one
+ * is weighed goods, else none (so couriers only take packages of goods). Its
+ * photos and words, when the seller left them out: up to 4 of the items'
+ * photos, and "Includes: 2 x Pancit, 1 x Roasted Chicken". Its category, when
+ * none was chosen: the first item's. details.autoCover / autoDescription
+ * remember which were filled in, to fill them again on later saves.
+ * @param {Object} args
+ * @param {Object} args.data - Sanitised payload
+ * @param {Object} args.store - The seller's store
+ * @param {Object|null} args.product - The package being edited (null: new)
+ * @param {Object} args.fields - The validated fields
+ * @returns {Promise<Object>} fields to save, with `items` when they were sent
+ */
+const packageFields = async ({ data, store, product, fields }) => {
+  const sending = has(data, 'packageItems') || !product;
+  const items = sending
+    ? await validatePackageItems(data.packageItems, store.id)
+    : await prisma.packageItem.findMany({
+      where: { packageId: product.id },
+      orderBy: { position: 'asc' },
+      select: { productId: true, quantity: true, product: { select: ITEM_FIELDS } },
+    });
+  const was = product?.details || {};
+  const out = {};
+
+  out.weightGrams = items.length && items.every((it) => kindOf(it.product) === 'REGULAR' && it.product.weightGrams > 0)
+    ? items.reduce((sum, it) => sum + it.product.weightGrams * it.quantity, 0)
+    : null;
+
+  const autoCover = !product || has(data, 'images') ? noImages(data.images) : Boolean(was.autoCover);
+  if (autoCover) {
+    out.images = items.map((it) => normalizeImages(it.product.images)[0]).filter(Boolean).slice(0, PACKAGE_COVER_MAX);
+  }
+  const autoDescription = !product || has(data, 'description') ? blankText(data.description) : Boolean(was.autoDescription);
+  if (autoDescription) {
+    out.description = `Includes: ${items.map((it) => `${it.quantity} x ${it.product.name}`).join(', ')}`.slice(0, DESCRIPTION_MAX);
+  }
+  if (!product && !fields.categoryId) out.categoryId = items[0].product.categoryId;
+
+  const kept = has(data, 'details')
+    ? validateDetails('PACKAGE', data.details)
+    : { packageKind: was.packageKind, noticeHours: was.noticeHours };
+  out.details = {
+    ...Object.fromEntries(Object.entries(kept || {}).filter(([, v]) => v !== undefined)),
+    autoCover,
+    autoDescription,
+  };
+  if (sending) out.items = items.map((it, position) => ({ productId: it.productId, quantity: it.quantity, position }));
   return out;
 };
 
@@ -456,6 +627,8 @@ const normalizeListOptions = (options = {}) => {
     todayOnly: options.today === '1' || options.today === 'true' || options.today === true,
     // Seller lists: only always-available or only Available Today products.
     listingKind: options.kind === 'TODAY' || options.kind === 'REGULAR' ? options.kind : undefined,
+    // One kind of product (?type=PACKAGE…).
+    productType: PRODUCT_TYPES.includes(options.type) ? options.type : undefined,
   };
 };
 
@@ -517,36 +690,71 @@ const createProduct = async (userId, rawData) => {
   const store = await storeRepository.findByOwnerId(userId);
   assertStoreCanEdit(store, 'create');
 
-  const fields = await validateProductPayload(data, { partial: false });
-  if (!fields.weightGrams && await shipsWithCouriers(store.id)) {
+  const kind = resolveKind(data, null);
+  const fields = await validateProductPayload(data, { partial: false, kind });
+  const options = normalizeProductOptions(data);
+  const shape = { ...fields, ...options };
+  checkSale(shape);
+  checkTiers(shape);
+  assertKindShape(kind, shape);
+  // Couriers price goods by weight; the other kinds never go by courier, and
+  // a package's weight comes from its items.
+  if (kind === 'REGULAR' && !shape.weightGrams && await shipsWithCouriers(store.id)) {
     throw new ApiError(WEIGHT_NEEDED, 400);
   }
 
+  const kindData = { productType: kind, listingKind: kind === 'READY_TO_EAT' ? 'TODAY' : 'REGULAR' };
+  if (has(data, 'fulfillment')) kindData.fulfillment = validateFulfillment(data.fulfillment, store);
+  if (kind === 'PACKAGE') {
+    const { items, ...pkg } = await packageFields({ data, store, product: null, fields });
+    Object.assign(kindData, pkg, { packageItems: { create: items } });
+  } else {
+    const details = validateDetails(kind, data.details, { heads: shape.stock });
+    if (details) kindData.details = details;
+  }
+  // Available Today food is stocked by its windows; paluto keeps no stock.
+  if (kind === 'READY_TO_EAT' || kind === 'COOK_TO_ORDER') kindData.stock = 0;
+  // Animals are listed a few heads at a time: only "sold out" is worth a
+  // warning, unless the seller sets their own mark.
+  if (kind === 'LIVESTOCK' && !has(data, 'lowStockThreshold')) kindData.lowStockThreshold = 0;
+
+  // Ready-to-eat food can go on sale for today as it is saved: the post is
+  // checked here, before anything is saved, and published after.
+  let todayPost = null;
+  if (data.todayPost !== undefined && data.todayPost !== null) {
+    if (kind !== 'READY_TO_EAT') throw new ApiError('Only ready-to-eat food is posted for today', 400);
+    if (typeof data.todayPost !== 'object' || Array.isArray(data.todayPost)) throw new ApiError("Check today's post", 400);
+    todayPost = await availabilityService.checkPost(store, data.todayPost);
+  }
+
   // Generate unique slug — derived from the name only, never client-assignable
-  const slug = await generateSlug(fields.name);
+  const slug = await generateSlug(shape.name);
 
   // If the seller's shop is already approved (active + not suspended), products go live immediately.
   // Admins can still suspend or hide them later.
   const initialStatus = store.isActive && !store.isSuspended ? 'APPROVED' : 'PENDING';
 
   // Create product
-  const imageHash = await computeImageHashSafe(fields.images);
-  const options = normalizeProductOptions(data);
-  checkSale({ ...fields, ...options });
-  checkTiers({ ...fields, ...options });
-  if (fields.listingKind === 'TODAY') assertTodayShape(options.variations);
+  const imageHash = await computeImageHashSafe(kindData.images || shape.images);
   const product = await productRepository.createProduct({
-    ...fields,
+    ...shape,
+    ...kindData,
     slug,
-    ...options,
-    ...(fields.listingKind === 'TODAY' ? { stock: 0 } : {}),
     imageHash,
     storeId: store.id,
     municipalityId: store.municipalityId,
     status: initialStatus,
   });
 
-  return stripStoreInternals(product);
+  if (!todayPost) return stripStoreInternals(product);
+  // The product stays saved even if its post can't go up now.
+  try {
+    await availabilityService.publishChecked(userId, store, product, todayPost);
+  } catch (err) {
+    const reason = err instanceof ApiError ? err.message : 'Please try again from Today\'s menu.';
+    return { ...stripStoreInternals(product), todayPostError: `Saved, but it isn't posted for today yet. ${reason}` };
+  }
+  return stripStoreInternals(await productRepository.findById(product.id));
 };
 
 /**
@@ -635,6 +843,7 @@ const getProducts = async (rawOptions) => {
     sortOrder: options.sortOrder,
     todayOnly: options.todayOnly,
     listingKind: options.listingKind,
+    productType: options.productType,
   };
 
   // Free-text search has a long tail of one-off keys, so it gets a shorter TTL
@@ -752,9 +961,22 @@ const updateProduct = async (productId, userId, rawData) => {
   }
   assertStoreCanEdit(store, 'update');
 
+  // What it is after this save (a package stays a package).
+  const wasKind = kindOf(product);
+  const kind = resolveKind(data, wasKind);
+  const kindChanged = kind !== wasKind;
+  const wasToday = product.listingKind === 'TODAY';
+  if (kindChanged && kind === 'LIVESTOCK'
+    && await prisma.packageItem.count({ where: { productId, package: { deletedAt: null } } })) {
+    throw new ApiError('This product is in a package, and live animals can\'t be. Take it out of the package first.', 400);
+  }
+
   // Only whitelisted fields, each validated. `slug` is never accepted.
-  const updateData = await validateProductPayload(data, { partial: true });
-  if (updateData.weightGrams === null && await shipsWithCouriers(store.id)) {
+  const updateData = await validateProductPayload(data, { partial: true, kind });
+  // Couriers price goods by weight: goods keep one in a shop that uses them.
+  const weightGone = updateData.weightGrams === null
+    || (kindChanged && updateData.weightGrams === undefined && !product.weightGrams);
+  if (kind === 'REGULAR' && weightGone && await shipsWithCouriers(store.id)) {
     throw new ApiError(WEIGHT_NEEDED, 400);
   }
 
@@ -772,22 +994,49 @@ const updateProduct = async (productId, userId, rawData) => {
     }));
   }
 
+  const merged = { ...product, ...updateData };
   const SALE_FIELDS = ['salePrice', 'saleStartsAt', 'saleEndsAt', 'price', 'variations', 'priceTiers'];
   if (SALE_FIELDS.some((k) => updateData[k] !== undefined)) {
-    const merged = { ...product, ...updateData };
     checkSale(merged);
     checkTiers({ ...merged, priceTiers: Array.isArray(merged.priceTiers) ? merged.priceTiers : null });
   }
+  assertKindShape(kind, merged);
 
-  // Available Today: the window sets the stock, not the editor; switching
-  // back to always-available ends its windows first (their stock goes to 0,
-  // then whatever stock the seller entered applies).
-  const nextKind = updateData.listingKind || product.listingKind;
-  if (nextKind === 'TODAY') {
-    delete updateData.stock;
-    assertTodayShape(updateData.variations !== undefined ? updateData.variations : product.variations);
+  if (kindChanged || has(data, 'productType') || has(data, 'listingKind')) {
+    updateData.productType = kind;
+    updateData.listingKind = kind === 'READY_TO_EAT' ? 'TODAY' : 'REGULAR';
   }
-  if (product.listingKind === 'TODAY' && nextKind === 'REGULAR') {
+  if (has(data, 'fulfillment')) updateData.fulfillment = validateFulfillment(data.fulfillment, store);
+
+  // The kind's facts: checked again when sent, or when the kind changes.
+  const heads = updateData.stock !== undefined ? updateData.stock : Number(product.stock);
+  let packageItems = null;
+  if (kind === 'PACKAGE') {
+    const { items, ...pkg } = await packageFields({ data, store, product, fields: updateData });
+    Object.assign(updateData, pkg);
+    packageItems = items || null;
+  } else if (has(data, 'details') || kindChanged) {
+    updateData.details = validateDetails(kind, has(data, 'details') ? data.details : null, { heads });
+  } else if (kind === 'LIVESTOCK' && updateData.stock !== undefined) {
+    validateDetails(kind, product.details, { heads });
+  }
+
+  // Available Today: the window sets the stock, not the editor. Paluto keeps
+  // none: switching to it takes away what stock there was (in the ledger).
+  let stockReason;
+  if (kind === 'READY_TO_EAT') delete updateData.stock;
+  if (kind === 'COOK_TO_ORDER') {
+    delete updateData.stock;
+    if (kindChanged && !wasToday && Number(product.stock) > 0) {
+      updateData.stock = 0;
+      stockReason = 'KIND_SWITCH';
+    }
+  }
+  if (packageItems) updateData.packageItems = { deleteMany: {}, create: packageItems };
+
+  // Switching away from Available Today ends its windows first (their stock
+  // goes to 0, then whatever stock the seller entered applies).
+  if (wasToday && kind !== 'READY_TO_EAT') {
     const windows = await prisma.productAvailability.findMany({
       where: { productId, status: { in: ['LIVE', 'SCHEDULED'] } },
       select: { id: true },
@@ -809,7 +1058,7 @@ const updateProduct = async (productId, userId, rawData) => {
   }
 
   // The stock the editor opened with, so sales made meanwhile are kept.
-  const stockBase = rawData && (rawData.stockWas != null || rawData.stocksWas)
+  const stockBase = !stockReason && rawData && (rawData.stockWas != null || rawData.stocksWas)
     ? {
       stock: Number.isFinite(Number(rawData.stockWas)) ? Number(rawData.stockWas) : null,
       stocks: rawData.stocksWas && typeof rawData.stocksWas === 'object' && !Array.isArray(rawData.stocksWas) ? rawData.stocksWas : null,
@@ -820,9 +1069,10 @@ const updateProduct = async (productId, userId, rawData) => {
     actorId: userId,
     previousSlug,
     stockBase,
+    stockReason,
   });
   // Now sold in Available Today windows: no stock until a window opens.
-  if (product.listingKind !== 'TODAY' && nextKind === 'TODAY' && Number(updated.stock) > 0) {
+  if (!wasToday && kind === 'READY_TO_EAT' && Number(updated.stock) > 0) {
     await prisma.$transaction((tx) => availabilityRepository.setStockTx(tx, productId, 0, 'TODAY_SWITCH', productId, userId));
     await productRepository.invalidateProductIds([productId]);
     updated.stock = 0;
@@ -872,6 +1122,9 @@ const adjustStock = async (productId, userId, body = {}) => {
   const product = await productRepository.findById(productId);
   if (product?.listingKind === 'TODAY') {
     throw new ApiError("Available Today products: change the day's quantity in Available Today", 400);
+  }
+  if (product && isStockless(product)) {
+    throw new ApiError('Cooked-to-order food has no stock to change: it is cooked when ordered', 400);
   }
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);

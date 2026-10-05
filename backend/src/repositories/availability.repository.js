@@ -31,6 +31,9 @@ const PRODUCT_SELECT = {
   stock: true,
   status: true,
   listingKind: true,
+  productType: true,
+  details: true,
+  fulfillment: true,
   categoryId: true,
   municipalityId: true,
   returnPolicy: true,
@@ -44,6 +47,7 @@ const setStockTx = async (tx, productId, target, reason, referenceId, actorId) =
   const delta = target - current;
   if (delta === 0) return current;
   const balanceAfter = await changeStock(tx, productId, null, delta);
+  if (balanceAfter === null) return current;
   await tx.inventoryMovement.create({
     data: { productId, quantityDelta: delta, balanceAfter, reason, referenceId, actorId: actorId || null },
   });
@@ -120,11 +124,13 @@ const adjustQuantity = async (id, delta, { actorId = null } = {}) => {
     if (window.status === 'LIVE') {
       // Throws INSUFFICIENT_STOCK when taking more than is left.
       const balanceAfter = await changeStock(tx, window.productId, null, delta);
-      await tx.inventoryMovement.create({
-        data: {
-          productId: window.productId, quantityDelta: delta, balanceAfter, reason: 'TODAY_ADJUST', referenceId: id, actorId,
-        },
-      });
+      if (balanceAfter !== null) {
+        await tx.inventoryMovement.create({
+          data: {
+            productId: window.productId, quantityDelta: delta, balanceAfter, reason: 'TODAY_ADJUST', referenceId: id, actorId,
+          },
+        });
+      }
     } else if (window.quantity + delta < 1) {
       const err = new Error('A window needs at least 1 to sell');
       err.code = 'INSUFFICIENT_STOCK';

@@ -1,409 +1,459 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  FlatList,
-  Modal,
-  ActivityIndicator,
-  StyleSheet,
-} from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MagnifyingGlassIcon as Search, SlidersHorizontalIcon as SlidersHorizontal, SquaresFourIcon as Grid2x2, ListIcon as List, PackageIcon as Package, XIcon as X, CheckIcon as Check } from 'phosphor-react-native';
+import {
+  CaretDownIcon, CaretLeftIcon, CaretUpIcon, MagnifyingGlassIcon, MapPinIcon, SlidersHorizontalIcon,
+} from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
-import { ENDPOINTS } from '../../src/api/endpoints';
-import { resolveImg } from '../../src/lib/media';
-import { toast } from '../../src/lib/toast';
-import useCartStore from '../../src/store/cartStore';
+import Chip from '../../src/components/Chip';
 import ProductCard from '../../src/components/ProductCard';
-import EmptyState from '../../src/components/EmptyState';
-import LoadingSkeleton from '../../src/components/LoadingSkeleton';
-import { ProductGridSkeleton } from '../../src/components/SkeletonLayouts';
-import { getCacheEntry, getCachedData, refreshCachedData } from '../../src/lib/dataCache';
-import { colors, control, radius, spacing, typography } from '../../src/theme';
-import { fetchCategories, REFERENCE_KEYS } from '../../src/lib/referenceData';
+import SearchCameraGlyph from '../../src/components/search/SearchCameraGlyph';
+import SearchFilterSheet from '../../src/components/search/SearchFilterSheet';
+import {
+  SearchResultsEmpty, SearchResultsError, SearchSkeletonCards, SkeletonBar,
+} from '../../src/components/search/SearchResultsStates';
+import { readImageSearch } from '../../src/components/search/imageSearchStore';
+import { saveRecent } from '../../src/lib/shellSearch';
+import { fetchCategories, fetchMunicipalities } from '../../src/lib/referenceData';
+import { font, t } from '../../src/theme';
 
-const SORT_OPTIONS = [
-  { label: 'Newest', value: 'newest', sortBy: 'createdAt', sortOrder: 'desc' },
-  { label: 'Oldest', value: 'oldest', sortBy: 'createdAt', sortOrder: 'asc' },
-  { label: 'Price: Low to High', value: 'price-low', sortBy: 'price', sortOrder: 'asc' },
-  { label: 'Price: High to Low', value: 'price-high', sortBy: 'price', sortOrder: 'desc' },
-  { label: 'Name: A to Z', value: 'name-asc', sortBy: 'name', sortOrder: 'asc' },
-  { label: 'Name: Z to A', value: 'name-desc', sortBy: 'name', sortOrder: 'desc' },
-];
+// The API's sortBy and sortOrder for each sort choice (web Products.jsx SORTS).
+const SORTS = {
+  // A search's default: the words in the name first (the API ranks them).
+  relevance: { sortBy: 'relevance', sortOrder: 'desc' },
+  newest: { sortBy: 'createdAt', sortOrder: 'desc' },
+  oldest: { sortBy: 'createdAt', sortOrder: 'asc' },
+  'price-low': { sortBy: 'price', sortOrder: 'asc' },
+  'price-high': { sortBy: 'price', sortOrder: 'desc' },
+  'top-sales': { sortBy: 'orderCount', sortOrder: 'desc' },
+  'name-asc': { sortBy: 'name', sortOrder: 'asc' },
+  'name-desc': { sortBy: 'name', sortOrder: 'desc' },
+};
 const PAGE_SIZE = 20;
-const PRODUCTS_CACHE_TTL = 60 * 1000;
 
-// Mirrors web/src/pages/Products.jsx (category/price sidebar filters become a
-// modal + chip row here since there's no room for a persistent sidebar).
+/** GET /products parameters for the list as filtered and paged. */
+const listParams = ({ page, category, municipalityId, search, minPrice, maxPrice, sort }) => {
+  const params = { page, pageSize: PAGE_SIZE };
+  if (category) params.categoryId = category;
+  if (municipalityId) params.municipalityId = municipalityId;
+  if (search) params.search = search;
+  if (minPrice) params.minPrice = minPrice;
+  if (maxPrice) params.maxPrice = maxPrice;
+  if (sort && SORTS[sort]) Object.assign(params, SORTS[sort]);
+  return params;
+};
+
+// Each filtered list remembers what it showed, for this app run (web pageCache):
+// shown at once when asked for again, then refreshed.
+const listCache = new Map();
+const listKey = (params) => `products:${JSON.stringify(params)}`;
+
+const str = (v) => (typeof v === 'string' ? v : '');
+
+/**
+ * Phones: the search results (web/src/pages/Products.jsx, its phone branch,
+ * and Products.css .srch-m-*). Reads the website's URL: ?q= &category=
+ * &municipalityId= &minPrice= &maxPrice= &sort= and ?imageSearch=1.
+ * A search bar that opens the search page, sort tabs, filter chips opening
+ * the filter sheet, the count, then a two-column grid that loads more as it
+ * scrolls.
+ */
 export default function Products() {
   const router = useRouter();
-  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const addItem = useCartStore((s) => s.addItem);
+  const { width: screenW } = useWindowDimensions();
+  // Two columns 4 apart inside the 12px sides (.products-grid), a lone card too.
+  const cellW = (screenW - 24 - 4) / 2;
+  const params = useLocalSearchParams();
 
-  // Seeded from the shared reference cache so the chips render instantly
-  // when returning to this tab.
-  const [categories, setCategories] = useState(getCacheEntry(REFERENCE_KEYS.categories)?.data || []);
-  const [selectedCategory, setSelectedCategory] = useState(params.category || '');
-  const [searchQuery, setSearchQuery] = useState(params.q || '');
-  const [inputValue, setInputValue] = useState(params.q || '');
-  const [sortBy, setSortBy] = useState('newest');
-  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-  const [draftPriceRange, setDraftPriceRange] = useState({ min: '', max: '' });
-  const [viewMode, setViewMode] = useState('grid');
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const searchQuery = str(params.q);
+  const selectedCategory = str(params.category);
+  const municipalityId = str(params.municipalityId);
+  const minParam = str(params.minPrice);
+  const maxParam = str(params.maxPrice);
+  const imageSearch = str(params.imageSearch) === '1';
+  // No sort chosen: a search ranks by best match, browsing by newest.
+  const sortBy = str(params.sort) && SORTS[str(params.sort)] ? str(params.sort) : (searchQuery ? 'relevance' : 'newest');
 
-  const [products, setProducts] = useState([]);
+  const firstParams = useMemo(() => listParams({
+    page: 1, category: selectedCategory, municipalityId, search: searchQuery, minPrice: minParam, maxPrice: maxParam, sort: sortBy,
+  }), [selectedCategory, municipalityId, searchQuery, minParam, maxParam, sortBy]);
+  const saved = imageSearch ? null : listCache.get(listKey(firstParams));
+
+  const [products, setProducts] = useState(() => saved?.products || []);
+  const [total, setTotal] = useState(() => saved?.total || 0);
+  const [totalPages, setTotalPages] = useState(() => saved?.totalPages || 0);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !saved);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-  const hasActiveFilters = Boolean(selectedCategory || searchQuery || priceRange.min || priceRange.max || sortBy !== 'newest');
+  const [loadError, setLoadError] = useState('');
+  // The words the results are for, when the search had a typo.
+  const [corrected, setCorrected] = useState('');
+  const [imageSearchPreview, setImageSearchPreview] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [municipalities, setMunicipalities] = useState([]);
+  // The filter sheet: null, or the chip that opened it ('all' | 'municipality' | 'category' | 'price').
+  const [filterSheet, setFilterSheet] = useState(null);
+  // Only the latest request is shown: an earlier one can answer after it.
+  const latestRequest = useRef(0);
+  const listRef = useRef(null);
 
   useEffect(() => {
-    fetchCategories()
-      .then(setCategories)
-      .catch(() => setCategories([]));
+    let live = true;
+    fetchCategories().then((list) => { if (live) setCategories(list || []); }).catch(() => {});
+    fetchMunicipalities().then((list) => { if (live) setMunicipalities(list || []); }).catch(() => {});
+    return () => { live = false; };
   }, []);
 
-  useEffect(() => {
-    const nextQuery = typeof params.q === 'string' ? params.q : '';
-    const nextCategory = typeof params.category === 'string' ? params.category : '';
-    setInputValue(nextQuery);
-    setSearchQuery(nextQuery);
-    setSelectedCategory(nextCategory);
-  }, [params.q, params.category]);
-
-  const fetchProducts = useCallback(
-    async (targetPage, append) => {
-      if (append) setIsLoadingMore(true);
-      try {
-        const sort = SORT_OPTIONS.find((s) => s.value === sortBy);
-        const query = {
-          page: targetPage,
-          pageSize: PAGE_SIZE,
-          sortBy: sort?.sortBy,
-          sortOrder: sort?.sortOrder,
-        };
-        if (selectedCategory) query.categoryId = selectedCategory;
-        if (searchQuery) query.search = searchQuery;
-        if (priceRange.min) query.minPrice = priceRange.min;
-        if (priceRange.max) query.maxPrice = priceRange.max;
-
-        const cacheKey = `products:${JSON.stringify(query)}`;
-        if (!append) {
-          const cachedEntry = getCacheEntry(cacheKey)?.data;
-          if (cachedEntry) {
-            setProducts(cachedEntry.products);
-            setTotal(cachedEntry.total);
-            setTotalPages(cachedEntry.totalPages);
-            setIsLoading(false);
-          } else {
-            setIsLoading(true);
-          }
-          if (getCachedData(cacheKey, PRODUCTS_CACHE_TTL)) return;
-        }
-
-        const loadPage = async () => {
-          const response = await apiClient.get(ENDPOINTS.PRODUCTS, { params: query });
-          return {
-            response,
-            products: response.data || [],
-            total: response.pagination?.total || 0,
-            totalPages: response.pagination?.totalPages || 0,
-          };
-        };
-        const result = append ? await loadPage() : await refreshCachedData(cacheKey, loadPage);
-        const res = result.response;
-        setProducts((prev) => (append ? [...prev, ...(res.data || [])] : res.data || []));
-        if (res.pagination) {
-          setTotal(res.pagination.total);
-          setTotalPages(res.pagination.totalPages);
-        }
-      } catch (err) {
-        toast.error('Failed to load products', err.message);
-        if (!append) setProducts([]);
-      } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-      }
-    },
-    [selectedCategory, searchQuery, sortBy, priceRange]
-  );
-
-  useEffect(() => {
+  const fetchProducts = useCallback(async () => {
+    const key = listKey(firstParams);
+    const request = ++latestRequest.current;
+    // Shown before: at once, then refreshed. New filters: the skeleton.
+    const kept = listCache.get(key);
+    if (kept) {
+      setProducts(kept.products);
+      setTotal(kept.total);
+      setTotalPages(kept.totalPages);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
     setPage(1);
-    fetchProducts(1, false);
-  }, [selectedCategory, searchQuery, sortBy, priceRange, fetchProducts]);
+    setLoadError('');
+    try {
+      const response = await apiClient.get('/products', { params: firstParams });
+      if (request !== latestRequest.current) return;
+      const list = response.data || [];
+      setProducts(list);
+      setCorrected(response.correctedSearch || '');
+      setTotal(response.pagination?.total || 0);
+      setTotalPages(response.pagination?.totalPages || 0);
+      listCache.set(key, { products: list, total: response.pagination?.total || 0, totalPages: response.pagination?.totalPages || 0 });
+    } catch (error) {
+      if (request !== latestRequest.current) return;
+      // Offline and the like: the list shown last time stays.
+      if (!kept) {
+        setProducts([]);
+        setLoadError(error?.message || 'Failed to load products');
+      }
+    } finally {
+      if (request === latestRequest.current) setIsLoading(false);
+    }
+  }, [firstParams]);
 
-  const handleSearch = () => setSearchQuery(inputValue.trim());
-
-  const handleAddToCart = (product) => {
-    if (product.stock === 0) {
-      toast.error('Out of stock');
+  useEffect(() => {
+    if (imageSearch) {
+      latestRequest.current += 1;
+      const stored = readImageSearch();
+      setProducts(stored.results);
+      setImageSearchPreview(stored.previewUrl);
+      setTotal(stored.results.length);
+      setTotalPages(1);
+      setPage(1);
+      setLoadError('');
+      setIsLoading(false);
       return;
     }
+    setImageSearchPreview('');
+    fetchProducts();
+    listRef.current?.scrollToOffset?.({ offset: 0, animated: false });
+  }, [imageSearch, fetchProducts]);
+
+  // The next page, added under the list as it scrolls near the end.
+  const loadMore = async () => {
+    if (imageSearch || isLoading || isLoadingMore || loadError || page >= totalPages) return;
+    const next = page + 1;
+    const request = latestRequest.current;
+    setIsLoadingMore(true);
     try {
-      addItem(
-        {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          image: product.images?.[0],
-          storeId: product.storeId,
-          storeName: product.store?.name,
-          storeLogo: product.store?.logo || product.store?.logoUrl,
-          storeSlug: product.store?.slug,
-          stock: product.stock,
-          slug: product.slug,
-          categoryId: product.categoryId,
-        },
-        1
-      );
-      toast.success(`${product.name} added to cart`);
-    } catch (err) {
-      toast.error(err.message || 'Failed to add to cart');
+      const response = await apiClient.get('/products', { params: { ...firstParams, page: next } });
+      if (request !== latestRequest.current) return;
+      setProducts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...(response.data || []).filter((p) => !seen.has(p.id))];
+      });
+      setPage(next);
+      if (response.pagination) {
+        setTotal(response.pagination.total);
+        setTotalPages(response.pagination.totalPages);
+      }
+    } catch {
+      // The next scroll asks again.
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
-  const handleLoadMore = () => {
-    if (isLoadingMore || isLoading || page >= totalPages) return;
-    const next = page + 1;
-    setPage(next);
-    fetchProducts(next, true);
+  /* URL changes, as the website's updateURL: empty values drop the key. */
+  const updateURL = (changes) => {
+    const next = {};
+    Object.entries(changes).forEach(([key, value]) => { next[key] = value ? String(value) : undefined; });
+    router.setParams(next);
   };
 
-  const clearFilters = () => {
-    setSelectedCategory('');
-    setSearchQuery('');
-    setInputValue('');
-    setSortBy('newest');
-    setPriceRange({ min: '', max: '' });
+  const openSearchPage = () => router.push(searchQuery ? { pathname: '/search', params: { edit: searchQuery } } : '/search');
+  const runSearch = (term) => {
+    const q = term.trim();
+    if (!q) return;
+    saveRecent(q);
+    router.push({ pathname: '/products', params: { q } });
   };
+  const phoneBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
-  const applyPriceFilter = () => {
-    setPriceRange(draftPriceRange);
-    setFilterModalOpen(false);
+  // A sort tab, and filters from the sheet; each starts the list again.
+  const pickSort = (sort) => {
+    const fallback = searchQuery ? 'relevance' : 'newest';
+    updateURL({ sort: sort === fallback ? '' : sort });
   };
+  const applyFilters = (changes) => {
+    const next = {};
+    if ('category' in changes) next.category = changes.category;
+    if ('municipalityId' in changes) next.municipalityId = changes.municipalityId;
+    if ('minPrice' in changes || 'maxPrice' in changes) {
+      next.minPrice = changes.minPrice || '';
+      next.maxPrice = changes.maxPrice || '';
+    }
+    updateURL(next);
+  };
+  const resetFilters = () => applyFilters({ category: '', municipalityId: '', minPrice: '', maxPrice: '' });
+
+  const priceActive = Boolean(minParam || maxParam);
+  const activeCategoryName = categories.find((c) => c.id === selectedCategory)?.name;
+  const activeMunicipalityName = municipalities.find((m) => m.id === municipalityId)?.name;
+  const filterCount = [selectedCategory, municipalityId, priceActive].filter(Boolean).length;
+  const priceLabel = priceActive
+    ? (maxParam ? `₱${minParam || 0} – ₱${maxParam}` : `₱${minParam} and up`)
+    : 'Price';
+  const priceOn = sortBy === 'price-low' || sortBy === 'price-high';
+
+  const header = (
+    <View>
+      <Text style={styles.srOnly} accessibilityRole="header">
+        {searchQuery ? `Results for “${searchQuery}”` : activeCategoryName || 'Products'}
+      </Text>
+      {!imageSearch ? (
+        <>
+          <View style={styles.controls}>
+            <View style={styles.sorts} accessibilityRole="tablist" accessibilityLabel="Sort by">
+              {searchQuery ? <SortTab label="Best match" on={sortBy === 'relevance'} onPress={() => pickSort('relevance')} /> : null}
+              <SortTab label="Newest" on={sortBy === 'newest'} onPress={() => pickSort('newest')} />
+              <SortTab label="Top Sales" on={sortBy === 'top-sales'} onPress={() => pickSort('top-sales')} />
+              <SortTab
+                label="Price"
+                on={priceOn}
+                accessibilityLabel={sortBy === 'price-low' ? 'Price, low to high' : sortBy === 'price-high' ? 'Price, high to low' : 'Price'}
+                onPress={() => pickSort(sortBy === 'price-low' ? 'price-high' : 'price-low')}
+              >
+                <View style={styles.sortDir}>
+                  <CaretUpIcon size={10} weight="bold" color={sortBy === 'price-low' ? t.primary[700] : t.neutral[300]} />
+                  <CaretDownIcon size={10} weight="bold" color={sortBy === 'price-high' ? t.primary[700] : t.neutral[300]} />
+                </View>
+              </SortTab>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filters}
+              accessibilityRole="toolbar"
+              accessibilityLabel="Filters"
+            >
+              <Chip
+                variant="filter"
+                icon={SlidersHorizontalIcon}
+                label={`Filter${filterCount ? ` (${filterCount})` : ''}`}
+                active={Boolean(filterCount)}
+                onPress={() => setFilterSheet('all')}
+              />
+              <Chip
+                variant="filter"
+                icon={MapPinIcon}
+                label={activeMunicipalityName || 'Municipality'}
+                caret
+                active={Boolean(municipalityId)}
+                onPress={() => setFilterSheet('municipality')}
+              />
+              <Chip
+                variant="filter"
+                label={activeCategoryName || 'Category'}
+                caret
+                active={Boolean(selectedCategory)}
+                onPress={() => setFilterSheet('category')}
+              />
+              <Chip variant="filter" label={priceLabel} caret active={priceActive} onPress={() => setFilterSheet('price')} />
+            </ScrollView>
+          </View>
+
+          <View style={styles.count}>
+            {isLoading ? <SkeletonBar height={11} width={140} style={styles.countSkeleton} /> : (
+              <Text style={styles.countText} numberOfLines={1}>
+                <Text style={styles.strong}>{total}</Text> {total === 1 ? 'result' : 'results'}
+                {searchQuery ? ` for “${corrected || searchQuery}”` : null}
+                {corrected ? <Text style={styles.corrected}>{` (you searched “${searchQuery}”)`}</Text> : null}
+                {activeMunicipalityName ? ` in ${activeMunicipalityName}` : null}
+              </Text>
+            )}
+          </View>
+        </>
+      ) : (
+        <View style={styles.tools}>
+          {isLoading ? <SkeletonBar height={12} width={150} /> : (
+            <View style={styles.imageSummary}>
+              {imageSearchPreview ? <Image source={{ uri: imageSearchPreview }} style={styles.imageThumb} /> : null}
+              <Text style={styles.countText} numberOfLines={1}>
+                <Text style={styles.strong}>{total}</Text> matching this photo
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
+  let body = null;
+  if (isLoading) {
+    body = <View style={styles.gutter}><SearchSkeletonCards count={12} /></View>;
+  } else if (loadError) {
+    body = <View style={styles.gutter}><SearchResultsError message={loadError} onRetry={fetchProducts} /></View>;
+  } else if (products.length === 0) {
+    body = (
+      <View style={styles.gutter}>
+        <SearchResultsEmpty
+          searchQuery={searchQuery}
+          showClear={Boolean(selectedCategory || priceActive || municipalityId)}
+          onClear={resetFilters}
+          onSearch={runSearch}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <View style={styles.searchBar}>
-          <Search size={16} color={colors.gray400} />
-          <TextInput
-            style={styles.searchInput}
-            value={inputValue}
-            onChangeText={setInputValue}
-            placeholder="Search products..."
-            placeholderTextColor={colors.gray400}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
-        </View>
+      <View style={[styles.bar, { paddingTop: 10 + insets.top }]}>
         <Pressable
-          style={styles.filterBtn}
-          onPress={() => {
-            setDraftPriceRange(priceRange);
-            setFilterModalOpen(true);
-          }}
+          style={({ pressed }) => [styles.back, pressed && styles.backPressed]}
+          onPress={phoneBack}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
         >
-          <SlidersHorizontal size={18} color={colors.textPrimary} />
+          <CaretLeftIcon size={22} weight="bold" color={t.neutral[900]} />
         </Pressable>
-        <Pressable style={styles.viewToggleBtn} onPress={() => setViewMode((v) => (v === 'grid' ? 'list' : 'grid'))}>
-          {viewMode === 'grid' ? <List size={18} color={colors.textPrimary} /> : <Grid2x2 size={18} color={colors.textPrimary} />}
-        </Pressable>
+        <View style={styles.field} accessibilityRole="search">
+          <Pressable style={styles.fieldText} onPress={openSearchPage} accessibilityRole="button" accessibilityLabel="Search products">
+            <Text style={[styles.fieldValue, !searchQuery && styles.fieldPlaceholder]} numberOfLines={1}>
+              {searchQuery || 'Search products'}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.camera, pressed && styles.cameraPressed]}
+            onPress={() => router.push('/search-by-image')}
+            accessibilityRole="button"
+            accessibilityLabel="Search by image"
+          >
+            <SearchCameraGlyph color={t.neutral[500]} />
+          </Pressable>
+          <Pressable style={styles.go} onPress={openSearchPage} accessibilityRole="button" accessibilityLabel="Search">
+            <MagnifyingGlassIcon size={18} color={t.neutral[0]} />
+          </Pressable>
+        </View>
       </View>
 
       <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipRow}
-        contentContainerStyle={styles.chipRowContent}
-        data={[{ id: '', name: 'All' }, ...categories]}
-        keyExtractor={(item) => item.id || 'all'}
+        ref={listRef}
+        style={styles.list}
+        data={body ? [] : products}
+        keyExtractor={(item) => String(item.id)}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        ListHeaderComponent={header}
+        ListEmptyComponent={body}
         renderItem={({ item }) => (
-          <Pressable
-            style={[styles.chip, selectedCategory === item.id && styles.chipActive]}
-            onPress={() => setSelectedCategory(item.id)}
-          >
-            <Text style={[styles.chipText, selectedCategory === item.id && styles.chipTextActive]}>{item.name}</Text>
-          </Pressable>
+          <View style={[styles.cell, { width: cellW }]}>
+            <ProductCard product={item} variant="result" />
+          </View>
         )}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.6}
+        ListFooterComponent={isLoadingMore ? <ActivityIndicator color={t.primary[600]} style={styles.more} /> : null}
+        contentContainerStyle={{ paddingBottom: 12 + insets.bottom }}
+        keyboardShouldPersistTaps="handled"
       />
 
-      <View style={styles.resultsRow}>
-        {isLoading ? (
-          <LoadingSkeleton width={140} height={12} />
-        ) : (
-          <Text style={styles.resultsText}>
-            Showing {products.length} of {total} products
-          </Text>
-        )}
-        {hasActiveFilters ? (
-          <Pressable onPress={clearFilters}>
-            <Text style={styles.clearText}>Clear filters</Text>
-          </Pressable>
-        ) : null}
-      </View>
-
-      {isLoading ? (
-        <ProductGridSkeleton count={6} />
-      ) : products.length === 0 ? (
-        <EmptyState
-          icon={<Package size={48} color={colors.gray400} />}
-          title="No products found"
-          message="Try adjusting your filters or search terms"
+      {!imageSearch ? (
+        <SearchFilterSheet
+          focus={filterSheet}
+          onClose={() => setFilterSheet(null)}
+          municipalities={municipalities}
+          categories={categories}
+          value={{ municipalityId, category: selectedCategory, minPrice: minParam, maxPrice: maxParam }}
+          onChange={applyFilters}
+          onReset={resetFilters}
         />
-      ) : (
-        <FlatList
-          key={viewMode}
-          data={products}
-          keyExtractor={(item) => item.id}
-          numColumns={viewMode === 'grid' ? 2 : 1}
-          columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
-          contentContainerStyle={styles.listContent}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={isLoadingMore ? <ActivityIndicator color={colors.primary} style={styles.footerLoader} /> : null}
-          renderItem={({ item }) => (
-            <View style={viewMode === 'grid' ? styles.gridItem : styles.listItem}>
-              <ProductCard
-                name={item.name}
-                price={item.price}
-                imageUrl={resolveImg(item.images?.[0])}
-                reviewCount={item.reviewCount}
-                variant={viewMode}
-                onPress={() => router.push(`/product/${item.slug}`)}
-                onAddToCart={() => handleAddToCart(item)}
-              />
-            </View>
-          )}
-        />
-      )}
-
-      <Modal visible={filterModalOpen} animationType="slide" transparent onRequestClose={() => setFilterModalOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setFilterModalOpen(false)}>
-          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Filters</Text>
-              <Pressable onPress={() => setFilterModalOpen(false)} hitSlop={8}>
-                <X size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <Text style={styles.sheetSectionTitle}>Price Range</Text>
-            <View style={styles.priceRow}>
-              <TextInput
-                style={styles.priceInput}
-                placeholder="Min"
-                keyboardType="numeric"
-                value={draftPriceRange.min}
-                onChangeText={(v) => setDraftPriceRange((p) => ({ ...p, min: v }))}
-              />
-              <Text style={styles.priceDash}>—</Text>
-              <TextInput
-                style={styles.priceInput}
-                placeholder="Max"
-                keyboardType="numeric"
-                value={draftPriceRange.max}
-                onChangeText={(v) => setDraftPriceRange((p) => ({ ...p, max: v }))}
-              />
-            </View>
-
-            <Text style={styles.sheetSectionTitle}>Sort By</Text>
-            {SORT_OPTIONS.map((opt) => (
-              <Pressable key={opt.value} style={styles.sortOption} onPress={() => setSortBy(opt.value)}>
-                <Text style={styles.sortOptionText}>{opt.label}</Text>
-                {sortBy === opt.value ? <Check size={18} color={colors.primary} /> : null}
-              </Pressable>
-            ))}
-
-            <Pressable style={styles.applyBtn} onPress={applyPriceFilter}>
-              <Text style={styles.applyBtnText}>Apply</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      ) : null}
     </View>
   );
 }
 
+/** A sort tab (.srch-m-sorts button): green and medium when chosen. */
+function SortTab({ label, on, onPress, accessibilityLabel, children }) {
+  return (
+    <Pressable
+      style={styles.sortTab}
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: on }}
+      accessibilityLabel={accessibilityLabel || label}
+    >
+      <Text style={[styles.sortText, on && styles.sortTextOn]}>{label}</Text>
+      {children}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bgPrimary },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-    backgroundColor: colors.white,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    height: control.compactHeight,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: colors.gray100,
-    borderRadius: radius.base,
-  },
-  searchInput: { flex: 1, height: '100%', color: colors.textPrimary, ...typography.body },
-  filterBtn: { width: control.iconSize, height: control.iconSize, borderRadius: radius.lg, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' },
-  viewToggleBtn: { width: control.iconSize, height: control.iconSize, borderRadius: radius.lg, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' },
+  screen: { flex: 1, backgroundColor: t.neutral[100] },
+  srOnly: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
 
-  chipRow: { flexGrow: 0 },
-  chipRowContent: { paddingHorizontal: spacing.md, gap: spacing.xs },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    backgroundColor: colors.gray100,
-    marginRight: spacing.xs,
+  bar: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingRight: 12, paddingBottom: 10, paddingLeft: 6,
+    backgroundColor: t.neutral[0], borderBottomWidth: 1, borderBottomColor: t.neutral[200], zIndex: 10,
   },
-  chipActive: { backgroundColor: colors.primary },
-  chipText: { ...typography.caption, color: colors.textSecondary },
-  chipTextActive: { color: colors.white, fontWeight: '600' },
+  back: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  backPressed: { backgroundColor: t.neutral[100] },
+  field: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'stretch', height: 44, backgroundColor: t.neutral[100] },
+  fieldText: { flex: 1, minWidth: 0, justifyContent: 'center', paddingLeft: 16, paddingRight: 8 },
+  // The website's input is 46 tall in the 44 field: its words sit a little low.
+  fieldValue: { marginTop: 3, fontSize: 16, lineHeight: 24, ...font(400), color: t.neutral[900] },
+  fieldPlaceholder: { color: t.neutral[400] },
+  camera: { width: 40, alignItems: 'center', justifyContent: 'center' },
+  cameraPressed: { backgroundColor: t.neutral[200] },
+  go: { width: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600] },
 
-  resultsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  resultsText: { ...typography.caption, color: colors.textSecondary },
-  clearText: { ...typography.caption, color: colors.secondary, fontWeight: '600' },
+  list: { flex: 1 },
+  controls: { backgroundColor: t.neutral[0] },
+  sorts: { flexDirection: 'row', alignItems: 'stretch', gap: 22, paddingHorizontal: 16 },
+  sortTab: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 46 },
+  sortText: { fontSize: 15, lineHeight: 24, ...font(400), color: t.neutral[600] },
+  sortTextOn: { ...font(500), color: t.primary[700] },
+  sortDir: { flexDirection: 'column' },
+  filters: { gap: 8, paddingTop: 2, paddingHorizontal: 16, paddingBottom: 12 },
 
-  listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl },
-  gridRow: { gap: spacing.sm },
-  gridItem: { flex: 1, marginBottom: spacing.sm },
-  listItem: { marginBottom: spacing.sm },
-  footerLoader: { marginVertical: spacing.md },
+  // .products-main is a column 12 apart: the band, the count, the grid.
+  count: { marginVertical: 12, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 10 },
+  countSkeleton: { marginVertical: 5 },
+  countText: { fontSize: 13.5, lineHeight: 21.6, ...font(400), color: t.neutral[500] },
+  strong: { ...font(500), color: t.neutral[900] },
+  corrected: { ...font(400), color: t.neutral[500] },
 
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.white, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, maxHeight: '88%' },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  sheetTitle: { ...typography.h3, color: colors.textPrimary },
-  sheetSectionTitle: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  priceInput: {
-    flex: 1,
-    height: control.compactHeight,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.base,
-    backgroundColor: colors.gray50,
-    color: colors.textPrimary,
-  },
-  priceDash: { color: colors.textMuted },
-  sortOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.sm },
-  sortOptionText: { ...typography.body, color: colors.textPrimary },
-  applyBtn: { marginTop: spacing.lg, height: control.height, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  applyBtnText: { ...typography.body, color: colors.white, fontWeight: '600' },
+  // .srch-m-tools: the summary is an inline box in a 34.6px line (web).
+  tools: { marginBottom: 12, paddingTop: 14, paddingHorizontal: 12, paddingBottom: 4, minHeight: 52.6 },
+  imageSummary: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  imageThumb: { width: 28, height: 28, borderRadius: 6 },
+
+  gutter: { paddingHorizontal: 12 },
+  row: { gap: 4, paddingHorizontal: 12, marginBottom: 4 },
+  cell: { minWidth: 0 },
+  more: { marginVertical: 16 },
 });

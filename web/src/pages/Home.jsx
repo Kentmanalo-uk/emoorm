@@ -13,6 +13,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import axios from '../lib/axios';
 import { saleInfo } from '../lib/variantPricing';
 import { SaleWas } from '../components/ui/SaleTag';
+import KindPrice from '../components/product/kinds/KindPrice';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
@@ -449,7 +450,7 @@ const Home = () => {
                   </div>
                   <div className="product-info">
                     <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
-                    <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
+                    <span className="product-price"><KindPrice product={product}>₱{saleInfo(product).price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
                     <ProductStats product={product} />
                   </div>
                 </Link>
@@ -677,7 +678,7 @@ function HomeProductCard({ product, onAddToCart }) {
       </div>
       <div className="product-info">
         <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
-        <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
+        <span className="product-price"><KindPrice product={product}>₱{saleInfo(product).price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
         <ProductStats product={product} />
       </div>
     </Link>

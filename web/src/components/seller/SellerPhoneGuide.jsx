@@ -27,7 +27,7 @@ const PAGES = {
   '/seller/products/new': {
     art: 'newProduct',
     title: 'Add a product',
-    text: 'Clear photos, a fair price and the stock you have. New listings may get a quick check before buyers see them.',
+    text: 'Answer a few easy questions, one step at a time: name, photos and price first, then the details for your kind of product. Check how buyers will see it, then save.',
   },
   '/seller/today': {
     art: 'today',

@@ -1,7 +1,7 @@
 const prisma = require('../config/database');
 const { withDeadlockRetry } = require('../lib/dbRetry');
 const { invalidateProductIds } = require('./product.repository');
-const { changeStock } = require('./stockLedger');
+const { giveBack } = require('./stockLedger');
 
 const REQUEST_INCLUDE = {
   buyer: { select: { id: true, fullName: true, email: true, contactNumber: true } },
@@ -184,7 +184,10 @@ const receiveAndRestockTx = async (id, itemRestocks) => {
     // Same lock order as checkouts (by product), so they cannot deadlock.
     for (const item of [...itemRestocks].sort((a, b) => (a.productId < b.productId ? -1 : a.productId > b.productId ? 1 : 0))) {
       if (item.restockOnReceive) {
-        const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, item.quantity);
+        // Only what the line took goes back (a paluto line took none), and
+        // never into Available Today food outside its window.
+        const balanceAfter = await giveBack(tx, item);
+        if (balanceAfter === null) continue;
         await tx.inventoryMovement.create({
           data: {
             productId: item.productId,

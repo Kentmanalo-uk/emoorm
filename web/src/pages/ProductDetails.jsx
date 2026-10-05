@@ -37,16 +37,37 @@ import {
 import { awayUntil, shortDate } from '../lib/shopHours';
 import { saleInfo } from '../lib/variantPricing';
 import { recordView } from '../lib/recentlyViewed';
-import { estimate, readyDay, rangeLabel, dayLabel } from '../lib/eta';
 import {
-  isTodayProduct, isOpen as windowOpen, windowState, spanLabel, fulfillmentLabel,
+  estimate, orderEta, readyDay, rangeLabel, dayLabel,
+} from '../lib/eta';
+import {
+  isTodayProduct, isOpen as windowOpen, windowState, spanLabel, dayName, clockLabel, fulfillmentLabel,
 } from '../lib/availability';
 import TimeLeft from '../components/ui/TimeLeft';
 import TodayTag, { ProductTodayTag } from '../components/today/TodayTag';
 import ProductQuestions from '../components/product/ProductQuestions';
 import { SaleWas, SaleEnds, BulkPrices } from '../components/ui/SaleTag';
+import {
+  productKind, isStockless, minOrder, priceUnit, cookReady, packageSavings, headsLabel,
+} from '../lib/productKinds';
+import KindRows from '../components/product/kinds/KindRows';
+import KindPrice from '../components/product/kinds/KindPrice';
+import {
+  quantityBounds, countLabel, soldOutLabel, startsFrom, pageUnit, receiveMode,
+} from '../components/product/kinds/buying';
 
 const peso =(n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** A package's saving: what the items cost one by one, crossed out, and how much less it is. */
+const shortPeso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+function PackageSave({ savings }) {
+  return (
+    <div className="pdp-price-save">
+      <s title="Bought one by one">{shortPeso(savings.value)}</s>
+      <em>Save {shortPeso(savings.saved)}</em>
+    </div>
+  );
+}
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 
@@ -78,11 +99,11 @@ const renderShelfRating = (p) => {
   );
 };
 
-// Fulfilment / payment lines come from the store record, never hardcoded.
-const storeServiceLines = (store) => {
+// Fulfilment / payment lines come from the store record, never hardcoded;
+// `mode` narrows them to a pickup-only or delivery-only product.
+const storeServiceLines = (store, mode = store?.fulfillmentMode) => {
   if (!store) return [];
   const lines = [];
-  const mode = store.fulfillmentMode;
   if (mode === 'DELIVERY' || mode === 'BOTH') lines.push({ icon: Truck, text: 'Delivery available' });
   if (mode === 'PICKUP' || mode === 'BOTH') lines.push({ icon: Store, text: 'Pickup available' });
   if (store.acceptsCod) lines.push({ icon: Money, text: 'Cash on delivery accepted' });
@@ -259,14 +280,14 @@ const ProductDetails = () => {
   }, [slug]);
 
   const fetchProduct = async () => {
-    // Another product: its own start (first photo, one piece, nothing picked),
-    // from its saved copy when it has one. The fresh copy then only updates
-    // it, so a choice already made is kept.
+    // Another product: its own start (first photo, one piece or a paluto's
+    // minimum order, nothing picked), from its saved copy when it has one.
+    // The fresh copy then only updates it, so a choice already made is kept.
+    const kept = readCache(`product:${slug}`);
     setSelectedImage(0);
-    setQuantity(1);
+    setQuantity(minOrder(kept));
     setSelectedVariations({});
     setVariationError('');
-    const kept = readCache(`product:${slug}`);
     const loadAround = (item) => {
       if (item?.categoryId) fetchRelated(item.categoryId, item.id);
       if (item?.storeId) fetchSameShop(item.storeId, item.id);
@@ -283,6 +304,7 @@ const ProductDetails = () => {
     try {
       const res = await axios.get(`/products/slug/${slug}`);
       setProduct(res.data);
+      setQuantity((q) => Math.max(q, minOrder(res.data)));
       writeCache(`product:${slug}`, res.data);
       if (!kept) loadAround(res.data);
     } catch (error) {
@@ -368,6 +390,13 @@ const ProductDetails = () => {
         stock: stockForSelection(product, selectedVariations),
         listingKind: product.listingKind,
         availability: product.availability,
+        // The kind, so the cart knows a paluto has no stock but a minimum
+        // order, and checkout which ways it can be received.
+        productType: product.productType,
+        details: product.details,
+        fulfillment: product.fulfillment,
+        weightGrams: product.weightGrams,
+        packageItems: product.packageItems,
         slug: product.slug,
         categoryId: product.categoryId,
         productId: product.id,
@@ -407,14 +436,19 @@ const ProductDetails = () => {
     if (mode === 'buy') goToCheckout();
   };
 
+  // From one (a paluto: its minimum order) up to the stock for the choices
+  // (a paluto: no stock to cap it).
   const changeQty = (delta) => {
     const next = quantity + delta;
-    if (product && next >= 1 && next <= stockForSelection(product, selectedVariations)) setQuantity(next);
+    if (!product) return;
+    const { least, most } = quantityBounds(product, selectedVariations);
+    if (next >= least && next <= most) setQuantity(next);
   };
 
   const setQtyDirect = (raw) => {
     if (!product) return;
-    const n = Math.max(1, Math.min(stockForSelection(product, selectedVariations) || 1, parseInt(raw || '1', 10) || 1));
+    const { least, most } = quantityBounds(product, selectedVariations);
+    const n = Math.max(least, Math.min(most || 1, parseInt(raw || '1', 10) || 1));
     setQuantity(n);
   };
 
@@ -430,14 +464,16 @@ const ProductDetails = () => {
   // The device's share menu where there is one, otherwise the app list.
   const handleShare = () => share({
     title: product.name,
-    text: `${product.name} — ${peso(product.price)} on E-MOORM`,
+    text: `${product.name} — ${startsFrom(product) ? 'from ' : ''}${peso(product.price)}${priceUnit(product)} on E-MOORM`,
     url: `${window.location.origin}/product/${product.slug}`,
   });
 
   const soldCount = useMemo(() => Number(product?.soldCount ?? 0), [product]);
 
-  const serviceLines = useMemo(() => storeServiceLines(product?.store), [product]);
-  // When it would come: from the shop's preparation days and week (lib/eta).
+  // The product's own pickup / delivery when it has one, else the shop's.
+  const serviceLines = useMemo(() => storeServiceLines(product?.store, product?.store && receiveMode(product)), [product]);
+  // When it would come: from the shop's preparation days and week (lib/eta);
+  // a paluto from its cooking time, a package no sooner than its notice.
   const etaLines = useMemo(() => {
     const st = product?.store;
     if (!st || st.readyToSell === false || awayUntil(st)) return [];
@@ -445,10 +481,24 @@ const ProductDetails = () => {
       const w = product.availability;
       return w ? [`Ready ${spanLabel(w.readyFrom, w.readyUntil)}`] : [];
     }
-    const mode = st.fulfillmentMode || 'DELIVERY';
     const lower = (t) => t.replace(/Today|Tomorrow/g, (w) => w.toLowerCase());
+    if (isStockless(product)) {
+      const r = cookReady(product.details);
+      // One cooking time (no longest): one moment, not "8:30 AM – 8:30 AM".
+      const when = new Date(r.to) - new Date(r.from) > 60e3 ? spanLabel(r.from, r.to) : `${dayName(r.from)} at ${clockLabel(r.from)}`;
+      return [`Ready ${lower(when)} if you order now`];
+    }
+    const mode = receiveMode(product);
+    const town = user?.municipalityId;
+    if (productKind(product) === 'PACKAGE') {
+      const eta = (method) => orderEta(st, [product], { method, townId: town });
+      return [
+        ...(mode !== 'PICKUP' ? [`Arrives ${lower(rangeLabel(eta('DELIVERY')))} if delivered by the shop`] : []),
+        ...(mode !== 'DELIVERY' ? [`Ready for pickup ${lower(rangeLabel(eta('PICKUP')))}`] : []),
+      ];
+    }
     return [
-      ...(mode !== 'PICKUP' ? [`Arrives ${lower(rangeLabel(estimate(st, { method: 'DELIVERY', townId: user?.municipalityId })))} if delivered by the shop`] : []),
+      ...(mode !== 'PICKUP' ? [`Arrives ${lower(rangeLabel(estimate(st, { method: 'DELIVERY', townId: town })))} if delivered by the shop`] : []),
       ...(mode !== 'DELIVERY' ? [`Ready for pickup ${lower(dayLabel(readyDay(st)))}`] : []),
     ];
   }, [product, user?.municipalityId]);
@@ -480,7 +530,7 @@ const ProductDetails = () => {
           description: clampText(product.description),
           image: seoImage ? resolveImg(seoImage) : undefined,
           price: product.price,
-          inStock: Number(product.stock) > 0,
+          inStock: isStockless(product) || Number(product.stock) > 0,
           storeName: product.store?.name,
           slug: product.slug,
           rating: Number(product.averageRating) || undefined,
@@ -682,7 +732,10 @@ const ProductDetails = () => {
 
   const images = parseImages(product.images);
   const gallery = images.length ? images : ['/placeholder-product.png'];
-  const isOutOfStock = product.stock === 0;
+  // A paluto is cooked when ordered: never out of stock.
+  const isOutOfStock = !isStockless(product) && product.stock === 0;
+  const kind = productKind(product);
+  const { least: leastQty, most: mostQty } = quantityBounds(product, selectedVariations);
   // The shop is still setting up (shopReadiness on the API): its products
   // are on show, but checkout refuses them until it is ready to sell.
   const away = awayUntil(product.store);
@@ -704,7 +757,14 @@ const ProductDetails = () => {
   const unitPrice = unitPriceFor(product, selectedVariations, quantity);
   const tiers = priceTiersOf(product);
   const fmt = (n) => Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const priceLabel = () => (optionPriced && !optionChosen ? `${fmt(range.min)} – ₱${fmt(range.max)}` : fmt(unitPrice));
+  // A paluto's sizes read as where they start: "from ₱350".
+  const fromPrice = startsFrom(product) && !optionChosen;
+  const priceLabel = () => (fromPrice ? fmt(range.min)
+    : optionPriced && !optionChosen ? `${fmt(range.min)} – ₱${fmt(range.max)}` : fmt(unitPrice));
+  const unitWords = pageUnit(product);
+  // Computers: a kind's own rows make the page long, so the delivery lines join up.
+  const compactRows = !isPhone && kind !== 'REGULAR';
+  const savings = packageSavings(product);
   const wishlisted = isInWishlist(product.id);
   const toggleWishlist = () => {
     if (!isAuthenticated) { loginRedirect(); return; }
@@ -737,10 +797,15 @@ const ProductDetails = () => {
         stock: p.stock,
         listingKind: p.listingKind,
         availability: p.availability,
+        productType: p.productType,
+        details: p.details,
+        fulfillment: p.fulfillment,
+        weightGrams: p.weightGrams,
+        packageItems: p.packageItems,
         slug: p.slug,
         categoryId: p.categoryId,
         selectedVariations: null,
-      }, 1);
+      }, minOrder(p));
       toast.success('Added to cart');
     } catch (err) {
       toast.error(err.message || 'Could not add to cart');
@@ -851,10 +916,15 @@ const ProductDetails = () => {
               </div>
 
               <div className="pdp-m-price">
+                <div className="pdp-m-price-col">
                 <div className="pdp-m-price-main">
+                  {fromPrice && <span className="pdp-price-from">from</span>}
                   <span className="pdp-m-peso">₱</span>
                   {priceLabel(false)}
+                  {unitWords && <span className="pdp-price-unit">{unitWords}</span>}
                   <SaleWas product={product} />
+                </div>
+                {savings && <PackageSave savings={savings} />}
                 </div>
                 <SaleEnds product={product} />
                 {tiers.length > 0 && <BulkPrices tiers={tiers} />}
@@ -993,14 +1063,21 @@ const ProductDetails = () => {
               </div>
 
               {/* Price band */}
-              <div className="pdp-price-band">
-                <div className="pdp-price">₱{priceLabel(false)} <SaleWas product={product} /></div>
+              <div className={`pdp-price-band${compactRows ? ' pdp-price-band--compact' : ''}`}>
+                <div className="pdp-price">
+                  {fromPrice && <span className="pdp-price-from">from </span>}
+                  ₱{priceLabel(false)}
+                  {unitWords && <span className="pdp-price-unit">{unitWords}</span>}
+                  {' '}<SaleWas product={product} />
+                </div>
+                {savings && <PackageSave savings={savings} />}
                 <SaleEnds product={product} />
                 {tiers.length > 0 && <BulkPrices tiers={tiers} />}
               </div>
 
               {/* Row attributes */}
-              <div className="pdp-rows">
+              <div className={`pdp-rows${compactRows ? ' pdp-rows--compact' : ''}`}>
+                <KindRows product={product} compact={compactRows} />
                 {todayItem && (
                   <div className="pdp-row pdp-today">
                     <div className="pdp-row-label">Available today:</div>
@@ -1035,19 +1112,32 @@ const ProductDetails = () => {
                 <div className="pdp-row">
                   <div className="pdp-row-label">Delivery Options:</div>
                   <div className="pdp-row-content">
+                    {compactRows ? (
+                      <div className="pdp-row-line pdp-row-joined pdp-eta">
+                        <span className="pdp-row-strong">
+                          <MapPin size={14} className="pdp-row-icon" /> {product.municipality?.name || product.store?.municipality?.name || 'Oriental Mindoro'}
+                        </span>
+                        {etaLines.map((text) => <span key={text}>{text}</span>)}
+                      </div>
+                    ) : (
                     <div className="pdp-row-line">
                       <MapPin size={14} className="pdp-row-icon" />
                       <span className="pdp-row-strong">
                         {product.municipality?.name || product.store?.municipality?.name || 'Oriental Mindoro'}
                       </span>
                     </div>
-                    {etaLines.map((text) => (
+                    )}
+                    {!compactRows && etaLines.map((text) => (
                       <div className="pdp-row-line pdp-eta" key={text}>
                         <CalendarCheck size={14} className="pdp-row-icon" />
                         <span>{text}</span>
                       </div>
                     ))}
-                    {serviceLines.length > 0 ? serviceLines.map(({ icon: Icon, text }) => (
+                    {serviceLines.length > 0 && compactRows ? (
+                      <div className="pdp-row-line pdp-row-joined">
+                        {serviceLines.map(({ text }) => <span key={text}>{text}</span>)}
+                      </div>
+                    ) : serviceLines.length > 0 ? serviceLines.map(({ icon: Icon, text }) => (
                       <div className="pdp-row-line" key={text}>
                         <Icon size={14} className="pdp-row-icon" />
                         <span>{text}</span>
@@ -1058,18 +1148,22 @@ const ProductDetails = () => {
                   </div>
                 </div>
 
-                {/* Delivery by the seller and by couriers, priced for the buyer's town. */}
+                {/* Delivery by the seller and by couriers, priced for the buyer's town
+                    (none for a product that is pickup only). */}
+                {product.fulfillment !== 'PICKUP' && (
                 <div className="pdp-row pdp-row--shipping">
                   <div className="pdp-row-label">Shipping:</div>
                   <div className="pdp-row-content">
                     <ShippingEstimate
                       product={product}
                       unitPrice={unitPrice}
+                      compact={compactRows}
                       municipalityId={isAuthenticated ? user?.municipalityId : undefined}
                       onQuote={setShipQuote}
                     />
                   </div>
                 </div>
+                )}
 
                 <div className="pdp-row">
                   <div className="pdp-row-label">Return &amp; Warranty:</div>
@@ -1097,7 +1191,8 @@ const ProductDetails = () => {
                       {(() => {
                         const defs = Array.isArray(product.variations) ? product.variations : [];
                         const picked = defs.filter((v) => selectedVariations[v.name]).map((v) => `${v.name}: ${selectedVariations[v.name]}`);
-                        const qty = `Qty ${quantity}`;
+                        const qty = kind === 'LIVESTOCK' || kind === 'PACKAGE' ? countLabel(product, quantity)
+                          : `Qty ${quantity}${leastQty > 1 ? ` (min. ${leastQty})` : ''}`;
                         if (!defs.length) return qty;
                         if (picked.length < defs.length) return `Select ${defs.map((v) => v.name).join(', ')}`;
                         return `${picked.join(', ')} · ${qty}`;
@@ -1152,7 +1247,7 @@ const ProductDetails = () => {
                   <div className="pdp-row-label">Quantity:</div>
                   <div className="pdp-row-content pdp-row-qty">
                     <div className="pdp-qty-controls">
-                      <button type="button" onClick={() => changeQty(-1)} disabled={quantity <= 1} className="pdp-qty-btn" aria-label="Decrease quantity">
+                      <button type="button" onClick={() => changeQty(-1)} disabled={quantity <= leastQty} className="pdp-qty-btn" aria-label="Decrease quantity">
                         <Minus size={14} />
                       </button>
                       <input
@@ -1163,14 +1258,15 @@ const ProductDetails = () => {
                         className="pdp-qty-input"
                         aria-label="Quantity"
                       />
-                      <button type="button" onClick={() => changeQty(1)} disabled={quantity >= stockForSelection(product, selectedVariations)} className="pdp-qty-btn" aria-label="Increase quantity">
+                      <button type="button" onClick={() => changeQty(1)} disabled={quantity >= mostQty} className="pdp-qty-btn" aria-label="Increase quantity">
                         <Plus size={14} />
                       </button>
                     </div>
                     <span className={`pdp-stock ${cannotBuy ? 'is-out' : ''}`} aria-live="polite">
                       {notTakingOrders
                         ? (away ? `This shop is away until ${shortDate(away)}` : "This shop isn't taking orders yet")
-                        : isOutOfStock ? 'Out of stock' : `${quantity} ${quantity === 1 ? 'item' : 'items'} selected`}
+                        : isOutOfStock ? soldOutLabel(product) : `${countLabel(product, quantity)} selected`}
+                      {!cannotBuy && leastQty > 1 && <span className="pdp-stock-min"> · minimum order {leastQty}</span>}
                     </span>
                   </div>
                 </div>
@@ -1306,7 +1402,10 @@ const ProductDetails = () => {
                 <div><dt>Category</dt><dd>{product.category?.name || '—'}</dd></div>
                 <div><dt>Origin</dt><dd>{product.municipality?.name || product.store?.municipality?.name || 'Oriental Mindoro'}</dd></div>
                 <div><dt>Sold by</dt><dd>{product.store?.name || '—'}</dd></div>
-                <div><dt>Stock</dt><dd>{product.stock}</dd></div>
+                <div>
+                  <dt>{kind === 'LIVESTOCK' ? 'Heads available' : kind === 'PACKAGE' ? 'Packages available' : 'Stock'}</dt>
+                  <dd>{isStockless(product) ? 'Cooked when ordered' : product.stock}</dd>
+                </div>
                 <div><dt>SKU</dt><dd>{product.id?.slice(0, 8).toUpperCase()}</dd></div>
                 <div><dt>Listed</dt><dd>{new Date(product.createdAt).toLocaleDateString()}</dd></div>
               </dl>
@@ -1380,7 +1479,7 @@ const ProductDetails = () => {
                     <Link to={`/product/${p.slug}`} className="pdp-m-shelf-img"><ProductImage src={parseImages(p.images)[0]} alt={p.name} /></Link>
                     <Link to={`/product/${p.slug}`} className="pdp-m-shelf-name">{p.name}</Link>
                     <span className="pdp-m-shelf-foot">
-                      <b>{peso(saleInfo(p).price)}</b>
+                      <b><KindPrice product={p}>{peso(saleInfo(p).price)}</KindPrice></b>
                       <button type="button" aria-label={`Add ${p.name} to cart`} onClick={() => quickAdd(p)}><Plus size={14} weight="bold" /></button>
                     </span>
                   </div>
@@ -1406,7 +1505,7 @@ const ProductDetails = () => {
                     </div>
                     <div className="product-info">
                       <span className="product-name"><ProductTodayTag product={p} />{p.name}</span>
-                      <span className="product-price">{peso(saleInfo(p).price)} <SaleWas product={p} compact /></span>
+                      <span className="product-price"><KindPrice product={p}>{peso(saleInfo(p).price)}</KindPrice> <SaleWas product={p} compact /></span>
                       {renderShelfRating(p)}
                     </div>
                   </Link>
@@ -1432,7 +1531,7 @@ const ProductDetails = () => {
                     </div>
                     <div className="product-info">
                       <span className="product-name"><ProductTodayTag product={p} />{p.name}</span>
-                      <span className="product-price">{peso(saleInfo(p).price)} <SaleWas product={p} compact /></span>
+                      <span className="product-price"><KindPrice product={p}>{peso(saleInfo(p).price)}</KindPrice> <SaleWas product={p} compact /></span>
                       {renderShelfRating(p)}
                     </div>
                   </Link>
@@ -1460,7 +1559,7 @@ const ProductDetails = () => {
           </Link>
           {cannotBuy ? (
             <button type="button" className="pdp-m-buy pdp-m-closed" disabled>
-              <span>{notTakingOrders ? closedLabel : 'Out of stock'}</span>
+              <span>{notTakingOrders ? closedLabel : soldOutLabel(product)}</span>
             </button>
           ) : (
             <>
@@ -1506,6 +1605,11 @@ const ProductDetails = () => {
           onConfirm={confirmSheet}
           onClose={closeSheet}
           busy={isAddingToCart}
+          limits={{ least: leastQty, most: mostQty }}
+          stockText={isStockless(product) ? 'Cooked when you order' : kind === 'LIVESTOCK' ? headsLabel(product.stock) : null}
+          soldOutText={soldOutLabel(product)}
+          priceFrom={startsFrom(product)}
+          priceUnit={priceUnit(product)}
         />
       )}
 

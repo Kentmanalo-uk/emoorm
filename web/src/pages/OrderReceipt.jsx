@@ -7,6 +7,9 @@ import './OrderReceipt.css';
 import { ReceiptSkeleton } from '../components/ui/PageSkeletons';
 import AppLogo from '../components/AppLogo';
 import { trackingLink } from '../lib/tracking';
+import {
+  etaLabel, hasPaluto, lineKind, lineNote,
+} from '../lib/orderLines';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateFmt = (d) => new Date(d).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -127,6 +130,10 @@ export default function OrderReceipt() {
           )}
           <div><span className="meta-label">Payment Status</span><span>{paymentStatusLabel(order)}</span></div>
           <div><span className="meta-label">Status</span><span>{statusLabel(order.status, order.fulfillmentMethod)}</span></div>
+          {/* Paluto is cooked after the order: when it is ready. */}
+          {hasPaluto(items) && order.etaFrom && (
+            <div><span className="meta-label">{order.fulfillmentMethod === 'PICKUP' ? 'Ready for Pickup' : 'Expected'}</span><span>{etaLabel(order)}</span></div>
+          )}
           {order.trackingNumber && (
             <>
               <div><span className="meta-label">Courier</span><span>{order.courier?.name || order.courierName}</span></div>
@@ -157,6 +164,9 @@ export default function OrderReceipt() {
                   <td>
                     <div className="item-name">{it.product?.name || it.productName || 'Item'}</div>
                     {it.product?.unit && <div className="item-unit">per {it.product.unit}</div>}
+                    {lineKind(it) === 'LIVESTOCK' && <div className="item-unit">per head</div>}
+                    {lineKind(it) === 'PACKAGE' && <div className="item-unit">per package</div>}
+                    {lineNote(it, { choice: true }) && <div className="item-unit">{lineNote(it, { choice: true })}</div>}
                   </td>
                   <td className="col-qty">{it.quantity}</td>
                   <td className="col-price">{peso(it.price)}</td>

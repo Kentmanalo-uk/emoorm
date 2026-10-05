@@ -3,6 +3,7 @@ const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
 const { cleanText, cleanUrl } = require('../utils/sanitize');
 const { normalizeRates, feeFor } = require('../utils/courierRates');
+const { courierRefusal } = require('../utils/productKinds');
 const deliveryQuoteService = require('./deliveryQuote.service');
 
 /*
@@ -106,8 +107,11 @@ const remove = async (id) => {
   }
 };
 
-// Products a courier can't price yet: listed for the seller to weigh.
-const UNWEIGHED = (storeId) => ({ storeId, deletedAt: null, weightGrams: null, status: { not: 'ARCHIVED' } });
+// Goods a courier can't price yet: listed for the seller to weigh. Other
+// kinds never go by courier, and a package's weight comes from its items.
+const UNWEIGHED = (storeId) => ({
+  storeId, deletedAt: null, weightGrams: null, status: { not: 'ARCHIVED' }, productType: 'REGULAR', listingKind: 'REGULAR',
+});
 
 /**
  * The couriers a shop ships with, whether it also delivers itself, and the
@@ -215,21 +219,29 @@ const quote = async ({ storeId, items, municipalityId, barangay } = {}) => {
   if (lines.length === 0) throw new ApiError('Add at least one product', 400);
   const products = await prisma.product.findMany({
     where: { id: { in: lines.map((l) => l.productId) }, storeId: store.id, deletedAt: null },
-    select: { id: true, name: true, weightGrams: true },
+    select: {
+      id: true, name: true, weightGrams: true, productType: true, listingKind: true, fulfillment: true,
+    },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
   const missingWeight = [];
+  // Live animals, cooked food and packages without a weight go with the
+  // shop or the buyer; pickup-only products are not delivered at all.
+  const notByCourier = [];
+  const pickupOnly = [];
   let grams = 0;
   for (const line of lines) {
     const product = byId.get(line.productId);
     if (!product) throw new ApiError('A product is not from this store', 400);
-    if (!product.weightGrams) missingWeight.push(product.name);
+    if (product.fulfillment === 'PICKUP') pickupOnly.push(product.name);
+    if (courierRefusal(product)) notByCourier.push(product.name);
+    else if (!product.weightGrams) missingWeight.push(product.name);
     else grams += product.weightGrams * line.quantity;
   }
 
   const town = municipalityId ? String(municipalityId) : null;
   const sameTown = town ? town === store.municipalityId : null;
-  const delivers = store.fulfillmentMode !== 'PICKUP';
+  const delivers = store.fulfillmentMode !== 'PICKUP' && !pickupOnly.length;
 
   let seller = { offered: delivers && store.selfDelivery, covered: null, fee: null };
   if (seller.offered && town) {
@@ -241,6 +253,7 @@ const quote = async ({ storeId, items, municipalityId, barangay } = {}) => {
     .map(({ courier }) => courier)
     .filter((c) => c.isActive && c.rates)
     .map(({ rates, isActive, ...c }) => {
+      if (notByCourier.length) return { ...c, fee: null, reason: 'NOT_BY_COURIER' };
       if (missingWeight.length) return { ...c, fee: null, reason: 'NO_WEIGHT' };
       const fee = sameTown === null
         ? [feeFor(rates, grams, true), feeFor(rates, grams, false)].filter((v) => v != null).sort((a, b) => a - b)[0] ?? null
@@ -249,8 +262,10 @@ const quote = async ({ storeId, items, municipalityId, barangay } = {}) => {
     });
 
   return {
-    weightGrams: missingWeight.length ? null : grams,
+    weightGrams: missingWeight.length || notByCourier.length ? null : grams,
     missingWeight,
+    notByCourier,
+    pickupOnly,
     sameTown,
     // Courier orders are paid online, so they need the shop's QR.
     onlinePaymentReady: Boolean(store.paymentQrImage),

@@ -170,9 +170,10 @@ async function cleanup() {
   await step(() => prisma.voucherRedemption.deleteMany({ where: { orderId: { in: orderIds } } }));
   await step(() => prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }));
   await step(() => prisma.order.deleteMany({ where: { id: { in: orderIds } } }));
-  await step(() => prisma.inventoryMovement.deleteMany({ where: { productId: { in: made.products } } }));
+  // Products of the tests' shops too: some are made through the API.
+  await step(() => prisma.inventoryMovement.deleteMany({ where: { OR: [{ productId: { in: made.products } }, { product: { storeId: { in: made.stores } } }] } }));
   await step(() => prisma.productAvailability.deleteMany({ where: { OR: [{ productId: { in: made.products } }, { storeId: { in: made.stores } }] } }));
-  await step(() => prisma.product.deleteMany({ where: { id: { in: made.products } } }));
+  await step(() => prisma.product.deleteMany({ where: { OR: [{ id: { in: made.products } }, { storeId: { in: made.stores } }] } }));
   await step(() => prisma.store.deleteMany({ where: { OR: [{ id: { in: made.stores } }, { ownerId: { in: made.users } }] } }));
   // Notices sent in the background (a low-stock alert after an order) can
   // land between these deletes; try again shortly when one does.

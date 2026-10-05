@@ -3200,3 +3200,280 @@ div.pdp-store-followers {
     vertical-align: 0.15em;
   }
 }
+
+/* Product kinds (components/product/kinds): what the price is for, a
+   package's saving, and the kind's own rows. */
+.pdp-price-from,
+.pdp-price-unit {
+  font-size: 0.55em;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.pdp-price-from {
+  margin-right: 4px;
+}
+
+.pdp-price-unit {
+  margin-left: 4px;
+}
+
+.pdp-price-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.pdp-price-save s {
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.pdp-price-save em {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #03684c);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.pdp-stock-min {
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.pdp-fact .pdp-row-content {
+  color: var(--t-neutral-900, #111827);
+  font-weight: 500;
+}
+
+.pdp-fact.is-note .pdp-row-content {
+  font-weight: 400;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.pdp-pkg-sum {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pdp-pkg-list {
+  margin: 0;
+  padding: 0;
+  max-width: 520px;
+  overflow: hidden;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  list-style: none;
+}
+
+.pdp-pkg-list li + li {
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.pdp-pkg-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px 7px 7px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+a.pdp-pkg-item:hover {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.pdp-pkg-img {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.pdp-pkg-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pdp-pkg-qty {
+  flex-shrink: 0;
+  min-width: 28px;
+  color: var(--t-primary-700, #03684c);
+  font-weight: 700;
+}
+
+.pdp-pkg-name {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.pdp-pkg-caret {
+  flex-shrink: 0;
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+/* Phones: the price band is green to pink, so the saving sits on white. */
+@media (max-width: 768px) {
+  .pdp-m-price-col {
+    min-width: 0;
+  }
+
+  .pdp-is-phone .pdp-m-price .pdp-price-save {
+    margin-top: 8px;
+  }
+
+  .pdp-is-phone .pdp-m-price .pdp-price-save s {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .pdp-is-phone .pdp-m-price .pdp-price-save em {
+    background: #fff;
+  }
+
+  .pdp-pkg-list {
+    max-width: none;
+    background: #fff;
+  }
+}
+
+@media (max-width: 768px) {
+  .pdp-m-price-main .pdp-price-unit,
+  .pdp-m-price-main .pdp-price-from {
+    font-size: 15px;
+    vertical-align: 2px;
+  }
+
+}
+
+/* Computers: a package's items two to a row, and the delivery lines of a
+   kind's page joined into one, so the details stay about as tall as the photo. */
+.pdp-row-joined {
+  flex-wrap: wrap;
+  column-gap: 0;
+}
+
+.pdp-row-joined span + span::before {
+  content: '·';
+  margin: 0 8px;
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+@media (min-width: 769px) {
+  .pdp-pkg-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    max-width: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .pdp-pkg-list li + li {
+    border-top: 0;
+  }
+
+  .pdp-pkg-item {
+    height: 100%;
+    padding: 5px 8px 5px 5px;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 8px;
+    font-size: 13.5px;
+  }
+
+  .pdp-pkg-img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .pdp-pkg-qty {
+    min-width: 0;
+  }
+
+  .pdp-pkg-sum {
+    margin-bottom: 8px;
+  }
+}
+
+/* Computers: a live animal's or paluto's facts side by side in one row. */
+.pdp-facts-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--pdp-fact-cols, 3), minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.pdp-facts-grid dt {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+}
+
+.pdp-facts-grid dd {
+  margin: 2px 0 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Computers, a kind's page: tighter rows so the details stay near the
+   photo's height. */
+.pdp-price-band--compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 10px 14px;
+}
+
+.pdp-price-band--compact .pdp-price {
+  font-size: 26px;
+}
+
+.pdp-price-band--compact .pdp-price-save {
+  margin-top: 0;
+}
+
+.pdp-rows--compact .pdp-row {
+  padding: 6px 0;
+}
+
+.pdp-rows--compact .pdp-row-line {
+  margin-bottom: 2px;
+}
+
+.pdp-rows--compact .pdp-pkg-sum {
+  margin-bottom: 6px;
+}
+
+.pdp-rows--compact .pdp-pkg-list {
+  gap: 4px;
+}
+
+.pdp-rows--compact .pdp-pkg-item {
+  padding: 3px 8px 3px 3px;
+  font-size: 13px;
+}
+
+.pdp-rows--compact .pdp-pkg-img {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+}
+
+.pdp-rows--compact .pdp-facts-grid {
+  gap: 6px 16px;
+}

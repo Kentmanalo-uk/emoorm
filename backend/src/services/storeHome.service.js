@@ -12,6 +12,7 @@ const { normalizeHome, productIdsOf } = require('../utils/shopHome');
 
 const PRODUCT_FIELDS = {
   id: true, name: true, slug: true, price: true, images: true, stock: true, storeId: true, categoryId: true, variations: true,
+  listingKind: true, productType: true, details: true, fulfillment: true,
 };
 
 /** Live products by id, with rating and sold counts, in a Map. */

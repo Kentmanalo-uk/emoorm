@@ -99,7 +99,9 @@ const getSellerAttention = async (actor) => {
         storeId: store.id,
         deletedAt: null,
         status: 'APPROVED',
+        // Available Today and cooked-to-order food keep no stock to top up.
         listingKind: 'REGULAR',
+        productType: { not: 'COOK_TO_ORDER' },
         stock: { lte: prisma.product.fields.lowStockThreshold },
       },
       select: { updatedAt: true },

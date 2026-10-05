@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye, ArrowSquareOut,
   MagnifyingGlass as Search, WarningCircle as AlertCircle, CheckCircle, Clock, X, CircleNotch as Loader2,
-  EyeSlash as EyeOff, Archive, DotsThree, SlidersHorizontal, Check, Minus, Prohibit,
+  EyeSlash as EyeOff, Archive, DotsThree, SlidersHorizontal, Check, Minus, Prohibit, CaretRight,
 } from '@phosphor-icons/react';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import PhoneSheet from '../components/seller/PhoneSheet';
@@ -20,9 +21,11 @@ import './SellerProducts.css';
 import { useCategories } from '../hooks/useReferenceData';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import ProductForm from '../components/seller/ProductForm';
+import PackageForm from '../components/seller/PackageForm';
 import { sellBlockers } from '../lib/sellerSetup';
 import { readCache, writeCache } from '../lib/pageCache';
 import { isTodayProduct, isOpen as windowOpen, windowState } from '../lib/availability';
+import { headsLabel, isStockless, priceUnit, productKind } from '../lib/productKinds';
 
 const STATUS_LABELS = {
   PENDING: { label: 'Pending Approval', cls: 'status-pending', icon: <Clock size={12} /> },
@@ -58,8 +61,9 @@ const countFor = (summary, key) => {
 const PHONE_QUICK_TABS = ['all', 'APPROVED', 'PENDING'];
 
 const stockLevel = (product) => {
-  // Available Today: at 0 between posts on purpose, never "out of stock".
-  if (isTodayProduct(product)) return 'ok';
+  // Available Today: at 0 between posts on purpose, never "out of stock";
+  // cooked-to-order food keeps no stock at all.
+  if (isTodayProduct(product) || isStockless(product)) return 'ok';
   const stock = Number(product?.stock ?? 0);
   if (stock <= 0) return 'out';
   const threshold = Number(product?.lowStockThreshold ?? 0);
@@ -69,6 +73,26 @@ const stockLevel = (product) => {
 const hasStockPerChoice = (product) => Array.isArray(product?.variations)
   && product.variations.some((v) => v?.stocks && Object.keys(v.stocks).length);
 
+// What a product's stock counts, in the words of its kind: live animals by
+// the head, packages by the package.
+const stockWords = (product) => {
+  const kind = productKind(product);
+  if (kind === 'LIVESTOCK') return { add: 'Add heads', now: 'Heads available now', unit: (n) => (n === 1 ? 'head' : 'heads') };
+  if (kind === 'PACKAGE') return { add: 'Add packages', now: 'Packages available now', unit: (n) => (n === 1 ? 'package' : 'packages') };
+  return { add: 'Add stock', now: 'In stock now', unit: null };
+};
+
+// How many different products a package holds.
+const itemsLabel = (product) => {
+  const n = Array.isArray(product?.packageItems) ? product.packageItems.length : 0;
+  return `${n} ${n === 1 ? 'item' : 'items'}`;
+};
+
+// A package item deleted or taken off show since: the seller should fix the package.
+const packageIssue = (product) => (Array.isArray(product?.packageItems)
+  && product.packageItems.some((it) => it.product?.deletedAt
+    || ['HIDDEN', 'SUSPENDED', 'ARCHIVED'].includes(it.product?.status)));
+
 export default function SellerProducts() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -76,7 +100,8 @@ export default function SellerProducts() {
 
   const { categories } = useCategories();
   // Until the shop is ready to sell, buyers can see its products but cannot order them.
-  const blockers = sellBlockers(useOutletContext()?.setup);
+  const outlet = useOutletContext();
+  const blockers = sellBlockers(outlet?.setup);
   const notReady = blockers.length > 0;
   const statusOf = (product) => STATUS_LABELS[product.status] || STATUS_LABELS.PENDING;
   const tabLabel = (key) => PRODUCT_TABS.find((t) => t.key === key)?.label;
@@ -105,6 +130,11 @@ export default function SellerProducts() {
   const editParam = searchParams.get('edit');
   const [editingProduct, setEditingProduct] = useState(null);
   const showForm = isNewRoute || (!!editParam && !!editingProduct);
+  // Packages have their own form: /seller/products/new?type=package, or
+  // editing one.
+  const packageForm = isNewRoute
+    ? searchParams.get('type') === 'package'
+    : productKind(editingProduct) === 'PACKAGE';
 
   // Phones: status sheet, a product's "more" sheet and its add-stock sheet.
   const isPhone = usePhoneLayout();
@@ -251,7 +281,11 @@ export default function SellerProducts() {
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, ...updated } : p)));
       setRestockDrafts((prev) => ({ ...prev, [product.id]: '' }));
       loadSummary();
-      toast.success(delta > 0 ? `Added ${delta} to stock` : `Removed ${Math.abs(delta)} from stock`);
+      const unit = stockWords(product).unit;
+      const n = Math.abs(delta);
+      toast.success(unit
+        ? `${delta > 0 ? 'Added' : 'Removed'} ${n} ${unit(n)}`
+        : delta > 0 ? `Added ${delta} to stock` : `Removed ${n} from stock`);
       return true;
     } catch (err) {
       toast.error(err.message || 'Failed to update stock');
@@ -269,6 +303,7 @@ export default function SellerProducts() {
   };
 
   const openNew = () => navigate('/seller/products/new', { state: { fromList: true } });
+  const openNewPackage = () => navigate('/seller/products/new?type=package', { state: { fromList: true } });
 
   const openEdit = (product) => {
     setEditingProduct(product);
@@ -276,7 +311,9 @@ export default function SellerProducts() {
   };
 
   const closeForm = () => {
-    if (location.state?.fromList) navigate(-1);
+    // On phones the package form adds a history entry per step (?step=3).
+    const steps = Math.max(1, parseInt(searchParams.get('step') || '1', 10) || 1);
+    if (location.state?.fromList) navigate(-steps);
     else navigate('/seller/products', { replace: true });
   };
 
@@ -287,12 +324,13 @@ export default function SellerProducts() {
       navigate('/seller/today');
       return;
     }
+    const what = productKind(saved) === 'PACKAGE' ? 'Package' : 'Product';
     if (created) {
       toast.success(notReady && saved?.status === 'APPROVED'
-        ? 'Product added. Buyers can see it, and can order once your shop is ready to sell.'
+        ? `${what} added. Buyers can see it, and can order once your shop is ready to sell.`
         : saved?.status === 'APPROVED'
-          ? 'Product added. It is now live.'
-          : 'Product added. It will go live once approved.');
+          ? `${what} added. It is now live.`
+          : `${what} added. It will go live once approved.`);
     } else {
       toast.success('Changes saved');
     }
@@ -310,7 +348,7 @@ export default function SellerProducts() {
     setBulkLoading(true);
     try {
       await axios.delete(`/products/${product.id}`);
-      toast.success('Product deleted');
+      toast.success(productKind(product) === 'PACKAGE' ? 'Package deleted' : 'Product deleted');
       setSelectedIds((ids) => ids.filter((id) => id !== product.id));
       loadProducts();
       setConfirmState(null);
@@ -376,6 +414,28 @@ export default function SellerProducts() {
     );
   };
 
+  if (showForm && packageForm) {
+    return (
+      <div className="seller-dashboard">
+        <div className="seller-container">
+          <SellerPageHead
+            className="pkf-head"
+            title={isNewRoute ? 'Create a package' : 'Edit package'}
+            subtitle="Sell some of your products together at one price."
+          />
+          <PackageForm
+            key={isNewRoute ? 'new-package' : editingProduct?.id}
+            product={isNewRoute ? null : editingProduct}
+            store={outlet?.store}
+            onCancel={closeForm}
+            onSaved={handleSaved}
+            sellBlockers={blockers}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (showForm) {
     return (
       <div className="seller-dashboard">
@@ -429,9 +489,14 @@ export default function SellerProducts() {
           subtitle="Add, edit, and manage your inventory"
           // Phones add products from the + in the header.
           actions={isPhone ? null : (
-            <button className="btn-seller-primary" onClick={openNew}>
-              <Plus size={16} /> Add Product
-            </button>
+            <>
+              <button className="btn-seller-outline" onClick={openNewPackage}>
+                <Package size={16} /> Create a package
+              </button>
+              <button className="btn-seller-primary" onClick={openNew}>
+                <Plus size={16} /> Add Product
+              </button>
+            </>
           )}
         />
 
@@ -560,6 +625,18 @@ export default function SellerProducts() {
 
         {!isPhone && searchBar}
 
+        {/* Phones: packages start here (the header's + adds a product). */}
+        {isPhone && statusFilter === 'all' && !search && products.length > 0 && (
+          <button type="button" className="spm-package" onClick={openNewPackage}>
+            <Package size={26} weight="fill" className="spm-package-icon" />
+            <span className="spm-package-text">
+              <b>Create a package</b>
+              <span>Sell some of your products together at one price</span>
+            </span>
+            <CaretRight size={18} className="spm-package-arrow" />
+          </button>
+        )}
+
         {/* Products table */}
         <div className="seller-card">
           {isLoading ? (
@@ -610,6 +687,8 @@ export default function SellerProducts() {
                     const s = statusOf(product);
                     const thumb = product.images?.[0];
                     const level = stockLevel(product);
+                    const kind = productKind(product);
+                    const words = stockWords(product);
                     const showNote = Boolean(product.moderationNote)
                       && (product.status === 'SUSPENDED' || product.status === 'ARCHIVED');
                     return (
@@ -636,7 +715,10 @@ export default function SellerProducts() {
                           </div>
                         </td>
                         <td>{product.category?.name || '—'}</td>
-                        <td>₱{Number(product.price).toFixed(2)}</td>
+                        <td>
+                          ₱{Number(product.price).toFixed(2)}
+                          {priceUnit(product) && <span className="product-price-unit">{priceUnit(product)}</span>}
+                        </td>
                         <td data-label="Stock">
                           {isTodayProduct(product) ? (
                             <div className="product-stock product-stock--today">
@@ -652,13 +734,49 @@ export default function SellerProducts() {
                                 <Link to="/seller/today" className="btn-seller-outline product-restock-btn">Today&apos;s menu</Link>
                               )}
                             </div>
+                          ) : isStockless(product) ? (
+                            // Paluto: cooked when ordered, so no stock to count or add.
+                            <div className="product-stock product-stock--made">
+                              <span className="product-stock-line">
+                                <span className="seller-badge product-kind-badge">Made to order</span>
+                              </span>
+                            </div>
                           ) : (
                           <div className={`product-stock ${level !== 'ok' ? `product-stock--${level}` : ''}`}>
+                            {kind === 'PACKAGE' && (
+                              <span className="product-stock-line">
+                                <span className="seller-badge product-kind-badge">Package</span>
+                                <span className="product-stock-note" title={product.packageItems?.map((it) => `${it.quantity} x ${it.product?.name || ''}`).join(', ')}>
+                                  {itemsLabel(product)}
+                                </span>
+                              </span>
+                            )}
+                            {kind === 'PACKAGE' && packageIssue(product) && (
+                              <span className="product-stock-line">
+                                <span className="seller-badge status-pending product-stock-badge" title="An item in it was deleted or is hidden. Edit the package to check.">
+                                  Check its items
+                                </span>
+                              </span>
+                            )}
                             <span className="product-stock-line">
-                              <span className="product-stock-label">Stock</span>
-                              <span className="product-stock-value">{product.stock}</span>
+                              {kind === 'LIVESTOCK' ? (
+                                <span className="product-stock-value" title={headsLabel(product.stock)}>
+                                  {product.stock} <span className="product-stock-note">{Number(product.stock) === 1 ? 'head' : 'heads'}</span>
+                                </span>
+                              ) : kind === 'PACKAGE' ? (
+                                <span className="product-stock-value">
+                                  {product.stock} <span className="product-stock-note">available</span>
+                                </span>
+                              ) : (
+                                <>
+                                  <span className="product-stock-label">Stock</span>
+                                  <span className="product-stock-value">{product.stock}</span>
+                                </>
+                              )}
                               {level === 'out' && (
-                                <span className="seller-badge status-cancelled product-stock-badge">Out of stock</span>
+                                <span className="seller-badge status-cancelled product-stock-badge">
+                                  {kind === 'REGULAR' ? 'Out of stock' : 'Sold out'}
+                                </span>
                               )}
                               {level === 'low' && (
                                 <span className="seller-badge status-pending product-stock-badge">Low stock</span>
@@ -689,7 +807,7 @@ export default function SellerProducts() {
                                 className="btn-seller-outline product-restock-btn"
                                 disabled={restockingId === product.id || !restockDrafts[product.id]}
                               >
-                                {restockingId === product.id ? <Loader2 size={13} className="spin" /> : 'Add stock'}
+                                {restockingId === product.id ? <Loader2 size={13} className="spin" /> : words.add}
                               </button>
                             </form>
                             )}
@@ -704,7 +822,7 @@ export default function SellerProducts() {
                         <td>
                           {isPhone ? (
                             // Phones: the two everyday actions, the rest under ⋯.
-                            <div className="product-actions pm-actions">
+                            <div className={`product-actions pm-actions${isStockless(product) ? ' pm-actions--two' : ''}`}>
                               <button type="button" className="pm-btn" onClick={() => openEdit(product)} aria-label={`Edit ${product.name}`}>
                                 <Edit2 size={16} /> Edit
                               </button>
@@ -712,13 +830,13 @@ export default function SellerProducts() {
                                 <Link to="/seller/today" className="pm-btn">
                                   <Plus size={16} /> Post today
                                 </Link>
-                              ) : hasStockPerChoice(product) ? (
+                              ) : isStockless(product) ? null : hasStockPerChoice(product) ? (
                                 <button type="button" className="pm-btn" onClick={() => openEdit(product)}>
                                   <Plus size={16} /> Edit stock
                                 </button>
                               ) : (
                                 <button type="button" className="pm-btn" onClick={() => openStockSheet(product)}>
-                                  <Plus size={16} /> Add stock
+                                  <Plus size={16} /> {words.add}
                                 </button>
                               )}
                               <button
@@ -858,14 +976,14 @@ export default function SellerProducts() {
           className="scm-choice scm-choice--danger"
           onClick={() => { const p = moreFor; setMoreFor(null); handleDelete(p); }}
         >
-          Delete product <Trash2 size={18} />
+          {productKind(moreFor) === 'PACKAGE' ? 'Delete package' : 'Delete product'} <Trash2 size={18} />
         </button>
       </PhoneSheet>
 
       {/* Phones: add stock with a counter */}
       <PhoneSheet
         open={!!stockFor}
-        title="Add stock"
+        title={stockWords(stockFor).add}
         onClose={() => setStockFor(null)}
         footer={(
           <button
@@ -874,14 +992,18 @@ export default function SellerProducts() {
             disabled={restockingId === stockFor?.id || !(stockAmount > 0)}
             onClick={async () => { if (await changeStock(stockFor, stockAmount)) setStockFor(null); }}
           >
-            {restockingId === stockFor?.id ? 'Saving…' : `Add ${stockAmount > 0 ? stockAmount : ''} to stock`}
+            {restockingId === stockFor?.id
+              ? 'Saving…'
+              : stockWords(stockFor).unit && stockAmount > 0
+                ? `Add ${stockAmount} ${stockWords(stockFor).unit(stockAmount)}`
+                : `Add ${stockAmount > 0 ? stockAmount : ''} to stock`}
           </button>
         )}
       >
         {stockFor && (
           <div className="pm-stock">
             <p className="pm-stock-name">{stockFor.name}</p>
-            <p className="pm-stock-now">In stock now: <strong>{stockFor.stock}</strong></p>
+            <p className="pm-stock-now">{stockWords(stockFor).now}: <strong>{stockFor.stock}</strong></p>
             <div className="pm-stepper">
               <button
                 type="button"
@@ -916,27 +1038,36 @@ export default function SellerProducts() {
         )}
       </PhoneSheet>
 
-      <ConfirmDialog
-        open={confirmState?.type === 'delete-one'}
-        title={`Delete "${confirmState?.product?.name}"?`}
-        message="This product will be permanently removed from your store and cannot be undone."
-        confirmLabel="Delete"
-        danger
-        loading={bulkLoading}
-        onConfirm={confirmDeleteOne}
-        onCancel={() => setConfirmState(null)}
-      />
+      {/* On the body: the page fades in (opacity), which would otherwise keep
+          these sheets under the phone tab bar. */}
+      {createPortal(
+        <>
+          <ConfirmDialog
+            open={confirmState?.type === 'delete-one'}
+            title={`Delete "${confirmState?.product?.name}"?`}
+            message={productKind(confirmState?.product) === 'PACKAGE'
+              ? 'This package will be removed from your store. The products in it stay as they are.'
+              : 'This product will be permanently removed from your store and cannot be undone.'}
+            confirmLabel="Delete"
+            danger
+            loading={bulkLoading}
+            onConfirm={confirmDeleteOne}
+            onCancel={() => setConfirmState(null)}
+          />
 
-      <ConfirmDialog
-        open={confirmState?.type === 'bulk-delete'}
-        title={`Delete ${confirmState?.ids?.length || 0} product(s)?`}
-        message="These products will be permanently removed from your store and cannot be undone."
-        confirmLabel="Delete All"
-        danger
-        loading={bulkLoading}
-        onConfirm={() => runBulkAction('DELETE')}
-        onCancel={() => setConfirmState(null)}
-      />
+          <ConfirmDialog
+            open={confirmState?.type === 'bulk-delete'}
+            title={`Delete ${confirmState?.ids?.length || 0} product(s)?`}
+            message="These products will be permanently removed from your store and cannot be undone."
+            confirmLabel="Delete All"
+            danger
+            loading={bulkLoading}
+            onConfirm={() => runBulkAction('DELETE')}
+            onCancel={() => setConfirmState(null)}
+          />
+        </>,
+        document.body,
+      )}
     </div>
   );
 }

@@ -1,56 +1,74 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Link, router, useLocalSearchParams } from 'expo-router';
-import Button from '../../src/components/Button';
-import TextField from '../../src/components/TextField';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { CheckCircleIcon, CheckIcon } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
-import { ENDPOINTS } from '../../src/api/endpoints';
-import toast from '../../src/lib/toast';
-import { colors, spacing, typography } from '../../src/theme';
+import AuthSheet from '../../src/components/auth/AuthSheet';
+import { AuthField, AuthSubmit } from '../../src/components/auth/AuthForm';
+import AuthDone, { DoneIcon, DoneText, DoneTitle } from '../../src/components/auth/AuthDone';
+import { font, t } from '../../src/theme';
 
-const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/;
-
+/**
+ * Reset password, from the link in the email (/reset-password?token=…): the
+ * website's phone sheet (web/src/pages/ResetPassword.jsx + AuthSheet.css),
+ * with the password rules ticking off as they are met.
+ */
 export default function ResetPassword() {
   const params = useLocalSearchParams();
-  const [token, setToken] = useState(String(params.token || ''));
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const tokenFromUrl = typeof params.token === 'string' ? params.token : '';
+
+  const [formData, setFormData] = useState({ token: tokenFromUrl, password: '', confirmPassword: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const leaveTimer = useRef(null);
 
-  const hasTokenFromParams = Boolean(params.token);
+  useEffect(() => () => clearTimeout(leaveTimer.current), []);
+
+  const hasTokenFromUrl = Boolean(tokenFromUrl);
+
+  const rules = [
+    { label: 'At least 8 characters', ok: formData.password.length >= 8 },
+    { label: 'One uppercase letter', ok: /[A-Z]/.test(formData.password) },
+    { label: 'One lowercase letter', ok: /[a-z]/.test(formData.password) },
+    { label: 'One number', ok: /\d/.test(formData.password) },
+    { label: 'One special character', ok: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password) },
+  ];
+
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (apiError) setApiError('');
+  };
 
   const validate = () => {
-    const next = {};
-    if (!token.trim()) next.token = 'Reset token is required.';
-    if (!password) {
-      next.password = 'Password is required.';
-    } else if (password.length < 8 || !PASSWORD_RULE.test(password)) {
-      next.password = 'Must be 8+ chars with uppercase, lowercase, number, and special character.';
+    const newErrors = {};
+    if (!formData.token.trim()) newErrors.token = 'Reset token is required.';
+    if (!formData.password) {
+      newErrors.password = 'Password is required.';
+    } else if (!rules.every((r) => r.ok)) {
+      newErrors.password = 'Password does not meet the requirements below.';
     }
-    if (password !== confirmPassword) {
-      next.confirmPassword = 'Passwords do not match.';
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match.';
     }
-    setErrors(next);
-    return Object.keys(next).length === 0;
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
-    setApiError('');
     if (!validate()) return;
-
     setIsLoading(true);
     try {
-      await apiClient.post(ENDPOINTS.AUTH.RESET_PASSWORD, {
-        token: token.trim(),
-        password,
-        confirmPassword,
+      await apiClient.post('/auth/reset-password', {
+        token: formData.token.trim(),
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
       });
       setDone(true);
-      toast.success('Password updated! Please sign in.');
-      setTimeout(() => router.replace('/(auth)/login'), 1500);
+      leaveTimer.current = setTimeout(() => router.replace('/login'), 2000);
     } catch (err) {
       setApiError(err.message || 'Reset failed. The link may have expired.');
     } finally {
@@ -58,50 +76,172 @@ export default function ResetPassword() {
     }
   };
 
-  if (done) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Password updated</Text>
-        <Text style={styles.subtitle}>You can now sign in with your new password. Redirecting…</Text>
-        <Link href="/(auth)/login" style={styles.link}>Go to Sign In now</Link>
-      </View>
-    );
-  }
+  const confirmMatches = formData.confirmPassword && formData.confirmPassword === formData.password;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Reset Password</Text>
-      <Text style={styles.subtitle}>
-        {hasTokenFromParams
-          ? 'Choose a new password for your account.'
-          : "Paste the reset token from your email and choose a new password."}
-      </Text>
+    <AuthSheet switchTo="/login" switchLabel="Log in" switchBold>
+      {done ? (
+        <AuthDone>
+          <DoneIcon Icon={CheckCircleIcon} />
+          <DoneTitle>Password updated</DoneTitle>
+          <DoneText>You can now log in with your new password. Taking you to log in…</DoneText>
+          <AuthSubmit label="Log in now" onPress={() => { clearTimeout(leaveTimer.current); router.replace('/login'); }} />
+        </AuthDone>
+      ) : (
+        <View style={styles.card}>
+          <Text accessibilityRole="header" style={styles.title}>Reset your password</Text>
+          <Text style={styles.description}>
+            {hasTokenFromUrl
+              ? 'Choose a new password for your account. This link expires in 1 hour.'
+              : 'Paste the reset token from your email and choose a new password.'}
+          </Text>
 
-      {apiError ? <Text style={styles.apiError}>{apiError}</Text> : null}
+          <View style={styles.form}>
+            {!hasTokenFromUrl ? (
+              <AuthField
+                kind="sheet"
+                label="Reset token"
+                value={formData.token}
+                onChangeText={(v) => handleChange('token', v)}
+                placeholder="Paste your reset token"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="off"
+                error={errors.token}
+              />
+            ) : null}
 
-      {!hasTokenFromParams && (
-        <TextField label="Reset Token" value={token} onChangeText={setToken} placeholder="Paste your reset token" error={errors.token} />
+            <View>
+              <AuthField
+                kind="sheet"
+                label="New password"
+                secure
+                eyeSize={20}
+                eyeStart
+                show={showPassword}
+                onToggleShow={() => setShowPassword((v) => !v)}
+                value={formData.password}
+                onChangeText={(v) => handleChange('password', v)}
+                placeholder="New password"
+                autoComplete="new-password"
+                textContentType="newPassword"
+                error={errors.password}
+              />
+              {formData.password ? (
+                <View style={styles.rules} accessibilityLabel="Password requirements">
+                  {rules.map((r) => (
+                    <View key={r.label} style={styles.rule}>
+                      <View style={[styles.ruleDot, r.ok && styles.ruleDotOk]}>
+                        {r.ok ? <CheckIcon size={10} weight="bold" color="#fff" /> : null}
+                      </View>
+                      <Text style={[styles.ruleText, r.ok && styles.ruleTextOk]}>{r.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+
+            <View>
+              <AuthField
+                kind="sheet"
+                label="Confirm new password"
+                value={formData.confirmPassword}
+                onChangeText={(v) => handleChange('confirmPassword', v)}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                textContentType="newPassword"
+                onSubmitEditing={handleSubmit}
+                error={errors.confirmPassword}
+              />
+              {!errors.confirmPassword && confirmMatches ? (
+                <View style={styles.match}>
+                  <CheckIcon size={12} weight="bold" color={t.primary[700]} />
+                  <Text style={styles.matchText}>Passwords match</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {apiError ? (
+              <View accessibilityRole="alert" style={styles.apiError}>
+                <Text style={styles.apiErrorText}>{apiError}</Text>
+                <Text style={styles.apiErrorMore}>
+                  Need a new link?{' '}
+                  <Text accessibilityRole="link" style={styles.apiErrorLink} onPress={() => router.replace('/forgot-password')}>
+                    Request another one
+                  </Text>
+                  .
+                </Text>
+              </View>
+            ) : null}
+
+            <AuthSubmit
+              label="Reset password"
+              busyLabel="Resetting…"
+              busy={isLoading}
+              fade
+              onPress={handleSubmit}
+              style={styles.submit}
+            />
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Remembered it? </Text>
+            <Pressable accessibilityRole="link" onPress={() => router.replace('/login')} style={styles.backLink}>
+              <Text style={styles.backLinkText}>Log in</Text>
+            </Pressable>
+          </View>
+        </View>
       )}
-      <TextField label="New Password" value={password} onChangeText={setPassword} placeholder="••••••••" secureTextEntry error={errors.password} />
-      <TextField label="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="••••••••" secureTextEntry error={errors.confirmPassword} />
-
-      <Button title="Reset Password" onPress={handleSubmit} loading={isLoading} style={styles.button} />
-
-      <Link href="/(auth)/login" style={styles.link}>Back to Login</Link>
-    </View>
+    </AuthSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.bgPrimary,
+  // .rp-card lays its parts 8px apart.
+  card: { paddingTop: 8, gap: 8 },
+  title: {
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 28,
+    lineHeight: 32.2,
+    letterSpacing: -0.28,
+    color: t.neutral[900],
+    ...font(500),
   },
-  title: { ...typography.h1, color: colors.primary, textAlign: 'center' },
-  subtitle: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xl },
-  apiError: { ...typography.body, color: colors.error, textAlign: 'center', marginBottom: spacing.md },
-  button: { marginTop: spacing.sm },
-  link: { ...typography.body, color: colors.primaryDark, textAlign: 'center', marginTop: spacing.xl },
+  description: { marginBottom: 24, fontSize: 15, lineHeight: 22.5, color: t.neutral[500], ...font(400) },
+  form: { gap: 20 },
+  rules: { marginTop: 18, gap: 6 },
+  rule: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  ruleDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: t.neutral[200],
+  },
+  ruleDotOk: { backgroundColor: t.primary[600] },
+  ruleText: { fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
+  ruleTextOk: { color: t.primary[700] },
+  match: { marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  matchText: { fontSize: 13, lineHeight: 20.8, color: t.primary[700], ...font(400) },
+  apiError: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: t.danger[200],
+    backgroundColor: t.danger[50],
+  },
+  apiErrorText: { fontSize: 14, lineHeight: 22.4, color: t.danger[600], ...font(400) },
+  apiErrorMore: { marginTop: 6, fontSize: 12, lineHeight: 19.2, color: t.danger[600], ...font(400) },
+  apiErrorLink: { color: t.primary[600] },
+  submit: { marginTop: 4 },
+  footer: { marginTop: 24, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  footerText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[600], ...font(400) },
+  backLink: { minHeight: 44, justifyContent: 'center' },
+  backLinkText: { fontSize: 14, lineHeight: 22.4, color: t.primary[600], ...font(500) },
 });

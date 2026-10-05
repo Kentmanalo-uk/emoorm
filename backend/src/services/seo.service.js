@@ -196,7 +196,7 @@ const productMeta = async (slug) => {
   const product = await prisma.product.findFirst({
     where: { slug, deletedAt: null, status: 'APPROVED', store: VISIBLE_STORE },
     select: {
-      name: true, slug: true, description: true, price: true, stock: true,
+      name: true, slug: true, description: true, price: true, stock: true, productType: true,
       images: true, updatedAt: true,
       category: { select: { name: true } },
       municipality: { select: { name: true } },
@@ -213,6 +213,8 @@ const productMeta = async (slug) => {
   );
   const image = absolute(firstImage(product.images));
   const inStock = Number(product.stock) > 0;
+  // Paluto is cooked when ordered: never out of stock.
+  const madeToOrder = product.productType === 'COOK_TO_ORDER';
 
   const ratings = product.reviews.map((r) => r.rating).filter((n) => Number.isFinite(n));
   const aggregate = ratings.length
@@ -248,9 +250,11 @@ const productMeta = async (slug) => {
           url: `${ORIGIN}/product/${product.slug}`,
           priceCurrency: 'PHP',
           price: peso(product.price),
-          availability: inStock
-            ? 'https://schema.org/InStock'
-            : 'https://schema.org/OutOfStock',
+          availability: madeToOrder
+            ? 'https://schema.org/MadeToOrder'
+            : inStock
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
           itemCondition: 'https://schema.org/NewCondition',
           ...(product.store?.name
             ? { seller: { '@type': 'Organization', name: product.store.name } }

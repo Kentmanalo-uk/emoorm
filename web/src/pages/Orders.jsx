@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { rangeLabel } from '../lib/eta';
-import { spanLabel, momentLabel } from '../lib/availability';
+import { momentLabel } from '../lib/availability';
+import { isStockless, minOrder } from '../lib/productKinds';
+import {
+  etaLabel, lineKind, lineNote, lineUnit, countLabel,
+} from '../lib/orderLines';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -212,10 +215,13 @@ const Orders = () => {
         const line = lines[index];
         const product = result.status === 'fulfilled' ? result.value?.data : null;
         const stock = Number(product?.stock ?? 0);
-        if (!product || product.status !== 'APPROVED' || stock <= 0) {
+        // Paluto has no stock: it is cooked when ordered.
+        const stockless = isStockless(product);
+        if (!product || product.status !== 'APPROVED' || (!stockless && stock <= 0)) {
           skipped += 1;
           return;
         }
+        const wanted = Number(line.quantity) || 1;
         try {
           addItem({
             id: product.id,
@@ -229,8 +235,15 @@ const Orders = () => {
             stock,
             slug: product.slug,
             categoryId: product.categoryId,
+            listingKind: product.listingKind,
+            availability: product.availability,
+            productType: product.productType,
+            details: product.details,
+            fulfillment: product.fulfillment,
+            weightGrams: product.weightGrams,
+            packageItems: product.packageItems,
             selectedVariations: line.selectedVariations || null,
-          }, Math.max(1, Math.min(Number(line.quantity) || 1, stock)));
+          }, Math.max(minOrder(product), stockless ? wanted : Math.min(wanted, stock)));
           keys.push(cartKeyFor({ id: product.id, selectedVariations: line.selectedVariations || null }));
           added += 1;
         } catch {
@@ -463,10 +476,14 @@ const Orders = () => {
                         <ProductImage src={item.product?.images?.[0]} alt={item.productName} className="order-item-image" />
                         <div className="order-item-details">
                           <p className="order-item-name">{item.productName}</p>
-                          <p className="order-item-quantity">Qty: {item.quantity}</p>
+                          {lineNote(item, { choice: true }) && <p className="order-item-note">{lineNote(item, { choice: true })}</p>}
+                          <p className="order-item-quantity">
+                            {lineKind(item) === 'LIVESTOCK' ? countLabel(item) : `Qty: ${item.quantity}`}
+                          </p>
                         </div>
                         <div className="order-item-price">
                           ₱{parseFloat(item.price).toFixed(2)}
+                          {lineUnit(item) && <small className="order-item-unit">{lineUnit(item)}</small>}
                         </div>
                       </div>
                     ))}
@@ -495,11 +512,7 @@ const Orders = () => {
                     {order.etaFrom && !['COMPLETED', 'CANCELLED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && (
                       <div className="order-info-item">
                         <span className="order-info-label">{order.fulfillmentMethod === 'PICKUP' ? 'Ready for pickup' : 'Expected'}</span>
-                        <span className="order-info-value order-eta">
-                          {order.respondBy
-                            ? spanLabel(order.etaFrom, order.etaTo || order.etaFrom)
-                            : rangeLabel({ from: order.etaFrom, to: order.etaTo || order.etaFrom })}
-                        </span>
+                        <span className="order-info-value order-eta">{etaLabel(order)}</span>
                       </div>
                     )}
                     {order.respondBy && order.status === 'PENDING' && (
@@ -793,10 +806,16 @@ const Orders = () => {
                       <ProductImage src={item.product?.images?.[0]} alt={item.productName} />
                       <div className="order-details-item-info">
                         <p className="item-name">{item.productName}</p>
-                        <p className="item-quantity">Quantity: {item.quantity}</p>
+                        {lineNote(item, { choice: true }) && <p className="order-item-note">{lineNote(item, { choice: true })}</p>}
+                        <p className="item-quantity">
+                          {lineKind(item) === 'LIVESTOCK' ? countLabel(item) : `Quantity: ${item.quantity}`}
+                        </p>
                       </div>
                       <div className="order-details-item-price">
-                        <p>₱{parseFloat(item.price).toFixed(2)}</p>
+                        <p>
+                          ₱{parseFloat(item.price).toFixed(2)}
+                          {lineUnit(item) && <small className="order-item-unit">{lineUnit(item)}</small>}
+                        </p>
                         <p className="item-subtotal">
                           Subtotal: ₱{parseFloat(item.subtotal).toFixed(2)}
                         </p>

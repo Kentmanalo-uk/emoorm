@@ -1,8 +1,9 @@
 const prisma = require('../config/database');
 const { termsOf, whereFor, scoreOf, correct, vocabularyOf } = require('../utils/searchTerms');
-const { stockedVariation, totalOptionStock } = require('../utils/variantPricing');
+const { stockedVariation, totalOptionStock, activeSalePrice } = require('../utils/variantPricing');
 const { invalidate, TAGS } = require('../lib/cachePolicy');
 const { liveNow, currentWindow, publicWindow } = require('../utils/availability');
+const { kindOf } = require('../utils/productKinds');
 
 /**
  * Drop the cached copies a product write makes stale. Invalidation lives at
@@ -65,9 +66,47 @@ const withAvailability = (product) => {
   return { ...rest, availability: publicWindow(currentWindow(availabilities)) };
 };
 
+const money = (n) => Math.round(n * 100) / 100;
+
+/**
+ * The product's kind (Available Today rows read as ready-to-eat food), and for
+ * a package what is inside: each item with a short look at its product, and
+ * packageValue, what the items cost bought one by one now.
+ */
+const withKind = (product) => {
+  const { packageItems, ...rest } = product;
+  if (rest.productType === undefined) return rest;
+  const productType = kindOf(rest);
+  if (productType !== 'PACKAGE' || !Array.isArray(packageItems)) return { ...rest, productType };
+  const items = packageItems.map(({ productId, quantity, product: item }) => {
+    const first = normalizeImages(item?.images)[0];
+    return {
+      productId,
+      quantity,
+      product: item ? {
+        id: item.id,
+        name: item.name,
+        slug: item.slug,
+        images: first ? [first] : [],
+        price: item.price,
+        salePrice: item.salePrice,
+        saleStartsAt: item.saleStartsAt,
+        saleEndsAt: item.saleEndsAt,
+        status: item.status,
+        productType: kindOf(item),
+        deletedAt: item.deletedAt,
+      } : null,
+    };
+  });
+  const packageValue = money(items.reduce((sum, it) => (it.product
+    ? sum + (activeSalePrice(it.product) ?? Number(it.product.price || 0)) * it.quantity
+    : sum), 0));
+  return { ...rest, productType, packageItems: items, packageValue };
+};
+
 const withImages = (product) => {
   if (!product) return product;
-  return withAvailability({ ...product, images: normalizeImages(product.images) });
+  return withAvailability(withKind({ ...product, images: normalizeImages(product.images) }));
 };
 
 const withImagesList = (products) => (products || []).map(withImages);
@@ -102,7 +141,7 @@ const PUBLIC_STORE_SELECT = {
   municipality: { select: { id: true, name: true } },
 };
 
-const CATEGORY_SELECT = { id: true, name: true, slug: true, image: true };
+const CATEGORY_SELECT = { id: true, name: true, slug: true, image: true, kind: true };
 const MUNICIPALITY_SELECT = { id: true, name: true, code: true };
 
 /** A product's open and upcoming Available Today windows (withAvailability picks one). */
@@ -112,9 +151,35 @@ const AVAILABILITY_INCLUDE = {
   take: 3,
 };
 
+/** A package's items, in the seller's order (withKind shapes them). */
+const PACKAGE_ITEMS_INCLUDE = {
+  orderBy: { position: 'asc' },
+  select: {
+    productId: true,
+    quantity: true,
+    product: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        images: true,
+        price: true,
+        salePrice: true,
+        saleStartsAt: true,
+        saleEndsAt: true,
+        status: true,
+        productType: true,
+        listingKind: true,
+        deletedAt: true,
+      },
+    },
+  },
+};
+
 /** Include used by every detail-shaped read and write (owner id for the ownership check, no contact number). */
 const DETAIL_INCLUDE = {
   availabilities: AVAILABILITY_INCLUDE,
+  packageItems: PACKAGE_ITEMS_INCLUDE,
   store: {
     select: {
       ...PUBLIC_STORE_SELECT,
@@ -128,6 +193,7 @@ const DETAIL_INCLUDE = {
 /** Include used by list reads: same store shape, no owner. */
 const LIST_INCLUDE = {
   availabilities: AVAILABILITY_INCLUDE,
+  packageItems: PACKAGE_ITEMS_INCLUDE,
   store: { select: PUBLIC_STORE_SELECT },
   category: { select: CATEGORY_SELECT },
   municipality: { select: { id: true, name: true } },
@@ -251,6 +317,9 @@ const SORTABLE_COLUMNS = new Set(['createdAt', 'price', 'name']);
 
 // Products whose stock a seller should watch (archived and suspended ones cannot sell).
 const STOCK_WATCH_STATUSES = ['APPROVED', 'PENDING', 'HIDDEN'];
+// Products that keep stock a seller tops up: not Available Today ones (0
+// between windows) nor cooked-to-order ones (no stock at all).
+const KEEPS_STOCK = { listingKind: 'REGULAR', productType: { not: 'COOK_TO_ORDER' } };
 // Out of stock, or at/below the product's own low-stock mark.
 const RESTOCK_WHERE = () => ({
   OR: [{ stock: { lte: 0 } }, { stock: { lte: prisma.product.fields.lowStockThreshold } }],
@@ -264,8 +333,9 @@ const RESTOCK_WHERE = () => ({
  */
 const getStoreSummary = async (storeId) => {
   const base = { storeId, deletedAt: null };
-  // Available Today products sit at 0 between windows: never "out of stock".
-  const watched = { ...base, status: { in: STOCK_WATCH_STATUSES }, listingKind: 'REGULAR' };
+  // Available Today products sit at 0 between windows, and cooked-to-order
+  // food keeps none: never "out of stock".
+  const watched = { ...base, status: { in: STOCK_WATCH_STATUSES }, ...KEEPS_STOCK };
   const [groups, outOfStock, lowStock] = await Promise.all([
     prisma.product.groupBy({ by: ['status'], where: base, _count: { _all: true } }),
     prisma.product.count({ where: { ...watched, stock: { lte: 0 } } }),
@@ -306,6 +376,7 @@ const findAll = async (options = {}) => {
     publicListing,
     todayOnly,
     listingKind,
+    productType,
     sortBy = 'createdAt',
     sortOrder = 'desc',
   } = options;
@@ -319,6 +390,12 @@ const findAll = async (options = {}) => {
   if (municipalityId) where.municipalityId = municipalityId;
   if (status) where.status = status;
   if (listingKind) where.listingKind = listingKind;
+  // One kind of product; Available Today products count as ready-to-eat food.
+  if (productType === 'READY_TO_EAT') {
+    where.AND = [...(where.AND || []), { OR: [{ productType }, { listingKind: 'TODAY' }] }];
+  } else if (productType) {
+    where.AND = [...(where.AND || []), { productType, listingKind: 'REGULAR' }];
+  }
 
   // Available Today products are on public lists only while a window takes
   // orders; between windows they wait in the seller's catalogue.
@@ -336,7 +413,7 @@ const findAll = async (options = {}) => {
   // own low-stock mark, among products that can still sell.
   if (stockFilter) {
     if (!status) where.status = { in: STOCK_WATCH_STATUSES };
-    where.AND = [...(where.AND || []), { listingKind: 'REGULAR' }, stockFilter === 'out' ? { stock: { lte: 0 } } : RESTOCK_WHERE()];
+    where.AND = [...(where.AND || []), KEEPS_STOCK, stockFilter === 'out' ? { stock: { lte: 0 } } : RESTOCK_WHERE()];
   }
 
   if (storeIsActive !== undefined || storeIsSuspended !== undefined || storeIsApproved !== undefined) {
@@ -465,9 +542,12 @@ const correctedSearch = async (options, words, empty) => {
  * @param {Object} [meta.stockBase] - The stock the editor showed when it opened
  *   ({ stock, stocks }): the seller's change is applied on top of the stock
  *   now, so units sold while the form was open are not put back.
+ * @param {String} [meta.stockReason] - The ledger reason for a stock change
  * @returns {Promise<Object>} Updated product
  */
-const updateProduct = async (id, data, { actorId = null, previousSlug = null, stockBase = null } = {}) => {
+const updateProduct = async (id, data, {
+  actorId = null, previousSlug = null, stockBase = null, stockReason = 'MANUAL_ADJUSTMENT',
+} = {}) => {
   const hasStock = Object.prototype.hasOwnProperty.call(data, 'stock') && data.stock !== undefined;
 
   const p = await prisma.$transaction(async (tx) => {
@@ -495,7 +575,7 @@ const updateProduct = async (id, data, { actorId = null, previousSlug = null, st
           productId: id,
           quantityDelta: delta,
           balanceAfter: updated.stock,
-          reason: 'MANUAL_ADJUSTMENT',
+          reason: stockReason,
           actorId,
         },
       });

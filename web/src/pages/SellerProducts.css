@@ -939,3 +939,84 @@ a.pm-btn {
     padding: 0;
   }
 }
+
+/* ── Kinds of product: what each one's stock counts ───────────── */
+/* "/ head", "/ package" after the price. */
+.product-price-unit {
+  margin-left: 2px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Package / Made to order, beside the stock. */
+.product-kind-badge {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.product-stock-note {
+  color: var(--t-neutral-500, #636b78);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Paluto rows: Edit and ⋯ only (nothing to restock). */
+@media (max-width: 768px) {
+  .sc-shell .sc-content .pm-actions--two {
+    grid-template-columns: 1fr 44px;
+  }
+
+  /* Packages start from a row at the top of the list (the header's +
+     adds a product). */
+  .spm-package {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin: 0 0 10px;
+    padding: 14px 14px 14px 16px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-900, #111827);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .spm-package:active {
+    background: var(--t-neutral-50, #f9fafb);
+  }
+
+  .spm-package-icon {
+    flex-shrink: 0;
+    color: var(--t-primary-600, #059669);
+  }
+
+  .spm-package-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .spm-package-text b {
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .spm-package-text span {
+    color: var(--t-neutral-500, #636b78);
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  .spm-package-arrow {
+    flex-shrink: 0;
+    color: var(--t-neutral-400, #9ca3af);
+  }
+}

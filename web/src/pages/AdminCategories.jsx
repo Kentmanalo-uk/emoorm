@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Plus, PencilSimple as Pencil, Trash as Trash2, ToggleLeft, ToggleRight, X, Check, UploadSimple as Upload, Image as ImageIcon, CircleNotch as Loader2 } from '@phosphor-icons/react';
+import { Plus, PencilSimple as Pencil, Trash as Trash2, ToggleLeft, ToggleRight, X, Check, UploadSimple as Upload, Image as ImageIcon, CircleNotch as Loader2, Basket, CookingPot, Cow } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
@@ -10,7 +10,32 @@ import EmptyArt from '../components/ui/EmptyArt';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import { CATEGORY_ICONS, CATEGORY_ICON_KEYS, categoryIconKey } from '../lib/categoryIcons';
 import '../components/admin/AdminLayout.css';
+import './AdminCategories.css';
 import { confirmAction } from '../lib/confirm';
+
+/**
+ * A category's kind decides the "What kind?" question sellers get when they
+ * add a product in it (kindChoices in lib/productKinds.js). Products already
+ * listed keep their own kind when it changes.
+ */
+const KINDS = [
+  { key: 'GOODS', label: 'Goods', Icon: Basket, hint: 'Regular products with stock. Sellers get no extra question.' },
+  { key: 'FOOD', label: 'Food', Icon: CookingPot, hint: 'Sellers also pick: packed product, ready to eat today, or paluto (cooked to order).' },
+  { key: 'LIVESTOCK', label: 'Livestock', Icon: Cow, hint: 'Sellers also pick: live animal sold per head, or meat and other products.' },
+];
+const kindOf = (cat) => KINDS.find((k) => k.key === cat?.kind) || KINDS[0];
+
+function KindPill({ category }) {
+  const { key, label, Icon } = kindOf(category);
+  return (
+    <span className={`admin-cat-kind-pill is-${key.toLowerCase()}`}>
+      <Icon size={13} weight="fill" aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
+
+const EMPTY_FORM = { name: '', description: '', image: '', icon: '', kind: 'GOODS' };
 
 export default function AdminCategories() {
   const [categories, setCategories] = useState([]);
@@ -18,7 +43,7 @@ export default function AdminCategories() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null); // null = create, category = edit
   // icon: '' = Auto (picked from the name).
-  const [form, setForm] = useState({ name: '', description: '', image: '', icon: '' });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
@@ -34,7 +59,9 @@ export default function AdminCategories() {
   const fetchCategories = async () => {
     setIsLoading(true);
     try {
-      const res = await axios.get('/categories', { params: { includeInactive: true } });
+      // Browsers may keep GET /categories for 15 minutes (publicCache): the
+      // page that edits them always asks the server, so a save shows at once.
+      const res = await axios.get('/categories', { params: { includeInactive: true, at: Date.now() } });
       setCategories(res.data || []);
     } catch {
       toast.error('Failed to load categories');
@@ -45,13 +72,13 @@ export default function AdminCategories() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', description: '', image: '', icon: '' });
+    setForm(EMPTY_FORM);
     setShowForm(true);
   };
 
   const openEdit = (cat) => {
     setEditing(cat);
-    setForm({ name: cat.name, description: cat.description || '', image: cat.image || '', icon: cat.icon || '' });
+    setForm({ name: cat.name, description: cat.description || '', image: cat.image || '', icon: cat.icon || '', kind: kindOf(cat).key });
     setShowForm(true);
   };
 
@@ -238,6 +265,28 @@ export default function AdminCategories() {
                 </div>
               </div>
               <div className="admin-form-field">
+                <label id="admin-cat-kind-label">Kind</label>
+                <p className="admin-cat-icon-help">What sellers are asked when they add a product here. Products already listed keep their kind.</p>
+                <div className="admin-cat-kinds" role="radiogroup" aria-labelledby="admin-cat-kind-label">
+                  {KINDS.map(({ key, label, hint, Icon }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="radio"
+                      aria-checked={form.kind === key}
+                      className={`admin-cat-kind-opt is-${key.toLowerCase()}${form.kind === key ? ' is-on' : ''}`}
+                      onClick={() => setForm((f) => ({ ...f, kind: key }))}
+                    >
+                      <span className="admin-cat-kind-icon" aria-hidden="true"><Icon size={18} weight="fill" /></span>
+                      <span className="admin-cat-kind-text">
+                        <strong>{label}</strong>
+                        <span>{hint}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="admin-form-field">
                 <label>Homepage icon</label>
                 <p className="admin-cat-icon-help">Shown when Settings › Branding › Homepage categories is set to Icons.</p>
                 <div className="admin-cat-icons" role="radiogroup" aria-label="Homepage icon">
@@ -300,6 +349,7 @@ export default function AdminCategories() {
                   <th>Image</th>
                   <th>Icon</th>
                   <th>Name</th>
+                  <th>Kind</th>
                   <th>Slug</th>
                   <th>Description</th>
                   <th>Status</th>
@@ -324,6 +374,7 @@ export default function AdminCategories() {
                       </span>
                     </td>
                     <td style={{ fontWeight: 600, color: 'var(--t-neutral-900, #0f172a)' }}>{cat.name}</td>
+                    <td><KindPill category={cat} /></td>
                     <td><code style={{ fontSize: 12, color: 'var(--t-neutral-500, #64748b)' }}>{cat.slug}</code></td>
                     <td style={{ fontSize: 13, color: 'var(--t-neutral-500, #64748b)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {cat.description || '—'}

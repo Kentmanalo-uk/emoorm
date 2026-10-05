@@ -10,7 +10,7 @@ import { joinPickup, splitPickup } from '../../lib/pickupAddress';
  */
 export default function PickupAddressField({ value, shopTown, municipalities, onChange }) {
   // The picker finds the saved barangay on its list by itself.
-  const [parts, setParts] = useState(() => splitPickup(value, shopTown));
+  const [parts, setParts] = useState(() => splitPickup(value, shopTown)); 
 
   const handleChange = (next) => {
     const merged = { ...parts, ...next };

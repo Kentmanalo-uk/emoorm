@@ -1,8 +1,11 @@
 const prisma = require('../config/database');
 const { invalidateProductIds } = require('./product.repository');
-const { changeStock } = require('./stockLedger');
+const { changeStock, giveBack } = require('./stockLedger');
 const { stageWhere } = require('../utils/orderStages');
 const { isOpen } = require('../utils/availability');
+
+// Order lines show what kind of product each was (a package, a paluto…).
+const KIND_FIELDS = { productType: true, details: true, fulfillment: true };
 
 const ORDER_STATUSES = new Set(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP', 'SHIPPED']);
 
@@ -44,6 +47,7 @@ const createOrder = async (data) => {
               name: true,
               slug: true,
               images: true,
+              ...KIND_FIELDS,
             },
           },
         },
@@ -74,19 +78,25 @@ const createOrderWithItems = async (orderData, itemsData, voucherRedemption = nu
 
 const createOrderTx = (orderData, itemsData, voucherRedemption) => withDeadlockRetry(() => prisma.$transaction(async (tx) => {
     // Take stock under a row lock (per option when the product keeps stock
-    // per option); fails if there is not enough.
+    // per option); fails if there is not enough. Cooked-to-order food keeps
+    // none, and a package only its own (never its items').
+    // Each line remembers whether it took any, for cancellations and returns.
+    const tookNone = new Set();
     for (const item of [...itemsData].sort(byProductId)) {
       const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, -item.quantity);
-      await tx.inventoryMovement.create({
-        data: {
-          productId: item.productId,
-          quantityDelta: -item.quantity,
-          balanceAfter,
-          reason: 'SALE',
-          referenceId: orderData.checkoutKey || orderData.orderNumber,
-          actorId: orderData.buyerId,
-        },
-      });
+      if (balanceAfter === null) tookNone.add(item);
+      else {
+        await tx.inventoryMovement.create({
+          data: {
+            productId: item.productId,
+            quantityDelta: -item.quantity,
+            balanceAfter,
+            reason: 'SALE',
+            referenceId: orderData.checkoutKey || orderData.orderNumber,
+            actorId: orderData.buyerId,
+          },
+        });
+      }
       // Available Today: counted against its window, which must still be
       // taking orders now (the clock may have ended it since checkout began).
       if (item.availabilityId) {
@@ -114,6 +124,7 @@ const createOrderTx = (orderData, itemsData, voucherRedemption) => withDeadlockR
           data: {
             ...item,
             orderId: order.id,
+            stockTaken: !tookNone.has(item),
           },
         })
       )
@@ -200,6 +211,7 @@ const createOrderTx = (orderData, itemsData, voucherRedemption) => withDeadlockR
                 name: true,
                 slug: true,
                 images: true,
+                ...KIND_FIELDS,
                 price: true,
               },
             },
@@ -311,6 +323,7 @@ const findById = async (id) => {
               name: true,
               slug: true,
               images: true,
+              ...KIND_FIELDS,
               price: true,
             },
           },
@@ -407,6 +420,7 @@ const findAll = async (options = {}) => {
                 id: true,
                 name: true,
                 images: true,
+                ...KIND_FIELDS,
               },
             },
           },
@@ -648,7 +662,7 @@ const cancelOrderTx = async (id, actorId = null, {
     const items = await tx.orderItem.findMany({
       where: { orderId: id },
       select: {
-        productId: true, quantity: true, selectedVariations: true, availabilityId: true, availability: true,
+        productId: true, quantity: true, selectedVariations: true, availabilityId: true, availability: true, stockTaken: true,
       },
       orderBy: { productId: 'asc' },
     });
@@ -664,7 +678,9 @@ const cancelOrderTx = async (id, actorId = null, {
         });
         if (!isOpen(item.availability)) continue;
       }
-      const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, item.quantity);
+      // What the line took when ordered, not what the product is now.
+      const balanceAfter = await giveBack(tx, item, { intoWindow: Boolean(item.availabilityId) });
+      if (balanceAfter === null) continue;
       await tx.inventoryMovement.create({
         data: {
           productId: item.productId,

@@ -1,0 +1,5 @@
+-- Abandoned feature (separate livestock listings), intentionally empty.
+-- Development databases recorded it as applied before its folder was emptied;
+-- production never had it. Live animals are now products with productType
+-- LIVESTOCK (see 20261006090000_product_kinds), and the old table is dropped
+-- in 20261006090500_drop_livestock_listings.

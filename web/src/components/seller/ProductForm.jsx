@@ -1,155 +1,90 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  Camera, X, Plus, Trash, CircleNotch, Info, ArrowLeft, Check,
+  CircleNotch, Info, ArrowLeft, ArrowRight, Check, CheckCircle,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
-import { uploadImage } from '../../lib/upload';
-import { resolveImg } from '../../lib/media';
+import { usePhoneLayout } from '../../hooks/useMobileNav';
+import useAppSettings from '../../hooks/useAppSettings';
+import { productKind, kindLabel, headsLabel } from '../../lib/productKinds';
 import ConfirmDialog from '../ui/ConfirmDialog';
-import './ProductForm.css';
 import { BusyLabel } from '../ui/Spinner';
+import BasicsStep from './product-form/BasicsStep';
+import DetailsStep from './product-form/DetailsStep';
+import MoreStep from './product-form/MoreStep';
+import ReviewStep from './product-form/ReviewStep';
+import {
+  STEPS, DETAIL_TITLES, RETURN_POLICIES, MAX_GROUPS,
+  toFormState, kindOptions, switchKind, kindOffers, withDrafts, pricedBy, priceSpan, buildPayload,
+  checkStep, checkAll, hasErrors, rowsWithErrors, draftProduct, detailLines, policyModeFor,
+  emptyGroup, mergeChoices, peso,
+} from './product-form/formState';
+import './PhoneSaveBar.css';
+import './ProductForm.css';
 
 /*
- * Add / edit a product, written for sellers who are not "techy": five short
- * steps in the order people think about a listing (photos, what it is, its
- * choices, price and stock, returns), plain words, and the Save button always
- * in reach at the bottom of the screen.
+ * Add / edit a product (every kind but packages, which have their own form),
+ * as a few easy questions in four steps: Basics, Details for the kind of
+ * product, Extras (closed until wanted) and a Review of what buyers
+ * will see.
  *
- * The payload is the same one the product API has always taken.
+ * One step per screen with Back / Next at the bottom, on phones and
+ * computers. Each step is a history entry (?step=2), so the browser's (or
+ * the top bar's) back goes back a step.
  */
 
-const MAX_IMAGES = 10;
-const NAME_MIN = 2;
-const NAME_MAX = 200;
-const DESCRIPTION_MIN = 10;
-const DESCRIPTION_MAX = 5000;
-const MAX_GROUPS = 10;
-const MAX_CHOICES = 30;
+const LAST_STEP = STEPS.length;
+const FOOD = ['READY_TO_EAT', 'COOK_TO_ORDER'];
 
-// Common choice types. Picking one names the group and offers its usual
-// choices as one-tap suggestions; nothing is added without a tap.
-const CHOICE_TYPES = [
-  { name: 'Weight', example: '250g', suggestions: ['250g', '500g', '1kg'] },
-  { name: 'Size', example: 'Small', suggestions: ['Small', 'Medium', 'Large'] },
-  { name: 'Color', example: 'Red', suggestions: ['Red', 'Blue', 'Green', 'Black', 'White'] },
-  { name: 'Pack size', example: '1 piece', suggestions: ['1 piece', '3 pieces', '6 pieces'] },
-];
-
-const RETURN_POLICIES = [
-  {
-    key: 'none',
-    title: 'No returns',
-    hint: 'Only wrong or damaged items, asked for within 3 days',
-    text: 'No returns or refunds accepted unless the item is incorrect or damaged on arrival.',
-  },
-  {
-    key: '7day',
-    title: '7-day returns',
-    hint: 'Wrong or damaged items, within 7 days, with proof',
-    text: 'Returns or refunds accepted within 7 days for incorrect or damaged items. Buyer must provide proof.',
-  },
-  {
-    key: 'perishable',
-    title: 'Perishable goods',
-    hint: 'Problems reported within 2 days, with a photo',
-    text: 'For perishable goods, report incorrect or damaged items on delivery with photo proof.',
-  },
-];
-
-let groupSeq = 0;
-const nextKey = () => {
-  groupSeq += 1;
-  return `g${groupSeq}`;
+const STEP_HINTS = {
+  basics: 'What you sell, a photo and its price.',
+  more: 'All optional. Skip this step if you don’t need them.',
+  review: 'Check it, then add it to your shop.',
+};
+const DETAIL_HINTS = {
+  REGULAR: 'How many you have and how buyers get it.',
+  READY_TO_EAT: 'How many you have today, until when, and how buyers get it.',
+  COOK_TO_ORDER: 'Sizes, cooking time, and when you cook.',
+  LIVESTOCK: 'About the animal, and how buyers get it.',
 };
 
-const asStrings = (obj) => (obj && typeof obj === 'object'
-  ? Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, String(v)]))
-  : {});
-
-// A stored time as the value of a datetime-local input (the device's time).
-const toLocalInput = (value) => {
-  if (!value) return '';
-  const d = new Date(value);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-
-const toFormState = (product) => ({
-  name: product?.name || '',
-  description: product?.description || '',
-  price: product ? String(Number(product.price) || '') : '',
-  // A sale: a lower price, optionally from / until a time (a flash sale).
-  saleOn: product?.salePrice !== null && product?.salePrice !== undefined,
-  salePrice: product?.salePrice ? String(Number(product.salePrice)) : '',
-  saleStartsAt: toLocalInput(product?.saleStartsAt),
-  saleEndsAt: toLocalInput(product?.saleEndsAt),
-  // Bulk prices: more units, lower price each.
-  priceTiers: Array.isArray(product?.priceTiers)
-    ? product.priceTiers.map((t) => ({ minQty: String(t.minQty), price: String(t.price) }))
-    : [],
-  stock: product ? String(product.stock ?? '') : '',
-  // REGULAR: kept in stock. TODAY: posted with a quantity on the days it is
-  // made or harvested (Today's menu), so it has no stock of its own here.
-  listingKind: product?.listingKind === 'TODAY' ? 'TODAY' : 'REGULAR',
-  // Kilograms in the form; the API keeps grams.
-  weightKg: product?.weightGrams ? String(product.weightGrams / 1000) : '',
-  categoryId: product?.categoryId || product?.category?.id || '',
-  images: Array.isArray(product?.images) ? product.images.filter(Boolean) : [],
-  returnPolicy: product?.returnPolicy || '',
-  variations: Array.isArray(product?.variations)
-    ? product.variations.map((v) => ({
-      key: nextKey(),
-      name: v?.name || '',
-      choices: Array.isArray(v?.options) ? v.options.map(String) : [],
-      draft: '',
-      priced: !!(v?.prices && Object.keys(v.prices).length),
-      prices: asStrings(v?.prices),
-      stocked: !!(v?.stocks && Object.keys(v.stocks).length),
-      stocks: asStrings(v?.stocks),
-    }))
-    : [],
-});
-
-const emptyGroup = () => ({
-  key: nextKey(), name: '', choices: [], draft: '', priced: false, prices: {}, stocked: false, stocks: {},
-});
-
-const policyModeFor = (text) => {
-  if (!text) return null;
-  return RETURN_POLICIES.find((p) => p.text === text)?.key || 'custom';
-};
-
-const peso = (n) => `₱${Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const isWhole = (v) => /^\d+$/.test(String(v).trim());
-
-/** Split "250g, 500g" into choices; skip blanks and ones already there. */
-const mergeChoices = (existing, raw) => {
-  const out = [...existing];
-  for (const part of String(raw).split(',')) {
-    const choice = part.trim().slice(0, 80);
-    if (!choice || out.length >= MAX_CHOICES) continue;
-    if (!out.some((c) => c.toLowerCase() === choice.toLowerCase())) out.push(choice);
-  }
-  return out;
-};
+const WAY_TEXT = { PICKUP: 'Pickup only', DELIVERY: 'Delivery only' };
 
 /**
+ * @param {Object} [product] - The product being edited
+ * @param {Array} categories - Categories to choose from (with their kind)
  * @param {Array<{key, label}>} [sellBlockers] - What the shop still needs
  *   before it can sell; while any are left, buyers see products but cannot order.
  */
 export default function ProductForm({ product = null, categories = [], onCancel, onSaved, sellBlockers = [] }) {
   const editing = !!product;
-  const [initial] = useState(() => toFormState(product));
+  const isPhone = usePhoneLayout();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [params] = useSearchParams();
+  const outlet = useOutletContext();
+  const shopMode = outlet?.store?.fulfillmentMode || null;
+  const { settings } = useAppSettings();
+  const todayOn = settings?.availableTodayEnabled !== false;
+
+  const [initial, setInitial] = useState(() => toFormState(product));
   const [form, setForm] = useState(initial);
   const [hasOptions, setHasOptions] = useState(initial.variations.length > 0);
   const [policyMode, setPolicyMode] = useState(() => policyModeFor(initial.returnPolicy));
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [confirmLeave, setConfirmLeave] = useState(false);
+  // What leaving is for: 'cancel' or 'package' (asked while there are changes).
+  const [confirmLeave, setConfirmLeave] = useState(null);
   const [attempt, setAttempt] = useState(0);
-  // A shop that ships with couriers needs every product's weight: it is how
-  // the shipping fee is worked out.
+  const [openRows, setOpenRows] = useState([]);
+  // A new live animal just saved: offer to list another like it.
+  const [savedAnimal, setSavedAnimal] = useState(null);
+  const lastSaved = useRef(null);
+  const rootRef = useRef(null);
+
+  // A shop that ships with couriers needs every regular product's weight:
+  // it is how the shipping fee is worked out.
   const [couriersOn, setCouriersOn] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -158,267 +93,263 @@ export default function ProductForm({ product = null, categories = [], onCancel,
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
-  const rootRef = useRef(null);
 
   // Phones: the form takes the whole screen, so the bottom tab bar steps
-  // aside and the Save bar sits at the bottom edge instead.
+  // aside and the step bar sits at the bottom edge instead.
   useEffect(() => {
     document.body.classList.add('pf-open');
     return () => document.body.classList.remove('pf-open');
   }, []);
 
-  // After a failed save, bring the first problem into view.
+  // The step on screen.
+  const step = Math.min(LAST_STEP, Math.max(1, parseInt(params.get('step') || '1', 10) || 1));
+
+  // Opened on a later step (a reload): the answers are gone, so start over.
+  const openedOn = useRef(step);
+  useEffect(() => {
+    if (openedOn.current <= 1) return;
+    const next = new URLSearchParams(params);
+    next.delete('step');
+    navigate({ search: next.toString() ? `?${next.toString()}` : '' }, { replace: true, state: location.state });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A new step starts at the top of the screen.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [step]);
+
+  // After a failed check, bring the first problem into view.
   useEffect(() => {
     if (!attempt) return;
     const first = rootRef.current?.querySelector('[data-invalid="true"]');
     first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [attempt]);
+  }, [attempt, step]);
 
-  const set = (field, value) => {
-    setForm((f) => ({ ...f, [field]: value }));
-    if (errors[field]) setErrors((e) => ({ ...e, [field]: '' }));
-  };
+  /* ── kind ─────────────────────────────────────────────────────── */
+  const originalKind = product ? productKind(product) : null;
+  const optionsFor = (category) => kindOptions(category, originalKind)
+    .filter((k) => k.key !== 'READY_TO_EAT' || todayOn || originalKind === 'READY_TO_EAT');
+  const category = categories.find((c) => c.id === form.categoryId) || product?.category || null;
+  const kindOpts = form.categoryId ? optionsFor(category) : [];
+  const kind = form.kind;
+  const ctx = { kind, kindAsked: kindOpts.length > 1, hasOptions, couriersOn, editing };
+  const offers = kindOffers(kind);
+  const by = pricedBy(form, ctx);
+  const span = priceSpan(form, ctx);
+  const stockedGroup = kind === 'REGULAR' && hasOptions ? form.variations.find((g) => g.stocked && g.choices.length) : null;
 
-  const groups = hasOptions ? form.variations : [];
-  const pricedGroup = groups.find((g) => g.priced) || null;
-  const stockedGroup = groups.find((g) => g.stocked) || null;
-  const priceRange = (() => {
-    if (!pricedGroup) return null;
-    const values = pricedGroup.choices.map((c) => Number(pricedGroup.prices[c])).filter((n) => n > 0);
-    return values.length ? { min: Math.min(...values), max: Math.max(...values) } : null;
-  })();
-  const stockTotal = stockedGroup
-    ? stockedGroup.choices.reduce((sum, c) => sum + (parseInt(stockedGroup.stocks[c] || '0', 10) || 0), 0)
-    : 0;
-
-  /* ── choice groups ───────────────────────────────────────────── */
-  const updateGroup = (key, patch) => {
-    setForm((f) => ({
-      ...f,
-      variations: f.variations.map((g) => (g.key === key ? { ...g, ...(typeof patch === 'function' ? patch(g) : patch) } : g)),
-    }));
-    if (errors[`group-${key}`]) setErrors((e) => ({ ...e, [`group-${key}`]: '' }));
-  };
-
-  const chooseHasOptions = (yes) => {
-    setHasOptions(yes);
-    if (yes && form.variations.length === 0) {
-      setForm((f) => ({ ...f, variations: [emptyGroup()] }));
-    }
-    setErrors((e) => ({ ...e, options: '' }));
-  };
-
-  const addGroup = () => {
-    if (form.variations.length >= MAX_GROUPS) return;
-    setForm((f) => ({ ...f, variations: [...f.variations, emptyGroup()] }));
-  };
-
-  const removeGroup = (key) => {
-    if (!form.variations.some((g) => g.key !== key)) setHasOptions(false);
-    setForm((f) => ({ ...f, variations: f.variations.filter((g) => g.key !== key) }));
-  };
-
-  const addChoices = (key, raw) => {
-    updateGroup(key, (g) => ({ choices: mergeChoices(g.choices, raw ?? g.draft), draft: raw === undefined ? '' : g.draft }));
-  };
-
-  const removeChoice = (key, choice) => {
-    updateGroup(key, (g) => {
-      const prices = { ...g.prices };
-      const stocks = { ...g.stocks };
-      delete prices[choice];
-      delete stocks[choice];
-      return { choices: g.choices.filter((c) => c !== choice), prices, stocks };
-    });
-  };
-
-  // Only one group can carry prices, and only one stock: switching it on
-  // for one group switches it off for the others.
-  const toggleGroupFlag = (key, flag) => {
-    const turningOn = !form.variations.find((g) => g.key === key)?.[flag];
-    const other = turningOn ? form.variations.find((g) => g.key !== key && g[flag]) : null;
-    if (other) {
-      const what = flag === 'priced' ? 'Prices' : 'Stock';
-      toast(`${what} per choice moved from ${other.name || 'the other type'} to this one`);
-    }
-    setForm((f) => ({
-      ...f,
-      variations: f.variations.map((g) => {
-        if (g.key === key) return { ...g, [flag]: turningOn };
-        return turningOn ? { ...g, [flag]: false } : g;
-      }),
-    }));
-    setErrors((e) => ({ ...e, price: '', stock: '', [`group-${key}`]: '' }));
-  };
-
-  /* ── how it is sold ──────────────────────────────────────────── */
-  const today = form.listingKind === 'TODAY';
-  const chooseKind = (kind) => {
-    setForm((f) => ({
-      ...f,
-      listingKind: kind,
-      // Today items have no per-choice stock: the day's quantity covers all.
-      variations: kind === 'TODAY' ? f.variations.map((g) => ({ ...g, stocked: false, stocks: {} })) : f.variations,
-    }));
-    setErrors((e) => ({ ...e, stock: '' }));
-    // Fresh food: the perishable returns rule fits, unless one is chosen.
-    if (kind === 'TODAY' && !editing && !form.returnPolicy) pickPolicy('perishable');
-  };
-
-  /* ── return policy ───────────────────────────────────────────── */
   const pickPolicy = (key) => {
     setPolicyMode(key);
     if (key === 'custom') {
-      if (policyModeFor(form.returnPolicy) !== 'custom') set('returnPolicy', '');
+      if (policyModeFor(form.returnPolicy) !== 'custom') setForm((f) => ({ ...f, returnPolicy: '' }));
     } else {
-      set('returnPolicy', RETURN_POLICIES.find((p) => p.key === key)?.text || '');
+      setForm((f) => ({ ...f, returnPolicy: RETURN_POLICIES.find((p) => p.key === key)?.text || '' }));
     }
   };
 
   const clearPolicy = () => {
     setPolicyMode(null);
-    set('returnPolicy', '');
+    setForm((f) => ({ ...f, returnPolicy: '' }));
   };
 
-  /* ── save ────────────────────────────────────────────────────── */
-  const validate = (state, optionGroups) => {
-    const errs = {};
-    if (!state.images.length) errs.images = 'Add at least one photo of the product.';
-    const name = state.name.trim();
-    if (!name) errs.name = 'Enter the product name.';
-    else if (name.length < NAME_MIN) errs.name = 'The name is too short.';
-    if (!state.categoryId) errs.categoryId = 'Choose a category.';
-    const description = state.description.trim();
-    if (description.length < DESCRIPTION_MIN) {
-      errs.description = description
-        ? `Write a little more (at least ${DESCRIPTION_MIN} letters).`
-        : 'Describe the product so buyers know what they are getting.';
+  // Switch the kind on a copy of the form (base) and keep it.
+  const applyKind = (base, next) => {
+    const { form: switched, hasOptions: has } = switchKind(base, next, hasOptions);
+    let out = switched;
+    // Cooked food: the perishable returns rule fits, unless one is chosen.
+    if (next !== form.kind && FOOD.includes(next) && !editing && !out.returnPolicy) {
+      out = { ...out, returnPolicy: RETURN_POLICIES.find((p) => p.key === 'perishable').text };
+      setPolicyMode('perishable');
     }
-
-    if (hasOptions) {
-      const used = optionGroups.filter((g) => g.name.trim() || g.choices.length);
-      if (!used.length) errs.options = 'Add at least one choice, or pick "No" above.';
-      const seen = new Set();
-      for (const g of used) {
-        const gName = g.name.trim();
-        const k = `group-${g.key}`;
-        if (!gName) errs[k] = 'Give this choice type a name, for example Weight.';
-        else if (!g.choices.length) errs[k] = `Add at least one ${gName.toLowerCase()} choice.`;
-        else if (seen.has(gName.toLowerCase())) errs[k] = 'Each choice type needs a different name.';
-        else if (g.priced) {
-          const missing = g.choices.find((c) => !(Number(g.prices[c]) > 0));
-          if (missing) errs[k] = `Enter a price for "${missing}".`;
-        }
-        if (!errs[k] && g.stocked) {
-          const bad = g.choices.find((c) => (g.stocks[c] ?? '') !== '' && !isWhole(g.stocks[c]));
-          if (bad) errs[k] = `Stock for "${bad}" must be a whole number, like 5.`;
-        }
-        seen.add(gName.toLowerCase());
-      }
-    }
-
-    const priced = hasOptions && optionGroups.some((g) => g.priced && g.choices.length);
-    if (!priced && !(Number(state.price) > 0)) errs.price = 'Enter a price higher than ₱0.';
-    if (!priced && state.priceTiers.length) {
-      const rows = state.priceTiers.filter((t) => t.minQty !== '' || t.price !== '');
-      let lastQty = 1;
-      let lastPrice = Number(state.price);
-      for (const t of [...rows].sort((a, b) => Number(a.minQty) - Number(b.minQty))) {
-        if (!isWhole(t.minQty) || Number(t.minQty) <= lastQty) { errs.priceTiers = 'Each bulk price needs a quantity of 2 or more, all different.'; break; }
-        if (!(Number(t.price) > 0) || Number(t.price) >= lastPrice) { errs.priceTiers = 'Each bulk price must be lower than the price before it.'; break; }
-        lastQty = Number(t.minQty);
-        lastPrice = Number(t.price);
-      }
-    }
-    if (!priced && state.saleOn) {
-      if (!(Number(state.salePrice) > 0) || Number(state.salePrice) >= Number(state.price)) {
-        errs.salePrice = 'The sale price must be lower than the regular price.';
-      } else if (state.saleEndsAt && new Date(state.saleEndsAt) <= new Date()) {
-        errs.salePrice = 'The sale end is already past.';
-      } else if (state.saleStartsAt && state.saleEndsAt && new Date(state.saleEndsAt) <= new Date(state.saleStartsAt)) {
-        errs.salePrice = 'The sale must end after it starts.';
-      }
-    }
-    const stocked = hasOptions && optionGroups.some((g) => g.stocked && g.choices.length);
-    if (state.listingKind !== 'TODAY' && !stocked && state.stock !== '' && !isWhole(state.stock)) errs.stock = 'Stock must be a whole number, like 10.';
-    if (state.weightKg !== '' && !(Number(state.weightKg) > 0 && Number(state.weightKg) <= 100)) {
-      errs.weightKg = 'Enter the weight in kilograms, like 0.5 or 2.';
-    } else if (state.weightKg === '' && couriersOn) {
-      errs.weightKg = 'Add the weight: your shop ships with couriers, and they charge by weight.';
-    }
-    return errs;
+    setForm(out);
+    setHasOptions(has);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (saving) return;
-    // Choices typed but not added yet still count.
-    const optionGroups = form.variations.map((g) => (g.draft.trim()
-      ? { ...g, choices: mergeChoices(g.choices, g.draft), draft: '' }
-      : g));
-    const state = { ...form, variations: optionGroups };
-    if (optionGroups.some((g, i) => g !== form.variations[i])) setForm(state);
+  const onCategory = (id) => {
+    const opts = id ? optionsFor(categories.find((c) => c.id === id)) : [];
+    let next = form.kind;
+    if (opts.length === 1) next = opts[0].key;
+    else if (!(form.kindPicked && opts.some((o) => o.key === form.kind))) next = null;
+    const picked = opts.length > 1 && form.kindPicked && next === form.kind;
+    applyKind({ ...form, categoryId: id, kindPicked: picked }, next);
+    setErrors((e) => ({ ...e, categoryId: '', kind: '' }));
+  };
 
-    const errs = validate(state, optionGroups);
+  const onKind = (next) => {
+    applyKind({ ...form, kindPicked: true }, next);
+    setErrors((e) => ({ ...e, kind: '', price: '' }));
+  };
+
+  /* ── fields ───────────────────────────────────────────────────── */
+  const set = (field, value) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    if (errors[field]) setErrors((e) => ({ ...e, [field]: '' }));
+  };
+
+  // Several fields at once; their problems are cleared.
+  const patch = (fields) => {
+    setForm((f) => ({ ...f, ...fields }));
+    if (Object.keys(fields).some((k) => errors[k])) {
+      setErrors((e) => ({ ...e, ...Object.fromEntries(Object.keys(fields).map((k) => [k, ''])) }));
+    }
+  };
+
+  /* ── choice groups ───────────────────────────────────────────── */
+  const updateGroup = (key, change) => {
+    setForm((f) => ({
+      ...f,
+      variations: f.variations.map((g) => (g.key === key ? { ...g, ...(typeof change === 'function' ? change(g) : change) } : g)),
+    }));
+    if (errors[`group-${key}`]) setErrors((e) => ({ ...e, [`group-${key}`]: '' }));
+  };
+
+  const groupActions = {
+    update: updateGroup,
+    add: () => {
+      if (form.variations.length >= MAX_GROUPS) return;
+      setForm((f) => ({ ...f, variations: [...f.variations, emptyGroup()] }));
+    },
+    remove: (key) => {
+      if (!form.variations.some((g) => g.key !== key)) setHasOptions(false);
+      setForm((f) => ({ ...f, variations: f.variations.filter((g) => g.key !== key) }));
+    },
+    addChoices: (key, raw) => {
+      updateGroup(key, (g) => ({ choices: mergeChoices(g.choices, raw ?? g.draft), draft: raw === undefined ? '' : g.draft }));
+    },
+    removeChoice: (key, choice) => {
+      updateGroup(key, (g) => {
+        const prices = { ...g.prices };
+        const stocks = { ...g.stocks };
+        delete prices[choice];
+        delete stocks[choice];
+        return { choices: g.choices.filter((c) => c !== choice), prices, stocks };
+      });
+    },
+    // Only one group can carry prices, and only one stock: switching it on
+    // for one group switches it off for the others.
+    toggleFlag: (key, flag) => {
+      const turningOn = !form.variations.find((g) => g.key === key)?.[flag];
+      const other = turningOn ? form.variations.find((g) => g.key !== key && g[flag]) : null;
+      if (other) {
+        const what = flag === 'priced' ? 'Prices' : 'Stock';
+        toast(`${what} per choice moved from ${other.name || 'the other type'} to this one`);
+      }
+      setForm((f) => ({
+        ...f,
+        variations: f.variations.map((g) => {
+          if (g.key === key) return { ...g, [flag]: turningOn };
+          return turningOn ? { ...g, [flag]: false } : g;
+        }),
+      }));
+      setErrors((e) => ({ ...e, price: '', stock: '', [`group-${key}`]: '' }));
+    },
+  };
+
+  const chooseHasOptions = (yes) => {
+    setHasOptions(yes);
+    if (yes && form.variations.length === 0) setForm((f) => ({ ...f, variations: [emptyGroup()] }));
+    setErrors((e) => ({ ...e, options: '' }));
+  };
+
+  const toggleRow = (row) => setOpenRows((rows) => (rows.includes(row) ? rows.filter((r) => r !== row) : [...rows, row]));
+  const openWithErrors = (errs) => {
+    const rows = rowsWithErrors(errs);
+    if (rows.length) setOpenRows((open) => [...new Set([...open, ...rows])]);
+  };
+
+  /* ── steps ────────────────────────────────────────────────────── */
+  const goStep = (n) => {
+    const next = new URLSearchParams(params);
+    if (n <= 1) next.delete('step');
+    else next.set('step', String(n));
+    navigate({ search: next.toString() ? `?${next.toString()}` : '' }, { state: location.state });
+  };
+
+  // Typed but not added choices count; keep them merged in.
+  const settled = () => {
+    const state = withDrafts(form);
+    if (state !== form) setForm(state);
+    return state;
+  };
+
+  const goNext = () => {
+    const state = settled();
+    const key = STEPS[step - 1]?.key;
+    const errs = key && key !== 'review' ? checkStep(key, state, ctx) : {};
     setErrors(errs);
-    if (Object.values(errs).some(Boolean)) {
+    if (hasErrors(errs)) {
+      toast.error('Please check the highlighted part.');
+      openWithErrors(errs);
+      setAttempt((n) => n + 1);
+      return;
+    }
+    goStep(step + 1);
+  };
+
+  // Back to an earlier step; when editing, any step (saving checks them all).
+  const jumpTo = (n) => {
+    if (n < step) navigate(n - step);
+    else if (n > step && editing) goStep(n);
+  };
+
+  /* ── leaving ──────────────────────────────────────────────────── */
+  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
+  // Animals saved from this form reach the list as it closes.
+  const leave = () => {
+    if (lastSaved.current) onSaved?.(lastSaved.current, { created: true });
+    else onCancel?.();
+  };
+  const toPackage = () => navigate('/seller/products/new?type=package', { replace: true, state: location.state });
+
+  const requestCancel = () => {
+    if (dirty && !saving) setConfirmLeave('cancel');
+    else leave();
+  };
+  const requestPackage = () => {
+    if (dirty) setConfirmLeave('package');
+    else toPackage();
+  };
+
+  const goBack = () => {
+    if (step > 1) navigate(-1);
+    else requestCancel();
+  };
+
+  /* ── save ─────────────────────────────────────────────────────── */
+  const save = async (e) => {
+    e?.preventDefault();
+    if (saving) return;
+    // Enter in a field moves on rather than saving early.
+    if (step < LAST_STEP) {
+      goNext();
+      return;
+    }
+    const state = settled();
+    const { errors: errs, first } = checkAll(state, ctx);
+    setErrors(errs);
+    if (first >= 0) {
       toast.error('Please check the highlighted parts.');
+      openWithErrors(errs);
+      if (first + 1 < step) navigate(first + 1 - step);
       setAttempt((n) => n + 1);
       return;
     }
 
-    const cleanGroups = hasOptions
-      ? optionGroups.filter((g) => g.name.trim() && g.choices.length)
-      : [];
-    const pGroup = cleanGroups.find((g) => g.priced);
-    const todayKind = state.listingKind === 'TODAY';
-    const sGroup = todayKind ? null : cleanGroups.find((g) => g.stocked);
-    const minPrice = pGroup ? Math.min(...pGroup.choices.map((c) => Number(pGroup.prices[c]))) : null;
-    const total = sGroup
-      ? sGroup.choices.reduce((sum, c) => sum + (parseInt(sGroup.stocks[c] || '0', 10) || 0), 0)
-      : null;
-
-    const payload = {
-      name: state.name.trim(),
-      description: state.description.trim(),
-      price: pGroup ? minPrice : parseFloat(state.price),
-      // Option prices have no sale price: lower the option prices instead.
-      salePrice: !pGroup && state.saleOn ? parseFloat(state.salePrice) : null,
-      saleStartsAt: !pGroup && state.saleOn && state.saleStartsAt ? new Date(state.saleStartsAt).toISOString() : null,
-      saleEndsAt: !pGroup && state.saleOn && state.saleEndsAt ? new Date(state.saleEndsAt).toISOString() : null,
-      priceTiers: pGroup ? null : state.priceTiers
-        .filter((t) => t.minQty !== '' && t.price !== '')
-        .map((t) => ({ minQty: parseInt(t.minQty, 10), price: parseFloat(t.price) })),
-      listingKind: state.listingKind,
-      // A Today item's stock is the day's quantity, set in Today's menu.
-      ...(todayKind ? {} : { stock: sGroup ? total : (state.stock !== '' ? parseInt(state.stock, 10) : 0) }),
-      categoryId: state.categoryId,
-      images: state.images,
-      returnPolicy: state.returnPolicy.trim() || null,
-      weightGrams: state.weightKg !== '' ? Math.round(Number(state.weightKg) * 1000) : null,
-      variations: cleanGroups.map((g) => ({
-        name: g.name.trim(),
-        options: g.choices,
-        ...(g.priced ? { prices: Object.fromEntries(g.choices.map((c) => [c, Number(g.prices[c])])) } : {}),
-        ...(g.stocked && !todayKind ? { stocks: Object.fromEntries(g.choices.map((c) => [c, parseInt(g.stocks[c] || '0', 10) || 0])) } : {}),
-      })),
-    };
-
-    // Editing: the stock this form opened with, so the server applies only
-    // the change made here (units sold meanwhile are not put back).
-    if (editing && !todayKind) {
-      payload.stockWas = Number(product.stock) || 0;
-      const opened = (Array.isArray(product.variations) ? product.variations : [])
-        .find((v) => v && v.stocks && typeof v.stocks === 'object');
-      if (opened) payload.stocksWas = opened.stocks;
-    }
-
+    const payload = buildPayload(state, { kind, hasOptions, editing, product });
     setSaving(true);
     try {
       const res = editing
         ? await axios.put(`/products/${product.id}`, payload)
         : await axios.post('/products', payload);
-      onSaved?.(res?.data || null, { created: !editing });
+      const saved = res?.data || null;
+      if (saved?.todayPostError) toast.error(saved.todayPostError, { duration: 7000 });
+      if (!editing && kind === 'LIVESTOCK') {
+        lastSaved.current = saved;
+        setSavedAnimal(saved);
+        window.scrollTo({ top: 0 });
+        return;
+      }
+      onSaved?.(saved, { created: !editing });
     } catch (err) {
       toast.error(err.message || 'Could not save the product. Please try again.');
     } finally {
@@ -426,23 +357,172 @@ export default function ProductForm({ product = null, categories = [], onCancel,
     }
   };
 
-  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
-  const requestCancel = () => {
-    if (dirty && !saving) setConfirmLeave(true);
-    else onCancel?.();
+  // The animal's details again, for one more listing: new photos and name.
+  const addAnother = () => {
+    const next = { ...form, name: '', images: [], kindPicked: true };
+    setForm(next);
+    setInitial(next);
+    setErrors({});
+    setSavedAnimal(null);
+    if (step > 1) navigate(1 - step);
+    window.scrollTo({ top: 0 });
   };
 
-  return (
-    <form className="pf" ref={rootRef} onSubmit={handleSubmit} noValidate>
-      <button type="button" className="pf-back" onClick={requestCancel}>
-        <ArrowLeft size={16} /> Back to products
-      </button>
+  /* ── what buyers will see ─────────────────────────────────────── */
+  const draft = draftProduct(form, ctx);
+  const askWay = !shopMode || shopMode === 'BOTH';
+  const wayText = WAY_TEXT[askWay ? form.fulfillment : shopMode] || 'Pickup or delivery';
+  const todayQty = kind === 'READY_TO_EAT' && !editing && form.postToday ? parseInt(form.todayQty, 10) || 0 : 0;
+  const kindWord = kindOpts.find((k) => k.key === kind)?.label || (kind ? kindLabel(kind) : '');
+  const tiers = form.priceTiers.filter((t) => t.minQty !== '' && t.price !== '');
+  const policy = RETURN_POLICIES.find((p) => p.key === policyMode);
+  const choiceGroups = hasOptions && offers.choices ? form.variations.filter((g) => g.name.trim() && g.choices.length) : [];
+  const sumup = [
+    {
+      step: 1,
+      title: 'Basics',
+      lines: [
+        [category?.name, ctx.kindAsked && kindWord].filter(Boolean).join(' · '),
+        form.description.trim() && `${form.description.trim().slice(0, 90)}${form.description.trim().length > 90 ? '…' : ''}`,
+      ],
+    },
+    { step: 2, title: DETAIL_TITLES[kind] || 'Details', lines: [...detailLines(form, ctx), wayText] },
+    {
+      step: 3,
+      title: STEPS[2].title,
+      lines: [
+        choiceGroups.length ? `Choices: ${choiceGroups.map((g) => g.name.trim()).join(', ')}` : '',
+        !by && form.saleOn && Number(form.salePrice) > 0 ? `On sale at ${peso(form.salePrice)}` : '',
+        !by && tiers.length ? `${tiers.length} bulk ${tiers.length === 1 ? 'price' : 'prices'}` : '',
+        offers.weight && !couriersOn && form.weightKg ? `${form.weightKg} kg with packaging` : '',
+        policy ? `Returns: ${policy.title}` : policyMode === 'custom' ? 'Returns: in your own words' : 'No return policy',
+      ],
+    },
+  ];
 
-      {sellBlockers?.length > 0 ? (
+  const priceFrom = by ? {
+    span,
+    text: by === 'sizes' ? 'From the sizes in Details' : 'From each choice’s price in Extras',
+  } : null;
+
+  const stepTitle = (s) => (s.key === 'details' ? DETAIL_TITLES[kind] || 'Details' : s.title);
+  const stepHint = (s) => {
+    if (s.key === 'details') return DETAIL_HINTS[kind] || 'Questions for what you sell.';
+    if (s.key === 'review' && editing) return 'This is how buyers will see it.';
+    return STEP_HINTS[s.key];
+  };
+  const saveLabel = editing ? 'Save changes' : kind === 'LIVESTOCK' ? 'Add animal' : 'Add product';
+
+  const bodies = {
+    basics: (
+      <BasicsStep
+        form={form}
+        set={set}
+        errors={errors}
+        categories={categories}
+        kind={kind}
+        kindOpts={kindOpts}
+        onCategory={onCategory}
+        onKind={onKind}
+        priceFrom={priceFrom}
+        onPackage={requestPackage}
+        editing={editing}
+      />
+    ),
+    details: (
+      <DetailsStep
+        form={form}
+        set={set}
+        patch={patch}
+        errors={errors}
+        ctx={{ kind, editing, couriersOn, shopMode, stockedGroup }}
+      />
+    ),
+    more: (
+      <MoreStep
+        form={form}
+        set={set}
+        errors={errors}
+        kind={kind}
+        offers={offers}
+        by={by}
+        couriersOn={couriersOn}
+        open={openRows}
+        onToggleRow={toggleRow}
+        hasOptions={hasOptions}
+        onHasOptions={chooseHasOptions}
+        groupActions={groupActions}
+        policyMode={policyMode}
+        onPolicy={pickPolicy}
+        onClearPolicy={clearPolicy}
+      />
+    ),
+    review: (
+      <ReviewStep draft={draft} kind={kind} way={wayText} todayQty={todayQty} sections={sumup} onEdit={jumpTo} />
+    ),
+  };
+
+  if (savedAnimal) {
+    const unitPrice = Number(savedAnimal.price) || 0;
+    return (
+      <div className="pf" ref={rootRef}>
+        <section className="pf-done">
+          <CheckCircle size={44} weight="fill" className="pf-done-icon" aria-hidden="true" />
+          <h2>{savedAnimal.name} is listed</h2>
+          <p className="pf-done-facts">{headsLabel(savedAnimal.stock)} · {peso(unitPrice)} / head</p>
+          <p>
+            Have more animals that differ, like another age, sex or weight? List each one on its own.
+            We copy these details, so you only add the photos and name.
+          </p>
+          <div className="pf-done-actions">
+            <button type="button" className="pf-btn pf-btn--ghost" onClick={addAnother}>Add another animal like this</button>
+            <button type="button" className="pf-btn pf-btn--primary" onClick={() => onSaved?.(savedAnimal, { created: true })}>
+              <Check size={17} weight="bold" /> Done
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <form className={`pf pf--steps${isPhone ? '' : ' pf--wide'}`} ref={rootRef} onSubmit={save} noValidate>
+      {!isPhone && (
+        <button type="button" className="pf-back" onClick={requestCancel}>
+          <ArrowLeft size={16} /> Back to products
+        </button>
+      )}
+
+      {isPhone ? (
+        <div className="pf-progress">
+          <span>Step {step} of {LAST_STEP}</span>
+          <div className="pf-progress-bar" aria-hidden="true">
+            {STEPS.map((s, i) => <i key={s.key} className={i < step ? 'is-on' : ''} />)}
+          </div>
+        </div>
+      ) : (
+        <ol className="pf-track" aria-label="Steps">
+          {STEPS.map((s, i) => {
+            const n = i + 1;
+            const state = n === step ? 'is-current' : n < step ? 'is-done' : '';
+            const canGo = n < step || (editing && n !== step);
+            return (
+              <li key={s.key} className={state}>
+                <button type="button" onClick={() => jumpTo(n)} disabled={!canGo} aria-current={n === step ? 'step' : undefined}>
+                  <span className="pf-track-num" aria-hidden="true">{n < step ? <Check size={13} weight="bold" /> : n}</span>
+                  <span>{stepTitle(s)}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      {step === 1 && (sellBlockers?.length > 0 ? (
         <div className="pf-note pf-note--draft">
           <Info size={16} />
           <span>
-            Buyers can see this product, but can't order it until your shop is ready to sell.
+            Buyers can see this product, but can&apos;t order it until your shop is ready to sell.
             {' '}Still to do: {sellBlockers.map((b) => b.label).join(', ')}.
           </span>
         </div>
@@ -451,672 +531,71 @@ export default function ProductForm({ product = null, categories = [], onCancel,
           <Info size={16} />
           <span>This product is live. Your changes show to buyers as soon as you save.</span>
         </div>
-      )}
+      ))}
 
-      {/* 1 · Photos */}
-      <Section step={1} title="Photos" tag="Required" hint="Clear, bright photos sell better. The first photo is the cover." invalid={!!errors.images}>
-        <PhotoPicker
-          images={form.images}
-          onChange={(imgs) => set('images', imgs)}
-        />
-        <FieldError text={errors.images} />
-      </Section>
+      {STEPS.map((s) => s.key === STEPS[step - 1].key && (
+        <section key={s.key} className={`pf-section pf-section--${s.key}`} aria-labelledby={`pf-step-${s.key}`}>
+          <header className="pf-section-head">
+            <h2 id={`pf-step-${s.key}`}>{stepTitle(s)}</h2>
+            <p>{stepHint(s)}</p>
+          </header>
+          <div className="pf-section-body">{bodies[s.key]}</div>
 
-      {/* 2 · About the product */}
-      <Section step={2} title="About the product">
-        <Field label="Product name" required error={errors.name} htmlFor="pf-name">
-          <input
-            id="pf-name"
-            className="pf-input"
-            value={form.name}
-            maxLength={NAME_MAX}
-            onChange={(e) => set('name', e.target.value)}
-            placeholder="e.g. Fresh Ampalaya"
-            autoComplete="off"
-          />
-        </Field>
-        <Field label="Category" required error={errors.categoryId} htmlFor="pf-category">
-          <select
-            id="pf-category"
-            className="pf-input pf-select"
-            value={form.categoryId}
-            onChange={(e) => set('categoryId', e.target.value)}
-          >
-            <option value="">Choose a category</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </Field>
-        <Field
-          label="Description"
-          required
-          error={errors.description}
-          htmlFor="pf-description"
-          hint={errors.description ? null : 'How fresh it is, its size or weight, where it comes from.'}
-          aside={`${form.description.length}/${DESCRIPTION_MAX}`}
-        >
-          <textarea
-            id="pf-description"
-            className="pf-input pf-textarea"
-            rows={4}
-            maxLength={DESCRIPTION_MAX}
-            value={form.description}
-            onChange={(e) => set('description', e.target.value)}
-            placeholder="e.g. Harvested this morning from our farm in Bansud. Sold per kilo."
-          />
-        </Field>
-      </Section>
+          {!isPhone && (
+            <div className="pf-footer">
+              <button type="button" className="pf-btn pf-btn--ghost" onClick={goBack} disabled={saving}>
+                {step > 1 ? 'Back' : 'Cancel'}
+              </button>
+              {step < LAST_STEP ? (
+                <button type="button" className="pf-btn pf-btn--primary" onClick={goNext}>
+                  Next <ArrowRight size={17} weight="bold" />
+                </button>
+              ) : (
+                <button type="submit" className="pf-btn pf-btn--primary" disabled={saving}>
+                  {saving ? <CircleNotch size={17} className="pf-spin" /> : <Check size={17} weight="bold" />}
+                  {saving ? <BusyLabel>Saving…</BusyLabel> : saveLabel}
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+      ))}
 
-      {/* 3 · Choices */}
-      <Section
-        step={3}
-        title="Choices"
-        tag="Optional"
-        hint="Does it come in different sizes, weights or colors?"
-        invalid={!!errors.options}
-      >
-        <div className="pf-yesno" role="radiogroup" aria-label="Does it come in different choices?">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!hasOptions}
-            className={`pf-yesno-btn${!hasOptions ? ' is-on' : ''}`}
-            onClick={() => chooseHasOptions(false)}
-          >
-            <span className="pf-radio" aria-hidden="true" />
-            <span><strong>No</strong><small>It comes in one kind only</small></span>
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={hasOptions}
-            className={`pf-yesno-btn${hasOptions ? ' is-on' : ''}`}
-            onClick={() => chooseHasOptions(true)}
-          >
-            <span className="pf-radio" aria-hidden="true" />
-            <span><strong>Yes</strong><small>e.g. 250g and 1kg, or Small and Large</small></span>
-          </button>
-        </div>
-        <FieldError text={errors.options} />
-
-        {hasOptions && (
-          <div className="pf-groups">
-            {form.variations.map((g, index) => (
-              <ChoiceGroup
-                key={g.key}
-                group={g}
-                index={index}
-                count={form.variations.length}
-                error={errors[`group-${g.key}`]}
-                onChange={(patch) => updateGroup(g.key, patch)}
-                onAddChoices={(raw) => addChoices(g.key, raw)}
-                onRemoveChoice={(c) => removeChoice(g.key, c)}
-                onToggle={(flag) => toggleGroupFlag(g.key, flag)}
-                noStock={today}
-                onRemove={() => removeGroup(g.key)}
-              />
-            ))}
-            {form.variations.length < MAX_GROUPS && (
-              <button type="button" className="pf-add-group" onClick={addGroup}>
-                <Plus size={16} /> Add another choice type
-                <small>e.g. Color as well as Size</small>
+      {isPhone && (
+        <>
+          <div className="pf-bar-space" aria-hidden="true" />
+          <div className="scm-savebar pf-bar" role="group" aria-label="Steps">
+            <button type="button" className="scm-savebar-btn scm-savebar-cancel" onClick={goBack} disabled={saving}>
+              {step > 1 ? 'Back' : 'Cancel'}
+            </button>
+            {step < LAST_STEP ? (
+              <button type="button" className="scm-savebar-btn scm-savebar-save" onClick={goNext}>
+                Next
+              </button>
+            ) : (
+              <button type="submit" className="scm-savebar-btn scm-savebar-save" disabled={saving}>
+                {saving ? <BusyLabel>Saving…</BusyLabel> : saveLabel}
               </button>
             )}
           </div>
-        )}
-      </Section>
-
-      {/* 4 · Price and stock */}
-      <Section step={4} title="Price and stock" className="pf-section--price">
-        <div className="pf-kind">
-          <span className="pf-kind-label" id="pf-kind-label">How you sell it</span>
-          <div className="pf-yesno" role="radiogroup" aria-labelledby="pf-kind-label">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={!today}
-              className={`pf-yesno-btn${!today ? ' is-on' : ''}`}
-              onClick={() => chooseKind('REGULAR')}
-            >
-              <span className="pf-radio" aria-hidden="true" />
-              <span><strong>Always available</strong><small>You keep it in stock. Buyers order any time.</small></span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={today}
-              className={`pf-yesno-btn${today ? ' is-on' : ''}`}
-              onClick={() => chooseKind('TODAY')}
-            >
-              <span className="pf-radio" aria-hidden="true" />
-              <span><strong>Available Today</strong><small>Fresh food, cooked meals or harvests. You post how many and until when, on the days you have it.</small></span>
-            </button>
-          </div>
-        </div>
-        <div className="pf-grid-2">
-          <Field label="Price" required error={errors.price} htmlFor="pf-price">
-            {pricedGroup ? (
-              <div className="pf-derived" aria-live="polite">
-                <strong>
-                  {priceRange
-                    ? (priceRange.min === priceRange.max ? peso(priceRange.min) : `${peso(priceRange.min)} – ${peso(priceRange.max)}`)
-                    : 'Set a price for each choice'}
-                </strong>
-                <small>From each {pricedGroup.name || 'choice'} price above</small>
-              </div>
-            ) : (
-              <div className={`pf-money${errors.price ? ' is-invalid' : ''}`}>
-                <em>₱</em>
-                <input
-                  id="pf-price"
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(e) => set('price', e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-            )}
-          </Field>
-          <Field
-            label={today ? 'How many' : 'Stock'}
-            error={errors.stock}
-            htmlFor="pf-stock"
-            hint={stockedGroup || today ? null : 'How many you can sell right now.'}
-          >
-            {today ? (
-              <div className="pf-derived" aria-live="polite">
-                <strong>Set each day</strong>
-                <small>After saving, post it in Today&apos;s menu with how many you have and until when.</small>
-              </div>
-            ) : stockedGroup ? (
-              <div className="pf-derived" aria-live="polite">
-                <strong>{stockTotal} in total</strong>
-                <small>From each {stockedGroup.name || 'choice'} stock above</small>
-              </div>
-            ) : (
-              <input
-                id="pf-stock"
-                className={`pf-input${errors.stock ? ' is-invalid' : ''}`}
-                type="number"
-                inputMode="numeric"
-                min="0"
-                step="1"
-                value={form.stock}
-                onChange={(e) => set('stock', e.target.value)}
-                placeholder="0"
-              />
-            )}
-          </Field>
-        </div>
-        {!pricedGroup && (
-          <div className={`pf-sale${form.saleOn ? ' is-on' : ''}`}>
-            <label className="pf-sale-toggle">
-              <input type="checkbox" checked={form.saleOn} onChange={(e) => set('saleOn', e.target.checked)} />
-              <span>
-                <strong>Put it on sale</strong>
-                <small>Buyers see the lower price with the regular one crossed out. Saved by buyers? They are told.</small>
-              </span>
-            </label>
-            {form.saleOn && (
-              <div className="pf-grid-2">
-                <Field label="Sale price" required error={errors.salePrice} htmlFor="pf-sale-price">
-                  <div className={`pf-money${errors.salePrice ? ' is-invalid' : ''}`}>
-                    <em>₱</em>
-                    <input
-                      id="pf-sale-price"
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="0.01"
-                      value={form.salePrice}
-                      onChange={(e) => set('salePrice', e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </Field>
-                <Field label="Starts" htmlFor="pf-sale-start" hint="Empty: right away.">
-                  <input id="pf-sale-start" className="pf-input" type="datetime-local" value={form.saleStartsAt} onChange={(e) => set('saleStartsAt', e.target.value)} />
-                </Field>
-                <Field label="Ends" htmlFor="pf-sale-end" hint="Empty: until you turn it off. Set it for a flash sale.">
-                  <input id="pf-sale-end" className="pf-input" type="datetime-local" value={form.saleEndsAt} onChange={(e) => set('saleEndsAt', e.target.value)} />
-                </Field>
-              </div>
-            )}
-          </div>
-        )}
-        {!pricedGroup && (
-          <div className="pf-tiers">
-            <div className="pf-tiers-head">
-              <strong>Bulk prices</strong>
-              <small>Lower prices when a buyer orders more, like 10 or more at ₱90 each.</small>
-            </div>
-            {form.priceTiers.map((t, i) => (
-              <div className="pf-tier" key={i}>
-                <label>
-                  <span>From</span>
-                  <input
-                    className="pf-input"
-                    type="number"
-                    inputMode="numeric"
-                    min="2"
-                    step="1"
-                    value={t.minQty}
-                    placeholder="10"
-                    aria-label={`Bulk price ${i + 1}: from how many`}
-                    onChange={(e) => set('priceTiers', form.priceTiers.map((x, j) => (j === i ? { ...x, minQty: e.target.value } : x)))}
-                  />
-                  <span>units</span>
-                </label>
-                <div className="pf-money">
-                  <em>₱</em>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    value={t.price}
-                    placeholder="0.00"
-                    aria-label={`Bulk price ${i + 1}: price each`}
-                    onChange={(e) => set('priceTiers', form.priceTiers.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))}
-                  />
-                </div>
-                <button type="button" className="pf-tier-remove" aria-label="Remove this bulk price" onClick={() => set('priceTiers', form.priceTiers.filter((_, j) => j !== i))}>×</button>
-              </div>
-            ))}
-            {errors.priceTiers && <p className="pf-tier-error">{errors.priceTiers}</p>}
-            {form.priceTiers.length < 4 && (
-              <button type="button" className="pf-tier-add" onClick={() => set('priceTiers', [...form.priceTiers, { minQty: '', price: '' }])}>+ Add a bulk price</button>
-            )}
-          </div>
-        )}
-        <Field
-          label="Weight with packaging"
-          required={couriersOn}
-          error={errors.weightKg}
-          htmlFor="pf-weight"
-          hint={couriersOn
-            ? 'Needed for courier delivery: the shipping fee is worked out from it.'
-            : 'Needed if you ship with couriers: they charge by weight.'}
-        >
-          <div className="pf-unit">
-            <input
-              id="pf-weight"
-              className={`pf-input${errors.weightKg ? ' is-invalid' : ''}`}
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              value={form.weightKg}
-              onChange={(e) => set('weightKg', e.target.value)}
-              placeholder="0.5"
-            />
-            <span>kg</span>
-          </div>
-        </Field>
-      </Section>
-
-      {/* 5 · Returns */}
-      <Section step={5} title="Returns" tag="Optional" hint="What can buyers do if something is wrong with the item?">
-        <div className="pf-policies" role="radiogroup" aria-label="Return policy">
-          {RETURN_POLICIES.map((p) => (
-            <button
-              type="button"
-              key={p.key}
-              role="radio"
-              aria-checked={policyMode === p.key}
-              className={`pf-policy${policyMode === p.key ? ' is-on' : ''}`}
-              onClick={() => pickPolicy(p.key)}
-            >
-              <span className="pf-radio" aria-hidden="true" />
-              <span><strong>{p.title}</strong><small>{p.hint}</small></span>
-            </button>
-          ))}
-          <button
-            type="button"
-            role="radio"
-            aria-checked={policyMode === 'custom'}
-            className={`pf-policy${policyMode === 'custom' ? ' is-on' : ''}`}
-            onClick={() => pickPolicy('custom')}
-          >
-            <span className="pf-radio" aria-hidden="true" />
-            <span><strong>Write my own</strong><small>In your own words</small></span>
-          </button>
-        </div>
-        {policyMode && (
-          <div className="pf-policy-text">
-            <label htmlFor="pf-policy">What buyers will see</label>
-            <textarea
-              id="pf-policy"
-              className="pf-input pf-textarea"
-              rows={3}
-              maxLength={2000}
-              value={form.returnPolicy}
-              onChange={(e) => set('returnPolicy', e.target.value)}
-              placeholder="e.g. Returns accepted within 7 days for damaged or wrong items."
-            />
-            <small className="pf-hint">Buyers can ask for a return for as many days as your words say (for example &ldquo;within 14 days&rdquo;); 7 days when they don&rsquo;t say.</small>
-            <button type="button" className="pf-link" onClick={clearPolicy}>No return policy</button>
-          </div>
-        )}
-      </Section>
-
-      <div className="pf-footer">
-        <button type="button" className="pf-btn pf-btn--ghost" onClick={requestCancel} disabled={saving}>
-          Cancel
-        </button>
-        <button type="submit" className="pf-btn pf-btn--primary" disabled={saving}>
-          {saving ? <CircleNotch size={17} className="pf-spin" /> : <Check size={17} weight="bold" />}
-          {saving ? <BusyLabel>Saving…</BusyLabel> : editing ? 'Save changes' : 'Add product'}
-        </button>
-      </div>
+        </>
+      )}
 
       <ConfirmDialog
-        open={confirmLeave}
+        open={!!confirmLeave}
         title="Leave without saving?"
         message="What you entered for this product will be lost."
         confirmLabel="Leave"
         cancelLabel="Keep editing"
         danger
-        onConfirm={() => { setConfirmLeave(false); onCancel?.(); }}
-        onCancel={() => setConfirmLeave(false)}
+        onConfirm={() => {
+          const to = confirmLeave;
+          setConfirmLeave(null);
+          if (to === 'package') toPackage();
+          else leave();
+        }}
+        onCancel={() => setConfirmLeave(null)}
       />
     </form>
-  );
-}
-
-function Section({ step, title, tag, hint, invalid, className = '', children }) {
-  return (
-    <section className={`pf-section ${className}`.trim()} data-invalid={invalid ? 'true' : undefined}>
-      <header className="pf-section-head">
-        <span className="pf-step" aria-hidden="true">{step}</span>
-        <div>
-          <h2>
-            {title}
-            {tag && <em className={`pf-tag${tag === 'Required' ? ' pf-tag--req' : ''}`}>{tag}</em>}
-          </h2>
-          {hint && <p>{hint}</p>}
-        </div>
-      </header>
-      <div className="pf-section-body">{children}</div>
-    </section>
-  );
-}
-
-function Field({ label, required, error, hint, aside, htmlFor, children }) {
-  return (
-    <div className={`pf-field${error ? ' has-error' : ''}`} data-invalid={error ? 'true' : undefined}>
-      <div className="pf-label-row">
-        <label className="pf-label" htmlFor={htmlFor}>
-          {label}{required && <span className="pf-req" aria-hidden="true"> *</span>}
-        </label>
-        {aside && <span className="pf-aside">{aside}</span>}
-      </div>
-      {children}
-      {error ? <FieldError text={error} /> : hint && <p className="pf-hint">{hint}</p>}
-    </div>
-  );
-}
-
-function FieldError({ text }) {
-  if (!text) return null;
-  return <p className="pf-error" role="alert">{text}</p>;
-}
-
-function Switch({ checked, onChange, label, sub }) {
-  return (
-    <label className={`pf-switch${checked ? ' is-on' : ''}`}>
-      <input type="checkbox" role="switch" checked={checked} onChange={onChange} />
-      <span className="pf-switch-track" aria-hidden="true"><span /></span>
-      <span className="pf-switch-text">
-        <strong>{label}</strong>
-        {sub && <small>{sub}</small>}
-      </span>
-    </label>
-  );
-}
-
-function ChoiceGroup({ group, index, count, error, onChange, onAddChoices, onRemoveChoice, onToggle, onRemove, noStock = false }) {
-  const type = CHOICE_TYPES.find((t) => t.name.toLowerCase() === group.name.trim().toLowerCase());
-  const suggestions = (type?.suggestions || []).filter(
-    (s) => !group.choices.some((c) => c.toLowerCase() === s.toLowerCase()),
-  );
-  const typeLabel = group.name.trim() || 'choice';
-  const showTable = (group.priced || group.stocked) && group.choices.length > 0;
-
-  return (
-    <div className={`pf-group${error ? ' has-error' : ''}`} data-invalid={error ? 'true' : undefined}>
-      <div className="pf-group-top">
-        <span className="pf-group-title">{count > 1 ? `Choice type ${index + 1}` : 'Choice type'}</span>
-        <button type="button" className="pf-link pf-link--danger" onClick={onRemove}>
-          <Trash size={14} /> Remove
-        </button>
-      </div>
-
-      <div className="pf-type-chips" role="group" aria-label="Common choice types">
-        {CHOICE_TYPES.map((t) => {
-          const on = t.name.toLowerCase() === group.name.trim().toLowerCase();
-          return (
-            <button
-              type="button"
-              key={t.name}
-              className={`pf-type-chip${on ? ' is-on' : ''}`}
-              aria-pressed={on}
-              onClick={() => onChange({ name: t.name })}
-            >
-              {t.name}
-            </button>
-          );
-        })}
-      </div>
-      <input
-        className="pf-input"
-        value={group.name}
-        maxLength={80}
-        onChange={(e) => onChange({ name: e.target.value })}
-        placeholder="Or type your own, e.g. Flavor"
-        aria-label="Choice type name"
-      />
-
-      <div className="pf-choices">
-        <span className="pf-label">Choices</span>
-        {group.choices.length > 0 && (
-          <div className="pf-chips">
-            {group.choices.map((c) => (
-              <span className="pf-chip" key={c}>
-                {c}
-                <button type="button" onClick={() => onRemoveChoice(c)} aria-label={`Remove ${c}`}>
-                  <X size={12} weight="bold" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="pf-add-row">
-          <input
-            className="pf-input"
-            value={group.draft}
-            maxLength={200}
-            onChange={(e) => onChange({ draft: e.target.value })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onAddChoices();
-              }
-            }}
-            placeholder={`Type one, e.g. ${type?.example || '250g'}`}
-            aria-label="Add a choice"
-            enterKeyHint="done"
-          />
-          <button type="button" className="pf-add-btn" onClick={() => onAddChoices()} disabled={!group.draft.trim()}>
-            <Plus size={15} weight="bold" /> Add
-          </button>
-        </div>
-        {suggestions.length > 0 && (
-          <div className="pf-suggest">
-            <span>Tap to add:</span>
-            {suggestions.map((s) => (
-              <button type="button" key={s} onClick={() => onAddChoices(s)}>+ {s}</button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="pf-switches">
-        <Switch
-          checked={!!group.priced}
-          onChange={() => onToggle('priced')}
-          label="Each choice has its own price"
-          sub={`e.g. 250g ₱100, 1kg ₱300`}
-        />
-        {!noStock && (
-          <Switch
-            checked={!!group.stocked}
-            onChange={() => onToggle('stocked')}
-            label="Each choice has its own stock"
-            sub="Count how many of each you have"
-          />
-        )}
-      </div>
-
-      {(group.priced || group.stocked) && !group.choices.length && (
-        <p className="pf-hint">Add the choices first, then fill in each one here.</p>
-      )}
-
-      {showTable && (
-        <div className={`pf-table${group.priced && group.stocked ? ' pf-table--both' : ''}`}>
-          <div className="pf-table-row pf-table-head" aria-hidden="true">
-            <span>{typeLabel}</span>
-            {group.priced && <span>Price</span>}
-            {group.stocked && <span>Stock</span>}
-          </div>
-          {group.choices.map((c) => (
-            <div className="pf-table-row" key={c}>
-              <span className="pf-table-name">{c}</span>
-              {group.priced && (
-                <label className="pf-money pf-money--sm">
-                  <em>₱</em>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    value={group.prices[c] ?? ''}
-                    onChange={(e) => onChange((g) => ({ prices: { ...g.prices, [c]: e.target.value } }))}
-                    placeholder="0.00"
-                    aria-label={`Price for ${c}`}
-                  />
-                </label>
-              )}
-              {group.stocked && (
-                <input
-                  className="pf-input pf-input--sm"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  step="1"
-                  value={group.stocks[c] ?? ''}
-                  onChange={(e) => onChange((g) => ({ stocks: { ...g.stocks, [c]: e.target.value } }))}
-                  placeholder="0"
-                  aria-label={`Stock for ${c}`}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <FieldError text={error} />
-    </div>
-  );
-}
-
-function PhotoPicker({ images, onChange }) {
-  const inputRef = useRef(null);
-  const [uploading, setUploading] = useState(0);
-  const list = Array.isArray(images) ? images : [];
-
-  const handleFiles = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (inputRef.current) inputRef.current.value = '';
-    if (!files.length) return;
-    const room = MAX_IMAGES - list.length;
-    if (room <= 0) {
-      toast.error(`You can add up to ${MAX_IMAGES} photos`);
-      return;
-    }
-    const chosen = files.slice(0, room);
-    if (files.length > room) toast(`Only ${room} more photo${room === 1 ? '' : 's'} can be added`);
-
-    setUploading(chosen.length);
-    const uploaded = [];
-    for (const file of chosen) {
-      try {
-        const res = await uploadImage(file);
-        uploaded.push(res.url);
-      } catch (err) {
-        toast.error(err.message || 'A photo could not be uploaded');
-      }
-      setUploading((n) => Math.max(0, n - 1));
-    }
-    setUploading(0);
-    if (uploaded.length) onChange([...list, ...uploaded]);
-  };
-
-  const makeCover = (idx) => {
-    const next = [...list];
-    const [picked] = next.splice(idx, 1);
-    onChange([picked, ...next]);
-  };
-
-  const removeAt = (idx) => onChange(list.filter((_, i) => i !== idx));
-  const pick = () => inputRef.current?.click();
-
-  return (
-    <div className="pf-photos-wrap">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/jpg,image/png,image/webp"
-        multiple
-        onChange={handleFiles}
-        hidden
-      />
-      {list.length === 0 && !uploading ? (
-        <button type="button" className="pf-photo-empty" onClick={pick}>
-          <span className="pf-photo-empty-icon"><Camera size={26} /></span>
-          <strong>Add photos</strong>
-          <small>Take a photo or choose from your gallery · up to {MAX_IMAGES}</small>
-        </button>
-      ) : (
-        <div className="pf-photos">
-          {list.map((src, idx) => (
-            <div key={`${src}-${idx}`} className={`pf-photo${idx === 0 ? ' is-cover' : ''}`}>
-              <img src={resolveImg(src) || src} alt={`Product photo ${idx + 1}`} />
-              <button type="button" className="pf-photo-remove" onClick={() => removeAt(idx)} aria-label={`Remove photo ${idx + 1}`}>
-                <X size={14} weight="bold" />
-              </button>
-              {idx === 0
-                ? <span className="pf-photo-cover">Cover</span>
-                : <button type="button" className="pf-photo-makecover" onClick={() => makeCover(idx)}>Make cover</button>}
-            </div>
-          ))}
-          {uploading > 0 && (
-            <div className="pf-photo pf-photo--loading" aria-live="polite">
-              <CircleNotch size={22} className="pf-spin" />
-              <span>Uploading…</span>
-            </div>
-          )}
-          {list.length + uploading < MAX_IMAGES && !uploading && (
-            <button type="button" className="pf-photo-add" onClick={pick}>
-              <Camera size={22} />
-              <span>Add photo</span>
-              <small>{list.length}/{MAX_IMAGES}</small>
-            </button>
-          )}
-        </div>
-      )}
-    </div>
   );
 }

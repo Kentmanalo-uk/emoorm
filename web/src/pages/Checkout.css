@@ -2038,3 +2038,29 @@
   font-size: 14px;
   font-weight: 500;
 }
+
+/* Paluto and packages ordered ahead: the ready time, then why. */
+.co-ready-note small {
+  display: block;
+  margin-top: 3px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* Product kinds in the items: "/ head" after the price, what a package holds. */
+.co-m-item-unit {
+  margin-left: 2px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 0.78em;
+}
+
+.co-m-item-note {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}

@@ -1,46 +1,210 @@
-import { Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { HeartIcon as Heart, PackageIcon as Package, ShoppingCartIcon as ShoppingCart, TrashIcon as Trash2 } from 'phosphor-react-native';
+import { useEffect, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PackageIcon, ShoppingCartIcon, TrashIcon } from 'phosphor-react-native';
 import ScreenHeader from '../src/components/ScreenHeader';
-import EmptyState from '../src/components/EmptyState';
+import CartConfirmDialog from '../src/components/cart/CartConfirmDialog';
+import { ProfileEmpty } from '../src/components/profile/ProfileUI';
+import { saveWishlist, syncWishlist } from '../src/components/profile/wishlistSync';
 import useWishlistStore from '../src/store/wishlistStore';
 import useCartStore from '../src/store/cartStore';
+import useAuthStore from '../src/store/authStore';
 import { resolveImg } from '../src/lib/media';
+import { saleInfo } from '../src/lib/variantPricing';
 import { toast } from '../src/lib/toast';
-import { colors, fontFamily, radius, spacing, typography } from '../src/theme';
+import { font, t } from '../src/theme';
 
-const imageOf = (product) => Array.isArray(product.images) ? product.images[0] : product.image;
-
+/**
+ * /profile/wishlist and /wishlist (web/src/pages/Wishlist.jsx, WishlistContent
+ * in the profile layout): "Clear all", then the saved products two to a row,
+ * each with Remove and Add to cart.
+ */
 export default function Wishlist() {
   const router = useRouter();
-  const items = useWishlistStore((state) => state.items);
-  const removeItem = useWishlistStore((state) => state.removeItem);
-  const clear = useWishlistStore((state) => state.clear);
-  const addItem = useCartStore((state) => state.addItem);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const items = useWishlistStore((s) => s.items);
+  const removeItem = useWishlistStore((s) => s.removeItem);
+  const clear = useWishlistStore((s) => s.clear);
+  const addItem = useCartStore((s) => s.addItem);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.floor(((width - 24 - 10) / 2) * 100) / 100;
 
-  const addToCart = (product) => {
+  // The account's saved list (the website's store loads it on sign-in).
+  useEffect(() => { if (isAuthenticated) syncWishlist(); }, [isAuthenticated]);
+
+  const handleAddToCart = (product) => {
+    if (!isAuthenticated) { router.push('/login'); return; }
     try {
-      addItem({ ...product, image: imageOf(product), storeId: product.storeId || product.store?.id, storeName: product.store?.name, storeLogo: product.store?.logo || product.store?.logoUrl, storeSlug: product.store?.slug }, 1);
-      toast.success('Added to cart');
-    } catch (error) { toast.error(error.message || 'Could not add item'); }
+      addItem({ ...product, quantity: 1 }, 1);
+      toast.success(`${product.name} added to cart`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to add to cart');
+    }
   };
 
-  return <View style={styles.screen}>
-    <ScreenHeader title="My Wishlist" subtitle={`${items.length} saved ${items.length === 1 ? 'item' : 'items'}`} action={items.length ? <Pressable onPress={() => Alert.alert('Clear wishlist?', 'All saved products will be removed.', [{ text: 'Keep', style: 'cancel' }, { text: 'Clear', style: 'destructive', onPress: clear }])}><Trash2 size={19} color={colors.error} /></Pressable> : null} />
-    <FlatList
-      data={items}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={items.length ? styles.list : styles.empty}
-      ListEmptyComponent={<EmptyState icon={<Heart size={46} color={colors.gray400} />} title="Your wishlist is empty" message="Save products you love and come back anytime." actionLabel="Browse products" onAction={() => router.push('/products')} />}
-      renderItem={({ item }) => <Pressable style={styles.card} onPress={() => router.push(`/product/${item.slug}`)}>
-        {imageOf(item) ? <Image source={{ uri: resolveImg(imageOf(item)) }} style={styles.image} /> : <View style={[styles.image, styles.fallback]}><Package size={24} color={colors.gray400} /></View>}
-        <View style={styles.body}><Text style={styles.name} numberOfLines={2}>{item.name}</Text><Text style={styles.store} numberOfLines={1}>{item.store?.name || item.storeName || 'Local seller'}</Text><Text style={styles.price}>₱{Number(item.price || 0).toFixed(2)}</Text><View style={styles.actions}><Pressable style={styles.cartButton} disabled={item.stock === 0} onPress={(event) => { event.stopPropagation(); addToCart(item); }}><ShoppingCart size={15} color={colors.white} /><Text style={styles.cartText}>{item.stock === 0 ? 'Out of stock' : 'Add to cart'}</Text></Pressable><Pressable style={styles.removeButton} onPress={(event) => { event.stopPropagation(); removeItem(item.id); }}><Trash2 size={17} color={colors.error} /></Pressable></View></View>
-      </Pressable>}
-    />
-  </View>;
+  const handleRemove = (product) => {
+    removeItem(product.id);
+    if (isAuthenticated) saveWishlist();
+    toast.success('Removed from wishlist');
+  };
+
+  const handleClearAll = () => {
+    setConfirmOpen(false);
+    clear();
+    if (isAuthenticated) saveWishlist([]);
+    toast.success('Wishlist cleared');
+  };
+
+  return (
+    <View style={styles.screen}>
+      <ScreenHeader title="My Wishlist" backTo="/profile" />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+        {items.length > 0 ? (
+          <View style={styles.header}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setConfirmOpen(true)}
+              style={({ pressed }) => [styles.clear, pressed && styles.clearPressed]}
+            >
+              {({ pressed }) => (
+                <>
+                  <TrashIcon size={14} color={pressed ? t.danger[500] : t.neutral[500]} />
+                  <Text style={[styles.clearText, pressed && { color: t.danger[500] }]}>Clear all</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        ) : null}
+
+        {items.length === 0 ? (
+          <ProfileEmpty
+            section
+            art="wishlist"
+            title="Your wishlist is empty"
+            hint="Save products you love and come back to them anytime."
+            action="Browse Products"
+            onAction={() => router.push('/products')}
+          />
+        ) : (
+          <View style={styles.grid}>
+            {items.map((product) => (
+              <WishlistCard
+                key={product.id}
+                width={cardWidth}
+                product={product}
+                onOpen={() => router.push(`/product/${product.slug}`)}
+                onStore={() => product.store?.slug && router.push(`/store/${product.store.slug}`)}
+                onAddToCart={handleAddToCart}
+                onRemove={handleRemove}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      <CartConfirmDialog
+        open={confirmOpen}
+        title="Remove everything from your wishlist?"
+        confirmLabel="Remove all"
+        danger
+        onConfirm={handleClearAll}
+        onCancel={() => setConfirmOpen(false)}
+      />
+    </View>
+  );
+}
+
+function WishlistCard({ width, product, onOpen, onStore, onAddToCart, onRemove }) {
+  const sale = saleInfo(product);
+  const price = sale.price;
+  const compareAt = sale.regular ?? (product.compareAtPrice ? Number(product.compareAtPrice) : null);
+  const discount = compareAt && compareAt > price
+    ? Math.round(((compareAt - price) / compareAt) * 100)
+    : null;
+  const images = Array.isArray(product.images) ? product.images : [];
+  const out = product.stock === 0;
+
+  return (
+    <View style={[styles.card, { width }]}>
+      <Pressable accessibilityRole="link" accessibilityLabel={product.name} onPress={onOpen} style={styles.imgWrap}>
+        {images[0]
+          ? <Image source={{ uri: resolveImg(images[0]) || images[0] }} style={styles.img} resizeMode="cover" />
+          : <View style={styles.noImg}><PackageIcon size={28} color={t.neutral[300]} /></View>}
+        {discount ? <Text style={styles.discount}>-{discount}%</Text> : null}
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel="Remove" onPress={() => onRemove(product)} style={styles.remove}>
+        <TrashIcon size={14} color={t.neutral[500]} />
+      </Pressable>
+
+      <View style={styles.body}>
+        <Pressable accessibilityRole="link" onPress={onOpen}>
+          <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+        </Pressable>
+
+        {product.store?.name ? (
+          <Pressable accessibilityRole="link" onPress={onStore}>
+            <Text style={styles.store} numberOfLines={1}>{product.store.name}</Text>
+          </Pressable>
+        ) : null}
+
+        <View style={styles.priceRow}>
+          <Text style={styles.price}>₱{price.toFixed(2)}</Text>
+          {compareAt ? <Text style={styles.compare}>₱{compareAt.toFixed(2)}</Text> : null}
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: out }}
+          disabled={out}
+          onPress={() => onAddToCart(product)}
+          style={({ pressed }) => [styles.cartBtn, pressed && { backgroundColor: t.primary[700] }, out && styles.cartBtnOff]}
+        >
+          <ShoppingCartIcon size={14} color="#fff" />
+          <Text style={styles.cartText}>{out ? 'Out of stock' : 'Add to cart'}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bgSecondary }, list: { padding: spacing.md, gap: spacing.sm, paddingBottom: spacing.xxl }, empty: { flexGrow: 1 },
-  card: { flexDirection: 'row', padding: spacing.sm, gap: spacing.md, borderRadius: radius.lg, backgroundColor: colors.white }, image: { width: 110, height: 126, borderRadius: radius.base, backgroundColor: colors.gray100 }, fallback: { alignItems: 'center', justifyContent: 'center' }, body: { flex: 1, paddingVertical: spacing.xs }, name: { ...typography.body, fontFamily: fontFamily.semiBold, color: colors.textPrimary }, store: { ...typography.caption, color: colors.textMuted, marginTop: 3 }, price: { ...typography.h3, color: colors.primaryDark, marginTop: spacing.sm }, actions: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm }, cartButton: { flex: 1, height: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.base, backgroundColor: colors.primary }, cartText: { ...typography.caption, color: colors.white, fontFamily: fontFamily.semiBold }, removeButton: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: radius.base, backgroundColor: '#fef2f2' },
+  screen: { flex: 1, backgroundColor: t.neutral[0] },
+  content: { gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
+
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: -12 },
+  clear: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 40, paddingHorizontal: 14,
+    borderRadius: 8, backgroundColor: t.neutral[0],
+  },
+  clearPressed: { backgroundColor: t.danger[50] },
+  clearText: { fontSize: 13, lineHeight: 15.6, color: t.neutral[500], ...font(400) },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 10 },
+  card: { borderRadius: 12, overflow: 'hidden', backgroundColor: t.neutral[0] },
+  imgWrap: { width: '100%', aspectRatio: 1, overflow: 'hidden', backgroundColor: t.neutral[50] },
+  img: { width: '100%', height: '100%' },
+  noImg: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  discount: {
+    position: 'absolute', top: 8, left: 8, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4, overflow: 'hidden',
+    backgroundColor: t.accent[500], color: '#fff', fontSize: 11, lineHeight: 17.6, ...font(500),
+  },
+  remove: {
+    position: 'absolute', top: 6, right: 6, width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.12)',
+  },
+  body: { gap: 4, padding: 10 },
+  name: { minHeight: 36.4, fontSize: 13, lineHeight: 18.2, color: t.neutral[900], ...font(500) },
+  store: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
+  priceRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  price: { fontSize: 15, lineHeight: 24, color: t.primary[600], ...font(500) },
+  compare: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], textDecorationLine: 'line-through', ...font(400) },
+  cartBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 40, marginTop: 6, padding: 7,
+    borderRadius: 8, backgroundColor: t.primary[600],
+  },
+  cartBtnOff: { backgroundColor: t.neutral[400] },
+  cartText: { fontSize: 13, lineHeight: 15.6, color: '#fff', ...font(500) },
 });

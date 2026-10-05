@@ -7,15 +7,16 @@ import { Image, View, StyleSheet, Text, TextInput } from 'react-native';
 import Toast from 'react-native-toast-message';
 import {
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  Inter_800ExtraBold,
-} from '@expo-google-fonts/inter';
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+  DMSans_800ExtraBold,
+} from '@expo-google-fonts/dm-sans';
 import useAuthStore from '../src/store/authStore';
 import { colors, fontFamily } from '../src/theme';
 import { toastConfig } from '../src/lib/toast';
+import { AccountSwitchHost } from '../src/components/RoleSwitchOverlay';
 
 SplashScreen.preventAutoHideAsync().catch(() => { });
 
@@ -34,10 +35,16 @@ const PROTECTED_PATHS = [
   '/design-system',
   '/qr-scan',
   '/qr-approve',
+  '/returns',
+  '/receipt',
+  '/verification',
+  '/support',
+  '/reports',
+  '/notification',
 ];
 
-// Apply Inter as the app-wide default so screens/components that don't set
-// an explicit typography style (e.g. auth forms) still render in Inter.
+// DM Sans (the website's font) as the app-wide default, so screens and
+// components without their own typography style still render in it.
 Text.defaultProps = Text.defaultProps || {};
 Text.defaultProps.style = [{ fontFamily: fontFamily.regular }, Text.defaultProps.style];
 TextInput.defaultProps = TextInput.defaultProps || {};
@@ -50,11 +57,11 @@ export default function RootLayout() {
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_800ExtraBold,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
+    DMSans_800ExtraBold,
   });
   const requiresLogin = !isAuthenticated && PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
@@ -64,7 +71,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (isHydrated && fontsLoaded && requiresLogin) {
-      router.replace({ pathname: '/login', params: { redirect: pathname } });
+      // The Seller Center and the seller application sign in on the seller
+      // login, as the website's /seller/login.
+      const seller = pathname === '/seller' || pathname.startsWith('/seller/') || pathname.startsWith('/seller-');
+      router.replace({ pathname: seller ? '/seller-login' : '/login', params: { redirect: pathname } });
     }
   }, [fontsLoaded, isHydrated, pathname, requiresLogin, router]);
 
@@ -105,6 +115,8 @@ export default function RootLayout() {
           </Stack.Protected>
         </Stack>
       )}
+      {/* The account switch's fade-out runs over whichever page it lands on. */}
+      <AccountSwitchHost />
       <Toast config={toastConfig} topOffset={52} />
     </SafeAreaProvider>
   );

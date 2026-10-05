@@ -24,6 +24,9 @@ import Spinner from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
 import { momentLabel, spanLabel } from '../lib/availability';
 import TimeLeft from '../components/ui/TimeLeft';
+import {
+  etaLabel, hasPaluto, lineKind, lineNote, countLabel,
+} from '../lib/orderLines';
 
 // Available Today orders carry a time to confirm by (respondBy); unconfirmed
 // by then, they cancel on their own.
@@ -41,6 +44,19 @@ const TodayTag = ({ order }) => {
     </div>
   );
 };
+
+// Paluto is cooked after the order: when the buyer expects it.
+const cookingFor = (order) => !order?.respondBy && order?.etaFrom && hasPaluto(order.items)
+  && !['CANCELLED', 'DELIVERED', 'COMPLETED', 'PICKED_UP'].includes(order.status);
+const CookTag = ({ order }) => (cookingFor(order) ? (
+  <div className="so-today">
+    <span className="so-today-badge so-cook-badge">Paluto</span>
+    <span className="so-today-ready">Ready {etaLabel(order)}</span>
+  </div>
+) : null);
+
+// "×2", or "2 heads" for animals.
+const qtyLabel = (item) => (lineKind(item) === 'LIVESTOCK' ? countLabel(item) : `×${item.quantity}`);
 
 // How many orders a tab holds (open steps only; not All, Completed, Cancelled).
 const tabCount = (t, byStatus) => (t.key === 'all' || t.final ? 0 : sellerTabCount(t, byStatus));
@@ -627,6 +643,7 @@ export default function SellerOrders() {
                           <div>#{order.orderNumber || order.id.slice(-6).toUpperCase()}</div>
                           {orderDate && <div className="so-order-date">{orderDate}</div>}
                           <TodayTag order={order} />
+                          <CookTag order={order} />
                         </td>
                         <td>
                           <div className="so-products">
@@ -665,7 +682,7 @@ export default function SellerOrders() {
                                     )}
                                   </span>
                                   <span className="so-product-meta">
-                                    {items.length} {items.length === 1 ? 'item' : 'items'} · Qty {totalQty}
+                                    {items.length} {items.length === 1 ? 'item' : 'items'} · {items.length === 1 && ['LIVESTOCK', 'PACKAGE'].includes(lineKind(items[0])) ? countLabel(items[0]) : `Qty ${totalQty}`}
                                   </span>
                                 </>
                               )}
@@ -774,6 +791,13 @@ export default function SellerOrders() {
                         : ''}
                       {selectedOrder.etaFrom ? `The buyer expects it ${spanLabel(selectedOrder.etaFrom, selectedOrder.etaTo || selectedOrder.etaFrom)}.` : ''}
                     </p>
+                  </div>
+                )}
+
+                {cookingFor(selectedOrder) && (
+                  <div className="detail-row detail-row--col so-today-detail">
+                    <span>Paluto</span>
+                    <p>Cooked to order. The buyer expects it {etaLabel(selectedOrder)}.</p>
                   </div>
                 )}
 
@@ -972,8 +996,9 @@ export default function SellerOrders() {
                             {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
                           </small>
                         )}
+                        {lineNote(item) && <small className="detail-item-variations">{lineNote(item)}</small>}
                       </span>
-                      <span>×{item.quantity}</span>
+                      <span>{qtyLabel(item)}</span>
                       <span>₱{(Number(item.price) * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}

@@ -12,6 +12,8 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { saleInfo } from '../lib/variantPricing';
 import { SaleWas } from '../components/ui/SaleTag';
+import KindPrice from '../components/product/kinds/KindPrice';
+import { isStockless } from '../lib/productKinds';
 import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
@@ -109,7 +111,7 @@ const Products = () => {
   const handleAddToCart = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
-    if (product.stock === 0) {
+    if (product.stock === 0 && !isStockless(product)) {
       toast.error('Out of stock');
       return;
     }
@@ -132,6 +134,10 @@ const Products = () => {
         stock: product.stock,
         listingKind: product.listingKind,
         availability: product.availability,
+        productType: product.productType,
+        details: product.details,
+        fulfillment: product.fulfillment,
+        weightGrams: product.weightGrams,
         slug: product.slug,
         categoryId: product.categoryId,
         selectedVariations: null,
@@ -670,7 +676,7 @@ const Products = () => {
                     >
                       <div className="product-image">
                         <ProductImage src={product.images?.[0]} alt={product.name} />
-                        {product.stock === 0 && (
+                        {product.stock === 0 && !isStockless(product) && (
                           <div className="product-badge out-of-stock">Out of Stock</div>
                         )}
                         {product.isFeatured && (
@@ -688,7 +694,7 @@ const Products = () => {
                       {isPhone ? (
                         <div className="product-info srch-card">
                           <h3 className="product-name"><ProductTodayTag product={product} />{product.name}</h3>
-                          <span className="srch-card-price">₱{saleInfo(product).price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <SaleWas product={product} compact /></span>
+                          <span className="srch-card-price"><KindPrice product={product}>₱{saleInfo(product).price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</KindPrice> <SaleWas product={product} compact /></span>
                           <span className="srch-card-meta">
                             {Number(product.reviewCount) > 0 && (
                               <span className="srch-card-rating"><Star size={13} weight="fill" /> {Number(product.averageRating || 0).toFixed(1)}</span>
@@ -703,7 +709,7 @@ const Products = () => {
                       ) : (
                         <div className="product-info">
                           <h3 className="product-name"><ProductTodayTag product={product} />{product.name}</h3>
-                          <span className="product-price">₱{saleInfo(product).price.toFixed(2)} <SaleWas product={product} compact /></span>
+                          <span className="product-price"><KindPrice product={product}>₱{saleInfo(product).price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
                           {renderRating(product)}
                           {Number(product.soldCount) > 0 && (
                             <span className="product-review-count">{product.soldCount} sold</span>

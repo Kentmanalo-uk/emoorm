@@ -19,6 +19,10 @@ const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFracti
  * mode: 'cart' | 'buy' | null (closed)
  * onConfirm(): runs the add or buy; the sheet only checks that every option
  * group has a pick first.
+ * limits: { least, most } for the quantity when the product's kind sets them
+ * (a paluto's minimum order and no stock cap); stockText and soldOutText
+ * replace the stock line and "Out of stock" for kinds that word them otherwise;
+ * priceFrom shows sizes' prices as "from ₱350", priceUnit follows the price (" / head").
  */
 export default function ProductOptionSheet({
   mode,
@@ -31,6 +35,11 @@ export default function ProductOptionSheet({
   onConfirm,
   onClose,
   busy = false,
+  limits = null,
+  stockText = null,
+  soldOutText = 'Out of stock',
+  priceFrom = false,
+  priceUnit = '',
 }) {
   const [shown, setShown] = useState(mode);
   const [closing, setClosing] = useState(false);
@@ -71,7 +80,8 @@ export default function ProductOptionSheet({
   // Per-option stock: the chosen option's quantity (the total until chosen).
   const stockGroup = stockedVariation(product.variations);
   const stock = stockForSelection(product, selected);
-  const outOfStock = stock <= 0;
+  const { least, most } = limits || { least: 1, most: stock };
+  const outOfStock = most <= 0;
   const optionSoldOut = (groupName, opt) => stockGroup?.name === groupName
     && Number(stockGroup.stocks?.[opt] || 0) <= 0;
   const picked = variations.filter((v) => selected[v.name]).map((v) => `${v.name}: ${selected[v.name]}`);
@@ -85,7 +95,7 @@ export default function ProductOptionSheet({
   const showRange = !!pricedGroup && range.min !== range.max && !chosen;
   const total = unit * quantity;
 
-  const setQty = (n) => onQuantity(Math.max(1, Math.min(stock || 1, n)));
+  const setQty = (n) => onQuantity(Math.max(least, Math.min(most || 1, n)));
 
   const confirm = () => {
     const first = variations.find((v) => !selected[v.name]);
@@ -113,9 +123,12 @@ export default function ProductOptionSheet({
             <ProductImage src={image} alt={product.name} />
           </div>
           <div className="pos-head-info">
-            <div className="pos-price">{showRange ? `${peso(range.min)} – ${peso(range.max)}` : peso(unit)}</div>
-            <div className={`pos-stock${outOfStock ? ' is-out' : stock <= (product.lowStockThreshold || 5) ? ' is-low' : ''}`}>
-              {outOfStock ? 'Out of stock' : stock <= (product.lowStockThreshold || 5) ? `Only ${stock} left` : `Stock: ${stock}`}
+            <div className="pos-price">
+              {showRange ? (priceFrom ? `from ${peso(range.min)}` : `${peso(range.min)} – ${peso(range.max)}`) : peso(unit)}
+              {priceUnit && <small className="pos-price-unit">{priceUnit}</small>}
+            </div>
+            <div className={`pos-stock${outOfStock ? ' is-out' : !stockText && stock <= (product.lowStockThreshold || 5) ? ' is-low' : ''}`}>
+              {outOfStock ? soldOutText : stockText || (stock <= (product.lowStockThreshold || 5) ? `Only ${stock} left` : `Stock: ${stock}`)}
             </div>
             <div className="pos-picked">
               {variations.length === 0
@@ -182,19 +195,19 @@ export default function ProductOptionSheet({
           })}
 
           <section className="pos-group pos-qty-row">
-            <h3 className="pos-group-title">Quantity</h3>
+            <h3 className="pos-group-title">Quantity{least > 1 && <span> (minimum {least})</span>}</h3>
             <div className="pos-qty">
-              <button type="button" onClick={() => setQty(quantity - 1)} disabled={quantity <= 1} aria-label="Decrease quantity">
+              <button type="button" onClick={() => setQty(quantity - 1)} disabled={quantity <= least} aria-label="Decrease quantity">
                 <Minus size={15} weight="bold" />
               </button>
               <input
                 type="text"
                 inputMode="numeric"
                 value={quantity}
-                onChange={(e) => setQty(parseInt(e.target.value.replace(/\D/g, '') || '1', 10))}
+                onChange={(e) => setQty(parseInt(e.target.value.replace(/\D/g, '') || String(least), 10))}
                 aria-label="Quantity"
               />
-              <button type="button" onClick={() => setQty(quantity + 1)} disabled={quantity >= stock} aria-label="Increase quantity">
+              <button type="button" onClick={() => setQty(quantity + 1)} disabled={quantity >= most} aria-label="Increase quantity">
                 <Plus size={15} weight="bold" />
               </button>
             </div>
@@ -211,7 +224,7 @@ export default function ProductOptionSheet({
             onClick={confirm}
             disabled={outOfStock || busy}
           >
-            {outOfStock ? 'Out of stock' : busy ? <BusyLabel size={18}>Please wait…</BusyLabel> : (
+            {outOfStock ? soldOutText : busy ? <BusyLabel size={18}>Please wait…</BusyLabel> : (
               <>
                 <span>{label}</span>
                 {shown === 'buy' && <small>{peso(total)}</small>}

@@ -14,6 +14,7 @@ const { termsOf, whereFor } = require('../utils/searchTerms');
 const {
   MODES, DAY_MS, liveNow, isOpen, manilaDay, daysBetween, publicWindow,
 } = require('../utils/availability');
+const { kindOf } = require('../utils/productKinds');
 
 /**
  * Available Today: sellers publish a batch of a product for a limited time
@@ -158,6 +159,9 @@ const shape = (window) => ({
       saleEndsAt: window.product.saleEndsAt,
       status: window.product.status,
       listingKind: window.product.listingKind,
+      productType: kindOf(window.product),
+      details: window.product.details ?? null,
+      fulfillment: window.product.fulfillment ?? null,
     }
     : undefined,
 });
@@ -181,6 +185,29 @@ const notifyFollowers = async (store, window, productName) => {
 };
 
 /**
+ * Check a window for `store` before it is published: its times, settings and
+ * quantity. Also used for the first post sent with a new ready-to-eat
+ * product, before that product is saved.
+ * @returns {Promise<{ fields: Object, quantity: Number }>}
+ */
+const checkPost = async (store, body = {}) => {
+  await assertEnabled();
+  return { fields: windowFields(body, store), quantity: quantityField(body.quantity) };
+};
+
+/** Publish a checked window (checkPost) of the store's product: it opens now, or at ordersOpenAt. */
+const publishChecked = async (userId, store, product, { fields, quantity }) => {
+  const created = await availabilityRepository.create({
+    ...fields, quantity, productId: product.id, storeId: store.id, status: 'SCHEDULED',
+  });
+  if (fields.ordersOpenAt.getTime() <= Date.now()) {
+    await availabilityRepository.openWindow(created.id, { actorId: userId });
+  }
+  await notifyFollowers(store, created, product.name).catch((err) => console.error('[today] notify failed:', err.message));
+  return shape(await availabilityRepository.findById(created.id));
+};
+
+/**
  * Publish a window for one of the seller's Available Today products. It opens
  * now (or at ordersOpenAt) with `quantity` to sell.
  */
@@ -199,19 +226,10 @@ const publish = async (userId, body = {}) => {
     throw new ApiError('This product cannot be sold right now', 400);
   }
 
-  const fields = windowFields(body, store);
-  const quantity = quantityField(body.quantity);
-  const overlap = await availabilityRepository.findOverlap(product.id, fields.ordersOpenAt, fields.ordersCloseAt);
+  const post = await checkPost(store, body);
+  const overlap = await availabilityRepository.findOverlap(product.id, post.fields.ordersOpenAt, post.fields.ordersCloseAt);
   if (overlap) throw new ApiError('This product already has a window at that time. Change or end it first.', 409);
-
-  const created = await availabilityRepository.create({
-    ...fields, quantity, productId: product.id, storeId: store.id, status: 'SCHEDULED',
-  });
-  if (fields.ordersOpenAt.getTime() <= Date.now()) {
-    await availabilityRepository.openWindow(created.id, { actorId: userId });
-  }
-  await notifyFollowers(store, created, product.name).catch((err) => console.error('[today] notify failed:', err.message));
-  return shape(await availabilityRepository.findById(created.id));
+  return publishChecked(userId, store, product, post);
 };
 
 /** Change a window's times, preparation, fulfilment or note. */
@@ -554,6 +572,8 @@ const refresh = (productIds) => invalidateProductIds(productIds);
 module.exports = {
   CONFIRM_MINUTES,
   isEnabled,
+  checkPost,
+  publishChecked,
   publish,
   updateWindow,
   adjustQuantity,

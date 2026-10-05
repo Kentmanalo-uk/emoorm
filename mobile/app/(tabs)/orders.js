@@ -1,275 +1,610 @@
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, RefreshControl,
-  ScrollView, Share, StyleSheet, Text, TextInput, View,
+  Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import { ImageIcon as ImagePlus, ChatCircleIcon as MessageCircle, PackageIcon as Package, ReceiptIcon as ReceiptText, ArrowCounterClockwiseIcon as RotateCcw, StarIcon as Star, VideoCameraIcon as Video, XIcon as X } from 'phosphor-react-native';
+import {
+  ArrowCounterClockwiseIcon, ChatTextIcon, CheckCircleIcon, EyeIcon, QrCodeIcon, StarIcon, UploadSimpleIcon,
+} from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
-import { ENDPOINTS } from '../../src/api/endpoints';
-import EmptyState from '../../src/components/EmptyState';
-import StatusBadge from '../../src/components/StatusBadge';
-import useCartStore from '../../src/store/cartStore';
-import { resolveImg } from '../../src/lib/media';
+import ScreenHeader from '../../src/components/ScreenHeader';
+import ProductImage from '../../src/components/ProductImage';
+import useCartStore, { cartKeyFor } from '../../src/store/cartStore';
 import { toast } from '../../src/lib/toast';
-import { uploadReview } from '../../src/lib/upload';
-import { ListSkeleton } from '../../src/components/SkeletonLayouts';
 import { invalidateCachedData } from '../../src/lib/dataCache';
-import { colors, fontFamily, radius, spacing, typography } from '../../src/theme';
+import { momentLabel, spanLabel } from '../../src/lib/availability';
+import { font, t } from '../../src/theme';
+import {
+  BUYER_TABS, buyerBucket, buyerTabFrom, countBuyerTabs, needsPayment, longDate, pesoPlain, rangeLabel,
+} from '../../src/components/orders/orderProgress';
+import {
+  OrderActions, OrderBadge, OrderCardsSkeleton, OrderTabs, cardShadow,
+} from '../../src/components/orders/OrderBits';
+import CourierTracking from '../../src/components/orders/CourierTracking';
+import OrderPayForm from '../../src/components/orders/OrderPayForm';
+import OrderConfirmDialog from '../../src/components/orders/OrderConfirmDialog';
+import OrderReviewSheet from '../../src/components/orders/OrderReviewSheet';
+import OrderDetailsSheet from '../../src/components/orders/OrderDetailsSheet';
+import OrdersEmpty from '../../src/components/orders/OrdersEmpty';
 
-const TABS = [
-  { key: 'all', label: 'All' },
-  { key: 'PENDING', label: 'To Pay' },
-  { key: 'CONFIRMED', label: 'To Ship' },
-  { key: 'PREPARING', label: 'Preparing' },
-  { key: 'READY', label: 'Ready' },
-  { key: 'COMPLETED', label: 'Completed' },
-  { key: 'CANCELLED', label: 'Cancelled' },
-];
+/*
+ * My Orders (web/src/pages/Orders.jsx at phone size): the buyer's tabs, one
+ * card per order with what to do next, the details sheet, paying a QR
+ * order, "Order received", cancelling, rating and buying again.
+ */
 
-const TAB_STATUS_GROUPS = {
-  PENDING: ['PENDING'],
-  CONFIRMED: ['CONFIRMED'],
-  PREPARING: ['PREPARING'],
-  READY: ['READY', 'READY_FOR_PICKUP', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'PICKED_UP', 'DELIVERED'],
-  COMPLETED: ['COMPLETED'],
-  CANCELLED: ['CANCELLED'],
+const ORDERS_PAGE = 50;
+
+// Pay, pay again after a rejection, or replace a proof not yet checked.
+const canResubmitProof = (order) => (
+  needsPayment(order)
+  || (order.paymentMethod !== 'COD'
+    && order.paymentStatus === 'PENDING_VERIFICATION'
+    && ['PENDING', 'CONFIRMED'].includes(order.status))
+);
+
+const payActionLabel = (order) => {
+  if (order.paymentStatus === 'PENDING') return 'Pay now';
+  if (order.paymentStatus === 'FAILED') return 'Pay again / resubmit proof';
+  return 'Replace payment proof';
 };
 
-const REVIEWABLE = ['COMPLETED', 'DELIVERED', 'PICKED_UP'];
-const peso = (value) => `₱${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const firstImage = (images) => {
-  if (Array.isArray(images)) return images[0];
-  try { return JSON.parse(images || '[]')[0]; } catch { return images; }
+const canConfirmReceipt = (order) => ['DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(order.status);
+
+// While the shop checks a payment the order is held, until that check is
+// overdue (the backend's paymentCheck deadline); then the buyer may cancel.
+const canBuyerCancel = (order) => order.paymentStatus !== 'PENDING_VERIFICATION'
+  || (order.deadline?.kind === 'paymentCheck' && new Date(order.deadline.at) <= new Date());
+
+// The card's badge: the tab it is in (as on Shopee).
+const BADGE = {
+  to_pay: { label: 'To Pay', tone: 'warning' },
+  to_ship: { label: 'To Ship', tone: 'neutral' },
+  to_receive: { label: 'To Receive', tone: 'accent' },
+  to_pickup: { label: 'To Pick Up', tone: 'accent' },
+  completed: { label: 'Completed', tone: 'success' },
+  cancelled: { label: 'Cancelled', tone: 'danger' },
 };
+const stageBadge = (order) => BADGE[buyerBucket(order)];
+
+const productOf = (it) => it.product || { id: it.productId, name: it.productName, images: it.product?.images || [] };
+const parseImages = (images) => {
+  if (Array.isArray(images)) return images;
+  try { return JSON.parse(images || '[]'); } catch { return images ? [images] : []; }
+};
+
+// The list as it showed last time: shown at once while it is asked for again.
+let cachedOrders = null;
 
 export default function Orders() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { status, id: deepLinkOrderId } = useLocalSearchParams();
-  const addItem = useCartStore((state) => state.addItem);
-  const [orders, setOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState(String(status || 'all').toUpperCase());
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [reviewItem, setReviewItem] = useState(null);
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-  const [reviewImages, setReviewImages] = useState([]);
-  const [reviewVideo, setReviewVideo] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const params = useLocalSearchParams();
+  const addItem = useCartStore((s) => s.addItem);
 
-  const fetchOrders = useCallback(async ({ refresh = false } = {}) => {
-    refresh ? setIsRefreshing(true) : setIsLoading(true);
+  const [orders, setOrders] = useState(() => cachedOrders || []);
+  const [ordersFresh, setOrdersFresh] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => !cachedOrders);
+  const [refreshing, setRefreshing] = useState(false);
+  const [savedTab, setActiveTab] = useState(() => buyerTabFrom(params.status));
+  const activeTab = buyerTabFrom(savedTab);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState(null);
+  const [reorderingId, setReorderingId] = useState(null);
+  const [pendingReviews, setPendingReviews] = useState({});
+  const [proofOrderId, setProofOrderId] = useState(null);
+  const [receiveTarget, setReceiveTarget] = useState(null);
+  const [receiving, setReceiving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+  const scrollRef = useRef(null);
+  const cardY = useRef({});
+  const listY = useRef(0);
+
+  const tabCounts = countBuyerTabs(orders);
+  const filteredOrders = activeTab === 'all' ? orders : orders.filter((o) => buyerBucket(o) === activeTab);
+
+  // A link can name a tab (/orders?status=to_pay).
+  useEffect(() => { if (params.status) setActiveTab(buyerTabFrom(params.status)); }, [params.status]);
+
+  const loadPendingReviews = useCallback(async () => {
     try {
-      const response = await apiClient.get(ENDPOINTS.ORDERS.MY_ORDERS, { params: { pageSize: 100 } });
-      setOrders(response.data || []);
-    } catch (error) {
-      toast.error('Failed to load orders', error.message);
+      const res = await apiClient.get('/reviews/my/pending');
+      const map = {};
+      for (const item of (Array.isArray(res.data) ? res.data : [])) map[item.productId] = item;
+      setPendingReviews(map);
+    } catch {
+      /* the nudge is optional; the page works without it */
+    }
+  }, []);
+  const unreviewedItems = (order) => (order.items || []).filter((it) => pendingReviews[it.productId]);
+
+  const fetchOrders = useCallback(async () => {
+    if (!cachedOrders) setIsLoading(true);
+    try {
+      const response = await apiClient.get('/orders/my/orders', { params: { page: 1, pageSize: ORDERS_PAGE } });
+      const list = response.data || [];
+      cachedOrders = list;
+      setOrders(list);
+      setPage(1);
+      setHasMore(Boolean(response.pagination?.hasNext));
+      setOrdersFresh(true);
+      setLoadFailed(false);
+    } catch {
+      setLoadFailed(true);
+      toast.error('Failed to load orders');
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
+      setRefreshing(false);
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { fetchOrders(); }, [fetchOrders]));
+  useFocusEffect(useCallback(() => {
+    fetchOrders();
+    loadPendingReviews();
+  }, [fetchOrders, loadPendingReviews]));
 
-  // Deep link from an order notification: /orders?id=<orderId> opens that
-  // order once the list has loaded. The id is remembered rather than cleared,
-  // so dismissing the sheet does not immediately reopen it while a different
-  // order arriving from another notification still does.
+  const loadMoreOrders = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = page + 1;
+      const response = await apiClient.get('/orders/my/orders', { params: { page: next, pageSize: ORDERS_PAGE } });
+      setOrders((cur) => {
+        const have = new Set(cur.map((o) => o.id));
+        return [...cur, ...(response.data || []).filter((o) => !have.has(o.id))];
+      });
+      setPage(next);
+      setHasMore(Boolean(response.pagination?.hasNext));
+    } catch {
+      toast.error('Could not load more orders');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleViewOrder = (order) => {
+    setSelectedOrder(order);
+    setShowOrderDetails(true);
+  };
+
+  const confirmCancelOrder = async () => {
+    if (!cancelTarget || cancelling) return;
+    setCancelling(true);
+    try {
+      await apiClient.post(`/orders/${cancelTarget}/cancel`);
+      invalidateCachedData('profile:');
+      invalidateCachedData('products:');
+      invalidateCachedData('home:');
+      toast.success('Order cancelled successfully');
+      setCancelTarget(null);
+      setShowOrderDetails(false);
+      fetchOrders();
+    } catch (error) {
+      toast.error(error.message || 'Failed to cancel order');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  // "Buy again": re-add each line from current catalogue data, skipping what
+  // can no longer be bought, then straight to checkout with these items.
+  const handleReorder = async (order) => {
+    const lines = order.items || [];
+    if (lines.length === 0) return;
+    setReorderingId(order.id);
+    try {
+      const results = await Promise.allSettled(lines.map((line) => apiClient.get(`/products/${line.productId || line.product?.id}`)));
+      let added = 0;
+      let skipped = 0;
+      const keys = [];
+      results.forEach((result, index) => {
+        const line = lines[index];
+        const product = result.status === 'fulfilled' ? result.value?.data : null;
+        const stock = Number(product?.stock ?? 0);
+        if (!product || product.status !== 'APPROVED' || stock <= 0) {
+          skipped += 1;
+          return;
+        }
+        try {
+          addItem({
+            id: product.id,
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            image: parseImages(product.images)[0] || null,
+            storeId: product.storeId || product.store?.id,
+            storeName: product.store?.name,
+            storeLogo: product.store?.logoUrl || product.store?.logo || null,
+            stock,
+            slug: product.slug,
+            categoryId: product.categoryId,
+            selectedVariations: line.selectedVariations || null,
+          }, Math.max(1, Math.min(Number(line.quantity) || 1, stock)));
+          keys.push(cartKeyFor({ id: product.id, selectedVariations: line.selectedVariations || null }));
+          added += 1;
+        } catch {
+          skipped += 1;
+        }
+      });
+      if (added === 0) {
+        toast.error('None of these items are available right now');
+        return;
+      }
+      toast.success(skipped > 0
+        ? `${added} item${added === 1 ? '' : 's'} added to cart, ${skipped} unavailable`
+        : `${added} item${added === 1 ? '' : 's'} added to cart`);
+      router.push({ pathname: '/checkout', params: { selectedIds: JSON.stringify(keys) } });
+    } catch (error) {
+      toast.error(error.message || 'Failed to add items to cart');
+    } finally {
+      setReorderingId(null);
+    }
+  };
+
+  // Deep link from a notification: /orders?id=<orderId> opens that order once
+  // the fresh list has loaded. The id is remembered, so closing the sheet
+  // does not reopen it while another order's link still does.
   const openedOrderId = useRef(null);
   useEffect(() => {
-    if (!deepLinkOrderId || orders.length === 0) return;
-    if (openedOrderId.current === deepLinkOrderId) return;
-    openedOrderId.current = deepLinkOrderId;
-    const match = orders.find((order) => order.id === deepLinkOrderId);
-    if (match) setSelectedOrder(match);
-  }, [deepLinkOrderId, orders]);
+    const targetId = params.id;
+    if (!targetId || !ordersFresh || orders.length === 0 || openedOrderId.current === targetId) return;
+    openedOrderId.current = targetId;
+    const match = orders.find((order) => order.id === targetId);
+    if (!match) return;
+    // "Order confirmed: please pay now" lands on the payment, in To Pay.
+    if (needsPayment(match)) {
+      setActiveTab('to_pay');
+      setProofOrderId(match.id);
+      setTimeout(() => {
+        const y = cardY.current[match.id];
+        if (y != null) scrollRef.current?.scrollTo({ y: Math.max(0, listY.current + y - 120), animated: true });
+      }, 400);
+      return;
+    }
+    setActiveTab(buyerBucket(match));
+    setSelectedOrder(match);
+    setShowOrderDetails(true);
+  }, [orders, ordersFresh, params.id]);
 
-  const filteredOrders = useMemo(() => activeTab === 'ALL' || activeTab === 'all'
-    ? orders
-    : orders.filter((order) => (TAB_STATUS_GROUPS[activeTab] || [activeTab]).includes(order.status)), [activeTab, orders]);
-
-  const countFor = (key) => key === 'all' ? orders.length : orders.filter((order) => (TAB_STATUS_GROUPS[key] || [key]).includes(order.status)).length;
-
-  const cancelOrder = (order) => Alert.alert(
-    'Cancel this order?',
-    'Reserved stock will be returned to the store.',
-    [
-      { text: 'Keep order', style: 'cancel' },
-      {
-        text: 'Cancel order', style: 'destructive', onPress: async () => {
-          try {
-            await apiClient.post(ENDPOINTS.ORDERS.CANCEL(order.id));
-            invalidateCachedData('profile:');
-            invalidateCachedData('products:');
-            invalidateCachedData('home:');
-            setSelectedOrder(null);
-            toast.success('Order cancelled');
-            fetchOrders({ refresh: true });
-          } catch (error) { toast.error('Could not cancel order', error.message); }
-        }
-      },
-    ]
-  );
-
-  const reorder = (order) => {
-    let added = 0;
-    order.items?.forEach((item) => {
-      try {
-        addItem({
-          id: item.productId || item.product?.id,
-          name: item.productName || item.product?.name,
-          price: item.product?.price || item.price,
-          image: firstImage(item.product?.images),
-          storeId: order.storeId || order.store?.id,
-          storeName: order.store?.name,
-          slug: item.product?.slug,
-        }, item.quantity);
-        added += 1;
-      } catch { /* Continue with other available items. */ }
-    });
-    if (added) {
-      toast.success(`${added} ${added === 1 ? 'item' : 'items'} added to cart`);
-      router.push('/cart');
-    } else toast.error('No items could be added');
-  };
-
-  const shareReceipt = async (order) => {
-    const lines = order.items?.map((item) => `${item.quantity} x ${item.productName || item.product?.name} - ${peso(item.subtotal || Number(item.price) * item.quantity)}`) || [];
-    await Share.share({ message: `E-MOORM Receipt\nOrder ${order.orderNumber}\n${lines.join('\n')}\nDelivery: ${peso(order.deliveryFee)}\nTotal: ${peso(order.total)}\nStatus: ${order.status}` });
-  };
-
-  const openReview = (item) => {
-    setReviewItem(item);
-    setRating(5);
-    setComment('');
-    setReviewImages([]);
-    setReviewVideo(null);
-  };
-
-  const pickReviewImages = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return toast.error('Photo permission is required');
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: 5 - reviewImages.length, quality: 0.85 });
-    if (!result.canceled) setReviewImages((current) => [...current, ...result.assets].slice(0, 5));
-  };
-
-  const pickReviewVideo = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return toast.error('Video permission is required');
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], videoMaxDuration: 60 });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) return toast.error('Video must be under 50 MB');
-    setReviewVideo(asset);
-  };
-
-  const submitReview = async () => {
-    setIsSubmitting(true);
+  const handleConfirmReceived = async () => {
+    if (!receiveTarget) return;
+    setReceiving(true);
     try {
-      await uploadReview({
-        productId: reviewItem.productId || reviewItem.product?.id,
-        orderId: selectedOrder?.id,
-        rating,
-        comment,
-        images: reviewImages,
-        video: reviewVideo,
-      });
-      invalidateCachedData('profile:');
-      setReviewItem(null);
-      toast.success('Review published');
-    } catch (error) { toast.error('Could not publish review', error.message); }
-    finally { setIsSubmitting(false); }
+      const received = receiveTarget;
+      await apiClient.post(`/orders/${received.id}/received`);
+      toast.success('Thanks! Order marked as received');
+      setReceiveTarget(null);
+      setShowOrderDetails(false);
+      fetchOrders();
+      loadPendingReviews();
+      // The goods are in hand: ask right away. One item opens the review
+      // form; several go to the review list so each can be rated.
+      const items = received.items || [];
+      if (items.length === 1) {
+        setReviewTarget({
+          product: productOf(items[0]),
+          orderId: received.id,
+          intro: 'Thanks for confirming. How was it? Your rating helps other buyers and the seller.',
+        });
+      } else if (items.length > 1) {
+        router.push('/reviews?tab=pending');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to confirm receipt');
+    } finally {
+      setReceiving(false);
+    }
   };
 
-  if (isLoading) return <View style={styles.screen}><View style={[styles.header, { paddingTop: insets.top + spacing.md }]}><Text style={styles.title}>My Orders</Text><Text style={styles.subtitle}>Loading your purchases</Text></View><ListSkeleton rows={6} imageSize={56} /></View>;
+  const reviewOrder = (order, item, extra = {}) => setReviewTarget({ product: productOf(item), orderId: order.id, ...extra });
+
+  const cardButtons = (order) => {
+    const storeId = order.storeId || order.store?.id;
+    const done = ['COMPLETED', 'DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(order.status);
+    const received = ['COMPLETED', 'DELIVERED', 'PICKED_UP'].includes(order.status) && order.items?.length > 0;
+    return [
+      { key: 'view', label: 'View details', Icon: EyeIcon, onPress: () => handleViewOrder(order) },
+      canResubmitProof(order) && {
+        key: 'pay',
+        primary: true,
+        label: payActionLabel(order),
+        Icon: order.paymentStatus === 'PENDING_VERIFICATION' ? UploadSimpleIcon : QrCodeIcon,
+        onPress: () => setProofOrderId((id) => (id === order.id ? null : order.id)),
+      },
+      canConfirmReceipt(order) && {
+        key: 'received', primary: true, label: 'Order received', Icon: CheckCircleIcon, onPress: () => setReceiveTarget(order),
+      },
+      ['PENDING', 'CONFIRMED'].includes(order.status) && canBuyerCancel(order) && {
+        key: 'cancel', danger: true, label: 'Cancel order', onPress: () => setCancelTarget(order.id),
+      },
+      order.status === 'COMPLETED' && {
+        key: 'again',
+        primary: true,
+        label: reorderingId === order.id ? 'Adding…' : 'Buy again',
+        Icon: reorderingId === order.id ? null : ArrowCounterClockwiseIcon,
+        busy: reorderingId === order.id,
+        onPress: () => handleReorder(order),
+      },
+      done && {
+        key: 'return', label: 'Request return', Icon: ArrowCounterClockwiseIcon, onPress: () => router.push(`/returns/request?orderId=${order.id}`),
+      },
+      done && { key: 'receipt', label: 'View receipt', onPress: () => router.push(`/receipt/${order.id}`) },
+      received && (order.items.length === 1
+        ? { key: 'review', label: 'Write review', Icon: StarIcon, onPress: () => reviewOrder(order, order.items[0]) }
+        : { key: 'review', label: 'Review items', Icon: StarIcon, onPress: () => handleViewOrder(order) }),
+      storeId && { key: 'chat', label: 'Contact seller', Icon: ChatTextIcon, onPress: () => router.push(`/messages?store=${storeId}`) },
+    ];
+  };
+
+  const header = <ScreenHeader title="My Orders" backTo="/profile" />;
+
+  if (isLoading) {
+    return (
+      <View style={styles.screen}>
+        {header}
+        <View style={styles.content}><OrderCardsSkeleton /></View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}><Text style={styles.title}>My Orders</Text><Text style={styles.subtitle}>{orders.length} total orders</Text></View>
-      <View style={styles.tabsWrap}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {TABS.map((tab) => {
-            const active = activeTab === tab.key || (activeTab === 'ALL' && tab.key === 'all');
-            const count = countFor(tab.key);
-            return <Pressable key={tab.key} style={[styles.tab, active && styles.tabActive]} onPress={() => setActiveTab(tab.key)}><Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>{count ? <Text style={[styles.tabCount, active && styles.tabCountActive]}>{count}</Text> : null}</Pressable>;
-          })}
-        </ScrollView>
-      </View>
-      <FlatList
-        data={filteredOrders}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={filteredOrders.length ? styles.list : styles.empty}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => fetchOrders({ refresh: true })} colors={[colors.primary]} />}
-        ListEmptyComponent={<EmptyState icon={<Package size={44} color={colors.gray400} />} title="No orders here" message="Orders in this stage will appear here." actionLabel="Browse products" onAction={() => router.push('/products')} />}
-        renderItem={({ item: order }) => <OrderCard order={order} onDetails={() => setSelectedOrder(order)} onCancel={() => cancelOrder(order)} onReorder={() => reorder(order)} />}
+      {header}
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchOrders(); loadPendingReviews(); }} colors={[t.primary[600]]} />}
+        keyboardShouldPersistTaps="handled"
+      >
+        <OrderTabs
+          tabs={BUYER_TABS}
+          active={activeTab}
+          onChange={setActiveTab}
+          // Counts on the tabs that need something from the buyer (as on Shopee).
+          counts={{
+            to_pay: tabCounts.to_pay, to_ship: tabCounts.to_ship, to_receive: tabCounts.to_receive, to_pickup: tabCounts.to_pickup,
+          }}
+        />
+
+        {loadFailed && orders.length === 0 ? (
+          <OrdersEmpty
+            art="orders"
+            title={'Your orders couldn’t be loaded'}
+            hint="Check your connection and try again."
+            button="Try again"
+            onPress={fetchOrders}
+          />
+        ) : filteredOrders.length === 0 ? (
+          <OrdersEmpty
+            art="orders"
+            title="No orders found"
+            hint="You haven't placed any orders in this category yet."
+            button="Browse Products"
+            onPress={() => router.push('/products')}
+          />
+        ) : (
+          <View style={styles.list} onLayout={(e) => { listY.current = e.nativeEvent.layout.y; }}>
+            {filteredOrders.map((order) => (
+              <View key={order.id} onLayout={(e) => { cardY.current[order.id] = e.nativeEvent.layout.y; }}>
+                <OrderCard
+                  order={order}
+                  badge={stageBadge(order)}
+                  unreviewed={order.status === 'COMPLETED' ? unreviewedItems(order) : []}
+                  buttons={cardButtons(order)}
+                  onStore={() => order.store?.slug && router.push(`/store/${order.store.slug}`)}
+                  onStar={(item, n) => reviewOrder(order, item, { initialRating: n })}
+                  onRateItems={() => router.push('/reviews?tab=pending')}
+                  payForm={proofOrderId === order.id ? (
+                    <OrderPayForm
+                      key={`pay-${order.id}`}
+                      order={order}
+                      apiClient={apiClient}
+                      onCancel={() => setProofOrderId(null)}
+                      onDone={() => { setProofOrderId(null); fetchOrders(); }}
+                    />
+                  ) : null}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Older orders, 50 at a time. */}
+        {hasMore && !loadFailed ? (
+          <Pressable accessibilityRole="button" onPress={loadMoreOrders} disabled={loadingMore} style={[styles.more, loadingMore && { opacity: 0.6 }]}>
+            <Text style={styles.moreText}>{loadingMore ? 'Loading…' : 'Show more orders'}</Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
+
+      <OrderDetailsSheet
+        open={showOrderDetails && Boolean(selectedOrder)}
+        order={selectedOrder}
+        badge={selectedOrder ? stageBadge(selectedOrder) : null}
+        onClose={() => setShowOrderDetails(false)}
+        canReceive={selectedOrder ? canConfirmReceipt(selectedOrder) : false}
+        canCancel={selectedOrder ? ['PENDING', 'CONFIRMED'].includes(selectedOrder.status) && canBuyerCancel(selectedOrder) : false}
+        onReceived={() => setReceiveTarget(selectedOrder)}
+        onCancel={() => setCancelTarget(selectedOrder.id)}
+        onReview={(item) => { setShowOrderDetails(false); reviewOrder(selectedOrder, item); }}
       />
 
-      <Modal visible={Boolean(selectedOrder)} transparent animationType="slide" onRequestClose={() => setSelectedOrder(null)}>
-        <View style={styles.modalBackdrop}><View style={styles.sheet}>
-          <View style={styles.sheetHeader}><View><Text style={styles.sheetTitle}>Order Details</Text><Text style={styles.orderNumber}>{selectedOrder?.orderNumber}</Text></View><Pressable style={styles.closeButton} onPress={() => setSelectedOrder(null)}><X size={20} color={colors.textPrimary} /></Pressable></View>
-          {selectedOrder ? <ScrollView contentContainerStyle={styles.sheetBody}>
-            <View style={styles.detailTop}><StatusBadge status={selectedOrder.status} /><Text style={styles.date}>{new Date(selectedOrder.createdAt).toLocaleString('en-PH')}</Text></View>
-            <Detail label={selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Pickup location' : 'Delivery address'} value={selectedOrder.deliveryAddress || selectedOrder.pickupLocation || 'Store pickup'} />
-            <Detail label="Contact number" value={selectedOrder.contactNumber || '—'} />
-            <Text style={styles.sectionTitle}>Items</Text>
-            {selectedOrder.items?.map((item) => <View key={item.id || item.productId} style={styles.detailItem}><ProductImage item={item} /><View style={styles.itemInfo}><Text style={styles.itemName}>{item.productName || item.product?.name}</Text><Text style={styles.itemMeta}>Qty {item.quantity} · {peso(item.price)}</Text></View><Text style={styles.itemPrice}>{peso(item.subtotal || Number(item.price) * item.quantity)}</Text>{REVIEWABLE.includes(selectedOrder.status) ? <Pressable style={styles.reviewIcon} onPress={() => openReview(item)}><Star size={17} color={colors.star} /></Pressable> : null}</View>)}
-            <View style={styles.summary}><Summary label="Subtotal" value={peso(selectedOrder.subtotal)} /><Summary label="Delivery fee" value={Number(selectedOrder.deliveryFee) ? peso(selectedOrder.deliveryFee) : 'FREE'} /><Summary label="Total" value={peso(selectedOrder.total)} total /></View>
-            <View style={styles.actions}>
-              <Pressable style={styles.actionButton} onPress={() => shareReceipt(selectedOrder)}><ReceiptText size={16} color={colors.secondary} /><Text style={styles.actionText}>Share receipt</Text></Pressable>
-              <Pressable style={styles.actionButton} onPress={() => { setSelectedOrder(null); router.push(`/messages?store=${selectedOrder.storeId || selectedOrder.store?.id}`); }}><MessageCircle size={16} color={colors.secondary} /><Text style={styles.actionText}>Contact seller</Text></Pressable>
-              {selectedOrder.status === 'PENDING' || selectedOrder.status === 'CONFIRMED' ? <Pressable style={[styles.actionButton, styles.dangerButton]} onPress={() => cancelOrder(selectedOrder)}><Text style={styles.dangerText}>Cancel order</Text></Pressable> : null}
-              {selectedOrder.status === 'COMPLETED' ? <Pressable style={[styles.actionButton, styles.primaryAction]} onPress={() => reorder(selectedOrder)}><RotateCcw size={16} color={colors.white} /><Text style={styles.primaryActionText}>Buy again</Text></Pressable> : null}
-            </View>
-          </ScrollView> : null}
-        </View></View>
-      </Modal>
+      <OrderReviewSheet
+        target={reviewTarget}
+        onClose={() => setReviewTarget(null)}
+        onSuccess={() => { invalidateCachedData('profile:'); fetchOrders(); loadPendingReviews(); }}
+      />
 
-      <Modal visible={Boolean(reviewItem)} transparent animationType="fade" onRequestClose={() => setReviewItem(null)}>
-        <View style={styles.modalBackdrop}><View style={styles.reviewSheet}>
-          <View style={styles.sheetHeader}><Text style={styles.sheetTitle}>Review product</Text><Pressable onPress={() => setReviewItem(null)}><X size={20} color={colors.textPrimary} /></Pressable></View>
-          <Text style={styles.reviewProduct}>{reviewItem?.productName || reviewItem?.product?.name}</Text>
-          <View style={styles.ratingPicker}>{[1, 2, 3, 4, 5].map((value) => <Pressable key={value} onPress={() => setRating(value)} hitSlop={5}><Star size={32} color={colors.star} weight={value <= rating ? 'fill' : 'regular'} /></Pressable>)}</View>
-          <TextInput value={comment} onChangeText={setComment} style={styles.commentInput} placeholder="Share what you liked about this product" placeholderTextColor={colors.textMuted} multiline maxLength={1000} />
-          <View style={styles.mediaRow}>
-            {reviewImages.map((asset, index) => <Pressable key={`${asset.uri}-${index}`} onPress={() => setReviewImages((current) => current.filter((_, imageIndex) => imageIndex !== index))}><Image source={{ uri: asset.uri }} style={styles.mediaPreview} /><View style={styles.mediaRemove}><X size={11} color={colors.white} /></View></Pressable>)}
-            {reviewImages.length < 5 ? <Pressable style={styles.mediaButton} onPress={pickReviewImages}><ImagePlus size={20} color={colors.secondary} /><Text style={styles.mediaButtonText}>Photo</Text></Pressable> : null}
-            <Pressable style={styles.mediaButton} onPress={pickReviewVideo}><Video size={20} color={reviewVideo ? colors.primary : colors.secondary} /><Text style={styles.mediaButtonText}>{reviewVideo ? 'Video added' : 'Video'}</Text></Pressable>
-          </View>
-          <Pressable style={[styles.submitButton, isSubmitting && styles.disabled]} disabled={isSubmitting} onPress={submitReview}>{isSubmitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.submitText}>Publish review</Text>}</Pressable>
-        </View></View>
-      </Modal>
+      <OrderConfirmDialog
+        open={Boolean(cancelTarget)}
+        title="Cancel this order?"
+        message="The shop will be told, and anything you paid will be refunded by the shop."
+        confirmLabel="Cancel order"
+        cancelLabel="Keep order"
+        danger
+        loading={cancelling}
+        onConfirm={confirmCancelOrder}
+        onCancel={() => { if (!cancelling) setCancelTarget(null); }}
+      />
+
+      <OrderConfirmDialog
+        open={Boolean(receiveTarget)}
+        title="Confirm you received this order?"
+        message={receiveTarget ? `Order #${receiveTarget.orderNumber} will be marked as completed.${receiveTarget.paymentMethod === 'COD' ? ' This also confirms you paid on delivery / pickup.' : ''}` : ''}
+        confirmLabel="Yes, received"
+        loading={receiving}
+        onConfirm={handleConfirmReceived}
+        onCancel={() => { if (!receiving) setReceiveTarget(null); }}
+      />
     </View>
   );
 }
 
-function ProductImage({ item }) {
-  const uri = resolveImg(firstImage(item.product?.images));
-  return uri ? <Image source={{ uri }} style={styles.itemImage} /> : <View style={[styles.itemImage, styles.imageFallback]}><Package size={18} color={colors.gray400} /></View>;
+/** One order (.order-card): shop and stage, items, facts, nudges, buttons. */
+function OrderCard({
+  order, badge, unreviewed, buttons, onStore, onStar, onRateItems, payForm,
+}) {
+  const showEta = order.etaFrom && !['COMPLETED', 'CANCELLED', 'DELIVERED', 'PICKED_UP'].includes(order.status);
+  const items = order.items || [];
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHead}>
+        <Pressable accessibilityRole="link" onPress={onStore} style={styles.storeLink}>
+          <Text style={styles.storeName} numberOfLines={1}>{order.store?.name || 'Store'}</Text>
+        </Pressable>
+        <OrderBadge label={badge.label} tone={badge.tone} />
+      </View>
+
+      <View style={styles.cardBody}>
+        <View style={styles.items}>
+          {items.slice(0, 3).map((item, index) => (
+            // eslint-disable-next-line react/no-array-index-key
+            <View key={index} style={styles.item}>
+              <View style={styles.itemImage}><ProductImage src={item.product?.images?.[0]} /></View>
+              <View style={styles.itemText}>
+                <Text style={styles.itemName} numberOfLines={2}>{item.productName}</Text>
+                <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
+              </View>
+              <Text style={styles.itemPrice}>{pesoPlain(item.price)}</Text>
+            </View>
+          ))}
+          {items.length > 3 ? (
+            <Text style={styles.more3}>+{items.length - 3} more item{items.length - 3 > 1 ? 's' : ''}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.info}>
+          <InfoRow label="Order number" value={order.orderNumber} />
+          <InfoRow label="Order date" value={longDate(order.createdAt)} />
+          {showEta ? (
+            <InfoRow
+              label={order.fulfillmentMethod === 'PICKUP' ? 'Ready for pickup' : 'Expected'}
+              value={order.respondBy
+                ? spanLabel(order.etaFrom, order.etaTo || order.etaFrom)
+                : rangeLabel({ from: order.etaFrom, to: order.etaTo || order.etaFrom })}
+            />
+          ) : null}
+          {order.respondBy && order.status === 'PENDING' ? (
+            <InfoRow label="Available Today" value={`The shop confirms by ${momentLabel(order.respondBy)}, or the order cancels on its own`} />
+          ) : null}
+          <InfoRow label="Total amount" value={pesoPlain(order.total)} total />
+        </View>
+      </View>
+
+      {unreviewed.length > 0 ? (
+        <View style={styles.nudge}>
+          {unreviewed.length === 1 ? null : (
+            <Pressable accessibilityRole="link" onPress={onRateItems} style={styles.nudgeBtn}>
+              <Text style={styles.nudgeBtnText}>Rate items</Text>
+            </Pressable>
+          )}
+          <View style={styles.nudgeText}>
+            <StarIcon size={18} weight="fill" color={t.warning[500]} />
+            <Text style={styles.nudgeLine}>
+              {unreviewed.length === 1
+                ? <>How was <Text style={styles.nudgeStrong}>{productOf(unreviewed[0]).name}</Text>? Tap a star to rate it.</>
+                : `How was your order? ${unreviewed.length} items are waiting for a rating.`}
+            </Text>
+          </View>
+          {unreviewed.length === 1 ? (
+            <View style={styles.nudgeStars}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Pressable key={n} accessibilityRole="button" accessibilityLabel={`${n} star${n === 1 ? '' : 's'}`} onPress={() => onStar(unreviewed[0], n)} style={styles.nudgeStar}>
+                  <StarIcon size={22} color={t.neutral[500]} />
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {order.status === 'SHIPPED' && order.trackingNumber ? <CourierTracking order={order} /> : null}
+
+      <OrderActions buttons={buttons} />
+      {payForm}
+    </View>
+  );
 }
 
-function OrderCard({ order, onDetails, onCancel, onReorder }) {
-  const preview = order.items?.[0];
-  return <View style={styles.card}>
-    <View style={styles.cardHeader}><View style={styles.storeInfo}><Text style={styles.storeName} numberOfLines={1}>{order.store?.name || 'Store'}</Text><Text style={styles.orderNumber}>{order.orderNumber}</Text></View><StatusBadge status={order.status} /></View>
-    {preview ? <View style={styles.preview}><ProductImage item={preview} /><View style={styles.itemInfo}><Text style={styles.itemName} numberOfLines={2}>{preview.productName || preview.product?.name}</Text><Text style={styles.itemMeta}>Qty {preview.quantity}{order.items.length > 1 ? ` · +${order.items.length - 1} more` : ''}</Text></View><Text style={styles.itemPrice}>{peso(order.total)}</Text></View> : null}
-    <View style={styles.cardFooter}><Text style={styles.date}>{new Date(order.createdAt).toLocaleDateString('en-PH')}</Text><View style={styles.cardActions}>{(order.status === 'PENDING' || order.status === 'CONFIRMED') ? <Pressable onPress={onCancel}><Text style={styles.cancelLink}>Cancel</Text></Pressable> : null}{order.status === 'COMPLETED' ? <Pressable onPress={onReorder}><Text style={styles.reorderLink}>Buy again</Text></Pressable> : null}<Pressable style={styles.detailsButton} onPress={onDetails}><Text style={styles.detailsText}>View details</Text></Pressable></View></View>
-  </View>;
+function InfoRow({ label, value, total = false }) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={[styles.infoValue, total && styles.infoTotal]}>{value}</Text>
+    </View>
+  );
 }
-
-function Detail({ label, value }) { return <View style={styles.detailRow}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View>; }
-function Summary({ label, value, total }) { return <View style={styles.summaryRow}><Text style={total ? styles.totalLabel : styles.summaryLabel}>{label}</Text><Text style={total ? styles.totalValue : styles.summaryValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bgSecondary }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm, backgroundColor: colors.white }, title: { ...typography.h2, color: colors.textPrimary }, subtitle: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
-  tabsWrap: { backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.borderLight }, tabs: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs }, tab: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, borderRadius: radius.full, backgroundColor: colors.gray100 }, tabActive: { backgroundColor: colors.primary }, tabText: { ...typography.caption, color: colors.textSecondary }, tabTextActive: { color: colors.white, fontFamily: fontFamily.semiBold }, tabCount: { ...typography.caption, color: colors.textMuted }, tabCountActive: { color: colors.white },
-  list: { padding: spacing.md, gap: spacing.sm, paddingBottom: spacing.xxl }, empty: { flexGrow: 1 }, card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md, gap: spacing.md }, cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm }, storeInfo: { flex: 1 }, storeName: { ...typography.body, fontFamily: fontFamily.semiBold, color: colors.textPrimary }, orderNumber: { ...typography.caption, color: colors.textMuted, marginTop: 2 }, preview: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, itemImage: { width: 58, height: 58, borderRadius: radius.base, backgroundColor: colors.gray100 }, imageFallback: { alignItems: 'center', justifyContent: 'center' }, itemInfo: { flex: 1, gap: 3 }, itemName: { ...typography.body, color: colors.textPrimary }, itemMeta: { ...typography.caption, color: colors.textSecondary }, itemPrice: { ...typography.body, fontFamily: fontFamily.semiBold, color: colors.textPrimary }, cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.borderLight, paddingTop: spacing.sm, gap: spacing.sm }, date: { ...typography.caption, color: colors.textMuted }, cardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md }, cancelLink: { ...typography.caption, color: colors.error }, reorderLink: { ...typography.caption, color: colors.secondary }, detailsButton: { minHeight: 34, justifyContent: 'center', paddingHorizontal: spacing.md, borderRadius: radius.base, backgroundColor: colors.bgGreenLight }, detailsText: { ...typography.caption, fontFamily: fontFamily.semiBold, color: colors.secondary },
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,24,39,0.45)' }, sheet: { maxHeight: '88%', backgroundColor: colors.bgSecondary, borderTopLeftRadius: 16, borderTopRightRadius: 16, overflow: 'hidden' }, sheetHeader: { minHeight: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.borderLight }, sheetTitle: { ...typography.h3, color: colors.textPrimary }, closeButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }, sheetBody: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl }, detailTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, detailRow: { padding: spacing.md, backgroundColor: colors.white, borderRadius: radius.lg, gap: spacing.xs }, detailLabel: { ...typography.caption, color: colors.textMuted }, detailValue: { ...typography.body, color: colors.textPrimary, lineHeight: 20 }, sectionTitle: { ...typography.h3, color: colors.textPrimary, marginTop: spacing.xs }, detailItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.white }, reviewIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' }, summary: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm }, summaryRow: { flexDirection: 'row', justifyContent: 'space-between' }, summaryLabel: { ...typography.body, color: colors.textSecondary }, summaryValue: { ...typography.body, color: colors.textPrimary }, totalLabel: { ...typography.h3, color: colors.textPrimary }, totalValue: { ...typography.h3, color: colors.primaryDark }, actions: { gap: spacing.sm }, actionButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.borderLight, borderRadius: radius.lg, backgroundColor: colors.white }, actionText: { ...typography.body, color: colors.secondary, fontFamily: fontFamily.semiBold }, dangerButton: { borderColor: '#fecaca' }, dangerText: { ...typography.body, color: colors.error, fontFamily: fontFamily.semiBold }, primaryAction: { borderColor: colors.primary, backgroundColor: colors.primary }, primaryActionText: { ...typography.body, color: colors.white, fontFamily: fontFamily.semiBold },
-  reviewSheet: { backgroundColor: colors.white, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: spacing.xxl }, reviewProduct: { ...typography.body, color: colors.textSecondary, textAlign: 'center', padding: spacing.md }, ratingPicker: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginBottom: spacing.lg }, commentInput: { minHeight: 110, marginHorizontal: spacing.lg, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.gray50, textAlignVertical: 'top', ...typography.body, color: colors.textPrimary }, mediaRow: { minHeight: 70, flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, paddingHorizontal: spacing.lg }, mediaPreview: { width: 64, height: 64, borderRadius: radius.base }, mediaRemove: { position: 'absolute', right: 2, top: 2, width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: radius.full, backgroundColor: 'rgba(17,24,39,0.75)' }, mediaButton: { minWidth: 64, height: 64, alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: spacing.xs, borderRadius: radius.base, backgroundColor: colors.bgGreenLight }, mediaButtonText: { ...typography.caption, fontSize: 10, color: colors.secondary }, submitButton: { minHeight: 48, margin: spacing.lg, alignItems: 'center', justifyContent: 'center', borderRadius: radius.lg, backgroundColor: colors.primary }, submitText: { ...typography.body, color: colors.white, fontFamily: fontFamily.semiBold }, disabled: { opacity: 0.5 },
+  screen: { flex: 1, backgroundColor: t.neutral[0] },
+  scroll: { flex: 1 },
+  content: { paddingTop: 24, paddingHorizontal: 12, gap: 12 },
+  list: { gap: 12 },
+
+  card: { borderRadius: 12, backgroundColor: t.neutral[0], overflow: 'hidden', ...cardShadow },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 14, paddingHorizontal: 14, paddingBottom: 4 },
+  storeLink: { flex: 1, minWidth: 0 },
+  storeName: { fontSize: 15, lineHeight: 24, ...font(500), color: t.neutral[900] },
+  cardBody: { paddingTop: 8, paddingHorizontal: 14 },
+  items: { marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: t.neutral[150] },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  itemImage: { width: 52, height: 52, borderRadius: 8, overflow: 'hidden', backgroundColor: t.neutral[100] },
+  itemText: { flex: 1, minWidth: 0 },
+  itemName: { marginBottom: 4, fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[900] },
+  itemQty: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
+  itemPrice: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[900] },
+  more3: { marginTop: 7, fontSize: 12, lineHeight: 19.2, fontStyle: 'italic', ...font(400), color: t.neutral[500] },
+  info: { gap: 6, paddingBottom: 12 },
+  infoRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+  infoLabel: { flexShrink: 0, fontSize: 12.5, lineHeight: 20, ...font(400), color: t.neutral[500] },
+  infoValue: { flexShrink: 1, textAlign: 'right', fontSize: 13, lineHeight: 20.8, ...font(500), color: t.neutral[900] },
+  infoTotal: { fontSize: 17, lineHeight: 27.2 },
+
+  nudge: {
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+    marginHorizontal: 20, marginBottom: 0, paddingVertical: 12, paddingHorizontal: 14,
+    borderRadius: 10, borderWidth: 1, borderColor: t.warning[200], backgroundColor: t.warning[50],
+  },
+  nudgeBtn: { width: '100%', minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: t.primary[600] },
+  nudgeBtnText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: '#fff' },
+  nudgeText: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
+  nudgeLine: { flexShrink: 1, fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[800] },
+  nudgeStrong: { ...font(500) },
+  nudgeStars: { flexDirection: 'row', gap: 2 },
+  nudgeStar: { padding: 2 },
+
+  more: {
+    alignSelf: 'center', marginTop: 2, marginBottom: 8, paddingVertical: 10, paddingHorizontal: 22,
+    borderWidth: 1, borderColor: t.neutral[200], borderRadius: 999, backgroundColor: t.neutral[0],
+  },
+  moreText: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[700] },
 });
+

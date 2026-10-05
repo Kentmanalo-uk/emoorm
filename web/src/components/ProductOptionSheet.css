@@ -100,6 +100,11 @@ body.pos-open {
   line-height: 1.1;
 }
 
+.pos-price-unit {
+  margin-left: 2px;
+  font-size: 14px;
+}
+
 .pos-stock {
   align-self: flex-start;
   padding: 2px 8px;

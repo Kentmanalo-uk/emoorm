@@ -192,7 +192,7 @@ const TOPICS = [
   {
     id: 'my-orders',
     title: "The buyer's orders and what they wait for",
-    keywords: ['my order', 'my orders', 'where is my order', 'order status', 'status', 'to pay', 'to ship', 'to receive', 'to pick up', 'waiting', 'pending', 'confirmed', 'when will', 'arrive', 'track order', 'nasaan', 'order ko', 'mga order', 'kailan darating', 'dumating'],
+    keywords: ['my order', 'my orders', 'where is my order', 'order status', 'status', 'to pay', 'to ship', 'to receive', 'to pick up', 'waiting', 'pending', 'confirmed', 'when will', 'arrive', 'track order', 'nasaan', 'order ko', 'mga order', 'kailan darating', 'dumating', 'my package', 'where is my package'],
     related: ['received', 'payments', 'cancel'],
     links: [{ label: 'My Orders', to: '/profile/orders' }],
     answer: myOrders,
@@ -333,6 +333,30 @@ const TOPICS = [
     },
   },
   {
+    id: 'special-products',
+    title: 'Packages, paluto and live animals',
+    keywords: ['package', 'packages', 'bundle', 'bundles', 'combo', "what's included", 'whats included', 'what is included', 'you save', 'how much do i save', 'do i save', 'paluto', 'cooked to order', 'cook to order', 'minimum order', 'min order', 'cooking days', 'live animal', 'live animals', 'livestock', 'per head', 'heads available', 'pig', 'goat', 'cow', 'carabao', 'native chicken', 'visit the farm', 'farm visit', 'baboy', 'kambing', 'baka', 'kalabaw', 'buhay na hayop', 'bawat ulo', 'kada ulo', 'pakete', 'lulutuin', 'kasama sa package', 'matitipid'],
+    related: ['how-to-buy', 'delivery', 'my-orders'],
+    links: [{ label: 'Browse products', to: '/products' }],
+    answer: {
+      en: [
+        'Some products are sold in a special way:',
+        '- **Packages**: several products from one shop at one price, like a Fiesta Food Package. The product page lists what is included (each item and how many), the package price and how much you save compared with buying each one.',
+        '- **Paluto** (cooked to order): the shop cooks it after you order. The page shows how many it serves, how long it takes and any minimum order. A price "from ₱350" is the smallest size: pick a size to see its price. Order on one of the shop\'s cooking days before its order-by time and it is ready after the preparation time; otherwise it is ready on the next cooking day.',
+        '- **Live animals** are sold **per head**: the price is for one animal, and the page shows its age, sex, approximate weight and how many heads are left. Some farms let you visit first.',
+        'Paluto, live animals and ready-to-eat food are not sent by courier: pick them up or choose the shop\'s own delivery. Some products are pickup only or delivery only.',
+      ].join('\n'),
+      tl: [
+        'May mga produktong iba ang paraan ng pagbebenta:',
+        '- **Package**: ilang produkto mula sa iisang shop sa iisang presyo, gaya ng Fiesta Food Package. Nakalista sa product page kung ano ang kasama (bawat item at ilan), ang presyo ng package at kung magkano ang matitipid mo kumpara sa isa-isang pagbili.',
+        '- **Paluto** (lulutuin pagka-order): niluluto ito ng shop pagkatapos mong umorder. Makikita sa page kung ilang tao ang kasya, gaano katagal ito lutuin at kung may minimum order. Ang presyong "from ₱350" ay para sa pinakamaliit na size: pumili ng size para makita ang presyo nito. Kapag umorder ka sa araw ng pagluluto ng shop bago ang order-by time nito, handa ito pagkatapos ng preparation time; kung hindi, handa ito sa susunod nitong araw ng pagluluto.',
+        '- **Buhay na hayop**: per head (bawat ulo) ang benta: para sa isang hayop ang presyo, at makikita sa page ang edad, kasarian, tantiyang timbang at ilang ulo pa ang natitira. May mga farm na puwedeng bisitahin muna.',
+        'Hindi ipinapadala sa courier ang paluto, buhay na hayop at ready-to-eat na pagkain: kunin ito o piliin ang delivery ng shop mismo. May mga produktong pickup lang o delivery lang.',
+      ].join('\n'),
+    },
+    facts: 'Packages: several products of one shop at one price; the product page lists each item and how many, the package price and the saving against buying the items today; an order keeps a copy of what was inside; some packages must be ordered ahead (up to 14 days). Paluto (cooked to order): never out of stock; sizes can have their own prices, and "from ₱350" is the smallest; buyers cannot order fewer than its minimum order; ready time: on a cooking day before the order-by time, the preparation time after ordering, otherwise from 8:00 AM on the next cooking day. Live animals: the price is per head; the page shows age, sex, approximate weight and the heads available; some farms allow a visit first. Paluto, live animals, ready-to-eat food and packages without a weight never go by courier: pickup or the shop\'s own delivery. A product can also be pickup only or delivery only.',
+  },
+  {
     id: 'chat',
     title: 'Messaging a shop',
     keywords: ['message', 'chat', 'contact', 'contact seller', 'ask the seller', 'talk to seller', 'seller', 'shop owner', 'inbox', 'messages', 'reply', 'kausapin', 'i-message', 'imessage', 'magtanong sa seller'],
@@ -442,6 +466,7 @@ const PRESETS = [
   { id: 'delivery', topic: 'delivery', question: { en: 'How do delivery and pickup work?', tl: 'Paano ang delivery at pickup?' } },
   { id: 'verify-id', topic: 'verify-id', question: { en: 'Why do I need to verify my ID?', tl: 'Bakit kailangan i-verify ang ID ko?' } },
   { id: 'vouchers', topic: 'vouchers', question: { en: 'How do I use a voucher?', tl: 'Paano gamitin ang voucher?' } },
+  { id: 'special-products', topic: 'special-products', question: { en: 'What are packages, paluto and live animals?', tl: 'Ano ang package, paluto at buhay na hayop?' } },
 ];
 
 /** Words that make a question about shopping on Emoorm (normalized). */
@@ -455,6 +480,7 @@ const DOMAIN_WORDS = [
   'support', 'report', 'admin', 'search', 'category', 'municipality', 'town', 'stock', 'sold out', 'size', 'variation',
   'bumili', 'mamili', 'pamimili', 'produkto', 'tindahan', 'presyo', 'bayad', 'magbayad', 'pagbabayad', 'nagbayad',
   'padala', 'singil', 'resibo', 'order ko', 'ibalik', 'isauli', 'kansela', 'natanggap',
+  'package', 'bundle', 'paluto', 'livestock', 'live animal', 'per head', 'buhay na hayop',
 ];
 
 module.exports = {
