@@ -29,13 +29,6 @@ const PARTS = [
   { title: 'Start selling', text: 'Your first product' },
 ];
 
-const PAYOUTS = [
-  { value: 'GCASH', label: 'GCash' },
-  { value: 'MAYA', label: 'Maya' },
-  { value: 'BANK', label: 'Bank transfer' },
-  { value: 'COD_ONLY', label: 'Cash only' },
-];
-
 const MODES = [
   { value: 'DELIVERY', label: 'I deliver', text: 'You bring orders to buyers.', Icon: Truck },
   { value: 'PICKUP', label: 'Buyers pick up', text: 'Buyers collect at your shop or stall.', Icon: Storefront },
@@ -127,9 +120,6 @@ export default function SellerWelcome() {
         businessType: details.sellerBusinessType || 'INDIVIDUAL',
         permit: details.sellerPermitNumber || '',
         tin: details.sellerBirTin || '',
-        payout: details.payoutMethod || '',
-        payoutName: details.payoutAccountName || user?.fullName || '',
-        payoutNumber: details.payoutAccountNumber || user?.contactNumber || '',
         logo: shop.logo || '',
         banner: shop.bannerImage || shop.coverImage || '',
         description: shop.description || '',
@@ -146,7 +136,7 @@ export default function SellerWelcome() {
     } catch {
       setFailed(true);
     }
-  }, [user?.fullName, user?.contactNumber]);
+  }, []);
   useEffect(() => { load(); }, [load]);
 
   const town = store?.municipality?.name || setup?.municipality || 'your town';
@@ -158,7 +148,6 @@ export default function SellerWelcome() {
     return [
       { key: 'identity', part: 0, done: app?.identityVerified === true },
       { key: 'business', part: 0 },
-      { key: 'payout', part: 0, done: Boolean(app?.details?.payoutMethod) },
       { key: 'branding', part: 1, done: stepDone(setup, 'branding') },
       { key: 'about', part: 1, done: Boolean(store?.description) },
       { key: 'mode', part: 1 },
@@ -258,46 +247,6 @@ export default function SellerWelcome() {
               if (form.businessType === 'REGISTERED' && !form.permit.trim()) return toast.error('Enter your permit or registration number');
               return save(() => axios.patch('/auth/seller-application/details', {
                 sellerBusinessType: form.businessType, sellerPermitNumber: form.permit, sellerBirTin: form.tin,
-              }));
-            },
-          },
-        };
-      case 'payout':
-        return {
-          art: 'payout',
-          title: 'How do you get paid?',
-          text: 'Where your earnings from online payments go.',
-          body: (
-            <>
-              <div className="sw-pills" role="radiogroup" aria-label="Payout">
-                {PAYOUTS.map((p) => (
-                  <button key={p.value} type="button" role="radio" aria-checked={form.payout === p.value} className={`sw-pill${form.payout === p.value ? ' is-on' : ''}`} onClick={() => set({ payout: p.value })}>
-                    {form.payout === p.value && <Check size={14} weight="bold" />} {p.label}
-                  </button>
-                ))}
-              </div>
-              {form.payout && form.payout !== 'COD_ONLY' && (
-                <div className="sw-fields">
-                  <label className="sw-field">
-                    <span>Account name</span>
-                    <input value={form.payoutName} onChange={(e) => set({ payoutName: e.target.value })} maxLength={100} />
-                  </label>
-                  <label className="sw-field">
-                    <span>{form.payout === 'BANK' ? 'Account number' : 'Mobile number'}</span>
-                    <input value={form.payoutNumber} onChange={(e) => set({ payoutNumber: e.target.value })} inputMode="numeric" maxLength={40} />
-                  </label>
-                </div>
-              )}
-              {form.payout === 'COD_ONLY' && <p className="sw-note">Buyers pay you in cash when they get their order.</p>}
-            </>
-          ),
-          primary: {
-            label: 'Save and continue',
-            disabled: !form.payout,
-            onClick: () => {
-              if (form.payout !== 'COD_ONLY' && (!form.payoutName.trim() || !form.payoutNumber.trim())) return toast.error('Add the account name and number');
-              return save(() => axios.patch('/auth/seller-application/details', {
-                payoutMethod: form.payout, payoutAccountName: form.payoutName, payoutAccountNumber: form.payoutNumber,
               }));
             },
           },
@@ -528,7 +477,6 @@ export default function SellerWelcome() {
     return frame(
       <div className="sw-intro">
         <SellerGuideArt name="welcome" className="sw-art" />
-        <p className="sw-kicker">Application sent</p>
         <h1 className="sw-title">{store.name} is open for setup!</h1>
         <p className="sw-text">The {town} admin is reviewing your shop. Meanwhile, let&apos;s get it ready to sell: about 10 minutes, one small step at a time.</p>
         <ol className="sw-parts">
@@ -557,7 +505,6 @@ export default function SellerWelcome() {
     return frame(
       <div className="sw-intro">
         <SellerGuideArt name="ready" className="sw-art" />
-        <p className="sw-kicker">All set up</p>
         <h1 className="sw-title">You&apos;re ready to go!</h1>
         <p className="sw-text">
           {setup?.readyToSell
@@ -585,7 +532,7 @@ export default function SellerWelcome() {
   return frame(
     <div className="sw-step">
       <SellerGuideArt name={s.art} className="sw-art is-small" />
-      <p className="sw-kicker">{PARTS[step.part].title}{step.done && <span className="sw-badge"><Check size={12} weight="bold" /> Done</span>}</p>
+      {step.done && <span className="sw-badge"><Check size={12} weight="bold" /> Done</span>}
       <h1 className="sw-title">{s.title}</h1>
       <p className="sw-text">{s.text}</p>
       {s.body && <div className="sw-form">{s.body}</div>}
@@ -606,7 +553,6 @@ export default function SellerWelcome() {
 const LATER_LABELS = {
   identity: 'Verify your identity',
   business: 'How you sell',
-  payout: 'How you get paid',
   branding: 'Logo and cover photo',
   about: 'Shop description',
   mode: 'How buyers get orders',

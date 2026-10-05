@@ -24,7 +24,6 @@ const SCENES = {
   welcome: { Icon: Confetti, shape: 'circle', tilt: 0 },
   identity: { Icon: IdentificationCard, shape: 'wide', tilt: -7 },
   business: { Icon: Briefcase, shape: 'square', tilt: 9 },
-  payout: { Icon: Wallet, shape: 'square', tilt: -9 },
   branding: { Icon: ImageIcon, shape: 'wide', tilt: 7 },
   about: { Icon: NotePencil, shape: 'bubble', tilt: -8 },
   delivery: { Icon: Truck, shape: 'wide', tilt: -6 },

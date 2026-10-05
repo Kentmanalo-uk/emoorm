@@ -290,8 +290,8 @@ export default function SellerApply() {
     setIsSubmitting(true);
     try {
       // Only what this form asks for (and shop details an older draft may
-      // hold). Business and payout details come in the guided setup: an old
-      // draft's half-filled payout must not block applying.
+      // hold). Business details come in the guided setup; an old draft's
+      // half-filled payout must not block applying.
       const extras = Object.fromEntries(APPLY_FIELDS
         .map((key) => [key, form[key]])
         .filter(([, v]) => (Array.isArray(v) ? v.length : v)));
@@ -527,7 +527,7 @@ export default function SellerApply() {
             <Sparkle size={20} weight="fill" />
             <div>
               <strong>After you apply</strong>
-              <p>A short guided setup: verify your ID, how you get paid, your logo, delivery and your first product. Skip any step and finish it later.</p>
+              <p>A short guided setup: verify your ID, your logo, delivery, payments and your first product. Skip any step and finish it later.</p>
             </div>
           </section>
         </div>

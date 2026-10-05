@@ -552,10 +552,14 @@ const Header = () => {
                     aria-label="Search products"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={(e) => {
-                      // Phones search on their own page (SearchStart), not in a dropdown.
+                    // Phones search on their own page (SearchStart), which opens
+                    // the keyboard once. This box is read-only there, so tapping
+                    // it never starts a keyboard of its own: opening one here and
+                    // closing it on the way out made Android drop the search
+                    // page's keyboard too (the close landing after its open).
+                    readOnly={isPhone}
+                    onFocus={() => {
                       if (isPhone) {
-                        e.currentTarget.blur();
                         navigate('/search');
                         return;
                       }

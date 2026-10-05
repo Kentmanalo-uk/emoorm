@@ -144,35 +144,24 @@
   width: 100%;
   max-width: 300px;
   height: auto;
-  margin: 0 auto 8px;
+  margin: 0 auto 16px;
 }
 
 .sw-art.is-small {
   max-width: 220px;
 }
 
-.sw-kicker {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 6px;
-  color: var(--t-primary-700, #047857);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
 .sw-badge {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 8px;
+  margin-bottom: 8px;
+  padding: 2px 9px;
   border-radius: 999px;
   background: var(--t-primary-50, #ecfdf5);
-  font-size: 11.5px;
-  letter-spacing: 0;
-  text-transform: none;
+  color: var(--t-primary-700, #047857);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .sw-title {
@@ -198,10 +187,6 @@
 }
 
 /* Welcome: the three parts. */
-.sw-intro .sw-kicker {
-  justify-content: center;
-}
-
 .sw-intro {
   text-align: center;
 }
