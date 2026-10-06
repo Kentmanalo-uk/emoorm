@@ -6,7 +6,7 @@ const PrivacyPolicy = () => (
   <Layout>
     <div className="legal-page">
       <h1>Privacy Policy</h1>
-      <p className="legal-updated">Last updated: August 2026</p>
+      <p className="legal-updated">Last updated: October 2026</p>
 
       <p>
         This Privacy Policy explains what information Emoorm collects when you use our website
@@ -34,6 +34,12 @@ const PrivacyPolicy = () => (
         <li>Products you list, order, review, message about, or add to your cart/wishlist.</li>
         <li>Order details such as items purchased, delivery/pickup address, and order status.</li>
         <li>Messages you send through the in-app messaging feature between buyers and sellers.</li>
+        <li>
+          If you use our Android app: a random install number made on your phone, the app version,
+          your phone model and Android version, when you last opened the app, and the account you
+          signed in with. We use this to know how many people use the app and to remind those on an
+          old version to update.
+        </li>
       </ul>
 
       <h2>What we do not collect</h2>

@@ -905,3 +905,35 @@ p+.appdl-sheet-steps {
     animation: none;
   }
 }
+
+/* Beta: the app is still being tested. */
+.appdl-beta {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--t-accent-500, #ec4899);
+  color: #fff;
+  font-size: 0.32em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.appdl-beta-note {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+@media (max-width: 768px) {
+  .appdl-beta {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+
+  .appdl-beta-note {
+    font-size: 12px;
+  }
+}

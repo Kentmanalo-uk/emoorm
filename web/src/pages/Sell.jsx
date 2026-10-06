@@ -4,7 +4,7 @@ import useSeo from '../lib/seo';
 import {
   ArrowRight, Star, List as Menu, X, CaretDown as ChevronDown,
   Storefront, Users, Truck, ChatCircleDots, ChartLineUp, SealCheck,
-  IdentificationCard, Camera, Package,  Plus, Minus, Money, House,
+  IdentificationCard, Camera, Package,  Plus, Minus, Money, House, PlayCircle,
 } from '@phosphor-icons/react';
 import useAuthStore from '../store/authStore';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -387,6 +387,9 @@ export default function Sell() {
                   </button>
                 )}
               </div>
+              <Link to="/sell/tutorial" className="sell-hero-watch">
+                <PlayCircle size={20} weight="fill" /> Watch how selling works <span>3 min</span>
+              </Link>
               {isPending && (
                 <p className="sell-hero-pending">Your application is under review (1–2 business days).</p>
               )}

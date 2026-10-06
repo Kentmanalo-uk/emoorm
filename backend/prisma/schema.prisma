@@ -409,6 +409,7 @@ model User {
   bannersCreated Banner[]         @relation("BannerCreator")
   vouchersCreated Voucher[]       @relation("VoucherCreator")
   voucherRedemptions VoucherRedemption[]
+  appInstalls   AppInstall[]
   identityVerification IdentityVerification?
 
   @@map("users")
@@ -1638,4 +1639,33 @@ model ProductView {
   @@id([productId, day])
   @@index([day], map: "product_views_day_idx")
   @@map("product_views")
+}
+
+// The Android app (apk/): each phone it is installed on, reported by the
+// website when it runs inside the app. The id is made on the phone at first
+// launch (a new one after a reinstall); the user is whoever last signed in.
+model AppInstall {
+  id          String   @id @db.VarChar(64)
+  version     String   @db.VarChar(20)
+  device      String?  @db.VarChar(120)
+  android     String?  @db.VarChar(20)
+  userId      String?  @map("user_id")
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  opens       Int      @default(1)
+  firstSeenAt DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at")
+
+  @@index([lastSeenAt], map: "app_installs_last_seen_idx")
+  @@index([userId], map: "app_installs_user_idx")
+  @@map("app_installs")
+}
+
+// APK downloads from the /app page, per version and Manila day.
+model AppDownload {
+  version   String   @db.VarChar(20)
+  day       DateTime @db.Date
+  downloads Int      @default(0)
+
+  @@id([version, day])
+  @@map("app_downloads")
 }

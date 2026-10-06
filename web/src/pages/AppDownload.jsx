@@ -388,8 +388,11 @@ export default function AppDownload() {
           <div className="appdl-wrap appdl-hero-inner">
             <img className="appdl-hero-icon" src={ICON} alt="Emoorm app icon" width="512" height="512" />
             <div className="appdl-hero-text">
-              <h1 className="appdl-name">Emoorm</h1>
+              <h1 className="appdl-name">
+                Emoorm <span className="appdl-beta" title="The app is still being tested: tell us if something doesn't work">Beta</span>
+              </h1>
               <p className="appdl-tagline">The Mindoreño marketplace</p>
+              <p className="appdl-beta-note">Early version: some things may still change. Found a problem? Tell us in Help &amp; Support.</p>
             </div>
             <div className="appdl-hero-actions">
               <GetButton platform={platform} onGet={onGet} onIphone={onIphone} buttonRef={heroGet} />

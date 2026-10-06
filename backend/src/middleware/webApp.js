@@ -3,6 +3,7 @@ const path = require('path');
 const express = require('express');
 const config = require('../config/env');
 const seoService = require('../services/seo.service');
+const { recordDownload } = require('../services/appInstall.service');
 
 /**
  * Serves the built React app and gives every HTML response real metadata.
@@ -154,6 +155,16 @@ const mountWebApp = (app) => {
 
   // The Android app (the /app page's Get button): always saved as a file,
   // under the name it was published with. Each version has its own name.
+  // Each download is counted once: a resumed download (a Range that does not
+  // start at the beginning) is the same download.
+  app.use('/downloads', (req, res, next) => {
+    const range = req.get('range');
+    if (req.method === 'GET' && req.path.endsWith('.apk') && (!range || /^bytes=0-/.test(range))
+      && fs.existsSync(path.join(root, 'downloads', path.basename(req.path)))) {
+      recordDownload(path.basename(req.path)).catch(() => {});
+    }
+    next();
+  });
   app.use('/downloads', express.static(path.join(root, 'downloads'), {
     index: false,
     etag: true,

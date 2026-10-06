@@ -548,6 +548,28 @@
   flex-wrap: wrap;
 }
 
+/* The seller tutorial, under the hero buttons. */
+.sell-hero-watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  color: var(--t-primary-700, #047857);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sell-hero-watch:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sell-hero-watch span {
+  color: var(--t-neutral-500, #6b7280);
+  font-weight: 500;
+}
+
 .sell-hero-btn-primary {
   display: inline-flex;
   align-items: center;

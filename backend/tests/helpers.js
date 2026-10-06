@@ -140,11 +140,11 @@ async function order(buyer, store, items, fields = {}) {
 }
 
 /** fetch against the app: { status, body }. */
-async function api(method, path, { token: bearer, body } = {}) {
+async function api(method, path, { token: bearer, body, headers = {} } = {}) {
   const url = `${await startApp()}${path}`;
   const res = await fetch(url, {
     method,
-    headers: { ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    headers: { ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers },
     body: body ? JSON.stringify(body) : undefined,
   });
   let json = null;

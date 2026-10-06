@@ -48,6 +48,7 @@ import NotificationWatcher from './components/NotificationWatcher';
 import ActivityBar from './components/ui/ActivityBar';
 import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import useAuthStore from './store/authStore';
+import AppInstallPing from './components/AppInstallPing';
 import { ThemeRuntime } from './hooks/useTheme';
 import { usePhoneLayout } from './hooks/useMobileNav';
 import { isAuthSheetPath, HOME_BACKGROUND } from './lib/authSheet';
@@ -119,6 +120,8 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const CookiePolicy = lazy(() => import('./pages/CookiePolicy'));
 const AppDownload = lazy(() => import('./pages/AppDownload'));
+const SellerTutorial = lazy(() => import('./pages/SellerTutorial'));
+const AdminAppUsers = lazy(() => import('./pages/AdminAppUsers'));
 const SearchByImage = lazy(() => import('./pages/SearchByImage'));
 const AvailableToday = lazy(() => import('./pages/AvailableToday'));
 const SellerReturns = lazy(() => import('./pages/SellerReturns'));
@@ -193,6 +196,7 @@ function AppRoutes() {
       <RouteTitles />
       <ConfirmHost />
       <OfflineBanner />
+      <AppInstallPing />
       <Suspense fallback={<RouteLoading />}>
       <Routes location={background || location}>
         {/* Public routes */}
@@ -216,6 +220,7 @@ function AppRoutes() {
         <Route path="/municipality/:id" element={<MunicipalityShowcase />} />
         <Route path="/municipality/:id/gallery" element={<MunicipalityGallery />} />
         <Route path="/sell" element={<Sell />} />
+        <Route path="/sell/tutorial" element={<SellerTutorial />} />
         <Route path="/search/image" element={<SearchByImage />} />
         <Route path="/about" element={<About />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -320,6 +325,7 @@ function AppRoutes() {
         <Route path="/admin/banners" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminBanners /></AdminRoute>} />
         <Route path="/admin/couriers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCouriers /></AdminRoute>} />
         <Route path="/admin/vouchers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminVouchers /></AdminRoute>} />
+        <Route path="/admin/app-users" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminAppUsers /></AdminRoute>} />
         <Route path="/admin/junior-admins" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminJuniorAdmins /></AdminRoute>} />
         <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogs /></AdminRoute>} />
         <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />

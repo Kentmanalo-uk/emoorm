@@ -1128,6 +1128,13 @@
   body.messenger-chat-open .layout-main {
     padding-bottom: 0 !important;
   }
+
+  /* The Seller Center's phone header and tab bar step aside too: the
+     conversation has its own header (back, buyer) and message box. */
+  body.messenger-chat-open .sc-shell .scm-head,
+  body.messenger-chat-open .sc-shell .sc-tabbar {
+    display: none !important;
+  }
 }
 
 /* ── Mobile (≤768px / ≤480px) ── */

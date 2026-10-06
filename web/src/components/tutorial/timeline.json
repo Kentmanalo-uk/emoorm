@@ -1,0 +1,36 @@
+{
+  "length": 186,
+  "chapters": [
+    { "key": "open", "title": "Your products deserve to be seen", "start": 0, "end": 14 },
+    { "key": "what", "title": "What is E-MOORM", "start": 14, "end": 32 },
+    { "key": "sell", "title": "What you can sell", "start": 32, "end": 56 },
+    { "key": "who", "title": "Made for every kind of seller", "start": 56, "end": 74 },
+    { "key": "start", "title": "How to start selling", "start": 74, "end": 96 },
+    { "key": "add", "title": "Adding a product", "start": 96, "end": 124 },
+    { "key": "journey", "title": "From listing to customer", "start": 124, "end": 146 },
+    { "key": "local", "title": "Local discovery", "start": 146, "end": 158 },
+    { "key": "success", "title": "Your product is online", "start": 158, "end": 170 },
+    { "key": "cta", "title": "Sell it on E-MOORM", "start": 170, "end": 186 }
+  ],
+  "cues": [
+    { "t": 0.45, "type": "tick" }, { "t": 1.05, "type": "tick" }, { "t": 1.65, "type": "tick" }, { "t": 2.25, "type": "tick" },
+    { "t": 2.85, "type": "tick" }, { "t": 3.45, "type": "tick" }, { "t": 4.05, "type": "tick" },
+    { "t": 9.6, "type": "riser" }, { "t": 11.6, "type": "impact" },
+    { "t": 14, "type": "whoosh" },
+    { "t": 15.6, "type": "tick" }, { "t": 15.85, "type": "tick" }, { "t": 16.1, "type": "tick" }, { "t": 16.35, "type": "tick" }, { "t": 16.6, "type": "tick" }, { "t": 16.85, "type": "tick" }, { "t": 17.1, "type": "tick" },
+    { "t": 17.6, "type": "tap" }, { "t": 20.4, "type": "whoosh" }, { "t": 24.4, "type": "whoosh" }, { "t": 28.2, "type": "impact" },
+    { "t": 32, "type": "whoosh" }, { "t": 34.4, "type": "whoosh" }, { "t": 36.8, "type": "whoosh" }, { "t": 39.2, "type": "whoosh" },
+    { "t": 41.6, "type": "whoosh" }, { "t": 44, "type": "whoosh" }, { "t": 46.4, "type": "whoosh" }, { "t": 48.8, "type": "whoosh" },
+    { "t": 52.2, "type": "impact" },
+    { "t": 56, "type": "whoosh" }, { "t": 59.6, "type": "whoosh" }, { "t": 63.2, "type": "whoosh" }, { "t": 66.8, "type": "whoosh" }, { "t": 70.4, "type": "whoosh" },
+    { "t": 74, "type": "whoosh" }, { "t": 75.2, "type": "tick" }, { "t": 80.5, "type": "tick" }, { "t": 85.8, "type": "tick" }, { "t": 91.1, "type": "tick" },
+    { "t": 96, "type": "whoosh" }, { "t": 98.6, "type": "tap" }, { "t": 100.2, "type": "tap" }, { "t": 101.8, "type": "tap" }, { "t": 103.4, "type": "tap" }, { "t": 105, "type": "tap" },
+    { "t": 106.8, "type": "tap" }, { "t": 110.4, "type": "whoosh" }, { "t": 117.4, "type": "whoosh" }, { "t": 120.6, "type": "tap" }, { "t": 121.4, "type": "chime" },
+    { "t": 124, "type": "whoosh" }, { "t": 127.4, "type": "whoosh" }, { "t": 130.2, "type": "tap" }, { "t": 133.4, "type": "tap" }, { "t": 136.6, "type": "tap" },
+    { "t": 139.8, "type": "tap" }, { "t": 141.2, "type": "chime" },
+    { "t": 146, "type": "whoosh" }, { "t": 148, "type": "tick" }, { "t": 149.8, "type": "tick" }, { "t": 151.6, "type": "tick" }, { "t": 153.4, "type": "tick" },
+    { "t": 156, "type": "riser" },
+    { "t": 158, "type": "impact" }, { "t": 162.6, "type": "notify" }, { "t": 165.6, "type": "tap" },
+    { "t": 170, "type": "whoosh" }, { "t": 174.4, "type": "impact" }, { "t": 178.6, "type": "impact" }, { "t": 181.6, "type": "chime" }
+  ]
+}

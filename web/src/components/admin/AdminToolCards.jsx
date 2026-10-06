@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import {
   IdentificationBadge, Storefront, Users, Package, Receipt, Star, ArrowCounterClockwise, Flag,
   ChatsCircle, EnvelopeSimple, Bell, ChatCircleDots, ChartPie, FileText, UsersThree, SquaresFour,
-  MapPin, UserGear, Image as ImageIcon, Ticket, CaretRight, Truck,
+  MapPin, UserGear, Image as ImageIcon, Ticket, CaretRight, Truck, DeviceMobile,
 } from '@phosphor-icons/react';
 import ToolGradients from '../ui/ToolGradients';
 import { useAdminShell } from './adminShell';
@@ -35,13 +35,14 @@ const TOOL = {
   banners: { to: '/admin/banners', label: 'Banners', Icon: ImageIcon, tone: 'pink', superOnly: true },
   vouchers: { to: '/admin/vouchers', label: 'Vouchers', Icon: Ticket, tone: 'rose', superOnly: true },
   couriers: { to: '/admin/couriers', label: 'Couriers', Icon: Truck, tone: 'amber', superOnly: true },
+  appUsers: { to: '/admin/app-users', label: 'App users', Icon: DeviceMobile, tone: 'green', superOnly: true },
 };
 
 /** Every card on the Tools tab. */
 const ALL_CARDS = [
   { title: 'Marketplace', keys: ['applications', 'sellers', 'buyers', 'products', 'orders', 'reviews', 'returns', 'reports'] },
   { title: 'Messages & insights', keys: ['support', 'messages', 'alerts', 'feedback', 'analytics', 'auditLogs'] },
-  { title: 'System', keys: ['users', 'categories', 'municipalities', 'admins', 'banners', 'vouchers', 'couriers'] },
+  { title: 'System', keys: ['users', 'categories', 'municipalities', 'admins', 'banners', 'vouchers', 'couriers', 'appUsers'] },
 ];
 
 /** Home: the ones an admin opens most, per role. */
