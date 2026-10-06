@@ -4,7 +4,8 @@ import {
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  CaretDown, CaretLeft, CaretRight, CheckCircle, DownloadSimple, Export, PlusSquare, ShareNetwork, ShieldCheck, X,
+  CaretDown, CaretLeft, CaretRight, CheckCircle, CornersIn, CornersOut, DownloadSimple, Export, Pause, Play, PlusSquare,
+  ShareNetwork, ShieldCheck, SpeakerHigh, SpeakerSlash, X,
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import { useShare } from '../components/ShareSheet';
@@ -43,6 +44,14 @@ const PREVIEWS = [
   { src: '/app-preview/preview-3.jpg', alt: 'Manage your shop: the Seller Center' },
   { src: '/app-preview/preview-4.jpg', alt: 'Personalize and own it: shop templates' },
 ];
+
+// The 30-second ad leads the preview: upright on phones (the first tile),
+// wide on computers (above the screenshots). See AdVideo.
+const AD = {
+  title: 'E-MOORM in 30 seconds',
+  portrait: { src: '/app-preview/ad-portrait.mp4', poster: '/app-preview/ad-portrait.jpg' },
+  landscape: { src: '/app-preview/ad-landscape.mp4', poster: '/app-preview/ad-landscape.jpg' },
+};
 
 // About the app: the first lines show; the arrow opens the rest.
 const ABOUT = [
@@ -192,11 +201,170 @@ function Sheet({
   );
 }
 
+const clock = (seconds) => {
+  const whole = Math.max(0, Math.floor(seconds || 0));
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+};
+
+/**
+ * The ad in the preview, in a player of the page's own: play and pause, a bar
+ * to scrub, the time, sound on and off, and full screen.
+ *
+ * It plays by itself, muted (browsers allow nothing else), while at least
+ * half of it is on screen, and pauses once scrolled away; once someone pauses
+ * it, it stays paused. Nothing of it loads until it first comes into view.
+ * The controls fade out while it plays: a mouse move or a tap brings them back.
+ */
+function AdVideo({ src, poster, width, height, className = '' }) {
+  const box = useRef(null);
+  const video = useRef(null);
+  const pausedByViewer = useRef(false);
+  const lastPointer = useRef('mouse');
+  const hideTimer = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [full, setFull] = useState(false);
+  const [showUi, setShowUi] = useState(true);
+
+  // Controls: shown, then hidden again after a moment while playing.
+  const wake = useCallback(() => {
+    setShowUi(true);
+    clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => {
+      if (video.current && !video.current.paused) setShowUi(false);
+    }, 2500);
+  }, []);
+  useEffect(() => () => clearTimeout(hideTimer.current), []);
+
+  useEffect(() => {
+    const el = video.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        if (!pausedByViewer.current) el.play().catch(() => { /* the play button is there */ });
+      } else if (!document.fullscreenElement) {
+        el.pause();
+      }
+    }, { threshold: 0.5 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => setFull(document.fullscreenElement === box.current);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggle = () => {
+    const el = video.current;
+    if (!el) return;
+    if (el.paused) {
+      pausedByViewer.current = false;
+      el.play().catch(() => {});
+    } else {
+      pausedByViewer.current = true;
+      el.pause();
+    }
+    wake();
+  };
+
+  const toggleSound = () => {
+    const el = video.current;
+    if (!el) return;
+    el.muted = !el.muted;
+    setMuted(el.muted);
+    wake();
+  };
+
+  const toggleFull = () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else if (box.current?.requestFullscreen) box.current.requestFullscreen().catch(() => {});
+    // iPhones only let the video itself go full screen, in their own player.
+    else video.current?.webkitEnterFullscreen?.();
+    wake();
+  };
+
+  const seek = (event) => {
+    const el = video.current;
+    if (!el) return;
+    el.currentTime = Number(event.target.value);
+    setTime(el.currentTime);
+    wake();
+  };
+
+  // A tap on the picture brings the controls up first; a click plays or pauses.
+  const onSurface = () => {
+    if (lastPointer.current === 'touch' && !showUi) wake();
+    else toggle();
+  };
+
+  const progress = duration ? (time / duration) * 100 : 0;
+
+  return (
+    <div
+      ref={box}
+      className={`appdl-player ${className}${full ? ' is-full' : ''}${showUi || !playing ? ' is-ui' : ''}`}
+      onPointerDown={(event) => { lastPointer.current = event.pointerType; }}
+      onPointerMove={(event) => { if (event.pointerType === 'mouse') wake(); }}
+    >
+      <video
+        ref={video}
+        src={src}
+        poster={poster}
+        width={width}
+        height={height}
+        muted
+        loop
+        playsInline
+        preload="none"
+        aria-label={AD.title}
+        onClick={onSurface}
+        onPlay={() => { setPlaying(true); wake(); }}
+        onPause={() => { setPlaying(false); setShowUi(true); }}
+        onTimeUpdate={(event) => setTime(event.currentTarget.currentTime)}
+        onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
+      />
+      {!playing && (
+        <button type="button" className="appdl-player-big" onClick={toggle} aria-label="Play">
+          <Play size={28} weight="fill" />
+        </button>
+      )}
+      <div className="appdl-player-bar">
+        <button type="button" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}>
+          {playing ? <Pause size={18} weight="fill" /> : <Play size={18} weight="fill" />}
+        </button>
+        <input
+          type="range"
+          className="appdl-player-seek"
+          min="0"
+          max={duration || 0}
+          step="0.1"
+          value={time}
+          onChange={seek}
+          style={{ '--appdl-progress': `${progress}%` }}
+          aria-label="Seek"
+        />
+        <span className="appdl-player-time">{`${clock(time)} / ${clock(duration)}`}</span>
+        <button type="button" onClick={toggleSound} aria-label={muted ? 'Sound on' : 'Sound off'}>
+          {muted ? <SpeakerSlash size={18} weight="fill" /> : <SpeakerHigh size={18} weight="fill" />}
+        </button>
+        <button type="button" onClick={toggleFull} aria-label={full ? 'Exit full screen' : 'Full screen'}>
+          {full ? <CornersIn size={18} weight="bold" /> : <CornersOut size={18} weight="bold" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** The screenshots full screen, one at a time (swipe, arrows or the keyboard). */
 function PreviewViewer({ start, onClose }) {
   const track = useRef(null);
   const done = useRef(null);
   const [index, setIndex] = useState(start);
+  const count = PREVIEWS.length;
 
   useLayoutEffect(() => {
     const el = track.current;
@@ -207,9 +375,9 @@ function PreviewViewer({ start, onClose }) {
     const el = track.current;
     if (!el) return;
     const current = Math.round(el.scrollLeft / el.clientWidth);
-    const next = Math.min(PREVIEWS.length - 1, Math.max(0, current + step));
+    const next = Math.min(count - 1, Math.max(0, current + step));
     el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' });
-  }, []);
+  }, [count]);
 
   useEffect(() => {
     done.current?.focus();
@@ -235,7 +403,7 @@ function PreviewViewer({ start, onClose }) {
   return (
     <div className="appdl-viewer" role="dialog" aria-modal="true" aria-label="Screenshots">
       <div className="appdl-viewer-bar">
-        <span>{`${index + 1} of ${PREVIEWS.length}`}</span>
+        <span>{`${index + 1} of ${count}`}</span>
         <button ref={done} type="button" className="appdl-viewer-done" onClick={onClose}>Done</button>
       </div>
       <div className="appdl-viewer-track" ref={track} onScroll={onScroll}>
@@ -258,7 +426,7 @@ function PreviewViewer({ start, onClose }) {
         type="button"
         className="appdl-viewer-nav is-next"
         onClick={() => go(1)}
-        disabled={index === PREVIEWS.length - 1}
+        disabled={index === count - 1}
         aria-label="Next screenshot"
       >
         <CaretRight size={22} weight="bold" />
@@ -432,7 +600,17 @@ export default function AppDownload() {
 
         <section className="appdl-gallery" aria-labelledby="appdl-preview-title">
           <h2 id="appdl-preview-title" className="appdl-wrap appdl-h2">Preview</h2>
+          {!isPhone && (
+            <div className="appdl-wrap">
+              <AdVideo className="appdl-ad" width="1280" height="720" {...AD.landscape} />
+            </div>
+          )}
           <div className="appdl-shots">
+            {isPhone && (
+              <div className="appdl-shot appdl-shot--ad">
+                <AdVideo width="720" height="1280" {...AD.portrait} />
+              </div>
+            )}
             {PREVIEWS.map((shot, i) => (
               <button
                 type="button"
