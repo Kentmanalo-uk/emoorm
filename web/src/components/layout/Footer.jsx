@@ -7,7 +7,10 @@ import { useMunicipalities, useCategories } from '../../hooks/useReferenceData';
 import { queryKeys, policy } from '../../lib/queryKeys';
 import AppLogo from '../AppLogo';
 import './Footer.css';
-import { SUPPORT_EMAIL, FACEBOOK_URL } from '../../lib/contact';
+import { EnvelopeSimple, FacebookLogo, InstagramLogo } from '@phosphor-icons/react';
+import {
+  SUPPORT_EMAIL, FACEBOOK_URL, INSTAGRAM_URL, INSTAGRAM_HANDLE, GMAIL,
+} from '../../lib/contact';
 
 // The footer renders on every page, so these three reads used to fire on every
 // navigation. They now share the app-wide query cache with the rest of the
@@ -182,8 +185,18 @@ const Footer = () => {
                 <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
               </li>
               <li>
-                <span className="footer-contact-label">Facebook:</span>
-                <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer">Emoorm on Facebook</a>
+                <span className="footer-contact-label">Socials:</span>
+                <span className="footer-socials">
+                  <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" className="footer-social is-facebook" aria-label="Emoorm on Facebook" title="Emoorm on Facebook">
+                    <FacebookLogo size={18} weight="fill" />
+                  </a>
+                  <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="footer-social is-instagram" aria-label={`Emoorm on Instagram, ${INSTAGRAM_HANDLE}`} title={`Instagram ${INSTAGRAM_HANDLE}`}>
+                    <InstagramLogo size={18} weight="fill" />
+                  </a>
+                  <a href={`mailto:${GMAIL}`} className="footer-social is-gmail" aria-label={`Email ${GMAIL}`} title={GMAIL}>
+                    <EnvelopeSimple size={18} weight="fill" />
+                  </a>
+                </span>
               </li>
               <li>
                 <span className="footer-contact-label">Hours:</span>

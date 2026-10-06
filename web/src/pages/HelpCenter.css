@@ -197,7 +197,7 @@
   }
 }
 
-/* Email and Facebook, under the case form. */
+/* Email and socials, under the case form. */
 .hc-reach {
   display: flex;
   flex-wrap: wrap;
@@ -222,3 +222,26 @@
 .hc-reach a:hover {
   text-decoration: underline;
 }
+
+.hc-socials {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hc-reach a.hc-social {
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.hc-reach a.hc-social:hover {
+  text-decoration: none;
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.hc-social.is-facebook { color: #1877f2; }
+.hc-social.is-instagram { color: #e1306c; }
+.hc-social.is-gmail { color: #ea4335; }
