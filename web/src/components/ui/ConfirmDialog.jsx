@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Warning as AlertTriangle, Question as HelpCircle, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import './ConfirmDialog.css';
@@ -48,7 +49,9 @@ export default function ConfirmDialog({
 
   if (!mounted) return null;
 
-  return (
+  // Drawn at the end of <body>: inside a page, a parent that makes its own
+  // layer (a transform, a z-index) kept it under the phone's bottom bar.
+  return createPortal(
     <div
       className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`}
       onClick={() => !loading && onCancel?.()}
@@ -87,6 +90,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
