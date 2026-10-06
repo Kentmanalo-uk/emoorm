@@ -2,6 +2,54 @@ const { verifyAccessToken } = require('../utils/jwt');
 const prisma = require('../config/database');
 
 /**
+ * The account behind a session token, as every signed-in request needs it.
+ *
+ * Each request used to read it from the database, so a page firing a dozen
+ * requests read the same row a dozen times, and under a rush those reads took
+ * a good share of the few database connections. The row is kept here for a
+ * few seconds instead. Any change to an account through Prisma (suspending,
+ * deleting, a role change, a new password) drops it at once, so a suspended
+ * account or an old password's session is not let in from here; the short
+ * lifetime covers a change made outside this process.
+ */
+const SESSION_USER_TTL_MS = 15 * 1000;
+const SESSION_USER_MAX = 5000;
+const sessionUsers = new Map();
+
+const SESSION_USER_SELECT = {
+  id: true,
+  email: true,
+  fullName: true,
+  role: true,
+  municipalityId: true,
+  isActive: true,
+  deletedAt: true,
+  adminAccessExpiresAt: true,
+  tokenVersion: true,
+};
+
+const USER_WRITES = new Set(['update', 'updateMany', 'upsert', 'delete', 'deleteMany']);
+prisma.$use(async (params, next) => {
+  if (params.model === 'User' && USER_WRITES.has(params.action)) {
+    const id = params.args?.where?.id;
+    if (typeof id === 'string') sessionUsers.delete(id);
+    else sessionUsers.clear();
+  }
+  return next(params);
+});
+
+/** A fresh copy of the account (callers change it), or null. */
+const loadSessionUser = async (id) => {
+  const hit = sessionUsers.get(id);
+  if (hit && hit.expiresAt > Date.now()) return hit.user && { ...hit.user };
+  const user = await prisma.user.findUnique({ where: { id }, select: SESSION_USER_SELECT });
+  sessionUsers.delete(id);
+  sessionUsers.set(id, { user, expiresAt: Date.now() + SESSION_USER_TTL_MS });
+  if (sessionUsers.size > SESSION_USER_MAX) sessionUsers.delete(sessionUsers.keys().next().value);
+  return user && { ...user };
+};
+
+/**
  * Middleware to authenticate requests using JWT
  * Verifies token and attaches user to request object
  */
@@ -23,20 +71,7 @@ const authenticate = async (req, res, next) => {
     const decoded = verifyAccessToken(token);
 
     // Check if user still exists and is active
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        municipalityId: true,
-        isActive: true,
-        deletedAt: true,
-        adminAccessExpiresAt: true,
-        tokenVersion: true,
-      },
-    });
+    const user = await loadSessionUser(decoded.id);
 
     if (!user || user.deletedAt) {
       return res.status(401).json({
@@ -279,20 +314,7 @@ const optionalAuth = async (req, res, next) => {
     const token = authHeader.substring(7);
     const decoded = verifyAccessToken(token);
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        municipalityId: true,
-        isActive: true,
-        deletedAt: true,
-        adminAccessExpiresAt: true,
-        tokenVersion: true,
-      },
-    });
+    const user = await loadSessionUser(decoded.id);
 
     if (user && !user.deletedAt && user.isActive
       && (decoded.tokenVersion ?? 0) === user.tokenVersion) {

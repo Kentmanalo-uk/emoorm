@@ -161,6 +161,9 @@ const Header = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // When the chat badge was last asked for.
+  const chatCountAt = useRef(0);
+
   // Poll unread count + recent notifications when authenticated
   useEffect(() => {
     if (!isAuthenticated) {
@@ -170,6 +173,7 @@ const Header = () => {
       return;
     }
     const fetchAll = async () => {
+      chatCountAt.current = Date.now();
       try {
         const [countRes, listRes, chatRes] = await Promise.all([
           axios.get('/notifications/unread/count', { params: { audience: 'BUYER' }, quiet: true }),
@@ -191,9 +195,12 @@ const Header = () => {
     };
   }, [isAuthenticated]);
 
-  // Opening a tab (reading chats there, say) refreshes the chat badge.
+  // Opening a tab (reading chats there, say) refreshes the chat badge, unless
+  // the poll above just asked (on first load both would).
   useEffect(() => {
     if (!isAuthenticated || !isTabPage) return;
+    if (Date.now() - chatCountAt.current < 2000) return;
+    chatCountAt.current = Date.now();
     axios.get('/messages/unread-count', { quiet: true })
       .then((res) => setUnreadChats(res.data?.count ?? 0))
       .catch(() => {});

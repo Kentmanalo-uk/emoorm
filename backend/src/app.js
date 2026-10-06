@@ -11,6 +11,7 @@ const { csrfOriginGuard, isLocalNetworkOrigin } = require('./middleware/security
 const { noStore, immutableAsset } = require('./middleware/httpCache');
 const seoRoutes = require('./routes/seo.routes');
 const { mountWebApp } = require('./middleware/webApp');
+const { overloadGuard, overloadStats } = require('./middleware/overload');
 
 // The only media types this server will ever serve out of /uploads. Anything
 // else is handed back as an unrenderable download.
@@ -151,6 +152,27 @@ app.use(cors({
 }));
 
 app.use(csrfOriginGuard);
+
+// Any request slower than SLOW_REQUEST_MS (default 3 seconds) is written to
+// the log with its time, so a slow page or a 504 can be traced to the
+// request behind it. Timed from here, so waiting in line below counts. The
+// path only: query strings can carry what someone searched for.
+const SLOW_REQUEST_MS = parseInt(process.env.SLOW_REQUEST_MS || '3000', 10);
+app.use((req, res, next) => {
+  const started = process.hrtime.bigint();
+  res.on('finish', () => {
+    const ms = Number(process.hrtime.bigint() - started) / 1e6;
+    if (ms >= SLOW_REQUEST_MS) {
+      console.warn(`[slow] ${req.method} ${req.originalUrl.split('?')[0]} ${res.statusCode} ${Math.round(ms)}ms`);
+    }
+  });
+  next();
+});
+
+// Under a rush, reads take turns, and one that would wait longer than the
+// proxy's timeout gets "busy, try again" instead. After CORS, like the
+// limiter, so that answer carries CORS headers.
+app.use(config.apiPrefix, overloadGuard);
 
 // Global light rate limit. Registered after CORS so a 429 still carries CORS
 // headers — otherwise browsers report it as a generic "Network Error".
@@ -302,6 +324,7 @@ app.get('/health', async (req, res) => {
     jobs: runtime.jobs,
     email: isResendConfigured() ? 'resend' : isSmtpConfigured() ? 'smtp' : 'none',
     cache: require('./lib/cache').getStats(),
+    load: overloadStats(),
     timestamp: new Date().toISOString(),
   });
 });

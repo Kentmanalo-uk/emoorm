@@ -1,5 +1,22 @@
 const jwt = require('jsonwebtoken');
+const { createSecretKey } = require('crypto');
 const config = require('../config/env');
+
+/**
+ * The signing secrets as key objects, built once.
+ *
+ * Handed a plain string, jsonwebtoken first tries to read it as a public key,
+ * fails, and only then makes a secret key of it, on every sign and verify.
+ * That failed attempt is expensive: under load it was over a third of the
+ * server's CPU, since every signed-in request verifies a token.
+ */
+const keys = new Map();
+const keyFor = (secret) => {
+  if (!keys.has(secret)) keys.set(secret, createSecretKey(Buffer.from(secret)));
+  return keys.get(secret);
+};
+const accessKey = () => keyFor(config.jwt.secret);
+const refreshKey = () => keyFor(config.jwt.refreshSecret);
 
 /**
  * Generate JWT Access Token
@@ -7,7 +24,7 @@ const config = require('../config/env');
  * @returns {String} JWT token
  */
 const generateAccessToken = (payload) => {
-  return jwt.sign(payload, config.jwt.secret, {
+  return jwt.sign(payload, accessKey(), {
     expiresIn: config.jwt.expiresIn,
   });
 };
@@ -18,7 +35,7 @@ const generateAccessToken = (payload) => {
  * @returns {String} JWT refresh token
  */
 const generateRefreshToken = (payload) => {
-  return jwt.sign(payload, config.jwt.refreshSecret, {
+  return jwt.sign(payload, refreshKey(), {
     expiresIn: config.jwt.refreshExpiresIn,
   });
 };
@@ -32,7 +49,7 @@ const generateRefreshToken = (payload) => {
 const verifyAccessToken = (token) => {
   let decoded;
   try {
-    decoded = jwt.verify(token, config.jwt.secret);
+    decoded = jwt.verify(token, accessKey());
   } catch (error) {
     throw new Error('Invalid or expired token');
   }
@@ -61,7 +78,7 @@ const verifyAccessToken = (token) => {
  */
 const verifyRefreshToken = (token) => {
   try {
-    return jwt.verify(token, config.jwt.refreshSecret);
+    return jwt.verify(token, refreshKey());
   } catch (error) {
     throw new Error('Invalid or expired refresh token');
   }
@@ -97,13 +114,13 @@ const generateTokens = (user) => {
 const generateMfaToken = (user, type) => {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, type },
-    config.jwt.secret,
+    accessKey(),
     { expiresIn: '10m' }
   );
 };
 
 const verifyMfaToken = (token, expectedType) => {
-  const decoded = jwt.verify(token, config.jwt.secret);
+  const decoded = jwt.verify(token, accessKey());
   if (!decoded?.type || (expectedType && decoded.type !== expectedType)) {
     throw new Error('Invalid MFA token');
   }
@@ -124,7 +141,7 @@ const generateGoogleProfileToken = (profile) => {
       profilePhoto: profile.profilePhoto,
       type: 'google-profile',
     },
-    config.jwt.secret,
+    accessKey(),
     { expiresIn: '15m' }
   );
 };
@@ -132,7 +149,7 @@ const generateGoogleProfileToken = (profile) => {
 const verifyGoogleProfileToken = (token) => {
   let decoded;
   try {
-    decoded = jwt.verify(token, config.jwt.secret);
+    decoded = jwt.verify(token, accessKey());
   } catch {
     throw new Error('Invalid or expired Google sign-in session');
   }
@@ -157,7 +174,7 @@ const verifyGoogleProfileToken = (token) => {
 const verifyTyped = (token, type) => {
   let decoded;
   try {
-    decoded = jwt.verify(token, config.jwt.secret);
+    decoded = jwt.verify(token, accessKey());
   } catch {
     throw new Error('Invalid or expired Google sign-in');
   }
@@ -167,7 +184,7 @@ const verifyTyped = (token, type) => {
 
 const generateGoogleAppState = (challenge) => jwt.sign(
   { challenge, type: 'google-app-state' },
-  config.jwt.secret,
+  accessKey(),
   { expiresIn: '10m' }
 );
 
@@ -182,7 +199,7 @@ const generateGoogleAppTicket = (profile, challenge) => jwt.sign(
     challenge,
     type: 'google-app-ticket',
   },
-  config.jwt.secret,
+  accessKey(),
   { expiresIn: '5m' }
 );
 

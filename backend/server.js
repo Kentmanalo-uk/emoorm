@@ -60,6 +60,12 @@ const startServer = async () => {
       // instance, so it should never be a silent surprise.
       console.log(`  Cache: ${describeCache()}`);
       console.log('================================================');
+      // Hostinger's proxy keeps connections to this server open between
+      // requests. Node closes an idle one after 5 seconds by default, and a
+      // request the proxy sends down a connection just as Node closes it
+      // fails with a 502/504. Outlast the proxy instead.
+      httpServer.keepAliveTimeout = 65 * 1000;
+      httpServer.headersTimeout = 66 * 1000;
       // Order clocks: unconfirmed orders expire, unpaid QR orders expire,
       // handed-over orders complete. Once shortly after boot (a restart must
       // not push them back), then every five minutes; /health shows when

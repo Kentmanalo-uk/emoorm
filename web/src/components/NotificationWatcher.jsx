@@ -113,18 +113,14 @@ export default function NotificationWatcher() {
     };
 
     check();
+    // Also checks once on coming back into view.
     const timer = pollWhileVisible(() => check(), EVERY_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') check();
-    };
     // Something was read or changed somewhere on the site.
     const onChanged = () => check(true);
-    document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('emoorm:notifications', onChanged);
     return () => {
       stopped = true;
       timer();
-      document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('emoorm:notifications', onChanged);
     };
   }, [userId]);

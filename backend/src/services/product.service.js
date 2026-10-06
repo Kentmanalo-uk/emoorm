@@ -806,12 +806,16 @@ const getProducts = async (rawOptions) => {
   }
 
   // Each product's store says whether it takes orders yet, so cards can hold
-  // back "add to cart". Asked after the cache, one query per page.
+  // back "add to cart". Asked after the cache; the public lists reuse an
+  // answer up to 15 seconds old, since every page view asks.
   const shape = async (result) => {
     const products = options.isAdmin
       ? result.products.map(stripStoreInternals)
       : result.products.map((p) => toPublicProduct(p));
-    const ready = await shopReadiness.readyIds(products.map((p) => p.storeId || p.store?.id));
+    const ready = await shopReadiness.readyIds(
+      products.map((p) => p.storeId || p.store?.id),
+      { maxAgeMs: options.isAdmin ? 0 : 15 * 1000 },
+    );
     return {
       ...result,
       products: products.map((p) => (p.store

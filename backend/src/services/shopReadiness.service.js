@@ -85,16 +85,35 @@ const isReady = async (storeId) => {
   return (await prisma.store.count({ where: { id: storeId, ...READY_STORE } })) > 0;
 };
 
+// Answers from the last few seconds, for the busy public lists (maxAgeMs).
+const recentReadiness = new Map();
+
 /**
  * Which of these shops are ready to sell, in one query.
  * @param {String[]} storeIds
+ * @param {Object} [options]
+ * @param {Number} [options.maxAgeMs] - reuse an answer this recent (public
+ *   product lists, asked on every page view); 0 always asks the database
  * @returns {Promise<Set<String>>}
  */
-const readyIds = async (storeIds) => {
+const readyIds = async (storeIds, { maxAgeMs = 0 } = {}) => {
   const ids = [...new Set((storeIds || []).filter(Boolean))];
   if (!ids.length) return new Set();
-  const rows = await prisma.store.findMany({ where: { id: { in: ids }, ...READY_STORE }, select: { id: true } });
-  return new Set(rows.map((r) => r.id));
+  const now = Date.now();
+  const known = maxAgeMs > 0 ? ids.filter((id) => recentReadiness.get(id)?.at > now - maxAgeMs) : [];
+  const ask = ids.filter((id) => !known.includes(id));
+  const ready = new Set(known.filter((id) => recentReadiness.get(id).ready));
+  if (ask.length) {
+    const rows = await prisma.store.findMany({ where: { id: { in: ask }, ...READY_STORE }, select: { id: true } });
+    const found = new Set(rows.map((r) => r.id));
+    for (const id of ask) {
+      if (found.has(id)) ready.add(id);
+      recentReadiness.delete(id);
+      recentReadiness.set(id, { ready: found.has(id), at: now });
+    }
+    while (recentReadiness.size > 5000) recentReadiness.delete(recentReadiness.keys().next().value);
+  }
+  return ready;
 };
 
 module.exports = {

@@ -22,6 +22,23 @@ test('a session from before a promotion to admin is refused, and not renewed', a
   assert.equal((await h.api('POST', '/auth/refresh-token', { body: { refreshToken: tokens.refreshToken } })).status, 401);
 });
 
+test('a session ends at once when its account is suspended or its password changes', async () => {
+  const buyer = await h.user('BUYER');
+  const { accessToken } = generateTokens(buyer);
+  // Signed-in requests just made: the account is remembered for a moment.
+  assert.equal((await h.api('GET', '/auth/profile', { token: accessToken })).status, 200);
+  await h.prisma.user.update({ where: { id: buyer.id }, data: { isActive: false } });
+  assert.equal((await h.api('GET', '/auth/profile', { token: accessToken })).status, 403);
+
+  await h.prisma.user.update({ where: { id: buyer.id }, data: { isActive: true } });
+  assert.equal((await h.api('GET', '/auth/profile', { token: accessToken })).status, 200);
+  // A password change inside a transaction, as the account pages make it.
+  await h.prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: buyer.id }, data: { tokenVersion: { increment: 1 } } });
+  });
+  assert.equal((await h.api('GET', '/auth/profile', { token: accessToken })).status, 401);
+});
+
 test('login answers the same for an unknown email, a wrong password and a deleted account', async () => {
   const buyer = await h.user('BUYER');
   const gone = await h.user('BUYER', { deletedAt: new Date() });

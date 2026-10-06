@@ -106,17 +106,20 @@ axiosInstance.interceptors.response.use(
     // A retry below counts again from the start.
     settle(originalRequest);
 
-    // Read-only requests retry once after a short pause when the server is
-    // rate limiting (429), busy (502/503/504, e.g. its database connections
-    // all taken) or briefly unreachable (e.g. dev server restarting).
+    // Read-only requests retry up to twice after a short pause when the
+    // server is rate limiting (429), busy (502/503/504, e.g. a rush of
+    // visitors) or briefly unreachable (e.g. dev server restarting). The
+    // pause grows and varies a little, so a crowd turned away together does
+    // not come back together.
     const status = error.response?.status;
     const retryable = [429, 502, 503, 504].includes(status) || (!error.response && error.code !== 'ECONNABORTED');
-    if (retryable && originalRequest && !originalRequest._retriedTransient
+    const tries = originalRequest?._transientTries || 0;
+    if (retryable && originalRequest && tries < 2
       && (originalRequest.method || 'get').toLowerCase() === 'get') {
-      originalRequest._retriedTransient = true;
+      originalRequest._transientTries = tries + 1;
       const retryAfter = Number(error.response?.headers?.['retry-after']);
-      const delayMs = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 5) * 1000 : 1500;
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      const baseMs = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 5) * 1000 : 1500 * (tries + 1);
+      await new Promise((resolve) => setTimeout(resolve, baseMs + Math.random() * 1000));
       return axiosInstance(originalRequest);
     }
 
