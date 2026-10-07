@@ -5,7 +5,7 @@ import {
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
   ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X,
   CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check, Sparkle,
-  NotePencil, Question,
+  NotePencil, Question, Handshake,
 } from '@phosphor-icons/react';
 import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
@@ -350,6 +350,10 @@ export default function SellerLayout() {
             <NavLink to="/seller/questions" className={navCls} title="Buyer questions">
               <Question size={17} weight="fill" /> <span>Questions</span>
             </NavLink>
+            <NavLink to="/seller/offers" className={navCls} title="Offers">
+              <Handshake size={17} weight="fill" /> <span>Offers</span>
+              {badge('/seller/offers')}
+            </NavLink>
             <NavLink to="/seller/analytics" className={navCls} title="Analytics">
               <PieChart size={17} weight="fill" /> <span>Analytics</span>
             </NavLink>
@@ -677,6 +681,7 @@ const LABELS = {
   '/seller/decorate/home': 'Shop home',
   '/seller/reviews': 'Reviews',
   '/seller/questions': 'Buyer questions',
+  '/seller/offers': 'Offers',
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop Profile',
@@ -712,6 +717,7 @@ const PHONE_TITLES = {
   '/seller/notifications': 'Notifications',
   '/seller/reviews': 'Reviews',
   '/seller/questions': 'Questions',
+  '/seller/offers': 'Offers',
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop profile',

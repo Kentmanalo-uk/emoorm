@@ -58,6 +58,7 @@ const KINDS = [
   'admin-messages',
   'admin-feedback',
   'buyer-messages', 'seller-messages',
+  'buyer-offers', 'seller-offers',
   'admin-seller-application', 'seller-application',
   'buyer-verification', 'seller-verification', 'seller-setup',
   'municipality', 'admin-dashboard',
@@ -159,6 +160,10 @@ const resolveRef = (notification) => {
 
     case 'ADMIN_ALERT':
       return { kind: 'admin-dashboard', id: null, slug: null };
+
+    // A price offer on livestock: the seller's Offers tab, the buyer's offers.
+    case 'PRICE_OFFER':
+      return { kind: isSeller ? 'seller-offers' : 'buyer-offers', id, slug: null };
 
     // Announcements and anything unrecognised open the notification itself, so
     // a long message is readable in full rather than clipped in the list.

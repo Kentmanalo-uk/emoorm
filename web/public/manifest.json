@@ -17,6 +17,12 @@
     "food"
   ],
   "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "shop.emoorm.app"
+    }
+  ],
   "icons": [
     {
       "src": "/icon-72x72.png",

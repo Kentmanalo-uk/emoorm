@@ -58,10 +58,11 @@ const getSellerAttention = async (actor) => {
         severity: supportOnly.length ? 'low' : 'none',
       },
       empty('lowStock', 'Products running low on stock', '/seller/products'),
+      empty('priceOffers', 'Price offers to answer', '/seller/offers'),
     ];
   }
 
-  const [orders, returns, conversations, support, lowStock] = await Promise.all([
+  const [orders, returns, conversations, support, lowStock, offers] = await Promise.all([
     prisma.order.findMany({
       where: { storeId: store.id, status: 'PENDING' },
       select: { createdAt: true },
@@ -106,6 +107,11 @@ const getSellerAttention = async (actor) => {
       },
       select: { updatedAt: true },
     }),
+    // Livestock price offers waiting for an answer (48 hours each).
+    prisma.priceOffer.findMany({
+      where: { storeId: store.id, status: 'PENDING', respondBy: { gt: new Date() } },
+      select: { createdAt: true },
+    }),
   ]);
 
   const items = [
@@ -116,6 +122,7 @@ const getSellerAttention = async (actor) => {
     // Stock is a standing condition rather than something that queued up, so
     // it never escalates with age the way an unanswered order does.
     { key: 'lowStock', label: 'Products running low on stock', rows: lowStock, field: null, link: '/seller/products' },
+    { key: 'priceOffers', label: 'Price offers to answer', rows: offers, field: 'createdAt', link: '/seller/offers' },
   ];
 
   return items.map(({ rows, field, ...item }) => {

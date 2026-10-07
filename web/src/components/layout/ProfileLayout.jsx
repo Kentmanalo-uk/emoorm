@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import {
   User, MapPin, Star, Package, Heart, Storefront as Store,
   ChatText as MessageSquare, Bell, Gear as Settings,
-  ArrowCounterClockwise as ReturnsIcon, ShieldCheck, Lifebuoy, Flag,
+  ArrowCounterClockwise as ReturnsIcon, ShieldCheck, Lifebuoy, Flag, Handshake,
 } from '@phosphor-icons/react';
 import Layout from './Layout';
 import '../../pages/Profile.css';
@@ -16,6 +16,7 @@ const navItems = [
   { to: '/profile/returns', label: 'Returns & refunds', icon: ReturnsIcon },
   { to: '/profile/wishlist', label: 'My Wishlist', icon: Heart },
   { to: '/profile/followed-stores', label: 'Followed Stores', icon: Store },
+  { to: '/profile/offers', label: 'My Offers', icon: Handshake },
   { to: '/profile/messages', label: 'Messages', icon: MessageSquare },
   { to: '/profile/notifications', label: 'Notifications', icon: Bell },
   { to: '/profile/support', label: 'Help & Support', icon: Lifebuoy },

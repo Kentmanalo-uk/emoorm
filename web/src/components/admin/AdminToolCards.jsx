@@ -36,13 +36,14 @@ const TOOL = {
   vouchers: { to: '/admin/vouchers', label: 'Vouchers', Icon: Ticket, tone: 'rose', superOnly: true },
   couriers: { to: '/admin/couriers', label: 'Couriers', Icon: Truck, tone: 'amber', superOnly: true },
   appUsers: { to: '/admin/app-users', label: 'App users', Icon: DeviceMobile, tone: 'green', superOnly: true },
+  team: { to: '/admin/team', label: 'Admin team', Icon: UsersThree, tone: 'blue', municipalOnly: true },
 };
 
 /** Every card on the Tools tab. */
 const ALL_CARDS = [
   { title: 'Marketplace', keys: ['applications', 'sellers', 'buyers', 'products', 'orders', 'reviews', 'returns', 'reports'] },
   { title: 'Messages & insights', keys: ['support', 'messages', 'alerts', 'feedback', 'analytics', 'auditLogs'] },
-  { title: 'System', keys: ['users', 'categories', 'municipalities', 'admins', 'banners', 'vouchers', 'couriers', 'appUsers'] },
+  { title: 'System', keys: ['users', 'categories', 'municipalities', 'admins', 'banners', 'vouchers', 'couriers', 'appUsers', 'team'] },
 ];
 
 /** Home: the ones an admin opens most, per role. */
@@ -102,7 +103,7 @@ export function QuickToolsCard() {
 export function AllToolCards() {
   const { isSuperAdmin } = useAdminShell();
   const cards = ALL_CARDS
-    .map((card) => ({ ...card, tools: card.keys.map((key) => TOOL[key]).filter((t) => isSuperAdmin || !t.superOnly) }))
+    .map((card) => ({ ...card, tools: card.keys.map((key) => TOOL[key]).filter((t) => (isSuperAdmin ? !t.municipalOnly : !t.superOnly)) }))
     .filter((card) => card.tools.length > 0);
   return (
     <>

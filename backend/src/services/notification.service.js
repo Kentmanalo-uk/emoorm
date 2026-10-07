@@ -81,6 +81,7 @@ const createNotification = async (data) => {
     'PRODUCT_ANSWER',
     'RETURN_DISPUTED',
     'RETURN_DISPUTE_RESOLVED',
+    'PRICE_OFFER',
   ];
 
   if (!validTypes.includes(type)) {

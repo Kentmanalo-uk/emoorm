@@ -38,6 +38,22 @@ prisma.$use(async (params, next) => {
   return next(params);
 });
 
+/**
+ * When the account last used the site, for "Online now" / "Active 2 h ago"
+ * on the admin team. Written at most every two minutes per account, in plain
+ * SQL so it neither bumps updatedAt nor drops the remembered account above.
+ */
+const ACTIVE_WRITE_MS = 2 * 60 * 1000;
+const lastTouched = new Map();
+const touchActivity = (id) => {
+  const now = Date.now();
+  if (now - (lastTouched.get(id) || 0) < ACTIVE_WRITE_MS) return;
+  lastTouched.delete(id);
+  lastTouched.set(id, now);
+  if (lastTouched.size > SESSION_USER_MAX) lastTouched.delete(lastTouched.keys().next().value);
+  prisma.$executeRaw`UPDATE users SET last_active_at = ${new Date(now)} WHERE id = ${id}`.catch(() => {});
+};
+
 /** A fresh copy of the account (callers change it), or null. */
 const loadSessionUser = async (id) => {
   const hit = sessionUsers.get(id);
@@ -138,6 +154,7 @@ const authenticate = async (req, res, next) => {
 
     // Attach user to request object
     req.user = user;
+    touchActivity(user.id);
     next();
   } catch (error) {
     return res.status(401).json({
@@ -329,6 +346,7 @@ const optionalAuth = async (req, res, next) => {
       delete user.adminAccessExpiresAt;
       delete user.tokenVersion;
       req.user = user;
+      touchActivity(user.id);
     }
 
     next();

@@ -3,7 +3,7 @@ const { rateLimit } = require('express-rate-limit');
 const router = express.Router();
 const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
-const { recordPing, getStats } = require('../services/appInstall.service');
+const { recordPing, getStats, getPublicDownloads } = require('../services/appInstall.service');
 
 // A phone pings once per launch and once per sign-in; this is generous.
 const pingLimiter = rateLimit({
@@ -23,6 +23,12 @@ router.post('/ping', pingLimiter, optionalAuth, asyncHandler(async (req, res) =>
     launch: req.body?.launch === true,
   });
   res.status(202).json({ success: true, recorded });
+}));
+
+// Everyone: the rounded download count for the /app page ("100+").
+router.get('/downloads', asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=600');
+  res.json({ success: true, data: await getPublicDownloads() });
 }));
 
 // Super admin: downloads, installs per version and who uses the app.

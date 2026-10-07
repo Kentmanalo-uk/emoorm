@@ -21,6 +21,7 @@ const identityVerificationService = require('./identityVerification.service');
 const deliveryQuoteService = require('./deliveryQuote.service');
 const courierService = require('./courier.service');
 const shopReadiness = require('./shopReadiness.service');
+const priceOfferService = require('./priceOffer.service');
 const availabilityService = require('./availability.service');
 const { ApiError } = require('../middleware/errorHandler');
 const { snapshotReturnPolicy } = require('../utils/returnPolicy');
@@ -385,8 +386,11 @@ const createOrder = async (userId, data) => {
     if (product.weightGrams) parcelGrams += product.weightGrams * quantity;
     else unweighed.push(product.name);
 
-    // Options, a sale and a bulk price for this quantity (utils/variantPricing).
-    const unitPrice = unitPriceFor(product, selectedVariations, quantity);
+    // Options, a sale and a bulk price for this quantity (utils/variantPricing);
+    // or the price agreed in a price offer (livestock).
+    const unitPrice = item.offerId
+      ? await priceOfferService.priceForOrderLine(userId, item, product)
+      : unitPriceFor(product, selectedVariations, quantity);
     const itemTotal = unitPrice * quantity;
     totalAmount += itemTotal;
 
@@ -398,6 +402,7 @@ const createOrder = async (userId, data) => {
       subtotal: itemTotal,
       selectedVariations,
       returnPolicySnapshot: snapshotReturnPolicy(product.returnPolicy),
+      ...(item.offerId ? { offerId: String(item.offerId) } : {}),
       // A package's items as sold, should the seller change it later.
       ...(kindOf(product) === 'PACKAGE' ? { packageContents: packageSnapshot(product) } : {}),
     });
@@ -431,6 +436,10 @@ const createOrder = async (userId, data) => {
   const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0 : (courier ? courierFee : deliveryQuote.fee);
   let voucherRecord = null;
   let discountAmount = 0;
+  // An agreed offer price is already the deal: no voucher on top.
+  if (voucherCode && orderItems.some((line) => line.offerId)) {
+    throw new ApiError("Vouchers can't be used with an agreed offer price", 400);
+  }
   if (voucherCode) {
     const normalized = String(voucherCode).trim().toUpperCase();
     if (normalized) {
@@ -507,6 +516,9 @@ const createOrder = async (userId, data) => {
     }
     if (err.code === 'VOUCHER_UNAVAILABLE') {
       throw new ApiError(err.message, 400);
+    }
+    if (err.code === 'OFFER_UNAVAILABLE') {
+      throw new ApiError('This agreed price is no longer available', 400);
     }
     // A unique violation on (buyerId, checkoutKey) means a concurrent submit
     // of the same checkout won the race. Return that order instead of an

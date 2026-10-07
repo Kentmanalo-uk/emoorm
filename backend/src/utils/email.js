@@ -427,6 +427,37 @@ const sendSellerApprovedEmail = async ({ user, storeName }) => {
   return sendMail({ to: user.email, subject, html, text });
 };
 
+/** Added to a town's admin team: what it means and how to start. */
+const sendAdminTeamEmail = async ({ user, town, addedBy, until = null }) => {
+  const name = user.fullName || 'there';
+  const adminUrl = appUrl('/admin');
+  const subject = `You're now an admin for ${town} on Emoorm`;
+  const term = until ? ` until ${until}` : '';
+
+  const text = [
+    `Hi ${name},`,
+    '',
+    `${addedBy} added you to the admin team for ${town}${term}.`,
+    'Sign in again to start: admin accounts use two-factor sign-in, so you will set up an authenticator app the first time.',
+    '',
+    `Open the admin dashboard: ${adminUrl}`,
+    '',
+    "Didn't expect this? Reply to this email or contact support.",
+    '',
+    '— The Emoorm team',
+  ].join('\n');
+
+  const html = layout(`
+    ${heading(`You're now an admin for ${escapeHtml(town)}`)}
+    ${para(`Hi ${escapeHtml(name)}, ${escapeHtml(addedBy)} added you to the admin team for <strong>${escapeHtml(town)}</strong>${escapeHtml(term)}.`)}
+    ${para('Sign in again to start. Admin accounts use two-factor sign-in, so you will set up an authenticator app the first time.')}
+    ${button(adminUrl, 'Open the admin dashboard')}
+    ${para("Didn't expect this? Reply to this email or contact support.")}
+  `);
+
+  return sendMail({ to: user.email, subject, html, text });
+};
+
 /** The application was not approved; says why and how to re-apply. */
 const sendSellerRejectedEmail = async ({ user, reason }) => {
   const name = user.fullName || 'there';
@@ -589,6 +620,7 @@ module.exports = {
   sendSellerApplicationReceivedEmail,
   sendSellerApprovedEmail,
   sendSellerRejectedEmail,
+  sendAdminTeamEmail,
   isSmtpConfigured,
   isResendConfigured,
 };

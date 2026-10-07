@@ -312,6 +312,12 @@ const validateProductPayload = async (data, { partial, kind = 'REGULAR' }) => {
   if (has(data, 'saleStartsAt') && out.saleStartsAt === undefined) out.saleStartsAt = optionalDate(data.saleStartsAt, 'Sale start');
   if (has(data, 'saleEndsAt') && out.saleEndsAt === undefined) out.saleEndsAt = optionalDate(data.saleEndsAt, 'Sale end');
   if (has(data, 'priceTiers')) out.priceTiers = validatePriceTiers(data.priceTiers);
+  // Livestock: whether buyers may offer a price, and the lowest the seller
+  // takes (kept from buyers; offers below it are declined).
+  if (has(data, 'acceptsOffers')) out.acceptsOffers = data.acceptsOffers === true || data.acceptsOffers === 'true';
+  if (has(data, 'offerFloor')) {
+    out.offerFloor = data.offerFloor === null || data.offerFloor === '' ? null : validatePrice(data.offerFloor);
+  }
   if ((!partial || has(data, 'images')) && !(pkg && noImages(data.images))) out.images = validateImages(data.images);
   if ((!partial || has(data, 'categoryId')) && !(pkg && blankText(data.categoryId))) {
     out.categoryId = await validateCategory(data.categoryId);
@@ -504,7 +510,7 @@ const PUBLIC_STORE_FIELDS = [
   'pickupAddress', 'isActive', 'isSuspended', 'municipality',
   'vacationUntil', 'vacationNote', 'openingHours', 'prepDays',
 ];
-const PRIVATE_PRODUCT_FIELDS = ['moderationNote', 'approvedById', 'imageHash'];
+const PRIVATE_PRODUCT_FIELDS = ['moderationNote', 'approvedById', 'imageHash', 'offerFloor'];
 
 /** The QR a shop takes payment with: none until it has put its QR up. */
 const shownQrType = (store) => (store.paymentQrImage ? store.paymentQrType ?? null : null);

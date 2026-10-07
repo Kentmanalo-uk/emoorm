@@ -4,6 +4,7 @@ import {
   BellSlash as BellOff, Checks as CheckCheck, Trash as Trash2, Package, ShoppingBag,
   CheckCircle, XCircle, Star, WarningCircle as AlertCircle, Info, ChatCircleDots,
   MagnifyingGlass, X, Storefront, Tag, Question, Scales,
+  Handshake,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -56,6 +57,7 @@ const TYPE_CONFIG = {
   LOW_STOCK: { icon: AlertCircle, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Low Stock' },
   PRICE_DROP: { icon: Tag, color: 'var(--t-primary-500, #10b981)', bg: 'var(--t-primary-100, #d1fae5)', label: 'On Sale' },
   PRODUCT_QUESTION: { icon: Question, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Question' },
+  PRICE_OFFER: { icon: Handshake, color: 'var(--t-success-600, #059669)', bg: 'var(--t-success-100, #d1fae5)', label: 'Offer' },
   PRODUCT_ANSWER: { icon: ChatCircleDots, color: 'var(--t-primary-500, #10b981)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Answer' },
   RETURN_DISPUTED: { icon: Scales, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Return Dispute' },
   RETURN_DISPUTE_RESOLVED: { icon: Scales, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Dispute Decided' },

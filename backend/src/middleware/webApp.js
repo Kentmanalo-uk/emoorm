@@ -156,12 +156,13 @@ const mountWebApp = (app) => {
   // The Android app (the /app page's Get button): always saved as a file,
   // under the name it was published with. Each version has its own name.
   // Each download is counted once: a resumed download (a Range that does not
-  // start at the beginning) is the same download.
+  // start at the beginning) is the same download, and so is the same phone
+  // downloading again that day.
   app.use('/downloads', (req, res, next) => {
     const range = req.get('range');
     if (req.method === 'GET' && req.path.endsWith('.apk') && (!range || /^bytes=0-/.test(range))
       && fs.existsSync(path.join(root, 'downloads', path.basename(req.path)))) {
-      recordDownload(path.basename(req.path)).catch(() => {});
+      recordDownload(path.basename(req.path), req.ip).catch(() => {});
     }
     next();
   });

@@ -62,13 +62,46 @@ const recordPing = async ({ installId, userAgent, userId = null, launch = false 
   return true;
 };
 
-/** Counts one APK download, for the version in its file name. */
-const recordDownload = async (fileName) => {
+// Who downloaded what today: a phone that downloads again (a retry, a second
+// tap) counts once a day per version.
+const downloadedToday = new Map();
+
+/** Counts one APK download, for the version in its file name, once a day per phone. */
+const recordDownload = async (fileName, ip = '') => {
   const version = /(\d+\.\d+(?:\.\d+)?)\.apk$/i.exec(String(fileName))?.[1] || 'unknown';
   const day = dayKey(new Date());
+  const key = `${day}|${version}|${ip}`;
+  if (ip && downloadedToday.has(key)) return false;
+  if (ip) {
+    downloadedToday.set(key, true);
+    while (downloadedToday.size > MAX_REMEMBERED) downloadedToday.delete(downloadedToday.keys().next().value);
+  }
+  publicCount = null;
   await prisma.$executeRaw`
     INSERT INTO app_downloads (version, day, downloads) VALUES (${version}, ${day}, 1)
     ON DUPLICATE KEY UPDATE downloads = downloads + 1`;
+  return true;
+};
+
+/**
+ * The download count everyone sees on the /app page, rounded the way app
+ * stores do ("100+"). Below 10 there is nothing to show yet. Kept for ten
+ * minutes; a new download starts it afresh.
+ */
+const BUCKETS = [1e6, 5e5, 1e5, 5e4, 1e4, 5e3, 1e3, 500, 100, 50, 10];
+let publicCount = null;
+const downloadsLabel = (total) => {
+  const step = BUCKETS.find((b) => total >= b);
+  if (!step) return null;
+  return `${step >= 1e6 ? `${step / 1e6}M` : step >= 1e3 ? `${step / 1e3}K` : step}+`;
+};
+const getPublicDownloads = async () => {
+  if (publicCount && publicCount.at > Date.now() - 10 * 60 * 1000) return publicCount.value;
+  const sum = await prisma.appDownload.aggregate({ _sum: { downloads: true } });
+  const total = sum._sum.downloads || 0;
+  const value = { label: downloadsLabel(total) };
+  publicCount = { value, at: Date.now() };
+  return value;
 };
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -147,4 +180,6 @@ const getStats = async () => {
   };
 };
 
-module.exports = { recordPing, recordDownload, getStats, parseAgent };
+module.exports = {
+  recordPing, recordDownload, getStats, getPublicDownloads, downloadsLabel, parseAgent,
+};

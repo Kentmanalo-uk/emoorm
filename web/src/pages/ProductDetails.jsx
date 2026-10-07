@@ -19,6 +19,7 @@ import axios from '../lib/axios';
 import { resolveImg, parseImages } from '../lib/media';
 import useCartStore, { cartKeyFor } from '../store/cartStore';
 import useAuthStore from '../store/authStore';
+import OfferPanel from '../components/offers/OfferPanel';
 import ShippingEstimate from '../components/orders/ShippingEstimate';
 import useWishlistStore from '../store/wishlistStore';
 import useIdentityGate from '../hooks/useIdentityGate';
@@ -1272,6 +1273,9 @@ const ProductDetails = () => {
                 </div>
                 )}
               </div>
+
+              {/* Livestock: make an offer, or where it stands. */}
+              <OfferPanel product={product} listPrice={unitPrice} cannotBuy={cannotBuy} />
 
               {/* CTAs */}
               <div className="pdp-cta-row">

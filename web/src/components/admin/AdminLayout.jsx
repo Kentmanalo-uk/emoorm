@@ -5,7 +5,7 @@ import {
   CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
   EnvelopeSimple, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
   Star, ArrowCounterClockwise, List, X, ChatCircleDots,
-  House, Receipt, UserCircle, SquaresFour, Truck, DeviceMobile,
+  House, Receipt, UserCircle, SquaresFour, Truck, DeviceMobile, UsersThree,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
@@ -395,6 +395,12 @@ export default function AdminLayout({ children }) {
               </>
             )}
 
+            {!isSuperAdmin && (
+              <NavLink to="/admin/team" className={navCls} title="Admin team">
+                <UsersThree size={17} weight="fill" /> <span>Admin team</span>
+              </NavLink>
+            )}
+
             <NavLink to="/admin/audit-logs" className={navCls} title="Audit Logs">
               <FileText size={17} weight="fill" /> <span>Audit Logs</span>
             </NavLink>
@@ -614,6 +620,7 @@ const LABELS = {
   '/admin/couriers': 'Couriers',
   '/admin/vouchers': 'Vouchers',
   '/admin/app-users': 'App users',
+  '/admin/team': 'Admin team',
   '/admin/junior-admins': 'Municipal Admins',
   '/admin/audit-logs': 'Audit Logs',
   '/admin/settings': 'Settings',

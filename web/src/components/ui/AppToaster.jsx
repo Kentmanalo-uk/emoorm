@@ -6,6 +6,7 @@ import {
   Flag, GearSix, Headset, Heart, IdentificationCard, ImageSquare, Info, LockKey, MapPin, Megaphone,
   Package, Prohibit, Receipt, ShoppingCart, SpinnerGap, Star, Storefront, Tag, Ticket, UserCircle,
   UserPlus, WarningCircle, X, Question, Scales,
+  Handshake,
 } from '@phosphor-icons/react';
 import NotificationPicture from '../NotificationPicture';
 import { playSound } from '../../lib/uiSound';
@@ -85,6 +86,7 @@ const NOTIFICATION_LOOK = {
   LOW_STOCK: { Icon: WarningCircle, label: 'Low stock', tone: 'amber' },
   PRICE_DROP: { Icon: Tag, label: 'On sale', tone: 'green' },
   PRODUCT_QUESTION: { Icon: Question, label: 'Question', tone: 'blue' },
+  PRICE_OFFER: { Icon: Handshake, label: 'Offer', tone: 'green' },
   PRODUCT_ANSWER: { Icon: ChatText, label: 'Answer', tone: 'green' },
   RETURN_DISPUTED: { Icon: Scales, label: 'Return dispute', tone: 'red' },
   RETURN_DISPUTE_RESOLVED: { Icon: Scales, label: 'Return', tone: 'blue' },

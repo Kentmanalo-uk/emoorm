@@ -5,6 +5,7 @@ import {
   ChatCircle, Bell, User,
   ShoppingBag, CheckCircle, Package, XCircle, Star, WarningCircle as AlertCircle, Info,
   Clock, TrendUp as TrendingUp, ChatCircleDots, ArrowCounterClockwise, Megaphone, Tag, Question, Scales,
+  Handshake,
 } from '@phosphor-icons/react';
 import useAuthStore from '../../store/authStore';
 import FeedbackDialog from '../feedback/FeedbackDialog';
@@ -55,6 +56,7 @@ const NOTIF_TYPE = {
   LOW_STOCK: { Icon: AlertCircle, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Low stock' },
   PRICE_DROP: { Icon: Tag, color: 'var(--t-primary-500, #10b981)', bg: 'var(--t-primary-100, #d1fae5)', label: 'On sale' },
   PRODUCT_QUESTION: { Icon: Question, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Question' },
+  PRICE_OFFER: { Icon: Handshake, color: 'var(--t-success-600, #059669)', bg: 'var(--t-success-100, #d1fae5)', label: 'Offer' },
   PRODUCT_ANSWER: { Icon: ChatCircleDots, color: 'var(--t-primary-500, #10b981)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Answer' },
   RETURN_DISPUTED: { Icon: Scales, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Return dispute' },
   RETURN_DISPUTE_RESOLVED: { Icon: Scales, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'Dispute decided' },

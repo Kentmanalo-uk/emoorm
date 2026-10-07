@@ -75,6 +75,8 @@ const startServer = async () => {
         runtimeStatus.runJob('order-expiry', () => orderService.expirePendingOrders(), ORDER_JOBS_MS),
         runtimeStatus.runJob('order-unpaid-expiry', () => orderService.expireUnpaidOrders(), ORDER_JOBS_MS),
         runtimeStatus.runJob('order-auto-complete', () => orderService.autoCompleteOrders(), ORDER_JOBS_MS),
+        // Price offers nobody answered, and agreed prices left unused.
+        runtimeStatus.runJob('offer-expiry', () => require('./src/services/priceOffer.service').expireDue(), ORDER_JOBS_MS),
       ]);
       setTimeout(runOrderJobs, 20 * 1000).unref();
       const expiryTimer = setInterval(runOrderJobs, ORDER_JOBS_MS);

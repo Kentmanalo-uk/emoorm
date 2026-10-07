@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   requireBuyerVerification: true,
   categoryStyle: 'IMAGE',
   availableTodayEnabled: true,
+  adminTeamMax: 5,
 };
 
 // How the homepage shows its categories.
@@ -188,8 +189,16 @@ const sanitize = (input = {}) => {
     data.availableTodayEnabled = booleanField(input.availableTodayEnabled, 'availableTodayEnabled');
   }
 
+  if (input.adminTeamMax !== undefined) {
+    const max = Number(input.adminTeamMax);
+    if (!Number.isInteger(max) || max < 1 || max > 20) {
+      throw new ApiError('adminTeamMax must be a whole number from 1 to 20', 400);
+    }
+    data.adminTeamMax = max;
+  }
+
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, verification, category style or Available Today setting', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, verification, category style, Available Today or admin team setting', 400);
   }
   return data;
 };

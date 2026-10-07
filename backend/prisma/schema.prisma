@@ -40,6 +40,9 @@ model AppSetting {
   /// super admin can switch the whole feature off; listings stay stored.
   availableTodayEnabled Boolean @default(true) @map("available_today_enabled")
 
+  /// How many admins a town's admin team may have, its primary admin included.
+  adminTeamMax Int @default(5) @map("admin_team_max")
+
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -203,6 +206,8 @@ enum NotificationType {
   PRODUCT_ANSWER
   RETURN_DISPUTED
   RETURN_DISPUTE_RESOLVED
+  /// A price offer on livestock was made, answered or agreed.
+  PRICE_OFFER
 }
 
 enum NotificationAudience {
@@ -369,6 +374,14 @@ model User {
 
   // Temporary (backup) municipal admins lose admin access after this time.
   adminAccessExpiresAt DateTime? @map("admin_access_expires_at")
+  // Who in the town's admin team added this admin (null: the super admin).
+  adminAddedById String? @map("admin_added_by_id")
+  adminAddedBy   User?   @relation("AdminAddedBy", fields: [adminAddedById], references: [id], onDelete: SetNull)
+  adminsAdded    User[]  @relation("AdminAddedBy")
+
+  // When the account last used the site (signed in), written at most every
+  // couple of minutes: "Online now" / "Active 2 h ago" on the admin team.
+  lastActiveAt DateTime? @map("last_active_at")
 
   // Timestamps
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -411,6 +424,7 @@ model User {
   voucherRedemptions VoucherRedemption[]
   appInstalls   AppInstall[]
   identityVerification IdentityVerification?
+  priceOffers   PriceOffer[]   @relation("OfferBuyer")
 
   @@map("users")
   @@index([deletedAt, role, municipalityId, createdAt], map: "users_role_municipality_idx")
@@ -716,6 +730,7 @@ model Store {
 
   // Relations
   products      Product[]
+  priceOffers   PriceOffer[]
   availabilities ProductAvailability[]
   orders        Order[]
   conversations Conversation[]
@@ -834,6 +849,11 @@ model Product {
   /// A package's is worked out from its items when it is saved.
   weightGrams Int?          @map("weight_grams")
   lowStockThreshold Int     @default(5) @map("low_stock_threshold")
+
+  // Livestock: buyers may offer a price per head. offerFloor is the lowest
+  // the seller takes (never shown to buyers): offers below it are declined.
+  acceptsOffers Boolean  @default(true) @map("accepts_offers")
+  offerFloor    Decimal? @db.Decimal(10, 2) @map("offer_floor")
   images      Json          // Array of image URLs
   returnPolicy Json?        @map("return_policy")
   variations  Json?
@@ -870,6 +890,7 @@ model Product {
   reviews     Review[]
   wishlistItems WishlistItem[]
   cartItems   CartItem[]
+  priceOffers PriceOffer[]
   reports     Report[]
   messages    Message[]
   inventoryMovements InventoryMovement[]
@@ -1131,6 +1152,8 @@ model OrderItem {
   /// Whether the line took stock when ordered (a paluto takes none): a
   /// cancellation or a return gives back only what was taken.
   stockTaken    Boolean  @default(true) @map("stock_taken")
+  /// Bought at a price agreed in a price offer (livestock): that offer.
+  offerId       String?  @map("offer_id")
 
   createdAt     DateTime @default(now()) @map("created_at")
 
@@ -1380,6 +1403,10 @@ model Message {
   // Optional link to a product the buyer is asking about
   productId String?  @map("product_id")
   product   Product? @relation(fields: [productId], references: [id])
+
+  // A price offer this message is about (an offer card in the chat).
+  offerId   String?     @map("offer_id")
+  offer     PriceOffer? @relation(fields: [offerId], references: [id], onDelete: SetNull)
 
   readAt    DateTime? @map("read_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -1668,4 +1695,53 @@ model AppDownload {
 
   @@id([version, day])
   @@map("app_downloads")
+}
+
+// ============================================
+// PRICE OFFERS (livestock)
+// ============================================
+
+/// Where a price offer stands.
+enum OfferStatus {
+  PENDING   // the buyer offered; the seller answers by respondBy
+  COUNTERED // the seller named a price; the buyer answers by respondBy
+  ACCEPTED  // agreed: the buyer can buy at agreedPrice until buyBy
+  DECLINED
+  CANCELLED // the buyer took it back
+  EXPIRED   // nobody answered, or the agreed price went unused
+  USED      // bought: orderId
+}
+
+/// A buyer's offer of a price per head on a livestock listing, and the
+/// seller's answer. One round each: the seller may counter once, then the
+/// buyer accepts or declines.
+model PriceOffer {
+  id           String      @id @default(uuid())
+  productId    String      @map("product_id")
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeId      String      @map("store_id")
+  store        Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  buyerId      String      @map("buyer_id")
+  buyer        User        @relation("OfferBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  quantity     Int
+  // The listing's price per head when the offer was made.
+  listPrice    Decimal     @db.Decimal(10, 2) @map("list_price")
+  offerPrice   Decimal     @db.Decimal(10, 2) @map("offer_price")
+  counterPrice Decimal?    @db.Decimal(10, 2) @map("counter_price")
+  agreedPrice  Decimal?    @db.Decimal(10, 2) @map("agreed_price")
+  note         String?     @db.VarChar(300)
+  sellerNote   String?     @db.VarChar(300) @map("seller_note")
+  status       OfferStatus @default(PENDING)
+  respondBy    DateTime    @map("respond_by")
+  buyBy        DateTime?   @map("buy_by")
+  orderId      String?     @map("order_id")
+  messages     Message[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@index([productId, buyerId, status], map: "price_offers_product_buyer_idx")
+  @@index([storeId, status, createdAt], map: "price_offers_store_idx")
+  @@index([buyerId, status, createdAt], map: "price_offers_buyer_idx")
+  @@index([status, respondBy], map: "price_offers_due_idx")
+  @@map("price_offers")
 }

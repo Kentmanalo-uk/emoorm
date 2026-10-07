@@ -23,6 +23,9 @@ const ROUTES = {
   'admin-product': ({ id }) => (id ? `/admin/products?id=${enc(id)}` : '/admin/products'),
   product: ({ slug }) => (slug ? `/product/${enc(slug)}` : null),
   'seller-questions': ({ id }) => (id ? `/seller/questions?id=${enc(id)}` : '/seller/questions'),
+  // Price offers on livestock
+  'buyer-offers': () => '/profile/offers',
+  'seller-offers': () => '/seller/offers',
 
   // Stores
   store: ({ slug }) => (slug ? `/store/${enc(slug)}` : null),

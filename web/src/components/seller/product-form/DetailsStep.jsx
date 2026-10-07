@@ -432,6 +432,29 @@ function AnimalDetails({ form, set, patch, errors, way }) {
         label="Buyers can visit the farm first"
         sub="They can come and see the animal before they buy."
       />
+      <Switch
+        checked={form.acceptsOffers !== false}
+        onChange={(on) => set('acceptsOffers', on)}
+        label="Buyers can make an offer"
+        sub="They name a price per head; you accept, decline or counter."
+      />
+      {form.acceptsOffers !== false && (
+        <Field
+          label="Lowest price you take per head"
+          htmlFor="pf-offer-floor"
+          error={errors.offerFloor}
+          hint="Optional, and never shown to buyers. Offers below it are declined for you."
+        >
+          <MoneyInput
+            id="pf-offer-floor"
+            value={form.offerFloor}
+            onChange={(v) => set('offerFloor', v)}
+            placeholder="e.g. 7000"
+            invalid={!!errors.offerFloor}
+            label="Lowest price you take per head"
+          />
+        </Field>
+      )}
 
       <OptionalHead />
       <NotesField form={form} set={set} placeholder="e.g. Vaccinated and dewormed. Fed with rice bran and kangkong." />

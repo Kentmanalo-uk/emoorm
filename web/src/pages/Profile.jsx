@@ -6,7 +6,7 @@ import {
   PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Truck, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Question, EnvelopeSimple,
-  Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut,
+  Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut, Handshake,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -232,6 +232,7 @@ const Profile = () => {
           <Row to="/profile/wishlist" icon={Heart} label="Wishlist" hint={wishlistCount || null} />
           <Row to="/profile/followed-stores" icon={Store} label="Followed Stores" hint={followedStores.length || null} />
           <Row to="/profile/reviews" icon={Star} label="My Reviews" hint={reviewCount || null} />
+          <Row to="/profile/offers" icon={Handshake} label="My Offers" />
         </section>
 
         <section className="pf-m-section pf-m-list">

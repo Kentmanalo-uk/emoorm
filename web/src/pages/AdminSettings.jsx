@@ -82,6 +82,7 @@ export default function AdminSettings() {
       appLogo: currentAppSettings.appLogo,
       productPlaceholder: currentAppSettings.productPlaceholder,
       deliveryFee: String(currentAppSettings.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
+      adminTeamMax: String(currentAppSettings.adminTeamMax ?? 5),
       requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
       availableTodayEnabled: currentAppSettings.availableTodayEnabled !== false,
       categoryStyle: currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE',
@@ -90,6 +91,7 @@ export default function AdminSettings() {
     currentAppSettings.appLogo,
     currentAppSettings.productPlaceholder,
     currentAppSettings.deliveryFee,
+    currentAppSettings.adminTeamMax,
     currentAppSettings.requireBuyerVerification,
     currentAppSettings.availableTodayEnabled,
     currentAppSettings.categoryStyle,
@@ -192,6 +194,12 @@ export default function AdminSettings() {
       changes.productPlaceholder = brandingForm.productPlaceholder;
     }
     if (deliveryFee !== Number(currentAppSettings.deliveryFee)) changes.deliveryFee = deliveryFee;
+    const adminTeamMax = Number(brandingForm.adminTeamMax);
+    if (!Number.isInteger(adminTeamMax) || adminTeamMax < 1 || adminTeamMax > 20) {
+      toast.error('Admins per municipality must be a whole number from 1 to 20');
+      return;
+    }
+    if (adminTeamMax !== Number(currentAppSettings.adminTeamMax ?? 5)) changes.adminTeamMax = adminTeamMax;
     const requireBuyerVerification = brandingForm.requireBuyerVerification !== false;
     if (requireBuyerVerification !== (currentAppSettings.requireBuyerVerification !== false)) {
       changes.requireBuyerVerification = requireBuyerVerification;
@@ -411,6 +419,20 @@ export default function AdminSettings() {
           value={brandingForm.deliveryFee ?? ''}
           onChange={(e) => setBrandingForm((current) => ({ ...current, deliveryFee: e.target.value }))}
           placeholder={String(DEFAULT_APP_SETTINGS.deliveryFee)}
+        />
+      </Row>
+
+      <Row label="Admins per municipality" help="The most admins a municipality's admin team may have, its primary admin included. Municipal admins add and remove their own team in Admin team.">
+        <input
+          className="st-input"
+          type="number"
+          min="1"
+          max="20"
+          step="1"
+          inputMode="numeric"
+          value={brandingForm.adminTeamMax ?? ''}
+          onChange={(e) => setBrandingForm((current) => ({ ...current, adminTeamMax: e.target.value }))}
+          placeholder="5"
         />
       </Row>
 

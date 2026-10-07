@@ -64,3 +64,29 @@ test('only the super admin sees the app numbers', async () => {
   assert.equal(mine.user.id, buyer.id);
   assert.equal(mine.device, 'SM-A135F');
 });
+
+test('a phone downloading again the same day counts once; the page shows a rounded count', async () => {
+  const { recordDownload, downloadsLabel } = require('../src/services/appInstall.service');
+  // A version no real release uses, so the count is this test's alone.
+  const file = `E-MOORM-0.0.${Date.now() % 100000}.apk`;
+  const version = /(\d+\.\d+\.\d+)\.apk$/.exec(file)[1];
+  try {
+    assert.equal(await recordDownload(file, '203.0.113.7'), true);
+    assert.equal(await recordDownload(file, '203.0.113.7'), false);
+    assert.equal(await recordDownload(file, '203.0.113.8'), true);
+    const rows = await h.prisma.appDownload.findMany({ where: { version } });
+    assert.equal(rows.reduce((n, r) => n + r.downloads, 0), 2);
+  } finally {
+    await h.prisma.appDownload.deleteMany({ where: { version } });
+  }
+
+  assert.equal(downloadsLabel(9), null);
+  assert.equal(downloadsLabel(10), '10+');
+  assert.equal(downloadsLabel(137), '100+');
+  assert.equal(downloadsLabel(1200), '1K+');
+  assert.equal(downloadsLabel(52000), '50K+');
+
+  const page = await h.api('GET', '/app/downloads');
+  assert.equal(page.status, 200);
+  assert.ok('label' in page.body.data);
+});

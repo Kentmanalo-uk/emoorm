@@ -181,6 +181,21 @@ const codeWasJustUsed = (userId, code) => {
   return Boolean(entry && entry.code === code && entry.until >= now);
 };
 
+/**
+ * A signed-in admin's current authenticator code, asked again before a step
+ * that hands out access (adding someone to the admin team). A code just used
+ * is not taken twice.
+ */
+const confirmCode = async (userId, code) => {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { mfaEnabled: true, mfaSecret: true } });
+  if (!user?.mfaEnabled || !user.mfaSecret) throw new ApiError('Set up two-factor sign-in first', 403);
+  const trimmed = String(code || '').replace(/\s/g, '');
+  if (!/^\d{6}$/.test(trimmed) || codeWasJustUsed(userId, trimmed) || !verifyTotp(user.mfaSecret, trimmed)) {
+    throw new ApiError('That code is not right. Enter the 6-digit code from your authenticator app.', 400);
+  }
+  recentCodes.set(userId, { code: trimmed, until: Date.now() + REUSE_WINDOW_MS });
+};
+
 const verifyLogin = async (mfaToken, code) => {
   let decoded;
   try {
@@ -288,6 +303,7 @@ module.exports = {
   disable,
   regenerateBackupCodes,
   verifyLogin,
+  confirmCode,
   completeSetupDuringLogin,
   beginSetupWithMfaToken,
   getStatus,

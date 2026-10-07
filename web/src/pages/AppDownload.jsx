@@ -4,7 +4,7 @@ import {
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  CaretDown, CaretLeft, CaretRight, CheckCircle, CornersIn, CornersOut, DownloadSimple, Export, Pause, Play, PlusSquare,
+  ArrowSquareOut, CaretDown, CaretLeft, CaretRight, CheckCircle, CornersIn, CornersOut, DownloadSimple, Export, Pause, Play, PlusSquare,
   ShareNetwork, ShieldCheck, SpeakerHigh, SpeakerSlash, X,
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
@@ -13,7 +13,10 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useSheetPresence } from '../hooks/useSheetMotion';
 import useSeo from '../lib/seo';
 import { androidAppVersion } from '../lib/inApp';
-import release from '../data/androidApp.json';
+import {
+  appInstalledHere, downloadedVersion, isOlder, openInAppUrl, release, rememberDownload,
+} from '../lib/appRelease';
+import axios from '../lib/axios';
 import './AppDownload.css';
 
 /**
@@ -84,24 +87,19 @@ const splitNote = (note) => {
   return { title: note.slice(0, at), text: rest.charAt(0).toUpperCase() + rest.slice(1) };
 };
 
-/** Where the page is open: the app itself, an iPhone, an Android phone or a computer. */
+/**
+ * Where the page is open: the app itself, an iPhone, an Android phone or a
+ * computer. On an Android phone's browser, hasApp says the app is installed
+ * (Chrome can tell), and an older downloaded version asks for an update.
+ */
 const platformOf = () => {
   const version = androidAppVersion();
   if (version) return { kind: 'app', version };
   const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent || '';
   if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return { kind: 'ios' };
-  if (/Android/i.test(ua)) return { kind: 'android' };
+  // An Android phone's browser remembers the version it last downloaded here.
+  if (/Android/i.test(ua)) return { kind: 'android', downloaded: downloadedVersion() };
   return { kind: 'computer' };
-};
-
-/** Whether version a ("1.2.0") comes before b ("1.3.0"). */
-const isOlder = (a, b) => {
-  const x = String(a).split('.').map((n) => parseInt(n, 10) || 0);
-  const y = String(b).split('.').map((n) => parseInt(n, 10) || 0);
-  for (let i = 0; i < Math.max(x.length, y.length); i += 1) {
-    if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0);
-  }
-  return false;
 };
 
 function QrCode({ size }) {
@@ -140,7 +138,16 @@ function GetButton({
       </span>
     );
   }
-  const update = platform.kind === 'app';
+  if (platform.hasApp) {
+    return (
+      <a ref={buttonRef} className={className} href={openInAppUrl('/')}>
+        <ArrowSquareOut size={compact ? 17 : 20} weight="bold" aria-hidden="true" />
+        {compact ? 'Open' : 'Open in app'}
+      </a>
+    );
+  }
+  const update = platform.kind === 'app'
+    || (platform.kind === 'android' && Boolean(platform.downloaded) && isOlder(platform.downloaded, release.version));
   return (
     <a ref={buttonRef} className={className} href={release.file} download={FILE_NAME} onClick={onGet}>
       <DownloadSimple size={compact ? 17 : 20} weight="bold" aria-hidden="true" />
@@ -459,7 +466,8 @@ function AfterGetSteps() {
 
 export default function AppDownload() {
   const isPhone = usePhoneLayout();
-  const [platform] = useState(platformOf);
+  const [platform, setPlatform] = useState(platformOf);
+  const [downloads, setDownloads] = useState(null);
   const [sheet, setSheet] = useState(null);
   const [viewer, setViewer] = useState(null);
   const [pastHero, setPastHero] = useState(false);
@@ -529,7 +537,32 @@ export default function AppDownload() {
   const closeSheet = useCallback(() => setSheet(null), []);
   const closeViewer = useCallback(() => setViewer(null), []);
   // The link itself downloads the file; this only shows what comes next.
-  const onGet = () => setSheet('installing');
+  const onGet = () => {
+    rememberDownload();
+    setSheet('installing');
+  };
+
+  // In an Android phone's browser: is the app already on this phone?
+  useEffect(() => {
+    if (platform.kind !== 'android') return undefined;
+    let live = true;
+    appInstalledHere().then((yes) => {
+      if (live && yes) setPlatform((p) => ({ ...p, hasApp: true }));
+    });
+    return () => { live = false; };
+  }, [platform.kind]);
+
+  // "100+ downloads", once there are enough to show.
+  useEffect(() => {
+    let live = true;
+    axios.get('/app/downloads', { quiet: true })
+      .then((res) => { if (live) setDownloads(res.data?.label || null); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
+
+  const oldDownload = platform.kind === 'android' && !platform.hasApp && platform.downloaded
+    && isOlder(platform.downloaded, release.version) ? platform.downloaded : null;
   const onIphone = () => setSheet('iphone');
   const onShare = () => share({
     title: 'E-MOORM app for Android',
@@ -560,10 +593,14 @@ export default function AppDownload() {
                 Emoorm <span className="appdl-beta" title="The app is still being tested: tell us if something doesn't work">Beta</span>
               </h1>
               <p className="appdl-tagline">The Mindoreño marketplace</p>
+              {downloads && <p className="appdl-count">{`${downloads} downloads`}</p>}
               <p className="appdl-beta-note">Early version: some things may still change. Found a problem? Tell us in Help &amp; Support.</p>
             </div>
             <div className="appdl-hero-actions">
               <GetButton platform={platform} onGet={onGet} onIphone={onIphone} buttonRef={heroGet} />
+              {oldDownload && (
+                <p className="appdl-update-note">{`You downloaded ${oldDownload} on this phone. ${release.version} is out.`}</p>
+              )}
             </div>
             {!isPhone && (
               <button type="button" className="appdl-ghost appdl-hero-share" onClick={onShare}>

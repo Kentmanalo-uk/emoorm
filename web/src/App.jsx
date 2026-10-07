@@ -32,6 +32,7 @@ import ProfileSettings from './pages/ProfileSettings';
 import ProfileVerification from './pages/ProfileVerification';
 import ProfileSupport from './pages/ProfileSupport';
 import ProfileReports from './pages/ProfileReports';
+import ProfileOffers from './pages/ProfileOffers';
 import NotFound from './pages/NotFound';
 import HelpCenter from './pages/HelpCenter';
 import Returns from './pages/Returns';
@@ -49,6 +50,7 @@ import ActivityBar from './components/ui/ActivityBar';
 import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import useAuthStore from './store/authStore';
 import AppInstallPing from './components/AppInstallPing';
+import AppUpdateBar from './components/AppUpdateBar';
 import { ThemeRuntime } from './hooks/useTheme';
 import { usePhoneLayout } from './hooks/useMobileNav';
 import { isAuthSheetPath, HOME_BACKGROUND } from './lib/authSheet';
@@ -122,6 +124,8 @@ const CookiePolicy = lazy(() => import('./pages/CookiePolicy'));
 const AppDownload = lazy(() => import('./pages/AppDownload'));
 const SellerTutorial = lazy(() => import('./pages/SellerTutorial'));
 const AdminAppUsers = lazy(() => import('./pages/AdminAppUsers'));
+const AdminTeam = lazy(() => import('./pages/AdminTeam'));
+const SellerOffers = lazy(() => import('./pages/SellerOffers'));
 const SearchByImage = lazy(() => import('./pages/SearchByImage'));
 const AvailableToday = lazy(() => import('./pages/AvailableToday'));
 const SellerReturns = lazy(() => import('./pages/SellerReturns'));
@@ -197,6 +201,7 @@ function AppRoutes() {
       <ConfirmHost />
       <OfflineBanner />
       <AppInstallPing />
+      <AppUpdateBar />
       <Suspense fallback={<RouteLoading />}>
       <Routes location={background || location}>
         {/* Public routes */}
@@ -258,6 +263,7 @@ function AppRoutes() {
           <Route path="verification" element={<ProfileVerification />} />
           <Route path="support" element={<ProfileSupport />} />
           <Route path="reports" element={<ProfileReports />} />
+          <Route path="offers" element={<ProfileOffers />} />
         </Route>
         <Route path="/help" element={<HelpCenter />} />
         <Route path="/cart" element={<ProtectedRoute gate="cart"><Cart /></ProtectedRoute>} />
@@ -296,6 +302,7 @@ function AppRoutes() {
           <Route path="today" element={<SellerToday />} />
           <Route path="reviews" element={<SellerReviews />} />
           <Route path="questions" element={<SellerQuestions />} />
+          <Route path="offers" element={<SellerOffers />} />
           <Route path="analytics" element={<SellerAnalytics />} />
           <Route path="finance" element={<SellerFinance />} />
           <Route path="store" element={<SellerStore />} />
@@ -325,6 +332,7 @@ function AppRoutes() {
         <Route path="/admin/banners" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminBanners /></AdminRoute>} />
         <Route path="/admin/couriers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCouriers /></AdminRoute>} />
         <Route path="/admin/vouchers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminVouchers /></AdminRoute>} />
+        <Route path="/admin/team" element={<AdminRoute roles={['MUNICIPAL_ADMIN']}><AdminTeam /></AdminRoute>} />
         <Route path="/admin/app-users" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminAppUsers /></AdminRoute>} />
         <Route path="/admin/junior-admins" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminJuniorAdmins /></AdminRoute>} />
         <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogs /></AdminRoute>} />
