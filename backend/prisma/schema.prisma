@@ -425,6 +425,9 @@ model User {
   appInstalls   AppInstall[]
   identityVerification IdentityVerification?
   priceOffers   PriceOffer[]   @relation("OfferBuyer")
+  teamMessagesSent     TeamMessage[]  @relation("TeamMessageSender")
+  teamMessagesReceived TeamMessage[]  @relation("TeamMessageRecipient")
+  teamChatReads        TeamChatRead[]
 
   @@map("users")
   @@index([deletedAt, role, municipalityId, createdAt], map: "users_role_municipality_idx")
@@ -648,6 +651,7 @@ model Municipality {
   feedback  Feedback[]
 
   @@map("municipalities")
+  teamMessages TeamMessage[]
 }
 
 model Store {
@@ -1744,4 +1748,38 @@ model PriceOffer {
   @@index([buyerId, status, createdAt], map: "price_offers_buyer_idx")
   @@index([status, respondBy], map: "price_offers_due_idx")
   @@map("price_offers")
+}
+
+// ============================================
+// ADMIN TEAM CHAT
+// ============================================
+
+/// A message between the municipal admins of one town: to the whole team
+/// (recipientId null) or to one admin.
+model TeamMessage {
+  id             String       @id @default(uuid())
+  municipalityId String       @map("municipality_id")
+  municipality   Municipality @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  senderId       String       @map("sender_id")
+  sender         User         @relation("TeamMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId    String?      @map("recipient_id")
+  recipient      User?        @relation("TeamMessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  body           String       @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([municipalityId, recipientId, createdAt], map: "team_messages_thread_idx")
+  @@index([senderId, recipientId, createdAt], map: "team_messages_pair_idx")
+  @@map("team_messages")
+}
+
+/// How far an admin has read a team chat: the team's ('team') or one with
+/// another admin (their id).
+model TeamChatRead {
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread     String   @db.VarChar(64)
+  lastReadAt DateTime @map("last_read_at")
+
+  @@id([userId, thread])
+  @@map("team_chat_reads")
 }

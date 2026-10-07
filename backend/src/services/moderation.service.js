@@ -34,7 +34,7 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
   const scope = scopeOf(actor, municipalityId);
   const staleBefore = new Date(Date.now() - STALE_PAYMENT_MS);
 
-  const [applications, products, reports, payments, returns, conversations] = await Promise.all([
+  const [applications, products, reports, payments, returns, conversations, teamUnread] = await Promise.all([
     prisma.user.findMany({
       // An applicant may live in one municipality and open their shop in
       // another — the queue follows the shop, like the review itself.
@@ -76,6 +76,8 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
         messages: { orderBy: { createdAt: 'desc' }, take: 1, select: { senderId: true } },
       },
     }),
+    // Unread messages in the admin team's chats (municipal admins).
+    require('./teamChat.service').unreadRows(actor),
   ]);
   const awaiting = conversations.filter((c) => c.messages[0]?.senderId === c.userId);
 
@@ -86,6 +88,7 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
     { key: 'supportAwaiting', label: 'Support messages awaiting reply', rows: awaiting, field: 'lastMessageAt', link: '/admin/support' },
     { key: 'stalePayments', label: 'Payments sellers have not checked in 24h', rows: payments, field: 'updatedAt', link: '/admin/orders' },
     { key: 'openReturns', label: 'Return requests awaiting the seller', rows: returns, field: 'createdAt', link: '/admin/returns' },
+    { key: 'teamChat', label: 'Unread team messages', rows: teamUnread, field: 'createdAt', link: '/admin/team' },
   ];
 
   return items.map(({ rows, field, ...item }) => {

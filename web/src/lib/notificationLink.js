@@ -67,6 +67,8 @@ const ROUTES = {
   'seller-setup': () => '/seller',
   municipality: ({ id }) => (id ? `/municipality/${enc(id)}` : null),
   'admin-dashboard': () => '/admin',
+  // The admin team's chats: the team's, or one with another admin.
+  'admin-team': ({ id }) => `/admin/team?chat=${enc(id || 'team')}`,
 
   // Announcements and anything else open in full on their own page.
   notification: ({ id }) => (id ? `/notifications/${enc(id)}` : null),

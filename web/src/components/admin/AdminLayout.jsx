@@ -397,7 +397,7 @@ export default function AdminLayout({ children }) {
 
             {!isSuperAdmin && (
               <NavLink to="/admin/team" className={navCls} title="Admin team">
-                <UsersThree size={17} weight="fill" /> <span>Admin team</span>
+                <UsersThree size={17} weight="fill" /> <span>Admin team</span>{badge('/admin/team')}
               </NavLink>
             )}
 

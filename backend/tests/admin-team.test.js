@@ -132,3 +132,47 @@ test('signed-in use marks an admin online', async () => {
   const list = await h.api('GET', '/admin-team', { token: await session(primary) });
   assert.equal(list.body.data.members.find((m) => m.id === a.id).online, true);
 });
+
+test('team chat: the whole team, and admin to admin; only members read it', async () => {
+  const a = await admin({ adminAddedBy: { connect: { id: primary.id } } });
+  const p = await session(primary);
+  const asA = await session(a);
+
+  const sent = await h.api('POST', '/admin-team/chats/team', { token: p, body: { body: 'Meeting at 2 PM about the fiesta stalls' } });
+  assert.equal(sent.status, 201, sent.body?.message);
+  assert.equal((await h.api('POST', '/admin-team/chats/team', { token: p, body: { body: '   ' } })).status, 400);
+
+  let list = await h.api('GET', '/admin-team/chats', { token: asA });
+  assert.equal(list.status, 200, list.body?.message);
+  const teamChat = list.body.data.chats.find((c) => c.thread === 'team');
+  assert.equal(teamChat.unread, 1);
+  assert.equal(teamChat.last.body, 'Meeting at 2 PM about the fiesta stalls');
+  // The sidebar badge counts it too.
+  const waiting = await h.api('GET', '/moderation/attention', { token: asA });
+  assert.equal(waiting.body.data.find((i) => i.link === '/admin/team').count, 1);
+
+  const read = await h.api('GET', '/admin-team/chats/team', { token: asA });
+  assert.equal(read.body.data.messages.at(-1).sender.id, primary.id);
+  list = await h.api('GET', '/admin-team/chats', { token: asA });
+  assert.equal(list.body.data.chats.find((c) => c.thread === 'team').unread, 0);
+
+  // Admin to admin: the thread is the other admin's id.
+  assert.equal((await h.api('POST', `/admin-team/chats/${primary.id}`, { token: asA, body: { body: 'Can you cover the reports today?' } })).status, 201);
+  const pList = await h.api('GET', '/admin-team/chats', { token: p });
+  assert.equal(pList.body.data.chats.find((c) => c.thread === a.id).unread, 1);
+  const dm = await h.api('GET', `/admin-team/chats/${a.id}`, { token: p });
+  assert.deepEqual(dm.body.data.messages.map((m) => m.body), ['Can you cover the reports today?']);
+
+  // Not to yourself, not to someone off the team, not read by outsiders.
+  assert.equal((await h.api('POST', `/admin-team/chats/${a.id}`, { token: asA, body: { body: 'me' } })).status, 404);
+  const buyer = await h.user('BUYER');
+  assert.equal((await h.api('POST', `/admin-team/chats/${buyer.id}`, { token: asA, body: { body: 'hi' } })).status, 404);
+  assert.equal((await h.api('GET', '/admin-team/chats/team', { token: h.token(buyer) })).status, 403);
+  const other = await h.otherTown(town.id);
+  const elsewhere = await h.user('MUNICIPAL_ADMIN', { municipality: { connect: { id: other.id } } });
+  assert.equal((await h.api('GET', `/admin-team/chats/${a.id}`, { token: h.token(elsewhere) })).status, 404);
+
+  // Taken off the team: the chats are gone for them.
+  await h.api('DELETE', `/admin-team/${a.id}`, { token: p });
+  assert.equal((await h.api('GET', '/admin-team/chats', { token: h.token({ ...a, role: 'MUNICIPAL_ADMIN' }) })).status, 401);
+});

@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  ArrowsClockwise as RefreshCw, CalendarBlank, ShieldCheck, UserPlus, Warning, X,
+  ArrowsClockwise as RefreshCw, CalendarBlank, ChatCircleDots, ChatsCircle, ShieldCheck, UserPlus, Warning, X,
 } from '@phosphor-icons/react';
 import AdminLayout from '../components/admin/AdminLayout';
 import UserAvatar from '../components/ui/UserAvatar';
 import EmptyArt from '../components/ui/EmptyArt';
+import TeamChat from '../components/admin/TeamChat';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import useAuthStore from '../store/authStore';
 import axios from '../lib/axios';
 import { confirmAction } from '../lib/confirm';
 import '../components/admin/AdminLayout.css';
@@ -17,7 +21,8 @@ import './AdminTeam.css';
  * online or when they were last active, and adding or removing admins. Any
  * permanent admin may add another, after their authenticator code; backups
  * (with an end date) may not. The primary admin may remove anyone else;
- * others only the admins they added.
+ * others only the admins they added. Beside the list (on phones, full
+ * screen) is the team's chat: everyone, or one admin.
  */
 
 const KIND = { PRIMARY: 'Primary admin', ADMIN: 'Admin', BACKUP: 'Backup' };
@@ -230,6 +235,28 @@ export default function AdminTeam() {
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [extending, setExtending] = useState(null);
+  const isPhone = usePhoneLayout();
+  const meId = useAuthStore((st) => st.user?.id);
+  // The chat open: ?chat=team or ?chat=<admin id> (a notification links here).
+  const [params, setParams] = useSearchParams();
+  const openChat = params.get('chat');
+  const [phoneChats, setPhoneChats] = useState(false);
+  const [unread, setUnread] = useState({ total: 0, byThread: {} });
+  const setOpenChat = useCallback((thread) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (thread) next.set('chat', thread); else next.delete('chat');
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+  const onUnread = useCallback((data) => {
+    setUnread({ total: data.unread, byThread: Object.fromEntries(data.chats.map((c) => [c.thread, c.unread])) });
+  }, []);
+  const message = (thread) => {
+    if (isPhone) setPhoneChats(true);
+    setOpenChat(thread);
+  };
+  const showPhoneChat = isPhone && (phoneChats || Boolean(openChat));
 
   const load = useCallback(() => {
     setLoading(true);
@@ -271,6 +298,12 @@ export default function AdminTeam() {
             </p>
           </div>
           <div className="at-head-actions">
+            {isPhone && members.length > 0 && (
+              <button type="button" className="admin-btn admin-btn-outline at-chat-btn" onClick={() => setPhoneChats(true)} aria-label="Team chat">
+                <ChatsCircle size={17} weight="fill" />
+                {unread.total > 0 && <b className="at-badge">{unread.total > 99 ? '99+' : unread.total}</b>}
+              </button>
+            )}
             <button type="button" className="admin-btn admin-btn-outline" onClick={load} disabled={loading} aria-label="Refresh">
               <RefreshCw size={15} />
             </button>
@@ -288,6 +321,8 @@ export default function AdminTeam() {
           </div>
         </div>
 
+        <div className="at-layout">
+        <div className="at-main">
         {team && !team.canAddAtAll && (
           <p className="at-note">As a backup admin you can see the team; permanent admins add and remove admins.</p>
         )}
@@ -324,21 +359,55 @@ export default function AdminTeam() {
                     {m.addedBy && <span className="at-added">{`Added by ${m.addedBy.id === members.find((x) => x.isYou)?.id ? 'you' : m.addedBy.fullName}`}</span>}
                   </span>
                 </div>
-                {m.canRemove && (
+                {(!m.isYou || m.canRemove) && (
                   <div className="at-member-actions">
+                    {!m.isYou && (
+                      <button type="button" className="admin-btn admin-btn-outline at-msg-btn" onClick={() => message(m.id)} aria-label={`Message ${m.fullName}`}>
+                        <ChatCircleDots size={15} weight="fill" /> <span>Message</span>
+                        {unread.byThread[m.id] > 0 && <b className="at-badge">{unread.byThread[m.id]}</b>}
+                      </button>
+                    )}
+                    {m.canRemove && (
+                      <>
                     {m.kind === 'BACKUP' && (
                       <button type="button" className="admin-btn admin-btn-outline" onClick={() => setExtending(m)}>
                         <CalendarBlank size={15} /> <span>End date</span>
                       </button>
                     )}
                     <button type="button" className="admin-btn at-remove" onClick={() => remove(m)}>Remove</button>
+                      </>
+                    )}
                   </div>
                 )}
               </li>
             ))}
           </ul>
         )}
+        </div>
+
+        {!isPhone && members.length > 0 && (
+          <aside className="at-chat" aria-label="Team chat">
+            <TeamChat meId={meId} open={openChat} onOpen={setOpenChat} onUnread={onUnread} />
+          </aside>
+        )}
+        </div>
       </div>
+
+      {showPhoneChat && createPortal(
+        <div className="at-chat-sheet" role="dialog" aria-modal="true" aria-label="Team chat">
+          {!openChat && (
+            <button type="button" className="at-chat-close" onClick={() => setPhoneChats(false)} aria-label="Close">
+              <X size={20} />
+            </button>
+          )}
+          <TeamChat meId={meId} open={openChat} onOpen={(t) => { setOpenChat(t); if (!t) setPhoneChats(true); }} onUnread={onUnread} />
+        </div>,
+        document.body,
+      )}
+      {isPhone && !showPhoneChat && members.length > 0 && (
+        // Keeps the unread count fresh for the chat button.
+        <div hidden><TeamChat meId={meId} open={null} onOpen={message} onUnread={onUnread} /></div>
+      )}
 
       {adding && team && (
         <AddAdmin

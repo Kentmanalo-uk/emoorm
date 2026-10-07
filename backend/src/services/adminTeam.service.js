@@ -278,5 +278,5 @@ const extend = async (actorIn, id, { accessExpiresAt, municipalityId } = {}, req
 };
 
 module.exports = {
-  list, lookup, add, remove, extend, ONLINE_MS,
+  list, lookup, add, remove, extend, membersOf, ONLINE_MS,
 };

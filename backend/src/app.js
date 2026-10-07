@@ -290,7 +290,7 @@ const sendLimiter = rateLimit({
 });
 // Marking a chat read is not sending anything.
 const onlyWrites = (limiter) => (req, res, next) => (req.method === 'POST' && !req.path.endsWith('/read') ? limiter(req, res, next) : next());
-for (const area of ['/messages', '/reports', '/support', '/feedback']) {
+for (const area of ['/messages', '/reports', '/support', '/feedback', '/admin-team/chats']) {
   app.use(`${config.apiPrefix}${area}`, onlyWrites(sendLimiter));
 }
 app.use(config.apiPrefix, apiRoutes);
