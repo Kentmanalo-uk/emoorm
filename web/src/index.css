@@ -94,7 +94,8 @@ a:hover {
 input,
 textarea,
 select,
-button {
+button,
+.ui-select {
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
@@ -107,7 +108,8 @@ button {
 
 input,
 textarea,
-select {
+select,
+.ui-select {
   font-size: 15px;
   line-height: 1.5;
 }

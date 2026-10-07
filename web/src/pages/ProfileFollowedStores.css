@@ -75,7 +75,7 @@
   color: var(--t-neutral-500, #64748b);
 }
 
-.followed-sort select {
+.followed-sort select, .followed-sort .ui-select {
   border: 1px solid var(--t-neutral-200, #e2e8f0);
   border-radius: 8px;
   padding: 8px 12px;
@@ -87,7 +87,9 @@
 }
 
 .followed-sort select:focus,
-.profile-main .followed-sort select:focus {
+.profile-main .followed-sort select:focus,
+.followed-sort .ui-select:focus,
+.profile-main .followed-sort .ui-select:focus {
   border-color: var(--t-primary-600, #059669);
 }
 
@@ -360,7 +362,7 @@
     justify-content: space-between;
   }
 
-  .profile-main .followed-sort select {
+  .profile-main .followed-sort select, .profile-main .followed-sort .ui-select {
     min-height: 40px;
     border-color: transparent;
     border-radius: 10px;

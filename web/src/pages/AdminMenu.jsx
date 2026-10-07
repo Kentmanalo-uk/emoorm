@@ -13,6 +13,7 @@ import { resolveImg } from '../lib/media';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTranslate';
 import './SellerApp.css';
 import PageMenu from '../components/layout/PageMenu';
+import Select from '../components/ui/Select';
 
 /*
  * "Me" for admins on a phone (the tab bar's last tab), drawn like the seller
@@ -106,7 +107,7 @@ function MenuBody() {
           <label className="sme-row sm-lang notranslate" translate="no">
             <span className="sme-row-icon"><Globe size={19} weight="fill" /></span>
             <span className="sme-row-label">Language</span>
-            <select
+            <Select
               value={language}
               onChange={(e) => {
                 setLanguageState(e.target.value);
@@ -115,7 +116,7 @@ function MenuBody() {
               aria-label="Language"
             >
               {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-            </select>
+            </Select>
             <CaretRight size={16} className="sh-chev" />
           </label>
         </section>

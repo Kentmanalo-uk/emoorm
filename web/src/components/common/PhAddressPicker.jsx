@@ -7,6 +7,7 @@ import {
   normalizeName,
 } from '../../lib/phAddress';
 import './PhAddressPicker.css';
+import Select from '../ui/Select';
 
 /**
  * Reusable Philippine address picker, scoped to the province the platform serves.
@@ -244,7 +245,7 @@ const PhAddressPicker = ({
             tabIndex={-1}
           />
         ) : (
-          <select
+          <Select
             id={`${uid}-town`}
             className={`ph-input ${errors.municipality || errors.municipalityId ? 'error' : ''}`}
             value={townCode}
@@ -262,7 +263,7 @@ const PhAddressPicker = ({
                 </option>
               );
             })}
-          </select>
+          </Select>
         )}
         {lockTown && townHint && <span className="ph-hint">{townHint}</span>}
         {(errors.municipality || errors.municipalityId) && (
@@ -278,7 +279,7 @@ const PhAddressPicker = ({
       <div className="ph-field">
         <label className="ph-label" htmlFor={`${uid}-barangay`}>Barangay</label>
         {!typing && barangays.length > 0 ? (
-          <select
+          <Select
             id={`${uid}-barangay`}
             className={`ph-input ${errors.barangay ? 'error' : ''}`}
             value={barangayCode}
@@ -295,7 +296,7 @@ const PhAddressPicker = ({
             {barangays.map((b) => (
               <option key={b.code} value={b.code}>{b.name}</option>
             ))}
-          </select>
+          </Select>
         ) : (
           <input
             id={`${uid}-barangay`}

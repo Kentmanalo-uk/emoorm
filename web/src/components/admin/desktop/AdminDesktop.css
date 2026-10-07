@@ -240,13 +240,13 @@
 
   /* Form fields: 40px; inside a toolbar or a card header they are toolbar
      controls (36px). */
-  .ac-shell .ac-content :is(input, select).admin-input {
+  .ac-shell .ac-content :is(input, select).admin-input, .ac-shell .ac-content :is(input, .ui-select).admin-input {
     height: var(--ad-h-field);
     min-height: var(--ad-h-field);
     padding: 0 12px;
   }
 
-  .ac-shell .ac-content :is(.admin-toolbar, .admin-card-header) :is(input, select).admin-input {
+  .ac-shell .ac-content :is(.admin-toolbar, .admin-card-header) :is(input, select).admin-input, .ac-shell .ac-content :is(.admin-toolbar, .admin-card-header) :is(input, .ui-select).admin-input {
     height: var(--ad-h-control);
     min-height: var(--ad-h-control);
   }

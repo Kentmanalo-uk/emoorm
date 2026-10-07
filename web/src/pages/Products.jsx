@@ -23,6 +23,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
 import { parseImages } from '../lib/media';
+import Select from '../components/ui/Select';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 
@@ -490,7 +491,7 @@ const Products = () => {
                 </div>
 
                 <div className="products-actions">
-                  <select
+                  <Select
                     aria-label="Sort products"
                     value={sortBy}
                     onChange={(e) => handleSortChange(e.target.value)}
@@ -503,7 +504,7 @@ const Products = () => {
                     <option value="price-high">Price: High to Low</option>
                     <option value="name-asc">Name: A to Z</option>
                     <option value="name-desc">Name: Z to A</option>
-                  </select>
+                  </Select>
 
                   <div className="view-toggle">
                     <button

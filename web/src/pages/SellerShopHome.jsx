@@ -17,6 +17,7 @@ import { BusyLabel } from '../components/ui/Spinner';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import './SellerDashboard.css';
 import './SellerShopHome.css';
+import Select from '../components/ui/Select';
 
 /*
  * Decorate my shop → Shop home: the seller builds the Home tab of their shop
@@ -409,10 +410,10 @@ function PhotosField({ section: s, max, onChange, products }) {
               <button type="button" className="shb-photo-x" onClick={() => onChange({ images: images.filter((_, j) => j !== i) })} aria-label="Remove photo"><X size={13} weight="bold" /></button>
             </div>
             {s.type === 'banner' ? (
-              <select className="shb-input shb-photo-link" value={img.productId || ''} onChange={(e) => setImg(i, { productId: e.target.value || null })} aria-label="Opens product">
+              <Select className="shb-input shb-photo-link" value={img.productId || ''} onChange={(e) => setImg(i, { productId: e.target.value || null })} aria-label="Opens product">
                 <option value="">No link</option>
                 {products.map((p) => <option key={p.id} value={p.id}>Opens: {p.name}</option>)}
-              </select>
+              </Select>
             ) : (
               <input className="shb-input shb-photo-link" value={img.caption || ''} maxLength={80} placeholder="Caption (optional)" onChange={(e) => setImg(i, { caption: e.target.value })} />
             )}

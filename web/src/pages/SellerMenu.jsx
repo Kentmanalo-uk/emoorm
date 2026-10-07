@@ -15,6 +15,7 @@ import FeedbackDialog from '../components/feedback/FeedbackDialog';
 import './SellerDashboard.css';
 import { readCache, writeCache } from '../lib/pageCache';
 import PageMenu from '../components/layout/PageMenu';
+import Select from '../components/ui/Select';
 
 /*
  * "Me" (phone), drawn like the buyer's Profile: the shop card with its
@@ -220,7 +221,7 @@ export default function SellerMenu() {
           <label className="sme-row sm-lang notranslate" translate="no">
             <span className="sme-row-icon"><Globe size={19} weight="fill" /></span>
             <span className="sme-row-label">Language</span>
-            <select
+            <Select
               value={language}
               onChange={(e) => {
                 setLanguageState(e.target.value);
@@ -229,7 +230,7 @@ export default function SellerMenu() {
               aria-label="Language"
             >
               {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-            </select>
+            </Select>
             <CaretRight size={16} className="sh-chev" />
           </label>
           <Row to="/seller/settings" icon={Gear} label="Shop settings" />

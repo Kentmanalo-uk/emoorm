@@ -258,7 +258,7 @@
   font-size: 14px;
 }
 
-.avt-sort select {
+.avt-sort select, .avt-sort .ui-select {
   min-height: 36px;
   padding: 0 10px;
   border: 1px solid var(--t-neutral-200, #e5e7eb);

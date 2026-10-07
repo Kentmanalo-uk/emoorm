@@ -321,7 +321,8 @@
 .request-label textarea,
 .seller-action-form textarea,
 .seller-action-form input,
-.seller-action-form select {
+.seller-action-form select,
+.seller-action-form .ui-select {
   display: block;
   width: 100%;
   box-sizing: border-box;

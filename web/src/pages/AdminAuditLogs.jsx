@@ -7,6 +7,7 @@ import useAuthStore from '../store/authStore';
 import { ACTION_LABELS, actionLabel } from '../lib/auditActions';
 import '../components/admin/AdminLayout.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
+import Select from '../components/ui/Select';
 
 const ACTIONS = Object.keys(ACTION_LABELS);
 
@@ -83,7 +84,7 @@ export default function AdminAuditLogs() {
           <h2 className="admin-card-title">Filter</h2>
         </div>
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', padding: 16 }}>
-          <select
+          <Select
             aria-label="Filter by action"
             value={filters.action}
             onChange={(e) => setFilters((f) => ({ ...f, action: e.target.value }))}
@@ -91,8 +92,8 @@ export default function AdminAuditLogs() {
           >
             <option value="">All actions</option>
             {ACTIONS.map((a) => <option key={a} value={a}>{ACTION_LABELS[a]}</option>)}
-          </select>
-          <select
+          </Select>
+          <Select
             aria-label="Filter by record type"
             value={filters.entity}
             onChange={(e) => setFilters((f) => ({ ...f, entity: e.target.value }))}
@@ -106,9 +107,9 @@ export default function AdminAuditLogs() {
             <option value="Report">Report</option>
             <option value="Municipality">Municipality</option>
             <option value="Announcement">Announcement</option>
-          </select>
+          </Select>
           {isSuperAdmin && (
-            <select
+            <Select
               aria-label="Filter by municipality"
               value={filters.municipalityId}
               onChange={(e) => setFilters((f) => ({ ...f, municipalityId: e.target.value }))}
@@ -116,7 +117,7 @@ export default function AdminAuditLogs() {
             >
               <option value="">All municipalities</option>
               {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
+            </Select>
           )}
           <input
             aria-label="From date"

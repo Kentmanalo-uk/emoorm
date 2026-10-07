@@ -318,10 +318,7 @@
 
   /* Comfortable touch targets for text fields and standard buttons
      (checkboxes, radios and icon buttons keep their own sizes). */
-  input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])),
-  select,
-  .btn,
-  .button {
+  input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])), select, .btn, .button, .ui-select {
     min-height: var(--mobile-touch-target);
   }
 
@@ -410,14 +407,13 @@
   .btn,
   .button,
   input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])),
-  select {
+  select,
+  .ui-select {
     min-height: 46px;
   }
 
   /* 16px avoids the iOS zoom-on-focus. */
-  input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])),
-  textarea,
-  select {
+  input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])), textarea, select, .ui-select {
     font-size: 16px;
   }
 

@@ -12,6 +12,7 @@ import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import './AdminModeration.css';
+import Select from '../components/ui/Select';
 
 const PAGE_SIZE = 20;
 
@@ -151,7 +152,7 @@ export default function AdminReturns() {
             {pagination.total > 0 && <span className="am-count">({pagination.total})</span>}
           </h2>
           <div className="admin-toolbar">
-            <select
+            <Select
               aria-label="Filter by status"
               className="admin-select"
               value={status}
@@ -159,7 +160,7 @@ export default function AdminReturns() {
             >
               <option value="">All statuses</option>
               {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
-            </select>
+            </Select>
           </div>
         </div>
         <p className="am-note">Sellers approve, receive and refund returns from their dashboard. When a buyer disputes a rejection, you decide it here.</p>

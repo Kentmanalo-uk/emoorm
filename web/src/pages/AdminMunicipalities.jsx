@@ -10,6 +10,7 @@ import { resolveImg } from '../lib/media';
 import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import { confirmAction } from '../lib/confirm';
+import Select from '../components/ui/Select';
 
 export default function AdminMunicipalities() {
   const [municipalities, setMunicipalities] = useState([]);
@@ -295,7 +296,7 @@ export default function AdminMunicipalities() {
                         <td colSpan={8} style={{ background: 'var(--t-success-50, #f0fdf4)', padding: '12px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-neutral-900, #0f172a)' }}>Select admin for {mun.name}:</span>
-                            <select
+                            <Select
                               className="admin-select"
                               value={assignUserId}
                               onChange={(e) => setAssignUserId(e.target.value)}
@@ -307,7 +308,7 @@ export default function AdminMunicipalities() {
                                   {u.fullName} — {u.email} ({u.role})
                                 </option>
                               ))}
-                            </select>
+                            </Select>
                             <button
                               className="admin-btn admin-btn-green"
                               disabled={saving || !assignUserId}

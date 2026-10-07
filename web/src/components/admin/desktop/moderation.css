@@ -217,19 +217,19 @@
 
   /* F: a slim filter bar. "Filter" is a quiet label, the controls are the
      36px toolbar controls on one row, Apply keeps its label centred. */
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) > .admin-card-header {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) > .admin-card-header, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) > .admin-card-header {
     min-height: 0;
     padding: 16px var(--ad-inset) 0;
   }
 
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) .admin-card-title {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) .admin-card-title, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) .admin-card-title {
     font-size: 13px;
     font-weight: 600;
     line-height: 20px;
     color: var(--ad-ink-muted);
   }
 
-  .ac-shell .ac-content .admin-card > div:has(> select[aria-label='Filter by action']) {
+  .ac-shell .ac-content .admin-card > div:has(> select[aria-label='Filter by action']), .ac-shell .ac-content .admin-card > div:has(> .ui-select[aria-label='Filter by action']) {
     display: flex !important;
     flex-wrap: wrap;
     align-items: center;
@@ -237,7 +237,7 @@
     padding: 10px var(--ad-inset) var(--ad-inset) !important;
   }
 
-  .ac-shell .ac-content .admin-card > div:has(> select[aria-label='Filter by action']) > .admin-input {
+  .ac-shell .ac-content .admin-card > div:has(> select[aria-label='Filter by action']) > .admin-input, .ac-shell .ac-content .admin-card > div:has(> .ui-select[aria-label='Filter by action']) > .admin-input {
     flex: 1 1 140px;
     width: auto;
     min-width: 0;
@@ -245,28 +245,28 @@
     min-height: var(--ad-h-control);
   }
 
-  .ac-shell .ac-content .admin-card > div:has(> select[aria-label='Filter by action']) > .admin-btn {
+  .ac-shell .ac-content .admin-card > div:has(> select[aria-label='Filter by action']) > .admin-btn, .ac-shell .ac-content .admin-card > div:has(> .ui-select[aria-label='Filter by action']) > .admin-btn {
     flex: 0 0 auto;
     min-width: 96px;
   }
 
   /* R: one text size per row. The inline 11-12px sizes go to 13px, the
      record id sits beside its type, details get a little more room. */
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card .admin-table td {
     font-size: 13px !important;
     vertical-align: middle;
   }
 
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:first-child {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:first-child, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card .admin-table td:first-child {
     color: var(--ad-ink-soft);
     font-variant-numeric: tabular-nums;
   }
 
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4), .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) {
     white-space: nowrap;
   }
 
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) > div {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) > div, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) > div {
     display: inline;
     margin-left: 6px;
     font-size: var(--ad-fs-meta) !important;
@@ -276,17 +276,17 @@
   /* Narrower screens: the id goes back under its type so Details keeps
      its room. */
   @media (max-width: 1279px) {
-    .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) {
+    .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4), .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) {
       white-space: normal;
     }
 
-    .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) > div {
+    .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) > div, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) > div {
       display: block;
       margin-left: 0;
     }
   }
 
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(5) {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(5), .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(5) {
     max-width: 360px !important;
     font-size: var(--ad-fs-meta) !important;
     line-height: 1.5;
@@ -294,17 +294,17 @@
 
   /* The reason / note line reads at row size; the key: value pairs under
      it stay one step smaller. */
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(5) > div:has(> strong) {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(5) > div:has(> strong), .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(5) > div:has(> strong) {
     font-size: 13px !important;
   }
 
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-badge {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-badge, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card .admin-badge {
     font-size: var(--ad-fs-badge) !important;
     white-space: nowrap;
   }
 
   /* R's pager: the same bar as .admin-pagination on Reviews and Returns. */
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn), .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) {
     align-items: center;
     gap: 12px !important;
     margin-top: 0 !important;
@@ -315,18 +315,18 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > span {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > span, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > span {
     padding: 0 !important;
   }
 
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > .admin-btn {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > .admin-btn, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > .admin-btn {
     min-height: var(--ad-h-compact);
     padding: 0 12px;
     border-radius: var(--ad-r-compact);
     font-size: var(--ad-fs-compact);
   }
 
-  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > .admin-btn:disabled {
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > .admin-btn:disabled, .ac-shell .ac-content .admin-card:has(> div > .ui-select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > .admin-btn:disabled {
     opacity: 0.45;
   }
 

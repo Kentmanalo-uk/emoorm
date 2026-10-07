@@ -17,6 +17,7 @@ import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import { confirmAction } from '../lib/confirm';
+import Select from '../components/ui/Select';
 
 const ROLE_BADGE = {
   BUYER: 'admin-badge-active',
@@ -248,7 +249,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
               />
             </div>
             {!fixedRole && (
-              <select
+              <Select
                 aria-label="Filter by role"
                 className="admin-select"
                 value={roleFilter}
@@ -259,7 +260,7 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
                   <option key={r} value={r}>{r.replace('_', ' ')}</option>
                 ))}
                 {isSuperAdmin && <option value={CLOSING}>Closed by owner</option>}
-              </select>
+              </Select>
             )}
             <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
               <DownloadSimple size={13} /> {exporting ? 'Exporting…' : 'Export CSV'}

@@ -16,6 +16,7 @@ import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import { MODES, isOpen } from '../lib/availability';
 import '../components/search/SearchFilterSheet.css';
 import './AvailableToday.css';
+import Select from '../components/ui/Select';
 
 const SORTS = [
   { key: 'ending', label: 'Ending soon' },
@@ -333,7 +334,7 @@ export default function AvailableToday() {
                 {myTown && radio('avt-where', 'near', `Near me${townName ? ` (${townName})` : ''}`, where === 'near', () => setWhere('near'))}
                 {myTown && radio('avt-where', 'delivers', 'Delivers to me', where === 'delivers', () => setWhere('delivers'))}
                 {radio('avt-where', 'all', 'All towns', where === 'all', () => setWhere('all'))}
-                <select
+                <Select
                   className="avt-side-select"
                   value={['near', 'delivers', 'all'].includes(where) ? '' : where}
                   onChange={(e) => setWhere(e.target.value || 'all')}
@@ -341,7 +342,7 @@ export default function AvailableToday() {
                 >
                   <option value="">Choose a town…</option>
                   {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
+                </Select>
               </section>
 
               <section className="avt-side-sec">
@@ -360,9 +361,9 @@ export default function AvailableToday() {
                 </p>
                 <label className="avt-sort">
                   <span>Sort by</span>
-                  <select value={sort} onChange={(e) => set({ sort: e.target.value === 'ending' ? '' : e.target.value })}>
+                  <Select value={sort} onChange={(e) => set({ sort: e.target.value === 'ending' ? '' : e.target.value })}>
                     {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-                  </select>
+                  </Select>
                 </label>
               </div>
               {results}

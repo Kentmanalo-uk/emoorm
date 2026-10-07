@@ -41,6 +41,7 @@ const courierFrom = (c) => {
 import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { BusyLabel } from '../components/ui/Spinner';
+import Select from '../components/ui/Select';
 
 /**
  * Phones: each part of this page on a page of its own
@@ -1234,7 +1235,7 @@ function SellerFulfillment({ part }) {
             <div className="sf-payment-grid">
               <div className="form-group">
                 <label>QR type</label>
-                <select
+                <Select
                   aria-label="QR type"
                   name="paymentQrType"
                   value={form.paymentQrType}
@@ -1246,7 +1247,7 @@ function SellerFulfillment({ part }) {
                       {t.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="form-group">

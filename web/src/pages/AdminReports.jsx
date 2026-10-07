@@ -17,6 +17,7 @@ import useAuthStore from '../store/authStore';
 import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
+import Select from '../components/ui/Select';
 
 const STATUS_BADGE = {
   PENDING: 'admin-badge-pending',
@@ -238,7 +239,7 @@ export default function AdminReports() {
             )}
           </h2>
           <div className="admin-toolbar">
-            <select
+            <Select
               aria-label="Filter by type"
               className="admin-select"
               value={typeFilter}
@@ -248,9 +249,9 @@ export default function AdminReports() {
               <option value="PRODUCT">Product</option>
               <option value="SELLER">Seller</option>
               <option value="BUYER">Buyer</option>
-            </select>
+            </Select>
             {isSuperAdmin && (
-              <select
+              <Select
                 className="admin-select"
                 value={municipalityFilter}
                 onChange={(e) => { setMunicipalityFilter(e.target.value); setPage(1); }}
@@ -260,9 +261,9 @@ export default function AdminReports() {
                 {municipalities.map((m) => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
-              </select>
+              </Select>
             )}
-            <select
+            <Select
               aria-label="Filter by status"
               className="admin-select"
               value={statusFilter}
@@ -273,7 +274,7 @@ export default function AdminReports() {
               <option value="RESOLVED">Resolved</option>
               <option value="DISMISSED">Dismissed</option>
               <option value="">All Status</option>
-            </select>
+            </Select>
             <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
               <DownloadSimple size={13} /> {exporting ? 'Exporting…' : 'Export CSV'}
             </button>

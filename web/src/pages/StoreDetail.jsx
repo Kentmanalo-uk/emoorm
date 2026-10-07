@@ -62,6 +62,7 @@ import { isStockless } from '../lib/productKinds';
 import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import { ProductTodayTag } from '../components/today/TodayTag';
+import Select from '../components/ui/Select';
 
 const SORTS = [
   { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -991,11 +992,11 @@ export default function StoreDetail() {
               </div>
               <div className="shop-sort">
                 <label>Sort:</label>
-                <select value={sortKey} onChange={(e) => onSortChange(e.target.value)} aria-label="Sort products">
+                <Select value={sortKey} onChange={(e) => onSortChange(e.target.value)} aria-label="Sort products">
                   {SORTS.map((s) => (
                     <option key={s.key} value={s.key}>{s.label}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
           </div>

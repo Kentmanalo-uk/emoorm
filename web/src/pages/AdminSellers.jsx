@@ -16,6 +16,7 @@ import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import EmptyArt from '../components/ui/EmptyArt';
 import { confirmAction } from '../lib/confirm';
+import Select from '../components/ui/Select';
 
 // Bulk approvals go three at a time: each one is a dozen queries and a new
 // shop on a database with a handful of connections, so twenty at once could
@@ -262,7 +263,7 @@ export default function AdminSellers() {
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <select
+            <Select
               aria-label="Filter by status"
               className="admin-select"
               value={statusFilter}
@@ -272,7 +273,7 @@ export default function AdminSellers() {
               <option value="APPROVED">Approved</option>
               <option value="REJECTED">Rejected</option>
               <option value="">All</option>
-            </select>
+            </Select>
           </div>
         </div>
 

@@ -16,6 +16,7 @@ import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import './AdminFeedback.css';
+import Select from '../components/ui/Select';
 
 /**
  * Platform feedback, super admin only.
@@ -268,7 +269,7 @@ export default function AdminFeedback() {
                 aria-label="Search feedback"
               />
             </div>
-            <select
+            <Select
               className="admin-select"
               value={categoryFilter}
               onChange={(e) => { startLoading(); setCategoryFilter(e.target.value); setPage(1); }}
@@ -278,7 +279,7 @@ export default function AdminFeedback() {
               {Object.entries(CATEGORY_LABEL).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
-            </select>
+            </Select>
             <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
               <DownloadSimple size={13} /> {exporting ? 'Exporting…' : 'Export CSV'}
             </button>

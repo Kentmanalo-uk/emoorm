@@ -243,7 +243,8 @@
 
 .apply-field input,
 .apply-field textarea,
-.apply-field select {
+.apply-field select,
+.apply-field .ui-select {
   border: 1px solid var(--t-neutral-300, #d1d5db);
   border-radius: 8px;
   padding: 10px 14px;
@@ -257,7 +258,8 @@
 
 .apply-field input:focus,
 .apply-field textarea:focus,
-.apply-field select:focus {
+.apply-field select:focus,
+.apply-field .ui-select:focus {
   border-color: var(--t-secondary-500, #29a366);
 }
 
@@ -665,7 +667,8 @@
   }
 
   .apply-field input,
-  .apply-field select {
+  .apply-field select,
+  .apply-field .ui-select {
     min-height: 48px;
     border-radius: 10px;
     font-size: 16px;

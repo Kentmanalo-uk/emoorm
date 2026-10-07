@@ -7,6 +7,7 @@ import Skeleton from '../ui/Skeleton';
 import { confirmAction } from '../../lib/confirm';
 import { voucherSummary } from '../../lib/vouchers';
 import './ShopVouchers.css';
+import Select from '../ui/Select';
 
 const EMPTY = { code: '', discountType: 'FIXED', discountValue: '', minOrderAmount: '', maxDiscount: '', usageLimit: '', expiresAt: '' };
 
@@ -128,10 +129,10 @@ export default function ShopVouchers() {
         <div className="svc-row">
           <label className="scm-field smk-field">
             Discount
-            <select value={form.discountType} onChange={(e) => set('discountType', e.target.value)}>
+            <Select value={form.discountType} onChange={(e) => set('discountType', e.target.value)}>
               <option value="FIXED">₱ off</option>
               <option value="PERCENT">% off</option>
-            </select>
+            </Select>
           </label>
           <label className="scm-field smk-field">
             {form.discountType === 'PERCENT' ? 'Percent' : 'Amount (₱)'}

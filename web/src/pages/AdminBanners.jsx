@@ -10,6 +10,7 @@ import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
 import './AdminBanners.css';
 import { confirmAction } from '../lib/confirm';
+import Select from '../components/ui/Select';
 
 const EMPTY_FORM = {
   id: null,
@@ -336,7 +337,7 @@ export default function AdminBanners() {
             </label>
             <label style={{ display: 'grid', gap: 6 }}>
               <span style={{ fontWeight: 600, fontSize: 13 }}>Homepage placement</span>
-              <select
+              <Select
                 className="admin-input"
                 value={form.placement}
                 onChange={(e) => setForm({ ...form, placement: e.target.value })}
@@ -345,7 +346,7 @@ export default function AdminBanners() {
                 <option value="HOME_SIDEBAR_TOP">Right-side banner 1</option>
                 <option value="HOME_SIDEBAR_BOTTOM">Right-side banner 2</option>
                 <option value="HOME_POPUP">Entry promotion popup</option>
-              </select>
+              </Select>
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <label style={{ display: 'grid', gap: 6 }}>

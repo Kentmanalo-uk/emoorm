@@ -51,7 +51,8 @@
 }
 
 .so-filter input,
-.so-filter select {
+.so-filter select,
+.so-filter .ui-select {
   min-height: 34px;
   padding: 6px 10px;
   font: inherit;
@@ -66,7 +67,8 @@
 }
 
 .so-filter input:focus,
-.so-filter select:focus {
+.so-filter select:focus,
+.so-filter .ui-select:focus {
   border-color: var(--t-primary-600, #059669);
 }
 
@@ -701,7 +703,8 @@
   }
 
   .sc-content .so-filter input,
-  .sc-content .so-filter select {
+  .sc-content .so-filter select,
+  .sc-content .so-filter .ui-select {
     width: 100%;
     min-height: 44px;
     border-radius: 10px;

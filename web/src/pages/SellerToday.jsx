@@ -17,6 +17,7 @@ import Skeleton from '../components/ui/Skeleton';
 import TimeLeft from '../components/ui/TimeLeft';
 import './SellerDashboard.css';
 import './SellerToday.css';
+import Select from '../components/ui/Select';
 
 const MODE_HINTS = {
   READY_NOW: 'Already cooked or harvested. Buyers get it right away.',
@@ -387,10 +388,10 @@ export default function SellerToday() {
           <div className="stw-form">
             <label className="scm-field">
               What
-              <select value={draft.productId} onChange={(e) => setD({ productId: e.target.value })}>
+              <Select value={draft.productId} onChange={(e) => setD({ productId: e.target.value })}>
                 <option value="">Choose a product</option>
                 {productOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+              </Select>
             </label>
 
             <span className="scm-sheet-label">Kind</span>
@@ -460,11 +461,11 @@ export default function SellerToday() {
             {storeMode === 'BOTH' ? (
               <label className="scm-field stw-gap">
                 How buyers get it
-                <select value={draft.fulfillment} onChange={(e) => setD({ fulfillment: e.target.value })}>
+                <Select value={draft.fulfillment} onChange={(e) => setD({ fulfillment: e.target.value })}>
                   <option value="BOTH">Pickup or delivery</option>
                   <option value="PICKUP">Pickup only</option>
                   <option value="DELIVERY">Delivery only</option>
-                </select>
+                </Select>
               </label>
             ) : (
               <p className="stw-hint">{fulfillmentLabel(storeMode)}, as your shop is set up. Couriers don&apos;t carry Today items.</p>

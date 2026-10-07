@@ -8,6 +8,7 @@ import Skeleton from '../components/ui/Skeleton';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import './SellerDashboard.css';
+import Select from '../components/ui/Select';
 
 const PAGE_SIZE = 10;
 
@@ -135,18 +136,18 @@ export default function SellerReviews() {
             </button>
             <label className={`scm-chip scm-chip--more scm-chip--select${ratingFilter ? ' is-on' : ''}`}>
               <Star size={15} weight="fill" />
-              <select value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value)} aria-label="Rating">
+              <Select value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value)} aria-label="Rating">
                 <option value="">Any</option>
                 {[5, 4, 3, 2, 1].map((n) => (
                   <option key={n} value={n}>{n} star{n === 1 ? '' : 's'}</option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
         ) : (
         <div className="seller-card" style={{ padding: '10px 16px', marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <label style={{ fontSize: 13, color: 'var(--t-neutral-600, #475569)', fontWeight: 600 }}>Filter by rating:</label>
-          <select
+          <Select
             aria-label="Filter by rating"
             className="form-select"
             style={{ maxWidth: 160 }}
@@ -157,7 +158,7 @@ export default function SellerReviews() {
             {[5, 4, 3, 2, 1].map((n) => (
               <option key={n} value={n}>{n} star{n === 1 ? '' : 's'}</option>
             ))}
-          </select>
+          </Select>
 
           <button
             type="button"

@@ -6,6 +6,7 @@ import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
 import { confirmAction } from '../lib/confirm';
+import Select from '../components/ui/Select';
 
 const EMPTY_FORM = {
   id: null,
@@ -167,14 +168,14 @@ export default function AdminVouchers() {
               </label>
               <label style={{ display: 'grid', gap: 6 }}>
                 <span style={{ fontWeight: 600, fontSize: 13 }}>Discount type</span>
-                <select
+                <Select
                   className="admin-input"
                   value={form.discountType}
                   onChange={(e) => setForm({ ...form, discountType: e.target.value })}
                 >
                   <option value="PERCENT">Percent (%)</option>
                   <option value="FIXED">Fixed amount (₱)</option>
-                </select>
+                </Select>
               </label>
             </div>
 

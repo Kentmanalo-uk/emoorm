@@ -19,6 +19,7 @@ import './SupportChat.css';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import { BusyLabel } from '../ui/Spinner';
 import { pollWhileVisible } from '../../lib/visiblePoll';
+import Select from '../ui/Select';
 
 const THREAD_POLL_MS = 5000;
 const LIST_POLL_MS = 15000;
@@ -328,11 +329,11 @@ function NewCaseDialog({ open, onClose, onOpened }) {
         <form className="sc-case-form" onSubmit={submit}>
           <label>
             <span>What is it about?</span>
-            <select ref={firstRef} value={form.category} onChange={set('category')}>
+            <Select ref={firstRef} value={form.category} onChange={set('category')}>
               {SUPPORT_CATEGORIES.map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
-            </select>
+            </Select>
           </label>
           <label>
             <span>Subject</span>

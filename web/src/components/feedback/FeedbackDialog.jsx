@@ -7,6 +7,7 @@ import useAuthStore from '../../store/authStore';
 import './FeedbackDialog.css';
 import { useSheetClose } from '../../hooks/useSheetMotion';
 import { BusyLabel } from '../ui/Spinner';
+import Select from '../ui/Select';
 
 /**
  * Feedback about E-MOORM itself, addressed to the people who run it.
@@ -103,7 +104,7 @@ export default function FeedbackDialog({ onClose: onCloseProp }) {
           <form className="fbd-body" onSubmit={submit}>
             <div className="fbd-field">
               <label htmlFor="fbd-category">What is this about?</label>
-              <select
+              <Select
                 id="fbd-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -112,7 +113,7 @@ export default function FeedbackDialog({ onClose: onCloseProp }) {
                 {CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="fbd-field">

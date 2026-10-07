@@ -10,6 +10,7 @@ import { fetchIdentityStatus, submitIdentityVerification } from '../../lib/ident
 import { checkIdFrame, ID_RATIO } from '../../lib/idCardCheck';
 import Skeleton from '../ui/Skeleton';
 import '../../pages/ProfileVerification.css';
+import Select from '../ui/Select';
 
 const STATUS_META = {
   NOT_VERIFIED: {
@@ -552,7 +553,7 @@ export default function IdentityVerifier({
 
           <label className="idv-field">
             <span className="idv-label">ID type</span>
-            <select
+            <Select
               className="idv-input"
               value={idType}
               onChange={(e) => setIdType(e.target.value)}
@@ -562,7 +563,7 @@ export default function IdentityVerifier({
               {(status?.supportedIdTypes || []).map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <PhotoSlot

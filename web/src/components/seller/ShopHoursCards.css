@@ -54,7 +54,8 @@
 
 .shc-field input,
 .shc-field select,
-.shc-times input {
+.shc-times input,
+.shc-field .ui-select {
   height: 40px;
   padding: 0 10px;
   font: inherit;

@@ -17,6 +17,7 @@ import ProductImage from '../components/ProductImage';
 import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
+import Select from '../components/ui/Select';
 
 // Bulk actions go three at a time: each one is several queries and a
 // notification on a database with a handful of connections, so twenty at once
@@ -239,7 +240,7 @@ export default function AdminProducts() {
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <select
+            <Select
               aria-label="Filter by status"
               className="admin-select"
               value={statusFilter}
@@ -249,7 +250,7 @@ export default function AdminProducts() {
               <option value="PENDING">Pending</option>
               <option value="SUSPENDED">Suspended</option>
               <option value="">All</option>
-            </select>
+            </Select>
           </div>
         </div>
 

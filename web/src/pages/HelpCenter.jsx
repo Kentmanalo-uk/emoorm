@@ -13,6 +13,7 @@ import useAuthStore from '../store/authStore';
 import './Profile.css';
 import './HelpCenter.css';
 import { BusyLabel } from '../components/ui/Spinner';
+import Select from '../components/ui/Select';
 
 const topics = [
   {
@@ -126,11 +127,11 @@ function GetHelpPanel() {
         <form className="hc-form" onSubmit={submit}>
           <label className="hc-field">
             <span>What is it about?</span>
-            <select value={form.category} onChange={set('category')}>
+            <Select value={form.category} onChange={set('category')}>
               {SUPPORT_CATEGORIES.map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="hc-field">

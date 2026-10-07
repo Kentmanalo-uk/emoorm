@@ -1516,7 +1516,8 @@
   }
 
   .ac-content .admin-card form label > input:not([type="checkbox"]):not([type="radio"]),
-  .ac-content .admin-card form label > select {
+  .ac-content .admin-card form label > select,
+  .ac-content .admin-card form label > .ui-select {
     width: 100%;
     min-width: 0;
   }

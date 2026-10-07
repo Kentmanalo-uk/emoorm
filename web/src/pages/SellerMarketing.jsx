@@ -16,6 +16,7 @@ import Skeleton from '../components/ui/Skeleton';
 import ToolGradients from '../components/ui/ToolGradients';
 import './SellerDashboard.css';
 import { readCache, writeCache } from '../lib/pageCache';
+import Select from '../components/ui/Select';
 
 /*
  * Marketing: ways a seller brings buyers back. Tell followers something new
@@ -223,9 +224,9 @@ export default function SellerMarketing() {
           ) : (
             <label className="scm-field smk-field">
               Product
-              <select value={productId} onChange={(e) => setProductId(e.target.value)}>
+              <Select value={productId} onChange={(e) => setProductId(e.target.value)}>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+              </Select>
             </label>
           )
         )}

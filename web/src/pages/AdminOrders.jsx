@@ -13,6 +13,7 @@ import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
+import Select from '../components/ui/Select';
 
 /*
  * Orders, as admins see them: what was ordered, where, and how far it got.
@@ -118,10 +119,10 @@ export default function AdminOrders() {
         <div className="admin-card-header">
           <h2 className="admin-card-title">Orders {pagination.total > 0 && <span style={{ fontWeight: 400, color: 'var(--t-neutral-500, #64748b)', fontSize: 14 }}>({pagination.total})</span>}</h2>
           <div className="admin-toolbar">
-            <select aria-label="Filter by status" className="admin-select" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
+            <Select aria-label="Filter by status" className="admin-select" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
               <option value="">All statuses</option>
               {STATUSES.map((value) => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}
-            </select>
+            </Select>
             <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
               <DownloadSimple size={13} /> {exporting ? 'Exporting…' : 'Export CSV'}
             </button>

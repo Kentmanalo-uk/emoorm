@@ -9,6 +9,7 @@ import {
   READY_PREP, COOK_PREP, COOK_PREP_MAX, SERVES_EXAMPLES, NOTES_MAX, MAX_SIZES, TODAY_MAX,
   minutesLabel, clock, peso, emptySize, sizeRows,
 } from './formState';
+import Select from '../../ui/Select';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -170,9 +171,9 @@ function ReadyDetails({ form, set, patch, errors, editing, way }) {
                 <Stepper id="pf-today-qty" value={form.todayQty} onChange={(v) => set('todayQty', v)} min={1} max={TODAY_MAX} invalid={!!errors.todayQty} label="How many today" />
               </Field>
               <Field label="Ready how soon after an order?" required htmlFor="pf-today-prep">
-                <select id="pf-today-prep" className="pf-input pf-select" value={form.todayPrep} onChange={(e) => set('todayPrep', e.target.value)}>
+                <Select id="pf-today-prep" className="pf-input pf-select" value={form.todayPrep} onChange={(e) => set('todayPrep', e.target.value)}>
                   {READY_PREP.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
+                </Select>
               </Field>
               <Field label="Buyers can order until" required error={errors.closeTime} htmlFor="pf-close-time">
                 <div className="pf-close">
@@ -182,10 +183,10 @@ function ReadyDetails({ form, set, patch, errors, editing, way }) {
                     value={form.closeDay}
                     onChange={(d) => patch({ closeDay: d, closeTime: form.closeTime })}
                   />
-                  <select id="pf-close-time" className="pf-input pf-select" value={form.closeTime} onChange={(e) => set('closeTime', e.target.value)}>
+                  <Select id="pf-close-time" className="pf-input pf-select" value={form.closeTime} onChange={(e) => set('closeTime', e.target.value)}>
                     {!times.some((t) => t.key === form.closeTime) && <option value="">Choose a time</option>}
                     {times.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
-                  </select>
+                  </Select>
                 </div>
               </Field>
             </div>
@@ -273,7 +274,7 @@ function PalutoDetails({ form, set, patch, errors, way }) {
 
       <Field label="How long to cook it?" required error={errors.prepMin} htmlFor="pf-prep">
         <div className="pf-range">
-          <select
+          <Select
             id="pf-prep"
             className={`pf-input pf-select${errors.prepMin ? ' is-invalid' : ''}`}
             value={form.prepMin}
@@ -284,9 +285,9 @@ function PalutoDetails({ form, set, patch, errors, way }) {
           >
             <option value="">Choose</option>
             {COOK_PREP.map((m) => <option key={m} value={String(m)}>{minutesLabel(m)}</option>)}
-          </select>
+          </Select>
           <span>up to</span>
-          <select
+          <Select
             className="pf-input pf-select"
             value={form.prepMax}
             onChange={(e) => set('prepMax', e.target.value)}
@@ -295,7 +296,7 @@ function PalutoDetails({ form, set, patch, errors, way }) {
           >
             <option value="">Same time</option>
             {maxChoices.map((m) => <option key={m} value={String(m)}>{minutesLabel(m)}</option>)}
-          </select>
+          </Select>
         </div>
       </Field>
 
@@ -323,10 +324,10 @@ function PalutoDetails({ form, set, patch, errors, way }) {
         htmlFor="pf-order-by"
         hint="Later orders are cooked on your next cooking day."
       >
-        <select id="pf-order-by" className="pf-input pf-select" value={form.orderBy} onChange={(e) => set('orderBy', e.target.value)}>
+        <Select id="pf-order-by" className="pf-input pf-select" value={form.orderBy} onChange={(e) => set('orderBy', e.target.value)}>
           <option value="">Any time</option>
           {timesWith(form.orderBy).map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
-        </select>
+        </Select>
       </Field>
       <NotesField form={form} set={set} placeholder="e.g. Choose grilled or sinigang in your message. Bring your own container for pickup." />
     </>
@@ -398,9 +399,9 @@ function AnimalDetails({ form, set, patch, errors, way }) {
             onChange={(e) => set('ageValue', e.target.value)}
             placeholder="e.g. 8"
           />
-          <select className="pf-input pf-select" value={form.ageUnit} onChange={(e) => set('ageUnit', e.target.value)} aria-label="Weeks, months or years">
+          <Select className="pf-input pf-select" value={form.ageUnit} onChange={(e) => set('ageUnit', e.target.value)} aria-label="Weeks, months or years">
             {AGE_UNITS.map((u) => <option key={u.key} value={u.key}>{u.label} old</option>)}
-          </select>
+          </Select>
         </div>
       </Field>
 

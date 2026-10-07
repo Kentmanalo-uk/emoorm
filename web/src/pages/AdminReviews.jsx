@@ -8,6 +8,7 @@ import axios from '../lib/axios';
 import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import './AdminModeration.css';
+import Select from '../components/ui/Select';
 
 const PAGE_SIZE = 20;
 
@@ -105,7 +106,7 @@ export default function AdminReviews() {
                 placeholder="Search comment, product, store, reviewer…"
               />
             </form>
-            <select
+            <Select
               aria-label="Filter by rating"
               className="admin-select"
               value={rating}
@@ -115,7 +116,7 @@ export default function AdminReviews() {
               {[5, 4, 3, 2, 1].map((n) => (
                 <option key={n} value={n}>{n} star{n > 1 ? 's' : ''}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 

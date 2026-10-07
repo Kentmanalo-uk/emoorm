@@ -67,7 +67,8 @@
 
 .hc-field select,
 .hc-field input,
-.hc-field textarea {
+.hc-field textarea,
+.hc-field .ui-select {
   width: 100%;
   padding: 9px 11px;
   font: inherit;
@@ -87,7 +88,8 @@
 
 .hc-field select:focus,
 .hc-field input:focus,
-.hc-field textarea:focus {
+.hc-field textarea:focus,
+.hc-field .ui-select:focus {
   border-color: var(--t-primary-600, #059669);
 }
 

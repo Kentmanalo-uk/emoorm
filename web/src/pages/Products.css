@@ -1295,7 +1295,7 @@
     flex-shrink: 0;
   }
 
-  .srch-m-sort select {
+  .srch-m-sort select, .srch-m-sort .ui-select {
     height: 34px;
     padding: 0 30px 0 14px;
     border: 1px solid var(--t-neutral-200, #e5e7eb);

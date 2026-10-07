@@ -512,6 +512,7 @@
 
   .sc-content .seller-action-form input:not([type="checkbox"]),
   .sc-content .seller-action-form select,
+  .sc-content .seller-action-form .ui-select,
   .sc-content .seller-action-form textarea {
     box-sizing: border-box;
     width: 100%;
@@ -533,6 +534,7 @@
 
   .sc-content .seller-action-form input:focus,
   .sc-content .seller-action-form select:focus,
+  .sc-content .seller-action-form .ui-select:focus,
   .sc-content .seller-action-form textarea:focus {
     border-color: var(--t-primary-600, #059669);
     outline: none;

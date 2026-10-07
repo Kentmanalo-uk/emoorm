@@ -6,6 +6,7 @@ import './ReportModal.css';
 import { useSheetClose } from '../hooks/useSheetMotion';
 import { BusyLabel } from './ui/Spinner';
 import useFocusTrap from '../hooks/useFocusTrap';
+import Select from './ui/Select';
 
 /**
  * Reasons are sent as the API's enum value, not as the label.
@@ -113,10 +114,10 @@ export default function ReportModal({ type, productId, storeId, reportedBuyerId,
         <form onSubmit={handleSubmit}>
           <div className="report-field">
             <label>Reason for report</label>
-            <select value={reason} onChange={(e) => setReason(e.target.value)} required>
+            <Select value={reason} onChange={(e) => setReason(e.target.value)} required>
               <option value="">Select a reason…</option>
               {reasons.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
+            </Select>
           </div>
 
           <div className="report-field">

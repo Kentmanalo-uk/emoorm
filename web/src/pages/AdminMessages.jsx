@@ -14,6 +14,7 @@ import '../components/admin/AdminLayout.css';
 import './AdminNotifications.css';
 import './AdminMessages.css';
 import { pollWhileVisible } from '../lib/visiblePoll';
+import Select from '../components/ui/Select';
 
 const LIST_POLL_MS = 20000;
 const THREAD_POLL_MS = 6000;
@@ -117,7 +118,7 @@ function NewThreadDialog({ open, onClose, onCreated }) {
         <div className="am-dialog-body">
           <label className="am-field">
             <span>Municipal admin</span>
-            <select
+            <Select
               className="admin-input"
               value={adminId}
               onChange={(e) => setAdminId(e.target.value)}
@@ -131,7 +132,7 @@ function NewThreadDialog({ open, onClose, onCreated }) {
                   {a.municipality?.name ? ` — ${a.municipality.name}` : ''}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="am-field">
@@ -537,7 +538,7 @@ function AnnouncementsTab({ isSuperAdmin }) {
 
           <label className="am-field">
             <span>Audience</span>
-            <select
+            <Select
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               className="admin-input"
@@ -546,7 +547,7 @@ function AnnouncementsTab({ isSuperAdmin }) {
               <option value="buyers">Buyers only</option>
               <option value="sellers">Sellers only</option>
               {isSuperAdmin && <option value="admins">Municipal admins only</option>}
-            </select>
+            </Select>
             <small className="am-hint">
               {isSuperAdmin
                 ? 'As Super Admin, this broadcasts platform-wide.'

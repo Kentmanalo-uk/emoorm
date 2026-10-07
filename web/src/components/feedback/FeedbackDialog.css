@@ -84,7 +84,8 @@
 }
 
 .fbd-field select,
-.fbd-field textarea {
+.fbd-field textarea,
+.fbd-field .ui-select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--t-neutral-200, #e5e7eb);
@@ -103,7 +104,8 @@
 }
 
 .fbd-field select:focus,
-.fbd-field textarea:focus {
+.fbd-field textarea:focus,
+.fbd-field .ui-select:focus {
   outline: none;
   border-color: var(--t-secondary-500, #29a366);
 }

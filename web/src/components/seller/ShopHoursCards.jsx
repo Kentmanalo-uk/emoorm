@@ -4,6 +4,7 @@ import { AirplaneTilt, Clock, CircleNotch as Loader2 } from '@phosphor-icons/rea
 import axios from '../../lib/axios';
 import { DAYS, awayUntil, shortDate } from '../../lib/shopHours';
 import './ShopHoursCards.css';
+import Select from '../ui/Select';
 
 const DEFAULT_RANGE = ['08:00', '17:00'];
 
@@ -144,11 +145,11 @@ export default function ShopHoursCards({ store, onSaved }) {
 
           <label className="shc-field shc-prep">
             <span>Days to get an order ready</span>
-            <select value={prepDays} onChange={(e) => setPrepDays(e.target.value)}>
+            <Select value={prepDays} onChange={(e) => setPrepDays(e.target.value)}>
               <option value="">Not set (1 day)</option>
               <option value="0">Same day</option>
               {[1, 2, 3, 4, 5, 7, 10, 14].map((d) => <option key={d} value={d}>{d} day{d === 1 ? '' : 's'}</option>)}
-            </select>
+            </Select>
             <small>Buyers see when to expect their order from this.</small>
           </label>
 

@@ -1186,7 +1186,8 @@
 
 .sc-case-form select,
 .sc-case-form input,
-.sc-case-form textarea {
+.sc-case-form textarea,
+.sc-case-form .ui-select {
   width: 100%;
   padding: 9px 11px;
   font: inherit;
@@ -1206,7 +1207,8 @@
 
 .sc-case-form select:focus,
 .sc-case-form input:focus,
-.sc-case-form textarea:focus {
+.sc-case-form textarea:focus,
+.sc-case-form .ui-select:focus {
   border-color: var(--t-primary-600, #059669);
 }
 

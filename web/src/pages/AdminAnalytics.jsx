@@ -13,6 +13,7 @@ import { num, pctText, growthText, shortDate, toCSV, downloadCSV } from '../comp
 import MunicipalAdminAnalytics from './MunicipalAdminAnalytics';
 import '../components/analytics/analytics.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
+import Select from '../components/ui/Select';
 
 function PlatformAnalytics() {
   const [range, setRange] = useState(() => DateRangePicker.default30d());
@@ -71,7 +72,7 @@ function PlatformAnalytics() {
             </p>
           </div>
           <div className="an-actions">
-            <select
+            <Select
               aria-label="Filter by municipality"
               className="an-icon-btn"
               value={muniFilter}
@@ -83,7 +84,7 @@ function PlatformAnalytics() {
               {municipalities.map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
-            </select>
+            </Select>
             <DateRangePicker value={range} onChange={setRange} />
             <button className="an-icon-btn" onClick={load} disabled={loading} title="Refresh">
               <RefreshCw size={13} /> Refresh

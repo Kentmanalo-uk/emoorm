@@ -2,6 +2,7 @@ import { Package } from '@phosphor-icons/react';
 import PhotoPicker from './PhotoPicker';
 import { Field, FieldError, MoneyInput, RadioCards } from './parts';
 import { EXAMPLES, NAME_MAX, DESCRIPTION_MAX, peso } from './formState';
+import Select from '../../ui/Select';
 
 const PRICE_WORDS = {
   REGULAR: { label: 'Price' },
@@ -39,7 +40,7 @@ export default function BasicsStep({
       </Field>
 
       <Field label="Category" required error={errors.categoryId} htmlFor="pf-category">
-        <select
+        <Select
           id="pf-category"
           className="pf-input pf-select"
           value={form.categoryId}
@@ -47,7 +48,7 @@ export default function BasicsStep({
         >
           <option value="">Choose a category</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        </Select>
       </Field>
 
       {kindOpts.length > 1 && (

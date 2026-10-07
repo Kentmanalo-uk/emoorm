@@ -7,6 +7,7 @@ import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
 import './AdminJuniorAdmins.css';
 import { confirmAction } from '../lib/confirm';
+import Select from '../components/ui/Select';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const toDateInput = (date) => {
@@ -264,7 +265,7 @@ function AssignAdminModal({ municipalities, onClose, onAssigned }) {
 
         <label style={{ display: 'grid', gap: 6, marginBottom: 16 }}>
           <span style={{ fontWeight: 600, fontSize: 13 }}>Assign to municipality</span>
-          <select
+          <Select
             value={municipalityId}
             onChange={(e) => setMunicipalityId(e.target.value)}
             className="admin-input"
@@ -273,7 +274,7 @@ function AssignAdminModal({ municipalities, onClose, onAssigned }) {
             {municipalities.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
-          </select>
+          </Select>
         </label>
 
         <div className="ja-backup">

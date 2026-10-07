@@ -15,6 +15,7 @@ import { BusyLabel } from '../ui/Spinner';
 import './PhoneSaveBar.css';
 import './ProductForm.css';
 import './PackageForm.css';
+import Select from '../ui/Select';
 
 /*
  * Create or edit a package: some of the shop's own products sold together at
@@ -629,7 +630,7 @@ export default function PackageForm({ product = null, store = null, onCancel, on
                 htmlFor="pkf-notice"
                 hint="Useful for food you cook for the order."
               >
-                <select
+                <Select
                   id="pkf-notice"
                   className="pkf-input pkf-select"
                   value={form.noticeHours}
@@ -637,7 +638,7 @@ export default function PackageForm({ product = null, store = null, onCancel, on
                 >
                   <option value="">No need: buyers can order any time</option>
                   {noticeChoices.map((h) => <option key={h} value={h}>At least {aheadText(h)} ahead</option>)}
-                </select>
+                </Select>
               </Field>
 
               <Field

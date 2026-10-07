@@ -27,6 +27,7 @@ import TimeLeft from '../components/ui/TimeLeft';
 import {
   etaLabel, hasPaluto, lineKind, lineNote, countLabel,
 } from '../lib/orderLines';
+import Select from '../components/ui/Select';
 
 // Available Today orders carry a time to confirm by (respondBy); unconfirmed
 // by then, they cancel on their own.
@@ -534,11 +535,11 @@ export default function SellerOrders() {
               </div>
               <span className="scm-sheet-label">Payment</span>
               <label className="scm-field">
-                <select value={paymentFilter} onChange={(e) => applyFilter(setPaymentFilter)(e.target.value)} aria-label="Payment">
+                <Select value={paymentFilter} onChange={(e) => applyFilter(setPaymentFilter)(e.target.value)} aria-label="Payment">
                   {PAYMENT_FILTERS.map((p) => (
                     <option key={p.key || 'any'} value={p.key}>{p.label}</option>
                   ))}
-                </select>
+                </Select>
               </label>
             </PhoneSheet>
           </>
@@ -570,11 +571,11 @@ export default function SellerOrders() {
           </label>
           <label className="so-filter">
             <span>Payment</span>
-            <select value={paymentFilter} onChange={(e) => applyFilter(setPaymentFilter)(e.target.value)}>
+            <Select value={paymentFilter} onChange={(e) => applyFilter(setPaymentFilter)(e.target.value)}>
               {PAYMENT_FILTERS.map((p) => (
                 <option key={p.key || 'any'} value={p.key}>{p.label}</option>
               ))}
-            </select>
+            </Select>
           </label>
           {hasFilters && (
             <button type="button" className="btn-seller-outline so-filter-clear" onClick={clearFilters}>

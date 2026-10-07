@@ -12,6 +12,7 @@ import {
 import { resolveImg } from '../lib/media';
 import './ProfileFollowedStores.css';
 import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
+import Select from '../components/ui/Select';
 
 const SORTS = [
   { key: 'recent', label: 'Recently followed' },
@@ -123,11 +124,11 @@ const ProfileFollowedStores = () => {
         </div>
         <div className="followed-sort">
           <label>Sort:</label>
-          <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort followed stores">
+          <Select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort followed stores">
             {SORTS.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
