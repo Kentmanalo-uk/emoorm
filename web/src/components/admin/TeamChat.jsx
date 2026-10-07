@@ -31,7 +31,7 @@ function ChatAvatar({ chat }) {
   return <UserAvatar src={chat.profilePhoto} name={chat.title?.[0]} imgClassName="tc-avatar" fallbackClassName="tc-avatar tc-avatar--fallback" />;
 }
 
-function Thread({ chat, meId, onBack, onSent }) {
+function Thread({ chat, meId, onBack, onRead }) {
   const [messages, setMessages] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [text, setText] = useState('');
@@ -39,6 +39,8 @@ function Thread({ chat, meId, onBack, onSent }) {
   const scroller = useRef(null);
   const stick = useRef(true);
   const thread = chat.thread;
+  const onReadRef = useRef(onRead);
+  useEffect(() => { onReadRef.current = onRead; }, [onRead]);
 
   const fetchLatest = useCallback(() => axios.get(`/admin-team/chats/${thread}`, { quiet: true })
     .then((res) => {
@@ -51,6 +53,8 @@ function Thread({ chat, meId, onBack, onSent }) {
         return [...older, ...latest];
       });
       setHasMore((h) => h || res.data.hasMore);
+      // The server marks the chat read when it hands over the latest messages.
+      onReadRef.current?.(thread);
     })
     .catch(() => {}), [thread]);
 
@@ -100,7 +104,6 @@ function Thread({ chat, meId, onBack, onSent }) {
       if (box) box.style.height = '';
       stick.current = true;
       setMessages((prev) => [...(prev || []), res.data]);
-      onSent();
     } catch (err) {
       toast.error(err.message || 'Could not send the message');
     } finally {
@@ -179,22 +182,36 @@ export default function TeamChat({ meId, open, onOpen, onUnread }) {
   const [data, setData] = useState(null);
   const onUnreadRef = useRef(onUnread);
   useEffect(() => { onUnreadRef.current = onUnread; }, [onUnread]);
+  // The page's badges follow whatever this list knows, loaded or read here.
+  useEffect(() => { if (data) onUnreadRef.current?.(data); }, [data]);
 
+  // The list loads once on opening, then every 20 s while the page is in
+  // view, and again on coming back from a chat (for its last message).
   const load = useCallback(() => axios.get('/admin-team/chats', { quiet: true })
-    .then((res) => { setData(res.data); onUnreadRef.current?.(res.data); })
+    .then((res) => setData(res.data))
     .catch(() => {}), []);
   useEffect(() => {
     load();
     return pollWhileVisible(load, 20000);
   }, [load]);
-  // Opening a chat reads it: the counts follow.
-  useEffect(() => { if (open) load(); }, [open, load]);
+
+  // Opening a chat reads it: once the server has marked it read, its count
+  // here clears without asking for the whole list again.
+  const markRead = useCallback((thread) => setData((prev) => {
+    const read = prev?.chats.find((c) => c.thread === thread);
+    if (!read?.unread) return prev;
+    return {
+      ...prev,
+      unread: Math.max(0, (prev.unread || 0) - read.unread),
+      chats: prev.chats.map((c) => (c.thread === thread ? { ...c, unread: 0 } : c)),
+    };
+  }), []);
 
   const chat = data?.chats.find((c) => c.thread === open)
     || (open === TEAM ? { thread: TEAM, title: 'Everyone on the team', size: 0 } : null);
 
   if (open && chat) {
-    return <Thread chat={chat} meId={meId} onBack={() => { onOpen(null); load(); }} onSent={load} />;
+    return <Thread chat={chat} meId={meId} onBack={() => { onOpen(null); load(); }} onRead={markRead} />;
   }
 
   return (

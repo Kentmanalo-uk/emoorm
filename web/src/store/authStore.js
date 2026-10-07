@@ -4,6 +4,18 @@ import useCartStore from './cartStore';
 import useWishlistStore from './wishlistStore';
 import { setAuthHandlers } from '../lib/axios';
 
+// Admins stay in /admin, where no cart or saved list is ever shown, so theirs
+// are not read from the account on every visit. Buyers' and sellers' are.
+const ADMIN_ROLES = ['MUNICIPAL_ADMIN', 'SUPER_ADMIN'];
+const isAdminAccount = (user) => ADMIN_ROLES.includes(user?.role);
+
+/** Points the cart and the saved list at this account (null: the guest's). */
+const pointListsAt = (user) => {
+  const sync = !isAdminAccount(user);
+  useCartStore.getState().setOwner(user?.id || null, { sync });
+  useWishlistStore.getState().setOwner(user?.id || null, { sync });
+};
+
 // Initialize auth state from localStorage
 const initializeAuth = () => {
   const token = localStorage.getItem('token');
@@ -59,8 +71,7 @@ const useAuthStore = create(
 
         // Switch to this user's cart (merging anything added as a guest) and
         // saved list.
-        useCartStore.getState().setOwner(userData?.id || null);
-        useWishlistStore.getState().setOwner(userData?.id || null);
+        pointListsAt(userData);
       },
 
       // `to`: where the page that signed out is sending the visitor, so route
@@ -140,8 +151,18 @@ const useAuthStore = create(
 );
 
 // Point the cart and saved list at whoever is already signed in on this device.
-useCartStore.getState().setOwner(useAuthStore.getState().user?.id || null);
-useWishlistStore.getState().setOwner(useAuthStore.getState().user?.id || null);
+pointListsAt(useAuthStore.getState().user);
+
+// An admin taken off a team goes back to an ordinary account while signed in
+// (the admin shell's profile read says so): the saved cart and list left
+// unread while they were an admin come in now, before any change here is
+// saved over them.
+useAuthStore.subscribe((state, previous) => {
+  const { user } = state;
+  if (user?.id && user.id === previous.user?.id && isAdminAccount(previous.user) && !isAdminAccount(user)) {
+    pointListsAt(user);
+  }
+});
 
 // The API client saves renewed tokens here, and signs out through here when
 // the session cannot be renewed.
@@ -169,8 +190,7 @@ if (typeof window !== 'undefined') {
     }
     if (stored.id !== user?.id || token !== useAuthStore.getState().accessToken) {
       useAuthStore.setState({ user: stored, accessToken: token, isAuthenticated: true });
-      useCartStore.getState().setOwner(stored.id);
-      useWishlistStore.getState().setOwner(stored.id);
+      pointListsAt(stored);
     }
   });
 }

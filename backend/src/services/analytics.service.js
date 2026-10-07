@@ -136,24 +136,26 @@ const getSellerAnalytics = async (userId, query = {}) => {
 };
 
 // ---------- MUNICIPALITY ----------
-const getMunicipalityAnalytics = async (actor, query = {}) => {
-  let municipalityId = null;
-
+// The town an admin's request is about: a municipal admin's own, or the one a
+// super admin asked for.
+const municipalityFor = (actor, query = {}) => {
   if (actor.role === 'SUPER_ADMIN') {
-    municipalityId = query.municipalityId || null;
-    if (!municipalityId) {
+    if (!query.municipalityId) {
       throw new ApiError('municipalityId query parameter is required for super admin', 400);
     }
-  } else if (actor.role === 'MUNICIPAL_ADMIN') {
+    return query.municipalityId;
+  }
+  if (actor.role === 'MUNICIPAL_ADMIN') {
     if (!actor.municipalityId) throw new ApiError('No municipality assigned to this admin', 403);
     if (query.municipalityId && query.municipalityId !== actor.municipalityId) {
       throw new ApiError('You can only view your assigned municipality', 403);
     }
-    municipalityId = actor.municipalityId;
-  } else {
-    throw new ApiError('Forbidden', 403);
+    return actor.municipalityId;
   }
+  throw new ApiError('Forbidden', 403);
+};
 
+const getMunicipalityAnalytics = async (municipalityId, query = {}) => {
   const municipality = await municipalityRepository.findById(municipalityId);
   if (!municipality) throw new ApiError('Municipality not found', 404);
 
@@ -479,17 +481,64 @@ const toAdminView = (data) => {
 
 // ---------- Simple in-memory cache (60s TTL) ----------
 const CACHE_TTL_MS = 60 * 1000;
+// Plenty for every town's dashboard and the shops looking at theirs; past
+// this the oldest entries go, so a long-running server cannot fill up.
+const CACHE_MAX = 500;
 const cache = new Map();
+// Figures being worked out right now: an identical request waits for them
+// instead of running the same queries again.
+const inflight = new Map();
 
-const cacheKey = (scope, ...parts) => `${scope}::${parts.map((p) => p || '').join('|')}`;
+const cacheKey = (scope, ...parts) => `${scope}::${parts.map((p) => p ?? '').join('|')}`;
 
-const withCache = (key, fn) => async (...args) => {
-  const cached = cache.get(key);
+const remember = (key, value) => {
   const now = Date.now();
-  if (cached && cached.expires > now) return cached.value;
-  const value = await fn(...args);
+  cache.delete(key);
+  // Entries sit in the order they were stored, so the oldest come first:
+  // drop the expired ones, and more while the cache is full.
+  for (const [oldKey, entry] of cache) {
+    if (entry.expires > now && cache.size < CACHE_MAX) break;
+    cache.delete(oldKey);
+  }
   cache.set(key, { value, expires: now + CACHE_TTL_MS });
-  return value;
+};
+
+const cached = async (key, compute) => {
+  const hit = cache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.value;
+  if (!inflight.has(key)) {
+    inflight.set(key, compute()
+      .then((value) => {
+        remember(key, value);
+        return value;
+      })
+      .finally(() => inflight.delete(key)));
+  }
+  return inflight.get(key);
+};
+
+/**
+ * The requested window to the minute: `from` from the start of its minute,
+ * `to` to the end of its minute. The pages send the moment of the request to
+ * the millisecond, so without this no two requests ever shared an entry.
+ * Neither edge moves by a minute or more, and `to` never ends sooner than
+ * asked. A missing or unreadable date stays missing (the default window).
+ */
+const MINUTE_MS = 60 * 1000;
+const minuteOf = (value) => {
+  const time = value ? new Date(value).getTime() : NaN;
+  return Number.isNaN(time) ? null : Math.floor(time / MINUTE_MS);
+};
+const byMinute = (query) => {
+  const from = minuteOf(query.from);
+  const to = minuteOf(query.to);
+  return {
+    minutes: [from, to],
+    window: {
+      from: from === null ? undefined : new Date(from * MINUTE_MS),
+      to: to === null ? undefined : new Date((to + 1) * MINUTE_MS - 1),
+    },
+  };
 };
 
 /**
@@ -498,20 +547,28 @@ const withCache = (key, fn) => async (...args) => {
  * stopped being), not a minute later.
  */
 const cachedSeller = async (userId, query = {}) => {
-  const key = cacheKey('seller', userId, query.from, query.to, query.granularity);
-  const data = await withCache(key, () => getSellerAnalytics(userId, query))();
+  const { minutes, window } = byMinute(query);
+  const key = cacheKey('seller', userId, ...minutes, query.granularity);
+  const data = await cached(key, () => getSellerAnalytics(userId, { ...query, ...window }));
   const live = await shopReadiness.countLiveProducts({ storeId: data.store.id });
   return { ...data, kpis: { ...data.kpis, activeProducts: { value: live, previous: null, delta: null } } };
 };
 
+/**
+ * A town's figures are the same whoever asks, so they are cached per town,
+ * once the asker is known to be allowed to see it.
+ */
 const cachedMunicipality = async (actor, query = {}) => {
-  const key = cacheKey('muni', actor.id, actor.role, query.municipalityId, query.from, query.to);
-  return toAdminView(await withCache(key, () => getMunicipalityAnalytics(actor, query))());
+  const municipalityId = municipalityFor(actor, query);
+  const { minutes, window } = byMinute(query);
+  const key = cacheKey('muni', municipalityId, ...minutes);
+  return toAdminView(await cached(key, () => getMunicipalityAnalytics(municipalityId, { ...query, ...window })));
 };
 
 const cachedPlatform = async (query = {}) => {
-  const key = cacheKey('platform', query.municipalityId, query.from, query.to);
-  return toAdminView(await withCache(key, () => getPlatformAnalytics(query))());
+  const { minutes, window } = byMinute(query);
+  const key = cacheKey('platform', query.municipalityId, ...minutes);
+  return toAdminView(await cached(key, () => getPlatformAnalytics({ ...query, ...window })));
 };
 
 module.exports = {
@@ -519,4 +576,6 @@ module.exports = {
   getSellerDayDetails,
   getMunicipalityAnalytics: cachedMunicipality,
   getPlatformAnalytics: cachedPlatform,
+  // The cache itself, so the tests can check its bounds.
+  cache: { cached, size: () => cache.size, MAX: CACHE_MAX },
 };

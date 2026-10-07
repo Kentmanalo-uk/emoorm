@@ -100,8 +100,12 @@ const broadcast = async (actor, data) => {
 
   const audience = AUDIENCE_BY_TARGET[target];
 
+  // Every batch in one transaction: a send that fails part-way delivers
+  // nothing, so the admin can retry without anyone getting it twice. It also
+  // commits once rather than once per batch.
+  const batches = [];
   for (let i = 0; i < recipients.length; i += INSERT_CHUNK) {
-    await prisma.notification.createMany({
+    batches.push(prisma.notification.createMany({
       data: recipients.slice(i, i + INSERT_CHUNK).map((u) => ({
         userId: u.id,
         type: 'SYSTEM_ANNOUNCEMENT',
@@ -110,10 +114,12 @@ const broadcast = async (actor, data) => {
         message,
         isRead: false,
       })),
-    });
+    }));
   }
+  await prisma.$transaction(batches);
 
-  // Audit trail
+  // Audit trail. Written after the send, because the Sent list reads it as
+  // the record of what went out.
   await auditLogService.record({
     actor,
     action: 'BROADCAST_ANNOUNCEMENT',

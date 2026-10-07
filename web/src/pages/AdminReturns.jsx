@@ -8,6 +8,7 @@ import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import EmptyState from '../components/ui/EmptyState';
+import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import './AdminModeration.css';
@@ -69,8 +70,12 @@ export default function AdminReturns() {
   // Deciding a dispute: for whom, how much, and why.
   const [verdict, setVerdict] = useState({ decision: '', amount: '', physical: true, note: '' });
   const [deciding, setDeciding] = useState(false);
+  // Bumped after a decision: the list loads again with the row's new status.
+  const [reloadTick, setReloadTick] = useState(0);
+  // A decision changes the waiting count beside Returns.
+  const refreshShell = useRefreshAdminShell();
 
-  const queryKey = `${status}|${page}`;
+  const queryKey = `${status}|${page}|${reloadTick}`;
   const isLoading = result.key !== queryKey;
 
   useEffect(() => {
@@ -121,7 +126,8 @@ export default function AdminReturns() {
       toast.success('Dispute decided. Both sides are told.');
       setDetail((d) => ({ ...d, ...res.data }));
       setVerdict({ decision: '', amount: '', physical: true, note: '' });
-      setResult((r) => ({ ...r, key: null }));
+      setReloadTick((t) => t + 1);
+      refreshShell('attention');
     } catch (err) {
       toast.error(err.message || 'Could not decide the dispute');
     } finally {

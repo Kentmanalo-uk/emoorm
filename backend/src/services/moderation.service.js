@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
 const { maskEmail, maskPhone } = require('../utils/privacy');
 const config = require('../config/env');
@@ -27,78 +28,88 @@ const oldestOf = (rows, field) => rows.reduce((oldest, row) => {
   return value && (!oldest || value < oldest) ? value : oldest;
 }, null);
 
+/** How many rows of a queue there are, and the oldest `field` among them. */
+const queueOf = async (model, where, field) => {
+  const { _count: count, _min: min } = await prisma[model].aggregate({
+    where,
+    _count: { _all: true },
+    _min: { [field]: true },
+  });
+  return { count: count._all, oldestAt: min[field] };
+};
+
+/**
+ * Open support cases whose last message is the person's, so an admin owes
+ * the reply. Counted in the database: loading the cases with their last
+ * message read every message of every open case.
+ */
+const supportAwaiting = async (scope) => {
+  // Ordering by the case too (one case, so the same order) is what lets
+  // MySQL read each case's last message straight off the end of the
+  // (conversation_id, created_at) index instead of sorting all of them.
+  const rows = await prisma.$queryRaw`
+    SELECT COUNT(*) AS n, MIN(c.last_message_at) AS oldest
+    FROM support_conversations c
+    WHERE c.status = 'OPEN'
+      ${scope ? Prisma.sql`AND c.municipality_id = ${scope}` : Prisma.empty}
+      AND c.user_id = (
+        SELECT m.sender_id FROM support_messages m
+        WHERE m.conversation_id = c.id
+        ORDER BY m.conversation_id DESC, m.created_at DESC
+        LIMIT 1
+      )`;
+  return { count: Number(rows[0]?.n || 0), oldestAt: rows[0]?.oldest || null };
+};
+
 /**
  * Items waiting on an admin, with how long the oldest has been waiting.
+ * Every admin page asks for this each minute, so each queue is a count and
+ * its oldest date, never the rows themselves.
  */
 const getAttentionQueue = async (actor, { municipalityId } = {}) => {
   const scope = scopeOf(actor, municipalityId);
   const staleBefore = new Date(Date.now() - STALE_PAYMENT_MS);
 
-  const [applications, products, reports, payments, returns, conversations, teamUnread] = await Promise.all([
-    prisma.user.findMany({
+  const [applications, products, reports, payments, returns, awaiting, teamUnread] = await Promise.all([
+    queueOf('user', {
       // An applicant may live in one municipality and open their shop in
       // another — the queue follows the shop, like the review itself.
-      where: {
-        sellerApplicationStatus: 'PENDING',
-        deletedAt: null,
-        ...(scope && { OR: [{ municipalityId: scope }, { shopMunicipalityId: scope }] }),
-      },
-      select: { sellerApplicationDate: true },
-    }),
-    prisma.product.findMany({
-      where: { status: 'PENDING', deletedAt: null, ...(scope && { municipalityId: scope }) },
-      select: { createdAt: true },
-    }),
-    prisma.report.findMany({
-      where: { status: { in: ['PENDING', 'UNDER_REVIEW'] }, ...(scope && { municipalityId: scope }) },
-      select: { createdAt: true },
-    }),
-    prisma.order.findMany({
-      where: {
-        paymentStatus: 'PENDING_VERIFICATION',
-        status: { not: 'CANCELLED' },
-        // The proof arrives after the seller confirms, so the wait counts
-        // from the order's last change (the proof), not from checkout.
-        updatedAt: { lt: staleBefore },
-        ...(scope && { store: { municipalityId: scope } }),
-      },
-      select: { updatedAt: true },
-    }),
-    prisma.returnRequest.findMany({
-      where: { status: 'REQUESTED', ...(scope && { store: { municipalityId: scope } }) },
-      select: { createdAt: true },
-    }),
-    prisma.supportConversation.findMany({
-      where: { status: 'OPEN', ...(scope && { municipalityId: scope }) },
-      select: {
-        userId: true,
-        lastMessageAt: true,
-        messages: { orderBy: { createdAt: 'desc' }, take: 1, select: { senderId: true } },
-      },
-    }),
+      sellerApplicationStatus: 'PENDING',
+      deletedAt: null,
+      ...(scope && { OR: [{ municipalityId: scope }, { shopMunicipalityId: scope }] }),
+    }, 'sellerApplicationDate'),
+    queueOf('product', { status: 'PENDING', deletedAt: null, ...(scope && { municipalityId: scope }) }, 'createdAt'),
+    queueOf('report', { status: { in: ['PENDING', 'UNDER_REVIEW'] }, ...(scope && { municipalityId: scope }) }, 'createdAt'),
+    queueOf('order', {
+      paymentStatus: 'PENDING_VERIFICATION',
+      status: { not: 'CANCELLED' },
+      // The proof arrives after the seller confirms, so the wait counts
+      // from the order's last change (the proof), not from checkout.
+      updatedAt: { lt: staleBefore },
+      ...(scope && { store: { municipalityId: scope } }),
+    }, 'updatedAt'),
+    queueOf('returnRequest', { status: 'REQUESTED', ...(scope && { store: { municipalityId: scope } }) }, 'createdAt'),
+    supportAwaiting(scope),
     // Unread messages in the admin team's chats (municipal admins).
-    require('./teamChat.service').unreadRows(actor),
+    require('./teamChat.service').unreadRows(actor)
+      .then((rows) => ({ count: rows.length, oldestAt: oldestOf(rows, 'createdAt') })),
   ]);
-  const awaiting = conversations.filter((c) => c.messages[0]?.senderId === c.userId);
 
   const items = [
-    { key: 'sellerApplications', label: 'Seller applications to review', rows: applications, field: 'sellerApplicationDate', link: '/admin/sellers' },
-    { key: 'pendingProducts', label: 'Products awaiting approval', rows: products, field: 'createdAt', link: '/admin/products' },
-    { key: 'openReports', label: 'Open reports', rows: reports, field: 'createdAt', link: '/admin/reports' },
-    { key: 'supportAwaiting', label: 'Support messages awaiting reply', rows: awaiting, field: 'lastMessageAt', link: '/admin/support' },
-    { key: 'stalePayments', label: 'Payments sellers have not checked in 24h', rows: payments, field: 'updatedAt', link: '/admin/orders' },
-    { key: 'openReturns', label: 'Return requests awaiting the seller', rows: returns, field: 'createdAt', link: '/admin/returns' },
-    { key: 'teamChat', label: 'Unread team messages', rows: teamUnread, field: 'createdAt', link: '/admin/team' },
+    { key: 'sellerApplications', label: 'Seller applications to review', link: '/admin/sellers', ...applications },
+    { key: 'pendingProducts', label: 'Products awaiting approval', link: '/admin/products', ...products },
+    { key: 'openReports', label: 'Open reports', link: '/admin/reports', ...reports },
+    { key: 'supportAwaiting', label: 'Support messages awaiting reply', link: '/admin/support', ...awaiting },
+    { key: 'stalePayments', label: 'Payments sellers have not checked in 24h', link: '/admin/orders', ...payments },
+    { key: 'openReturns', label: 'Return requests awaiting the seller', link: '/admin/returns', ...returns },
+    { key: 'teamChat', label: 'Unread team messages', link: '/admin/team', ...teamUnread },
   ];
 
-  return items.map(({ rows, field, ...item }) => {
-    const oldestAt = oldestOf(rows, field);
-    const ageDays = oldestAt ? (Date.now() - new Date(oldestAt).getTime()) / DAY_MS : 0;
+  return items.map((item) => {
+    const ageDays = item.oldestAt ? (Date.now() - new Date(item.oldestAt).getTime()) / DAY_MS : 0;
     return {
       ...item,
-      count: rows.length,
-      oldestAt,
-      severity: rows.length === 0 ? 'none' : ageDays >= 3 ? 'high' : ageDays >= 1 ? 'medium' : 'low',
+      severity: item.count === 0 ? 'none' : ageDays >= 3 ? 'high' : ageDays >= 1 ? 'medium' : 'low',
     };
   });
 };
@@ -310,10 +321,13 @@ const getStoreHealth = async (actor, { municipalityId, limit = 8 } = {}) => {
       where: { storeId: { in: storeIds }, createdAt: { gte: since } },
       _count: { _all: true },
     }),
-    prisma.review.findMany({
-      where: { deletedAt: null, product: { storeId: { in: storeIds } } },
-      select: { rating: true, product: { select: { storeId: true } } },
-    }),
+    // Each store's review count and rating total, added up by the database
+    // rather than by loading every review.
+    prisma.$queryRaw`
+      SELECT p.store_id AS storeId, COUNT(*) AS n, SUM(r.rating) AS total
+      FROM reviews r JOIN products p ON p.id = r.product_id
+      WHERE r.deleted_at IS NULL AND p.store_id IN (${Prisma.join(storeIds)})
+      GROUP BY p.store_id`,
   ]);
 
   const liveByStore = new Map(liveProducts.map((r) => [r.storeId, r._count._all]));
@@ -324,14 +338,7 @@ const getStoreHealth = async (actor, { municipalityId, limit = 8 } = {}) => {
     if (row.status === 'CANCELLED') cur.cancelled += row._count._all;
     ordersByStore.set(row.storeId, cur);
   }
-  const ratingByStore = new Map();
-  for (const r of ratings) {
-    const id = r.product.storeId;
-    const cur = ratingByStore.get(id) || { sum: 0, count: 0 };
-    cur.sum += r.rating;
-    cur.count += 1;
-    ratingByStore.set(id, cur);
-  }
+  const ratingByStore = new Map(ratings.map((r) => [r.storeId, { sum: Number(r.total), count: Number(r.n) }]));
 
   const flagged = [];
   for (const store of stores) {

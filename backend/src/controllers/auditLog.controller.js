@@ -1,4 +1,5 @@
 const auditLogService = require('../services/auditLog.service');
+const manila = require('../utils/manilaTime');
 const { maskIp } = require('../utils/privacy');
 const { paginatedResponse } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -8,6 +9,19 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * Read-only audit trail: superadmins see everything, municipal admins only
  * actions recorded for their municipality.
  */
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+// The page's date boxes send calendar days, which are Manila days: `from`
+// starts at that day's midnight and `to` takes in the whole day. (Read as
+// UTC they began at 8 in the morning here, so most of the `to` day was left
+// out.) A full timestamp is used as it is; anything else is ignored.
+const dateBound = (value, endOfDay = false) => {
+  const s = String(value || '').trim();
+  if (!s) return undefined;
+  const d = DATE_ONLY.test(s) ? (endOfDay ? manila.dayEnd(s) : manila.dayStart(s)) : new Date(s);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+};
 
 const getAuditLogs = asyncHandler(async (req, res) => {
   const {
@@ -29,8 +43,8 @@ const getAuditLogs = asyncHandler(async (req, res) => {
     action,
     entity,
     entityId,
-    from,
-    to,
+    from: dateBound(from),
+    to: dateBound(to, true),
     municipalityId: req.user.role === 'MUNICIPAL_ADMIN' ? req.user.municipalityId : municipalityId,
   });
 

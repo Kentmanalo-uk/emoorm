@@ -21,16 +21,27 @@ const formatTime = (value) => {
  * Slim right-hand rail for the Seller Center and the Admin panel: language,
  * notifications and sign out as icon-only buttons. Language and notifications
  * open on hover; sign out asks for confirmation.
+ *
+ * `notifications`: the newest notifications, when the shell already has them
+ * (the admin shell keeps them between pages); without it the rail asks for
+ * its own. `onRead` hears when a row opened here has been marked read.
  */
 export default function AppRail({
   unreadCount = 0,
+  notifications: given,
+  onRead,
   onLogout,
   notificationsTo = '/seller/notifications',
   audience = 'SELLER',
   signOutMessage = 'You will need to sign in again to manage your shop.',
 }) {
   const [current] = useState(() => getCurrentLanguage());
-  const [notifications, setNotifications] = useState(null);
+  const ownList = given === undefined;
+  const [fetched, setNotifications] = useState(null);
+  // Rows opened here, shown as read straight away whoever fetched the list.
+  const [readHere, setReadHere] = useState(() => new Set());
+  const notifications = (ownList ? fetched : given)
+    ?.map((n) => (readHere.has(n.id) ? { ...n, isRead: true } : n)) ?? null;
   const [confirmOpen, setConfirmOpen] = useState(false);
   const logoutRef = useRef(null);
 
@@ -55,15 +66,18 @@ export default function AppRail({
   }, [audience]);
 
   useEffect(() => {
+    if (!ownList) return;
     loadNotifications();
-  }, [loadNotifications, unreadCount]);
+  }, [ownList, loadNotifications, unreadCount]);
 
   // A row in the rail is a shortcut to the thing it is about, not just to the
   // list. Marking it read locally keeps the badge honest without a refetch.
   const openNotification = (n) => {
     if (n.isRead) return;
-    setNotifications((prev) => (prev || []).map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
-    axios.put(`/notifications/${n.id}/read`).catch(() => { /* the next load will correct it */ });
+    setReadHere((prev) => new Set(prev).add(n.id));
+    axios.put(`/notifications/${n.id}/read`)
+      .then(() => onRead?.(n))
+      .catch(() => { /* the next load will correct it */ });
   };
 
   const pickLanguage = (code) => {

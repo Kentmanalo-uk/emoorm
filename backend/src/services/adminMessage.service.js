@@ -49,7 +49,8 @@ const cleanSubject = (subject) => {
 
 const preview = (text) => (text.length > 120 ? `${text.slice(0, 117)}...` : text);
 
-const toSummary = async (conversation, side) => ({
+/** A thread as lists show it. `unreadCount` is counted by the caller, a page at a time. */
+const toSummary = (conversation, unreadCount) => ({
   id: conversation.id,
   subject: conversation.subject,
   status: conversation.status,
@@ -59,7 +60,7 @@ const toSummary = async (conversation, side) => ({
   lastMessageAt: conversation.lastMessageAt,
   createdAt: conversation.createdAt,
   lastMessage: conversation.messages?.[0] || null,
-  unreadCount: await adminMessageRepository.countUnreadFor({ conversation, side }),
+  unreadCount,
 });
 
 /** A super admin opens a thread with a municipal admin. */
@@ -98,8 +99,10 @@ const list = async (actor, options = {}) => {
     pageSize,
   });
 
+  // One count query for the whole page (it used to be one per row).
+  const unread = await adminMessageRepository.countUnreadForMany(rows, side);
   return {
-    conversations: await Promise.all(rows.map((row) => toSummary(row, side))),
+    conversations: rows.map((row) => toSummary(row, unread.get(row.id) || 0)),
     total,
     page,
     pageSize,
@@ -113,10 +116,17 @@ const getConversation = async (actor, conversationId) => {
     adminMessageRepository.findMessages(conversationId),
     adminMessageRepository.countMessages(conversationId),
   ]);
-  await adminMessageRepository.markRead(conversationId, side, new Date());
+  // An open thread is polled: mark it read only when there is something new,
+  // up to the newest message shown. Writing on every poll also bumped the
+  // thread's updatedAt.
+  const newest = messages[messages.length - 1]?.createdAt;
+  const readAt = side === 'admin' ? conversation.adminLastReadAt : conversation.superLastReadAt;
+  if (newest && (!readAt || newest > readAt)) {
+    await adminMessageRepository.markRead(conversationId, side, newest);
+  }
   return {
-    ...(await toSummary(conversation, side)),
-    unreadCount: 0,
+    // Opening the thread reads it, so there is nothing to count.
+    ...toSummary(conversation, 0),
     viewerSide: side,
     messageCount,
     hasMoreMessages: messageCount > messages.length,

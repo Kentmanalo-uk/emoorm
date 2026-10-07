@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import EmptyArt from '../components/ui/EmptyArt';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
@@ -55,7 +56,8 @@ export default function AdminAuditLogs() {
       setLogs(res.data || []);
       setPagination(res.pagination || { page, pageSize: 25, total: 0 });
     } catch (err) {
-      console.error(err);
+      // Otherwise a failed load looks like an empty log.
+      toast.error(err.message || 'Failed to load audit logs');
     } finally {
       setIsLoading(false);
     }

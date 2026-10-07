@@ -511,6 +511,8 @@ model SupportConversation {
   // direct message to them. A person may now have several cases at once.
   @@index([municipalityId, status, lastMessageAt])
   @@index([userId, lastMessageAt])
+  // A town's inbox, every status, latest message first.
+  @@index([municipalityId, lastMessageAt, createdAt], map: "support_conversations_inbox_idx")
   @@map("support_conversations")
 }
 
@@ -1081,6 +1083,10 @@ model Order {
   @@index([buyerId, cancelReason], map: "orders_buyer_cancel_idx")
   @@index([storeId, status, createdAt], map: "orders_store_status_idx")
   @@index([status, createdAt], map: "orders_status_created_idx")
+  // The admins' queue of payment proofs no seller has checked in a day.
+  @@index([paymentStatus, updatedAt], map: "orders_payment_status_idx")
+  // The admin order list, newest first.
+  @@index([createdAt], map: "orders_created_idx")
 }
 
 /// A delivery company sellers can ship with, kept by the super admin.
@@ -1228,6 +1234,8 @@ model Review {
   @@map("reviews")
   @@index([productId, deletedAt, createdAt], map: "reviews_product_idx")
   @@index([userId, deletedAt, createdAt], map: "reviews_user_idx")
+  // The admins' review list, newest first.
+  @@index([deletedAt, createdAt], map: "reviews_moderation_idx")
 }
 
 model Report {
@@ -1306,6 +1314,10 @@ model Notification {
 
   @@map("notifications")
   @@index([userId, deletedAt, isRead, createdAt], map: "notifications_user_feed_idx")
+  // One audience's feed (the admin bell, rail and list), newest first.
+  @@index([userId, audience, deletedAt, createdAt], map: "notifications_user_audience_feed_idx")
+  // And its unread count, from the index alone.
+  @@index([userId, audience, isRead, deletedAt], map: "notifications_user_audience_unread_idx")
 }
 
 model PushToken {
@@ -1474,6 +1486,9 @@ model ReturnRequest {
   @@index([orderId])
   @@index([buyerId])
   @@index([storeId, status])
+  // The admins' return list, newest first, by status or all of them.
+  @@index([status, createdAt], map: "return_requests_status_created_idx")
+  @@index([createdAt], map: "return_requests_created_idx")
   @@map("return_requests")
 }
 

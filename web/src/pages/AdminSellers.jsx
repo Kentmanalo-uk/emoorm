@@ -13,8 +13,20 @@ import UserContactReveal from '../components/admin/UserContactReveal';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
+import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import EmptyArt from '../components/ui/EmptyArt';
 import { confirmAction } from '../lib/confirm';
+
+// Bulk approvals go three at a time: each one is a dozen queries and a new
+// shop on a database with a handful of connections, so twenty at once could
+// time out (and stall every other admin's pages meanwhile).
+const settleInBatches = async (items, run, size = 3) => {
+  const results = [];
+  for (let i = 0; i < items.length; i += size) {
+    results.push(...await Promise.allSettled(items.slice(i, i + size).map(run)));
+  }
+  return results;
+};
 
 const STATUS_BADGE = {
   PENDING: 'admin-badge-pending',
@@ -100,6 +112,8 @@ export default function AdminSellers() {
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const { municipalities: municipalityList } = useMunicipalities();
   const { categories: categoryList } = useCategories();
+  // A decision changes the waiting count beside Seller Applications.
+  const refreshShell = useRefreshAdminShell();
 
   // Applications store the shop's municipality and categories as IDs.
   const lookups = useMemo(() => {
@@ -107,8 +121,18 @@ export default function AdminSellers() {
     return { municipalities: byId(municipalityList), categories: byId(categoryList) };
   }, [municipalityList, categoryList]);
 
+  // Typing waits for a pause (300 ms) before asking, so a name is one request
+  // rather than one per letter; a filter or page change asks at once.
+  const lastSearch = useRef(search);
   useEffect(() => {
-    fetchApplicants();
+    const typed = search !== lastSearch.current;
+    lastSearch.current = search;
+    if (!typed) {
+      fetchApplicants();
+      return undefined;
+    }
+    const timer = setTimeout(fetchApplicants, 300);
+    return () => clearTimeout(timer);
   }, [statusFilter, search, page]);
 
   // Deep link from the "new seller application" notification:
@@ -126,7 +150,11 @@ export default function AdminSellers() {
   const shopMunicipality = (u) =>
     lookups.municipalities[u.shopMunicipalityId] || u.municipality?.name || '—';
 
+  // Only the newest request fills the table: one overtaken by a later search,
+  // filter or page (and answering late) is dropped.
+  const latestRequest = useRef(0);
   const fetchApplicants = async () => {
+    const request = ++latestRequest.current;
     setIsLoading(true);
     setSelectedIds([]);
     try {
@@ -137,14 +165,15 @@ export default function AdminSellers() {
       if (search) params.search = search;
 
       const res = await axios.get('/auth/users', { params });
+      if (request !== latestRequest.current) return;
       // Filter to only users who have applied (have sellerApplicationStatus set)
       const data = (res.data || []).filter((u) => u.sellerApplicationStatus);
       setApplicants(data);
       if (res.pagination) setPagination(res.pagination);
     } catch {
-      toast.error('Failed to load applications');
+      if (request === latestRequest.current) toast.error('Failed to load applications');
     } finally {
-      setIsLoading(false);
+      if (request === latestRequest.current) setIsLoading(false);
     }
   };
 
@@ -156,6 +185,7 @@ export default function AdminSellers() {
       toast.success('Seller approved!');
       setSelected(null);
       fetchApplicants();
+      refreshShell('attention');
     } catch (err) {
       toast.error(err.message || 'Failed to approve');
     } finally {
@@ -179,6 +209,7 @@ export default function AdminSellers() {
       setShowRejectInput(false);
       setRejectReason('');
       fetchApplicants();
+      refreshShell('attention');
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message || 'Failed to reject');
     } finally {
@@ -197,7 +228,7 @@ export default function AdminSellers() {
     const ids = selectedIds.filter((id) => pendingApplicants.some((u) => u.id === id));
     setBulkProcessing(true);
     try {
-      const results = await Promise.allSettled(ids.map((id) => axios.post(`/auth/users/${id}/approve-seller`)));
+      const results = await settleInBatches(ids, (id) => axios.post(`/auth/users/${id}/approve-seller`));
       const done = results.filter((r) => r.status === 'fulfilled').length;
       const failed = results.length - done;
       const msg = `Approve: ${done} done, ${failed} failed`;
@@ -205,6 +236,7 @@ export default function AdminSellers() {
       setSelectedIds([]);
       setBulkConfirmOpen(false);
       fetchApplicants();
+      refreshShell('attention');
     } finally {
       setBulkProcessing(false);
     }

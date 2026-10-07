@@ -1,4 +1,5 @@
 const reviewService = require('../services/review.service');
+const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
   createdResponse,
@@ -164,12 +165,30 @@ const updateReview = asyncHandler(async (req, res) => {
  * @access Private (Review owner or Admin)
  */
 const deleteReview = asyncHandler(async (req, res) => {
-  await reviewService.deleteReview(
+  const { review, byAdmin } = await reviewService.deleteReview(
     req.params.id,
     req.user.id,
     req.user.role,
     req.user.municipalityId
   );
+
+  // An admin taking down someone's review is moderation, so it goes in the
+  // audit trail, under the product's town. A buyer deleting their own is not.
+  if (byAdmin) {
+    await auditLog.record({
+      actor: req.user,
+      action: 'REMOVE_REVIEW',
+      entity: 'Review',
+      entityId: req.params.id,
+      details: {
+        product: review.product?.name || null,
+        rating: review.rating,
+        writtenBy: review.user?.fullName || null,
+      },
+      municipalityId: review.product?.municipalityId,
+      req,
+    });
+  }
 
   noContentResponse(res);
 });

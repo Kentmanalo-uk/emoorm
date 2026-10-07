@@ -1,0 +1,92 @@
+/* Admin panel on computers: Seller applications, Sellers, Buyers, Products, Orders, Reports.
+   Desktop only (min-width: 769px) and only inside the admin shell (.ac-shell),
+   on top of the shared AdminDesktop.css. Phones keep their own styles.
+
+   The shared sheet already gives these pages their cards, toolbar, soft
+   buttons, table insets, right-aligned row actions, pagination, drawer,
+   bulk bar, reason dialog and skeleton. This sheet only adds what is
+   particular to these six tables. */
+
+@media (min-width: 769px) {
+
+  /* ── Row text: one size per row ───────────────────────────────────────
+     Sellers/Buyers (Municipality, Joined) and Reports (Date) set 13px
+     inline; on a computer they match the 14px cells beside them. Phones
+     keep the inline 13px. */
+  .ac-shell .ac-content .admin-table:has(> tbody > tr > td:first-child > .admin-user-cell) td[style*='font-size'],
+  .ac-shell .ac-content .admin-table:has(.admin-report-description) td[style*='font-size'] {
+    font-size: var(--ad-fs-body) !important;
+  }
+
+  /* ── Pills that say what something is, not its state ──────────────────
+     Sellers/Buyers: the role pill repeats one word on every row and used
+     the same green as "Active". Reports: the type pill used the amber of
+     "Pending". Both become neutral tags, so colour means status only. */
+  .ac-shell .ac-content .admin-table:has(> tbody > tr > td:first-child > .admin-user-cell) tbody td:nth-child(2) > .admin-badge,
+  .ac-shell .ac-content .admin-table:has(.admin-report-description) tbody td:first-child > .admin-badge {
+    background: var(--ad-fill);
+    color: var(--ad-ink-soft);
+  }
+
+  /* ── Orders: the order cell reads like the other tables' first column ──
+     Order number 14px/600 in the heading ink, date 12.5px under it (the
+     inline 11px stays on phones). */
+  .ac-shell .ac-content .admin-table td:first-child > strong:has(+ div) {
+    font-weight: 600;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .admin-table td:first-child > strong + div {
+    margin-top: 2px;
+    font-size: var(--ad-fs-meta) !important;
+  }
+
+  /* ── Products: amounts line up ───────────────────────────────────────
+     Price and Stock (columns 5 and 6 after the tick box) are right-aligned
+     in even-width figures. */
+  .ac-shell .ac-content .admin-table:has(.admin-product-cell) tr > :is(:nth-child(5), :nth-child(6)) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Drawers ──────────────────────────────────────────────────────── */
+
+  /* Orders: "Show contact" sits right under the grid; give it the same
+     12px the other drawers leave above their buttons. */
+  .ac-shell .ac-content .admin-detail-grid + .admin-reveal-btn {
+    margin-top: 12px;
+  }
+
+  /* Reports: "The reporter attached no evidence." reads like the
+     Applications notice (a left-aligned line), not a centred caption. */
+  .ac-shell .ac-content .admin-detail-section .admin-id-photos > .admin-id-missing {
+    justify-content: flex-start;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  /* Products: a photo that fails to load shows the plain soft tile, not
+     the browser's broken-image glyph (the alt text still reaches screen
+     readers). Pseudo-elements only render on an image that failed. */
+  .ac-shell .ac-content .admin-product-detail-img {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ac-shell .ac-content .admin-product-detail-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--ad-fill);
+  }
+
+  /* ── Reports: the "could not open that report" banner ─────────────────
+     The shared card rule drops its amber left edge; it keeps its meaning
+     as a soft amber fill instead. */
+  .ac-shell .ac-content .admin-card.ar-deeplink-error {
+    background: var(--t-warning-50, #fffbeb);
+    box-shadow: none;
+  }
+}

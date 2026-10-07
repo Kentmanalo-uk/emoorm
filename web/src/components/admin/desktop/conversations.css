@@ -1,0 +1,1133 @@
+/* Admin panel on computers: Buyer support, Messages, Admin team, Settings.
+   Desktop only (min-width: 769px) and only inside the admin shell (.ac-shell),
+   on top of the shared AdminDesktop.css. Phones keep their own styles.
+
+   The three two-pane chats (Buyer support, Messages, Team chat) share one
+   look: a white 12px card with the soft card shadow and a viewport-based
+   height; inset rounded list rows; a 64px thread header; borderless grey
+   bubbles on white with a 4px tail corner; a soft pill composer with a round
+   send button. Hairline rules only. */
+
+@media (min-width: 769px) {
+
+  /* ══ 1. Shared chat look ═══════════════════════════════════════════════ */
+
+  /* Card: no outline, 12px corners, soft shadow; fills the window. Heights
+     = 100vh minus what sits above (topbar 56 + content top 20 + the page's
+     header and tabs) and the content's 40px bottom padding. */
+  .ac-shell .ac-content .as-support .sc-chat {
+    height: clamp(520px, calc(100vh - 172px), 880px);
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--ad-r-card);
+    background: var(--ad-surface);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  .ac-shell .ac-content .am-card {
+    margin-bottom: 0;
+  }
+
+  .ac-shell .ac-content .am-grid {
+    height: clamp(520px, calc(100vh - 224px), 880px);
+  }
+
+  .ac-shell .ac-content .at-chat {
+    top: 72px;
+    height: clamp(480px, calc(100vh - 192px), 860px);
+    border: 0;
+    border-radius: var(--ad-r-card);
+    background: var(--ad-surface);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  /* List column: a hairline, not a full grey rule. */
+  .ac-shell .ac-content .as-support .sc-list,
+  .ac-shell .ac-content .am-list {
+    padding-bottom: 8px;
+    border-right: 1px solid var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .am-list {
+    padding-top: 6px;
+  }
+
+  /* Rows: inset, rounded, no dividers. */
+  .ac-shell .ac-content .as-support .sc-list-item,
+  .ac-shell .ac-content .am-list .am-item {
+    width: calc(100% - 16px);
+    margin: 2px 8px;
+    padding: 10px 12px;
+    gap: 12px;
+    align-items: flex-start;
+    border: 0;
+    border-radius: var(--ad-r-control);
+    background: transparent;
+    transition: background-color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .tc-list ul {
+    padding: 6px 8px 8px;
+  }
+
+  .ac-shell .ac-content .tc-list .tc-chat {
+    margin: 2px 0;
+    padding: 10px 12px;
+    gap: 12px;
+    border-radius: var(--ad-r-control);
+    transition: background-color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .as-support .sc-list-item:hover,
+  .ac-shell .ac-content .am-list .am-item:hover,
+  .ac-shell .ac-content .tc-list .tc-chat:hover {
+    background: var(--ad-band);
+  }
+
+  .ac-shell .ac-content .as-support .sc-list-item.is-active,
+  .ac-shell .ac-content .am-list .am-item.is-active {
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-list-item, .am-list .am-item, .tc-list .tc-chat):focus-visible {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: -2px;
+  }
+
+  .ac-shell .ac-content .as-support .sc-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Row text: name 14px/600, time 12px muted. */
+  .ac-shell .ac-content :is(.as-support .sc-list-top strong, .am-list .am-item-top strong, .tc-list .tc-chat-top strong) {
+    font-size: var(--ad-fs-body);
+    font-weight: 600;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-list-top small, .am-list .am-item-top small, .tc-list .tc-chat-top small) {
+    font-size: 12px;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .tc-list .tc-chat.is-unread .tc-chat-top strong {
+    font-weight: 700;
+  }
+
+  /* Unread counts in a list: one green 20px pill on every chat. */
+  .ac-shell .ac-content :is(.as-support .sc-unread, .am-list .am-unread, .tc-list .tc-unread) {
+    min-width: 20px;
+    padding: 0 6px;
+    border-radius: var(--ad-r-pill);
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #fff);
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+  }
+
+  /* Thread header: 64px, 20px inset (16px in the narrow team column). */
+  .ac-shell .ac-content .as-support .sc-thread-head,
+  .ac-shell .ac-content .am-thread-head {
+    min-height: 64px;
+    padding: 10px 20px;
+    gap: 12px;
+    border-bottom: 1px solid var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .tc-list-head,
+  .ac-shell .ac-content .tc-thread-head {
+    min-height: 64px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--ad-divider);
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-thread-title strong, .am-thread-title strong, .tc-thread-title strong) {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-thread-title > span, .am-thread-title > span, .tc-thread-title span) {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ad-ink-muted);
+  }
+
+  /* Header actions: compact 32px soft buttons, 8px apart. */
+  .ac-shell .ac-content :is(.as-support .sc-thread-actions, .am-thread-actions) {
+    gap: var(--ad-space-2);
+  }
+
+  .ac-shell .ac-content .am-thread-actions .admin-btn {
+    min-height: var(--ad-h-compact);
+    padding: 0 12px;
+    border-radius: var(--ad-r-compact);
+    font-size: var(--ad-fs-compact);
+  }
+
+  /* Message area: white, like the phone. */
+  .ac-shell .ac-content .as-support .sc-messages,
+  .ac-shell .ac-content .am-messages {
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--ad-surface);
+  }
+
+  .ac-shell .ac-content .tc-messages {
+    padding: 12px 16px;
+    background: var(--ad-surface);
+  }
+
+  /* Bubbles: incoming soft grey, mine brand green; 16px with a 4px tail. */
+  .ac-shell .ac-content .as-support .sc-message,
+  .ac-shell .ac-content .am-message {
+    max-width: 75%;
+    padding: 9px 14px;
+    border: 0;
+    border-radius: 16px 16px 16px 4px;
+    background: var(--ad-fill);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .as-support .sc-message.is-mine,
+  .ac-shell .ac-content .am-message.is-mine {
+    border-radius: 16px 16px 4px 16px;
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #fff);
+  }
+
+  .ac-shell .ac-content .tc-bubble {
+    padding: 9px 14px;
+    background: var(--ad-fill);
+    box-shadow: none;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .tc-msg.is-mine .tc-bubble {
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #fff);
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-message p, .am-message p) {
+    font-size: var(--ad-fs-body);
+    line-height: 1.5;
+  }
+
+  /* Sender name inside a bubble: 12px/600 brand green (as in support). */
+  .ac-shell .ac-content :is(.as-support .sc-message-name, .am-message-name) {
+    margin-bottom: 2px;
+    color: var(--t-primary-700, #03684c);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .ac-shell .ac-content .tc-msg-name {
+    color: var(--ad-ink-muted);
+    font-size: 12px;
+  }
+
+  /* Time: 11px, right-aligned, readable on both bubble colours. */
+  .ac-shell .ac-content :is(.as-support .sc-message time, .am-message time) {
+    margin-top: 4px;
+    color: var(--ad-ink-muted);
+    font-size: 11px;
+    text-align: right;
+    opacity: 1;
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-message.is-mine time, .am-message.is-mine time) {
+    color: var(--t-primary-100, #d1fae5);
+  }
+
+  .ac-shell .ac-content :is(.tc-msg-time, .tc-chat-top small) {
+    color: var(--ad-ink-muted);
+  }
+
+  /* Composer: a soft pill that grows with the text, a round send button. */
+  .ac-shell .ac-content .as-support .sc-composer,
+  .ac-shell .ac-content .am-composer,
+  .ac-shell .ac-content .tc-compose {
+    align-items: flex-end;
+    gap: var(--ad-space-2);
+    padding: 10px 16px;
+    border-top: 1px solid var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .as-support .sc-composer textarea,
+  .ac-shell .ac-content .am-composer textarea,
+  .ac-shell .ac-content .tc-compose textarea {
+    min-width: 0;
+    min-height: 40px;
+    max-height: 120px;
+    padding: 9px 16px;
+    border: 1px solid transparent;
+    border-radius: 20px;
+    background: var(--ad-fill);
+    color: var(--t-neutral-800, #1f2937);
+    font-size: var(--ad-fs-body);
+    line-height: 20px;
+    resize: none;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .ac-shell .ac-content .as-support .sc-composer textarea,
+  .ac-shell .ac-content .am-composer textarea {
+    height: 40px;
+  }
+
+  @supports (field-sizing: content) {
+    .ac-shell .ac-content .as-support .sc-composer textarea,
+    .ac-shell .ac-content .am-composer textarea {
+      height: auto;
+      field-sizing: content;
+    }
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-composer textarea, .am-composer textarea, .tc-compose textarea):hover:not(:focus) {
+    background: var(--ad-field-hover);
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-composer textarea, .am-composer textarea, .tc-compose textarea):focus {
+    border-color: transparent;
+    outline: 2px solid transparent;
+    background: var(--ad-surface);
+    box-shadow: var(--ad-ring);
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-composer textarea, .am-composer textarea, .tc-compose textarea)::placeholder {
+    color: var(--ad-ink-muted);
+    opacity: 1;
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-composer .sc-send, .am-composer .am-send, .tc-compose .tc-send) {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #fff);
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-composer .sc-send, .am-composer .am-send, .tc-compose .tc-send):hover:not(:disabled) {
+    background: var(--t-primary-700, #03684c);
+  }
+
+  .ac-shell .ac-content :is(.as-support .sc-composer .sc-send, .am-composer .am-send, .tc-compose .tc-send):disabled {
+    background: var(--t-primary-600, #047857);
+    opacity: 0.45;
+  }
+
+  /* ══ 2. Buyer support ══════════════════════════════════════════════════ */
+
+  .ac-shell .ac-content .as-support .sc-list-head {
+    border-bottom: 1px solid var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .as-support .sc-compose {
+    width: calc(100% - 32px);
+    min-height: var(--ad-h-control);
+    margin: 16px 16px 12px;
+    padding: 0 14px;
+    border-radius: var(--ad-r-control);
+    font-size: var(--ad-fs-control);
+  }
+
+  /* Filters: wrapping pill chips that fit the 300px list (the underline
+     tabs were 314px wide and scrolled the list sideways). */
+  .ac-shell .ac-content .as-support .sc-filters {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 16px 12px;
+    border-bottom: 0;
+    background: transparent;
+  }
+
+  .ac-shell .ac-content .as-support .sc-filter {
+    flex: 0 0 auto;
+    gap: 6px;
+    min-height: 30px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--ad-r-pill);
+    background: var(--ad-fill);
+    color: var(--ad-ink-soft);
+    font-size: 12.5px;
+    font-weight: 600;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .as-support .sc-filter:hover {
+    background: var(--ad-fill-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .as-support .sc-filter.is-active {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #03684c);
+  }
+
+  .ac-shell .ac-content .as-support .sc-filter:focus-visible {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: 1px;
+  }
+
+  .ac-shell .ac-content .as-support .sc-filter-count {
+    min-width: 18px;
+    padding: 0 6px;
+    border-radius: var(--ad-r-pill);
+    background: var(--ad-surface);
+    color: var(--ad-ink-soft);
+    font-weight: 700;
+  }
+
+  .ac-shell .ac-content .as-support .sc-filter.is-active .sc-filter-count {
+    background: var(--t-primary-100, #d1fae5);
+    color: var(--t-primary-700, #03684c);
+  }
+
+  .ac-shell .ac-content .as-support .sc-list > .sc-list-item:first-of-type {
+    margin-top: 8px;
+  }
+
+  .ac-shell .ac-content .as-support .as-list-subject {
+    font-size: 13px;
+    color: var(--ad-ink-body);
+  }
+
+  .ac-shell .ac-content .as-support .sc-list-preview {
+    color: var(--ad-ink-soft);
+  }
+
+  .ac-shell .ac-content .as-support .sc-list-badges {
+    margin-top: 4px;
+  }
+
+  /* Status badges: the same pill as .admin-badge. */
+  .ac-shell .ac-content .as-support :is(.sc-badge, .sc-vbadge) {
+    padding: 3px 9px;
+    border-radius: var(--ad-r-pill);
+    font-size: var(--ad-fs-badge);
+    font-weight: 600;
+    line-height: 16px;
+  }
+
+  /* Thread header actions and identity actions: compact soft buttons. */
+  .ac-shell .ac-content .as-support :is(.sc-thread-actions, .sc-identity-actions) .sc-btn {
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--ad-h-compact);
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--ad-r-compact);
+    font-size: var(--ad-fs-compact);
+    font-weight: 600;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .as-support .sc-btn.sc-btn-ghost {
+    background: var(--ad-fill);
+    color: var(--ad-ink-body);
+  }
+
+  .ac-shell .ac-content .as-support .sc-btn.sc-btn-ghost:hover:not(:disabled) {
+    background: var(--ad-fill-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .as-support .sc-btn.sc-btn-ghost.is-on {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #03684c);
+  }
+
+  .ac-shell .ac-content .as-support .sc-btn.sc-btn-ghost.is-on:hover:not(:disabled) {
+    background: var(--t-primary-100, #d1fae5);
+  }
+
+  .ac-shell .ac-content .as-support .sc-btn.sc-btn-green {
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #fff);
+  }
+
+  .ac-shell .ac-content .as-support .sc-btn.sc-btn-green:hover:not(:disabled) {
+    background: var(--t-primary-700, #03684c);
+  }
+
+  .ac-shell .ac-content .as-support .sc-btn.sc-btn-red {
+    background: var(--t-danger-50, #fef2f2);
+    color: var(--t-danger-700, #b91c1c);
+  }
+
+  .ac-shell .ac-content .as-support .sc-btn.sc-btn-red:hover:not(:disabled) {
+    background: var(--t-danger-100, #fee2e2);
+    color: var(--t-danger-800, #991b1b);
+  }
+
+  /* "Say hello" and the closed notice: centred, soft. */
+  .ac-shell .ac-content .as-support .sc-messages > .sc-empty {
+    margin-block: auto;
+  }
+
+  .ac-shell .ac-content .as-support .sc-messages > .sc-empty svg {
+    color: var(--t-primary-200, #a7f3d0);
+  }
+
+  .ac-shell .ac-content .as-support .sc-closed-notice {
+    padding: 6px 14px;
+    border: 0;
+    border-radius: var(--ad-r-pill);
+    background: var(--ad-fill);
+    color: var(--ad-ink-soft);
+  }
+
+  /* An empty inbox shows one illustration, not two. */
+  .ac-shell .ac-content .as-support .sc-chat:has(.sc-list > .ui-empty) .sc-thread-empty {
+    visibility: hidden;
+  }
+
+  /* Safety strip lines up with the thread's 20px inset. */
+  .ac-shell .ac-content .as-support .safety-notice-row {
+    padding-inline: 20px;
+  }
+
+  /* Quick replies: soft pill toggle, rounded menu without rules. */
+  .ac-shell .ac-content .as-support .sc-quick-toggle {
+    height: 40px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 20px;
+    background: var(--ad-fill);
+    color: var(--t-primary-700, #03684c);
+    transition: background-color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .as-support .sc-quick-toggle:hover:not(:disabled),
+  .ac-shell .ac-content .as-support .sc-quick-toggle[aria-expanded='true'] {
+    background: var(--t-primary-50, #ecfdf5);
+  }
+
+  .ac-shell .ac-content .as-support .sc-quick-menu {
+    padding: 6px;
+    border: 0;
+    border-radius: var(--ad-r-card);
+    box-shadow: var(--elev-popover, 0 10px 24px rgba(15, 23, 42, 0.14)), 0 0 0 1px var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .as-support .sc-quick-title {
+    padding: 6px 10px 4px;
+    border-bottom: 0;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .as-support .sc-quick-menu button {
+    padding: 8px 10px;
+    border-bottom: 0;
+    border-radius: var(--ad-r-compact);
+    background: transparent;
+  }
+
+  .ac-shell .ac-content .as-support .sc-quick-menu button:hover {
+    background: var(--t-primary-50, #ecfdf5);
+  }
+
+  /* Identity panel: a pale band instead of a ruled column. */
+  .ac-shell .ac-content .as-support .sc-identity {
+    padding: 16px;
+    border-left: 0;
+    background: var(--ad-band);
+  }
+
+  .ac-shell .ac-content .as-support .sc-identity-status {
+    border-color: var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .as-support .sc-identity-list dt {
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .as-support .sc-identity-head button {
+    border-radius: var(--ad-r-compact);
+  }
+
+  .ac-shell .ac-content .as-support .sc-identity-head button:hover {
+    background: var(--ad-fill);
+    color: var(--ad-ink);
+  }
+
+  /* "New message" dialog: already soft; match the dialog radius. */
+  .ac-shell .ac-content .as-support .sc-dialog {
+    border-radius: var(--ad-r-dialog);
+  }
+
+  /* 769-1100px: the actions take their own row so the name keeps its width;
+     the identity panel (stacked above the thread here) takes less height. */
+  @media (max-width: 1100px) {
+    .ac-shell .ac-content .as-support .sc-thread-head {
+      flex-wrap: wrap;
+      row-gap: 8px;
+    }
+
+    .ac-shell .ac-content .as-support .sc-thread-actions {
+      flex: 1 0 100%;
+      justify-content: flex-start;
+    }
+
+    .ac-shell .ac-content .as-support .sc-thread-body.has-panel .sc-identity {
+      max-height: 40%;
+      border-bottom: 1px solid var(--ad-divider);
+    }
+  }
+
+  /* ══ 3. Messages ═══════════════════════════════════════════════════════ */
+
+  .ac-shell .ac-content .am-list-head {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .am-list-head .am-compose {
+    min-height: var(--ad-h-control);
+    padding: 0 14px;
+    border-radius: var(--ad-r-control);
+  }
+
+  .ac-shell .ac-content .am-list .am-item-body {
+    gap: 2px;
+  }
+
+  .ac-shell .ac-content .am-list .am-item-subject {
+    font-size: 13px;
+    color: var(--ad-ink-body);
+  }
+
+  .ac-shell .ac-content .am-list .am-item-muni {
+    font-size: 12px;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .am-list .am-item-meta {
+    margin-top: 2px;
+  }
+
+  /* Loading line: centred quiet text (AdminModeration.css restyles .am-note). */
+  .ac-shell .ac-content .am-list > .am-note {
+    padding: 28px 18px;
+    border-bottom: 0;
+    font-size: 13.5px;
+  }
+
+  /* No threads (municipal admin): one centred empty state across the card
+     instead of two illustrations side by side. */
+  .ac-shell .ac-content .am-grid:has(> .am-list > .am-empty):not(:has(.am-list-head)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ac-shell .ac-content .am-grid:has(> .am-list > .am-empty):not(:has(.am-list-head)) > .am-thread {
+    display: none;
+  }
+
+  .ac-shell .ac-content .am-grid:has(> .am-list > .am-empty):not(:has(.am-list-head)) > .am-list {
+    display: grid;
+    place-content: center;
+    padding: 0;
+    border-right: 0;
+  }
+
+  .ac-shell .ac-content .am-empty {
+    gap: 12px;
+    padding: 32px 24px;
+    color: var(--ad-ink-muted);
+    font-size: var(--ad-fs-body);
+  }
+
+  .ac-shell .ac-content .am-empty p {
+    max-width: 46ch;
+    margin: 0;
+  }
+
+  /* Announcements: the form sits on the card's 20px inset. */
+  .ac-shell .ac-content .am-announce-form {
+    gap: var(--ad-space-4);
+    padding: 4px var(--ad-inset) var(--ad-inset);
+  }
+
+  .ac-shell .ac-content .am-field > span {
+    color: var(--ad-ink);
+    font-size: 13.5px;
+  }
+
+  .ac-shell .ac-content .am-hint {
+    color: var(--ad-ink-muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  /* Character counter under the message right-aligned, as in Settings. */
+  .ac-shell .ac-content .am-field:has(> textarea) > .am-hint {
+    justify-self: end;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ac-shell .ac-content .am-result {
+    gap: 12px;
+    padding: 16px var(--ad-inset);
+  }
+
+  /* ══ 4. Admin team ═════════════════════════════════════════════════════ */
+
+  .ac-shell .ac-content .at-page,
+  .ac-shell .ac-content .at-page:has(.at-chat) {
+    max-width: none;
+  }
+
+  .ac-shell .ac-content .at-layout {
+    gap: var(--ad-gap-stack);
+  }
+
+  .ac-shell .ac-content .at-list {
+    gap: 12px;
+  }
+
+  .ac-shell .ac-content .at-note {
+    margin-bottom: var(--ad-gap-stack);
+    padding: 12px 16px;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-surface);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  /* Member cards: borderless white cards like every other surface. */
+  .ac-shell .ac-content .at-member {
+    gap: 16px;
+    padding: 16px var(--ad-inset);
+    border: 0;
+    border-radius: var(--ad-r-card);
+    background: var(--ad-surface);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  .ac-shell .ac-content .at-member.is-loading {
+    box-shadow: none;
+  }
+
+  .ac-shell .ac-content .at-member-name strong {
+    font-weight: 600;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content :is(.at-you, .at-email, .at-status) {
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .at-tag {
+    padding: 2px 9px;
+    font-size: var(--ad-fs-badge);
+    line-height: 16px;
+  }
+
+  /* Theme tokens instead of fixed colours (same values by default). */
+  .ac-shell .ac-content .at-tag--admin {
+    background: var(--t-info-100, #dbeafe);
+    color: var(--t-info-700, #1d4ed8);
+  }
+
+  .ac-shell .ac-content .at-tag--backup {
+    background: var(--t-warning-100, #fef3c7);
+    color: var(--t-warning-700, #b45309);
+  }
+
+  .ac-shell .ac-content .at-online {
+    color: var(--t-success-700, #15803d);
+  }
+
+  .ac-shell .ac-content .at-flag {
+    color: var(--t-warning-700, #b45309);
+  }
+
+  .ac-shell .ac-content .at-flag.at-flag--danger {
+    color: var(--t-danger-700, #b91c1c);
+  }
+
+  .ac-shell .ac-content .at-dot.is-online {
+    background: var(--t-success-500, #22c55e);
+  }
+
+  .ac-shell .ac-content .at-member-actions {
+    gap: var(--ad-space-2);
+  }
+
+  /* Remove: the soft red of every other destructive button. */
+  .ac-shell .ac-content .at-member-actions .admin-btn.at-remove {
+    border-color: transparent;
+    background: var(--t-danger-50, #fef2f2);
+    color: var(--t-danger-700, #b91c1c);
+  }
+
+  .ac-shell .ac-content .at-member-actions .admin-btn.at-remove:hover:not(:disabled) {
+    background: var(--t-danger-100, #fee2e2);
+    color: var(--t-danger-800, #991b1b);
+  }
+
+  /* Refresh: a square icon button like the dashboard's. */
+  .ac-shell .ac-content .at-head-actions .admin-btn[aria-label='Refresh'] {
+    width: var(--ad-h-control);
+    padding: 0;
+  }
+
+  /* Unread on "Message": the same green count as the chat list beside it. */
+  .ac-shell .ac-content .at-badge {
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #fff);
+  }
+
+  /* Team chat column. */
+  .ac-shell .ac-content .tc-list-head strong {
+    font-size: var(--ad-fs-card-title);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .tc-icon-btn {
+    width: 32px;
+    height: 32px;
+    margin-left: -4px;
+    color: var(--ad-ink-body);
+  }
+
+  .ac-shell .ac-content .tc-icon-btn:hover {
+    background: var(--ad-fill);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .tc-chat-last {
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .tc-earlier {
+    padding: 6px 14px;
+    border: 0;
+    background: var(--ad-fill);
+    color: var(--ad-ink-body);
+    font-weight: 600;
+  }
+
+  .ac-shell .ac-content .tc-earlier:hover {
+    background: var(--ad-fill-hover);
+  }
+
+  .ac-shell .ac-content .tc-quiet {
+    color: var(--ad-ink-muted);
+  }
+
+  /* Beside the chat column the card can get narrow (320-380px chat): when a
+     member's buttons no longer fit beside the details they drop to their own
+     right-aligned row instead of sliding under the chat. */
+  .ac-shell .ac-content .at-member {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .ac-shell .ac-content .at-member-text {
+    flex: 1 1 260px;
+  }
+
+  .ac-shell .ac-content .at-member-actions {
+    margin-left: auto;
+  }
+
+  /* Add-admin / end-date dialog: portaled to <body>, outside .ac-shell, so
+     it is scoped by its own backdrop class. Same chrome as ConfirmDialog,
+     soft fields and buttons as in the shared sheet. */
+  .at-backdrop {
+    background: rgba(15, 23, 42, 0.45);
+  }
+
+  .at-backdrop .at-dialog {
+    padding: 24px;
+    border-radius: 14px;
+    box-shadow: var(--elev-popover, 0 24px 60px rgba(0, 0, 0, 0.25));
+  }
+
+  .at-backdrop .at-dialog-head {
+    margin-bottom: 16px;
+  }
+
+  .at-backdrop .at-dialog-head h2 {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .at-backdrop .at-icon-btn {
+    width: 36px;
+    height: 36px;
+    margin-right: -6px;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-700, #374151);
+  }
+
+  .at-backdrop .at-icon-btn:hover {
+    background: var(--t-neutral-200, #e5e7eb);
+  }
+
+  .at-backdrop .at-form {
+    gap: 16px;
+  }
+
+  .at-backdrop .admin-input {
+    height: 40px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background-color: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-800, #1f2937);
+    font-size: 14px;
+    line-height: 1.4;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .at-backdrop .admin-input:hover:not(:focus):not(:disabled) {
+    background-color: var(--t-neutral-150, #eef0f3);
+  }
+
+  .at-backdrop .admin-input:focus {
+    border-color: transparent;
+    outline: 2px solid transparent;
+    background-color: var(--t-neutral-0, #fff);
+    box-shadow: 0 0 0 2px var(--t-primary-600, #047857);
+  }
+
+  .at-backdrop .admin-input::placeholder {
+    color: var(--t-neutral-500, #636b78);
+    opacity: 1;
+  }
+
+  .at-backdrop .at-code .admin-input {
+    font-size: 18px;
+  }
+
+  .at-backdrop .admin-btn {
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-700, #374151);
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  }
+
+  .at-backdrop .admin-btn:hover:not(:disabled) {
+    border-color: transparent;
+    background: var(--t-neutral-200, #e5e7eb);
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .at-backdrop .admin-btn.admin-btn-primary {
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #fff);
+  }
+
+  .at-backdrop .admin-btn.admin-btn-primary:hover:not(:disabled) {
+    background: var(--t-primary-700, #03684c);
+    color: var(--t-on-primary, #fff);
+  }
+
+  .at-backdrop .admin-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .at-backdrop .at-found {
+    margin-top: 16px;
+    border-radius: 10px;
+  }
+
+  /* Access choices: soft tiles; the chosen one gets the brand inset ring. */
+  .at-backdrop .at-kind {
+    padding: 12px 14px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--t-neutral-50, #f9fafb);
+    transition: background-color 0.15s ease;
+  }
+
+  .at-backdrop .at-kind:hover {
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .at-backdrop .at-kind.is-on {
+    background: var(--t-primary-50, #ecfdf5);
+    box-shadow: inset 0 0 0 1.5px var(--t-primary-600, #047857);
+  }
+
+  .at-backdrop .at-kind:has(input:focus-visible) {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: 2px;
+  }
+
+  .at-backdrop .at-actions {
+    margin-top: 4px;
+  }
+
+  /* ══ 5. Settings ═══════════════════════════════════════════════════════ */
+
+  .ac-shell .ac-content .st-nav,
+  .ac-shell .ac-content .st-panel {
+    border-radius: var(--ad-r-card);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  .ac-shell .ac-content .st-panel-foot {
+    border-radius: 0 0 var(--ad-r-card) var(--ad-r-card);
+    background: var(--ad-band);
+  }
+
+  .ac-shell .ac-content .st-nav-item {
+    border-radius: var(--ad-r-compact);
+    transition: background-color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .st-nav-item:hover {
+    background: var(--ad-band);
+  }
+
+  .ac-shell .ac-content .st-nav-item.is-active {
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content .st-nav-item:focus-visible {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: -2px;
+  }
+
+  /* Panel head on the card's 24px inset; hairline rules. */
+  .ac-shell .ac-content .st-panel-head {
+    align-items: center;
+    border-bottom-color: var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .st-panel-head h2 {
+    font-size: 18px;
+    line-height: 1.3;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .st-panel-head p,
+  .ac-shell .ac-content .st-row-label span {
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .st-row {
+    border-bottom-color: var(--ad-divider);
+  }
+
+  /* Fields: the 40px form field of the shared spec, 2px focus ring. */
+  .ac-shell .ac-content input.st-input {
+    min-height: var(--ad-h-field);
+    padding: 9px 12px;
+    line-height: 20px;
+  }
+
+  .ac-shell .ac-content .st-input {
+    border-radius: var(--ad-r-control);
+  }
+
+  .ac-shell .ac-content .st-input:hover:not(:disabled):not(:focus) {
+    background: var(--ad-field-hover);
+  }
+
+  .ac-shell .ac-content .st-input:focus {
+    outline: 2px solid transparent;
+    background: var(--ad-surface);
+    box-shadow: var(--ad-ring);
+  }
+
+  .ac-shell .ac-content .st-input::placeholder {
+    color: var(--ad-ink-muted);
+    opacity: 1;
+  }
+
+  /* A row whose control starts with a field: the label lines up with the
+     field's text, not its top edge. */
+  .ac-shell .ac-content .st-row:has(> .st-row-control > .st-input:first-child) > .st-row-label {
+    padding-top: 10px;
+  }
+
+  .ac-shell .ac-content .st-counter {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Buttons: 36px toolbar height, 10px radius. */
+  .ac-shell .ac-content .st-btn {
+    min-height: var(--ad-h-control);
+    padding: 0 16px;
+    border-radius: var(--ad-r-control);
+    line-height: 20px;
+  }
+
+  .ac-shell .ac-content .st-btn.st-btn-text {
+    padding: 0 12px;
+  }
+
+  .ac-shell .ac-content .st-panel-head .st-btn.st-btn-text {
+    margin-right: -12px;
+    color: var(--t-primary-700, #03684c);
+  }
+
+  .ac-shell .ac-content .st-panel-head .st-btn.st-btn-text:hover {
+    background: var(--t-primary-50, #ecfdf5);
+  }
+
+  /* Removing the logo is destructive: a red cue on hover. */
+  .ac-shell .ac-content .st-logo .st-btn.st-btn-text:hover:not(:disabled) {
+    background: var(--t-danger-50, #fef2f2);
+    color: var(--t-danger-700, #b91c1c);
+  }
+
+  .ac-shell .ac-content .st-gallery-add,
+  .ac-shell .ac-content .st-gallery-item {
+    border-radius: var(--ad-r-control);
+  }
+
+  .ac-shell .ac-content .st-callout {
+    border-radius: var(--ad-r-control);
+  }
+
+  /* Super admin "Homepage categories": soft tiles, inset ring when chosen. */
+  .ac-shell .ac-content .st-choice {
+    border: 0;
+    background: var(--ad-band);
+  }
+
+  .ac-shell .ac-content .st-choice.is-on {
+    background: var(--t-primary-50, #ecfdf5);
+    box-shadow: inset 0 0 0 1.5px var(--t-primary-600, #047857);
+  }
+
+  .ac-shell .ac-content .st-status {
+    padding: 3px 9px;
+    font-size: var(--ad-fs-badge);
+    font-weight: 600;
+    line-height: 16px;
+  }
+
+  /* The section menu sticks below the 56px top bar, not under it. */
+  @media (min-width: 961px) {
+    .ac-shell .ac-content .st-nav {
+      top: 72px;
+    }
+  }
+}

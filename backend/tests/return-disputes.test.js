@@ -37,14 +37,26 @@ test('a rejected return goes to the town admin, who can decide for the buyer', a
   assert.match(decided.body.data.disputeResolution, /For the buyer/);
   const told = await h.prisma.notification.count({ where: { userId: buyer.id, type: 'RETURN_DISPUTE_RESOLVED' } });
   assert.equal(told, 1);
+  // The ruling is in the audit trail, under the shop's town.
+  const logged = await h.prisma.auditLog.findFirst({ where: { action: 'RESOLVE_RETURN_DISPUTE', entityId: id } });
+  assert.equal(logged.userId, admin.id);
+  assert.equal(logged.municipalityId, store.municipalityId);
+  assert.equal(logged.details.decision, 'BUYER');
+  assert.equal(logged.details.approvedAmount, 80);
+  assert.equal(logged.details.note, 'The photos show damage.');
 });
 
 test('the admin can keep the rejection, which closes the return', async () => {
-  const { id, buyer } = await rejectedReturn();
+  const { id, buyer, store } = await rejectedReturn();
   await h.api('POST', `/returns/${id}/dispute`, { token: h.token(buyer), body: { reason: 'It was not what the photos showed.' } });
   const admin = await h.user('SUPER_ADMIN');
   const decided = await h.api('POST', `/returns/${id}/resolve-dispute`, { token: h.token(admin), body: { decision: 'SELLER', note: 'The item matches the listing.' } });
   assert.equal(decided.body.data.status, 'CLOSED');
+  // A super admin's ruling still shows on that town's audit log.
+  const logged = await h.prisma.auditLog.findFirst({ where: { action: 'RESOLVE_RETURN_DISPUTE', entityId: id } });
+  assert.equal(logged.municipalityId, store.municipalityId);
+  assert.equal(logged.details.decision, 'SELLER');
+  assert.equal(logged.details.approvedAmount, null);
 });
 
 test('a rejection cannot be disputed after a week', async () => {

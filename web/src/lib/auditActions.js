@@ -1,5 +1,7 @@
 // Human-readable names for audit log action codes.
 export const ACTION_LABELS = {
+  RESOLVE_RETURN_DISPUTE: 'Decided return dispute',
+  REMOVE_REVIEW: 'Removed review',
   APPROVE_SELLER: 'Approved seller',
   REJECT_SELLER: 'Rejected seller',
   SUSPEND_USER: 'Suspended user',

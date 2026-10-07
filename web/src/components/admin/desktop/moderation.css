@@ -1,0 +1,484 @@
+/* Admin panel on computers: Reviews, Returns, Audit logs, Notifications.
+   Desktop only (min-width: 769px) and only inside the admin shell (.ac-shell),
+   on top of the shared AdminDesktop.css. Phones keep their own styles.
+
+   These pages have no page class, so rules hang off their own markup:
+   .am-table (Reviews, Returns), the Audit Logs filter card (the card that
+   holds the "Filter by action" select) and the card after it, the
+   notification list card, and the notification detail page's .notif-*
+   classes (Notifications.css is shared with buyers and sellers, so every
+   rule here stays under .ac-shell). Inline styles on Audit Logs are beaten
+   with !important only where a value must change. */
+
+@media (min-width: 769px) {
+
+  /* ── Reviews and Returns tables ───────────────────────────────────── */
+
+  /* The comment reads at the table's size and uses the room it has. */
+  .ac-shell .ac-content .am-table .am-comment {
+    max-width: 420px;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .ac-shell .ac-content .am-table .am-muted {
+    font-size: 13.5px;
+  }
+
+  /* The column keeps room for a usual product name and its link icon, so
+     the icon doesn't drop onto a line of its own; a long name still
+     wraps, without leaving one word alone on its last line. */
+  .ac-shell .ac-content .am-table td[data-label='Product'] {
+    text-wrap: pretty;
+  }
+
+  @media (min-width: 1280px) {
+    .ac-shell .ac-content .am-table td[data-label='Product'] {
+      min-width: 204px;
+    }
+  }
+
+  .ac-shell .ac-content .am-table td[data-label='Product'] .admin-link > svg {
+    vertical-align: -1px;
+  }
+
+  /* Request number: the row's id, not its loudest text. */
+  .ac-shell .ac-content .am-table .am-mono {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--t-neutral-800, #1f2937);
+  }
+
+  .ac-shell .ac-content .am-table .am-sub {
+    margin-top: 2px;
+    font-size: var(--ad-fs-meta);
+    line-height: 1.45;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .am-table .am-amount {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Names stay on one line once the table has the room: from 1280px on
+     Reviews (7 columns), from 1400px on Returns (8 columns). */
+  @media (min-width: 1280px) {
+    .ac-shell .ac-content .am-table td[data-label='Store']:has(+ td[data-label='Reviewer']),
+    .ac-shell .ac-content .am-table td[data-label='Reviewer'] {
+      white-space: nowrap;
+    }
+  }
+
+  @media (min-width: 1400px) {
+    .ac-shell .ac-content .am-table td:is([data-label='Buyer'], [data-label='Store'], [data-label='Reason']) {
+      white-space: nowrap;
+    }
+  }
+
+  /* Tablets and small laptops: tighter inner cells so the 8-column
+     Returns table fits without sideways scrolling (the outer cells keep
+     the card's 20px inset). */
+  @media (max-width: 1279px) {
+    .ac-shell .ac-content .am-table tr > :is(th, td):not(:first-child):not(:last-child) {
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+  }
+
+  /* Returns: the explainer is the card's subtitle, under its title and on
+     its inset, not a centred banner with its own rule. (.am-note is also
+     a Messages class; the sibling selector only matches here.) */
+  .ac-shell .ac-content .admin-card-header + .am-note {
+    display: block;
+    margin: -10px 0 0;
+    padding: 0 var(--ad-inset) 16px;
+    border-bottom: 0;
+    color: var(--ad-ink-muted);
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  /* ── Return drawer ────────────────────────────────────────────────── */
+
+  /* Items: soft tiles, not framed boxes, and not clickable-looking. */
+  /* .am-item is also a Messages class (pointer, hover tint, bottom rule,
+     top alignment); '.am-items >' only matches the Returns drawer. */
+  .ac-shell .ac-content .am-items > .am-item {
+    align-items: center;
+    width: auto;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-band);
+    cursor: default;
+  }
+
+  .ac-shell .ac-content .am-items > .am-item:hover {
+    background: var(--ad-band);
+  }
+
+  .ac-shell .ac-content .am-items > .am-item > :is(img, .am-item-ph) {
+    border-radius: var(--ad-r-compact);
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content .am-items > .am-item > div {
+    gap: 2px;
+    font-size: 13.5px;
+  }
+
+  .ac-shell .ac-content .am-items > .am-item strong {
+    font-weight: 600;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .am-items > .am-item small {
+    font-size: var(--ad-fs-meta);
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .am-photos img {
+    border: 0;
+    border-radius: var(--ad-r-compact);
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content .am-history {
+    border-left-color: var(--t-primary-100, #d1fae5);
+  }
+
+  .ac-shell .ac-content .am-history li {
+    font-size: var(--ad-fs-meta);
+  }
+
+  /* Dispute verdict: white choices and fields on the amber panel, a
+     brand ring for the picked choice and for focus. */
+  .ac-shell .ac-content .am-dispute {
+    padding: 16px;
+    border-radius: var(--ad-r-card);
+  }
+
+  .ac-shell .ac-content .am-verdict-choice label {
+    min-height: var(--ad-h-control);
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-surface);
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .ac-shell .ac-content .am-verdict-choice label.is-on {
+    border-color: transparent;
+    background: var(--t-primary-50, #ecfdf5);
+    box-shadow: inset 0 0 0 1.5px var(--t-primary-600, #047857);
+  }
+
+  .ac-shell .ac-content .am-verdict-choice label:has(input:focus-visible) {
+    box-shadow: var(--ad-ring);
+  }
+
+  .ac-shell .ac-content .am-verdict :is(input[type='number'], textarea) {
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-surface);
+    color: var(--t-neutral-800, #1f2937);
+    font-size: var(--ad-fs-body);
+    transition: box-shadow 0.15s ease;
+  }
+
+  .ac-shell .ac-content .am-verdict input[type='number'] {
+    height: var(--ad-h-control);
+  }
+
+  .ac-shell .ac-content .am-verdict textarea {
+    min-height: 88px;
+    padding: 10px 12px;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .ac-shell .ac-content .am-verdict :is(input[type='number'], textarea):focus {
+    border-color: transparent;
+    outline: 2px solid transparent;
+    box-shadow: var(--ad-ring);
+  }
+
+  .ac-shell .ac-content .am-verdict textarea::placeholder {
+    color: var(--ad-ink-muted);
+    opacity: 1;
+  }
+
+  /* ── Audit Logs ───────────────────────────────────────────────────────
+     F = the filter card, R = the results card right after it. */
+
+  /* F: a slim filter bar. "Filter" is a quiet label, the controls are the
+     36px toolbar controls on one row, Apply keeps its label centred. */
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) > .admin-card-header {
+    min-height: 0;
+    padding: 16px var(--ad-inset) 0;
+  }
+
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) .admin-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .admin-card > div:has(> select[aria-label='Filter by action']) {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ad-space-2) !important;
+    padding: 10px var(--ad-inset) var(--ad-inset) !important;
+  }
+
+  .ac-shell .ac-content .admin-card > div:has(> select[aria-label='Filter by action']) > .admin-input {
+    flex: 1 1 140px;
+    width: auto;
+    min-width: 0;
+    height: var(--ad-h-control);
+    min-height: var(--ad-h-control);
+  }
+
+  .ac-shell .ac-content .admin-card > div:has(> select[aria-label='Filter by action']) > .admin-btn {
+    flex: 0 0 auto;
+    min-width: 96px;
+  }
+
+  /* R: one text size per row. The inline 11-12px sizes go to 13px, the
+     record id sits beside its type, details get a little more room. */
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td {
+    font-size: 13px !important;
+    vertical-align: middle;
+  }
+
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:first-child {
+    color: var(--ad-ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) {
+    white-space: nowrap;
+  }
+
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) > div {
+    display: inline;
+    margin-left: 6px;
+    font-size: var(--ad-fs-meta) !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Narrower screens: the id goes back under its type so Details keeps
+     its room. */
+  @media (max-width: 1279px) {
+    .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) {
+      white-space: normal;
+    }
+
+    .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(4) > div {
+      display: block;
+      margin-left: 0;
+    }
+  }
+
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(5) {
+    max-width: 360px !important;
+    font-size: var(--ad-fs-meta) !important;
+    line-height: 1.5;
+  }
+
+  /* The reason / note line reads at row size; the key: value pairs under
+     it stay one step smaller. */
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-table td:nth-child(5) > div:has(> strong) {
+    font-size: 13px !important;
+  }
+
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card .admin-badge {
+    font-size: var(--ad-fs-badge) !important;
+    white-space: nowrap;
+  }
+
+  /* R's pager: the same bar as .admin-pagination on Reviews and Returns. */
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) {
+    align-items: center;
+    gap: 12px !important;
+    margin-top: 0 !important;
+    padding: 14px var(--ad-inset) 16px;
+    border-top: 1px solid var(--ad-divider);
+    color: var(--ad-ink-muted);
+    font-size: var(--ad-fs-compact);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > span {
+    padding: 0 !important;
+  }
+
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > .admin-btn {
+    min-height: var(--ad-h-compact);
+    padding: 0 12px;
+    border-radius: var(--ad-r-compact);
+    font-size: var(--ad-fs-compact);
+  }
+
+  .ac-shell .ac-content .admin-card:has(> div > select[aria-label='Filter by action']) + .admin-card > div:last-child:has(> button.admin-btn) > .admin-btn:disabled {
+    opacity: 0.45;
+  }
+
+  /* ── Notifications list ───────────────────────────────────────────── */
+
+  .ac-shell .ac-content .admin-notif-top {
+    gap: 12px;
+  }
+
+  .ac-shell .ac-content .admin-notif-title {
+    line-height: 1.45;
+    color: var(--ad-ink);
+  }
+
+  /* "Load more": a footer bar on the card's inset, like a pager. */
+  .ac-shell .ac-content .admin-card:has(> .admin-notif-list) > div:last-child:has(> .admin-btn) {
+    padding: 14px var(--ad-inset) 16px !important;
+    border-top: 1px solid var(--ad-divider);
+  }
+
+  /* ── Notification detail (/admin/notifications/:id) ─────────────── */
+
+  /* Back sits on the grey page like a page-header button: the next grey
+     step, 36px, no floating shadow; 20px to the card like every header. */
+  .ac-shell .ac-content .notif-detail-back {
+    gap: 6px;
+    min-height: var(--ad-h-control);
+    margin-bottom: var(--ad-gap-header);
+    padding: 0 14px 0 12px;
+    border: 0;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill-page);
+    box-shadow: none;
+    color: var(--ad-ink-body);
+    font-size: var(--ad-fs-control);
+    font-weight: 600;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .notif-detail-back:hover {
+    background: var(--ad-fill-page-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .notif-detail-card {
+    padding: 24px var(--ad-space-6) var(--ad-space-6);
+    border-radius: var(--ad-r-card);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  .ac-shell .ac-content .notif-detail-head {
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .ac-shell .ac-content .notif-detail-icon {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-600, #047857);
+  }
+
+  .ac-shell .ac-content .notif-detail-head h1 {
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .notif-detail-meta {
+    font-size: var(--ad-fs-meta);
+    color: var(--ad-ink-muted);
+  }
+
+  /* A long announcement keeps a readable line length. */
+  .ac-shell .ac-content .notif-detail-body {
+    max-width: 72ch;
+    margin: 0 0 20px;
+  }
+
+  .ac-shell .ac-content .notif-detail-body:last-child {
+    margin-bottom: 0;
+  }
+
+  /* "Open" is the page's onward action: the filled primary button. */
+  .ac-shell .ac-content .notif-detail-card .notif-show-all-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--ad-h-control);
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-control);
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #ffffff);
+    font-size: var(--ad-fs-control);
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .notif-detail-card .notif-show-all-btn:hover {
+    background: var(--t-primary-700, #03684c);
+    color: var(--t-on-primary, #ffffff);
+  }
+
+  /* "Not available": a white card like every other admin empty state. */
+  .ac-shell .ac-content .notif-empty {
+    padding: 48px 24px 56px;
+    border-radius: var(--ad-r-card);
+    background: var(--ad-surface);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  .ac-shell .ac-content .notif-empty svg {
+    margin-bottom: 16px;
+    opacity: 1;
+  }
+
+  .ac-shell .ac-content .notif-empty h2 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--t-neutral-800, #1f2937);
+  }
+
+  .ac-shell .ac-content .notif-empty p {
+    margin: 0 auto 20px;
+    max-width: 46ch;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .notif-empty .notif-show-all-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--ad-h-control);
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill);
+    color: var(--ad-ink-body);
+    font-size: var(--ad-fs-control);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .notif-empty .notif-show-all-btn:hover {
+    background: var(--ad-fill-hover);
+    color: var(--ad-ink);
+  }
+}

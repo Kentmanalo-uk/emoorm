@@ -112,7 +112,9 @@ axiosInstance.interceptors.response.use(
     // pause grows and varies a little, so a crowd turned away together does
     // not come back together.
     const status = error.response?.status;
-    const retryable = [429, 502, 503, 504].includes(status) || (!error.response && error.code !== 'ECONNABORTED');
+    // A request the page cancelled itself (it moved on) is never retried.
+    const retryable = !axios.isCancel(error)
+      && ([429, 502, 503, 504].includes(status) || (!error.response && error.code !== 'ECONNABORTED'));
     const tries = originalRequest?._transientTries || 0;
     if (retryable && originalRequest && tries < 2
       && (originalRequest.method || 'get').toLowerCase() === 'get') {

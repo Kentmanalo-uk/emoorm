@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
 
 /**
@@ -68,6 +69,31 @@ const findOpenCase = ({ userId, municipalityId, topic }) =>
   });
 
 /**
+ * The newest message of each of these cases, in one query: a Map of case id
+ * to message, shaped like LAST_MESSAGE. Prisma cannot limit an include per
+ * parent, so `take: 1` on a list loaded every message of every listed case.
+ */
+const lastMessages = async (ids) => {
+  const byCase = new Map();
+  if (ids.length === 0) return byCase;
+  const rows = await prisma.$queryRaw`
+    SELECT m.id, m.body, m.sender_id AS senderId, m.created_at AS createdAt, m.conversation_id AS conversationId
+    FROM support_messages m
+    JOIN (
+      SELECT conversation_id, MAX(created_at) AS newest
+      FROM support_messages
+      WHERE conversation_id IN (${Prisma.join(ids)})
+      GROUP BY conversation_id
+    ) t ON t.conversation_id = m.conversation_id AND t.newest = m.created_at
+    ORDER BY m.id DESC`;
+  for (const { conversationId, ...message } of rows) {
+    // Two messages in the same millisecond: either is the newest; keep one.
+    if (!byCase.has(conversationId)) byCase.set(conversationId, message);
+  }
+  return byCase;
+};
+
+/**
  * Paginated case list.
  * @param {Object} options - { userId, municipalityId, status, category, search, page, pageSize }
  * @returns {Promise<{rows: Array, total: Number, page: Number, pageSize: Number}>}
@@ -97,7 +123,7 @@ const findMany = async ({
   const [rows, total] = await Promise.all([
     prisma.supportConversation.findMany({
       where,
-      include: { ...CONVERSATION_INCLUDE, messages: LAST_MESSAGE },
+      include: CONVERSATION_INCLUDE,
       orderBy: [{ lastMessageAt: 'desc' }, { createdAt: 'desc' }],
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -105,7 +131,14 @@ const findMany = async ({
     prisma.supportConversation.count({ where }),
   ]);
 
-  return { rows, total, page, pageSize };
+  // Each case carries `messages: [last]`, as the single-case reads do.
+  const last = await lastMessages(rows.map((r) => r.id));
+  return {
+    rows: rows.map((r) => ({ ...r, messages: last.has(r.id) ? [last.get(r.id)] : [] })),
+    total,
+    page,
+    pageSize,
+  };
 };
 
 /** Thread messages, oldest first, newest page last. */
@@ -163,15 +196,31 @@ const markRead = (conversationId, side, at) => prisma.supportConversation.update
   data: side === 'user' ? { userLastReadAt: at } : { adminLastReadAt: at },
 });
 
-const countUnreadFor = async ({ conversation, side }) => {
+/** Messages from the other side of a case that `side` has not read yet. */
+const unreadWhere = (conversation, side) => {
   const readAt = side === 'user' ? conversation.userLastReadAt : conversation.adminLastReadAt;
-  return prisma.supportMessage.count({
-    where: {
-      conversationId: conversation.id,
-      senderId: side === 'user' ? { not: conversation.userId } : conversation.userId,
-      ...(readAt ? { createdAt: { gt: readAt } } : {}),
-    },
+  return {
+    conversationId: conversation.id,
+    senderId: side === 'user' ? { not: conversation.userId } : conversation.userId,
+    ...(readAt ? { createdAt: { gt: readAt } } : {}),
+  };
+};
+
+const countUnreadFor = async ({ conversation, side }) =>
+  prisma.supportMessage.count({ where: unreadWhere(conversation, side) });
+
+/**
+ * Unread counts for a page of cases in one query (the inbox used to run one
+ * count per row): Map of case id to count, absent when nothing is unread.
+ */
+const countUnreadForMany = async (conversations, side) => {
+  if (conversations.length === 0) return new Map();
+  const groups = await prisma.supportMessage.groupBy({
+    by: ['conversationId'],
+    where: { OR: conversations.map((c) => unreadWhere(c, side)) },
+    _count: { _all: true },
   });
+  return new Map(groups.map((g) => [g.conversationId, g._count._all]));
 };
 
 // The municipality's assigned admin, falling back to any active admin of that municipality.
@@ -207,5 +256,6 @@ module.exports = {
   setStatus,
   setRating,
   countUnreadFor,
+  countUnreadForMany,
   findMunicipalAdmin,
 };

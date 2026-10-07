@@ -15,6 +15,7 @@ import { formatRelativeTime } from '../lib/time';
 import { actionLabel } from '../lib/auditActions';
 import useAuthStore from '../store/authStore';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import { useAdminAttention, useRefreshAdminShell } from '../hooks/useAdminShellData';
 import AdminPhoneHome from '../components/admin/AdminPhoneHome';
 import '../components/admin/AdminLayout.css';
 import './AdminDashboard.css';
@@ -302,8 +303,12 @@ export default function AdminDashboard() {
 
   const [analytics, setAnalytics] = useState(null);
   const [analyticsError, setAnalyticsError] = useState(null);
-  const [attention, setAttention] = useState(null);
-  const [attentionFailed, setAttentionFailed] = useState(false);
+  // The waiting counts are the shell's own (useAdminAttention): one request
+  // serves the sidebar's badges and this page.
+  const attentionQuery = useAdminAttention();
+  const attention = attentionQuery.data ?? null;
+  const attentionFailed = attentionQuery.isError && !attentionQuery.data;
+  const refreshShell = useRefreshAdminShell();
   const [health, setHealth] = useState(null);
   const [activity, setActivity] = useState(null);
   const [reports, setReports] = useState(null);
@@ -341,16 +346,16 @@ export default function AdminDashboard() {
       (res) => { if (!cancelled) setter(Array.isArray(res.data) ? res.data : fallback); },
       () => { if (!cancelled) setter(fallback); },
     ];
-    axios.get('/moderation/attention')
-      .then((res) => { if (!cancelled) { setAttention(res.data || []); setAttentionFailed(false); } })
-      .catch(() => { if (!cancelled) setAttentionFailed(true); });
     axios.get('/moderation/store-health', { params: { limit: 6 } }).then(...done(setHealth, []));
     axios.get('/audit-logs', { params: { pageSize: 8 } }).then(...done(setActivity, []));
     axios.get('/reports', { params: { pageSize: 5, status: 'PENDING' } }).then(...done(setReports, []));
     return () => { cancelled = true; };
   }, [refreshKey]);
 
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const refresh = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+    refreshShell('attention');
+  }, [refreshShell]);
 
   const kpis = analytics?.kpis || {};
   const pendingSellers = analytics?.recent?.sellerApplications ?? null;
@@ -417,7 +422,8 @@ export default function AdminDashboard() {
       const key = kind === 'seller' ? 'sellerApplications' : 'pendingProducts';
       return { ...prev, recent: { ...prev.recent, [key]: prev.recent[key].filter((x) => x.id !== id) } };
     });
-    axios.get('/moderation/attention').then((res) => setAttention(res.data || [])).catch(() => {});
+    // The banner here and the sidebar's badges count again together.
+    refreshShell('attention');
   };
 
   const approve = async (kind, id, name) => {

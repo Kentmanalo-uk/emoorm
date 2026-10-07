@@ -1,0 +1,1362 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Admin desktop design system (computers and tablets, 769px and wider)
+
+   One look for every admin page above phone width: surfaces are separated
+   by fill and a soft shadow, never by 1px outlines; controls are soft-filled
+   like the phone app; one spacing scale, one control height per context,
+   one radius per size.
+
+   How this sheet stays safe
+   - Every rule sits inside @media (min-width: 769px). Phones (768px and
+     narrower, html.admin-phone) never match a single rule here.
+   - Every rule is scoped under .ac-shell, which only AdminLayout renders, so
+     buyer and Seller Center pages that share class names are untouched.
+   - Content rules start with ".ac-shell .ac-content": Vite injects page CSS
+     in chunk order, so these rules win on specificity, never on file order.
+   - Inline styles are overridden with !important only where a page sets an
+     inline value that breaks the shared rhythm (row-action gaps, count
+     margins).
+
+   The scale (tokens below): spacing 4/8/12/16/20/24/32/40; header to
+   content 20px; card to card and grid gutters 16px; inside a card 20px.
+   Controls 36px (toolbar), 32px (rows, lists, pagination), 40px (form
+   fields). Radius 10px for 36-40px controls, 8px for 32px controls, 12px
+   for cards, 999px for pills.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 769px) {
+
+  /* ── 0. Tokens ────────────────────────────────────────────────────────
+     Page and group sheets read these inside .ac-shell so every page uses
+     the same numbers. */
+  .ac-shell {
+    --ad-space-1: 4px;
+    --ad-space-2: 8px;
+    --ad-space-3: 12px;
+    --ad-space-4: 16px;
+    --ad-space-5: 20px;
+    --ad-space-6: 24px;
+    --ad-space-8: 32px;
+    --ad-space-10: 40px;
+    --ad-gap-header: 20px;
+    --ad-gap-stack: 16px;
+    --ad-inset: 20px;
+
+    --ad-h-control: 36px;
+    --ad-h-compact: 32px;
+    --ad-h-field: 40px;
+
+    --ad-r-card: 12px;
+    --ad-r-control: 10px;
+    --ad-r-compact: 8px;
+    --ad-r-chip: 7px;
+    --ad-r-dialog: 14px;
+    --ad-r-pill: 999px;
+
+    --ad-surface: var(--t-neutral-0, #ffffff);
+    --ad-page: var(--t-neutral-100, #f3f4f6);
+    --ad-band: var(--t-neutral-50, #f9fafb);
+    --ad-fill: var(--t-neutral-100, #f3f4f6);
+    --ad-fill-hover: var(--t-neutral-200, #e5e7eb);
+    --ad-field-hover: var(--t-neutral-150, #eef0f3);
+    --ad-fill-page: var(--t-neutral-200, #e5e7eb);
+    --ad-fill-page-hover: var(--t-neutral-300, #d1d5db);
+    --ad-divider: var(--rule-hairline, rgba(15, 23, 42, 0.05));
+
+    --ad-ink: var(--t-neutral-900, #111827);
+    --ad-ink-body: var(--t-neutral-700, #374151);
+    --ad-ink-soft: var(--t-neutral-600, #4b5563);
+    --ad-ink-muted: var(--t-neutral-500, #636b78);
+
+    --ad-ring: 0 0 0 2px var(--t-primary-600, #047857);
+    --ad-shadow-card: var(--elev-card, rgba(149, 157, 165, 0.06) 0 8px 24px);
+    --ad-shadow-chip: 0 1px 2px rgba(15, 23, 42, 0.08);
+
+    --ad-fs-title: 24px;
+    --ad-fs-card-title: 17.5px;
+    --ad-fs-body: 14px;
+    --ad-fs-control: 13.5px;
+    --ad-fs-compact: 13px;
+    --ad-fs-meta: 12.5px;
+    --ad-fs-th: 12px;
+    --ad-fs-badge: 11.5px;
+  }
+
+  /* ── 1. Shell ─────────────────────────────────────────────────────── */
+
+  .ac-shell .ac-topbar {
+    border-bottom-color: var(--ad-divider);
+  }
+
+  .ac-shell .ac-collapse-btn {
+    border-color: transparent;
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-collapse-btn:hover {
+    border-color: transparent;
+    background: var(--ad-fill-hover);
+  }
+
+  /* Top-bar search: a soft pill on the white bar. The open results card
+     keeps its own connected look (ShellSearch.css). */
+  .ac-shell .ac-topbar .shell-search:not(.is-open):not(.is-closing) .shell-search-field {
+    border-color: transparent;
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-topbar .shell-search:not(.is-open):not(.is-closing) .shell-search-field:hover {
+    border-color: transparent;
+    background: var(--ad-field-hover);
+  }
+
+  .ac-shell .ac-topbar .shell-search:not(.is-open):not(.is-closing) .shell-search-field:focus-within {
+    border-color: transparent;
+    background: var(--ad-surface);
+    box-shadow: var(--ad-ring);
+  }
+
+  .ac-shell .ac-topbar .shell-search-input::placeholder {
+    color: var(--ad-ink-muted);
+  }
+
+  /* ── 2. Page header ───────────────────────────────────────────────────
+     Title on a 36px line, so the page's controls (36px) sit on the title
+     line; subtitle right under it; 20px to the first block. */
+
+  .ac-shell .ac-content :is(.admin-page-header, .dash-header, .an-page-header) {
+    align-items: flex-start;
+    gap: 12px 16px;
+  }
+
+  .ac-shell .ac-content .admin-page-header {
+    margin-bottom: var(--ad-gap-header);
+  }
+
+  /* Flex-column pages (16px gap) add 4px to reach the same 20px. */
+  .ac-shell .ac-content :is(.dash > .dash-header, .an-page > .an-page-header, .st > .st-header) {
+    margin-bottom: 4px;
+  }
+
+  .ac-shell .ac-content :is(.admin-page-title, .an-page-title) {
+    margin: 0;
+    font-size: var(--ad-fs-title);
+    font-weight: 500;
+    line-height: 36px;
+    letter-spacing: -0.005em;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content :is(.admin-page-sub, .dash-subtitle, .an-page-sub, .st-header > p) {
+    margin: 0;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content :is(.dash-controls, .an-actions, .at-head-actions) {
+    gap: var(--ad-space-2);
+  }
+
+  /* ── 3. Cards ─────────────────────────────────────────────────────── */
+
+  .ac-shell .ac-content .admin-card {
+    margin-bottom: var(--ad-gap-stack);
+    border: 0;
+    border-radius: var(--ad-r-card);
+    background: var(--ad-surface);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  .ac-shell .ac-content .admin-card-header {
+    min-height: 68px;
+    padding: 16px var(--ad-inset);
+    gap: 12px 16px;
+  }
+
+  .ac-shell .ac-content .admin-card-title {
+    margin: 0;
+    font-size: var(--ad-fs-card-title);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--ad-ink);
+  }
+
+  /* "Products (8)": the count always sits 8px after the title. */
+  .ac-shell .ac-content .admin-card-title:has(> span) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--ad-space-2);
+  }
+
+  .ac-shell .ac-content .admin-card-title > span {
+    margin-left: 0 !important;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--ad-ink-muted);
+  }
+
+  /* One gutter for every grid of cards and tiles. */
+  .ac-shell .ac-content :is(.dash-stats, .an-kpi-grid, .dash-grid, .an-grid-2, .an-grid-3, .admin-stats-row) {
+    gap: var(--ad-gap-stack);
+  }
+
+  /* ── 4. Toolbar and fields ────────────────────────────────────────────
+     Soft fill, no border; hover one step darker; focus turns the field
+     white with a 2px brand ring. The transparent outline keeps a visible
+     edge in Windows high-contrast mode. */
+
+  .ac-shell .ac-content .admin-toolbar {
+    align-items: center;
+    gap: var(--ad-space-2);
+  }
+
+  .ac-shell .ac-content :is(.admin-input, .admin-select, .admin-search-input) {
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-control);
+    background-color: var(--ad-fill);
+    color: var(--t-neutral-800, #1f2937);
+    font-size: var(--ad-fs-body);
+    line-height: 1.4;
+    box-shadow: none;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  /* Toolbar controls: 36px. */
+  .ac-shell .ac-content :is(.admin-select, .admin-search-input) {
+    height: var(--ad-h-control);
+    min-height: var(--ad-h-control);
+    padding: 0 12px;
+  }
+
+  .ac-shell .ac-content .admin-select {
+    cursor: pointer;
+  }
+
+  .ac-shell .ac-content .admin-search-input {
+    width: 240px;
+  }
+
+  /* Form fields: 40px; inside a toolbar or a card header they are toolbar
+     controls (36px). */
+  .ac-shell .ac-content :is(input, select).admin-input {
+    height: var(--ad-h-field);
+    min-height: var(--ad-h-field);
+    padding: 0 12px;
+  }
+
+  .ac-shell .ac-content :is(.admin-toolbar, .admin-card-header) :is(input, select).admin-input {
+    height: var(--ad-h-control);
+    min-height: var(--ad-h-control);
+  }
+
+  .ac-shell .ac-content textarea.admin-input {
+    height: auto;
+    min-height: 96px;
+    padding: 10px 12px;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .ac-shell .ac-content :is(.admin-input, .admin-select, .admin-search-input):hover:not(:focus):not(:disabled) {
+    background-color: var(--ad-field-hover);
+  }
+
+  .ac-shell .ac-content :is(.admin-input, .admin-select, .admin-search-input):focus {
+    border-color: transparent;
+    outline: 2px solid transparent;
+    outline-offset: 0;
+    background-color: var(--ad-surface);
+    box-shadow: var(--ad-ring);
+  }
+
+  .ac-shell .ac-content :is(.admin-input, .admin-select, .admin-search-input):disabled {
+    background-color: var(--ad-fill);
+    color: var(--t-neutral-400, #9ca3af);
+    cursor: not-allowed;
+  }
+
+  .ac-shell .ac-content :is(.admin-input, .admin-search-input)::placeholder {
+    color: var(--ad-ink-muted);
+    opacity: 1;
+  }
+
+  /* An empty date field shows its dd/mm/yyyy mask as a hint, not a value. */
+  .ac-shell .ac-content input[type='date'].admin-input[value='']:not(:focus)::-webkit-datetime-edit {
+    color: var(--ad-ink-muted);
+  }
+
+  /* Search box built as a form (Reviews): the same 36px soft field. */
+  .ac-shell .ac-content .am-search {
+    height: var(--ad-h-control);
+    min-width: 340px;
+    gap: var(--ad-space-2);
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill);
+    color: var(--ad-ink-muted);
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .ac-shell .ac-content .am-search:hover:not(:focus-within) {
+    background: var(--ad-field-hover);
+  }
+
+  .ac-shell .ac-content .am-search:focus-within {
+    border-color: transparent;
+    background: var(--ad-surface);
+    box-shadow: var(--ad-ring);
+  }
+
+  .ac-shell .ac-content .am-search input {
+    height: 34px;
+    font-size: var(--ad-fs-body);
+    color: var(--t-neutral-800, #1f2937);
+  }
+
+  .ac-shell .ac-content .am-search input::placeholder {
+    color: var(--ad-ink-muted);
+    opacity: 1;
+  }
+
+  /* ── 5. Buttons ───────────────────────────────────────────────────────
+     Primary: filled green. Secondary (gray / blue / outline / plain):
+     soft grey. Danger (red / danger): soft red; solid red is kept for the
+     final confirm inside dialogs. Ghost: no fill until hovered. Keyboard
+     focus keeps the global 2px :focus-visible ring. */
+
+  .ac-shell .ac-content .admin-btn {
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--ad-h-control);
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill);
+    color: var(--ad-ink-body);
+    font-size: var(--ad-fs-control);
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  }
+
+  .ac-shell .ac-content .admin-btn:hover:not(:disabled) {
+    background: var(--ad-fill-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .admin-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .ac-shell .ac-content .admin-btn:is(.admin-btn-gray, .admin-btn-blue, .admin-btn-outline) {
+    border-color: transparent;
+    background: var(--ad-fill);
+    color: var(--ad-ink-body);
+  }
+
+  .ac-shell .ac-content .admin-btn:is(.admin-btn-gray, .admin-btn-blue, .admin-btn-outline):hover:not(:disabled) {
+    border-color: transparent;
+    background: var(--ad-fill-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .admin-btn:is(.admin-btn-primary, .admin-btn-green) {
+    border-color: transparent;
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #ffffff);
+  }
+
+  .ac-shell .ac-content .admin-btn:is(.admin-btn-primary, .admin-btn-green):hover:not(:disabled) {
+    border-color: transparent;
+    background: var(--t-primary-700, #03684c);
+    color: var(--t-on-primary, #ffffff);
+  }
+
+  .ac-shell .ac-content .admin-btn:is(.admin-btn-red, .admin-btn-danger) {
+    border-color: transparent;
+    background: var(--t-danger-50, #fef2f2);
+    color: var(--t-danger-700, #b91c1c);
+  }
+
+  .ac-shell .ac-content .admin-btn:is(.admin-btn-red, .admin-btn-danger):hover:not(:disabled) {
+    border-color: transparent;
+    background: var(--t-danger-100, #fee2e2);
+    color: var(--t-danger-800, #991b1b);
+  }
+
+  .ac-shell .ac-content .admin-btn.admin-btn-ghost {
+    border-color: transparent;
+    background: transparent;
+    color: var(--ad-ink-soft);
+  }
+
+  .ac-shell .ac-content .admin-btn.admin-btn-ghost:hover:not(:disabled) {
+    background: var(--ad-fill);
+    color: var(--ad-ink);
+  }
+
+  /* A secondary button sitting on the grey page (page header) takes the
+     next grey step, or it would vanish into the page. */
+  .ac-shell .ac-content :is(.admin-page-header, .dash-header, .an-page-header) .admin-btn:not(.admin-btn-primary, .admin-btn-green, .admin-btn-red, .admin-btn-danger, .admin-btn-ghost) {
+    background: var(--ad-fill-page);
+  }
+
+  .ac-shell .ac-content :is(.admin-page-header, .dash-header, .an-page-header) .admin-btn:not(.admin-btn-primary, .admin-btn-green, .admin-btn-red, .admin-btn-danger, .admin-btn-ghost):hover:not(:disabled) {
+    background: var(--ad-fill-page-hover);
+  }
+
+  /* Compact (32px) inside table rows, the bulk bar and a drawer header. */
+  .ac-shell .ac-content :is(.admin-table, .admin-bulk-bar, .admin-detail-head-actions) .admin-btn {
+    min-height: var(--ad-h-compact);
+    padding: 0 12px;
+    border-radius: var(--ad-r-compact);
+    font-size: var(--ad-fs-compact);
+  }
+
+  /* Dashboard list buttons are the same compact button. */
+  .ac-shell .ac-content .dash-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--ad-h-compact);
+    padding: 0 12px;
+    border-radius: var(--ad-r-compact);
+    font-size: var(--ad-fs-compact);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  /* Page-toolbar buttons that live on the grey page (Refresh, Export). */
+  .ac-shell .ac-content .dash-refresh {
+    width: var(--ad-h-control);
+    height: var(--ad-h-control);
+    border: 0;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill-page);
+    color: var(--ad-ink-body);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .dash-refresh:hover {
+    background: var(--ad-fill-page-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .an-icon-btn {
+    justify-content: center;
+    gap: 6px;
+    height: var(--ad-h-control);
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill-page);
+    color: var(--ad-ink-body);
+    font-size: var(--ad-fs-control);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .ac-shell .ac-content .an-icon-btn:hover:not(:disabled) {
+    background: var(--ad-fill-page-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .an-icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .ac-shell .ac-content .admin-quick-btn {
+    min-height: var(--ad-h-control);
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content .admin-quick-btn:hover {
+    border-color: transparent;
+    background: var(--ad-fill-hover);
+  }
+
+  /* ── 6. Tabs and segmented controls ───────────────────────────────────
+     One control for switching a view or a period: a grey track with a
+     white chip on the active choice. 36px on the page, 30px inside a
+     card header. */
+
+  .ac-shell .ac-content :is(.dash-segment, .an-daterange, .am-tabs) {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 3px;
+    border: 0;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill-page);
+  }
+
+  .ac-shell .ac-content .am-tabs {
+    margin-bottom: var(--ad-gap-stack);
+  }
+
+  .ac-shell .ac-content :is(.dash-segment > button, .an-daterange-btn, .am-tab) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--ad-r-chip);
+    background: transparent;
+    color: var(--ad-ink-soft);
+    font-size: var(--ad-fs-compact);
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .ac-shell .ac-content :is(.dash-segment > button, .an-daterange-btn, .am-tab):hover {
+    background: rgba(255, 255, 255, 0.55);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content :is(.dash-segment > button.is-active, .an-daterange-btn.is-active, .am-tab.is-active) {
+    background: var(--ad-surface);
+    color: var(--t-primary-700, #03684c);
+    box-shadow: var(--ad-shadow-chip);
+  }
+
+  .ac-shell .ac-content :is(.dash-segment > button, .an-daterange-btn, .am-tab):focus-visible {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: 1px;
+  }
+
+  /* Compact version inside a white card header. */
+  .ac-shell .ac-content .dash-card-toggle {
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--ad-r-compact);
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content .dash-card-toggle > button {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 6px;
+    color: var(--ad-ink-soft);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .ac-shell .ac-content .dash-card-toggle > button:hover {
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .dash-card-toggle > button.is-active {
+    background: var(--ad-surface);
+    color: var(--t-primary-700, #03684c);
+    box-shadow: var(--ad-shadow-chip);
+  }
+
+  /* ── 7. Tables ────────────────────────────────────────────────────────
+     A pale header band, hairline row rules only, 12x16px cells with the
+     outer cells on the card's 20px inset, actions right-aligned. */
+
+  .ac-shell .ac-content .admin-table {
+    font-size: var(--ad-fs-body);
+  }
+
+  .ac-shell .ac-content .admin-table th {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--ad-divider);
+    background: var(--ad-band);
+    color: var(--ad-ink-muted);
+    font-size: var(--ad-fs-th);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+  }
+
+  .ac-shell .ac-content .admin-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--ad-divider);
+    color: var(--ad-ink-body);
+    line-height: 1.45;
+  }
+
+  .ac-shell .ac-content .admin-table tr > :first-child {
+    padding-left: var(--ad-inset);
+  }
+
+  .ac-shell .ac-content .admin-table tr > :last-child {
+    padding-right: var(--ad-inset);
+  }
+
+  .ac-shell .ac-content .admin-table tbody > tr:last-child > td {
+    border-bottom: 0;
+  }
+
+  .ac-shell .ac-content .admin-table tbody > tr:hover > td {
+    background: var(--ad-band);
+  }
+
+  /* Tick-box column: as narrow as the box. */
+  .ac-shell .ac-content .admin-table .admin-check-col {
+    width: 1%;
+    padding-right: 4px;
+  }
+
+  .ac-shell .ac-content .admin-check-col input[type='checkbox'] {
+    margin: 0;
+    vertical-align: middle;
+  }
+
+  /* Nothing on the page can be ticked: drop the empty column. */
+  .ac-shell .ac-content .admin-table:has(> thead th.admin-check-col:empty) .admin-check-col {
+    display: none;
+  }
+
+  .ac-shell .ac-content .admin-table:has(> thead th.admin-check-col:empty) .admin-check-col + :is(th, td) {
+    padding-left: var(--ad-inset);
+  }
+
+  /* Row actions: right-aligned, never wrapped, 6px apart. */
+  .ac-shell .ac-content .admin-table:has(> tbody > tr > td:last-child .admin-btn) tr > :last-child {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .ac-shell .ac-content .admin-table td:last-child > div:has(> .admin-btn) {
+    justify-content: flex-end;
+    gap: 6px !important;
+  }
+
+  /* Tablets and small laptops: row buttons get a little narrower, and where
+     the table would still be pushed sideways (below 1000px, and 1025-1100px
+     where the sidebar takes its room back) a row's actions wrap. Between
+     1000px and 1024px the sidebar is hidden and one line fits. */
+  @media (max-width: 1100px) {
+    .ac-shell .ac-content .admin-table td:last-child .admin-btn {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+
+  @media (max-width: 999px), (min-width: 1025px) and (max-width: 1100px) {
+    .ac-shell .ac-content .admin-table:has(> tbody > tr > td:last-child .admin-btn) tr > :last-child {
+      white-space: normal;
+    }
+
+    .ac-shell .ac-content .admin-table td:last-child > div:has(> .admin-btn) {
+      flex-wrap: wrap;
+    }
+  }
+
+  /* A row's name is never smaller than the plain cells beside it. */
+  .ac-shell .ac-content :is(.admin-user-cell, .admin-product-cell) {
+    gap: 12px;
+  }
+
+  .ac-shell .ac-content .admin-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ac-shell .ac-content :is(.admin-user-cell-name, .admin-product-name) {
+    font-size: var(--ad-fs-body);
+    font-weight: 600;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .admin-user-cell-email {
+    font-size: var(--ad-fs-meta);
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .admin-product-name {
+    max-width: 260px;
+  }
+
+  .ac-shell .ac-content .admin-report-description {
+    font-size: var(--ad-fs-body);
+  }
+
+  .ac-shell .ac-content .admin-product-cell :is(.admin-product-thumb, .admin-product-thumb-placeholder) {
+    border: 0;
+    border-radius: var(--ad-r-compact);
+    background-color: var(--ad-fill);
+  }
+
+  /* ── 8. Badges ────────────────────────────────────────────────────── */
+
+  .ac-shell .ac-content .admin-badge {
+    padding: 3px 9px;
+    font-size: var(--ad-fs-badge);
+    font-weight: 600;
+    line-height: 16px;
+  }
+
+  /* ── 9. Pagination ────────────────────────────────────────────────── */
+
+  .ac-shell .ac-content .admin-pagination {
+    justify-content: center;
+    gap: 12px;
+    padding: 14px var(--ad-inset) 16px;
+    border-top: 1px solid var(--ad-divider);
+    color: var(--ad-ink-muted);
+    font-size: var(--ad-fs-compact);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ac-shell .ac-content .admin-page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: var(--ad-h-compact);
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-compact);
+    background: var(--ad-fill);
+    color: var(--ad-ink-body);
+    font-size: var(--ad-fs-compact);
+    font-weight: 600;
+    line-height: 1;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .admin-page-btn:hover:not(:disabled) {
+    background: var(--ad-fill-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .admin-page-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* ── 10. Empty and loading states ─────────────────────────────────────
+     Whole card empty: 112px art, one medium line. Loading or error line
+     alone: quiet text in a card that keeps its height. Empty section
+     inside a card (dashboards): 88px art, title and hint. */
+
+  .ac-shell .ac-content .admin-empty {
+    padding: 48px 24px 56px;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .admin-empty .empty-art {
+    height: 112px;
+    margin: 0 auto 16px;
+  }
+
+  .ac-shell .ac-content .admin-empty > p {
+    max-width: 52ch;
+    margin: 0 auto;
+    font-size: 14.5px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--ad-ink-body);
+  }
+
+  .ac-shell .ac-content .admin-empty:has(> p:only-child) {
+    display: grid;
+    place-items: center;
+    min-height: 240px;
+    padding: 32px 24px;
+  }
+
+  .ac-shell .ac-content .admin-empty > p:only-child {
+    font-size: var(--ad-fs-body);
+    font-weight: 400;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .admin-empty > .ui-empty {
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .ac-shell .ac-content .admin-empty .ui-empty-title {
+    margin: 0 0 6px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--t-neutral-800, #1f2937);
+  }
+
+  .ac-shell .ac-content .admin-empty .ui-empty-text {
+    max-width: 46ch;
+    margin: 0 auto;
+    font-size: 13.5px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content :is(.dash-empty-state, .an-empty-state) {
+    flex: 1 1 auto;
+    gap: 4px;
+    min-height: 0;
+    padding: 20px var(--ad-inset) 24px;
+  }
+
+  .ac-shell .ac-content :is(.dash-empty-state, .an-empty-state) .empty-art {
+    height: 88px;
+    margin-bottom: 8px;
+  }
+
+  .ac-shell .ac-content :is(.dash-empty-state, .an-empty-state) > strong {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--t-neutral-800, #1f2937);
+  }
+
+  .ac-shell .ac-content :is(.dash-empty-state, .an-empty-state) > span {
+    max-width: 280px;
+    font-size: var(--ad-fs-meta);
+    line-height: 1.5;
+    color: var(--ad-ink-muted);
+  }
+
+  /* ── 11. KPI tiles ────────────────────────────────────────────────────
+     Number first, then label and hint; four to a row across the desktop
+     range; the same tile on the dashboard and on analytics. */
+
+  .ac-shell .ac-content .dash-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .ac-shell .ac-content :is(.dash-stat, .an-kpi, .admin-stat-card) {
+    gap: 4px;
+    min-width: 0;
+    padding: 20px 24px;
+    border-radius: var(--ad-r-card);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  .ac-shell .ac-content :is(.dash-stat-top, .an-kpi-top) {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .ac-shell .ac-content :is(.dash-stat-value, .an-kpi-value, .admin-stat-value) {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ac-shell .ac-content :is(.dash-stat-label, .an-kpi-label, .admin-stat-label) {
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--ad-ink-body);
+  }
+
+  .ac-shell .ac-content .admin-stat-label {
+    margin-top: 0;
+  }
+
+  .ac-shell .ac-content :is(.dash-stat-hint, .an-kpi-hint) {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content :is(.dash-trend, .an-kpi-delta) {
+    margin-top: 4px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  @media (max-width: 1280px) {
+    .ac-shell .ac-content :is(.dash-stat, .an-kpi, .admin-stat-card) {
+      padding: 18px 20px;
+    }
+
+    .ac-shell .ac-content :is(.dash-stat-value, .an-kpi-value, .admin-stat-value) {
+      font-size: 28px;
+    }
+  }
+
+  /* ── 12. Dashboard and analytics cards ────────────────────────────────
+     Same head as every card: 17.5px title, muted meta after a dot, tools
+     and the link pushed right, 20px inset. Same list rows on both pages. */
+
+  .ac-shell .ac-content :is(.dash-card-head, .an-card-head) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    min-height: 54px;
+    padding: 16px var(--ad-inset) 8px;
+  }
+
+  .ac-shell .ac-content :is(.dash-card-head > h2, .an-card-title) {
+    margin: 0;
+    font-size: var(--ad-fs-card-title);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content :is(.dash-card-meta, .an-card-sub) {
+    font-size: var(--ad-fs-meta);
+    font-weight: 500;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content .an-card-title + .an-card-sub::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--t-neutral-300, #d1d5db);
+  }
+
+  .ac-shell .ac-content .dash-card-link {
+    width: 28px;
+    height: 28px;
+    margin-right: -6px;
+    border-radius: var(--ad-r-compact);
+    color: var(--t-primary-700, #03684c);
+  }
+
+  .ac-shell .ac-content .dash-card-link:hover {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #03684c);
+  }
+
+  .ac-shell .ac-content .an-card-link {
+    height: 28px;
+    margin-left: auto;
+    margin-right: -10px;
+    padding: 0 10px;
+    gap: 4px;
+    border-radius: var(--ad-r-compact);
+    color: var(--t-primary-700, #03684c);
+    font-size: var(--ad-fs-meta);
+    font-weight: 600;
+  }
+
+  .ac-shell .ac-content .an-card-link:hover {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #03684c);
+  }
+
+  /* Cards in a row share the row's height, as on the dashboard. */
+  .ac-shell .ac-content .an-page .an-grid-2 {
+    align-items: stretch;
+  }
+
+  .ac-shell .ac-content .an-page .an-grid-2 > .an-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* List rows: 10px x 20px, no rules between rows. */
+  .ac-shell .ac-content :is(.dash-list, .dash-feed, .an-toplist) {
+    padding: 4px 0 8px;
+  }
+
+  .ac-shell .ac-content :is(.dash-list, .dash-feed) > li,
+  .ac-shell .ac-content .an-toplist > .an-toplist-row {
+    gap: 12px;
+    padding: 10px var(--ad-inset);
+  }
+
+  .ac-shell .ac-content .dash-list-bars > li {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .ac-shell .ac-content .an-toplist > .an-toplist-row {
+    border-bottom: 0;
+  }
+
+  /* Only rows that do something react to the pointer. */
+  .ac-shell .ac-content :is(.dash-list, .dash-feed) > li:not(:has(a, button)):hover {
+    background: transparent;
+  }
+
+  .ac-shell .ac-content :is(.dash-list-main strong, .an-toplist-name) {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content :is(.dash-list-main > span, .an-toplist-sub) {
+    font-size: 12px;
+    color: var(--ad-ink-muted);
+  }
+
+  .ac-shell .ac-content :is(.dash-list-value, .an-toplist-metric) {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ad-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ac-shell .ac-content :is(.dash-rank-no, .an-toplist-rank) {
+    width: 18px;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--ad-ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ac-shell .ac-content :is(.dash-rank > li:first-child .dash-rank-no, .an-toplist-row:first-child .an-toplist-rank) {
+    color: var(--t-primary-600, #047857);
+  }
+
+  .ac-shell .ac-content :is(.dash-thumb, .an-toplist-thumb) {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--ad-r-compact);
+  }
+
+  .ac-shell .ac-content .an-toplist-thumb-fallback {
+    background: var(--ad-fill);
+  }
+
+  /* ── 13. Notification lists (Notifications, Messages › Recently sent) ── */
+
+  .ac-shell .ac-content .admin-notif-list > li + li {
+    border-top-color: var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .admin-notif-item {
+    gap: 12px;
+    padding: 16px var(--ad-inset);
+    border-left: 0;
+    transition: background-color 0.15s ease;
+  }
+
+  /* The unread bar is painted inside the row, so read and unread rows
+     start their text at the same x. */
+  .ac-shell .ac-content .admin-notif-item.unread {
+    border-left: 0;
+    box-shadow: inset 3px 0 0 var(--t-primary-600, #047857);
+  }
+
+  .ac-shell .ac-content .admin-notif-item.unread:hover {
+    background: color-mix(in srgb, var(--t-primary-100, #d1fae5) 55%, var(--t-primary-50, #ecfdf5));
+  }
+
+  .ac-shell .ac-content .admin-notif-item:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .ac-shell .ac-content .admin-notif-dot {
+    margin-top: 7px;
+    border-radius: 50%;
+  }
+
+  .ac-shell .ac-content .admin-notif-item.unread .admin-badge {
+    background: var(--ad-surface);
+  }
+
+  .ac-shell .ac-content .admin-notif-message {
+    max-width: 80ch;
+    line-height: 1.5;
+  }
+
+  .ac-shell .ac-content .admin-notif-item:not(.unread) .admin-notif-message {
+    color: var(--ad-ink-muted);
+  }
+
+  /* Sent announcements are records, not alerts: their titles read as
+     headings. */
+  .ac-shell .ac-content div.admin-notif-item .admin-notif-title {
+    font-weight: 600;
+  }
+
+  /* ── 14. Detail drawer (every admin page) ─────────────────────────── */
+
+  .ac-shell .ac-content .admin-detail-overlay {
+    background: rgba(15, 23, 42, 0.45);
+  }
+
+  .ac-shell .ac-content .admin-detail-panel {
+    border-radius: 16px 0 0 16px;
+    box-shadow: -16px 0 48px rgba(15, 23, 42, 0.12);
+  }
+
+  .ac-shell .ac-content .admin-detail-header {
+    gap: 12px;
+    min-height: 64px;
+    padding: 12px 16px 12px 24px;
+    border-bottom: 1px solid var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .admin-detail-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .admin-detail-head-actions {
+    gap: var(--ad-space-2);
+  }
+
+  .ac-shell .ac-content .admin-detail-close {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--ad-fill);
+    color: var(--ad-ink-body);
+  }
+
+  .ac-shell .ac-content .admin-detail-close:hover {
+    background: var(--ad-fill-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .admin-detail-body {
+    gap: 28px;
+    padding: 24px;
+  }
+
+  .ac-shell .ac-content .admin-detail-section h4 {
+    gap: 6px;
+    margin-bottom: 14px;
+    font-weight: 600;
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .admin-detail-grid {
+    gap: 16px 24px;
+  }
+
+  .ac-shell .ac-content .admin-detail-grid label {
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .ac-shell .ac-content .admin-detail-grid p {
+    color: var(--t-neutral-800, #1f2937);
+  }
+
+  /* Plain lines in a section (order items, notes) sit 6px apart, not 15px. */
+  .ac-shell .ac-content .admin-detail-section > p:not([class]) {
+    margin: 0 0 6px;
+  }
+
+  .ac-shell .ac-content .admin-detail-section > p:not([class]):last-child {
+    margin-bottom: 0;
+  }
+
+  .ac-shell .ac-content .admin-detail-footer {
+    justify-content: flex-end;
+    gap: var(--ad-space-2);
+    padding: 16px 24px;
+    border-top: 1px solid var(--ad-divider);
+  }
+
+  /* Photos and notices: soft tiles, no frames. */
+  .ac-shell .ac-content .admin-id-photo img {
+    border: 0;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content .admin-id-missing {
+    border: 0;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill);
+  }
+
+  /* A notice written straight into the section (no photo row) is a line
+     of text, not a 4:3 picture frame. */
+  .ac-shell .ac-content .admin-detail-section > .admin-id-missing {
+    aspect-ratio: auto;
+    justify-content: flex-start;
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  /* A broken image shows the soft tile, not its alt text (screen readers
+     still get the alt). */
+  .ac-shell .ac-content .admin-product-detail-img {
+    border: 0;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill);
+    color: transparent;
+  }
+
+  /* ── 15. Bulk-selection bar: an inset mint strip, no rule. ────────── */
+
+  .ac-shell .ac-content .admin-bulk-bar {
+    gap: var(--ad-space-2);
+    margin: 0 var(--ad-inset) 12px;
+    padding: 8px 8px 8px 16px;
+    border-bottom: 0;
+    border-radius: var(--ad-r-control);
+    background: var(--t-primary-50, #ecfdf5);
+  }
+
+  .ac-shell .ac-content .admin-bulk-bar .admin-btn:not(.admin-btn-primary, .admin-btn-green) {
+    background: var(--ad-surface);
+  }
+
+  .ac-shell .ac-content .admin-bulk-bar .admin-btn:is(.admin-btn-gray, .admin-btn-blue, .admin-btn-outline):hover:not(:disabled) {
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content .admin-bulk-bar .admin-btn:is(.admin-btn-red, .admin-btn-danger):hover:not(:disabled) {
+    background: var(--t-danger-50, #fef2f2);
+  }
+
+  /* ── 16. Dialogs drawn inside the page (reason, delete user) ──────────
+     Only the field and its hint: the dialog chrome matches ConfirmDialog,
+     which is portaled to <body> and keeps its own look. */
+
+  .ac-shell .ac-content .reason-dialog-body h3 {
+    font-weight: 700;
+  }
+
+  .ac-shell .ac-content .reason-dialog-input {
+    min-height: 104px;
+    border: 1px solid transparent;
+    border-radius: var(--ad-r-control);
+    background: var(--ad-fill);
+    color: var(--t-neutral-800, #1f2937);
+    line-height: 1.5;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .ac-shell .ac-content .reason-dialog-input:hover:not(:focus) {
+    background: var(--ad-field-hover);
+  }
+
+  .ac-shell .ac-content .reason-dialog-input:focus {
+    border-color: transparent;
+    outline: 2px solid transparent;
+    background: var(--ad-surface);
+    box-shadow: var(--ad-ring);
+  }
+
+  .ac-shell .ac-content .reason-dialog-input::placeholder {
+    color: var(--ad-ink-muted);
+    opacity: 1;
+  }
+
+  .ac-shell .ac-content .reason-dialog-hint {
+    align-self: flex-end;
+  }
+
+  .ac-shell .ac-content .del-user-scope {
+    border: 0;
+  }
+
+  /* ── 17. Loading skeleton in a table card ─────────────────────────────
+     One line per row whatever the column count, on the card's inset, and
+     a round avatar. */
+
+  .ac-shell .ac-content .admin-card .sk-table {
+    border-radius: 0;
+  }
+
+  .ac-shell .ac-content .admin-card .sk-table .sk-table-row {
+    grid-template-columns: minmax(0, 1.6fr);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    padding: 14px var(--ad-inset);
+    border-bottom-color: var(--ad-divider);
+  }
+
+  .ac-shell .ac-content .admin-card .sk-table .sk-table-head {
+    padding: 12px var(--ad-inset);
+  }
+
+  .ac-shell .ac-content .sk-table-cell-user > .sk {
+    flex: 0 0 auto;
+  }
+
+  /* ── 18. Super-admin forms (categories, municipalities) ───────────── */
+
+  /* White like the card it opens in, so its soft fields stay visible. */
+  .ac-shell .ac-content .admin-inline-form {
+    border-bottom-color: var(--ad-divider);
+    background: var(--ad-surface);
+  }
+
+  .ac-shell .ac-content .admin-inline-form-header {
+    border-bottom-color: var(--ad-divider);
+  }
+
+  .ac-shell .ac-content :is(.admin-cat-image-preview, .admin-cat-thumb) {
+    border: 0;
+    border-radius: var(--ad-r-compact);
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content .admin-cat-icon-opt {
+    border-color: transparent;
+    background: var(--ad-band);
+  }
+
+  .ac-shell .ac-content .admin-cat-icon-opt:hover {
+    border-color: transparent;
+    background: var(--ad-fill);
+  }
+
+  .ac-shell .ac-content .admin-cat-icon-opt.is-on {
+    border-color: transparent;
+    background: var(--t-primary-50, #ecfdf5);
+    box-shadow: inset 0 0 0 1.5px var(--t-primary-600, #047857);
+  }
+}
+
+@media (min-width: 769px) {
+  /* Link icons beside a table name sit on the text's baseline. */
+  .ac-shell .ac-content .admin-table .admin-link > svg {
+    vertical-align: -1px;
+  }
+
+  /* 1100-1279px is the tightest width: the sidebar is back and the content
+     is narrower than at 1024px, where it folds away. Inner cells give up a
+     little side padding so the tables fit without scrolling sideways. */
+  @media (max-width: 1279px) {
+    .ac-shell .ac-content .admin-table tr > :is(th, td):not(:first-child):not(:last-child) {
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+  }
+
+  /* A thumbnail whose photo fails to load shows its soft tile, not the
+     browser's broken-image icon and alt text. */
+  .ac-shell .ac-content :is(.admin-table, .am-items, .admin-detail-panel) img {
+    color: transparent;
+  }
+}

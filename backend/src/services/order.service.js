@@ -750,8 +750,9 @@ const getStoreStageCounts = async (userId) => {
  * @returns {Promise<Object>} Orders and pagination
  */
 const getAllOrders = async (options) => {
-  // Admin route only: each order as its summary.
-  const result = await orderRepository.findAll(options);
+  // Admin route only: each order as its summary, read with only the fields
+  // the summary uses.
+  const result = await orderRepository.findAll({ ...options, adminSummary: true });
   return { ...result, orders: result.orders.map(adminOrderSummary) };
 };
 

@@ -247,6 +247,80 @@ const findByUsername = async (username) => {
   });
 };
 
+// What every row of the admin people lists carries. A shop's product and
+// order counts are left to the person's own record (the drawer reads them
+// from GET /auth/users/:id): counting them here counted every order of every
+// shop on the page.
+const LIST_SELECT = {
+  id: true,
+  email: true,
+  fullName: true,
+  contactNumber: true,
+  profilePhoto: true,
+  municipalityId: true,
+  municipality: {
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      logo: true,
+    },
+  },
+  province: true,
+  barangay: true,
+  address: true,
+  store: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      logo: true,
+      pickupAddress: true,
+      isActive: true,
+      isSuspended: true,
+    },
+  },
+  role: true,
+  isActive: true,
+  isVerified: true,
+  sellerApplicationStatus: true,
+  sellerApplicationDate: true,
+  deletionRequestedAt: true,
+  createdAt: true,
+};
+
+// The application itself: shop, ID, permit and payout details and its
+// history, for the seller applications page, which opens a row as the
+// application (auth.service adminUserView masks them on the way out).
+const APPLICATION_SELECT = {
+  sellerRejectionReason: true,
+  sellerReviewedAt: true,
+  sellerApplicationHistory: true,
+  sellerTermsVersion: true,
+  sellerTermsAcceptedAt: true,
+  shopName: true,
+  shopDescription: true,
+  shopAddress: true,
+  shopBarangay: true,
+  shopMunicipalityId: true,
+  shopTagline: true,
+  shopLogoUrl: true,
+  shopCategories: true,
+  sellerBusinessType: true,
+  sellerPermitNumber: true,
+  sellerPermitUrl: true,
+  sellerBirTin: true,
+  payoutMethod: true,
+  payoutAccountName: true,
+  payoutAccountNumber: true,
+  fulfillmentPreference: true,
+  idType: true,
+  idFrontUrl: true,
+  idBackUrl: true,
+  selfieUrl: true,
+};
+
 /**
  * Get all users with pagination and filters
  * @param {Object} options - Query options
@@ -290,73 +364,15 @@ const findAll = async (options = {}) => {
     where.AND = [...(where.AND || []), matchesSearch];
   }
 
+  // The applications page asks by status, or for "All" with no role, and
+  // reads the application off the row. A list of one role (the Sellers and
+  // Buyers pages) shows people, not applications, and goes without it.
+  const withApplication = Boolean(sellerApplicationStatus) || !role || Array.isArray(role);
+
   const [users, total] = await Promise.all([
     prisma.user.findMany({
       where,
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        contactNumber: true,
-        profilePhoto: true,
-        municipalityId: true,
-        municipality: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            logo: true,
-          },
-        },
-        province: true,
-        barangay: true,
-        address: true,
-        store: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            description: true,
-            logo: true,
-            pickupAddress: true,
-            isActive: true,
-            isSuspended: true,
-            _count: { select: { products: true, orders: true } },
-          },
-        },
-        role: true,
-        isActive: true,
-        isVerified: true,
-        sellerApplicationStatus: true,
-        sellerApplicationDate: true,
-        sellerRejectionReason: true,
-        sellerReviewedAt: true,
-        sellerApplicationHistory: true,
-        sellerTermsVersion: true,
-        sellerTermsAcceptedAt: true,
-        deletionRequestedAt: true,
-        shopName: true,
-        shopDescription: true,
-        shopAddress: true,
-        shopBarangay: true,
-        shopMunicipalityId: true,
-        shopTagline: true,
-        shopLogoUrl: true,
-        shopCategories: true,
-        sellerBusinessType: true,
-        sellerPermitNumber: true,
-        sellerPermitUrl: true,
-        sellerBirTin: true,
-        payoutMethod: true,
-        payoutAccountName: true,
-        payoutAccountNumber: true,
-        fulfillmentPreference: true,
-        idType: true,
-        idFrontUrl: true,
-        idBackUrl: true,
-        selfieUrl: true,
-        createdAt: true,
-      },
+      select: { ...LIST_SELECT, ...(withApplication ? APPLICATION_SELECT : {}) },
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { createdAt: 'desc' },
@@ -501,6 +517,20 @@ const applyForSeller = async (userId, data = {}, history = []) => {
 };
 
 /**
+ * What a decision answers with. The admin's browser gets the outcome only:
+ * the whole row carried the applicant's password hash, authenticator secret,
+ * reset tokens and payout numbers.
+ */
+const DECISION_SELECT = {
+  id: true,
+  fullName: true,
+  role: true,
+  sellerApplicationStatus: true,
+  sellerReviewedAt: true,
+  sellerRejectionReason: true,
+};
+
+/**
  * Decide a seller application that is still waiting. Only one decision
  * lands: two admins approving and rejecting at the same moment cannot leave
  * the account and its application disagreeing.
@@ -514,15 +544,38 @@ const decidePending = async (userId, data) => {
   if (changed.count === 0) {
     throw new ApiError('This application was already decided. Refresh to see the result.', 409);
   }
-  return prisma.user.findUnique({ where: { id: userId } });
+  return prisma.user.findUnique({ where: { id: userId }, select: DECISION_SELECT });
 };
+
+/**
+ * Take back a decision whose shop step failed, so the application waits
+ * again and the admin can simply retry (a retry used to meet "already
+ * decided", leaving an approved seller with no live shop). Only the decision
+ * named in `status` is undone, never a later one.
+ * @param {String} userId - User ID
+ * @param {String} status - The decision to undo: 'APPROVED' or 'REJECTED'
+ * @param {Object} before - The role and application fields the decision replaced
+ * @returns {Promise<Object>} { count }
+ */
+const reopenDecision = async (userId, status, before = {}) => prisma.user.updateMany({
+  where: { id: userId, sellerApplicationStatus: status },
+  data: {
+    role: before.role,
+    sellerApplicationStatus: 'PENDING',
+    sellerRejectionReason: before.sellerRejectionReason ?? null,
+    // A waiting application has no reviewer: applying clears it.
+    sellerReviewedById: null,
+    sellerReviewedAt: before.sellerReviewedAt ?? null,
+    sellerApplicationHistory: before.sellerApplicationHistory ?? Prisma.DbNull,
+  },
+});
 
 /**
  * Approve seller application — this is the only place the SELLER role is
  * granted, so an applicant has no seller access until an admin says yes.
  * @param {String} userId - User ID
  * @param {Object} review - { reviewedById, reviewerName, history }
- * @returns {Promise<Object>} Updated user
+ * @returns {Promise<Object>} The decision (DECISION_SELECT)
  */
 const approveSeller = async (userId, review = {}) => decidePending(userId, {
     role: 'SELLER',
@@ -543,7 +596,7 @@ const approveSeller = async (userId, review = {}) => decidePending(userId, {
  * rejected applicant cannot keep Seller Center access.
  * @param {String} userId - User ID
  * @param {Object} review - { reason, reviewedById, reviewerName, history }
- * @returns {Promise<Object>} Updated user
+ * @returns {Promise<Object>} The decision (DECISION_SELECT)
  */
 const rejectSeller = async (userId, review = {}) => decidePending(userId, {
     role: 'BUYER',
@@ -686,6 +739,7 @@ module.exports = {
   saveSellerApplicationDraft,
   approveSeller,
   rejectSeller,
+  reopenDecision,
   findByMunicipality,
   setPasswordResetToken,
   findByResetToken,

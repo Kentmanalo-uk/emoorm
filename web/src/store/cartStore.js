@@ -193,8 +193,9 @@ const useCartStore = create(
 
         // Switch the active bucket. Logging in merges the guest cart into the
         // user's cart and brings in the account's saved cart; logging out
-        // returns to the (now empty) guest bucket.
-        setOwner: (userId) => {
+        // returns to the (now empty) guest bucket. `sync: false` leaves the
+        // saved cart unread, for accounts that never see a cart (admins).
+        setOwner: (userId, { sync = true } = {}) => {
           const key = ownerKey(userId);
           const { owner, carts } = get();
           const nextCarts = { ...carts };
@@ -208,7 +209,7 @@ const useCartStore = create(
           // A save still waiting belongs to the account being left.
           if (key !== owner) clearTimeout(saveTimer);
           set({ owner: key, carts: nextCarts, items: nextCarts[key], unsaved });
-          if (key !== GUEST) loadSaved(key);
+          if (key !== GUEST && sync) loadSaved(key);
         },
 
         // Actions

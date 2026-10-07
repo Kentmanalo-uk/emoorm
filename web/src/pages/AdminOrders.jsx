@@ -111,7 +111,7 @@ export default function AdminOrders() {
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">Orders & Activity</h1>
+        <h1 className="admin-page-title">Orders</h1>
       </div>
 
       <div className="admin-card">

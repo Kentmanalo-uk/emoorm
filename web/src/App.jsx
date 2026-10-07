@@ -315,7 +315,7 @@ function AppRoutes() {
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/admin/sellers" element={<AdminRoute><AdminSellers /></AdminRoute>} />
         <Route path="/admin/all-sellers" element={<AdminRoute><AdminUsers fixedRole="SELLER" title="All Sellers" /></AdminRoute>} />
-        <Route path="/admin/buyers" element={<AdminRoute><AdminUsers fixedRole="BUYER" title="Buyer Management" /></AdminRoute>} />
+        <Route path="/admin/buyers" element={<AdminRoute><AdminUsers fixedRole="BUYER" title="Buyers" /></AdminRoute>} />
         <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
         <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
         <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />

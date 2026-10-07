@@ -3,7 +3,9 @@ const assert = require('node:assert/strict');
 const speakeasy = require('speakeasy');
 const h = require('./helpers');
 
-// A town of this file's own, so its team starts empty.
+// A town of this file's own, so its team starts empty. Its name and id sort
+// last so h.reference() never hands it to the other files: this file demotes
+// every other admin of the town, which would sign theirs out mid-test.
 let town;
 let primary;
 const secret = speakeasy.generateSecret({ length: 20 }).base32;
@@ -22,8 +24,10 @@ const admin = async (extra = {}) => h.user('MUNICIPAL_ADMIN', {
 const session = async (u) => h.token(await h.prisma.user.findUnique({ where: { id: u.id } }));
 
 before(async () => {
+  const shared = await h.reference();
+  await h.otherTown(shared.id);
   const made = await h.prisma.municipality.findFirst({ where: { code: 'CI-TEAM' } })
-    || await h.prisma.municipality.create({ data: { name: 'Ci Team Town', code: 'CI-TEAM' } });
+    || await h.prisma.municipality.create({ data: { id: 'ffffffff-ffff-4fff-8fff-ffffffffff04', name: 'Ci Zz Team Town', code: 'CI-TEAM' } });
   town = made;
   await h.prisma.user.updateMany({ where: { municipalityId: town.id, role: 'MUNICIPAL_ADMIN' }, data: { role: 'BUYER' } });
   primary = await admin();
@@ -175,4 +179,47 @@ test('team chat: the whole team, and admin to admin; only members read it', asyn
   // Taken off the team: the chats are gone for them.
   await h.api('DELETE', `/admin-team/${a.id}`, { token: p });
   assert.equal((await h.api('GET', '/admin-team/chats', { token: h.token({ ...a, role: 'MUNICIPAL_ADMIN' }) })).status, 401);
+});
+
+test('team chat list: each chat\'s last message and unread; an open chat is marked read only when something new arrives', async () => {
+  const a = await admin({ adminAddedBy: { connect: { id: primary.id } } });
+  const b = await admin({ adminAddedBy: { connect: { id: primary.id } } });
+  const p = await session(primary);
+  const say = async (token, thread, body) => (await h.api('POST', `/admin-team/chats/${thread}`, { token, body: { body } })).body.data;
+  await say(p, 'team', 'Stalls are assigned');
+  await say(await session(a), primary.id, 'Can you sign the permits?');
+  await say(p, a.id, 'Signed, they are on your desk');
+  await say(await session(b), 'team', 'Thank you!');
+
+  const chats = async () => (await h.api('GET', '/admin-team/chats', { token: p })).body.data;
+  const list = await chats();
+  const chat = (thread) => list.chats.find((c) => c.thread === thread);
+  assert.equal(chat('team').last.body, 'Thank you!');
+  assert.equal(chat('team').last.sender.id, b.id);
+  assert.equal(chat('team').last.sender.fullName, b.fullName);
+  assert.equal(chat('team').unread, 1);
+  // The newer of the two directions is the pair's last message; your own reply read the chat.
+  assert.equal(chat(a.id).last.body, 'Signed, they are on your desk');
+  assert.equal(chat(a.id).unread, 0);
+  assert.equal(chat(b.id).last, null);
+  assert.equal(list.unread, list.chats.reduce((n, c) => n + c.unread, 0));
+
+  // Opening the team chat reads it up to its newest message; polling it again writes nothing.
+  const mark = async () => (await h.prisma.teamChatRead.findUnique({ where: { userId_thread: { userId: primary.id, thread: 'team' } } })).lastReadAt.getTime();
+  await h.api('GET', '/admin-team/chats/team', { token: p });
+  const read = await mark();
+  assert.equal(read, new Date(chat('team').last.createdAt).getTime());
+  await new Promise((r) => setTimeout(r, 25));
+  await h.api('GET', '/admin-team/chats/team', { token: p });
+  assert.equal(await mark(), read);
+  const more = await say(await session(b), 'team', 'One more thing');
+  await h.api('GET', '/admin-team/chats/team', { token: p });
+  assert.equal(await mark(), new Date(more.createdAt).getTime());
+
+  // Someone taken off the team keeps the last word in the team's chat.
+  await h.api('DELETE', `/admin-team/${b.id}`, { token: p });
+  const after = await chats();
+  assert.equal(after.chats.find((c) => c.thread === 'team').last.sender.id, b.id);
+  assert.equal(after.chats.some((c) => c.thread === b.id), false);
+  await h.api('DELETE', `/admin-team/${a.id}`, { token: p });
 });

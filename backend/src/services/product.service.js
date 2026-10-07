@@ -1220,12 +1220,23 @@ const approveProduct = async (productId, adminId, actor) => {
     throw new ApiError('Only pending products can be approved', 400);
   }
 
-  const updated = await productRepository.updateProduct(productId, {
-    status: 'APPROVED',
-    approvedById: adminId || null,
-    approvedAt: new Date(),
-    moderationNote: null,
+  // Only one approval lands. Two at once (two admins, or a bulk approve and
+  // a single one) both passed the check above, and the seller and every
+  // follower heard about the product twice.
+  const claimed = await prisma.product.updateMany({
+    where: { id: productId, status: 'PENDING', deletedAt: null },
+    data: {
+      status: 'APPROVED',
+      approvedById: adminId || null,
+      approvedAt: new Date(),
+      moderationNote: null,
+    },
   });
+  if (claimed.count === 0) {
+    throw new ApiError('This product was already reviewed. Refresh to see it.', 409);
+  }
+  await productRepository.invalidateProductIds([productId]);
+  const updated = await productRepository.findById(productId);
 
   let approvedStore = null;
   try {
@@ -1237,18 +1248,17 @@ const approveProduct = async (productId, adminId, actor) => {
     console.error('[approveProduct] notification failed:', err.message);
   }
 
-  // Notify followers that the store added a new product
-  try {
-    if (approvedStore) {
-      await followService.notifyFollowers(product.storeId, {
+  // Followers hear that the store added a new product after the answer: one
+  // notice per follower held up the admin, and every bulk approval with it.
+  if (approvedStore) {
+    Promise.resolve()
+      .then(() => followService.notifyFollowers(product.storeId, {
         type: 'STORE_NEW_PRODUCT',
         title: `${approvedStore.name} added a new product`,
         message: `${product.name} is now available at ${approvedStore.name}.`,
         relatedId: product.id,
-      });
-    }
-  } catch (err) {
-    console.error('[approveProduct] follower fan-out failed:', err.message);
+      }))
+      .catch((err) => console.error('[approveProduct] follower fan-out failed:', err.message));
   }
 
   return stripStoreInternals(updated);

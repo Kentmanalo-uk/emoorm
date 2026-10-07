@@ -368,6 +368,10 @@ const findAll = async (options = {}) => {
     search,
     stage,
     forBuyer = false,
+    // The admin list shows each order as a summary (order.service
+    // adminOrderSummary): no courier or products, and of the items only how
+    // many there are.
+    adminSummary = false,
   } = options;
 
   const where = {};
@@ -420,7 +424,9 @@ const findAll = async (options = {}) => {
             } : {}),
           },
         },
-        courier: { select: { id: true, name: true, logoUrl: true, trackingUrl: true } },
+        ...(adminSummary ? {} : {
+          courier: { select: { id: true, name: true, logoUrl: true, trackingUrl: true } },
+        }),
         // When each step happened, for the buyer's progress line.
         ...(forBuyer ? {
           statusHistory: {
@@ -428,7 +434,7 @@ const findAll = async (options = {}) => {
             orderBy: { createdAt: 'asc' },
           },
         } : {}),
-        items: {
+        items: adminSummary ? { select: { quantity: true } } : {
           include: {
             product: {
               select: {

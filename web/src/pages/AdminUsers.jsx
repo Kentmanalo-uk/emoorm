@@ -48,8 +48,18 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
   const [storeProcessing, setStoreProcessing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  // Typing waits for a pause (300 ms) before asking, so a name is one request
+  // rather than one per letter; a filter or page change asks at once.
+  const lastSearch = useRef(search);
   useEffect(() => {
-    fetchUsers();
+    const typed = search !== lastSearch.current;
+    lastSearch.current = search;
+    if (!typed) {
+      fetchUsers();
+      return undefined;
+    }
+    const timer = setTimeout(fetchUsers, 300);
+    return () => clearTimeout(timer);
   }, [search, roleFilter, page, fixedRole]);
 
   // Follows ?search= when it changes, so a second search from the top bar
@@ -60,11 +70,17 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
   useEffect(() => {
     if (urlSearch === lastUrlSearch.current) return;
     lastUrlSearch.current = urlSearch;
+    // A finished search, not typing: it loads at once.
+    lastSearch.current = urlSearch;
     setSearch(urlSearch);
     setPage(1);
   }, [urlSearch]);
 
+  // Only the newest request fills the table: one overtaken by a later search,
+  // filter or page (and answering late) is dropped.
+  const latestRequest = useRef(0);
   const fetchUsers = async () => {
+    const request = ++latestRequest.current;
     setIsLoading(true);
     try {
       const params = { page, pageSize: 20 };
@@ -73,12 +89,13 @@ export default function AdminUsers({ fixedRole = '', title = 'User Management' }
       else if (fixedRole || roleFilter) params.role = fixedRole || roleFilter;
 
       const res = await axios.get('/auth/users', { params });
+      if (request !== latestRequest.current) return;
       setUsers(res.data || []);
       if (res.pagination) setPagination(res.pagination);
     } catch {
-      toast.error('Failed to load users');
+      if (request === latestRequest.current) toast.error('Failed to load users');
     } finally {
-      setIsLoading(false);
+      if (request === latestRequest.current) setIsLoading(false);
     }
   };
 

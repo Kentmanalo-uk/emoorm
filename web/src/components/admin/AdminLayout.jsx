@@ -7,7 +7,6 @@ import {
   Star, ArrowCounterClockwise, List, X, ChatCircleDots,
   House, Receipt, UserCircle, SquaresFour, Truck, DeviceMobile, UsersThree,
 } from '@phosphor-icons/react';
-import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';
@@ -16,7 +15,9 @@ import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import AppRail from '../layout/AppRail';
 import NavBadge from '../layout/NavBadge';
-import useAttention from '../../hooks/useAttention';
+import {
+  useAdminAttention, useAdminShellData, useRefreshAdminShell, waitingByLink,
+} from '../../hooks/useAdminShellData';
 import ShellSearch from '../layout/ShellSearch';
 import { adminSearchSources } from '../../lib/shellSearchSources';
 // The admin shell on phones is drawn with the Seller Center's app styles
@@ -58,6 +59,13 @@ import '../../pages/AdminJuniorAdmins.css';
 import '../../pages/AdminSettings.css';
 import '../../pages/AdminSupport.css';
 import '../../pages/AdminModeration.css';
+// Computers only (769px and wider): one look for every admin page. Phones
+// never match these sheets.
+import './desktop/AdminDesktop.css';
+import './desktop/overview.css';
+import './desktop/tables.css';
+import './desktop/moderation.css';
+import './desktop/conversations.css';
 import { afterSignOutPath } from '../../lib/afterSignOut';
 import PageMenu from '../layout/PageMenu';
 
@@ -68,7 +76,7 @@ import PageMenu from '../layout/PageMenu';
 export default function AdminLayout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, updateUser } = useAuthStore();
+  const { user, logout } = useAuthStore();
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
@@ -103,73 +111,49 @@ export default function AdminLayout({ children }) {
     location.pathname.startsWith('/admin/categories') ||
     location.pathname.startsWith('/admin/municipalities')
   );
-  const [unreadCount, setUnreadCount] = useState(0);
-  // Unread messages between this admin and the super admin — the one thing
-  // the Messages page has that nothing else in the shell would surface.
-  const [messageUnread, setMessageUnread] = useState(0);
-  // Feedback nobody has read yet. Super admin only — municipal admins have no
-  // feedback page to send them to.
-  const [feedbackNew, setFeedbackNew] = useState(0);
+  // The shell's counts live in the shared query cache (useAdminShellData), so
+  // the next page shows them at once instead of blanking every badge while it
+  // asks for all of them again. A municipal admin's profile is read there too,
+  // which keeps the municipality's name and logo below up to date.
+  const {
+    // The bell's count and the rail's newest notifications.
+    notifications,
+    unreadCount,
+    // Unread messages between this admin and the super admin — the one thing
+    // the Messages page has that nothing else in the shell would surface.
+    messageUnread,
+    // Feedback nobody has read yet. Super admin only — municipal admins have no
+    // feedback page to send them to.
+    feedbackNew,
+  } = useAdminShellData(isSuperAdmin);
+  const refreshShell = useRefreshAdminShell();
 
   // What is waiting on this admin, keyed by the route it lives at, so the
   // sidebar can say where the work is without opening every page.
-  const { byLink: waiting } = useAttention('/moderation/attention');
+  const { data: attention } = useAdminAttention();
+  const waiting = useMemo(() => waitingByLink(attention), [attention]);
   const badge = (path) => <NavBadge {...(waiting[path] || {})} />;
-  const [municipalityName, setMunicipalityName] = useState(user?.municipality?.name || '');
-  const [municipalityLogo, setMunicipalityLogo] = useState(user?.municipality?.logo || '');
+  const municipalityName = user?.municipality?.name || '';
+  const municipalityLogo = user?.municipality?.logo || '';
 
+  // A new notification just popped up (NotificationWatcher): count it now,
+  // with the messages and the work it is most likely about.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const n = await axios.get('/notifications/unread/count', { params: { audience: 'ADMIN' } });
-        if (!cancelled) setUnreadCount(n.data?.count ?? 0);
-      } catch {
-        /* ignore */
-      }
-      try {
-        const m = await axios.get('/admin-messages/unread-count');
-        if (!cancelled) setMessageUnread(m.data?.count ?? 0);
-      } catch {
-        /* ignore */
-      }
-      if (isSuperAdmin) {
-        try {
-          const f = await axios.get('/feedback/unread-count');
-          if (!cancelled) setFeedbackNew(f.data?.count ?? 0);
-        } catch {
-          /* ignore */
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [isSuperAdmin]);
+    const recount = () => ['notifications', 'messages', 'attention'].forEach((kind) => refreshShell(kind));
+    window.addEventListener('emoorm:notifications', recount);
+    return () => window.removeEventListener('emoorm:notifications', recount);
+  }, [refreshShell]);
 
-  // A new notification just popped up (NotificationWatcher): count it now.
+  // Leaving a page whose actions change one of the counts reads that count
+  // again, as every page change used to. Pages that say so the moment they
+  // act (useRefreshAdminShell) update the badge sooner still.
   useEffect(() => {
-    const refresh = () => {
-      axios.get('/notifications/unread/count', { params: { audience: 'ADMIN' } })
-        .then((n) => setUnreadCount(n.data?.count ?? 0))
-        .catch(() => { /* the next page counts again */ });
-    };
-    window.addEventListener('emoorm:notifications', refresh);
-    return () => window.removeEventListener('emoorm:notifications', refresh);
-  }, []);
-
-  useEffect(() => {
-    if (isSuperAdmin || !user?.id) return;
-    let cancelled = false;
-    axios.get('/auth/profile')
-      .then((response) => {
-        const profile = response.data;
-        if (cancelled || !profile) return;
-        updateUser(profile);
-        setMunicipalityName(profile.municipality?.name || '');
-        setMunicipalityLogo(profile.municipality?.logo || '');
-      })
-      .catch(() => { });
-    return () => { cancelled = true; };
-  }, [isSuperAdmin, updateUser, user?.id]);
+    const kinds = REREAD_ON_LEAVE
+      .filter(([path]) => location.pathname.startsWith(path))
+      .map(([, kind]) => kind);
+    if (kinds.length === 0) return undefined;
+    return () => kinds.forEach((kind) => refreshShell(kind));
+  }, [location.pathname, refreshShell]);
 
   // The admin guard notices the sign-out first; it is told where to go.
   const handleLogout = () => {
@@ -414,7 +398,9 @@ export default function AdminLayout({ children }) {
             </NavLink>
           </nav>
 
-          <Link to="/profile" className="ac-user-card" title="View profile">
+          {/* An admin's profile is a tab of Settings: /profile is a buyer
+              page, which the admin guard would send straight back to /admin. */}
+          <Link to="/admin/settings?tab=profile" className="ac-user-card" title="View profile">
             <UserAvatar
               src={user?.profilePhoto}
               name={initial}
@@ -505,6 +491,8 @@ export default function AdminLayout({ children }) {
 
       <AppRail
         unreadCount={unreadCount}
+        notifications={notifications}
+        onRead={() => refreshShell('notifications')}
         onLogout={handleLogout}
         notificationsTo="/admin/notifications"
         audience="ADMIN"
@@ -583,6 +571,21 @@ function subNavCls({ isActive }) {
 function tabCls({ isActive }) {
   return `sc-tab${isActive ? ' is-active' : ''}`;
 }
+
+/**
+ * Pages whose own actions change one of the shell's counts, and that count.
+ * Leaving one reads the count again (the pages do not report it themselves).
+ */
+const REREAD_ON_LEAVE = [
+  ['/admin/notifications', 'notifications'],
+  ['/admin/messages', 'messages'],
+  ['/admin/feedback', 'feedback'],
+  ['/admin/support', 'attention'],
+  // Reading the team's chats clears the Admin team badge.
+  ['/admin/team', 'attention'],
+  // The municipality's page (its logo) and the admin's own profile.
+  ['/admin/settings', 'profile'],
+];
 
 /** Phones: the tab bar's pages; Home and Me draw their own header. */
 const PHONE_TABS = ['/admin', '/admin/tools', '/admin/orders', '/admin/support', '/admin/menu'];

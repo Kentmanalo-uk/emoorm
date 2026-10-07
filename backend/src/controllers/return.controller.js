@@ -1,4 +1,5 @@
 const returnService = require('../services/return.service');
+const auditLog = require('../services/auditLog.service');
 const storeRepository = require('../repositories/store.repository');
 const { successResponse, createdResponse, paginatedResponse } = require('../utils/response');
 const { asyncHandler, ApiError } = require('../middleware/errorHandler');
@@ -80,6 +81,24 @@ const dispute = asyncHandler(async (req, res) => {
 
 const resolveDispute = asyncHandler(async (req, res) => {
   const result = await returnService.resolveDispute(req.params.id, req.user, req.body);
+  // The ruling decides who gets the money, so it belongs in the audit trail,
+  // filed under the shop's town (a super admin may decide it).
+  const forBuyer = String(req.body?.decision || '').toUpperCase() === 'BUYER';
+  await auditLog.record({
+    actor: req.user,
+    action: 'RESOLVE_RETURN_DISPUTE',
+    entity: 'ReturnRequest',
+    entityId: req.params.id,
+    details: {
+      note: String(req.body?.note || '').trim().slice(0, 200),
+      decision: forBuyer ? 'BUYER' : 'SELLER',
+      status: result.status,
+      approvedAmount: forBuyer ? Number(result.approvedAmount) : null,
+      orderNumber: result.order?.orderNumber || null,
+    },
+    municipalityId: result.store?.municipalityId,
+    req,
+  });
   successResponse(res, result, 'Dispute decided');
 });
 

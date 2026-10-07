@@ -73,7 +73,8 @@ const topicForCategory = (category) =>
 
 const preview = (text) => (text.length > 120 ? `${text.slice(0, 117)}...` : text);
 
-const toSummary = async (conversation, side) => ({
+/** A case as lists show it. `unreadCount` is counted by the caller, a page at a time. */
+const toSummary = (conversation, side, unreadCount) => ({
   id: conversation.id,
   topic: conversation.topic,
   category: conversation.category,
@@ -99,10 +100,14 @@ const toSummary = async (conversation, side) => ({
   // The user spoke last and the case is still open.
   awaitingReply: conversation.status === 'OPEN'
     && conversation.messages?.[0]?.senderId === conversation.userId,
-  unreadCount: await supportCaseRepository.countUnreadFor({ conversation, side }),
+  unreadCount,
 });
 
-const summarise = (rows, side) => Promise.all(rows.map((row) => toSummary(row, side)));
+// One count query for the whole page (it used to be one per row).
+const summarise = async (rows, side) => {
+  const unread = await supportCaseRepository.countUnreadForMany(rows, side);
+  return rows.map((row) => toSummary(row, side, unread.get(row.id) || 0));
+};
 
 /** The municipality a case is filed in — the person's own. */
 const resolveOwnMunicipality = async (actor) => {
@@ -172,8 +177,9 @@ const openWithMunicipalAdmin = async (actor, { topic = 'GENERAL', message } = {}
   // Re-read: the summary used to be built from the pre-send row, so
   // lastMessage was always null and lastMessageAt always stale.
   const fresh = await supportCaseRepository.findById(conversation.id);
+  const unreadCount = await supportCaseRepository.countUnreadFor({ conversation: fresh, side: 'user' });
   return {
-    ...(await toSummary(fresh, 'user')),
+    ...toSummary(fresh, 'user', unreadCount),
     adminName: target.admin?.fullName || null,
     adminAssigned: Boolean(target.admin),
   };
@@ -254,10 +260,17 @@ const getCase = async (actor, conversationId) => {
     supportCaseRepository.findMessages(conversationId, { limit: MAX_THREAD_MESSAGES }),
     supportCaseRepository.countMessages(conversationId),
   ]);
-  await supportCaseRepository.markRead(conversationId, side, new Date());
+  // An open thread is polled every few seconds: mark it read only when there
+  // is something new, up to the newest message shown. Writing on every poll
+  // also bumped the case's updatedAt.
+  const newest = messages[messages.length - 1]?.createdAt;
+  const readAt = side === 'user' ? conversation.userLastReadAt : conversation.adminLastReadAt;
+  if (newest && (!readAt || newest > readAt)) {
+    await supportCaseRepository.markRead(conversationId, side, newest);
+  }
   return {
-    ...(await toSummary(conversation, side)),
-    unreadCount: 0,
+    // Opening the case reads it, so there is nothing to count.
+    ...toSummary(conversation, side, 0),
     viewerSide: side,
     messageCount,
     hasMoreMessages: messageCount > messages.length,

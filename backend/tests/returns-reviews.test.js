@@ -48,3 +48,21 @@ test('a double-tapped review is saved once', async () => {
   const count = await h.prisma.review.count({ where: { userId: buyer.id, productId: item.id, deletedAt: null } });
   assert.equal(count, 1);
 });
+
+test('an admin removing a review is in the audit trail; a buyer deleting their own is not', async () => {
+  const store = await h.shop(await h.user('SELLER'));
+  const item = await h.product(store);
+  const [author, other] = [await h.user('BUYER'), await h.user('BUYER')];
+  const [removed, withdrawn] = await Promise.all([author, other].map((u) => h.prisma.review.create({ data: { userId: u.id, productId: item.id, rating: 1, comment: 'Not as described' } })));
+  const admin = await h.user('MUNICIPAL_ADMIN');
+
+  assert.equal((await h.api('DELETE', `/reviews/${removed.id}`, { token: h.token(admin) })).status, 204);
+  assert.equal((await h.api('DELETE', `/reviews/${withdrawn.id}`, { token: h.token(other) })).status, 204);
+
+  const logged = await h.prisma.auditLog.findMany({ where: { action: 'REMOVE_REVIEW', entityId: { in: [removed.id, withdrawn.id] } } });
+  assert.equal(logged.length, 1);
+  assert.equal(logged[0].entityId, removed.id);
+  assert.equal(logged[0].userId, admin.id);
+  assert.equal(logged[0].municipalityId, item.municipalityId);
+  assert.equal(logged[0].details.writtenBy, author.fullName);
+});

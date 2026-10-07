@@ -184,7 +184,8 @@ const updateReview = async (reviewId, userId, data) => {
  * @param {String} reviewId - Review ID
  * @param {String} userId - User ID
  * @param {String} userRole - User role
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} { review, byAdmin }: the removed review, and
+ *   whether an admin took it down (which the controller audits)
  */
 const deleteReview = async (reviewId, userId, userRole, userMunicipalityId) => {
   const review = await reviewRepository.findById(reviewId);
@@ -205,6 +206,7 @@ const deleteReview = async (reviewId, userId, userRole, userMunicipalityId) => {
   }
 
   await reviewRepository.softDeleteReview(reviewId);
+  return { review, byAdmin: !isOwner };
 };
 
 /**

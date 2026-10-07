@@ -14,8 +14,20 @@ import axios from '../lib/axios';
 import ReasonDialog from '../components/admin/ReasonDialog';
 import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
+import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
+
+// Bulk actions go three at a time: each one is several queries and a
+// notification on a database with a handful of connections, so twenty at once
+// could time out (and stall every other admin's pages meanwhile).
+const settleInBatches = async (items, run, size = 3) => {
+  const results = [];
+  for (let i = 0; i < items.length; i += size) {
+    results.push(...await Promise.allSettled(items.slice(i, i + size).map(run)));
+  }
+  return results;
+};
 
 const STATUS_BADGE = {
   PENDING: 'admin-badge-pending',
@@ -42,9 +54,21 @@ export default function AdminProducts() {
   const [reasonAction, setReasonAction] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  // A decision changes the waiting count beside Products.
+  const refreshShell = useRefreshAdminShell();
 
+  // Typing waits for a pause (300 ms) before asking, so a name is one request
+  // rather than one per letter; a filter or page change asks at once.
+  const lastSearch = useRef(search);
   useEffect(() => {
-    fetchProducts();
+    const typed = search !== lastSearch.current;
+    lastSearch.current = search;
+    if (!typed) {
+      fetchProducts();
+      return undefined;
+    }
+    const timer = setTimeout(fetchProducts, 300);
+    return () => clearTimeout(timer);
   }, [statusFilter, search, page, storeId]);
 
   // Follows ?search= when it changes, so a second search from the top bar
@@ -55,12 +79,18 @@ export default function AdminProducts() {
   useEffect(() => {
     if (urlSearch === lastUrlSearch.current) return;
     lastUrlSearch.current = urlSearch;
+    // A finished search, not typing: it loads at once.
+    lastSearch.current = urlSearch;
     setSearch(urlSearch);
     setStatusFilter(urlSearch ? '' : 'APPROVED');
     setPage(1);
   }, [urlSearch]);
 
+  // Only the newest request fills the table: one overtaken by a later search,
+  // filter or page (and answering late) is dropped.
+  const latestRequest = useRef(0);
   const fetchProducts = async () => {
+    const request = ++latestRequest.current;
     setIsLoading(true);
     setSelectedIds([]);
     try {
@@ -70,12 +100,13 @@ export default function AdminProducts() {
       if (storeId) params.storeId = storeId;
 
       const res = await axios.get('/products', { params });
+      if (request !== latestRequest.current) return;
       setProducts(res.data || []);
       if (res.pagination) setPagination(res.pagination);
     } catch {
-      toast.error('Failed to load products');
+      if (request === latestRequest.current) toast.error('Failed to load products');
     } finally {
-      setIsLoading(false);
+      if (request === latestRequest.current) setIsLoading(false);
     }
   };
 
@@ -86,6 +117,7 @@ export default function AdminProducts() {
       toast.success('Product approved — now visible to buyers');
       setSelected(null);
       fetchProducts();
+      refreshShell('attention');
     } catch (err) {
       toast.error(err.message || 'Failed to approve');
     } finally {
@@ -101,6 +133,7 @@ export default function AdminProducts() {
       toast.success('Product restored — visible to buyers again');
       setSelected(null);
       fetchProducts();
+      refreshShell('attention');
     } catch (err) {
       toast.error(err.message || 'Failed to restore product');
     } finally {
@@ -127,11 +160,12 @@ export default function AdminProducts() {
       setBulkProcessing(true);
       try {
         const targets = products.filter((p) => selectedIds.includes(p.id) && (p.status === 'PENDING' || p.status === 'APPROVED'));
-        const results = await Promise.allSettled(targets.map((p) => axios.post(`/products/${p.id}/suspend`, body)));
+        const results = await settleInBatches(targets, (p) => axios.post(`/products/${p.id}/suspend`, body));
         summarize(results, 'Suspend');
         setSelectedIds([]);
         setReasonAction(null);
         fetchProducts();
+        refreshShell('attention');
       } finally {
         setBulkProcessing(false);
       }
@@ -145,6 +179,7 @@ export default function AdminProducts() {
       setReasonAction(null);
       setSelected(null);
       fetchProducts();
+      refreshShell('attention');
     } catch (err) {
       toast.error(err.message || `Failed to ${type}`);
     } finally {
@@ -165,10 +200,11 @@ export default function AdminProducts() {
     if (selectedPending.length === 0) return;
     setBulkProcessing(true);
     try {
-      const results = await Promise.allSettled(selectedPending.map((p) => axios.post(`/products/${p.id}/approve`)));
+      const results = await settleInBatches(selectedPending, (p) => axios.post(`/products/${p.id}/approve`));
       summarize(results, 'Approve');
       setSelectedIds([]);
       fetchProducts();
+      refreshShell('attention');
     } finally {
       setBulkProcessing(false);
     }
@@ -179,7 +215,7 @@ export default function AdminProducts() {
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">Product Approvals</h1>
+        <h1 className="admin-page-title">Products</h1>
       </div>
 
       <div className="admin-card">

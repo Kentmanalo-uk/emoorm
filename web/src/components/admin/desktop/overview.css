@@ -1,0 +1,328 @@
+/* Admin panel on computers: Dashboard and Analytics.
+   Desktop only (min-width: 769px) and only inside the admin shell (.ac-shell),
+   on top of the shared AdminDesktop.css. Phones keep their own styles.
+
+   The shared sheet already gives both pages the same header, period
+   control, toolbar buttons, KPI tiles, card heads, list rows and empty
+   states. This sheet adds what only these two pages have: the attention
+   banner, the custom date ranges, the charts, the capped dashboard cards
+   and the analytics pending-actions list. */
+
+@media (min-width: 769px) {
+
+  /* ── Dashboard: attention banner ──────────────────────────────────────
+     A white card like everything around it; the severity lives in a
+     tinted icon tile and the red chip instead of a tinted slab. */
+
+  .ac-shell .ac-content .dash-attention {
+    align-items: center;
+    gap: 14px;
+    padding: 14px var(--ad-inset);
+    border-radius: var(--ad-r-card);
+    background: var(--ad-surface);
+    box-shadow: var(--ad-shadow-card);
+  }
+
+  .ac-shell .ac-content .dash-attention > svg {
+    box-sizing: content-box;
+    padding: 9px;
+    border-radius: var(--ad-r-control);
+    background: var(--t-warning-50, #fffbeb);
+  }
+
+  .ac-shell .ac-content .dash-attention.is-urgent > svg {
+    background: var(--t-danger-50, #fef2f2);
+  }
+
+  .ac-shell .ac-content .dash-attention.is-clear > svg {
+    background: var(--t-secondary-50, #e9f7f0);
+  }
+
+  .ac-shell .ac-content .dash-attention strong {
+    line-height: 1.4;
+  }
+
+  .ac-shell .ac-content .dash-attention-body {
+    gap: 8px;
+  }
+
+  .ac-shell .ac-content .dash-attention-links {
+    gap: 8px;
+  }
+
+  .ac-shell .ac-content .dash-attention-links .dash-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: var(--ad-r-pill);
+    background: var(--ad-fill);
+    color: var(--ad-ink-body);
+    font-size: var(--ad-fs-meta);
+    font-weight: 600;
+    letter-spacing: 0;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .dash-attention-links .dash-chip:hover {
+    background: var(--ad-fill-hover);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .dash-attention-links .dash-chip.sev-high {
+    background: var(--t-danger-50, #fef2f2);
+    color: var(--t-danger-700, #b91c1c);
+  }
+
+  .ac-shell .ac-content .dash-attention-links .dash-chip.sev-high:hover {
+    background: var(--t-danger-100, #fee2e2);
+    color: var(--t-danger-800, #991b1b);
+  }
+
+  .ac-shell .ac-content .dash-attention-links .dash-chip:focus-visible {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: 1px;
+  }
+
+  .ac-shell .ac-content .dash-attention-dismiss {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--ad-r-compact);
+    color: var(--ad-ink-muted);
+    opacity: 1;
+  }
+
+  .ac-shell .ac-content .dash-attention-dismiss:hover {
+    background: var(--ad-fill);
+    color: var(--ad-ink);
+  }
+
+  .ac-shell .ac-content .dash-attention-dismiss:focus-visible {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: 1px;
+  }
+
+  .ac-shell .ac-content .dash-error {
+    gap: 10px;
+    padding: 12px var(--ad-inset);
+    border-radius: var(--ad-r-card);
+  }
+
+  /* ── Dashboard: custom range row ──────────────────────────────────── */
+
+  .ac-shell .ac-content .dash-custom-range {
+    align-items: center;
+    gap: 16px;
+    padding: 12px var(--ad-inset);
+    border-radius: var(--ad-r-card);
+  }
+
+  .ac-shell .ac-content .dash-custom-range label {
+    gap: 8px;
+    font-size: var(--ad-fs-compact);
+    color: var(--ad-ink-body);
+  }
+
+  .ac-shell .ac-content .dash-custom-range input {
+    height: var(--ad-h-control);
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--ad-r-compact);
+    background: var(--ad-fill);
+    color: var(--t-neutral-800, #1f2937);
+    font-size: var(--ad-fs-compact);
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .ac-shell .ac-content .dash-custom-range input:hover:not(:focus) {
+    background: var(--ad-field-hover);
+  }
+
+  .ac-shell .ac-content .dash-custom-range input:focus {
+    outline: 2px solid transparent;
+    background: var(--ad-surface);
+    box-shadow: var(--ad-ring);
+  }
+
+  /* ── Dashboard: cards ─────────────────────────────────────────────────
+     Capped cards scroll inside: a soft shade at the edge says there is
+     more (CSS-only scroll shadows), and the scroll region's keyboard focus
+     ring is drawn inside the card so overflow: hidden cannot clip it. */
+
+  .ac-shell .ac-content .dash-card-body {
+    background:
+      linear-gradient(var(--ad-surface) 30%, rgba(255, 255, 255, 0)) top / 100% 28px no-repeat local,
+      linear-gradient(rgba(255, 255, 255, 0), var(--ad-surface) 70%) bottom / 100% 28px no-repeat local,
+      radial-gradient(farthest-side at 50% 0, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0)) top / 100% 10px no-repeat scroll,
+      radial-gradient(farthest-side at 50% 100%, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0)) bottom / 100% 10px no-repeat scroll;
+    background-color: var(--ad-surface);
+    scrollbar-width: thin;
+    scrollbar-color: var(--t-neutral-300, #d1d5db) transparent;
+  }
+
+  .ac-shell .ac-content .dash-card-body:focus-visible {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: -2px;
+    border-radius: 0 0 var(--ad-r-card) var(--ad-r-card);
+  }
+
+  /* Every block inside a card sits on the same 20px inset as the head. */
+  .ac-shell .ac-content .dash-empty {
+    padding: 18px var(--ad-inset);
+  }
+
+  .ac-shell .ac-content .dash-coverage {
+    padding: 4px var(--ad-inset) 10px;
+  }
+
+  .ac-shell .ac-content .dash-pipeline {
+    padding: 4px var(--ad-inset) 16px;
+  }
+
+  /* Sales chart: 20px inset, rounded bar tops like analytics. */
+  .ac-shell .ac-content .dash-chart {
+    padding: 8px var(--ad-inset) 18px;
+  }
+
+  .ac-shell .ac-content .dash-chart-bar {
+    border-radius: 3px 3px 0 0;
+  }
+
+  .ac-shell .ac-content .dash-chart-avg {
+    left: var(--ad-inset);
+    right: var(--ad-inset);
+  }
+
+  .ac-shell .ac-content .dash-chart-axis {
+    padding: 0 var(--ad-inset) 16px;
+  }
+
+  /* Two tracks between 861px and 1280px: the third "third" card would sit
+     alone beside a hole, so it takes the whole row. */
+  @media (min-width: 861px) and (max-width: 1280px) {
+    .ac-shell .ac-content .dash-grid > .dash-col-third:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* ── Analytics: custom range panel ────────────────────────────────────
+     Opening it no longer pushes Refresh and Export down; borderless soft
+     date fields; Apply confirms, so it is the green button; Custom reads
+     as selected while the panel is open. */
+
+  .ac-shell .ac-content .an-actions {
+    align-items: flex-start;
+  }
+
+  .ac-shell .ac-content .an-daterange-wrap {
+    gap: 8px;
+  }
+
+  .ac-shell .ac-content .an-daterange-custom {
+    align-self: flex-end;
+    gap: 8px;
+    padding: 8px;
+    border-radius: var(--ad-r-card);
+    background: var(--ad-surface);
+    box-shadow: var(--ad-shadow-card);
+    font-size: var(--ad-fs-compact);
+  }
+
+  .ac-shell .ac-content .an-daterange-custom input[type='date'] {
+    height: var(--ad-h-control);
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--ad-r-compact);
+    background: var(--ad-fill);
+    color: var(--t-neutral-800, #1f2937);
+    font-size: var(--ad-fs-compact);
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .ac-shell .ac-content .an-daterange-custom input[type='date']:hover:not(:focus) {
+    background: var(--ad-field-hover);
+  }
+
+  .ac-shell .ac-content .an-daterange-custom input[type='date']:focus {
+    outline: 2px solid transparent;
+    background: var(--ad-surface);
+    box-shadow: var(--ad-ring);
+  }
+
+  .ac-shell .ac-content .an-daterange-sep {
+    font-size: 12px;
+  }
+
+  .ac-shell .ac-content .an-daterange-custom .an-icon-btn {
+    background: var(--t-primary-600, #047857);
+    color: var(--t-on-primary, #ffffff);
+  }
+
+  .ac-shell .ac-content .an-daterange-custom .an-icon-btn:hover:not(:disabled) {
+    background: var(--t-primary-700, #03684c);
+    color: var(--t-on-primary, #ffffff);
+  }
+
+  .ac-shell .ac-content .an-daterange-wrap:has(> .an-daterange-custom) .an-daterange-btn:last-child {
+    background: var(--ad-surface);
+    color: var(--t-primary-700, #03684c);
+    box-shadow: var(--ad-shadow-chip);
+  }
+
+  /* ── Analytics: sales trend ───────────────────────────────────────────
+     Summary and bars on the 20px inset; the day labels get room above
+     the card's bottom edge. */
+
+  .ac-shell .ac-content .an-chart-summary {
+    padding: 0 var(--ad-inset);
+  }
+
+  .ac-shell .ac-content .an-barchart {
+    padding: 20px var(--ad-inset) 30px;
+  }
+
+  /* ── Analytics: lists ─────────────────────────────────────────────────
+     The two "Recent …" cards (the ones with a View all link) are not
+     rankings: no rank numbers, no empty metric column. */
+
+  .ac-shell .ac-content .an-card:has(.an-card-link) .an-toplist-rank {
+    display: none;
+  }
+
+  .ac-shell .ac-content .an-toplist-metric:empty {
+    display: none;
+  }
+
+  /* Pending actions: the same 10px x 20px rhythm as the other lists, and
+     a focus ring drawn inside the card. */
+  .ac-shell .ac-content .an-actions-list {
+    padding: 4px 0 8px;
+  }
+
+  .ac-shell .ac-content .an-actions-list a {
+    min-height: 52px;
+    padding: 10px var(--ad-inset);
+    transition: background-color 0.15s ease;
+  }
+
+  .ac-shell .ac-content .an-actions-list a:hover {
+    background: var(--ad-band);
+  }
+
+  .ac-shell .ac-content .an-actions-list a:focus-visible {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: -2px;
+    border-radius: var(--ad-r-control);
+  }
+
+  /* ── Analytics: load error ────────────────────────────────────────────
+     The page draws its error as an inline-styled card; show it as the
+     same tinted banner the dashboard uses. */
+
+  .ac-shell .ac-content .an-page > .an-card[style] {
+    padding: 12px var(--ad-inset) !important;
+    background: var(--t-danger-50, #fef2f2);
+    box-shadow: none;
+    font-size: var(--ad-fs-compact);
+  }
+}

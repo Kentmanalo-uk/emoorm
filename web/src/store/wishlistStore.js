@@ -71,7 +71,9 @@ const useWishlistStore = create(
         // Owners whose list here has changes the account has not saved yet.
         unsaved: {},
 
-        setOwner: (userId) => {
+        // `sync: false` leaves the account's saved list unread, for accounts
+        // that never see one (admins).
+        setOwner: (userId, { sync = true } = {}) => {
           const key = ownerKey(userId);
           const lists = { ...get().lists };
           if (!lists[key]) lists[key] = [];
@@ -84,7 +86,7 @@ const useWishlistStore = create(
           }
           if (key !== get().owner) clearTimeout(saveTimer);
           set({ owner: key, lists, items: lists[key], unsaved });
-          if (key !== GUEST) loadSaved(key);
+          if (key !== GUEST && sync) loadSaved(key);
         },
 
         addItem: (product) => {

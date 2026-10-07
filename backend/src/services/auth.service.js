@@ -1037,10 +1037,25 @@ const getUsers = async (options) => {
 };
 
 /**
+ * A decision and its shop step land together: when opening or hiding the
+ * shop fails, the decision is taken back and the application waits again,
+ * as it was. Logged rather than thrown, so the caller still reports the
+ * failure that caused it.
+ */
+const undoSellerDecision = (userId, status, user, application) => userRepository
+  .reopenDecision(userId, status, {
+    role: user.role,
+    sellerRejectionReason: application?.sellerRejectionReason,
+    sellerReviewedAt: application?.sellerReviewedAt,
+    sellerApplicationHistory: application?.sellerApplicationHistory,
+  })
+  .catch((err) => console.error(`[seller decision] could not reopen ${userId}:`, err.message));
+
+/**
  * Approve seller application (admin use)
  * @param {String} userId - User ID
  * @param {Object} [actor] - The acting admin for municipality scope enforcement
- * @returns {Promise<Object>} Updated user
+ * @returns {Promise<Object>} The decision: id, name, role and application status
  */
 const approveSeller = async (userId, actor) => {
   const user = await userRepository.findById(userId);
@@ -1067,7 +1082,13 @@ const approveSeller = async (userId, actor) => {
 
   // Approval makes the shop public. Applicants from before shops opened at
   // application time get theirs created here.
-  const store = await ensureSellerStore(user, application, { approved: true });
+  let store;
+  try {
+    store = await ensureSellerStore(user, application, { approved: true });
+  } catch (err) {
+    await undoSellerDecision(userId, 'APPROVED', user, application);
+    throw err;
+  }
 
   // Notify the newly approved seller (non-blocking on failure).
   try {
@@ -1089,7 +1110,7 @@ const approveSeller = async (userId, actor) => {
  * @param {String} userId - User ID
  * @param {Object} [actor] - The acting admin for municipality scope enforcement
  * @param {String} [reason] - Rejection reason (passed to notification)
- * @returns {Promise<Object>} Updated user
+ * @returns {Promise<Object>} The decision: id, name, role and application status
  */
 const rejectSeller = async (userId, actor, reason) => {
   const user = await userRepository.findById(userId);
@@ -1125,9 +1146,14 @@ const rejectSeller = async (userId, actor, reason) => {
   // Legacy applicants promoted under the old flow may already own a store —
   // hide it so a rejected shop cannot stay reachable.
   // The shop stays private; the applicant can fix things and re-apply.
-  const store = await storeRepository.findByOwnerId(userId);
-  if (store) {
-    await storeRepository.updateStore(store.id, { isActive: false, isApproved: false });
+  try {
+    const store = await storeRepository.findByOwnerId(userId);
+    if (store) {
+      await storeRepository.updateStore(store.id, { isActive: false, isApproved: false });
+    }
+  } catch (err) {
+    await undoSellerDecision(userId, 'REJECTED', user, application);
+    throw err;
   }
 
   try {
@@ -1165,7 +1191,9 @@ const suspendUser = async (userId, actor) => {
     isActive: false,
   });
 
-  return user;
+  // The admin's browser gets the masked view, never the raw row (password
+  // hash, two-factor secret, payout numbers).
+  return adminUserView(user);
 };
 
 /**
@@ -1191,7 +1219,7 @@ const activateUser = async (userId, actor) => {
     isActive: true,
   });
 
-  return user;
+  return adminUserView(user);
 };
 
 /**

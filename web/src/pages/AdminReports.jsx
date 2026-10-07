@@ -14,6 +14,7 @@ import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import EmptyArt from '../components/ui/EmptyArt';
 import useAuthStore from '../store/authStore';
+import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 
@@ -69,6 +70,8 @@ export default function AdminReports() {
   const [exporting, setExporting] = useState(false);
   // Optional note saved with the decision, so "why" survives the drawer.
   const [notes, setNotes] = useState('');
+  // A decision changes the waiting count beside Reports.
+  const refreshShell = useRefreshAdminShell();
 
   useEffect(() => {
     fetchReports();
@@ -158,6 +161,7 @@ export default function AdminReports() {
       }
       setNotes('');
       fetchReports();
+      refreshShell('attention');
     } catch (err) {
       toast.error(err.message || 'Failed to update status');
     } finally {
