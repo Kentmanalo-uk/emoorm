@@ -58,7 +58,7 @@ import { saleInfo } from '../lib/variantPricing';
 import { voucherSummary } from '../lib/vouchers';
 import { SaleWas } from '../components/ui/SaleTag';
 import KindPrice from '../components/product/kinds/KindPrice';
-import { isStockless } from '../lib/productKinds';
+import { isStockless, productKind } from '../lib/productKinds';
 import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import { ProductTodayTag } from '../components/today/TodayTag';
@@ -266,6 +266,8 @@ export default function StoreDetail() {
   const handleAddToCart = (e, product) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
+    // Live animals are bought by making an offer on their page.
+    if (productKind(product) === 'LIVESTOCK') { navigate(`/product/${product.slug}`); return; }
     if (!isAuthenticated) {
       toast.error('Please login to add items to cart');
       return;
@@ -281,7 +283,7 @@ export default function StoreDetail() {
   // Phones: the same rules as the product list (options are picked on the
   // product page), and guests may fill a cart, as on the product page.
   const addToCartPhone = (product) => {
-    if (Array.isArray(product.variations) && product.variations.length > 0) {
+    if (productKind(product) === 'LIVESTOCK' || (Array.isArray(product.variations) && product.variations.length > 0)) {
       navigate(`/product/${product.slug}`);
       return false;
     }

@@ -13,7 +13,7 @@ import axios from '../lib/axios';
 import { saleInfo } from '../lib/variantPricing';
 import { SaleWas } from '../components/ui/SaleTag';
 import KindPrice from '../components/product/kinds/KindPrice';
-import { isStockless } from '../lib/productKinds';
+import { isStockless, productKind } from '../lib/productKinds';
 import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
@@ -112,6 +112,8 @@ const Products = () => {
   const handleAddToCart = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
+    // Live animals are bought by making an offer on their page.
+    if (productKind(product) === 'LIVESTOCK') { navigate(`/product/${product.slug}`); return; }
     if (product.stock === 0 && !isStockless(product)) {
       toast.error('Out of stock');
       return;

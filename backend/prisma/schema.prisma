@@ -856,10 +856,6 @@ model Product {
   weightGrams Int?          @map("weight_grams")
   lowStockThreshold Int     @default(5) @map("low_stock_threshold")
 
-  // Livestock: buyers may offer a price per head. offerFloor is the lowest
-  // the seller takes (never shown to buyers): offers below it are declined.
-  acceptsOffers Boolean  @default(true) @map("accepts_offers")
-  offerFloor    Decimal? @db.Decimal(10, 2) @map("offer_floor")
   images      Json          // Array of image URLs
   returnPolicy Json?        @map("return_policy")
   variations  Json?
@@ -1162,7 +1158,7 @@ model OrderItem {
   /// Whether the line took stock when ordered (a paluto takes none): a
   /// cancellation or a return gives back only what was taken.
   stockTaken    Boolean  @default(true) @map("stock_taken")
-  /// Bought at a price agreed in a price offer (livestock): that offer.
+  /// Livestock sold through a deal in chat (PriceOffer): that deal.
   offerId       String?  @map("offer_id")
 
   createdAt     DateTime @default(now()) @map("created_at")
@@ -1420,9 +1416,12 @@ model Message {
   productId String?  @map("product_id")
   product   Product? @relation(fields: [productId], references: [id])
 
-  // A price offer this message is about (an offer card in the chat).
-  offerId   String?     @map("offer_id")
-  offer     PriceOffer? @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  // A livestock deal this message is about (a deal card in the chat), and
+  // the step it records: OFFER, COUNTER, CHANGE, ACCEPT, DECLINE, WITHDRAW,
+  // MEETUP, RECORD, CONFIRM, NOT_RIGHT, CALL_OFF, EXPIRE, AUTO_CONFIRM.
+  offerId    String?     @map("offer_id")
+  offer      PriceOffer? @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  offerEvent String?     @db.VarChar(20) @map("offer_event")
 
   readAt    DateTime? @map("read_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -1720,20 +1719,22 @@ model AppDownload {
 // PRICE OFFERS (livestock)
 // ============================================
 
-/// Where a price offer stands.
+/// Where a livestock deal stands.
 enum OfferStatus {
-  PENDING   // the buyer offered; the seller answers by respondBy
-  COUNTERED // the seller named a price; the buyer answers by respondBy
-  ACCEPTED  // agreed: the buyer can buy at agreedPrice until buyBy
+  PENDING    // the buyer named a price (offerPrice); the seller answers by respondBy
+  COUNTERED  // the seller named a price (counterPrice); the buyer answers by respondBy
+  ACCEPTED   // agreed on agreedPrice: they meet, and the seller records the sale by meetBy
+  CONFIRMING // the seller recorded the sale (orderId); the buyer confirms by respondBy, else it confirms itself
+  SOLD       // done: the order is completed
   DECLINED
-  CANCELLED // the buyer took it back
-  EXPIRED   // nobody answered, or the agreed price went unused
-  USED      // bought: orderId
+  CANCELLED  // withdrawn, or called off after agreeing (closedBy)
+  EXPIRED    // nobody answered, or no sale was recorded in time
 }
 
-/// A buyer's offer of a price per head on a livestock listing, and the
-/// seller's answer. One round each: the seller may counter once, then the
-/// buyer accepts or declines.
+/// A livestock deal between a buyer and a seller, talked over in their chat:
+/// prices per head go back and forth until one side accepts; they meet; the
+/// seller records the heads and total agreed in person, and the buyer
+/// confirms it. Recorded, it is an order like any other (paid in person).
 model PriceOffer {
   id           String      @id @default(uuid())
   productId    String      @map("product_id")
@@ -1752,7 +1753,19 @@ model PriceOffer {
   sellerNote   String?     @db.VarChar(300) @map("seller_note")
   status       OfferStatus @default(PENDING)
   respondBy    DateTime    @map("respond_by")
-  buyBy        DateTime?   @map("buy_by")
+  meetBy       DateTime?   @map("buy_by")
+  // Prices named so far (each offer, counter or change is one).
+  rounds       Int         @default(1)
+  // What the seller recorded after meeting: heads and the total paid.
+  finalQuantity Int?       @map("final_quantity")
+  finalTotal   Decimal?    @db.Decimal(10, 2) @map("final_total")
+  // Where and when they plan to meet (either side may set it).
+  meetAt       DateTime?   @map("meet_at")
+  meetPlace    String?     @db.VarChar(200) @map("meet_place")
+  // Why it closed (NOT_ENOUGH_HEADS, LISTING_GONE, CALLED_OFF…) and by whom
+  // (BUYER, SELLER or SYSTEM).
+  closedReason String?     @db.VarChar(40) @map("closed_reason")
+  closedBy     String?     @db.VarChar(10) @map("closed_by")
   orderId      String?     @map("order_id")
   messages     Message[]
   createdAt    DateTime    @default(now()) @map("created_at")
@@ -1762,6 +1775,7 @@ model PriceOffer {
   @@index([storeId, status, createdAt], map: "price_offers_store_idx")
   @@index([buyerId, status, createdAt], map: "price_offers_buyer_idx")
   @@index([status, respondBy], map: "price_offers_due_idx")
+  @@index([status, updatedAt], map: "price_offers_status_updated_idx")
   @@map("price_offers")
 }
 

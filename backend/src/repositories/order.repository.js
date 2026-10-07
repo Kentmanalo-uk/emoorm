@@ -130,21 +130,6 @@ const createOrderTx = (orderData, itemsData, voucherRedemption) => withDeadlockR
       )
     );
 
-    // Agreed offer prices: each used once, by this order (two checkouts at
-    // once: the second finds it used and the whole order rolls back).
-    for (const item of itemsData) {
-      if (!item.offerId) continue;
-      const used = await tx.priceOffer.updateMany({
-        where: { id: item.offerId, buyerId: orderData.buyerId, status: 'ACCEPTED', buyBy: { gt: new Date() } },
-        data: { status: 'USED', orderId: order.id },
-      });
-      if (used.count === 0) {
-        const err = new Error('This agreed price is no longer available');
-        err.code = 'OFFER_UNAVAILABLE';
-        throw err;
-      }
-    }
-
     if (voucherRedemption && voucherRedemption.voucherId) {
       // Voucher limits are re-checked here, inside the transaction, and never
       // trusted from the earlier read-only validation: that check-then-act

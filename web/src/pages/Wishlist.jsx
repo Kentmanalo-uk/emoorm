@@ -1,5 +1,6 @@
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate } from 'react-router-dom';
+import { productKind } from '../lib/productKinds';
 import { ShoppingCart, Trash as Trash2, Package } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -26,6 +27,8 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
   const { addItem } = useCartStore();
 
   const handleAddToCart = (product) => {
+    // Live animals are bought by making an offer on their page.
+    if (productKind(product) === 'LIVESTOCK') { navigate(`/product/${product.slug}`); return; }
     if (!isAuthenticated) { navigate('/login'); return; }
     try {
       addItem({ ...product, quantity: 1 });

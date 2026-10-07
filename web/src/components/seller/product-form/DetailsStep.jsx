@@ -335,7 +335,7 @@ function PalutoDetails({ form, set, patch, errors, way }) {
 }
 
 /* ── Live animal ─────────────────────────────────────────────────── */
-function AnimalDetails({ form, set, patch, errors, way }) {
+function AnimalDetails({ form, set, patch, errors }) {
   const heads = parseInt(form.stock, 10) || 0;
   const sexes = SEXES.map((s) => (s.key === 'MIXED'
     ? { ...s, disabled: heads <= 1, title: heads <= 1 ? 'For more than one head' : undefined }
@@ -426,36 +426,14 @@ function AnimalDetails({ form, set, patch, errors, way }) {
         </div>
       </Field>
 
-      {way}
+      {/* No pickup or delivery to choose: buyers make an offer, and you
+          agree in chat where to meet. */}
       <Switch
         checked={form.visitFirst}
         onChange={(on) => set('visitFirst', on)}
         label="Buyers can visit the farm first"
         sub="They can come and see the animal before they buy."
       />
-      <Switch
-        checked={form.acceptsOffers !== false}
-        onChange={(on) => set('acceptsOffers', on)}
-        label="Buyers can make an offer"
-        sub="They name a price per head; you accept, decline or counter."
-      />
-      {form.acceptsOffers !== false && (
-        <Field
-          label="Lowest price you take per head"
-          htmlFor="pf-offer-floor"
-          error={errors.offerFloor}
-          hint="Optional, and never shown to buyers. Offers below it are declined for you."
-        >
-          <MoneyInput
-            id="pf-offer-floor"
-            value={form.offerFloor}
-            onChange={(v) => set('offerFloor', v)}
-            placeholder="e.g. 7000"
-            invalid={!!errors.offerFloor}
-            label="Lowest price you take per head"
-          />
-        </Field>
-      )}
 
       <OptionalHead />
       <NotesField form={form} set={set} placeholder="e.g. Vaccinated and dewormed. Fed with rice bran and kangkong." />

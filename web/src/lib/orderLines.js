@@ -54,8 +54,8 @@ export const lineUnit = (line) => {
  * chosen options), a sized dish shows its size instead ("Good for 3-4").
  */
 export const lineNote = (line, { choice = false } = {}) => {
-  // Bought at a price agreed in a price offer (livestock).
-  if (line?.offerId) return 'Agreed price (offer)';
+  // Livestock: the price agreed with the seller in chat and paid in person.
+  if (line?.offerId) return 'Agreed with the seller';
   const kind = lineKind(line);
   if (kind === 'PACKAGE') {
     const list = packageItemsLabel(line.packageContents || line.packageItems || line.product?.packageItems);

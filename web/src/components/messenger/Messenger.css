@@ -2173,3 +2173,106 @@
   opacity: 0.6;
   cursor: default;
 }
+
+/* ── Livestock deals in a chat ── */
+
+/* Each message, and a deal's card after its latest step. */
+.msgr-entry {
+  display: contents;
+}
+
+.msgr-deal-row {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+  scroll-margin: 80px;
+}
+
+.msgr-bubble.is-deal-step {
+  background: var(--t-primary-50, #ecfdf5);
+  border-color: transparent;
+  color: var(--t-primary-900, #064e3b);
+}
+
+.msgr-bubble-row.is-self .msgr-bubble.is-deal-step {
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.msgr-bubble-deal-icon {
+  opacity: 0.8;
+}
+
+/* Open deals, kept in view above the messages. */
+.msgr-deals {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 18px;
+  background: var(--t-neutral-0, #fff);
+  border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
+  flex-shrink: 0;
+}
+
+.msgr-deal-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.msgr-deal-strip > svg {
+  flex-shrink: 0;
+  color: var(--t-primary-600, #059669);
+}
+
+.msgr-deal-strip-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.msgr-deal-strip-price {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+/* Call the other side (a livestock deal is open). */
+.msgr-thread-call {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-left: auto;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.msgr-thread-call:hover {
+  background: var(--t-primary-100, #d1fae5);
+}
+
+@media (max-width: 768px) {
+  .msgr-deals {
+    padding: 6px 12px;
+  }
+
+  .msgr-deal-strip .of-badge {
+    display: none;
+  }
+}

@@ -5,7 +5,7 @@ import {
   PaperPlaneTilt as Send, ChatText as MessageSquare, Storefront as StoreIcon, User as UserIcon,
   Package, PushPin as Pin, ArrowsClockwise as RefreshCw, CircleNotch as Loader2,
   MagnifyingGlass, CaretLeft, Tag as TagIcon, Image as ImageIcon,
-  Check, Checks, X, Flag, EnvelopeOpen, Funnel,
+  Check, Checks, X, Flag, EnvelopeOpen, Funnel, Phone, Handshake,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axiosInstance from '../../lib/axios';
@@ -24,6 +24,10 @@ import { readCache, writeCache } from '../../lib/pageCache';
 import MoormyEntry from '../moormy/MoormyEntry';
 import MoormyThread from '../moormy/MoormyThread';
 import { pollWhileVisible } from '../../lib/visiblePoll';
+import DealCard from '../offers/DealCard';
+import {
+  OPEN as OPEN_DEALS, dealStatus, heads, peso as dealPeso, telHref,
+} from '../offers/offerText';
 
 const POLL_INTERVAL_MS = 5000;
 // Ate Moormy's chat (buyers only): opened like a conversation, as ?c=moormy.
@@ -186,7 +190,8 @@ function PinnedOrderCard({ order, onAttach }) {
 }
 
 function MessageBubble({ message, isSelf, seen, onOpenImage }) {
-  const product = message.product;
+  // A step of a livestock deal: its card shows the animal, so no product card.
+  const product = message.offerId ? null : message.product;
   const hasMedia = Boolean(message.imageUrl);
   return (
     <div className={`msgr-bubble-row ${isSelf ? 'is-self' : ''}`}>
@@ -201,7 +206,8 @@ function MessageBubble({ message, isSelf, seen, onOpenImage }) {
           />
         </div>
       )}
-      <div className={`msgr-bubble${hasMedia && !message.body && !product && !message.order ? ' is-media-only' : ''}`}>
+      <div className={`msgr-bubble${hasMedia && !message.body && !product && !message.order ? ' is-media-only' : ''}${message.offerId ? ' is-deal-step' : ''}`}>
+        {message.offerId && <Handshake size={13} weight="fill" className="msgr-bubble-deal-icon" aria-hidden="true" />}
         {message.order && (
           <div className="msgr-bubble-order">
             <Pin size={11} />
@@ -707,6 +713,25 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     return out;
   }, [activeConvo, earlierHere]);
 
+  // Livestock deals: each one's card goes after its latest step in the chat.
+  const dealsById = useMemo(() => new Map((activeConvo?.deals || []).map((d) => [d.id, d])), [activeConvo]);
+  const lastStepOf = useMemo(() => {
+    const last = new Map();
+    timeline.forEach((entry) => { if (entry.kind === 'msg' && entry.message.offerId) last.set(entry.message.offerId, entry.message.id); });
+    return last;
+  }, [timeline]);
+  const openDeals = (activeConvo?.deals || []).filter((d) => OPEN_DEALS.includes(d.status));
+  const dealSide = activeConvo?.role === 'seller' ? 'seller' : 'buyer';
+  const dealPhone = openDeals.map((d) => (dealSide === 'buyer' ? d.sellerPhone : d.buyerPhone)).find(Boolean) || null;
+  const refreshDeals = () => {
+    if (!activeId) return;
+    fetchConversation(activeId, { silent: true }).then(() => scrollToBottom());
+    fetchConversations();
+  };
+  const showDeal = (id) => {
+    document.getElementById(`msgr-deal-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   const canSend = !sending && Boolean(draft.trim() || pendingImage || pendingProduct || attachedOrderId);
 
   const menuItems = activeConvo ? [
@@ -906,6 +931,16 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                 </div>
                 <div className="msgr-thread-sub">{activeHeader?.subtitle}</div>
               </div>
+              {dealPhone && (
+                <a
+                  className="msgr-thread-call"
+                  href={telHref(dealPhone)}
+                  aria-label={dealSide === 'buyer' ? 'Call the seller' : 'Call the buyer'}
+                  title={dealSide === 'buyer' ? 'Call the seller' : 'Call the buyer'}
+                >
+                  <Phone size={20} weight="fill" />
+                </a>
+              )}
               <MoreMenu
                 className="msgr-thread-more"
                 buttonClassName="msgr-thread-menu"
@@ -914,6 +949,22 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                 items={menuItems}
               />
             </header>
+
+            {openDeals.length > 0 && (
+              <div className="msgr-deals" aria-label="Deals in this chat">
+                {openDeals.map((d) => {
+                  const st = dealStatus(d, dealSide);
+                  return (
+                    <button type="button" key={d.id} className="msgr-deal-strip" onClick={() => showDeal(d.id)}>
+                      <Handshake size={16} weight="fill" aria-hidden="true" />
+                      <span className="msgr-deal-strip-name">{d.product?.name}</span>
+                      <span className="msgr-deal-strip-price">{d.finalTotal != null ? dealPeso(d.finalTotal) : `${heads(d.quantity)} · ${dealPeso(d.total)}`}</span>
+                      <span className={`of-badge is-${st.tone}`}>{st.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {activeConvo.pinnedOrders?.length > 0 && (
               <div className="msgr-pins">
@@ -971,13 +1022,20 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                 timeline.map((entry) => (entry.kind === 'day' ? (
                   <div key={entry.key} className="msgr-day"><span>{entry.label}</span></div>
                 ) : (
-                  <MessageBubble
-                    key={entry.key}
-                    message={entry.message}
-                    isSelf={entry.message.senderId === currentUser?.id}
-                    seen={Boolean(otherReadAt) && new Date(otherReadAt) >= new Date(entry.message.createdAt)}
-                    onOpenImage={setViewerImage}
-                  />
+                  <div key={entry.key} className="msgr-entry">
+                    <MessageBubble
+                      message={entry.message}
+                      isSelf={entry.message.senderId === currentUser?.id}
+                      seen={Boolean(otherReadAt) && new Date(otherReadAt) >= new Date(entry.message.createdAt)}
+                      onOpenImage={setViewerImage}
+                    />
+                    {entry.message.offerId && lastStepOf.get(entry.message.offerId) === entry.message.id
+                      && dealsById.has(entry.message.offerId) && (
+                      <div className="msgr-deal-row" id={`msgr-deal-${entry.message.offerId}`}>
+                        <DealCard deal={dealsById.get(entry.message.offerId)} side={dealSide} onChanged={refreshDeals} />
+                      </div>
+                    )}
+                  </div>
                 )))
               )}
               <div ref={messagesEndRef} />

@@ -578,3 +578,452 @@
   font-size: 11px;
   font-weight: 700;
 }
+
+/* ── Livestock deals: the product page, the sheets and the chat card ── */
+
+/* Computers: Make an offer · Message seller */
+.of-make {
+  min-height: 52px;
+  padding: 8px 24px 8px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  text-align: left;
+}
+
+.of-make:hover:not(:disabled) {
+  background: var(--t-primary-700, #047857);
+}
+
+.of-make span,
+.of-bar-offer span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.of-make small,
+.of-bar-offer small {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.of-make.is-closed,
+.of-bar-offer.is-closed {
+  background: var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.of-panel-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 14px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.of-panel-chat:hover {
+  background: var(--t-primary-100, #d1fae5);
+}
+
+.of-panel .of-panel-hint {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* Phones: the big offer button in the bottom bar */
+.of-bar-offer {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.of-bar-offer:disabled {
+  cursor: not-allowed;
+}
+
+/* The sheets */
+.of-grip {
+  justify-self: center;
+  width: 40px;
+  height: 4px;
+  margin: -8px 0 -4px;
+  border-radius: 999px;
+  background: var(--t-neutral-300, #d1d5db);
+}
+
+.of-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.of-item img {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.of-item span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.of-item b {
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-item small {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+}
+
+.of-dialog .of-stepper,
+.of-dialog .of-money {
+  border: 0;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.of-dialog .of-money:focus-within {
+  box-shadow: 0 0 0 2px var(--t-primary-500, #10b981);
+}
+
+.of-dialog .of-chip {
+  border: 0;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.of-dialog .of-chip.is-on {
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.of-dialog textarea,
+.of-input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #111827);
+  font: inherit;
+  font-size: 15px;
+}
+
+.of-dialog textarea:focus,
+.of-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--t-primary-500, #10b981);
+}
+
+/* What it works out to */
+.of-calc {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.of-calc-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.of-calc-total span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.of-calc-total span svg {
+  color: var(--t-primary-600, #059669);
+}
+
+.of-calc-total strong {
+  color: var(--t-primary-800, #065f46);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.of-calc-lines {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.of-calc-lines li {
+  display: flex;
+  gap: 8px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.of-calc-lines svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--t-primary-600, #059669);
+}
+
+.of-calc-usual {
+  font-weight: 600;
+}
+
+/* Status badges */
+.of-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.of-badge.is-amber {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.of-badge.is-blue {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.of-badge.is-green {
+  background: var(--t-primary-100, #d1fae5);
+  color: var(--t-primary-800, #065f46);
+}
+
+.of-badge.is-gray {
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-600, #4b5563);
+}
+
+/* The deal card in the chat */
+.of-deal {
+  display: grid;
+  gap: 10px;
+  width: min(380px, 100%);
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
+}
+
+.of-deal-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.of-deal-img img {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.of-deal-what {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.of-deal-name {
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 14.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-call {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.of-call:hover {
+  background: var(--t-primary-100, #d1fae5);
+}
+
+.of-deal-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.of-deal-price span {
+  color: var(--t-neutral-700, #374151);
+  font-size: 13.5px;
+}
+
+.of-deal-price s {
+  margin-left: 6px;
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+.of-deal-price strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 19px;
+}
+
+.of-deal.is-green .of-deal-price {
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.of-deal.is-green .of-deal-price strong {
+  color: var(--t-primary-800, #065f46);
+}
+
+.of-deal-meet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.of-deal-meet svg {
+  color: var(--t-primary-600, #059669);
+}
+
+.of-deal-hint {
+  margin: 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.of-deal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.of-deal-actions .of-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  border: 0;
+  background: var(--t-neutral-100, #f3f4f6);
+  text-decoration: none;
+}
+
+.of-deal-actions .of-btn--primary {
+  flex: 1 1 100%;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.of-deal-actions .of-btn--quiet {
+  background: none;
+}
+
+/* The deal lists (My offers, the seller's Offers) */
+.of-row {
+  border: 0;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+.of-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.of-row-total {
+  color: var(--t-neutral-900, #111827);
+  font-weight: 700;
+}
+
+.of-row-actions .of-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: var(--t-neutral-100, #f3f4f6);
+  text-decoration: none;
+}
+
+.of-row-actions .of-btn--primary {
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .of-row {
+    grid-template-columns: 56px 1fr;
+    padding: 12px;
+  }
+
+  .of-row-img {
+    width: 56px;
+    height: 56px;
+  }
+}

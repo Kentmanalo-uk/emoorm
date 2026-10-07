@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { productKind } from '../lib/productKinds';
 import { Camera, CircleNotch as Loader2, ShoppingCart, Star, UploadSimple as Upload, ArrowLeft } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
@@ -78,6 +79,8 @@ const SearchByImage = () => {
   const handleAddToCart = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
+    // Live animals are bought by making an offer on their page.
+    if (productKind(product) === 'LIVESTOCK') { navigate(`/product/${product.slug}`); return; }
     addItem({
       id: product.id,
       name: product.name,

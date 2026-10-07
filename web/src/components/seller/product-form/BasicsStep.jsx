@@ -8,7 +8,7 @@ const PRICE_WORDS = {
   REGULAR: { label: 'Price' },
   READY_TO_EAT: { label: 'Price', hint: 'For one serving.' },
   COOK_TO_ORDER: { label: 'Price', hint: 'Different sizes and prices? Add them in the next step.' },
-  LIVESTOCK: { label: 'Price per head', hint: 'For one animal.' },
+  LIVESTOCK: { label: 'Asking price per head', hint: 'For one animal. Buyers make offers, and you agree on the price in chat.' },
 };
 
 /**

@@ -261,9 +261,6 @@ export const toFormState = (product) => {
     sex: d.sex || '',
     liveWeight: d.weightKg !== undefined && d.weightKg !== null ? String(d.weightKg) : '',
     visitFirst: d.visitFirst === true,
-    // Livestock: buyers may offer a price; the lowest the seller takes.
-    acceptsOffers: product ? product.acceptsOffers !== false : true,
-    offerFloor: product?.offerFloor != null ? String(Number(product.offerFloor)) : '',
     // Ready-to-eat, new: its first post for today goes up as it is saved.
     postToday: true,
     todayQty: '',
@@ -458,8 +455,6 @@ export const buildPayload = (state, { kind, hasOptions, editing, product }) => {
   // food is stocked by its posts for the day.
   if (kind === 'LIVESTOCK') {
     payload.stock = parseInt(state.stock, 10) || 0;
-    payload.acceptsOffers = state.acceptsOffers !== false;
-    payload.offerFloor = state.acceptsOffers !== false && state.offerFloor !== '' ? Number(state.offerFloor) : null;
   }
 
   // Editing: the stock this form opened with, so the server applies only the
@@ -587,11 +582,6 @@ export const checkStep = (step, s, ctx) => {
       else if (s.sex === 'MIXED' && !(Number(heads) > 1)) errs.sex = 'Males and females is for more than one head. Choose male or female.';
       const kg = Number(s.liveWeight);
       if (String(s.liveWeight).trim() === '' || !(kg >= 0.1 && kg <= 2000)) errs.liveWeight = 'Enter about how heavy it is, from 0.1 to 2,000 kg.';
-      if (s.acceptsOffers !== false && String(s.offerFloor ?? '').trim() !== '') {
-        const floor = Number(s.offerFloor);
-        if (!(floor > 0)) errs.offerFloor = 'Enter an amount, or leave it empty.';
-        else if (Number(s.price) > 0 && floor >= Number(s.price)) errs.offerFloor = 'Make it lower than your price per head.';
-      }
     }
   }
 
@@ -707,7 +697,7 @@ export const detailLines = (s, ctx) => {
       weightLabel(d),
       headsLabel(s.stock),
       s.visitFirst && 'Buyers can visit the farm first',
-      s.acceptsOffers !== false && (s.offerFloor ? `Takes offers from ${peso(s.offerFloor)}` : 'Takes offers'),
+      'Buyers make offers; you agree in chat',
     ].filter(Boolean);
   }
   return [];

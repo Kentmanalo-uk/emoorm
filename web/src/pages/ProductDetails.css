@@ -3477,3 +3477,22 @@ a.pdp-pkg-item:hover {
 .pdp-rows--compact .pdp-facts-grid {
   gap: 6px 16px;
 }
+
+/* Livestock: the price is an asking price, open to offers. */
+.pdp-price-nego {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 12.5px;
+  font-weight: 700;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.pdp-m-price-col .pdp-price-nego {
+  margin: 4px 0 0;
+}

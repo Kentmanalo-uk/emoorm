@@ -2,6 +2,7 @@ const messageRepository = require('../repositories/message.repository');
 const storeRepository = require('../repositories/store.repository');
 const orderRepository = require('../repositories/order.repository');
 const notificationService = require('./notification.service');
+const priceOfferService = require('./priceOffer.service');
 const { ApiError } = require('../middleware/errorHandler');
 const prisma = require('../config/database');
 const config = require('../config/env');
@@ -215,10 +216,11 @@ const getConversation = async (conversationId, userId, { before = null } = {}) =
 
   const role = resolveRole(conversation, userId);
   const { messages, hasEarlier } = await messageRepository.listMessages(conversationId, { before });
-  const orders = await messageRepository.findBuyerOrdersForStore(
-    conversation.buyerId,
-    conversation.storeId,
-  );
+  const [orders, deals] = await Promise.all([
+    messageRepository.findBuyerOrdersForStore(conversation.buyerId, conversation.storeId),
+    // Livestock deals between them: each shows as a card in the chat.
+    priceOfferService.forConversation(conversation.buyerId, conversation.storeId, role === 'buyer' ? 'BUYER' : 'SELLER'),
+  ]);
 
   return {
     id: conversation.id,
@@ -237,6 +239,7 @@ const getConversation = async (conversationId, userId, { before = null } = {}) =
     serviceRating: conversation.serviceRating,
     serviceRatingAt: conversation.serviceRatingAt,
     pinnedOrders: shapePinnedOrders(orders),
+    deals,
     // The newest messages; earlier ones come a page at a time (?before=).
     hasEarlier,
     messages: messages.map((m) => ({
@@ -258,6 +261,8 @@ const getConversation = async (conversationId, userId, { before = null } = {}) =
         : null,
       productId: m.productId,
       product: shapeMessageProduct(m.product),
+      offerId: m.offerId,
+      offerEvent: m.offerEvent,
       createdAt: m.createdAt,
       readAt: m.readAt,
     })),

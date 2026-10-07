@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { productKind } from '../lib/productKinds';
 import useSeo from '../lib/seo';
 import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ShoppingCart, Star, Storefront, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -297,6 +298,8 @@ const Home = () => {
 
   const handleAddToCart = (e, product) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
+    // Live animals are bought by making an offer on their page.
+    if (productKind(product) === 'LIVESTOCK') { navigate(`/product/${product.slug}`); return; }
     try {
       addItem(product, 1);
       toast.success(`${product.name} added to cart!`);

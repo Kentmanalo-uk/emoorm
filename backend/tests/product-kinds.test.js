@@ -617,9 +617,6 @@ test('couriers are refused for live animals, paluto and packages without a weigh
   const buyer = await h.user('BUYER');
   const byCourier = { courierId: courier.id, paymentMethod: 'GCASH' };
 
-  const animal = await deliveryOrder(buyer, store, municipality, [{ productId: pig.id, quantity: 1 }], byCourier);
-  assert.equal(animal.status, 400);
-  assert.equal(animal.body.message, 'Live animals are picked up or delivered by the shop, not by couriers.');
   const cooked = await deliveryOrder(buyer, store, municipality, [{ productId: paluto.id, quantity: 2 }], byCourier);
   assert.equal(cooked.status, 400);
   assert.equal(cooked.body.message, 'Cooked-to-order food is picked up or delivered by the shop, not by couriers.');
@@ -631,9 +628,11 @@ test('couriers are refused for live animals, paluto and packages without a weigh
   assert.equal(box.status, 201, box.body?.message);
   assert.equal(box.body.data.courierId, courier.id);
 
-  // The shop delivering a live animal itself is fine.
+  // Live animals never go through checkout at all: they are bought by
+  // agreeing a price with the seller in chat.
   const self = await deliveryOrder(await h.user('BUYER'), store, municipality, [{ productId: pig.id, quantity: 1 }]);
-  assert.equal(self.status, 201, self.body?.message);
+  assert.equal(self.status, 400);
+  assert.equal(self.body.message, `${pig.name} is bought by making an offer to the seller`);
 
   // The quote says so too.
   const quote = await h.api('POST', '/couriers/quote', { body: { storeId: store.id, items: [{ productId: pig.id, quantity: 1 }], municipalityId: municipality.id } });
@@ -652,17 +651,17 @@ test('couriers are refused for live animals, paluto and packages without a weigh
 test("an order must fit each product's own way of receiving it", async () => {
   const seller = await h.user('SELLER');
   const { store, municipality } = await courierShop(seller);
-  const pig = await h.product(store, { name: `Ci Farm Pig ${h.RUN}`, productType: 'LIVESTOCK', details: PIG, stock: 2, fulfillment: 'PICKUP' });
+  const rice = await h.product(store, { name: `Ci Farm Rice ${h.RUN}`, stock: 2, weightGrams: 1000, fulfillment: 'PICKUP' });
   const buyer = await h.user('BUYER');
 
-  const delivered = await deliveryOrder(buyer, store, municipality, [{ productId: pig.id, quantity: 1 }]);
+  const delivered = await deliveryOrder(buyer, store, municipality, [{ productId: rice.id, quantity: 1 }]);
   assert.equal(delivered.status, 400);
-  assert.equal(delivered.body.message, `${pig.name} is pickup only`);
-  const picked = await pickupOrder(buyer, store, [{ productId: pig.id, quantity: 1 }]);
+  assert.equal(delivered.body.message, `${rice.name} is pickup only`);
+  const picked = await pickupOrder(buyer, store, [{ productId: rice.id, quantity: 1 }]);
   assert.equal(picked.status, 201, picked.body?.message);
 
-  const quote = await h.api('POST', '/couriers/quote', { body: { storeId: store.id, items: [{ productId: pig.id, quantity: 1 }] } });
-  assert.deepEqual(quote.body.data.pickupOnly, [pig.name]);
+  const quote = await h.api('POST', '/couriers/quote', { body: { storeId: store.id, items: [{ productId: rice.id, quantity: 1 }] } });
+  assert.deepEqual(quote.body.data.pickupOnly, [rice.name]);
   assert.equal(quote.body.data.seller.offered, false);
 });
 

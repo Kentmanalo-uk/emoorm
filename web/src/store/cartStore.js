@@ -218,6 +218,11 @@ const useCartStore = create(
           const cartKey = cartKeyFor(product);
           const existingItem = items.find((item) => item.id === cartKey);
 
+          // Live animals are bought by agreeing a price in chat (Make an offer).
+          if (productKind(product) === 'LIVESTOCK') {
+            throw new Error('Make an offer to the seller to buy live animals');
+          }
+
           // A shop still setting up shows its products but takes no orders.
           if (product.readyToSell === false || product.store?.readyToSell === false) {
             throw new Error("This shop isn't taking orders yet");
@@ -386,6 +391,10 @@ const useCartStore = create(
             if (gone) {
               patch.unavailable = true;
               patch.unavailableReason = 'This product is no longer available';
+            } else if (productKind(product) === 'LIVESTOCK') {
+              // Added before live animals were sold by offer: buy it from its page.
+              patch.unavailable = true;
+              patch.unavailableReason = 'Make an offer to the seller on its page';
             } else if (optionGone) {
               patch.unavailable = true;
               patch.unavailableReason = 'This option is no longer available';

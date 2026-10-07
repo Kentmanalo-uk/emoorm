@@ -104,42 +104,11 @@ const Checkout = () => {
   // Restrict checkout to the items selected on the Cart page (if provided).
   const selectedIds = location.state?.selectedIds;
   const incomingVoucherCode = location.state?.voucherCode || '';
-  // Buying at a price agreed in a price offer (livestock): that line alone,
-  // from the offer, not from the cart.
-  const offerId = location.state?.offerId || null;
-  const [offerLine, setOfferLine] = useState(null);
-  const [offerError, setOfferError] = useState('');
-  useEffect(() => {
-    if (!offerId || !isAuthenticated) return undefined;
-    let live = true;
-    axios.get(`/offers/${offerId}/checkout`)
-      .then((res) => {
-        if (!live) return;
-        const o = res.data;
-        setOfferLine({
-          id: `offer:${o.id}`,
-          offerId: o.id,
-          productId: o.product.id,
-          name: o.product.name,
-          slug: o.product.slug,
-          image: o.product.image,
-          price: o.agreedPrice,
-          quantity: o.quantity,
-          stock: o.product.stock,
-          productType: 'LIVESTOCK',
-          storeId: o.store.id,
-          storeName: o.store.name,
-        });
-      })
-      .catch((err) => { if (live) setOfferError(err.message || 'This agreed price is no longer available'); });
-    return () => { live = false; };
-  }, [offerId, isAuthenticated]);
   const items = useMemo(() => {
-    if (offerId) return offerLine ? [offerLine] : [];
     if (!Array.isArray(selectedIds) || selectedIds.length === 0) return allItems;
     const allow = new Set(selectedIds);
     return allItems.filter((it) => allow.has(it.id));
-  }, [allItems, selectedIds, offerId, offerLine]);
+  }, [allItems, selectedIds]);
 
   const [deliveryForm, setDeliveryForm] = useState({
     fullName: '',
@@ -212,17 +181,10 @@ const Checkout = () => {
       navigate('/cart', { replace: true });
       return;
     }
-    // An offer line is still loading: wait for it (or its error).
-    if (offerId && !offerLine && !offerError) return;
-    if (offerId && offerError && !orderSuccess) {
-      toast.error(offerError);
-      navigate('/profile/offers', { replace: true });
-      return;
-    }
     if (items.length === 0 && !orderSuccess) {
       navigate('/cart');
     }
-  }, [isAuthenticated, items, navigate, orderSuccess, storeIds, offerId, offerLine, offerError]);
+  }, [isAuthenticated, items, navigate, orderSuccess, storeIds]);
 
   // Load municipalities + prefill address
   useEffect(() => {
@@ -720,14 +682,10 @@ const Checkout = () => {
           productId: item.productId || item.id,
           quantity: item.quantity,
           selectedVariations: item.selectedVariations || undefined,
-          offerId: item.offerId || undefined,
         })),
       });
       // Only remove the items that were part of this order — leave any unselected items in the cart.
-      // An agreed offer never came from the cart: the cart stays as it is.
-      if (offerId) {
-        // nothing to take out of the cart
-      } else if (Array.isArray(selectedIds) && selectedIds.length > 0) {
+      if (Array.isArray(selectedIds) && selectedIds.length > 0) {
         selectedIds.forEach((id) => useCartStore.getState().removeItem(id));
       } else {
         clearCart();
@@ -1263,9 +1221,6 @@ const Checkout = () => {
                   <span className="total-amount">{peso(total)}</span>
                 </div>
 
-                {offerId ? (
-                  <p className="co-offer-note">Agreed offer price: vouchers don&apos;t apply.</p>
-                ) : (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--t-neutral-200, #e5e7eb)' }}>
                   <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Voucher</label>
                   <div style={{ display: 'flex', gap: 6 }}>
@@ -1297,7 +1252,6 @@ const Checkout = () => {
                     </p>
                   )}
                 </div>
-                )}
 
                 {!isPhone && (
                   <button

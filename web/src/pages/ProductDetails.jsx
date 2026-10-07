@@ -19,7 +19,7 @@ import axios from '../lib/axios';
 import { resolveImg, parseImages } from '../lib/media';
 import useCartStore, { cartKeyFor } from '../store/cartStore';
 import useAuthStore from '../store/authStore';
-import OfferPanel from '../components/offers/OfferPanel';
+import LivestockDeal from '../components/offers/LivestockDeal';
 import ShippingEstimate from '../components/orders/ShippingEstimate';
 import useWishlistStore from '../store/wishlistStore';
 import useIdentityGate from '../hooks/useIdentityGate';
@@ -925,6 +925,7 @@ const ProductDetails = () => {
                   {unitWords && <span className="pdp-price-unit">{unitWords}</span>}
                   <SaleWas product={product} />
                 </div>
+                {kind === 'LIVESTOCK' && <span className="pdp-price-nego">Asking price · negotiable</span>}
                 {savings && <PackageSave savings={savings} />}
                 </div>
                 <SaleEnds product={product} />
@@ -1070,6 +1071,7 @@ const ProductDetails = () => {
                   ₱{priceLabel(false)}
                   {unitWords && <span className="pdp-price-unit">{unitWords}</span>}
                   {' '}<SaleWas product={product} />
+                  {kind === 'LIVESTOCK' && <span className="pdp-price-nego">Asking price · negotiable</span>}
                 </div>
                 {savings && <PackageSave savings={savings} />}
                 <SaleEnds product={product} />
@@ -1110,6 +1112,29 @@ const ProductDetails = () => {
                     </div>
                   </div>
                 )}
+                {/* Livestock is not delivered or checked out: the price is agreed
+                    in chat and the animals are paid for at the meetup. */}
+                {kind === 'LIVESTOCK' ? (
+                <div className="pdp-row">
+                  <div className="pdp-row-label">How to buy:</div>
+                  <div className="pdp-row-content">
+                    <div className="pdp-row-line">
+                      <MapPin size={14} className="pdp-row-icon" />
+                      <span className="pdp-row-strong">
+                        {product.municipality?.name || product.store?.municipality?.name || 'Oriental Mindoro'}
+                      </span>
+                    </div>
+                    <div className="pdp-row-line">
+                      <MessageCircle size={14} className="pdp-row-icon" />
+                      <span>Make an offer and agree on the price in chat</span>
+                    </div>
+                    <div className="pdp-row-line">
+                      <Store size={14} className="pdp-row-icon" />
+                      <span>Meet the seller, see the animals, and pay in person</span>
+                    </div>
+                  </div>
+                </div>
+                ) : (
                 <div className="pdp-row">
                   <div className="pdp-row-label">Delivery Options:</div>
                   <div className="pdp-row-content">
@@ -1148,10 +1173,11 @@ const ProductDetails = () => {
                     )}
                   </div>
                 </div>
+                )}
 
                 {/* Delivery by the seller and by couriers, priced for the buyer's town
-                    (none for a product that is pickup only). */}
-                {product.fulfillment !== 'PICKUP' && (
+                    (none for a product that is pickup only, nor for livestock). */}
+                {product.fulfillment !== 'PICKUP' && kind !== 'LIVESTOCK' && (
                 <div className="pdp-row pdp-row--shipping">
                   <div className="pdp-row-label">Shipping:</div>
                   <div className="pdp-row-content">
@@ -1183,7 +1209,7 @@ const ProductDetails = () => {
                   </div>
                 )}
 
-                {isPhone && (
+                {isPhone && kind !== 'LIVESTOCK' && (
                   <button type="button" className="pdp-row pdp-m-options-row" onClick={() => setSheetMode('cart')}>
                     <span className="pdp-row-label">
                       {Array.isArray(product.variations) && product.variations.length > 0 ? 'Options' : 'Quantity'}
@@ -1243,7 +1269,19 @@ const ProductDetails = () => {
                   </div>
                 )}
 
-                {!isPhone && (
+                {!isPhone && kind === 'LIVESTOCK' && cannotBuy && (
+                <div className="pdp-row">
+                  <div className="pdp-row-label">Heads:</div>
+                  <div className="pdp-row-content">
+                    <span className="pdp-stock is-out">
+                      {notTakingOrders
+                        ? (away ? `This shop is away until ${shortDate(away)}` : "This shop isn't taking orders yet")
+                        : soldOutLabel(product)}
+                    </span>
+                  </div>
+                </div>
+                )}
+                {!isPhone && kind !== 'LIVESTOCK' && (
                 <div className="pdp-row">
                   <div className="pdp-row-label">Quantity:</div>
                   <div className="pdp-row-content pdp-row-qty">
@@ -1274,11 +1312,21 @@ const ProductDetails = () => {
                 )}
               </div>
 
-              {/* Livestock: make an offer, or where it stands. */}
-              <OfferPanel product={product} listPrice={unitPrice} cannotBuy={cannotBuy} />
+              {/* Livestock: no cart and no fixed price. Make an offer, then talk
+                  it over in chat. */}
+              {kind === 'LIVESTOCK' && !isPhone && (
+                <LivestockDeal
+                  product={product}
+                  listPrice={unitPrice}
+                  cannotBuy={cannotBuy}
+                  closedLabel={notTakingOrders ? closedLabel : soldOutLabel(product)}
+                />
+              )}
 
               {/* CTAs */}
               <div className="pdp-cta-row">
+                {kind !== 'LIVESTOCK' && (
+                <>
                 <button
                   type="button"
                   onClick={handleBuyNow}
@@ -1295,6 +1343,8 @@ const ProductDetails = () => {
                 >
                   {isAddingToCart ? <BusyLabel>Adding…</BusyLabel> : 'Add to Cart'}
                 </button>
+                </>
+                )}
                 <button
                   type="button"
                   className="pdp-cta-icon"
@@ -1546,7 +1596,19 @@ const ProductDetails = () => {
         </div>
       </div>
 
-      {isPhone && (
+      {isPhone && kind === 'LIVESTOCK' && (
+        <LivestockDeal
+          variant="bar"
+          product={product}
+          listPrice={unitPrice}
+          cannotBuy={cannotBuy}
+          closedLabel={notTakingOrders ? closedLabel : soldOutLabel(product)}
+          shopLogo={shopLogo && failedLogo !== shopLogo ? shopLogo : null}
+          chatUnread={chatUnread}
+        />
+      )}
+
+      {isPhone && kind !== 'LIVESTOCK' && (
         <div className="pdp-m-actionbar">
           <Link to={product.store ? `/store/${product.store.slug}` : '/stores'} className="pdp-m-action">
             {shopLogo && failedLogo !== shopLogo

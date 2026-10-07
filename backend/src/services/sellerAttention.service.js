@@ -107,7 +107,7 @@ const getSellerAttention = async (actor) => {
       },
       select: { updatedAt: true },
     }),
-    // Livestock price offers waiting for an answer (48 hours each).
+    // Livestock offers waiting for the seller's answer (7 days each).
     prisma.priceOffer.findMany({
       where: { storeId: store.id, status: 'PENDING', respondBy: { gt: new Date() } },
       select: { createdAt: true },
