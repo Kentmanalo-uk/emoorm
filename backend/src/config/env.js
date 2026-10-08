@@ -39,7 +39,10 @@ const config = {
   // JWT Configuration
   jwt: {
     secret: process.env.JWT_SECRET || 'default-secret-change-in-production',
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    // An hour: a copied access token is useful for that long, no more. The
+    // refresh token (a revocable session, services/session.service.js)
+    // renews it.
+    expiresIn: process.env.JWT_EXPIRES_IN || '1h',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'default-refresh-secret',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
   },

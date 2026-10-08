@@ -79,13 +79,19 @@ const listByBuyer = async (buyerId, { search, sort = 'recent' } = {}) => {
   });
 };
 
-const followerIdsForStore = async (storeId, { onlyEnabled = true } = {}) => {
+// One notice reaches at most this many followers (the most recent first), so
+// a single fan-out cannot load or write an unbounded number of rows.
+const MAX_FANOUT_FOLLOWERS = 20000;
+
+const followerIdsForStore = async (storeId, { onlyEnabled = true, limit = MAX_FANOUT_FOLLOWERS } = {}) => {
   const rows = await prisma.storeFollow.findMany({
     where: {
       storeId,
       ...(onlyEnabled ? { notificationsEnabled: true } : {}),
     },
     select: { buyerId: true },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
   });
   return rows.map((r) => r.buyerId);
 };

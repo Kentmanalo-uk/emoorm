@@ -29,6 +29,9 @@ const VALID_REASONS = [
   'OTHER',
 ];
 const VALID_STATUSES = ['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'DISMISSED'];
+const MAX_DESCRIPTION = 2000;
+const MAX_EVIDENCE = 5;
+const EVIDENCE_PHOTO = /^\/uploads\/[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif)$/i;
 
 /**
  * Create report
@@ -48,6 +51,21 @@ const createReport = async (userId, data) => {
   }
   if (!VALID_REASONS.includes(reason)) {
     throw new ApiError('Invalid report reason', 400);
+  }
+  // The report form allows 2,000 characters; the column would take far more,
+  // and the admin queue shows it whole.
+  if (description != null && typeof description !== 'string') {
+    throw new ApiError('Description must be text', 400);
+  }
+  const text = (description || '').trim();
+  if (text.length > MAX_DESCRIPTION) {
+    throw new ApiError(`Description must be at most ${MAX_DESCRIPTION} characters`, 400);
+  }
+  // Evidence is our own uploaded photos only: anything else would be loaded
+  // by the admin's browser when the report is opened.
+  if (evidence != null && (!Array.isArray(evidence) || evidence.length > MAX_EVIDENCE
+    || !evidence.every((e) => typeof e === 'string' && EVIDENCE_PHOTO.test(e)))) {
+    throw new ApiError(`Evidence must be up to ${MAX_EVIDENCE} uploaded photos`, 400);
   }
 
   let municipalityId = null;
@@ -117,15 +135,24 @@ const createReport = async (userId, data) => {
     }
   }
 
-  const report = await reportRepository.createReport({
+  const target = {
     reporterId: userId,
     type,
     productId: type === 'PRODUCT' ? productId : null,
     reportedSellerId: type === 'SELLER' ? reportedSellerId : null,
     reportedBuyerId: type === 'BUYER' ? reportedBuyerId : null,
+  };
+  // One open report per person and target: sending the same one again only
+  // fills the admin queue and notifies the admins each time.
+  if (await reportRepository.findOpenByReporter(target)) {
+    throw new ApiError('You already have an open report about this', 409);
+  }
+
+  const report = await reportRepository.createReport({
+    ...target,
     reason,
-    description: description || null,
-    evidence: evidence || null,
+    description: text || null,
+    evidence: evidence && evidence.length ? evidence : null,
     status: 'PENDING',
     municipalityId,
   });

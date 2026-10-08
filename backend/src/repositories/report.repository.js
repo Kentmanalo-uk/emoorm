@@ -102,6 +102,20 @@ const createReport = async (data) => {
   });
 };
 
+/** The reporter's report about this target that an admin has not closed yet, if any. */
+const findOpenByReporter = ({ reporterId, type, productId, reportedSellerId, reportedBuyerId }) =>
+  prisma.report.findFirst({
+    where: {
+      reporterId,
+      type,
+      productId: productId || null,
+      reportedSellerId: reportedSellerId || null,
+      reportedBuyerId: reportedBuyerId || null,
+      status: { in: ['PENDING', 'UNDER_REVIEW'] },
+    },
+    select: { id: true },
+  });
+
 const findById = async (id) => {
   return prisma.report.findUnique({
     where: { id },
@@ -169,6 +183,7 @@ const updateReport = async (id, data) => {
 
 module.exports = {
   createReport,
+  findOpenByReporter,
   findById,
   findAll,
   updateStatus,

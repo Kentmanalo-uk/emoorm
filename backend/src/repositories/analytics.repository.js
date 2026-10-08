@@ -1,5 +1,6 @@
 const prisma = require('../config/database');
 const manila = require('../utils/manilaTime');
+const { ApiError } = require('../middleware/errorHandler');
 
 /**
  * Analytics Repository — unified aggregations
@@ -7,6 +8,14 @@ const manila = require('../utils/manilaTime');
  */
 
 const DEFAULT_WINDOW_DAYS = 30;
+const DAY_MS = 86400000;
+// Nothing was sold on E-MOORM before this, so earlier dates add only work.
+const EARLIEST = new Date('2020-01-01T00:00:00.000Z');
+// A window that is charted day by day stays within a year (a leap year fits);
+// one charted by month or year may run to five years. Past that the queries
+// and the padded arrays grow with whatever the request asks for.
+const MAX_DAY_SPAN_DAYS = 366;
+const MAX_LONG_SPAN_DAYS = 5 * 366;
 
 const clampDate = (d, fallback) => {
   if (!d) return fallback;
@@ -14,13 +23,33 @@ const clampDate = (d, fallback) => {
   return Number.isNaN(parsed.getTime()) ? fallback : parsed;
 };
 
-const resolveWindow = ({ from, to } = {}) => {
+/**
+ * The window asked for, kept within what the dashboards can chart: `to` no
+ * later than a day from now, `from` no earlier than 2020, and the span within
+ * a year when the figures are laid out day by day (`granularity` day, and the
+ * admin dashboards, which always are), five years otherwise.
+ */
+const resolveWindow = ({ from, to, granularity } = {}, { daily = true } = {}) => {
   const now = new Date();
-  const end = clampDate(to, now);
-  const start = clampDate(
+  const latest = new Date(now.getTime() + DAY_MS);
+  let end = clampDate(to, now);
+  if (end > latest) end = latest;
+  let start = clampDate(
     from,
-    new Date(end.getTime() - DEFAULT_WINDOW_DAYS * 86400000),
+    new Date(end.getTime() - DEFAULT_WINDOW_DAYS * DAY_MS),
   );
+  if (start < EARLIEST) start = EARLIEST;
+  if (start > end) throw new ApiError('The start date must be on or before the end date.', 400);
+  const byDay = daily || !['month', 'year'].includes(granularity);
+  const maxDays = byDay ? MAX_DAY_SPAN_DAYS : MAX_LONG_SPAN_DAYS;
+  if (end.getTime() - start.getTime() > maxDays * DAY_MS) {
+    throw new ApiError(
+      byDay
+        ? 'Pick a period of one year or less, or view it by month or year.'
+        : 'Pick a period of five years or less.',
+      400,
+    );
+  }
   const spanMs = Math.max(1, end.getTime() - start.getTime());
   return {
     from: start,
@@ -101,7 +130,8 @@ const getSellerDayDetails = async (storeId, dateISO) => {
 
 // ---------- SELLER ----------
 const getSellerStats = async (storeId, window) => {
-  const w = resolveWindow(window);
+  // A shop's chart may go by month or year, so its window may be longer.
+  const w = resolveWindow(window, { daily: false });
   const granularity = window?.granularity || 'day';
   const orderScope = { storeId, createdAt: { gte: w.from, lte: w.to } };
   const prevOrderScope = { storeId, createdAt: { gte: w.previousFrom, lt: w.previousTo } };

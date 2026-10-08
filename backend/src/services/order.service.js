@@ -182,6 +182,10 @@ const notifyStockCrossings = async (sellerId, items) => {
   if (crossed.length) await notificationService.notifyLowStock(sellerId, crossed);
 };
 
+// Unconfirmed (PENDING) orders one buyer may hold: overall, and with one shop.
+const OPEN_ORDERS_MAX = Math.max(1, parseInt(process.env.OPEN_ORDERS_MAX || '8', 10) || 8);
+const OPEN_ORDERS_PER_STORE = Math.max(1, parseInt(process.env.OPEN_ORDERS_PER_STORE || '3', 10) || 3);
+
 const createOrder = async (userId, data) => {
   const {
     storeId,
@@ -253,6 +257,16 @@ const createOrder = async (userId, data) => {
   }
   if (store.ownerId === userId) {
     throw new ApiError('You cannot purchase from your own store', 400);
+  }
+  // Orders the shop has not confirmed yet hold its stock for up to two days
+  // and each one emails the seller. A buyer may have a few at once, not a
+  // pile: beyond this it is hoarding, by a script or by mistake.
+  const [openAll, openHere] = await Promise.all([
+    prisma.order.count({ where: { buyerId: userId, status: 'PENDING' } }),
+    prisma.order.count({ where: { buyerId: userId, storeId, status: 'PENDING' } }),
+  ]);
+  if (openHere >= OPEN_ORDERS_PER_STORE || openAll >= OPEN_ORDERS_MAX) {
+    throw new ApiError('You have orders still waiting for a shop to confirm. Please wait for those before placing another.', 429);
   }
   if (!(await shopReadiness.isReady(storeId))) {
     throw new ApiError("This shop isn't taking orders yet. Please check back soon.", 400);

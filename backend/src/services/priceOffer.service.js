@@ -10,6 +10,7 @@ const { kindOf } = require('../utils/productKinds');
 const { unitPriceFor } = require('../utils/variantPricing');
 const { cleanText } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
+const { withKeyedLock } = require('../utils/keyedLock');
 
 /**
  * Livestock deals, talked over in the buyer and seller's chat.
@@ -228,7 +229,12 @@ const openDeal = (productId, buyerId) => prisma.priceOffer.findFirst({
 });
 
 /** A buyer names a first price: the deal starts, in the chat. */
-const make = async (buyer, {
+// One at a time per buyer: "one open deal per listing" and "ten a day" are
+// counted before the offer is written, so offers sent together would all
+// pass.
+const make = (buyer, args = {}) => withKeyedLock(`offer:${buyer.id}`, () => makeNow(buyer, args));
+
+const makeNow = async (buyer, {
   productId, quantity, price, note,
 } = {}) => {
   const product = await offerableProduct(productId, buyer.id);

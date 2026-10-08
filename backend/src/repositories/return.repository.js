@@ -49,9 +49,13 @@ const createRequest = async ({ request, items, limits = null }) => {
       });
       const used = new Map();
       rows.forEach((r) => used.set(r.orderItemId, (used.get(r.orderItemId) || 0) + r.quantity));
-      for (const it of items) {
-        const remaining = (limits.get(it.orderItemId) || 0) - (used.get(it.orderItemId) || 0);
-        if (it.quantity > remaining) {
+      // Count this request's own lines per order item too, so the same line
+      // listed twice is measured as one total and not checked copy by copy.
+      const asked = new Map();
+      items.forEach((it) => asked.set(it.orderItemId, (asked.get(it.orderItemId) || 0) + it.quantity));
+      for (const [orderItemId, quantity] of asked) {
+        const remaining = (limits.get(orderItemId) || 0) - (used.get(orderItemId) || 0);
+        if (quantity > remaining) {
           const err = new Error('Return quantity exceeds what is left');
           err.code = 'RETURN_QUANTITY_EXCEEDED';
           err.remaining = Math.max(0, remaining);

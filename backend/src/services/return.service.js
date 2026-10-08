@@ -9,6 +9,7 @@ const { returnWindowDays } = require('../utils/returnPolicy');
 const ELIGIBLE_ORDER_STATUSES = new Set(['DELIVERED', 'PICKED_UP', 'SHIPPED', 'COMPLETED']);
 const VALID_REASONS = new Set(['DAMAGED', 'WRONG_ITEM', 'NOT_AS_DESCRIBED', 'MISSING', 'OTHER']);
 const VALID_REFUND_METHODS = new Set(['COD_CASH', 'GCASH', 'BANK', 'MANUAL']);
+const MAX_RETURN_ITEMS = 50;
 
 const money = (n) => Number(Number(n || 0).toFixed(2));
 
@@ -68,6 +69,20 @@ const createRequest = async (buyerId, payload) => {
   if (!VALID_REASONS.has(reason)) throw new ApiError('Invalid return reason', 400);
   if (!Array.isArray(items) || items.length === 0) {
     throw new ApiError('Please select at least one item to return', 400);
+  }
+  // No order has more lines than this; a longer list is only there to make
+  // the server do work before it says no.
+  if (items.length > MAX_RETURN_ITEMS) {
+    throw new ApiError('Too many items in one return request', 400);
+  }
+  // Each order line may appear once. Listed twice, every copy passed the
+  // quantity checks on its own, so the refund could add up to more than was
+  // bought.
+  const seen = new Set();
+  for (const raw of items) {
+    const key = raw && raw.orderItemId;
+    if (seen.has(key)) throw new ApiError('Each item can only be listed once in a return', 400);
+    seen.add(key);
   }
 
   const order = await orderRepository.findById(orderId);
@@ -211,7 +226,9 @@ const decide = async (id, seller, payload) => {
   const approvedAmount = approvedAmountRaw != null
     ? money(approvedAmountRaw)
     : money(request.requestedAmount);
-  if (approvedAmount < 0 || approvedAmount > Number(request.requestedAmount)) {
+  // NaN fails every comparison, so "abc" would have slipped past a plain
+  // range check and been saved as the amount.
+  if (!Number.isFinite(approvedAmount) || approvedAmount < 0 || approvedAmount > Number(request.requestedAmount)) {
     throw new ApiError('Approved amount must be between 0 and the requested amount', 400);
   }
 
@@ -234,7 +251,8 @@ const decide = async (id, seller, payload) => {
     status: nextStatus,
     approvedAmount,
     requiresPhysicalReturn,
-    sellerNote: payload.sellerNote?.slice(0, 2000) || request.sellerNote,
+    // A note sent as a number or object has no slice; ignore it instead of a 500.
+    sellerNote: (typeof payload.sellerNote === 'string' && payload.sellerNote.slice(0, 2000)) || request.sellerNote,
     decidedAt: new Date(),
     decidedBy: seller.id,
     history: withHistory(request.history, {
@@ -462,7 +480,7 @@ const resolveDispute = async (id, admin, payload = {}) => {
     };
   } else {
     const approvedAmount = payload.approvedAmount != null ? money(payload.approvedAmount) : money(request.requestedAmount);
-    if (!(approvedAmount >= 0) || approvedAmount > Number(request.requestedAmount)) {
+    if (!Number.isFinite(approvedAmount) || approvedAmount < 0 || approvedAmount > Number(request.requestedAmount)) {
       throw new ApiError('The amount must be between 0 and the requested amount', 400);
     }
     const requiresPhysicalReturn = payload.requiresPhysicalReturn !== undefined

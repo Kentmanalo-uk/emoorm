@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import useCartStore from './cartStore';
 import useWishlistStore from './wishlistStore';
-import { setAuthHandlers } from '../lib/axios';
+import axiosInstance, { setAuthHandlers } from '../lib/axios';
 
 // Admins stay in /admin, where no cart or saved list is ever shown, so theirs
 // are not read from the account on every visit. Buyers' and sellers' are.
@@ -78,6 +78,12 @@ const useAuthStore = create(
       // guards that notice the signed-out state first send them there too.
       // Not saved: only this visit needs it.
       logout: (to = null) => {
+        // The server forgets this device's session (its refresh token stops
+        // renewing). Best effort: the sign-out here does not wait for it.
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken && localStorage.getItem('token')) {
+          axiosInstance.post('/auth/logout', { refreshToken }, { quiet: true }).catch(() => {});
+        }
         set({
           user: null,
           accessToken: null,

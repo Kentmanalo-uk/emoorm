@@ -69,24 +69,17 @@ const shapePinnedOrders = (orders) =>
     })),
   }));
 
-const shapeConversationSummary = async (conversation, viewerId) => {
+// The viewer's last read moment in a conversation, on whichever side they are.
+const lastReadFor = (conversation, viewerId) => (
+  resolveRole(conversation, viewerId) === 'buyer' ? conversation.buyerLastReadAt : conversation.sellerLastReadAt
+);
+
+/**
+ * One row of the chat list. The unread count and the newest message (for the
+ * preview) are worked out for the whole list beforehand, in one query each.
+ */
+const shapeConversationSummary = (conversation, viewerId, { unreadCount = 0, lastMessage = null } = {}) => {
   const role = resolveRole(conversation, viewerId);
-  const lastReadAt =
-    role === 'buyer' ? conversation.buyerLastReadAt : conversation.sellerLastReadAt;
-
-  const unreadCount = await messageRepository.countUnreadInConversation(
-    conversation.id,
-    viewerId,
-    lastReadAt,
-  );
-
-  // Pull the most recent message for a preview
-  const [lastMessage] = await prisma.message.findMany({
-    where: { conversationId: conversation.id },
-    orderBy: { createdAt: 'desc' },
-    take: 1,
-    select: { id: true, body: true, imageUrl: true, senderId: true, createdAt: true, orderId: true, productId: true },
-  });
 
   return {
     id: conversation.id,
@@ -134,9 +127,18 @@ const listMyConversations = async (userId) => {
     return true;
   });
 
-  const summaries = await Promise.all(
-    unique.map((c) => shapeConversationSummary(c, userId)),
-  );
+  // Two queries for the whole list, not two per conversation.
+  const [unreadCounts, lastMessages] = await Promise.all([
+    messageRepository.countUnreadByConversation(
+      userId,
+      unique.map((c) => ({ conversationId: c.id, since: lastReadFor(c, userId) })),
+    ),
+    messageRepository.latestMessages(unique.map((c) => c.id)),
+  ]);
+  const summaries = unique.map((c) => shapeConversationSummary(c, userId, {
+    unreadCount: unreadCounts.get(c.id) || 0,
+    lastMessage: lastMessages.get(c.id) || null,
+  }));
 
   summaries.sort((a, b) => {
     const ta = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;

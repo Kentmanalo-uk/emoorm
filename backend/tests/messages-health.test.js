@@ -34,3 +34,30 @@ test('/health reports the database', async () => {
   const body = await res.json();
   assert.equal(body.database, 'up');
 });
+
+test('the chat list gives each chat its unread count and newest message', async () => {
+  const buyer = await h.user('BUYER');
+  const sellerA = await h.user('SELLER');
+  const sellerB = await h.user('SELLER');
+  const storeA = await h.shop(sellerA);
+  const storeB = await h.shop(sellerB);
+  const now = Date.now();
+  const a = await h.prisma.conversation.create({ data: { buyerId: buyer.id, storeId: storeA.id, lastMessageAt: new Date(now - 60e3), buyerLastReadAt: new Date(now - 150e3) } });
+  const b = await h.prisma.conversation.create({ data: { buyerId: buyer.id, storeId: storeB.id, lastMessageAt: new Date(now - 30e3) } });
+  await h.prisma.message.createMany({ data: [
+    { conversationId: a.id, senderId: sellerA.id, body: 'read already', createdAt: new Date(now - 200e3) },
+    { conversationId: a.id, senderId: sellerA.id, body: 'new one', createdAt: new Date(now - 100e3) },
+    { conversationId: a.id, senderId: buyer.id, body: 'my reply', createdAt: new Date(now - 60e3) },
+    { conversationId: b.id, senderId: sellerB.id, body: '', imageUrl: '/uploads/x.jpg', createdAt: new Date(now - 30e3) },
+  ] });
+
+  const res = await h.api('GET', '/messages/conversations', { token: h.token(buyer) });
+  assert.equal(res.status, 200, res.body?.message);
+  assert.deepEqual(res.body.data.map((c) => c.id), [b.id, a.id]);
+  const [first, second] = res.body.data;
+  assert.deepEqual([first.unreadCount, first.lastMessage.body, first.role], [1, 'Photo', 'buyer']);
+  assert.deepEqual([second.unreadCount, second.lastMessage.body, second.lastMessage.senderId], [1, 'my reply', buyer.id]);
+
+  const seller = await h.api('GET', '/messages/conversations', { token: h.token(sellerA) });
+  assert.deepEqual(seller.body.data.map((c) => [c.id, c.role, c.unreadCount]), [[a.id, 'seller', 1]]);
+});

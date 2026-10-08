@@ -20,12 +20,15 @@ const yearKey = (date) => shifted(date).toISOString().slice(0, 4);
 const dayStart = (yyyyMmDd) => new Date(`${yyyyMmDd}T00:00:00.000+08:00`);
 const dayEnd = (yyyyMmDd) => new Date(`${yyyyMmDd}T23:59:59.999+08:00`);
 
-/** Every Manila day key from one moment's day to another's, inclusive. */
-const daysBetween = (from, to) => {
+/**
+ * Every Manila day key from one moment's day to another's, inclusive, but
+ * never more than `max` of them: a far-apart pair cannot spin this for ages.
+ */
+const daysBetween = (from, to, max = 401) => {
   const keys = [];
   const cursor = new Date(`${dayKey(from)}T00:00:00.000Z`);
   const last = new Date(`${dayKey(to)}T00:00:00.000Z`);
-  while (cursor <= last) {
+  while (cursor <= last && keys.length < max) {
     keys.push(cursor.toISOString().slice(0, 10));
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }

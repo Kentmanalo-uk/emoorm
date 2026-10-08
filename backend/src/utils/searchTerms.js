@@ -103,6 +103,9 @@ const correct = (words, vocabulary) => {
   let changed = false;
   const fixed = words.map((word) => {
     if (vocabulary.has(word) || SYNONYMS.has(word) || SYNONYMS.has(singular(word))) return word;
+    // A word of 15 letters or more is not a typo of a product word; it is
+    // gibberish or pasted text, and comparing it costs the most. Left as is.
+    if (word.length >= 15) return word;
     const limit = word.length >= 7 ? 2 : 1;
     let best = null;
     let bestDistance = limit + 1;

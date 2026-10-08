@@ -333,8 +333,13 @@ const optionalAuth = async (req, res, next) => {
 
     const user = await loadSessionUser(decoded.id);
 
+    // The same tests as authenticate(): a session opened under another role
+    // or town (a buyer made an admin since) counts as anonymous here, so
+    // the admin views these routes branch on never open to it.
     if (user && !user.deletedAt && user.isActive
-      && (decoded.tokenVersion ?? 0) === user.tokenVersion) {
+      && (decoded.tokenVersion ?? 0) === user.tokenVersion
+      && !adminAccessChanged(decoded, user)
+      && !(user.role === 'MUNICIPAL_ADMIN' && !user.municipalityId)) {
       // A temporary municipal admin whose window has closed is a buyer here
       // too. This used to be checked only in authenticate(), so an expired
       // backup admin still carried MUNICIPAL_ADMIN into every optionalAuth

@@ -13,14 +13,15 @@ const REPEAT_MS = 30 * 60 * 1000;
 const MAX_REMEMBERED = 50000;
 const seen = new Map();
 
+// Entries sit in the order they were last counted, so the first is the
+// stalest. Past the bound only that one goes: clearing the whole map (as a
+// flood of distinct keys used to force) let every recent visitor count again.
 const remember = (key, now) => {
   const last = seen.get(key);
   if (last && now - last < REPEAT_MS) return false;
-  if (seen.size >= MAX_REMEMBERED) {
-    for (const [k, t] of seen) if (now - t >= REPEAT_MS) seen.delete(k);
-    if (seen.size >= MAX_REMEMBERED) seen.clear();
-  }
+  seen.delete(key);
   seen.set(key, now);
+  if (seen.size > MAX_REMEMBERED) seen.delete(seen.keys().next().value);
   return true;
 };
 

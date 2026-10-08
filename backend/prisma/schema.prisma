@@ -428,6 +428,7 @@ model User {
   teamMessagesSent     TeamMessage[]  @relation("TeamMessageSender")
   teamMessagesReceived TeamMessage[]  @relation("TeamMessageRecipient")
   teamChatReads        TeamChatRead[]
+  refreshSessions      RefreshSession[]
 
   @@map("users")
   @@index([deletedAt, role, municipalityId, createdAt], map: "users_role_municipality_idx")
@@ -598,6 +599,28 @@ model Address {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("addresses")
+}
+
+/// One signed-in device: the row behind a refresh token (its `jti`). Renewing
+/// the session retires this row and makes the next one in the same family;
+/// signing out revokes it. A retired token used again means it was copied,
+/// so the whole family is ended (services/session.service.js).
+model RefreshSession {
+  id         String    @id
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId   String    @map("family_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedBy String?   @map("replaced_by")
+  userAgent  String?   @map("user_agent") @db.VarChar(300)
+  ipAddress  String?   @map("ip_address") @db.VarChar(100)
+
+  @@index([userId], map: "refresh_sessions_user_idx")
+  @@index([familyId], map: "refresh_sessions_family_idx")
+  @@index([expiresAt], map: "refresh_sessions_expires_idx")
+  @@map("refresh_sessions")
 }
 
 model QrLoginSession {

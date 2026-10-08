@@ -23,8 +23,14 @@ const refreshKey = () => keyFor(config.jwt.refreshSecret);
  * @param {Object} payload - Data to encode in token
  * @returns {String} JWT token
  */
+// Every token here is an HMAC with our own secret; saying so on verify means
+// a token claiming any other algorithm is refused before its signature is
+// even looked at.
+const ALGORITHMS = ['HS256'];
+
 const generateAccessToken = (payload) => {
   return jwt.sign(payload, accessKey(), {
+    algorithm: 'HS256',
     expiresIn: config.jwt.expiresIn,
   });
 };
@@ -32,11 +38,14 @@ const generateAccessToken = (payload) => {
 /**
  * Generate JWT Refresh Token
  * @param {Object} payload - Data to encode in token
+ * @param {{jti?: String}} [options] - `jti`: the session row this token renews (session.service)
  * @returns {String} JWT refresh token
  */
-const generateRefreshToken = (payload) => {
+const generateRefreshToken = (payload, { jti } = {}) => {
   return jwt.sign(payload, refreshKey(), {
+    algorithm: 'HS256',
     expiresIn: config.jwt.refreshExpiresIn,
+    ...(jti ? { jwtid: jti } : {}),
   });
 };
 
@@ -49,7 +58,7 @@ const generateRefreshToken = (payload) => {
 const verifyAccessToken = (token) => {
   let decoded;
   try {
-    decoded = jwt.verify(token, accessKey());
+    decoded = jwt.verify(token, accessKey(), { algorithms: ALGORITHMS });
   } catch (error) {
     throw new Error('Invalid or expired token');
   }
@@ -78,7 +87,7 @@ const verifyAccessToken = (token) => {
  */
 const verifyRefreshToken = (token) => {
   try {
-    return jwt.verify(token, refreshKey());
+    return jwt.verify(token, refreshKey(), { algorithms: ALGORITHMS });
   } catch (error) {
     throw new Error('Invalid or expired refresh token');
   }
@@ -89,7 +98,7 @@ const verifyRefreshToken = (token) => {
  * @param {Object} user - User object
  * @returns {Object} Object containing accessToken and refreshToken
  */
-const generateTokens = (user) => {
+const generateTokens = (user, { jti } = {}) => {
   const payload = {
     id: user.id,
     email: user.email,
@@ -103,7 +112,7 @@ const generateTokens = (user) => {
 
   return {
     accessToken: generateAccessToken(payload),
-    refreshToken: generateRefreshToken(payload),
+    refreshToken: generateRefreshToken(payload, { jti }),
   };
 };
 
@@ -112,15 +121,16 @@ const generateTokens = (user) => {
  * follow-up MFA step. `type` is one of 'mfa-verify' | 'mfa-setup'.
  */
 const generateMfaToken = (user, type) => {
+  // The id lets the code step count failed tries and spend the token once.
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, type },
     accessKey(),
-    { expiresIn: '10m' }
+    { algorithm: 'HS256', expiresIn: '10m', jwtid: require('crypto').randomBytes(12).toString('hex') }
   );
 };
 
 const verifyMfaToken = (token, expectedType) => {
-  const decoded = jwt.verify(token, accessKey());
+  const decoded = jwt.verify(token, accessKey(), { algorithms: ALGORITHMS });
   if (!decoded?.type || (expectedType && decoded.type !== expectedType)) {
     throw new Error('Invalid MFA token');
   }
@@ -149,7 +159,7 @@ const generateGoogleProfileToken = (profile) => {
 const verifyGoogleProfileToken = (token) => {
   let decoded;
   try {
-    decoded = jwt.verify(token, accessKey());
+    decoded = jwt.verify(token, accessKey(), { algorithms: ALGORITHMS });
   } catch {
     throw new Error('Invalid or expired Google sign-in session');
   }
@@ -174,7 +184,7 @@ const verifyGoogleProfileToken = (token) => {
 const verifyTyped = (token, type) => {
   let decoded;
   try {
-    decoded = jwt.verify(token, accessKey());
+    decoded = jwt.verify(token, accessKey(), { algorithms: ALGORITHMS });
   } catch {
     throw new Error('Invalid or expired Google sign-in');
   }

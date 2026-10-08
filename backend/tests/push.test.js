@@ -19,8 +19,10 @@ test('a browser subscribes, gets each notification, and is forgotten once it uns
   assert.equal(config.body.data.enabled, true);
 
   const browserKeys = { p256dh: 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM', auth: 'tBHItJI5svbpez7KI4CCXg' };
-  const endpoint = `https://push.example.test/${h.RUN}`;
+  const endpoint = `https://fcm.googleapis.com/fcm/send/ci-${h.RUN}`;
   assert.equal((await h.api('POST', '/push/subscribe', { token, body: { subscription: { endpoint: 'http://insecure', keys: browserKeys } } })).status, 400);
+  // Only a browser push service: anything else would have the server post to it.
+  assert.equal((await h.api('POST', '/push/subscribe', { token, body: { subscription: { endpoint: 'https://evil.example/x', keys: browserKeys } } })).status, 400);
   assert.equal((await h.api('POST', '/push/subscribe', { token, body: { subscription: { endpoint, keys: browserKeys } } })).status, 200);
 
   const sent = [];
@@ -42,4 +44,18 @@ test('a browser subscribes, gets each notification, and is forgotten once it uns
   } finally {
     webpush.sendNotification = original;
   }
+});
+
+test('an account keeps at most ten browsers; the oldest makes way', async () => {
+  const buyer = await h.user('BUYER');
+  const token = h.token(buyer);
+  const browserKeys = { p256dh: 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM', auth: 'tBHItJI5svbpez7KI4CCXg' };
+  const endpointOf = (i) => `https://fcm.googleapis.com/fcm/send/ci-cap-${h.RUN}-${i}`;
+  for (let i = 0; i < 11; i += 1) {
+    const res = await h.api('POST', '/push/subscribe', { token, body: { subscription: { endpoint: endpointOf(i), keys: browserKeys } } });
+    assert.equal(res.status, 200);
+  }
+  const rows = await h.prisma.pushToken.findMany({ where: { userId: buyer.id }, select: { endpoint: true } });
+  assert.equal(rows.length, 10);
+  assert.ok(!rows.some((r) => r.endpoint === endpointOf(0)));
 });

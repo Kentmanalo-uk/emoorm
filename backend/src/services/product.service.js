@@ -562,15 +562,20 @@ const isPubliclyVisible = (product) =>
  * `store.readyToSell` says whether the shop takes orders yet
  * (shopReadiness.service); checkout enforces it.
  */
-const presentDetail = async (product, viewerId, viewerRole) => {
+const presentDetail = async (product, viewerId, viewerRole, viewerMunicipalityId = null) => {
   if (!product || product.deletedAt) {
     throw new ApiError('Product not found', 404);
   }
   const isOwner = !!viewerId && product.store?.owner?.id === viewerId;
-  if (!isOwner && !isAdminRole(viewerRole) && !isPubliclyVisible(product)) {
+  // A municipal admin moderates their own town's shops; elsewhere they are
+  // an ordinary visitor.
+  const isModerator = viewerRole === 'SUPER_ADMIN'
+    || (viewerRole === 'MUNICIPAL_ADMIN' && !!viewerMunicipalityId
+      && (product.municipalityId || product.store?.municipalityId) === viewerMunicipalityId);
+  if (!isOwner && !isModerator && !isPubliclyVisible(product)) {
     throw new ApiError('Product not found', 404);
   }
-  const shaped = isOwner || isAdminRole(viewerRole)
+  const shaped = isOwner || isModerator
     ? stripStoreInternals(product)
     : toPublicProduct(product, { withOwner: true });
   if (shaped.store) {
@@ -601,7 +606,8 @@ const normalizeListOptions = (options = {}) => {
   const maxPageSize = config.pagination.maxPageSize || 100;
   const defaultPageSize = Math.min(config.pagination.defaultPageSize || 20, maxPageSize);
 
-  const page = Math.max(1, toInt(options.page, 1));
+  // Nobody pages 200 deep; a huge page only makes MySQL skip that many rows.
+  const page = Math.min(200, Math.max(1, toInt(options.page, 1)));
   const pageSize = Math.min(maxPageSize, Math.max(1, toInt(options.pageSize, defaultPageSize)));
 
   const search = typeof options.search === 'string'
@@ -762,12 +768,12 @@ const createProduct = async (userId, rawData) => {
  * @param {String} id - Product ID
  * @returns {Promise<Object>} Product
  */
-const getProductById = async (id, viewerId = null, viewerRole = null) => {
+const getProductById = async (id, viewerId = null, viewerRole = null, viewerMunicipalityId = null) => {
   // The product payload does not vary by caller; the visibility check below
   // deliberately runs on the cached value, not inside the cache, so one
   // caller's permission can never be cached for another.
   const product = await cached.product({ id }, () => productRepository.findById(id));
-  return presentDetail(product, viewerId, viewerRole);
+  return presentDetail(product, viewerId, viewerRole, viewerMunicipalityId);
 };
 
 /**
@@ -775,9 +781,9 @@ const getProductById = async (id, viewerId = null, viewerRole = null) => {
  * @param {String} slug - Product slug
  * @returns {Promise<Object>} Product
  */
-const getProductBySlug = async (slug, viewerId = null, viewerRole = null) => {
+const getProductBySlug = async (slug, viewerId = null, viewerRole = null, viewerMunicipalityId = null) => {
   const product = await cached.product({ slug }, () => productRepository.findBySlug(slug));
-  return presentDetail(product, viewerId, viewerRole);
+  return presentDetail(product, viewerId, viewerRole, viewerMunicipalityId);
 };
 
 /**
@@ -889,14 +895,42 @@ const getMyProductSummary = async (userId) => {
   return productRepository.getStoreSummary(store.id);
 };
 
+/*
+ * When each product last had its restock notice sent. Stock set to 0 and
+ * back again would otherwise send every follower a notice each time; one a
+ * day per product is plenty. Bounded: the oldest entries go first, and a
+ * product that is touched again moves to the back.
+ */
+const RESTOCK_NOTICE_GAP_MS = 24 * 60 * 60 * 1000;
+const RESTOCK_NOTICES_MAX = 5000;
+const restockNotices = new Map();
+
+const restockNoticedRecently = (productId) => {
+  const at = restockNotices.get(productId);
+  return at !== undefined && Date.now() - at < RESTOCK_NOTICE_GAP_MS;
+};
+
+const rememberRestockNotice = (productId) => {
+  restockNotices.delete(productId);
+  restockNotices.set(productId, Date.now());
+  while (restockNotices.size > RESTOCK_NOTICES_MAX) {
+    restockNotices.delete(restockNotices.keys().next().value);
+  }
+};
+
 /**
- * Tell the store's followers a product is back in stock. Best-effort.
+ * Tell the store's followers a product is back in stock. Best-effort, and at
+ * most once a day per product.
  */
 const notifyRestock = async (store, before, after) => {
   try {
     const wasOutOfStock = (before.stock || 0) === 0;
     const nowInStock = (after.stock || 0) > 0;
     if (wasOutOfStock && nowInStock && after.status === 'APPROVED') {
+      if (restockNoticedRecently(after.id)) return;
+      // Noted before the fan-out, so a second restock moments later does
+      // not start another one while this one is still writing.
+      rememberRestockNotice(after.id);
       await followService.notifyFollowers(after.storeId, {
         type: 'STORE_NEW_PRODUCT',
         title: `${store.name} restocked ${after.name}`,
@@ -1374,6 +1408,59 @@ const normalizeImages = (raw) => {
   return [];
 };
 
+/*
+ * The image hashes of every product image search can find, kept in memory:
+ * only ids and 16-character hashes, refreshed at most every five minutes.
+ * Loading every listed product with its shop, category and town on each
+ * search was the heaviest read a single request could make. A stale list is
+ * served while one shared refresh runs; a product that has since gone (sold
+ * out of its shop, hidden, deleted) is dropped again when the matches are
+ * loaded, and a newly listed one is found within five minutes.
+ */
+const IMAGE_INDEX_TTL_MS = 5 * 60 * 1000;
+const imageSearchWhere = () => ({
+  deletedAt: null,
+  status: 'APPROVED',
+  imageHash: { not: null },
+  store: shopReadiness.VISIBLE_STORE,
+});
+let imageIndex = null; // { at, rows: [{ id, imageHash }] }
+let imageIndexRefresh = null;
+// Bumped on invalidation, so a refresh that started before it does not
+// store a list from before the change.
+let imageIndexGeneration = 0;
+
+const refreshImageIndex = () => {
+  if (!imageIndexRefresh) {
+    const generation = imageIndexGeneration;
+    imageIndexRefresh = prisma.product.findMany({
+      where: imageSearchWhere(),
+      select: { id: true, imageHash: true },
+    })
+      .then((rows) => {
+        const fresh = { at: Date.now(), rows };
+        if (generation === imageIndexGeneration) imageIndex = fresh;
+        return fresh;
+      })
+      .finally(() => { imageIndexRefresh = null; });
+  }
+  return imageIndexRefresh;
+};
+
+const imageHashRows = async () => {
+  if (!imageIndex) return (await refreshImageIndex()).rows;
+  if (Date.now() - imageIndex.at > IMAGE_INDEX_TTL_MS) {
+    refreshImageIndex().catch((err) => console.warn('[imageSearch] index refresh failed:', err.message));
+  }
+  return imageIndex.rows;
+};
+
+/** Forget the image hash list, so the next image search loads it afresh. */
+const invalidateImageHashIndex = () => {
+  imageIndexGeneration += 1;
+  imageIndex = null;
+};
+
 /**
  * Search products by an uploaded image buffer using perceptual hashing.
  * Returns approved products ranked by Hamming distance, filtered to a threshold.
@@ -1390,28 +1477,35 @@ const searchByImageBuffer = async (buffer, { threshold = 20, limit = 24 } = {}) 
     throw new ApiError(`Could not process image: ${err.message}`, 400);
   }
 
-  const candidates = await prisma.product.findMany({
-    where: {
-      deletedAt: null,
-      status: 'APPROVED',
-      imageHash: { not: null },
-      store: shopReadiness.VISIBLE_STORE,
-    },
-    include: {
-      store: { select: { id: true, name: true, slug: true } },
-      category: { select: { id: true, name: true, slug: true, image: true } },
-      municipality: { select: { id: true, name: true } },
-    },
-  });
-
-  const scored = candidates
-    .map((p) => ({
-      product: { ...p, images: normalizeImages(p.images) },
-      distance: hammingDistance(queryHash, p.imageHash),
-    }))
+  const nearest = (await imageHashRows())
+    .map((row) => ({ id: row.id, distance: hammingDistance(queryHash, row.imageHash) }))
     .filter((r) => r.distance <= threshold)
     .sort((a, b) => a.distance - b.distance)
     .slice(0, limit);
+
+  // Only the matches are loaded in full, under the same conditions as the
+  // list, so one that stopped being listed since the last refresh drops out.
+  const matches = nearest.length
+    ? await prisma.product.findMany({
+      where: { ...imageSearchWhere(), id: { in: nearest.map((r) => r.id) } },
+      include: {
+        store: { select: { id: true, name: true, slug: true } },
+        category: { select: { id: true, name: true, slug: true, image: true } },
+        municipality: { select: { id: true, name: true } },
+      },
+    })
+    : [];
+  const byId = new Map(matches.map((p) => [p.id, p]));
+
+  const scored = nearest
+    .filter((r) => byId.has(r.id))
+    .map((r) => {
+      const p = byId.get(r.id);
+      // Scored on the hash as it is now, in case the image changed.
+      return { product: { ...p, images: normalizeImages(p.images) }, distance: hammingDistance(queryHash, p.imageHash) };
+    })
+    .filter((r) => r.distance <= threshold)
+    .sort((a, b) => a.distance - b.distance);
 
   const stats = await productRepository.getStatsForIds(scored.map((r) => r.product.id));
 
@@ -1484,5 +1578,6 @@ module.exports = {
   archiveProduct,
   restoreProduct,
   searchByImageBuffer,
+  invalidateImageHashIndex,
   bulkUpdateProducts,
 };

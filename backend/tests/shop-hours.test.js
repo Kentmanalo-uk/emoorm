@@ -66,3 +66,20 @@ test('a new order carries when to expect it, from the shop\'s preparation days',
   const mine = await h.api('GET', '/orders/my/orders', { token: h.token(buyer) });
   assert.ok(mine.body.data.find((o) => o.id === placed.body.data.id).etaFrom);
 });
+
+test('shop pictures and colours are checked; a shop being deleted stays hidden', async () => {
+  const seller = await h.user('SELLER');
+  const store = await readyShop(seller);
+  const token = h.token(seller);
+  const put = (body) => h.api('PUT', `/stores/${store.id}`, { token, body });
+  assert.equal((await put({ logo: 'https://tracker.example/pixel.gif' })).status, 400);
+  assert.equal((await put({ paymentQrImage: '/uploads/../secret.png' })).status, 400);
+  assert.equal((await put({ primaryColor: 'red; background:url(x)' })).status, 400);
+  assert.equal((await put({ logo: '/uploads/ci-logo.webp', primaryColor: '#1a7f37', secondaryColor: null })).status, 200);
+  assert.equal((await put({ coverImage: '' })).status, 200);
+
+  await h.prisma.store.update({ where: { id: store.id }, data: { isActive: false, deletionRequestedAt: new Date() } });
+  assert.equal((await put({ isActive: true })).status, 200);
+  const saved = await h.prisma.store.findUnique({ where: { id: store.id }, select: { logo: true, primaryColor: true, coverImage: true, isActive: true } });
+  assert.deepEqual(saved, { logo: '/uploads/ci-logo.webp', primaryColor: '#1a7f37', coverImage: null, isActive: false });
+});

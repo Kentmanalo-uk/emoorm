@@ -52,7 +52,11 @@ const optimizeUpload = async (file) => {
     const webpName = `${path.basename(file.filename, path.extname(file.filename))}.webp`;
     const webpPath = path.join(dir, webpName);
 
-    const info = await sharp(file.path, { limitInputPixels: MAX_INPUT_PIXELS })
+    // Decoded from memory, not from the path: libvips keeps a file it opened
+    // in its cache, and on Windows that open handle stops the original being
+    // overwritten or deleted below.
+    const original = await fs.promises.readFile(file.path);
+    const info = await sharp(original, { limitInputPixels: MAX_INPUT_PIXELS })
       // withoutEnlargement keeps small images untouched rather than upscaling.
       .rotate() // honour EXIF orientation before stripping metadata
       .resize({ width: MAX_EDGE, height: MAX_EDGE, fit: 'inside', withoutEnlargement: true })
@@ -62,7 +66,16 @@ const optimizeUpload = async (file) => {
     // Only keep the derivative if it actually saved space.
     if (info.size >= originalBytes) {
       await fs.promises.unlink(webpPath).catch(() => { });
-      return fallback;
+      // The original is still re-saved, in its own format: kept untouched it
+      // would keep its metadata, and a phone photo's carries where it was
+      // taken. sharp writes none unless asked.
+      const { format } = await sharp(original, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
+      const clean = await sharp(original, { limitInputPixels: MAX_INPUT_PIXELS })
+        .rotate()
+        .toFormat(format)
+        .toBuffer();
+      await fs.promises.writeFile(file.path, clean);
+      return { ...fallback, bytes: clean.length };
     }
 
     await fs.promises.unlink(file.path).catch(() => { });

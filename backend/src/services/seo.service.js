@@ -196,15 +196,21 @@ const productMeta = async (slug) => {
   const product = await prisma.product.findFirst({
     where: { slug, deletedAt: null, status: 'APPROVED', store: VISIBLE_STORE },
     select: {
-      name: true, slug: true, description: true, price: true, stock: true, productType: true,
+      id: true, name: true, slug: true, description: true, price: true, stock: true, productType: true,
       images: true, updatedAt: true,
       category: { select: { name: true } },
       municipality: { select: { name: true } },
       store: { select: { name: true, slug: true } },
-      reviews: { where: { deletedAt: null }, select: { rating: true } },
     },
   });
   if (!product) return null;
+  // The average and count from the database, not every review's row: a
+  // much-reviewed product would otherwise load them all on each page view.
+  const ratingStats = await prisma.review.aggregate({
+    where: { productId: product.id, deletedAt: null },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
 
   const where = product.municipality?.name ? ` in ${product.municipality.name}, ${REGION}` : ` in ${REGION}`;
   const shop = product.store?.name ? ` from ${product.store.name}` : '';
@@ -216,12 +222,12 @@ const productMeta = async (slug) => {
   // Paluto is cooked when ordered: never out of stock.
   const madeToOrder = product.productType === 'COOK_TO_ORDER';
 
-  const ratings = product.reviews.map((r) => r.rating).filter((n) => Number.isFinite(n));
-  const aggregate = ratings.length
+  const ratingCount = ratingStats._count.rating;
+  const aggregate = ratingCount
     ? {
       '@type': 'AggregateRating',
-      ratingValue: (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1),
-      reviewCount: ratings.length,
+      ratingValue: Number(ratingStats._avg.rating).toFixed(1),
+      reviewCount: ratingCount,
       bestRating: 5,
       worstRating: 1,
     }
@@ -365,6 +371,32 @@ const municipalityMeta = async (id) => {
   };
 };
 
+/*
+ * Product, shop and town pages resolved in the last minute, by path. Every
+ * page view (and every crawler) asks for these tags, so a popular link would
+ * otherwise query the database on each visit. Bounded, oldest out first; a
+ * change to a listing shows in its tags within the minute.
+ */
+const META_CACHE_MAX = 500;
+const META_CACHE_TTL_MS = 60 * 1000;
+const metaCache = new Map();
+
+const cachedMeta = (key) => {
+  const hit = metaCache.get(key);
+  if (!hit) return undefined;
+  metaCache.delete(key);
+  if (hit.expires <= Date.now()) return undefined;
+  metaCache.set(key, hit); // most recently used goes to the back
+  return hit.value;
+};
+
+const rememberMeta = (key, value) => {
+  metaCache.delete(key);
+  metaCache.set(key, { value, expires: Date.now() + META_CACHE_TTL_MS });
+  while (metaCache.size > META_CACHE_MAX) metaCache.delete(metaCache.keys().next().value);
+  return value;
+};
+
 /**
  * Resolve any path to the tags the HTML should carry.
  * Never throws: a database hiccup degrades to the site defaults rather than
@@ -402,25 +434,28 @@ const resolve = async (pathname) => {
     };
   }
 
+  const hit = cachedMeta(clean);
+  if (hit) return hit;
+
   try {
     let match = clean.match(/^\/product\/([^/]+)$/);
     if (match) {
       const meta = await productMeta(decodeURIComponent(match[1]));
       // A product that is gone, hidden or awaiting approval must not be
       // advertised as if it were live.
-      return meta ? { ...base, ...meta, noindex: base.noindex } : { ...base, noindex: true, jsonLd: [] };
+      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : { ...base, noindex: true, jsonLd: [] });
     }
 
     match = clean.match(/^\/store\/([^/]+)$/);
     if (match) {
       const meta = await storeMeta(decodeURIComponent(match[1]));
-      return meta ? { ...base, ...meta, noindex: base.noindex } : { ...base, noindex: true, jsonLd: [] };
+      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : { ...base, noindex: true, jsonLd: [] });
     }
 
     match = clean.match(/^\/municipality\/([^/]+)$/);
     if (match) {
       const meta = await municipalityMeta(decodeURIComponent(match[1]));
-      return meta ? { ...base, ...meta, noindex: base.noindex } : { ...base, noindex: true, jsonLd: [] };
+      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : { ...base, noindex: true, jsonLd: [] });
     }
   } catch (err) {
     console.error('[seo] metadata lookup failed:', err.message);

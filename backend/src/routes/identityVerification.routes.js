@@ -10,7 +10,9 @@ const router = express.Router();
 // ID photos stay in memory only — they are never written to disk.
 const idImageUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: config.upload.maxFileSize, files: 2 },
+  // The two sides of the ID and a few fields; caps keep a crafted form from
+  // filling memory with parts before the route sees it.
+  limits: { fields: 20, fieldSize: 16 * 1024, parts: 30, files: 2, headerPairs: 200, fileSize: config.upload.maxFileSize },
   fileFilter: (req, file, cb) => {
     if (config.upload.allowedFileTypes.includes(file.mimetype)) cb(null, true);
     else cb(new Error('Invalid file type. Only JPEG, PNG, and WebP are allowed.'), false);

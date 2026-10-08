@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
 const sms = require('../utils/sms');
+const manila = require('../utils/manilaTime');
 
 /**
  * Proving a mobile number with a 6-digit code by SMS, so shops can trust a
@@ -17,6 +18,27 @@ const RESEND_AFTER = 60 * 1000;
 const MAX_SENDS = 5; // per account per hour
 const MAX_TRIES = 5;
 const pending = new Map(); // userId → { number, hash, expires, tries, sends: [times] }
+
+/*
+ * Each text costs money. Besides the per-account limits above, one number
+ * gets at most 5 codes a day (so nobody can flood a stranger's phone from
+ * several accounts) and the whole site sends at most 500 a day. Counted per
+ * Manila day, in this process; the counts start again with the date. The
+ * per-number map cannot outgrow the site cap, since only numbers that were
+ * sent to are counted.
+ */
+const MAX_PER_NUMBER_PER_DAY = 5;
+const MAX_SITE_PER_DAY = 500;
+const daily = { day: null, total: 0, byNumber: new Map() };
+const today = () => {
+  const day = manila.dayKey(new Date());
+  if (daily.day !== day) {
+    daily.day = day;
+    daily.total = 0;
+    daily.byNumber.clear();
+  }
+  return daily;
+};
 
 const PH_MOBILE = /^09\d{9}$/;
 const hash = (code) => crypto.createHash('sha256').update(String(code)).digest('hex');
@@ -35,11 +57,24 @@ const sendCode = async (userId, rawNumber) => {
     throw new ApiError('Wait a minute before asking for another code', 429);
   }
   if (entry.sends.length >= MAX_SENDS) throw new ApiError('Too many codes asked for. Try again in an hour.', 429);
+  const counts = today();
+  if ((counts.byNumber.get(number) || 0) >= MAX_PER_NUMBER_PER_DAY) {
+    throw new ApiError('This number has had too many codes today. Try again tomorrow.', 429);
+  }
+  if (counts.total >= MAX_SITE_PER_DAY) {
+    throw new ApiError('Number verification is busy today. Please try again tomorrow.', 503);
+  }
 
   const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  // Recorded before the text goes out, with nothing awaited in between: two
+  // requests at once cannot both pass the one-minute check above. A failed
+  // or timed-out send still counts (the gateway may have delivered, and
+  // billed, it), and the code stays valid in case it arrives.
+  pending.set(userId, { number, hash: hash(code), expires: now + CODE_TTL, tries: 0, sends: [...entry.sends, now] });
+  counts.byNumber.set(number, (counts.byNumber.get(number) || 0) + 1);
+  counts.total += 1;
   await sms.sendSms(number, `Your Emoorm code is ${code}. It expires in 10 minutes. Never share it with anyone, even Emoorm staff.`)
     .catch(() => { throw new ApiError('The text could not be sent. Try again in a while.', 502); });
-  pending.set(userId, { number, hash: hash(code), expires: now + CODE_TTL, tries: 0, sends: [...entry.sends, now] });
   return { sentTo: `${number.slice(0, 4)}***${number.slice(-3)}` };
 };
 

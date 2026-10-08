@@ -1,9 +1,13 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const config = require('../config/env');
 
+// Keyed on the account when there is one: a throwaway account cannot fill
+// the disk by rotating addresses, and a household behind one address does
+// not share one quota.
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 30,
+  keyGenerator: (req) => (req.user?.id ? `user:${req.user.id}` : ipKeyGenerator(req.ip)),
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Upload limit reached. Try again later.' },
@@ -55,7 +59,7 @@ const forgotPasswordEmailLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => String(req.body?.email || '').trim().toLowerCase() || ipKeyGenerator(req),
+  keyGenerator: (req) => String(req.body?.email || '').trim().toLowerCase() || ipKeyGenerator(req.ip),
   message: {
     success: false,
     message: 'Too many reset requests for that email. Please try again later.',
@@ -99,7 +103,7 @@ const checkoutLimiter = rateLimit({
   max: 40,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req),
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
   // Rejected attempts (out of stock, validation) should not burn the quota.
   skipFailedRequests: true,
   message: { success: false, message: 'Too many checkout attempts. Please wait a moment and try again.' },
@@ -113,7 +117,7 @@ const voucherValidateLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req),
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
   message: { success: false, message: 'Too many voucher attempts. Please wait a moment and try again.' },
 });
 

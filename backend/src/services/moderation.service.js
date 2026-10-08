@@ -179,6 +179,7 @@ const loadScopedUser = async (actor, userId) => {
       fullName: true,
       email: true,
       contactNumber: true,
+      role: true,
       municipalityId: true,
       municipality: { select: { name: true } },
       barangay: true,
@@ -235,7 +236,9 @@ const reviewIdentity = async (actor, userId, { decision, note } = {}, req = null
   const reviewNote = String(note || '').trim();
   if (reviewNote.length < 5) throw new ApiError('Add a short note describing how you checked the ID', 400);
 
+  if (userId === actor.id) throw new ApiError('You cannot verify your own identity', 400);
   const user = await loadScopedUser(actor, userId);
+  if (!['BUYER', 'SELLER'].includes(user.role)) throw new ApiError('Only buyers and sellers are verified here', 400);
   const verified = normalized === 'VERIFIED';
   const data = {
     status: verified ? 'VERIFIED' : 'FAILED',

@@ -9,6 +9,7 @@ import { loadGoogleTranslate, getCurrentLanguage } from './lib/googleTranslate';
 import { startCuratedTagalog } from './lib/tagalog';
 import { bootTheme } from './hooks/useTheme';
 import { setupPwaInstall } from './lib/pwaInstall';
+import { startFreshnessWatch } from './lib/freshness';
 
 // Google's translator loads only for someone who chose another language
 // (choosing one reloads the page); English pages skip its scripts.
@@ -30,6 +31,9 @@ if (!window.history.state?.key) {
 // Listen for the browser's offer to install the app (it can come early) and
 // register the service worker that makes the site installable.
 setupPwaInstall();
+// A page open across a deploy (the Android app in the background) picks up
+// the new build when it is next looked at.
+startFreshnessWatch();
 
 // The saved palette, from this browser's copy, before React renders. The
 // server's version still wins once it arrives; this only stops the first

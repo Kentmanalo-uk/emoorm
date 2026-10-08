@@ -89,6 +89,8 @@ const toggleNotifications = async (buyerId, storeId, enabled) => {
   return { notificationsEnabled: updated.notificationsEnabled };
 };
 
+const FANOUT_BATCH = 1000;
+
 /**
  * Fan-out notifications to store followers.
  * @param {String} storeId
@@ -110,7 +112,11 @@ const notifyFollowers = async (storeId, payload) => {
     isRead: false,
   }));
 
-  await notificationRepository.createMany(data);
+  // Written a thousand at a time: one statement per batch keeps each insert
+  // (and the connection it holds) short, however many follow the shop.
+  for (let i = 0; i < data.length; i += FANOUT_BATCH) {
+    await notificationRepository.createMany(data.slice(i, i + FANOUT_BATCH));
+  }
   return { sent: data.length };
 };
 

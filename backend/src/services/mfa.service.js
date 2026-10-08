@@ -3,8 +3,24 @@ const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const prisma = require('../config/database');
 const userRepository = require('../repositories/user.repository');
-const { generateTokens, generateMfaToken, verifyMfaToken } = require('../utils/jwt');
+const { generateMfaToken, verifyMfaToken } = require('../utils/jwt');
 const { ApiError } = require('../middleware/errorHandler');
+const sessionService = require('./session.service');
+const { makeGuard } = require('../utils/attemptGuard');
+
+// A sign-in's code step: five wrong codes spend the step-up token, and a
+// token that completed a sign-in is not accepted again. Six digits are
+// guessable by a script that may try without limit; this is the limit.
+const MFA_TRY_LIMIT = 5;
+const codeTries = makeGuard({ limit: MFA_TRY_LIMIT, windowMs: 10 * 60 * 1000 });
+const spentTokens = makeGuard({ limit: 1, windowMs: 10 * 60 * 1000 });
+const assertStepUsable = (decoded) => {
+  const id = decoded?.jti;
+  if (!id) return;
+  if (spentTokens.lockedFor(id) || codeTries.lockedFor(id)) {
+    throw new ApiError('MFA session expired, please sign in again', 401);
+  }
+};
 
 const ISSUER = 'Emoorm Admin';
 const BACKUP_CODE_COUNT = 8;
@@ -203,8 +219,10 @@ const verifyLogin = async (mfaToken, code) => {
   } catch {
     throw new ApiError('MFA session expired, please sign in again', 401);
   }
+  assertStepUsable(decoded);
 
   const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+  if (user && (user.deletedAt || !user.isActive)) throw new ApiError('Account is not active', 403);
   if (!user) throw new ApiError('User not found', 404);
   if (!user.mfaEnabled || !user.mfaSecret) {
     throw new ApiError('MFA is not enabled on this account', 400);
@@ -234,15 +252,21 @@ const verifyLogin = async (mfaToken, code) => {
     }
   }
 
-  if (!ok) throw new ApiError('Invalid verification code', 401);
+  if (!ok) {
+    if (decoded.jti) codeTries.fail(decoded.jti);
+    throw new ApiError('Invalid verification code', 401);
+  }
+  if (decoded.jti) spentTokens.fail(decoded.jti);
 
   await prisma.user.update({
     where: { id: user.id },
     data: { mfaLastVerifiedAt: new Date() },
   });
 
-  const tokens = generateTokens(user);
-  const { password, mfaSecret, mfaBackupCodes, ...safe } = user;
+  const tokens = await sessionService.issue(user);
+  // The account as the profile endpoint shows it: an allow-list of columns,
+  // never the row minus a few secrets.
+  const safe = await userRepository.findById(user.id);
   return { user: safe, ...tokens, usedBackupCode: usedBackup };
 };
 
@@ -257,9 +281,17 @@ const completeSetupDuringLogin = async (mfaToken, code) => {
   } catch {
     throw new ApiError('MFA setup session expired, please sign in again', 401);
   }
-  const setup = await completeSetup(decoded.id, code);
+  assertStepUsable(decoded);
+  let setup;
+  try {
+    setup = await completeSetup(decoded.id, code);
+  } catch (err) {
+    if (decoded.jti) codeTries.fail(decoded.jti);
+    throw err;
+  }
+  if (decoded.jti) spentTokens.fail(decoded.jti);
   const user = await userRepository.findById(decoded.id);
-  const tokens = generateTokens(user);
+  const tokens = await sessionService.issue(user);
   return { user, ...tokens, backupCodes: setup.backupCodes };
 };
 

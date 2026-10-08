@@ -34,9 +34,30 @@ const getWorker = () => {
   return workerPromise;
 };
 
-// One job at a time: the shared worker's parameters change between passes.
-const exclusive = (task) => {
-  const run = queue.then(task, task);
+// A read takes seconds of CPU, and jobs run one after another, so a long
+// line means each person waits for everyone ahead (and their request times
+// out). Past this many waiting, a new job is turned away at once.
+const MAX_WAITING = 3;
+let waiting = 0;
+
+const ocrError = (code, message) => Object.assign(new Error(message), { code });
+
+/**
+ * One job at a time: the shared worker's parameters change between passes.
+ * Rejects with code OCR_BUSY when the line is full, and OCR_CANCELLED when
+ * `isCancelled` says, as the job's turn comes, that nobody awaits it any more.
+ */
+const exclusive = (task, { isCancelled } = {}) => {
+  if (waiting >= MAX_WAITING) {
+    return Promise.reject(ocrError('OCR_BUSY', 'Identity OCR queue is full'));
+  }
+  waiting += 1;
+  const start = () => {
+    waiting -= 1;
+    if (isCancelled?.()) throw ocrError('OCR_CANCELLED', 'Identity OCR request went away before its turn');
+    return task();
+  };
+  const run = queue.then(start, start);
   queue = run.catch(() => {});
   return run;
 };
@@ -76,9 +97,11 @@ const recognize = async (worker, png, psm) => {
  * @param {Object} [options]
  * @param {Function} [options.accept] - (text) => true when the read is good
  *   enough; extra passes run only while this returns false
+ * @param {Function} [options.isCancelled] - () => true when the request is
+ *   gone; checked when the job's turn comes, so its work is skipped
  * @returns {Promise<{text: String, confidence: Number, angle: Number, passes: Number}>}
  */
-const recognizeId = (buffer, { accept = () => false } = {}) => exclusive(async () => {
+const recognizeId = (buffer, { accept = () => false, isCancelled } = {}) => exclusive(async () => {
   const base = await baseImage(buffer);
   const worker = await getWorker();
   const attempts = [];
@@ -123,7 +146,7 @@ const recognizeId = (buffer, { accept = () => false } = {}) => exclusive(async (
   }
 
   return { ...merged(), angle, passes: attempts.length };
-});
+}, { isCancelled });
 
 const shutdown = async () => {
   if (!workerPromise) return;

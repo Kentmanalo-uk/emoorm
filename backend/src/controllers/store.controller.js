@@ -49,7 +49,9 @@ const getStores = asyncHandler(async (req, res) => {
   const options = {
     page: Math.max(1, parseInt(page, 10) || 1),
     pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
-    municipalityId: str(municipalityId),
+    // A municipal admin reviews shops of their own town only, whatever the
+    // query says; the super admin may look anywhere.
+    municipalityId: req.user?.role === 'MUNICIPAL_ADMIN' ? req.user.municipalityId : str(municipalityId),
     isAdmin,
     // Non-admin callers only see active, non-suspended stores. Admins can
     // pass explicit filters to review pending/inactive stores.

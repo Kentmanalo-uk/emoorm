@@ -55,10 +55,15 @@ const kpi = (value, previous) => ({
   delta: delta(value, previous),
 });
 
-// Fill missing days so a chart of last N days shows an unbroken axis.
+// Fill missing days so a chart of last N days shows an unbroken axis. A
+// shop's window charted by month or year may run past a year: its days are
+// then given as they are, only those with sales, rather than thousands of
+// empty ones.
+const MAX_PAD_DAYS = 400;
 const padDays = (series, from, to) => {
+  if (new Date(to).getTime() - new Date(from).getTime() > MAX_PAD_DAYS * 86400000) return series;
   const byDate = new Map(series.map((s) => [s.date, s]));
-  return manila.daysBetween(from, to).map((key) => byDate.get(key) || { date: key, total: 0, orders: 0 });
+  return manila.daysBetween(from, to, MAX_PAD_DAYS + 1).map((key) => byDate.get(key) || { date: key, total: 0, orders: 0 });
 };
 
 const padBuckets = (series, from, to, granularity) => {

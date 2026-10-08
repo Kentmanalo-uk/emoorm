@@ -25,7 +25,7 @@ const scan = asyncHandler(async (req, res) => {
 
 /** Authenticated (mobile): approve or reject a previously scanned session. */
 const approve = asyncHandler(async (req, res) => {
-  const data = await qrLoginService.approveSession(req.body.token, req.user.id, !!req.body.approve);
+  const data = await qrLoginService.approveSession(req.body.token, req.user.id, !!req.body.approve, { code: req.body.code });
   successResponse(res, data, data.status === 'APPROVED' ? 'Login approved' : 'Login rejected');
 });
 

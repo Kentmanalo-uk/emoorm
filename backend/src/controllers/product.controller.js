@@ -165,7 +165,7 @@ const getMyProductSummary = asyncHandler(async (req, res) => {
  * @access Public
  */
 const getProductById = asyncHandler(async (req, res) => {
-  const product = await productService.getProductById(req.params.id, req.user?.id, req.user?.role);
+  const product = await productService.getProductById(req.params.id, req.user?.id, req.user?.role, req.user?.municipalityId);
 
   successResponse(res, product, 'Product retrieved successfully');
 });
@@ -176,7 +176,7 @@ const getProductById = asyncHandler(async (req, res) => {
  * @access Public
  */
 const getProductBySlug = asyncHandler(async (req, res) => {
-  const product = await productService.getProductBySlug(req.params.slug, req.user?.id, req.user?.role);
+  const product = await productService.getProductBySlug(req.params.slug, req.user?.id, req.user?.role, req.user?.municipalityId);
 
   successResponse(res, product, 'Product retrieved successfully');
 });

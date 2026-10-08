@@ -1,4 +1,5 @@
 const authService = require('../services/auth.service');
+const sessionService = require('../services/session.service');
 const userPurgeService = require('../services/userPurge.service');
 const auditLog = require('../services/auditLog.service');
 const identityVerificationService = require('../services/identityVerification.service');
@@ -59,11 +60,22 @@ const refreshToken = asyncHandler(async (req, res) => {
  * @access Private
  */
 const logout = asyncHandler(async (req, res) => {
-  // In a stateless JWT setup, logout is handled client-side
-  // by removing the token from storage
-  // For enhanced security, implement token blacklisting here
-
+  // The refresh token this device holds stops renewing. The access token
+  // runs out on its own within the hour. A device that sends no refresh
+  // token is simply forgetting its own copy.
+  await sessionService.revoke(req.body?.refreshToken, req.user.id);
   successResponse(res, null, 'Logout successful');
+});
+
+/**
+ * Sign out of every device: every session of the account ends at once,
+ * current access tokens included (a lost phone, a shared computer).
+ * @route POST /api/auth/logout-all
+ * @access Private
+ */
+const logoutAll = asyncHandler(async (req, res) => {
+  await sessionService.revokeAll(req.user.id);
+  successResponse(res, null, 'Signed out everywhere');
 });
 
 /**
@@ -402,7 +414,7 @@ const purgeUser = asyncHandler(async (req, res) => {
  * @access Private (ADMIN only)
  */
 const deleteUser = asyncHandler(async (req, res) => {
-  await authService.deleteUser(req.params.id);
+  await authService.deleteUser(req.params.id, req.user);
 
   noContentResponse(res);
 });
@@ -560,6 +572,7 @@ module.exports = {
   googleAppExchange,
   refreshToken,
   logout,
+  logoutAll,
   getProfile,
   updateProfile,
   changePassword,

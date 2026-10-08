@@ -19,9 +19,14 @@ const setMigrations = (state) => {
  * @param {Number} everyMs - how often it is meant to run (to tell when it is late)
  */
 const runJob = async (name, run, everyMs) => {
-  const entry = status.jobs[name] || { lastRun: null, lastOk: null, lastError: null, every: everyMs };
+  const entry = status.jobs[name] || { lastRun: null, lastOk: null, lastError: null, every: everyMs, running: false };
   status.jobs[name] = entry;
   entry.every = everyMs;
+  // A tick that arrives while the previous run is still going (a slow
+  // database) is skipped rather than run alongside it: two copies of the
+  // same job would fight over the same rows.
+  if (entry.running) return null;
+  entry.running = true;
   entry.lastRun = new Date().toISOString();
   try {
     const result = await run();
@@ -32,6 +37,8 @@ const runJob = async (name, run, everyMs) => {
     entry.lastError = err?.message || String(err);
     console.error(`[job:${name}] failed:`, entry.lastError);
     return null;
+  } finally {
+    entry.running = false;
   }
 };
 

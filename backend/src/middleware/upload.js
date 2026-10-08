@@ -82,10 +82,15 @@ const assertRealImage = async (file) => {
   return verdict;
 };
 
+// Every upload route takes one file (upload.single). Without these caps a
+// form could carry thousands of text fields or parts, each parsed and held in
+// memory before the route ever looks at it.
+const FORM_LIMITS = { fields: 20, fieldSize: 16 * 1024, parts: 30, files: 1, headerPairs: 200 };
+
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: config.upload.maxFileSize },
+  limits: { ...FORM_LIMITS, fileSize: config.upload.maxFileSize },
 });
 
 // Ensure the private KYC directory exists (never auto-created by multer/fs).
@@ -104,7 +109,7 @@ const kycStorage = multer.diskStorage({
 const kycUpload = multer({
   storage: kycStorage,
   fileFilter,
-  limits: { fileSize: config.upload.maxFileSize },
+  limits: { ...FORM_LIMITS, fileSize: config.upload.maxFileSize },
 });
 
 module.exports = { upload, kycUpload, assertRealImage };

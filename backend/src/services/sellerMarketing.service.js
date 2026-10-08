@@ -4,6 +4,7 @@ const { ApiError } = require('../middleware/errorHandler');
 const storeRepository = require('../repositories/store.repository');
 const followService = require('./storeFollow.service');
 const { cleanText } = require('../utils/sanitize');
+const { withKeyedLock } = require('../utils/keyedLock');
 const { storeHealthIssues, storeHealthLevel } = require('../utils/storeHealth');
 
 /**
@@ -153,7 +154,11 @@ const listAnnouncements = async (userId) => {
  * @param {String} userId
  * @param {{message: String, productId?: String}} data
  */
-const sendAnnouncement = async (userId, data = {}) => {
+// One at a time per seller: the daily quota is read before it is spent, and
+// two sends at the same instant would both read the old count.
+const sendAnnouncement = (userId, data = {}) => withKeyedLock(`announce:${userId}`, () => sendAnnouncementNow(userId, data));
+
+const sendAnnouncementNow = async (userId, data = {}) => {
   const store = await ownStore(userId);
   const block = await sendBlock(store);
   if (block) throw new ApiError(block.message, 403);

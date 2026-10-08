@@ -39,11 +39,28 @@ const stats = { hits: 0, misses: 0, errors: 0, sets: 0, invalidations: 0 };
 const memory = new Map();
 const memoryTags = new Map();
 
+// Each entry keeps its own tags, so a key that leaves the cache (evicted,
+// expired, invalidated or replaced) leaves its tag sets too, and a set that
+// empties goes with it. Otherwise the tag sets would hold every key ever
+// cached and grow without bound while the entries themselves stay capped.
+const memoryDrop = (key) => {
+  const entry = memory.get(key);
+  if (!entry) return false;
+  memory.delete(key);
+  for (const tag of entry.tags) {
+    const keys = memoryTags.get(tag);
+    if (!keys) continue;
+    keys.delete(key);
+    if (keys.size === 0) memoryTags.delete(tag);
+  }
+  return true;
+};
+
 const memoryGet = (key) => {
   const entry = memory.get(key);
   if (!entry) return undefined;
   if (entry.expiresAt <= Date.now()) {
-    memory.delete(key);
+    memoryDrop(key);
     return undefined;
   }
   // Refresh recency.
@@ -52,18 +69,15 @@ const memoryGet = (key) => {
   return entry.value;
 };
 
-const memorySet = (key, value, ttlSeconds) => {
-  memory.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
-  while (memory.size > config.cache.maxMemoryEntries) {
-    const oldest = memory.keys().next().value;
-    memory.delete(oldest);
-  }
-};
-
-const memoryTag = (tags, key) => {
+const memorySet = (key, value, ttlSeconds, tags = []) => {
+  memoryDrop(key);
+  memory.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000, tags });
   for (const tag of tags) {
     if (!memoryTags.has(tag)) memoryTags.set(tag, new Set());
     memoryTags.get(tag).add(key);
+  }
+  while (memory.size > config.cache.maxMemoryEntries) {
+    memoryDrop(memory.keys().next().value);
   }
 };
 
@@ -72,8 +86,8 @@ const memoryInvalidate = (tags) => {
   for (const tag of tags) {
     const keys = memoryTags.get(tag);
     if (!keys) continue;
-    for (const key of keys) {
-      if (memory.delete(key)) removed += 1;
+    for (const key of [...keys]) {
+      if (memoryDrop(key)) removed += 1;
     }
     memoryTags.delete(tag);
   }
@@ -184,8 +198,7 @@ const set = async (key, value, ttlSeconds, tags = []) => {
       return; // Losing a write is harmless — the next request recomputes.
     }
   }
-  memorySet(key, value, ttlSeconds);
-  memoryTag(tags, key);
+  memorySet(key, value, ttlSeconds, tags);
 };
 
 /**
@@ -255,8 +268,10 @@ const remember = async ({ key, ttl, tags = [], shared = false }, loader) => {
 
   const promise = (async () => {
     const value = await loader();
-    // undefined is not representable in JSON — never cache it.
-    if (value !== undefined) await set(key, value, ttl, tags);
+    // undefined is not representable in JSON, and null is usually "not
+    // found": caching it would let anyone fill the cache with lookups of
+    // things that do not exist. Neither is stored; the next asker loads again.
+    if (value !== undefined && value !== null) await set(key, value, ttl, tags);
     return value;
   })().finally(() => inFlight.delete(key));
 

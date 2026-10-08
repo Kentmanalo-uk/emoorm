@@ -87,6 +87,9 @@ const assignJuniorAdmin = async (actor, { userId, municipalityId, backup = false
   if (user.role === 'SUPER_ADMIN') {
     throw new ApiError('Cannot demote a super admin', 400);
   }
+  if (user.role === 'SELLER') {
+    throw new ApiError('A seller cannot be made an admin. Close their shop first.', 400);
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
     // If municipality already has a different admin, demote them

@@ -64,9 +64,34 @@ function phoneMediumWeights() {
   };
 }
 
+/**
+ * Every build gets an id of its own, baked into the page (__BUILD_ID__) and
+ * written next to it as /version.json. A page that has been open since
+ * before a deploy (the Android app kept in the background, a tab left open)
+ * compares the two and reloads itself when they differ (src/lib/freshness.js),
+ * so a website update reaches the app without a new APK and without anyone
+ * pressing refresh.
+ */
+const BUILD_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function buildStamp() {
+  return {
+    name: 'build-stamp',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({ build: BUILD_ID, builtAt: new Date().toISOString() }),
+      });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), phoneMediumWeights()],
+  plugins: [react(), phoneMediumWeights(), buildStamp()],
+  define: {
+    __BUILD_ID__: JSON.stringify(BUILD_ID),
+  },
   // Listen on the LAN as well, so phones on the same Wi-Fi can open the dev site.
   server: {
     host: true,

@@ -227,12 +227,18 @@ const submit = async (actor, idType, images, req) => {
     attemptCount: (existing?.attemptCount || 0) + 1,
   });
 
+  // The person who sent the photos has gone (closed the page, or the
+  // response already went out): a queued read for them is skipped. Not
+  // `req.closed`, which turns true as soon as the upload has been read.
+  const isCancelled = () => Boolean(req?.res?.writableEnded || req?.res?.destroyed || req?.socket?.destroyed);
+
   let outcome;
   let confidence = 0;
   let ocrText = '';
   try {
     const frontOcr = await recognizeId(front, {
       accept: (text) => evaluate(text, idType, user).verified,
+      isCancelled,
     });
     let combined = frontOcr.text;
     confidence = Math.round(frontOcr.confidence);
@@ -241,6 +247,7 @@ const submit = async (actor, idType, images, req) => {
       const backOcr = await recognizeId(back, {
         // The back only has to complete what the front is missing.
         accept: (text) => evaluate(joinSides(frontOcr.text, text), idType, user).verified,
+        isCancelled,
       });
       combined = joinSides(frontOcr.text, backOcr.text);
       confidence = Math.round((frontOcr.confidence + backOcr.confidence) / 2);
@@ -249,6 +256,18 @@ const submit = async (actor, idType, images, req) => {
     ocrText = combined;
     outcome = evaluate(combined, idType, user);
   } catch (err) {
+    if (err.code === 'OCR_BUSY' || err.code === 'OCR_CANCELLED') {
+      // The ID was never read: put the record back as it was, so this is not
+      // counted as a failure and the retry is not "already in progress".
+      await identityRepository.upsertForUser(userId, {
+        status: existing?.status || 'NOT_VERIFIED',
+        idType: existing?.idType ?? null,
+        failureReason: existing?.failureReason ?? null,
+        lastAttemptAt: existing?.lastAttemptAt ?? null,
+        attemptCount: existing?.attemptCount || 0,
+      });
+      throw new ApiError('Identity checks are busy right now. Please try again in a minute.', 503);
+    }
     console.error('[identity] OCR failed:', err.message);
     outcome = { verified: false, failureCode: 'UNREADABLE', nameMatched: false };
   }

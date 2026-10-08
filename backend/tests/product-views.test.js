@@ -23,3 +23,10 @@ test('product views count once per visitor, not the shop, and show in the seller
   const row = stats.body.data.productFunnel.find((p) => p.id === item.id);
   assert.deepEqual({ views: row.views, orders: row.orders, conversion: row.conversion }, { views: 2, orders: 1, conversion: 50 });
 });
+
+test('seller analytics refuse a window far outside what can be charted', async () => {
+  const seller = await h.user('SELLER');
+  await h.shop(seller);
+  const res = await h.api('GET', '/analytics/seller?from=1500-01-01&to=9999-12-31', { token: h.token(seller) });
+  assert.equal(res.status, 400);
+});

@@ -129,9 +129,14 @@ const answer = async (userId, id, body = {}) => {
 
 /** Hide a question (the shop, or an admin moderating). */
 const hide = async (user, id) => {
-  const q = await prisma.productQuestion.findUnique({ where: { id }, include: { store: { select: { ownerId: true } } } });
-  const admin = user.role === 'SUPER_ADMIN' || user.role === 'MUNICIPAL_ADMIN';
-  if (!q || (!admin && q.store.ownerId !== user.id)) throw new ApiError('Question not found', 404);
+  const q = await prisma.productQuestion.findUnique({ where: { id }, include: { store: { select: { ownerId: true, municipalityId: true } } } });
+  // The shop, a super admin, or the admin of the shop's own town.
+  const allowed = q && (
+    user.role === 'SUPER_ADMIN'
+    || (user.role === 'MUNICIPAL_ADMIN' && q.store.municipalityId === user.municipalityId)
+    || q.store.ownerId === user.id
+  );
+  if (!allowed) throw new ApiError('Question not found', 404);
   await prisma.productQuestion.update({ where: { id }, data: { isHidden: true } });
   return { hidden: true };
 };

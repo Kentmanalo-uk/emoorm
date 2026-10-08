@@ -98,15 +98,26 @@ tells you to; Hostinger provides it.
 
 | Name | Default | What it does |
 | ---- | ------- | ------------ |
-| `API_MAX_ACTIVE` | `48` | Reads (page data) the server works on at once; the rest wait their turn in line |
+| `API_MAX_ACTIVE` | `24` | Reads (page data) the server works on at once; the rest wait their turn in line. About three times the database pool is plenty: more only means more waiting on the pool |
+| `API_MAX_ACTIVE_WRITES` | `12` | Orders, messages, saves the server works on at once, in a lane of their own, so a rush of page loads never stalls a checkout (and the other way round) |
 | `API_MAX_WAIT_MS` | `15000` | The longest a read waits in line before it is answered "busy, try again" (503), which the web app retries by itself. Keep it below the proxy's timeout, or visitors see a 504 instead |
 | `API_MAX_QUEUE` | `3000` | The longest the line gets |
 | `DB_CONNECTION_LIMIT` | `5` | Database connections the app keeps open. Raise it only if hPanel's MySQL allows more connections per user |
 | `DB_POOL_TIMEOUT` | `10` | Seconds a query waits for a free database connection before the request is answered "busy" |
 | `SLOW_REQUEST_MS` | `3000` | A request slower than this is written to the app's log as `[slow] GET /api/... 200 4123ms`, to find what made a page slow |
 
-`/health` shows the line under `load`: `active`, `waiting` and `turnedAway`
-(how many reads were told to try again since the last restart).
+`/health` shows the lines under `load`: `active`, `waiting`, `writesActive`,
+`writesWaiting` and `turnedAway` (how many requests were told to try again
+since the last restart).
+
+**Sign-in and abuse** (all optional):
+
+| Name | Default | What it does |
+| ---- | ------- | ------------ |
+| `JWT_EXPIRES_IN` | `1h` | How long an access token lives. The web app renews it on its own through the refresh token, so an hour costs nobody a sign-in; set it to `1h` in hPanel (older copies of the environment say `7d`) |
+| `JWT_REFRESH_EXPIRES_IN` | `30d` | How long a device stays signed in without use. Each refresh token is a row in `refresh_sessions`; signing out ends it, renewing replaces it, and a replaced token used again ends every session of that account |
+| `HEALTH_TOKEN` | unset | The uptime monitor's token: `/health?token=…` (or a Bearer header) shows the full detail (jobs, cache, load). Without it, anyone gets only up or down; the detail also shows from the server itself |
+| `OPEN_ORDERS_MAX` / `OPEN_ORDERS_PER_STORE` | `8` / `3` | Unconfirmed orders one buyer may hold at once, overall and with one shop, so a script cannot reserve a shop's whole stock for two days |
 
 ## 5. Google sign-in (Google Cloud Console → Credentials → OAuth client)
 

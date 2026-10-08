@@ -22,6 +22,9 @@ const {
   generateGoogleAppTicket,
   verifyGoogleAppTicket,
 } = require('../utils/jwt');
+const sessionService = require('./session.service');
+const prisma = require('../config/database');
+const { makeGuard } = require('../utils/attemptGuard');
 const {
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
@@ -192,8 +195,7 @@ const register = async (userData) => {
   // The welcome email asks them to confirm the address they typed.
   sendInBackground('welcome', async () => sendWelcomeEmail({ user, confirmUrl: await issueEmailConfirmation(user) }));
 
-  // Generate tokens
-  const tokens = generateTokens(user);
+  const tokens = await sessionService.issue(user);
 
   // Remove password from response
   delete user.password;
@@ -219,7 +221,17 @@ const getDummyHash = async () => {
   return dummyHash;
 };
 
+// Ten wrong passwords for one account in a quarter hour locks the password
+// step for the rest of it, whichever addresses the tries come from. The IP
+// limiter catches one source; this catches one target.
+const loginTries = makeGuard({ limit: 10, windowMs: 15 * 60 * 1000 });
+const LOGIN_KEY = (email) => String(email || '').trim().toLowerCase();
+
 const login = async (email, password) => {
+  const lockedFor = loginTries.lockedFor(LOGIN_KEY(email));
+  if (lockedFor) {
+    throw new ApiError(`Too many failed sign-in attempts. Try again in ${Math.ceil(lockedFor / 60)} minute${lockedFor > 60 ? 's' : ''}.`, 429);
+  }
   // Find user with password
   const user = await userRepository.findByEmail(email, true);
 
@@ -228,8 +240,10 @@ const login = async (email, password) => {
   // the password learns anything about the account.
   const isPasswordValid = await comparePassword(password, user?.password || await getDummyHash());
   if (!user || !isPasswordValid) {
+    loginTries.fail(LOGIN_KEY(email));
     throw new ApiError('Invalid email or password', 401);
   }
+  loginTries.clear(LOGIN_KEY(email));
 
   // Check if user is deleted
   if (user.deletedAt) {
@@ -267,8 +281,7 @@ const login = async (email, password) => {
     };
   }
 
-  // Generate tokens
-  const tokens = generateTokens(user);
+  const tokens = await sessionService.issue(user);
 
   // Remove password from response
   delete user.password;
@@ -318,10 +331,9 @@ const refreshToken = async (refreshToken) => {
       throw new ApiError('Session expired', 401);
     }
 
-    // Generate new tokens
-    const tokens = generateTokens(user);
-
-    return tokens;
+    // The refresh token is retired and the next one issued in its place;
+    // a retired one used again ends every session of the account.
+    return await sessionService.rotate(decoded, user);
   } catch (error) {
     throw new ApiError('Invalid or expired refresh token', 401);
   }
@@ -470,7 +482,7 @@ const changePassword = async (userId, currentPassword, newPassword) => {
   // them from the stale `user` would hand back a pair that the very next
   // request rejects — signing the caller out of their own password change.
   const updated = await userRepository.findById(userId);
-  const tokens = generateTokens(updated);
+  const tokens = await sessionService.issue(updated);
 
   await notifyPasswordChanged(updated || user);
 
@@ -1227,8 +1239,15 @@ const activateUser = async (userId, actor) => {
  * @param {String} userId - User ID
  * @returns {Promise<void>}
  */
-const deleteUser = async (userId) => {
+const deleteUser = async (userId, actor = null) => {
+  const target = await userRepository.findById(userId);
+  if (!target) throw new ApiError('User not found', 404);
+  // The same lines the permanent purge draws: not oneself, never a super admin.
+  if (actor && actor.id === userId) throw new ApiError('You cannot delete your own account from here', 400);
+  if (target.role === 'SUPER_ADMIN') throw new ApiError('A super admin account cannot be deleted', 400);
   await userRepository.softDeleteUser(userId);
+  // Whatever sessions the account had are over.
+  await sessionService.revokeAll(userId).catch(() => {});
   // A seller who can no longer sign in cannot run a shop: it closes, so
   // buyers stop ordering from it (open orders still expire or finish as usual).
   const store = await storeRepository.findByOwnerId(userId);
@@ -1408,7 +1427,16 @@ const loginWithGoogleProfile = async (profile) => {
   }
 
   // Admin accounts still need MFA — mirror the password login response shape.
+  // So does anyone else who turned it on: Google proves the email, not the
+  // second factor they chose.
   const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'MUNICIPAL_ADMIN';
+  if (!isAdmin && user.mfaEnabled) {
+    return {
+      requiresMfa: true,
+      mfaToken: generateMfaToken(user, 'mfa-verify'),
+      email: user.email,
+    };
+  }
   if (isAdmin) {
     if (user.mfaEnabled) {
       return {
@@ -1424,7 +1452,7 @@ const loginWithGoogleProfile = async (profile) => {
     };
   }
 
-  const tokens = generateTokens(user);
+  const tokens = await sessionService.issue(user);
   return { user, ...tokens };
 };
 
@@ -1607,12 +1635,13 @@ const completeGoogleSignup = async (googleToken, data) => {
 
   sendInBackground('welcome', () => sendWelcomeEmail({ user }));
 
-  const tokens = generateTokens(user);
+  const tokens = await sessionService.issue(user);
   return { user, ...tokens };
 };
 
 module.exports = {
   register,
+  loginWithGoogleProfile,
   login,
   loginWithGoogle,
   googleAppStartUrl,
@@ -1654,6 +1683,17 @@ async function setUserRole(userId, role, opts = {}) {
   // Only SUPER_ADMIN can promote to admin roles
   if ((role === 'MUNICIPAL_ADMIN' || role === 'SUPER_ADMIN') && actor?.role !== 'SUPER_ADMIN') {
     throw new ApiError('Only a super admin can assign admin roles', 403);
+  }
+  // Nobody changes their own role, and the last super admin is never
+  // demoted: the platform would be left with nobody able to manage it.
+  if (actor && actor.id === userId) throw new ApiError('You cannot change your own role', 400);
+  if (user.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN') {
+    const supers = await prisma.user.count({ where: { role: 'SUPER_ADMIN', deletedAt: null, isActive: true } });
+    if (supers <= 1) throw new ApiError('The last super admin cannot be demoted', 400);
+  }
+  // A shop owner cannot also be an admin (adminTeam has the same rule).
+  if (role === 'MUNICIPAL_ADMIN' && user.role === 'SELLER') {
+    throw new ApiError('A seller cannot be made an admin. Close their shop first.', 400);
   }
 
   // Promoting to MUNICIPAL_ADMIN requires a municipalityId

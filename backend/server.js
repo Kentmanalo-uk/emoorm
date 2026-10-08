@@ -66,6 +66,10 @@ const startServer = async () => {
       // fails with a 502/504. Outlast the proxy instead.
       httpServer.keepAliveTimeout = 65 * 1000;
       httpServer.headersTimeout = 66 * 1000;
+      // A request whose body never finishes arriving (a client trickling
+      // bytes to hold a connection) is dropped after two minutes, which is
+      // still enough for a video review over a slow mobile link.
+      httpServer.requestTimeout = 120 * 1000;
       // Order clocks: unconfirmed orders expire, unpaid QR orders expire,
       // handed-over orders complete. Once shortly after boot (a restart must
       // not push them back), then every five minutes; /health shows when
@@ -113,6 +117,15 @@ const startServer = async () => {
       );
       setTimeout(eraseClosed, 60 * 1000).unref();
       setInterval(eraseClosed, 24 * 60 * 60 * 1000).unref();
+
+      // Signed-in sessions whose refresh token has expired are forgotten.
+      const purgeSessions = () => runtimeStatus.runJob(
+        'session-purge',
+        () => require('./src/services/session.service').purgeExpired(),
+        24 * 60 * 60 * 1000,
+      );
+      setTimeout(purgeSessions, 90 * 1000).unref();
+      setInterval(purgeSessions, 24 * 60 * 60 * 1000).unref();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

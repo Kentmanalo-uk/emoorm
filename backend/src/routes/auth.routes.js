@@ -106,6 +106,12 @@ router.post(
   authController.logout
 );
 
+router.post(
+  '/logout-all',
+  authenticate,
+  authController.logoutAll
+);
+
 router.get(
   '/profile',
   authenticate,

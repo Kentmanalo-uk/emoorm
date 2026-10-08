@@ -41,7 +41,9 @@ const reviewUpload = multer({
     if (REVIEW_ALLOWED_MIME.has(file.mimetype)) return cb(null, true);
     cb(new Error('Only JPEG/PNG/WebP images and MP4/WebM/MOV videos are allowed'), false);
   },
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB per file (videos)
+  // Five photos and a video, a few text fields; caps keep a crafted form
+  // from making the server parse and hold thousands of parts.
+  limits: { fields: 20, fieldSize: 16 * 1024, parts: 30, files: 6, headerPairs: 200, fileSize: 50 * 1024 * 1024 }, // 50 MB per file (videos)
 });
 
 const reviewMediaFields = reviewUpload.fields([

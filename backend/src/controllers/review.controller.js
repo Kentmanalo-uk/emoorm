@@ -7,8 +7,10 @@ const {
   paginatedResponse,
 } = require('../utils/response');
 const fs = require('fs');
+const path = require('path');
 const { asyncHandler, ApiError } = require('../middleware/errorHandler');
 const { assertRealImage } = require('../middleware/upload');
+const { optimizeUpload } = require('../utils/imageOptimizer');
 
 // A video's first bytes: MP4/MOV boxes ("ftyp", "moov"…) at offset 4, or
 // WebM's EBML header. The declared type alone is chosen by the uploader.
@@ -47,6 +49,17 @@ const createReview = asyncHandler(async (req, res) => {
       if (image.size > 10 * 1024 * 1024) throw new ApiError('Each photo must be 10 MB or smaller', 400);
       const verdict = await assertRealImage(image);
       if (!verdict.ok) throw new ApiError('One of the photos is not a JPEG, PNG or WebP image', 400);
+      // Re-encoded like every other upload: smaller, and without the camera's
+      // metadata, which on a phone photo includes where it was taken (often
+      // the buyer's home). The file on disk changes, so the record follows it.
+      let optimized;
+      try {
+        optimized = await optimizeUpload(image);
+      } catch {
+        throw new ApiError('One of the photos could not be read as an image', 400);
+      }
+      image.path = path.join(path.dirname(image.path), optimized.filename);
+      image.filename = optimized.filename;
     }
     if (files.video?.[0] && !(await isRealVideo(files.video[0]))) {
       throw new ApiError('The video must be an MP4, WebM or MOV file', 400);

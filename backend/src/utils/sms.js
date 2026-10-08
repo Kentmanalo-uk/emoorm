@@ -20,7 +20,9 @@ const sendSms = async (number, message) => {
       message,
       ...(process.env.SEMAPHORE_SENDER_NAME ? { sendername: process.env.SEMAPHORE_SENDER_NAME } : {}),
     });
-    const res = await fetch('https://api.semaphore.co/api/v4/messages', { method: 'POST', body });
+    // A gateway that never answers must not hold the request (and its
+    // socket) open: ten seconds, then it counts as not sent.
+    const res = await fetch('https://api.semaphore.co/api/v4/messages', { method: 'POST', body, signal: AbortSignal.timeout(10000) });
     if (!res.ok) throw new Error(`SMS not sent (${res.status})`);
     return true;
   }

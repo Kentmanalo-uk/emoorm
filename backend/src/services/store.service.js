@@ -9,6 +9,19 @@ const { cached } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 const shopHours = require('../utils/shopHours');
 const { Prisma } = require('@prisma/client');
+const config = require('../config/env');
+
+const SHOP_IMAGE_FIELDS = ['logo', 'coverImage', 'bannerImage', 'paymentQrImage'];
+const UPLOAD_FILE = /^\/uploads\/[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif)$/i;
+const HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/;
+// An upload's address is /uploads/<file>, or the same behind the CDN when
+// one is set (utils/imageOptimizer.js publicUrl).
+const isOwnUpload = (value) => {
+  if (typeof value !== 'string') return false;
+  const cdn = config.cdn.url;
+  const local = cdn && value.startsWith(`${cdn}/uploads/`) ? value.slice(cdn.length) : value;
+  return UPLOAD_FILE.test(local);
+};
 
 /**
  * Store Service
@@ -480,6 +493,35 @@ const updateStore = async (storeId, userId, rawData) => {
     if (typeof updateData[field] === 'string') {
       updateData[field] = updateData[field].trim() || null;
     }
+  }
+
+  // Shop pictures are our own uploads. Any other address would be loaded by
+  // every buyer's browser that opens the shop (tracking, or a stranger's
+  // picture as the payment QR). Empty clears it; the value the shop already
+  // has is let through so an older picture does not block saving the form.
+  for (const field of SHOP_IMAGE_FIELDS) {
+    const value = updateData[field];
+    if (value === undefined) continue;
+    if (value === null || value === '') {
+      updateData[field] = null;
+    } else if (value !== store[field] && !isOwnUpload(value)) {
+      throw new ApiError('Shop pictures must be uploaded here first', 400);
+    }
+  }
+  // Colours go into the shop page's styles, so only a hex colour is taken.
+  for (const field of ['primaryColor', 'secondaryColor']) {
+    const value = updateData[field];
+    if (value === undefined) continue;
+    if (value === null || value === '') {
+      updateData[field] = null;
+    } else if (typeof value !== 'string' || !HEX_COLOR.test(value)) {
+      throw new ApiError('Colours must be written like #1a7f37', 400);
+    }
+  }
+  // A shop waiting to be deleted stays hidden; cancelling the deletion is
+  // what brings it back, not this form.
+  if (store.deletionRequestedAt && updateData.isActive !== undefined && updateData.isActive !== false) {
+    delete updateData.isActive;
   }
 
   // Buyers pay by QR with GCash or QR Ph, and see the account's number

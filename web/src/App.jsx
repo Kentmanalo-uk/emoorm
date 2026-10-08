@@ -51,6 +51,7 @@ import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import useAuthStore from './store/authStore';
 import AppInstallPing from './components/AppInstallPing';
 import AppUpdateBar from './components/AppUpdateBar';
+import NewVersionBar from './components/NewVersionBar';
 import { ThemeRuntime } from './hooks/useTheme';
 import { usePhoneLayout } from './hooks/useMobileNav';
 import { isAuthSheetPath, HOME_BACKGROUND } from './lib/authSheet';
@@ -202,6 +203,7 @@ function AppRoutes() {
       <OfflineBanner />
       <AppInstallPing />
       <AppUpdateBar />
+      <NewVersionBar />
       <Suspense fallback={<RouteLoading />}>
       <Routes location={background || location}>
         {/* Public routes */}

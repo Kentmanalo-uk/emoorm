@@ -124,8 +124,11 @@ if (config.nodeEnv === 'production') {
 // gzip responses
 app.use(compression());
 
-// Stricter limit on auth endpoints (login/register/forgot-password)
-const authLimiter = rateLimit({
+// Stricter limit on auth endpoints (login/register/forgot-password). Each
+// step gets its own bucket: a household behind one address that registers
+// twice should not be locked out of signing in, and a password guess should
+// not spend the register quota.
+const authLimiter = () => rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
@@ -169,11 +172,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Under a rush, reads take turns, and one that would wait longer than the
-// proxy's timeout gets "busy, try again" instead. After CORS, like the
-// limiter, so that answer carries CORS headers.
-app.use(config.apiPrefix, overloadGuard);
-
 // Global light rate limit. Registered after CORS so a 429 still carries CORS
 // headers — otherwise browsers report it as a generic "Network Error".
 //
@@ -192,6 +190,13 @@ app.use(
     message: { success: false, message: 'Too many requests, please wait a moment and try again.' },
   })
 );
+
+// Under a rush, requests take turns (reads and writes in separate lanes),
+// and one that would wait longer than the proxy's timeout gets "busy, try
+// again" instead. After the limiter, so a flooding address is turned away
+// before it takes places in line; after CORS, so the answer carries CORS
+// headers.
+app.use(config.apiPrefix, overloadGuard);
 
 // Body parsers
 app.use(express.json({ limit: config.bodyLimit }));
@@ -257,15 +262,11 @@ if (config.nodeEnv === 'development') {
 // ============================================
 
 // Mount API routes with prefix
-app.use(`${config.apiPrefix}/auth/login`, authLimiter);
-app.use(`${config.apiPrefix}/auth/register`, authLimiter);
-app.use(`${config.apiPrefix}/auth/forgot-password`, authLimiter);
-app.use(`${config.apiPrefix}/auth/qr/create`, authLimiter);
-app.use(`${config.apiPrefix}/auth/google/app/exchange`, authLimiter);
-// Google sign-in steps (one of them hashes a new password), changing the
-// password (a stolen session guessing the current one).
-app.use(`${config.apiPrefix}/auth/google`, authLimiter);
-app.use(`${config.apiPrefix}/auth/change-password`, authLimiter);
+for (const step of ['login', 'register', 'forgot-password', 'qr/create', 'google/app/exchange', 'google', 'change-password']) {
+  // Google sign-in steps (one of them hashes a new password), changing the
+  // password (a stolen session guessing the current one).
+  app.use(`${config.apiPrefix}/auth/${step}`, authLimiter());
+}
 
 // Renewing a session: a generous limit (each tab renews on its own), but a
 // limit.
@@ -295,8 +296,26 @@ for (const area of ['/messages', '/reports', '/support', '/feedback', '/admin-te
 }
 app.use(config.apiPrefix, apiRoutes);
 
-// Health check endpoint (includes database ping)
+// Health check endpoint (includes database ping).
+//
+// Answers are kept for five seconds, so a crowd (or a script) hitting it
+// costs one database ping per five seconds, not one per hit. The public
+// answer is only up or down; the detail (jobs, cache, load, email
+// transport) is for the operator: the uptime monitor's token
+// (HEALTH_TOKEN, as ?token= or a Bearer header) or a request from this
+// machine.
+let healthCache = { at: 0, body: null, status: 200 };
+const healthDetailAllowed = (req) => {
+  const token = process.env.HEALTH_TOKEN;
+  const given = req.query.token || (req.get('authorization') || '').replace(/^Bearers+/i, '');
+  if (token && given && given.length === token.length && require('crypto').timingSafeEqual(Buffer.from(given), Buffer.from(token))) return true;
+  return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket?.remoteAddress) && !req.get('x-forwarded-for');
+};
 app.get('/health', async (req, res) => {
+  if (Date.now() - healthCache.at < 5000 && healthCache.body) {
+    const { body, status } = healthCache;
+    return res.status(status).json(healthDetailAllowed(req) ? body : { success: body.success, message: body.message, timestamp: body.timestamp });
+  }
   const prisma = require('./config/database');
   let db = 'unknown';
   try {
@@ -316,7 +335,7 @@ app.get('/health', async (req, res) => {
     runtime.lateJobs.length > 0 && `Background jobs late: ${runtime.lateJobs.join(', ')}`,
   ].filter(Boolean);
   const { isResendConfigured, isSmtpConfigured } = require('./utils/email');
-  res.status(problems.length ? 503 : 200).json({
+  const body = {
     success: problems.length === 0,
     message: problems.length ? problems.join('; ') : 'Server is healthy',
     database: db,
@@ -326,7 +345,10 @@ app.get('/health', async (req, res) => {
     cache: require('./lib/cache').getStats(),
     load: overloadStats(),
     timestamp: new Date().toISOString(),
-  });
+  };
+  const status = problems.length ? 503 : 200;
+  healthCache = { at: Date.now(), body, status };
+  return res.status(status).json(healthDetailAllowed(req) ? body : { success: body.success, message: body.message, timestamp: body.timestamp });
 });
 
 // ============================================
@@ -337,6 +359,20 @@ app.get('/health', async (req, res) => {
 // search engines and link previews get a real title, description and image
 // rather than an empty root div. A no-op unless WEB_DIST_DIR is set, which
 // keeps a pure-API deployment behaving exactly as it did before.
+// A page view renders the shell with that page's metadata (a database read
+// for a product or shop page). Plenty for a person, a stop for a crawler
+// that walks random URLs, and the API's own limiter stays untouched.
+const pageLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many page requests, please wait a moment and try again.',
+});
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || path.extname(req.path) || req.path.startsWith(config.apiPrefix) || req.path.startsWith('/uploads')) return next();
+  return pageLimiter(req, res, next);
+});
 const servingWeb = mountWebApp(app);
 
 // On an API-only deployment nothing answers '/', so keep the banner that

@@ -1,5 +1,5 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const router = express.Router();
 const questions = require('../services/productQuestion.service');
 const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
@@ -10,7 +10,8 @@ const { successResponse, createdResponse } = require('../utils/response');
 const askLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => req.user?.id || req.ip,
+  // The helper groups IPv6 addresses by subnet, as the default key does.
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'You have asked a lot of questions. Try again later.' },

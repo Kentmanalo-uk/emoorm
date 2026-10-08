@@ -28,6 +28,13 @@ const approveValidation = [
   body('approve')
     .isBoolean()
     .withMessage('approve must be a boolean'),
+  // The authenticator code, for accounts with two-factor sign-in on.
+  body('code')
+    .optional({ values: 'falsy' })
+    .isString()
+    .trim()
+    .isLength({ min: 6, max: 12 })
+    .withMessage('Invalid code'),
 ];
 
 module.exports = {

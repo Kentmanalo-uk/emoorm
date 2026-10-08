@@ -1,7 +1,9 @@
 const crypto = require('crypto');
 const qrcode = require('qrcode');
 const prisma = require('../config/database');
-const { generateTokens } = require('../utils/jwt');
+const userRepository = require('../repositories/user.repository');
+const sessionService = require('./session.service');
+const mfaService = require('./mfa.service');
 const { ApiError } = require('../middleware/errorHandler');
 
 // Sessions are intentionally very short-lived and single-use.
@@ -30,6 +32,10 @@ const parseDeviceLabel = (userAgent) => {
 };
 
 const isExpired = (session) => session.expiresAt.getTime() < Date.now();
+
+// An approved code is collected by the browser within this long of the
+// approval, or not at all.
+const APPROVED_GRACE_MS = 60 * 1000;
 
 /** Best-effort cleanup of long-stale rows. Never throws. */
 const cleanupExpired = async () => {
@@ -70,34 +76,34 @@ const createSession = async ({ userAgent, ipAddress }) => {
 
 /**
  * Web (public, polled every couple seconds): report the current status.
- * Access/refresh tokens are delivered exactly once — the row is deleted
- * the moment they're read, so a stolen response can never be replayed.
+ *
+ * The session's tokens are minted here, at the moment the browser collects
+ * them, and the row is deleted first, so they exist exactly once and are
+ * never kept anywhere. An approval nobody collected within a minute lapses.
  */
 const getStatus = async (token) => {
   const session = await prisma.qrLoginSession.findUnique({ where: { token } });
   if (!session) return { status: 'EXPIRED' };
 
-  if (isExpired(session) && session.status !== 'APPROVED') {
+  const lapsed = session.status === 'APPROVED'
+    ? !session.approvedAt || session.approvedAt.getTime() + APPROVED_GRACE_MS < Date.now()
+    : isExpired(session);
+  if (lapsed) {
     await prisma.qrLoginSession.delete({ where: { token } }).catch(() => { });
     return { status: 'EXPIRED' };
   }
 
   if (session.status === 'APPROVED') {
-    const user = session.userId ? await prisma.user.findUnique({ where: { id: session.userId } }) : null;
-    // Single-shot delivery: consume the row now so it can never be polled again.
-    await prisma.qrLoginSession.delete({ where: { token } }).catch(() => { });
+    // Single-shot delivery: whoever deletes the row is the one browser that
+    // gets the session; a second poll of the same code finds nothing.
+    const claimed = await prisma.qrLoginSession.deleteMany({ where: { token, status: 'APPROVED' } });
+    if (claimed.count !== 1 || !session.userId) return { status: 'EXPIRED' };
 
-    if (!user || !session.accessToken || !session.refreshToken) {
-      return { status: 'EXPIRED' };
-    }
+    const user = await userRepository.findById(session.userId);
+    if (!user || !user.isActive || user.deletedAt) return { status: 'EXPIRED' };
 
-    const { password, mfaSecret, mfaBackupCodes, passwordResetToken, ...safe } = user;
-    return {
-      status: 'APPROVED',
-      user: safe,
-      accessToken: session.accessToken,
-      refreshToken: session.refreshToken,
-    };
+    const tokens = await sessionService.issue(user, { userAgent: session.userAgent, ipAddress: session.ipAddress });
+    return { status: 'APPROVED', user, ...tokens };
   }
 
   if (session.status === 'REJECTED') {
@@ -120,26 +126,35 @@ const scanSession = async (rawValue, userId) => {
   if (!session || isExpired(session)) {
     throw new ApiError('This QR code is invalid or has expired', 410);
   }
-  if (session.status !== 'PENDING') {
+  // Only a code nobody has scanned yet, decided in one statement so two
+  // phones scanning at once cannot both claim it.
+  const claimed = await prisma.qrLoginSession.updateMany({
+    where: { token, status: 'PENDING' },
+    data: { status: 'SCANNED', userId, scannedAt: new Date() },
+  });
+  if (claimed.count !== 1) {
     throw new ApiError('This QR code has already been used', 409);
   }
 
-  const updated = await prisma.qrLoginSession.update({
-    where: { token },
-    data: { status: 'SCANNED', userId, scannedAt: new Date() },
-  });
-
   return {
     token,
-    deviceLabel: updated.deviceLabel,
-    ipAddress: updated.ipAddress,
-    requestedAt: updated.createdAt,
-    expiresAt: updated.expiresAt,
+    deviceLabel: session.deviceLabel,
+    ipAddress: session.ipAddress,
+    requestedAt: session.createdAt,
+    expiresAt: session.expiresAt,
   };
 };
 
-/** Mobile (authenticated): approve or reject a session that this user scanned. */
-const approveSession = async (token, userId, approve) => {
+/**
+ * Mobile (authenticated): approve or reject a session that this user scanned.
+ *
+ * Approving opens a new full session on another device from a phone that
+ * only holds an access token, so it is held to the same bar as a sign-in:
+ * admins cannot sign in this way at all (their sign-in is password plus
+ * authenticator, on the device itself), and anyone who turned on two-factor
+ * enters their current code here.
+ */
+const approveSession = async (token, userId, approve, { code } = {}) => {
   const session = await prisma.qrLoginSession.findUnique({ where: { token } });
   if (!session || isExpired(session)) {
     throw new ApiError('This QR code is invalid or has expired', 410);
@@ -153,20 +168,25 @@ const approveSession = async (token, userId, approve) => {
     return { status: 'REJECTED' };
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new ApiError('User not found', 404);
-
-  const tokens = generateTokens(user);
-
-  await prisma.qrLoginSession.update({
-    where: { token },
-    data: {
-      status: 'APPROVED',
-      approvedAt: new Date(),
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    },
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, mfaEnabled: true, isActive: true, deletedAt: true },
   });
+  if (!user || !user.isActive || user.deletedAt) throw new ApiError('User not found', 404);
+  if (user.role === 'SUPER_ADMIN' || user.role === 'MUNICIPAL_ADMIN') {
+    await prisma.qrLoginSession.update({ where: { token }, data: { status: 'REJECTED' } }).catch(() => { });
+    throw new ApiError('Admin accounts sign in with their password and authenticator, not by QR code', 403);
+  }
+  if (user.mfaEnabled) {
+    if (!code) throw new ApiError('Enter the 6-digit code from your authenticator app to approve this sign-in', 400);
+    await mfaService.confirmCode(userId, code);
+  }
+
+  const approved = await prisma.qrLoginSession.updateMany({
+    where: { token, status: 'SCANNED', userId },
+    data: { status: 'APPROVED', approvedAt: new Date() },
+  });
+  if (approved.count !== 1) throw new ApiError('This QR code has already been used', 409);
 
   return { status: 'APPROVED' };
 };

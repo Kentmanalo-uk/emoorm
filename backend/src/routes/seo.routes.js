@@ -19,6 +19,7 @@ const ORIGIN = seoService.ORIGIN;
 /** Regenerating on every crawler hit would scan the catalogue each time. */
 const SITEMAP_TTL_MS = 30 * 60 * 1000;
 let cached = { xml: null, builtAt: 0 };
+let building = null;
 
 const xmlEscape = (value) => String(value == null ? '' : value)
   .replace(/&/g, '&amp;')
@@ -143,9 +144,15 @@ router.get('/sitemap.xml', async (req, res) => {
   if (!config.site.indexable) return res.status(404).type('text/plain').send('Not found');
 
   try {
-    const now = Date.now();
-    if (!cached.xml || now - cached.builtAt > SITEMAP_TTL_MS) {
-      cached = { xml: await buildSitemap(), builtAt: now };
+    if (!cached.xml || Date.now() - cached.builtAt > SITEMAP_TTL_MS) {
+      // Crawlers arriving together share one build: the catalogue scan runs
+      // once, not once per request that found the copy stale.
+      if (!building) {
+        building = buildSitemap()
+          .then((xml) => { cached = { xml, builtAt: Date.now() }; })
+          .finally(() => { building = null; });
+      }
+      await building;
     }
     res.set('Content-Type', 'application/xml; charset=utf-8');
     res.set('Cache-Control', 'public, max-age=1800');

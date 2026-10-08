@@ -216,7 +216,10 @@ const mountWebApp = (app) => {
       const meta = await seoService.resolve(req.path);
       const head = renderTags(meta);
       const stripped = MANAGED.reduce((html, pattern) => html.replace(pattern, ''), readTemplate());
-      const html = stripped.replace('</head>', `    ${head}\n  </head>`);
+      // A function, not a string: in a replacement string `$&`, `$'` and `` $` ``
+      // splice in parts of the template, and the head carries product and shop
+      // names that sellers type, so a name with them could rewrite the page.
+      const html = stripped.replace('</head>', () => `    ${head}\n  </head>`);
 
       res.set('Content-Type', 'text/html; charset=utf-8');
       // The shell is identical for everyone, but its tags depend on data that
