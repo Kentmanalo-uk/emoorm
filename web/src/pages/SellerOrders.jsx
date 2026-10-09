@@ -458,35 +458,39 @@ export default function SellerOrders() {
     setCancelConfirm(null);
   };
 
+  // The order-number search: in the header on phones, at the head of the
+  // list's toolbar on computers.
+  const searchBox = (
+    <div className="seller-search">
+      <MagnifyingGlass size={15} />
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Order number"
+        aria-label="Search your orders by order number"
+      />
+      {search && (
+        <button type="button" onClick={() => setSearch('')} aria-label="Clear search">
+          <X size={12} weight="bold" />
+        </button>
+      )}
+      {isPhone && (
+        <button type="button" className="so-filter-btn" onClick={() => setFilterOpen(true)} aria-label="Filter by date or payment">
+          <SlidersHorizontal size={17} weight="bold" />
+          {(from || to || paymentFilter) && <span className="scm-chip-dot" />}
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
         <SellerPageHead
           title="Orders"
           subtitle="Manage incoming orders from buyers"
-          actions={(
-            <div className="seller-search">
-              <MagnifyingGlass size={15} />
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Order number"
-                aria-label="Search your orders by order number"
-              />
-              {search && (
-                <button type="button" onClick={() => setSearch('')} aria-label="Clear search">
-                  <X size={12} weight="bold" />
-                </button>
-              )}
-              {isPhone && (
-                <button type="button" className="so-filter-btn" onClick={() => setFilterOpen(true)} aria-label="Filter by date or payment">
-                  <SlidersHorizontal size={17} weight="bold" />
-                  {(from || to || paymentFilter) && <span className="scm-chip-dot" />}
-                </button>
-              )}
-            </div>
-          )}
+          actions={isPhone ? searchBox : null}
         />
 
         {isPhone ? (
@@ -559,8 +563,9 @@ export default function SellerOrders() {
           ))}
         </div>
 
-        {/* Date range + payment status filters (server-side) */}
+        {/* The list's toolbar: search, date range and payment (server-side). */}
         <div className="so-filters">
+          {searchBox}
           <label className="so-filter">
             <span>From</span>
             <input type="date" value={from} max={to || undefined} onChange={(e) => applyFilter(setFrom)(e.target.value)} />

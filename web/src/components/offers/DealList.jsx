@@ -5,6 +5,7 @@ import { ChatCircleDots, Phone } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import UserAvatar from '../ui/UserAvatar';
+import EmptyArt from '../ui/EmptyArt';
 import {
   dealStatus, heads, peso, telHref, when,
 } from './offerText';
@@ -34,13 +35,14 @@ const TABS = {
 // The tabs that ask something of this side get a count.
 const NEEDS_YOU = { seller: ['answer', 'agreed'], buyer: ['talking', 'agreed'] };
 
+// An empty tab: what is missing, then what brings the first one.
 const EMPTY = {
-  answer: 'No offers to answer. Buyers make offers on your livestock listings.',
-  waiting: 'No prices waiting for a buyer.',
-  talking: 'No offers being talked over. On a live animal’s page, tap Make an offer.',
-  agreed: 'No agreed deals yet.',
-  sold: 'Nothing sold through offers yet.',
-  closed: 'No closed deals.',
+  answer: ['No offers to answer', 'Buyers make offers on your livestock listings. New ones show up here.'],
+  waiting: ['No prices waiting', 'When you answer an offer with your price, it waits here for the buyer.'],
+  talking: ['No offers yet', 'On a live animal’s page, tap Make an offer and agree on the price in chat.'],
+  agreed: ['No agreed deals yet', 'Deals you and the other side agree on wait here until you meet.'],
+  sold: ['Nothing sold through offers yet', 'Deals marked as done after you meet show up here.'],
+  closed: ['No closed deals', 'Declined and cancelled offers are kept here.'],
 };
 
 export default function DealList({ side }) {
@@ -80,7 +82,11 @@ export default function DealList({ side }) {
       {data === null ? (
         <p className="of-empty">Loading…</p>
       ) : offers.length === 0 ? (
-        <p className="of-empty">{EMPTY[tab]}</p>
+        <div className="of-empty of-empty--art">
+          <EmptyArt name="offers" size={150} />
+          <strong>{EMPTY[tab][0]}</strong>
+          <p>{EMPTY[tab][1]}</p>
+        </div>
       ) : (
         <ul className="of-list">
           {offers.map((d) => {

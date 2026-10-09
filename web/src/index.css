@@ -364,6 +364,120 @@ img {
   background: var(--color-gray-500);
 }
 
+/* Computers: every scrollbar in the app kept out of the way — a thin,
+   faint rounded thumb, no track, no arrows. (Phones keep their own overlay bars.)
+   Lists that hide their scrollbar set scrollbar-width: none themselves,
+   which still wins over this. */
+@media (hover: hover) and (pointer: fine) {
+  /* Firefox: its own thin bar. Chrome, Edge and Safari use the rules
+     below instead (setting these there would bring back the arrow
+     buttons Windows draws on standard thin bars). */
+  @supports not selector(::-webkit-scrollbar) {
+    html,
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(15, 23, 42, 0.14) transparent;
+    }
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* A 4px thumb, barely there until the area under the pointer is the
+     one that scrolls; a little firmer while it is held or pointed at. */
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    background-clip: padding-box;
+  }
+
+  :hover::-webkit-scrollbar-thumb {
+    background-color: rgba(15, 23, 42, 0.18);
+  }
+
+  ::-webkit-scrollbar-thumb:hover,
+  ::-webkit-scrollbar-thumb:active {
+    background-color: rgba(15, 23, 42, 0.32);
+  }
+}
+
+/* The few places that asked for the standard thin bar (sidebars, the
+   dashboard's lists, photo strips, shop tabs) drop it in Chrome, Edge and
+   Safari, so they get the same slim thumb as everywhere else. */
+@media (hover: hover) and (pointer: fine) and (min-width: 769px) {
+  @supports selector(::-webkit-scrollbar) {
+    :root :is(
+      .ac-sidebar-inner > .ac-nav,
+      .sc-sidebar-inner > .sc-nav,
+      .ac-shell .ac-content .dash-card-body,
+      .pdp-thumbs,
+      .shop-tabs,
+      .pvw-row
+    ) {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+  }
+}
+
+/* Their own thumb colours, folded into the same faint thumb. */
+@media (hover: hover) and (pointer: fine) and (min-width: 769px) {
+  :root :is(.ac-nav, .sc-nav, .dash-card-body)::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  :root :is(.ac-nav, .sc-nav, .dash-card-body)::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    background-clip: padding-box;
+  }
+
+  :root :is(.ac-nav, .sc-nav, .dash-card-body):hover::-webkit-scrollbar-thumb {
+    background-color: rgba(15, 23, 42, 0.18);
+  }
+
+  :root :is(.ac-nav, .sc-nav, .dash-card-body)::-webkit-scrollbar-thumb:is(:hover, :active) {
+    background-color: rgba(15, 23, 42, 0.32);
+  }
+}
+
+/* Sidebars: no scrollbar to see until the pointer is over the menu; then a
+   slim faint one. The space stays reserved, so nothing shifts. */
+@media (hover: hover) and (pointer: fine) and (min-width: 769px) {
+  :root :is(.ac-nav, .sc-nav)::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  :root :is(.ac-nav, .sc-nav)::-webkit-scrollbar-thumb {
+    border-width: 1px;
+    background-color: transparent;
+  }
+
+  :root :is(.ac-nav, .sc-nav):hover::-webkit-scrollbar-thumb {
+    background-color: rgba(15, 23, 42, 0.14);
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    :root :is(.ac-sidebar-inner > .ac-nav, .sc-sidebar-inner > .sc-nav) {
+      scrollbar-color: transparent transparent;
+    }
+
+    :root :is(.ac-sidebar-inner > .ac-nav, .sc-sidebar-inner > .sc-nav):hover {
+      scrollbar-color: rgba(15, 23, 42, 0.14) transparent;
+    }
+  }
+}
+
 /* Focus Styles */
 *:focus-visible {
   outline: 2px solid var(--color-primary);

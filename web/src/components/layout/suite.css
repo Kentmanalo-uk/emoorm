@@ -842,7 +842,7 @@
   }
 
   /* Status: a soft label in its colour, never two lines. */
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge.seller-badge--solid {
+  .sc-shell:not(.is-phone) .sc-content :is(.so-orders-table, .order-detail-panel) .seller-badge.seller-badge--solid {
     display: inline-flex;
     align-items: center;
     padding: 3px 10px;
@@ -855,12 +855,12 @@
     white-space: nowrap;
   }
 
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-pending { background: #fef3c7; color: #b45309; }
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-confirmed { background: #dbeafe; color: #1d4ed8; }
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-preparing { background: #e0e7ff; color: #4338ca; }
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-ready { background: #e0f2fe; color: #0369a1; }
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-completed { background: #d1fae5; color: #047857; }
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-cancelled { background: #fee2e2; color: #b91c1c; }
+  .sc-shell:not(.is-phone) .sc-content :is(.so-orders-table, .order-detail-panel) .seller-badge--solid.status-pending { background: #fef3c7; color: #b45309; }
+  .sc-shell:not(.is-phone) .sc-content :is(.so-orders-table, .order-detail-panel) .seller-badge--solid.status-confirmed { background: #dbeafe; color: #1d4ed8; }
+  .sc-shell:not(.is-phone) .sc-content :is(.so-orders-table, .order-detail-panel) .seller-badge--solid.status-preparing { background: #e0e7ff; color: #4338ca; }
+  .sc-shell:not(.is-phone) .sc-content :is(.so-orders-table, .order-detail-panel) .seller-badge--solid.status-ready { background: #e0f2fe; color: #0369a1; }
+  .sc-shell:not(.is-phone) .sc-content :is(.so-orders-table, .order-detail-panel) .seller-badge--solid.status-completed { background: #d1fae5; color: #047857; }
+  .sc-shell:not(.is-phone) .sc-content :is(.so-orders-table, .order-detail-panel) .seller-badge--solid.status-cancelled { background: #fee2e2; color: #b91c1c; }
 
   /* Actions side by side, at the row's end. */
   .sc-shell:not(.is-phone) .sc-content .so-orders-table .order-row-actions {
@@ -881,5 +881,203 @@
     border-radius: 9px;
     font-size: 13px;
     white-space: nowrap;
+  }
+}
+
+/* ── Seller orders: tabs, then one panel ───────────────────────────────
+   The search sat alone at the top right and the filters were a row of
+   their own with labels stacked over the fields. On computers the search,
+   the date range, the payment filter and the count are now one toolbar
+   along the top of the list, so the list reads as one panel under the
+   tabs. Phones keep theirs. */
+@media (min-width: 769px) {
+  .sc-shell:not(.is-phone) .sc-content .so-filters {
+    align-items: center;
+    gap: 10px 14px;
+    margin: 0 0 12px;
+    padding: 12px 16px;
+    border: var(--suite-hairline);
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+  }
+
+  /* Joined to the list below it while no order is open beside it. */
+  .sc-shell:not(.is-phone) .sc-content .so-filters:has(+ .orders-layout.is-single) {
+    margin-bottom: 0;
+    border-bottom: 0;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-filters + .orders-layout.is-single > .orders-list-card {
+    border-radius: 0 0 14px 14px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-filters .seller-search {
+    flex: 0 1 260px;
+    min-height: 36px;
+    border-color: rgba(15, 23, 42, 0.1);
+    background: var(--t-neutral-50, #f8fafc);
+  }
+
+  /* A field's name beside it, not above it. */
+  .sc-shell:not(.is-phone) .sc-content .so-filter {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-filter :is(input, select, .ui-select) {
+    min-height: 36px;
+    border-color: rgba(15, 23, 42, 0.1);
+    border-radius: 9px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-filter-count {
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 13px;
+  }
+
+  /* The list: a little more air, a quieter header. */
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table :is(th, td) {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table th {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table td {
+    border-bottom-color: rgba(15, 23, 42, 0.06);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table tbody tr:hover td {
+    background: var(--t-neutral-50, #f8fafc);
+  }
+}
+
+/* Seller orders with one open beside the list: the list gives up its
+   Action and Buyer columns (the open order shows both), so nothing is cut off;
+   the order's side panel lines its labels up with their values. */
+@media (min-width: 769px) {
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table :is(th, td):is(:last-child, :nth-child(3)) {
+    display: none;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table :is(th, td) {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table th:first-child {
+    width: 160px !important;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table th:nth-child(5) {
+    width: auto !important;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table td.order-num > div:first-child {
+    max-width: 140px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-buyer-name {
+    display: block;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .order-detail-panel {
+    border: var(--suite-hairline);
+    border-radius: 14px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .order-detail-panel .detail-row > span:first-child {
+    flex-shrink: 0;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .order-detail-panel .so-buyer-cell {
+    justify-content: flex-end;
+    gap: 6px 10px;
+    text-align: right;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .order-detail-panel .so-buyer-cell .profile-link {
+    border-bottom: 0;
+  }
+}
+
+/* ── Analytics: even spacing between sections ──────────────────────────
+   Each section brought its own bottom margin, and the paired panels none,
+   so some sections nearly touched and others did not. On computers the
+   page is now one column with the same 20px between every section, and
+   cards inside a pair keep no margin of their own. The small line chart
+   under Sales analytics repeated the bars above it edge to edge; it is
+   left to phones. */
+@media (min-width: 769px) {
+  .sc-shell:not(.is-phone) .sc-content .seller-container:has(> .an-kpi-grid),
+  .ac-shell:not(.is-phone) .ac-content .an-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-container:has(> .an-kpi-grid) > *,
+  .ac-shell:not(.is-phone) .ac-content .an-page > * {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  :is(.sc-shell, .ac-shell):not(.is-phone) :is(.sc-content, .ac-content) .an-grid-2 > .an-card {
+    margin: 0;
+  }
+
+  /* The page head and the numbers sit a little closer than sections do. */
+  .sc-shell:not(.is-phone) .sc-content .seller-container:has(> .an-kpi-grid) > .seller-header,
+  .ac-shell:not(.is-phone) .ac-content .an-page > .an-page-header {
+    margin-bottom: -6px;
+  }
+
+  /* The growth line: a quiet panel like the rest. */
+  :is(.sc-shell, .ac-shell):not(.is-phone) :is(.sc-content, .ac-content) .an-growth {
+    padding: 14px 18px;
+    border: var(--suite-hairline);
+    border-radius: 14px;
+    box-shadow: none;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .an-card > .an-trendline {
+    display: none;
+  }
+
+  /* A card's chart keeps clear of its edges. */
+  :is(.sc-shell, .ac-shell):not(.is-phone) :is(.sc-content, .ac-content) .an-card {
+    border-radius: 14px;
+  }
+}
+
+@media (min-width: 769px) {
+  /* Bar charts: the date labels keep clear of the card's bottom edge. */
+  :is(.sc-shell, .ac-shell):not(.is-phone) :is(.sc-content, .ac-content) .an-card .an-chart-wrap {
+    padding-bottom: 18px;
+  }
+
+  /* Two rows of numbers (municipal analytics) read as one strip. */
+  .ac-shell:not(.is-phone) .ac-content .an-page > .an-kpi-grid + .an-kpi-grid {
+    margin-top: -20px;
+    border-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .an-page > .an-kpi-grid:has(+ .an-kpi-grid) {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 }

@@ -6,7 +6,7 @@ import {
   ArrowUpRight, PiggyBank, ShoppingBag, Heart, Star, ChatCircleText, ChatCircleDots, PaperPlaneTilt,
   Smiley, Truck, Laptop, Coffee, NotePencil, ArrowCounterClockwise, UsersThree, IdentificationCard,
   MagnifyingGlass, Flag, ChatTeardropText, SquaresFour, ShoppingCart, UserPlus, Megaphone,
-  ImageSquare, UploadSimple, Ticket, Percent, Headset, Images, Camera, Key, DeviceMobile,
+  ImageSquare, UploadSimple, Ticket, Percent, Headset, Images, Camera, Key, DeviceMobile, Handshake,
 } from '@phosphor-icons/react';
 import './EmptyArt.css';
 
@@ -53,6 +53,8 @@ const SCENES = {
   reviews: { layout: 'bubbles', main: Star, a: ChatCircleText, b: Heart },
   support: { layout: 'bubbles', main: Headset, a: ChatCircleDots, b: ShieldCheck },
   announcements: { layout: 'bubbles', main: Megaphone, a: UsersThree, b: Sparkle },
+  // Livestock deals: a handshake over a price, talked over in chat.
+  offers: { layout: 'bubbles', main: Handshake, a: Tag, b: ChatCircleDots },
   // A storefront with an awning: shops and shopping.
   stores: { layout: 'shop', main: Storefront, a: MapPin, b: Star },
   following: { layout: 'shop', main: Heart, a: Bell, b: Star },
