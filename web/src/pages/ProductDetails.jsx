@@ -368,7 +368,9 @@ const ProductDetails = () => {
     }
   };
 
-  const handleAddToCart = () => {
+  // `quiet`: Buy now puts the item in the cart only to check it out, so it
+  // says nothing about the cart.
+  const handleAddToCart = ({ quiet = false } = {}) => {
     if (!isAuthenticated) { loginRedirect(); return; }
     const variationDefinitions = Array.isArray(product.variations) ? product.variations : [];
     const missingVariation = variationDefinitions.find((variation) => !selectedVariations[variation.name]);
@@ -403,7 +405,7 @@ const ProductDetails = () => {
         productId: product.id,
         selectedVariations: variationDefinitions.length ? selectedVariations : null,
       }, quantity);
-      toast.success('Added to cart');
+      if (!quiet) toast.success('Added to cart');
       return true;
     } catch (error) {
       toast.error(error.message || 'Failed to add to cart');
@@ -422,7 +424,7 @@ const ProductDetails = () => {
 
   const handleBuyNow = async () => {
     if (isAuthenticated && !(await requireVerifiedIdentity())) return;
-    if (handleAddToCart() !== false) goToCheckout();
+    if (handleAddToCart({ quiet: true }) !== false) goToCheckout();
   };
 
   // Phone sheet: the sheet has already checked every option group.
@@ -434,7 +436,7 @@ const ProductDetails = () => {
     // The identity dialog shows in place of the sheet.
     if (mode === 'buy' && !(await requireVerifiedIdentity())) { setSheetMode(null); return; }
     // On failure (e.g. more than the stock) the sheet stays open with the toast.
-    if (handleAddToCart() === false) return;
+    if (handleAddToCart({ quiet: mode === 'buy' }) === false) return;
     setSheetMode(null);
     if (mode === 'buy') goToCheckout();
   };
@@ -1347,7 +1349,7 @@ const ProductDetails = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={handleAddToCart}
+                  onClick={() => handleAddToCart()}
                   disabled={cannotBuy || isAddingToCart}
                   className="pdp-btn pdp-btn-primary"
                 >
