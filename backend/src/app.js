@@ -44,6 +44,23 @@ app.disable('x-powered-by');
 const proxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS ?? '', 10);
 app.set('trust proxy', config.nodeEnv === 'production' ? (Number.isInteger(proxyHops) && proxyHops >= 0 ? proxyHops : 1) : false);
 
+// One address for the site. "www.emoorm.shop" is sent to "emoorm.shop" (the
+// SITE_URL host), keeping the path: a page opened at www is another origin
+// to the browser, so its sign-in and saved cart are separate, and a build
+// that names the bare domain for its API has every request blocked there.
+// 301 for page loads; 308 keeps a POST a POST.
+const canonicalHost = (() => {
+  try { return new URL(config.site.url).host.toLowerCase(); } catch { return ''; }
+})();
+if (config.nodeEnv === 'production' && canonicalHost && !canonicalHost.startsWith('www.')) {
+  app.use((req, res, next) => {
+    const host = String(req.get('host') || '').toLowerCase();
+    if (host !== `www.${canonicalHost}`) return next();
+    const target = `${new URL(config.site.url).protocol}//${canonicalHost}${req.originalUrl}`;
+    return res.redirect(['GET', 'HEAD'].includes(req.method) ? 301 : 308, target);
+  });
+}
+
 // Third parties the web app genuinely loads. Kept as one list so the policy
 // below reads as "these, and nothing else".
 // Google Identity Services and the Translate widget both pull from several

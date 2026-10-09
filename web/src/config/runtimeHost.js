@@ -8,11 +8,23 @@
  */
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])$/i;
 
+// "www.emoorm.shop" and "emoorm.shop" are one site.
+const bare = (host) => String(host || '').toLowerCase().replace(/^www\./, '');
+
 export const forLocalNetwork = (url) => {
   if (typeof window === 'undefined' || !url) return url;
   try {
     const target = new URL(url, window.location.origin);
-    if (!LOCAL_HOST.test(target.hostname)) return url;
+    // A deployed address for this same site, with or without "www.": use
+    // the address the page was actually opened at. Calling the other one is
+    // another origin to the browser, so the page's security policy blocks
+    // every request and the site shows no data.
+    if (!LOCAL_HOST.test(target.hostname)) {
+      if (target.origin !== window.location.origin && bare(target.hostname) === bare(window.location.hostname)) {
+        return `${window.location.origin}${target.pathname}${target.search}`.replace(/\/$/, '');
+      }
+      return url;
+    }
     if (LOCAL_HOST.test(window.location.hostname)) return url;
     target.hostname = window.location.hostname;
     return target.toString().replace(/\/$/, '');

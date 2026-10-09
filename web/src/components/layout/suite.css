@@ -216,3 +216,149 @@
     background: rgba(219, 39, 119, 0.08);
   }
 }
+
+/* ── The Seller Center, the same as the admin pages ─────────────────────
+   Its content area painted its own flat grey over the shell's wash; it is
+   clear now, so the pink-to-green reaches every seller page. Headings,
+   tabs, cards, tables and fields take the admin dashboard's look: a 24px
+   title, a soft segmented tab bar, hairline cards, a quiet table header
+   band and soft-filled fields. Computers only. */
+@media (min-width: 769px) {
+  .sc-shell:not(.is-phone) .sc-main,
+  .sc-shell:not(.is-phone) .sc-content {
+    background: transparent;
+  }
+
+  /* Page heading: the admin's size and weight. */
+  .sc-shell:not(.is-phone) .sc-content .seller-header {
+    align-items: flex-end;
+    margin-bottom: 14px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-header h1,
+  .sc-shell:not(.is-phone) .sc-content .sd-header h1 {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-welcome {
+    font-size: 13px;
+    color: var(--t-neutral-500, #6b7280);
+  }
+
+  /* Cards: hairline, 12px corners, barely any shadow. */
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-card, .sd-card, .an-card, .sa-card, .sd-header-card, .sd-stat) {
+    border: var(--suite-hairline);
+    border-radius: 12px;
+    box-shadow: var(--suite-shadow);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-card-header {
+    padding: 12px 16px;
+    border-bottom-color: rgba(15, 23, 42, 0.05);
+  }
+
+  /* Tabs: one soft segmented bar, the active tab a white chip. */
+  .sc-shell:not(.is-phone) .sc-content .seller-tabs {
+    display: inline-flex;
+    max-width: 100%;
+    gap: 2px;
+    padding: 3px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.05);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-tab {
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--t-neutral-600, #4b5563);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-tab:hover {
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-tab--active,
+  .sc-shell:not(.is-phone) .sc-content .seller-tab--active:hover {
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-primary-700, #047857);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  }
+
+  /* Tables: a quiet header band in sentence case. */
+  .sc-shell:not(.is-phone) .sc-content .seller-table th {
+    background: rgba(248, 250, 252, 0.9);
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    border-bottom-color: rgba(15, 23, 42, 0.05);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-table td {
+    border-bottom-color: rgba(15, 23, 42, 0.05);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-table tbody tr:hover td {
+    background: rgba(5, 150, 105, 0.03);
+  }
+
+  /* Fields: soft-filled, no box line, a green ring when in use. */
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-card, .an-card, .sa-card) :is(input[type="text"], input[type="search"], input[type="number"], input[type="tel"], input[type="email"], input[type="url"], input[type="date"], input:not([type]), textarea, select) {
+    border-color: transparent;
+    border-radius: 10px;
+    background-color: var(--t-neutral-100, #f3f4f6);
+    transition: background-color .12s, box-shadow .12s;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-card, .an-card, .sa-card) :is(input[type="text"], input[type="search"], input[type="number"], input[type="tel"], input[type="email"], input[type="url"], input[type="date"], input:not([type]), textarea, select):hover:not(:focus):not(:disabled) {
+    background-color: var(--t-neutral-150, #eef0f3);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-card, .an-card, .sa-card) :is(input[type="text"], input[type="search"], input[type="number"], input[type="tel"], input[type="email"], input[type="url"], input[type="date"], input:not([type]), textarea, select):focus {
+    border-color: transparent;
+    background-color: var(--t-neutral-0, #fff);
+    box-shadow: 0 0 0 2px var(--t-primary-600, #047857);
+    outline: none;
+  }
+}
+
+/* The period picker on Analytics: the same segmented bar as the dashboard's. */
+@media (min-width: 769px) {
+  .sc-shell:not(.is-phone) .sc-content .an-daterange {
+    gap: 2px;
+    padding: 3px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.05);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .an-daterange-btn {
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--t-neutral-600, #4b5563);
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .an-daterange-btn:hover {
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .an-daterange-btn.is-active,
+  .sc-shell:not(.is-phone) .sc-content .an-daterange-btn.is-active:hover {
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-primary-700, #047857);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  }
+}
