@@ -77,3 +77,293 @@
     font-size: 22px;
   }
 }
+
+/* ── Computers: the phone apps' notification list, wider ──────────────
+   A picture (applicant, reported product, the person writing) or the
+   kind's icon on the left, the details beside it, grouped by day. Only
+   rendered off phones (AdminNotifications.jsx), so phones are unchanged. */
+.anl-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.anl-filter {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.anl-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t-neutral-600, #475569);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.anl-filter button.is-on {
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+}
+
+.anl-filter-count {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--t-accent-500, #ec4899);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.anl {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  overflow: hidden;
+}
+
+.anl-group + .anl-group {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.anl-group-label {
+  margin: 0;
+  padding: 14px 20px 6px;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.anl-list {
+  margin: 0;
+  padding: 0 8px 8px;
+  list-style: none;
+}
+
+.anl-item {
+  position: relative;
+  border-radius: 12px;
+}
+
+/* Unread rows are tinted; a hairline gap keeps two of them apart. */
+.anl-item + .anl-item {
+  margin-top: 3px;
+}
+
+.anl-item:hover,
+.anl-item:focus-within {
+  background: var(--t-neutral-50, #f8fafc);
+}
+
+.anl-item.is-unread {
+  background: color-mix(in srgb, var(--t-primary-50, #ecfdf5) 70%, #fff);
+}
+
+.anl-item.is-unread:hover,
+.anl-item.is-unread:focus-within {
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.anl-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.anl-item.is-linkable .anl-main {
+  cursor: pointer;
+}
+
+.anl-main:focus-visible {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: -2px;
+}
+
+.anl-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.anl-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.anl-kind {
+  font-weight: 600;
+}
+
+.anl-time {
+  color: var(--t-neutral-500, #64748b);
+}
+
+.anl-time::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--t-neutral-400, #94a3b8);
+}
+
+.anl-title {
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.anl-item.is-unread .anl-title {
+  font-weight: 700;
+}
+
+.anl-message {
+  display: -webkit-box;
+  max-width: 90ch;
+  overflow: hidden;
+  color: var(--t-neutral-600, #475569);
+  font-size: 13.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.anl-item:not(.is-unread) .anl-message {
+  color: var(--t-neutral-500, #64748b);
+}
+
+.anl-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--t-primary-600, #059669);
+}
+
+.anl-caret {
+  flex-shrink: 0;
+  color: var(--t-neutral-400, #94a3b8);
+}
+
+/* Mark as read and delete: shown on the row being pointed at. */
+.anl-actions {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.12s ease;
+}
+
+.anl-item:hover .anl-actions,
+.anl-item:focus-within .anl-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.anl-actions button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t-neutral-600, #475569);
+  cursor: pointer;
+}
+
+.anl-actions button:hover {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.anl-actions button.is-danger:hover {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-600, #dc2626);
+}
+
+.anl-more {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.anl-foot {
+  margin: 10px 4px 0;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+}
+
+.anl-skeletons {
+  padding: 12px 20px;
+}
+
+.anl-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+.anl-skeleton > span:first-child {
+  width: 48px;
+  height: 48px;
+  border-radius: 28%;
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.anl-skeleton > span:last-child {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.anl-skeleton i {
+  display: block;
+  width: 40%;
+  height: 10px;
+  border-radius: 6px;
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.anl-skeleton i + i {
+  width: 70%;
+}

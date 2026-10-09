@@ -1158,3 +1158,31 @@
   cursor: pointer;
 }
 .sf-weigh-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Pickup spot: the pin buyers' route leads to. Leaflet's layers stay under
+   the sticky headers. */
+.sf-pin .store-map-frame {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.sf-pin-help {
+  margin: 2px 0 8px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sf-pin.has-error .store-map-frame {
+  outline: 2px solid var(--t-danger-500, #ef4444);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+.sf-pin .form-error {
+  display: block;
+  margin-top: 6px;
+  color: var(--t-danger-600, #dc2626);
+  font-size: 13px;
+}

@@ -29,6 +29,8 @@ import SellerPageHead from '../components/seller/SellerPageHead';
 import PhoneSaveBar from '../components/seller/PhoneSaveBar';
 import PickupAddressField from '../components/seller/PickupAddressField';
 import { pickupGap } from '../lib/pickupAddress';
+import StoreLocationMap from '../components/maps/StoreLocationMap';
+import { validPin } from '../components/maps/PickupRoute';
 import { CourierMark } from '../components/orders/CourierTracking';
 import ChoiceCard from '../components/ui/ChoiceCard';
 
@@ -250,6 +252,9 @@ function SellerFulfillment({ part }) {
     fulfillmentMode: 'DELIVERY',
     pickupAddress: '',
     pickupInstructions: '',
+    // The pickup spot on the map: buyers' route and road guide lead here.
+    latitude: null,
+    longitude: null,
     paymentQrImage: '',
     paymentQrType: 'GCASH',
     paymentInstructions: '',
@@ -313,6 +318,8 @@ function SellerFulfillment({ part }) {
           fulfillmentMode: s.fulfillmentMode || 'DELIVERY',
           pickupAddress: s.pickupAddress || '',
           pickupInstructions: s.pickupInstructions || '',
+          latitude: s.latitude ?? null,
+          longitude: s.longitude ?? null,
           paymentQrImage: s.paymentQrImage || '',
           paymentQrType: s.paymentQrType || 'GCASH',
           paymentInstructions: s.paymentInstructions || '',
@@ -491,11 +498,13 @@ function SellerFulfillment({ part }) {
 
   const showDeliveryAreas = form.fulfillmentMode === 'DELIVERY' || form.fulfillmentMode === 'BOTH';
   const showPickup = form.fulfillmentMode === 'PICKUP' || form.fulfillmentMode === 'BOTH';
+  const pickupPinned = validPin(form.latitude, form.longitude);
+  const [pinError, setPinError] = useState('');
 
   // A part's own settings, to tell whether its page changed anything.
   const partState = (p) => JSON.stringify(
     p === 'method' ? [form.fulfillmentMode]
-      : p === 'pickup' ? [form.pickupAddress.trim(), form.pickupInstructions.trim()]
+      : p === 'pickup' ? [form.pickupAddress.trim(), form.pickupInstructions.trim(), form.latitude, form.longitude]
         : p === 'payment' ? [form.acceptsCod, qrOn, ...(qrOn ? [
           form.paymentQrImage, form.paymentQrType, form.paymentAccountName.trim(),
           form.paymentAccountNumber.replace(/[\s-]/g, ''), form.paymentInstructions.trim(),
@@ -539,6 +548,13 @@ function SellerFulfillment({ part }) {
     const pickupProblem = has('pickup') && showPickup && pickupDraft ? pickupGap(pickupDraft) : null;
     if (pickupProblem) {
       toast.error(pickupProblem);
+      return;
+    }
+    // Buyers who pick up see the way from where they are to this pin.
+    if (has('pickup') && showPickup && !pickupPinned) {
+      setPinError('Pin your pickup spot on the map.');
+      toast.error('Pin your pickup spot on the map so buyers can find it.');
+      document.getElementById('pickup-pin')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     // Delivery answers are checked while delivery is on; with pickup only they are kept as they are.
@@ -595,7 +611,12 @@ function SellerFulfillment({ part }) {
     const changes = {
       all: { ...form, deliveryFee },
       method: { fulfillmentMode: form.fulfillmentMode },
-      pickup: { pickupAddress: form.pickupAddress, pickupInstructions: form.pickupInstructions },
+      pickup: {
+        pickupAddress: form.pickupAddress,
+        pickupInstructions: form.pickupInstructions,
+        latitude: form.latitude,
+        longitude: form.longitude,
+      },
       // QR payment off takes the QR down; its details stay for next time.
       payment: qr ? {
         acceptsCod: form.acceptsCod,
@@ -631,7 +652,7 @@ function SellerFulfillment({ part }) {
       }
       // A new way to hand orders over may need its part set up next.
       const next = scope !== 'method' ? null
-        : showPickup && !form.pickupAddress.trim() ? 'pickup'
+        : showPickup && (!form.pickupAddress.trim() || !pickupPinned) ? 'pickup'
           : showDeliveryAreas && !places.length ? 'delivery' : null;
       if (next) {
         toast.success(next === 'pickup' ? 'Saved. Now add your pickup spot.' : 'Saved. Now choose where you deliver.');
@@ -802,6 +823,27 @@ function SellerFulfillment({ part }) {
                     className="form-input"
                   />
                 )}
+              </div>
+              <div className={`form-group sf-pin${pinError ? ' has-error' : ''}`} id="pickup-pin">
+                <label>
+                  Pin your pickup spot <span className="required">*</span>
+                </label>
+                <p className="sf-pin-help">
+                  {pickupPinned
+                    ? 'Buyers who pick up see the way here from where they are. Drag the pin if the spot moves.'
+                    : 'Tap the map where buyers collect their orders, or use your location.'}
+                </p>
+                <StoreLocationMap
+                  value={{ latitude: form.latitude, longitude: form.longitude }}
+                  onChange={({ latitude, longitude }) => {
+                    setForm((p) => ({ ...p, latitude, longitude }));
+                    setPinError('');
+                  }}
+                  height={isPhone ? 240 : 300}
+                  lockToPhilippines
+                  hint="Tap the map where buyers collect their orders."
+                />
+                {pinError && <span className="form-error">{pinError}</span>}
               </div>
               <div className="form-group">
                 <label>Pickup instructions (optional)</label>
@@ -1356,8 +1398,8 @@ function SellerFulfillment({ part }) {
                 to={partPath('pickup')}
                 icon={StoreIcon}
                 label="Pickup spot"
-                value={pickupSet ? form.pickupAddress.trim() : 'Not set yet'}
-                missing={!pickupSet}
+                value={!pickupSet ? 'Not set yet' : pickupPinned ? form.pickupAddress.trim() : 'Pin it on the map'}
+                missing={!pickupSet || !pickupPinned}
                 tag={pickupSet ? null : 'Needed to sell'}
               />
             )}

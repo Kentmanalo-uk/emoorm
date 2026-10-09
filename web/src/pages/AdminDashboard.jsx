@@ -545,7 +545,9 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Headline numbers */}
+        {/* Overview: the headline numbers as one strip, and the sales chart
+            under them on the same surface; they describe the same period. */}
+        <section className="dash-panel dash-overview" aria-label="Overview">
         <div className="dash-stats">
           {!analytics
             ? Array.from({ length: 4 }).map((_, i) => (
@@ -563,10 +565,6 @@ export default function AdminDashboard() {
             ))}
         </div>
 
-        {/* One grid for every card. Each card declares how many of the six
-            columns it takes, so a row of thirds lines up with the row of
-            halves above it instead of each row picking its own width. */}
-        <div className="dash-grid">
           {/* Sales */}
           <Section
             title="Sales"
@@ -623,6 +621,13 @@ export default function AdminDashboard() {
               </div>
             )}
           </Section>
+        </section>
+
+        {/* Marketplace: who covers the province and where orders sit (super
+            admin), or the two review queues (municipal admin), side by side
+            in one panel. */}
+        <p className="dash-panel-label">{isSuperAdmin ? 'Marketplace' : 'Review queues'}</p>
+        <div className="dash-panel dash-panel-row is-2">
 
           {/* Reach and staffing — the one view only a super admin has, and the
               platform payload already carries it. */}
@@ -809,7 +814,11 @@ export default function AdminDashboard() {
             </Section>
           )}
 
-          {/* Performance */}
+        </div>
+
+        {/* Performance: the best stores and products of the period. */}
+        <p className="dash-panel-label">Performance</p>
+        <div className="dash-panel dash-panel-row is-2">
           <Section
             title="Top stores"
             span="half"
@@ -878,7 +887,11 @@ export default function AdminDashboard() {
             )}
           </Section>
 
-          {/* Health, reports and activity */}
+        </div>
+
+        {/* Watchlist: what may need a follow-up, and what was done lately. */}
+        <p className="dash-panel-label">Watchlist</p>
+        <div className="dash-panel dash-panel-row is-3">
           <Section title="Stores to check" span="third" link="/admin/all-sellers" linkLabel="All sellers">
             {health === null ? <Empty>Loading…</Empty> : health.length === 0 ? (
               <Empty art="healthy" title="All stores look healthy">No store needs a follow-up right now.</Empty>

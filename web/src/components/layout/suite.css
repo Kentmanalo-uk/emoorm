@@ -19,7 +19,9 @@
 
   :is(.ac-shell, .sc-shell):not(.is-phone) {
     --suite-hairline: 1px solid rgba(15, 23, 42, 0.06);
-    --suite-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    /* No shadows: the hairline alone outlines a surface. */
+    --suite-shadow: none;
+    --elev-card: none;
     --suite-glass: rgba(255, 255, 255, 0.86);
     /* Pink into green across the whole page, faint, over the usual grey.
        On the shell itself (which is as tall as the page), so it reaches
@@ -126,7 +128,7 @@
 
   /* ── Admin cards and tables: outlined, a step tighter ──────────────── */
 
-  .ac-shell:not(.is-phone) .ac-content :is(.admin-card, .dash-card, .dash-stat, .dash-attention) {
+  .ac-shell:not(.is-phone) .ac-content :is(.admin-card, .dash-card, .dash-stat, .dash-attention, .an-card) {
     border: var(--suite-hairline);
     box-shadow: var(--suite-shadow);
   }
@@ -360,5 +362,210 @@
     background: var(--t-neutral-0, #fff);
     color: var(--t-primary-700, #047857);
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  }
+}
+
+/* ── Admin dashboard: panels instead of a wall of cards ─────────────────
+   Related sections share one surface and are told apart by a hairline and
+   spacing, the way a business suite lays out its home: an Overview (the
+   headline numbers as one strip over the sales chart), then Marketplace,
+   Performance and Watchlist, each a single panel of side-by-side columns.
+   The sections keep their own headers, toggles, links and scrolling; only
+   their box goes. Computers only: phones have their own home screen. */
+@media (min-width: 769px) {
+  .ac-shell:not(.is-phone) .ac-content .dash {
+    gap: 14px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .dash-panel {
+    overflow: hidden;
+    border: var(--suite-hairline);
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: var(--suite-shadow);
+  }
+
+  /* A short heading over each panel: where one group ends and the next
+     begins, without another box. */
+  .ac-shell:not(.is-phone) .ac-content .dash-panel-label {
+    margin: 10px 2px -4px;
+    color: var(--t-neutral-800, #1f2937);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+
+  /* Sections inside a panel lose their own card. */
+  .ac-shell:not(.is-phone) .ac-content .dash-panel :is(.dash-card, .dash-stat) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* Overview: four numbers in one strip, dividers between them. */
+  .ac-shell:not(.is-phone) .ac-content .dash-overview .dash-stats {
+    gap: 0;
+    border-bottom: var(--suite-hairline);
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .dash-overview .dash-stat {
+    padding: 18px 22px 16px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .dash-overview .dash-stat + .dash-stat {
+    border-left: var(--suite-hairline);
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .dash-overview .dash-stat-value {
+    font-size: 28px;
+  }
+
+  /* Columns of a panel: side by side, a hairline between them. */
+  .ac-shell:not(.is-phone) .ac-content .dash-panel-row {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .dash-panel-row.is-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .dash-panel-row.is-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .dash-panel-row > .dash-card + .dash-card {
+    border-left: var(--suite-hairline);
+  }
+
+  /* The old six-track grid told each card how many tracks to span; in a
+     panel each takes one column. */
+  .ac-shell:not(.is-phone) .ac-content .dash-panel-row > .dash-card {
+    grid-column: auto;
+    max-height: 340px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .dash-panel-row.is-3 > .dash-card {
+    max-height: 300px;
+  }
+
+  /* Two numbers to a row on narrower screens: the dividers follow. */
+  @media (max-width: 1100px) {
+    .ac-shell:not(.is-phone) .ac-content .dash-overview .dash-stat:nth-child(3) {
+      border-left: 0;
+    }
+
+    .ac-shell:not(.is-phone) .ac-content .dash-overview .dash-stat:nth-child(n + 3) {
+      border-top: var(--suite-hairline);
+    }
+  }
+
+  /* Three columns get too narrow first; they stack, divided across. */
+  @media (max-width: 1280px) {
+    .ac-shell:not(.is-phone) .ac-content .dash-panel-row.is-3 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ac-shell:not(.is-phone) .ac-content .dash-panel-row.is-3 > .dash-card + .dash-card {
+      border-left: 0;
+      border-top: var(--suite-hairline);
+    }
+  }
+
+  @media (max-width: 960px) {
+    .ac-shell:not(.is-phone) .ac-content .dash-panel-row.is-2 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ac-shell:not(.is-phone) .ac-content .dash-panel-row.is-2 > .dash-card + .dash-card {
+      border-left: 0;
+      border-top: var(--suite-hairline);
+    }
+  }
+}
+
+/* ── Number tiles elsewhere in the admin: one strip, not a row of cards ──
+   Analytics, App users and Feedback lined their figures up as separate
+   cards. On admin pages they now sit on one surface, divided by hairlines
+   (each figure draws the line to its right and below; the strip's edge
+   clips the outer ones), with a column count that suits how many figures
+   there are, so no row ends in a gap. Computers only. */
+@media (min-width: 769px) {
+  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary) {
+    gap: 0;
+    overflow: hidden;
+    border: var(--suite-hairline);
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: var(--suite-shadow);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* Ten figures: two rows of five. Five: one row. Six: one row of six. */
+  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):has(> :nth-child(9)) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):has(> :nth-child(5)):not(:has(> :nth-child(6))) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):has(> :nth-child(6)):not(:has(> :nth-child(7))) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):has(> :nth-child(3)):not(:has(> :nth-child(4))) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary) > * {
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: 1px 0 0 rgba(15, 23, 42, 0.06), 0 1px 0 rgba(15, 23, 42, 0.06);
+  }
+
+  /* Narrower screens: half as many to a row. */
+  @media (max-width: 1180px) {
+    .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary),
+    .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):is(:has(> :nth-child(5)), :has(> :nth-child(9))) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}
+
+/* ── Analytics: each pair of sections is one panel ─────────────────────
+   Top stores with Order status, Top products with Users by role, Pending
+   actions with Product status: two sections of one surface, a hairline
+   between them, like the dashboard's panels. Computers only. */
+@media (min-width: 769px) {
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) .an-grid-2 {
+    gap: 0;
+    align-items: stretch;
+    overflow: hidden;
+    border: var(--suite-hairline);
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+  }
+
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) .an-grid-2 > .an-card {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) .an-grid-2 > .an-card + .an-card {
+    border-left: var(--suite-hairline);
+  }
+
+  /* Where the pair stacks (900px and narrower), the line runs across. */
+  @media (max-width: 900px) {
+    :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) .an-grid-2 > .an-card + .an-card {
+      border-left: 0;
+      border-top: var(--suite-hairline);
+    }
   }
 }
