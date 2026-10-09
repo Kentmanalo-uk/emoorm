@@ -4,7 +4,7 @@ import {
   BellSlash as BellOff, Checks as CheckCheck, Trash as Trash2, Package, ShoppingBag,
   CheckCircle, XCircle, Star, WarningCircle as AlertCircle, Info, ChatCircleDots,
   MagnifyingGlass, X, Storefront, Tag, Question, Scales,
-  Handshake,
+  Handshake, CaretRight,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -23,6 +23,8 @@ import NotificationPicture from '../components/NotificationPicture';
 import ToolGradients from '../components/ui/ToolGradients';
 import { readCache, writeCache } from '../lib/pageCache';
 import { confirmAction } from '../lib/confirm';
+import { groupByDay } from '../lib/dayGroup';
+import '../components/NotificationRows.css';
 
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
@@ -67,6 +69,10 @@ const TYPE_CONFIG = {
 function getConfig(type) {
   return TYPE_CONFIG[type] || TYPE_CONFIG.DEFAULT;
 }
+
+// "Order Cancelled" -> "Order cancelled": the Seller Center's rows on
+// computers read in sentence case.
+const sentence = (label = '') => label.charAt(0) + label.slice(1).toLowerCase();
 
 /** Phones: the gradient (ToolGradients) a kind's icon is filled with, from its colour. */
 const gradientOf = (color = '') => {
@@ -306,8 +312,16 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
             subtitle={unreadCount > 0
               ? `${unreadCount} unread · order updates and alerts for your shop`
               : 'Order updates and alerts for your shop'}
-            actions={(notifications.length > 0 || unreadCount > 0) && (
+            actions={(
               <>
+                <div className="anl-filter" role="tablist" aria-label="Show">
+                  <button type="button" role="tab" aria-selected={filter === 'all'} className={filter === 'all' ? 'is-on' : ''} onClick={() => { setFilter('all'); setPage(1); }}>
+                    All
+                  </button>
+                  <button type="button" role="tab" aria-selected={filter === 'unread'} className={filter === 'unread' ? 'is-on' : ''} onClick={() => { setFilter('unread'); setPage(1); }}>
+                    Unread{unreadCount > 0 && <span className="anl-filter-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+                  </button>
+                </div>
                 {unreadCount > 0 && (
                   <button className="notif-action-btn" onClick={handleMarkAllRead}>
                     <CheckCheck size={15} /> Mark all read
@@ -342,7 +356,8 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
 
         {/* Filters */}
         <div className={`notif-body${sellerLook ? ' is-seller' : ''}`}>
-        <div className={`notif-filters${sellerLook ? ' is-seller' : ''}`}>
+        {!sellerLook && (
+        <div className="notif-filters">
           <button
             className={`notif-filter-btn ${filter === 'all' ? 'active' : ''}`}
             onClick={() => { setFilter('all'); setPage(1); }}
@@ -369,6 +384,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
             />
           )}
         </div>
+        )}
 
         {/* List */}
         {isLoading ? (
@@ -415,6 +431,56 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
                 View all notifications
               </button>
             )}
+          </div>
+        ) : sellerLook ? (
+          /* Computers: picture rows grouped by day, as on the admin side. */
+          <div className="anl">
+            {groupByDay(notifications).map((g) => (
+              <section key={g.label} className="anl-group" aria-label={g.label}>
+                <h2 className="anl-group-label">{g.label}</h2>
+                <ul className="anl-list">
+                  {g.items.map((notif) => {
+                    const cfg = getConfig(notif.type);
+                    const href = notificationHref(notif);
+                    return (
+                      <li key={notif.id} className={`anl-item${notif.isRead ? '' : ' is-unread'}${href ? ' is-linkable' : ''}`}>
+                        <button type="button" className="anl-main" onClick={() => openNotification(notif)}>
+                          <NotificationPicture
+                            picture={notif.picture}
+                            Icon={cfg.icon}
+                            color={cfg.color}
+                            bg={cfg.bg}
+                            size={48}
+                            iconWeight="fill"
+                            className="anl-picture"
+                          />
+                          <span className="anl-body">
+                            <span className="anl-meta">
+                              <span className="anl-kind" style={{ color: cfg.color }}>{sentence(cfg.label)}</span>
+                              <span className="anl-time">{formatTime(notif.createdAt)}</span>
+                            </span>
+                            {notif.title && <span className="anl-title">{notif.title}</span>}
+                            {notif.message && <span className="anl-message">{notif.message}</span>}
+                          </span>
+                          {!notif.isRead && <span className="anl-dot" aria-label="Unread" />}
+                          {href && <CaretRight size={16} className="anl-caret" aria-hidden="true" />}
+                        </button>
+                        <span className="anl-actions">
+                          {!notif.isRead && (
+                            <button type="button" title="Mark as read" aria-label="Mark as read" onClick={() => handleMarkRead(notif)}>
+                              <CheckCheck size={16} />
+                            </button>
+                          )}
+                          <button type="button" title="Delete" aria-label="Delete" className="is-danger" onClick={() => handleDelete(notif.id)}>
+                            <Trash2 size={16} />
+                          </button>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
           </div>
         ) : (
           <div className="notif-list">

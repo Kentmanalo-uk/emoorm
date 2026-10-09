@@ -641,7 +641,7 @@ export default function SellerOrders() {
                         className={`${selectedOrder?.id === order.id ? 'row-selected' : ''}${movedId === order.id ? ' is-moved' : ''}`.trim()}
                       >
                         <td className="order-num">
-                          <div>#{order.orderNumber || order.id.slice(-6).toUpperCase()}</div>
+                          <div title={`#${order.orderNumber || order.id.slice(-6).toUpperCase()}`}>#{order.orderNumber || order.id.slice(-6).toUpperCase()}</div>
                           {orderDate && <div className="so-order-date">{orderDate}</div>}
                           <TodayTag order={order} />
                           <CookTag order={order} />

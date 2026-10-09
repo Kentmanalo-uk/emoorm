@@ -485,14 +485,14 @@
   }
 }
 
-/* ── Number tiles elsewhere in the admin: one strip, not a row of cards ──
-   Analytics, App users and Feedback lined their figures up as separate
+/* ── Number tiles elsewhere: one strip, not a row of cards ──────────────
+   Analytics, App users, Feedback and the Seller Center's Finance lined their figures up as separate
    cards. On admin pages they now sit on one surface, divided by hairlines
    (each figure draws the line to its right and below; the strip's edge
    clips the outer ones), with a column count that suits how many figures
    there are, so no row ends in a gap. Computers only. */
 @media (min-width: 769px) {
-  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary) {
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) :is(.an-kpi-grid, .afb-summary, .sd-stats) {
     gap: 0;
     overflow: hidden;
     border: var(--suite-hairline);
@@ -503,23 +503,23 @@
   }
 
   /* Ten figures: two rows of five. Five: one row. Six: one row of six. */
-  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):has(> :nth-child(9)) {
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) :is(.an-kpi-grid, .afb-summary, .sd-stats):has(> :nth-child(9)) {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
-  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):has(> :nth-child(5)):not(:has(> :nth-child(6))) {
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) :is(.an-kpi-grid, .afb-summary, .sd-stats):has(> :nth-child(5)):not(:has(> :nth-child(6))) {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
-  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):has(> :nth-child(6)):not(:has(> :nth-child(7))) {
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) :is(.an-kpi-grid, .afb-summary, .sd-stats):has(> :nth-child(6)):not(:has(> :nth-child(7))) {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
-  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):has(> :nth-child(3)):not(:has(> :nth-child(4))) {
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) :is(.an-kpi-grid, .afb-summary, .sd-stats):has(> :nth-child(3)):not(:has(> :nth-child(4))) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary) > * {
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) :is(.an-kpi-grid, .afb-summary, .sd-stats) > * {
     min-height: 0;
     border: 0;
     border-radius: 0;
@@ -529,8 +529,8 @@
 
   /* Narrower screens: half as many to a row. */
   @media (max-width: 1180px) {
-    .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary),
-    .ac-shell:not(.is-phone) .ac-content :is(.an-kpi-grid, .afb-summary):is(:has(> :nth-child(5)), :has(> :nth-child(9))) {
+    :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) :is(.an-kpi-grid, .afb-summary, .sd-stats),
+    :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) :is(.an-kpi-grid, .afb-summary, .sd-stats):is(:has(> :nth-child(5)), :has(> :nth-child(9))) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
@@ -567,5 +567,319 @@
       border-left: 0;
       border-top: var(--suite-hairline);
     }
+  }
+}
+
+/* ── Seller dashboard: panels, as on the admin dashboard ───────────────
+   The overview numbers and the sales chart share one surface; orders and
+   followers, then top products and low stock, each share one. Computers
+   only: phones render their own dashboard. */
+@media (min-width: 769px) {
+  .sc-shell:not(.is-phone) .sc-content .sd {
+    gap: 14px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-panel {
+    border: var(--suite-hairline);
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+    overflow: hidden;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-panel-label {
+    margin: 10px 2px -4px;
+    color: var(--t-neutral-800, #1f2937);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+
+  /* Sections inside a panel lose their own card. */
+  .sc-shell:not(.is-phone) .sc-content .sd-panel .sd-card {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* The numbers: one strip, a line between each. */
+  .sc-shell:not(.is-phone) .sc-content .sd-ov-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-bottom: var(--suite-hairline);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-ov-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    padding: 18px 22px 16px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-ov-stat + .sd-ov-stat {
+    border-left: var(--suite-hairline);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-ov-value {
+    color: var(--t-neutral-900, #0f172a);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-ov-label {
+    color: var(--t-neutral-800, #1f2937);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-ov-sub {
+    overflow: hidden;
+    color: var(--t-neutral-500, #64748b);
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-ov-sub.is-warn {
+    color: var(--t-warning-700, #b45309);
+  }
+
+  /* Side-by-side sections, split by a hairline. */
+  .sc-shell:not(.is-phone) .sc-content .sd-panel-row {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-panel-row.is-2 {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-panel-row.is-1 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-panel-row > .sd-card + .sd-card {
+    border-left: var(--suite-hairline);
+  }
+
+  /* Where the sections stack, the line runs across. */
+  @media (max-width: 1100px) {
+    .sc-shell:not(.is-phone) .sc-content .sd-ov-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sc-shell:not(.is-phone) .sc-content .sd-ov-stat:nth-child(3) {
+      border-left: 0;
+    }
+
+    .sc-shell:not(.is-phone) .sc-content .sd-ov-stat:nth-child(n + 3) {
+      border-top: var(--suite-hairline);
+    }
+
+    .sc-shell:not(.is-phone) .sc-content .sd-panel-row.is-2 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sc-shell:not(.is-phone) .sc-content .sd-panel-row > .sd-card + .sd-card {
+      border-left: 0;
+      border-top: var(--suite-hairline);
+    }
+  }
+}
+
+/* ── Seller Center: one look across the pages ──────────────────────────
+   Orders, Products, Returns, Questions, Today's menu and Offers each drew
+   their tabs their own way (a segmented bar, underlines, pills). On
+   computers they are all the segmented bar now, and the order list reads
+   cleaner: the order number on one line, soft status labels, the buyer
+   without a dotted rule, the actions side by side. Phones keep theirs. */
+@media (min-width: 769px) {
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    max-width: 100%;
+    gap: 2px;
+    margin: 0 0 14px;
+    padding: 3px;
+    overflow-x: auto;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.05);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--t-neutral-600, #4b5563);
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button::after {
+    display: none;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button:hover {
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button:is(.is-active, .is-on),
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button:is(.is-active, .is-on):hover {
+    border: 0;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-primary-700, #047857);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  }
+
+  /* A tab's count: a small quiet number. */
+  .sc-shell:not(.is-phone) .sc-content :is(.seller-return-tabs, .of-tabs) > button b,
+  .sc-shell:not(.is-phone) .sc-content .seller-tab .so-tab-count {
+    min-width: 18px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--t-neutral-600, #4b5563);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+  }
+
+  /* Returns: "to review" is a small count beside the title, not a box. */
+  .sc-shell:not(.is-phone) .sc-content .seller-return-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: var(--suite-hairline);
+    border-radius: 999px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: none;
+    color: var(--t-primary-700, #047857);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-return-stat svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-return-stat strong {
+    font-size: 14px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-return-stat span {
+    color: var(--t-neutral-600, #4b5563);
+    font-size: 13px;
+  }
+
+  /* Offers: an empty list sits on a panel like every other page's. */
+  .sc-shell:not(.is-phone) .sc-content .of-empty {
+    margin: 0;
+    padding: 56px 24px;
+    border: var(--suite-hairline);
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-500, #6b7280);
+    text-align: center;
+  }
+
+  /* Orders: the number on one line (the full number on hover). */
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table th:first-child {
+    width: 190px !important;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table th:nth-child(5) {
+    width: 150px !important;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table th:last-child {
+    width: 230px !important;
+    text-align: right;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table td.order-num {
+    font-family: inherit;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table td.order-num > div:first-child {
+    max-width: 170px;
+    overflow: hidden;
+    color: var(--t-neutral-900, #111827);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table td.order-num .so-order-date {
+    font-family: inherit;
+    font-size: 12px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .so-buyer-name.profile-link {
+    display: inline;
+    border-bottom: 0;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .so-buyer-name.profile-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Status: a soft label in its colour, never two lines. */
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge.seller-badge--solid {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-700, #374151);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-pending { background: #fef3c7; color: #b45309; }
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-confirmed { background: #dbeafe; color: #1d4ed8; }
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-preparing { background: #e0e7ff; color: #4338ca; }
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-ready { background: #e0f2fe; color: #0369a1; }
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-completed { background: #d1fae5; color: #047857; }
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .seller-badge--solid.status-cancelled { background: #fee2e2; color: #b91c1c; }
+
+  /* Actions side by side, at the row's end. */
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .order-row-actions {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .order-row-actions .seller-icon-btn {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table .so-next-btn {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 9px;
+    font-size: 13px;
+    white-space: nowrap;
   }
 }

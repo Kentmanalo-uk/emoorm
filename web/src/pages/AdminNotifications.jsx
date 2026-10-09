@@ -14,6 +14,8 @@ import { notificationHref } from '../lib/notificationLink';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import '../components/admin/AdminLayout.css';
 import './AdminNotifications.css';
+import '../components/NotificationRows.css';
+import { groupByDay } from '../lib/dayGroup';
 
 const PAGE_SIZE = 20;
 
@@ -46,18 +48,6 @@ const kindOf = (n) => {
   // Feedback arrives as an announcement that says where it leads.
   if (n.type === 'SYSTEM_ANNOUNCEMENT' && n.data?.target?.kind === 'admin-feedback') return KINDS.FEEDBACK;
   return KINDS[n.type] || KINDS.DEFAULT;
-};
-
-// Today, Yesterday, This week, Earlier: the list reads by day.
-const dayGroupOf = (iso) => {
-  const d = new Date(iso);
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const day = 86400000;
-  if (d >= start) return 'Today';
-  if (d >= start - day) return 'Yesterday';
-  if (d >= start - 6 * day) return 'This week';
-  return 'Earlier';
 };
 
 const titleCase = (s = '') =>
@@ -217,13 +207,7 @@ export default function AdminNotifications() {
 
   // Computers: the phone apps' list, wider. A picture or the kind's icon on
   // the left, the title and details beside it, grouped by day.
-  const groups = [];
-  for (const n of items) {
-    const label = dayGroupOf(n.createdAt);
-    const last = groups[groups.length - 1];
-    if (last && last.label === label) last.items.push(n);
-    else groups.push({ label, items: [n] });
-  }
+  const groups = groupByDay(items);
 
   return (
     <AdminLayout>

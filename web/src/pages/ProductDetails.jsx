@@ -47,7 +47,7 @@ import {
 import TimeLeft from '../components/ui/TimeLeft';
 import TodayTag, { ProductTodayTag } from '../components/today/TodayTag';
 import ProductQuestions from '../components/product/ProductQuestions';
-import { SaleWas, SaleEnds, BulkPrices } from '../components/ui/SaleTag';
+import { SaleWas, PriceNotes } from '../components/ui/SaleTag';
 import {
   productKind, isStockless, minOrder, priceUnit, cookReady, packageSavings, headsLabel,
 } from '../lib/productKinds';
@@ -919,22 +919,25 @@ const ProductDetails = () => {
               </div>
 
               <div className="pdp-m-price">
-                <div className="pdp-m-price-col">
-                <div className="pdp-m-price-main">
-                  {fromPrice && <span className="pdp-price-from">from</span>}
-                  <span className="pdp-m-peso">₱</span>
-                  {priceLabel(false)}
-                  {unitWords && <span className="pdp-price-unit">{unitWords}</span>}
+                <div className="pdp-m-price-band">
+                  <div className="pdp-m-price-top">
+                    <div className="pdp-m-price-main">
+                      {fromPrice && <span className="pdp-price-from">from</span>}
+                      <span className="pdp-m-peso">₱</span>
+                      {priceLabel(false)}
+                      {unitWords && <span className="pdp-price-unit">{unitWords}</span>}
+                    </div>
+                    <span className="pdp-m-place"><MapPin size={12} /> {place}</span>
+                  </div>
                   <SaleWas product={product} />
+                  {savings && <PackageSave savings={savings} />}
                 </div>
-                {kind === 'LIVESTOCK' && <span className="pdp-price-nego">Asking price · negotiable</span>}
-                {savings && <PackageSave savings={savings} />}
-                </div>
-                <SaleEnds product={product} />
-                {tiers.length > 0 && <BulkPrices tiers={tiers} />}
-                <div className="pdp-m-price-side">
-                  <span className="pdp-m-place"><MapPin size={12} /> {place}</span>
-                </div>
+                <PriceNotes
+                  product={product}
+                  tiers={tiers}
+                  negotiable={kind === 'LIVESTOCK'}
+                  className="pdp-m-notes"
+                />
               </div>
             </>
           )}
@@ -1068,16 +1071,21 @@ const ProductDetails = () => {
 
               {/* Price band */}
               <div className={`pdp-price-band${compactRows ? ' pdp-price-band--compact' : ''}`}>
-                <div className="pdp-price">
-                  {fromPrice && <span className="pdp-price-from">from </span>}
-                  ₱{priceLabel(false)}
-                  {unitWords && <span className="pdp-price-unit">{unitWords}</span>}
-                  {' '}<SaleWas product={product} />
-                  {kind === 'LIVESTOCK' && <span className="pdp-price-nego">Asking price · negotiable</span>}
+                <div className="pdp-price-line">
+                  <div className="pdp-price">
+                    {fromPrice && <span className="pdp-price-from">from </span>}
+                    ₱{priceLabel(false)}
+                    {unitWords && <span className="pdp-price-unit">{unitWords}</span>}
+                  </div>
+                  <SaleWas product={product} />
                 </div>
                 {savings && <PackageSave savings={savings} />}
-                <SaleEnds product={product} />
-                {tiers.length > 0 && <BulkPrices tiers={tiers} />}
+                <PriceNotes
+                  product={product}
+                  tiers={tiers}
+                  negotiable={kind === 'LIVESTOCK'}
+                  className="pdp-notes"
+                />
               </div>
 
               {/* Row attributes */}

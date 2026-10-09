@@ -440,9 +440,28 @@
 
 /* Price band */
 .pdp-price-band {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   background: var(--t-neutral-100, #f7f8fa);
   border-radius: 10px;
   padding: 14px 16px;
+}
+
+.pdp-price-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+.pdp-price-band .pdp-price-save {
+  margin-top: 0;
+}
+
+.pdp-notes {
+  padding-top: 10px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .pdp-price {
@@ -2096,10 +2115,15 @@
 
   /* ── price band ─────────────────────────────────────────────────── */
   .pdp-m-price {
+    background: var(--t-neutral-0, #fff);
+  }
+
+  /* The price, where it is, and what it was. */
+  .pdp-m-price-band {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
     padding: 14px 16px;
     /* The Sell page button's sweep, mirrored: brand green under the price,
        accent pink on the right. Each colour holds only at its own end. */
@@ -2113,7 +2137,29 @@
     color: #fff;
   }
 
+  .pdp-m-price-top {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .pdp-m-price-top .pdp-m-place {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-bottom: 3px;
+  }
+
+  /* Sale countdown, asking price, bulk prices: a line each. */
+  .pdp-m-notes {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+  }
+
   .pdp-m-price-main {
+    flex-shrink: 0;
+    white-space: nowrap;
     font-size: 30px;
     font-weight: 800;
     line-height: 1;
@@ -2125,14 +2171,6 @@
     font-size: 18px;
     font-weight: 700;
     vertical-align: 6px;
-  }
-
-  .pdp-m-price-side {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 5px;
-    min-width: 0;
   }
 
   .pdp-m-badge {
@@ -3328,12 +3366,8 @@ a.pdp-pkg-item:hover {
 
 /* Phones: the price band is green to pink, so the saving sits on white. */
 @media (max-width: 768px) {
-  .pdp-m-price-col {
-    min-width: 0;
-  }
-
   .pdp-is-phone .pdp-m-price .pdp-price-save {
-    margin-top: 8px;
+    margin-top: 0;
   }
 
   .pdp-is-phone .pdp-m-price .pdp-price-save s {
@@ -3432,11 +3466,12 @@ a.pdp-pkg-item:hover {
 /* Computers, a kind's page: tighter rows so the details stay near the
    photo's height. */
 .pdp-price-band--compact {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 14px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.pdp-price-band--compact .pdp-notes {
+  padding-top: 8px;
 }
 
 .pdp-price-band--compact .pdp-price {
@@ -3478,21 +3513,4 @@ a.pdp-pkg-item:hover {
   gap: 6px 16px;
 }
 
-/* Livestock: the price is an asking price, open to offers. */
-.pdp-price-nego {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-primary-700, #047857);
-  font-size: 12.5px;
-  font-weight: 700;
-  vertical-align: middle;
-  white-space: nowrap;
-}
 
-.pdp-m-price-col .pdp-price-nego {
-  margin: 4px 0 0;
-}

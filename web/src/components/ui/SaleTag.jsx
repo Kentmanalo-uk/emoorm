@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Lightning } from '@phosphor-icons/react';
+import { Lightning, Handshake, Tag } from '@phosphor-icons/react';
 import { saleInfo } from '../../lib/variantPricing';
 import './SaleTag.css';
 
@@ -26,18 +26,8 @@ const left = (ms) => {
   return h ? `${h}h ${m % 60}m` : `${m % 60}m`;
 };
 
-/** Bulk prices: "Buy more: 10+ ₱90.00 each · 50+ ₱80.00 each". */
-export function BulkPrices({ tiers }) {
-  return (
-    <span className="sale-bulk">
-      <b>Buy more, pay less:</b>
-      {tiers.map((t) => <span key={t.minQty}>{t.minQty}+ {peso(t.price)} each</span>)}
-    </span>
-  );
-}
-
-/** A flash sale's countdown, shown in its last three days. */
-export function SaleEnds({ product }) {
+/** A flash sale's time left ("2d 14h"), in its last three days; else null. */
+function useSaleEndsIn(product) {
   const { endsAt } = saleInfo(product);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -46,9 +36,42 @@ export function SaleEnds({ product }) {
     return () => clearInterval(t);
   }, [endsAt]);
   if (!endsAt || endsAt.getTime() - now > 3 * 86400e3 || endsAt.getTime() <= now) return null;
+  return left(endsAt.getTime() - now);
+}
+
+/**
+ * What else to know about the price, one line each under it: the sale's
+ * countdown, an asking price open to offers, bulk prices. They used to sit
+ * beside the price as badges and boxes of different shapes, which crowded
+ * the band once a product had more than one.
+ */
+export function PriceNotes({ product, tiers = [], negotiable = false, className = '' }) {
+  const endsIn = useSaleEndsIn(product);
+  if (!endsIn && !negotiable && tiers.length === 0) return null;
   return (
-    <span className="sale-ends" role="timer">
-      <Lightning size={13} weight="fill" /> Sale ends in {left(endsAt.getTime() - now)}
-    </span>
+    <ul className={`price-notes ${className}`}>
+      {endsIn && (
+        <li className="price-note is-sale" role="timer">
+          <Lightning size={15} weight="fill" />
+          <span><b>Sale ends in {endsIn}</b></span>
+        </li>
+      )}
+      {negotiable && (
+        <li className="price-note is-offer">
+          <Handshake size={15} weight="fill" />
+          <span><b>Asking price</b> · make an offer and agree on the price in chat</span>
+        </li>
+      )}
+      {tiers.length > 0 && (
+        <li className="price-note is-bulk">
+          <Tag size={15} weight="fill" />
+          <span>
+            <b>Buy more, pay less</b>
+            {/* Each tier stays on one line; the lines break between tiers. */}
+            {tiers.map((t) => <span key={t.minQty}> · <span className="price-note-tier">{t.minQty}+ {peso(t.price)} each</span></span>)}
+          </span>
+        </li>
+      )}
+    </ul>
   );
 }
