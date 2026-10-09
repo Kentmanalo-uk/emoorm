@@ -299,6 +299,23 @@ body.pos-open {
   background: var(--t-primary-600, #009f3a);
 }
 
+/* Opened for Buy now: Add to cart beside it, the two side by side. */
+.pos-foot.is-split {
+  display: flex;
+  gap: 10px;
+}
+
+.pos-foot.is-split .pos-confirm {
+  flex: 1;
+  min-width: 0;
+}
+
+.pos-foot.is-split .pos-confirm-cart {
+  background: var(--t-accent-50, #fdf2f8);
+  color: var(--t-accent-600, #db2777);
+  box-shadow: inset 0 0 0 1.5px var(--t-accent-500, #ec4899);
+}
+
 .pos-confirm span {
   font-weight: 500;
   line-height: 1.15;

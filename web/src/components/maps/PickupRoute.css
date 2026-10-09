@@ -1,0 +1,263 @@
+/* Checkout, pickup: the shop's spot, the way there, and the road guide. */
+.pr {
+  margin-top: 12px;
+  border: 1px solid var(--t-neutral-150, #eef0f3);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  overflow: hidden;
+}
+
+.pr-map {
+  position: relative;
+  /* Leaflet stacks its layers in the hundreds; kept inside the map so it
+     never draws over the page's sticky header. */
+  z-index: 0;
+  isolation: isolate;
+  height: 230px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.pr-leaflet {
+  width: 100%;
+  height: 100%;
+}
+
+.pr-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 14px 4px;
+}
+
+.pr-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+}
+
+.pr-stat svg {
+  color: var(--t-primary-600, #059669);
+}
+
+.pr-stat b {
+  font-weight: 700;
+}
+
+.pr-note {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.pr-routing {
+  margin: 0;
+  padding: 0 14px;
+}
+
+.pr-locate {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pr-locate:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.pr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px 14px;
+}
+
+.pr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.pr-btn--primary {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.pr-caret {
+  transition: transform 0.15s ease;
+}
+
+.pr-btn.is-open .pr-caret {
+  transform: rotate(180deg);
+}
+
+.pr-steps {
+  margin: 0;
+  padding: 0 14px 14px;
+  list-style: none;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.pr-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+  font-size: 13.5px;
+  color: var(--t-neutral-800, #1f2937);
+}
+
+.pr-step-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.pr-step-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pr-step-dist {
+  flex: 0 0 auto;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+}
+
+.pr-link {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.pr--nopin {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+}
+
+.pr--nopin svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--t-accent-500, #ec4899);
+}
+
+.pr--nopin p {
+  margin: 0 0 4px;
+}
+
+/* Markers */
+.pr-marker-shell {
+  background: none;
+  border: 0;
+}
+
+.pr-shop-pin {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 52px;
+}
+
+.pr-shop-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  background: var(--t-primary-600, #059669);
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.pr-shop-face {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--t-primary-600, #059669);
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+  overflow: hidden;
+  box-shadow: 0 6px 14px rgba(15, 35, 25, 0.25);
+}
+
+.pr-shop-face b {
+  color: var(--t-primary-700, #047857);
+  font-size: 16px;
+}
+
+.pr-shop-face img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pr-me {
+  position: relative;
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.22);
+  animation: pr-pulse 2s ease-out infinite;
+}
+
+.pr-me span {
+  position: absolute;
+  inset: 5px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #2563eb;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes pr-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.35); }
+  100% { box-shadow: 0 0 0 16px rgba(37, 99, 235, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-me {
+    animation: none;
+  }
+}

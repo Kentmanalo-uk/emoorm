@@ -100,7 +100,8 @@ app.use(helmet({
       styleSrcElem: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
       fontSrc: ["'self'", 'data:', ...GOOGLE_HOSTS],
       imgSrc: ["'self'", 'data:', 'blob:', ...MAP_TILES, ...IMAGE_HOSTS, ...GOOGLE_HOSTS],
-      connectSrc: ["'self'", 'https://psgc.gitlab.io', ...GOOGLE_HOSTS, ...MAP_TILES],
+      // OSRM: the road route from the buyer to a shop's pickup spot (checkout).
+      connectSrc: ["'self'", 'https://psgc.gitlab.io', 'https://router.project-osrm.org', ...GOOGLE_HOSTS, ...MAP_TILES],
       frameSrc: ["'self'", 'https://accounts.google.com', 'https://www.google.com'],
       // Nothing on this site belongs in someone else's frame.
       frameAncestors: ["'none'"],

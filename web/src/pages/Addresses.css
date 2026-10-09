@@ -486,3 +486,19 @@
 .profile-main .address-empty {
   max-width: none;
 }
+
+/* An address saved before pins were required. */
+.address-unpinned {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 4px 0 0;
+  color: var(--t-accent-600, #db2777);
+  font-size: 12.5px;
+}
+
+.address-pin.has-error .store-map-frame {
+  outline: 2px solid var(--t-danger-500, #ef4444);
+  outline-offset: 2px;
+  border-radius: 12px;
+}

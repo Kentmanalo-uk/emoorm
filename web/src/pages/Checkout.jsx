@@ -22,6 +22,8 @@ import ProductImage from '../components/ProductImage';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
+import StoreLocationMap from '../components/maps/StoreLocationMap';
+import PickupRoute, { validPin } from '../components/maps/PickupRoute';
 import useIdentityGate from '../hooks/useIdentityGate';
 import useAppSettings, { storeDeliveryFee } from '../hooks/useAppSettings';
 import { isIdentityRequiredError } from '../lib/identity';
@@ -144,6 +146,10 @@ const Checkout = () => {
   const [selectedAddressId, setSelectedAddressId] = useState(null); // null = manual entry
   const [addressesLoaded, setAddressesLoaded] = useState(false);
   const pinnedAddress = savedAddresses.find((a) => a.id === selectedAddressId) || null;
+  // The exact delivery spot, for the rider: the saved address's own pin, or
+  // one dropped here (a one-off address, or a saved one that has none yet,
+  // which is then saved back to it). Every delivery order carries one.
+  const [deliveryPin, setDeliveryPin] = useState(null);
 
   // Per-store settings + coverage
   const [storeInfo, setStoreInfo] = useState({}); // { [storeId]: { store, error, covered, fee, checked } }
@@ -204,6 +210,7 @@ const Checkout = () => {
 
   const applySavedAddress = (addr) => {
     setSelectedAddressId(addr.id);
+    setDeliveryPin(validPin(addr.latitude, addr.longitude) ? { latitude: addr.latitude, longitude: addr.longitude } : null);
     setDeliveryForm((prev) => ({
       ...prev,
       fullName: addr.fullName || '',
@@ -220,6 +227,7 @@ const Checkout = () => {
 
   const useManualAddress = () => {
     setSelectedAddressId(null);
+    setDeliveryPin(null);
   };
 
   // Load saved addresses and prefill from the default one, if any
@@ -583,6 +591,7 @@ const Checkout = () => {
       if (!deliveryForm.street.trim()) errs.street = 'Street / house address is required.';
       if (!deliveryForm.barangay.trim()) errs.barangay = 'Barangay is required.';
       if (!deliveryForm.municipality.trim()) errs.municipality = 'Municipality is required.';
+      if (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude)) errs.pin = 'Pin your delivery spot on the map so the rider can find you.';
     }
     setDeliveryErrors(errs);
     return Object.keys(errs).length === 0;
@@ -622,8 +631,10 @@ const Checkout = () => {
       return;
     }
     if (!validateDelivery()) {
-      toast.error(fulfillmentMethod === 'DELIVERY' ? 'Please complete your delivery address.' : 'Please complete your contact details.');
-      scrollToSection('co-address');
+      const pinOnly = fulfillmentMethod === 'DELIVERY' && (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude))
+        && deliveryForm.street.trim() && deliveryForm.barangay.trim() && deliveryForm.municipality.trim();
+      toast.error(pinOnly ? 'Pin your delivery spot on the map.' : fulfillmentMethod === 'DELIVERY' ? 'Please complete your delivery address.' : 'Please complete your contact details.');
+      scrollToSection(pinOnly ? 'co-pin' : 'co-address');
       return;
     }
     if (fulfillmentMethod === 'DELIVERY' && !sellerDelivers && !chosenCourier) {
@@ -671,9 +682,9 @@ const Checkout = () => {
           fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
         contactNumber: normalizeContact(deliveryForm.contactNumber),
         deliveryNotes: notes || undefined,
-        // The saved address's map pin, if it has one.
-        ...(fulfillmentMethod === 'DELIVERY' && pinnedAddress?.latitude != null
-          ? { deliveryLatitude: pinnedAddress.latitude, deliveryLongitude: pinnedAddress.longitude }
+        // The delivery spot on the map, for the rider.
+        ...(fulfillmentMethod === 'DELIVERY' && deliveryPin
+          ? { deliveryLatitude: deliveryPin.latitude, deliveryLongitude: deliveryPin.longitude }
           : {}),
         buyerMunicipalityId: deliveryForm.municipalityId || undefined,
         buyerBarangay: deliveryForm.barangay || undefined,
@@ -692,6 +703,10 @@ const Checkout = () => {
       }
 
       if (response?.data?.id) setOrderId(response.data.id);
+      // A saved address pinned here for the first time keeps its pin.
+      if (fulfillmentMethod === 'DELIVERY' && pinnedAddress && !validPin(pinnedAddress.latitude, pinnedAddress.longitude) && deliveryPin) {
+        axios.put(`/addresses/${pinnedAddress.id}`, { latitude: deliveryPin.latitude, longitude: deliveryPin.longitude }, { quiet: true }).catch(() => {});
+      }
 
       writeGcashReturn(null);
       setOrderSuccess(true);
@@ -972,6 +987,28 @@ const Checkout = () => {
                           errors={deliveryErrors}
                         />
                       )}
+
+                      {fulfillmentMethod === 'DELIVERY' && (
+                        <div className={`form-group checkout-pin${deliveryErrors.pin ? ' has-error' : ''}`} id="co-pin">
+                          <label className="form-label">Pin your delivery spot</label>
+                          <p className="checkout-pin-help">
+                            {pinnedAddress && deliveryPin && validPin(pinnedAddress.latitude, pinnedAddress.longitude)
+                              ? 'From your saved address. Drag the pin if the spot has moved.'
+                              : 'Tap the map at your house (or use your location). The rider follows this pin.'}
+                          </p>
+                          <StoreLocationMap
+                            value={deliveryPin}
+                            onChange={({ latitude, longitude }) => {
+                              setDeliveryPin({ latitude, longitude });
+                              if (deliveryErrors.pin) setDeliveryErrors((prev) => ({ ...prev, pin: '' }));
+                            }}
+                            height={240}
+                            lockToPhilippines
+                            hint="Tap the map where the house is."
+                          />
+                          {deliveryErrors.pin && <span className="form-error">{deliveryErrors.pin}</span>}
+                        </div>
+                      )}
                     </div>
 
                     {/* Per-store status */}
@@ -990,6 +1027,7 @@ const Checkout = () => {
                                   {info?.store?.pickupInstructions && (
                                     <p className="store-status-note">{info.store.pickupInstructions}</p>
                                   )}
+                                  {info?.store && <PickupRoute store={info.store} />}
                                 </div>
                               </div>
                             );

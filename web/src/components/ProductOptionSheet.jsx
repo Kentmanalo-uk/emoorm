@@ -17,8 +17,9 @@ const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFracti
  * and quantity before adding it to the cart or buying it now.
  *
  * mode: 'cart' | 'buy' | null (closed)
- * onConfirm(): runs the add or buy; the sheet only checks that every option
- * group has a pick first.
+ * onConfirm(action): runs the add ('cart') or buy ('buy'); the sheet only
+ * checks that every option group has a pick first. Opened for Buy now, the
+ * sheet offers both, so a buyer who changes their mind can still add to cart.
  * limits: { least, most } for the quantity when the product's kind sets them
  * (a paluto's minimum order and no stock cap); stockText and soldOutText
  * replace the stock line and "Out of stock" for kinds that word them otherwise;
@@ -44,6 +45,8 @@ export default function ProductOptionSheet({
   const [shown, setShown] = useState(mode);
   const [closing, setClosing] = useState(false);
   const [missing, setMissing] = useState('');
+  // Which footer button was pressed, so only that one shows it is working.
+  const [pressed, setPressed] = useState(null);
   const timer = useRef(null);
   const bodyRef = useRef(null);
   const trapRef = useFocusTrap(Boolean(mode));
@@ -55,6 +58,7 @@ export default function ProductOptionSheet({
       setShown(mode);
       setClosing(false);
       setMissing('');
+      setPressed(null);
     } else if (shown) {
       setClosing(true);
       timer.current = setTimeout(() => { setShown(null); setClosing(false); }, CLOSE_MS);
@@ -97,7 +101,7 @@ export default function ProductOptionSheet({
 
   const setQty = (n) => onQuantity(Math.max(least, Math.min(most || 1, n)));
 
-  const confirm = () => {
+  const confirm = (action = shown) => {
     const first = variations.find((v) => !selected[v.name]);
     if (first) {
       setMissing(first.name);
@@ -105,7 +109,8 @@ export default function ProductOptionSheet({
         ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    onConfirm();
+    setPressed(action);
+    onConfirm(action);
   };
 
   const label = shown === 'buy' ? 'Buy now' : 'Add to cart';
@@ -217,14 +222,24 @@ export default function ProductOptionSheet({
           )}
         </div>
 
-        <div className="pos-foot">
+        <div className={`pos-foot${shown === 'buy' && !outOfStock ? ' is-split' : ''}`}>
+          {shown === 'buy' && !outOfStock && (
+            <button
+              type="button"
+              className="pos-confirm pos-confirm-cart"
+              onClick={() => confirm('cart')}
+              disabled={busy}
+            >
+              {busy && pressed === 'cart' ? <BusyLabel size={18}>Adding…</BusyLabel> : <span>Add to cart</span>}
+            </button>
+          )}
           <button
             type="button"
             className={`pos-confirm pos-confirm-${shown}`}
-            onClick={confirm}
+            onClick={() => confirm(shown)}
             disabled={outOfStock || busy}
           >
-            {outOfStock ? soldOutText : busy ? <BusyLabel size={18}>Please wait…</BusyLabel> : (
+            {outOfStock ? soldOutText : busy && pressed !== 'cart' ? <BusyLabel size={18}>Please wait…</BusyLabel> : (
               <>
                 <span>{label}</span>
                 {shown === 'buy' && <small>{peso(total)}</small>}

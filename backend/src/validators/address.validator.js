@@ -54,6 +54,15 @@ const addressValidation = [
     .isLength({ max: 500 })
     .withMessage('Address is too long'),
 
+  // Every saved address carries its spot on the map, for the rider (the
+  // service checks it is inside the Philippines).
+  body('latitude')
+    .exists({ values: 'null' })
+    .withMessage('Pin the house on the map so the rider can find it'),
+  body('longitude')
+    .exists({ values: 'null' })
+    .withMessage('Pin the house on the map so the rider can find it'),
+
   body('isDefault')
     .optional()
     .isBoolean()

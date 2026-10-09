@@ -2064,3 +2064,33 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
+
+/* The delivery spot on the map (required for delivery). Its map's layers
+   stay inside it, under the sticky header. */
+.checkout-pin {
+  margin-top: 4px;
+}
+
+.checkout-pin .store-map-frame {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.checkout-pin-help {
+  margin: 2px 0 8px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+}
+
+.checkout-pin.has-error .store-map-frame {
+  outline: 2px solid var(--t-danger-500, #ef4444);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+/* The pickup route sits under the shop's pickup address. */
+.store-status:has(.pr) > div {
+  flex: 1;
+  min-width: 0;
+}

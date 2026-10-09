@@ -26,7 +26,7 @@ const emptyForm = {
   barangay: '',
   barangayCode: '',
   street: '',
-  // Optional pin for the rider.
+  // The pin for the rider: every address has one.
   latitude: null,
   longitude: null,
 };
@@ -47,7 +47,6 @@ const Addresses = () => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState({});
-  const [pinOpen, setPinOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [busyId, setBusyId] = useState(null);
 
@@ -84,13 +83,13 @@ const Addresses = () => {
     if (!formData.municipalityId) errs.municipalityId = 'City / Municipality is required.';
     if (!formData.barangay.trim()) errs.barangay = 'Barangay is required.';
     if (!formData.street.trim()) errs.street = 'Street / house address is required.';
+    if (formData.latitude == null || formData.longitude == null) errs.pin = 'Pin the house on the map so the rider can find it.';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const openAddForm = () => {
     setEditingId(null);
-    setPinOpen(false);
     // The first address starts from the account's own address.
     const fromProfile = addresses.length === 0 && user?.municipalityId;
     setFormData({
@@ -127,7 +126,6 @@ const Addresses = () => {
       latitude: addr.latitude ?? null,
       longitude: addr.longitude ?? null,
     });
-    setPinOpen(addr.latitude != null);
     setFormErrors({});
     setFormOpen(true);
   };
@@ -137,7 +135,6 @@ const Addresses = () => {
     setEditingId(null);
     setFormData(emptyForm);
     setFormErrors({});
-    setPinOpen(false);
   };
 
   const handleSave = async (e) => {
@@ -241,7 +238,9 @@ const Addresses = () => {
                   <div>
                     <p>{addr.street || '—'}</p>
                     <p>{addr.barangay || '—'}</p>
-                    {addr.latitude != null && <p className="address-pinned"><MapPin size={13} weight="fill" /> Pinned on the map</p>}
+                    {addr.latitude != null
+                    ? <p className="address-pinned"><MapPin size={13} weight="fill" /> Pinned on the map</p>
+                    : <p className="address-unpinned"><MapPin size={13} /> Not pinned yet: edit to pin it on the map</p>}
                     <p>{addr.municipality?.name || '—'}, {addr.province || 'Oriental Mindoro'}</p>
                   </div>
                 </div>
@@ -321,28 +320,20 @@ const Addresses = () => {
             errors={formErrors}
           />
 
-          <div className="form-group address-pin">
-            {pinOpen ? (
-              <>
-                <label className="form-label">Pin it on the map (optional)</label>
-                <p className="address-pin-help">Tap where the house is. The rider gets a map link with your order.</p>
-                <StoreLocationMap
-                  value={{ latitude: formData.latitude, longitude: formData.longitude }}
-                  onChange={({ latitude, longitude }) => setFormData((prev) => ({ ...prev, latitude, longitude }))}
-                  height={260}
-                  hint="Tap the map where the house is."
-                />
-                {formData.latitude != null && (
-                  <button type="button" className="address-pin-clear" onClick={() => setFormData((prev) => ({ ...prev, latitude: null, longitude: null }))}>
-                    Remove the pin
-                  </button>
-                )}
-              </>
-            ) : (
-              <button type="button" className="address-pin-add" onClick={() => setPinOpen(true)}>
-                <MapPin size={16} /> Pin it on the map (optional)
-              </button>
-            )}
+          <div className={`form-group address-pin${formErrors.pin ? ' has-error' : ''}`}>
+            <label className="form-label">Pin the house on the map</label>
+            <p className="address-pin-help">Tap where the house is, or use your location. The rider follows this pin to your door.</p>
+            <StoreLocationMap
+              value={{ latitude: formData.latitude, longitude: formData.longitude }}
+              onChange={({ latitude, longitude }) => {
+                setFormData((prev) => ({ ...prev, latitude, longitude }));
+                if (formErrors.pin) setFormErrors((prev) => ({ ...prev, pin: '' }));
+              }}
+              height={260}
+              lockToPhilippines
+              hint="Tap the map where the house is."
+            />
+            {formErrors.pin && <span className="form-error">{formErrors.pin}</span>}
           </div>
 
           <div className="address-edit-actions">

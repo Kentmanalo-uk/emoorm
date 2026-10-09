@@ -426,8 +426,10 @@ const ProductDetails = () => {
   };
 
   // Phone sheet: the sheet has already checked every option group.
-  const confirmSheet = async () => {
-    const mode = sheetMode;
+  // `action` is the button pressed: the sheet opened for Buy now also
+  // offers Add to cart.
+  const confirmSheet = async (action) => {
+    const mode = action || sheetMode;
     if (!isAuthenticated) { setSheetMode(null); loginRedirect(); return; }
     // The identity dialog shows in place of the sheet.
     if (mode === 'buy' && !(await requireVerifiedIdentity())) { setSheetMode(null); return; }
