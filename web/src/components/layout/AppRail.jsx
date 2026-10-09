@@ -86,6 +86,21 @@ export default function AppRail({
 
   return (
     <aside className="sr-rail notranslate" translate="no" aria-label="Quick actions">
+      {/* The pink the rail's icons are painted with on computers (suite.css):
+          light pink at the top of each glyph into the brand pink below; the
+          language button has the same in blue. */}
+      <svg width="0" height="0" aria-hidden="true" focusable="false" style={{ position: 'absolute' }}>
+        <defs>
+          <linearGradient id="sr-icon-pink" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f9a8d4" />
+            <stop offset="100%" stopColor="#db2777" />
+          </linearGradient>
+          <linearGradient id="sr-icon-blue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#93c5fd" />
+            <stop offset="100%" stopColor="#2563eb" />
+          </linearGradient>
+        </defs>
+      </svg>
       <div className="sr-item">
         <button type="button" className="sr-btn sr-btn--lang" aria-label="Change language" aria-haspopup="listbox">
           <Translate size={26} weight="fill" />

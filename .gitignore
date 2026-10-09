@@ -14,5 +14,15 @@ backend/uploads-private/
 # lives in apk/keystore/). The site offers the finished APK from
 # web/public/downloads/ (apk/publish.cjs puts it there).
 apk/
+
+# Kept on this PC only, not part of the app: promo videos, manuals,
+# graphics, logo sources, decks, screenshots and the sister project.
+documentation/
+docs/
 graphics/
+icon/
 moormove/
+ppt/
+screenshot/
+# Word and Excel lock files left while a document is open.
+~$*

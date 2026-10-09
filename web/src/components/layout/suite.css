@@ -1,0 +1,218 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   The admin panel and the Seller Center on a computer: a lighter, denser
+   take on both shells, the way a business suite is laid out.
+
+   A faint pink-to-green wash (the brand's two colours) behind the whole
+   page instead of flat grey; cards outlined by a hairline with barely any
+   shadow; a little less air inside cards and table rows so more fits on
+   one screen; and a slim strip under the top bar showing the pages related
+   to the open one and the things made most often (what the phone keeps
+   behind its ⋯ button).
+
+   Computers only (769px and wider), under the two shells (.ac-shell for
+   admins, .sc-shell for sellers), so every phone screen is untouched.
+   Loaded last by both layouts and carrying one more class than the sheets
+   it refines, so it wins on specificity, never on file order.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 769px) {
+
+  :is(.ac-shell, .sc-shell):not(.is-phone) {
+    --suite-hairline: 1px solid rgba(15, 23, 42, 0.06);
+    --suite-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    --suite-glass: rgba(255, 255, 255, 0.86);
+    /* Pink into green across the whole page, faint, over the usual grey.
+       On the shell itself (which is as tall as the page), so it reaches
+       the last line of the longest page. */
+    background:
+      linear-gradient(110deg, rgba(219, 39, 119, 0.09) 0%, rgba(219, 39, 119, 0.045) 30%, rgba(5, 150, 105, 0.06) 62%, rgba(5, 150, 105, 0.09) 100%),
+      var(--t-neutral-100, #f3f4f6);
+  }
+
+  .ac-shell:not(.is-phone) {
+    --ad-inset: 16px;
+    --ad-gap-stack: 12px;
+    --ad-shadow-card: var(--suite-shadow);
+  }
+
+  /* ── Shell ─────────────────────────────────────────────────────────── */
+
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-sidebar, .sc-sidebar) {
+    border-right: var(--suite-hairline);
+  }
+
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-topbar, .sc-topbar) {
+    background: var(--suite-glass);
+    backdrop-filter: saturate(1.4) blur(10px);
+    -webkit-backdrop-filter: saturate(1.4) blur(10px);
+    border-bottom: var(--suite-hairline);
+  }
+
+  :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) {
+    padding-top: 16px;
+  }
+
+  /* ── The strip under the top bar ──────────────────────────────────── */
+
+  :is(.ac-shell, .sc-shell) .ac-toolstrip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 36px;
+    padding: 4px 24px;
+    background: rgba(255, 255, 255, 0.35);
+    border-bottom: var(--suite-hairline);
+  }
+
+  :is(.ac-shell, .sc-shell) .ac-toolstrip-related,
+  :is(.ac-shell, .sc-shell) .ac-toolstrip-create {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  /* A thin rule between the related pages and the create links. */
+  :is(.ac-shell, .sc-shell) .ac-toolstrip-create {
+    padding-left: 10px;
+    border-left: var(--suite-hairline);
+  }
+
+  :is(.ac-shell, .sc-shell) .ac-toolstrip-chip,
+  :is(.ac-shell, .sc-shell) .ac-toolstrip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 9px;
+    border-radius: 7px;
+    background: transparent;
+    border: 0;
+    color: var(--t-neutral-600, #4b5563);
+    font-size: 12.5px;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color .12s, color .12s;
+  }
+
+  :is(.ac-shell, .sc-shell) .ac-toolstrip-chip svg {
+    width: 14px;
+    height: 14px;
+    color: var(--t-neutral-500, #6b7280);
+  }
+
+  :is(.ac-shell, .sc-shell) .ac-toolstrip-btn svg {
+    color: var(--t-primary-600, #047857);
+  }
+
+  :is(.ac-shell, .sc-shell) :is(.ac-toolstrip-chip, .ac-toolstrip-btn):hover {
+    background: rgba(255, 255, 255, 0.8);
+    color: var(--t-primary-800, #065f46);
+  }
+
+  :is(.ac-shell, .sc-shell) .ac-toolstrip-chip:hover svg {
+    color: var(--t-primary-600, #047857);
+  }
+
+  /* Narrow desktops: the related pages give way to the create links. */
+  @media (max-width: 1180px) {
+    :is(.ac-shell, .sc-shell) .ac-toolstrip-related {
+      display: none;
+    }
+  }
+
+  /* ── Admin cards and tables: outlined, a step tighter ──────────────── */
+
+  .ac-shell:not(.is-phone) .ac-content :is(.admin-card, .dash-card, .dash-stat, .dash-attention) {
+    border: var(--suite-hairline);
+    box-shadow: var(--suite-shadow);
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .admin-card-header {
+    min-height: 58px;
+    padding: 12px var(--ad-inset);
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .dash-stat {
+    padding: 16px 18px 14px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-content :is(.dash, .dash-stats, .dash-grid) {
+    gap: 12px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-content .admin-table :is(th, td) {
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-content :is(.admin-page-header, .dash-header) {
+    margin-bottom: 14px;
+  }
+
+  /* ── Seller cards and tables: the same ─────────────────────────────── */
+
+  .sc-shell:not(.is-phone) .sc-content :is(.sd-card, .seller-card, .sa-card, .sd-stat, .sd-kpi-side > *) {
+    border: var(--suite-hairline);
+    box-shadow: var(--suite-shadow);
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .sd-card-header {
+    padding: 12px 16px 10px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-card {
+    margin-bottom: 12px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-content .seller-table :is(th, td) {
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+}
+
+/* ── The right rail: language, notifications, sign out ─────────────────
+   The rail stays white; the icons themselves carry the brand's pink, light
+   at the top of each glyph into full pink at the bottom. The gradient is
+   an SVG definition the rail renders once (AppRail.jsx), referenced here by
+   id. Computers only, like everything in this sheet. */
+@media (min-width: 769px) {
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn > svg :is(path, circle, rect, line, polyline, polygon) {
+    fill: url(#sr-icon-pink);
+  }
+
+  /* Any part of a glyph that still paints with the current colour (and the
+     rail's own blue for the language button) is pink too. */
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail :is(.sr-btn--notif, .sr-btn--logout),
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail :is(.sr-btn--notif, .sr-btn--logout):hover,
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-item:not(.sr-item--click):hover :is(.sr-btn--notif, .sr-btn--logout) {
+    color: #db2777;
+  }
+
+  /* The language button keeps its blue, light to full, the same way. */
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn--lang > svg :is(path, circle, rect, line, polyline, polygon) {
+    fill: url(#sr-icon-blue);
+  }
+
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn--lang,
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn--lang:hover,
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-item:not(.sr-item--click):hover .sr-btn--lang {
+    color: #2563eb;
+  }
+
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn--lang:hover,
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-item:not(.sr-item--click):hover .sr-btn--lang,
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-item:not(.sr-item--click):focus-within .sr-btn--lang {
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn:hover,
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-item:not(.sr-item--click):hover .sr-btn,
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-item:not(.sr-item--click):focus-within .sr-btn,
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-item.is-open .sr-btn {
+    background: rgba(219, 39, 119, 0.08);
+  }
+}

@@ -26,6 +26,7 @@ import SellerCenterGuide from '../seller/SellerCenterGuide';
 import SetupReturnPill from '../seller/SetupReturnPill';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import AppRail from './AppRail';
+import ToolStrip from './ToolStrip';
 import './SellerLayout.css';
 import './SellerShellMobile.css';
 import './SellerPhoneFit.css';
@@ -47,6 +48,8 @@ import '../../pages/SellerReturns.css';
 import UserAvatar from '../ui/UserAvatar';
 import { readCache, writeCache } from '../../lib/pageCache';
 import { afterSignOutPath } from '../../lib/afterSignOut';
+// The business-suite look shared with the admin panel, last so it wins.
+import './suite.css';
 
 /**
  * Persistent shell for /seller/* routes.
@@ -568,6 +571,8 @@ export default function SellerLayout() {
             </button>
           </div>
         </header>
+
+        {!isPhone && <ToolStrip area="seller" role="SELLER" />}
 
         <main className="sc-content">
           {!isPhone && DESKTOP_HIDDEN_TITLES.includes(cleanPath) && (

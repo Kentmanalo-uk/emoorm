@@ -19,6 +19,7 @@ import {
   useAdminAttention, useAdminShellData, useRefreshAdminShell, waitingByLink,
 } from '../../hooks/useAdminShellData';
 import ShellSearch from '../layout/ShellSearch';
+import ToolStrip from '../layout/ToolStrip';
 import { adminSearchSources } from '../../lib/shellSearchSources';
 // The admin shell on phones is drawn with the Seller Center's app styles
 // (headers, tab bar, cards). They used to arrive with the Seller Center's
@@ -65,6 +66,8 @@ import './desktop/AdminDesktop.css';
 import './desktop/overview.css';
 import './desktop/tables.css';
 import './desktop/moderation.css';
+// The business-suite look shared with the Seller Center, last so it wins.
+import '../layout/suite.css';
 import './desktop/conversations.css';
 import { afterSignOutPath } from '../../lib/afterSignOut';
 import PageMenu from '../layout/PageMenu';
@@ -459,6 +462,8 @@ export default function AdminLayout({ children }) {
             </button>
           </div>
         </header>
+
+        {!isPhone && <ToolStrip area="admin" role={user?.role} />}
 
         {isPhone && isTabRoot && !ownHeader && (
           <header className="scm-head acm-head">
