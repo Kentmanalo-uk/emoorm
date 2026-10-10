@@ -1,8 +1,8 @@
 /**
- * Talking to MoorMove (move.emoorm.shop), the rider service that delivers
+ * Talking to MoorMove (moormove.emoorm.shop), the rider service that delivers
  * orders for shops. Server to server only, with one shared secret:
  *
- *   MOORMOVE_API_URL  e.g. https://move.emoorm.shop/api (locally http://localhost:4000/api)
+ *   MOORMOVE_API_URL  e.g. https://moormove.emoorm.shop/api (locally http://localhost:4000/api)
  *   MOORMOVE_SECRET   the same value as MoorMove's PARTNER_SECRET, 32+ characters
  *
  * Without either, MoorMove is "not configured" and every MoorMove option is

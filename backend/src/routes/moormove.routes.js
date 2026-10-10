@@ -5,7 +5,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { publicCache } = require('../middleware/httpCache');
 
 /**
- * MoorMove rider delivery (move.emoorm.shop).
+ * MoorMove rider delivery (moormove.emoorm.shop).
  *
  *   router       mounted at /moormove: the option's status, checkout's rider
  *                fee, the super admin's connection check
