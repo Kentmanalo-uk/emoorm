@@ -21,7 +21,7 @@ documentation/
 docs/
 graphics/
 icon/
-moormove/
+/moormove/
 ppt/
 screenshot/
 # Word and Excel lock files left while a document is open.

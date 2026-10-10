@@ -17,6 +17,8 @@ export const DEFAULT_APP_SETTINGS = {
   availableTodayEnabled: true,
   // Home's "Shop by Category": 'IMAGE' (pictures) or 'ICON' (gradient icons).
   categoryStyle: 'IMAGE',
+  // MoorMove rider delivery, switched on by the super admin.
+  moormoveEnabled: false,
 };
 
 /**

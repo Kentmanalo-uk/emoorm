@@ -14,6 +14,7 @@ import {
   DeviceMobile,
   NotePencil,
   ClockCountdown,
+  Motorcycle,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -36,7 +37,8 @@ import { CourierMark } from '../components/orders/CourierTracking';
 import {
   allowsCourier, allowsMethod, cookDaysLabel, cookReady,
 } from '../lib/productKinds';
-import { orderEta, onDayStart } from '../lib/eta';
+import { orderEta, onDayStart, rangeLabel } from '../lib/eta';
+import { useMoormove } from '../lib/moormove';
 import {
   lineKind, lineNote, lineUnit, countLabel, whenLabel, orderByLabel,
 } from '../lib/orderLines';
@@ -65,6 +67,10 @@ const writeGcashReturn = (storeId) => {
   }
 };
 
+// A key for one checkout (see handlePlaceOrder).
+const newCheckoutId = () => window.crypto?.randomUUID?.()
+  || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -72,6 +78,7 @@ const Checkout = () => {
   const { items: allItems, clearCart, revalidate } = useCartStore();
   const { requireVerifiedIdentity, showIdentityRequired, identityDialog } = useIdentityGate();
   const { settings } = useAppSettings();
+  const { enabled: ridersOn } = useMoormove();
   const isPhone = usePhoneLayout();
 
   // Refresh price / stock / availability of every line before anything is placed.
@@ -370,6 +377,44 @@ const Checkout = () => {
     return () => { cancelled = true; };
   }, [quoteKey, fulfillmentMethod]);
 
+  // A MoorMove rider: offered when riders are on and the shop takes them
+  // (its pin is where the rider picks up). The fee is by distance, so it
+  // waits for the buyer's pin; the server prices the order the same way.
+  const riderStore = storeInfo[storeIds[0]]?.store || null;
+  const ridersOffered = ridersOn && fulfillmentMethod === 'DELIVERY' && Boolean(riderStore)
+    && riderStore.moormoveEnabled !== false && validPin(riderStore.latitude, riderStore.longitude);
+  const [riderQuote, setRiderQuote] = useState(null); // { key, available, reason, fee, distanceKm, eta }
+  const riderKey = ridersOffered && deliveryPin && validPin(deliveryPin.latitude, deliveryPin.longitude)
+    ? JSON.stringify([
+      storeIds[0],
+      Number(deliveryPin.latitude).toFixed(6),
+      Number(deliveryPin.longitude).toFixed(6),
+      orderableItems.map((it) => [it.productId || it.id, it.quantity]),
+    ])
+    : null;
+  useEffect(() => {
+    if (!riderKey) return undefined;
+    const [storeId, lat, lng, lines] = JSON.parse(riderKey);
+    let cancelled = false;
+    // A pin being dragged settles first.
+    const timer = setTimeout(() => {
+      axios.post('/moormove/quote', {
+        storeId,
+        lat: Number(lat),
+        lng: Number(lng),
+        items: lines.map(([productId, quantity]) => ({ productId, quantity })),
+      }, { quiet: true })
+        .then((res) => { if (!cancelled) setRiderQuote({ key: riderKey, ...(res.data || {}) }); })
+        .catch((err) => {
+          if (!cancelled) setRiderQuote({ key: riderKey, available: false, reason: err?.status >= 500 || !err?.status ? "Riders can't be reached right now. Try again in a moment." : err?.message || null, fee: null });
+        });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [riderKey]);
+  // Only the answer for this pin and these items counts.
+  const riderAnswer = riderQuote && riderQuote.key === riderKey ? riderQuote : null;
+  const riderReady = Boolean(riderAnswer?.available) && riderAnswer.fee != null;
+
   // Available Today items: delivered by the shop or picked up, never by a
   // courier, in the ways their windows allow; ready in their ready time.
   const todayLines = useMemo(() => items.filter((it) => it.listingKind === 'TODAY' && it.availability), [items]);
@@ -402,15 +447,18 @@ const Checkout = () => {
   const courierChoices = shipQuote?.couriers || [];
   const courierPickable = (c) => c.fee != null && onlineReady && !todayLines.length && !noCourierNames.length;
   // A shop that only ships with couriers can't deliver what they won't take.
-  const courierOnlyBlocked = Boolean(shipQuote) && !sellerDelivers && courierChoices.length > 0 && noCourierNames.length > 0;
+  const courierOnlyBlocked = Boolean(shipQuote) && !sellerDelivers && courierChoices.length > 0 && noCourierNames.length > 0 && !ridersOffered;
   // The pick, or the first way that works when it no longer does.
   const choiceValid = (choice) => (choice === 'SELLER'
     ? sellerReaches
-    : courierChoices.some((c) => c.id === choice && courierPickable(c)));
+    : choice === 'MOORMOVE'
+      ? riderReady
+      : courierChoices.some((c) => c.id === choice && courierPickable(c)));
   const activeChoice = choiceValid(deliveryChoice)
     ? deliveryChoice
-    : (sellerReaches ? 'SELLER' : courierChoices.find(courierPickable)?.id || 'SELLER');
-  const chosenCourier = fulfillmentMethod === 'DELIVERY' && activeChoice !== 'SELLER'
+    : (sellerReaches ? 'SELLER' : courierChoices.find(courierPickable)?.id || (riderReady ? 'MOORMOVE' : 'SELLER'));
+  const riderChosen = fulfillmentMethod === 'DELIVERY' && activeChoice === 'MOORMOVE' && riderReady;
+  const chosenCourier = fulfillmentMethod === 'DELIVERY' && activeChoice !== 'SELLER' && activeChoice !== 'MOORMOVE'
     ? courierChoices.find((c) => c.id === activeChoice) || null
     : null;
 
@@ -470,9 +518,9 @@ const Checkout = () => {
 
   const anyCoverageMissing = useMemo(
     () =>
-      fulfillmentMethod === 'DELIVERY' && !chosenCourier &&
+      fulfillmentMethod === 'DELIVERY' && !chosenCourier && !riderChosen &&
       storeIds.some((id) => storeInfo[id]?.checked && !storeInfo[id]?.covered),
-    [fulfillmentMethod, storeIds, storeInfo, chosenCourier]
+    [fulfillmentMethod, storeIds, storeInfo, chosenCourier, riderChosen]
   );
 
   // Checkout holds one store's items. Delivery costs what that store charges
@@ -483,7 +531,7 @@ const Checkout = () => {
     ? Number(quoted.fee)
     : storeDeliveryFee(checkoutStore, settings, 'DELIVERY');
   const shippingFee = orderableItems.length > 0 && fulfillmentMethod === 'DELIVERY'
-    ? (chosenCourier ? Number(chosenCourier.fee) : deliveryFee)
+    ? (chosenCourier ? Number(chosenCourier.fee) : riderChosen ? Number(riderAnswer.fee) : deliveryFee)
     : 0;
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount);
@@ -637,7 +685,7 @@ const Checkout = () => {
       scrollToSection(pinOnly ? 'co-pin' : 'co-address');
       return;
     }
-    if (fulfillmentMethod === 'DELIVERY' && !sellerDelivers && !chosenCourier) {
+    if (fulfillmentMethod === 'DELIVERY' && !sellerDelivers && !chosenCourier && !riderChosen) {
       toast.error('Choose a courier to deliver your order.');
       scrollToSection('co-delivery');
       return;
@@ -660,8 +708,7 @@ const Checkout = () => {
     // One key per checkout: a retry after a lost response finds the order
     // already placed instead of placing it again.
     if (!checkoutIdRef.current) {
-      checkoutIdRef.current = window.crypto?.randomUUID?.()
-        || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      checkoutIdRef.current = newCheckoutId();
     }
     const checkoutId = checkoutIdRef.current;
     try {
@@ -677,6 +724,8 @@ const Checkout = () => {
         paymentMethod,
         // A courier the buyer chose: priced by weight, paid online.
         courierId: chosenCourier?.id || undefined,
+        // A MoorMove rider: priced by distance on the server, cash on delivery allowed.
+        deliveryPartner: riderChosen ? 'MOORMOVE' : undefined,
         voucherCode: appliedVoucher?.voucher?.code || undefined,
         deliveryAddress:
           fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
@@ -1047,7 +1096,9 @@ const Checkout = () => {
                               <div>
                                 <strong>{storeName}</strong>
                                 <p>
-                                  {courierChoices.some(courierPickable)
+                                  {riderReady
+                                    ? 'The seller does not deliver here, but a MoorMove rider can. Choose it below.'
+                                    : courierChoices.some(courierPickable)
                                     ? 'The seller does not deliver here, but a courier can. Choose one below.'
                                     : 'Does not deliver to your address. Choose Pickup or update your address.'}
                                 </p>
@@ -1060,7 +1111,7 @@ const Checkout = () => {
                   </div>
 
                   {/* How it is delivered: by the seller or by a courier */}
-                  {fulfillmentMethod === 'DELIVERY' && shipQuote && (sellerDelivers || courierChoices.length > 0) && (
+                  {fulfillmentMethod === 'DELIVERY' && ((shipQuote && (sellerDelivers || courierChoices.length > 0)) || ridersOffered) && (
                     <div className="checkout-section" id="co-delivery">
                       <div className="section-header">
                         <Truck size={24} />
@@ -1108,6 +1159,38 @@ const Checkout = () => {
                           );
                         })}
                       </div>
+                      {ridersOffered && (() => {
+                        const pinned = deliveryPin && validPin(deliveryPin.latitude, deliveryPin.longitude);
+                        const why = !pinned ? 'Drop your pin to see the rider fee'
+                          : !riderAnswer ? 'Checking the rider fee…'
+                            : !riderReady ? (riderAnswer.reason || 'No rider for this address right now') : null;
+                        const eta = riderReady && riderAnswer.eta?.from && riderAnswer.eta?.to
+                          ? rangeLabel({ from: new Date(riderAnswer.eta.from), to: new Date(riderAnswer.eta.to) })
+                          : null;
+                        const km = riderReady && riderAnswer.distanceKm != null
+                          ? `${Number(riderAnswer.distanceKm).toLocaleString('en-PH', { maximumFractionDigits: 1 })} km`
+                          : null;
+                        return (
+                          <ChoiceCard
+                            name="delivery-option"
+                            value="MOORMOVE"
+                            className="co-delivery-choice"
+                            checked={activeChoice === 'MOORMOVE'}
+                            disabled={Boolean(why)}
+                            onChange={setDeliveryChoice}
+                            media={<Motorcycle size={20} weight="fill" />}
+                            title="MoorMove rider"
+                            desc={why || ['A local rider brings it', km, eta ? `arrives ${eta}` : null, 'cash on delivery OK'].filter(Boolean).join(' · ')}
+                            aside={why ? '' : peso(riderAnswer.fee)}
+                          />
+                        );
+                      })()}
+                      {riderChosen && (
+                        <p className="co-delivery-note">
+                          A MoorMove rider picks up your order at the shop and brings it to your pin. You can see the rider on a map in My Orders.
+                          {paymentMethod === 'COD' ? ` Pay ${peso(total)} to the rider when it arrives.` : ''}
+                        </p>
+                      )}
                       {chosenCourier && (
                         <p className="co-delivery-note">
                           Courier deliveries are paid online with GCash or QR Ph after the seller confirms your order.
@@ -1162,7 +1245,7 @@ const Checkout = () => {
                           <div className="co-m-ship">
                             <span>
                               {fulfillmentMethod === 'PICKUP' ? <StoreIcon size={16} /> : <Truck size={16} />}
-                              {fulfillmentMethod === 'PICKUP' ? 'Pickup at the store' : chosenCourier ? `Shipping · ${chosenCourier.name}` : 'Delivery fee'}
+                              {fulfillmentMethod === 'PICKUP' ? 'Pickup at the store' : chosenCourier ? `Shipping · ${chosenCourier.name}` : riderChosen ? 'MoorMove rider' : 'Delivery fee'}
                             </span>
                             <span>{fulfillmentMethod === 'PICKUP' ? 'No fee' : peso(shippingFee)}</span>
                           </div>
@@ -1244,7 +1327,7 @@ const Checkout = () => {
                   <span>{peso(subtotal)}</span>
                 </div>
                 <div className="summary-row">
-                  <span>{fulfillmentMethod === 'PICKUP' ? 'Pickup' : chosenCourier ? `Shipping (${chosenCourier.name})` : 'Delivery Fee'}</span>
+                  <span>{fulfillmentMethod === 'PICKUP' ? 'Pickup' : chosenCourier ? `Shipping (${chosenCourier.name})` : riderChosen ? 'Rider fee' : 'Delivery Fee'}</span>
                   <span>{fulfillmentMethod === 'PICKUP' ? 'No fee' : peso(shippingFee)}</span>
                 </div>
                 {appliedVoucher && discountAmount > 0 && (

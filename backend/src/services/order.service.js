@@ -22,6 +22,8 @@ const deliveryQuoteService = require('./deliveryQuote.service');
 const courierService = require('./courier.service');
 const shopReadiness = require('./shopReadiness.service');
 const availabilityService = require('./availability.service');
+const moormoveService = require('./moormove.service');
+const { isOpen: riderOpen, withRiderDelivery } = require('./moormove.view');
 const { ApiError } = require('../middleware/errorHandler');
 const { snapshotReturnPolicy } = require('../utils/returnPolicy');
 const shopHours = require('../utils/shopHours');
@@ -120,12 +122,17 @@ const orderEta = (store, products, how, now = new Date()) => {
  * @param {Object} data - Order data
  * @returns {Promise<Object>} Created order
  */
-/** The seller's reason, checked against where the order is. */
-const sellerCancelReason = (order, reason) => {
+/**
+ * The seller's reason, checked against where the order is. After a MoorMove
+ * rider couldn't deliver it (`riderFailed`), the order is back in To ship but
+ * the buyer may well have refused it or not been there.
+ */
+const sellerCancelReason = (order, reason, { riderFailed = false } = {}) => {
   const key = reason ? String(reason).toUpperCase() : 'SELLER_CANCELLED';
   if (!(key in SELLER_CANCEL_REASONS)) throw new ApiError('Choose why the order is cancelled', 400);
   const only = SELLER_CANCEL_REASONS[key];
-  if (only && !only.includes(order.status)) {
+  const afterRider = riderFailed && ['REFUSED', 'NO_SHOW'].includes(key) && order.status === 'TO_SHIP';
+  if (only && !only.includes(order.status) && !afterRider) {
     throw new ApiError(key === 'NO_SHOW'
       ? 'A no-show is for an order that was ready for pickup'
       : 'Refused is for an order that was out for delivery', 400);
@@ -205,7 +212,14 @@ const createOrder = async (userId, data) => {
     checkoutKey,
     voucherCode,
     courierId,
+    deliveryPartner,
   } = data;
+
+  // A MoorMove rider instead of the shop or a courier (delivery only).
+  const partner = deliveryPartner ? String(deliveryPartner).trim().toUpperCase() : null;
+  if (partner && partner !== 'MOORMOVE') throw new ApiError('Choose how the order is delivered again', 400);
+  if (partner && fulfillmentMethod !== 'DELIVERY') throw new ApiError('A MoorMove rider is for delivery orders', 400);
+  if (partner && courierId) throw new ApiError('Choose either a courier or a MoorMove rider', 400);
 
   // Validate buyer
   const buyer = await userRepository.findById(userId);
@@ -310,11 +324,21 @@ const createOrder = async (userId, data) => {
   // the province, is priced on the parcel's weight below, and is paid online.
   let deliveryQuote = null;
   let courier = null;
+  let riderPin = null;
   if (fulfillmentMethod === 'DELIVERY') {
     if (!deliveryAddress) {
       throw new ApiError('Delivery address is required', 400);
     }
-    if (courierId) {
+    if (partner) {
+      // Delivered by a MoorMove rider: anywhere the rider can reach from the
+      // shop's pin, priced by MoorMove below (the shop's coverage doesn't apply).
+      const check = await moormoveService.availability(store);
+      if (!check.ok) throw new ApiError(`${check.reason}. Choose another way to receive it.`, 400);
+      riderPin = normalizePin(deliveryLatitude, deliveryLongitude);
+      if (riderPin.latitude == null) {
+        throw new ApiError('Drop your pin on the map so the rider can find you', 400);
+      }
+    } else if (courierId) {
       courier = await courierService.courierForStore(storeId, courierId);
       if (!courier) throw new ApiError("This shop doesn't ship with that courier", 400);
       if (paymentMethod === 'COD') {
@@ -346,6 +370,8 @@ const createOrder = async (userId, data) => {
   const orderedProducts = [];
   let parcelGrams = 0;
   const unweighed = [];
+  // For a MoorMove rider's vehicle: a product without a weight counts as 500 g.
+  let riderGrams = 0;
 
   for (const item of items) {
     const quantity = Number(item.quantity);
@@ -404,6 +430,7 @@ const createOrder = async (userId, data) => {
     // (e.g. 1kg vs 250g); otherwise the product's single price.
     if (product.weightGrams) parcelGrams += product.weightGrams * quantity;
     else unweighed.push(product.name);
+    riderGrams += (product.weightGrams || 500) * quantity;
 
     // Options, a sale and a bulk price for this quantity (utils/variantPricing).
     const unitPrice = unitPriceFor(product, selectedVariations, quantity);
@@ -448,7 +475,15 @@ const createOrder = async (userId, data) => {
       throw new ApiError(`This order is too heavy for ${courier.name}. Choose another way to receive it.`, 400);
     }
   }
-  const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0 : (courier ? courierFee : deliveryQuote.fee);
+  // A MoorMove rider: what MoorMove quotes for this parcel from the shop's
+  // pin to the buyer's, asked here (never the price the browser saw).
+  let riderQuote = null;
+  if (partner) {
+    riderQuote = await moormoveService.quoteForCheckout({ store, buyerPin: riderPin, grams: riderGrams });
+    if (!riderQuote.available) throw new ApiError(`${riderQuote.reason}. Choose another way to receive it.`, 400);
+  }
+  const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0
+    : (courier ? courierFee : (riderQuote ? riderQuote.fee : deliveryQuote.fee));
   let voucherRecord = null;
   let discountAmount = 0;
   if (voucherCode) {
@@ -461,6 +496,11 @@ const createOrder = async (userId, data) => {
   }
 
   const grandTotal = Math.max(0, totalAmount + DELIVERY_FEE - discountAmount);
+
+  // The rider carries cash for the shop only up to MoorMove's limit.
+  if (riderQuote && paymentMethod === 'COD' && riderQuote.maxCod != null && grandTotal - DELIVERY_FEE > riderQuote.maxCod) {
+    throw new ApiError(`A MoorMove rider can collect up to ₱${Number(riderQuote.maxCod).toLocaleString('en-PH')} in cash for the shop. Pay with GCash or QR Ph, or choose another way to receive it.`, 400);
+  }
 
   // When the buyer can expect it, from the shop's preparation days and week
   // (and a paluto's cooking time).
@@ -513,6 +553,8 @@ const createOrder = async (userId, data) => {
         buyerProvince: buyerProvince || buyer.province || 'Oriental Mindoro',
         // The courier the buyer chose; the seller ships with it.
         ...(courier ? { courierId: courier.id, courierName: courier.name, shippingWeightGrams: parcelGrams } : {}),
+        // A MoorMove rider: the seller calls one once it is packed.
+        ...(riderQuote ? { deliveryPartner: 'MOORMOVE' } : {}),
       },
       orderItems,
       voucherRecord ? { voucherId: voucherRecord.id, userId, discountAmount } : null,
@@ -609,7 +651,7 @@ const getOrderById = async (id, userId, userRole, userMunicipalityId) => {
   // The buyer and the seller see the order; an admin sees what moderating
   // it needs (adminOrderView), and asks to see more with a reason.
   if (!isBuyer && !isSeller) return adminOrderView(order);
-  return order;
+  return withRiderDelivery(order);
 };
 
 /* ── Orders as admins see them ──────────────────────────────────────── */
@@ -699,7 +741,7 @@ const revealOrderDetails = async (orderId, actor, part) => {
  */
 const getMyOrders = async (userId, options) => {
   const result = await orderRepository.findAll({ ...options, buyerId: userId, forBuyer: true });
-  return { ...result, orders: result.orders.map(withDeadline) };
+  return { ...result, orders: result.orders.map((o) => withDeadline(withRiderDelivery(o))) };
 };
 
 /**
@@ -742,7 +784,7 @@ const getStoreOrders = async (userId, options) => {
   }
 
   const result = await orderRepository.findAll({ ...options, storeId: store.id });
-  return { ...result, orders: result.orders.map(withDeadline) };
+  return { ...result, orders: result.orders.map((o) => withDeadline(withRiderDelivery(o))) };
 };
 
 /** The seller's tab counts: orders per stage (new, unpaid, to ship…). */
@@ -825,6 +867,15 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelR
   if (order.courierId && ['OUT_FOR_DELIVERY', 'DELIVERED'].includes(newStatus)) {
     throw new ApiError(`Ship this order with ${order.courierName || 'the courier'} the buyer chose`, 400);
   }
+  // A MoorMove rider's progress moves these orders on (or the seller first
+  // chooses to deliver it themselves).
+  if (order.deliveryPartner === 'MOORMOVE' && ['OUT_FOR_DELIVERY', 'DELIVERED'].includes(newStatus)) {
+    throw new ApiError('A MoorMove rider updates this order', 400);
+  }
+  const rider = order.riderDeliveries?.[0] || null;
+  if (newStatus === 'CANCELLED' && riderOpen(rider)) {
+    throw new ApiError('Cancel the rider first, then cancel the order', 409);
+  }
 
   if (order.paymentMethod !== 'COD'
     && ['PREPARING', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP', 'SHIPPED', 'COMPLETED'].includes(newStatus)
@@ -856,7 +907,7 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelR
       ? await orderRepository.cancelOrder(orderId, userId, {
         fromStatuses: [order.status],
         note: 'Cancelled by seller',
-        reason: sellerCancelReason(order, cancelReason),
+        reason: sellerCancelReason(order, cancelReason, { riderFailed: rider?.status === 'FAILED' }),
         by: 'SELLER',
       })
       : await orderRepository.updateStatus(orderId, newStatus, order.status, userId, null, proofFields);
@@ -1388,6 +1439,7 @@ const expireUnpaidOrders = async (ageHours = PAYMENT_EXPIRY_HOURS) => {
 };
 
 module.exports = {
+  withDeadline,
   buyerRecord,
   getStoreStageCounts,
   createOrder,

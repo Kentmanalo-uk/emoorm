@@ -62,6 +62,13 @@ const createOrderValidation = [
     .isIn(FULFILLMENT_METHODS)
     .withMessage('Invalid fulfillment method'),
 
+  // Delivered by a MoorMove rider instead of the shop or a courier.
+  body('deliveryPartner')
+    .optional({ nullable: true, checkFalsy: true })
+    .customSanitizer((value) => String(value).trim().toUpperCase())
+    .isIn(['MOORMOVE'])
+    .withMessage('Choose how the order is delivered again'),
+
   body('contactNumber')
     .customSanitizer(stripPhone)
     .notEmpty()

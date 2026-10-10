@@ -4,6 +4,8 @@
  * happened) and the server's `deadline` (confirm / pay / auto-complete).
  */
 
+import { riderStatus } from './moormove';
+
 const PAY_LABEL = { COD: 'Cash on delivery', GCASH: 'GCash (QR)', QRPH: 'QR Ph', BANK_TRANSFER: 'Bank transfer' };
 export const payLabel = (method, pickup = false) => (method === 'COD' && pickup ? 'Cash on pickup' : PAY_LABEL[method] || method || '—');
 
@@ -30,6 +32,8 @@ export const timeLeft = (date, now = Date.now()) => {
 
 const isPickup = (o) => o.fulfillmentMethod === 'PICKUP';
 const isQr = (o) => o.paymentMethod && o.paymentMethod !== 'COD';
+// The buyer chose a MoorMove rider (and the shop has not taken it over).
+const byRider = (o) => o.deliveryPartner === 'MOORMOVE' && o.fulfillmentMethod !== 'PICKUP';
 
 /** When the order first reached one of these statuses (from its history). */
 const reachedAt = (o, statuses) => (o.statusHistory || []).find((h) => statuses.includes(h.toStatus))?.createdAt || null;
@@ -113,9 +117,19 @@ export const orderStage = (o) => {
   if (o.paymentStatus === 'PENDING_VERIFICATION' && !['COMPLETED', 'CANCELLED'].includes(o.status)) {
     return { tone: 'blue', kind: 'checking', title: 'Payment sent: the shop is checking it', text: `${shop} prepares your order once it confirms your payment${o.paymentReference ? ` (ref. ${o.paymentReference})` : ''}.`, deadline: null };
   }
+  // A MoorMove rider brings it: where the rider is, in the buyer's words.
+  const rd = byRider(o) ? o.riderDelivery : null;
+  if (rd && ['TO_SHIP', 'READY', 'OUT_FOR_DELIVERY'].includes(o.status)
+    && !(o.status !== 'OUT_FOR_DELIVERY' && rd.status === 'CANCELLED')) {
+    const r = riderStatus(rd, 'buyer', o);
+    if (r.title) {
+      const kind = o.status === 'OUT_FOR_DELIVERY' ? 'way' : 'packed';
+      return { tone: r.tone === 'red' ? 'amber' : 'blue', kind, title: r.title, text: r.text, deadline: null };
+    }
+  }
   switch (o.status) {
     case 'CONFIRMED':
-      return { tone: 'blue', kind: 'confirmed', title: `${shop} confirmed your order`, text: `It will be ${pickup ? 'prepared for pickup' : 'packed and sent out'} next.`, deadline: null };
+      return { tone: 'blue', kind: 'confirmed', title: `${shop} confirmed your order`, text: `It will be ${pickup ? 'prepared for pickup' : byRider(o) ? 'packed and sent with a MoorMove rider' : 'packed and sent out'} next.`, deadline: null };
     case 'PREPARING':
       return { tone: 'blue', kind: 'preparing', title: 'Being prepared', text: `${shop} is getting your order ready.`, deadline: null };
     case 'TO_SHIP':
@@ -125,7 +139,9 @@ export const orderStage = (o) => {
         tone: 'blue',
         kind: 'packed',
         title: 'Packed and ready to go',
-        text: o.courierName ? `${shop} will hand it to ${o.courierName} and send you the tracking number.` : `${shop} will deliver it to you.`,
+        text: o.courierName ? `${shop} will hand it to ${o.courierName} and send you the tracking number.`
+          : byRider(o) ? `${shop} will call a MoorMove rider to bring it to you.${o.paymentMethod === 'COD' ? ` Pay ${peso(o.total)} to the rider.` : ''}`
+            : `${shop} will deliver it to you.`,
         deadline: null,
       };
     case 'OUT_FOR_DELIVERY':
@@ -184,7 +200,7 @@ export const handOver = (o) => {
     label: 'Deliver to',
     address: o.deliveryAddress || '—',
     note: o.deliveryNotes || null,
-    by: o.courierName || 'the seller',
+    by: o.courierName || (byRider(o) ? 'a MoorMove rider' : 'the seller'),
     mapUrl: null,
   };
 };
@@ -328,6 +344,34 @@ export const sellerNext = (o) => {
   }
   if (o.status === 'CONFIRMED' && isQr(o) && o.paymentStatus === 'PENDING') {
     return { tone: 'blue', short: 'Waiting for payment', title: "Waiting for the buyer's payment", text: `The buyer pays ${peso(o.total)} with your QR${deadline ? ` by ${shortWhen(deadline)}` : ''}. You'll be told when they send it; it is cancelled if they don't pay.`, due };
+  }
+  // A MoorMove rider takes it: the rider's step decides what is next.
+  if (byRider(o)) {
+    const rd = o.riderDelivery || null;
+    const r = rd ? riderStatus(rd, 'seller', o) : null;
+    const cashHeld = rd?.status === 'DELIVERED' && Number(rd.codAmount) > 0 && !rd.codReturnedAt;
+    if (cashHeld && ['DELIVERED', 'COMPLETED'].includes(o.status)) {
+      return { tone: 'amber', short: 'Collect cash', title: r.title, text: r.text, due };
+    }
+    if (['CONFIRMED', 'PREPARING', 'TO_SHIP', 'READY'].includes(o.status)) {
+      if (rd && !['CANCELLED', 'FAILED', 'DELIVERED'].includes(rd.status)) {
+        return { tone: r.tone, short: r.title, title: r.title, text: r.text, due: '' };
+      }
+      if (rd && ['CANCELLED', 'FAILED'].includes(rd.status)) {
+        return { tone: 'amber', short: 'Call a rider again', title: r.title, text: `${r.text} You can also cancel the order.`, due: '' };
+      }
+      return {
+        tone: 'amber',
+        short: 'Call a rider',
+        title: o.status === 'TO_SHIP' ? 'Call a rider' : 'Pack it, then call a rider',
+        text: 'The buyer chose a MoorMove rider. When the parcel is packed, tap Call a rider: a rider picks it up at your shop pin.',
+        due: '',
+      };
+    }
+    if (o.status === 'OUT_FOR_DELIVERY') {
+      const t = r?.title ? r : { title: 'With the rider', text: 'The rider is delivering it. This order updates on its own.' };
+      return { tone: 'blue', short: 'With the rider', title: t.title, text: t.text, due: '' };
+    }
   }
   if (['CONFIRMED', 'PREPARING'].includes(o.status)) {
     return {

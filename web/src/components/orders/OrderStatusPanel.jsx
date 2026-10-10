@@ -81,7 +81,7 @@ export default function OrderStatusPanel({ order }) {
             <p>{payLabel(order.paymentMethod, place.pickup)} · {peso(order.total)}</p>
             <p className="osd-sub">
               {codPending
-                ? `Pay when you ${place.pickup ? 'pick it up' : 'receive it'}`
+                ? (order.deliveryPartner === 'MOORMOVE' && !place.pickup ? `Pay ${peso(order.total)} to the rider` : `Pay when you ${place.pickup ? 'pick it up' : 'receive it'}`)
                 : PAYMENT_STATE[order.paymentStatus] || order.paymentStatus}
               {order.paymentReference ? ` · ref. ${order.paymentReference}` : ''}
             </p>

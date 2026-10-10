@@ -16,6 +16,7 @@ import { resolveImg } from '../lib/media';
 import useAppSettings, { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS, resolveAppSettingImage } from '../hooks/useAppSettings';
 import useAuthStore from '../store/authStore';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
+import { MOORMOVE_STATUS_KEY } from '../lib/moormove';
 import './AdminSettings.css';
 
 // Settings row: label and help on the left, controls on the right.
@@ -77,6 +78,22 @@ export default function AdminSettings() {
 
   useEffect(() => { loadStatus(); }, []);
 
+  // MoorMove: whether this server is set up to reach it, and whether it answers.
+  const [riderHealth, setRiderHealth] = useState(null); // null = checking
+  const [riderHealthKey, setRiderHealthKey] = useState(0);
+  useEffect(() => {
+    if (!isSuperAdmin) return undefined;
+    let cancelled = false;
+    axios.get('/moormove/admin/health', { quiet: true })
+      .then((res) => { if (!cancelled) setRiderHealth(res.data || { configured: false }); })
+      .catch((err) => { if (!cancelled) setRiderHealth({ failed: true, error: err?.message || null }); });
+    return () => { cancelled = true; };
+  }, [isSuperAdmin, riderHealthKey]);
+  const recheckRiders = () => {
+    setRiderHealth(null);
+    setRiderHealthKey((n) => n + 1);
+  };
+
   useEffect(() => {
     setBrandingForm({
       appLogo: currentAppSettings.appLogo,
@@ -86,6 +103,7 @@ export default function AdminSettings() {
       requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
       availableTodayEnabled: currentAppSettings.availableTodayEnabled !== false,
       categoryStyle: currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE',
+      moormoveEnabled: currentAppSettings.moormoveEnabled === true,
     });
   }, [
     currentAppSettings.appLogo,
@@ -95,6 +113,7 @@ export default function AdminSettings() {
     currentAppSettings.requireBuyerVerification,
     currentAppSettings.availableTodayEnabled,
     currentAppSettings.categoryStyle,
+    currentAppSettings.moormoveEnabled,
   ]);
 
   useEffect(() => {
@@ -212,6 +231,10 @@ export default function AdminSettings() {
     if (categoryStyle !== (currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE')) {
       changes.categoryStyle = categoryStyle;
     }
+    const moormoveEnabled = brandingForm.moormoveEnabled === true;
+    if (moormoveEnabled !== (currentAppSettings.moormoveEnabled === true)) {
+      changes.moormoveEnabled = moormoveEnabled;
+    }
     if (Object.keys(changes).length === 0) {
       toast.success('No changes to save');
       return;
@@ -221,6 +244,7 @@ export default function AdminSettings() {
       const response = await axios.put('/app-settings', changes);
       queryClient.setQueryData(APP_SETTINGS_QUERY_KEY, { ...DEFAULT_APP_SETTINGS, ...(response.data || {}) });
       queryClient.invalidateQueries({ queryKey: APP_SETTINGS_QUERY_KEY });
+      if ('moormoveEnabled' in changes) queryClient.invalidateQueries({ queryKey: MOORMOVE_STATUS_KEY });
       toast.success('App settings updated');
     } catch (err) {
       toast.error(err.message || 'Failed to save app branding');
@@ -466,6 +490,40 @@ export default function AdminSettings() {
           />
           <span>Turn on Available Today</span>
         </label>
+      </Row>
+
+      <Row
+        label="MoorMove rider delivery"
+        help={brandingForm.moormoveEnabled === true
+          ? 'On: buyers can choose a MoorMove rider at checkout, and shops call a rider when an order is packed. Riders pick up at the shop pin; the fee is by distance.'
+          : 'Off: no rider option anywhere. Rider deliveries already under way still finish.'}
+      >
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={brandingForm.moormoveEnabled === true}
+            onChange={(e) => setBrandingForm((current) => ({ ...current, moormoveEnabled: e.target.checked }))}
+          />
+          <span>Turn on MoorMove riders</span>
+        </label>
+        <p className="st-note st-rider-health" role="status">
+          {(() => {
+            const h = riderHealth;
+            if (!h) return <span className="st-rider-dot is-wait">Checking the connection…</span>;
+            if (h.failed) return <span className="st-rider-dot is-bad">Couldn&apos;t check the connection{h.error ? `: ${h.error}` : ''}</span>;
+            if (!h.configured) return <span className="st-rider-dot is-bad">Not configured (set MOORMOVE_API_URL and MOORMOVE_SECRET)</span>;
+            if (!h.reachable) return <span className="st-rider-dot is-bad">Not reachable{h.error ? ` · ${h.error}` : ''}</span>;
+            const open = (h.towns || []).filter((t) => t.serviceOpen).length;
+            return (
+              <span className={`st-rider-dot ${h.open ? 'is-ok' : 'is-wait'}`}>
+                Connected · open in {open} town{open === 1 ? '' : 's'}{h.open ? '' : ' · MoorMove is not taking orders right now'}
+              </span>
+            );
+          })()}
+          {riderHealth && (
+            <button type="button" className="st-btn st-btn-text st-rider-recheck" onClick={recheckRiders}>Check again</button>
+          )}
+        </p>
       </Row>
 
       <Row

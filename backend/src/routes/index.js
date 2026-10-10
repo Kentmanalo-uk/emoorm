@@ -69,6 +69,10 @@ router.use('/municipalities', municipalityRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/stores', storeRoutes);
 router.use('/products', productRoutes);
+// MoorMove riders: the seller's bookings, tracking (before the order routes).
+const moormoveRoutes = require('./moormove.routes');
+router.use('/moormove', moormoveRoutes.router);
+router.use('/orders', moormoveRoutes.orderRouter);
 router.use('/orders', orderRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/reports', reportRoutes);

@@ -89,6 +89,11 @@ in front. A wrong value makes every visitor share one login rate limit.
 - SMS verification of mobile numbers: `SEMAPHORE_API_KEY` from semaphore.co (and
   `SEMAPHORE_SENDER_NAME` once approved). `COD_REQUIRES_VERIFIED_PHONE=true` then makes
   cash on delivery need a verified number.
+- MoorMove riders (move.emoorm.shop, its own Node.js app): `MOORMOVE_API_URL=https://move.emoorm.shop/api`
+  and `MOORMOVE_SECRET` (random, 64 hex chars: `randomBytes(32)`), the **same value** as
+  `PARTNER_SECRET` in MoorMove's environment. Then a super admin turns on "MoorMove rider
+  delivery" in Settings, which shows whether MoorMove answers. MoorMove sends its updates to
+  `https://emoorm.shop/api/partner/moormove/events` (signed with that secret).
 
 Leave `CACHE_REDIS_URL` empty: Hostinger web hosting has no Redis and the
 app uses its in-memory cache instead. Do **not** set `PORT` unless hPanel

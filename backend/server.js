@@ -98,6 +98,19 @@ const startServer = async () => {
       setTimeout(runTodayClock, 10 * 1000).unref();
       setInterval(runTodayClock, TODAY_CLOCK_MS).unref();
 
+      // MoorMove riders: bookings that heard nothing from MoorMove for two
+      // minutes are asked about (a backup for its updates), and the record
+      // of updates already applied is trimmed once a day. Idle while
+      // MoorMove isn't configured.
+      const moormove = require('./src/services/moormove.service');
+      const RIDER_SYNC_MS = 2 * 60 * 1000;
+      const runRiderSync = () => runtimeStatus.runJob('moormove-reconcile', () => moormove.reconcile(), RIDER_SYNC_MS);
+      setTimeout(runRiderSync, 30 * 1000).unref();
+      setInterval(runRiderSync, RIDER_SYNC_MS).unref();
+      const pruneRiderEvents = () => runtimeStatus.runJob('moormove-prune', () => moormove.pruneEvents(), 24 * 60 * 60 * 1000);
+      setTimeout(pruneRiderEvents, 2 * 60 * 1000).unref();
+      setInterval(pruneRiderEvents, 24 * 60 * 60 * 1000).unref();
+
       // Delete ID photos / permits once a decided application is past the
       // retention window. Runs at boot, then once a day.
       const purgeKyc = () => runtimeStatus.runJob(

@@ -43,6 +43,11 @@ model AppSetting {
   /// How many admins a town's admin team may have, its primary admin included.
   adminTeamMax Int @default(5) @map("admin_team_max")
 
+  /// MoorMove rider delivery (move.emoorm.shop) for the whole marketplace.
+  /// Off until a super admin turns it on; it also needs MOORMOVE_API_URL and
+  /// MOORMOVE_SECRET in the environment.
+  moormoveEnabled Boolean @default(false) @map("moormove_enabled")
+
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -713,6 +718,9 @@ model Store {
   /// The seller delivers delivery orders themselves (as before). Couriers
   /// the shop ships with are in `couriers`; a shop can do both.
   selfDelivery         Boolean         @default(true) @map("self_delivery")
+  /// Buyers may choose a MoorMove rider (picked up at the shop's pin, priced
+  /// by distance). On by default; the seller can turn it off.
+  moormoveEnabled      Boolean         @default(true) @map("moormove_enabled")
   /// The shop's Home tab: sections the seller arranges in Decorate my shop
   /// (banners, spotlight products, a gallery, a message), each in its own style.
   /// { sections: [{ id, type, style, … }] }. Null: no Home tab.
@@ -1056,6 +1064,9 @@ model Order {
   /// The parcel weight the courier fee was priced on.
   shippingWeightGrams Int?    @map("shipping_weight_grams")
   shippedAt       DateTime?   @map("shipped_at")
+  /// 'MOORMOVE' when the buyer chose a MoorMove rider; null when the shop
+  /// delivers (or a courier carries) it. The rider bookings are in riderDeliveries.
+  deliveryPartner String?     @db.VarChar(20) @map("delivery_partner")
 
   // Delivery Information
   deliveryAddress String      @db.Text @map("delivery_address")
@@ -1090,6 +1101,7 @@ model Order {
   returnRequests  ReturnRequest[] @relation("OrderReturns")
   statusHistory   OrderStatusHistory[]
   voucherRedemption VoucherRedemption?
+  riderDeliveries RiderDelivery[]
 
   // A double-submitted checkout must not become two orders. The application
   // also looks the key up first, but that check-then-insert races under
@@ -1155,6 +1167,62 @@ model OrderStatusHistory {
 
   @@index([orderId, createdAt])
   @@map("order_status_history")
+}
+
+/// A MoorMove rider booked for an order: one row per MoorMove job, kept up to
+/// date from MoorMove's updates (and a poll as a backup). An order may have
+/// several (a rider gave up, the seller called another); its current one is
+/// the newest. `status` is MoorMove's: SEARCHING, ACCEPTED, AT_PICKUP,
+/// PICKED_UP, AT_DROPOFF, DELIVERED, CANCELLED or FAILED.
+model RiderDelivery {
+  id             String    @id @default(uuid())
+  orderId        String    @map("order_id")
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  jobId          String    @unique(map: "rider_deliveries_job_id_key") @db.VarChar(64) @map("job_id")
+  jobCode        String?   @db.VarChar(16) @map("job_code")
+  status         String    @db.VarChar(20)
+  riderName      String?   @db.VarChar(120) @map("rider_name")
+  riderPhone     String?   @db.VarChar(30) @map("rider_phone")
+  riderVehicle   String?   @db.VarChar(20) @map("rider_vehicle")
+  riderPlate     String?   @db.VarChar(20) @map("rider_plate")
+  riderLat       Float?    @map("rider_lat")
+  riderLng       Float?    @map("rider_lng")
+  riderSeenAt    DateTime? @map("rider_seen_at")
+  /// The delivery fee the buyer paid, which the rider earns.
+  fee            Decimal   @db.Decimal(10, 2)
+  /// Cash on delivery: what the rider collects for the shop (the fee aside).
+  codAmount      Decimal   @default(0) @db.Decimal(10, 2) @map("cod_amount")
+  /// RECIPIENT (the buyer pays the rider) or SENDER (the shop pays at pickup).
+  feePaidBy      String    @db.VarChar(12) @map("fee_paid_by")
+  acceptedAt     DateTime? @map("accepted_at")
+  pickedUpAt     DateTime? @map("picked_up_at")
+  deliveredAt    DateTime? @map("delivered_at")
+  cancelledAt    DateTime? @map("cancelled_at")
+  failedAt       DateTime? @map("failed_at")
+  codCollectedAt DateTime? @map("cod_collected_at")
+  /// The seller confirmed the rider brought the cash back.
+  codReturnedAt  DateTime? @map("cod_returned_at")
+  cancelReason   String?   @db.VarChar(255) @map("cancel_reason")
+  failReason     String?   @db.VarChar(255) @map("fail_reason")
+  lastEventId    String?   @db.VarChar(64) @map("last_event_id")
+  /// MoorMove's updatedAt of the job as last applied: an older copy is ignored.
+  jobUpdatedAt   DateTime? @map("job_updated_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([orderId, createdAt], map: "rider_deliveries_order_idx")
+  @@index([status, updatedAt], map: "rider_deliveries_status_idx")
+  @@map("rider_deliveries")
+}
+
+/// MoorMove updates already applied, by their id, so one sent twice is
+/// applied once. Kept for 7 days.
+model MoormoveEvent {
+  id         String   @id @db.VarChar(64)
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  @@index([receivedAt], map: "moormove_events_received_idx")
+  @@map("moormove_events")
 }
 
 model OrderItem {

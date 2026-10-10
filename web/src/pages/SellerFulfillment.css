@@ -1186,3 +1186,49 @@
   color: var(--t-danger-600, #dc2626);
   font-size: 13px;
 }
+
+/* MoorMove riders: the option among who delivers, what it means, and what
+   still keeps riders from coming (no shop pin, not open in the town). */
+.sf-rider-mark {
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+}
+
+.sf-riders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sf-riders:empty {
+  display: none;
+}
+
+.sf-rider-help {
+  color: var(--t-neutral-600, #475569);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sf-riders .sf-rider-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+
+.sf-rider-warn svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.sf-rider-warn a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sf-riders .sf-rider-pin {
+  margin: 0;
+}

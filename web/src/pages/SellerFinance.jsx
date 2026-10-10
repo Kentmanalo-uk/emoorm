@@ -7,6 +7,8 @@ import Skeleton from '../components/ui/Skeleton';
 import EmptyArt from '../components/ui/EmptyArt';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import DateRangePicker from '../components/analytics/DateRangePicker';
+import RiderCashCard from '../components/seller/RiderCashCard';
+import { useMoormove } from '../lib/moormove';
 import './SellerDashboard.css';
 import '../components/analytics/analytics.css';
 
@@ -93,6 +95,7 @@ export default function SellerFinance() {
   const [isExporting, setIsExporting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState(null);
+  const { enabled: ridersOn } = useMoormove();
 
   const orderParams = { status: 'COMPLETED', from: ymd(range.from), to: ymd(range.to) };
 
@@ -279,6 +282,8 @@ export default function SellerFinance() {
             <span className="sd-stat-hint">Per completed order</span>
           </div>
         </div>
+
+        <RiderCashCard ridersOn={ridersOn} />
 
         <div className="seller-card">
           <div className="seller-card-header">

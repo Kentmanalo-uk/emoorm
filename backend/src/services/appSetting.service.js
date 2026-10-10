@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   categoryStyle: 'IMAGE',
   availableTodayEnabled: true,
   adminTeamMax: 5,
+  moormoveEnabled: false,
 };
 
 // How the homepage shows its categories.
@@ -197,8 +198,14 @@ const sanitize = (input = {}) => {
     data.adminTeamMax = max;
   }
 
+  // MoorMove rider delivery for the whole marketplace (it also needs
+  // MOORMOVE_API_URL and MOORMOVE_SECRET on the server).
+  if (input.moormoveEnabled !== undefined) {
+    data.moormoveEnabled = booleanField(input.moormoveEnabled, 'moormoveEnabled');
+  }
+
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, verification, category style, Available Today or admin team setting', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, verification, category style, Available Today, admin team or MoorMove setting', 400);
   }
   return data;
 };

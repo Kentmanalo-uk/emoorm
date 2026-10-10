@@ -26,6 +26,9 @@ import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
 import { OrderProof } from '../components/orders/ProofPhotoSheet';
 import CourierTracking, { CourierMark } from '../components/orders/CourierTracking';
 import OrderStatusPanel from '../components/orders/OrderStatusPanel';
+import RiderCard from '../components/orders/RiderCard';
+import RiderTrackingMap from '../components/orders/RiderTrackingMap';
+import { isRiderOrder, riderOpen } from '../lib/moormove';
 import {
   BUYER_TABS, buyerBucket, buyerTabFrom, countBuyerTabs, needsPayment,
 } from '../lib/orderProgress';
@@ -173,6 +176,15 @@ const Orders = () => {
     } finally {
       setLoadingMore(false);
     }
+  };
+
+  // The rider's latest step, from the live map: kept on the order everywhere it shows.
+  const applyTracking = (t) => {
+    if (!t?.orderId) return;
+    const changes = { status: t.status || undefined, riderDelivery: t.riderDelivery ?? undefined };
+    const clean = Object.fromEntries(Object.entries(changes).filter(([, v]) => v !== undefined));
+    setOrders((cur) => cur.map((o) => (o.id === t.orderId ? { ...o, ...clean } : o)));
+    setSelectedOrder((cur) => (cur?.id === t.orderId ? { ...cur, ...clean } : cur));
   };
 
   const handleViewOrder = (order) => {
@@ -571,6 +583,12 @@ const Orders = () => {
                   <CourierTracking order={order} />
                 )}
 
+                {isRiderOrder(order) && riderOpen(order.riderDelivery) && (
+                  <div className="order-rider-strip">
+                    <RiderCard order={order} who="buyer" compact />
+                  </div>
+                )}
+
                 <div className="order-card-actions">
                   <button
                     onClick={() => handleViewOrder(order)}
@@ -772,6 +790,16 @@ const Orders = () => {
               </div>
 
               <OrderStatusPanel order={selectedOrder} />
+
+              {isRiderOrder(selectedOrder) && riderOpen(selectedOrder.riderDelivery) && (
+                <div className="order-details-section">
+                  <h3>Your rider</h3>
+                  <div className="order-rider">
+                    <RiderCard order={selectedOrder} who="buyer" />
+                    <RiderTrackingMap orderId={selectedOrder.id} onUpdate={applyTracking} />
+                  </div>
+                </div>
+              )}
 
               {selectedOrder.fulfillmentProofUrl && (
                 <div className="order-details-section">

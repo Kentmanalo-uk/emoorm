@@ -1,0 +1,564 @@
+/* MoorMove rider deliveries: the rider card (RiderCard.jsx), the live map
+   (RiderTrackingMap.jsx), the seller's confirm sheets (RiderActionSheet.jsx)
+   and the seller's rider buttons. Plain blocks that read the same in the
+   Seller Center, the buyer's order details and on phones. */
+
+.rider-card {
+  --rc: #2563eb;
+  --rc-soft: #eff6ff;
+  --rc-ink: #1e3a8a;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--rc) 22%, transparent);
+  border-radius: 12px;
+  background: var(--rc-soft);
+}
+
+.rider-card.is-amber { --rc: #d97706; --rc-soft: #fffbeb; --rc-ink: #92400e; }
+.rider-card.is-blue { --rc: #2563eb; --rc-soft: #eff6ff; --rc-ink: #1e3a8a; }
+.rider-card.is-green { --rc: #059669; --rc-soft: #ecfdf5; --rc-ink: #065f46; }
+.rider-card.is-red { --rc: #dc2626; --rc-soft: #fef2f2; --rc-ink: #991b1b; }
+.rider-card.is-grey { --rc: #6b7280; --rc-soft: #f9fafb; --rc-ink: #374151; }
+
+.rider-card.is-compact {
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.rider-card-status {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.rider-card-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--rc);
+  color: #fff;
+}
+
+.rider-card.is-compact .rider-card-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.rider-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rider-card-text strong {
+  color: var(--rc-ink);
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.rider-card.is-compact .rider-card-text strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 26px;
+}
+
+.rider-card-text span {
+  color: var(--t-neutral-700, #374151);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.rider-card-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.rider-card.is-compact .rider-card-who {
+  padding: 0;
+  background: none;
+}
+
+.rider-card-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rider-card-name b {
+  color: var(--t-neutral-900, #111827);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.rider-card-name small {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+}
+
+.rider-card-contact {
+  display: flex;
+  gap: 6px;
+}
+
+.rider-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #047857);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rider-card-btn:hover {
+  border-color: var(--t-primary-300, #6ee7b7);
+}
+
+/* The seller's buttons under the card (Call a rider, Cancel rider…). */
+.rider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rider-actions > button {
+  flex: 1 1 140px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rider-actions > button.is-primary {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.rider-actions > button.is-primary:hover {
+  background: var(--t-primary-700, #047857);
+}
+
+.rider-actions > button.is-quiet {
+  flex: 0 0 auto;
+  border-color: transparent;
+  background: none;
+  color: var(--t-danger-600, #dc2626);
+  font-weight: 500;
+}
+
+.rider-actions > button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rider-actions-note {
+  margin: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* The live map */
+.rtm {
+  overflow: hidden;
+  border: 1px solid var(--t-neutral-150, #eef0f3);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.rtm-map {
+  position: relative;
+  /* Leaflet's layers stay inside the map, under sticky headers and sheets. */
+  z-index: 0;
+  isolation: isolate;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.rtm-leaflet {
+  width: 100%;
+  height: 100%;
+}
+
+.rtm--loading {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  text-align: center;
+}
+
+.rtm-note {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.rtm-marker-shell {
+  border: 0;
+  background: none;
+}
+
+.rtm-pin {
+  position: relative;
+  display: block;
+  width: 36px;
+  height: 44px;
+}
+
+.rtm-pin::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 2px;
+  background: var(--rtm-pin, #059669);
+  transform: rotate(45deg);
+}
+
+.rtm-pin--shop { --rtm-pin: #059669; }
+.rtm-pin--home { --rtm-pin: #2563eb; }
+
+.rtm-pin-face {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--rtm-pin, #059669);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(15, 35, 25, 0.28);
+}
+
+.rtm-rider {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #fff;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45), 0 4px 10px rgba(0, 0, 0, 0.25);
+  animation: rtm-pulse 2s ease-out infinite;
+}
+
+@keyframes rtm-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45), 0 4px 10px rgba(0, 0, 0, 0.25); }
+  100% { box-shadow: 0 0 0 16px rgba(245, 158, 11, 0), 0 4px 10px rgba(0, 0, 0, 0.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rtm-rider {
+    animation: none;
+  }
+}
+
+/* Confirm sheets */
+.rider-sheet-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.rider-sheet-lines > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13.5px;
+}
+
+.rider-sheet-lines dt {
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.rider-sheet-lines dd {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rider-sheet-lines > div.is-strong dt,
+.rider-sheet-lines > div.is-strong dd {
+  color: var(--t-primary-700, #047857);
+  font-weight: 700;
+}
+
+.rider-sheet-note {
+  margin: 4px 0 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.rider-sheet-reasons label.is-on {
+  border-color: var(--t-danger-300, #fca5a5);
+  background: var(--t-danger-50, #fef2f2);
+}
+
+.rider-sheet-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.rider-sheet-reasons label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+/* Seller Center order details: the MoorMove part. */
+.so-rider {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.so-rider-label {
+  margin: 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rider-inline-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-primary-700, #047857);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* Seller Finance: Rider cash */
+.rider-cash .seller-card-header {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rider-cash .seller-card-header h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rider-cash-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.rider-cash-tab {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rider-cash-tab.is-on {
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-900, #111827);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.rider-cash-total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.rider-cash-total span {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.rider-cash-total strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.rider-cash-total small {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rider-cash-empty {
+  margin: 0;
+  padding: 18px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.rider-cash-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rider-cash-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.rider-cash-list li:first-child {
+  border-top: 0;
+}
+
+.rider-cash-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rider-cash-order {
+  color: var(--t-neutral-900, #111827);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.rider-cash-order:hover {
+  text-decoration: underline;
+}
+
+.rider-cash-meta {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.rider-cash-amount {
+  color: var(--t-primary-700, #047857);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rider-cash-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.rider-cash-btn {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--t-primary-600, #059669);
+  border-radius: 999px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rider-cash-btn:hover {
+  background: var(--t-primary-700, #047857);
+}
+
+@media (max-width: 480px) {
+  .rider-cash-total,
+  .rider-cash-list li {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .rider-cash-actions > * {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+}
+
+/* Seller Center on phones: medium weights, like the rest of the seller app
+   (buyer pages get theirs from vite.config.js's phone-medium-weights). */
+@media (max-width: 768px) {
+  .sc-shell :is(.rider-card-text strong, .rider-card-name b, .rider-card-btn, .rider-actions > button,
+    .rider-cash-tab, .rider-cash-total strong, .rider-cash-order, .rider-cash-amount, .rider-cash-btn,
+    .rider-inline-link, .rider-sheet-lines dd) {
+    font-weight: 500;
+  }
+
+  .sc-shell .rider-actions > button {
+    min-height: 44px;
+  }
+}

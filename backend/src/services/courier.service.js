@@ -5,6 +5,7 @@ const { cleanText, cleanUrl } = require('../utils/sanitize');
 const { normalizeRates, feeFor } = require('../utils/courierRates');
 const { courierRefusal } = require('../utils/productKinds');
 const deliveryQuoteService = require('./deliveryQuote.service');
+const { invalidate, TAGS } = require('../lib/cachePolicy');
 
 /*
  * Couriers sellers ship with (J&T, LBC…). The super admin keeps the list;
@@ -122,6 +123,7 @@ const getStoreDelivery = async (storeId) => {
     where: { id: storeId },
     select: {
       selfDelivery: true,
+      moormoveEnabled: true,
       couriers: { orderBy: [{ courier: { sortOrder: 'asc' } }, { courier: { name: 'asc' } }], select: { courier: { select: PUBLIC_FIELDS } } },
     },
   });
@@ -137,6 +139,9 @@ const getStoreDelivery = async (storeId) => {
   ]);
   return {
     selfDelivery: store.selfDelivery,
+    // MoorMove riders for this shop's orders (shown only while the
+    // marketplace has MoorMove on).
+    moormoveEnabled: store.moormoveEnabled,
     couriers: store.couriers.map((c) => c.courier),
     unweighedCount,
     unweighed: unweighed.map((p) => ({ id: p.id, name: p.name, image: Array.isArray(p.images) ? p.images[0] || null : null })),
@@ -146,9 +151,12 @@ const getStoreDelivery = async (storeId) => {
 /**
  * Save a shop's delivery choices.
  * @param {String} storeId
- * @param {{ selfDelivery?: Boolean, courierIds?: String[] }} input
+ * @param {{ selfDelivery?: Boolean, courierIds?: String[], moormoveEnabled?: Boolean }} input
  */
-const setStoreDelivery = async (storeId, { selfDelivery, courierIds } = {}) => {
+const setStoreDelivery = async (storeId, { selfDelivery, courierIds, moormoveEnabled } = {}) => {
+  if (moormoveEnabled !== undefined && typeof moormoveEnabled !== 'boolean') {
+    throw new ApiError('moormoveEnabled must be true or false', 400);
+  }
   const ids = Array.isArray(courierIds) ? [...new Set(courierIds.map(String))].slice(0, 30) : null;
   if (ids) {
     const found = await prisma.courier.count({ where: { id: { in: ids }, isActive: true } });
@@ -176,9 +184,16 @@ const setStoreDelivery = async (storeId, { selfDelivery, courierIds } = {}) => {
       }
     }
   }
+  let written = null;
   await prisma.$transaction(async (tx) => {
-    if (nextSelf !== undefined) {
-      await tx.store.update({ where: { id: storeId }, data: { selfDelivery: nextSelf } });
+    if (nextSelf !== undefined || moormoveEnabled !== undefined) {
+      written = await tx.store.update({
+        where: { id: storeId },
+        data: {
+          ...(nextSelf !== undefined ? { selfDelivery: nextSelf } : {}),
+          ...(moormoveEnabled !== undefined ? { moormoveEnabled } : {}),
+        },
+      });
     }
     if (ids) {
       await tx.storeCourier.deleteMany({ where: { storeId } });
@@ -187,6 +202,8 @@ const setStoreDelivery = async (storeId, { selfDelivery, courierIds } = {}) => {
       }
     }
   });
+  // Checkout reads the shop (cached) to offer its delivery choices.
+  if (written) await invalidate([TAGS.stores, TAGS.store(written.id), TAGS.store(written.slug)]);
   return getStoreDelivery(storeId);
 };
 

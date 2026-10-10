@@ -28,6 +28,11 @@ import {
   etaLabel, hasPaluto, lineKind, lineNote, countLabel,
 } from '../lib/orderLines';
 import Select from '../components/ui/Select';
+import SellerRiderPanel from '../components/orders/SellerRiderPanel';
+import RiderActionSheet from '../components/orders/RiderActionSheet';
+import {
+  isRiderOrder, riderNextAction, riderOpen, riderStatus, useMoormove,
+} from '../lib/moormove';
 
 // Available Today orders carry a time to confirm by (respondBy); unconfirmed
 // by then, they cancel on their own.
@@ -131,12 +136,16 @@ const paymentBadge = (order) => {
 // A cancelled order the buyer paid for (verified, or a proof left unchecked
 // past its deadline): the shop records the refund once the money is back.
 // Why a seller cancels; a no-show and a refusal count on the buyer's record.
-const cancelReasonsFor = (status) => [
-  ['SELLER_CANCELLED', 'I can\'t fill this order'],
-  ['OUT_OF_STOCK', 'Out of stock'],
-  ...(['READY_FOR_PICKUP', 'READY'].includes(status) ? [['NO_SHOW', 'The buyer didn\'t come to pick it up']] : []),
-  ...(status === 'OUT_FOR_DELIVERY' ? [['REFUSED', 'The buyer refused the delivery']] : []),
-];
+const cancelReasonsFor = (status, order = null) => {
+  const riderFailed = order?.riderDelivery?.status === 'FAILED' && status === 'TO_SHIP';
+  return [
+    ['SELLER_CANCELLED', 'I can\'t fill this order'],
+    ['OUT_OF_STOCK', 'Out of stock'],
+    ...(['READY_FOR_PICKUP', 'READY'].includes(status) ? [['NO_SHOW', 'The buyer didn\'t come to pick it up']] : []),
+    ...(status === 'OUT_FOR_DELIVERY' || riderFailed ? [['REFUSED', 'The buyer refused the delivery']] : []),
+    ...(riderFailed ? [['NO_SHOW', "The buyer wasn't there for the rider"]] : []),
+  ];
+};
 
 /** The buyer's last year at a glance: finished orders, and any that fell through on their side. */
 function BuyerRecord({ orderId }) {
@@ -171,6 +180,8 @@ const isAwaitingPayment = (order) => Boolean(order?.paymentMethod)
 
 /** The one next step, or null (waiting for the buyer's payment, or for the buyer). */
 function nextStep(order) {
+  // A MoorMove rider takes it from packing on: Call a rider instead (SellerRiderPanel).
+  if (isRiderOrder(order) && order.fulfillmentMethod !== 'PICKUP' && order.status !== 'PENDING') return null;
   const step = NEXT_STEP[order?.fulfillmentMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY'][order?.status];
   const to = typeof step === 'function' ? step(order) : step;
   if (!to) return null;
@@ -178,7 +189,9 @@ function nextStep(order) {
   if (to !== 'CONFIRMED' && isAwaitingPayment(order)) return null;
   return to;
 }
-const canCancel = (order) => CANCELLABLE.includes(order?.status);
+// Not while a rider is on it (cancel the rider first), nor once a rider has the parcel.
+const canCancel = (order) => CANCELLABLE.includes(order?.status)
+  && !(isRiderOrder(order) && (riderOpen(order.riderDelivery) || order.status === 'OUT_FOR_DELIVERY'));
 
 const ACTION_LABELS = {
   CONFIRMED: { label: 'Confirm order', cls: 'action-confirm' },
@@ -228,6 +241,9 @@ export default function SellerOrders() {
   // Phones: a few status chips on one row; everything else in a sheet.
   const isPhone = usePhoneLayout();
   const [filterOpen, setFilterOpen] = useState(false);
+  // MoorMove riders: on for the site, and the step being asked (Call a rider…).
+  const { enabled: ridersOn } = useMoormove();
+  const [riderAsk, setRiderAsk] = useState(null); // { action, order }
 
   // Typing shouldn't fire a request per keystroke.
   useEffect(() => {
@@ -358,6 +374,24 @@ export default function SellerOrders() {
     setSelectedOrder((prev) => (prev?.id === orderId ? { ...prev, ...clean } : prev));
   }
 
+  // A rider step went through: the order as the server has it now (or, when
+  // it had moved on meanwhile, the list again).
+  const riderDone = (updated) => {
+    const before = riderAsk?.order;
+    if (!updated?.id) { loadOrders(); return; }
+    applyOrderUpdate(updated.id, updated);
+    if (before && updated.status && updated.status !== before.status) moveToTab(updated.id, updated.status);
+  };
+  // The live map's latest answer: the rider's step and the order's status.
+  const riderTracking = (t) => {
+    if (!t?.orderId) return;
+    const current = orders.find((o) => o.id === t.orderId) || (selectedOrder?.id === t.orderId ? selectedOrder : null);
+    const same = current && current.status === t.status
+      && JSON.stringify(current.riderDelivery || null) === JSON.stringify(t.riderDelivery || null);
+    if (!same) applyOrderUpdate(t.orderId, { status: t.status || undefined, riderDelivery: t.riderDelivery ?? undefined });
+  };
+  const askRider = (order, action) => setRiderAsk({ action, order });
+
   const PAYMENT_TOASTS = {
     PAID: 'Payment confirmed. You can now prepare the order.',
     FAILED: 'Payment rejected — the buyer will be asked to upload a new proof',
@@ -396,7 +430,7 @@ export default function SellerOrders() {
   const requestStatusChange = (orderId, newStatus) => {
     if (newStatus === 'CANCELLED') {
       const target = orders.find((o) => o.id === orderId) || (selectedOrder?.id === orderId ? selectedOrder : null);
-      setCancelConfirm({ orderId, status: target?.status });
+      setCancelConfirm({ orderId, status: target?.status, order: target });
       setCancelReason('SELLER_CANCELLED');
       return;
     }
@@ -631,6 +665,8 @@ export default function SellerOrders() {
                   {displayed.map(order => {
                     const s = STATUS_MAP[order.status] || { label: order.status, cls: '' };
                     const next = nextStep(order);
+                    const riderNext = riderNextAction(order, ridersOn);
+                    const riderLine = isRiderOrder(order) && order.riderDelivery ? riderStatus(order.riderDelivery, 'seller', order) : null;
                     const isUpdating = updatingId === order.id;
                     const items = order.items || [];
                     const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
@@ -714,6 +750,9 @@ export default function SellerOrders() {
                           <span className={`seller-badge seller-badge--solid ${s.cls}`}>
                             {s.label}
                           </span>
+                          {riderLine?.title && !['COMPLETED', 'CANCELLED'].includes(order.status) && (
+                            <span className={`so-next so-rider-line is-${riderLine.tone}`}>{riderLine.title}</span>
+                          )}
                         </td>
                         <td>
                           <div className="order-row-actions">
@@ -727,6 +766,16 @@ export default function SellerOrders() {
                             >
                               <Eye size={15} /><span className="so-action-label">Details</span>
                             </button>
+                            {riderNext && (
+                              <button
+                                type="button"
+                                className="so-next-btn"
+                                disabled={isUpdating}
+                                onClick={() => askRider(order, riderNext)}
+                              >
+                                <span>{riderNext === 'cash' ? 'Cash received' : 'Call a rider'}</span>
+                              </button>
+                            )}
                             {next && (
                               <button
                                 type="button"
@@ -854,12 +903,22 @@ export default function SellerOrders() {
                   <div className="detail-row">
                     <span>Delivered by</span>
                     <strong>
-                      {selectedOrder.courierId
-                        ? `${selectedOrder.courierName || selectedOrder.courier?.name} (buyer's choice)${selectedOrder.shippingWeightGrams ? ` · ${(selectedOrder.shippingWeightGrams / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} kg` : ''}`
-                        : 'You'}
+                      {isRiderOrder(selectedOrder)
+                        ? "A MoorMove rider (buyer's choice)"
+                        : selectedOrder.courierId
+                          ? `${selectedOrder.courierName || selectedOrder.courier?.name} (buyer's choice)${selectedOrder.shippingWeightGrams ? ` · ${(selectedOrder.shippingWeightGrams / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} kg` : ''}`
+                          : 'You'}
                     </strong>
                   </div>
                 )}
+
+                <SellerRiderPanel
+                  order={selectedOrder}
+                  enabled={ridersOn}
+                  busy={updatingId === selectedOrder.id}
+                  onAsk={(action) => askRider(selectedOrder, action)}
+                  onTracking={riderTracking}
+                />
 
                 <div className="detail-row">
                   <span>Payment</span>
@@ -1076,6 +1135,11 @@ export default function SellerOrders() {
         onCancel={() => setShipRequest(null)}
         onConfirm={confirmShip}
       />
+      <RiderActionSheet
+        ask={riderAsk}
+        onClose={() => setRiderAsk(null)}
+        onDone={riderDone}
+      />
       <ProofPhotoSheet
         open={!!proofRequest}
         kind={proofRequest?.kind}
@@ -1094,7 +1158,7 @@ export default function SellerOrders() {
         onCancel={() => setCancelConfirm(null)}
       >
         <div className="so-cancel-reasons" role="radiogroup" aria-label="Why">
-          {cancelReasonsFor(cancelConfirm?.status).map(([key, label]) => (
+          {cancelReasonsFor(cancelConfirm?.status, cancelConfirm?.order).map(([key, label]) => (
             <label key={key} className={cancelReason === key ? 'is-on' : ''}>
               <input type="radio" name="cancel-reason" checked={cancelReason === key} onChange={() => setCancelReason(key)} />
               {label}

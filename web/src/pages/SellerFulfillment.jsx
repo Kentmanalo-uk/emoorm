@@ -15,6 +15,8 @@ import {
   Check,
   CheckCircle,
   Money,
+  Motorcycle,
+  Warning,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -33,6 +35,7 @@ import StoreLocationMap from '../components/maps/StoreLocationMap';
 import { validPin } from '../components/maps/PickupRoute';
 import { CourierMark } from '../components/orders/CourierTracking';
 import ChoiceCard from '../components/ui/ChoiceCard';
+import { useMoormove } from '../lib/moormove';
 
 // "from ₱85": a courier's cheapest fee, for the seller to compare.
 const courierFrom = (c) => {
@@ -234,6 +237,13 @@ function SellerFulfillment({ part }) {
       .finally(() => { if (!cancelled) setShippingLoaded(true); });
     return () => { cancelled = true; };
   }, []);
+  // MoorMove riders (on by default): offered at checkout while the site has
+  // them on. Kept on the shop (moormoveEnabled).
+  const { enabled: ridersOn } = useMoormove();
+  const [riders, setRiders] = useState(true);
+  // Why riders can't come to this shop right now (e.g. not open in its town),
+  // asked once the shop has a pin: a quote from the shop to itself.
+  const [riderBlock, setRiderBlock] = useState(null);
   const toggleCourier = (id) => setShipping((prev) => ({
     ...prev,
     courierIds: prev.courierIds.includes(id) ? prev.courierIds.filter((x) => x !== id) : [...prev.courierIds, id],
@@ -328,6 +338,7 @@ function SellerFulfillment({ part }) {
           acceptsCod: s.acceptsCod ?? true,
           deliveryFee: mode === 'FREE' ? '' : amount,
         });
+        setRiders(s.moormoveEnabled !== false);
         setQrOn(Boolean(s.paymentQrImage));
       } catch (err) {
         toast.error(err.message || 'Failed to load store');
@@ -494,6 +505,22 @@ function SellerFulfillment({ part }) {
     if (value === 'SOME' && someTowns.length === 0 && homeId) setSomeTowns([homeId]);
   };
 
+  const savedPinned = validPin(store?.latitude, store?.longitude);
+  useEffect(() => {
+    // Only for a shop that has riders on (saved), so the answer is about its town.
+    if (!ridersOn || !store?.id || !savedPinned || store.moormoveEnabled === false) return undefined;
+    let cancelled = false;
+    axios.post('/moormove/quote', {
+      storeId: store.id,
+      lat: Number(store.latitude),
+      lng: Number(store.longitude),
+      items: [],
+    }, { quiet: true })
+      .then((res) => { if (!cancelled) setRiderBlock(res.data && res.data.available === false ? (res.data.reason || null) : null); })
+      .catch(() => { if (!cancelled) setRiderBlock(null); });
+    return () => { cancelled = true; };
+  }, [ridersOn, store?.id, store?.latitude, store?.longitude, store?.moormoveEnabled, savedPinned]);
+
   const toggleTown = (id) => setSomeTowns((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const showDeliveryAreas = form.fulfillmentMode === 'DELIVERY' || form.fulfillmentMode === 'BOTH';
@@ -511,7 +538,8 @@ function SellerFulfillment({ part }) {
         ] : [])]
           : [coverage, feeMode, feeMode === 'SAME' ? form.deliveryFee : '',
             places.map((pl) => [pl.municipalityId, pl.barangay, feeMode === 'PLACE' ? pl.fee : '']),
-            shipping.selfDelivery, [...shipping.courierIds].sort()],
+            shipping.selfDelivery, [...shipping.courierIds].sort(), ridersOn ? riders : null,
+            ridersOn && !showPickup ? [form.latitude, form.longitude] : null],
   );
   const partReady = !loading && (part !== 'delivery' || (!savedAreas && shippingLoaded));
   const [baseline, setBaseline] = useState(null);
@@ -609,7 +637,7 @@ function SellerFulfillment({ part }) {
     }));
     // A part's page sends only its own settings, so it never touches the others.
     const changes = {
-      all: { ...form, deliveryFee },
+      all: { ...form, deliveryFee, ...(ridersOn ? { moormoveEnabled: riders } : {}) },
       method: { fulfillmentMode: form.fulfillmentMode },
       pickup: {
         pickupAddress: form.pickupAddress,
@@ -626,7 +654,11 @@ function SellerFulfillment({ part }) {
         paymentAccountNumber: form.paymentAccountNumber,
         paymentInstructions: form.paymentInstructions,
       } : { acceptsCod: form.acceptsCod, paymentQrImage: null },
-      delivery: { deliveryFee },
+      delivery: {
+        deliveryFee,
+        ...(ridersOn ? { moormoveEnabled: riders } : {}),
+        ...(ridersOn && !showPickup && pickupPinned ? { latitude: form.latitude, longitude: form.longitude } : {}),
+      },
     }[scope];
 
     if (has('delivery') && showDeliveryAreas && !shipping.selfDelivery && shipping.courierIds.length === 0) {
@@ -641,7 +673,8 @@ function SellerFulfillment({ part }) {
         await axios.put('/stores/my/service-areas', { areas });
         if (shippingLoaded) await axios.put('/couriers/my-store', shipping);
       }
-      // Me and Home show what is saved now.
+      // Me and Home show what is saved now (and so does the riders check here).
+      setStore((prev) => (prev && res.data ? { ...prev, ...res.data } : prev));
       layoutCtx?.setStore?.((prev) => (prev ? { ...prev, ...res.data } : prev));
       layoutCtx?.refreshSetup?.();
       // "Some towns" starts from what is saved now, as it would after a reload.
@@ -886,6 +919,18 @@ function SellerFulfillment({ part }) {
                     title="I deliver myself"
                     desc="Your own delivery fee · cash on delivery allowed"
                   />
+                  {ridersOn && (
+                    <ChoiceCard
+                      type="checkbox"
+                      name="moormove"
+                      value="MOORMOVE"
+                      checked={riders}
+                      onChange={() => setRiders((v) => !v)}
+                      media={<span className="sf-courier-self sf-rider-mark"><Motorcycle size={18} weight="fill" /></span>}
+                      title="MoorMove riders"
+                      desc="Local riders deliver for you · fee by distance, paid by the buyer"
+                    />
+                  )}
                   {courierList.map((c) => {
                     const from = courierFrom(c);
                     return (
@@ -904,6 +949,48 @@ function SellerFulfillment({ part }) {
                     );
                   })}
                 </div>
+                {ridersOn && (
+                  <div className="sf-riders">
+                    {riders && (
+                      <p className="sf-hint sf-rider-help">
+                        Buyers can choose a MoorMove rider at checkout. When an order is packed, tap Call a rider: a rider picks it up at your shop pin.
+                        The buyer pays the delivery fee, worked out by distance. With cash on delivery, the rider collects from the buyer and brings the item money back to you.
+                      </p>
+                    )}
+                    {riders && !pickupPinned && (
+                      <p className="sf-courier-warn sf-rider-warn" role="status">
+                        <Warning size={15} weight="fill" />
+                        <span>
+                          Riders pick up at your shop pin, and your shop has none yet.{' '}
+                          {showPickup
+                            ? (isPhone
+                              ? <Link to={partPath('pickup')}>Pin your shop in Pickup Location</Link>
+                              : <a href="#pickup-pin">Pin your shop in Pickup Location</a>)
+                            : 'Pin it on the map below.'}
+                        </span>
+                      </p>
+                    )}
+                    {riders && !showPickup && (
+                      <div className="form-group sf-pin sf-rider-pin">
+                        <label>Your shop pin</label>
+                        <p className="sf-pin-help">Where riders pick up your orders. Drag the pin if the spot moves.</p>
+                        <StoreLocationMap
+                          value={{ latitude: form.latitude, longitude: form.longitude }}
+                          onChange={({ latitude, longitude }) => setForm((prev) => ({ ...prev, latitude, longitude }))}
+                          height={isPhone ? 220 : 260}
+                          lockToPhilippines
+                          hint="Tap the map where riders pick up your orders."
+                        />
+                      </div>
+                    )}
+                    {riders && pickupPinned && riderBlock && (
+                      <p className="sf-courier-warn sf-rider-warn" role="status">
+                        <Warning size={15} weight="fill" />
+                        <span>{riderBlock}. Buyers can choose a rider once it is.</span>
+                      </p>
+                    )}
+                  </div>
+                )}
                 {unweighed.count > 0 && (
                   <WeightFixer products={unweighed.list} total={unweighed.count} onSaved={loadUnweighed} />
                 )}

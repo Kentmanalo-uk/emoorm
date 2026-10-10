@@ -204,7 +204,8 @@ app.use(
     max: config.rateLimit.maxRequests,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.method === 'OPTIONS' || req.path.endsWith('/health'),
+    // MoorMove's signed updates have a limit of their own (moormove.routes).
+    skip: (req) => req.method === 'OPTIONS' || req.path.endsWith('/health') || req.path === '/partner/moormove/events',
     message: { success: false, message: 'Too many requests, please wait a moment and try again.' },
   })
 );
@@ -215,6 +216,10 @@ app.use(
 // before it takes places in line; after CORS, so the answer carries CORS
 // headers.
 app.use(config.apiPrefix, overloadGuard);
+
+// MoorMove's updates about its riders. Before the JSON parser: the
+// signature is checked over the body exactly as it was sent.
+app.post(`${config.apiPrefix}/partner/moormove/events`, ...require('./routes/moormove.routes').receiveEvent);
 
 // Body parsers
 app.use(express.json({ limit: config.bodyLimit }));

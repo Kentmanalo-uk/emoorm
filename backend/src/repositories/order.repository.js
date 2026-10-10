@@ -3,6 +3,8 @@ const { invalidateProductIds } = require('./product.repository');
 const { changeStock, giveBack } = require('./stockLedger');
 const { stageWhere } = require('../utils/orderStages');
 const { isOpen } = require('../utils/availability');
+// The order's current MoorMove rider booking (services/moormove.view.js).
+const { CURRENT_RIDER } = require('../services/moormove.view');
 
 // Order lines show what kind of product each was (a package, a paluto…).
 const KIND_FIELDS = { productType: true, details: true, fulfillment: true };
@@ -330,6 +332,7 @@ const findById = async (id) => {
         },
       },
       courier: { select: { id: true, name: true, logoUrl: true, trackingUrl: true } },
+      ...CURRENT_RIDER,
     },
   });
 };
@@ -411,6 +414,7 @@ const findAll = async (options = {}) => {
         },
         ...(adminSummary ? {} : {
           courier: { select: { id: true, name: true, logoUrl: true, trackingUrl: true } },
+          ...CURRENT_RIDER,
         }),
         // When each step happened, for the buyer's progress line.
         ...(forBuyer ? {

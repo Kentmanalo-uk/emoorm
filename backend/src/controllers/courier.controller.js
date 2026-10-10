@@ -48,8 +48,8 @@ const getMyDelivery = asyncHandler(async (req, res) => {
 });
 
 const setMyDelivery = asyncHandler(async (req, res) => {
-  const { selfDelivery, courierIds } = req.body || {};
-  const data = await courierService.setStoreDelivery(await myStoreId(req.user.id), { selfDelivery, courierIds });
+  const { selfDelivery, courierIds, moormoveEnabled } = req.body || {};
+  const data = await courierService.setStoreDelivery(await myStoreId(req.user.id), { selfDelivery, courierIds, moormoveEnabled });
   successResponse(res, data, 'Delivery options saved');
 });
 

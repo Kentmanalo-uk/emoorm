@@ -1263,3 +1263,27 @@
   opacity: 0.6;
   cursor: default;
 }
+
+/* A MoorMove rider on the way: a one-line rider card on the order, the full
+   card and the live map in its details. */
+.order-rider-strip {
+  padding: 0 20px 12px;
+}
+
+.order-rider {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .profile-main .order-rider-strip {
+    padding: 8px 16px 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-main .order-rider-strip {
+    padding: 8px 14px 4px;
+  }
+}

@@ -455,6 +455,7 @@ const updateStore = async (storeId, userId, rawData) => {
     'paymentAccountName',
     'paymentAccountNumber',
     'acceptsCod',
+    'moormoveEnabled',
     'deliveryFee',
     'primaryColor',
     'secondaryColor',
@@ -483,6 +484,10 @@ const updateStore = async (storeId, userId, rawData) => {
         updateData[field] = shopHours.normalizeVacationNote(data[field]);
       } else if (field === 'prepDays') {
         updateData[field] = shopHours.normalizePrepDays(data[field]);
+      } else if (field === 'moormoveEnabled') {
+        // MoorMove riders for this shop's orders: a plain on / off.
+        if (typeof data[field] !== 'boolean') throw new ApiError('moormoveEnabled must be true or false', 400);
+        updateData[field] = data[field];
       } else {
         updateData[field] = data[field];
       }
