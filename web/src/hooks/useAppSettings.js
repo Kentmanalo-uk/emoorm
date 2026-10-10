@@ -12,6 +12,10 @@ export const DEFAULT_APP_SETTINGS = {
   // Default delivery fee for stores that have not set their own. The
   // server applies the same rule. Matches the server's default.
   deliveryFee: 50,
+  // Delivery by distance: deliveryFee is the starting fee, covering the
+  // first deliveryIncludedKm km by road; each km after costs deliveryPerKm.
+  deliveryPerKm: 10,
+  deliveryIncludedKm: 3,
   // Whether buyers must verify their ID before checking out.
   requireBuyerVerification: true,
   availableTodayEnabled: true,

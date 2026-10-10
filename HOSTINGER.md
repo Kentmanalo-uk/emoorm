@@ -94,6 +94,11 @@ in front. A wrong value makes every visitor share one login rate limit.
   `PARTNER_SECRET` in MoorMove's environment. Then a super admin turns on "MoorMove rider
   delivery" in Settings, which shows whether MoorMove answers. MoorMove sends its updates to
   `https://emoorm.shop/api/partner/moormove/events` (signed with that secret).
+- Road distances for delivery fees by distance: `ROUTING_URL` (an OSRM route service).
+  Unset, it uses OSRM's public demo server (https://router.project-osrm.org), which is fine
+  for low volume; swap it for a self-hosted or paid OSRM-compatible URL as orders grow.
+  `ROUTING_URL=off` never asks it: distances are then estimates (straight line × 1.3), as
+  they also are whenever the service is down or slow (buyers see "estimated distance").
 
 Leave `CACHE_REDIS_URL` empty: Hostinger web hosting has no Redis and the
 app uses its in-memory cache instead. Do **not** set `PORT` unless hPanel

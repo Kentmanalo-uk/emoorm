@@ -1,11 +1,34 @@
-import { useId } from 'react';
-import { CaretDown, Minus, Plus } from '@phosphor-icons/react';
+import { CheckCircle, Minus, Plus } from '@phosphor-icons/react';
 
 /*
- * Small building blocks the product form's steps share: a field with its
- * label and error, radio cards, chips, switches, a number stepper, money
- * input, and a row that opens to show more.
+ * Small building blocks the product form's parts share: a card, a field
+ * with its label and error, radio cards, chips, switches, a number
+ * stepper and money input.
  */
+
+/**
+ * One white card of the form, with a tick once it is filled in.
+ * @param {String} id - its key (pf-card-<id>), used to scroll to it
+ * @param {Boolean} done - filled in: shows the tick
+ * @param {Boolean} optional - can be left empty: says so instead
+ */
+export function Card({ id, title, hint, done, optional, children, className = '' }) {
+  return (
+    <section className={`pf-card ${className}`.trim()} id={`pf-card-${id}`} aria-labelledby={`pf-card-${id}-title`}>
+      <header className="pf-card-head">
+        <h2 id={`pf-card-${id}-title`}>{title}</h2>
+        {done ? (
+          <span className="pf-card-done">
+            <CheckCircle size={22} weight="fill" aria-hidden="true" />
+            <span className="pf-sr">Done</span>
+          </span>
+        ) : optional && <em className="pf-opt">Optional</em>}
+      </header>
+      {hint && <p className="pf-card-hint">{hint}</p>}
+      <div className="pf-card-body">{children}</div>
+    </section>
+  );
+}
 
 export function FieldError({ text }) {
   if (!text) return null;
@@ -180,23 +203,6 @@ export function Stepper({ id, value, onChange, min = 0, max = 10000, invalid, la
       <button type="button" onClick={() => step(1)} disabled={Number.isFinite(n) && n >= max} aria-label="One more">
         <Plus size={18} weight="bold" />
       </button>
-    </div>
-  );
-}
-
-/** A row that opens to show its options; `summary` says what is set while closed. */
-export function MoreRow({ title, summary, open, onToggle, invalid, children }) {
-  const id = useId();
-  return (
-    <div className={`pf-more${open ? ' is-open' : ''}${invalid ? ' has-error' : ''}`} data-invalid={invalid ? 'true' : undefined}>
-      <button type="button" className="pf-more-head" aria-expanded={open} aria-controls={id} onClick={onToggle}>
-        <span className="pf-more-text">
-          <strong>{title}</strong>
-          {summary && <small>{summary}</small>}
-        </span>
-        <CaretDown size={18} className="pf-more-caret" aria-hidden="true" />
-      </button>
-      {open && <div className="pf-more-body" id={id}>{children}</div>}
     </div>
   );
 }

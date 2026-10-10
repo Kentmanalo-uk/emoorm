@@ -12,9 +12,15 @@ import useAppSettings from '../hooks/useAppSettings';
 // Same as orderProgress's (kept here so that file can use this one).
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+/** MoorMove shown like a courier (its name and logo, as CourierMark takes them). */
+export const MOORMOVE_COURIER = { name: 'MoorMove', logoUrl: '/couriers/moormove.svg' };
+
 export const MOORMOVE_STATUS_KEY = ['moormove-status'];
 
-/** Whether riders can be offered at all: `{ enabled }`. */
+/**
+ * Whether riders can be offered at all, and MoorMove's free-delivery promos
+ * running now: `{ enabled, promos: [{ id, title, endsAt, townIds|null, maxKm|null }] }`.
+ */
 export function useMoormove() {
   const { settings } = useAppSettings();
   const on = settings?.moormoveEnabled === true;
@@ -28,10 +34,36 @@ export function useMoormove() {
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
-  return { enabled: on && status.data?.enabled === true };
+  const enabled = on && status.data?.enabled === true;
+  return { enabled, promos: enabled && Array.isArray(status.data?.promos) ? status.data.promos : [] };
 }
 
+/**
+ * The promos that apply to a shop in this town (MoorMove matches a promo to
+ * the shop's town; one without towns runs everywhere).
+ */
+export const promosForTown = (promos, townId) => (promos || []).filter((p) => !Array.isArray(p.townIds)
+  || (townId != null && p.townIds.map(String).includes(String(townId))));
+
+/** "Oct 31, 2026": the day a promo ends. */
+export const promoUntil = (p) => (p?.endsAt
+  ? new Date(p.endsAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+  : '');
+
 export const isRiderOrder = (o) => o?.deliveryPartner === 'MOORMOVE';
+
+/** An order's MoorMove free-delivery promo `{ title }`, or null. */
+export const orderPromo = (o) => {
+  if (!isRiderOrder(o)) return null;
+  if (o.deliveryPromo) return o.deliveryPromo;
+  return o.riderDelivery?.promoTitle ? { title: o.riderDelivery.promoTitle } : null;
+};
+
+/** The seller's line for a free-delivery promo order (who pays what), or ''. */
+export const promoSellerLine = (o) => (orderPromo(o)
+  ? `Free delivery promo by MoorMove: the buyer pays no delivery fee and you pay the rider nothing${
+    o.paymentMethod === 'COD' ? `; the rider collects only ${peso(o.total)} for the items` : ''}.`
+  : '');
 
 const FINAL = ['DELIVERED', 'CANCELLED', 'FAILED'];
 /** A rider delivery still under way (a rider is being found, or has the job). */

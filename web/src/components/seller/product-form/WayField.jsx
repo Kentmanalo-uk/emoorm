@@ -1,23 +1,24 @@
 import { Field, Segmented } from './parts';
 
 const NOT_BY_COURIER = {
-  READY_TO_EAT: 'Cooked food is picked up or delivered by you, not by couriers.',
-  COOK_TO_ORDER: 'Paluto is picked up or delivered by you, not by couriers.',
-  LIVESTOCK: 'Live animals are picked up or delivered by you, never by couriers.',
+  READY_TO_EAT: 'Cooked food is picked up, or brought by you. Couriers do not carry it.',
+  COOK_TO_ORDER: 'Paluto is picked up, or brought by you. Couriers do not carry it.',
 };
 
 /**
  * How buyers get it: asked only when the shop offers both pickup and
- * delivery. null keeps it as the shop offers.
+ * delivery. null keeps it as the shop offers (both). `label` null: the
+ * card around it already names it.
  */
-export default function WayField({ value, onChange, shopMode, kind, couriersOn }) {
+export default function WayField({
+  value, onChange, shopMode, kind, couriersOn, label = 'How buyers get it',
+}) {
   const askWay = !shopMode || shopMode === 'BOTH';
   const courierNote = NOT_BY_COURIER[kind];
-  const deliveryHint = kind === 'REGULAR' && couriersOn ? 'You or a courier bring it to buyers' : 'You bring it to buyers';
 
   if (!askWay) {
     return (
-      <Field label="How buyers get it">
+      <Field label={label}>
         <div className="pf-derived">
           <strong>{shopMode === 'PICKUP' ? 'Pickup only' : 'Delivery only'}</strong>
           <small>
@@ -34,12 +35,13 @@ export default function WayField({ value, onChange, shopMode, kind, couriersOn }
     { key: 'PICKUP', label: 'Pickup only' },
     { key: 'DELIVERY', label: 'Delivery only' },
   ];
+  const bringer = kind === 'REGULAR' && couriersOn ? 'You or a courier bring it to the buyer.' : 'You bring it to the buyer.';
   const hint = {
-    PICKUP: 'Buyers pick it up from you.',
-    DELIVERY: `${deliveryHint}.`,
-  }[value] || 'Buyers choose pickup or delivery.';
+    PICKUP: 'The buyer comes to get it from you.',
+    DELIVERY: bringer,
+  }[value] || 'The buyer picks: come and get it, or have it brought.';
   return (
-    <Field label="How buyers get it" required>
+    <Field label={label} required={!!label}>
       <Segmented label="How buyers get it" options={options} value={value} onChange={onChange} />
       <p className="pf-hint">
         {hint}

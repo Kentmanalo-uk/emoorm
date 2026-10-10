@@ -2,6 +2,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import ConfirmDialog from '../ui/ConfirmDialog';
+import { orderPromo, promoSellerLine } from '../../lib/moormove';
 import './RiderDelivery.css';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -43,6 +44,8 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
   const cod = order.paymentMethod === 'COD';
   const cashBack = Math.max(0, Number(order.total || 0) - fee);
   const held = Number(rd?.codAmount || 0);
+  // A MoorMove free-delivery promo: MoorMove pays the rider, the buyer pays no fee.
+  const promo = orderPromo(order);
 
   const run = async () => {
     if (!ask || busy) return;
@@ -80,9 +83,10 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
       confirm: 'Call a rider',
       body: (
         <dl className="rider-sheet-lines">
+          {promo && <p className="rider-promo-line">{promoSellerLine(order)}</p>}
           <div>
             <dt>Delivery fee</dt>
-            <dd>{peso(fee)}</dd>
+            <dd>{promo ? 'Free (MoorMove promo)' : peso(fee)}</dd>
           </div>
           {cod ? (
             <>
@@ -94,10 +98,16 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
                 <dt>The rider brings back to you</dt>
                 <dd>{peso(cashBack)}</dd>
               </div>
-              <p className="rider-sheet-note">The rider keeps the {peso(fee)} delivery fee. Tap Cash received once they hand you the money.</p>
+              <p className="rider-sheet-note">
+                {promo ? 'MoorMove pays the rider for this delivery.' : `The rider keeps the ${peso(fee)} delivery fee.`} Tap Cash received once they hand you the money.
+              </p>
             </>
           ) : (
-            <p className="rider-sheet-note">The buyer already paid you, delivery fee included. Pay the rider {peso(fee)} when they pick it up; they collect nothing from the buyer.</p>
+            <p className="rider-sheet-note">
+              {promo
+                ? 'The buyer already paid you for the items. You pay the rider nothing; they collect nothing from the buyer.'
+                : `The buyer already paid you, delivery fee included. Pay the rider ${peso(fee)} when they pick it up; they collect nothing from the buyer.`}
+            </p>
           )}
         </dl>
       ),
@@ -120,7 +130,7 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
     },
     self: {
       title: 'Deliver it yourself?',
-      message: `No rider will be called for ${number}. You take it to the buyer, then mark it delivered with a photo as usual. The buyer's delivery fee (${peso(order.deliveryFee)}) stays the same.`,
+      message: `No rider will be called for ${number}. You take it to the buyer, then mark it delivered with a photo as usual. ${promo ? 'The buyer still pays no delivery fee.' : `The buyer's delivery fee (${peso(order.deliveryFee)}) stays the same.`}`,
       confirm: 'Deliver it myself',
     },
     cash: {

@@ -1,6 +1,6 @@
 import { Motorcycle, Truck, Money } from '@phosphor-icons/react';
 import {
-  AT_SHOP, awaitingPayment, isRiderOrder, riderCashHeld, riderOpen, riderHasParcel,
+  AT_SHOP, awaitingPayment, isRiderOrder, orderPromo, promoSellerLine, riderCashHeld, riderOpen, riderHasParcel,
 } from '../../lib/moormove';
 import RiderCard from './RiderCard';
 import RiderTrackingMap from './RiderTrackingMap';
@@ -33,6 +33,7 @@ export default function SellerRiderPanel({
   const canSelf = atShop && !open && !waitingPay;
   const canCancelRider = open && !riderHasParcel(rd);
   const cashHeld = riderCashHeld(order);
+  const promo = orderPromo(order);
 
   const actions = (
     <>
@@ -62,7 +63,7 @@ export default function SellerRiderPanel({
       )}
       {canSelf && !rd && enabled && (
         <p className="rider-actions-note">
-          The buyer chose a MoorMove rider ({peso(order.deliveryFee)} delivery fee). Pack it, then call a rider: one picks it up at your shop pin.{' '}
+          The buyer chose a MoorMove rider ({promo ? 'free delivery' : `${peso(order.deliveryFee)} delivery fee`}). Pack it, then call a rider: one picks it up at your shop pin.{' '}
           <button type="button" className="rider-inline-link" disabled={busy} onClick={() => onAsk?.('self')}>Deliver it myself instead</button>
         </p>
       )}
@@ -78,6 +79,7 @@ export default function SellerRiderPanel({
   return (
     <div className="so-rider">
       <p className="so-rider-label">MoorMove rider</p>
+      {promo && <p className="rider-promo-line">{promoSellerLine(order)}</p>}
       {rd ? (
         <RiderCard order={order} who="seller">{actions}</RiderCard>
       ) : actions}

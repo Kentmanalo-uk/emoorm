@@ -24,6 +24,9 @@ const publicRiderDelivery = (row) => (row ? {
   riderLng: row.riderLng,
   riderSeenAt: row.riderSeenAt,
   fee: money(row.fee),
+  // A free-delivery promo: fee 0, listFee the usual fee (MoorMove pays the rider).
+  listFee: money(row.listFee),
+  promoTitle: row.promoTitle || null,
   codAmount: money(row.codAmount) || 0,
   feePaidBy: row.feePaidBy,
   acceptedAt: row.acceptedAt,
@@ -39,9 +42,15 @@ const publicRiderDelivery = (row) => (row ? {
   updatedAt: row.updatedAt,
 } : null);
 
+/** An order's MoorMove free-delivery promo: { id, title } or null. */
+const deliveryPromo = (order) => (order?.deliveryPromoId
+  ? { id: order.deliveryPromoId, title: order.deliveryPromoTitle || 'MoorMove promo' }
+  : null);
+
 /**
  * An order read with `riderDeliveries` (newest first, one is enough) as the
- * payload shows it: `deliveryPartner` and `riderDelivery`, without the list.
+ * payload shows it: `deliveryPartner`, `riderDelivery` and `deliveryPromo`,
+ * without the list.
  */
 const withRiderDelivery = (order) => {
   if (!order || typeof order !== 'object') return order;
@@ -50,6 +59,13 @@ const withRiderDelivery = (order) => {
     ...rest,
     deliveryPartner: order.deliveryPartner ?? null,
     riderDelivery: publicRiderDelivery(Array.isArray(riderDeliveries) ? riderDeliveries[0] : null),
+    deliveryPromo: deliveryPromo(order),
+    // How far the delivery was priced for (km by road, or an ESTIMATE; NONE:
+    // the shop had no pin, so no distance).
+    ...('deliveryDistanceKm' in order ? {
+      deliveryDistanceKm: order.deliveryDistanceKm == null ? null : Number(order.deliveryDistanceKm),
+      deliveryDistanceSource: order.deliveryDistanceSource ?? null,
+    } : {}),
   };
 };
 
@@ -57,5 +73,5 @@ const withRiderDelivery = (order) => {
 const CURRENT_RIDER = { riderDeliveries: { orderBy: { createdAt: 'desc' }, take: 1 } };
 
 module.exports = {
-  FINAL_STATUSES, isOpen, publicRiderDelivery, withRiderDelivery, CURRENT_RIDER,
+  FINAL_STATUSES, isOpen, publicRiderDelivery, withRiderDelivery, deliveryPromo, CURRENT_RIDER,
 };

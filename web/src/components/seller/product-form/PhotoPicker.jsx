@@ -1,12 +1,16 @@
 import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Camera, X, CircleNotch } from '@phosphor-icons/react';
+import { Camera, X, CircleNotch, Plus } from '@phosphor-icons/react';
 import { uploadImage } from '../../../lib/upload';
 import { resolveImg } from '../../../lib/media';
 import { MAX_IMAGES } from './formState';
 
-/** The product's photos: add from the camera or gallery, remove, pick the cover. */
-export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) {
+/**
+ * The product's photos: one big box to tap for the first photo, then the
+ * first photo large with small tiles for the others. Any photo can be
+ * made the first one (the one buyers see first).
+ */
+export default function PhotoPicker({ images, onChange, invalid = false }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(0);
   const list = Array.isArray(images) ? images : [];
@@ -30,7 +34,7 @@ export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) 
         const res = await uploadImage(file);
         uploaded.push(res.url);
       } catch (err) {
-        toast.error(err.message || 'A photo could not be uploaded');
+        toast.error(err.message || 'A photo could not be added. Please try again.');
       }
       setUploading((n) => Math.max(0, n - 1));
     }
@@ -38,7 +42,7 @@ export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) 
     if (uploaded.length) onChange([...list, ...uploaded]);
   };
 
-  const makeCover = (idx) => {
+  const makeFirst = (idx) => {
     const next = [...list];
     const [picked] = next.splice(idx, 1);
     onChange([picked, ...next]);
@@ -46,6 +50,7 @@ export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) 
 
   const removeAt = (idx) => onChange(list.filter((_, i) => i !== idx));
   const pick = () => inputRef.current?.click();
+  const canAdd = list.length + uploading < MAX_IMAGES && !uploading;
 
   return (
     <div className="pf-photos-wrap">
@@ -58,35 +63,35 @@ export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) 
         hidden
       />
       {list.length === 0 && !uploading ? (
-        <button type="button" className="pf-photo-empty" onClick={pick}>
-          <span className="pf-photo-empty-icon"><Camera size={26} /></span>
-          <strong>{empty}</strong>
-          <small>Take a photo or choose from your gallery · up to {MAX_IMAGES}</small>
+        <button type="button" className={`pf-photo-empty${invalid ? ' is-invalid' : ''}`} onClick={pick}>
+          <span className="pf-photo-empty-icon"><Camera size={30} /></span>
+          <strong>Add a photo — tap here</strong>
+          <small>Take a photo, or choose one from your phone or computer.</small>
         </button>
       ) : (
         <div className="pf-photos">
           {list.map((src, idx) => (
             <div key={`${src}-${idx}`} className={`pf-photo${idx === 0 ? ' is-cover' : ''}`}>
-              <img src={resolveImg(src) || src} alt={`Photo ${idx + 1}`} />
+              <img src={resolveImg(src) || src} alt={idx === 0 ? 'First photo' : `Photo ${idx + 1}`} />
               <button type="button" className="pf-photo-remove" onClick={() => removeAt(idx)} aria-label={`Remove photo ${idx + 1}`}>
-                <X size={14} weight="bold" />
+                <X size={15} weight="bold" />
               </button>
               {idx === 0
-                ? <span className="pf-photo-cover">Cover</span>
-                : <button type="button" className="pf-photo-makecover" onClick={() => makeCover(idx)}>Make cover</button>}
+                ? <span className="pf-photo-cover">First photo</span>
+                : <button type="button" className="pf-photo-makecover" onClick={() => makeFirst(idx)}>Make first</button>}
             </div>
           ))}
           {uploading > 0 && (
             <div className="pf-photo pf-photo--loading" aria-live="polite">
               <CircleNotch size={22} className="pf-spin" />
-              <span>Uploading…</span>
+              <span>Adding…</span>
             </div>
           )}
-          {list.length + uploading < MAX_IMAGES && !uploading && (
+          {canAdd && (
             <button type="button" className="pf-photo-add" onClick={pick}>
-              <Camera size={22} />
-              <span>Add photo</span>
-              <small>{list.length}/{MAX_IMAGES}</small>
+              <Plus size={22} />
+              <span>Add more</span>
+              <small>{list.length} of {MAX_IMAGES}</small>
             </button>
           )}
         </div>

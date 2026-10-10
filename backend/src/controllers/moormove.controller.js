@@ -15,10 +15,10 @@ const status = asyncHandler(async (req, res) => {
 /** POST /moormove/quote: the rider fee for a checkout. */
 const quote = asyncHandler(async (req, res) => {
   const {
-    storeId, lat, lng, items, municipalityId,
+    storeId, lat, lng, items, municipalityId, barangay,
   } = req.body || {};
   const data = await moormoveService.checkoutQuote(req.user, {
-    storeId, lat, lng, items, municipalityId,
+    storeId, lat, lng, items, municipalityId, barangay,
   });
   successResponse(res, data, 'Rider fee');
 });

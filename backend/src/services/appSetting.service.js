@@ -9,6 +9,10 @@ const DEFAULT_SETTINGS = {
   productPlaceholder: '/brand-icon.png',
   theme: null,
   deliveryFee: 50,
+  // Delivery by distance: deliveryFee is the starting fee, covering the
+  // first deliveryIncludedKm km by road; each km after costs deliveryPerKm.
+  deliveryPerKm: 10,
+  deliveryIncludedKm: 3,
   freeDeliveryThreshold: 500,
   requireBuyerVerification: true,
   categoryStyle: 'IMAGE',
@@ -31,6 +35,9 @@ const booleanField = (value, field) => {
 
 // Money fields are bounded so a typo cannot quote a six-figure delivery fee.
 const MAX_MONEY = 99999;
+// Delivery by distance: a fee per extra km, and the km a starting fee covers.
+const MAX_PER_KM = 1000;
+const MAX_KM = 100;
 const moneyField = (value, field) => {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0 || n > MAX_MONEY) {
@@ -174,6 +181,22 @@ const sanitize = (input = {}) => {
     data[field] = moneyField(input[field], field);
   }
 
+  // Delivery by distance, the defaults for every shop that leaves its own blank.
+  if (input.deliveryPerKm !== undefined) {
+    const n = Number(input.deliveryPerKm);
+    if (input.deliveryPerKm === null || input.deliveryPerKm === '' || !Number.isFinite(n) || n < 0 || n > MAX_PER_KM) {
+      throw new ApiError(`Each extra km must cost ₱0 to ₱${MAX_PER_KM}`, 400);
+    }
+    data.deliveryPerKm = Math.round(n * 100) / 100;
+  }
+  if (input.deliveryIncludedKm !== undefined) {
+    const n = Number(input.deliveryIncludedKm);
+    if (input.deliveryIncludedKm === null || input.deliveryIncludedKm === '' || !Number.isFinite(n) || n < 0 || n > MAX_KM) {
+      throw new ApiError(`The km included must be 0 to ${MAX_KM}`, 400);
+    }
+    data.deliveryIncludedKm = Math.round(n * 10) / 10;
+  }
+
   if (input.requireBuyerVerification !== undefined) {
     data.requireBuyerVerification = booleanField(input.requireBuyerVerification, 'requireBuyerVerification');
   }
@@ -205,7 +228,7 @@ const sanitize = (input = {}) => {
   }
 
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, verification, category style, Available Today, admin team or MoorMove setting', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, delivery by distance, verification, category style, Available Today, admin team or MoorMove setting', 400);
   }
   return data;
 };
@@ -230,6 +253,9 @@ const getCheckoutPricing = async () => {
   const settings = await get();
   return {
     deliveryFee: Number(settings.deliveryFee ?? DEFAULT_SETTINGS.deliveryFee),
+    // Delivery by distance (see deliveryQuote.service).
+    deliveryPerKm: Number(settings.deliveryPerKm ?? DEFAULT_SETTINGS.deliveryPerKm),
+    deliveryIncludedKm: Number(settings.deliveryIncludedKm ?? DEFAULT_SETTINGS.deliveryIncludedKm),
   };
 };
 

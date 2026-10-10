@@ -189,6 +189,22 @@ const notifyStockCrossings = async (sellerId, items) => {
   if (crossed.length) await notificationService.notifyLowStock(sellerId, crossed);
 };
 
+/**
+ * The order's delivery distance columns from a quote (the shop's or
+ * MoorMove's): { deliveryDistanceKm, deliveryDistanceSource }, or nothing.
+ */
+const DISTANCE_SOURCES = ['ROAD', 'ESTIMATE', 'NONE'];
+const deliveryDistance = (q) => {
+  if (!q) return {};
+  const km = q.distanceKm == null ? null : Number(q.distanceKm);
+  const source = DISTANCE_SOURCES.includes(q.distanceSource) ? q.distanceSource : null;
+  return {
+    deliveryDistanceKm: Number.isFinite(km) && km >= 0 && km < 10000 ? Math.round(km * 100) / 100 : null,
+    // A km without a source (an older MoorMove) was a straight-line estimate.
+    deliveryDistanceSource: source || (Number.isFinite(km) ? 'ESTIMATE' : null),
+  };
+};
+
 // Unconfirmed (PENDING) orders one buyer may hold: overall, and with one shop.
 const OPEN_ORDERS_MAX = Math.max(1, parseInt(process.env.OPEN_ORDERS_MAX || '8', 10) || 8);
 const OPEN_ORDERS_PER_STORE = Math.max(1, parseInt(process.env.OPEN_ORDERS_PER_STORE || '3', 10) || 3);
@@ -319,8 +335,9 @@ const createOrder = async (userId, data) => {
   }
 
   // Delivery-only validations. Delivered by the seller: the quote carries the
-  // fee for this address (the barangay's or town's own fee, else the store's
-  // standard fee). Delivered by a courier the buyer chose: it goes anywhere in
+  // fee for this address, by distance from the shop's pin to the buyer's
+  // (see deliveryQuote.service; worked out here, never taken from the
+  // browser). Delivered by a courier the buyer chose: it goes anywhere in
   // the province, is priced on the parcel's weight below, and is paid online.
   let deliveryQuote = null;
   let courier = null;
@@ -350,9 +367,21 @@ const createOrder = async (userId, data) => {
       }
       const muniForCoverage = buyerMunicipalityId || buyer.municipalityId;
       const brgyForCoverage = buyerBarangay || buyer.barangay;
-      deliveryQuote = await deliveryQuoteService.quote(store, muniForCoverage, brgyForCoverage);
+      const buyerPin = normalizePin(deliveryLatitude, deliveryLongitude);
+      deliveryQuote = await deliveryQuoteService.quote(
+        store,
+        muniForCoverage,
+        brgyForCoverage,
+        buyerPin.latitude == null ? null : buyerPin,
+      );
+      if (!deliveryQuote.covered && deliveryQuote.tooFar) {
+        throw new ApiError(`${deliveryQuote.reason}, and your pin is ${deliveryQuote.distanceKm} km away. Choose another way to receive it.`, 400);
+      }
       if (!deliveryQuote.covered) {
         throw new ApiError('Delivery is not available for your address. Please choose Pickup instead.', 400);
+      }
+      if (deliveryQuote.fee == null) {
+        throw new ApiError('Drop your pin on the map so the shop can work out the delivery fee', 400);
       }
     }
   }
@@ -462,7 +491,7 @@ const createOrder = async (userId, data) => {
   }
 
   // Pickup is free; delivery by the seller costs what the store charges for
-  // the buyer's area (see deliveryQuote.service); by a courier, its rate for
+  // the distance (see deliveryQuote.service); by a courier, its rate for
   // the parcel's weight, within the seller's town or to another town.
   let courierFee = null;
   if (courier) {
@@ -479,7 +508,13 @@ const createOrder = async (userId, data) => {
   // pin to the buyer's, asked here (never the price the browser saw).
   let riderQuote = null;
   if (partner) {
-    riderQuote = await moormoveService.quoteForCheckout({ store, buyerPin: riderPin, grams: riderGrams });
+    riderQuote = await moormoveService.quoteForCheckout({
+      store,
+      buyerPin: riderPin,
+      grams: riderGrams,
+      buyerTownId: buyerMunicipalityId || buyer.municipalityId || null,
+      buyerBarangay: buyerBarangay || buyer.barangay || null,
+    });
     if (!riderQuote.available) throw new ApiError(`${riderQuote.reason}. Choose another way to receive it.`, 400);
   }
   const DELIVERY_FEE = fulfillmentMethod === 'PICKUP' ? 0
@@ -555,6 +590,10 @@ const createOrder = async (userId, data) => {
         ...(courier ? { courierId: courier.id, courierName: courier.name, shippingWeightGrams: parcelGrams } : {}),
         // A MoorMove rider: the seller calls one once it is packed.
         ...(riderQuote ? { deliveryPartner: 'MOORMOVE' } : {}),
+        // A MoorMove free-delivery promo (deliveryFee 0): kept for the booking and the notices.
+        ...(riderQuote?.promo ? { deliveryPromoId: riderQuote.promo.id, deliveryPromoTitle: riderQuote.promo.title } : {}),
+        // How far it was priced for: the shop's distance, or MoorMove's.
+        ...deliveryDistance(fulfillmentMethod === 'DELIVERY' ? (riderQuote || deliveryQuote) : null),
       },
       orderItems,
       voucherRecord ? { voucherId: voucherRecord.id, userId, discountAmount } : null,
@@ -581,13 +620,34 @@ const createOrder = async (userId, data) => {
     throw err;
   }
 
+  // A MoorMove free-delivery promo: the seller pays the rider nothing and, on
+  // cash on delivery, the rider collects only the items' price.
+  const promoTitle = riderQuote?.promo?.title || null;
+  const promoNote = promoTitle
+    ? `Free delivery promo by MoorMove (${promoTitle}): the buyer pays no delivery fee and you pay the rider nothing${
+      paymentMethod === 'COD' ? `; the rider collects only ₱${Number(grandTotal).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} for the items` : ''}.`
+    : null;
+
   // Notify the seller (non-blocking on failure)
   try {
     if (store.ownerId) {
-      await notificationService.notifyOrderCreated(store.ownerId, order.id, buyer.fullName);
+      await notificationService.notifyOrderCreated(store.ownerId, order.id, buyer.fullName, promoNote);
     }
   } catch (err) {
     console.error('[createOrder] notification failed:', err.message);
+  }
+
+  // …and the buyer, that the delivery is free.
+  if (promoTitle) {
+    notificationService.createNotification({
+      userId: buyer.id,
+      type: 'ORDER_CONFIRMED',
+      audience: 'BUYER',
+      title: 'Free delivery',
+      message: `Order ${order.orderNumber} placed. ${notificationService.promoLine(promoTitle)}: you pay no delivery fee.`,
+      relatedId: order.id,
+      target: { kind: 'buyer-order', id: order.id },
+    }).catch((err) => console.error('[createOrder] promo notice failed:', err.message));
   }
 
   // Products this order brought down to their low-stock line.

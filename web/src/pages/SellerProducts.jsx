@@ -443,12 +443,13 @@ export default function SellerProducts() {
           <SellerPageHead
             className="pf-head"
             title={editingProduct && !isNewRoute ? 'Edit product' : 'Add a product'}
-            subtitle="Fill in the steps below. Parts marked * are required."
+            subtitle="Fill in the boxes below, top to bottom. Parts marked * are needed."
           />
           <ProductForm
             key={isNewRoute ? 'new' : editingProduct?.id}
             product={isNewRoute ? null : editingProduct}
             categories={categories}
+            recentProducts={products}
             onCancel={closeForm}
             onSaved={handleSaved}
             sellBlockers={blockers}

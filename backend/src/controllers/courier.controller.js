@@ -53,10 +53,18 @@ const setMyDelivery = asyncHandler(async (req, res) => {
   successResponse(res, data, 'Delivery options saved');
 });
 
-/** POST /couriers/quote — delivery by the seller and by each courier, for some items. */
+/**
+ * POST /couriers/quote — delivery by the seller and by each courier, for
+ * some items. lat, lng: the delivery pin (the seller's fee is by distance).
+ */
 const quote = asyncHandler(async (req, res) => {
-  const { storeId, items, municipalityId, barangay } = req.body || {};
-  successResponse(res, await courierService.quote({ storeId, items, municipalityId, barangay }), 'Delivery options');
+  const {
+    storeId, items, municipalityId, barangay, lat, lng,
+  } = req.body || {};
+  const pin = lat != null && lng != null ? { lat, lng } : null;
+  successResponse(res, await courierService.quote({
+    storeId, items, municipalityId, barangay, pin,
+  }), 'Delivery options');
 });
 
 module.exports = { quote, listActive, listAll, create, update, remove, getMyDelivery, setMyDelivery };

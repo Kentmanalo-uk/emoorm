@@ -34,3 +34,20 @@
 @media (max-width: 480px) {
   .ac-rates-extra { grid-template-columns: 1fr; }
 }
+
+/* MoorMove: the first row (local riders, not a database courier). */
+.ac-mm-name { display: inline-flex; flex-direction: column; gap: 1px; line-height: 1.2; }
+.ac-mm-tag { color: var(--t-neutral-500, #64748b); font-size: 12px; font-weight: 500; }
+.ac-mm-dot { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--t-neutral-600, #475569); font-size: 12px; line-height: 1.35; }
+.ac-mm-dot::before { content: ''; flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--t-neutral-400, #9ca3af); }
+.ac-mm-dot.is-ok::before { background: var(--t-primary-600, #059669); }
+.ac-mm-dot.is-bad::before { background: var(--t-danger-600, #dc2626); }
+.ac-mm-dot.is-wait::before { background: var(--t-warning-500, #f59e0b); }
+.ac-row-actions a.admin-btn { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
+.ac-mm-name strong { white-space: nowrap; }
+/* Phones (the row becomes a card): the connection line under the name. */
+.ac-mm-row td:first-child { flex-wrap: wrap; }
+.ac-mm-row .ac-mm-dot { flex-basis: 100%; }
+/* A MoorMove free-delivery promo running now, under the connection line. */
+.ac-mm-dot.ac-mm-promo { margin-top: 3px; color: var(--t-primary-700, #047857); font-weight: 600; }
+.ac-mm-dot.ac-mm-promo::before { background: var(--t-primary-500, #10b981); }

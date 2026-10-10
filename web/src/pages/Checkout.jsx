@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   MapPin,
@@ -14,7 +14,7 @@ import {
   DeviceMobile,
   NotePencil,
   ClockCountdown,
-  Motorcycle,
+  Gift,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -38,7 +38,7 @@ import {
   allowsCourier, allowsMethod, cookDaysLabel, cookReady,
 } from '../lib/productKinds';
 import { orderEta, onDayStart, rangeLabel } from '../lib/eta';
-import { useMoormove } from '../lib/moormove';
+import { MOORMOVE_COURIER, promosForTown, useMoormove } from '../lib/moormove';
 import {
   lineKind, lineNote, lineUnit, countLabel, whenLabel, orderByLabel,
 } from '../lib/orderLines';
@@ -78,7 +78,7 @@ const Checkout = () => {
   const { items: allItems, clearCart, revalidate } = useCartStore();
   const { requireVerifiedIdentity, showIdentityRequired, identityDialog } = useIdentityGate();
   const { settings } = useAppSettings();
-  const { enabled: ridersOn } = useMoormove();
+  const { enabled: ridersOn, promos: riderPromos } = useMoormove();
   const isPhone = usePhoneLayout();
 
   // Refresh price / stock / availability of every line before anything is placed.
@@ -321,36 +321,59 @@ const Checkout = () => {
     [storesLoading, storeIds, storeInfo]
   );
 
-  // Coverage check on delivery address change (debounced by simple effect).
-  // The answer also carries the fee for this address: stores can price each
-  // town or barangay on its own.
-  const checkCoverage = useCallback(async () => {
-    if (fulfillmentMethod !== 'DELIVERY') return;
-    if (!deliveryForm.municipalityId) return;
+  // The delivery pin, rounded (about 1 m): fees by distance are asked again
+  // when it moves, once it settles.
+  const pinKey = deliveryPin && validPin(deliveryPin.latitude, deliveryPin.longitude)
+    ? `${Number(deliveryPin.latitude).toFixed(5)},${Number(deliveryPin.longitude).toFixed(5)}`
+    : '';
+
+  // Coverage check on delivery address change. The answer carries the fee
+  // for this address: by distance from the shop's pin to the buyer's pin
+  // (with the km, and whether it is by road or an estimate), or why not.
+  useEffect(() => {
+    if (fulfillmentMethod !== 'DELIVERY' || !deliveryForm.municipalityId) return undefined;
     const params = { municipalityId: deliveryForm.municipalityId };
     if (deliveryForm.barangay) params.barangay = deliveryForm.barangay;
-    const results = await Promise.all(
-      storeIds.map(async (id) => {
-        try {
-          const res = await axios.get(`/stores/${id}/coverage`, { params });
-          return { id, covered: !!res.data?.covered, fee: res.data?.fee ?? null };
-        } catch {
-          return { id, covered: false, fee: null };
+    if (pinKey) {
+      const [lat, lng] = pinKey.split(',');
+      params.lat = lat;
+      params.lng = lng;
+    }
+    let cancelled = false;
+    // A pin being dragged settles first (like the rider quote).
+    const timer = setTimeout(async () => {
+      const results = await Promise.all(
+        storeIds.map(async (id) => {
+          try {
+            const res = await axios.get(`/stores/${id}/coverage`, { params });
+            const d = res.data || {};
+            return {
+              id,
+              covered: !!d.covered,
+              fee: d.fee ?? null,
+              distanceKm: d.distanceKm ?? null,
+              distanceSource: d.distanceSource ?? null,
+              reason: d.reason || null,
+              needsPin: Boolean(d.needsPin),
+            };
+          } catch {
+            return { id, covered: false, fee: null };
+          }
+        })
+      );
+      if (cancelled) return;
+      setStoreInfo((prev) => {
+        const next = { ...prev };
+        for (const { id, ...answer } of results) {
+          next[id] = {
+            ...(next[id] || {}), distanceKm: null, distanceSource: null, reason: null, needsPin: false, ...answer, checked: true,
+          };
         }
-      })
-    );
-    setStoreInfo((prev) => {
-      const next = { ...prev };
-      for (const { id, covered, fee } of results) {
-        next[id] = { ...(next[id] || {}), covered, fee, checked: true };
-      }
-      return next;
-    });
-  }, [fulfillmentMethod, deliveryForm.municipalityId, deliveryForm.barangay, storeIds]);
-
-  useEffect(() => {
-    checkCoverage();
-  }, [checkCoverage]);
+        return next;
+      });
+    }, pinKey ? 400 : 0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [fulfillmentMethod, deliveryForm.municipalityId, deliveryForm.barangay, storeIds, pinKey]);
 
   // Delivery by the seller (their fee for this address) or by a courier the
   // shop ships with (its rate for the parcel's weight; paid online only).
@@ -361,20 +384,27 @@ const Checkout = () => {
     orderableItems.map((it) => [it.productId || it.id, it.quantity]),
     deliveryForm.municipalityId || null,
     deliveryForm.barangay || null,
+    pinKey || null,
   ]);
   useEffect(() => {
-    const [storeId, lines, municipalityId, barangay] = JSON.parse(quoteKey);
+    const [storeId, lines, municipalityId, barangay, pin] = JSON.parse(quoteKey);
     if (fulfillmentMethod !== 'DELIVERY' || !storeId || lines.length === 0) return undefined;
     let cancelled = false;
-    axios.post('/couriers/quote', {
-      storeId,
-      items: lines.map(([productId, quantity]) => ({ productId, quantity })),
-      municipalityId: municipalityId || undefined,
-      barangay: barangay || undefined,
-    })
-      .then((res) => { if (!cancelled) setShipQuote(res.data || null); })
-      .catch(() => { if (!cancelled) setShipQuote(null); });
-    return () => { cancelled = true; };
+    const [lat, lng] = pin ? pin.split(',').map(Number) : [];
+    // A pin being dragged settles first.
+    const timer = setTimeout(() => {
+      axios.post('/couriers/quote', {
+        storeId,
+        items: lines.map(([productId, quantity]) => ({ productId, quantity })),
+        municipalityId: municipalityId || undefined,
+        barangay: barangay || undefined,
+        // The seller's fee is by distance to this pin.
+        ...(pin ? { lat, lng } : {}),
+      })
+        .then((res) => { if (!cancelled) setShipQuote(res.data || null); })
+        .catch(() => { if (!cancelled) setShipQuote(null); });
+    }, pin ? 400 : 0);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [quoteKey, fulfillmentMethod]);
 
   // A MoorMove rider: offered when riders are on and the shop takes them
@@ -383,18 +413,21 @@ const Checkout = () => {
   const riderStore = storeInfo[storeIds[0]]?.store || null;
   const ridersOffered = ridersOn && fulfillmentMethod === 'DELIVERY' && Boolean(riderStore)
     && riderStore.moormoveEnabled !== false && validPin(riderStore.latitude, riderStore.longitude);
-  const [riderQuote, setRiderQuote] = useState(null); // { key, available, reason, fee, distanceKm, eta }
+  // { key, available, reason, fee, listFee, promo, distanceKm, eta }
+  const [riderQuote, setRiderQuote] = useState(null);
   const riderKey = ridersOffered && deliveryPin && validPin(deliveryPin.latitude, deliveryPin.longitude)
     ? JSON.stringify([
       storeIds[0],
       Number(deliveryPin.latitude).toFixed(6),
       Number(deliveryPin.longitude).toFixed(6),
       orderableItems.map((it) => [it.productId || it.id, it.quantity]),
+      deliveryForm.municipalityId || null,
+      deliveryForm.barangay || null,
     ])
     : null;
   useEffect(() => {
     if (!riderKey) return undefined;
-    const [storeId, lat, lng, lines] = JSON.parse(riderKey);
+    const [storeId, lat, lng, lines, municipalityId, barangay] = JSON.parse(riderKey);
     let cancelled = false;
     // A pin being dragged settles first.
     const timer = setTimeout(() => {
@@ -403,6 +436,9 @@ const Checkout = () => {
         lat: Number(lat),
         lng: Number(lng),
         items: lines.map(([productId, quantity]) => ({ productId, quantity })),
+        // The buyer's town and barangay: whether a rider covers this area.
+        municipalityId: municipalityId || undefined,
+        barangay: barangay || undefined,
       }, { quiet: true })
         .then((res) => { if (!cancelled) setRiderQuote({ key: riderKey, ...(res.data || {}) }); })
         .catch((err) => {
@@ -414,6 +450,13 @@ const Checkout = () => {
   // Only the answer for this pin and these items counts.
   const riderAnswer = riderQuote && riderQuote.key === riderKey ? riderQuote : null;
   const riderReady = Boolean(riderAnswer?.available) && riderAnswer.fee != null;
+  // A MoorMove free-delivery promo: no fee for the buyer (MoorMove pays the rider).
+  const riderPromo = riderReady && Number(riderAnswer.fee) === 0 && riderAnswer.promo ? riderAnswer.promo : null;
+  // Promos MoorMove runs for this shop's town, for the banner over the options
+  // (not when no rider can come to this address).
+  const shopPromos = ridersOffered && !(riderAnswer && !riderReady)
+    ? promosForTown(riderPromos, riderStore?.municipalityId)
+    : [];
 
   // Available Today items: delivered by the shop or picked up, never by a
   // courier, in the ways their windows allow; ready in their ready time.
@@ -458,6 +501,7 @@ const Checkout = () => {
     ? deliveryChoice
     : (sellerReaches ? 'SELLER' : courierChoices.find(courierPickable)?.id || (riderReady ? 'MOORMOVE' : 'SELLER'));
   const riderChosen = fulfillmentMethod === 'DELIVERY' && activeChoice === 'MOORMOVE' && riderReady;
+  const riderFree = riderChosen && Boolean(riderPromo);
   const chosenCourier = fulfillmentMethod === 'DELIVERY' && activeChoice !== 'SELLER' && activeChoice !== 'MOORMOVE'
     ? courierChoices.find((c) => c.id === activeChoice) || null
     : null;
@@ -527,9 +571,19 @@ const Checkout = () => {
   // for this address (its quote), or its standard fee until the quote is in.
   const checkoutStore = storeInfo[storeIds[0]]?.store || null;
   const quoted = storeInfo[storeIds[0]];
+  // Delivered by the seller, priced by distance: waiting for the buyer's pin.
+  const sellerFeePending = Boolean(quoted?.checked && quoted.covered && quoted.fee == null);
   const deliveryFee = quoted?.checked && quoted.covered && quoted.fee != null
     ? Number(quoted.fee)
     : storeDeliveryFee(checkoutStore, settings, 'DELIVERY');
+  // How far it is: the seller's distance, or the rider's.
+  const kmText = (km) => `${Number(km).toLocaleString('en-PH', { maximumFractionDigits: 1 })} km`;
+  const sellerKm = quoted?.checked && quoted.distanceKm != null ? kmText(quoted.distanceKm) : null;
+  const deliveryDistance = fulfillmentMethod !== 'DELIVERY' || chosenCourier ? null
+    : riderChosen
+      ? (riderAnswer.distanceKm != null ? { km: kmText(riderAnswer.distanceKm), estimated: riderAnswer.distanceSource === 'ESTIMATE' } : null)
+      : (sellerKm ? { km: sellerKm, estimated: quoted.distanceSource === 'ESTIMATE' } : null);
+  const kmNote = deliveryDistance ? ` · ${deliveryDistance.km}${deliveryDistance.estimated ? ' (estimated distance)' : ''}` : '';
   const shippingFee = orderableItems.length > 0 && fulfillmentMethod === 'DELIVERY'
     ? (chosenCourier ? Number(chosenCourier.fee) : riderChosen ? Number(riderAnswer.fee) : deliveryFee)
     : 0;
@@ -691,7 +745,8 @@ const Checkout = () => {
       return;
     }
     if (anyCoverageMissing) {
-      toast.error(courierChoices.some(courierPickable)
+      const far = quoted?.reason && quoted.distanceKm != null ? `${quoted.reason}, and your pin is ${kmText(quoted.distanceKm)} away. ` : '';
+      toast.error(far ? `${far}Choose ${courierChoices.some(courierPickable) ? 'a courier, ' : ''}Pickup, or another address.` : courierChoices.some(courierPickable)
         ? 'The seller does not deliver to your address. Choose a courier, Pickup, or another address.'
         : 'This store does not deliver to your address. Choose Pickup or update your address.');
       scrollToSection('co-address');
@@ -1117,9 +1172,23 @@ const Checkout = () => {
                         <Truck size={24} />
                         <h2>Delivery Option</h2>
                       </div>
+                      {shopPromos.length > 0 && (
+                        <p className="co-mm-promo-banner">
+                          <Gift size={16} weight="fill" aria-hidden="true" />
+                          <span>MoorMove free delivery: {shopPromos.map((p) => `${p.title}${p.maxKm ? ` (within ${p.maxKm} km)` : ''}`).join(' · ')}</span>
+                        </p>
+                      )}
                       <div className="co-choices">
                         {sellerDelivers && (() => {
                           const notHere = quoted?.checked && !quoted.covered;
+                          // Too far for the shop: how far the pin is, and how far it goes.
+                          const why = !notHere ? null
+                            : quoted.reason && quoted.distanceKm != null
+                              ? `${quoted.reason}; your pin is ${kmText(quoted.distanceKm)} away`
+                              : "Doesn't deliver to your address";
+                          const distance = sellerKm
+                            ? `${sellerKm}${quoted.distanceSource === 'ESTIMATE' ? ' (estimated)' : ''}`
+                            : null;
                           return (
                             <ChoiceCard
                               name="delivery-option"
@@ -1130,8 +1199,10 @@ const Checkout = () => {
                               onChange={setDeliveryChoice}
                               media={<Truck size={20} weight="fill" />}
                               title="Delivered by the seller"
-                              desc={notHere ? "Doesn't deliver to your address" : 'Cash on delivery or online payment'}
-                              aside={notHere ? '' : deliveryFee === 0 ? 'Free' : peso(deliveryFee)}
+                              desc={why || (sellerFeePending
+                                ? 'Drop your pin to see the delivery fee (by distance)'
+                                : [distance, 'Cash on delivery or online payment'].filter(Boolean).join(' · '))}
+                              aside={notHere || sellerFeePending ? '' : deliveryFee === 0 ? 'Free' : peso(deliveryFee)}
                             />
                           );
                         })()}
@@ -1174,21 +1245,28 @@ const Checkout = () => {
                           <ChoiceCard
                             name="delivery-option"
                             value="MOORMOVE"
-                            className="co-delivery-choice"
+                            className={`co-delivery-choice${riderPromo ? ' co-mm-promo' : ''}`}
                             checked={activeChoice === 'MOORMOVE'}
                             disabled={Boolean(why)}
                             onChange={setDeliveryChoice}
-                            media={<Motorcycle size={20} weight="fill" />}
-                            title="MoorMove rider"
+                            media={<CourierMark courier={MOORMOVE_COURIER} size={30} />}
+                            title="MoorMove"
+                            badge={riderPromo ? `Free delivery · ${riderPromo.title}, by MoorMove` : null}
                             desc={why || ['A local rider brings it', km, eta ? `arrives ${eta}` : null, 'cash on delivery OK'].filter(Boolean).join(' · ')}
-                            aside={why ? '' : peso(riderAnswer.fee)}
+                            aside={why ? '' : riderPromo ? (
+                              <span className="co-free-fee">
+                                {Number(riderAnswer.listFee) > 0 && <s>{peso(riderAnswer.listFee)}</s>}
+                                Free
+                              </span>
+                            ) : peso(riderAnswer.fee)}
                           />
                         );
                       })()}
                       {riderChosen && (
                         <p className="co-delivery-note">
                           A MoorMove rider picks up your order at the shop and brings it to your pin. You can see the rider on a map in My Orders.
-                          {paymentMethod === 'COD' ? ` Pay ${peso(total)} to the rider when it arrives.` : ''}
+                          {riderFree ? ` You pay no delivery fee: MoorMove's ${riderPromo.title} promo covers it.` : ''}
+                          {paymentMethod === 'COD' ? ` Pay ${peso(total)} to the rider when it arrives${riderFree ? ', for the items only' : ''}.` : ''}
                         </p>
                       )}
                       {chosenCourier && (
@@ -1246,8 +1324,9 @@ const Checkout = () => {
                             <span>
                               {fulfillmentMethod === 'PICKUP' ? <StoreIcon size={16} /> : <Truck size={16} />}
                               {fulfillmentMethod === 'PICKUP' ? 'Pickup at the store' : chosenCourier ? `Shipping · ${chosenCourier.name}` : riderChosen ? 'MoorMove rider' : 'Delivery fee'}
+                              {kmNote && <small className="co-km">{kmNote}</small>}
                             </span>
-                            <span>{fulfillmentMethod === 'PICKUP' ? 'No fee' : peso(shippingFee)}</span>
+                            <span className={riderFree ? 'co-m-free' : undefined}>{fulfillmentMethod === 'PICKUP' ? 'No fee' : riderFree ? 'Free (MoorMove promo)' : !riderChosen && !chosenCourier && sellerFeePending ? 'Drop your pin' : peso(shippingFee)}</span>
                           </div>
                         </div>
                       );
@@ -1327,8 +1406,11 @@ const Checkout = () => {
                   <span>{peso(subtotal)}</span>
                 </div>
                 <div className="summary-row">
-                  <span>{fulfillmentMethod === 'PICKUP' ? 'Pickup' : chosenCourier ? `Shipping (${chosenCourier.name})` : riderChosen ? 'Rider fee' : 'Delivery Fee'}</span>
-                  <span>{fulfillmentMethod === 'PICKUP' ? 'No fee' : peso(shippingFee)}</span>
+                  <span>
+                    {fulfillmentMethod === 'PICKUP' ? 'Pickup' : chosenCourier ? `Shipping (${chosenCourier.name})` : riderChosen ? 'Rider fee' : 'Delivery Fee'}
+                    {kmNote && <small className="co-km">{kmNote}</small>}
+                  </span>
+                  <span className={riderFree ? 'co-m-free' : undefined}>{fulfillmentMethod === 'PICKUP' ? 'No fee' : riderFree ? 'Free (MoorMove promo)' : !riderChosen && !chosenCourier && sellerFeePending ? 'Drop your pin' : peso(shippingFee)}</span>
                 </div>
                 {appliedVoucher && discountAmount > 0 && (
                   <div className="summary-row" style={{ color: 'var(--t-primary-600, #059669)' }}>

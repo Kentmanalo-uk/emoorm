@@ -1232,3 +1232,136 @@
 .sf-riders .sf-rider-pin {
   margin: 0;
 }
+
+/* Delivery fee by distance: two answers, then the starting fee, km
+   included, each extra km and the farthest distance, with what buyers pay. */
+.sf-mode-grid.sf-fee-modes {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sf-perkm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.sf-perkm-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sf-perkm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sf-perkm-label {
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sf-perkm-label em {
+  color: var(--t-neutral-500, #64748b);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.sf-perkm-field .sf-fee-box {
+  width: 100%;
+}
+
+.sf-perkm-field small {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.sf-km-box input {
+  padding-left: 0;
+}
+
+.sf-fee-unit {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13px;
+}
+
+.sf-perkm-preview {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #334155);
+  font-size: 13.5px;
+  line-height: 1.5;
+  box-shadow: var(--elev-card);
+}
+
+.sf-perkm-preview > span:first-child {
+  color: var(--t-neutral-500, #64748b);
+}
+
+.sf-perkm-preview strong {
+  color: var(--t-primary-700, #047857);
+}
+
+.sf-perkm-step {
+  white-space: nowrap;
+}
+
+.sf-perkm-pin {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sf-perkm + .sf-hint,
+.sf-perkm .sf-hint {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .sf-perkm-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Phones (the seller app's look): stacked answers, roomier boxes. */
+@media (max-width: 768px) {
+  .sc-content .sf-mode-grid.sf-fee-modes {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-content .sf-perkm {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .sc-content .sf-perkm-grid {
+    gap: 12px 10px;
+  }
+
+  .sc-content .sf-perkm-label {
+    font-weight: 500;
+  }
+
+  .sc-content .sf-perkm-field .sf-fee-box {
+    width: 100%;
+    height: 42px;
+  }
+
+  .sc-content .sf-perkm-preview {
+    border-radius: 10px;
+  }
+
+  .sc-content .sf-perkm-preview strong {
+    font-weight: 500;
+  }
+}

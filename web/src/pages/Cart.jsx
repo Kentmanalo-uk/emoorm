@@ -221,20 +221,31 @@ const Cart = () => {
   const addressReady = !isAuthenticated || savedAddress !== undefined;
   const quoteTown = savedAddress ? savedAddress.municipalityId : user?.municipalityId;
   const quoteBarangay = savedAddress ? savedAddress.barangay : user?.barangay;
+  // Shops charge by distance from their pin to the buyer's, so the saved address's pin goes too.
+  const hasPin = savedAddress?.latitude != null && savedAddress?.longitude != null;
+  const quoteLat = hasPin ? savedAddress.latitude : null;
+  const quoteLng = hasPin ? savedAddress.longitude : null;
   const [feeQuotes, setFeeQuotes] = useState({});
-  const quoteKey = addressReady && feeStoreId && quoteTown ? `${feeStoreId}|${quoteTown}|${quoteBarangay || ''}` : null;
+  const quoteKey = addressReady && feeStoreId && quoteTown
+    ? `${feeStoreId}|${quoteTown}|${quoteBarangay || ''}|${hasPin ? `${quoteLat},${quoteLng}` : ''}`
+    : null;
   useEffect(() => {
     if (!quoteKey || feeQuotes[quoteKey] !== undefined) return undefined;
     let cancelled = false;
-    const params = { municipalityId: quoteTown, ...(quoteBarangay ? { barangay: quoteBarangay } : {}) };
+    const params = {
+      municipalityId: quoteTown,
+      ...(quoteBarangay ? { barangay: quoteBarangay } : {}),
+      ...(quoteLat != null ? { lat: quoteLat, lng: quoteLng } : {}),
+    };
     axios.get(`/stores/${feeStoreId}/coverage`, { params })
       .then((res) => { if (!cancelled) setFeeQuotes((cur) => ({ ...cur, [quoteKey]: res.data || null })); })
       .catch(() => { if (!cancelled) setFeeQuotes((cur) => ({ ...cur, [quoteKey]: null })); });
     return () => { cancelled = true; };
-  }, [quoteKey, feeQuotes, feeStoreId, quoteTown, quoteBarangay]);
+  }, [quoteKey, feeQuotes, feeStoreId, quoteTown, quoteBarangay, quoteLat, quoteLng]);
   const quote = quoteKey ? feeQuotes[quoteKey] : null;
-  // null: not known yet (nothing selected, several shops, or still loading).
-  const shippingFee = subtotal > 0 && feeStore !== undefined
+  // null: not known yet (nothing selected, several shops, or still loading),
+  // or the fee depends on a pin the buyer drops at checkout.
+  const shippingFee = subtotal > 0 && feeStore !== undefined && quote !== undefined && !(quote?.covered && quote.fee == null)
     ? (pickupOnly ? 0 : (quote?.covered && quote.fee != null ? Number(quote.fee) : storeDeliveryFee(feeStore, settings, 'DELIVERY')))
     : null;
   const shippingLabel = shippingFee === null

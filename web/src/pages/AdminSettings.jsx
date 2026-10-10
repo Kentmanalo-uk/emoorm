@@ -16,8 +16,22 @@ import { resolveImg } from '../lib/media';
 import useAppSettings, { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS, resolveAppSettingImage } from '../hooks/useAppSettings';
 import useAuthStore from '../store/authStore';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
-import { MOORMOVE_STATUS_KEY } from '../lib/moormove';
 import './AdminSettings.css';
+
+/**
+ * What the default delivery fees add up to, for the admin to check:
+ * "The starting fee covers the first 3 km. A 5 km delivery costs ₱70."
+ */
+function DeliveryExample({ form }) {
+  const base = Number(form.deliveryFee);
+  const perKm = Number(form.deliveryPerKm);
+  const included = Number(form.deliveryIncludedKm);
+  const lead = 'The starting fee covers this many km by road.';
+  if (![base, perKm, included].every((n) => Number.isFinite(n) && n >= 0)) return lead;
+  const km = Math.max(5, Math.ceil(included) + 2);
+  const cost = Math.round(base + Math.max(0, km - included) * perKm);
+  return `${lead} A ${km} km delivery costs ₱${cost.toLocaleString('en-PH')}.`;
+}
 
 // Settings row: label and help on the left, controls on the right.
 function Row({ label, help, children }) {
@@ -78,42 +92,28 @@ export default function AdminSettings() {
 
   useEffect(() => { loadStatus(); }, []);
 
-  // MoorMove: whether this server is set up to reach it, and whether it answers.
-  const [riderHealth, setRiderHealth] = useState(null); // null = checking
-  const [riderHealthKey, setRiderHealthKey] = useState(0);
-  useEffect(() => {
-    if (!isSuperAdmin) return undefined;
-    let cancelled = false;
-    axios.get('/moormove/admin/health', { quiet: true })
-      .then((res) => { if (!cancelled) setRiderHealth(res.data || { configured: false }); })
-      .catch((err) => { if (!cancelled) setRiderHealth({ failed: true, error: err?.message || null }); });
-    return () => { cancelled = true; };
-  }, [isSuperAdmin, riderHealthKey]);
-  const recheckRiders = () => {
-    setRiderHealth(null);
-    setRiderHealthKey((n) => n + 1);
-  };
-
   useEffect(() => {
     setBrandingForm({
       appLogo: currentAppSettings.appLogo,
       productPlaceholder: currentAppSettings.productPlaceholder,
       deliveryFee: String(currentAppSettings.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
+      deliveryPerKm: String(Number(currentAppSettings.deliveryPerKm ?? DEFAULT_APP_SETTINGS.deliveryPerKm)),
+      deliveryIncludedKm: String(Number(currentAppSettings.deliveryIncludedKm ?? DEFAULT_APP_SETTINGS.deliveryIncludedKm)),
       adminTeamMax: String(currentAppSettings.adminTeamMax ?? 5),
       requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
       availableTodayEnabled: currentAppSettings.availableTodayEnabled !== false,
       categoryStyle: currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE',
-      moormoveEnabled: currentAppSettings.moormoveEnabled === true,
     });
   }, [
     currentAppSettings.appLogo,
     currentAppSettings.productPlaceholder,
     currentAppSettings.deliveryFee,
+    currentAppSettings.deliveryPerKm,
+    currentAppSettings.deliveryIncludedKm,
     currentAppSettings.adminTeamMax,
     currentAppSettings.requireBuyerVerification,
     currentAppSettings.availableTodayEnabled,
     currentAppSettings.categoryStyle,
-    currentAppSettings.moormoveEnabled,
   ]);
 
   useEffect(() => {
@@ -213,6 +213,21 @@ export default function AdminSettings() {
       changes.productPlaceholder = brandingForm.productPlaceholder;
     }
     if (deliveryFee !== Number(currentAppSettings.deliveryFee)) changes.deliveryFee = deliveryFee;
+    // Delivery by distance: each extra km, and the km the starting fee covers.
+    const deliveryPerKm = Number(brandingForm.deliveryPerKm);
+    if (String(brandingForm.deliveryPerKm ?? '').trim() === '' || !Number.isFinite(deliveryPerKm) || deliveryPerKm < 0 || deliveryPerKm > 1000) {
+      toast.error('Each extra km must cost ₱0 to ₱1,000');
+      return;
+    }
+    const deliveryIncludedKm = Number(brandingForm.deliveryIncludedKm);
+    if (String(brandingForm.deliveryIncludedKm ?? '').trim() === '' || !Number.isFinite(deliveryIncludedKm) || deliveryIncludedKm < 0 || deliveryIncludedKm > 100) {
+      toast.error('The km included must be 0 to 100');
+      return;
+    }
+    if (deliveryPerKm !== Number(currentAppSettings.deliveryPerKm ?? DEFAULT_APP_SETTINGS.deliveryPerKm)) changes.deliveryPerKm = deliveryPerKm;
+    if (deliveryIncludedKm !== Number(currentAppSettings.deliveryIncludedKm ?? DEFAULT_APP_SETTINGS.deliveryIncludedKm)) {
+      changes.deliveryIncludedKm = deliveryIncludedKm;
+    }
     const adminTeamMax = Number(brandingForm.adminTeamMax);
     if (!Number.isInteger(adminTeamMax) || adminTeamMax < 1 || adminTeamMax > 20) {
       toast.error('Admins per municipality must be a whole number from 1 to 20');
@@ -231,10 +246,6 @@ export default function AdminSettings() {
     if (categoryStyle !== (currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE')) {
       changes.categoryStyle = categoryStyle;
     }
-    const moormoveEnabled = brandingForm.moormoveEnabled === true;
-    if (moormoveEnabled !== (currentAppSettings.moormoveEnabled === true)) {
-      changes.moormoveEnabled = moormoveEnabled;
-    }
     if (Object.keys(changes).length === 0) {
       toast.success('No changes to save');
       return;
@@ -244,7 +255,6 @@ export default function AdminSettings() {
       const response = await axios.put('/app-settings', changes);
       queryClient.setQueryData(APP_SETTINGS_QUERY_KEY, { ...DEFAULT_APP_SETTINGS, ...(response.data || {}) });
       queryClient.invalidateQueries({ queryKey: APP_SETTINGS_QUERY_KEY });
-      if ('moormoveEnabled' in changes) queryClient.invalidateQueries({ queryKey: MOORMOVE_STATUS_KEY });
       toast.success('App settings updated');
     } catch (err) {
       toast.error(err.message || 'Failed to save app branding');
@@ -433,7 +443,7 @@ export default function AdminSettings() {
         ))}
       </div>
 
-      <Row label="Default delivery fee (₱)" help="Charged on delivery orders from stores that have not set their own delivery fee. Sellers set theirs in Fulfillment & Payment. Pickup orders are never charged.">
+      <Row label="Default delivery fee (₱)" help="Shops deliver by distance. This is the starting fee for shops that have not set their own; it covers the first km below. Sellers set theirs in Fulfillment & Payment. Pickup orders are never charged.">
         <input
           className="st-input"
           type="number"
@@ -443,6 +453,37 @@ export default function AdminSettings() {
           value={brandingForm.deliveryFee ?? ''}
           onChange={(e) => setBrandingForm((current) => ({ ...current, deliveryFee: e.target.value }))}
           placeholder={String(DEFAULT_APP_SETTINGS.deliveryFee)}
+        />
+      </Row>
+
+      <Row label="Each extra km (₱)" help="Added for every km by road past the km included, for shops that have not set their own.">
+        <input
+          className="st-input"
+          type="number"
+          min="0"
+          max="1000"
+          step="0.5"
+          inputMode="decimal"
+          value={brandingForm.deliveryPerKm ?? ''}
+          onChange={(e) => setBrandingForm((current) => ({ ...current, deliveryPerKm: e.target.value }))}
+          placeholder={String(DEFAULT_APP_SETTINGS.deliveryPerKm)}
+        />
+      </Row>
+
+      <Row
+        label="First km included"
+        help={<DeliveryExample form={brandingForm} />}
+      >
+        <input
+          className="st-input"
+          type="number"
+          min="0"
+          max="100"
+          step="0.5"
+          inputMode="decimal"
+          value={brandingForm.deliveryIncludedKm ?? ''}
+          onChange={(e) => setBrandingForm((current) => ({ ...current, deliveryIncludedKm: e.target.value }))}
+          placeholder={String(DEFAULT_APP_SETTINGS.deliveryIncludedKm)}
         />
       </Row>
 
@@ -490,40 +531,6 @@ export default function AdminSettings() {
           />
           <span>Turn on Available Today</span>
         </label>
-      </Row>
-
-      <Row
-        label="MoorMove rider delivery"
-        help={brandingForm.moormoveEnabled === true
-          ? 'On: buyers can choose a MoorMove rider at checkout, and shops call a rider when an order is packed. Riders pick up at the shop pin; the fee is by distance.'
-          : 'Off: no rider option anywhere. Rider deliveries already under way still finish.'}
-      >
-        <label className="st-toggle">
-          <input
-            type="checkbox"
-            checked={brandingForm.moormoveEnabled === true}
-            onChange={(e) => setBrandingForm((current) => ({ ...current, moormoveEnabled: e.target.checked }))}
-          />
-          <span>Turn on MoorMove riders</span>
-        </label>
-        <p className="st-note st-rider-health" role="status">
-          {(() => {
-            const h = riderHealth;
-            if (!h) return <span className="st-rider-dot is-wait">Checking the connection…</span>;
-            if (h.failed) return <span className="st-rider-dot is-bad">Couldn&apos;t check the connection{h.error ? `: ${h.error}` : ''}</span>;
-            if (!h.configured) return <span className="st-rider-dot is-bad">Not configured (set MOORMOVE_API_URL and MOORMOVE_SECRET)</span>;
-            if (!h.reachable) return <span className="st-rider-dot is-bad">Not reachable{h.error ? ` · ${h.error}` : ''}</span>;
-            const open = (h.towns || []).filter((t) => t.serviceOpen).length;
-            return (
-              <span className={`st-rider-dot ${h.open ? 'is-ok' : 'is-wait'}`}>
-                Connected · open in {open} town{open === 1 ? '' : 's'}{h.open ? '' : ' · MoorMove is not taking orders right now'}
-              </span>
-            );
-          })()}
-          {riderHealth && (
-            <button type="button" className="st-btn st-btn-text st-rider-recheck" onClick={recheckRiders}>Check again</button>
-          )}
-        </p>
       </Row>
 
       <Row

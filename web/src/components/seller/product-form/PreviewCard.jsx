@@ -1,4 +1,4 @@
-import { Image as ImageIcon, PencilSimple } from '@phosphor-icons/react';
+import { Image as ImageIcon } from '@phosphor-icons/react';
 import { resolveImg } from '../../../lib/media';
 import { kindFacts, priceUnit } from '../../../lib/productKinds';
 import { peso } from './formState';
@@ -10,7 +10,7 @@ const BADGES = {
 };
 
 /** What buyers will see: the product's card with its key facts. */
-export function PreviewCard({ draft, kind, way, todayQty }) {
+export default function PreviewCard({ draft, kind, way, todayQty }) {
   const cover = draft.images[0];
   const facts = kind ? kindFacts(draft) : [];
   const unit = priceUnit(draft);
@@ -42,33 +42,5 @@ export function PreviewCard({ draft, kind, way, todayQty }) {
         {way && <span className="pf-preview-way">{way}</span>}
       </div>
     </div>
-  );
-}
-
-/**
- * Step 4: the preview, and on phones a short sum-up of each step with a way
- * back to change it.
- * @param {Array<{ step, title, lines }>} sections - the sum-up (phones)
- */
-export default function ReviewStep({ draft, kind, way, todayQty, sections, onEdit }) {
-  return (
-    <>
-      <PreviewCard draft={draft} kind={kind} way={way} todayQty={todayQty} />
-      {sections && (
-        <div className="pf-sumup">
-          {sections.map((s) => (
-            <div className="pf-sumup-row" key={s.step}>
-              <div>
-                <strong>{s.title}</strong>
-                {s.lines.filter(Boolean).map((line) => <span key={line}>{line}</span>)}
-              </div>
-              <button type="button" className="pf-sumup-edit" onClick={() => onEdit(s.step)} aria-label={`Change ${s.title}`}>
-                <PencilSimple size={15} /> Change
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
   );
 }

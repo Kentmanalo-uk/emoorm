@@ -28,7 +28,7 @@ import CourierTracking, { CourierMark } from '../components/orders/CourierTracki
 import OrderStatusPanel from '../components/orders/OrderStatusPanel';
 import RiderCard from '../components/orders/RiderCard';
 import RiderTrackingMap from '../components/orders/RiderTrackingMap';
-import { isRiderOrder, riderOpen } from '../lib/moormove';
+import { isRiderOrder, orderPromo, riderOpen } from '../lib/moormove';
 import {
   BUYER_TABS, buyerBucket, buyerTabFrom, countBuyerTabs, needsPayment,
 } from '../lib/orderProgress';
@@ -37,6 +37,7 @@ import GcashPhonePay from '../components/checkout/GcashPhonePay';
 import { qrMethod, formatAccountNumber } from '../lib/qrPayment';
 import { isTouchPhone } from '../lib/device';
 import { readCache, writeCache } from '../lib/pageCache';
+import { distanceNote } from '../lib/deliveryDistance';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 
@@ -879,8 +880,15 @@ const Orders = () => {
                     <span>₱{parseFloat(selectedOrder.subtotal).toFixed(2)}</span>
                   </div>
                   <div className="summary-row">
-                    <span>Delivery Fee</span>
-                    <span>₱{parseFloat(selectedOrder.deliveryFee || 0).toFixed(2)}</span>
+                    <span>
+                      Delivery Fee
+                      {distanceNote(selectedOrder) && <small className="summary-km">{distanceNote(selectedOrder)}</small>}
+                    </span>
+                    {orderPromo(selectedOrder) && Number(selectedOrder.deliveryFee || 0) === 0 ? (
+                      <span className="summary-free">Free delivery (MoorMove promo: {orderPromo(selectedOrder).title})</span>
+                    ) : (
+                      <span>₱{parseFloat(selectedOrder.deliveryFee || 0).toFixed(2)}</span>
+                    )}
                   </div>
                   {Number(selectedOrder.discountAmount) > 0 && (
                     <div className="summary-row">

@@ -34,6 +34,11 @@ const fake = {
   seq: 0,
 };
 const OPEN = ['SEARCHING', 'ACCEPTED', 'AT_PICKUP', 'PICKED_UP', 'AT_DROPOFF'];
+// A barangay no MoorMove rider delivers to.
+const NOWHERE = 'Ci Nowhere';
+// A barangay where MoorMove runs a free-delivery promo.
+const LIBRE = 'Ci Libre';
+const PROMO = { id: `ci-promo-${crypto.randomBytes(4).toString('hex')}`, title: 'Ci Free delivery week', endsAt: null };
 
 const later = () => new Date(Date.now() + (fake.seq += 1)).toISOString();
 
@@ -45,12 +50,25 @@ const startFake = async () => {
     : res.status(401).json({ success: false, message: 'Bad partner secret' })));
   const ok = (res, data, status = 200) => res.status(status).json({ success: true, data });
   app.get('/api/partner/status', (req, res) => ok(res, {
-    open: fake.open, towns: fake.towns, maxDistanceKm: 15, maxCod: 5000,
+    open: fake.open, towns: fake.towns, maxDistanceKm: 15, maxCod: 5000, promos: [{ ...PROMO, townIds: null, maxKm: 5 }],
   }));
   app.post('/api/partner/quote', (req, res) => {
     fake.quotes.push(req.body);
-    ok(res, {
-      available: true, vehicleType: 'MOTORCYCLE', distanceKm: 3.2, fee: 75,
+    // No rider's area has this barangay (the real MoorMove checks riders' areas).
+    if (req.body.dropoff?.barangay === NOWHERE) {
+      const town = fake.towns.find((t) => t.id === (req.body.dropoffTownId || req.body.townId));
+      return ok(res, {
+        available: false, reason: `No MoorMove rider delivers to ${NOWHERE}, ${town?.name || 'this town'} yet`, vehicleType: 'MOTORCYCLE', distanceKm: 3.2, fee: 75,
+      });
+    }
+    // A free-delivery promo: fee 0, the usual fee as listFee.
+    if (req.body.dropoff?.barangay === LIBRE) {
+      return ok(res, {
+        available: true, vehicleType: 'MOTORCYCLE', distanceKm: 3.2, fee: 0, listFee: 75, promo: PROMO,
+      });
+    }
+    return ok(res, {
+      available: true, vehicleType: 'MOTORCYCLE', distanceKm: 3.2, distanceSource: 'ROAD', fee: 75, listFee: 75, promo: null,
     });
   });
   app.post('/api/partner/jobs', (req, res) => {
@@ -68,6 +86,10 @@ const startFake = async () => {
       packageSize: req.body.packageSize,
       distanceKm: 3.2,
       fee: req.body.fee,
+      // The real MoorMove makes it free only with a promo it ran.
+      listFee: req.body.promoId === PROMO.id ? 75 : null,
+      promo: req.body.promoId === PROMO.id ? { id: PROMO.id, title: PROMO.title } : null,
+      riderEarning: req.body.promoId === PROMO.id ? 67.5 : req.body.fee * 0.9,
       feePaidBy: req.body.feePaidBy,
       codAmount: req.body.codAmount,
       codReturnedAt: null,
@@ -242,6 +264,7 @@ test('checkout with a MoorMove rider charges the fee MoorMove quotes', async () 
   assert.equal(quote.body.data.available, true);
   assert.equal(quote.body.data.fee, 75);
   assert.equal(quote.body.data.distanceKm, 3.2);
+  assert.equal(quote.body.data.distanceSource, 'ROAD');
   assert.ok(quote.body.data.eta?.from && quote.body.data.eta?.to);
   assert.equal(fake.quotes.at(-1).packageSize, 'SMALL');
   assert.equal(fake.quotes.at(-1).townId, ctx.municipality.id);
@@ -272,12 +295,151 @@ test('checkout with a MoorMove rider charges the fee MoorMove quotes', async () 
   assert.equal(saved.deliveryPartner, 'MOORMOVE');
   assert.equal(Number(saved.deliveryFee), 75);
   assert.equal(Number(saved.total), 175);
+  // The km MoorMove priced it on (by road), kept on the order.
+  assert.equal(Number(saved.deliveryDistanceKm), 3.2);
+  assert.equal(saved.deliveryDistanceSource, 'ROAD');
 
   // The seller's list shows the choice, with no rider yet.
   const list = await h.api('GET', '/orders/store/orders', { token: h.token(ctx.seller) });
   const listed = list.body.data.find((x) => x.id === saved.id);
   assert.equal(listed.deliveryPartner, 'MOORMOVE');
   assert.equal(listed.riderDelivery, null);
+  assert.equal(listed.deliveryDistanceKm, 3.2);
+  assert.equal(listed.deliveryDistanceSource, 'ROAD');
+});
+
+test("no rider delivering to the buyer's barangay: the quote says so and checkout is refused", async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  await h.prisma.user.update({ where: { id: ctx.seller.id }, data: { shopBarangay: 'Ci Market' } });
+  const quote = await h.api('POST', '/moormove/quote', {
+    token: h.token(ctx.buyer),
+    body: {
+      storeId: ctx.store.id,
+      lat: 13.05,
+      lng: 121.4,
+      items: [{ productId: ctx.item.id, quantity: 1 }],
+      municipalityId: ctx.municipality.id,
+      barangay: NOWHERE,
+    },
+  });
+  assert.equal(quote.status, 200, quote.body?.message);
+  assert.equal(quote.body.data.available, false);
+  assert.equal(quote.body.data.fee, null);
+  assert.equal(quote.body.data.reason, `No MoorMove rider delivers to ${NOWHERE}, ${ctx.municipality.name} yet`);
+  // MoorMove was told both ends: the buyer's town and barangay, the shop's barangay.
+  const sent = fake.quotes.at(-1);
+  assert.equal(sent.dropoffTownId, ctx.municipality.id);
+  assert.equal(sent.dropoff.barangay, NOWHERE);
+  assert.equal(sent.pickup.barangay, 'Ci Market');
+
+  const res = await h.api('POST', '/orders', {
+    token: h.token(ctx.buyer),
+    body: {
+      storeId: ctx.store.id,
+      fulfillmentMethod: 'DELIVERY',
+      deliveryPartner: 'MOORMOVE',
+      paymentMethod: 'COD',
+      contactNumber: '09171234567',
+      deliveryAddress: `Purok 1, ${NOWHERE}, ${ctx.municipality.name}, Oriental Mindoro`,
+      buyerMunicipalityId: ctx.municipality.id,
+      buyerBarangay: NOWHERE,
+      deliveryLatitude: 13.05,
+      deliveryLongitude: 121.4,
+      items: [{ productId: ctx.item.id, quantity: 1 }],
+    },
+  });
+  assert.equal(res.status, 400);
+  assert.match(res.body.message, new RegExp(`No MoorMove rider delivers to ${NOWHERE}`));
+  assert.equal(await h.prisma.order.count({ where: { buyerId: ctx.buyer.id } }), 0);
+});
+
+test('a MoorMove free-delivery promo: no delivery fee at checkout, and buyer and seller are told', async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  client.clearStatusCache();
+  const status = await moormove.publicStatus();
+  assert.equal(status.promos.length, 1);
+  assert.equal(status.promos[0].id, PROMO.id);
+  assert.equal(status.promos[0].maxKm, 5);
+
+  const quote = await h.api('POST', '/moormove/quote', {
+    token: h.token(ctx.buyer),
+    body: {
+      storeId: ctx.store.id, lat: 13.05, lng: 121.4, items: [{ productId: ctx.item.id, quantity: 1 }], municipalityId: ctx.municipality.id, barangay: LIBRE,
+    },
+  });
+  assert.equal(quote.status, 200, quote.body?.message);
+  assert.equal(quote.body.data.available, true);
+  assert.equal(quote.body.data.fee, 0);
+  assert.equal(quote.body.data.listFee, 75);
+  assert.equal(quote.body.data.promo.id, PROMO.id);
+  assert.equal(quote.body.data.promo.title, PROMO.title);
+
+  const res = await h.api('POST', '/orders', {
+    token: h.token(ctx.buyer),
+    body: {
+      storeId: ctx.store.id,
+      fulfillmentMethod: 'DELIVERY',
+      deliveryPartner: 'MOORMOVE',
+      paymentMethod: 'COD',
+      contactNumber: '09171234567',
+      deliveryAddress: `Purok 1, ${LIBRE}, ${ctx.municipality.name}, Oriental Mindoro`,
+      buyerMunicipalityId: ctx.municipality.id,
+      buyerBarangay: LIBRE,
+      deliveryLatitude: 13.05,
+      deliveryLongitude: 121.4,
+      items: [{ productId: ctx.item.id, quantity: 1 }],
+    },
+  });
+  assert.equal(res.status, 201, res.body?.message);
+  const saved = await orderOf(res.body.data);
+  assert.equal(Number(saved.deliveryFee), 0);
+  assert.equal(Number(saved.total), 100);
+  assert.equal(saved.deliveryPromoId, PROMO.id);
+  assert.equal(saved.deliveryPromoTitle, PROMO.title);
+
+  // The order says so to the buyer.
+  const detail = await h.api('GET', `/orders/${saved.id}`, { token: h.token(ctx.buyer) });
+  assert.equal(detail.status, 200, detail.body?.message);
+  assert.deepEqual(detail.body.data.deliveryPromo, { id: PROMO.id, title: PROMO.title });
+
+  // The seller: free for the buyer, nothing to pay the rider, the rider collects only the items' price.
+  const sellerNote = await h.prisma.notification.findFirst({ where: { userId: ctx.seller.id, relatedId: saved.id, type: 'ORDER_RECEIVED' } });
+  assert.match(sellerNote.message, /Free delivery promo by MoorMove/);
+  assert.match(sellerNote.message, /you pay the rider nothing/);
+  assert.match(sellerNote.message, /the rider collects only ₱100\.00 for the items/);
+  // The buyer, when ordering and when the shop confirms.
+  const buyerNote = await h.prisma.notification.findFirst({ where: { userId: ctx.buyer.id, relatedId: saved.id } });
+  assert.match(buyerNote.message, new RegExp(`Free delivery \\(MoorMove promo: ${PROMO.title}\\)`));
+  const confirmed = await h.api('PUT', `/orders/${saved.id}/status`, { token: h.token(ctx.seller), body: { status: 'CONFIRMED' } });
+  assert.equal(confirmed.status, 200, confirmed.body?.message);
+  const notes = await h.prisma.notification.findMany({ where: { userId: ctx.buyer.id, relatedId: saved.id } });
+  assert.ok(notes.some((n) => /confirmed/.test(n.message) && n.message.includes(`MoorMove promo: ${PROMO.title}`)), notes.map((n) => n.message).join(' | '));
+});
+
+test('booking a free-delivery order sends fee 0 with the promo, and the seller pays the rider nothing', async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  // QR-paid: the shop would otherwise pay the rider's fee at pickup.
+  const o = await riderOrder(ctx, {
+    paymentMethod: 'GCASH', paymentStatus: 'PAID', deliveryFee: 0, total: 100, deliveryPromoId: PROMO.id, deliveryPromoTitle: PROMO.title,
+  });
+  const res = await book(ctx, o);
+  assert.equal(res.status, 200, res.body?.message);
+  const sent = fake.created.find((j) => j.externalRef === o.id);
+  assert.equal(sent.fee, 0);
+  assert.equal(sent.promoId, PROMO.id);
+  assert.equal(res.body.data.deliveryPromo.id, PROMO.id);
+  assert.equal(res.body.data.riderDelivery.listFee, 75);
+  assert.equal(res.body.data.riderDelivery.promoTitle, PROMO.title);
+
+  const row = await rowOf(o);
+  const accepted = advance(row.jobId, { status: 'ACCEPTED', acceptedAt: new Date().toISOString(), rider: RIDER });
+  assert.equal((await sendEvent(accepted)).status, 200);
+  const note = await h.prisma.notification.findFirst({ where: { userId: ctx.seller.id, relatedId: o.id, title: 'A rider is coming' } });
+  assert.match(note.message, /you pay the rider nothing/);
+  assert.doesNotMatch(note.message, /Pay the rider/);
 });
 
 test('calling a rider books one job, and a second call is refused while it runs', async () => {
@@ -299,6 +461,9 @@ test('calling a rider books one job, and a second call is refused while it runs'
   assert.equal(sent.townId, ctx.municipality.id);
   assert.equal(sent.pickup.phone, '09171112222');
   assert.equal(sent.dropoff.lat, 13.05);
+  // The buyer's town and barangay, so MoorMove offers it to riders who go there.
+  assert.equal(sent.dropoffTownId, ctx.municipality.id);
+  assert.equal(sent.dropoff.barangay, 'Poblacion');
 
   const again = await book(ctx, o);
   assert.equal(again.status, 409);

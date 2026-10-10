@@ -97,26 +97,55 @@ const availability = async (store) => {
 
 const available = async (store) => (await availability(store)).ok;
 
-/** GET /moormove/status: whether the option exists at all right now. */
+/**
+ * GET /moormove/status: whether the option exists at all right now, and the
+ * free-delivery promos MoorMove runs (for a checkout banner):
+ * promos [{ id, title, endsAt, townIds|null (the shop's town; null: all), maxKm|null }].
+ */
 const publicStatus = async () => {
   const enabled = await systemEnabled();
   let open = false;
+  let promos = [];
   if (enabled) {
-    try { open = Boolean((await client.status())?.open); } catch { open = false; }
+    try {
+      const status = await client.status();
+      open = Boolean(status?.open);
+      promos = (Array.isArray(status?.promos) ? status.promos : [])
+        .map((p) => {
+          const promo = promoOf(p);
+          return promo && {
+            ...promo,
+            townIds: Array.isArray(p.townIds) ? p.townIds.map(String) : null,
+            maxKm: toNum(p.maxKm),
+          };
+        })
+        .filter(Boolean);
+    } catch { open = false; }
   }
-  return { enabled, available: enabled && open };
+  return { enabled, available: enabled && open, promos: open ? promos : [] };
 };
 
-/** The super admin's connection check. */
+/** Shops offering riders (switched on, with a map pin) and orders that went by rider. */
+const usage = async () => {
+  const [stores, orders] = await Promise.all([
+    prisma.store.count({ where: { moormoveEnabled: true, latitude: { not: null }, longitude: { not: null } } }),
+    prisma.order.count({ where: { deliveryPartner: 'MOORMOVE' } }),
+  ]);
+  return { stores, orders, site: client.siteUrl() };
+};
+
+/** The super admin's connection check (and the Couriers list's MoorMove row). */
 const health = async () => {
+  const used = await usage();
   if (!client.isConfigured()) {
     return {
-      configured: false, reachable: false, open: false, towns: [], error: 'MOORMOVE_API_URL and MOORMOVE_SECRET are not set',
+      configured: false, reachable: false, open: false, towns: [], error: 'MOORMOVE_API_URL and MOORMOVE_SECRET are not set', ...used,
     };
   }
   try {
     const status = await client.status({ fresh: true });
     return {
+      ...used,
       configured: true,
       reachable: true,
       open: Boolean(status?.open),
@@ -128,7 +157,7 @@ const health = async () => {
       ? 'MoorMove refused the secret: MOORMOVE_SECRET must match its PARTNER_SECRET'
       : err.message;
     return {
-      configured: true, reachable: false, open: false, towns: [], error,
+      configured: true, reachable: false, open: false, towns: [], error, ...used,
     };
   }
 };
@@ -163,18 +192,35 @@ const parcelGrams = async (storeId, items) => {
 };
 
 const unavailable = (reason) => ({
-  available: false, reason, fee: null, distanceKm: null,
+  available: false, reason, fee: null, listFee: null, promo: null, distanceKm: null,
 });
+
+/** MoorMove's promo { id, title, endsAt } from a quote or status, checked; null when none. */
+const promoOf = (p) => (p && typeof p === 'object' && p.id
+  ? { id: cut(String(p.id), 64), title: cut(String(p.title || 'MoorMove promo'), 80), endsAt: toDate(p.endsAt) }
+  : null);
+
+/** The shop's barangay (from its owner's seller application), for the rider's pickup. */
+const shopBarangay = async (store) => {
+  if (store?.owner && ('shopBarangay' in store.owner || 'barangay' in store.owner)) {
+    return store.owner.shopBarangay || store.owner.barangay || null;
+  }
+  if (!store?.ownerId) return null;
+  const owner = await prisma.user.findUnique({ where: { id: store.ownerId }, select: { shopBarangay: true, barangay: true } });
+  return owner?.shopBarangay || owner?.barangay || null;
+};
 
 /**
  * What a MoorMove rider would charge to bring this parcel from the shop's
  * pin to the buyer's. The order service charges exactly this (never a price
- * sent by the browser).
- * @param {{ store: Object, buyerPin: {latitude, longitude}|null, items?: Array, grams?: Number }} input
- * @returns {Promise<{ available, reason, fee, distanceKm, vehicleType?, packageSize?, maxCod? }>}
+ * sent by the browser). MoorMove also checks a rider delivers to both the
+ * shop's barangay and the buyer's (buyerTownId, buyerBarangay).
+ * @param {{ store: Object, buyerPin: {latitude, longitude}|null, items?: Array, grams?: Number,
+ *   buyerTownId?: String, buyerBarangay?: String }} input
+ * @returns {Promise<{ available, reason, fee, distanceKm, distanceSource, vehicleType?, packageSize?, maxCod? }>}
  */
 const quoteForCheckout = async ({
-  store, buyerPin, items, grams,
+  store, buyerPin, items, grams, buyerTownId, buyerBarangay,
 }) => {
   const check = await availability(store);
   if (!check.ok) return unavailable(check.reason);
@@ -192,37 +238,56 @@ const quoteForCheckout = async ({
   try {
     quote = await client.quote({
       townId: store.municipalityId,
+      dropoffTownId: buyerTownId || null,
       packageSize,
-      pickup: { lat: store.latitude, lng: store.longitude },
-      dropoff: { lat: buyerPin.latitude, lng: buyerPin.longitude },
+      pickup: { lat: store.latitude, lng: store.longitude, barangay: await shopBarangay(store) },
+      dropoff: { lat: buyerPin.latitude, lng: buyerPin.longitude, barangay: buyerBarangay || null },
     });
   } catch (err) {
     return unavailable(err.status === 0 ? "MoorMove riders can't be reached right now" : (err.message || 'No MoorMove rider can take this delivery'));
   }
   if (!quote?.available) return unavailable(quote?.reason || 'No MoorMove rider can take this delivery');
   const fee = toNum(quote.fee);
-  if (!(fee > 0)) return unavailable('No MoorMove rider can take this delivery');
+  // A MoorMove free-delivery promo: fee 0 (MoorMove pays the rider).
+  const promo = promoOf(quote.promo);
+  if (!(fee > 0) && !(fee === 0 && promo)) return unavailable('No MoorMove rider can take this delivery');
   return {
     available: true,
     reason: null,
     fee: round2(fee),
+    listFee: toNum(quote.listFee) ?? round2(fee),
+    promo: fee === 0 ? promo : null,
     distanceKm: toNum(quote.distanceKm),
+    // ROAD (by road) or ESTIMATE (MoorMove's route service was out).
+    distanceSource: ['ROAD', 'ESTIMATE'].includes(quote.distanceSource) ? quote.distanceSource : null,
     vehicleType: quote.vehicleType || null,
     packageSize,
     maxCod: toNum(check.status?.maxCod),
   };
 };
 
-/** POST /moormove/quote: the rider fee for checkout, with when it would arrive. */
+/**
+ * POST /moormove/quote: the rider fee for checkout, with when it would
+ * arrive. municipalityId and barangay are the delivery address's (default:
+ * the buyer's own).
+ */
 const checkoutQuote = async (user, {
-  storeId, lat, lng, items, municipalityId,
+  storeId, lat, lng, items, municipalityId, barangay,
 } = {}) => {
   const store = storeId ? await storeRepository.findById(String(storeId)) : null;
   if (!store || store.deletedAt || store.isSuspended || !store.isActive || store.isApproved === false) {
     throw new ApiError('Store not found', 404);
   }
   const pin = normalizePin(lat, lng);
-  const result = await quoteForCheckout({ store, buyerPin: pin.latitude == null ? null : pin, items });
+  const buyerTownId = (municipalityId && String(municipalityId)) || user?.municipalityId || null;
+  let buyerBarangay = typeof barangay === 'string' ? barangay.trim().slice(0, 80) : '';
+  // The buyer's own barangay only goes with the buyer's own town.
+  if (!buyerBarangay && user?.id && buyerTownId && buyerTownId === user.municipalityId) {
+    buyerBarangay = (await prisma.user.findUnique({ where: { id: user.id }, select: { barangay: true } }))?.barangay || '';
+  }
+  const result = await quoteForCheckout({
+    store, buyerPin: pin.latitude == null ? null : pin, items, buyerTownId, buyerBarangay: buyerBarangay || null,
+  });
   const eta = result.available
     ? estimate(store, { method: 'DELIVERY', courier: false, townId: municipalityId || user?.municipalityId || null })
     : null;
@@ -230,7 +295,11 @@ const checkoutQuote = async (user, {
     available: result.available,
     reason: result.reason,
     fee: result.fee,
+    // A free-delivery promo: fee 0, listFee the usual fee, promo { id, title, endsAt }.
+    listFee: result.listFee ?? null,
+    promo: result.promo || null,
     distanceKm: result.distanceKm,
+    distanceSource: result.distanceSource ?? null,
     eta,
   };
 };
@@ -335,9 +404,13 @@ const book = async (orderId, sellerUserId) => {
       externalRef: order.id,
       externalCode: order.orderNumber,
       townId: store.municipalityId,
+      // The buyer's town (MoorMove: the pickup's when not given).
+      ...(order.buyerMunicipalityId ? { dropoffTownId: order.buyerMunicipalityId } : {}),
       packageSize: packageSizeFor(grams),
       packageDetails: order.items.map((it) => `${it.quantity}× ${it.productName}`).join(', ').slice(0, 255),
       fee,
+      // Free delivery: fee 0 under the MoorMove promo the buyer got at checkout.
+      ...(order.deliveryPromoId ? { promoId: order.deliveryPromoId } : {}),
       feePaidBy: cod ? 'RECIPIENT' : 'SENDER',
       codAmount,
       pickup: {
@@ -488,6 +561,9 @@ const rowFields = (job) => {
     riderLng: toNum(rider?.lng),
     riderSeenAt: toDate(rider?.lastSeenAt),
     ...(toNum(job.fee) != null ? { fee: toNum(job.fee) } : {}),
+    // A free-delivery promo: the usual fee and the promo's name.
+    ...('listFee' in job ? { listFee: toNum(job.listFee) } : {}),
+    ...('promo' in job ? { promoTitle: cut(job.promo?.title, 80) } : {}),
     codAmount: cod,
     ...(job.feePaidBy ? { feePaidBy: cut(job.feePaidBy, 12) } : {}),
     acceptedAt: toDate(job.acceptedAt),
@@ -570,7 +646,10 @@ const followJob = async (row, job, { statusChanged, previous, quiet }) => {
     case 'ACCEPTED':
       if (statusChanged && !quiet && seller) {
         const vehicle = row.riderVehicle ? ` (${row.riderVehicle.toLowerCase()}${row.riderPlate ? `, ${row.riderPlate}` : ''})` : '';
-        const pay = row.feePaidBy === 'SENDER' ? ` Pay the rider the ${peso(row.fee)} delivery fee at pickup.` : '';
+        const free = row.promoTitle || order.deliveryPromoTitle;
+        const pay = free
+          ? ` Free delivery (MoorMove promo: ${free}): you pay the rider nothing.`
+          : row.feePaidBy === 'SENDER' && Number(row.fee) > 0 ? ` Pay the rider the ${peso(row.fee)} delivery fee at pickup.` : '';
         await notify(seller, 'SELLER', 'A rider is coming', `${riderName}${vehicle} is on the way to pick up order ${number}.${pay}`, order.id);
       }
       break;

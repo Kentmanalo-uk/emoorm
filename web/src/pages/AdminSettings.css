@@ -1328,36 +1328,3 @@ textarea.st-input {
   accent-color: var(--t-primary-600);
   cursor: pointer;
 }
-
-/* MoorMove: the connection line under the switch. */
-.st-rider-health {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  margin: 0;
-}
-
-.st-rider-dot {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.st-rider-dot::before {
-  content: '';
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--t-neutral-400, #9ca3af);
-}
-
-.st-rider-dot.is-ok::before { background: var(--t-primary-600, #059669); }
-.st-rider-dot.is-bad::before { background: var(--t-danger-600, #dc2626); }
-.st-rider-dot.is-wait::before { background: var(--t-warning-500, #f59e0b); }
-
-.st-rider-recheck {
-  padding: 0;
-  min-height: 0;
-}

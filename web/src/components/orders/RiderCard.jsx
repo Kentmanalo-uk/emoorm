@@ -1,7 +1,7 @@
 import {
   Bicycle, ChatText, Motorcycle, Phone,
 } from '@phosphor-icons/react';
-import { riderStatus, vehicleLabel } from '../../lib/moormove';
+import { orderPromo, riderStatus, vehicleLabel } from '../../lib/moormove';
 import './RiderDelivery.css';
 
 /** The rider's vehicle as an icon. */
@@ -24,6 +24,7 @@ export default function RiderCard({ order, who = 'buyer', compact = false, child
   const vehicle = [vehicleLabel(rd.riderVehicle), rd.riderPlate].filter(Boolean).join(' · ');
   const phone = rd.riderPhone ? String(rd.riderPhone).replace(/[^\d+]/g, '') : '';
   const showRider = rd.riderName && !['CANCELLED', 'SEARCHING'].includes(rd.status);
+  const promo = orderPromo(order);
 
   return (
     <div className={`rider-card is-${status.tone}${compact ? ' is-compact' : ''}`}>
@@ -33,6 +34,7 @@ export default function RiderCard({ order, who = 'buyer', compact = false, child
           <strong>{status.title}</strong>
           {status.text && !compact && <span>{status.text}</span>}
         </div>
+        {promo && <em className="rider-card-chip" title={`MoorMove promo: ${promo.title}`}>Free delivery</em>}
       </div>
 
       {showRider && (

@@ -31,8 +31,9 @@ import Select from '../components/ui/Select';
 import SellerRiderPanel from '../components/orders/SellerRiderPanel';
 import RiderActionSheet from '../components/orders/RiderActionSheet';
 import {
-  isRiderOrder, riderNextAction, riderOpen, riderStatus, useMoormove,
+  isRiderOrder, orderPromo, riderNextAction, riderOpen, riderStatus, useMoormove,
 } from '../lib/moormove';
+import { distanceNote } from '../lib/deliveryDistance';
 
 // Available Today orders carry a time to confirm by (respondBy); unconfirmed
 // by then, they cancel on their own.
@@ -753,6 +754,9 @@ export default function SellerOrders() {
                           {riderLine?.title && !['COMPLETED', 'CANCELLED'].includes(order.status) && (
                             <span className={`so-next so-rider-line is-${riderLine.tone}`}>{riderLine.title}</span>
                           )}
+                          {orderPromo(order) && order.fulfillmentMethod !== 'PICKUP' && (
+                            <span className="so-promo-chip" title={`MoorMove promo: ${orderPromo(order).title}`}>Free delivery</span>
+                          )}
                         </td>
                         <td>
                           <div className="order-row-actions">
@@ -904,7 +908,7 @@ export default function SellerOrders() {
                     <span>Delivered by</span>
                     <strong>
                       {isRiderOrder(selectedOrder)
-                        ? "A MoorMove rider (buyer's choice)"
+                        ? `A MoorMove rider (buyer's choice)${orderPromo(selectedOrder) ? ' · free delivery promo' : ''}`
                         : selectedOrder.courierId
                           ? `${selectedOrder.courierName || selectedOrder.courier?.name} (buyer's choice)${selectedOrder.shippingWeightGrams ? ` · ${(selectedOrder.shippingWeightGrams / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} kg` : ''}`
                           : 'You'}
@@ -1076,8 +1080,15 @@ export default function SellerOrders() {
                     <span>₱{Number(selectedOrder.subtotal).toFixed(2)}</span>
                   </div>
                   <div className="detail-total-row">
-                    <span>Delivery fee</span>
-                    <span>₱{Number(selectedOrder.deliveryFee || 0).toFixed(2)}</span>
+                    <span>
+                      Delivery fee
+                      {distanceNote(selectedOrder) && <small className="summary-km">{distanceNote(selectedOrder)}</small>}
+                    </span>
+                    <span>
+                      {orderPromo(selectedOrder) && Number(selectedOrder.deliveryFee || 0) === 0
+                        ? 'Free (MoorMove promo)'
+                        : `₱${Number(selectedOrder.deliveryFee || 0).toFixed(2)}`}
+                    </span>
                   </div>
                   {Number(selectedOrder.discountAmount) > 0 && (
                     <div className="detail-total-row">

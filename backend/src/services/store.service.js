@@ -374,6 +374,30 @@ const normalizeDeliveryFee = (value) => {
   return fee;
 };
 
+/**
+ * Delivery by distance: the shop's own starting fee, km included, fee per
+ * extra km and farthest distance. Blank (null or '') uses the platform's
+ * (the farthest distance: no limit). Fees ₱0 to ₱5,000, distances 0 to 100 km.
+ */
+const DELIVERY_RATE_LIMITS = {
+  deliveryBaseFee: { max: 5000, label: 'The starting fee', unit: 'peso' },
+  deliveryPerKm: { max: 5000, label: 'The fee for each extra km', unit: 'peso' },
+  deliveryIncludedKm: { max: 100, label: 'The km included', unit: 'km' },
+  deliveryMaxKm: { max: 100, label: 'The farthest distance', unit: 'km' },
+};
+const normalizeDeliveryRate = (field, value) => {
+  if (value === null || value === '') return null;
+  const { max, label, unit } = DELIVERY_RATE_LIMITS[field];
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > max) {
+    throw new ApiError(unit === 'km' ? `${label} must be 0 to ${max} km` : `${label} must be ₱0 to ₱${max.toLocaleString('en-PH')}`, 400);
+  }
+  // A farthest distance of 0 km would deliver nowhere.
+  if (field === 'deliveryMaxKm' && n < 0.5) throw new ApiError('The farthest distance must be at least 0.5 km, or left blank', 400);
+  return unit === 'km' ? Math.round(n * 10) / 10 : Math.round(n * 100) / 100;
+};
+const DELIVERY_FEE_MODES = ['FREE', 'PER_KM'];
+
 const QR_TYPES = ['GCASH', 'QRPH'];
 
 /**
@@ -457,6 +481,12 @@ const updateStore = async (storeId, userId, rawData) => {
     'acceptsCod',
     'moormoveEnabled',
     'deliveryFee',
+    // Delivery by distance (see deliveryQuote.service).
+    'deliveryFeeMode',
+    'deliveryBaseFee',
+    'deliveryIncludedKm',
+    'deliveryPerKm',
+    'deliveryMaxKm',
     'primaryColor',
     'secondaryColor',
     'bannerImage',
@@ -476,6 +506,12 @@ const updateStore = async (storeId, userId, rawData) => {
         updateData[field] = normalizeCoordinate(data[field], -180, 180, 'Longitude');
       } else if (field === 'deliveryFee') {
         updateData[field] = normalizeDeliveryFee(data[field]);
+      } else if (field === 'deliveryFeeMode') {
+        const mode = String(data[field] || '').toUpperCase();
+        if (!DELIVERY_FEE_MODES.includes(mode)) throw new ApiError('Choose free delivery or a fee by distance', 400);
+        updateData[field] = mode;
+      } else if (DELIVERY_RATE_LIMITS[field]) {
+        updateData[field] = normalizeDeliveryRate(field, data[field]);
       } else if (field === 'openingHours') {
         updateData[field] = shopHours.normalizeOpeningHours(data[field]) ?? Prisma.DbNull;
       } else if (field === 'vacationUntil') {
@@ -725,12 +761,15 @@ const replaceMyServiceAreas = async (userId, areas) => {
   return storeRepository.replaceServiceAreas(store.id, normalized);
 };
 
-/** Whether the store delivers to this address, and the fee it charges there. */
-const checkCoverage = async (storeId, municipalityId, barangay) => {
-  if (!municipalityId) return { covered: false, fee: null, reason: 'municipality required' };
+/**
+ * Whether the store delivers to this address, and the fee it charges there:
+ * by distance from the shop's pin to the buyer's (pin: { lat, lng }).
+ * @returns {Promise<{ covered, fee, distanceKm, distanceSource, reason, needsPin?, rate }>}
+ */
+const checkCoverage = async (storeId, municipalityId, barangay, pin = null) => {
   const store = await storeRepository.findById(storeId);
   if (!store || store.deletedAt) throw new ApiError('Store not found', 404);
-  return deliveryQuoteService.quote(store, municipalityId, barangay);
+  return deliveryQuoteService.quote(store, municipalityId, barangay, pin);
 };
 
 module.exports = {

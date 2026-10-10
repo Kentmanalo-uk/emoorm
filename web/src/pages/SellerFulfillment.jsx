@@ -15,7 +15,6 @@ import {
   Check,
   CheckCircle,
   Money,
-  Motorcycle,
   Warning,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -35,7 +34,8 @@ import StoreLocationMap from '../components/maps/StoreLocationMap';
 import { validPin } from '../components/maps/PickupRoute';
 import { CourierMark } from '../components/orders/CourierTracking';
 import ChoiceCard from '../components/ui/ChoiceCard';
-import { useMoormove } from '../lib/moormove';
+import { MOORMOVE_COURIER, promosForTown, useMoormove } from '../lib/moormove';
+import useAppSettings, { DEFAULT_APP_SETTINGS } from '../hooks/useAppSettings';
 
 // "from ₱85": a courier's cheapest fee, for the seller to compare.
 const courierFrom = (c) => {
@@ -100,54 +100,39 @@ const ORIENTAL_MINDORO_CODE = '175200000';
 const feeText = (value) => (value === null || value === undefined || value === '' ? '' : String(Number(value)));
 
 /** A form fee for the API: null (none set), a number, or undefined if invalid. */
-const parseFee = (text) => {
+const parseFee = (text, max = 10000) => {
   const t = String(text ?? '').trim();
   if (t === '') return null;
   const n = Number(t);
-  if (!Number.isFinite(n) || n < 0 || n > 10000) return undefined;
+  if (!Number.isFinite(n) || n < 0 || n > max) return undefined;
   return Math.round(n * 100) / 100;
 };
+
+/** A form distance for the API: null (none set), km to 0.1, or undefined if invalid. */
+const parseKm = (text) => {
+  const t = String(text ?? '').trim();
+  if (t === '') return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return undefined;
+  return Math.round(n * 10) / 10;
+};
+
+const kmLabel = (km) => `${Number(km).toLocaleString('en-PH', { maximumFractionDigits: 1 })} km`;
+
+/** What a delivery of `km` costs at a rate: base + each km past included × perKm, to the whole peso. */
+const feeAt = (rate, km) => Math.round(Math.round((rate.base + Math.max(0, km - rate.included) * rate.perKm) * 100) / 100);
+
+// The distances the seller's preview prices.
+const PREVIEW_KM = [2, 5, 10];
 
 const pesos = (n) => `₱${Number(n).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** A town's delivery details: all its barangays or some, and the fees used when the fee depends on the place. */
-const emptyTown = () => ({ whole: true, fee: '', barangays: [] });
-
 /**
- * A delivery fee box: an amount in pesos, or Free (₱0).
+ * A town's delivery details: all its barangays or some. Each place keeps the
+ * fee it had before delivery by distance (it still prices a shop with no pin).
  */
-function FeeInput({ id, value, onChange, placeholder, label }) {
-  const free = value !== '' && Number(value) === 0;
-  return (
-    <div className={`sf-fee${free ? ' is-free' : ''}`}>
-      <span className="sf-fee-box">
-        <span className="sf-fee-peso" aria-hidden="true">₱</span>
-        <input
-          id={id}
-          type="number"
-          min="0"
-          max="10000"
-          step="0.01"
-          inputMode="decimal"
-          value={free ? '' : value}
-          placeholder={free ? 'Free' : placeholder}
-          disabled={free}
-          aria-label={label}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      </span>
-      <button
-        type="button"
-        className="sf-free"
-        aria-pressed={free}
-        onClick={() => onChange(free ? '' : '0')}
-      >
-        Free
-      </button>
-    </div>
-  );
-}
+const emptyTown = () => ({ whole: true, fee: '', barangays: [] });
 
 /** One answer to a question: a card with a title, a short line and a tick when chosen. */
 function Choice({ name, value, checked, onPick, title, desc }) {
@@ -198,7 +183,8 @@ function SellerFulfillment({ part }) {
   const { municipalities } = useMunicipalities();
   // Delivery is two questions: where (coverage) and how much (feeMode).
   //   coverage: 'TOWN' (only the shop's town) | 'SOME' (towns it picks) | 'ALL' (all around Mindoro)
-  //   feeMode:  'FREE' | 'SAME' (one fee, form.deliveryFee) | 'PLACE' (a fee per town or barangay)
+  //   feeMode:  'FREE' | 'PER_KM' (by distance: a starting fee covering the
+  //             first km by road, then a fee for each extra km)
   // `towns` keeps each town's details ({ [municipalityId]: emptyTown() }) and
   // survives switching answers, so nothing typed is lost.
   const [coverage, setCoverage] = useState('');
@@ -239,7 +225,7 @@ function SellerFulfillment({ part }) {
   }, []);
   // MoorMove riders (on by default): offered at checkout while the site has
   // them on. Kept on the shop (moormoveEnabled).
-  const { enabled: ridersOn } = useMoormove();
+  const { enabled: ridersOn, promos: riderPromos } = useMoormove();
   const [riders, setRiders] = useState(true);
   // Why riders can't come to this shop right now (e.g. not open in its town),
   // asked once the shop has a pin: a quote from the shop to itself.
@@ -271,9 +257,19 @@ function SellerFulfillment({ part }) {
     paymentAccountName: '',
     paymentAccountNumber: '',
     acceptsCod: true,
-    // The fee when it is the same everywhere.
-    deliveryFee: '',
+    // By distance: blank km settings use the platform's.
+    deliveryBaseFee: '',
+    deliveryIncludedKm: '',
+    deliveryPerKm: '',
+    deliveryMaxKm: '',
   });
+  // The platform's defaults, for blank settings and the preview.
+  const { settings: appSettings } = useAppSettings();
+  const platformRate = {
+    base: Number(appSettings?.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
+    included: Number(appSettings?.deliveryIncludedKm ?? DEFAULT_APP_SETTINGS.deliveryIncludedKm),
+    perKm: Number(appSettings?.deliveryPerKm ?? DEFAULT_APP_SETTINGS.deliveryPerKm),
+  };
 
   useEffect(() => {
     (async () => {
@@ -297,28 +293,9 @@ function SellerFulfillment({ part }) {
           }
         }
 
-        // How much: what each place pays now tells which answer fits.
-        const standard = s.deliveryFee == null ? null : Number(s.deliveryFee);
-        let mode = '';
-        let amount = standard === null ? '' : feeText(standard);
-        if (saved.some((a) => a.fee != null)) {
-          const paid = saved.map((a) => (a.fee == null ? standard : Number(a.fee)));
-          if (paid.every((f) => f !== null && f === paid[0])) {
-            mode = paid[0] === 0 ? 'FREE' : 'SAME';
-            amount = feeText(paid[0]);
-          } else {
-            mode = 'PLACE';
-            // Places that used the one fee keep it as their own.
-            if (standard !== null) {
-              for (const t of Object.values(byTown)) {
-                if (t.whole && t.fee === '') t.fee = feeText(standard);
-                t.barangays = t.barangays.map((b) => (b.fee === '' ? { ...b, fee: feeText(standard) } : b));
-              }
-            }
-          }
-        } else if (standard !== null) {
-          mode = standard === 0 ? 'FREE' : 'SAME';
-        }
+        // How much: free, or by distance (the shop's own settings; blank
+        // ones use the platform's).
+        const mode = s.deliveryFeeMode === 'FREE' ? 'FREE' : 'PER_KM';
 
         setTowns(byTown);
         setSomeTowns(Object.keys(byTown));
@@ -336,7 +313,10 @@ function SellerFulfillment({ part }) {
           paymentAccountName: s.paymentAccountName || '',
           paymentAccountNumber: s.paymentAccountNumber || '',
           acceptsCod: s.acceptsCod ?? true,
-          deliveryFee: mode === 'FREE' ? '' : amount,
+          deliveryBaseFee: feeText(s.deliveryBaseFee),
+          deliveryIncludedKm: feeText(s.deliveryIncludedKm),
+          deliveryPerKm: feeText(s.deliveryPerKm),
+          deliveryMaxKm: feeText(s.deliveryMaxKm),
         });
         setRiders(s.moormoveEnabled !== false);
         setQrOn(Boolean(s.paymentQrImage));
@@ -495,10 +475,6 @@ function SellerFulfillment({ part }) {
     barangays: t.barangays.filter((b) => b.name.toLowerCase() !== name.toLowerCase()),
   }));
 
-  const setPlaceFee = (place, fee) => updateTown(place.municipalityId, (t) => (place.barangay === null
-    ? { ...t, fee }
-    : { ...t, barangays: t.barangays.map((b) => (b.name === place.barangay ? { ...b, fee } : b)) }));
-
   const pickCoverage = (value) => {
     setCoverage(value);
     // "Some towns" starts from the shop's own town.
@@ -536,10 +512,12 @@ function SellerFulfillment({ part }) {
           form.paymentQrImage, form.paymentQrType, form.paymentAccountName.trim(),
           form.paymentAccountNumber.replace(/[\s-]/g, ''), form.paymentInstructions.trim(),
         ] : [])]
-          : [coverage, feeMode, feeMode === 'SAME' ? form.deliveryFee : '',
-            places.map((pl) => [pl.municipalityId, pl.barangay, feeMode === 'PLACE' ? pl.fee : '']),
+          : [coverage, feeMode, feeMode === 'PER_KM'
+            ? [form.deliveryBaseFee, form.deliveryIncludedKm, form.deliveryPerKm, form.deliveryMaxKm].map((v) => String(v).trim())
+            : null,
+            places.map((pl) => [pl.municipalityId, pl.barangay]),
             shipping.selfDelivery, [...shipping.courierIds].sort(), ridersOn ? riders : null,
-            ridersOn && !showPickup ? [form.latitude, form.longitude] : null],
+            !showPickup ? [form.latitude, form.longitude] : null],
   );
   const partReady = !loading && (part !== 'delivery' || (!savedAreas && shippingLoaded));
   const [baseline, setBaseline] = useState(null);
@@ -598,14 +576,22 @@ function SellerFulfillment({ part }) {
         toast.error(`Pick the barangays you deliver to in ${nameOf(noBarangay)}, or choose All barangays.`);
         return;
       }
-      if (feeMode === 'SAME' && parseFee(form.deliveryFee) == null) {
-        toast.error('Enter your delivery fee (up to ₱10,000), or choose Free delivery.');
+      if (!feeMode) {
+        toast.error('Choose free delivery or a fee by distance.');
         return;
       }
-      const unpriced = feeMode === 'PLACE' ? places.find((p) => parseFee(p.fee) == null) : null;
-      if (unpriced) {
-        toast.error(`Set the delivery fee for ${unpriced.barangay ? `${unpriced.name}, ${unpriced.sub}` : unpriced.name} (or tap Free).`);
-        return;
+      if (feeMode === 'PER_KM') {
+        const max = parseKm(form.deliveryMaxKm);
+        const problem = parseFee(form.deliveryBaseFee, 5000) == null ? 'Enter your starting fee (₱0 to ₱5,000).'
+          : parseKm(form.deliveryIncludedKm) === undefined ? 'The km included must be 0 to 100.'
+            : parseFee(form.deliveryPerKm, 5000) === undefined ? 'Each extra km must cost ₱0 to ₱5,000.'
+              : max === undefined || (max !== null && max < 0.5) ? 'The farthest distance must be 0.5 to 100 km, or left blank.'
+                : null;
+        if (problem) {
+          toast.error(problem);
+          document.getElementById('delivery-fee')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
       }
     }
     // QR payment needs the QR, and the account buyers pay to.
@@ -628,16 +614,30 @@ function SellerFulfillment({ part }) {
       }
     }
 
-    // One fee (0 when free) lives on the shop; a fee per place lives on each place.
-    const deliveryFee = feeMode === 'FREE' ? 0 : feeMode === 'SAME' ? parseFee(form.deliveryFee) ?? null : null;
+    // The fee by distance lives on the shop; blank km settings are the platform's.
+    const deliveryRate = feeMode === 'FREE'
+      ? { deliveryFeeMode: 'FREE' }
+      : feeMode === 'PER_KM'
+        ? {
+          deliveryFeeMode: 'PER_KM',
+          deliveryBaseFee: parseFee(form.deliveryBaseFee, 5000) ?? null,
+          deliveryIncludedKm: parseKm(form.deliveryIncludedKm) ?? null,
+          deliveryPerKm: parseFee(form.deliveryPerKm, 5000) ?? null,
+          deliveryMaxKm: parseKm(form.deliveryMaxKm) ?? null,
+        }
+        : {};
+    // Places keep the fee they had (it only prices a shop with no pin yet).
     const areas = places.map((p) => ({
       municipalityId: p.municipalityId,
       barangay: p.barangay,
-      fee: feeMode === 'PLACE' ? parseFee(p.fee) ?? null : null,
+      fee: parseFee(p.fee) ?? null,
     }));
+    // The form's text boxes go as numbers (deliveryRate), never as typed.
+    const formFields = { ...form };
+    for (const key of ['deliveryBaseFee', 'deliveryIncludedKm', 'deliveryPerKm', 'deliveryMaxKm']) delete formFields[key];
     // A part's page sends only its own settings, so it never touches the others.
     const changes = {
-      all: { ...form, deliveryFee, ...(ridersOn ? { moormoveEnabled: riders } : {}) },
+      all: { ...formFields, ...deliveryRate, ...(ridersOn ? { moormoveEnabled: riders } : {}) },
       method: { fulfillmentMode: form.fulfillmentMode },
       pickup: {
         pickupAddress: form.pickupAddress,
@@ -655,9 +655,10 @@ function SellerFulfillment({ part }) {
         paymentInstructions: form.paymentInstructions,
       } : { acceptsCod: form.acceptsCod, paymentQrImage: null },
       delivery: {
-        deliveryFee,
+        ...deliveryRate,
         ...(ridersOn ? { moormoveEnabled: riders } : {}),
-        ...(ridersOn && !showPickup && pickupPinned ? { latitude: form.latitude, longitude: form.longitude } : {}),
+        // The shop pin (riders and fees by distance start there).
+        ...(!showPickup && pickupPinned ? { latitude: form.latitude, longitude: form.longitude } : {}),
       },
     }[scope];
 
@@ -701,6 +702,23 @@ function SellerFulfillment({ part }) {
     }
   };
 
+  // By distance as the seller has it now, blanks filled in from the
+  // platform's: { base, included, perKm, max }, or null while a box is wrong.
+  const effectiveRate = (() => {
+    if (feeMode !== 'PER_KM') return null;
+    const base = parseFee(form.deliveryBaseFee, 5000);
+    const included = parseKm(form.deliveryIncludedKm);
+    const perKm = parseFee(form.deliveryPerKm, 5000);
+    const max = parseKm(form.deliveryMaxKm);
+    if (base === undefined || included === undefined || perKm === undefined || max === undefined) return null;
+    return {
+      base: base ?? platformRate.base,
+      included: included ?? platformRate.included,
+      perKm: perKm ?? platformRate.perKm,
+      max: max || null,
+    };
+  })();
+
   // The answers in one sentence, so the seller can check them.
   const summary = (() => {
     if (!coverage || !feeMode || !places.length) return null;
@@ -710,12 +728,13 @@ function SellerFulfillment({ part }) {
       : coverage === 'TOWN'
         ? (home.whole ? `anywhere in ${homeName}` : `in ${plural(places.length, 'barangay')} of ${homeName}`)
         : `in ${plural(coveredIds.length, 'town')}`;
-    const amount = feeMode === 'SAME' ? parseFee(form.deliveryFee) : null;
-    const cost = feeMode === 'FREE' || amount === 0
+    const rate = effectiveRate;
+    const cost = feeMode === 'FREE'
       ? 'get free delivery'
-      : feeMode === 'SAME'
-        ? (amount ? `can order delivery for ${pesos(amount)}` : null)
-        : 'pay the delivery fee you set for their place';
+      : rate
+        ? `pay ${pesos(rate.base)} for the first ${kmLabel(rate.included)} by road, then ${pesos(rate.perKm)} for each extra km${
+          rate.max != null ? ` (up to ${kmLabel(rate.max)})` : ''}`
+        : null;
     if (!cost) return null;
     return `Buyers ${where} ${cost}.${showPickup ? ' Pickup is always free.' : ''}`;
   })();
@@ -926,9 +945,10 @@ function SellerFulfillment({ part }) {
                       value="MOORMOVE"
                       checked={riders}
                       onChange={() => setRiders((v) => !v)}
-                      media={<span className="sf-courier-self sf-rider-mark"><Motorcycle size={18} weight="fill" /></span>}
-                      title="MoorMove riders"
-                      desc="Local riders deliver for you · fee by distance, paid by the buyer"
+                      media={<CourierMark courier={MOORMOVE_COURIER} size={30} />}
+                      title="MoorMove"
+                      desc={`Local riders pick up at your shop · fee by distance, paid by the buyer · cash on delivery OK${
+                        promosForTown(riderPromos, store?.municipalityId).length ? ' · Free delivery promo running now' : ''}`}
                     />
                   )}
                   {courierList.map((c) => {
@@ -1071,7 +1091,7 @@ function SellerFulfillment({ part }) {
                 <h3 className="sf-q-title" id="sf-q-fee">
                   <span className="sf-q-num" aria-hidden="true">3</span> How much is your delivery fee?
                 </h3>
-                <div className="sf-mode-grid" role="radiogroup" aria-labelledby="sf-q-fee">
+                <div className="sf-mode-grid sf-fee-modes" role="radiogroup" aria-labelledby="sf-q-fee">
                   <Choice
                     name="feeMode"
                     value="FREE"
@@ -1082,62 +1102,140 @@ function SellerFulfillment({ part }) {
                   />
                   <Choice
                     name="feeMode"
-                    value="SAME"
-                    checked={feeMode === 'SAME'}
-                    onPick={setFeeMode}
-                    title="Same fee everywhere"
-                    desc="One delivery fee for every place."
-                  />
-                  <Choice
-                    name="feeMode"
-                    value="PLACE"
-                    checked={feeMode === 'PLACE'}
-                    onPick={setFeeMode}
-                    title="Depends on the place"
-                    desc="A fee for each town or barangay."
+                    value="PER_KM"
+                    checked={feeMode === 'PER_KM'}
+                    onPick={(value) => {
+                      setFeeMode(value);
+                      // Start from the platform's starting fee, ready to change.
+                      setForm((p) => (String(p.deliveryBaseFee).trim() === '' ? { ...p, deliveryBaseFee: String(platformRate.base) } : p));
+                    }}
+                    title="By distance"
+                    desc="A starting fee, then a fee for each extra km by road."
                   />
                 </div>
 
-                {feeMode === 'SAME' && (
-                  <div className="sf-same">
-                    <label htmlFor="sf-delivery-fee">Delivery fee</label>
-                    <span className="sf-fee-box">
-                      <span className="sf-fee-peso" aria-hidden="true">₱</span>
-                      <input
-                        id="sf-delivery-fee"
-                        type="number"
-                        min="0"
-                        max="10000"
-                        step="0.01"
-                        inputMode="decimal"
-                        placeholder="e.g. 50"
-                        value={form.deliveryFee}
-                        onChange={(e) => setForm((p) => ({ ...p, deliveryFee: e.target.value }))}
-                      />
-                    </span>
+                {feeMode === 'PER_KM' && (
+                  <div className="sf-perkm">
+                    <div className="sf-perkm-grid">
+                      <label className="sf-perkm-field" htmlFor="sf-base-fee">
+                        <span className="sf-perkm-label">Starting fee</span>
+                        <span className="sf-fee-box">
+                          <span className="sf-fee-peso" aria-hidden="true">₱</span>
+                          <input
+                            id="sf-base-fee"
+                            type="number"
+                            min="0"
+                            max="5000"
+                            step="1"
+                            inputMode="decimal"
+                            placeholder={String(platformRate.base)}
+                            value={form.deliveryBaseFee}
+                            onChange={(e) => setForm((p) => ({ ...p, deliveryBaseFee: e.target.value }))}
+                          />
+                        </span>
+                        <small>Covers the first {kmLabel(effectiveRate?.included ?? platformRate.included)}</small>
+                      </label>
+                      <label className="sf-perkm-field" htmlFor="sf-included-km">
+                        <span className="sf-perkm-label">First km included</span>
+                        <span className="sf-fee-box sf-km-box">
+                          <input
+                            id="sf-included-km"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            inputMode="decimal"
+                            placeholder={String(platformRate.included)}
+                            value={form.deliveryIncludedKm}
+                            onChange={(e) => setForm((p) => ({ ...p, deliveryIncludedKm: e.target.value }))}
+                          />
+                          <span className="sf-fee-unit" aria-hidden="true">km</span>
+                        </span>
+                        <small>Blank: {kmLabel(platformRate.included)}</small>
+                      </label>
+                      <label className="sf-perkm-field" htmlFor="sf-per-km">
+                        <span className="sf-perkm-label">Each extra km</span>
+                        <span className="sf-fee-box">
+                          <span className="sf-fee-peso" aria-hidden="true">₱</span>
+                          <input
+                            id="sf-per-km"
+                            type="number"
+                            min="0"
+                            max="5000"
+                            step="0.5"
+                            inputMode="decimal"
+                            placeholder={String(platformRate.perKm)}
+                            value={form.deliveryPerKm}
+                            onChange={(e) => setForm((p) => ({ ...p, deliveryPerKm: e.target.value }))}
+                          />
+                        </span>
+                        <small>Blank: {pesos(platformRate.perKm)}</small>
+                      </label>
+                      <label className="sf-perkm-field" htmlFor="sf-max-km">
+                        <span className="sf-perkm-label">Farthest distance <em>(optional)</em></span>
+                        <span className="sf-fee-box sf-km-box">
+                          <input
+                            id="sf-max-km"
+                            type="number"
+                            min="0.5"
+                            max="100"
+                            step="0.5"
+                            inputMode="decimal"
+                            placeholder="No limit"
+                            value={form.deliveryMaxKm}
+                            onChange={(e) => setForm((p) => ({ ...p, deliveryMaxKm: e.target.value }))}
+                          />
+                          <span className="sf-fee-unit" aria-hidden="true">km</span>
+                        </span>
+                        <small>Farther buyers can&apos;t choose your delivery</small>
+                      </label>
+                    </div>
+                    {effectiveRate && (
+                      <p className="sf-perkm-preview" role="status">
+                        <span>What buyers pay:</span>{' '}
+                        {PREVIEW_KM.map((km, i) => (
+                          <span key={km} className="sf-perkm-step">
+                            {i > 0 && <span aria-hidden="true"> · </span>}
+                            {kmLabel(km)}{' '}
+                            <strong>
+                              {effectiveRate.max != null && km > effectiveRate.max ? 'too far' : pesos(feeAt(effectiveRate, km))}
+                            </strong>
+                          </span>
+                        ))}
+                      </p>
+                    )}
+                    <p className="sf-hint">
+                      Worked out by road, from your shop pin to the buyer&apos;s pin. Buyers see the km and the fee at checkout.
+                    </p>
                   </div>
                 )}
 
-                {feeMode === 'PLACE' && (places.length > 0 ? (
-                  <ul className="sf-brgy-fees sf-place-fees" aria-label="Delivery fee for each place">
-                    {places.map((p) => (
-                      <li key={p.key} className="sf-fee-row">
-                        <span className="sf-fee-row-name">
-                          {p.name}
-                          <small>{p.sub}</small>
-                        </span>
-                        <FeeInput
-                          value={p.fee}
-                          onChange={(fee) => setPlaceFee(p, fee)}
-                          placeholder="Fee"
-                          label={`Delivery fee for ${p.barangay ? `${p.name}, ${p.sub}` : p.name}`}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="sf-hint">Answer “Where do you deliver?” first, then set a fee for each place.</p>
-                ))}
+                {feeMode === 'PER_KM' && !pickupPinned && (
+                  <p className="sf-courier-warn sf-rider-warn sf-perkm-pin" role="status">
+                    <Warning size={15} weight="fill" />
+                    <span>
+                      Pin your shop on the map so the fee can be worked out by distance. Until then, buyers pay a flat fee.{' '}
+                      {showPickup
+                        ? (isPhone
+                          ? <Link to={partPath('pickup')}>Pin your shop in Pickup Location</Link>
+                          : <a href="#pickup-pin">Pin your shop in Pickup Location</a>)
+                        : (ridersOn && riders ? 'Pin it on the map above.' : 'Pin it on the map below.')}
+                    </span>
+                  </p>
+                )}
+                {feeMode === 'PER_KM' && !showPickup && !(ridersOn && riders) && (
+                  <div className="form-group sf-pin sf-rider-pin">
+                    <label>Your shop pin</label>
+                    <p className="sf-pin-help">Delivery distances start here. Drag the pin if the spot moves.</p>
+                    <StoreLocationMap
+                      value={{ latitude: form.latitude, longitude: form.longitude }}
+                      onChange={({ latitude, longitude }) => setForm((prev) => ({ ...prev, latitude, longitude }))}
+                      height={isPhone ? 220 : 260}
+                      lockToPhilippines
+                      hint="Tap the map where your deliveries start."
+                    />
+                  </div>
+                )}
               </section>
 
                 </>
@@ -1457,16 +1555,16 @@ function SellerFulfillment({ part }) {
   // Phones, the list: each part with what is set now; the parts buyers need
   // before the shop can sell say so while they are missing.
   if (isPhone && !part) {
-    const amount = parseFee(form.deliveryFee);
     const where = coverage === 'ALL'
       ? 'All around Mindoro'
       : coverage === 'TOWN'
         ? (townOf(homeId).whole ? `Only in ${homeName}` : `${plural(places.length, 'barangay')} in ${homeName}`)
         : coverage === 'SOME' ? plural(coveredIds.length, 'town') : '';
-    const cost = feeMode === 'FREE' || (feeMode === 'SAME' && amount === 0)
+    const cost = feeMode === 'FREE'
       ? 'Free delivery'
-      : feeMode === 'SAME' && amount ? pesos(amount)
-        : feeMode === 'PLACE' && places.length && places.every((p) => parseFee(p.fee) != null) ? 'A fee for each place' : '';
+      : feeMode === 'PER_KM' && parseFee(form.deliveryBaseFee, 5000) != null && effectiveRate
+        ? `${pesos(effectiveRate.base)} + ${pesos(effectiveRate.perKm)}/km`
+        : '';
     const deliveryMissing = !where || !places.length || !cost;
     const ways = [form.acceptsCod && 'Cash on delivery', form.paymentQrImage && `${qrKind.label} QR`].filter(Boolean);
     const pickupSet = Boolean(form.pickupAddress.trim());

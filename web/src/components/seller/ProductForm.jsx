@@ -1,72 +1,102 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useLocation, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  CircleNotch, Info, ArrowLeft, ArrowRight, Check, CheckCircle,
+  CircleNotch, Info, ArrowLeft, Check, CheckCircle, CaretDown, Package, Plus,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import useAppSettings from '../../hooks/useAppSettings';
-import { productKind, kindLabel, headsLabel } from '../../lib/productKinds';
+import { productKind, headsLabel } from '../../lib/productKinds';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import { BusyLabel } from '../ui/Spinner';
-import BasicsStep from './product-form/BasicsStep';
-import DetailsStep from './product-form/DetailsStep';
-import MoreStep from './product-form/MoreStep';
-import ReviewStep from './product-form/ReviewStep';
+import PhotoPicker from './product-form/PhotoPicker';
+import CategoryPicker from './product-form/CategoryPicker';
+import ChoiceGroup from './product-form/ChoiceGroup';
+import KindDetails from './product-form/KindDetails';
+import MoreDetails from './product-form/MoreDetails';
+import PreviewCard from './product-form/PreviewCard';
+import WayField from './product-form/WayField';
 import {
-  STEPS, DETAIL_TITLES, RETURN_POLICIES, MAX_GROUPS,
+  Card, Field, MoneyInput, RadioCards, Stepper, Switch,
+} from './product-form/parts';
+import {
+  DETAIL_TITLES, EXAMPLES, RETURN_POLICIES, MAX_GROUPS, NAME_MAX, DESCRIPTION_MAX,
+  CHOICE_TYPES, FOOD_CHOICE_TYPES,
   toFormState, kindOptions, switchKind, kindOffers, withDrafts, pricedBy, priceSpan, buildPayload,
-  checkStep, checkAll, hasErrors, rowsWithErrors, draftProduct, detailLines, policyModeFor,
+  checkAll, hasErrors, cardsWithErrors, draftProduct, policyModeFor, guessKind,
   emptyGroup, mergeChoices, peso,
 } from './product-form/formState';
 import './PhoneSaveBar.css';
 import './ProductForm.css';
 
 /*
- * Add / edit a product (every kind but packages, which have their own form),
- * as a few easy questions in four steps: Basics, Details for the kind of
- * product, Extras (closed until wanted) and a Review of what buyers
- * will see.
- *
- * One step per screen with Back / Next at the bottom, on phones and
- * computers. Each step is a history entry (?step=2), so the browser's (or
- * the top bar's) back goes back a step.
+ * Add / edit a product (every kind but packages, which have their own form)
+ * on one page, top to bottom, in a few white cards: photos, name and
+ * category, price and how many, choices (only when switched on), how buyers
+ * get it, the kind's own questions (food, animals) and "More details",
+ * closed until wanted. One button at the bottom saves it.
  */
 
-const LAST_STEP = STEPS.length;
 const FOOD = ['READY_TO_EAT', 'COOK_TO_ORDER'];
+const RECENT_MAX = 5;
 
-const STEP_HINTS = {
-  basics: 'What you sell, a photo and its price.',
-  more: 'All optional. Skip this step if you don’t need them.',
-  review: 'Check it, then add it to your shop.',
+/** A short line under the category on what was set for this kind. */
+const KIND_NOTES = {
+  REGULAR: 'Sold from your stock. Say below how many you have.',
+  READY_TO_EAT: 'Cooked food you sell today. A few questions about it are added below.',
+  COOK_TO_ORDER: 'You cook it after someone orders. Cooking questions are added below.',
+  LIVESTOCK: 'A live animal, sold per head. Questions about the animal are added below.',
 };
-const DETAIL_HINTS = {
-  REGULAR: 'How many you have and how buyers get it.',
-  READY_TO_EAT: 'How many you have today, until when, and how buyers get it.',
-  COOK_TO_ORDER: 'Sizes, cooking time, and when you cook.',
-  LIVESTOCK: 'About the animal, and how buyers get it.',
+
+const PRICE_WORDS = {
+  REGULAR: { label: 'Price', hint: 'Example: 85' },
+  READY_TO_EAT: { label: 'Price of one serving', hint: 'Example: 120' },
+  COOK_TO_ORDER: { label: 'Price', hint: 'Bigger sizes cost more? Set them in "About the cooking" below.' },
+  LIVESTOCK: { label: 'Price for one animal', hint: 'Buyers can offer a price, and you agree in chat.' },
 };
 
 const WAY_TEXT = { PICKUP: 'Pickup only', DELIVERY: 'Delivery only' };
 
+const readRecent = (key) => {
+  if (!key) return [];
+  try {
+    const list = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(list) ? list.filter((x) => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
+const keepRecent = (key, id) => {
+  if (!key || !id) return;
+  try {
+    const list = [id, ...readRecent(key).filter((x) => x !== id)].slice(0, RECENT_MAX);
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch {
+    /* private window: nothing to remember */
+  }
+};
+
 /**
  * @param {Object} [product] - The product being edited
  * @param {Array} categories - Categories to choose from (with their kind)
+ * @param {Array} [recentProducts] - The seller's products, for "Used before"
  * @param {Array<{key, label}>} [sellBlockers] - What the shop still needs
  *   before it can sell; while any are left, buyers see products but cannot order.
  */
-export default function ProductForm({ product = null, categories = [], onCancel, onSaved, sellBlockers = [] }) {
+export default function ProductForm({
+  product = null, categories = [], recentProducts = [], onCancel, onSaved, sellBlockers = [],
+}) {
   const editing = !!product;
   const isPhone = usePhoneLayout();
   const navigate = useNavigate();
   const location = useLocation();
-  const [params] = useSearchParams();
   const outlet = useOutletContext();
   const shopMode = outlet?.store?.fulfillmentMode || null;
   const { settings } = useAppSettings();
   const todayOn = settings?.availableTodayEnabled !== false;
+  const recentKey = outlet?.store?.id ? `pf:recent-categories:${outlet.store.id}` : null;
 
   const [initial, setInitial] = useState(() => toFormState(product));
   const [form, setForm] = useState(initial);
@@ -77,7 +107,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
   // What leaving is for: 'cancel' or 'package' (asked while there are changes).
   const [confirmLeave, setConfirmLeave] = useState(null);
   const [attempt, setAttempt] = useState(0);
-  const [openRows, setOpenRows] = useState([]);
+  const [moreOpen, setMoreOpen] = useState(false);
   // A new live animal just saved: offer to list another like it.
   const [savedAnimal, setSavedAnimal] = useState(null);
   const lastSaved = useRef(null);
@@ -95,35 +125,28 @@ export default function ProductForm({ product = null, categories = [], onCancel,
   }, []);
 
   // Phones: the form takes the whole screen, so the bottom tab bar steps
-  // aside and the step bar sits at the bottom edge instead.
+  // aside for the save bar.
   useEffect(() => {
     document.body.classList.add('pf-open');
     return () => document.body.classList.remove('pf-open');
   }, []);
 
-  // The step on screen.
-  const step = Math.min(LAST_STEP, Math.max(1, parseInt(params.get('step') || '1', 10) || 1));
-
-  // Opened on a later step (a reload): the answers are gone, so start over.
-  const openedOn = useRef(step);
-  useEffect(() => {
-    if (openedOn.current <= 1) return;
-    const next = new URLSearchParams(params);
-    next.delete('step');
-    navigate({ search: next.toString() ? `?${next.toString()}` : '' }, { replace: true, state: location.state });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // A new step starts at the top of the screen.
-  useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, [step]);
-
-  // After a failed check, bring the first problem into view.
+  // After a save with problems, bring the first one into view.
   useEffect(() => {
     if (!attempt) return;
     const first = rootRef.current?.querySelector('[data-invalid="true"]');
     first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [attempt, step]);
+  }, [attempt]);
+
+  // Categories used before: remembered on this device, then the shop's
+  // other products, newest first.
+  const recent = useMemo(() => {
+    const fromProducts = [...(recentProducts || [])]
+      .filter((p) => p?.categoryId && productKind(p) !== 'PACKAGE')
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
+      .map((p) => p.categoryId);
+    return [...new Set([...readRecent(recentKey), ...fromProducts])].slice(0, RECENT_MAX);
+  }, [recentProducts, recentKey]);
 
   /* ── kind ─────────────────────────────────────────────────────── */
   const originalKind = product ? productKind(product) : null;
@@ -156,7 +179,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
   const applyKind = (base, next) => {
     const { form: switched, hasOptions: has } = switchKind(base, next, hasOptions);
     let out = switched;
-    // Cooked food: the perishable returns rule fits, unless one is chosen.
+    // Cooked food: the fresh-food returns rule fits, unless one is chosen.
     if (next !== form.kind && FOOD.includes(next) && !editing && !out.returnPolicy) {
       out = { ...out, returnPolicy: RETURN_POLICIES.find((p) => p.key === 'perishable').text };
       setPolicyMode('perishable');
@@ -165,11 +188,13 @@ export default function ProductForm({ product = null, categories = [], onCancel,
     setHasOptions(has);
   };
 
+  // Choosing a category sets the kind: its only one, the one already
+  // picked, or the one the name points to.
   const onCategory = (id) => {
     const opts = id ? optionsFor(categories.find((c) => c.id === id)) : [];
     let next = form.kind;
     if (opts.length === 1) next = opts[0].key;
-    else if (!(form.kindPicked && opts.some((o) => o.key === form.kind))) next = null;
+    else if (!(form.kindPicked && opts.some((o) => o.key === form.kind))) next = guessKind(form.name, opts);
     const picked = opts.length > 1 && form.kindPicked && next === form.kind;
     applyKind({ ...form, categoryId: id, kindPicked: picked }, next);
     setErrors((e) => ({ ...e, categoryId: '', kind: '' }));
@@ -194,17 +219,24 @@ export default function ProductForm({ product = null, categories = [], onCancel,
     }
   };
 
-  /* ── choice groups ───────────────────────────────────────────── */
+  // Live animals: "males and females" only fits more than one.
+  const setHeads = (v) => {
+    if ((parseInt(v, 10) || 0) <= 1 && form.sex === 'MIXED') patch({ stock: v, sex: '' });
+    else set('stock', v);
+  };
+
+  /* ── choices ─────────────────────────────────────────────────── */
   const updateGroup = (key, change) => {
     setForm((f) => ({
       ...f,
       variations: f.variations.map((g) => (g.key === key ? { ...g, ...(typeof change === 'function' ? change(g) : change) } : g)),
     }));
-    if (errors[`group-${key}`]) setErrors((e) => ({ ...e, [`group-${key}`]: '' }));
+    setErrors((e) => (e[`group-${key}`] || e.price || e.stock || e.options
+      ? { ...e, [`group-${key}`]: '', price: '', stock: '', options: '' }
+      : e));
   };
 
   const groupActions = {
-    update: updateGroup,
     add: () => {
       if (form.variations.length >= MAX_GROUPS) return;
       setForm((f) => ({ ...f, variations: [...f.variations, emptyGroup()] }));
@@ -222,26 +254,11 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         const stocks = { ...g.stocks };
         delete prices[choice];
         delete stocks[choice];
-        return { choices: g.choices.filter((c) => c !== choice), prices, stocks };
+        const filled = (o) => Object.values(o).some((v) => String(v ?? '').trim() !== '');
+        return {
+          choices: g.choices.filter((c) => c !== choice), prices, stocks, priced: filled(prices), stocked: filled(stocks),
+        };
       });
-    },
-    // Only one group can carry prices, and only one stock: switching it on
-    // for one group switches it off for the others.
-    toggleFlag: (key, flag) => {
-      const turningOn = !form.variations.find((g) => g.key === key)?.[flag];
-      const other = turningOn ? form.variations.find((g) => g.key !== key && g[flag]) : null;
-      if (other) {
-        const what = flag === 'priced' ? 'Prices' : 'Stock';
-        toast(`${what} per choice moved from ${other.name || 'the other type'} to this one`);
-      }
-      setForm((f) => ({
-        ...f,
-        variations: f.variations.map((g) => {
-          if (g.key === key) return { ...g, [flag]: turningOn };
-          return turningOn ? { ...g, [flag]: false } : g;
-        }),
-      }));
-      setErrors((e) => ({ ...e, price: '', stock: '', [`group-${key}`]: '' }));
     },
   };
 
@@ -249,47 +266,6 @@ export default function ProductForm({ product = null, categories = [], onCancel,
     setHasOptions(yes);
     if (yes && form.variations.length === 0) setForm((f) => ({ ...f, variations: [emptyGroup()] }));
     setErrors((e) => ({ ...e, options: '' }));
-  };
-
-  const toggleRow = (row) => setOpenRows((rows) => (rows.includes(row) ? rows.filter((r) => r !== row) : [...rows, row]));
-  const openWithErrors = (errs) => {
-    const rows = rowsWithErrors(errs);
-    if (rows.length) setOpenRows((open) => [...new Set([...open, ...rows])]);
-  };
-
-  /* ── steps ────────────────────────────────────────────────────── */
-  const goStep = (n) => {
-    const next = new URLSearchParams(params);
-    if (n <= 1) next.delete('step');
-    else next.set('step', String(n));
-    navigate({ search: next.toString() ? `?${next.toString()}` : '' }, { state: location.state });
-  };
-
-  // Typed but not added choices count; keep them merged in.
-  const settled = () => {
-    const state = withDrafts(form);
-    if (state !== form) setForm(state);
-    return state;
-  };
-
-  const goNext = () => {
-    const state = settled();
-    const key = STEPS[step - 1]?.key;
-    const errs = key && key !== 'review' ? checkStep(key, state, ctx) : {};
-    setErrors(errs);
-    if (hasErrors(errs)) {
-      toast.error('Please check the highlighted part.');
-      openWithErrors(errs);
-      setAttempt((n) => n + 1);
-      return;
-    }
-    goStep(step + 1);
-  };
-
-  // Back to an earlier step; when editing, any step (saving checks them all).
-  const jumpTo = (n) => {
-    if (n < step) navigate(n - step);
-    else if (n > step && editing) goStep(n);
   };
 
   /* ── leaving ──────────────────────────────────────────────────── */
@@ -310,27 +286,18 @@ export default function ProductForm({ product = null, categories = [], onCancel,
     else toPackage();
   };
 
-  const goBack = () => {
-    if (step > 1) navigate(-1);
-    else requestCancel();
-  };
-
   /* ── save ─────────────────────────────────────────────────────── */
   const save = async (e) => {
     e?.preventDefault();
     if (saving) return;
-    // Enter in a field moves on rather than saving early.
-    if (step < LAST_STEP) {
-      goNext();
-      return;
-    }
-    const state = settled();
-    const { errors: errs, first } = checkAll(state, ctx);
+    // Typed but not added choices count; keep them merged in.
+    const state = withDrafts(form);
+    if (state !== form) setForm(state);
+    const { errors: errs } = checkAll(state, ctx);
     setErrors(errs);
-    if (first >= 0) {
-      toast.error('Please check the highlighted parts.');
-      openWithErrors(errs);
-      if (first + 1 < step) navigate(first + 1 - step);
+    if (hasErrors(errs)) {
+      toast.error('Some parts need fixing. Look for the red words.');
+      if (cardsWithErrors(errs).more) setMoreOpen(true);
       setAttempt((n) => n + 1);
       return;
     }
@@ -342,6 +309,7 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         ? await axios.put(`/products/${product.id}`, payload)
         : await axios.post('/products', payload);
       const saved = res?.data || null;
+      keepRecent(recentKey, state.categoryId);
       if (saved?.todayPostError) toast.error(saved.todayPostError, { duration: 7000 });
       if (!editing && kind === 'LIVESTOCK') {
         lastSaved.current = saved;
@@ -364,8 +332,33 @@ export default function ProductForm({ product = null, categories = [], onCancel,
     setInitial(next);
     setErrors({});
     setSavedAnimal(null);
-    if (step > 1) navigate(1 - step);
     window.scrollTo({ top: 0 });
+  };
+
+  /* ── which cards are filled in ────────────────────────────────── */
+  const live = cardsWithErrors(checkAll(withDrafts(form), ctx).errors);
+  const showStock = !kind || kind === 'REGULAR' || kind === 'LIVESTOCK';
+  const showOptions = !!kind && offers.choices;
+  const showWay = kind !== 'LIVESTOCK';
+  const detailTitle = DETAIL_TITLES[kind];
+  const food = FOOD.includes(kind);
+  const types = food ? FOOD_CHOICE_TYPES : CHOICE_TYPES;
+  const priceTitle = kind === 'LIVESTOCK' ? 'Price and how many animals' : showStock ? 'Price and how many' : 'Price';
+  const optionsTitle = food ? 'Flavors or sizes' : 'Sizes or colors';
+
+  const cards = [
+    { id: 'photos', title: 'Photos', done: form.images.length > 0 },
+    { id: 'about', title: 'Name and category', done: !live.about },
+    { id: 'price', title: priceTitle, done: !live.price },
+    showOptions && { id: 'options', title: optionsTitle, done: hasOptions && !live.options, optional: true },
+    showWay && { id: 'way', title: 'How buyers get it', done: !live.way },
+    detailTitle && { id: 'details', title: detailTitle, done: !live.details },
+  ].filter(Boolean);
+  const doneOf = Object.fromEntries(cards.map((c) => [c.id, c.done]));
+  const left = cards.filter((c) => !c.optional && !c.done).length;
+
+  const goToCard = (id) => {
+    document.getElementById(`pf-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   /* ── what buyers will see ─────────────────────────────────────── */
@@ -373,94 +366,16 @@ export default function ProductForm({ product = null, categories = [], onCancel,
   const askWay = !shopMode || shopMode === 'BOTH';
   const wayText = WAY_TEXT[askWay ? form.fulfillment : shopMode] || 'Pickup or delivery';
   const todayQty = kind === 'READY_TO_EAT' && !editing && form.postToday ? parseInt(form.todayQty, 10) || 0 : 0;
-  const kindWord = kindOpts.find((k) => k.key === kind)?.label || (kind ? kindLabel(kind) : '');
-  const tiers = form.priceTiers.filter((t) => t.minQty !== '' && t.price !== '');
+  const ex = EXAMPLES[kind] || EXAMPLES.REGULAR;
+  const priceWords = PRICE_WORDS[kind] || PRICE_WORDS.REGULAR;
+  const saveLabel = editing ? 'Save changes' : 'Put on sale';
   const policy = RETURN_POLICIES.find((p) => p.key === policyMode);
-  const choiceGroups = hasOptions && offers.choices ? form.variations.filter((g) => g.name.trim() && g.choices.length) : [];
-  const sumup = [
-    {
-      step: 1,
-      title: 'Basics',
-      lines: [
-        [category?.name, ctx.kindAsked && kindWord].filter(Boolean).join(' · '),
-        form.description.trim() && `${form.description.trim().slice(0, 90)}${form.description.trim().length > 90 ? '…' : ''}`,
-      ],
-    },
-    { step: 2, title: DETAIL_TITLES[kind] || 'Details', lines: [...detailLines(form, ctx), wayText] },
-    {
-      step: 3,
-      title: STEPS[2].title,
-      lines: [
-        choiceGroups.length ? `Choices: ${choiceGroups.map((g) => g.name.trim()).join(', ')}` : '',
-        !by && form.saleOn && Number(form.salePrice) > 0 ? `On sale at ${peso(form.salePrice)}` : '',
-        !by && tiers.length ? `${tiers.length} bulk ${tiers.length === 1 ? 'price' : 'prices'}` : '',
-        offers.weight && !couriersOn && form.weightKg ? `${form.weightKg} kg with packaging` : '',
-        policy ? `Returns: ${policy.title}` : policyMode === 'custom' ? 'Returns: in your own words' : 'No return policy',
-      ],
-    },
-  ];
-
-  const priceFrom = by ? {
-    span,
-    text: by === 'sizes' ? 'From the sizes in Details' : 'From each choice’s price in Extras',
-  } : null;
-
-  const stepTitle = (s) => (s.key === 'details' ? DETAIL_TITLES[kind] || 'Details' : s.title);
-  const stepHint = (s) => {
-    if (s.key === 'details') return DETAIL_HINTS[kind] || 'Questions for what you sell.';
-    if (s.key === 'review' && editing) return 'This is how buyers will see it.';
-    return STEP_HINTS[s.key];
-  };
-  const saveLabel = editing ? 'Save changes' : kind === 'LIVESTOCK' ? 'Add animal' : 'Add product';
-
-  const bodies = {
-    basics: (
-      <BasicsStep
-        form={form}
-        set={set}
-        errors={errors}
-        categories={categories}
-        kind={kind}
-        kindOpts={kindOpts}
-        onCategory={onCategory}
-        onKind={onKind}
-        priceFrom={priceFrom}
-        onPackage={requestPackage}
-        editing={editing}
-      />
-    ),
-    details: (
-      <DetailsStep
-        form={form}
-        set={set}
-        patch={patch}
-        errors={errors}
-        ctx={{ kind, editing, couriersOn, shopMode, stockedGroup }}
-      />
-    ),
-    more: (
-      <MoreStep
-        form={form}
-        set={set}
-        errors={errors}
-        kind={kind}
-        offers={offers}
-        by={by}
-        couriersOn={couriersOn}
-        open={openRows}
-        onToggleRow={toggleRow}
-        hasOptions={hasOptions}
-        onHasOptions={chooseHasOptions}
-        groupActions={groupActions}
-        policyMode={policyMode}
-        onPolicy={pickPolicy}
-        onClearPolicy={clearPolicy}
-      />
-    ),
-    review: (
-      <ReviewStep draft={draft} kind={kind} way={wayText} todayQty={todayQty} sections={sumup} onEdit={jumpTo} />
-    ),
-  };
+  const moreSummary = [
+    kind === 'REGULAR' && form.size.trim() && form.size.trim(),
+    !by && form.saleOn && Number(form.salePrice) > 0 && `On sale at ${peso(form.salePrice)}`,
+    !by && form.priceTiers.some((t) => t.minQty !== '' && t.price !== '') && 'Cheaper when buying many',
+    policy ? `Returns: ${policy.title}` : policyMode === 'custom' && 'Returns: your own words',
+  ].filter(Boolean).join(' · ') || 'Sale price, cheaper for many, returns';
 
   if (savedAnimal) {
     const unitPrice = Number(savedAnimal.price) || 0;
@@ -468,11 +383,11 @@ export default function ProductForm({ product = null, categories = [], onCancel,
       <div className="pf" ref={rootRef}>
         <section className="pf-done">
           <CheckCircle size={44} weight="fill" className="pf-done-icon" aria-hidden="true" />
-          <h2>{savedAnimal.name} is listed</h2>
-          <p className="pf-done-facts">{headsLabel(savedAnimal.stock)} · {peso(unitPrice)} / head</p>
+          <h2>{savedAnimal.name} is on sale</h2>
+          <p className="pf-done-facts">{headsLabel(savedAnimal.stock)} · {peso(unitPrice)} for one</p>
           <p>
-            Have more animals that differ, like another age, sex or weight? List each one on its own.
-            We copy these details, so you only add the photos and name.
+            Have more animals that are different, like another age, sex or weight? List each one on its own.
+            We keep these answers, so you only add the photos and name.
           </p>
           <div className="pf-done-actions">
             <button type="button" className="pf-btn pf-btn--ghost" onClick={addAnother}>Add another animal like this</button>
@@ -485,42 +400,81 @@ export default function ProductForm({ product = null, categories = [], onCancel,
     );
   }
 
-  return (
-    <form className={`pf pf--steps${isPhone ? '' : ' pf--wide'}`} ref={rootRef} onSubmit={save} noValidate>
-      {!isPhone && (
-        <button type="button" className="pf-back" onClick={requestCancel}>
-          <ArrowLeft size={16} /> Back to products
-        </button>
-      )}
-
-      {isPhone ? (
-        <div className="pf-progress">
-          <span>Step {step} of {LAST_STEP}</span>
-          <div className="pf-progress-bar" aria-hidden="true">
-            {STEPS.map((s, i) => <i key={s.key} className={i < step ? 'is-on' : ''} />)}
-          </div>
+  const priceField = (
+    <Field
+      label={priceWords.label}
+      required
+      error={errors.price}
+      htmlFor="pf-price"
+      hint={by ? null : priceWords.hint}
+      className="pf-field--price"
+    >
+      {by ? (
+        <div className="pf-derived" aria-live="polite">
+          <strong>
+            {span
+              ? (span.min === span.max ? peso(span.min) : `${peso(span.min)} – ${peso(span.max)}`)
+              : 'Type a price for each one below'}
+          </strong>
+          <small>{by === 'sizes' ? 'From the sizes below.' : 'Each choice has its own price (see below).'}</small>
         </div>
       ) : (
-        <ol className="pf-track" aria-label="Steps">
-          {STEPS.map((s, i) => {
-            const n = i + 1;
-            const state = n === step ? 'is-current' : n < step ? 'is-done' : '';
-            const canGo = n < step || (editing && n !== step);
-            return (
-              <li key={s.key} className={state}>
-                <button type="button" onClick={() => jumpTo(n)} disabled={!canGo} aria-current={n === step ? 'step' : undefined}>
-                  <span className="pf-track-num" aria-hidden="true">{n < step ? <Check size={13} weight="bold" /> : n}</span>
-                  <span>{stepTitle(s)}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
+        <MoneyInput id="pf-price" value={form.price} onChange={(v) => set('price', v)} placeholder="" invalid={!!errors.price} />
       )}
+    </Field>
+  );
 
-      {step === 1 && (sellBlockers?.length > 0 ? (
+  const stockField = kind === 'LIVESTOCK' ? (
+    <Field
+      label="How many animals?"
+      required
+      error={errors.stock}
+      htmlFor="pf-heads"
+      hint="Same age, sex and size? List them together. Different ones get their own listing."
+    >
+      <Stepper
+        id="pf-heads"
+        value={form.stock}
+        onChange={setHeads}
+        min={0}
+        max={10000}
+        unit={(parseInt(form.stock, 10) || 0) === 1 ? 'animal' : 'animals'}
+        invalid={!!errors.stock}
+        label="How many animals"
+      />
+    </Field>
+  ) : (
+    <Field
+      label="How many do you have?"
+      required
+      error={errors.stock}
+      htmlFor="pf-stock"
+      hint={stockedGroup ? null : 'It goes down by itself when someone buys.'}
+    >
+      {stockedGroup ? (
+        <div className="pf-derived" aria-live="polite">
+          <strong>{stockedGroup.choices.reduce((n, c) => n + (parseInt(stockedGroup.stocks[c] || '0', 10) || 0), 0)} in all</strong>
+          <small>Counted from your choices below.</small>
+        </div>
+      ) : (
+        <Stepper id="pf-stock" value={form.stock} onChange={(v) => set('stock', v)} invalid={!!errors.stock} label="How many you have" />
+      )}
+    </Field>
+  );
+
+  const optionsSwitch = {
+    REGULAR: { label: 'It comes in different sizes or colors', sub: 'Example: Small, Medium, Large' },
+    READY_TO_EAT: { label: 'It comes in different flavors or sizes', sub: 'Example: Original and Spicy' },
+    COOK_TO_ORDER: { label: 'Buyers can pick a flavor or style', sub: 'Example: Grilled or Fried' },
+  }[kind] || { label: 'It comes in different sizes or colors', sub: 'Example: Small, Medium, Large' };
+
+  const showKindNote = !!kind && !!form.categoryId && (kindOpts.length > 1 || kind !== 'REGULAR');
+
+  const body = (
+    <div className="pf-cards-col">
+      {sellBlockers?.length > 0 ? (
         <div className="pf-note pf-note--draft">
-          <Info size={16} />
+          <Info size={18} />
           <span>
             Buyers can see this product, but can&apos;t order it until your shop is ready to sell.
             {' '}Still to do: {sellBlockers.map((b) => b.label).join(', ')}.
@@ -528,65 +482,290 @@ export default function ProductForm({ product = null, categories = [], onCancel,
         </div>
       ) : editing && product.status === 'APPROVED' && (
         <div className="pf-note">
-          <Info size={16} />
-          <span>This product is live. Your changes show to buyers as soon as you save.</span>
+          <Info size={18} />
+          <span>This product is on sale now. Buyers see your changes as soon as you save.</span>
         </div>
-      ))}
+      )}
 
-      {STEPS.map((s) => s.key === STEPS[step - 1].key && (
-        <section key={s.key} className={`pf-section pf-section--${s.key}`} aria-labelledby={`pf-step-${s.key}`}>
-          <header className="pf-section-head">
-            <h2 id={`pf-step-${s.key}`}>{stepTitle(s)}</h2>
-            <p>{stepHint(s)}</p>
-          </header>
-          <div className="pf-section-body">{bodies[s.key]}</div>
+      {/* 1. Photos */}
+      <Card id="photos" title="Photos" done={doneOf.photos} hint="The first photo is the one buyers see first.">
+        <Field error={errors.images}>
+          <PhotoPicker images={form.images} onChange={(imgs) => set('images', imgs)} invalid={!!errors.images} />
+        </Field>
+      </Card>
 
-          {!isPhone && (
-            <div className="pf-footer">
-              <button type="button" className="pf-btn pf-btn--ghost" onClick={goBack} disabled={saving}>
-                {step > 1 ? 'Back' : 'Cancel'}
-              </button>
-              {step < LAST_STEP ? (
-                <button type="button" className="pf-btn pf-btn--primary" onClick={goNext}>
-                  Next <ArrowRight size={17} weight="bold" />
-                </button>
-              ) : (
-                <button type="submit" className="pf-btn pf-btn--primary" disabled={saving}>
-                  {saving ? <CircleNotch size={17} className="pf-spin" /> : <Check size={17} weight="bold" />}
-                  {saving ? <BusyLabel>Saving…</BusyLabel> : saveLabel}
+      {/* 2. Name and category */}
+      <Card id="about" title="Name and category" done={doneOf.about}>
+        <Field
+          label={kind === 'LIVESTOCK' ? 'Name of the animal for sale' : 'Product name'}
+          required
+          error={errors.name}
+          htmlFor="pf-name"
+          hint={ex.name.replace(/^e\.g\. /, 'Example: ')}
+          aside={form.name.length ? `${form.name.length}/${NAME_MAX}` : null}
+        >
+          <input
+            id="pf-name"
+            className="pf-input pf-input--lg"
+            value={form.name}
+            maxLength={NAME_MAX}
+            onChange={(e) => set('name', e.target.value)}
+            autoComplete="off"
+          />
+        </Field>
+
+        <Field label="Category" required error={errors.categoryId} hint={form.categoryId ? null : 'Tap the one it belongs to. Buyers find it there.'}>
+          <CategoryPicker
+            categories={categories}
+            value={form.categoryId}
+            onChange={onCategory}
+            name={form.name}
+            recent={recent}
+            invalid={!!errors.categoryId}
+          />
+        </Field>
+
+        {kindOpts.length > 1 && (
+          <div className="pf-field pf-kind" data-invalid={errors.kind ? 'true' : undefined}>
+            <span className="pf-label" id="pf-kind-label">What kind is it?</span>
+            <RadioCards
+              label="What kind is it?"
+              options={kindOpts}
+              value={kind}
+              onChange={onKind}
+              columns={1}
+              invalid={!!errors.kind}
+            />
+            {errors.kind && <p className="pf-error" role="alert">{errors.kind}</p>}
+          </div>
+        )}
+        {showKindNote && (
+          <p className="pf-kind-note" aria-live="polite">
+            <Info size={17} aria-hidden="true" />
+            <span>{KIND_NOTES[kind]}</span>
+          </p>
+        )}
+
+        <Field
+          label="Tell buyers about it"
+          required
+          error={errors.description}
+          htmlFor="pf-description"
+          hint={ex.description.replace(/^e\.g\. /, 'Example: ')}
+          aside={form.description.length > DESCRIPTION_MAX - 200 ? `${form.description.length}/${DESCRIPTION_MAX}` : null}
+        >
+          <textarea
+            id="pf-description"
+            className="pf-input pf-textarea"
+            rows={3}
+            maxLength={DESCRIPTION_MAX}
+            value={form.description}
+            onChange={(e) => set('description', e.target.value)}
+          />
+        </Field>
+
+        {!editing && (
+          <button type="button" className="pf-package-hint" onClick={requestPackage}>
+            <Package size={18} aria-hidden="true" />
+            <span>Selling a few products together as one set? <strong>Make a package</strong></span>
+          </button>
+        )}
+      </Card>
+
+      {/* 3. Price and how many */}
+      <Card id="price" title={priceTitle} done={doneOf.price}>
+        <div className={showStock ? 'pf-grid-2' : ''}>
+          {priceField}
+          {showStock && stockField}
+        </div>
+      </Card>
+
+      {/* 4. Sizes, colors or flavors: only when switched on */}
+      {showOptions && (
+        <Card id="options" title={optionsTitle} done={doneOf.options} optional>
+          <div data-invalid={errors.options ? 'true' : undefined}>
+            <Switch checked={hasOptions} onChange={chooseHasOptions} label={optionsSwitch.label} sub={optionsSwitch.sub} />
+          </div>
+          {errors.options && <p className="pf-error" role="alert">{errors.options}</p>}
+          {hasOptions && (
+            <div className="pf-groups">
+              {form.variations.map((g, index) => (
+                <ChoiceGroup
+                  key={g.key}
+                  group={g}
+                  index={index}
+                  count={form.variations.length}
+                  error={errors[`group-${g.key}`]}
+                  types={types}
+                  showPrice={offers.choicePrices && (g.priced || !form.variations.some((x) => x.key !== g.key && x.priced))}
+                  showStock={offers.choiceStock && (g.stocked || !form.variations.some((x) => x.key !== g.key && x.stocked))}
+                  onChange={(change) => updateGroup(g.key, change)}
+                  onAddChoices={(raw) => groupActions.addChoices(g.key, raw)}
+                  onRemoveChoice={(c) => groupActions.removeChoice(g.key, c)}
+                  onRemove={() => groupActions.remove(g.key)}
+                />
+              ))}
+              {form.variations.length < MAX_GROUPS && (
+                <button type="button" className="pf-add-group" onClick={groupActions.add}>
+                  <Plus size={17} /> Add another
+                  <small>{food ? 'like Rice as well as Flavor' : 'like Color as well as Size'}</small>
                 </button>
               )}
             </div>
           )}
-        </section>
-      ))}
+        </Card>
+      )}
 
-      {isPhone && (
+      {/* 5. How buyers get it (and the weight couriers need) */}
+      {showWay && (
+        <Card id="way" title="How buyers get it" done={doneOf.way}>
+          <WayField
+            value={form.fulfillment}
+            onChange={(v) => set('fulfillment', v)}
+            shopMode={shopMode}
+            kind={kind}
+            couriersOn={couriersOn}
+            label={null}
+          />
+          {offers.weight && (
+            <Field
+              label="Weight with the packaging"
+              required={couriersOn}
+              optional={!couriersOn}
+              error={errors.weightKg}
+              htmlFor="pf-weight"
+              hint={couriersOn
+                ? 'Couriers use it to work out the delivery fee. Example: 0.5 kg'
+                : 'Only needed if a courier delivers it. Example: 0.5 kg'}
+            >
+              <div className="pf-unit">
+                <input
+                  id="pf-weight"
+                  className={`pf-input${errors.weightKg ? ' is-invalid' : ''}`}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={form.weightKg}
+                  onChange={(e) => set('weightKg', e.target.value)}
+                />
+                <span>kg</span>
+              </div>
+            </Field>
+          )}
+        </Card>
+      )}
+
+      {/* 6. Food and animals: their own questions */}
+      {detailTitle && (
+        <Card id="details" title={detailTitle} done={doneOf.details}>
+          <KindDetails form={form} set={set} patch={patch} errors={errors} ctx={{ kind, editing }} />
+        </Card>
+      )}
+
+      {/* 7. More details: closed until wanted */}
+      <section className={`pf-card pf-card--more${moreOpen ? ' is-open' : ''}`} id="pf-card-more">
+        <button
+          type="button"
+          className="pf-more-toggle"
+          aria-expanded={moreOpen}
+          aria-controls="pf-more-body"
+          onClick={() => setMoreOpen((v) => !v)}
+        >
+          <span className="pf-more-toggle-text">
+            <span className="pf-more-toggle-title">More details <em className="pf-opt">Optional</em></span>
+            <small>{moreSummary}</small>
+          </span>
+          <CaretDown size={20} className="pf-more-caret" aria-hidden="true" />
+        </button>
+        {moreOpen && (
+          <div className="pf-card-body" id="pf-more-body">
+            <MoreDetails
+              form={form}
+              set={set}
+              errors={errors}
+              kind={kind}
+              by={by}
+              policyMode={policyMode}
+              onPolicy={pickPolicy}
+              onClearPolicy={clearPolicy}
+            />
+          </div>
+        )}
+      </section>
+    </div>
+  );
+
+  return (
+    <form className={`pf pf--page${isPhone ? '' : ' pf--wide'}`} ref={rootRef} onSubmit={save} noValidate>
+      {!isPhone && (
+        <button type="button" className="pf-back" onClick={requestCancel}>
+          <ArrowLeft size={16} /> Back to products
+        </button>
+      )}
+
+      {isPhone ? body : (
+        <div className="pf-layout">
+          {body}
+          <aside className="pf-aside-col" aria-label="Your progress">
+            <div className="pf-aside-card">
+              <h3>Your progress</h3>
+              <ul className="pf-checklist">
+                {cards.map((c) => (
+                  <li key={c.id} className={c.done ? 'is-done' : ''}>
+                    <button type="button" onClick={() => goToCard(c.id)}>
+                      <span className="pf-check" aria-hidden="true">{c.done && <Check size={13} weight="bold" />}</span>
+                      <span>{c.title}</span>
+                      {c.optional && !c.done && <em>Optional</em>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="pf-aside-left">
+                {left ? `${left} ${left === 1 ? 'part' : 'parts'} left to fill in` : 'All set. You can save it now.'}
+              </p>
+            </div>
+            <div className="pf-aside-card">
+              <h3>What buyers see</h3>
+              <PreviewCard draft={draft} kind={kind} way={showWay ? wayText : null} todayQty={todayQty} />
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {isPhone ? (
         <>
           <div className="pf-bar-space" aria-hidden="true" />
-          <div className="scm-savebar pf-bar" role="group" aria-label="Steps">
-            <button type="button" className="scm-savebar-btn scm-savebar-cancel" onClick={goBack} disabled={saving}>
-              {step > 1 ? 'Back' : 'Cancel'}
+          <div className="scm-savebar pf-bar" role="group" aria-label="Save">
+            <button type="button" className="scm-savebar-btn scm-savebar-cancel" onClick={requestCancel} disabled={saving}>
+              Cancel
             </button>
-            {step < LAST_STEP ? (
-              <button type="button" className="scm-savebar-btn scm-savebar-save" onClick={goNext}>
-                Next
-              </button>
-            ) : (
-              <button type="submit" className="scm-savebar-btn scm-savebar-save" disabled={saving}>
-                {saving ? <BusyLabel>Saving…</BusyLabel> : saveLabel}
-              </button>
-            )}
+            <button type="submit" className="scm-savebar-btn scm-savebar-save" disabled={saving}>
+              {saving ? <BusyLabel>Saving…</BusyLabel> : saveLabel}
+            </button>
           </div>
         </>
+      ) : (
+        <div className="pf-footer">
+          <span className="pf-footer-note">
+            {left ? `${left} ${left === 1 ? 'part' : 'parts'} left to fill in` : 'All set.'}
+          </span>
+          <button type="button" className="pf-btn pf-btn--ghost" onClick={requestCancel} disabled={saving}>
+            Cancel
+          </button>
+          <button type="submit" className="pf-btn pf-btn--primary" disabled={saving}>
+            {saving ? <CircleNotch size={17} className="pf-spin" /> : <Check size={17} weight="bold" />}
+            {saving ? <BusyLabel>Saving…</BusyLabel> : saveLabel}
+          </button>
+        </div>
       )}
 
       <ConfirmDialog
         open={!!confirmLeave}
         title="Leave without saving?"
-        message="What you entered for this product will be lost."
+        message="What you typed for this product will be lost."
         confirmLabel="Leave"
-        cancelLabel="Keep editing"
+        cancelLabel="Keep going"
         danger
         onConfirm={() => {
           const to = confirmLeave;

@@ -7,9 +7,11 @@ import './OrderReceipt.css';
 import { ReceiptSkeleton } from '../components/ui/PageSkeletons';
 import AppLogo from '../components/AppLogo';
 import { trackingLink } from '../lib/tracking';
+import { orderPromo } from '../lib/moormove';
 import {
   etaLabel, hasPaluto, lineKind, lineNote,
 } from '../lib/orderLines';
+import { distanceNote } from '../lib/deliveryDistance';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateFmt = (d) => new Date(d).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -179,7 +181,7 @@ export default function OrderReceipt() {
 
         <section className="receipt-totals">
           <div className="totals-row"><span>Items Subtotal</span><span>{peso(itemsSubtotal)}</span></div>
-          <div className="totals-row"><span>{order.fulfillmentMethod === 'PICKUP' ? 'Pickup Fee' : 'Delivery Fee'}</span><span>{deliveryFee === 0 ? 'FREE' : peso(deliveryFee)}</span></div>
+          <div className="totals-row"><span>{order.fulfillmentMethod === 'PICKUP' ? 'Pickup Fee' : `Delivery Fee${distanceNote(order)}`}</span><span>{deliveryFee === 0 ? (orderPromo(order) ? 'FREE (MoorMove promo)' : 'FREE') : peso(deliveryFee)}</span></div>
           {discountAmount > 0 && (
             <div className="totals-row"><span>Discount{order.voucherCode ? ` (${order.voucherCode})` : ''}</span><span>-{peso(discountAmount)}</span></div>
           )}

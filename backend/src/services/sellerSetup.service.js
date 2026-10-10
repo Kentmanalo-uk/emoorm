@@ -82,9 +82,18 @@ const getSetup = async (userId) => {
         // Each area may have its own fee; the rest use the standard fee, and
         // a store without one uses the platform default. The step asks the
         // seller to decide: a standard fee (0 is free), or a fee on every area.
+        // Delivery by distance: free, or a starting fee (the km and the fee
+        // per km have the platform's defaults). Decided once the seller set
+        // either (shops from before: their old fees count too).
         byCourier ? { key: 'delivery-fee', done: true, byCourier: true } : {
           key: 'delivery-fee',
-          done: standardFee !== null || (areaCount > 0 && areasWithoutFee === 0),
+          done: store.deliveryFeeMode === 'FREE' || store.deliveryBaseFee != null
+            || standardFee !== null || (areaCount > 0 && areasWithoutFee === 0),
+          mode: store.deliveryFeeMode === 'FREE' ? 'FREE' : 'PER_KM',
+          baseFee: store.deliveryBaseFee == null ? null : Number(store.deliveryBaseFee),
+          includedKm: store.deliveryIncludedKm == null ? null : Number(store.deliveryIncludedKm),
+          perKm: store.deliveryPerKm == null ? null : Number(store.deliveryPerKm),
+          pinned: store.latitude != null && store.longitude != null,
           fee: standardFee,
           areaCount,
           pricedAreas: areaCount - areasWithoutFee,

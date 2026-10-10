@@ -320,9 +320,13 @@ const replaceMyServiceAreas = asyncHandler(async (req, res) => {
   successResponse(res, areas, 'Service areas updated successfully');
 });
 
+/** GET /stores/:id/coverage?municipalityId=&barangay=&lat=&lng= (lat, lng: the delivery pin). */
 const checkStoreCoverage = asyncHandler(async (req, res) => {
-  const { municipalityId, barangay } = req.query;
-  const result = await storeService.checkCoverage(req.params.id, municipalityId, barangay);
+  const {
+    municipalityId, barangay, lat, lng,
+  } = req.query;
+  const pin = lat !== undefined && lng !== undefined ? { lat, lng } : null;
+  const result = await storeService.checkCoverage(req.params.id, municipalityId, barangay, pin);
   successResponse(res, result, 'Coverage check');
 });
 

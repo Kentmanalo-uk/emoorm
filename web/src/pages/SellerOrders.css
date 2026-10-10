@@ -1211,3 +1211,30 @@ tr.is-moved { box-shadow: inset 3px 0 0 var(--t-primary-600, #059669); }
   font-size: 13.5px;
   line-height: 1.5;
 }
+
+/* A MoorMove free-delivery promo order, under its status. */
+.so-promo-chip {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--t-primary-100, #d1fae5);
+  color: var(--t-primary-800, #065f46);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+@media (max-width: 768px) {
+  /* Phones: the status sits on the right of the card. */
+  .sc-content .so-orders-table td:nth-child(5) .so-promo-chip { margin-left: auto; }
+}
+
+/* The km a delivery was priced for, beside its fee. */
+.summary-km {
+  margin-left: 2px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+  font-weight: 400;
+}

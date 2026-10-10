@@ -9,8 +9,9 @@ const prisma = require('../config/database');
  * on, for the way the seller chose to hand orders over:
  *
  *  - Delivering (DELIVERY or BOTH): by the seller, at least one delivery
- *    area and a fee decided for every one (a standard fee, or each area's
- *    own); or by a courier with rates, which the buyer pays for online, so
+ *    area and a fee decided (free, or a starting fee by distance; shops from
+ *    before delivery by distance: their old standard fee or a fee on every
+ *    area); or by a courier with rates, which the buyer pays for online, so
  *    with the shop's payment QR. Courier fees are worked out from weight.
  *  - Pickup (PICKUP or BOTH): a pickup address.
  *  - A way to pay: cash on delivery / pickup, or a payment QR.
@@ -36,13 +37,21 @@ const SELL_STEPS = ['delivery-areas', 'delivery-fee', 'pickup', 'payment'];
 
 const hasValue = (field) => ({ AND: [{ [field]: { not: null } }, { [field]: { not: '' } }] });
 
-// Delivering by the seller: somewhere to deliver to, and a fee for every
-// area (a standard fee, or none left without one).
+// Delivering by the seller: somewhere to deliver to, and a fee decided:
+// free, or a starting fee by distance (or, from before delivery by distance,
+// a standard fee or none of the areas left without one).
 const SELF_DELIVERY_READY = {
   AND: [
     { selfDelivery: true },
     { serviceAreas: { some: {} } },
-    { OR: [{ deliveryFee: { not: null } }, { serviceAreas: { none: { fee: null } } }] },
+    {
+      OR: [
+        { deliveryFeeMode: 'FREE' },
+        { deliveryBaseFee: { not: null } },
+        { deliveryFee: { not: null } },
+        { serviceAreas: { none: { fee: null } } },
+      ],
+    },
   ],
 };
 // Delivering by courier: one with rates, paid online with the shop's QR.

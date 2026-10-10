@@ -243,16 +243,20 @@ const getUnreadCount = async (userId, audience) => {
  * @param {String} sellerId - Seller user ID
  * @param {String} orderId - Order ID
  * @param {String} buyerName - Buyer name
+ * @param {String} [note] - A sentence to add (e.g. a MoorMove free-delivery promo)
  */
-const notifyOrderCreated = async (sellerId, orderId, buyerName) => {
+const notifyOrderCreated = async (sellerId, orderId, buyerName, note = null) => {
   return createNotification({
     userId: sellerId,
     type: 'ORDER_RECEIVED',
     title: 'New Order Received',
-    message: `You have received a new order from ${buyerName}`,
+    message: `You have received a new order from ${buyerName}${note ? `. ${note}` : ''}`,
     relatedId: orderId,
   });
 };
+
+/** "Free delivery (MoorMove promo: <title>)", for an order's buyer. */
+const promoLine = (title) => `Free delivery (MoorMove promo: ${title})`;
 
 /**
  * Notify order status updated
@@ -284,11 +288,17 @@ const ORDER_STATUS_NOTICES = {
 const notifyOrderUpdated = async (buyerId, orderId, newStatus, { orderNumber, refundNote } = {}) => {
   const notice = ORDER_STATUS_NOTICES[newStatus] || { type: 'ORDER_CONFIRMED', text: 'was updated' };
   const refund = refundNote ? ' The seller will arrange a refund of your payment.' : '';
+  // Confirmed: a MoorMove free-delivery promo is said again.
+  let promo = '';
+  if (newStatus === 'CONFIRMED' && orderId) {
+    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { deliveryPromoTitle: true } }).catch(() => null);
+    if (order?.deliveryPromoTitle) promo = ` ${promoLine(order.deliveryPromoTitle)}.`;
+  }
   return createNotification({
     userId: buyerId,
     type: notice.type,
     title: 'Order Status Updated',
-    message: `Your order${orderNumber ? ` ${orderNumber}` : ''} ${notice.text}.${refund}`,
+    message: `Your order${orderNumber ? ` ${orderNumber}` : ''} ${notice.text}.${refund}${promo}`,
     relatedId: orderId,
   });
 };
@@ -465,6 +475,7 @@ module.exports = {
   getUnreadCount,
   // Helper functions
   notifyOrderCreated,
+  promoLine,
   notifyOrderReceived,
   notifyOrderUpdated,
   notifyProductApproved,

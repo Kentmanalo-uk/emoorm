@@ -6,12 +6,16 @@
  * locally: point it at a scratch database, never the live one). Everything a
  * test makes is named "ci-…" and removed afterwards.
  *
- * No email, AI or Redis traffic: those keys are blanked before the app loads
- * (dotenv never overrides a variable that is already set, even to '').
+ * No email, AI, Redis or route-service traffic: those keys are blanked (or
+ * ROUTING_URL set to off) before the app loads (dotenv never overrides a
+ * variable that is already set, even to '').
  */
 for (const key of ['RESEND_API_KEY', 'SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'HF_TOKEN', 'CACHE_REDIS_URL', 'REDIS_URL', 'SENTRY_DSN']) {
   process.env[key] = '';
 }
+// Never the internet's route service: distances are estimates (straight line
+// × 1.3) unless a test points ROUTING_URL at its own fake one.
+process.env.ROUTING_URL = 'off';
 require('dotenv').config();
 // Only ever a scratch database: its name must say so (emoorm_ci, emoorm_test…).
 const dbName = (process.env.DATABASE_URL || '').split('?')[0].split('/').pop() || '';

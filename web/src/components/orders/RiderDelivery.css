@@ -562,3 +562,36 @@
     min-height: 44px;
   }
 }
+
+/* A MoorMove free-delivery promo: the chip on the rider card and the
+   seller's line about who pays what. */
+.rider-card-chip {
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--t-primary-100, #d1fae5);
+  color: var(--t-primary-800, #065f46);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.rider-promo-line {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.rider-sheet-lines > .rider-promo-line {
+  margin-bottom: 4px;
+  background: var(--t-neutral-0, #fff);
+}

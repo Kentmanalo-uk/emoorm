@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, PencilSimple, Trash, UploadSimple, ArrowSquareOut } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
@@ -6,6 +7,10 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import EmptyArt from '../components/ui/EmptyArt';
 import { CourierMark } from '../components/orders/CourierTracking';
 import axios from '../lib/axios';
+import useAppSettings, { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS } from '../hooks/useAppSettings';
+import {
+  MOORMOVE_COURIER, MOORMOVE_STATUS_KEY, promoUntil, useMoormove,
+} from '../lib/moormove';
 import { uploadImage } from '../lib/upload';
 import '../components/admin/AdminLayout.css';
 import './AdminCouriers.css';
@@ -44,6 +49,11 @@ const ratesSummary = (rates) => {
  * Couriers sellers ship with (J&T, LBC…): the name and logo buyers see, and
  * the courier's tracking page. Sellers tick the ones they use in their
  * delivery settings and pick one when they ship an order.
+ *
+ * MoorMove (local riders, moormove.emoorm.shop) is listed first. It isn't a
+ * courier row in the database: Active/Hidden is the site's MoorMove switch
+ * (app settings), its fees come from MoorMove by distance, and its riders
+ * and towns are managed on MoorMove's own admin.
  */
 export default function AdminCouriers() {
   const [couriers, setCouriers] = useState([]);
@@ -60,6 +70,43 @@ export default function AdminCouriers() {
     .finally(() => setLoading(false)), []);
 
   useEffect(() => { load(); }, [load]);
+
+  // MoorMove's row: the switch, and whether this server reaches MoorMove.
+  const queryClient = useQueryClient();
+  const { settings } = useAppSettings();
+  const riderOn = settings.moormoveEnabled === true;
+  // Free-delivery promos MoorMove runs now (set up on MoorMove's admin).
+  const { promos: riderPromos } = useMoormove();
+  const [riderHealth, setRiderHealth] = useState(null); // null = checking
+  const [riderSaving, setRiderSaving] = useState(false);
+  const fetchRiderHealth = useCallback(() => axios.get('/moormove/admin/health', { quiet: true })
+    .then((res) => setRiderHealth(res.data || { configured: false }))
+    .catch((err) => setRiderHealth({ failed: true, error: err?.message || null })), []);
+  useEffect(() => { fetchRiderHealth(); }, [fetchRiderHealth]);
+  const checkRiders = () => { setRiderHealth(null); fetchRiderHealth(); };
+  const toggleRiders = async () => {
+    setRiderSaving(true);
+    try {
+      const res = await axios.put('/app-settings', { moormoveEnabled: !riderOn });
+      queryClient.setQueryData(APP_SETTINGS_QUERY_KEY, { ...DEFAULT_APP_SETTINGS, ...(res.data || {}) });
+      queryClient.invalidateQueries({ queryKey: APP_SETTINGS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: MOORMOVE_STATUS_KEY });
+      toast.success(riderOn ? 'MoorMove hidden: sellers and buyers no longer see it' : 'MoorMove is active: sellers can choose it');
+    } catch (err) {
+      toast.error(err.message || 'Update failed');
+    } finally {
+      setRiderSaving(false);
+    }
+  };
+  const riderLine = (() => {
+    const h = riderHealth;
+    if (!h) return { tone: 'wait', text: 'Checking the connection…' };
+    if (h.failed) return { tone: 'bad', text: `Couldn't check the connection${h.error ? `: ${h.error}` : ''}` };
+    if (!h.configured) return { tone: 'bad', text: 'Not connected: set MOORMOVE_API_URL and MOORMOVE_SECRET on this server' };
+    if (!h.reachable) return { tone: 'bad', text: `Not reachable${h.error ? ` · ${h.error}` : ''}` };
+    const open = (h.towns || []).filter((t) => t.serviceOpen).length;
+    return { tone: h.open ? 'ok' : 'wait', text: `Connected · open in ${open} town${open === 1 ? '' : 's'}${h.open ? '' : ' · not taking orders right now'}` };
+  })();
 
   const openCreate = () => {
     const next = couriers.reduce((n, c) => Math.max(n, Number(c.sortOrder || 0)), 0) + 1;
@@ -267,8 +314,6 @@ export default function AdminCouriers() {
       <div className="admin-card">
         {loading ? (
           <div className="ac-couriers-loading">Loading couriers…</div>
-        ) : couriers.length === 0 ? (
-          <div className="admin-empty"><EmptyArt name="delivery" size={104} /><p>No couriers yet. Add the ones sellers in your area use.</p></div>
         ) : (
           <table className="admin-table ac-couriers-table">
             <thead>
@@ -283,6 +328,49 @@ export default function AdminCouriers() {
               </tr>
             </thead>
             <tbody>
+              <tr className="ac-mm-row">
+                <td>
+                  <span className="ac-courier-cell">
+                    <CourierMark courier={MOORMOVE_COURIER} size={34} />
+                    <span className="ac-mm-name">
+                      <strong>MoorMove</strong>
+                      <span className="ac-mm-tag">Local riders</span>
+                    </span>
+                  </span>
+                  <span className={`ac-mm-dot is-${riderLine.tone}`} role="status">{riderLine.text}</span>
+                  {riderPromos.map((p) => (
+                    <span key={p.id} className="ac-mm-dot ac-mm-promo">
+                      Free delivery promo: {p.title}{p.endsAt ? ` (until ${promoUntil(p)})` : ''}
+                    </span>
+                  ))}
+                </td>
+                <td><span className="ac-rates-sum">By distance · cash on delivery OK</span></td>
+                <td><span className="ac-muted">Live rider map</span></td>
+                <td>{riderHealth?.stores ?? '–'}</td>
+                <td>{riderHealth?.orders ?? '–'}</td>
+                <td>
+                  <button type="button" className={`admin-btn ${riderOn ? 'admin-btn-primary' : ''}`} onClick={toggleRiders} disabled={riderSaving}>
+                    {riderSaving ? 'Saving…' : riderOn ? 'Active' : 'Hidden'}
+                  </button>
+                </td>
+                <td>
+                  <div className="ac-row-actions">
+                    {riderHealth?.site ? (
+                      <a className="admin-btn" href={`${riderHealth.site}/admin`} target="_blank" rel="noopener noreferrer">
+                        MoorMove admin <ArrowSquareOut size={12} />
+                      </a>
+                    ) : null}
+                    <button type="button" className="admin-btn" onClick={checkRiders} disabled={!riderHealth}>Check</button>
+                  </div>
+                </td>
+              </tr>
+              {couriers.length === 0 && (
+                <tr>
+                  <td colSpan={7}>
+                    <div className="admin-empty"><EmptyArt name="delivery" size={104} /><p>No other couriers yet. Add the ones sellers in your area use.</p></div>
+                  </td>
+                </tr>
+              )}
               {couriers.map((c) => (
                 <tr key={c.id}>
                   <td>

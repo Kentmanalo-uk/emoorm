@@ -1,12 +1,12 @@
 /**
  * The product form's rules in one place: what it opens with (a product, or
- * blank), what each step checks, and the payload the product API takes.
- * Pure functions, so the step components stay small.
+ * blank), what each part checks, and the payload the product API takes.
+ * Pure functions, so the form's parts stay small.
  */
 import {
-  KINDS, kindChoices, productKind, kindLabel, prepLabel, cookDaysLabel, servesLabel,
-  ageLabel, sexLabel, weightLabel, animalLabel, headsLabel, FULFILLMENTS,
+  KINDS, kindChoices, productKind, kindLabel, FULFILLMENTS,
 } from '../../../lib/productKinds';
+import { CATEGORY_ICONS, categoryIconKey } from '../../../lib/categoryIcons';
 
 export const MAX_IMAGES = 10;
 export const NAME_MIN = 2;
@@ -19,18 +19,10 @@ export const MAX_CHOICES = 30;
 export const MAX_SIZES = 10;
 export const TODAY_MAX = 10000;
 
-export const STEPS = [
-  { key: 'basics', title: 'Basics' },
-  { key: 'details', title: 'Details' },
-  { key: 'more', title: 'Extras' },
-  { key: 'review', title: 'Review' },
-];
-
-/** Step 2's title for each kind. */
+/** The title of the part with each kind's own questions (none for goods). */
 export const DETAIL_TITLES = {
-  REGULAR: 'Stock and delivery',
-  READY_TO_EAT: "Today's post",
-  COOK_TO_ORDER: 'Paluto details',
+  READY_TO_EAT: "Today's food",
+  COOK_TO_ORDER: 'About the cooking',
   LIVESTOCK: 'About the animal',
 };
 
@@ -55,19 +47,19 @@ export const RETURN_POLICIES = [
   {
     key: 'none',
     title: 'No returns',
-    hint: 'Only wrong or damaged items, asked for within 3 days',
+    hint: 'Only if it is wrong or damaged, told within 3 days',
     text: 'No returns or refunds accepted unless the item is incorrect or damaged on arrival.',
   },
   {
     key: '7day',
     title: '7-day returns',
-    hint: 'Wrong or damaged items, within 7 days, with proof',
+    hint: 'If it is wrong or damaged, within 7 days, with a photo',
     text: 'Returns or refunds accepted within 7 days for incorrect or damaged items. Buyer must provide proof.',
   },
   {
     key: 'perishable',
-    title: 'Perishable goods',
-    hint: 'Problems reported within 2 days, with a photo',
+    title: 'Fresh food',
+    hint: 'Problems told within 2 days, with a photo',
     text: 'For perishable goods, report incorrect or damaged items on delivery with photo proof.',
   },
 ];
@@ -104,7 +96,7 @@ export const minutesLabel = (m) => {
 
 /** What the name and description look like for each kind. */
 export const EXAMPLES = {
-  REGULAR: { name: 'e.g. Bansud Banana Chips', description: 'e.g. Homemade crispy banana chips, lightly sweetened.', price: 'e.g. 85' },
+  REGULAR: { name: 'e.g. Fresh mangoes, 1 kg', description: 'e.g. Sweet carabao mangoes picked this week from our farm.', price: 'e.g. 85' },
   READY_TO_EAT: { name: 'e.g. Chicken Adobo', description: 'e.g. Chicken adobo cooked this morning, with plenty of sauce.', price: 'e.g. 120' },
   COOK_TO_ORDER: { name: 'e.g. Paluto Bangus', description: 'e.g. Fresh bangus, grilled or as sinigang. We cook it when you order.', price: 'e.g. 350' },
   LIVESTOCK: { name: 'e.g. Native Pig', description: 'e.g. Healthy native pig raised on our farm. Vaccinated and dewormed.', price: 'e.g. 8500' },
@@ -489,16 +481,16 @@ const groupErrors = (errs, groups, offers, sizesName) => {
   for (const g of groups) {
     const gName = g.name.trim();
     const k = `group-${g.key}`;
-    if (!gName) errs[k] = 'Give this choice type a name, for example Weight.';
-    else if (!g.choices.length) errs[k] = `Add at least one ${gName.toLowerCase()} choice.`;
-    else if (seen.has(gName.toLowerCase())) errs[k] = 'Each choice type needs a different name.';
+    if (!gName) errs[k] = 'Tap or type what is different, like Size or Color.';
+    else if (!g.choices.length) errs[k] = `Add the ${gName.toLowerCase()} buyers can choose, like ${g.name.trim().toLowerCase() === 'color' ? 'Red' : 'Small'}.`;
+    else if (seen.has(gName.toLowerCase())) errs[k] = `You already have "${gName}". Use another word.`;
     else if (g.priced && offers.choicePrices) {
       const missing = g.choices.find((c) => !(Number(g.prices[c]) > 0));
-      if (missing) errs[k] = `Enter a price for "${missing}".`;
+      if (missing) errs[k] = `Type the price for "${missing}", or leave all prices empty.`;
     }
     if (!errs[k] && g.stocked && offers.choiceStock) {
       const bad = g.choices.find((c) => (g.stocks[c] ?? '') !== '' && !isWhole(g.stocks[c]));
-      if (bad) errs[k] = `Stock for "${bad}" must be a whole number, like 5.`;
+      if (bad) errs[k] = `How many "${bad}": use a whole number, like 5.`;
     }
     seen.add(gName.toLowerCase());
   }
@@ -519,19 +511,19 @@ export const checkStep = (step, s, ctx) => {
 
   if (step === 'basics') {
     const name = s.name.trim();
-    if (!name) errs.name = 'Enter the name.';
+    if (!name) errs.name = 'Type the name of what you sell.';
     else if (name.length < NAME_MIN) errs.name = 'The name is too short.';
-    if (!s.categoryId) errs.categoryId = 'Choose a category.';
-    else if (kindAsked && !kind) errs.kind = 'Choose what kind it is.';
+    if (!s.categoryId) errs.categoryId = 'Tap the category it belongs to.';
+    else if (kindAsked && !kind) errs.kind = 'Tap what kind it is.';
     if (!s.images.length) errs.images = 'Add at least one photo.';
     if (!by && !(Number(s.price) > 0)) {
-      errs.price = kind === 'LIVESTOCK' ? 'Enter the price for each head.' : 'Enter a price higher than ₱0.';
+      errs.price = kind === 'LIVESTOCK' ? 'Type the price for one animal.' : 'Type the price, like 85.';
     }
     const description = s.description.trim();
     if (description.length < DESCRIPTION_MIN) {
       errs.description = description
         ? `Write a little more (at least ${DESCRIPTION_MIN} letters).`
-        : 'Describe it so buyers know what they are getting.';
+        : 'Write a few words about it, so buyers know what they get.';
     }
   }
 
@@ -539,11 +531,11 @@ export const checkStep = (step, s, ctx) => {
     if (kind === 'REGULAR') {
       const stocked = hasOptions && s.variations.some((g) => g.stocked && g.choices.length);
       if (!stocked) {
-        if (String(s.stock).trim() === '') errs.stock = 'Enter how many you have, like 10.';
+        if (String(s.stock).trim() === '') errs.stock = 'Type how many you have, like 10.';
         else if (!isWhole(s.stock)) errs.stock = 'Use a whole number, like 10.';
       }
       if (couriersOn) {
-        if (s.weightKg === '') errs.weightKg = 'Add the weight: your shop ships with couriers, and they charge by weight.';
+        if (s.weightKg === '') errs.weightKg = 'Type the weight. Your shop sends with couriers, and they charge by weight.';
         else if (!(Number(s.weightKg) > 0 && Number(s.weightKg) <= 100)) errs.weightKg = 'Enter the weight in kilograms, like 0.5 or 2.';
       }
     }
@@ -576,7 +568,7 @@ export const checkStep = (step, s, ctx) => {
       else if (s.animal === 'OTHER' && !s.animalName.trim()) errs.animal = 'Type what animal it is.';
       if (!isWhole(s.ageValue) || Number(s.ageValue) > 600) errs.ageValue = 'Enter the age as a whole number, like 8.';
       const heads = String(s.stock).trim();
-      if (!heads || !isWhole(heads)) errs.stock = 'Enter how many heads, like 3.';
+      if (!heads || !isWhole(heads)) errs.stock = 'Type how many animals, like 3.';
       else if (!editing && Number(heads) < 1) errs.stock = 'List at least 1 head.';
       if (!s.sex) errs.sex = 'Choose male or female.';
       else if (s.sex === 'MIXED' && !(Number(heads) > 1)) errs.sex = 'Males and females is for more than one head. Choose male or female.';
@@ -588,7 +580,7 @@ export const checkStep = (step, s, ctx) => {
   if (step === 'more') {
     if (offers.choices && hasOptions) {
       const used = s.variations.filter((g) => g.name.trim() || g.choices.length);
-      if (!used.length) errs.options = 'Add at least one choice, or pick "No" above.';
+      if (!used.length) errs.options = 'Add the choices, like Small and Large, or switch this off.';
       groupErrors(errs, used, offers, kind === 'COOK_TO_ORDER' && s.sizesOn ? s.sizesName : '');
     }
     if (!by && s.priceTiers.length) {
@@ -596,17 +588,17 @@ export const checkStep = (step, s, ctx) => {
       let lastQty = 1;
       let lastPrice = Number(s.price);
       for (const t of [...rows].sort((a, b) => Number(a.minQty) - Number(b.minQty))) {
-        if (!isWhole(t.minQty) || Number(t.minQty) <= lastQty) { errs.priceTiers = 'Each bulk price needs a quantity of 2 or more, all different.'; break; }
-        if (!(Number(t.price) > 0) || Number(t.price) >= lastPrice) { errs.priceTiers = 'Each bulk price must be lower than the price before it.'; break; }
+        if (!isWhole(t.minQty) || Number(t.minQty) <= lastQty) { errs.priceTiers = 'Each "from" number must be 2 or more, and all different.'; break; }
+        if (!(Number(t.price) > 0) || Number(t.price) >= lastPrice) { errs.priceTiers = 'Each cheaper price must be lower than the price before it.'; break; }
         lastQty = Number(t.minQty);
         lastPrice = Number(t.price);
       }
     }
     if (!by && s.saleOn) {
       if (!(Number(s.salePrice) > 0) || Number(s.salePrice) >= Number(s.price)) {
-        errs.salePrice = 'The sale price must be lower than the regular price.';
+        errs.salePrice = 'The sale price must be lower than the normal price.';
       } else if (s.saleEndsAt && new Date(s.saleEndsAt) <= now) {
-        errs.salePrice = 'The sale end is already past.';
+        errs.salePrice = 'The sale end time has already passed.';
       } else if (s.saleStartsAt && s.saleEndsAt && new Date(s.saleEndsAt) <= new Date(s.saleStartsAt)) {
         errs.salePrice = 'The sale must end after it starts.';
       }
@@ -621,21 +613,118 @@ export const checkStep = (step, s, ctx) => {
 
 export const hasErrors = (errs) => Object.values(errs).some(Boolean);
 
-/** Every step's problems; and the first step that has any. */
+/** Every problem in the form; `first` is 0 when there is any, -1 when none. */
 export const checkAll = (s, ctx) => {
-  const byStep = ['basics', 'details', 'more'].map((key) => checkStep(key, s, ctx));
-  const first = byStep.findIndex(hasErrors);
-  return { errors: Object.assign({}, ...byStep), first };
+  const parts = ['basics', 'details', 'more'].map((key) => checkStep(key, s, ctx));
+  const errors = Object.assign({}, ...parts);
+  return { errors, first: hasErrors(errors) ? 0 : -1 };
 };
 
-/** Which More options rows hold a problem (to open them). */
-export const rowsWithErrors = (errs) => {
-  const rows = [];
-  if (errs.options || Object.keys(errs).some((k) => k.startsWith('group-') && errs[k])) rows.push('choices');
-  if (errs.salePrice) rows.push('sale');
-  if (errs.priceTiers) rows.push('bulk');
-  if (errs.weightKg) rows.push('weight');
-  return rows;
+/* ── The form's parts (cards) ───────────────────────────────────────── */
+
+/** Which card each field sits in, top to bottom. */
+const FIELD_CARD = {
+  images: 'photos',
+  name: 'about',
+  categoryId: 'about',
+  kind: 'about',
+  description: 'about',
+  price: 'price',
+  stock: 'price',
+  options: 'options',
+  weightKg: 'way',
+  salePrice: 'more',
+  priceTiers: 'more',
+};
+
+/** The card a field's problem shows in ('details' for each kind's own questions). */
+export const cardOf = (field) => {
+  if (field.startsWith('group-')) return 'options';
+  return FIELD_CARD[field] || 'details';
+};
+
+/** The cards that have a problem: { photos: true, … }. */
+export const cardsWithErrors = (errs) => {
+  const out = {};
+  for (const [field, message] of Object.entries(errs)) if (message) out[cardOf(field)] = true;
+  return out;
+};
+
+/* ── Category suggestions ───────────────────────────────────────────── */
+
+// Words that say what a product is, for the groups (category kinds) they
+// usually belong to. Category names, descriptions and their icon words
+// are matched too.
+const KIND_WORDS = {
+  FOOD: ['adobo', 'pancit', 'kakanin', 'lechon', 'sinigang', 'paluto', 'ulam', 'cooked', 'luto', 'bibingka', 'puto', 'suman', 'kutsinta', 'biko', 'turon', 'lumpia', 'longganisa', 'tocino', 'tapa', 'embutido', 'atchara', 'bagoong', 'chips', 'cake', 'bread', 'pastillas', 'polvoron', 'yema', 'meal', 'rice', 'pansit', 'barbecue', 'bbq', 'inihaw', 'grilled', 'fried', 'kare', 'caldereta', 'menudo', 'dinuguan', 'halo', 'snack', 'dessert', 'jam', 'peanut', 'vinegar', 'suka', 'patis'],
+  LIVESTOCK: ['pig', 'piglet', 'baboy', 'biik', 'goat', 'kambing', 'cow', 'baka', 'carabao', 'kalabaw', 'cattle', 'sheep', 'tupa', 'chicken', 'manok', 'rooster', 'hen', 'duck', 'pato', 'itik', 'turkey', 'rabbit', 'kuneho', 'horse', 'kabayo', 'livestock', 'head', 'heads', 'native', 'buhay', 'live'],
+};
+
+// Words that never pick a group on their own.
+const STOP = new Set(['and', 'the', 'for', 'with', 'from', 'pack', 'piece', 'pieces', 'kilo', 'kilos', 'fresh', 'local', 'other', 'products', 'product', 'goods', 'made', 'our', 'per', 'set', 'big', 'small', 'large', 'new']);
+
+/** "Fresh Mangoes, 1 kg" → ["mango", …] (lower case, plural endings off). */
+const wordsOf = (text) => String(text || '').toLowerCase()
+  .split(/[^a-zñ]+/)
+  .filter((w) => w.length >= 3 && !STOP.has(w))
+  .map((w) => (w.length > 4 && w.endsWith('es') && !w.endsWith('ses') ? w.slice(0, -2) : w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w));
+
+const near = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)));
+
+/**
+ * Up to `limit` categories that fit a product name, best first.
+ * @param {String} name - the product name typed so far
+ * @param {Array} categories - [{ id, name, slug, description, kind, icon, keywords? }]
+ */
+export const suggestCategories = (name, categories, limit = 3) => {
+  const typed = wordsOf(name);
+  if (!typed.length || !categories?.length) return [];
+  // "Chicken adobo" is a dish, not a live chicken.
+  const dish = typed.some((w) => KIND_WORDS.FOOD.some((x) => near(w, x)));
+  const scored = categories.map((c) => {
+    const own = wordsOf(`${c.name} ${c.slug || ''}`);
+    const about = wordsOf(c.description);
+    const keywords = Array.isArray(c.keywords) ? c.keywords.flatMap(wordsOf) : [];
+    const icon = CATEGORY_ICONS[categoryIconKey(c)]?.words || [];
+    const kindWords = KIND_WORDS[c.kind] || [];
+    let score = 0;
+    for (const w of typed) {
+      if (own.some((x) => near(w, x))) score += 5;
+      if (keywords.some((x) => near(w, x))) score += 4;
+      if (icon.some((x) => near(w, x))) score += 3;
+      if (about.some((x) => near(w, x))) score += 2;
+      if (kindWords.some((x) => near(w, x))) score += 2;
+    }
+    if (dish && c.kind === 'LIVESTOCK') score = Math.max(0, score - 6);
+    return { c, score };
+  });
+  return scored
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || a.c.name.localeCompare(b.c.name))
+    .slice(0, limit)
+    .map((x) => x.c);
+};
+
+// Names that say which kind a product is, where its group allows several.
+const KIND_GUESS = [
+  { kind: 'COOK_TO_ORDER', words: ['paluto', 'order'] },
+  { kind: 'READY_TO_EAT', words: ['adobo', 'pancit', 'ulam', 'cooked', 'luto', 'sinigang', 'caldereta', 'menudo', 'dinuguan', 'meal', 'today'] },
+  { kind: 'REGULAR', words: ['pork', 'beef', 'meat', 'karne', 'egg', 'itlog', 'longganisa', 'tocino', 'chorizo', 'dressed', 'frozen', 'feed', 'feeds'] },
+];
+
+/**
+ * The kind a new product most likely is, out of its category's choices: one
+ * its name points to, else the first choice.
+ * @param {String} name
+ * @param {Array<{key}>} options - kindOptions() for the category
+ */
+export const guessKind = (name, options) => {
+  if (!options?.length) return null;
+  const typed = wordsOf(name);
+  for (const g of KIND_GUESS) {
+    if (options.some((o) => o.key === g.kind) && typed.some((w) => g.words.some((x) => near(w, x)))) return g.kind;
+  }
+  return options[0].key;
 };
 
 /* ── What buyers will see ───────────────────────────────────────────── */
@@ -657,50 +746,6 @@ export const draftProduct = (s, ctx) => {
     images: s.images,
     fulfillment: s.fulfillment,
   };
-};
-
-/** Short lines that sum up what each kind's Details say. */
-export const detailLines = (s, ctx) => {
-  const { kind, editing } = ctx;
-  if (kind === 'REGULAR') {
-    const stocked = ctx.hasOptions && s.variations.find((g) => g.stocked && g.choices.length);
-    const total = stocked ? stocked.choices.reduce((n, c) => n + (parseInt(stocked.stocks[c] || '0', 10) || 0), 0) : Number(s.stock) || 0;
-    return [`${total} in stock`, s.size.trim() && `Size: ${s.size.trim()}`, s.weightKg && `${s.weightKg} kg with packaging`].filter(Boolean);
-  }
-  if (kind === 'READY_TO_EAT') {
-    if (editing || !s.postToday) return [s.serves.trim(), "Posted each day from Today's menu"].filter(Boolean);
-    const at = closeAt(s);
-    const prep = READY_PREP.find((p) => p.value === s.todayPrep);
-    return [
-      s.todayQty && `${s.todayQty} for today`,
-      at && `Orders close ${s.closeDay === 'tomorrow' ? 'tomorrow' : 'today'}, ${clock(s.closeTime)}`,
-      prep && (prep.value === '0' ? 'Ready now' : `Ready ${prep.label} after the order`),
-      s.serves.trim(),
-    ].filter(Boolean);
-  }
-  if (kind === 'COOK_TO_ORDER') {
-    const d = detailsFor(kind, { ...s, prepMin: s.prepMin || '0' });
-    return [
-      servesLabel(d),
-      s.prepMin && `Ready in ${prepLabel(d)}`,
-      Number(s.minOrder) > 1 && `Minimum order: ${s.minOrder}`,
-      `Cooks: ${cookDaysLabel(s.cookDays)}${s.orderBy ? `, order before ${clock(s.orderBy)}` : ''}`,
-      s.sizesOn && `${sizeRows(s).length} sizes`,
-    ].filter(Boolean);
-  }
-  if (kind === 'LIVESTOCK') {
-    const d = detailsFor(kind, s);
-    return [
-      animalLabel(d),
-      ageLabel(d),
-      sexLabel(d),
-      weightLabel(d),
-      headsLabel(s.stock),
-      s.visitFirst && 'Buyers can visit the farm first',
-      'Buyers make offers; you agree in chat',
-    ].filter(Boolean);
-  }
-  return [];
 };
 
 export { kindLabel };

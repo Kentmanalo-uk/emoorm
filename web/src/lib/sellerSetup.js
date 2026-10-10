@@ -126,17 +126,17 @@ export const describeStep = (step, { municipality } = {}) => {
           to: '/seller/fulfillment/delivery#delivery-couriers',
         };
       }
-      const own = step.pricedAreas || 0;
-      const ownText = own > 0 ? ` ${plural(own, 'place')} ${own === 1 ? 'has' : 'have'} its own fee.` : '';
+      // Free, or by distance: a starting fee for the first km, then per km.
+      const byDistance = step.baseFee != null
+        ? `${peso(step.baseFee)} to start${step.perKm != null ? `, then ${peso(step.perKm)} per extra km` : ', then a fee per extra km'}.`
+        : 'A fee by distance.';
       return {
         ...base,
         title: 'Set your delivery fees',
         label: 'Delivery fees',
         text: step.done
-          ? (step.fee == null
-            ? 'A fee for each place.'
-            : `${step.fee > 0 ? `${peso(step.fee)} for every place.` : 'Free delivery.'}${ownText}`)
-          : 'Free, the same fee everywhere, or a fee for each place.',
+          ? (step.mode === 'FREE' ? 'Free delivery.' : `${byDistance}${step.pinned === false ? ' Pin your shop so it can be worked out.' : ''}`)
+          : 'Free, or a fee by distance from your shop.',
         action: 'Set delivery fees',
         icon: Truck,
         to: '/seller/fulfillment/delivery#delivery-fee',

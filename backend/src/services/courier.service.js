@@ -211,16 +211,22 @@ const MAX_LINES = 50;
 
 /**
  * What delivering an order (or one product) would cost, every way the shop
- * delivers: by the seller (the shop's own fee for the buyer's area) and by
- * each courier it ships with (the courier's rate for the parcel's weight).
+ * delivers: by the seller (by distance from the shop's pin to the buyer's,
+ * within the areas it delivers to; see deliveryQuote.service) and by each
+ * courier it ships with (the courier's rate for the parcel's weight).
  * Without a town the courier fee is the lower of its two columns: a from-price.
- * @param {{ storeId: String, items: Array<{productId, quantity}>, municipalityId?: String, barangay?: String }} input
+ * @param {{ storeId: String, items: Array<{productId, quantity}>, municipalityId?: String,
+ *   barangay?: String, pin?: {lat, lng} }} input
  */
-const quote = async ({ storeId, items, municipalityId, barangay } = {}) => {
+const quote = async ({
+  storeId, items, municipalityId, barangay, pin,
+} = {}) => {
   const store = await prisma.store.findUnique({
     where: { id: String(storeId || '') },
     select: {
       id: true, municipalityId: true, fulfillmentMode: true, selfDelivery: true, deliveryFee: true,
+      deliveryFeeMode: true, deliveryBaseFee: true, deliveryIncludedKm: true, deliveryPerKm: true, deliveryMaxKm: true,
+      latitude: true, longitude: true,
       acceptsCod: true, paymentQrImage: true, isActive: true,
       couriers: {
         orderBy: [{ courier: { sortOrder: 'asc' } }, { courier: { name: 'asc' } }],
@@ -260,10 +266,31 @@ const quote = async ({ storeId, items, municipalityId, barangay } = {}) => {
   const sameTown = town ? town === store.municipalityId : null;
   const delivers = store.fulfillmentMode !== 'PICKUP' && !pickupOnly.length;
 
-  let seller = { offered: delivers && store.selfDelivery, covered: null, fee: null };
+  // By the seller: { offered, covered, fee, distanceKm, distanceSource, reason,
+  // needsPin, rate: { mode, baseFee, includedKm, perKm, maxKm }, pinned }.
+  // Without a town: just the rate ("fee by distance, from ₱base").
+  let seller = {
+    offered: delivers && store.selfDelivery,
+    covered: null,
+    fee: null,
+    distanceKm: null,
+    distanceSource: null,
+    reason: null,
+    rate: await deliveryQuoteService.rateFor(store),
+    // The shop has a pin, so its fee is by distance.
+    pinned: Boolean(deliveryQuoteService.toPin(store)),
+  };
   if (seller.offered && town) {
-    const q = await deliveryQuoteService.quote(store, town, barangay);
-    seller = { ...seller, covered: q.covered, fee: q.covered ? Number(q.fee) : null };
+    const q = await deliveryQuoteService.quote(store, town, barangay, pin);
+    seller = {
+      ...seller,
+      covered: q.covered,
+      fee: q.covered && q.fee != null ? Number(q.fee) : null,
+      distanceKm: q.distanceKm,
+      distanceSource: q.distanceSource,
+      reason: q.reason,
+      needsPin: Boolean(q.needsPin),
+    };
   }
 
   const couriers = !delivers ? [] : store.couriers

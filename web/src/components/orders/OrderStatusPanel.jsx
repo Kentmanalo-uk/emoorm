@@ -4,7 +4,9 @@ import {
 import {
   orderStage, orderSteps, handOver, payLabel, peso, when,
 } from '../../lib/orderProgress';
+import { orderPromo } from '../../lib/moormove';
 import './OrderStatusPanel.css';
+import { distanceNote } from '../../lib/deliveryDistance';
 
 const PAYMENT_STATE = {
   PENDING: 'Not paid yet',
@@ -30,6 +32,8 @@ export default function OrderStatusPanel({ order }) {
   const codPending = order.paymentMethod === 'COD' && order.paymentStatus === 'PENDING';
   const PlaceIcon = place.pickup ? Storefront : MapPin;
   const PayIcon = order.paymentMethod === 'COD' ? Money : QrCode;
+  // A MoorMove free-delivery promo: no delivery fee, the rider collects the items' price only.
+  const promo = place.pickup ? null : orderPromo(order);
 
   return (
     <>
@@ -59,7 +63,7 @@ export default function OrderStatusPanel({ order }) {
             <p>{place.address}</p>
             {!place.pickup && (
               <p className="osd-sub">
-                Delivered by {place.by}{Number(order.deliveryFee) > 0 ? ` · ${peso(order.deliveryFee)} fee` : ' · free delivery'}
+                Delivered by {place.by}{promo ? ` · Free delivery (MoorMove promo: ${promo.title})` : Number(order.deliveryFee) > 0 ? ` · ${peso(order.deliveryFee)} fee` : ' · free delivery'}{distanceNote(order)}
               </p>
             )}
             {place.note && <p className="osd-sub">{place.pickup ? 'Shop says: ' : 'Your note: '}{place.note}</p>}
@@ -81,7 +85,7 @@ export default function OrderStatusPanel({ order }) {
             <p>{payLabel(order.paymentMethod, place.pickup)} · {peso(order.total)}</p>
             <p className="osd-sub">
               {codPending
-                ? (order.deliveryPartner === 'MOORMOVE' && !place.pickup ? `Pay ${peso(order.total)} to the rider` : `Pay when you ${place.pickup ? 'pick it up' : 'receive it'}`)
+                ? (order.deliveryPartner === 'MOORMOVE' && !place.pickup ? `Pay ${peso(order.total)} to the rider${promo ? ', for the items only' : ''}` : `Pay when you ${place.pickup ? 'pick it up' : 'receive it'}`)
                 : PAYMENT_STATE[order.paymentStatus] || order.paymentStatus}
               {order.paymentReference ? ` · ref. ${order.paymentReference}` : ''}
             </p>

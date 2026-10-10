@@ -77,9 +77,15 @@ const status = async ({ fresh = false } = {}) => {
 /** Forget the cached status (tests, and the admin's connection check). */
 const clearStatusCache = () => { statusCache = { key: '', at: 0, value: null }; };
 
-/** { available, reason?, vehicleType, distanceKm, fee } */
-const quote = ({ townId, packageSize, pickup, dropoff }) => call('POST', '/partner/quote', {
-  townId, packageSize, pickup, dropoff,
+/**
+ * { available, reason?, vehicleType, distanceKm, fee }. townId is the shop's
+ * town; dropoffTownId (the buyer's town) and the barangays in pickup/dropoff
+ * are optional: MoorMove checks a rider delivers to both ends with them.
+ */
+const quote = ({
+  townId, dropoffTownId, packageSize, pickup, dropoff,
+}) => call('POST', '/partner/quote', {
+  townId, dropoffTownId: dropoffTownId || undefined, packageSize, pickup, dropoff,
 });
 
 /**
@@ -121,8 +127,12 @@ const photo = async (uploadId) => {
 /** The shared secret, for checking the signature on MoorMove's updates. */
 const secret = () => settings().secret;
 
+/** MoorMove's own site (its API address without /api), for links. */
+const siteUrl = () => settings().url.replace(/\/api$/, '') || null;
+
 module.exports = {
   isConfigured,
+  siteUrl,
   status,
   clearStatusCache,
   quote,
