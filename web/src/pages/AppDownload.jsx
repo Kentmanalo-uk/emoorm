@@ -65,8 +65,7 @@ const ABOUT = [
     + 'or QR Ph.',
   'Selling? Open a free shop and run it from the Seller Center: your products, orders, messages and earnings, all '
     + 'in one place.',
-  'The app picks up where you left off, opens emoorm.shop links straight away, and is always as up to date as the '
-    + 'site itself.',
+  'Made for your phone: quick screens built for touch, and emoorm.shop links open straight in the app.',
 ];
 
 const FEATURES = [

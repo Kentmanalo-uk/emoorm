@@ -1,15 +1,17 @@
 {
   "name": "E-MOORM",
   "package": "shop.emoorm.app",
-  "version": "1.3.5",
-  "versionCode": 9,
+  "version": "2.0.0",
+  "versionCode": 10,
   "minAndroid": "7.0",
-  "file": "/downloads/E-MOORM-1.3.5.apk",
-  "size": 1041302,
-  "sha256": "3bd5df1c0a1e83ff3f91ad7ecae37d6479e9f90a4431e0e93be070c4f45c531f",
+  "file": "/downloads/E-MOORM-2.0.0.apk",
+  "size": 84925263,
+  "sha256": "f5ded4e17a4877b0cbdd7891079d1298dd683c7956e32cde0c7c9cd7e7b7d134",
   "certificateSha256": "9F:60:02:EF:10:02:55:0F:51:DA:63:3E:B5:CF:3B:0D:37:28:2C:B8:08:6C:AF:0F:57:0C:C4:AD:8F:A0:AB:22",
-  "released": "2026-10-08",
+  "released": "2026-10-10",
   "notes": [
-    "The app now keeps itself up to date with the website: open it again after an update and it quietly loads the latest version, back on the page you were on."
+    "A brand-new app made for phones: quicker screens, smooth scrolling and animations built for touch, in place of the website in a frame.",
+    "Shopping, chat, orders and the Seller Center are all here, and emoorm.shop links open straight in the app.",
+    "After updating, sign in once more to pick up your account, cart and orders."
   ]
 }
