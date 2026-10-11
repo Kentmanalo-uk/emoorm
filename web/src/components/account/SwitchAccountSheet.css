@@ -1,0 +1,323 @@
+/* Switch account (SwitchAccountSheet.jsx): a dialog on computers, a bottom
+   sheet on phones (the slide comes from .ui-sheet-backdrop in index.css). */
+.sas-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.sas-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 440px;
+  max-height: min(640px, 88vh);
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.sas-grip {
+  display: none;
+}
+
+.sas-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 14px 8px 22px;
+}
+
+.sas-head h2 {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sas-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
+  cursor: pointer;
+}
+
+.sas-close:hover {
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.sas-body {
+  flex: 1;
+  padding: 6px 22px 22px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sas-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--t-info-50, #eff6ff);
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.sas-note > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--t-info-600, #2563eb);
+}
+
+.sas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.sas-account {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.sas-account:hover:not(.is-current) {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.sas-account.is-current {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.sas-account-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sas-account.is-current .sas-account-main {
+  cursor: default;
+}
+
+.sas-account-main:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.sas-account-main:focus-visible,
+.sas-remove:focus-visible,
+.sas-add:focus-visible {
+  outline: 2px solid var(--t-primary-500, #10b981);
+  outline-offset: 2px;
+}
+
+.sas-avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--t-primary-100, #d1fae5);
+}
+
+.sas-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sas-avatar-initial {
+  color: var(--t-primary-700, #047857);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.sas-account-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sas-account-text strong,
+.sas-account-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sas-account-text strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sas-account-text span {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+}
+
+.sas-check {
+  flex-shrink: 0;
+  color: var(--t-primary-600, #059669);
+}
+
+.sas-spin {
+  flex-shrink: 0;
+  color: var(--t-primary-600, #059669);
+  animation: sas-spin 0.8s linear infinite;
+}
+
+.sas-remove {
+  flex-shrink: 0;
+  margin-right: 10px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--t-danger-600, #dc2626);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sas-remove:hover:not(:disabled) {
+  background: var(--t-danger-50, #fef2f2);
+}
+
+.sas-remove:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.sas-add {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px dashed var(--t-neutral-300, #d1d5db);
+  border-radius: 14px;
+  background: none;
+  color: var(--t-neutral-900, #111827);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sas-add:hover:not(:disabled) {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.sas-add:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.sas-add-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 50%;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+@keyframes sas-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Phones: a sheet from the bottom. */
+@media (max-width: 768px) {
+  .sas-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .sas-panel {
+    max-width: none;
+    max-height: 86vh;
+    max-height: 86dvh;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.16);
+  }
+
+  .sas-grip {
+    display: block;
+    align-self: center;
+    width: 40px;
+    height: 4px;
+    margin: 10px 0 0;
+    border-radius: 999px;
+    background: var(--t-neutral-200, #e5e7eb);
+  }
+
+  .sas-head {
+    padding: 8px 12px 6px 20px;
+  }
+
+  .sas-close {
+    width: 40px;
+    height: 40px;
+  }
+
+  .sas-body {
+    padding: 6px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .sas-account:hover:not(.is-current),
+  .sas-add:hover:not(:disabled) {
+    background: none;
+  }
+
+  .sas-account-main:active {
+    background: var(--t-neutral-50, #f9fafb);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sas-spin {
+    animation-duration: 2s;
+  }
+}

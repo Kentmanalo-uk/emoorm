@@ -806,16 +806,54 @@
   background: var(--t-neutral-0, #fff);
 }
 
+/* The map, with its "Open full map" pill floating bottom-right (above
+   Leaflet's credit line and controls). */
+.discover-stores-map {
+  position: relative;
+}
+
 .discover-stores-empty {
-  margin-top: -440px;
-  height: 440px;
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  position: relative;
   z-index: 400;
   pointer-events: none;
   color: var(--t-neutral-500, #64748b);
   font-size: 13px;
+}
+
+.discover-stores-open {
+  position: absolute;
+  right: 12px;
+  bottom: 26px;
+  z-index: 1001;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--t-primary-600, #047857);
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.3);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 17px;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.discover-stores-open:hover,
+.discover-stores-open:active {
+  background: var(--t-primary-700, #03684c);
+  color: #fff;
+}
+
+.discover-stores-open:focus-visible {
+  outline: 2px solid var(--t-primary-600, #047857);
+  outline-offset: 2px;
 }
 
 /* Product card (matches reference design) */
@@ -1412,45 +1450,44 @@
   }
 }
 
-/* Explore Products: load more */
-.home-load-more {
+/* Explore Products: under the grid, a spinner while the next batch loads
+   on its own, a quiet "Try again" after a failure, or the end. */
+.home-explore-end {
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  margin: 32px 0 8px;
+  min-height: 56px;
+  padding: 12px 0 20px;
+  color: var(--t-primary-600, #047857);
 }
 
-.home-load-more-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-width: 220px;
-  padding: 12px 32px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--t-primary-600, #059669);
-  background: var(--t-neutral-0, #fff);
-  border: 1px solid var(--t-primary-600, #059669);
-  border-radius: 0;
+.home-explore-retry {
+  min-height: 0;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  color: var(--t-neutral-500, #64748b);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 18px;
   cursor: pointer;
 }
 
-.home-load-more-btn:disabled {
-  opacity: 0.6;
-  cursor: wait;
+.home-explore-retry span {
+  color: var(--t-primary-600, #047857);
+  font-weight: 500;
 }
 
-@media (max-width: 768px) {
-  .home-load-more {
-    margin-top: 24px;
-  }
+.home-explore-retry:hover span {
+  text-decoration: underline;
+}
 
-  .home-load-more-btn {
-    width: 100%;
-    max-width: 320px;
-  }
+.home-explore-done {
+  margin: 0;
+  color: var(--t-neutral-400, #94a3b8);
+  font-size: 13px;
+  line-height: 17px;
 }
 
 /* ── Mobile (≤768px / ≤480px) ── */
@@ -1708,22 +1745,9 @@
     height: 340px !important;
   }
 
-  .discover-stores-empty {
-    margin-top: -340px;
-    height: 340px;
-  }
-
-  /* Load more */
-  .home-load-more {
-    margin: 16px 0 0;
-  }
-
-  .home-load-more-btn {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-    min-height: 44px;
-    border-radius: 12px;
+  .discover-stores-open {
+    right: 10px;
+    bottom: 22px;
   }
 }
 

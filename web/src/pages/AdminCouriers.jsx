@@ -12,6 +12,7 @@ import {
   MOORMOVE_COURIER, MOORMOVE_STATUS_KEY, promoUntil, useMoormove,
 } from '../lib/moormove';
 import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import '../components/admin/AdminLayout.css';
 import './AdminCouriers.css';
 
@@ -216,7 +217,7 @@ export default function AdminCouriers() {
                 <CourierMark courier={{ name: form.name, logoUrl: form.logoUrl }} size={44} />
                 <label className="admin-btn">
                   <UploadSimple size={14} /> {uploading ? 'Uploading…' : form.logoUrl ? 'Replace logo' : 'Upload logo'}
-                  <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={uploading}
+                  <input type="file" accept={IMAGE_ACCEPT} hidden disabled={uploading}
                     onChange={(e) => { onUpload(e.target.files?.[0]); e.target.value = ''; }} />
                 </label>
                 {form.logoUrl && (

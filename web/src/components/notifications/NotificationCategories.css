@@ -1,0 +1,116 @@
+/* The notifications' groups bar (NotificationCategories.jsx): one rounded
+   light-grey bar, four cells split by thin rules; the chosen one a white pill
+   with a green name. Desktop and phones. */
+.ncat {
+  --ncat-bg: var(--t-neutral-50, #f9fafb);
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 0 12px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--ncat-bg);
+}
+
+.ncat-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.ncat-cell {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  min-width: 0;
+}
+
+/* The thin rule before every cell but the first. */
+.ncat-cell + .ncat-cell::before {
+  content: '';
+  flex: 0 0 1px;
+  height: 22px;
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.ncat-item {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 42px;
+  margin: 0 2px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s;
+}
+
+.ncat-item:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.ncat-item:active {
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.ncat-item.is-on {
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.ncat-item:focus-visible {
+  outline: 2px solid var(--t-primary-500, #10b981);
+  outline-offset: 1px;
+}
+
+.ncat-icon {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.ncat-icon svg {
+  display: block;
+}
+
+.ncat-label {
+  overflow: hidden;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ncat-item.is-on .ncat-label {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+}
+
+.ncat-badge {
+  position: absolute;
+  top: -6px;
+  right: -7px;
+  box-sizing: border-box;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3.5px;
+  border: 1.5px solid var(--ncat-bg);
+  border-radius: 999px;
+  background: var(--t-danger-500, #ef4444);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 12px;
+  text-align: center;
+}

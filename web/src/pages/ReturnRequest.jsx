@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Minus, Plus, UploadSimple } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
+import { IMAGE_ACCEPT, uploadableImage } from '../lib/uploadableImage';
 import './Returns.css';
 
 const REASONS = [['DAMAGED', 'Damaged item'], ['WRONG_ITEM', 'Wrong item'], ['NOT_AS_DESCRIBED', 'Not as described'], ['MISSING', 'Missing item'], ['OTHER', 'Other']];
@@ -51,8 +52,9 @@ export default function ReturnRequest() {
       const urls = [];
       for (const file of photos) {
         if (!uploadedRef.current.has(file)) {
+          // Any photo goes: shrunk here when the browser can open it, converted by the server otherwise.
           const body = new FormData();
-          body.append('file', file);
+          body.append('file', await uploadableImage(file));
           const result = await axios.post('/upload/image', body, { headers: { 'Content-Type': 'multipart/form-data' } });
           uploadedRef.current.set(file, result.data?.url);
         }
@@ -123,7 +125,7 @@ export default function ReturnRequest() {
         </label>
         <label className="photo-upload">
           <UploadSimple size={18} /> Add photos
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => setPhotos(Array.from(e.target.files || []).slice(0, 5))} />
+          <input type="file" accept={IMAGE_ACCEPT} multiple onChange={(e) => setPhotos(Array.from(e.target.files || []).slice(0, 5))} />
           <small>{photos.length ? `${photos.length} photo(s) selected` : 'Optional, up to 5 photos'}</small>
         </label>
         <button className="returns-primary returns-submit" disabled={saving}>{saving ? 'Submitting…' : 'Submit return request'}</button>

@@ -1801,17 +1801,6 @@
     color: var(--t-neutral-900, #111827);
   }
 
-  .cart-m-count {
-    min-width: 22px;
-    padding: 1px 8px;
-    border-radius: 999px;
-    background: var(--t-primary-50, #ecfdf5);
-    color: var(--t-primary-700, #047857);
-    font-size: 12px;
-    font-weight: 600;
-    text-align: center;
-  }
-
   .cart-m-more-btn {
     display: grid;
     place-items: center;

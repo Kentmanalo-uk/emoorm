@@ -1,0 +1,399 @@
+/* Search by image: the matches (ImageSearchResults.jsx). The sort tabs and
+   filter chips are the search results page's own (.srch-m-sorts,
+   .srch-m-fchip in pages/Products.css, phones); wider screens get the same
+   look here. */
+.isr {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-900, #111827);
+}
+
+/* ── Phones: a sheet over the photo ─────────────────────────────────── */
+.isr.is-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.18);
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.isr.is-sheet.is-dragging {
+  transition: none;
+}
+
+.isr-grab {
+  flex-shrink: 0;
+}
+
+.is-sheet .isr-grab {
+  touch-action: none;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.is-sheet.is-dragging .isr-grab {
+  cursor: grabbing;
+}
+
+.isr-handle {
+  display: block;
+  width: 40px;
+  height: 5px;
+  margin: 8px auto 0;
+  border-radius: 3px;
+  background: var(--t-neutral-300, #d1d5db);
+}
+
+.isr-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 6px;
+}
+
+.isr-thumb {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.isr-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.isr-title h2 {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.isr-title p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  line-height: 17px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.isr-retake {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--t-primary-200, #a7f3d0);
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #03684c);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.isr-retake:hover,
+.isr-retake:active {
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.isr-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.isr .isr-sorts,
+.isr .isr-filters {
+  margin: 0;
+}
+
+.isr .isr-sorts {
+  padding: 0 16px;
+}
+
+.isr .isr-filters {
+  padding: 2px 16px 12px;
+}
+
+/* The matches: two across on phones, as on the results page. */
+.isr-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 0 12px;
+}
+
+.isr-card .product-image > img {
+  border-radius: 0;
+}
+
+.isr-info {
+  gap: 4px;
+  padding: 8px 10px 10px;
+}
+
+.isr-info .product-name {
+  display: -webkit-box;
+  min-height: calc(16px * 1.35 * 2);
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.isr-price {
+  color: var(--t-primary-700, #03684c);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.isr-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+}
+
+.isr-meta > span + span {
+  padding-left: 8px;
+  border-left: 1px solid var(--t-neutral-200, #e5e7eb);
+}
+
+.isr-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--t-neutral-700, #374151);
+}
+
+.isr-rating svg {
+  color: #f59e0b;
+}
+
+.isr-new {
+  color: var(--t-primary-700, #03684c);
+}
+
+.isr-place {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 12.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.isr-place svg {
+  flex-shrink: 0;
+}
+
+.isr .isr-empty {
+  min-height: 0;
+  padding: 28px 24px 32px;
+  border-radius: 0;
+}
+
+@media (max-width: 768px) {
+  .isr-card {
+    border-radius: 0;
+  }
+
+  /* No hover on touch: quick add stays in view. */
+  .isr-card .product-cart-fab {
+    right: 8px;
+    bottom: 8px;
+    width: 32px;
+    height: 32px;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The filter sheet, over the full-screen camera page too. */
+.isr-filter-host .sfs-backdrop {
+  z-index: 1300;
+}
+
+/* ── Desktop: a panel beside the photo ───────────────────────────────── */
+.isr.is-panel {
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  animation: isr-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.is-panel .isr-head {
+  padding: 18px 20px 8px;
+}
+
+.is-panel .isr-thumb {
+  width: 52px;
+  height: 52px;
+}
+
+.is-panel .isr-title h2 {
+  font-size: 19px;
+  line-height: 26px;
+}
+
+.is-panel .isr-scroll {
+  overflow: visible;
+  padding-bottom: 20px;
+}
+
+@media (min-width: 769px) {
+  .isr .isr-sorts {
+    display: flex;
+    align-items: stretch;
+    gap: 26px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+  }
+
+  .isr .isr-sorts button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 46px;
+    padding: 0;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--t-neutral-600, #4b5563);
+    font: inherit;
+    font-size: 15px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .isr .isr-sorts button:hover {
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .isr .isr-sorts button.is-on {
+    border-bottom-color: var(--t-primary-600, #047857);
+    color: var(--t-primary-700, #03684c);
+    font-weight: 600;
+  }
+
+  .isr .srch-m-sort-dir {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 0;
+    color: var(--t-neutral-300, #d1d5db);
+  }
+
+  .isr .srch-m-sort-dir .is-on {
+    color: var(--t-primary-700, #03684c);
+  }
+
+  .isr .isr-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 20px 16px;
+  }
+
+  .isr .srch-m-fchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 18px;
+    background: var(--t-neutral-100, #f3f4f6);
+    color: var(--t-neutral-700, #374151);
+    font: inherit;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .isr .srch-m-fchip:hover {
+    background: var(--t-neutral-200, #e5e7eb);
+  }
+
+  .isr .srch-m-fchip svg {
+    color: var(--t-neutral-500, #6b7280);
+  }
+
+  .isr .srch-m-fchip.is-active {
+    border-color: var(--t-primary-200, #a7f3d0);
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #03684c);
+    font-weight: 600;
+  }
+
+  .isr .srch-m-fchip.is-active svg {
+    color: var(--t-primary-600, #047857);
+  }
+
+  .isr-grid {
+    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+    gap: 8px;
+    padding: 0 20px;
+  }
+
+  .is-panel .isr-card {
+    border: 1px solid var(--t-neutral-100, #f3f4f6);
+    border-radius: 10px;
+  }
+
+  .is-panel .isr-info .product-name {
+    font-size: 15px;
+  }
+
+  /* The filters open as a dialog in the middle, not a sheet from the bottom. */
+  .isr-filter-host .sfs-backdrop {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .isr-filter-host .sfs {
+    max-width: 520px;
+    max-height: 80vh;
+    border-radius: 16px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+  }
+}
+
+@keyframes isr-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .isr.is-sheet {
+    transition-duration: 0.01ms;
+  }
+
+  .isr.is-panel {
+    animation: none;
+  }
+}

@@ -2,7 +2,8 @@
 import { Navigate, Link } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, CheckCircle, User,
-  Storefront as Store, Warning, Check, MapPin, Sparkle,
+  Storefront as Store, Warning, Check, MapPin, Sparkle, Money,
+  IdentificationCard, Wallet,
 } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import axios from "../lib/axios";
@@ -10,6 +11,8 @@ import useAuthStore from "../store/authStore";
 import PhAddressPicker from "../components/common/PhAddressPicker";
 import AppLogo from "../components/AppLogo";
 import resolveImg from "../lib/media";
+import gcashLogo from "../assets/payments/gcash.svg";
+import qrphLogo from "../assets/payments/qrph.svg";
 import "./SellerApply.css";
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 
@@ -20,6 +23,49 @@ const APPLY_FIELDS = [
   "shopName", "shopCategories", "shopAddress", "municipalityId", "province",
   "shopTagline", "shopDescription", "shopLogoUrl",
 ];
+
+// How buyers pay the shop. GCash and QR Ph need the account buyers pay into.
+const PAYOUT_METHODS = [
+  { value: "GCASH", label: "GCash", logo: gcashLogo, desc: "Buyers pay to your GCash number", numberLabel: "GCash number", numberPlaceholder: "0917 123 4567" },
+  { value: "QRPH", label: "QR Ph", logo: qrphLogo, desc: "Buyers scan your bank or e-wallet QR", numberLabel: "Account number", numberPlaceholder: "Bank or e-wallet account number" },
+  { value: "COD_ONLY", label: "Cash on delivery", desc: "Buyers pay in cash when they get the order" },
+];
+const payoutMethodOf = (value) => PAYOUT_METHODS.find((m) => m.value === value) || PAYOUT_METHODS[0];
+
+/** GCash, QR Ph and Cash on delivery as cards: the logo (or a cash icon), how buyers pay, a radio dot. */
+function PaymentMethods({ value, onChange }) {
+  return (
+    <div className="apply-pay-methods" role="radiogroup" aria-labelledby="apply-pay-label">
+      {PAYOUT_METHODS.map((m) => {
+        const on = value === m.value;
+        return (
+          <button
+            type="button"
+            key={m.value}
+            role="radio"
+            aria-checked={on}
+            aria-label={`${m.label}. ${m.desc}`}
+            className={`apply-pay-method${on ? " is-active" : ""}`}
+            onClick={() => onChange(m.value)}
+          >
+            <span className="apply-pay-method-text">
+              {m.logo
+                ? <img className="apply-pay-method-logo" src={m.logo} alt="" />
+                : (
+                  <span className="apply-pay-method-cod">
+                    <span className="apply-pay-method-cod-icon"><Money size={15} weight="fill" /></span>
+                    <strong>{m.label}</strong>
+                  </span>
+                )}
+              <small>{m.desc}</small>
+            </span>
+            <span className="apply-pay-method-radio" aria-hidden="true" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /** Same brand lockup as the Seller Center sidebar. */
 function ApplyBrandHeader() {
@@ -117,18 +163,14 @@ const EMPTY_FORM = {
   sellerPermitNumber: "",
   sellerPermitUrl: "",
   sellerBirTin: "",
-  payoutMethod: "",
+  payoutMethod: "GCASH",
   payoutAccountName: "",
   payoutAccountNumber: "",
   fulfillmentPreference: "",
-  idType: "",
-  idFrontUrl: "",
-  idBackUrl: "",
 };
 
 export default function SellerApply() {
   const { isAuthenticated, user, updateUser } = useAuthStore();
-  // Set when the ID passes the OCR check on this page.
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Set once this page's application goes through: the account is a seller
   // from then on, and goes to the guided setup rather than the Seller Center.
@@ -143,6 +185,8 @@ export default function SellerApply() {
     province: user?.province || "Oriental Mindoro",
     barangay: user?.barangay || "",
     street: user?.address || "",
+    payoutAccountName: user?.fullName || "",
+    payoutAccountNumber: user?.contactNumber || "",
   }));
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -171,6 +215,9 @@ export default function SellerApply() {
             ...prev,
             ...draft,
             shopCategories: Array.isArray(draft.shopCategories) ? draft.shopCategories : prev.shopCategories,
+            // An older draft may hold Maya or Bank, which are no longer offered.
+            payoutMethod: PAYOUT_METHODS.some((m) => m.value === draft.payoutMethod)
+              ? draft.payoutMethod : prev.payoutMethod,
           }));
         }
       })
@@ -241,18 +288,12 @@ export default function SellerApply() {
         return value ? "" : "Select the municipality your shop is in";
       case "shopCategories":
         return value?.length ? "" : "Pick at least one category";
-      case "idType":
-        return value ? "" : "Please select an ID type";
-      case "idFrontUrl":
-        return value ? "" : "Front photo of ID is required";
-      case "idBackUrl":
-        return value ? "" : "Back photo of ID is required";
       case "payoutAccountName":
         return current?.payoutMethod && current.payoutMethod !== "COD_ONLY" && !(value || "").trim()
           ? "Account name is required" : "";
       case "payoutAccountNumber":
         return current?.payoutMethod && current.payoutMethod !== "COD_ONLY" && !(value || "").trim()
-          ? "Account number is required" : "";
+          ? `${payoutMethodOf(current.payoutMethod).numberLabel} is required` : "";
       case "sellerPermitNumber":
         return current?.sellerBusinessType === "REGISTERED" && !(value || "").trim()
           ? "Permit or registration number is required" : "";
@@ -267,7 +308,7 @@ export default function SellerApply() {
   };
 
   const validateAll = () => {
-    const keys = ["shopName", "shopAddress", "municipalityId", "shopCategories"];
+    const keys = ["shopName", "shopAddress", "municipalityId", "shopCategories", "payoutAccountName", "payoutAccountNumber"];
     const errs = {};
     for (const key of keys) {
       const message = fieldError(key, form[key], form);
@@ -282,6 +323,9 @@ export default function SellerApply() {
     !form.shopName.trim() && "Shop name",
     !form.shopCategories.length && "Shop categories",
     !form.shopAddress.trim() && "Shop address",
+    form.payoutMethod !== "COD_ONLY"
+      && (!form.payoutAccountName.trim() || !form.payoutAccountNumber.trim())
+      && `${payoutMethodOf(form.payoutMethod).label} account details`,
     !acceptedTerms && "Accept the seller terms",
   ].filter(Boolean), [form, contactNumber, acceptedTerms]);
 
@@ -290,13 +334,18 @@ export default function SellerApply() {
     setIsSubmitting(true);
     try {
       // Only what this form asks for (and shop details an older draft may
-      // hold). Business details come in the guided setup; an old draft's
-      // half-filled payout must not block applying.
+      // hold). Business details come in the guided setup.
       const extras = Object.fromEntries(APPLY_FIELDS
         .map((key) => [key, form[key]])
         .filter(([, v]) => (Array.isArray(v) ? v.length : v)));
+      const cod = form.payoutMethod === "COD_ONLY";
       const res = await axios.post("/auth/apply-seller", {
         ...extras,
+        payoutMethod: form.payoutMethod,
+        ...(cod ? {} : {
+          payoutAccountName: form.payoutAccountName.trim(),
+          payoutAccountNumber: form.payoutAccountNumber.trim(),
+        }),
         shopMunicipalityId: form.municipalityId,
         shopBarangay: form.barangay,
         acceptedTerms: true,
@@ -390,7 +439,7 @@ export default function SellerApply() {
         <div className="apply-main">
           <div className="apply-intro">
             <h1>Open your shop</h1>
-            <p>Just the basics for now: about two minutes. Logo, delivery, payments and your first product come next, one easy step at a time.</p>
+            <p>Just the basics for now: about two minutes. Logo, delivery and your first product come next, one easy step at a time.</p>
           </div>
 
           {/* ── 1 · You ── */}
@@ -522,12 +571,79 @@ export default function SellerApply() {
             </div>
           </section>
 
+          {/* ── 4 · How buyers pay ── */}
+          <section className="apply-card apply-section">
+            <div className="apply-section-head">
+              <span className="apply-step-num" aria-hidden="true">4</span>
+              <div>
+                <h2>How buyers pay</h2>
+                <p>Where your buyers' payments go. You can change it later.</p>
+              </div>
+              <Wallet size={22} className="apply-section-icon" />
+            </div>
+            <div className="apply-form">
+              <div className="apply-field">
+                <span className="apply-field-label" id="apply-pay-label">Payment method <span className="req">*</span></span>
+                <PaymentMethods
+                  value={form.payoutMethod}
+                  onChange={(value) => {
+                    setForm((p) => ({ ...p, payoutMethod: value }));
+                    setErrors((p) => ({ ...p, payoutAccountName: "", payoutAccountNumber: "" }));
+                  }}
+                />
+              </div>
+              {form.payoutMethod !== "COD_ONLY" && (
+                <div className="apply-pay-grid">
+                  <div className="apply-field">
+                    <label htmlFor="apply-pay-name">Account name <span className="req">*</span></label>
+                    <input
+                      id="apply-pay-name"
+                      type="text"
+                      value={form.payoutAccountName}
+                      onChange={(e) => set("payoutAccountName", e.target.value)}
+                      onBlur={() => touch("payoutAccountName")}
+                      placeholder="Name on the account"
+                      autoComplete="name"
+                      className={errors.payoutAccountName ? "input-error" : ""}
+                    />
+                    {errors.payoutAccountName && <span className="field-error">{errors.payoutAccountName}</span>}
+                  </div>
+                  <div className="apply-field">
+                    <label htmlFor="apply-pay-number">
+                      {payoutMethodOf(form.payoutMethod).numberLabel} <span className="req">*</span>
+                    </label>
+                    <input
+                      id="apply-pay-number"
+                      type="tel"
+                      inputMode="numeric"
+                      value={form.payoutAccountNumber}
+                      onChange={(e) => set("payoutAccountNumber", e.target.value)}
+                      onBlur={() => touch("payoutAccountNumber")}
+                      placeholder={payoutMethodOf(form.payoutMethod).numberPlaceholder}
+                      className={errors.payoutAccountNumber ? "input-error" : ""}
+                    />
+                    {errors.payoutAccountNumber && <span className="field-error">{errors.payoutAccountNumber}</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* The ID check comes later, in the Seller Center (/seller/verification). */}
+          <section className="apply-later" aria-label="Identity verification">
+            <IdentificationCard size={22} />
+            <div>
+              <strong>Verify your identity later</strong>
+              <p>After you apply, verify your ID from your Seller Center. It takes a minute and helps the admin approve your shop faster.</p>
+            </div>
+          </section>
+
           {/* What comes after: the guided setup. */}
           <section className="apply-next" aria-label="After you apply">
             <Sparkle size={20} weight="fill" />
             <div>
               <strong>After you apply</strong>
-              <p>A short guided setup: verify your ID, your logo, delivery, payments and your first product. Skip any step and finish it later.</p>
+              <p>A short guided setup: your logo, delivery, payment QR and your first product. Skip any step and finish it later.</p>
             </div>
           </section>
         </div>
@@ -570,6 +686,8 @@ export default function SellerApply() {
               <dd>{user?.fullName || "—"}</dd>
               <dt>Contact</dt>
               <dd>{contactNumber || "—"}</dd>
+              <dt>Buyers pay</dt>
+              <dd>{payoutMethodOf(form.payoutMethod).label}</dd>
               <dt>Reviewed by</dt>
               <dd>{form.municipalityName ? `${form.municipalityName} admin` : "Select a municipality"}</dd>
             </dl>

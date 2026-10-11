@@ -33,27 +33,21 @@ const loadBitmap = (file) =>
 /**
  * Measure a photo and describe what is wrong with it, if anything.
  * Never throws for analysis failures — an unreadable canvas just means we
- * skip the soft checks and let the server decide.
+ * skip the soft checks and let the server decide. Any type and size of photo
+ * is accepted (the server converts HEIC/AVIF/TIFF and explains what it can't
+ * open); the only hard stop is an ID photo too small to read.
  * @param {File} file - The selected image
- * @param {Number} maxBytes - Upload size ceiling
  * @returns {Promise<{ ok: Boolean, error: String|null, warning: String|null, width: Number, height: Number }>}
  */
-export const inspectImage = async (file, maxBytes = 5 * 1024 * 1024) => {
+export const inspectImage = async (file) => {
   const result = { ok: true, error: null, warning: null, width: 0, height: 0 };
-
-  if (!file.type?.startsWith('image/')) {
-    return { ...result, ok: false, error: 'That file is not an image.' };
-  }
-  if (file.size > maxBytes) {
-    const mb = (maxBytes / (1024 * 1024)).toFixed(0);
-    return { ...result, ok: false, error: `That image is larger than ${mb}MB. Try a smaller photo.` };
-  }
 
   let img;
   try {
     img = await loadBitmap(file);
   } catch {
-    return { ...result, ok: false, error: 'That image could not be opened.' };
+    // This browser can't open it (a HEIC in Chrome, say) — the server will convert or explain.
+    return result;
   }
 
   result.width = img.naturalWidth;

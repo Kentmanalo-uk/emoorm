@@ -83,7 +83,14 @@
   outline-offset: 2px;
 }
 
+/* The shortcuts: as wide as the longest one (at least 210px), lined up
+   with the card's left edge, as in the app. */
 .peek-menu {
+  position: relative;
+  align-self: flex-start;
+  width: max-content;
+  min-width: 210px;
+  max-width: 100%;
   overflow: hidden;
   border-radius: 18px;
   background: var(--t-neutral-0, #fff);
@@ -94,11 +101,11 @@
 .peek-action {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   width: 100%;
   min-height: 48px;
-  padding: 0 16px;
+  padding: 0 20px 0 14px;
   border: 0;
   background: transparent;
   color: var(--t-neutral-900, #111827);
@@ -114,15 +121,45 @@
   box-shadow: inset 0 0.5px 0 rgba(15, 23, 42, 0.16);
 }
 
-.peek-action > span {
+.peek-action-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.peek-action svg {
+/* The icon before the label, in its own gradient colour (the gradients are
+   drawn once in the menu: PeekTints in PeekHost.jsx). */
+.peek-action-icon {
+  display: grid;
   flex-shrink: 0;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+.peek-action-icon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.peek-action-icon.is-blue svg { fill: url(#peek-tint-blue); }
+.peek-action-icon.is-green svg { fill: url(#peek-tint-green); }
+.peek-action-icon.is-teal svg { fill: url(#peek-tint-teal); }
+.peek-action-icon.is-pink svg { fill: url(#peek-tint-pink); }
+.peek-action-icon.is-amber svg { fill: url(#peek-tint-amber); }
+.peek-action-icon.is-violet svg { fill: url(#peek-tint-violet); }
+.peek-action-icon.is-sky svg { fill: url(#peek-tint-sky); }
+.peek-action-icon.is-indigo svg { fill: url(#peek-tint-indigo); }
+.peek-action-icon.is-red svg { fill: url(#peek-tint-red); }
+
+.peek-tints {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .peek-action:hover {

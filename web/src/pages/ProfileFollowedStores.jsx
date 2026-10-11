@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import EmptyArt from '../components/ui/EmptyArt';
+import { useState, useEffect, useCallback } from 'react';
+import EmptyState from '../components/ui/EmptyState';
 import { Link } from 'react-router-dom';
-import { MagnifyingGlass as Search, Package, Users, Bell, BellSlash as BellOff, X } from '@phosphor-icons/react';
+import {
+  MagnifyingGlass as Search, Bell, BellSlash as BellOff, UserMinus, X,
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import {
   listMyFollowing,
@@ -13,6 +15,7 @@ import { resolveImg } from '../lib/media';
 import './ProfileFollowedStores.css';
 import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
 import Select from '../components/ui/Select';
+import useStorePeek from '../components/peek/useStorePeek';
 
 const SORTS = [
   { key: 'recent', label: 'Recently followed' },
@@ -135,18 +138,16 @@ const ProfileFollowedStores = () => {
       {loading ? (
         <StoreCardsSkeleton count={4} />
       ) : isEmpty ? (
-        <div className="empty-state">
-          <EmptyArt name={hasFilters ? 'search' : 'following'} size={96} />
-          <p className="empty-state-text">
-            {hasFilters ? 'No stores match your search' : 'You are not following any stores yet'}
-          </p>
-          <p className="empty-state-hint">
-            {hasFilters
-              ? 'Try a different keyword or clear the search.'
-              : 'Discover local sellers and follow them to see their newest products first.'}
-          </p>
-          <Link to="/stores" className="empty-state-button">Discover Stores</Link>
-        </div>
+        <EmptyState
+          page
+          className="followed-empty"
+          art={hasFilters ? 'search' : 'following'}
+          title={hasFilters ? 'No stores match your search' : 'You are not following any stores yet'}
+          text={hasFilters
+            ? 'Try a different keyword or clear the search.'
+            : 'Discover local sellers and follow them to see their newest products first.'}
+          actions={[{ label: 'Discover Stores', to: '/stores' }]}
+        />
       ) : (
         <div className="followed-grid">
           {items.map((it) => (
@@ -164,33 +165,25 @@ const ProfileFollowedStores = () => {
   );
 };
 
+/**
+ * One followed shop, as in the app (mobile/app/followed-stores.js): no cover
+ * photo and no card around it, a plain row with a hairline under it; a round
+ * logo, the name, "Town | N Followers", then Notifying/Muted, View shop and
+ * Unfollow. Held, the name shows the shop's preview, with Unfollow.
+ */
 function FollowedStoreCard({ item, busy, onUnfollow, onToggleNotifs }) {
-  const { store, notificationsEnabled, followedAt } = item;
-  const banner = store.bannerImage || store.coverImage;
+  const { store, notificationsEnabled } = item;
+  const peekStore = useStorePeek();
   const initials = store.name
     ? store.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
     : '?';
-
-  const followedLabel = useMemo(() => {
-    if (!followedAt) return '';
-    const d = new Date(followedAt);
-    const diff = Math.floor((Date.now() - d.getTime()) / 1000);
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  }, [followedAt]);
+  const followers = store.followerCount ?? 0;
+  const meta = [store.municipality?.name, `${followers} ${followers === 1 ? 'Follower' : 'Followers'}`]
+    .filter(Boolean)
+    .join(' | ');
 
   return (
     <div className="followed-card">
-      <Link to={`/store/${store.slug}`} className="followed-banner">
-        {banner ? (
-          <img src={resolveImg(banner)} alt="" />
-        ) : (
-          <div className="followed-banner-fallback" />
-        )}
-      </Link>
-
       <div className="followed-body">
         <div className="followed-identity">
           <div className="followed-avatar">
@@ -201,23 +194,18 @@ function FollowedStoreCard({ item, busy, onUnfollow, onToggleNotifs }) {
             )}
           </div>
           <div className="followed-title">
-            <Link to={`/store/${store.slug}`} className="followed-name">
+            <Link
+              to={`/store/${store.slug}`}
+              className="followed-name"
+              {...peekStore(store, {
+                follow: false,
+                extra: [{ key: 'unfollow', label: 'Unfollow', Icon: UserMinus, danger: true, onClick: onUnfollow }],
+              })}
+            >
               {store.name}
             </Link>
-            {store.municipality?.name && (
-              <span className="followed-location">{store.municipality.name}</span>
-            )}
+            <span className="followed-location">{meta}</span>
           </div>
-        </div>
-
-        {store.description && (
-          <p className="followed-desc">{store.description}</p>
-        )}
-
-        <div className="followed-stats">
-          <span><Package size={13} /> {store.productCount} products</span>
-          <span><Users size={13} /> {store.followerCount} followers</span>
-          <span className="followed-since">Followed {followedLabel}</span>
         </div>
 
         <div className="followed-actions">

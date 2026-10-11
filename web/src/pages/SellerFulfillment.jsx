@@ -20,6 +20,7 @@ import {
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { resolveImg } from '../lib/media';
 import { QR_METHODS, qrMethod, checkAccountNumber } from '../lib/qrPayment';
 import './SellerDashboard.css';
@@ -1264,7 +1265,7 @@ function SellerFulfillment({ part }) {
   const qrFile = (
     <input
       type="file"
-      accept="image/png,image/jpeg,image/webp"
+      accept={IMAGE_ACCEPT}
       onChange={handleQrUpload}
       disabled={uploading}
       hidden

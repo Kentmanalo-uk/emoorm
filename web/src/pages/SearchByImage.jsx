@@ -1,193 +1,321 @@
-import { useEffect, useState, useCallback } from 'react';
-import EmptyArt from '../components/ui/EmptyArt';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { productKind } from '../lib/productKinds';
-import { Camera, CircleNotch as Loader2, ShoppingCart, Star, UploadSimple as Upload, ArrowLeft } from '@phosphor-icons/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  ArrowsClockwise, Camera, Images, Lightning, LightningSlash, X,
+} from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
-import ProductImage from '../components/ProductImage';
-import axios from '../lib/axios';
-import useCartStore from '../store/cartStore';
-import toast from 'react-hot-toast';
-import { ProductTodayTag } from '../components/today/TodayTag';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import useCamera from '../components/search/useCamera';
+import ImageScanner, { ScanChip, ScanFrame } from '../components/search/ImageScanner';
+import ImageSearchResults from '../components/search/ImageSearchResults';
+import ImageSearchPicker from '../components/search/ImageSearchPicker';
+import Skeleton from '../components/ui/Skeleton';
+import {
+  SCAN_MIN_MS, fileToDataUrl, preparePhoto, readImageSearch, saveImageSearch, searchByImage, wait,
+} from '../components/search/imageSearch';
 import './SearchByImage.css';
 
+/*
+ * Search by image (/search/image).
+ *
+ *   camera   phones: the full-screen camera opens at once (the back camera;
+ *            the gallery left of the shutter, front/back on the right, the
+ *            torch at the top where the phone has one). Desktop: drop,
+ *            browse or take a photo (ImageSearchPicker).
+ *   scanning the photo fills the frame while the scan plays over it
+ *            (at least SCAN_MIN_MS, so a full sweep shows)
+ *   results  phones: a sheet rises over the photo (drag it up for more);
+ *            desktop: a panel beside the photo. Retake for another.
+ *   error    Couldn't search this photo: Retake / Try again
+ *
+ * A photo handed over in the location state (the header's dialog) is searched
+ * at once. The last search is kept for the visit, so Back from a product
+ * comes back to its results.
+ */
+
 const SearchByImage = () => {
+  const isPhone = usePhoneLayout();
   const location = useLocation();
   const navigate = useNavigate();
-  const { addItem } = useCartStore();
 
-  const [file, setFile] = useState(location.state?.file || null);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [results] = useState([]);
-  const [error, setError] = useState('');
+  // Back from a product: the search as it was.
+  const [restored] = useState(() => readImageSearch(location.state?.imageSearch));
+  const [phase, setPhase] = useState(restored ? 'results' : 'camera');
+  const [photoUrl, setPhotoUrl] = useState(restored?.previewUrl || '');
+  const [results, setResults] = useState(restored?.results || []);
+  const photoRef = useRef(null);
+  const objectUrl = useRef('');
+  const runId = useRef(0);
 
-  const runSearch = useCallback(async (imageFile) => {
-    if (!imageFile) return;
-    setLoading(true);
-    setError('');
+  const [facing, setFacing] = useState('back');
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef(null);
+  // Phones only: the desktop camera lives in the picker.
+  const {
+    attachVideo, status: camStatus, retry: camRetry, capture, torch, torchSupported, setTorch,
+  } = useCamera({ active: isPhone && phase === 'camera', facing });
+
+  const showPhoto = useCallback((file) => {
+    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
+    objectUrl.current = file ? URL.createObjectURL(file) : '';
+    setPhotoUrl(objectUrl.current);
+  }, []);
+  useEffect(() => () => { if (objectUrl.current) URL.revokeObjectURL(objectUrl.current); }, []);
+
+  // Search a photo: scan it (at least a full sweep), then the results.
+  const run = useCallback(async (raw, { prepared = false } = {}) => {
+    if (!raw) return;
+    const id = ++runId.current;
+    setPhase('scanning');
+    const file = prepared ? raw : await preparePhoto(raw);
+    if (id !== runId.current) return;
+    photoRef.current = file;
+    showPhoto(file);
     try {
-      const form = new FormData();
-      form.append('image', imageFile);
-      const res = await axios.post('/products/search-by-image', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const imageDataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(imageFile);
-      });
-      sessionStorage.setItem('emoorm.image-search', JSON.stringify({
-        results: res.data?.results || [],
-        previewUrl: imageDataUrl,
-      }));
-      navigate('/products?imageSearch=1');
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Image search failed';
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
+      const [found] = await Promise.all([searchByImage(file), wait(SCAN_MIN_MS)]);
+      if (id !== runId.current) return;
+      setResults(found);
+      setPhase('results');
+      // Kept for the visit: Back from a product returns here.
+      const key = `${Date.now()}`;
+      const previewUrl = await fileToDataUrl(file).catch(() => '');
+      if (id !== runId.current) return;
+      saveImageSearch({ key, results: found, previewUrl });
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: { imageSearch: key } });
+    } catch {
+      if (id === runId.current) setPhase('error');
     }
-  }, []);
+  }, [navigate, location.pathname, location.search, showPhoto]);
 
+  // A photo handed over by the header's dialog (also while already here).
+  const handled = useRef('');
   useEffect(() => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    runSearch(file);
-    return () => URL.revokeObjectURL(url);
-  }, [file, runSearch]);
+    const file = location.state?.file;
+    if (!file || handled.current === location.key) return;
+    handled.current = location.key;
+    run(file);
+  }, [location.key, location.state, run]);
 
+  // Desktop: a pasted picture is searched too.
   useEffect(() => {
-    const handlePaste = (event) => {
-      const imageItem = Array.from(event.clipboardData?.items || [])
-        .find((item) => item.type.startsWith('image/'));
-      const pastedImage = imageItem?.getAsFile();
-      if (pastedImage) setFile(pastedImage);
+    if (isPhone) return undefined;
+    const onPaste = (event) => {
+      const item = Array.from(event.clipboardData?.items || []).find((i) => i.type.startsWith('image/'));
+      const file = item?.getAsFile();
+      if (file) run(file);
     };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, []);
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [isPhone, run]);
 
-  const handleFileChange = (e) => {
-    const f = e.target.files?.[0];
-    if (f) setFile(f);
+  const retake = () => {
+    runId.current += 1;
+    setPhase('camera');
+    setResults([]);
+    photoRef.current = null;
+    showPhoto(null);
+    if (location.state) navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  };
+  const tryAgain = () => run(photoRef.current, { prepared: true });
+  const close = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/'));
+
+  const pickFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) run(file);
+  };
+  const shoot = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const file = await capture();
+      if (file) run(file, { prepared: true });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleAddToCart = (e, product) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Live animals are bought by making an offer on their page.
-    if (productKind(product) === 'LIVESTOCK') { navigate(`/product/${product.slug}`); return; }
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: Number(product.price),
-      image: product.images?.[0] || null,
-      slug: product.slug,
-      storeId: product.storeId,
-    });
-    toast.success('Added to cart');
-  };
+  /* ── Phones: full screen ──────────────────────────────────────────── */
+  if (isPhone) {
+    const live = camStatus === 'live';
+    const blocked = camStatus === 'denied' || camStatus === 'unavailable';
+    return (
+      <div className={`sbx-full is-${phase}`}>
+        {/* The camera, or the photo being searched. */}
+        {phase === 'camera' ? (
+          <>
+            <video
+              ref={attachVideo}
+              className={`sbx-video${facing === 'front' ? ' is-mirrored' : ''}${live ? ' is-live' : ''}`}
+              playsInline
+              muted
+              autoPlay
+              aria-label="Camera"
+            />
+            {blocked && (
+              <div className="sbx-nocam">
+                <Camera size={44} />
+                <h1>Search with your camera</h1>
+                <p>
+                  {camStatus === 'denied'
+                    ? 'Allow the camera to point it at a product and find similar ones from local shops.'
+                    : 'The camera can’t open here. Pick a photo of a product instead.'}
+                </p>
+                <div className="sbx-nocam-actions">
+                  {camStatus === 'denied' && (
+                    <button type="button" className="sbx-pill is-primary" onClick={camRetry}>Allow camera</button>
+                  )}
+                  <button type="button" className="sbx-pill is-glass" onClick={() => fileRef.current?.click()}>
+                    <Images size={18} /> Choose a photo
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : photoUrl ? (
+          <img className="sbx-photo" src={photoUrl} alt="Your photo" />
+        ) : null}
 
+        {/* Soft shade top and bottom, so the controls read on any picture. */}
+        <div className="sbx-shade is-top" aria-hidden="true" />
+        <div className="sbx-shade is-bottom" aria-hidden="true" />
+
+        {phase === 'camera' && live && <ScanFrame />}
+        {phase === 'scanning' && <ImageScanner />}
+
+        {/* Top: close, the title, the torch. */}
+        <div className="sbx-top">
+          <button type="button" className="sbx-round" onClick={close} aria-label="Close">
+            <X size={20} weight="bold" />
+          </button>
+          <span className="sbx-title">{phase === 'scanning' ? 'Searching…' : 'Search by image'}</span>
+          {phase === 'camera' && live && torchSupported && facing === 'back' ? (
+            <button
+              type="button"
+              className={`sbx-round${torch ? ' is-on' : ''}`}
+              onClick={() => setTorch(!torch)}
+              aria-label={torch ? 'Torch off' : 'Torch on'}
+              aria-pressed={torch}
+            >
+              {torch ? <Lightning size={20} weight="fill" /> : <LightningSlash size={20} />}
+            </button>
+          ) : <span className="sbx-round-space" />}
+        </div>
+
+        {/* Camera controls: gallery · shutter · flip. */}
+        {phase === 'camera' && (
+          <div className="sbx-controls">
+            {!blocked && <p className="sbx-hint">Point at a product, or pick a photo</p>}
+            <div className="sbx-shutter-row">
+              <button type="button" className="sbx-side" onClick={() => fileRef.current?.click()} aria-label="Choose from gallery">
+                <Images size={24} />
+              </button>
+              <button
+                type="button"
+                className="sbx-shutter"
+                onClick={shoot}
+                disabled={!live || busy}
+                aria-label="Take photo"
+              >
+                <span />
+              </button>
+              <button
+                type="button"
+                className="sbx-side"
+                onClick={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+                disabled={!live}
+                aria-label={facing === 'back' ? 'Use the front camera' : 'Use the back camera'}
+              >
+                <ArrowsClockwise size={24} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {phase === 'scanning' && <ScanChip className="sbx-chip" />}
+
+        {phase === 'error' && (
+          <div className="sbx-error" role="alert">
+            <h2>Couldn’t search this photo</h2>
+            <p>Check your connection, or try a clearer photo of one product.</p>
+            <div className="sbx-error-actions">
+              <button type="button" className="sbx-pill is-outline" onClick={retake}>Retake</button>
+              <button type="button" className="sbx-pill is-primary" onClick={tryAgain}>Try again</button>
+            </div>
+          </div>
+        )}
+
+        {phase === 'results' && (
+          <ImageSearchResults variant="sheet" results={results} photoUrl={photoUrl} onRetake={retake} />
+        )}
+
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickFile} />
+      </div>
+    );
+  }
+
+  /* ── Desktop ──────────────────────────────────────────────────────── */
   return (
     <Layout>
-      <div className="sbi-page">
+      <div className="sbx-page">
         <div className="container">
-          <button className="sbi-back" onClick={() => navigate(-1)}>
-            <ArrowLeft size={16} /> Back
-          </button>
-
-          <div className="sbi-header">
-            <div className="sbi-header-left">
+          <div className="sbx-head">
+            <div>
               <h1>Search by image</h1>
-              <p>We find visually similar products from local sellers.</p>
+              <p>Find visually similar products from local sellers.</p>
             </div>
-
-            <label className="sbi-upload-btn">
-              <Upload size={16} />
-              <span>Upload another image</span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                hidden
-              />
-            </label>
+            {phase !== 'camera' && (
+              <button type="button" className="sbx-pill is-outline" onClick={retake}>
+                <Camera size={16} /> Search another photo
+              </button>
+            )}
           </div>
 
-          <div className="sbi-body">
-            <aside className="sbi-preview">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Query" />
-              ) : (
-                <div className="sbi-preview-empty">
-                  <Camera size={40} />
-                  <p>No image selected</p>
-                </div>
-              )}
-            </aside>
+          {phase === 'camera' ? (
+            <div className="sbx-pick">
+              <ImageSearchPicker onFile={(file) => run(file)} />
+            </div>
+          ) : (
+            <div className="sbx-split">
+              <div className="sbx-stage">
+                {photoUrl && <img className="sbx-photo" src={photoUrl} alt="Your photo" />}
+                {phase === 'scanning' && (
+                  <>
+                    <ImageScanner className="sbx-stage-scan" />
+                    <ScanChip className="sbx-chip" />
+                  </>
+                )}
+              </div>
 
-            <section className="sbi-results">
-              {loading ? (
-                <div className="sbi-status">
-                  <Loader2 size={28} className="sbi-spin" />
-                  <p>Analyzing image…</p>
-                </div>
-              ) : error ? (
-                <div className="sbi-status sbi-status-error">
-                  <p>{error}</p>
-                </div>
-              ) : results.length === 0 ? (
-                <div className="sbi-status">
-                  <EmptyArt name="search" size={96} />
-                  <p>No similar products found. Try a clearer photo of a single product.</p>
-                </div>
-              ) : (
-                <>
-                  <div className="sbi-results-head">
-                    <span>{results.length} similar product{results.length === 1 ? '' : 's'}</span>
+              <div className="sbx-side-col">
+                {phase === 'scanning' && (
+                  <div className="sbx-waiting" aria-hidden="true">
+                    <div className="sbx-waiting-head">
+                      <Skeleton width={52} height={52} />
+                      <div>
+                        <Skeleton width={120} height={16} />
+                        <Skeleton width={200} height={12} />
+                      </div>
+                    </div>
+                    <Skeleton.Cards count={8} />
                   </div>
-                  <div className="sbi-grid">
-                    {results.map((product) => (
-                      <Link
-                        key={product.id}
-                        to={`/product/${product.slug}`}
-                        className="product-card"
-                      >
-                        <div className="product-image">
-                          <ProductImage src={product.images?.[0]} alt={product.name} />
-                          <span className="sbi-match">{product.matchSimilarity}% match</span>
-                          <button
-                            type="button"
-                            className="product-cart-fab"
-                            onClick={(e) => handleAddToCart(e, product)}
-                            aria-label="Add to cart"
-                          >
-                            <ShoppingCart size={16} />
-                          </button>
-                        </div>
-                        <div className="product-info">
-                          <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
-                          <span className="product-price">₱{Number(product.price).toFixed(2)}</span>
-                          <div className="product-rating-row">
-                            <div className="product-stars">
-                              {[0, 1, 2, 3, 4].map((i) => (
-                                <Star key={i} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
-                              ))}
-                            </div>
-                            <span className="product-review-count">({product.reviewCount ?? 0})</span>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+                )}
+                {phase === 'results' && (
+                  <ImageSearchResults variant="panel" results={results} photoUrl={photoUrl} onRetake={retake} />
+                )}
+                {phase === 'error' && (
+                  <div className="sbx-error is-panel" role="alert">
+                    <h2>Couldn’t search this photo</h2>
+                    <p>Check your connection, or try a clearer photo of one product.</p>
+                    <div className="sbx-error-actions">
+                      <button type="button" className="sbx-pill is-outline" onClick={retake}>Retake</button>
+                      <button type="button" className="sbx-pill is-primary" onClick={tryAgain}>Try again</button>
+                    </div>
                   </div>
-                </>
-              )}
-            </section>
-          </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

@@ -35,6 +35,49 @@ const FADE_MS = 150;
 const CARD_FROM = 0.55;
 const MENU_FOLDED = 'translateY(-16px) scale(.84)';
 
+// Each shortcut's icon colours (a gradient, light to deep), by what it
+// does, as in the app (mobile/src/components/Peek.js); a dangerous one is
+// always red. Unknown kinds take the next colour in turn.
+const TINTS = {
+  blue: ['#93c5fd', '#2563eb'],
+  green: ['#6ee7b7', '#047857'],
+  teal: ['#5eead4', '#0f766e'],
+  pink: ['#f9a8d4', '#db2777'],
+  amber: ['#fcd34d', '#ea580c'],
+  violet: ['#c4b5fd', '#7c3aed'],
+  sky: ['#7dd3fc', '#0284c7'],
+  indigo: ['#a5b4fc', '#4f46e5'],
+  red: ['#fca5a5', '#dc2626'],
+};
+const TINT_OF = {
+  open: 'blue', view: 'blue', details: 'blue', edit: 'blue',
+  cart: 'green', again: 'green', next: 'green', call: 'green', second: 'green',
+  options: 'teal', offer: 'teal', read: 'teal', visibility: 'teal',
+  wish: 'pink',
+  shop: 'amber',
+  share: 'violet',
+  chat: 'sky',
+  follow: 'indigo', buyer: 'indigo',
+};
+const ROTATION = ['blue', 'green', 'pink', 'amber', 'violet', 'sky', 'teal', 'indigo'];
+const tintFor = (a, i) => (a.danger ? 'red' : TINT_OF[a.key] || ROTATION[i % ROTATION.length]);
+
+/** The tints as gradients, once, for the shortcuts' icons to fill with (Peek.css). */
+function PeekTints() {
+  return (
+    <svg className="peek-tints" width="0" height="0" aria-hidden="true" focusable="false">
+      <defs>
+        {Object.entries(TINTS).map(([tone, [from, to]]) => (
+          <linearGradient key={tone} id={`peek-tint-${tone}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor={from} />
+            <stop offset="1" stopColor={to} />
+          </linearGradient>
+        ))}
+      </defs>
+    </svg>
+  );
+}
+
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /** From the item's place and size (`from`) to the card's own (`card`), as a transform. */
@@ -257,6 +300,7 @@ function PeekLayer({ peek }) {
           </div>
           {actions.length > 0 && (
             <div ref={menuRef} className="peek-menu" role="group" aria-label="Actions">
+              <PeekTints />
               {actions.map((a, i) => (
                 <button
                   key={a.key || a.label}
@@ -265,8 +309,13 @@ function PeekLayer({ peek }) {
                   className={`peek-action${a.danger ? ' is-danger' : ''}`}
                   onClick={() => close(a.onClick)}
                 >
-                  <span>{a.label}</span>
-                  {a.Icon && <a.Icon size={20} weight={a.iconWeight || 'regular'} aria-hidden="true" />}
+                  {/* The icon first, in its own gradient colour. */}
+                  {a.Icon && (
+                    <span className={`peek-action-icon is-${tintFor(a, i)}`} aria-hidden="true">
+                      <a.Icon size={24} weight={a.iconWeight || 'fill'} />
+                    </span>
+                  )}
+                  <span className="peek-action-label">{a.label}</span>
                 </button>
               ))}
             </div>

@@ -469,10 +469,7 @@ const Cart = () => {
     <>
       <div className="cart-m-head">
         <div className="cart-m-titlebar">
-          <h1 className="cart-m-title">
-            Cart
-            {itemCount > 0 && <span className="cart-m-count">{itemCount}</span>}
-          </h1>
+          <h1 className="cart-m-title">Cart</h1>
           <MoreMenu
             className="cart-m-more"
             buttonClassName="cart-m-more-btn"

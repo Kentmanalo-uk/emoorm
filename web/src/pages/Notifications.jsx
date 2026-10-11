@@ -26,6 +26,8 @@ import { confirmAction } from '../lib/confirm';
 import { groupByDay } from '../lib/dayGroup';
 import '../components/NotificationRows.css';
 import useNotificationPeek from '../components/peek/useNotificationPeek';
+import NotificationCategories from '../components/notifications/NotificationCategories';
+import { categoryLabel, minusOne } from '../lib/notificationCategories';
 
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
@@ -110,10 +112,14 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   const [saved] = useState(() => readCache(cacheKey));
   const [notifications, setNotifications] = useState(() => saved?.items || []);
   const [unreadCount, setUnreadCount] = useState(() => saved?.unreadCount ?? 0);
+  // Each group's unread count (chats | orders | alerts | promos).
+  const [unreadByCategory, setUnreadByCategory] = useState(() => saved?.unreadByCategory || {});
   const [isLoading, setIsLoading] = useState(() => !saved);
   // The filter, page and search of this visit: Back from a notification
   // finds the list as it was left.
   const [filter, setFilter] = useEntryState('filter', 'all'); // all | unread
+  // One group (chats | orders | alerts | promos), or null for all of them.
+  const [category, setCategory] = useEntryState('category', null);
   const [page, setPage] = useEntryState('page', 1);
   const [pagination, setPagination] = useState(() => saved?.pagination || { totalPages: 0, total: 0 });
   const firstViewFresh = useRef(false);
@@ -146,15 +152,16 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   useEffect(() => {
     if (!isAuthenticated) { navigate(`/login?redirect=${notificationsPath}`); return; }
     fetchNotifications();
-  }, [isAuthenticated, filter, page, audience, search]);
+  }, [isAuthenticated, filter, page, audience, search, category]);
 
   const fetchNotifications = async () => {
-    const firstView = filter === 'all' && page === 1 && !search;
+    const firstView = filter === 'all' && page === 1 && !search && !category;
     const kept = firstView ? readCache(cacheKey) : undefined;
     firstViewFresh.current = false;
     if (kept) {
       setNotifications(kept.items || []);
       setUnreadCount(kept.unreadCount ?? 0);
+      if (kept.unreadByCategory) setUnreadByCategory(kept.unreadByCategory);
       if (kept.pagination) setPagination(kept.pagination);
     } else {
       setIsLoading(true);
@@ -162,11 +169,13 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
     try {
       const params = { page, pageSize: 20, audience };
       if (filter === 'unread') params.isRead = false;
+      if (category) params.category = category;
       if (search) params.search = search;
 
       const response = await axios.get('/notifications', { params });
       setNotifications(response.data || []);
       setUnreadCount(response.unreadCount ?? 0);
+      if (response.unreadByCategory) setUnreadByCategory(response.unreadByCategory);
       if (response.pagination) setPagination(response.pagination);
       firstViewFresh.current = firstView;
     } catch (err) {
@@ -180,8 +189,8 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   // Marked read, deleted…: the saved first view follows what is shown.
   useEffect(() => {
     if (!firstViewFresh.current || isLoading) return;
-    writeCache(cacheKey, { items: notifications, unreadCount, pagination });
-  }, [cacheKey, isLoading, notifications, unreadCount, pagination]);
+    writeCache(cacheKey, { items: notifications, unreadCount, unreadByCategory, pagination });
+  }, [cacheKey, isLoading, notifications, unreadCount, unreadByCategory, pagination]);
 
   const handleMarkRead = async (notif) => {
     if (notif.isRead) return;
@@ -191,6 +200,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
         prev.map((n) => n.id === notif.id ? { ...n, isRead: true } : n)
       );
       setUnreadCount((c) => Math.max(0, c - 1));
+      setUnreadByCategory((counts) => minusOne(counts, notif.type));
     } catch (err) {
       console.error(err);
     }
@@ -209,6 +219,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       await axios.put(`/notifications/read-all?audience=${audience}`);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
+      setUnreadByCategory({});
       toast.success('All notifications marked as read');
     } catch {
       toast.error('Failed to mark all as read');
@@ -231,11 +242,34 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       await axios.delete('/notifications', { params: { audience } });
       setNotifications([]);
       setUnreadCount(0);
+      setUnreadByCategory({});
       toast.success('All notifications deleted');
     } catch {
       toast.error('Failed to delete notifications');
     }
   };
+
+  // A group, or all of them again (null): from the first page.
+  const changeCategory = (next) => {
+    setCategory(next);
+    setPage(1);
+  };
+
+  // The empty list's title: the search, the group, then the filter.
+  const emptyTitle = search
+    ? `No notifications match “${search}”`
+    : category
+      ? `No ${filter === 'unread' ? 'unread ' : ''}${categoryLabel(category).toLowerCase()} notifications`
+      : filter === 'unread' ? 'No unread notifications' : 'No notifications yet';
+
+  const categoriesBar = (
+    <NotificationCategories
+      value={category}
+      onChange={changeCategory}
+      unread={unreadByCategory}
+      className={sellerLook ? 'is-seller' : ''}
+    />
+  );
 
   // Hold a notification: the whole of it, bigger, with Open, Mark as read and Delete.
   const peekRow = (notif, cfg) => peekNotif(notif, {
@@ -355,9 +389,6 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
           <div className="notif-header">
             <div className="notif-header-left">
               <h1>Notifications</h1>
-              {unreadCount > 0 && (
-                <span className="notif-unread-badge">{unreadCount} unread</span>
-              )}
             </div>
             {headerTools}
           </div>
@@ -367,6 +398,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
 
         {/* Filters */}
         <div className={`notif-body${sellerLook ? ' is-seller' : ''}`}>
+        {categoriesBar}
         {!sellerLook && (
         <div className="notif-filters">
           <button
@@ -409,9 +441,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
             className="notif-empty-state"
             art="notifications"
             icon={BellOff}
-            title={search
-              ? `No notifications match “${search}”`
-              : filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+            title={emptyTitle}
             text={search
               ? 'Try another word, or clear the search.'
               : filter === 'unread'
@@ -428,9 +458,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
             {isSeller
               ? <EmptyArt name="notifications" size={150} />
               : <BellOff size={48} weight="fill" />}
-            <h2>{search
-              ? `No notifications match “${search}”`
-              : filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}</h2>
+            <h2>{emptyTitle}</h2>
             <p>{search ? 'Try another word, or clear the search.' : "You'll see order updates and important alerts here."}</p>
             {search && (
               <button className="notif-show-all-btn" onClick={closeSearch}>

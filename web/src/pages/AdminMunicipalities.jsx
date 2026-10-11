@@ -6,6 +6,7 @@ import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import { useReferenceInvalidation } from '../hooks/useReferenceData';
 import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { resolveImg } from '../lib/media';
 import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
@@ -235,7 +236,7 @@ export default function AdminMunicipalities() {
                           <input
                             ref={(el) => { logoInputRefs.current[mun.id] = el; }}
                             type="file"
-                            accept="image/jpeg,image/png,image/webp"
+                            accept={IMAGE_ACCEPT}
                             style={{ display: 'none' }}
                             onChange={(e) => {
                               const file = e.target.files?.[0];

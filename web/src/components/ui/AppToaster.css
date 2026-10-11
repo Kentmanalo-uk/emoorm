@@ -20,9 +20,7 @@
   align-items: flex-start;
   border: 0.5px solid rgba(15, 23, 42, 0.08);
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.97);
-  -webkit-backdrop-filter: saturate(180%) blur(30px);
-  backdrop-filter: saturate(180%) blur(30px);
+  background: var(--t-neutral-0, #fff);
   box-shadow: 0 16px 38px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.05);
   touch-action: none;
   user-select: none;
@@ -34,10 +32,41 @@
   transition: none;
 }
 
-/* Browsers without the frosted glass get a plain white banner. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+/* Frosted glass where the browser can blur what is behind: translucent
+   white, the page blurred and a little more vivid through it, a bright
+   hairline rim with a soft light along the top edge, and a soft shadow.
+   Browsers without it keep the plain white banner above. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .app-toast-card {
-    background: var(--t-neutral-0, #fff);
+    border-color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+    backdrop-filter: saturate(180%) blur(24px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.85),
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.4),
+      0 0 0 0.5px rgba(15, 23, 42, 0.06),
+      0 16px 38px rgba(15, 23, 42, 0.14),
+      0 2px 8px rgba(15, 23, 42, 0.05);
+  }
+
+  .app-toast .app-toast-card.is-link:hover {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.85),
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.4),
+      0 0 0 0.5px rgba(15, 23, 42, 0.06),
+      0 18px 42px rgba(15, 23, 42, 0.17),
+      0 2px 8px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Dark mode: the same glass, smoked. */
+  :root[data-theme="dark"] .app-toast-card {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(28, 30, 34, 0.72);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 16px 38px rgba(0, 0, 0, 0.32),
+      0 2px 8px rgba(0, 0, 0, 0.16);
   }
 }
 

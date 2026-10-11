@@ -1,5 +1,4 @@
-import { API_CONFIG } from '../config/api';
-import { beginActivity, endActivity } from './activity';
+import { uploadImage } from './upload';
 
 /**
  * Account settings: the checks and the photo upload shared by the Settings
@@ -53,31 +52,8 @@ export const passwordProblem = ({ currentPassword, newPassword, confirmPassword 
  * @returns {Promise<String>} The photo's URL
  */
 export const uploadProfilePhoto = async (file) => {
-  if (file.size > 5 * 1024 * 1024) throw new Error('Photo must be under 5 MB');
-  if (!/^image\/(jpe?g|png|webp)$/.test(file.type)) throw new Error('Only JPEG, PNG, or WebP images allowed');
-  const fd = new FormData();
-  fd.append('file', file);
-  // Use raw fetch so the browser sets multipart/form-data with a proper boundary.
-  // (The shared axios instance defaults Content-Type: application/json, which breaks uploads.)
-  const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-  beginActivity();
-  let resp;
-  let json;
-  try {
-    resp = await fetch(`${API_CONFIG.BASE_URL}/upload/image`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: fd,
-    });
-    json = await resp.json().catch(() => ({}));
-  } finally {
-    endActivity();
-  }
-  if (!resp.ok || !json?.success) {
-    throw new Error(json?.message || `Upload failed (${resp.status})`);
-  }
-  const url = json?.data?.url;
-  if (!url) throw new Error('Upload succeeded but no URL returned');
+  // Any photo goes; uploadImage shrinks it and throws the server's own message if refused.
+  const { url } = await uploadImage(file);
   return url;
 };
 

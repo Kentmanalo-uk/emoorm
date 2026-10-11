@@ -6,6 +6,7 @@ import {
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { resolveImg } from '../lib/media';
 import useAuthStore from '../store/authStore';
 import { useMunicipalities } from '../hooks/useReferenceData';
@@ -80,7 +81,7 @@ function PhotoPick({ label, hint, value, onChange, wide = false }) {
         <strong>{label}</strong>
         <small>{value ? <button type="button" className="sw-link" onClick={() => ref.current?.click()}>Change</button> : hint}</small>
       </span>
-      <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pick} />
+      <input ref={ref} type="file" accept={IMAGE_ACCEPT} hidden onChange={pick} />
     </div>
   );
 }

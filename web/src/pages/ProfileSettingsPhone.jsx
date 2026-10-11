@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   UserCircle, EnvelopeSimple, Phone, House, MapPin, ShieldCheck, LockKey, CalendarBlank,
-  SignOut, Camera, CircleNotch as Loader2, Database,
+  SignOut, Camera, CircleNotch as Loader2, Database, UsersThree, CaretRight,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -13,6 +13,7 @@ import {
   cleanUsername, fullNameProblem, usernameProblem, contactProblem, passwordProblem,
   uploadProfilePhoto, homeAddressLine,
 } from '../lib/profileForm';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
 import PhoneSaveBar from '../components/seller/PhoneSaveBar';
 import PhAddressPicker from '../components/common/PhAddressPicker';
@@ -20,6 +21,8 @@ import PasswordField from '../components/account/PasswordField';
 import AccountData from '../components/account/AccountData';
 import PushSetting from '../components/account/PushSetting';
 import PhoneVerify from '../components/account/PhoneVerify';
+import SwitchAccountSheet from '../components/account/SwitchAccountSheet';
+import { useSavedAccounts } from '../lib/savedAccounts';
 import UserAvatar from '../components/ui/UserAvatar';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Skeleton from '../components/ui/Skeleton';
@@ -80,6 +83,8 @@ function SettingsHub() {
   const [addresses, setAddresses] = useState(null);
   const [identity, setIdentity] = useState(null);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false);
+  const otherAccounts = useSavedAccounts((s) => s.accounts.filter((a) => a.id !== user?.id).length);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,6 +180,21 @@ function SettingsHub() {
         <SettingsList label="Account">
           <SettingsRow icon={CalendarBlank} label="Member since" value={memberSince} />
           <SettingsRow to={partPath('data')} icon={Database} label="Your data" value="Download a copy, or delete your account" />
+          {/* Opens a sheet, so a button styled as the other rows (SettingsRow only links). */}
+          <li>
+            <button type="button" className="scm-setrow pst-setrow-btn" onClick={() => setSwitchOpen(true)}>
+              <span className="scm-setrow-icon" aria-hidden="true"><UsersThree size={20} weight="fill" /></span>
+              <span className="scm-setrow-text">
+                <strong>Switch account</strong>
+                <span className="scm-setrow-value">
+                  {otherAccounts
+                    ? `${otherAccounts} other account${otherAccounts === 1 ? '' : 's'} saved here`
+                    : 'Use another account saved here'}
+                </span>
+              </span>
+              <CaretRight size={16} className="scm-setrow-chev" aria-hidden="true" />
+            </button>
+          </li>
         </SettingsList>
       </section>
 
@@ -199,6 +219,8 @@ function SettingsHub() {
         onConfirm={() => { setSignOutOpen(false); logout(); navigate(afterSignOutPath('/login'), { replace: true }); }}
         onCancel={() => setSignOutOpen(false)}
       />
+
+      <SwitchAccountSheet open={switchOpen} onClose={() => setSwitchOpen(false)} />
     </div>
   );
 }
@@ -356,11 +378,11 @@ function ProfilePart({ title }) {
           <input
             ref={fileRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={IMAGE_ACCEPT}
             onChange={handlePhoto}
             hidden
           />
-          <p className="ps-photo-hint">JPG, PNG, or WebP. Max 5 MB.</p>
+          <p className="ps-photo-hint">Any photo from your device.</p>
         </div>
       </div>
 

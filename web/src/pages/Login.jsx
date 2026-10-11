@@ -38,10 +38,11 @@ const Login = ({ seller = false }) => {
     ? safeRedirect
     : '/seller';
   const signUpPath = seller ? '/register?redirect=/seller/apply' : '/register';
-  const [formData, setFormData] = useState({
-    email: '',
+  // ?email= (Switch account, when a saved account's session has expired) fills in the email.
+  const [formData, setFormData] = useState(() => ({
+    email: new URLSearchParams(location.search).get('email') || '',
     password: '',
-  });
+  }));
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);

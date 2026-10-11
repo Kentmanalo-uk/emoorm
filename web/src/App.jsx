@@ -69,6 +69,7 @@ import OfflineBanner from './components/ui/OfflineBanner';
 const AppGoogle = lazy(() => import('./pages/AppGoogle'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const Sell = lazy(() => import('./pages/Sell'));
+const StoreMap = lazy(() => import('./pages/StoreMap'));
 const SellerApply = lazy(() => import('./pages/SellerApply'));
 const SellerLayout = lazy(() => import('./components/layout/SellerLayout'));
 // Also the admin's notification page, so it brings the admin shell only when opened.
@@ -222,6 +223,7 @@ function AppRoutes() {
         <Route path="/product/:slug" element={<ProductDetails />} />
         <Route path="/product/:slug/reviews" element={<ProductReviews />} />
         <Route path="/stores" element={<Stores />} />
+        <Route path="/stores/map" element={<StoreMap />} />
         <Route path="/today" element={<AvailableToday />} />
         <Route path="/store/:slug" element={<StoreDetail />} />
         <Route path="/u/:id" element={<PublicProfile />} />

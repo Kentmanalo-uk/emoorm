@@ -1182,28 +1182,30 @@
   .shop-m-main {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 14px 12px;
+    gap: 8px;
+    padding: 14px 12px 12px;
   }
 
+  /* A round logo, a size up (the app’s shop page). */
   .shop-m-logo {
     display: grid;
     place-items: center;
     flex-shrink: 0;
-    width: 62px;
-    height: 62px;
+    width: 74px;
+    height: 74px;
     overflow: hidden;
     border: 2px solid var(--t-neutral-100, #f3f4f6);
     border-radius: 50%;
     background: linear-gradient(135deg, color-mix(in srgb, var(--shop-primary) 80%, #fff), color-mix(in srgb, var(--shop-primary) 80%, #000));
     color: var(--t-neutral-0, #fff);
-    font-size: 20px;
-    font-weight: 800;
+    font-size: 26px;
+    font-weight: 600;
   }
 
   .shop-m-logo img {
     width: 100%;
     height: 100%;
+    border-radius: 50%;
     object-fit: cover;
     background: var(--t-neutral-0, #fff);
   }
@@ -1230,9 +1232,9 @@
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    font-size: 17px;
-    font-weight: 800;
-    line-height: 1.25;
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.24;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
@@ -1242,23 +1244,26 @@
     color: var(--t-neutral-500, #636b78);
   }
 
+  /* The rating and the counts on one line (the counts give way first). */
   .shop-m-rating-row {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 0;
     align-items: center;
-    gap: 4px 8px;
+    gap: 5px;
     margin-top: 6px;
   }
 
   .shop-m-rating {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 3px;
-    padding: 2px 7px;
+    padding: 2px 6px;
     border-radius: 6px;
     background: var(--shop-primary);
     color: var(--t-neutral-0, #fff);
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 800;
   }
 
@@ -1268,8 +1273,12 @@
   }
 
   .shop-m-counts {
+    min-width: 0;
+    overflow: hidden;
     color: var(--t-neutral-500, #6b7280);
-    font-size: 12.5px;
+    font-size: 11.5px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .shop-m-cta {
@@ -1277,7 +1286,7 @@
     flex-direction: column;
     gap: 6px;
     flex-shrink: 0;
-    width: 98px;
+    width: 68px;
   }
 
   .shop-m-follow,

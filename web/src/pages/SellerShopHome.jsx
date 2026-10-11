@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { resolveImg } from '../lib/media';
 import {
   SECTION_KINDS, KIND_ORDER, HOME_PRESETS, newSection, sectionReady, buildPreset,
@@ -385,7 +386,6 @@ function PhotosField({ section: s, max, onChange, products }) {
     if (files.length > room) toast(`Only ${max} photos fit in this section.`);
     let next = [...images];
     for (const file of list) {
-      if (!/^image\/(jpe?g|png|webp)$/.test(file.type)) { toast.error(`${file.name}: use a JPG, PNG or WebP photo`); continue; }
       setBusy((n) => n + 1);
       try {
         const { url } = await uploadImage(file);
@@ -426,7 +426,7 @@ function PhotosField({ section: s, max, onChange, products }) {
           </button>
         )}
       </div>
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { addFiles(e.target.files || []); e.target.value = ''; }} />
+      <input ref={input} type="file" accept={IMAGE_ACCEPT} multiple hidden onChange={(e) => { addFiles(e.target.files || []); e.target.value = ''; }} />
       <small className="shb-hint">{s.type === 'banner' ? 'Wide photos look best (about 2 : 1). A photo can open one of your products.' : 'Photos of your shop, farm or workshop.'}</small>
     </div>
   );

@@ -1602,3 +1602,146 @@
     display: none;
   }
 }
+
+/* ── Payment method cards (GCash, QR Ph, Cash on delivery) ────── */
+.apply-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t-neutral-700, #374151);
+}
+
+.apply-pay-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.apply-pay-method {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  min-height: 68px;
+  padding: 11px 16px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: var(--t-neutral-0, #fff);
+  border: 1.5px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.apply-pay-method:hover {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.apply-pay-method:focus-visible {
+  outline: 2px solid var(--t-primary-500, #10b981);
+  outline-offset: 2px;
+}
+
+.apply-pay-method.is-active {
+  background: var(--t-primary-50, #ecfdf5);
+  border-color: var(--t-primary-600, #059669);
+}
+
+.apply-pay-method-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.apply-pay-method-logo {
+  display: block;
+  width: auto;
+  max-width: 94px;
+  height: 22px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.apply-pay-method-cod {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  height: 24px;
+}
+
+.apply-pay-method-cod-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: #fff;
+  background: #16a34a;
+  border-radius: 50%;
+}
+
+.apply-pay-method-cod strong {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #111827);
+}
+
+.apply-pay-method small {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.apply-pay-method-radio {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 50%;
+}
+
+.apply-pay-method.is-active .apply-pay-method-radio {
+  border-color: var(--t-primary-600, #059669);
+}
+
+.apply-pay-method.is-active .apply-pay-method-radio::after {
+  width: 11px;
+  height: 11px;
+  content: "";
+  background: var(--t-primary-600, #059669);
+  border-radius: 50%;
+}
+
+/* ── Verify your identity later ───────────────────────────────── */
+.apply-later {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  color: var(--t-neutral-700, #374151);
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 14px;
+}
+
+.apply-later > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--t-primary-600, #059669);
+}
+
+.apply-later strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--t-neutral-900, #111827);
+}
+
+.apply-later p {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}

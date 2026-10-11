@@ -6,6 +6,7 @@ import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';
 import { useReferenceInvalidation } from '../hooks/useReferenceData';
 import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { resolveImg } from '../lib/media';
 import '../components/admin/AdminLayout.css';
 import './AdminBanners.css';
@@ -265,7 +266,7 @@ export default function AdminBanners() {
                       <Upload size={14} /> {busy ? 'Uploading…' : banner ? 'Replace image' : 'Upload image'}
                       <input
                         type="file"
-                        accept="image/png,image/jpeg,image/webp"
+                        accept={IMAGE_ACCEPT}
                         hidden
                         disabled={busy}
                         onChange={(event) => {
@@ -323,7 +324,7 @@ export default function AdminBanners() {
               )}
               <label className="admin-btn" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', width: 'max-content', cursor: 'pointer' }}>
                 <Upload size={14} /> {uploading ? 'Uploading…' : form.imageUrl ? 'Replace image' : 'Upload image'}
-                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onUpload} disabled={uploading} hidden />
+                <input type="file" accept={IMAGE_ACCEPT} onChange={onUpload} disabled={uploading} hidden />
               </label>
             </label>
             <label style={{ display: 'grid', gap: 6 }}>

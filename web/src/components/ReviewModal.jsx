@@ -3,6 +3,7 @@ import { X, Star, Image as ImageIcon, Video, Trash as Trash2 } from '@phosphor-i
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import { IMAGE_ACCEPT, uploadableImage } from '../lib/uploadableImage';
 import './ReviewModal.css';
 import { useSheetClose } from '../hooks/useSheetMotion';
 import { BusyLabel } from './ui/Spinner';
@@ -106,7 +107,9 @@ export default function ReviewModal({ product, orderId, onClose: onCloseProp, on
       if (orderId) form.append('orderId', orderId);
       form.append('rating', String(rating));
       if (comment.trim()) form.append('comment', comment.trim());
-      images.forEach(({ file }) => form.append('images', file));
+      // Any photo goes: shrunk here when the browser can open it, converted by the server otherwise.
+      const photos = await Promise.all(images.map(({ file }) => uploadableImage(file)));
+      photos.forEach((file) => form.append('images', file));
       if (video) form.append('video', video.file);
 
       await axios.post('/reviews', form, {
@@ -231,7 +234,7 @@ export default function ReviewModal({ product, orderId, onClose: onCloseProp, on
             <input
               ref={imageInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept={IMAGE_ACCEPT}
               multiple
               hidden
               onChange={handleImagesPick}

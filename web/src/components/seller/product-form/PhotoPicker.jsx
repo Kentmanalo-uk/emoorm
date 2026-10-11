@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Camera, X, CircleNotch, Plus } from '@phosphor-icons/react';
 import { uploadImage } from '../../../lib/upload';
+import { IMAGE_ACCEPT } from '../../../lib/uploadableImage';
 import { resolveImg } from '../../../lib/media';
 import { MAX_IMAGES } from './formState';
 
@@ -57,7 +58,7 @@ export default function PhotoPicker({ images, onChange, invalid = false }) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png,image/webp"
+        accept={IMAGE_ACCEPT}
         multiple
         onChange={handleFiles}
         hidden

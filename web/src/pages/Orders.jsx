@@ -16,6 +16,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import axios from '../lib/axios';
 import { resolveImg, parseImages } from '../lib/media';
 import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import ProductImage from '../components/ProductImage';
 import useAuthStore from '../store/authStore';
 import useCartStore, { cartKeyFor } from '../store/cartStore';
@@ -724,7 +725,7 @@ const Orders = () => {
                           <span>{proofForm.uploading ? 'Uploading…' : 'Upload screenshot'}</span>
                           <input
                             type="file"
-                            accept="image/png,image/jpeg,image/webp"
+                            accept={IMAGE_ACCEPT}
                             onChange={handleProofFileChange}
                             disabled={proofForm.uploading}
                             hidden

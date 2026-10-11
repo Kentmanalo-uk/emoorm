@@ -61,9 +61,10 @@ function LinkList({ items }) {
   );
 }
 
-// On phones the site footer shows on the homepage only; every other page
-// behaves like an app screen, with the bottom nav as the navigation.
-const isAppPage = (pathname) => pathname !== '/';
+// On phones the site footer closes the About page only (as in the app);
+// every other page, Home included, behaves like an app screen, with the
+// bottom nav as the navigation. Wider screens show it on every page.
+const isAppPage = (pathname) => pathname !== '/about';
 
 const Footer = () => {
   const { pathname } = useLocation();

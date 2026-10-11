@@ -6,6 +6,7 @@ import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, 
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
@@ -696,7 +697,7 @@ function ImageUploader({ value, onChange, onFile, uploading, shape = 'circle' })
               <Upload size={14} /> Replace
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                accept={IMAGE_ACCEPT}
                 onChange={(e) => onFile(e.target.files?.[0])}
                 disabled={uploading}
                 hidden
@@ -717,7 +718,7 @@ function ImageUploader({ value, onChange, onFile, uploading, shape = 'circle' })
           <span>{uploading ? 'Uploading…' : 'Upload image'}</span>
           <input
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept={IMAGE_ACCEPT}
             onChange={(e) => onFile(e.target.files?.[0])}
             disabled={uploading}
             hidden

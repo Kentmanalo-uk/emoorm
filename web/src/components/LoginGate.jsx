@@ -6,6 +6,7 @@ import Layout from './layout/Layout';
 import MoreMenu from './MoreMenu';
 import ProfileGuest from './ProfileGuest';
 import EmptyArt from './ui/EmptyArt';
+import WeightWaveText from './ui/WeightWaveText';
 import './LoginGate.css';
 
 /**
@@ -101,8 +102,9 @@ export default function LoginGate({ page }) {
           {gate.art && <EmptyArt name={gate.art} size={112} className="login-gate-art" />}
           <h2 className="login-gate-title">{gate.title}</h2>
           <p className="login-gate-body">{gate.body}</p>
+          {/* The label in the bold wave, as on the app's signed-out pages. */}
           <Link {...toLogin} className="login-gate-btn">
-            Log in
+            <WeightWaveText text="Log in" />
           </Link>
         </section>
       </div>

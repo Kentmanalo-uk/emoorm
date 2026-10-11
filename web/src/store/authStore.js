@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import useCartStore from './cartStore';
 import useWishlistStore from './wishlistStore';
 import axiosInstance, { setAuthHandlers } from '../lib/axios';
+import { dropKeptSession, refreshSavedAccount, rememberAccount } from '../lib/savedAccounts';
 
 // Admins stay in /admin, where no cart or saved list is ever shown, so theirs
 // are not read from the account on every visit. Buyers' and sellers' are.
@@ -72,16 +73,23 @@ const useAuthStore = create(
         // Switch to this user's cart (merging anything added as a guest) and
         // saved list.
         pointListsAt(userData);
+
+        // Listed under Settings → Switch account (lib/savedAccounts). A
+        // session this browser had kept for the account is not needed now.
+        rememberAccount(userData);
+        dropKeptSession(userData?.id);
       },
 
       // `to`: where the page that signed out is sending the visitor, so route
       // guards that notice the signed-out state first send them there too.
       // Not saved: only this visit needs it.
-      logout: (to = null) => {
+      // `forget`: false signs out here only and leaves the session alive on
+      // the server (Switch account → Add another account keeps it).
+      logout: (to = null, { forget = true } = {}) => {
         // The server forgets this device's session (its refresh token stops
         // renewing). Best effort: the sign-out here does not wait for it.
         const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken && localStorage.getItem('token')) {
+        if (forget && refreshToken && localStorage.getItem('token')) {
           axiosInstance.post('/auth/logout', { refreshToken }, { quiet: true }).catch(() => {});
         }
         set({
@@ -107,6 +115,8 @@ const useAuthStore = create(
       updateUser: (userData) => {
         set({ user: userData });
         localStorage.setItem('user', JSON.stringify(userData));
+        // The saved card under Switch account shows the new name or photo.
+        refreshSavedAccount(userData);
       },
 
       setTokens: (accessToken, refreshToken) => {

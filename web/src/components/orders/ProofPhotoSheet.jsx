@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, ImageSquare, ArrowClockwise, CircleNotch, Truck, Storefront } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { uploadImage } from '../../lib/upload';
+import { IMAGE_ACCEPT } from '../../lib/uploadableImage';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import '../ui/ConfirmDialog.css';
 import './ProofPhotoSheet.css';
@@ -46,15 +47,8 @@ export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, 
   const action = pickup ? 'Mark picked up' : 'Mark delivered';
 
   const choose = (picked) => {
+    // Any photo goes; uploadImage shrinks it and the server converts HEIC and the like.
     if (!picked) return;
-    if (!/^image\/(jpe?g|png|webp)$/.test(picked.type)) {
-      toast.error('Use a JPG, PNG or WebP photo.');
-      return;
-    }
-    if (picked.size > 5 * 1024 * 1024) {
-      toast.error('The photo must be under 5 MB.');
-      return;
-    }
     setFile(picked);
   };
 
@@ -111,9 +105,9 @@ export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, 
         )}
 
         {/* capture opens the camera directly on phones. */}
-        <input ref={cameraRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden
+        <input ref={cameraRef} type="file" accept={IMAGE_ACCEPT} capture="environment" hidden
           onChange={(e) => { choose(e.target.files?.[0]); e.target.value = ''; }} />
-        <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" hidden
+        <input ref={galleryRef} type="file" accept={IMAGE_ACCEPT} hidden
           onChange={(e) => { choose(e.target.files?.[0]); e.target.value = ''; }} />
 
         <div className="cf-dialog-actions">

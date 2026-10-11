@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
+import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { useReferenceInvalidation } from '../hooks/useReferenceData';
 import { resolveImg } from '../lib/media';
 import EmptyArt from '../components/ui/EmptyArt';
@@ -85,18 +87,11 @@ export default function AdminCategories() {
   const handleImageFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please choose an image file');
-      return;
-    }
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await axios.post('/upload/image', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setForm((f) => ({ ...f, image: res.data.url }));
+      // Any photo goes: uploadImage shrinks it, the server converts HEIC and the like.
+      const { url } = await uploadImage(file);
+      setForm((f) => ({ ...f, image: url }));
       toast.success('Image uploaded');
     } catch (err) {
       toast.error(err.message || 'Upload failed');
@@ -228,7 +223,7 @@ export default function AdminCategories() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept={IMAGE_ACCEPT}
                       onChange={handleImageFile}
                       style={{ display: 'none' }}
                     />

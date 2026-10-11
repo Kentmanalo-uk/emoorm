@@ -1,0 +1,898 @@
+/* Discover Stores, full screen (StoreMap.jsx). Thin outlines, no heavy
+   shadows; phones float a header on top and a row of cards on the bottom,
+   computers put the header and the shops in a panel on the left. */
+
+.sm-page {
+  --sm-line: var(--t-neutral-200, #e5e7eb);
+  --sm-blue: #2563eb;
+  --sm-blue-soft: #eff6ff;
+  --sm-blue-line: #bfdbfe;
+  --sm-card-w: min(calc(100vw - 40px), 380px);
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--t-neutral-150, #eef0f3);
+  color: var(--t-neutral-900, #111827);
+}
+
+.sm-map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--t-neutral-150, #eef0f3);
+}
+
+/* The credit line clears the cards on phones. */
+.sm-page.is-phone .sm-map .leaflet-bottom {
+  bottom: var(--sm-bottom, 0px);
+}
+
+.sm-loading,
+.sm-failed {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--t-primary-600, #047857);
+}
+
+.sm-loading {
+  pointer-events: none;
+}
+
+.sm-failed {
+  padding: 120px 16px 16px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+/* ── pins ─────────────────────────────────────────────────────────── */
+.sm-pin-shell {
+  border: 0;
+  background: transparent;
+}
+
+.sm-pin {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 54px;
+  cursor: pointer;
+  filter: drop-shadow(0 3px 5px rgba(15, 23, 42, .28));
+  transform-origin: 50% 52px;
+  transition: transform .28s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.sm-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--t-primary-600, #047857);
+  transform: translateX(-50%) rotate(45deg);
+  transition: background-color .2s ease;
+}
+
+.sm-pin-face {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 3px solid var(--t-primary-600, #047857);
+  border-radius: 50%;
+  background: var(--t-neutral-0, #fff);
+  transition: border-color .2s ease;
+}
+
+.sm-pin-face b {
+  color: var(--t-primary-600, #047857);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.sm-pin-face img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--t-neutral-0, #fff);
+}
+
+/* Placed from its address: about right, not exact. */
+.sm-pin.is-approx .sm-pin-face {
+  border-color: #f59e0b;
+  border-style: dashed;
+}
+
+.sm-pin.is-approx::after {
+  background: #f59e0b;
+}
+
+.sm-pin:hover {
+  transform: translateY(-2px) scale(1.06);
+}
+
+.sm-pin.is-selected,
+.sm-pin.is-selected:hover {
+  transform: scale(1.25);
+}
+
+.sm-pin.is-selected .sm-pin-face {
+  border-color: var(--t-accent-500, #ec4899);
+  border-style: solid;
+}
+
+.sm-pin.is-selected::after {
+  background: var(--t-accent-500, #ec4899);
+}
+
+/* You: a blue dot in a soft halo. */
+.sm-me-shell {
+  border: 0;
+  background: transparent;
+}
+
+.sm-me {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, .18);
+}
+
+.sm-me > span {
+  width: 14px;
+  height: 14px;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  background: var(--sm-blue);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .3);
+}
+
+/* ── zoom and locate ──────────────────────────────────────────────── */
+.sm-ctrls {
+  position: absolute;
+  top: calc(var(--sm-top, 0px) + 10px);
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sm-page.is-desk .sm-ctrls {
+  top: 16px;
+  right: 16px;
+}
+
+.sm-zoom {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--sm-line);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.sm-zoom button,
+.sm-locate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-800, #1f2937);
+  cursor: pointer;
+}
+
+.sm-zoom button + button {
+  border-top: 1px solid var(--sm-line);
+}
+
+.sm-zoom button:disabled {
+  color: var(--t-neutral-300, #d1d5db);
+  cursor: default;
+}
+
+.sm-locate {
+  border: 1px solid var(--sm-line);
+  border-radius: 12px;
+  color: var(--t-neutral-700, #374151);
+}
+
+.sm-locate.is-on {
+  border-color: var(--sm-blue-line);
+  color: var(--sm-blue);
+}
+
+.sm-locate[aria-busy='true'] {
+  color: var(--sm-blue);
+  cursor: progress;
+}
+
+.sm-zoom button:not(:disabled):hover,
+.sm-locate:hover {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.sm-zoom button:focus-visible,
+.sm-locate:focus-visible,
+.sm-back:focus-visible,
+.sm-chip:focus-visible,
+.sm-route-btn:focus-visible,
+.sm-card a:focus-visible,
+.sm-routecard a:focus-visible,
+.sm-routecard button:focus-visible {
+  outline: 2px solid var(--t-primary-600, #047857);
+  outline-offset: 2px;
+}
+
+/* ── header ───────────────────────────────────────────────────────── */
+.sm-head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 6px;
+  pointer-events: none;
+}
+
+.sm-head > * {
+  pointer-events: auto;
+}
+
+.sm-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 46px;
+  padding: 0 16px 0 3px;
+  border: 1px solid var(--sm-line);
+  border-radius: 23px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.sm-back {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--t-neutral-800, #1f2937);
+  cursor: pointer;
+}
+
+.sm-back:hover,
+.sm-back:active {
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.sm-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sm-count {
+  color: var(--t-neutral-400, #9ca3af);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 17px;
+}
+
+.sm-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sm-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid var(--sm-line);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.sm-chip:hover {
+  border-color: var(--t-neutral-300, #d1d5db);
+}
+
+.sm-chip.is-on {
+  border-color: var(--t-primary-600, #047857);
+  background: var(--t-primary-600, #047857);
+  color: #fff;
+}
+
+.sm-chip svg {
+  color: var(--t-neutral-500, #636b78);
+}
+
+.sm-chip.is-on svg {
+  color: #fff;
+}
+
+.sm-town {
+  position: relative;
+  min-width: 0;
+}
+
+.sm-town-chip {
+  max-width: 150px;
+}
+
+.sm-town-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sm-town-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  width: 220px;
+  max-height: min(360px, 60vh);
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--sm-line);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .12);
+  transform-origin: top right;
+  animation: sm-menu-in .16s ease-out;
+}
+
+@keyframes sm-menu-in {
+  from { opacity: 0; transform: scale(.94); }
+  to { opacity: 1; transform: none; }
+}
+
+.sm-town-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sm-town-opt:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.sm-town-opt.is-on {
+  color: var(--t-primary-700, #03684c);
+  font-weight: 600;
+}
+
+.sm-town-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sm-town-n {
+  color: var(--t-neutral-400, #9ca3af);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.sm-spacer {
+  flex: 1;
+}
+
+.sm-route-btn {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--sm-blue-line);
+  border-radius: 50%;
+  background: var(--t-neutral-0, #fff);
+  color: var(--sm-blue);
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.sm-route-btn:hover {
+  background: var(--sm-blue-soft);
+}
+
+.sm-route-btn.is-on {
+  border-color: var(--sm-blue);
+  background: var(--sm-blue);
+  color: #fff;
+}
+
+/* ── the route card ───────────────────────────────────────────────── */
+.sm-routecard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 64px;
+  padding: 0 8px 0 12px;
+  border: 1px solid var(--sm-line);
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .06);
+}
+
+.sm-routecard-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--sm-blue-soft);
+  color: var(--sm-blue);
+}
+
+.sm-routecard-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.sm-routecard-text p {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sm-routecard-time {
+  color: var(--t-neutral-500, #636b78);
+  font-size: 13.5px;
+  line-height: 22px;
+}
+
+.sm-routecard-time b {
+  color: var(--t-neutral-900, #111827);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.sm-routecard-meta {
+  color: var(--t-neutral-500, #636b78);
+  font-size: 12.5px;
+  line-height: 17px;
+}
+
+.sm-routecard-go {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 17px;
+  background: var(--sm-blue);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sm-routecard-go:hover {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.sm-routecard-close {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--t-neutral-500, #636b78);
+  cursor: pointer;
+}
+
+.sm-routecard-close:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+/* ── shop cards ───────────────────────────────────────────────────── */
+.sm-card {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid var(--sm-line);
+  border-radius: 20px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .06);
+}
+
+.sm-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sm-logo {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--sm-line);
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-600, #047857);
+}
+
+.sm-logo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sm-name-box {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sm-name,
+.sm-meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sm-name {
+  color: var(--t-neutral-900, #111827);
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.sm-who:hover .sm-name {
+  color: var(--t-primary-700, #03684c);
+}
+
+.sm-meta {
+  margin-top: 2px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 13px;
+  line-height: 17px;
+}
+
+.sm-dot {
+  margin: 0 6px;
+}
+
+.sm-state {
+  font-weight: 500;
+}
+
+.sm-state.is-open {
+  color: var(--t-primary-600, #047857);
+}
+
+.sm-state.is-closed {
+  color: var(--t-neutral-500, #636b78);
+}
+
+.sm-state.is-away {
+  color: #b45309;
+}
+
+.sm-desc {
+  margin: 10px 0 0;
+  overflow: hidden;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sm-card-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sm-thumbs {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sm-thumb {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border: 1px solid var(--sm-line);
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-300, #d1d5db);
+}
+
+.sm-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sm-more {
+  margin-left: 2px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sm-empty {
+  color: var(--t-neutral-400, #9ca3af);
+  font-size: 13px;
+}
+
+.sm-dir,
+.sm-visit {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  border-radius: 19px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #03684c);
+  text-decoration: none;
+  transition: background-color .15s ease;
+}
+
+.sm-dir {
+  width: 38px;
+  border: 1px solid var(--t-primary-200, #a7f3d0);
+}
+
+.sm-visit {
+  padding: 0 18px;
+  border: 1px solid var(--t-primary-600, #047857);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sm-dir:hover,
+.sm-visit:hover {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #03684c);
+}
+
+/* Nothing matches the filters. */
+.sm-none {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 1px solid var(--sm-line);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14px;
+}
+
+.sm-none button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-primary-700, #03684c);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── phones: the cards along the bottom ───────────────────────────── */
+.sm-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+  pointer-events: none;
+}
+
+.sm-bottom > * {
+  pointer-events: auto;
+}
+
+.sm-bottom > .sm-routecard {
+  box-sizing: border-box;
+  width: calc(100% - 40px);
+  max-width: 380px;
+}
+
+.sm-row {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 2px calc((100% - var(--sm-card-w)) / 2) 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sm-row::-webkit-scrollbar {
+  display: none;
+}
+
+.sm-row > .sm-card {
+  width: var(--sm-card-w);
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+/* ── computers: the panel on the left ─────────────────────────────── */
+.sm-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-width: calc(100% - 100px);
+  max-height: calc(100% - 32px);
+  border: 1px solid var(--sm-line);
+  border-radius: 22px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, .08);
+}
+
+.sm-panel-head {
+  position: relative;
+  z-index: 2;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.sm-panel-head .sm-bar {
+  border-color: transparent;
+}
+
+.sm-panel-route {
+  padding: 12px 12px 0;
+}
+
+.sm-panel-route .sm-routecard {
+  box-shadow: none;
+}
+
+.sm-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px;
+  overflow-y: auto;
+  border-radius: 0 0 22px 22px;
+  scrollbar-width: thin;
+}
+
+.sm-list > .sm-card {
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.sm-list > .sm-card:hover {
+  border-color: var(--t-neutral-300, #d1d5db);
+}
+
+.sm-list > .sm-card.is-selected {
+  border-color: var(--t-primary-600, #047857);
+  box-shadow: 0 0 0 1px var(--t-primary-600, #047857);
+}
+
+.sm-panel-none {
+  display: flex;
+  justify-content: center;
+  padding: 24px 12px;
+}
+
+.sm-panel-none .sm-none {
+  border: 0;
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sm-pin,
+  .sm-town-menu {
+    transition: none;
+    animation: none;
+  }
+}

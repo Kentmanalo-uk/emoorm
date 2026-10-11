@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { productKind } from '../lib/productKinds';
 import useSeo from '../lib/seo';
-import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ShoppingCart, Star, Storefront, X } from '@phosphor-icons/react';
+import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, MapTrifold, ShoppingCart, Star, Storefront, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
-import StoreLocationMap from '../components/maps/StoreLocationMap';
+import HomeStoresMap from '../components/home/HomeStoresMap';
+import StartSellingSticker from '../components/home/StartSellingSticker';
+import Spinner from '../components/ui/Spinner';
 import ChatDock from '../components/chat/ChatDock';
 import { readCache, patchCache } from '../lib/pageCache';
 import EmptyArt from '../components/ui/EmptyArt';
@@ -266,10 +268,12 @@ const Home = () => {
         patchCache('home', { nearbyStores: res.data || [] });
       },
     );
+    // Every public shop with a spot: its pin, or placed from its address
+    // (pinned: false, drawn with a dashed ring).
     load(
-      axios.get('/stores', { params: { pageSize: 100 } }),
+      axios.get('/stores/map'),
       (res) => {
-        const mapped = (res.data || []).filter((store) => store.latitude != null && store.longitude != null);
+        const mapped = Array.isArray(res.data) ? res.data : [];
         setMappedStores(mapped);
         patchCache('home', { mappedStores: mapped });
       },
@@ -277,8 +281,17 @@ const Home = () => {
     return () => { cancelled = true; };
   }, [user?.municipalityId, exploreBatch, exploreSaved]);
 
-  const loadMoreExplore = async () => {
+  // Explore Products loads its next batch on its own as the page nears the
+  // bottom, one request at a time. A failure waits for "Try again" (no
+  // retry loop).
+  const [exploreFailed, setExploreFailed] = useState(false);
+  const exploreBusy = useRef(false);
+  const exploreEndRef = useRef(null);
+  const loadMoreExplore = useCallback(async () => {
+    if (exploreBusy.current || !exploreHasMore) return;
+    exploreBusy.current = true;
     setExploreLoading(true);
+    setExploreFailed(false);
     try {
       const nextPage = explorePage + 1;
       const res = await axios.get('/products', {
@@ -286,19 +299,37 @@ const Home = () => {
       });
       const seen = new Set(exploreProducts.map((p) => p.id));
       const next = [...exploreProducts, ...(res.data || []).filter((p) => !seen.has(p.id))];
+      const hasNext = Boolean(res.pagination?.hasNext);
       setExploreProducts(next);
       setExplorePage(nextPage);
-      setExploreHasMore(Boolean(res.pagination?.hasNext));
+      setExploreHasMore(hasNext);
       // Remembered, so coming back finds everything loaded so far.
       patchCache('home', {
-        explore: next, explorePage: nextPage, exploreHasMore: Boolean(res.pagination?.hasNext), exploreBatch,
+        explore: next, explorePage: nextPage, exploreHasMore: hasNext, exploreBatch,
       });
-    } catch (err) {
-      toast.error(err.message || 'Failed to load more products');
+    } catch {
+      setExploreFailed(true);
     } finally {
+      exploreBusy.current = false;
       setExploreLoading(false);
     }
-  };
+  }, [exploreHasMore, explorePage, exploreProducts, exploreBatch]);
+
+  // About a screen and a half before the grid runs out: the next batch. A
+  // fresh observer after each batch reports at once whether the end is still
+  // that close (a tall screen can need two batches in a row). The end counts
+  // when it is up to a screen and a half below, or anywhere above: already
+  // scrolled past (a jump to the bottom of a tall page skips over it).
+  useEffect(() => {
+    const end = exploreEndRef.current;
+    if (!end || !exploreHasMore || exploreFailed || exploreLoading || exploreProducts.length === 0) return undefined;
+    if (typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) loadMoreExplore();
+    }, { rootMargin: `100000px 0px ${Math.round(window.innerHeight * 1.5)}px 0px` });
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [exploreHasMore, exploreFailed, exploreLoading, exploreProducts.length, loadMoreExplore]);
 
   const handleAddToCart = (e, product) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
@@ -543,12 +574,23 @@ const Home = () => {
         <div className="container">
           <div className="section-header">
             <h2 className="section-title title-medium">Discover Stores</h2>
-            <Link to="/stores" className="section-arrow-link" aria-label="Browse all stores" title="Browse all stores"><ArrowRight size={19} /></Link>
+            <Link to="/stores/map" className="section-arrow-link" aria-label="Open the stores map" title="Open the stores map"><ArrowRight size={19} /></Link>
           </div>
-          <StoreLocationMap stores={mappedStores} height={440} lockToPhilippines />
-          {mappedStores.length === 0 && (
-            <div className="discover-stores-empty">No sellers have pinned their store location yet.</div>
-          )}
+          {/* A tapped pin, or the button, opens the full stores map. */}
+          <div className="discover-stores-map">
+            <HomeStoresMap
+              stores={mappedStores}
+              height={440}
+              onSelect={(store) => navigate(`/stores/map?focus=${encodeURIComponent(store.id)}`)}
+            />
+            {mappedStores.length === 0 && (
+              <div className="discover-stores-empty">No shops on the map yet.</div>
+            )}
+            <Link to="/stores/map" className="discover-stores-open">
+              <MapTrifold size={16} weight="fill" aria-hidden="true" />
+              Open full map
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -564,20 +606,23 @@ const Home = () => {
               {exploreProducts.map((product) => <HomeProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />)}
             </div>
           )}
-          {exploreHasMore && (
-            <div className="home-load-more">
-              <button
-                type="button"
-                className="home-load-more-btn"
-                onClick={loadMoreExplore}
-                disabled={exploreLoading}
-              >
-                {exploreLoading ? 'Loading…' : 'Load more'}
+          {/* Under the grid: a spinner while the next batch loads, "Try again", or the end. */}
+          <div className="home-explore-end" ref={exploreEndRef} aria-live="polite">
+            {exploreLoading && <Spinner size={20} label="Loading more products" />}
+            {!exploreLoading && exploreFailed && (
+              <button type="button" className="home-explore-retry" onClick={loadMoreExplore}>
+                Couldn’t load more · <span>Try again</span>
               </button>
-            </div>
-          )}
+            )}
+            {!exploreHasMore && exploreProducts.length > 0 && (
+              <p className="home-explore-done">You’ve seen everything for now</p>
+            )}
+          </div>
         </div>
       </section>
+
+      {/* Phones: the floating "Start selling" sticker (guests and buyers). */}
+      {isPhone && <StartSellingSticker />}
 
       <ChatDock />
     </Layout>

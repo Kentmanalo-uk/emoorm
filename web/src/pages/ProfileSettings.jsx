@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CircleNotch as Loader2, FloppyDisk as Save, CheckCircle, SignOut } from '@phosphor-icons/react';
+import {
+  Camera, CircleNotch as Loader2, FloppyDisk as Save, CheckCircle, SignOut, UsersThree, CaretRight,
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
@@ -16,11 +18,14 @@ import PasswordField from '../components/account/PasswordField';
 import AccountData from '../components/account/AccountData';
 import PushSetting from '../components/account/PushSetting';
 import PhoneVerify from '../components/account/PhoneVerify';
+import SwitchAccountSheet from '../components/account/SwitchAccountSheet';
+import { useSavedAccounts } from '../lib/savedAccounts';
 import PhoneSettings from './ProfileSettingsPhone';
 import { afterSignOutPath } from '../lib/afterSignOut';
 import {
   cleanUsername, fullNameProblem, usernameProblem, contactProblem, passwordProblem, uploadProfilePhoto,
 } from '../lib/profileForm';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 
 const initialProfileState = (user) => ({
   fullName: user?.fullName || '',
@@ -55,6 +60,8 @@ function ProfileSettings() {
   const { user, updateUser, logout, setTokens } = useAuthStore();
   const navigate = useNavigate();
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false);
+  const otherAccounts = useSavedAccounts((s) => s.accounts.filter((a) => a.id !== user?.id).length);
   const { municipalities, isLoading: municipalitiesLoading } = useMunicipalities();
 
   const [form, setForm] = useState(() => initialProfileState(user));
@@ -238,11 +245,11 @@ function ProfileSettings() {
             <input
               ref={fileRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept={IMAGE_ACCEPT}
               onChange={handlePhoto}
               style={{ display: 'none' }}
             />
-            <p className="ps-photo-hint">JPG, PNG, or WebP. Max 5 MB.</p>
+            <p className="ps-photo-hint">Any photo from your device.</p>
           </div>
         </div>
 
@@ -425,6 +432,19 @@ function ProfileSettings() {
           />
         </div>
 
+        <button type="button" className="ps-switch-row" onClick={() => setSwitchOpen(true)}>
+          <span className="ps-switch-icon" aria-hidden="true"><UsersThree size={20} weight="fill" /></span>
+          <span className="ps-switch-text">
+            <strong>Switch account</strong>
+            <span>
+              {otherAccounts
+                ? `${otherAccounts} other account${otherAccounts === 1 ? '' : 's'} saved in this browser`
+                : 'Use another account saved in this browser'}
+            </span>
+          </span>
+          <CaretRight size={16} className="ps-switch-chev" aria-hidden="true" />
+        </button>
+
         <footer className="ps-actions ps-actions-signout">
           <button type="button" className="ps-btn ps-btn-signout" onClick={() => setSignOutOpen(true)}>
             <SignOut size={15} weight="bold" /> Sign out
@@ -441,6 +461,8 @@ function ProfileSettings() {
         onConfirm={() => { setSignOutOpen(false); logout(); navigate(afterSignOutPath('/login'), { replace: true }); }}
         onCancel={() => setSignOutOpen(false)}
       />
+
+      <SwitchAccountSheet open={switchOpen} onClose={() => setSwitchOpen(false)} />
     </div>
   );
 }

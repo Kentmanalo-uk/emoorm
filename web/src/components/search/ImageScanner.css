@@ -1,0 +1,240 @@
+/* Search by image: the framing corners and the scan (ImageScanner.jsx). */
+.isc {
+  --isc-top: 42%;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+  pointer-events: none;
+}
+
+/* The frame: a square in the middle of the picture. */
+.isc-frame {
+  position: absolute;
+  left: 50%;
+  top: var(--isc-top);
+  width: min(calc(100% - 72px), 42vh);
+  width: min(calc(100% - 72px), 42cqh);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+}
+
+.isc-corners {
+  position: absolute;
+  inset: 0;
+}
+
+.isc-corners.is-breathing {
+  animation: isc-breathe 0.8s ease-in-out infinite alternate;
+}
+
+.isc-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 0 solid #fff;
+}
+
+.is-idle .isc-corner {
+  border-color: rgba(255, 255, 255, 0.85);
+}
+
+.isc-corner.is-tl { left: 0; top: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 4px; }
+.isc-corner.is-tr { right: 0; top: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 4px; }
+.isc-corner.is-bl { left: 0; bottom: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 4px; }
+.isc-corner.is-br { right: 0; bottom: 0; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 4px; }
+
+/* The brand tint. */
+.isc-tint {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 26, 15, 0.38);
+  animation: isc-fade 0.3s ease-out both;
+}
+
+/* Drifting green and pink glows (sizes and travel relative to the width). */
+.isc-glow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 120%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  animation: isc-drift-a 2.6s ease-in-out infinite alternate;
+}
+
+.isc-glow.is-green {
+  background: radial-gradient(closest-side, rgba(52, 211, 153, 0.62), rgba(52, 211, 153, 0.2) 60%, rgba(52, 211, 153, 0));
+}
+
+.isc-glow.is-pink {
+  background: radial-gradient(closest-side, rgba(244, 114, 182, 0.62), rgba(244, 114, 182, 0.2) 60%, rgba(244, 114, 182, 0));
+  animation-name: isc-drift-b;
+}
+
+/* A fine grid inside the frame. */
+.isc-grid {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background-color: rgba(255, 255, 255, 0.06);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.22) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+}
+
+/* The beam: the whole layer travels down the picture; the trail hangs above
+   its top edge, the bright line at the trail's foot. */
+.isc-sweep {
+  position: absolute;
+  inset: 0;
+  animation: isc-sweep 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.isc-trail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 30%;
+  background: linear-gradient(
+    to bottom,
+    rgba(110, 231, 183, 0) 0%,
+    rgba(110, 231, 183, 0.28) 50%,
+    rgba(249, 168, 212, 0.5) 85%,
+    rgba(255, 255, 255, 0.75) 100%
+  );
+}
+
+.isc-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 3px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 14px 2px rgba(52, 211, 153, 0.9), 0 0 24px rgba(244, 114, 182, 0.7);
+}
+
+/* Detection points, one after another. */
+.isc-point {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+}
+
+.isc-ring,
+.isc-dot {
+  grid-area: 1 / 1;
+  border-radius: 50%;
+  animation-duration: 2.2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  animation-delay: var(--isc-delay, 0ms);
+}
+
+.isc-ring {
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  animation-name: isc-ring;
+}
+
+.isc-dot {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 3px solid var(--t-primary-400, #34d399);
+  background: #fff;
+  animation-name: isc-dot;
+}
+
+/* "Finding similar products…" */
+.isc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.isc-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: isc-spin 0.8s linear infinite;
+}
+
+@keyframes isc-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes isc-breathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.04); }
+}
+
+@keyframes isc-sweep {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(100% + 30% + 10px)); }
+}
+
+@keyframes isc-drift-a {
+  from { transform: translate(-37%, -9%); }
+  to { transform: translate(12%, 36%); }
+}
+
+@keyframes isc-drift-b {
+  from { transform: translate(21%, 81%); }
+  to { transform: translate(-25%, 45%); }
+}
+
+@keyframes isc-dot {
+  0% { opacity: 0; }
+  4% { opacity: 1; }
+  24% { opacity: 1; }
+  30% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes isc-ring {
+  0% { opacity: 0; transform: scale(0.5); }
+  5% { opacity: 0.9; }
+  30% { opacity: 0; transform: scale(2.4); }
+  100% { opacity: 0; transform: scale(2.4); }
+}
+
+@keyframes isc-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Less movement: the beam still sweeps (it is the "searching" sign), slower. */
+@media (prefers-reduced-motion: reduce) {
+  .isc-glow,
+  .isc-corners.is-breathing {
+    animation: none;
+  }
+
+  .isc-sweep {
+    animation-duration: 3.2s;
+  }
+}

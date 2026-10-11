@@ -6,6 +6,7 @@ import {
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { uploadImage } from '../../lib/upload';
+import { IMAGE_ACCEPT } from '../../lib/uploadableImage';
 import { resolveImg } from '../../lib/media';
 import { activeSalePrice } from '../../lib/variantPricing';
 import { PACKAGE_KINDS, packageItemsLabel, productKind } from '../../lib/productKinds';
@@ -937,7 +938,7 @@ function PackagePhotos({ images, itemPhotos, onChange }) {
 
   return (
     <div className="pkf-photos-wrap">
-      <input ref={inputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple hidden onChange={handleFiles} />
+      <input ref={inputRef} type="file" accept={IMAGE_ACCEPT} multiple hidden onChange={handleFiles} />
       {list.length === 0 && !uploading ? (
         <div className="pkf-autocover">
           {itemPhotos.length > 0 && (

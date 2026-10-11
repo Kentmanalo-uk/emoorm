@@ -1,0 +1,19 @@
+/* Home's stores map pins (HomeStoresMap.jsx), on StoreLocationMap.css's
+   round profile pin: green ring for a seller's own pin, dashed amber for a
+   shop placed from its address. */
+.home-map-pin .store-map-avatar {
+  border-color: var(--t-primary-600, #047857);
+}
+
+.home-map-pin.is-approx::after {
+  background: #f59e0b;
+}
+
+.home-map-pin.is-approx .store-map-avatar {
+  border-style: dashed;
+  border-color: #f59e0b;
+}
+
+.home-map-pin.is-approx .store-map-avatar b {
+  color: #b45309;
+}

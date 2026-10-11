@@ -1,4 +1,6 @@
-/* Shared empty state: one large centred card, same on every screen. */
+/* The shared empty state: the signed-out page's look (LoginGate.css) on
+   every screen: a picture, an 18px title, one short grey line and green
+   pill buttons, centred. */
 .ui-empty {
   display: flex;
   flex-direction: column;
@@ -6,7 +8,7 @@
   justify-content: center;
   gap: 0;
   min-height: 380px;
-  padding: 48px 24px;
+  padding: 32px 24px 40px;
   border-radius: 16px;
   background: var(--t-neutral-0, #fff);
   text-align: center;
@@ -15,7 +17,7 @@
 .ui-empty-icon {
   display: grid;
   place-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   color: var(--t-primary-200, #a7f3d0);
 }
 
@@ -26,33 +28,31 @@
 }
 
 .ui-empty-art {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .ui-empty-title {
-  margin: 0 0 8px;
-  color: var(--t-neutral-800, #1f2937);
-  font-size: 19px;
+  margin: 0 0 6px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 18px;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .ui-empty-text {
-  max-width: 300px;
+  max-width: 290px;
   margin: 0;
   color: var(--t-neutral-500, #6b7280);
-  font-size: 14.5px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
 .ui-empty-actions {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   gap: 10px;
-  width: 100%;
-  max-width: 260px;
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .ui-empty-btn {
@@ -60,34 +60,47 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 46px;
-  padding: 0 20px;
-  border-radius: 12px;
+  min-width: 140px;
+  height: 42px;
+  padding: 0 28px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   font-family: inherit;
   font-size: 15px;
   font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ui-empty-btn svg {
+  flex-shrink: 0;
 }
 
 .ui-empty-btn.is-primary {
-  border: 1px solid var(--t-primary-600, #059669);
-  background: var(--t-primary-600, #059669);
+  border-color: var(--t-primary-600, #047857);
+  background: var(--t-primary-600, #047857);
   color: #fff;
 }
 
-.ui-empty-btn.is-primary:hover {
-  background: var(--t-primary-700, #047857);
+.ui-empty-btn.is-primary:hover,
+.ui-empty-btn.is-primary:focus-visible {
+  border-color: var(--t-primary-700, #03684c);
+  background: var(--t-primary-700, #03684c);
+  color: #fff;
 }
 
+/* Outline: a white pill with a hairline. */
 .ui-empty-btn.is-outline {
-  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-color: var(--t-neutral-300, #d1d5db);
   background: #fff;
   color: var(--t-neutral-800, #1f2937);
 }
 
-.ui-empty-btn.is-outline:hover {
+.ui-empty-btn.is-outline:hover,
+.ui-empty-btn.is-outline:focus-visible {
   background: var(--t-neutral-50, #f9fafb);
 }
 
@@ -97,10 +110,37 @@
   }
 }
 
-/* Inset: inside a card or a list column that is already white. */
+/* A whole page: fills the height it is given (as a flex child it grows;
+   otherwise about a screen's worth) and centres in it, lifted a little:
+   more room below than above, so it reads as centred on the screen. */
+.ui-empty.ui-empty--page {
+  flex: 1 0 auto;
+  align-self: stretch;
+  min-height: max(380px, calc(100dvh - 240px));
+  padding: 24px 24px 120px;
+}
+
+/* Compact (also the older `ui-empty--inset`): inside a card or a section
+   that is already white: no card of its own, a smaller picture, less room. */
+.ui-empty.ui-empty--compact,
 .ui-empty.ui-empty--inset {
   min-height: 0;
-  padding: 28px 16px;
+  padding: 20px 16px 24px;
   border-radius: 0;
   background: transparent;
+}
+
+.ui-empty--compact .ui-empty-icon svg {
+  width: 56px;
+  height: 56px;
+}
+
+.ui-empty--compact .ui-empty-title {
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.ui-empty--compact .ui-empty-text {
+  font-size: 13.5px;
+  line-height: 1.45;
 }

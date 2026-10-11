@@ -12,6 +12,7 @@ import ThemePanel from '../components/admin/theme/ThemePanel';
 import '../components/admin/AdminLayout.css';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
+import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { resolveImg } from '../lib/media';
 import useAppSettings, { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS, resolveAppSettingImage } from '../hooks/useAppSettings';
 import useAuthStore from '../store/authStore';
@@ -437,7 +438,7 @@ export default function AdminSettings() {
               <button type="button" className="st-btn st-btn-text" onClick={() => setBrandingForm((current) => ({ ...current, [field]: DEFAULT_APP_SETTINGS[field] }))}>
                 Restore default
               </button>
-              <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { uploadBrandImage(field, event.target.files?.[0]); event.target.value = ''; }} />
+              <input ref={ref} type="file" accept={IMAGE_ACCEPT} hidden onChange={(event) => { uploadBrandImage(field, event.target.files?.[0]); event.target.value = ''; }} />
             </div>
           </div>
         ))}
@@ -590,7 +591,7 @@ export default function AdminSettings() {
         )}
       </header>
 
-      <Row label="Logo" help="Square JPEG, PNG or WebP, up to 5 MB.">
+      <Row label="Logo" help="A square photo works best. Any photo from your device.">
         <div className="st-logo">
           <div className="st-logo-preview">
             {municipalityProfile.logo
@@ -607,7 +608,7 @@ export default function AdminSettings() {
                 Remove
               </button>
             )}
-            <input ref={muniLogoInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { uploadMunicipalityLogo(e.target.files?.[0]); e.target.value = ''; }} />
+            <input ref={muniLogoInputRef} type="file" accept={IMAGE_ACCEPT} hidden onChange={(e) => { uploadMunicipalityLogo(e.target.files?.[0]); e.target.value = ''; }} />
           </div>
         </div>
       </Row>
@@ -653,7 +654,7 @@ export default function AdminSettings() {
               <span>{uploadingGallery ? 'Uploading…' : 'Add photos'}</span>
             </button>
           )}
-          <input ref={galleryInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { addGalleryImages(e.target.files); e.target.value = ''; }} />
+          <input ref={galleryInputRef} type="file" accept={IMAGE_ACCEPT} multiple hidden onChange={(e) => { addGalleryImages(e.target.files); e.target.value = ''; }} />
         </div>
       </Row>
 

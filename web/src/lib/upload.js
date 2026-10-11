@@ -1,26 +1,29 @@
 import { API_CONFIG } from '../config/api';
 import { beginActivity, endActivity } from './activity';
+import { uploadableImage } from './uploadableImage';
 
 /**
  * Upload an image file to the backend. Uses raw fetch so the browser sets the
  * multipart/form-data boundary correctly (the shared axios instance defaults
  * Content-Type: application/json which breaks multipart parsing).
  *
+ * Any photo goes: the browser shrinks what it can open to a sensible JPEG and
+ * sends the rest (HEIC, TIFF...) as it is for the server to convert. When the
+ * server refuses one, its own message is what gets thrown.
+ *
  * @param {File} file
+ * @param {{ document?: Boolean }} [options] - document: an ID/KYC photo, kept larger and sharper
  * @returns {Promise<{ url: string, filename: string }>} the stored path (e.g. /uploads/xxx.jpg)
  */
-export async function uploadImage(file) {
+export async function uploadImage(file, options) {
   if (!file) throw new Error('No file selected');
-  if (file.size > 5 * 1024 * 1024) throw new Error('Image must be under 5 MB');
-  if (!/^image\/(jpe?g|png|webp)$/.test(file.type)) {
-    throw new Error('Only JPEG, PNG, or WebP images are allowed');
-  }
+  const ready = await uploadableImage(file, options);
 
   const token =
     localStorage.getItem('token') || localStorage.getItem('accessToken');
 
   const fd = new FormData();
-  fd.append('file', file);
+  fd.append('file', ready);
 
   // The activity bar shows while the photo goes up.
   beginActivity();

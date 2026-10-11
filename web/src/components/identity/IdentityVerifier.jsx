@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import { fetchIdentityStatus, submitIdentityVerification } from '../../lib/identity';
 import { checkIdFrame, ID_RATIO } from '../../lib/idCardCheck';
+import { IMAGE_ACCEPT, uploadableImage } from '../../lib/uploadableImage';
 import Skeleton from '../ui/Skeleton';
 import '../../pages/ProfileVerification.css';
 import Select from '../ui/Select';
@@ -304,7 +305,7 @@ function CameraCapture({ side, onCapture, onClose }) {
       <input
         ref={uploadRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={IMAGE_ACCEPT}
         hidden
         onChange={(e) => {
           const picked = e.target.files?.[0];
@@ -353,7 +354,7 @@ function PhotoSlot({ side, label, hint, previewUrl, disabled, optional, onPick, 
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={IMAGE_ACCEPT}
         hidden
         onChange={(e) => {
           onPick(side, e.target.files?.[0]);
@@ -417,17 +418,12 @@ export default function IdentityVerifier({
     if (backPreview) URL.revokeObjectURL(backPreview);
   }, [backPreview]);
 
-  const pickFile = (side, selected) => {
+  // Any photo goes: it is kept large and sharp for reading, and one the
+  // browser can't open (HEIC in Chrome) goes up as it is for the server.
+  const pickFile = async (side, selected) => {
     if (!selected) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(selected.type)) {
-      toast.error('Use a JPG, PNG, or WebP image.');
-      return;
-    }
-    if (selected.size > 5 * 1024 * 1024) {
-      toast.error('Image must be 5 MB or smaller.');
-      return;
-    }
-    setFiles((current) => ({ ...current, [side]: selected }));
+    const ready = await uploadableImage(selected, { document: true });
+    setFiles((current) => ({ ...current, [side]: ready }));
   };
 
   const current = submitting ? 'PENDING' : (status?.status || 'NOT_VERIFIED');

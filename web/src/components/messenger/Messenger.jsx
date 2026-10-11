@@ -24,6 +24,7 @@ import { readCache, writeCache } from '../../lib/pageCache';
 import MoormyEntry from '../moormy/MoormyEntry';
 import MoormyThread from '../moormy/MoormyThread';
 import { pollWhileVisible } from '../../lib/visiblePoll';
+import { IMAGE_ACCEPT, uploadableImage } from '../../lib/uploadableImage';
 import DealCard from '../offers/DealCard';
 import useConversationPeek from '../peek/useConversationPeek';
 import {
@@ -33,8 +34,6 @@ import {
 const POLL_INTERVAL_MS = 5000;
 // Ate Moormy's chat (buyers only): opened like a conversation, as ?c=moormy.
 const MOORMY_ID = 'moormy';
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const QUICK_QUESTIONS = [
   'Hi! Is this still available?',
   'How much is delivery to my area?',
@@ -594,19 +593,13 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [draft]);
 
-  const handlePickImage = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!IMAGE_TYPES.includes(file.type)) {
-      setError('Send a JPG, PNG, WebP or GIF photo.');
-      e.target.value = '';
-      return;
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError('That photo is over 5 MB. Choose a smaller one.');
-      e.target.value = '';
-      return;
-    }
+  // Any photo goes: it is shrunk here if the browser can open it, and the
+  // server converts (or explains) the rest when it is sent.
+  const handlePickImage = async (e) => {
+    const picked = e.target.files?.[0];
+    e.target.value = '';
+    if (!picked) return;
+    const file = await uploadableImage(picked);
     setError('');
     setPendingImage((cur) => {
       if (cur?.preview) URL.revokeObjectURL(cur.preview);
@@ -1128,7 +1121,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={IMAGE_TYPES.join(',')}
+                  accept={IMAGE_ACCEPT}
                   className="msgr-file-input"
                   onChange={handlePickImage}
                   tabIndex={-1}
