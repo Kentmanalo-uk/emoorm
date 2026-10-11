@@ -522,13 +522,14 @@ const completeGoogleSignup = asyncHandler(async (req, res) => {
 });
 
 /**
- * "Continue with Google" in the Android app: its browser tab opens this and
- * is sent on to Google's sign-in page.
- * @route GET /api/auth/google/app/start?challenge=…
+ * "Continue with Google" in the apps: its browser tab opens this and is
+ * sent on to Google's sign-in page; `return` is the app's own link to come
+ * back to (only app links are taken, see auth.service).
+ * @route GET /api/auth/google/app/start?challenge=…&return=…
  * @access Public
  */
 const googleAppStart = (req, res) => {
-  res.redirect(302, authService.googleAppStartUrl(req.query.challenge));
+  res.redirect(302, authService.googleAppStartUrl(req.query.challenge, req.query.return));
 };
 
 /**

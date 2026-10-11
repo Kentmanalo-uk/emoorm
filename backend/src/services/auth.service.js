@@ -1464,24 +1464,44 @@ const loginWithGoogleProfile = async (profile) => {
 // pass and the secret at /google/app/exchange for the same answer as
 // POST /auth/google. The website's pop-up sign-in is untouched.
 const GOOGLE_APP_RETURN = 'shop.emoorm.app:/google-signin';
+// Where an app may ask to come back to (`return`): its own links only, never a
+// website. The React Native app on Android (shop.emoorm.app) and iPhone
+// (emoorm, com.emoorm.marketplace), and Expo Go while testing (exp, exps).
+// The pass it carries is useless without the app's secret either way.
+const GOOGLE_APP_RETURN_SCHEMES = ['shop.emoorm.app:', 'emoorm:', 'com.emoorm.marketplace:', 'exp:', 'exps:'];
 const PKCE_CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
 const PKCE_VERIFIER = /^[A-Za-z0-9_-]{43,128}$/;
 
 const googleAppCallbackUrl = () => config.google.appCallbackUrl
   || `${config.frontendUrl.replace(/\/$/, '')}${config.apiPrefix}/auth/google/app/callback`;
 
+/** The app's own return address, or the Android app's when it is not one. */
+const googleAppReturnBase = (ret) => {
+  if (typeof ret !== 'string' || !ret || ret.length > 300) return GOOGLE_APP_RETURN;
+  let url;
+  try {
+    url = new URL(ret);
+  } catch {
+    return GOOGLE_APP_RETURN;
+  }
+  if (!GOOGLE_APP_RETURN_SCHEMES.includes(url.protocol) || url.search || url.hash) return GOOGLE_APP_RETURN;
+  return ret;
+};
+
 /** Back to the app: the pass, or what stopped the sign-in. */
-const googleAppReturn = (params) => `${GOOGLE_APP_RETURN}?${new URLSearchParams(params)}`;
+const googleAppReturn = (params, ret) => `${googleAppReturnBase(ret)}?${new URLSearchParams(params)}`;
 
 /**
  * Where the app's browser tab goes first: Google's sign-in page, carrying
  * the app's challenge. A request the app didn't make goes back to it.
  * @param {String} challenge - base64url SHA-256 of the app's secret
+ * @param {String} [ret] - the app's own return address (see GOOGLE_APP_RETURN_SCHEMES)
  * @returns {String} URL to redirect to
  */
-const googleAppStartUrl = (challenge) => {
+const googleAppStartUrl = (challenge, ret) => {
+  const back = ret && googleAppReturnBase(ret) === ret ? ret : null;
   if (typeof challenge !== 'string' || !PKCE_CHALLENGE.test(challenge)) {
-    return googleAppReturn({ error: 'invalid_request' });
+    return googleAppReturn({ error: 'invalid_request' }, back);
   }
   // Unless GOOGLE_APP_CALLBACK_URL says Google lists this server's callback
   // as a redirect address (it didn't, and Google showed "Error 400:
@@ -1489,13 +1509,13 @@ const googleAppStartUrl = (challenge) => {
   // the website's sign-in page for the app instead, which uses the site's
   // own Google pop-up and hands the same pass back.
   if (!config.google.appCallbackUrl) {
-    return `${config.frontendUrl.replace(/\/$/, '')}/app-google?${new URLSearchParams({ challenge })}`;
+    return `${config.frontendUrl.replace(/\/$/, '')}/app-google?${new URLSearchParams({ challenge, ...(back ? { return: back } : {}) })}`;
   }
   try {
-    return googleService.authorizationUrl(generateGoogleAppState(challenge), googleAppCallbackUrl());
+    return googleService.authorizationUrl(generateGoogleAppState(challenge, back), googleAppCallbackUrl());
   } catch {
     // Google sign-in isn't set up on this server.
-    return googleAppReturn({ error: 'unavailable' });
+    return googleAppReturn({ error: 'unavailable' }, back);
   }
 };
 
@@ -1506,18 +1526,22 @@ const googleAppStartUrl = (challenge) => {
  * @returns {Promise<String>} URL to redirect to (the app)
  */
 const googleAppFinishUrl = async ({ code, state, error } = {}) => {
-  if (error) return googleAppReturn({ error: error === 'access_denied' ? 'cancelled' : 'google' });
+  // The state says where the app wants to come back to (read even when Google said no).
   let challenge;
+  let ret;
+  let stateError = null;
   try {
-    ({ challenge } = verifyGoogleAppState(state));
+    ({ challenge, ret } = verifyGoogleAppState(state));
   } catch {
-    return googleAppReturn({ error: 'expired' });
+    stateError = 'expired';
   }
+  if (error) return googleAppReturn({ error: error === 'access_denied' ? 'cancelled' : 'google' }, ret);
+  if (stateError) return googleAppReturn({ error: stateError });
   try {
     const profile = await googleService.exchangeCodeForProfile(code, googleAppCallbackUrl());
-    return googleAppReturn({ ticket: generateGoogleAppTicket(profile, challenge) });
+    return googleAppReturn({ ticket: generateGoogleAppTicket(profile, challenge) }, ret);
   } catch {
-    return googleAppReturn({ error: 'google' });
+    return googleAppReturn({ error: 'google' }, ret);
   }
 };
 
@@ -1527,10 +1551,10 @@ const googleAppFinishUrl = async ({ code, state, error } = {}) => {
  * Google as the login page does (an authorization code), and sends the
  * browser back to the app with the pass. This needs no Google setting beyond
  * the website's own (no Android client, no extra redirect address).
- * @param {{ code: String, challenge: String }} body
+ * @param {{ code: String, challenge: String, return?: String }} body
  * @returns {Promise<{ returnUrl: String }>} Where the page sends the browser
  */
-const googleAppTicketFromWeb = async ({ code, challenge } = {}) => {
+const googleAppTicketFromWeb = async ({ code, challenge, return: ret } = {}) => {
   if (typeof challenge !== 'string' || !PKCE_CHALLENGE.test(challenge)) {
     throw new ApiError('Open this page from the E-MOORM app.', 400);
   }
@@ -1538,7 +1562,7 @@ const googleAppTicketFromWeb = async ({ code, challenge } = {}) => {
     throw new ApiError('Google sign-in did not finish. Please try again.', 400);
   }
   const profile = await googleService.exchangeCodeForProfile(code);
-  return { returnUrl: googleAppReturn({ ticket: generateGoogleAppTicket(profile, challenge) }) };
+  return { returnUrl: googleAppReturn({ ticket: generateGoogleAppTicket(profile, challenge) }, ret) };
 };
 
 /**

@@ -192,8 +192,8 @@ const verifyTyped = (token, type) => {
   return decoded;
 };
 
-const generateGoogleAppState = (challenge) => jwt.sign(
-  { challenge, type: 'google-app-state' },
+const generateGoogleAppState = (challenge, ret) => jwt.sign(
+  { challenge, ...(ret ? { ret } : {}), type: 'google-app-state' },
   accessKey(),
   { expiresIn: '10m' }
 );

@@ -10,9 +10,21 @@ import './AppGoogle.css';
  * works there, not inside the app). The person signs in with the website's
  * usual Google pop-up; the server turns Google's answer and the app's
  * challenge into a one-time pass, and the browser goes back to the app with
- * it (shop.emoorm.app:/google-signin?ticket=…). Only the app holds the secret
- * that makes the pass usable.
+ * it (shop.emoorm.app:/google-signin?ticket=…, or the app's own `return`
+ * link: the iPhone app, Expo Go while testing; the server only takes app
+ * links). Only the app holds the secret that makes the pass usable.
  */
+
+// The app links the server accepts (auth.service GOOGLE_APP_RETURN_SCHEMES).
+const APP_SCHEMES = ['shop.emoorm.app:', 'emoorm:', 'com.emoorm.marketplace:', 'exp:', 'exps:'];
+const appReturn = (raw) => {
+  try {
+    const url = new URL(raw);
+    return APP_SCHEMES.includes(url.protocol) && !url.search && !url.hash ? raw : null;
+  } catch {
+    return null;
+  }
+};
 
 const GOOGLE_ICON = (
   <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
@@ -25,12 +37,13 @@ const GOOGLE_ICON = (
 
 export default function AppGoogle() {
   const challenge = useMemo(() => new URLSearchParams(window.location.search).get('challenge') || '', []);
+  const ret = useMemo(() => appReturn(new URLSearchParams(window.location.search).get('return') || ''), []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [returnUrl, setReturnUrl] = useState('');
 
   const back = (params) => {
-    const url = `shop.emoorm.app:/google-signin?${new URLSearchParams(params)}`;
+    const url = `${ret || 'shop.emoorm.app:/google-signin'}?${new URLSearchParams(params)}`;
     window.location.href = url;
   };
 
@@ -45,7 +58,7 @@ export default function AppGoogle() {
       setBusy(true);
       setError('');
       try {
-        const res = await axios.post('/auth/google/app/ticket', { code, challenge });
+        const res = await axios.post('/auth/google/app/ticket', { code, challenge, ...(ret ? { return: ret } : {}) });
         setReturnUrl(res.data.returnUrl);
         // Straight back to the app; the button below if the browser asks first.
         window.location.href = res.data.returnUrl;
