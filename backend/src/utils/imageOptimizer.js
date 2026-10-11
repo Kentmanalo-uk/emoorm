@@ -1,7 +1,7 @@
 const fs = require('fs');
 // A small file can claim enormous dimensions; decoding it would take the
-// server's memory. 40 megapixels covers any phone photo.
-const MAX_INPUT_PIXELS = 40e6;
+// server's memory. 70 megapixels covers phone photos up to 50 MP shots.
+const MAX_INPUT_PIXELS = 70e6;
 const path = require('path');
 const sharp = require('sharp');
 const config = require('../config/env');
@@ -98,4 +98,32 @@ const optimizeUpload = async (file) => {
   }
 };
 
-module.exports = { optimizeUpload, publicUrl, MAX_EDGE };
+/**
+ * Turn an upload in a format not every browser shows (HEIC/HEIF, AVIF, TIFF)
+ * into a JPEG, in place: the file, its name and its size change. Phone
+ * orientation is applied; the camera's metadata is dropped.
+ *
+ * Throws when the picture can't be decoded (an iPhone HEIC needs a HEVC
+ * decoder this server may not have); the caller refuses the upload then.
+ *
+ * @param {Object} file - Multer file object (disk storage)
+ */
+const toJpegInPlace = async (file) => {
+  const input = await fs.promises.readFile(file.path);
+  const output = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS })
+    .rotate()
+    .jpeg({ quality: 90, mozjpeg: true })
+    .toBuffer();
+  const jpgName = `${path.basename(file.filename, path.extname(file.filename))}.jpg`;
+  const jpgPath = path.join(path.dirname(file.path), jpgName);
+  await fs.promises.writeFile(jpgPath, output);
+  if (jpgPath !== file.path) await fs.promises.unlink(file.path).catch(() => { });
+  file.path = jpgPath;
+  file.filename = jpgName;
+  file.size = output.length;
+  file.mimetype = 'image/jpeg';
+};
+
+module.exports = {
+  optimizeUpload, publicUrl, MAX_EDGE, toJpegInPlace,
+};

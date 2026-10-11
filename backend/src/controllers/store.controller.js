@@ -1,5 +1,6 @@
 const storeService = require('../services/store.service');
 const storeHomeService = require('../services/storeHome.service');
+const storeMapService = require('../services/storeMap.service');
 const sellerAttentionService = require('../services/sellerAttention.service');
 const sellerSetupService = require('../services/sellerSetup.service');
 const sellerMarketingService = require('../services/sellerMarketing.service');
@@ -75,6 +76,17 @@ const getStores = asyncHandler(async (req, res) => {
     result.pageSize,
     'Stores retrieved successfully'
   );
+});
+
+/**
+ * Every public shop with its spot on the map: its pin, or a place worked out
+ * from its address (pinned: false).
+ * @route GET /api/stores/map
+ * @access Public
+ */
+const getStoreMap = asyncHandler(async (req, res) => {
+  const stores = await storeMapService.getStoreMap();
+  successResponse(res, stores, 'Store map retrieved successfully');
 });
 
 /**
@@ -331,6 +343,7 @@ const checkStoreCoverage = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getStoreMap,
   getMyHome,
   saveMyHome,
   getStoreHome,

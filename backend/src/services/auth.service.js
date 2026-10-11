@@ -493,7 +493,8 @@ const changePassword = async (userId, currentPassword, newPassword) => {
 const SELLER_TERMS_VERSION = '2026-09-20';
 
 const BUSINESS_TYPES = ['INDIVIDUAL', 'REGISTERED'];
-const PAYOUT_METHODS = ['GCASH', 'MAYA', 'BANK', 'COD_ONLY'];
+// The app offers GCash, QR Ph and cash on delivery; MAYA and BANK stay valid for older applications.
+const PAYOUT_METHODS = ['GCASH', 'QRPH', 'MAYA', 'BANK', 'COD_ONLY'];
 const FULFILLMENT_PREFERENCES = ['DELIVERY', 'PICKUP', 'BOTH'];
 
 const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');

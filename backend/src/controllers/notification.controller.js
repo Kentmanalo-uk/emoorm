@@ -1,4 +1,5 @@
 const notificationService = require('../services/notification.service');
+const { CATEGORY_KEYS } = require('../utils/notificationCategories');
 const {
   successResponse,
   noContentResponse,
@@ -22,6 +23,7 @@ const getMyNotifications = asyncHandler(async (req, res) => {
     isRead,
     audience,
     search,
+    category,
   } = req.query;
 
   // Clamped rather than trusted: page size reaches Prisma as `take`.
@@ -32,6 +34,8 @@ const getMyNotifications = asyncHandler(async (req, res) => {
     audience,
     // Free text over title and message; capped so it stays a cheap LIKE.
     search: typeof search === 'string' && search.trim() ? search.trim().slice(0, 100) : undefined,
+    // One of the inbox's groups: chats, orders, alerts or promos (anything else: all).
+    category: CATEGORY_KEYS.includes(category) ? category : undefined,
   };
 
   const result = await notificationService.getUserNotifications(
@@ -46,6 +50,7 @@ const getMyNotifications = asyncHandler(async (req, res) => {
     message: 'Notifications retrieved successfully',
     data: result.notifications,
     unreadCount: result.unreadCount,
+    unreadByCategory: result.unreadByCategory,
     pagination: {
       page: result.page,
       pageSize: result.pageSize,

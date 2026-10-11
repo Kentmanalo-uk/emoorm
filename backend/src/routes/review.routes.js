@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const { ApiError } = require('../middleware/errorHandler');
 const path = require('path');
 const crypto = require('crypto');
 const reviewController = require('../controllers/review.controller');
@@ -31,7 +32,8 @@ const reviewStorage = multer.diskStorage({
 });
 
 const REVIEW_ALLOWED_MIME = new Set([
-  'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+  'image/jpeg', 'image/jpg', 'image/pjpeg', 'image/png', 'image/webp', 'image/gif',
+  'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence', 'image/avif', 'image/tiff', 'image/x-tiff',
   'video/mp4', 'video/webm', 'video/quicktime',
 ]);
 
@@ -39,7 +41,7 @@ const reviewUpload = multer({
   storage: reviewStorage,
   fileFilter: (req, file, cb) => {
     if (REVIEW_ALLOWED_MIME.has(file.mimetype)) return cb(null, true);
-    cb(new Error('Only JPEG/PNG/WebP images and MP4/WebM/MOV videos are allowed'), false);
+    cb(new ApiError('Add photos (JPG, PNG, HEIC, WebP…) and an MP4, WebM or MOV video.', 400), false);
   },
   // Five photos and a video, a few text fields; caps keep a crafted form
   // from making the server parse and hold thousands of parts.

@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const { ApiError } = require('../middleware/errorHandler');
 const rateLimit = require('express-rate-limit');
 const config = require('../config/env');
 const identityVerificationController = require('../controllers/identityVerification.controller');
@@ -15,7 +16,7 @@ const idImageUpload = multer({
   limits: { fields: 20, fieldSize: 16 * 1024, parts: 30, files: 2, headerPairs: 200, fileSize: config.upload.maxFileSize },
   fileFilter: (req, file, cb) => {
     if (config.upload.allowedFileTypes.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Invalid file type. Only JPEG, PNG, and WebP are allowed.'), false);
+    else cb(new ApiError('That file is not a photo we can use. Choose a JPG, PNG, HEIC or WebP photo.', 400), false);
   },
 });
 

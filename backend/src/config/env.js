@@ -102,18 +102,23 @@ const config = {
 
   // File Upload Configuration
   upload: {
-    maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB default
+    // At least 20 MB: big phone photos are fine — every image is downscaled
+    // and re-encoded after upload, so the stored file stays small. A lower
+    // MAX_FILE_SIZE (the old 5 MB in many .env files) is raised to it.
+    maxFileSize: Math.max(parseInt(process.env.MAX_FILE_SIZE || '0', 10) || 0, 20 * 1024 * 1024),
     uploadDir: process.env.UPLOAD_DIR || 'uploads',
     // Private directory for sensitive KYC documents (ID photos, selfies).
     // Never served via express.static — only reachable through the authenticated
     // /auth/users/:id/kyc-photo/:field endpoint.
     privateUploadDir: process.env.PRIVATE_UPLOAD_DIR || 'uploads-private/kyc',
-    allowedFileTypes: process.env.ALLOWED_FILE_TYPES?.split(',') || [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/webp',
-    ],
+    // A first filter on the declared type; the bytes are what really decide
+    // (utils/fileType). HEIC/HEIF/AVIF/TIFF are turned into JPEG on arrival.
+    // These photo types are always accepted; ALLOWED_FILE_TYPES can add more.
+    allowedFileTypes: [...new Set([
+      'image/jpeg', 'image/jpg', 'image/pjpeg', 'image/png', 'image/webp', 'image/gif',
+      'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence', 'image/avif', 'image/tiff', 'image/x-tiff',
+      ...(process.env.ALLOWED_FILE_TYPES?.split(',').map((x) => x.trim()).filter(Boolean) || []),
+    ])],
   },
 
   // KYC document retention — ID photos and permits are deleted this many days

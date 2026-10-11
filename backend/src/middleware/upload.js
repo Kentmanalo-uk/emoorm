@@ -3,7 +3,9 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const config = require('../config/env');
-const { inspectImageFile, extensionFor } = require('../utils/fileType');
+const { ApiError } = require('./errorHandler');
+const { inspectImageFile, extensionFor, WEB_SAFE_TYPES } = require('../utils/fileType');
+const { toJpegInPlace } = require('../utils/imageOptimizer');
 
 /**
  * Extension for a stored upload.
@@ -21,6 +23,14 @@ const MIME_EXTENSIONS = {
   'image/png': '.png',
   'image/webp': '.webp',
   'image/gif': '.gif',
+  'image/pjpeg': '.jpg',
+  'image/heic': '.heic',
+  'image/heif': '.heic',
+  'image/heic-sequence': '.heic',
+  'image/heif-sequence': '.heic',
+  'image/avif': '.avif',
+  'image/tiff': '.tif',
+  'image/x-tiff': '.tif',
 };
 
 const safeFilename = (file) => {
@@ -46,7 +56,7 @@ const fileFilter = (req, file, cb) => {
   if (config.upload.allowedFileTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, and WebP are allowed.'), false);
+    cb(new ApiError('That file is not a photo we can use. Choose a JPG, PNG, HEIC or WebP photo.', 400), false);
   }
 };
 
@@ -77,6 +87,24 @@ const assertRealImage = async (file) => {
     await fs.promises.rename(file.path, corrected).catch(() => { });
     file.path = corrected;
     file.filename = path.basename(corrected);
+  }
+
+  // HEIC/HEIF, AVIF and TIFF become JPEG here, so every stored image shows
+  // everywhere. One that can't be decoded is refused (and removed).
+  if (!WEB_SAFE_TYPES.has(verdict.type)) {
+    try {
+      await toJpegInPlace(file);
+    } catch {
+      await fs.promises.unlink(file.path).catch(() => { });
+      return {
+        ok: false,
+        type: verdict.type,
+        reason: verdict.type === 'heif'
+          ? 'This HEIC photo could not be opened. Take a new photo, or choose a JPG or PNG.'
+          : 'This photo could not be opened. Choose a JPG or PNG.',
+      };
+    }
+    return { ok: true, type: 'jpeg', ext: '.jpg', mime: 'image/jpeg', reason: null };
   }
 
   return verdict;

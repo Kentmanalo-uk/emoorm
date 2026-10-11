@@ -10,11 +10,38 @@ const fs = require('fs');
  * the file's own signature, so that is what this reads.
  */
 
+// AVIF / HEIF brands in an ISO media file's ftyp box.
+const AVIF_BRANDS = new Set(['avif', 'avis']);
+const HEIF_BRANDS = new Set(['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'hevm', 'hevs', 'mif1', 'msf1']);
+
+/** 'avif', 'heif' or null for a buffer starting with an ftyp box. */
+const isoBrand = (b) => {
+  if (b.length < 16 || b.toString('ascii', 4, 8) !== 'ftyp') return null;
+  const size = Math.min(b.readUInt32BE(0), b.length);
+  const brands = [b.toString('ascii', 8, 12)];
+  for (let i = 16; i + 4 <= size; i += 4) brands.push(b.toString('ascii', i, i + 4));
+  if (brands.some((x) => AVIF_BRANDS.has(x))) return 'avif';
+  if (brands.some((x) => HEIF_BRANDS.has(x))) return 'heif';
+  return null;
+};
+
 /** Magic numbers for the raster formats the platform accepts. */
 const SIGNATURES = [
   { type: 'jpeg', ext: '.jpg', mime: 'image/jpeg', bytes: [0xff, 0xd8, 0xff] },
   { type: 'png', ext: '.png', mime: 'image/png', bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },
   { type: 'gif', ext: '.gif', mime: 'image/gif', bytes: [0x47, 0x49, 0x46, 0x38] },
+  // TIFF: little- or big-endian byte order mark, then 42.
+  {
+    type: 'tiff',
+    ext: '.tif',
+    mime: 'image/tiff',
+    test: (b) => b.length >= 4
+      && ((b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2a && b[3] === 0x00)
+        || (b[0] === 0x4d && b[1] === 0x4d && b[2] === 0x00 && b[3] === 0x2a)),
+  },
+  // AVIF and HEIC/HEIF are ISO media files: "????ftyp" and a brand.
+  { type: 'avif', ext: '.avif', mime: 'image/avif', test: (b) => isoBrand(b) === 'avif' },
+  { type: 'heif', ext: '.heic', mime: 'image/heic', test: (b) => isoBrand(b) === 'heif' },
   // WebP is "RIFF????WEBP" — the size field at offset 4 varies.
   {
     type: 'webp',
@@ -27,7 +54,10 @@ const SIGNATURES = [
 ];
 
 /** Formats accepted for user-facing images. SVG is deliberately absent. */
-const ALLOWED_IMAGE_TYPES = new Set(['jpeg', 'png', 'webp', 'gif']);
+const ALLOWED_IMAGE_TYPES = new Set(['jpeg', 'png', 'webp', 'gif', 'avif', 'heif', 'tiff']);
+
+/** Formats every browser and phone shows as they are; the rest become JPEG on arrival. */
+const WEB_SAFE_TYPES = new Set(['jpeg', 'png', 'webp', 'gif']);
 
 /**
  * Markup that must never be treated as an image, even behind a valid
@@ -73,7 +103,7 @@ const inspectImageFile = async (filePath) => {
 
     const detected = detect(head);
     if (!detected || !ALLOWED_IMAGE_TYPES.has(detected.type)) {
-      return { ok: false, type: null, reason: 'The file is not a JPEG, PNG, WebP or GIF image' };
+      return { ok: false, type: null, reason: 'That file is not a photo we can use. Choose a JPG, PNG, HEIC or WebP photo.' };
     }
 
     // Reject polyglots: valid image header, script payload behind it.
@@ -97,4 +127,6 @@ const inspectImageFile = async (filePath) => {
  */
 const extensionFor = (type) => SIGNATURES.find((s) => s.type === type)?.ext || '.bin';
 
-module.exports = { detect, inspectImageFile, extensionFor, ALLOWED_IMAGE_TYPES };
+module.exports = {
+  detect, inspectImageFile, extensionFor, ALLOWED_IMAGE_TYPES, WEB_SAFE_TYPES,
+};

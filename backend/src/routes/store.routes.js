@@ -32,6 +32,14 @@ router.get(
   storeController.getStoreBySlug
 );
 
+// Every public shop with its spot on the map (pinned, or placed from its
+// address). Before /:id.
+router.get(
+  '/map',
+  publicCache(config.cache.ttl.stores),
+  storeController.getStoreMap
+);
+
 // Seller-only static routes — must come before /:id
 router.get(
   '/my/store',

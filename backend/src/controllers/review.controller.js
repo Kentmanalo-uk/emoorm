@@ -46,9 +46,9 @@ const createReview = asyncHandler(async (req, res) => {
     // The bytes must really be photos and a video before they stay public.
     for (const image of files.images || []) {
       // 50 MB is for the video; a photo needs far less.
-      if (image.size > 10 * 1024 * 1024) throw new ApiError('Each photo must be 10 MB or smaller', 400);
+      if (image.size > 20 * 1024 * 1024) throw new ApiError('Each photo must be 20 MB or smaller', 400);
       const verdict = await assertRealImage(image);
-      if (!verdict.ok) throw new ApiError('One of the photos is not a JPEG, PNG or WebP image', 400);
+      if (!verdict.ok) throw new ApiError(verdict.reason || 'One of the photos could not be opened', 400);
       // Re-encoded like every other upload: smaller, and without the camera's
       // metadata, which on a phone photo includes where it was taken (often
       // the buyer's home). The file on disk changes, so the record follows it.

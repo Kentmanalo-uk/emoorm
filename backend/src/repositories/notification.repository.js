@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { CATEGORY_KEYS, categoryOfType, typeWhereFor } = require('../utils/notificationCategories');
 
 /**
  * Notification Repository
@@ -51,12 +52,18 @@ const findByUserId = async (options = {}) => {
     isRead,
     audience,
     search,
+    category,
   } = options;
 
   const where = {
     userId,
     deletedAt: null,
   };
+
+  // One of the inbox's groups (utils/notificationCategories).
+  if (category) {
+    where.type = typeWhereFor(category);
+  }
 
   if (search) {
     where.OR = [
@@ -72,7 +79,14 @@ const findByUserId = async (options = {}) => {
     where.audience = audience;
   }
 
-  const [notifications, total, unreadCount] = await Promise.all([
+  const unreadWhere = {
+    userId,
+    isRead: false,
+    deletedAt: null,
+    ...(audience ? { audience } : {}),
+  };
+
+  const [notifications, total, unreadCount, unreadTypes] = await Promise.all([
     prisma.notification.findMany({
       where,
       skip: (page - 1) * pageSize,
@@ -80,20 +94,19 @@ const findByUserId = async (options = {}) => {
       orderBy: { createdAt: 'desc' },
     }),
     prisma.notification.count({ where }),
-    prisma.notification.count({
-      where: {
-        userId,
-        isRead: false,
-        deletedAt: null,
-        ...(audience ? { audience } : {}),
-      },
-    }),
+    prisma.notification.count({ where: unreadWhere }),
+    // Unread by type, summed into the groups below.
+    prisma.notification.groupBy({ by: ['type'], where: unreadWhere, _count: { _all: true } }),
   ]);
+
+  const unreadByCategory = Object.fromEntries(CATEGORY_KEYS.map((key) => [key, 0]));
+  for (const row of unreadTypes) unreadByCategory[categoryOfType(row.type)] += row._count._all;
 
   return {
     notifications,
     total,
     unreadCount,
+    unreadByCategory,
     page,
     pageSize,
   };

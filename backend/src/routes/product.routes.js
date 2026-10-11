@@ -2,6 +2,7 @@ const { publicCache } = require('../middleware/httpCache');
 const config = require('../config/env');
 const express = require('express');
 const multer = require('multer');
+const { ApiError } = require('../middleware/errorHandler');
 const router = express.Router();
 const productController = require('../controllers/product.controller');
 const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
@@ -35,10 +36,10 @@ const stockAdjustLimiter = rateLimit({
 const imageSearchUpload = multer({
   storage: multer.memoryStorage(),
   // One photo and a few fields; anything bigger is held in memory for nothing.
-  limits: { fields: 20, fieldSize: 16 * 1024, parts: 30, files: 1, headerPairs: 200, fileSize: 8 * 1024 * 1024 },
+  limits: { fields: 20, fieldSize: 16 * 1024, parts: 30, files: 1, headerPairs: 200, fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (/^image\/(jpeg|png|webp|gif|bmp)$/i.test(file.mimetype)) cb(null, true);
-    else cb(new Error('Only image files are allowed'), false);
+    if (/^image\/(jpe?g|pjpeg|png|webp|gif|bmp|heic|heif|heic-sequence|heif-sequence|avif|tiff|x-tiff)$/i.test(file.mimetype)) cb(null, true);
+    else cb(new ApiError('That file is not a photo we can use. Choose a JPG, PNG, HEIC or WebP photo.', 400), false);
   },
 });
 
