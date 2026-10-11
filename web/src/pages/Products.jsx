@@ -24,6 +24,7 @@ import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
 import { parseImages } from '../lib/media';
 import Select from '../components/ui/Select';
+import useProductPeek from '../components/peek/useProductPeek';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 
@@ -85,6 +86,8 @@ const listKey = (params) => `products:${JSON.stringify(params)}`;
 
 const Products = () => {
   const navigate = useNavigate();
+  // Hold a result: its preview with quick actions.
+  const peekProduct = useProductPeek();
   const [searchParams, setSearchParams] = useSearchParams();
   const isPhone = usePhoneLayout();
   // The list as it showed last time for these filters: shown at once while
@@ -676,6 +679,7 @@ const Products = () => {
                       key={product.id}
                       to={`/product/${product.slug}`}
                       className="product-card"
+                      {...peekProduct(product)}
                     >
                       <div className="product-image">
                         <ProductImage src={product.images?.[0]} alt={product.name} />

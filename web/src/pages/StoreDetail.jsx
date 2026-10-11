@@ -63,6 +63,7 @@ import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import { ProductTodayTag } from '../components/today/TodayTag';
 import Select from '../components/ui/Select';
+import useProductPeek from '../components/peek/useProductPeek';
 
 const SORTS = [
   { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -1080,6 +1081,7 @@ export default function StoreDetail() {
                 <PhoneProductRow
                   key={product.id}
                   product={product}
+                  store={store}
                   onAdd={() => addToCartPhone(product)}
                   onBuy={() => buyNowPhone(product)}
                   closed={store.readyToSell === false || Boolean(away)}
@@ -1092,6 +1094,7 @@ export default function StoreDetail() {
                 <ProductCard
                   key={product.id}
                   product={product}
+                  store={store}
                   onAddToCart={handleAddToCart}
                 />
               ))}
@@ -1140,13 +1143,14 @@ export default function StoreDetail() {
   );
 }
 
-function ProductCard({ product, onAddToCart }) {
+function ProductCard({ product, store, onAddToCart }) {
+  const peekProduct = useProductPeek();
   const { price } = saleInfo(product);
   const images = Array.isArray(product.images) ? product.images : [];
   const image = images[0] || null;
 
   return (
-    <Link to={`/product/${product.slug}`} className="product-card">
+    <Link to={`/product/${product.slug}`} className="product-card" {...peekProduct(product, { store })}>
       <div className="product-image">
         <ProductImage src={image} alt={product.name} />
         <button
@@ -1191,7 +1195,10 @@ function ProductCard({ product, onAddToCart }) {
 /** Phones: one product per row, like the reference: photo, name, rating and
  *  sales, price, then add-to-cart and Buy (off while the shop is `closed`,
  *  i.e. not taking orders yet). */
-function PhoneProductRow({ product, onAdd, onBuy, closed = false }) {
+function PhoneProductRow({
+  product, store, onAdd, onBuy, closed = false,
+}) {
+  const peekProduct = useProductPeek();
   const { price } = saleInfo(product);
   const images = Array.isArray(product.images) ? product.images : [];
   const rating = Number(product.averageRating || 0);
@@ -1199,7 +1206,7 @@ function PhoneProductRow({ product, onAdd, onBuy, closed = false }) {
   const sold = Number(product.soldCount || 0);
   const soldOut = Number(product.stock) === 0 && !isStockless(product);
   return (
-    <div className="shop-m-row">
+    <div className="shop-m-row" {...peekProduct(product, { store })}>
       <Link to={`/product/${product.slug}`} className="shop-m-row-img">
         <ProductImage src={images[0] || null} alt={product.name} />
         {soldOut && <span className="shop-m-row-soldout">Sold out</span>}

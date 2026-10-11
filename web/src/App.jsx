@@ -61,6 +61,7 @@ import './styles/accent.css';
 import Spinner from './components/ui/Spinner';
 import { RouteTitles } from './lib/routeTitles';
 import ConfirmHost from './components/ui/ConfirmHost';
+import PeekHost from './components/peek/PeekHost';
 import OfflineBanner from './components/ui/OfflineBanner';
 
 // Pages most shoppers never open (the Seller Center, the admin panel, legal
@@ -373,6 +374,8 @@ function App() {
         <StatusBarTint />
         <AppToaster />
         <NotificationWatcher />
+        {/* Long-press previews of products, shops, chats and notifications. */}
+        <PeekHost />
         <ActivityBar />
         <AccountSwitchOverlay />
         <RoleGate>

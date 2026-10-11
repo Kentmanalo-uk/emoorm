@@ -5,6 +5,7 @@ import { SaleWas } from '../ui/SaleTag';
 import { saleInfo } from '../../lib/variantPricing';
 import { windowState, shortLeft, isEndingSoon } from '../../lib/availability';
 import TodayTag from './TodayTag';
+import useProductPeek from '../peek/useProductPeek';
 import './TodayCard.css';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -19,6 +20,7 @@ const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFracti
  */
 export default function TodayCard({ item, result = false }) {
   const { product, store } = item;
+  const peekProduct = useProductPeek();
   const remaining = item.remaining ?? product?.stock ?? null;
   const state = windowState(item, remaining);
   const soldOut = state.tone === 'ended';
@@ -38,6 +40,7 @@ export default function TodayCard({ item, result = false }) {
       to={`/product/${product.slug}`}
       className={`today-card${result ? ' is-result' : ''}${soldOut ? ' is-out' : ''}`}
       title={product.name}
+      {...peekProduct({ ...product, store: product.store || store, stock: soldOut ? 0 : remaining ?? product.stock })}
     >
       <div className="today-card-image">
         <ProductImage src={product.images?.[0]} alt="" />

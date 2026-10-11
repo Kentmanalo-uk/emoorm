@@ -645,9 +645,10 @@
   height: calc(var(--topbar-height) + var(--header-height));
 }
 
-/* Main Header */
+/* Main Header (on phones, Home's search header): white under the light
+   header wash (index.css). */
 .header {
-  background-color: white;
+  background: var(--header-glow);
   border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
   padding: 0;
   position: fixed;
@@ -884,14 +885,15 @@
   width: 100%;
   height: 50px;
 
-  background: var(--t-neutral-100, #f3f4f6);
-  border: none;
+  /* White inside a thin green outline; the green search button sits inside it. */
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-primary-600, #047857);
   border-radius: 0;
   overflow: hidden;
 }
 
 .header-search:focus-within {
-  background-color: var(--t-neutral-200, #e5e7eb);
+  box-shadow: 0 0 0 1px var(--t-primary-600, #047857);
 }
 
 .header-search-input-wrap {
@@ -1139,14 +1141,14 @@
   width: min(390px, 40vw);
   height: 42px;
   margin-left: auto;
-  border: 0;
+  /* As the header's product search: white inside a thin green outline. */
+  border: 1px solid var(--t-primary-600, #047857);
   outline: 0;
-  background: var(--t-neutral-100, #f3f4f6);
+  background: var(--t-neutral-0, #fff);
 }
 
 .cart-header-search:focus-within {
-  background: var(--t-neutral-200, #e5e7eb);
-  box-shadow: none;
+  box-shadow: 0 0 0 1px var(--t-primary-600, #047857);
 }
 
 .cart-header-search input {
@@ -1557,11 +1559,10 @@
 
 
 /* ── Home header on phones: one flat search bar ─────────────────────
-   Logo, then a square-cornered grey bar holding the text and the camera,
-   with the square green search button flush against its end, as on
-   desktop. On focus the bar turns white with a green edge, and the
-   suggestions open as a full-width sheet under the header with larger rows
-   for thumbs.
+   Logo, then a square-cornered white bar with a thin green outline holding
+   the text and the camera, with the square green search button flush
+   against its end inside the outline, as on desktop. The suggestions open
+   as a full-width sheet under the header with larger rows for thumbs.
    (The .header box is transformed for hide-on-scroll, so a fixed child is
    placed against the header itself: top: 100% sits right under it.) */
 @media (max-width: 768px) {
@@ -1573,16 +1574,14 @@
     align-items: stretch;
     height: 44px;
     padding: 0;
-    border: none;
+    border: 1px solid var(--t-primary-600, #047857);
     border-radius: 0;
-    background: var(--t-neutral-100, #f3f4f6);
-    transition: background-color 0.15s, box-shadow 0.15s;
+    background: var(--t-neutral-0, #fff);
   }
 
-  /* The green edge is a ring outside the bar, so the button stays flush. */
+  /* Tapping it opens the search page: no focus look of its own. */
   .header.is-home .header-search:focus-within {
-    box-shadow: 0 0 0 1.5px var(--t-primary-500, #10b981);
-    background: var(--t-neutral-0, #fff);
+    box-shadow: none;
   }
 
   .header.is-home .header-search-input {
@@ -1604,7 +1603,7 @@
   }
 
   .header.is-home .header-search-camera:active {
-    background: var(--t-neutral-200, #e5e7eb);
+    background: var(--t-neutral-100, #f3f4f6);
   }
 
   .header.is-home .header-search-button {

@@ -1966,7 +1966,8 @@
     gap: 6px;
     overflow-x: auto;
     padding: 8px 12px;
-    background: var(--t-neutral-0, #fff);
+    /* Light grey, as in the app, so each white suggestion box shows. */
+    background: var(--t-neutral-100, #f3f4f6);
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
@@ -1975,12 +1976,14 @@
     display: none;
   }
 
+  /* Each word on a plain white box, grey while pressed. */
   .home-quick-search button {
     flex-shrink: 0;
     padding: 6px 10px;
     border: 0;
     border-radius: 0;
-    background: var(--t-neutral-100, #f3f4f6);
+    box-shadow: none;
+    background: var(--t-neutral-0, #fff);
     color: var(--t-neutral-600, #4b5563);
     font: inherit;
     font-size: 12px;
@@ -1990,7 +1993,7 @@
   }
 
   .home-quick-search button:active {
-    background: var(--t-neutral-200, #e5e7eb);
+    background: var(--t-neutral-100, #f3f4f6);
   }
 }
 

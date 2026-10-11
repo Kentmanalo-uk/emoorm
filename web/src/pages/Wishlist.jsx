@@ -11,6 +11,7 @@ import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import './Wishlist.css';
 import { confirmAction } from '../lib/confirm';
+import useProductPeek from '../components/peek/useProductPeek';
 
 export default function Wishlist() {
   return (
@@ -123,6 +124,7 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
 }
 
 function WishlistCard({ product, onAddToCart, onRemove }) {
+  const peekProduct = useProductPeek();
   const sale = saleInfo(product);
   const price = sale.price;
   const compareAt = sale.regular ?? (product.compareAtPrice ? Number(product.compareAtPrice) : null);
@@ -132,7 +134,7 @@ function WishlistCard({ product, onAddToCart, onRemove }) {
   const images = Array.isArray(product.images) ? product.images : [];
 
   return (
-    <div className="wishlist-card">
+    <div className="wishlist-card" {...peekProduct(product)}>
       <Link to={`/product/${product.slug}`} className="wishlist-card-img-wrap">
         {images[0]
           ? <img src={resolveImg(images[0]) || images[0]} alt={product.name} />

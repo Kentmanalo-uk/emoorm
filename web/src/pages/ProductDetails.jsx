@@ -53,6 +53,7 @@ import {
 } from '../lib/productKinds';
 import KindRows from '../components/product/kinds/KindRows';
 import KindPrice from '../components/product/kinds/KindPrice';
+import useProductPeek from '../components/peek/useProductPeek';
 import {
   quantityBounds, countLabel, soldOutLabel, startsFrom, pageUnit, receiveMode,
 } from '../components/product/kinds/buying';
@@ -130,6 +131,8 @@ const phoneHeadHeight = () => {
 const ProductDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  // Hold a product on the shelves: its preview with quick actions.
+  const peekProduct = useProductPeek();
   const { isAuthenticated, user } = useAuthStore();
   const { addItem, getItemCount } = useCartStore();
   const cartCount = getItemCount();
@@ -1541,7 +1544,7 @@ const ProductDetails = () => {
               </div>
               <div className="pdp-m-shelf-row">
                 {((shelfTab === 'similar' && relatedProducts.length) || !sameShopProducts.length ? relatedProducts : sameShopProducts).slice(0, 12).map((p) => (
-                  <div key={p.id} className="pdp-m-shelf-card">
+                  <div key={p.id} className="pdp-m-shelf-card" {...peekProduct(p)}>
                     <Link to={`/product/${p.slug}`} className="pdp-m-shelf-img"><ProductImage src={parseImages(p.images)[0]} alt={p.name} /></Link>
                     <Link to={`/product/${p.slug}`} className="pdp-m-shelf-name">{p.name}</Link>
                     <span className="pdp-m-shelf-foot">
@@ -1565,7 +1568,7 @@ const ProductDetails = () => {
               </div>
               <div className="pdp-shelf-row">
                 {sameShopProducts.map((p) => (
-                  <Link key={p.id} to={`/product/${p.slug}`} className="product-card">
+                  <Link key={p.id} to={`/product/${p.slug}`} className="product-card" {...peekProduct(p, { store: product.store })}>
                     <div className="product-image">
                       <ProductImage src={parseImages(p.images)[0]} alt={p.name} />
                     </div>
@@ -1591,7 +1594,7 @@ const ProductDetails = () => {
               </div>
               <div className="pdp-shelf-grid">
                 {relatedProducts.map((p) => (
-                  <Link key={p.id} to={`/product/${p.slug}`} className="product-card">
+                  <Link key={p.id} to={`/product/${p.slug}`} className="product-card" {...peekProduct(p)}>
                     <div className="product-image">
                       <ProductImage src={parseImages(p.images)[0]} alt={p.name} />
                     </div>

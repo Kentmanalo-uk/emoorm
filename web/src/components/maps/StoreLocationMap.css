@@ -11,19 +11,50 @@
   background: var(--t-neutral-150, #edf2ef);
 }
 
-.store-map-current-location {
+/* "Use my location", floating on the map's bottom-right corner (above
+   Leaflet's credit line) and over its panes and controls. */
+.store-map-locate {
+  position: absolute;
+  right: 12px;
+  bottom: 26px;
+  z-index: 1001;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  padding: 7px 0;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
   border: 0;
-  background: transparent;
+  border-radius: 20px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .22);
   color: var(--t-primary-700, #047857);
   font: inherit;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color .15s ease;
+}
+
+.store-map-locate svg,
+.store-map-locate .ui-spinner {
+  flex-shrink: 0;
+  color: var(--t-primary-600, #059669);
+}
+
+.store-map-locate:hover,
+.store-map-locate:active {
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.store-map-locate:focus-visible {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 2px;
+}
+
+.store-map-locate[aria-busy='true'] {
+  cursor: progress;
 }
 
 .store-map-coordinates {

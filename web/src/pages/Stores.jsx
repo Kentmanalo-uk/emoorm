@@ -15,6 +15,7 @@ import { useMunicipalities } from '../hooks/useReferenceData';
 import './Stores.css';
 import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
 import PageMenu from '../components/layout/PageMenu';
+import useStorePeek from '../components/peek/useStorePeek';
 
 const PAGE_SIZE = 20;
 // Each list as it showed last time.
@@ -315,8 +316,9 @@ function StoreLogo({ store, className }) {
 }
 
 function StoreCard({ store }) {
+  const peekStore = useStorePeek();
   return (
-    <Link to={`/store/${store.slug}`} className="store-card">
+    <Link to={`/store/${store.slug}`} className="store-card" {...peekStore(store)}>
       <StoreLogo store={store} className="store-card-avatar" />
 
       <div className="store-card-body">
@@ -349,10 +351,11 @@ function StoreCard({ store }) {
 /** Phones: logo, name, town and product count, a line about the shop, and
  *  a peek at up to three of its newest products. */
 function PhoneStoreCard({ store }) {
+  const peekStore = useStorePeek();
   const count = store._count?.products ?? 0;
   const previews = (store.products || []).slice(0, 3);
   return (
-    <Link to={`/store/${store.slug}`} className="stores-m-card">
+    <Link to={`/store/${store.slug}`} className="stores-m-card" {...peekStore(store)}>
       <div className="stores-m-card-head">
         <StoreLogo store={store} className="stores-m-logo" />
         <div className="stores-m-card-text">

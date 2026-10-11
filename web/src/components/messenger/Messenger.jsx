@@ -25,6 +25,7 @@ import MoormyEntry from '../moormy/MoormyEntry';
 import MoormyThread from '../moormy/MoormyThread';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import DealCard from '../offers/DealCard';
+import useConversationPeek from '../peek/useConversationPeek';
 import {
   OPEN as OPEN_DEALS, dealStatus, heads, peso as dealPeso, telHref,
 } from '../offers/offerText';
@@ -100,7 +101,10 @@ const ORDER_STATUS_STYLES = {
   CANCELLED: { label: 'Cancelled', tone: 'red' },
 };
 
-function ConversationListItem({ item, active, currentUserId, onClick }) {
+// `peek`: the row's long-press preview props (peek/useConversationPeek).
+function ConversationListItem({
+  item, active, currentUserId, onClick, peek,
+}) {
   const isSellerView = item.role === 'seller';
   const title = isSellerView
     ? item.buyer?.fullName || 'Buyer'
@@ -120,6 +124,7 @@ function ConversationListItem({ item, active, currentUserId, onClick }) {
       type="button"
       className={`msgr-convo-item ${active ? 'is-active' : ''} ${item.unreadCount > 0 ? 'is-unread' : ''}`}
       onClick={onClick}
+      {...peek}
     >
       <div className="msgr-avatar">
         <UserAvatar
@@ -341,6 +346,8 @@ function ProductPicker({ storeId, onPick: onPickProp, onClose: onCloseProp }) {
 export default function Messenger({ role = 'buyer', className = '', title = '', filterChips = false }) {
   const currentUser = useAuthStore((s) => s.user);
   const [searchParams, setSearchParams] = useSearchParams();
+  // Hold a chat: its latest messages, with Open, Mark as read and the shop.
+  const peekChat = useConversationPeek();
   const initialStoreId = searchParams.get('store');
   const initialConversationId = searchParams.get('c');
 
@@ -507,6 +514,16 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     await Promise.allSettled(ids.map((id) => axiosInstance.post(`/messages/conversations/${id}/read`)));
     await fetchConversations();
     toast.success(ids.length === 1 ? 'Chat marked as read' : `${ids.length} chats marked as read`);
+  };
+
+  // A held chat's Mark as read: its count clears in the list at once.
+  const markChatRead = async (id) => {
+    try {
+      await axiosInstance.post(`/messages/conversations/${id}/read`);
+      setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)));
+    } catch (err) {
+      toast.error(err.message || 'Could not mark the chat as read');
+    }
   };
 
   const toggleSearch = () => {
@@ -881,6 +898,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                 active={c.id === activeId}
                 currentUserId={currentUser?.id}
                 onClick={() => handleSelect(c.id)}
+                peek={peekChat(c, { currentUserId: currentUser?.id, onOpen: () => handleSelect(c.id), onMarkRead: () => markChatRead(c.id) })}
               />
             ))
           )}

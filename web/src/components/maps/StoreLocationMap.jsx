@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { MapPin, NavigationArrow, Storefront, X } from '@phosphor-icons/react';
+import toast from 'react-hot-toast';
+import Spinner from '../ui/Spinner';
 import { resolveImg } from '../../lib/media';
 import 'leaflet/dist/leaflet.css';
 import './StoreLocationMap.css';
@@ -241,23 +243,40 @@ export default function StoreLocationMap({ stores = [], value = null, onChange =
       ? [points[0].latitude, points[0].longitude]
       : MINDORO_CENTER;
 
+  const [locating, setLocating] = useState(false);
   const useCurrentLocation = () => {
-    if (!navigator.geolocation || !onChange) return;
+    if (!navigator.geolocation || !onChange || locating) return;
+    setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => onChange({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
-      () => { },
+      (position) => {
+        setLocating(false);
+        onChange({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+      },
+      (err) => {
+        setLocating(false);
+        toast(err?.code === 1
+          ? 'Location is off for E-MOORM. Allow it in your browser, or tap the map.'
+          : "We couldn't find where you are. Tap the map instead.");
+      },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
   return (
     <div className="store-location-map-wrap">
+      <div className="store-map-frame">
+      {/* Floats on the map's bottom-right corner, above Leaflet's credit line, as map apps place it. */}
       {onChange && (
-        <button type="button" className="store-map-current-location" onClick={useCurrentLocation}>
-          <MapPin size={15} /> Use my current location
+        <button
+          type="button"
+          className="store-map-locate"
+          onClick={useCurrentLocation}
+          aria-busy={locating}
+        >
+          {locating ? <Spinner size={16} /> : <NavigationArrow size={17} weight="fill" />}
+          <span>{locating ? 'Finding you…' : 'Use my location'}</span>
         </button>
       )}
-      <div className="store-map-frame">
       <MapContainer
         center={center}
         zoom={selected || points.length ? 13 : 9}

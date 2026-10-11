@@ -33,6 +33,32 @@ body {
   overflow-x: clip;
 }
 
+/* The light wash behind the page headers (the app's HeaderGlow): soft pink
+   on the left to light green on the right (--t-accent-200, #fde4f0,
+   --t-primary-100), shown at --header-glow-strength over white, with a soft
+   bottom edge into the page's white. One strength for every header (lower
+   is lighter). Used as a background: `background: var(--header-glow);`
+   or the .header-glow class. --header-glow-band is the same colours
+   without the bottom edge, to carry the wash up over a gap above a bar. */
+:root {
+  --header-glow-strength: 0.5;
+  --header-glow-band:
+    linear-gradient(
+      to right,
+      rgba(251, 207, 232, var(--header-glow-strength)),
+      rgba(253, 228, 240, var(--header-glow-strength)),
+      rgba(209, 250, 229, var(--header-glow-strength))
+    ),
+    var(--t-neutral-0, #fff);
+  --header-glow:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0) 80%, rgba(255, 255, 255, 0.7)),
+    var(--header-glow-band);
+}
+
+.header-glow {
+  background: var(--header-glow);
+}
+
 /* Typography Elements */
 h1,
 h2,

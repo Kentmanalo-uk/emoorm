@@ -5,6 +5,7 @@ import { resolveImg } from '../../lib/media';
 import { saleInfo } from '../../lib/variantPricing';
 import { SaleWas } from '../ui/SaleTag';
 import ProductImage from '../ProductImage';
+import useProductPeek from '../peek/useProductPeek';
 import './ShopHome.css';
 
 /**
@@ -153,6 +154,7 @@ function Slider({ images, preview }) {
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function ProductTile({ product: p, preview, big = false, row = false, onAddToCart }) {
+  const peekProduct = useProductPeek();
   const images = Array.isArray(p.images) ? p.images : [];
   const rating = Number(p.averageRating || 0);
   const reviews = Number(p.reviewCount || 0);
@@ -177,7 +179,7 @@ function ProductTile({ product: p, preview, big = false, row = false, onAddToCar
   const cls = `shh-tile${big ? ' is-big' : ''}${row ? ' is-row' : ''}`;
   return (
     <div className="shh-tile-wrap">
-      {preview || !p.slug ? <div className={cls}>{body}</div> : <Link to={`/product/${p.slug}`} className={cls}>{body}</Link>}
+      {preview || !p.slug ? <div className={cls}>{body}</div> : <Link to={`/product/${p.slug}`} className={cls} {...peekProduct(p)}>{body}</Link>}
       {onAddToCart && !preview && Number(p.stock) !== 0 && (
         <button type="button" className="shh-tile-cart" onClick={(e) => onAddToCart(e, p)} aria-label={`Add ${p.name} to cart`}>
           <ShoppingCart size={16} />

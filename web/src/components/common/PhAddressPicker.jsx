@@ -5,6 +5,7 @@ import {
   listServiceMunicipalities,
   listBarangaysByMunicipality,
   normalizeName,
+  barangayKey,
 } from '../../lib/phAddress';
 import './PhAddressPicker.css';
 import Select from '../ui/Select';
@@ -45,9 +46,6 @@ const emptyValue = {
 
 const isServiceProvince = (name, code) =>
   normalizeName(name) === normalizeName(SERVICE_PROVINCE.name) && code === SERVICE_PROVINCE.code;
-
-// A barangay's name for comparing, without a typed "Brgy." or "Barangay" in front.
-const barangayKey = (name) => normalizeName(String(name || '').replace(/^(brgy\.?|bgy\.?|barangay)\s+/i, ''));
 
 const PhAddressPicker = ({
   value,

@@ -25,6 +25,8 @@ import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch'
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import TodayRail from '../components/today/TodayRail';
 import { ProductTodayTag } from '../components/today/TodayTag';
+import useProductPeek from '../components/peek/useProductPeek';
+import useStorePeek from '../components/peek/useStorePeek';
 
 const EXPLORE_ROWS = 5;
 const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
@@ -178,6 +180,8 @@ const Home = () => {
 
   const { addItem } = useCartStore();
   const { user } = useAuthStore();
+  // Hold a card: its preview with quick actions.
+  const peekProduct = useProductPeek();
 
   const [featuredProducts, setFeaturedProducts] = useState(() => homeCache.featured || []);
   // One batch fills 5 rows of the grid at the current width; fixed per visit so pages line up.
@@ -439,7 +443,7 @@ const Home = () => {
           {featuredProducts.length > 0 ? (
             <div className="products-grid">
               {featuredProducts.map((product) => (
-                <Link key={product.id} to={`/product/${product.slug}`} className="product-card">
+                <Link key={product.id} to={`/product/${product.slug}`} className="product-card" {...peekProduct(product)}>
                   <div className="product-image">
                     <ProductImage src={product.images?.[0]} alt={product.name} />
                     <button
@@ -671,8 +675,9 @@ function ProductStats({ product }) {
 }
 
 function HomeProductCard({ product, onAddToCart }) {
+  const peekProduct = useProductPeek();
   return (
-    <Link to={`/product/${product.slug}`} className="product-card">
+    <Link to={`/product/${product.slug}`} className="product-card" {...peekProduct(product)}>
       <div className="product-image">
         <ProductImage src={product.images?.[0]} alt={product.name} />
         <button type="button" className="product-cart-fab" onClick={(e) => onAddToCart(e, product)} aria-label="Add to cart">
@@ -689,6 +694,7 @@ function HomeProductCard({ product, onAddToCart }) {
 }
 
 function HomeStoreCard({ store }) {
+  const peekStore = useStorePeek();
   const initials = store.name?.split(' ').slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
   const productImages = (store.products || [])
     .map((product) => {
@@ -698,7 +704,7 @@ function HomeStoreCard({ store }) {
     .filter(Boolean);
 
   return (
-    <article className="home-store-card">
+    <article className="home-store-card" {...peekStore(store)}>
       <Link to={`/store/${store.slug}`} className="home-store-main">
         <div className="home-store-logo">
           {store.logo ? <img src={resolveImg(store.logo) || store.logo} alt={`${store.name} logo`} /> : <span>{initials}</span>}

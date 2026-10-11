@@ -36,6 +36,9 @@ export const normalizeName = (s) =>
     .replace(/[^a-z0-9]+/gi, '')
     .trim();
 
+// A barangay's name for comparing, without a typed "Brgy." or "Barangay" in front.
+export const barangayKey = (name) => normalizeName(String(name || '').replace(/^(brgy\.?|bgy\.?|barangay)\s+/i, ''));
+
 /**
  * The one province the platform serves, and its municipalities.
  *

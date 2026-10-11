@@ -2,8 +2,9 @@
  * Phones (≤768px) only: the app look shared by buyer, seller and admin pages.
  *
  * 1. Page headers are solid white bars with a hairline under them, held at
- *    the top while the page scrolls. Their buttons are plain icons (the bar
- *    is their background), ending with the page menu (⋯, PageMenu).
+ *    the top while the page scrolls; most carry the light header wash. Their
+ *    buttons are plain icons (the bar is their background), ending with the
+ *    page menu (⋯, PageMenu).
  * 2. Pages are white, and their sections run the full screen width instead
  *    of sitting as rounded cards on grey: a section ends with an 8px grey
  *    band, a list row with a hairline.
@@ -58,6 +59,38 @@
     background: var(--pa-bar) !important;
     box-shadow: none !important;
     border-bottom: 1px solid var(--pa-line);
+  }
+
+  /* The top bars of the tabs, the inner pages and the Seller Center carry
+     the light header wash (index.css --header-glow). Not the search page,
+     a shop's or a product's bars, sheets or dialogs. */
+  .layout-back-bar,
+  .scm-head,
+  .scm-backbar,
+  .cart-m-head,
+  .msgr-page-head,
+  .login-gate-head,
+  .sh-head,
+  .sme-head,
+  .profile-mobile-page-header,
+  .layout--flat .notif-page-header,
+  .layout--flat .notif-header {
+    background: var(--header-glow) !important;
+  }
+
+  /* The tab pages leave a small gap above their bar: the wash runs up over
+     it to the screen's top (once the bar is held at the top, this is off
+     screen). */
+  :is(.scm-head, .cart-m-head, .msgr-page-head, .login-gate-head, .sh-head, .sme-head,
+    .profile-mobile-page-header, .layout--flat .notif-page-header, .layout--flat .notif-header)::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 16px;
+    background: var(--header-glow-band);
+    pointer-events: none;
   }
 
   /* Plain icons: the bar is their background. */

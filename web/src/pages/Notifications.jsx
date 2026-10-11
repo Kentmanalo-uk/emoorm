@@ -25,6 +25,7 @@ import { readCache, writeCache } from '../lib/pageCache';
 import { confirmAction } from '../lib/confirm';
 import { groupByDay } from '../lib/dayGroup';
 import '../components/NotificationRows.css';
+import useNotificationPeek from '../components/peek/useNotificationPeek';
 
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
@@ -98,6 +99,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   const isPhone = usePhoneLayout();
   const sellerLook = isSeller && !isPhone;
   const navigate = useNavigate();
+  const peekNotif = useNotificationPeek();
   const { isAuthenticated } = useAuthStore();
   const audience = mode === 'SELLER' ? 'SELLER' : 'BUYER';
   const notificationsPath = audience === 'SELLER' ? '/seller/notifications' : '/notifications';
@@ -234,6 +236,15 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       toast.error('Failed to delete notifications');
     }
   };
+
+  // Hold a notification: the whole of it, bigger, with Open, Mark as read and Delete.
+  const peekRow = (notif, cfg) => peekNotif(notif, {
+    art: <NotificationPicture picture={notif.picture} Icon={cfg.icon} color={cfg.color} bg={cfg.bg} size={64} iconWeight="fill" />,
+    time: formatTime(notif.createdAt),
+    onOpen: notificationHref(notif) ? () => openNotification(notif) : undefined,
+    onMarkRead: () => handleMarkRead(notif),
+    onDelete: () => handleDelete(notif.id),
+  });
 
   const formatTime = (dateStr) => {
     const date = new Date(dateStr);
@@ -443,7 +454,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
                     const cfg = getConfig(notif.type);
                     const href = notificationHref(notif);
                     return (
-                      <li key={notif.id} className={`anl-item${notif.isRead ? '' : ' is-unread'}${href ? ' is-linkable' : ''}`}>
+                      <li key={notif.id} className={`anl-item${notif.isRead ? '' : ' is-unread'}${href ? ' is-linkable' : ''}`} {...peekRow(notif, cfg)}>
                         <button type="button" className="anl-main" onClick={() => openNotification(notif)}>
                           <NotificationPicture
                             picture={notif.picture}
@@ -493,6 +504,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
                 <div
                   key={notif.id}
                   className={`notif-item ${!notif.isRead ? 'unread' : ''}${href ? ' is-linkable' : ''}`}
+                  {...peekRow(notif, cfg)}
                   role={href ? 'link' : undefined}
                   tabIndex={href ? 0 : undefined}
                   onClick={() => openNotification(notif)}

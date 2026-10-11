@@ -1,7 +1,7 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Check, Plus, PencilSimple as Pencil, Trash as Trash2, Star } from '@phosphor-icons/react';
+import { MapPin, Check, Plus, PencilSimple as Pencil, Trash as Trash2, Star, Sparkle, Info, WarningCircle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -11,8 +11,10 @@ import StoreLocationMap from '../components/maps/StoreLocationMap';
 import './Addresses.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import useFreshAccount from '../hooks/useFreshAccount';
-import { BusyLabel } from '../components/ui/Spinner';
+import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import { confirmAction } from '../lib/confirm';
+import { normalizeName } from '../lib/phAddress';
+import { addressFromPin } from '../lib/pinAddress';
 
 const emptyForm = {
   label: '',
@@ -49,6 +51,10 @@ const Addresses = () => {
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  // What the last pin filled in: { tone: 'busy' | 'ok' | 'partial' | 'outside' | 'off', text }.
+  const [pinNote, setPinNote] = useState(null);
+  const pinAsk = useRef(0);
+  const autoStreet = useRef('');
 
   const loadAddresses = async () => {
     const res = await axios.get('/addresses');
@@ -73,6 +79,53 @@ const Addresses = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  // A pin (clicked, dragged or the browser's location) fills the town,
+  // barangay and street from the spot. A street the person typed is kept; one
+  // the pin wrote is replaced by the next pin's. Only the latest pin's answer
+  // counts.
+  const fillFromPin = async (pin) => {
+    const ask = ++pinAsk.current;
+    setPinNote({ tone: 'busy', text: 'Finding the address at the pin…' });
+    let found;
+    try {
+      found = await addressFromPin(pin);
+    } catch {
+      if (ask === pinAsk.current) setPinNote({ tone: 'off', text: 'Pinned. We couldn’t look up the address here — fill it in below.' });
+      return;
+    }
+    if (ask !== pinAsk.current) return;
+    if (found.outside) {
+      setPinNote({ tone: 'outside', text: 'This spot is outside Oriental Mindoro. E‑MOORM delivers in Oriental Mindoro only.' });
+      return;
+    }
+    const db = found.municipalityName
+      ? municipalities.find((m) => normalizeName(m.name) === normalizeName(found.municipalityName))
+      : null;
+    setFormData((prev) => {
+      const next = { ...prev };
+      if (found.municipalityName) {
+        Object.assign(next, { municipalityName: found.municipalityName, municipalityCode: found.municipalityCode, municipalityId: db?.id || '' });
+        // A new town: the old barangay can't stay.
+        if (normalizeName(prev.municipalityName) !== normalizeName(found.municipalityName)) Object.assign(next, { barangay: '', barangayCode: '' });
+      }
+      if (found.barangay) Object.assign(next, { barangay: found.barangay, barangayCode: found.barangayCode });
+      if (found.street && (!prev.street.trim() || prev.street === autoStreet.current)) {
+        next.street = found.street;
+        autoStreet.current = found.street;
+      }
+      return next;
+    });
+    setFormErrors((prev) => ({ ...prev, municipalityId: found.municipalityName ? '' : prev.municipalityId, barangay: found.barangay ? '' : prev.barangay }));
+    const place = [found.barangay, found.municipalityName].filter(Boolean).join(', ');
+    if (found.municipalityName && found.barangay) {
+      setPinNote({ tone: 'ok', text: `Filled in from the pin: ${place}. Check the street and house number.` });
+    } else if (found.municipalityName) {
+      setPinNote({ tone: 'partial', text: `Filled in ${found.municipalityName} from the pin. Pick the barangay below.` });
+    } else {
+      setPinNote({ tone: 'partial', text: 'Pinned. We couldn’t tell the town here — pick it below.' });
+    }
   };
 
   const validate = () => {
@@ -105,6 +158,9 @@ const Addresses = () => {
       } : {}),
     });
     setFormErrors({});
+    setPinNote(null);
+    autoStreet.current = '';
+    pinAsk.current += 1;
     setFormOpen(true);
   };
 
@@ -127,6 +183,9 @@ const Addresses = () => {
       longitude: addr.longitude ?? null,
     });
     setFormErrors({});
+    setPinNote(null);
+    autoStreet.current = '';
+    pinAsk.current += 1;
     setFormOpen(true);
   };
 
@@ -135,6 +194,8 @@ const Addresses = () => {
     setEditingId(null);
     setFormData(emptyForm);
     setFormErrors({});
+    setPinNote(null);
+    pinAsk.current += 1;
   };
 
   const handleSave = async (e) => {
@@ -311,6 +372,25 @@ const Addresses = () => {
             {formErrors.contactNumber && <span className="form-error">{formErrors.contactNumber}</span>}
           </div>
 
+          {/* The pin comes first: pinning fills in the town, barangay and street below it. */}
+          <div className={`form-group address-pin${formErrors.pin ? ' has-error' : ''}`}>
+            <label className="form-label">Pin the house on the map</label>
+            <p className="address-pin-help">Tap where the house is, or use your location. We fill in the address from the pin, and the rider follows it to your door.</p>
+            <StoreLocationMap
+              value={{ latitude: formData.latitude, longitude: formData.longitude }}
+              onChange={({ latitude, longitude }) => {
+                setFormData((prev) => ({ ...prev, latitude, longitude }));
+                if (formErrors.pin) setFormErrors((prev) => ({ ...prev, pin: '' }));
+                fillFromPin({ latitude, longitude });
+              }}
+              height={260}
+              lockToPhilippines
+              hint="Tap the map where the house is."
+            />
+            {formErrors.pin && <span className="form-error">{formErrors.pin}</span>}
+            {pinNote && <PinNote note={pinNote} />}
+          </div>
+
           <PhAddressPicker
             value={formData}
             // The picker hands back the whole value it last saw; the pin is not its to change.
@@ -319,22 +399,6 @@ const Addresses = () => {
             dbLoading={municipalitiesLoading}
             errors={formErrors}
           />
-
-          <div className={`form-group address-pin${formErrors.pin ? ' has-error' : ''}`}>
-            <label className="form-label">Pin the house on the map</label>
-            <p className="address-pin-help">Tap where the house is, or use your location. The rider follows this pin to your door.</p>
-            <StoreLocationMap
-              value={{ latitude: formData.latitude, longitude: formData.longitude }}
-              onChange={({ latitude, longitude }) => {
-                setFormData((prev) => ({ ...prev, latitude, longitude }));
-                if (formErrors.pin) setFormErrors((prev) => ({ ...prev, pin: '' }));
-              }}
-              height={260}
-              lockToPhilippines
-              hint="Tap the map where the house is."
-            />
-            {formErrors.pin && <span className="form-error">{formErrors.pin}</span>}
-          </div>
 
           <div className="address-edit-actions">
             <button type="button" onClick={closeForm} className="btn-modal-cancel">Cancel</button>
@@ -347,5 +411,16 @@ const Addresses = () => {
     </div>
   );
 };
+
+/** What the pin filled in (or why it couldn't), under the map. */
+function PinNote({ note }) {
+  const Icon = { ok: Sparkle, partial: Info, off: Info, outside: WarningCircle }[note.tone];
+  return (
+    <p className={`address-pin-note address-pin-note--${note.tone}`} role="status" aria-live="polite">
+      {Icon ? <Icon size={16} weight="fill" /> : <Spinner size={15} />}
+      <span>{note.text}</span>
+    </p>
+  );
+}
 
 export default Addresses;
