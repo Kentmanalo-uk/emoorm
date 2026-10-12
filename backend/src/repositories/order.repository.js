@@ -6,8 +6,9 @@ const { isOpen } = require('../utils/availability');
 // The order's current MoorMove rider booking (services/moormove.view.js).
 const { CURRENT_RIDER } = require('../services/moormove.view');
 
-// Order lines show what kind of product each was (a package, a paluto…).
-const KIND_FIELDS = { productType: true, details: true, fulfillment: true };
+// Order lines show what kind of product each was (a package, a paluto…), and
+// its variations so a line can show the photo of the option that was chosen.
+const KIND_FIELDS = { productType: true, details: true, fulfillment: true, variations: true };
 
 const ORDER_STATUSES = new Set(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_PICKUP', 'PICKED_UP', 'SHIPPED']);
 

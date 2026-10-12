@@ -71,6 +71,9 @@ const normalizeProductOptions = (data) => {
       rawStocks: variation?.stocks && typeof variation.stocks === 'object' && !Array.isArray(variation.stocks)
         ? variation.stocks
         : null,
+      rawImages: variation?.images && typeof variation.images === 'object' && !Array.isArray(variation.images)
+        ? variation.images
+        : null,
     }))
     .filter((variation) => variation.name && variation.options.length)
     .slice(0, 10);
@@ -97,7 +100,29 @@ const normalizeProductOptions = (data) => {
   if (stocked.length > 1) {
     throw new ApiError('Only one variation can have stock per option', 400);
   }
-  const withStock = variations.map(({ rawStocks, ...variation }) => {
+  // A photo per option (e.g. Color: Red → its photo). One group carries
+  // them; an option without a photo simply has none, and photos for options
+  // that aren't in the list are dropped.
+  const pictured = variations.filter((v) => v.rawImages && Object.keys(v.rawImages).length);
+  if (pictured.length > 1) {
+    throw new ApiError('Only one variation can have photos per option', 400);
+  }
+  const withImages = variations.map(({ rawImages, ...variation }) => {
+    if (!rawImages || !Object.keys(rawImages).length) return variation;
+    const images = {};
+    for (const option of variation.options) {
+      const raw = rawImages[option];
+      if (raw === undefined || raw === null || raw === '') continue;
+      const url = typeof raw === 'string' ? raw.trim() : raw;
+      if (typeof url !== 'string' || !IMAGE_PATTERN.test(url)) {
+        throw new ApiError(`The photo for "${option}" must be an uploaded image`, 400);
+      }
+      images[option] = url;
+    }
+    return Object.keys(images).length ? { ...variation, images } : variation;
+  });
+
+  const withStock = withImages.map(({ rawStocks, ...variation }) => {
     if (!rawStocks || !Object.keys(rawStocks).length) return variation;
     const stocks = {};
     for (const option of variation.options) {

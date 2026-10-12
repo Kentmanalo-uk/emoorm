@@ -97,7 +97,25 @@ const totalOptionStock = (group) => (group
   ? group.options.reduce((sum, o) => sum + Math.max(0, Number(group.stocks?.[o] || 0)), 0)
   : 0);
 
+/* ── Per-option photos ───────────────────────────────────────────────
+   One group may carry `images` ({ option: '/uploads/…' }); options without
+   a photo are absent. A line shows its option's photo, else the product's. */
+
+/** The group whose options have their own photos, or null. */
+const picturedVariation = (variations) => (Array.isArray(variations)
+  ? variations.find((v) => v && v.images && typeof v.images === 'object' && Object.keys(v.images).length) || null
+  : null);
+
+/** The chosen option's photo, or null (then use the product's first image). */
+const imageForSelection = (product, selected) => {
+  const group = picturedVariation(product?.variations);
+  if (!group || !selected || typeof selected !== 'object') return null;
+  const option = selected[group.name];
+  return (option != null && group.images[option]) || null;
+};
+
 module.exports = {
+  picturedVariation, imageForSelection,
   priceTiersOf, unitPriceFor,
   activeSalePrice, pricedVariation, priceForSelection, priceRange, stockedVariation, stockForSelection, totalOptionStock,
 };

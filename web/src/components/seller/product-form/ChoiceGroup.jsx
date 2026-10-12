@@ -1,5 +1,10 @@
-import { X, Plus, Trash } from '@phosphor-icons/react';
+import { useRef, useState } from 'react';
+import toast from 'react-hot-toast';
+import { X, Plus, Trash, Camera, CircleNotch } from '@phosphor-icons/react';
 import { FieldError, MoneyInput } from './parts';
+import { uploadImage } from '../../../lib/upload';
+import { IMAGE_ACCEPT } from '../../../lib/uploadableImage';
+import { resolveImg } from '../../../lib/media';
 
 const anyFilled = (values) => Object.values(values || {}).some((v) => String(v ?? '').trim() !== '');
 
@@ -10,11 +15,16 @@ const anyFilled = (values) => Object.values(values || {}).some((v) => String(v ?
  * @param {Array} types - the usual kinds to tap (CHOICE_TYPES)
  * @param {Boolean} showPrice - a price column (one kind of choice can have it)
  * @param {Boolean} showStock - a "how many" column (one kind of choice can have it)
+ * @param {String|null} photosOn - the other kind of choice that has photos
+ *   (only one can), or null when this one may have them
  */
 export default function ChoiceGroup({
   group, index, count, error, types, onChange, onAddChoices, onRemoveChoice, onRemove,
-  showPrice = false, showStock = false,
+  showPrice = false, showStock = false, photosOn = null,
 }) {
+  const fileRef = useRef(null);
+  const pickingFor = useRef(null);
+  const [uploadingFor, setUploadingFor] = useState(null);
   const type = types.find((t) => t.name.toLowerCase() === group.name.trim().toLowerCase());
   const suggestions = (type?.suggestions || []).filter(
     (s) => !group.choices.some((c) => c.toLowerCase() === s.toLowerCase()),
@@ -34,6 +44,36 @@ export default function ChoiceGroup({
     const stocks = { ...g.stocks, [choice]: v };
     return { stocks, stocked: anyFilled(stocks) };
   });
+
+  // A photo for each choice (optional): the first one added gives this kind
+  // of choice the photos; only one kind can have them.
+  const images = group.images || {};
+  const setPhoto = (choice, url) => onChange((g) => {
+    const next = { ...(g.images || {}) };
+    if (url) next[choice] = url;
+    else delete next[choice];
+    return { images: next };
+  });
+  const pickPhoto = (choice) => {
+    if (uploadingFor) return;
+    pickingFor.current = choice;
+    fileRef.current?.click();
+  };
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (fileRef.current) fileRef.current.value = '';
+    const choice = pickingFor.current;
+    if (!file || !choice) return;
+    setUploadingFor(choice);
+    try {
+      const res = await uploadImage(file);
+      setPhoto(choice, res.url);
+    } catch (err) {
+      toast.error(err.message || 'The photo could not be added. Please try again.');
+    } finally {
+      setUploadingFor(null);
+    }
+  };
 
   return (
     <div className={`pf-group${error ? ' has-error' : ''}`} data-invalid={error ? 'true' : undefined}>
@@ -167,6 +207,52 @@ export default function ChoiceGroup({
           </p>
         </div>
       )}
+
+      {group.choices.length > 0 && (photosOn ? (
+        <p className="pf-hint pf-choice-photos-off">
+          Only one kind of choice can have a photo for each. {photosOn} has them; remove those to add photos here.
+        </p>
+      ) : (
+        <div className="pf-field">
+          <span className="pf-label">
+            Photo of each <span className="pf-optional">(optional)</span>
+          </span>
+          <input ref={fileRef} type="file" accept={IMAGE_ACCEPT} onChange={handlePhoto} hidden />
+          <div className="pf-choice-photos">
+            {group.choices.map((c) => {
+              const src = images[c];
+              const busy = uploadingFor === c;
+              return (
+                <div className="pf-choice-photo" key={c}>
+                  <button
+                    type="button"
+                    className={`pf-choice-photo-tile${src ? ' has-photo' : ''}`}
+                    onClick={() => pickPhoto(c)}
+                    disabled={!!uploadingFor}
+                    aria-label={src ? `Change the photo of ${c}` : `Add a photo of ${c}`}
+                  >
+                    {busy ? <CircleNotch size={20} className="pf-spin" />
+                      : src ? <img src={resolveImg(src) || src} alt="" />
+                        : <Camera size={20} />}
+                  </button>
+                  {src && !busy && (
+                    <button
+                      type="button"
+                      className="pf-choice-photo-remove"
+                      onClick={() => setPhoto(c, null)}
+                      aria-label={`Remove the photo of ${c}`}
+                    >
+                      <X size={12} weight="bold" />
+                    </button>
+                  )}
+                  <span className="pf-choice-photo-name">{c}</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="pf-hint">Buyers see the photo when they pick that {what.toLowerCase()}. Tap a box to add or change one.</p>
+        </div>
+      ))}
 
       <FieldError text={error} />
     </div>

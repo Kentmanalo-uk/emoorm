@@ -53,6 +53,7 @@ const shapePinnedOrders = (orders) =>
     orderNumber: o.orderNumber,
     name: orderDisplayName(o.items),
     status: o.status,
+    fulfillmentMethod: o.fulfillmentMethod,
     total: Number(o.total),
     subtotal: Number(o.subtotal),
     deliveryFee: Number(o.deliveryFee),
@@ -257,6 +258,7 @@ const getConversation = async (conversationId, userId, { before = null } = {}) =
           orderNumber: m.order.orderNumber,
           name: orderDisplayName(m.order.items),
           status: m.order.status,
+          fulfillmentMethod: m.order.fulfillmentMethod,
           total: Number(m.order.total),
           createdAt: m.order.createdAt,
         }
@@ -378,6 +380,7 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
         orderNumber: message.order.orderNumber,
         name: orderDisplayName(message.order.items),
         status: message.order.status,
+        fulfillmentMethod: message.order.fulfillmentMethod,
         total: Number(message.order.total),
         createdAt: message.order.createdAt,
       }

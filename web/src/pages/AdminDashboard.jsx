@@ -91,14 +91,16 @@ const writeDismissed = (userId, signature) => {
 // The order lifecycle in the sequence a buyer moves through it, so the
 // stacked bar reads left to right as progress rather than as an arbitrary
 // list. Tones match the status colours used on the orders screens.
+// Each step counts every status that means it (delivery and pickup alike;
+// READY and PREPARING are older statuses), so the bar adds up to all orders.
 const ORDER_FLOW = [
-  { key: 'PENDING', label: 'Pending', tone: 'amber' },
-  { key: 'CONFIRMED', label: 'Confirmed', tone: 'blue' },
-  { key: 'PREPARING', label: 'Preparing', tone: 'blue' },
-  { key: 'READY', label: 'Ready', tone: 'teal' },
-  { key: 'SHIPPED', label: 'Shipped', tone: 'teal' },
-  { key: 'COMPLETED', label: 'Completed', tone: 'green' },
-  { key: 'CANCELLED', label: 'Cancelled', tone: 'red' },
+  { key: 'PENDING', label: 'New', tone: 'amber', statuses: ['PENDING'] },
+  { key: 'CONFIRMED', label: 'Confirmed', tone: 'blue', statuses: ['CONFIRMED', 'PREPARING'] },
+  { key: 'READY', label: 'Packed or ready for pickup', tone: 'blue', statuses: ['TO_SHIP', 'READY', 'READY_FOR_PICKUP'] },
+  { key: 'SHIPPED', label: 'On the way', tone: 'teal', statuses: ['OUT_FOR_DELIVERY', 'SHIPPED'] },
+  { key: 'HANDED_OVER', label: 'Delivered or picked up', tone: 'teal', statuses: ['DELIVERED', 'PICKED_UP'] },
+  { key: 'COMPLETED', label: 'Completed', tone: 'green', statuses: ['COMPLETED'] },
+  { key: 'CANCELLED', label: 'Cancelled', tone: 'red', statuses: ['CANCELLED'] },
 ];
 
 const ATTENTION_LABELS = {
@@ -380,7 +382,10 @@ export default function AdminDashboard() {
   ).slice().sort((a, b) => Number(b.share || 0) - Number(a.share || 0)
     || String(a.name).localeCompare(String(b.name)));
 
-  const pipeline = ORDER_FLOW.map((st) => ({ ...st, value: Number(analytics?.ordersByStatus?.[st.key] || 0) }));
+  const pipeline = ORDER_FLOW.map((st) => ({
+    ...st,
+    value: st.statuses.reduce((n, key) => n + Number(analytics?.ordersByStatus?.[key] || 0), 0),
+  }));
   const pipelineTotal = pipeline.reduce((n, st) => n + st.value, 0);
 
   // Already in the payload and previously unused — who is on the platform

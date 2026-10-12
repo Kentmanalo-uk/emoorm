@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from '../lib/axios';
 import { priceForSelection, pricedVariation, stockForSelection, priceTiersOf } from '../lib/variantPricing';
-import { firstImage } from '../lib/media';
+import { lineImage } from '../lib/variationImage';
 import { awayUntil, shortDate } from '../lib/shopHours';
 import { isTodayProduct, isOpen as windowOpen } from '../lib/availability';
 import { productKind, isStockless, minOrder } from '../lib/productKinds';
@@ -72,7 +72,8 @@ const savedLine = ({ product, selectedVariations, quantity }) => {
     price: priceForSelection(product, selectedVariations) || Number(product.price),
     basePrice: priceForSelection(product, selectedVariations) || Number(product.price),
     priceTiers: priceTiersOf(product),
-    image: firstImage(product.images),
+    // The chosen option's photo when it has one.
+    image: lineImage(product, selectedVariations),
     images: product.images,
     stock,
     storeId: product.storeId,
@@ -365,7 +366,7 @@ const useCartStore = create(
               patch.price = priceForSelection(product, line.selectedVariations) || Number(line.price);
               patch.basePrice = patch.price;
               patch.priceTiers = priceTiersOf(product);
-              patch.image = firstImage(product.images) || line.image;
+              patch.image = lineImage(product, line.selectedVariations) || line.image;
               patch.stock = stock;
               patch.slug = product.slug || line.slug;
               patch.storeId = product.storeId || product.store?.id || line.storeId;

@@ -7,6 +7,7 @@ import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import { lineImage } from '../lib/variationImage';
 import EmptyState from '../components/ui/EmptyState';
 import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import '../components/admin/AdminLayout.css';
@@ -352,7 +353,7 @@ export default function AdminReturns() {
                   <div className="am-items">
                     {(shown.items || []).map((it) => {
                       const product = it.orderItem?.product;
-                      const img = Array.isArray(product?.images) ? photoUrl(product.images[0]) : null;
+                      const img = Array.isArray(product?.images) ? photoUrl(lineImage(product, it.orderItem?.selectedVariations)) : null;
                       return (
                         <div key={it.id} className="am-item">
                           {img ? <img src={resolveImg(img)} alt="" /> : <span className="am-item-ph" />}

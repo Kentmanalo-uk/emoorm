@@ -38,11 +38,69 @@ const byRider = (o) => o.deliveryPartner === 'MOORMOVE' && o.fulfillmentMethod !
 /** When the order first reached one of these statuses (from its history). */
 const reachedAt = (o, statuses) => (o.statusHistory || []).find((h) => statuses.includes(h.toStatus))?.createdAt || null;
 
+/** When the shop confirmed the payment (the history notes "Payment status: … -> PAID"). */
+const paidAt = (o) => (o.statusHistory || []).find((h) => /-> PAID\b/.test(h.note || ''))?.createdAt || null;
+
+/**
+ * Each status in a word or two, the same on every order screen. READY is an
+ * older status: ready for pickup on a pickup order, packed (to ship) on a
+ * delivery.
+ */
+const STATUS_LABELS = {
+  PENDING: 'Waiting for confirmation',
+  CONFIRMED: 'Confirmed',
+  PREPARING: 'Preparing',
+  TO_SHIP: 'To ship',
+  OUT_FOR_DELIVERY: 'Out for delivery',
+  SHIPPED: 'Shipped',
+  DELIVERED: 'Delivered',
+  READY_FOR_PICKUP: 'Ready for pickup',
+  PICKED_UP: 'Picked up',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+};
+export const statusLabel = (status, fulfillmentMethod) => {
+  if (status !== 'READY') return STATUS_LABELS[status] || status || '—';
+  if (!fulfillmentMethod) return 'Ready';
+  return fulfillmentMethod === 'PICKUP' ? 'Ready for pickup' : 'To ship';
+};
+
+/**
+ * Why an order was cancelled, in a sentence for the buyer or the seller,
+ * from the order's cancelReason / cancelledBy (or the history's note).
+ */
+export const cancelSummary = (o, who = 'buyer') => {
+  const seller = who === 'seller';
+  const shop = o.store?.name || 'The shop';
+  switch (o.cancelReason) {
+    case 'BUYER_CANCELLED':
+      return seller ? 'The buyer cancelled this order.' : 'You cancelled this order.';
+    case 'OUT_OF_STOCK':
+      return seller ? 'You cancelled it: out of stock.' : `${shop} cancelled it: out of stock.`;
+    case 'SELLER_CANCELLED':
+      return seller ? 'You cancelled this order.' : `${shop} cancelled this order.`;
+    case 'NO_SHOW':
+      return seller ? "You cancelled it: the buyer didn't collect it." : `${shop} cancelled it because it wasn't collected.`;
+    case 'REFUSED':
+      return seller ? 'You cancelled it: the buyer refused the delivery.' : `${shop} cancelled it because the delivery was refused.`;
+    case 'EXPIRED':
+      return seller ? "It wasn't confirmed in time, so it was cancelled automatically." : `${shop} didn't confirm it in time, so it was cancelled automatically.`;
+    case 'UNPAID':
+      return seller ? "The buyer didn't pay in time, so it was cancelled automatically." : "It wasn't paid in time, so it was cancelled automatically.";
+    default: {
+      const note = [...(o.statusHistory || [])].reverse().find((h) => h.toStatus === 'CANCELLED')?.note;
+      return note ? `${note}.`.replace('..', '.') : 'This order was cancelled.';
+    }
+  }
+};
+
 const DELIVERY_FLOW = ['PENDING', 'CONFIRMED', 'PREPARING', 'TO_SHIP', 'READY', 'OUT_FOR_DELIVERY', 'SHIPPED', 'DELIVERED', 'COMPLETED'];
 const PICKUP_FLOW = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'READY_FOR_PICKUP', 'PICKED_UP', 'COMPLETED'];
 
 /**
  * The steps of this order, each `done` or not, with the time it happened.
+ * Delivered / picked up is the hand-over; Completed is when the buyer
+ * confirmed it (or it completed on its own).
  * @returns {Array<{ key, label, done, current, at }>}
  */
 export const orderSteps = (o) => {
@@ -55,12 +113,12 @@ export const orderSteps = (o) => {
     { key: 'confirmed', label: 'Confirmed', done: past('CONFIRMED'), at: reachedAt(o, ['CONFIRMED']) },
   ];
   if (isQr(o)) {
-    steps.push({ key: 'paid', label: 'Paid', done: o.paymentStatus === 'PAID' || o.paymentStatus === 'REFUNDED', at: null });
+    steps.push({ key: 'paid', label: 'Paid', done: o.paymentStatus === 'PAID' || o.paymentStatus === 'REFUNDED', at: paidAt(o) });
   }
   if (pickup) {
     steps.push(
       { key: 'ready', label: 'Ready for pickup', done: past('READY'), at: reachedAt(o, ['READY', 'READY_FOR_PICKUP']) },
-      { key: 'received', label: 'Picked up', done: past('PICKED_UP'), at: reachedAt(o, ['PICKED_UP', 'COMPLETED']) },
+      { key: 'handover', label: 'Picked up', done: past('PICKED_UP'), at: o.fulfillmentProofAt || reachedAt(o, ['PICKED_UP', 'COMPLETED']) },
     );
   } else {
     steps.push(
@@ -68,13 +126,18 @@ export const orderSteps = (o) => {
       { key: 'packed', label: 'Packed', done: past('TO_SHIP'), at: reachedAt(o, ['TO_SHIP', 'READY']) },
       {
         key: 'way',
-        label: o.courierName ? 'Shipped' : 'On the way',
+        label: o.courierName ? 'Shipped' : 'Out for delivery',
         done: past('OUT_FOR_DELIVERY'),
         at: o.shippedAt || reachedAt(o, ['OUT_FOR_DELIVERY', 'SHIPPED']),
       },
-      { key: 'received', label: 'Received', done: past('DELIVERED'), at: reachedAt(o, ['DELIVERED', 'COMPLETED']) },
     );
+    // A courier parcel has no hand-over step: it completes when the buyer
+    // confirms it arrived (or on its own).
+    if (!o.courierName) {
+      steps.push({ key: 'handover', label: 'Delivered', done: past('DELIVERED'), at: o.fulfillmentProofAt || reachedAt(o, ['DELIVERED', 'COMPLETED']) });
+    }
   }
+  steps.push({ key: 'completed', label: 'Completed', done: o.status === 'COMPLETED', at: o.completedAt || reachedAt(o, ['COMPLETED']) });
   const current = steps.findIndex((s) => !s.done);
   return steps.map((s, i) => ({ ...s, current: i === current }));
 };
@@ -90,11 +153,14 @@ export const orderStage = (o) => {
   const by = deadline ? `${when(deadline)} (${timeLeft(deadline)})` : '';
 
   if (o.status === 'CANCELLED') {
-    const note = [...(o.statusHistory || [])].reverse().find((h) => h.toStatus === 'CANCELLED')?.note;
-    const refund = o.paymentStatus === 'PAID' ? ' The shop will arrange the refund of your payment.' : o.paymentStatus === 'REFUNDED' ? ' Your payment was refunded.' : '';
-    return { tone: 'red', kind: 'cancelled', title: 'Order cancelled', text: `${note ? `${note}.` : 'This order was cancelled.'}${refund}`.replace('..', '.'), deadline: null };
+    const refund = {
+      PAID: ' The shop will return your payment.',
+      PENDING_VERIFICATION: ' If you already paid, the shop will return it.',
+      REFUNDED: ' Your payment was refunded.',
+    }[o.paymentStatus] || '';
+    return { tone: 'red', kind: 'cancelled', title: 'Order cancelled', text: `${cancelSummary(o, 'buyer')}${refund}`, deadline: null };
   }
-  if (o.status === 'PENDING') {
+  if (o.status === 'PENDING' && !['PENDING_VERIFICATION', 'FAILED'].includes(o.paymentStatus)) {
     return {
       tone: 'amber',
       kind: 'pending',
@@ -103,19 +169,28 @@ export const orderStage = (o) => {
       deadline,
     };
   }
-  if (o.status === 'CONFIRMED' && isQr(o) && ['PENDING', 'FAILED'].includes(o.paymentStatus)) {
+  if (needsPayment(o)) {
+    // The pay-by time is the payment deadline (a pending order's is the shop's).
+    const payBy = o.deadline?.kind === 'pay' ? by : '';
     return {
       tone: 'amber',
       kind: 'pay',
       title: o.paymentStatus === 'FAILED' ? `Send a new payment proof: ${peso(o.total)}` : `Pay ${peso(o.total)} now`,
       text: o.paymentStatus === 'FAILED'
-        ? `${shop} couldn't confirm your last payment. Pay if you haven't, then send the reference and screenshot${deadline ? ` by ${by}` : ''}.`
-        : `${shop} confirmed your order. Pay with the shop's ${payLabel(o.paymentMethod)}, then send the reference and screenshot${deadline ? ` by ${by}` : ''}, or the order is cancelled.`,
+        ? `${shop} couldn't confirm your last payment. Pay if you haven't, then send the reference and screenshot${payBy ? ` by ${payBy}, or the order is cancelled` : ''}.`
+        : `${shop} confirmed your order. Pay with the shop's ${payLabel(o.paymentMethod)}, then send the reference and screenshot${payBy ? ` by ${payBy}` : ''}, or the order is cancelled.`,
       deadline,
     };
   }
   if (o.paymentStatus === 'PENDING_VERIFICATION' && !['COMPLETED', 'CANCELLED'].includes(o.status)) {
-    return { tone: 'blue', kind: 'checking', title: 'Payment sent: the shop is checking it', text: `${shop} prepares your order once it confirms your payment${o.paymentReference ? ` (ref. ${o.paymentReference})` : ''}.`, deadline: null };
+    const overdue = o.deadline?.kind === 'paymentCheck' ? ` If it isn't checked by ${by}, you can cancel the order.` : '';
+    return {
+      tone: 'blue',
+      kind: 'checking',
+      title: 'Payment sent: the shop is checking it',
+      text: `${shop} ${o.status === 'PENDING' ? 'confirms your order and ' : ''}prepares it once your payment is confirmed${o.paymentReference ? ` (ref. ${o.paymentReference})` : ''}.${overdue}`,
+      deadline: o.deadline?.kind === 'paymentCheck' ? deadline : null,
+    };
   }
   // A MoorMove rider brings it: where the rider is, in the buyer's words.
   const rd = byRider(o) ? o.riderDelivery : null;
@@ -129,7 +204,7 @@ export const orderStage = (o) => {
   }
   switch (o.status) {
     case 'CONFIRMED':
-      return { tone: 'blue', kind: 'confirmed', title: `${shop} confirmed your order`, text: `It will be ${pickup ? 'prepared for pickup' : byRider(o) ? 'packed and sent with a MoorMove rider' : 'packed and sent out'} next.`, deadline: null };
+      return { tone: 'blue', kind: 'confirmed', title: `${shop} confirmed your order`, text: `${isQr(o) && o.paymentStatus === 'PAID' ? 'Your payment is confirmed. ' : ''}It will be ${pickup ? 'prepared for pickup' : byRider(o) ? 'packed and sent with a MoorMove rider' : o.courierName ? `packed and shipped with ${o.courierName}` : 'packed and delivered'} next.`, deadline: null };
     case 'PREPARING':
       return { tone: 'blue', kind: 'preparing', title: 'Being prepared', text: `${shop} is getting your order ready.`, deadline: null };
     case 'TO_SHIP':
@@ -163,9 +238,15 @@ export const orderStage = (o) => {
         deadline,
       };
     case 'PICKED_UP':
-      return { tone: 'green', kind: 'pickedup', title: 'Picked up', text: 'Tap "Order received" to finish your order.', deadline: null };
+      return {
+        tone: 'green',
+        kind: 'pickedup',
+        title: 'Picked up',
+        text: `Got everything? Tap "Order received"${deadline ? `. It completes on its own on ${when(deadline)}` : ''}.`,
+        deadline,
+      };
     case 'COMPLETED':
-      return { tone: 'green', kind: 'completed', title: 'Completed', text: `Received${o.completedAt ? ` on ${when(o.completedAt)}` : ''}. Thank you for shopping local!`, deadline: null };
+      return { tone: 'green', kind: 'completed', title: 'Completed', text: `${o.completedAt ? `Completed on ${when(o.completedAt)}. ` : ''}Thank you for shopping local!`, deadline: null };
     default:
       break;
   }
@@ -313,10 +394,12 @@ export const sellerNext = (o) => {
 
   if (o.status === 'CANCELLED') {
     if (o.paymentStatus === 'PAID') {
-      return { tone: 'red', short: 'Refund due', title: "Cancelled: return the buyer's payment", text: `Send back ${peso(o.total)}, then tap Mark refunded below.`, due: '' };
+      return { tone: 'red', short: 'Refund due', title: "Cancelled: return the buyer's payment", text: `${cancelSummary(o, 'seller')} Send back ${peso(o.total)}, then tap Mark refunded below.`, due: '' };
     }
-    const note = [...(o.statusHistory || [])].reverse().find((h) => h.toStatus === 'CANCELLED')?.note;
-    return { tone: 'grey', short: 'Cancelled', title: 'Cancelled', text: note ? `${note}.` : 'This order was cancelled. Its stock is back in your shop.', due: '' };
+    if (o.paymentStatus === 'PENDING_VERIFICATION') {
+      return { tone: 'amber', short: 'Check for a refund', title: 'Cancelled before you checked the payment', text: `${cancelSummary(o, 'seller')} If ${peso(o.total)} reached you, send it back, then tap Mark refunded below.`, due: '' };
+    }
+    return { tone: 'grey', short: 'Cancelled', title: 'Cancelled', text: `${cancelSummary(o, 'seller')} Its stock is back in your shop.`, due: '' };
   }
   if (o.status === 'COMPLETED') {
     return { tone: 'green', short: 'Done', title: 'Completed', text: 'The buyer has the order. Nothing more to do.', due: '' };
@@ -326,7 +409,7 @@ export const sellerNext = (o) => {
       tone: 'amber',
       short: 'Confirm it',
       title: 'New order: confirm it',
-      text: `${deadline ? `Confirm by ${shortWhen(deadline)} (${timeLeft(deadline)}), or it is cancelled automatically and the stock comes back. ` : ''}${isQr(o) ? 'The buyer pays with your QR after you confirm.' : `The buyer pays cash on ${pickup ? 'pickup' : 'delivery'}.`}`,
+      text: `${deadline ? `Confirm by ${shortWhen(deadline)} (${timeLeft(deadline)}), or it is cancelled automatically and the stock comes back. ` : ''}${isQr(o) ? (o.paymentStatus === 'PENDING_VERIFICATION' ? 'The buyer already sent a payment: check it below too.' : 'The buyer pays with your QR after you confirm.') : `The buyer pays cash on ${pickup ? 'pickup' : 'delivery'}.`}`,
       due,
     };
   }
@@ -373,7 +456,8 @@ export const sellerNext = (o) => {
       return { tone: 'blue', short: 'With the rider', title: t.title, text: t.text, due: '' };
     }
   }
-  if (['CONFIRMED', 'PREPARING'].includes(o.status)) {
+  // An older READY delivery going by courier is marked packed (To ship) first: only that can be shipped.
+  if (['CONFIRMED', 'PREPARING'].includes(o.status) || (o.status === 'READY' && !pickup && courier)) {
     return {
       tone: 'amber',
       short: pickup ? 'Prepare it' : 'Pack it',

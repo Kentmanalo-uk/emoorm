@@ -29,7 +29,7 @@ import { pollWhileVisible } from '../../lib/visiblePoll';
 const NOTIF_TYPE = {
   ORDER_RECEIVED: { Icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New order' },
   ORDER_CONFIRMED: { Icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Order confirmed' },
-  ORDER_READY: { Icon: Package, color: 'var(--t-orange-500, #f97316)', bg: 'var(--t-orange-100, #ffedd5)', label: 'Ready for pickup' },
+  ORDER_READY: { Icon: Package, color: 'var(--t-orange-500, #f97316)', bg: 'var(--t-orange-100, #ffedd5)', label: 'Order update' },
   ORDER_COMPLETED: { Icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Order completed' },
   ORDER_CANCELLED: { Icon: XCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Order cancelled' },
   PRODUCT_APPROVED: { Icon: Star, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Product approved' },

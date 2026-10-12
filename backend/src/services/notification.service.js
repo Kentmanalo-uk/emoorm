@@ -249,8 +249,8 @@ const notifyOrderCreated = async (sellerId, orderId, buyerName, note = null) => 
   return createNotification({
     userId: sellerId,
     type: 'ORDER_RECEIVED',
-    title: 'New Order Received',
-    message: `You have received a new order from ${buyerName}${note ? `. ${note}` : ''}`,
+    title: 'New order',
+    message: `You have a new order from ${buyerName}. Confirm it in My orders.${note ? ` ${note}` : ''}`,
     relatedId: orderId,
   });
 };
@@ -264,18 +264,28 @@ const promoLine = (title) => `Free delivery (MoorMove promo: ${title})`;
  * @param {String} orderId - Order ID
  * @param {String} newStatus - New order status
  */
+// The buyer's notice for each step: its title (the status in the words the
+// order screens use) and what happened, with what to do next where there is
+// something to do.
 const ORDER_STATUS_NOTICES = {
-  CONFIRMED: { type: 'ORDER_CONFIRMED', text: 'has been confirmed by the seller' },
-  PREPARING: { type: 'ORDER_CONFIRMED', text: 'is being prepared' },
-  TO_SHIP: { type: 'ORDER_READY', text: 'is packed and ready to ship' },
-  OUT_FOR_DELIVERY: { type: 'ORDER_READY', text: 'is out for delivery' },
-  DELIVERED: { type: 'ORDER_READY', text: 'has been delivered' },
-  READY: { type: 'ORDER_READY', text: 'is ready' },
-  READY_FOR_PICKUP: { type: 'ORDER_READY', text: 'is ready for pickup' },
-  PICKED_UP: { type: 'ORDER_READY', text: 'has been picked up' },
-  SHIPPED: { type: 'ORDER_READY', text: 'has been shipped' },
-  COMPLETED: { type: 'ORDER_COMPLETED', text: 'is complete. How was it? Rate the items you received to help other buyers' },
-  CANCELLED: { type: 'ORDER_CANCELLED', text: 'was cancelled by the seller' },
+  CONFIRMED: { type: 'ORDER_CONFIRMED', title: 'Order confirmed', text: 'was confirmed by the seller' },
+  PREPARING: { type: 'ORDER_CONFIRMED', title: 'Order being prepared', text: 'is being prepared' },
+  TO_SHIP: { type: 'ORDER_READY', title: 'Order packed', text: 'is packed and ready to go' },
+  OUT_FOR_DELIVERY: { type: 'ORDER_READY', title: 'Out for delivery', text: 'is out for delivery' },
+  DELIVERED: { type: 'ORDER_READY', title: 'Order delivered', text: 'was delivered. Got everything? Tap Order received in My Orders' },
+  READY: { type: 'ORDER_READY', title: 'Order ready', text: 'is ready' },
+  READY_FOR_PICKUP: { type: 'ORDER_READY', title: 'Ready for pickup', text: "is ready for pickup at the shop's pickup spot" },
+  PICKED_UP: { type: 'ORDER_READY', title: 'Order picked up', text: 'was picked up. Got everything? Tap Order received in My Orders' },
+  SHIPPED: { type: 'ORDER_READY', title: 'Order shipped', text: 'was shipped' },
+  COMPLETED: { type: 'ORDER_COMPLETED', title: 'Order completed', text: 'is complete. How was it? Rate the items you received to help other buyers' },
+  CANCELLED: { type: 'ORDER_CANCELLED', title: 'Order cancelled', text: 'was cancelled by the seller' },
+};
+
+// Why the seller cancelled, as the buyer reads it.
+const SELLER_CANCEL_TEXT = {
+  OUT_OF_STOCK: 'was cancelled by the seller: out of stock',
+  NO_SHOW: "was cancelled by the seller because it wasn't picked up",
+  REFUSED: 'was cancelled by the seller because the delivery was refused',
 };
 
 /**
@@ -283,11 +293,18 @@ const ORDER_STATUS_NOTICES = {
  * @param {String} buyerId - Buyer user ID
  * @param {String} orderId - Order ID
  * @param {String} newStatus - New order status
- * @param {Object} [options] - { orderNumber, refundNote }
+ * @param {Object} [options] - { orderNumber, refundNote, cancelReason }
+ *   refundNote: 'PAID' (the seller returns the payment) or
+ *   'PENDING_VERIFICATION' (a payment the seller had not checked yet); true = 'PAID'
  */
-const notifyOrderUpdated = async (buyerId, orderId, newStatus, { orderNumber, refundNote } = {}) => {
-  const notice = ORDER_STATUS_NOTICES[newStatus] || { type: 'ORDER_CONFIRMED', text: 'was updated' };
-  const refund = refundNote ? ' The seller will arrange a refund of your payment.' : '';
+const notifyOrderUpdated = async (buyerId, orderId, newStatus, { orderNumber, refundNote, cancelReason } = {}) => {
+  const base = ORDER_STATUS_NOTICES[newStatus] || { type: 'ORDER_CONFIRMED', title: 'Order updated', text: 'was updated' };
+  const notice = newStatus === 'CANCELLED' && SELLER_CANCEL_TEXT[cancelReason]
+    ? { ...base, text: SELLER_CANCEL_TEXT[cancelReason] }
+    : base;
+  const refund = refundNote === 'PENDING_VERIFICATION'
+    ? ' If you already paid, the seller will return your payment.'
+    : refundNote ? ' The seller will return your payment.' : '';
   // Confirmed: a MoorMove free-delivery promo is said again.
   let promo = '';
   if (newStatus === 'CONFIRMED' && orderId) {
@@ -297,7 +314,7 @@ const notifyOrderUpdated = async (buyerId, orderId, newStatus, { orderNumber, re
   return createNotification({
     userId: buyerId,
     type: notice.type,
-    title: 'Order Status Updated',
+    title: notice.title,
     message: `Your order${orderNumber ? ` ${orderNumber}` : ''} ${notice.text}.${refund}${promo}`,
     relatedId: orderId,
   });
@@ -391,8 +408,8 @@ const notifyOrderReceived = async (sellerId, orderId, buyerName) => {
   return createNotification({
     userId: sellerId,
     type: 'ORDER_RECEIVED',
-    title: 'New Order Received',
-    message: `You have received a new order from ${buyerName}`,
+    title: 'New order',
+    message: `You have a new order from ${buyerName}.`,
     relatedId: orderId,
   });
 };

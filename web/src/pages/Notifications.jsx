@@ -32,7 +32,7 @@ import { categoryLabel, minusOne } from '../lib/notificationCategories';
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
   ORDER_CONFIRMED: { icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Order Confirmed' },
-  ORDER_READY: { icon: Package, color: 'var(--t-orange-500, #f97316)', bg: 'var(--t-orange-100, #ffedd5)', label: 'Ready for Pickup' },
+  ORDER_READY: { icon: Package, color: 'var(--t-orange-500, #f97316)', bg: 'var(--t-orange-100, #ffedd5)', label: 'Order Update' },
   ORDER_COMPLETED: { icon: CheckCircle, color: 'var(--t-primary-600, #059669)', bg: 'var(--t-primary-100, #d1fae5)', label: 'Order Completed' },
   ORDER_CANCELLED: { icon: XCircle, color: 'var(--t-danger-500, #ef4444)', bg: 'var(--t-danger-100, #fee2e2)', label: 'Order Cancelled' },
   PRODUCT_APPROVED: { icon: Star, color: 'var(--t-warning-500, #f59e0b)', bg: 'var(--t-warning-100, #fef3c7)', label: 'Product Approved' },

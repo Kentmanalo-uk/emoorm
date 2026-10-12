@@ -362,3 +362,33 @@ body.pos-open {
   color: #b91c1c;
   font-size: 11.5px;
 }
+
+/* Options with their own photo: a small square before the name. */
+.pos-option-label {
+  display: contents;
+}
+
+.pos-option.has-thumb {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 5px 8px 5px 5px;
+  text-align: left;
+}
+
+.pos-option.has-thumb .pos-option-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pos-option-thumb {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  object-fit: cover;
+  background: var(--t-neutral-100, #f3f4f6);
+}

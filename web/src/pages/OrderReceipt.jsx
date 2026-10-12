@@ -8,6 +8,7 @@ import { ReceiptSkeleton } from '../components/ui/PageSkeletons';
 import AppLogo from '../components/AppLogo';
 import { trackingLink } from '../lib/tracking';
 import { orderPromo } from '../lib/moormove';
+import { statusLabel } from '../lib/orderProgress';
 import {
   etaLabel, hasPaluto, lineKind, lineNote,
 } from '../lib/orderLines';
@@ -25,27 +26,12 @@ const paymentLabel = (m) => ({
 
 const fulfillmentLabel = (m) => (m === 'PICKUP' ? 'Store Pickup' : 'Delivery');
 
-const statusLabel = (status, fulfillmentMethod) => ({
-  PENDING: 'Pending',
-  CONFIRMED: 'Confirmed',
-  PREPARING: 'Preparing',
-  READY: fulfillmentMethod === 'PICKUP' ? 'Ready for Pickup' : 'Ready',
-  READY_FOR_PICKUP: 'Ready for Pickup',
-  TO_SHIP: 'To Ship',
-  OUT_FOR_DELIVERY: 'Out for Delivery',
-  SHIPPED: 'Shipped',
-  DELIVERED: 'Delivered',
-  PICKED_UP: 'Picked Up',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
-})[status] || status || '—';
-
 const paymentStatusLabel = (order) => ({
   PENDING: order.paymentMethod === 'COD' ? 'Unpaid' : 'Awaiting payment',
   PENDING_VERIFICATION: 'Awaiting verification',
   PAID: 'Paid',
   FAILED: 'Proof rejected — resubmit',
-  EXPIRED: 'Expired',
+  EXPIRED: 'Not paid (expired)',
   REFUNDED: 'Refunded',
   PARTIALLY_REFUNDED: 'Partially refunded',
 })[order.paymentStatus] || order.paymentStatus || '—';
@@ -134,7 +120,7 @@ export default function OrderReceipt() {
           <div><span className="meta-label">Status</span><span>{statusLabel(order.status, order.fulfillmentMethod)}</span></div>
           {/* Paluto is cooked after the order: when it is ready. */}
           {hasPaluto(items) && order.etaFrom && (
-            <div><span className="meta-label">{order.fulfillmentMethod === 'PICKUP' ? 'Ready for Pickup' : 'Expected'}</span><span>{etaLabel(order)}</span></div>
+            <div><span className="meta-label">{order.fulfillmentMethod === 'PICKUP' ? 'Ready for pickup' : 'Expected'}</span><span>{etaLabel(order)}</span></div>
           )}
           {order.trackingNumber && (
             <>

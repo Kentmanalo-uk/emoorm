@@ -144,8 +144,11 @@ export const mergeChoices = (existing, raw) => {
 };
 
 export const emptyGroup = () => ({
-  key: nextKey(), name: '', choices: [], draft: '', priced: false, prices: {}, stocked: false, stocks: {},
+  key: nextKey(), name: '', choices: [], draft: '', priced: false, prices: {}, stocked: false, stocks: {}, images: {},
 });
+
+/** Whether a choice group has a photo for any of its choices. */
+export const hasChoicePhotos = (g) => !!g && g.choices.some((c) => g.images?.[c]);
 
 export const emptySize = (name = '', price = '') => ({ key: nextKey(), name, price });
 
@@ -190,6 +193,10 @@ const groupOf = (v) => ({
   prices: asStrings(v?.prices),
   stocked: !!(v?.stocks && Object.keys(v.stocks).length),
   stocks: asStrings(v?.stocks),
+  // A photo per choice (one group has them): { choice: '/uploads/…' }.
+  images: v?.images && typeof v.images === 'object'
+    ? Object.fromEntries(Object.entries(v.images).filter(([, url]) => typeof url === 'string' && url))
+    : {},
 });
 
 /** The form's fields for a product being edited, or a blank form. */
@@ -394,6 +401,7 @@ export const buildPayload = (state, { kind, hasOptions, editing, product }) => {
   const sizes = kind === 'COOK_TO_ORDER' && state.sizesOn ? sizeRows(state) : [];
   const pGroup = offers.choicePrices ? groups.find((g) => g.priced) || null : null;
   const sGroup = offers.choiceStock ? groups.find((g) => g.stocked) || null : null;
+  const iGroup = groups.find(hasChoicePhotos) || null;
   const prices = sizes.length
     ? sizes.map((r) => Number(r.price))
     : pGroup ? pGroup.choices.map((c) => Number(pGroup.prices[c])) : null;
@@ -410,6 +418,7 @@ export const buildPayload = (state, { kind, hasOptions, editing, product }) => {
       options: g.choices,
       ...(g === pGroup ? { prices: Object.fromEntries(g.choices.map((c) => [c, Number(g.prices[c])])) } : {}),
       ...(g === sGroup ? { stocks: Object.fromEntries(g.choices.map((c) => [c, parseInt(g.stocks[c] || '0', 10) || 0])) } : {}),
+      ...(g === iGroup ? { images: Object.fromEntries(g.choices.filter((c) => g.images[c]).map((c) => [c, g.images[c]])) } : {}),
     })),
   ];
 

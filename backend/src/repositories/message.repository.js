@@ -25,6 +25,7 @@ const messageInclude = {
       id: true,
       orderNumber: true,
       status: true,
+      fulfillmentMethod: true,
       total: true,
       createdAt: true,
       items: { select: { productName: true } },

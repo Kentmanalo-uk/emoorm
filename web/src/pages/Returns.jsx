@@ -5,6 +5,7 @@ import { CaretRight } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import ProductImage from '../components/ProductImage';
+import { lineImage } from '../lib/variationImage';
 import './Orders.css';
 import './Returns.css';
 import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
@@ -114,7 +115,7 @@ export default function Returns() {
                     {lines.slice(0, 3).map((line) => (
                       <div key={line.id} className="order-item">
                         <ProductImage
-                          src={line.orderItem?.product?.images?.[0]}
+                          src={lineImage(line.orderItem?.product, line.orderItem?.selectedVariations)}
                           alt={line.orderItem?.productName}
                           className="order-item-image"
                         />

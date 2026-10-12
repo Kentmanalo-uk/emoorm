@@ -8,6 +8,7 @@ import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { resolveImg } from '../lib/media';
+import { lineImage } from '../lib/variationImage';
 import EmptyArt from '../components/ui/EmptyArt';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import ReportModal from '../components/ReportModal';
@@ -17,7 +18,7 @@ import ProofPhotoSheet, { OrderProof } from '../components/orders/ProofPhotoShee
 import ShipOrderSheet from '../components/orders/ShipOrderSheet';
 import CourierTracking from '../components/orders/CourierTracking';
 import {
-  SELLER_TABS, sellerTabFrom, sellerTabCount, sellerTabOf, sellerNext,
+  SELLER_TABS, sellerTabFrom, sellerTabCount, sellerTabOf, sellerNext, statusLabel, payLabel,
 } from '../lib/orderProgress';
 import '../components/orders/OrderStatusPanel.css';
 import Spinner from '../components/ui/Spinner';
@@ -68,27 +69,33 @@ const qtyLabel = (item) => (lineKind(item) === 'LIVESTOCK' ? countLabel(item) : 
 // How many orders a tab holds (open steps only; not All, Completed, Cancelled).
 const tabCount = (t, byStatus) => (t.key === 'all' || t.final ? 0 : sellerTabCount(t, byStatus));
 
-const STATUS_MAP = {
-  PENDING: { label: 'New Order', cls: 'status-pending', icon: <Clock size={13} /> },
-  CONFIRMED: { label: 'Confirmed', cls: 'status-confirmed', icon: <CheckCircle size={13} /> },
-  PREPARING: { label: 'Preparing', cls: 'status-preparing', icon: <Package size={13} /> },
-  TO_SHIP: { label: 'To Ship', cls: 'status-preparing', icon: <Package size={13} /> },
-  OUT_FOR_DELIVERY: { label: 'Out for Delivery', cls: 'status-ready', icon: <Truck size={13} /> },
-  SHIPPED: { label: 'Shipped', cls: 'status-ready', icon: <Truck size={13} /> },
-  DELIVERED: { label: 'Delivered', cls: 'status-completed', icon: <CheckCircle size={13} /> },
-  READY: { label: 'Ready', cls: 'status-ready', icon: <Truck size={13} /> },
-  READY_FOR_PICKUP: { label: 'Ready for Pickup', cls: 'status-ready', icon: <StoreIcon size={13} /> },
-  PICKED_UP: { label: 'Picked Up', cls: 'status-completed', icon: <CheckCircle size={13} /> },
-  COMPLETED: { label: 'Completed', cls: 'status-completed', icon: <CheckCircle size={13} /> },
-  CANCELLED: { label: 'Cancelled', cls: 'status-cancelled', icon: <XCircle size={13} /> },
+// The status words are the tabs' (lib/orderProgress statusLabel); a new order is "New".
+const STATUS_LOOK = {
+  PENDING: { cls: 'status-pending', icon: <Clock size={13} /> },
+  CONFIRMED: { cls: 'status-confirmed', icon: <CheckCircle size={13} /> },
+  PREPARING: { cls: 'status-preparing', icon: <Package size={13} /> },
+  TO_SHIP: { cls: 'status-preparing', icon: <Package size={13} /> },
+  OUT_FOR_DELIVERY: { cls: 'status-ready', icon: <Truck size={13} /> },
+  SHIPPED: { cls: 'status-ready', icon: <Truck size={13} /> },
+  DELIVERED: { cls: 'status-completed', icon: <CheckCircle size={13} /> },
+  READY: { cls: 'status-ready', icon: <Truck size={13} /> },
+  READY_FOR_PICKUP: { cls: 'status-ready', icon: <StoreIcon size={13} /> },
+  PICKED_UP: { cls: 'status-completed', icon: <CheckCircle size={13} /> },
+  COMPLETED: { cls: 'status-completed', icon: <CheckCircle size={13} /> },
+  CANCELLED: { cls: 'status-cancelled', icon: <XCircle size={13} /> },
 };
+const statusOf = (status, fulfillmentMethod) => ({
+  cls: '',
+  ...STATUS_LOOK[status],
+  label: status === 'PENDING' ? 'New' : statusLabel(status, fulfillmentMethod),
+});
 
-// Fulfillment-aware next-status resolution. Mirrors the backend map in
-// order.service.js updateOrderStatus exactly: the first entry is the primary
-// "next" action, CANCELLED is offered wherever the server allows it.
-// The one next step for each status. Delivery orders the buyer sent with a
+// The one next step for each status, within the backend's transitions
+// (order.service.js updateOrderStatus). Delivery orders the buyer sent with a
 // courier are shipped with it; the rest the seller delivers. Delivered and
-// picked-up orders wait for the buyer (or complete on their own).
+// picked-up orders wait for the buyer (or complete on their own). READY is an
+// older status: it is handed over like the newer ones, never completed
+// straight away (a courier parcel is marked To ship first, then shipped).
 const NEXT_STEP = {
   DELIVERY: {
     PENDING: 'CONFIRMED',
@@ -96,14 +103,14 @@ const NEXT_STEP = {
     PREPARING: 'TO_SHIP',
     TO_SHIP: (o) => (o.courierId ? 'SHIPPED' : 'OUT_FOR_DELIVERY'),
     OUT_FOR_DELIVERY: 'DELIVERED',
-    READY: 'COMPLETED',
+    READY: (o) => (o.courierId ? 'TO_SHIP' : 'OUT_FOR_DELIVERY'),
   },
   PICKUP: {
     PENDING: 'CONFIRMED',
     CONFIRMED: 'READY_FOR_PICKUP',
     PREPARING: 'READY_FOR_PICKUP',
     READY_FOR_PICKUP: 'PICKED_UP',
-    READY: 'COMPLETED',
+    READY: 'PICKED_UP',
   },
 };
 const CANCELLABLE = ['PENDING', 'CONFIRMED', 'PREPARING', 'TO_SHIP', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP', 'READY'];
@@ -201,7 +208,6 @@ const ACTION_LABELS = {
   OUT_FOR_DELIVERY: { label: 'Out for delivery', cls: 'action-ready' },
   SHIPPED: { label: 'Ship with courier', cls: 'action-ready' },
   DELIVERED: { label: 'Mark delivered', cls: 'action-complete' },
-  READY: { label: 'Mark ready', cls: 'action-ready' },
   READY_FOR_PICKUP: { label: 'Ready for pickup', cls: 'action-ready' },
   PICKED_UP: { label: 'Mark picked up', cls: 'action-complete' },
   COMPLETED: { label: 'Mark completed', cls: 'action-complete' },
@@ -267,7 +273,7 @@ export default function SellerOrders() {
   const [movedId, setMovedId] = useState(null);
   const moveToTab = (orderId, status, note) => {
     const tab = sellerTabOf(status);
-    const label = SELLER_TABS.find((t) => t.key === tab)?.label || STATUS_MAP[status]?.label || status;
+    const label = SELLER_TABS.find((t) => t.key === tab)?.label || statusOf(status).label;
     toast.success(note ? `${note}. Moved to ${label}.` : `Moved to ${label}`);
     setMovedId(orderId);
     if (tab !== activeTab) selectTab(tab);
@@ -664,7 +670,7 @@ export default function SellerOrders() {
                 </thead>
                 <tbody>
                   {displayed.map(order => {
-                    const s = STATUS_MAP[order.status] || { label: order.status, cls: '' };
+                    const s = statusOf(order.status, order.fulfillmentMethod);
                     const next = nextStep(order);
                     const riderNext = riderNextAction(order, ridersOn);
                     const riderLine = isRiderOrder(order) && order.riderDelivery ? riderStatus(order.riderDelivery, 'seller', order) : null;
@@ -692,7 +698,7 @@ export default function SellerOrders() {
                           <div className="so-products">
                             <div className="so-product-thumbs">
                               {items.slice(0, 3).map((it) => {
-                                const src = resolveImg(it.product?.images?.[0]);
+                                const src = resolveImg(lineImage(it.product, it.selectedVariations));
                                 return (
                                   <div key={it.id} className="so-product-thumb" title={it.product?.name}>
                                     {src ? (
@@ -836,8 +842,8 @@ export default function SellerOrders() {
                 {/* Status */}
                 <div className="detail-row">
                   <span>Status</span>
-                  <span className={`seller-badge seller-badge--solid ${STATUS_MAP[selectedOrder.status]?.cls}`}>
-                    {STATUS_MAP[selectedOrder.status]?.label || selectedOrder.status}
+                  <span className={`seller-badge seller-badge--solid ${statusOf(selectedOrder.status, selectedOrder.fulfillmentMethod).cls}`}>
+                    {statusOf(selectedOrder.status, selectedOrder.fulfillmentMethod).label}
                   </span>
                 </div>
 
@@ -927,7 +933,7 @@ export default function SellerOrders() {
                 <div className="detail-row">
                   <span>Payment</span>
                   <strong>
-                    {selectedOrder.paymentMethod || 'COD'}
+                    {payLabel(selectedOrder.paymentMethod || 'COD', selectedOrder.fulfillmentMethod === 'PICKUP')}
                     {selectedOrder.paymentReference && ` — Ref: ${selectedOrder.paymentReference}`}
                   </strong>
                 </div>
@@ -985,7 +991,7 @@ export default function SellerOrders() {
 
                 {canMarkRefunded(selectedOrder) && (
                   <div className="so-payment-review">
-                    <p>This prepaid order was cancelled after payment. Once you have returned the money to the buyer, record it here.</p>
+                    <p>This prepaid order was cancelled. If the buyer&apos;s payment reached you, return it, then record the refund here.</p>
                     <div className="so-payment-actions">
                       <button
                         type="button"

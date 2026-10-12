@@ -208,12 +208,12 @@ const TOPICS = [
       en: [
         'When you have your order, tap **Order received** on it in **Profile › My Orders** and then **Yes, received**. For cash orders this also confirms you paid.',
         'The order becomes **Completed** and you can write a review.',
-        'Delivered or shipped orders also complete on their own 7 days later, unless a return is open. The shop\'s hand-over photo is in the order\'s details.',
+        'Delivered, picked-up or shipped orders also complete on their own 7 days later, unless a return is open. The shop\'s hand-over photo is in the order\'s details.',
       ].join('\n'),
       tl: [
         'Kapag natanggap mo na ang order, i-tap ang **Order received** dito sa **Profile › My Orders** at pagkatapos ang **Yes, received**. Sa cash na order, kinukumpirma rin nito na nakapagbayad ka na.',
         'Magiging **Completed** ang order at puwede ka nang mag-review.',
-        'Kusang nagiging completed ang mga na-deliver o naipadalang order pagkalipas ng 7 araw, maliban kung may bukas na return. Nasa details ng order ang litrato ng shop bilang patunay ng pag-abot.',
+        'Kusang nagiging completed ang mga na-deliver, na-pick up o naipadalang order pagkalipas ng 7 araw, maliban kung may bukas na return. Nasa details ng order ang litrato ng shop bilang patunay ng pag-abot.',
       ].join('\n'),
     },
   },

@@ -13,9 +13,26 @@ const PAYMENT_STATE = {
   PENDING_VERIFICATION: 'Being checked by the shop',
   PAID: 'Paid',
   FAILED: 'Proof rejected: send a new one',
-  EXPIRED: 'Expired',
+  EXPIRED: 'Not paid',
   REFUNDED: 'Refunded',
   PARTIALLY_REFUNDED: 'Partly refunded',
+};
+
+/** The payment line under the method: what the buyer pays, when, or what became of it. */
+const paymentState = (order, pickup) => {
+  const cancelled = order.status === 'CANCELLED';
+  if (order.paymentStatus === 'PENDING') {
+    if (cancelled) return 'Not paid';
+    if (order.paymentMethod === 'COD') {
+      return order.deliveryPartner === 'MOORMOVE' && !pickup
+        ? `Pay ${peso(order.total)} to the rider${orderPromo(order) ? ', for the items only' : ''}`
+        : `Pay when you ${pickup ? 'pick it up' : 'receive it'}`;
+    }
+    if (order.status === 'PENDING') return 'Pay after the shop confirms';
+  }
+  if (cancelled && order.paymentStatus === 'PAID') return 'Paid · the shop will return it';
+  if (cancelled && order.paymentStatus === 'FAILED') return 'Not paid';
+  return PAYMENT_STATE[order.paymentStatus] || order.paymentStatus;
 };
 
 /**
@@ -29,7 +46,6 @@ export default function OrderStatusPanel({ order }) {
   const stage = orderStage(order);
   const steps = order.status === 'CANCELLED' ? [] : orderSteps(order);
   const place = handOver(order);
-  const codPending = order.paymentMethod === 'COD' && order.paymentStatus === 'PENDING';
   const PlaceIcon = place.pickup ? Storefront : MapPin;
   const PayIcon = order.paymentMethod === 'COD' ? Money : QrCode;
   // A MoorMove free-delivery promo: no delivery fee, the rider collects the items' price only.
@@ -84,9 +100,7 @@ export default function OrderStatusPanel({ order }) {
           <div className="osd-box-text">
             <p>{payLabel(order.paymentMethod, place.pickup)} · {peso(order.total)}</p>
             <p className="osd-sub">
-              {codPending
-                ? (order.deliveryPartner === 'MOORMOVE' && !place.pickup ? `Pay ${peso(order.total)} to the rider${promo ? ', for the items only' : ''}` : `Pay when you ${place.pickup ? 'pick it up' : 'receive it'}`)
-                : PAYMENT_STATE[order.paymentStatus] || order.paymentStatus}
+              {paymentState(order, place.pickup)}
               {order.paymentReference ? ` · ref. ${order.paymentReference}` : ''}
             </p>
           </div>

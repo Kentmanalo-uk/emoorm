@@ -577,9 +577,11 @@ const sendOrderAcceptedEmail = async ({ buyer, store, order, items, payHours = 4
   const summary = orderSummary(order, items);
   const next = payNow
     ? `Pay ${money(order.total)} with the shop's ${PAY_LABEL[order.paymentMethod] || 'QR'} in To Pay, then send your reference number and screenshot within ${payHours} hours. The seller prepares your order once the payment is checked.`
-    : order.fulfillmentMethod === 'PICKUP'
-      ? "The seller is preparing your order. We'll let you know when it's ready to pick up."
-      : `The seller is preparing your order. We'll let you know when it's on its way${order.courierName ? ` with ${order.courierName}` : ''}.`;
+    : order.paymentMethod !== 'COD' && order.paymentStatus === 'PENDING_VERIFICATION'
+      ? "The seller is checking your payment and prepares your order once it's confirmed."
+      : order.fulfillmentMethod === 'PICKUP'
+        ? "The seller is preparing your order. We'll let you know when it's ready for pickup."
+        : `The seller is preparing your order. We'll let you know when it's on its way${order.courierName ? ` with ${order.courierName}` : ''}.`;
   const text = [
     `Hi ${buyer.fullName || 'there'},`,
     '',

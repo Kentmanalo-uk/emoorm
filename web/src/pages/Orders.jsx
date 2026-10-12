@@ -14,7 +14,8 @@ import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import axios from '../lib/axios';
-import { resolveImg, parseImages } from '../lib/media';
+import { resolveImg } from '../lib/media';
+import { lineImage } from '../lib/variationImage';
 import { uploadImage } from '../lib/upload';
 import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import ProductImage from '../components/ProductImage';
@@ -242,7 +243,7 @@ const Orders = () => {
             productId: product.id,
             name: product.name,
             price: product.price,
-            image: parseImages(product.images)[0] || '/placeholder-product.png',
+            image: lineImage(product, line.selectedVariations) || '/placeholder-product.png',
             storeId: product.storeId || product.store?.id,
             storeName: product.store?.name,
             storeLogo: product.store?.logoUrl || product.store?.logo || null,
@@ -487,7 +488,7 @@ const Orders = () => {
                   <div className="order-items">
                     {order.items?.slice(0, 3).map((item, index) => (
                       <div key={index} className="order-item">
-                        <ProductImage src={item.product?.images?.[0]} alt={item.productName} className="order-item-image" />
+                        <ProductImage src={lineImage(item.product, item.selectedVariations)} alt={item.productName} className="order-item-image" />
                         <div className="order-item-details">
                           <p className="order-item-name">{item.productName}</p>
                           {lineNote(item, { choice: true }) && <p className="order-item-note">{lineNote(item, { choice: true })}</p>}
@@ -833,7 +834,7 @@ const Orders = () => {
                 <div className="order-details-items">
                   {selectedOrder.items?.map((item, index) => (
                     <div key={index} className="order-details-item">
-                      <ProductImage src={item.product?.images?.[0]} alt={item.productName} />
+                      <ProductImage src={lineImage(item.product, item.selectedVariations)} alt={item.productName} />
                       <div className="order-details-item-info">
                         <p className="item-name">{item.productName}</p>
                         {lineNote(item, { choice: true }) && <p className="order-item-note">{lineNote(item, { choice: true })}</p>}
@@ -921,7 +922,7 @@ const Orders = () => {
                   onClick={() => handleCancelOrder(selectedOrder.id)}
                   className="btn-modal-cancel"
                 >
-                  Cancel Order
+                  Cancel order
                 </button>
               )}
               <button

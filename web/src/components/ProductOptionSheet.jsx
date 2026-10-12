@@ -5,6 +5,8 @@ import { BusyLabel } from './ui/Spinner';
 import {
   pricedVariation, priceRange, stockedVariation, stockForSelection, unitPriceFor,
 } from '../lib/variantPricing';
+import { optionImage, picturedVariation } from '../lib/variationImage';
+import { resolveImg } from '../lib/media';
 import './ProductOptionSheet.css';
 import useFocusTrap from '../hooks/useFocusTrap';
 
@@ -92,6 +94,8 @@ export default function ProductOptionSheet({
   const unpicked = variations.filter((v) => !selected[v.name]).map((v) => v.name);
   // Per-option pricing: the chosen option's price, or the range until chosen.
   const pricedGroup = pricedVariation(product.variations);
+  // A photo per option: shown on its button.
+  const photoGroup = picturedVariation(product.variations);
   const range = priceRange(product);
   const chosen = !!(pricedGroup && selected[pricedGroup.name]);
   // Options, a sale, and a bulk price for this many.
@@ -167,6 +171,7 @@ export default function ProductOptionSheet({
                   {options.map((opt) => {
                     const on = selected[v.name] === opt;
                     const soldOut = optionSoldOut(v.name, opt);
+                    const thumb = photoGroup?.name === v.name ? optionImage(photoGroup, opt) : null;
                     return (
                       <button
                         key={opt}
@@ -174,7 +179,7 @@ export default function ProductOptionSheet({
                         role="radio"
                         aria-checked={on}
                         disabled={soldOut && !on}
-                        className={`pos-option${on ? ' is-selected' : ''}${soldOut ? ' is-sold-out' : ''}`}
+                        className={`pos-option${on ? ' is-selected' : ''}${soldOut ? ' is-sold-out' : ''}${thumb ? ' has-thumb' : ''}`}
                         onClick={() => {
                           onSelect(v.name, on ? undefined : opt);
                           if (missing === v.name) setMissing('');
@@ -185,11 +190,14 @@ export default function ProductOptionSheet({
                           }
                         }}
                       >
-                        <span>{opt}</span>
-                        {soldOut && <small className="pos-option-soldout">Sold out</small>}
-                        {pricedGroup?.name === v.name && Number(pricedGroup.prices?.[opt]) > 0 && (
-                          <small className="pos-option-price">{peso(pricedGroup.prices[opt])}</small>
-                        )}
+                        {thumb && <img className="pos-option-thumb" src={resolveImg(thumb) || thumb} alt="" loading="lazy" />}
+                        <span className="pos-option-label">
+                          <span>{opt}</span>
+                          {soldOut && <small className="pos-option-soldout">Sold out</small>}
+                          {pricedGroup?.name === v.name && Number(pricedGroup.prices?.[opt]) > 0 && (
+                            <small className="pos-option-price">{peso(pricedGroup.prices[opt])}</small>
+                          )}
+                        </span>
                       </button>
                     );
                   })}

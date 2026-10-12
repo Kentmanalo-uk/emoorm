@@ -742,6 +742,7 @@ const adminOrderView = (order) => ({
     packageContents: it.packageContents || null,
     product: it.product ? {
       id: it.product.id, name: it.product.name, slug: it.product.slug, images: it.product.images, productType: it.product.productType,
+      variations: it.product.variations || null,
     } : null,
   })),
   area: areaOnly(order.buyerBarangay, order.fulfillmentMethod === 'PICKUP' ? null : order.store?.municipality?.name),
@@ -993,7 +994,10 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelR
     } else {
       await notificationService.notifyOrderUpdated(order.buyerId, orderId, newStatus, {
         orderNumber: order.orderNumber,
-        refundNote: newStatus === 'CANCELLED' && order.paymentStatus === 'PAID',
+        refundNote: newStatus === 'CANCELLED' && ['PAID', 'PENDING_VERIFICATION'].includes(order.paymentStatus)
+          ? order.paymentStatus
+          : false,
+        cancelReason: updated?.cancelReason || cancelReason,
       });
     }
   } catch (err) {
@@ -1069,8 +1073,8 @@ const cancelOrder = async (orderId, userId) => {
       await notificationService.createNotification({
         userId: order.store.owner?.id || order.store.ownerId,
         type: 'ORDER_CANCELLED',
-        title: 'Order Cancelled',
-        message: `Order ${order.orderNumber} was cancelled by the buyer.${refund}`,
+        title: 'Order cancelled by the buyer',
+        message: `Order ${order.orderNumber} was cancelled by the buyer. Its stock is back in your shop.${refund}`,
         relatedId: orderId,
         // Without this the seller's copy defaulted to the BUYER feed and
         // linked to /profile/orders — a page the seller does not use.
@@ -1154,8 +1158,8 @@ const verifyPayment = async (orderId, actor, paymentStatus, note = '') => {
       await notificationService.createNotification({
         userId: order.buyerId,
         type: 'ORDER_CONFIRMED',
-        title: 'Payment Verified',
-        message: `Your payment for order ${order.orderNumber} was verified. The seller will now prepare your order.`,
+        title: 'Payment confirmed',
+        message: `The seller confirmed your payment for order ${order.orderNumber}${order.status === 'PENDING' ? '' : ' and will now prepare your order'}.`,
         relatedId: orderId,
       });
     } else if (paymentStatus === 'FAILED') {
@@ -1163,7 +1167,7 @@ const verifyPayment = async (orderId, actor, paymentStatus, note = '') => {
         userId: order.buyerId,
         type: 'SYSTEM_ANNOUNCEMENT',
         audience: 'BUYER',
-        title: 'Payment Proof Rejected',
+        title: 'Payment proof rejected',
         message: `The payment proof for order ${order.orderNumber} could not be verified.${reason} Please open the order and submit a new reference and screenshot. Your order is kept while you do.`,
         relatedId: orderId,
         target: { kind: 'buyer-order', id: orderId },
@@ -1173,7 +1177,7 @@ const verifyPayment = async (orderId, actor, paymentStatus, note = '') => {
         userId: order.buyerId,
         type: 'SYSTEM_ANNOUNCEMENT',
         audience: 'BUYER',
-        title: 'Refund Issued',
+        title: 'Payment refunded',
         message: `The seller has recorded a refund of your payment for cancelled order ${order.orderNumber}.${reason}`,
         relatedId: orderId,
         target: { kind: 'buyer-order', id: orderId },
@@ -1230,7 +1234,7 @@ const submitPaymentProof = async (orderId, userId, { paymentReference, paymentPr
       await notificationService.createNotification({
         userId: order.store.ownerId,
         type: 'ORDER_RECEIVED',
-        title: first ? 'Buyer paid: check the payment' : 'Payment Proof Submitted',
+        title: first ? 'Buyer paid: check the payment' : 'New payment proof: check it',
         message: first
           ? `${order.buyer?.fullName || 'The buyer'} paid for order ${order.orderNumber}. Check the reference and screenshot against your records, then confirm the payment.`
           : `${order.buyer?.fullName || 'The buyer'} submitted a new payment proof for order ${order.orderNumber}. Please verify it.`,
@@ -1385,7 +1389,7 @@ const markReceived = async (orderId, userId) => {
         userId: order.store.ownerId,
         type: 'ORDER_COMPLETED',
         audience: 'SELLER',
-        title: 'Order Received',
+        title: 'Order completed',
         message: `${order.buyer?.fullName || 'The buyer'} confirmed receipt of order ${order.orderNumber}. The order is now completed.`,
         relatedId: orderId,
       });
@@ -1436,13 +1440,21 @@ const expirePendingOrders = async (ageHours = PENDING_EXPIRY_HOURS) => {
       continue;
     }
 
-    const message = `Order ${order.orderNumber} was cancelled because the seller did not confirm it within ${ageHours} hours.`;
+    const title = 'Order not confirmed in time';
     await Promise.allSettled([
       notificationService.createNotification({
-        userId: order.buyerId, type: 'ORDER_CANCELLED', title: 'Order Expired', message, relatedId: order.id,
+        userId: order.buyerId,
+        type: 'ORDER_CANCELLED',
+        title,
+        message: `Order ${order.orderNumber} was cancelled because the shop didn't confirm it within ${ageHours} hours.`,
+        relatedId: order.id,
       }),
       order.store?.ownerId && notificationService.createNotification({
-        userId: order.store.ownerId, type: 'ORDER_CANCELLED', title: 'Order Expired', message, relatedId: order.id,
+        userId: order.store.ownerId,
+        type: 'ORDER_CANCELLED',
+        title,
+        message: `Order ${order.orderNumber} was cancelled because it wasn't confirmed within ${ageHours} hours. Its stock is back in your shop.`,
+        relatedId: order.id,
         // The seller's copy belongs in the seller feed, not the buyer bell.
         audience: 'SELLER',
       }),

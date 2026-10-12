@@ -25,7 +25,7 @@ import {
   CHOICE_TYPES, FOOD_CHOICE_TYPES,
   toFormState, kindOptions, switchKind, kindOffers, withDrafts, pricedBy, priceSpan, buildPayload,
   checkAll, hasErrors, cardsWithErrors, draftProduct, policyModeFor, guessKind,
-  emptyGroup, mergeChoices, peso,
+  emptyGroup, mergeChoices, peso, hasChoicePhotos,
 } from './product-form/formState';
 import './PhoneSaveBar.css';
 import './ProductForm.css';
@@ -252,11 +252,13 @@ export default function ProductForm({
       updateGroup(key, (g) => {
         const prices = { ...g.prices };
         const stocks = { ...g.stocks };
+        const images = { ...g.images };
         delete prices[choice];
         delete stocks[choice];
+        delete images[choice];
         const filled = (o) => Object.values(o).some((v) => String(v ?? '').trim() !== '');
         return {
-          choices: g.choices.filter((c) => c !== choice), prices, stocks, priced: filled(prices), stocked: filled(stocks),
+          choices: g.choices.filter((c) => c !== choice), prices, stocks, images, priced: filled(prices), stocked: filled(stocks),
         };
       });
     },
@@ -599,6 +601,7 @@ export default function ProductForm({
                   types={types}
                   showPrice={offers.choicePrices && (g.priced || !form.variations.some((x) => x.key !== g.key && x.priced))}
                   showStock={offers.choiceStock && (g.stocked || !form.variations.some((x) => x.key !== g.key && x.stocked))}
+                  photosOn={form.variations.find((x) => x.key !== g.key && hasChoicePhotos(x))?.name.trim() || null}
                   onChange={(change) => updateGroup(g.key, change)}
                   onAddChoices={(raw) => groupActions.addChoices(g.key, raw)}
                   onRemoveChoice={(c) => groupActions.removeChoice(g.key, c)}

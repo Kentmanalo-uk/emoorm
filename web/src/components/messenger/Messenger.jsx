@@ -24,6 +24,7 @@ import { readCache, writeCache } from '../../lib/pageCache';
 import MoormyEntry from '../moormy/MoormyEntry';
 import MoormyThread from '../moormy/MoormyThread';
 import { pollWhileVisible } from '../../lib/visiblePoll';
+import { statusLabel } from '../../lib/orderProgress';
 import { IMAGE_ACCEPT, uploadableImage } from '../../lib/uploadableImage';
 import DealCard from '../offers/DealCard';
 import useConversationPeek from '../peek/useConversationPeek';
@@ -91,14 +92,25 @@ const firstImageOf = (product) => {
   return product?.image || null;
 };
 
-const ORDER_STATUS_STYLES = {
-  PENDING: { label: 'Pending', tone: 'amber' },
-  CONFIRMED: { label: 'Confirmed', tone: 'blue' },
-  PREPARING: { label: 'Preparing', tone: 'blue' },
-  READY: { label: 'Ready for pickup', tone: 'teal' },
-  COMPLETED: { label: 'Completed', tone: 'green' },
-  CANCELLED: { label: 'Cancelled', tone: 'red' },
+// An order's status in a chat (words from lib/orderProgress statusLabel).
+const ORDER_TONES = {
+  PENDING: 'amber',
+  CONFIRMED: 'blue',
+  PREPARING: 'blue',
+  TO_SHIP: 'blue',
+  READY: 'teal',
+  READY_FOR_PICKUP: 'teal',
+  OUT_FOR_DELIVERY: 'teal',
+  SHIPPED: 'teal',
+  DELIVERED: 'green',
+  PICKED_UP: 'green',
+  COMPLETED: 'green',
+  CANCELLED: 'red',
 };
+const orderStatusStyle = (order) => ({
+  label: statusLabel(order.status, order.fulfillmentMethod),
+  tone: ORDER_TONES[order.status] || 'gray',
+});
 
 // `peek`: the row's long-press preview props (peek/useConversationPeek).
 function ConversationListItem({
@@ -151,7 +163,7 @@ function ConversationListItem({
 }
 
 function PinnedOrderCard({ order, onAttach }) {
-  const style = ORDER_STATUS_STYLES[order.status] || { label: order.status, tone: 'gray' };
+  const style = orderStatusStyle(order);
   const firstItem = order.items?.[0];
   const thumb = firstItem?.image;
   const extra = Math.max(0, (order.itemCount || 0) - (firstItem?.quantity || 0));
@@ -220,7 +232,7 @@ function MessageBubble({ message, isSelf, seen, onOpenImage }) {
                 Order #{message.order.orderNumber}
               </div>
               <div className="msgr-bubble-order-meta">
-                {ORDER_STATUS_STYLES[message.order.status]?.label || message.order.status}
+                {orderStatusStyle(message.order).label}
                 {' · '}
                 {formatMoney(message.order.total)}
               </div>

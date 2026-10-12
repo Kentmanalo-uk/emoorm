@@ -37,6 +37,7 @@ import {
 } from '../lib/variantPricing';
 import { awayUntil, shortDate } from '../lib/shopHours';
 import { saleInfo } from '../lib/variantPricing';
+import { imageForSelection, optionImage, picturedVariation } from '../lib/variationImage';
 import { recordView } from '../lib/recentlyViewed';
 import {
   estimate, orderEta, readyDay, rangeLabel, dayLabel,
@@ -389,7 +390,8 @@ const ProductDetails = () => {
         name: product.name,
         price: priceForSelection(product, selectedVariations),
         priceTiers: product.priceTiers,
-        image: parseImages(product.images)[0] || '/placeholder-product.png',
+        // The chosen option's photo when it has one.
+        image: imageForSelection(product, selectedVariations) || parseImages(product.images)[0] || '/placeholder-product.png',
         storeId: product.storeId,
         storeName: product.store?.name,
         storeLogo: product.store?.logoUrl || product.store?.logo || null,
@@ -460,13 +462,20 @@ const ProductDetails = () => {
     setQuantity(n);
   };
 
-  const nextImage = () => {
+  // The gallery's length: the product's photos, and the chosen option's
+  // photo when it isn't one of them.
+  const galleryLength = () => {
     const list = parseImages(product?.images);
-    if (list.length) setSelectedImage((p) => (p + 1) % list.length);
+    const photo = product ? imageForSelection(product, selectedVariations) : null;
+    return list.length + (photo && !list.includes(photo) ? 1 : 0);
+  };
+  const nextImage = () => {
+    const n = galleryLength();
+    if (n) setSelectedImage((p) => (p + 1) % n);
   };
   const prevImage = () => {
-    const list = parseImages(product?.images);
-    if (list.length) setSelectedImage((p) => (p - 1 + list.length) % list.length);
+    const n = galleryLength();
+    if (n) setSelectedImage((p) => (p - 1 + n) % n);
   };
 
   // The device's share menu where there is one, otherwise the app list.
@@ -739,7 +748,29 @@ const ProductDetails = () => {
   }
 
   const images = parseImages(product.images);
-  const gallery = images.length ? images : ['/placeholder-product.png'];
+  // A photo per option: the chosen option's photo joins the gallery when it
+  // isn't one of the product's own photos, and picking it shows it.
+  const photoGroup = picturedVariation(product.variations);
+  const optionPhoto = imageForSelection(product, selectedVariations);
+  const gallery = optionPhoto && !images.includes(optionPhoto)
+    ? [...images, optionPhoto]
+    : images.length ? images : ['/placeholder-product.png'];
+  const pickOption = (name, value) => {
+    const next = { ...selectedVariations, [name]: value };
+    setSelectedVariations(next);
+    if (variationError === name) setVariationError('');
+    if (photoGroup?.name !== name) return;
+    // Its photo, or back to the first one for an option without a photo.
+    const photo = imageForSelection(product, next);
+    const own = photo ? images.indexOf(photo) : -1;
+    const at = !photo ? 0 : own >= 0 ? own : images.length;
+    setSelectedImage(at);
+    setActiveSlide(at);
+    requestAnimationFrame(() => {
+      const track = document.querySelector('.pdp-m-track');
+      if (track) track.scrollTo({ left: at * track.clientWidth, behavior: 'smooth' });
+    });
+  };
   // A paluto is cooked when ordered: never out of stock.
   const isOutOfStock = !isStockless(product) && product.stock === 0;
   const kind = productKind(product);
@@ -1252,30 +1283,33 @@ const ProductDetails = () => {
                         <fieldset className={`pdp-variation-field ${variationError === variation.name ? 'is-error' : ''}`} key={variation.name}>
                           <span>{variation.name}</span>
                           <div className="pdp-variation-options" role="radiogroup" aria-label={variation.name}>
-                            {(variation.options || []).map((option) => (
-                              <button
-                                type="button"
-                                role="radio"
-                                aria-checked={selectedVariations[variation.name] === option}
-                                disabled={stockedVariation(product.variations)?.name === variation.name
-                                  && Number(stockedVariation(product.variations).stocks?.[option] || 0) <= 0}
-                                className={selectedVariations[variation.name] === option ? 'is-selected' : ''}
-                                onClick={() => {
-                                  setSelectedVariations((current) => ({ ...current, [variation.name]: option }));
-                                  if (variationError === variation.name) setVariationError('');
-                                }}
-                                key={option}
-                              >
-                                {option}
-                                {stockedVariation(product.variations)?.name === variation.name
-                                  && Number(stockedVariation(product.variations).stocks?.[option] || 0) <= 0 && (
-                                  <small className="pdp-option-soldout">Sold out</small>
-                                )}
-                                {pricedGroup?.name === variation.name && Number(pricedGroup.prices?.[option]) > 0 && (
-                                  <small className="pdp-option-price">{peso(pricedGroup.prices[option])}</small>
-                                )}
-                              </button>
-                            ))}
+                            {(variation.options || []).map((option) => {
+                              const thumb = photoGroup?.name === variation.name ? optionImage(photoGroup, option) : null;
+                              return (
+                                <button
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={selectedVariations[variation.name] === option}
+                                  disabled={stockedVariation(product.variations)?.name === variation.name
+                                    && Number(stockedVariation(product.variations).stocks?.[option] || 0) <= 0}
+                                  className={`${selectedVariations[variation.name] === option ? 'is-selected' : ''}${thumb ? ' has-thumb' : ''}`}
+                                  onClick={() => pickOption(variation.name, option)}
+                                  key={option}
+                                >
+                                  {thumb && <img className="pdp-option-thumb" src={resolveImg(thumb) || thumb} alt="" loading="lazy" />}
+                                  <span className="pdp-option-label">
+                                    {option}
+                                    {stockedVariation(product.variations)?.name === variation.name
+                                      && Number(stockedVariation(product.variations).stocks?.[option] || 0) <= 0 && (
+                                      <small className="pdp-option-soldout">Sold out</small>
+                                    )}
+                                    {pricedGroup?.name === variation.name && Number(pricedGroup.prices?.[option]) > 0 && (
+                                      <small className="pdp-option-price">{peso(pricedGroup.prices[option])}</small>
+                                    )}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
                           {variationError === variation.name && <small>Please select {variation.name}.</small>}
                         </fieldset>
@@ -1675,12 +1709,9 @@ const ProductDetails = () => {
         <ProductOptionSheet
           mode={sheetMode}
           product={product}
-          image={gallery[0]}
+          image={optionPhoto || gallery[0]}
           selected={selectedVariations}
-          onSelect={(name, value) => {
-            setSelectedVariations((current) => ({ ...current, [name]: value }));
-            if (variationError === name) setVariationError('');
-          }}
+          onSelect={pickOption}
           quantity={quantity}
           onQuantity={setQuantity}
           onConfirm={confirmSheet}

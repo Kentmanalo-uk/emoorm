@@ -13,6 +13,7 @@ import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
+import { lineImage } from '../lib/variationImage';
 import useAuthStore from '../store/authStore';
 import Skeleton from '../components/ui/Skeleton';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -31,8 +32,8 @@ const STATUS_META = {
   CONFIRMED: { label: 'Confirmed', tint: 'sc-tint-blue', Icon: CheckCircle },
   PREPARING: { label: 'Preparing', tint: 'sc-tint-blue', Icon: Package },
   TO_SHIP: { label: 'To ship', tint: 'sc-tint-blue', Icon: Truck },
-  READY: { label: 'To ship', tint: 'sc-tint-blue', Icon: Truck },
-  OUT_FOR_DELIVERY: { label: 'On the way', tint: 'sc-tint-blue', Icon: Truck },
+  READY: { label: 'Ready', tint: 'sc-tint-blue', Icon: Truck },
+  OUT_FOR_DELIVERY: { label: 'Out for delivery', tint: 'sc-tint-blue', Icon: Truck },
   SHIPPED: { label: 'Shipped', tint: 'sc-tint-blue', Icon: Truck },
   READY_FOR_PICKUP: { label: 'Ready for pickup', tint: 'sc-tint-blue', Icon: Package },
   DELIVERED: { label: 'Delivered', tint: 'sc-tint-green', Icon: CheckCircle },
@@ -1033,7 +1034,7 @@ function PhoneOrderRow({ order, onClick }) {
   const { label, tint } = STATUS_META[order.status] || STATUS_META.PENDING;
   const items = order.items || [];
   const first = items[0];
-  const photo = first?.product?.images?.[0];
+  const photo = first ? lineImage(first.product, first.selectedVariations) : null;
   const name = first?.productName || first?.product?.name || 'Order';
   const more = items.length - 1;
   const qty = items.reduce((sum, it) => sum + (it.quantity || 0), 0);

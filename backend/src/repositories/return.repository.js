@@ -25,7 +25,7 @@ const REQUEST_INCLUDE = {
     include: {
       orderItem: {
         include: {
-          product: { select: { id: true, name: true, slug: true, images: true } },
+          product: { select: { id: true, name: true, slug: true, images: true, variations: true } },
         },
       },
     },

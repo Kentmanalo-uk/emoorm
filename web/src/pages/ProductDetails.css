@@ -3513,4 +3513,31 @@ a.pdp-pkg-item:hover {
   gap: 6px 16px;
 }
 
+/* Options with their own photo: a small square before the name. */
+.pdp-option-label {
+  display: contents;
+}
 
+.pdp-variation-options button.has-thumb {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  text-align: left;
+}
+
+.pdp-variation-options button.has-thumb .pdp-option-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.pdp-option-thumb {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  object-fit: cover;
+  background: var(--t-neutral-100, #f3f4f6);
+}
