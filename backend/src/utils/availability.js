@@ -52,6 +52,33 @@ const manilaDay = (value) => new Date(time(value) + MANILA_OFFSET_MS).toISOStrin
 /** Whole days from one Manila day ("YYYY-MM-DD") to another. */
 const daysBetween = (fromDay, toDay) => Math.round((Date.parse(`${toDay}T00:00:00Z`) - Date.parse(`${fromDay}T00:00:00Z`)) / DAY_MS);
 
+/** Whether `value` is a real "YYYY-MM-DD" date (not Feb 30). */
+const isDay = (value) => typeof value === 'string'
+  && /^\d{4}-\d{2}-\d{2}$/.test(value)
+  && !Number.isNaN(Date.parse(`${value}T00:00:00Z`))
+  && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+/** The Manila day `n` days after `day` ("YYYY-MM-DD"). */
+const addDays = (day, n) => new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
+
+/** The moment (ms) of `minutes` past midnight on a Manila day. */
+const manilaAt = (day, minutes) => Date.parse(`${day}T00:00:00Z`) - MANILA_OFFSET_MS + minutes * 60 * 1000;
+
+/** Minutes past Manila midnight of a moment. */
+const manilaMinutes = (value) => Math.floor(((time(value) + MANILA_OFFSET_MS) % DAY_MS) / 60000);
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** A Manila day in words: "Today", "Tomorrow" or "Wed, Oct 15". */
+const dayTitle = (day, now = Date.now()) => {
+  const ahead = daysBetween(manilaDay(now), day);
+  if (ahead === 0) return 'Today';
+  if (ahead === 1) return 'Tomorrow';
+  const d = new Date(`${day}T00:00:00Z`);
+  return `${WEEKDAYS[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+};
+
 /** The fields of a window a page may show. */
 const publicWindow = (w) => (w ? {
   id: w.id,
@@ -69,5 +96,18 @@ const publicWindow = (w) => (w ? {
 } : null);
 
 module.exports = {
-  MODES, DAY_MS, liveNow, isOpen, currentWindow, allowsMethod, manilaDay, daysBetween, publicWindow,
+  MODES,
+  DAY_MS,
+  liveNow,
+  isOpen,
+  currentWindow,
+  allowsMethod,
+  manilaDay,
+  daysBetween,
+  isDay,
+  addDays,
+  manilaAt,
+  manilaMinutes,
+  dayTitle,
+  publicWindow,
 };

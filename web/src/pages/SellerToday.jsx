@@ -1,29 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  Plus, Minus, Clock, Truck, ArrowClockwise, Stop, CalendarPlus, Info, ForkKnife,
+  Plus, Minus, Clock, Truck, ArrowClockwise, Stop, CalendarPlus, Info, ForkKnife, PencilSimple,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import { resolveImg, firstImage } from '../lib/media';
 import { confirmAction } from '../lib/confirm';
 import {
-  MODES, isOpen, modeLabel, spanLabel, momentLabel, fulfillmentLabel, windowState,
+  isOpen, momentLabel, clockLabel, dayName,
 } from '../lib/availability';
+import {
+  addDays, dayTitle, toggleDay, manilaDay,
+} from '../lib/manilaDays';
+import { AHEAD_DAYS, kindOf, getLabel, plural } from '../lib/todayPost';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import PhoneSheet from '../components/seller/PhoneSheet';
+import DayCalendar from '../components/seller/DayCalendar';
+import TodayPostFlow from '../components/seller/TodayPostFlow';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
 import TimeLeft from '../components/ui/TimeLeft';
 import './SellerDashboard.css';
 import './SellerToday.css';
-import Select from '../components/ui/Select';
-
-const MODE_HINTS = {
-  READY_NOW: 'Already cooked or harvested. Buyers get it right away.',
-  MADE_TO_ORDER: 'You make it after the order. Say how long it takes.',
-  PRE_ORDER: 'Orders now, ready later: like tomorrow morning.',
-};
 
 const pad = (n) => String(n).padStart(2, '0');
 // A time as a datetime-local value (the phone's own time).
@@ -32,15 +31,7 @@ const toInput = (value) => {
   const d = new Date(value);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
-const iso = (input) => (input ? new Date(input).toISOString() : undefined);
-// Now plus `hours`, on the next half hour.
-const later = (hours) => {
-  const t = Date.now() + hours * 3600e3;
-  return new Date(Math.ceil(t / 1800e3) * 1800e3);
-};
-const manilaDay = (ms) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
-// Today (0), tomorrow (1)… as a Manila date.
-const dayFromNow = (days) => manilaDay(Date.now() + days * 86400e3);
+const ms = (v) => new Date(v).getTime();
 
 /** The product photo, or a plain tile when there is none or it fails to load. */
 function Thumb({ src }) {
@@ -49,25 +40,36 @@ function Thumb({ src }) {
   return <img className="stw-thumb" src={src} alt="" loading="lazy" onError={() => setFailed(true)} />;
 }
 
-const blankDraft = () => ({
-  productId: '',
-  mode: 'READY_NOW',
-  quantity: '',
-  startNow: true,
-  ordersOpenAt: toInput(later(1)),
-  ordersCloseAt: toInput(later(3)),
-  prepMinutes: '',
-  readyFrom: '',
-  readyUntil: '',
-  fulfillment: 'BOTH',
-  note: '',
-});
+/**
+ * A post's state in plain words: "Taking orders", "Sold out",
+ * "Starts tomorrow 10:00 AM", "Ended" or "Cancelled", with its tone.
+ */
+const postStatus = (w, ended = false, now = Date.now()) => {
+  if (ended || !['LIVE', 'SCHEDULED'].includes(w.status)) {
+    return { tone: 'ended', text: w.status === 'CANCELLED' ? 'Cancelled' : 'Ended' };
+  }
+  if (w.status === 'SCHEDULED' && ms(w.ordersOpenAt) > now) {
+    const day = dayName(w.ordersOpenAt, now);
+    return { tone: 'soon', text: `Starts ${['Today', 'Tomorrow'].includes(day) ? day.toLowerCase() : day} ${clockLabel(w.ordersOpenAt)}` };
+  }
+  if (!isOpen(w, now)) return { tone: 'ended', text: 'Ended' };
+  if ((w.remaining ?? 1) <= 0) return { tone: 'ended', text: 'Sold out' };
+  return { tone: 'live', text: 'Taking orders' };
+};
+
+/** "Orders 10:00 AM – 2:00 PM" (with "(next day)" when it closes the day after). */
+const ordersSpan = (w) => {
+  const next = manilaDay(ms(w.ordersCloseAt)) !== manilaDay(ms(w.ordersOpenAt)) ? ' (next day)' : '';
+  return `Orders ${clockLabel(w.ordersOpenAt)} – ${clockLabel(w.ordersCloseAt)}${next}`;
+};
 
 /**
- * Today's menu: the shop's Available Today items. Post one with how many and
- * until when; while it is on, add or take away, stretch the time or end it;
- * afterwards, post it again for another day. Orders come in through My orders
- * like any other, with a time to confirm them.
+ * Today's menu: the shop's Available Today items. "Post an item" walks the
+ * seller through it one question at a time (TodayPostFlow): what, is it
+ * ready now, how many, when, then a check. Each post can be edited through
+ * the same steps; while it is on, add or take away, give it more time or end
+ * it; afterwards, post it again on other days. Orders come in through My
+ * orders like any other, with a time to confirm them.
  */
 export default function SellerToday() {
   const [scope, setScope] = useState('active');
@@ -75,8 +77,7 @@ export default function SellerToday() {
   const [products, setProducts] = useState(null);
   const [storeMode, setStoreMode] = useState('BOTH');
   const [busyId, setBusyId] = useState(null);
-  const [draft, setDraft] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [flow, setFlow] = useState({ open: false, key: 0, window: null });
   const [extend, setExtend] = useState(null);
   const [repeat, setRepeat] = useState(null);
 
@@ -105,7 +106,7 @@ export default function SellerToday() {
     if (scope !== 'active' || !data?.windows?.length) return undefined;
     const now = Date.now();
     const next = data.windows
-      .map((w) => new Date(w.status === 'LIVE' ? w.ordersCloseAt : w.ordersOpenAt).getTime())
+      .map((w) => ms(w.status === 'LIVE' ? w.ordersCloseAt : w.ordersOpenAt))
       .filter((t) => t > now)
       .sort((a, b) => a - b)[0];
     if (!next || next - now > 6 * 3600e3) return undefined;
@@ -119,7 +120,7 @@ export default function SellerToday() {
     setBusyId(w.id);
     try {
       const res = await run();
-      if (res?.data) replace(res.data);
+      if (res?.data && res.data.id) replace(res.data);
       if (done) toast.success(done);
       return res?.data;
     } catch (err) {
@@ -157,64 +158,44 @@ export default function SellerToday() {
     if (res) setExtend(null);
   };
 
+  /** A toast for what was posted: one window, or several days. */
+  const posted = (list) => {
+    if (list.length > 1) {
+      const first = dayTitle(manilaDay(ms(list[0].ordersOpenAt)));
+      toast.success(`Posted for ${list.length} days, starting ${['Today', 'Tomorrow'].includes(first) ? first.toLowerCase() : first}`);
+    } else if (list[0]) {
+      toast.success(isOpen(list[0]) ? 'Posted: buyers can order now' : `Posted for ${momentLabel(list[0].ordersOpenAt)}`);
+    }
+  };
+
   const openRepeat = (w) => {
-    const today = dayFromNow(0);
-    const tomorrow = dayFromNow(1);
-    setRepeat({ window: w, date: tomorrow, quantity: String(w.quantity), today, tomorrow });
+    const today = manilaDay();
+    setRepeat({ window: w, dates: [addDays(today, 1)], quantity: String(w.quantity), today });
   };
 
   const saveRepeat = async () => {
     const w = repeat.window;
-    const body = { date: repeat.date };
+    if (!repeat.dates.length) return toast.error('Pick at least one day');
+    const body = { dates: repeat.dates };
     if (repeat.quantity !== '') body.quantity = Number(repeat.quantity);
     const res = await act(w, () => axios.post(`/today/${w.id}/repeat`, body));
     if (res) {
-      toast.success(isOpen(res) ? 'Posted: buyers can order now' : `Posted for ${momentLabel(res.ordersOpenAt)}`);
+      posted(res.windows || []);
       setRepeat(null);
       setScope('active');
     }
+    return undefined;
   };
 
-  /* ── posting ─────────────────────────────────────────────────── */
-  const openDraft = (productId = '') => {
-    const d = blankDraft();
-    d.productId = productId || (products?.length === 1 ? products[0].id : '');
-    d.fulfillment = storeMode === 'BOTH' ? 'BOTH' : storeMode;
-    setDraft(d);
-  };
-  const setD = (patch) => setDraft((d) => ({ ...d, ...patch }));
-
-  const publish = async () => {
-    const d = draft;
-    if (!d.productId) return toast.error('Choose what you are posting');
-    if (!(Number(d.quantity) >= 1)) return toast.error('Enter how many you have');
-    if (!d.ordersCloseAt) return toast.error('Choose until when buyers can order');
-    if (d.mode === 'PRE_ORDER' && (!d.readyFrom || !d.readyUntil)) return toast.error('Choose when the pre-order is ready');
-    const body = {
-      productId: d.productId,
-      quantity: Number(d.quantity),
-      mode: d.mode,
-      ordersOpenAt: d.startNow ? undefined : iso(d.ordersOpenAt),
-      ordersCloseAt: iso(d.ordersCloseAt),
-      prepMinutes: d.mode === 'MADE_TO_ORDER' && d.prepMinutes !== '' ? Number(d.prepMinutes) : undefined,
-      readyFrom: d.mode === 'PRE_ORDER' ? iso(d.readyFrom) : undefined,
-      readyUntil: d.mode === 'PRE_ORDER' ? iso(d.readyUntil) : undefined,
-      fulfillment: d.fulfillment,
-      note: d.note.trim() || undefined,
-    };
-    setSaving(true);
-    try {
-      const res = await axios.post('/today', body);
-      const w = res.data;
-      toast.success(w && isOpen(w) ? 'Posted: buyers can order now' : `Posted for ${momentLabel(w?.ordersOpenAt)}`);
-      setDraft(null);
-      if (scope === 'active') load('active');
-      else setScope('active');
-    } catch (err) {
-      toast.error(err.message || 'Could not post it. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+  /* ── posting and editing ─────────────────────────────────────── */
+  const openFlow = (w = null) => setFlow((f) => ({ open: true, key: f.key + 1, window: w }));
+  const closeFlow = () => setFlow((f) => ({ ...f, open: false }));
+  const flowDone = (result) => {
+    closeFlow();
+    if (result.window) toast.success('Saved');
+    else posted(result.windows);
+    if (scope === 'active') load('active');
+    else setScope('active');
   };
 
   const windows = data?.windows || [];
@@ -222,42 +203,52 @@ export default function SellerToday() {
   const upcoming = windows.filter((w) => w.status === 'SCHEDULED');
   const enabled = data?.enabled !== false;
   const noProducts = products !== null && products.length === 0;
+  const today = manilaDay();
+
+  // Coming up, by the day orders open ("Tomorrow", "Wed, Oct 15").
+  const upcomingDays = [];
+  for (const w of upcoming) {
+    const day = manilaDay(ms(w.ordersOpenAt));
+    const last = upcomingDays[upcomingDays.length - 1];
+    if (last && last.day === day) last.windows.push(w);
+    else upcomingDays.push({ day, windows: [w] });
+  }
 
   const card = (w) => {
-    const state = windowState(w, w.remaining);
-    const busy = busyId === w.id;
     const ended = scope === 'ended';
+    const state = postStatus(w, ended);
+    const busy = busyId === w.id;
     const img = firstImage(w.product?.images);
+    const left = w.remaining ?? Math.max(0, w.quantity - w.soldCount);
+    const isLive = w.status === 'LIVE';
     return (
       <article key={w.id} className={`stw-card is-${state.tone}`}>
         <div className="stw-card-top">
           <Thumb src={img ? resolveImg(img) : null} />
           <div className="stw-card-main">
-            <div className="stw-card-line">
-              <span className={`stw-mode is-${w.mode.toLowerCase().replace(/_/g, '-')}`}>{modeLabel(w.mode)}</span>
-              <span className={`stw-state is-${state.tone}`}>
-                {ended ? (w.status === 'CANCELLED' ? 'Cancelled' : `Ended ${momentLabel(w.endedAt || w.ordersCloseAt)}`) : state.text}
-              </span>
-            </div>
+            <span className={`stw-chip is-${state.tone}`}>{state.text}</span>
             <h3 className="stw-name">
               {w.product?.slug ? <Link to={`/product/${w.product.slug}`}>{w.product.name}</Link> : w.product?.name || 'Product'}
             </h3>
-            <p className="stw-meta">
-              <Clock size={14} aria-hidden="true" /> Ready {spanLabel(w.readyFrom, w.readyUntil)}
-              {w.prepMinutes ? ` · ${w.prepMinutes} min to make` : ''}
+            <p className="stw-when">
+              <Clock size={15} aria-hidden="true" /> {dayTitle(manilaDay(ms(w.ordersOpenAt)), today)} · {ordersSpan(w)}
             </p>
-            <p className="stw-meta"><Truck size={14} aria-hidden="true" /> {fulfillmentLabel(w.fulfillment)}</p>
+            <p className="stw-meta">
+              <Truck size={14} aria-hidden="true" /> {kindOf(w.mode).title}
+              {w.mode === 'MADE_TO_ORDER' && w.prepMinutes ? ` (${w.prepMinutes} min)` : ''} · {getLabel(w.fulfillment)}
+            </p>
             {w.note && <p className="stw-note">{w.note}</p>}
           </div>
         </div>
 
         <div className="stw-count">
-          <div>
-            <strong>{ended ? w.soldCount : (w.remaining ?? Math.max(0, w.quantity - w.soldCount))}</strong>
-            <span>{ended ? `ordered of ${w.quantity}` : `left of ${w.quantity}`}</span>
-          </div>
-          {!ended && <div><strong>{w.soldCount}</strong><span>ordered</span></div>}
-          {!ended && w.status === 'LIVE' && <TimeLeft until={w.ordersCloseAt} prefix="Ends in" className="stw-left" />}
+          <p>
+            {ended
+              ? <><strong>{w.soldCount}</strong> of {w.quantity} ordered</>
+              : <><strong>{left}</strong> of {w.quantity} left</>}
+          </p>
+          {!ended && w.soldCount > 0 && <span className="stw-sold">{w.soldCount} ordered</span>}
+          {!ended && isLive && <TimeLeft until={w.ordersCloseAt} prefix="Ends in" className="stw-left" />}
         </div>
 
         {ended ? (
@@ -272,7 +263,7 @@ export default function SellerToday() {
               <button
                 type="button"
                 aria-label="One less"
-                disabled={busy || (w.status === 'LIVE' ? (w.remaining ?? 0) < 1 : w.quantity - w.soldCount <= 1)}
+                disabled={busy || (isLive ? (w.remaining ?? 0) < 1 : w.quantity - w.soldCount <= 1)}
                 onClick={() => changeQty(w, -1)}
               >
                 <Minus size={16} weight="bold" />
@@ -282,11 +273,16 @@ export default function SellerToday() {
                 <Plus size={16} weight="bold" />
               </button>
             </div>
-            <button type="button" className="stw-btn stw-btn--ghost" disabled={busy} onClick={() => setExtend({ window: w, value: toInput(new Date(new Date(w.ordersCloseAt).getTime() + 3600e3)) })}>
-              <CalendarPlus size={16} /> {w.status === 'LIVE' ? 'More time' : 'Change time'}
+            <button type="button" className="stw-btn stw-btn--edit" disabled={busy} onClick={() => openFlow(w)}>
+              <PencilSimple size={16} /> Edit
             </button>
+            {isLive && (
+              <button type="button" className="stw-btn stw-btn--ghost" disabled={busy} onClick={() => setExtend({ window: w, value: toInput(ms(w.ordersCloseAt) + 3600e3) })}>
+                <CalendarPlus size={16} /> More time
+              </button>
+            )}
             <button type="button" className="stw-btn stw-btn--danger" disabled={busy} onClick={() => endNow(w)}>
-              <Stop size={16} /> {w.status === 'LIVE' ? 'End' : 'Cancel'}
+              <Stop size={16} /> {isLive ? 'End' : 'Cancel'}
             </button>
           </div>
         )}
@@ -294,17 +290,17 @@ export default function SellerToday() {
     );
   };
 
-  const productOptions = useMemo(() => products || [], [products]);
+  const repeatTimes = repeat ? `${clockLabel(repeat.window.ordersOpenAt)} – ${clockLabel(repeat.window.ordersCloseAt)}` : '';
 
   return (
     <div className="seller-dashboard stw">
       <div className="seller-container">
         <SellerPageHead
           title="Today's menu"
-          subtitle="Post fresh food and harvests for a limited time. Buyers order until it ends or sells out."
+          subtitle="Post what you cooked or harvested. Buyers order until it ends or sells out."
           actions={!noProducts && enabled ? (
-            <button type="button" className="btn-seller-primary" onClick={() => openDraft()} disabled={products === null}>
-              <Plus size={16} weight="bold" /> Post an item
+            <button type="button" className="btn-seller-primary stw-post" onClick={() => openFlow()} disabled={products === null}>
+              <Plus size={18} weight="bold" /> Post an item
             </button>
           ) : null}
         />
@@ -340,8 +336,8 @@ export default function SellerToday() {
                 className="ui-empty--inset"
                 art="calendar"
                 title={scope === 'ended' ? 'Nothing ended in the last 30 days' : 'Nothing on today\'s menu'}
-                text={scope === 'ended' ? 'Posts that ended show here, so you can post them again.' : 'Post what you have today, how many, and until when.'}
-                actions={scope === 'ended' || !enabled ? [] : [{ label: 'Post an item', onClick: () => openDraft(), icon: Plus }]}
+                text={scope === 'ended' ? 'Posts that ended show here, so you can post them again.' : 'Tap "Post an item". We will ask a few short questions.'}
+                actions={scope === 'ended' || !enabled ? [] : [{ label: 'Post an item', onClick: () => openFlow(), icon: Plus }]}
               />
             )}
           </div>
@@ -358,7 +354,12 @@ export default function SellerToday() {
             {upcoming.length > 0 && (
               <section className="stw-group">
                 <h2 className="stw-group-title">Coming up <small>{upcoming.length}</small></h2>
-                <div className="stw-list">{upcoming.map(card)}</div>
+                {upcomingDays.map((g) => (
+                  <div key={g.day} className="stw-day">
+                    <h3 className="stw-day-title">{dayTitle(g.day, today)} <small>{g.windows.length}</small></h3>
+                    <div className="stw-list">{g.windows.map(card)}</div>
+                  </div>
+                ))}
               </section>
             )}
           </>
@@ -371,118 +372,23 @@ export default function SellerToday() {
         )}
       </div>
 
-      {/* Post an item */}
-      <PhoneSheet
-        open={Boolean(draft)}
-        title="Post an item"
-        className="stw-sheet"
-        onClose={() => !saving && setDraft(null)}
-        footer={draft && (
-          <>
-            <button type="button" className="scm-btn scm-btn--ghost" onClick={() => setDraft(null)} disabled={saving}>Cancel</button>
-            <button type="button" className="scm-btn" onClick={publish} disabled={saving}>{saving ? 'Posting…' : 'Post'}</button>
-          </>
-        )}
-      >
-        {draft && (
-          <div className="stw-form">
-            <label className="scm-field">
-              What
-              <Select value={draft.productId} onChange={(e) => setD({ productId: e.target.value })}>
-                <option value="">Choose a product</option>
-                {productOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </Select>
-            </label>
-
-            <span className="scm-sheet-label">Kind</span>
-            <div className="stw-modes" role="radiogroup" aria-label="Kind">
-              {MODES.map((m) => (
-                <button
-                  key={m.key}
-                  type="button"
-                  role="radio"
-                  aria-checked={draft.mode === m.key}
-                  className={`stw-mode-pick${draft.mode === m.key ? ' is-on' : ''}`}
-                  onClick={() => setD({ mode: m.key })}
-                >
-                  <strong>{m.label}</strong>
-                  <small>{MODE_HINTS[m.key]}</small>
-                </button>
-              ))}
-            </div>
-
-            <div className="scm-field-row">
-              <label className="scm-field">
-                How many
-                <input type="number" inputMode="numeric" min="1" step="1" value={draft.quantity} onChange={(e) => setD({ quantity: e.target.value })} placeholder="e.g. 20" />
-              </label>
-              {draft.mode === 'MADE_TO_ORDER' && (
-                <label className="scm-field">
-                  Minutes to make
-                  <input type="number" inputMode="numeric" min="0" max="1440" step="5" value={draft.prepMinutes} onChange={(e) => setD({ prepMinutes: e.target.value })} placeholder="e.g. 30" />
-                </label>
-              )}
-            </div>
-
-            <span className="scm-sheet-label">Buyers can order</span>
-            <label className="stw-check">
-              <input type="checkbox" checked={draft.startNow} onChange={(e) => setD({ startNow: e.target.checked })} />
-              Starting now
-            </label>
-            <div className="scm-field-row">
-              {!draft.startNow && (
-                <label className="scm-field">
-                  From
-                  <input type="datetime-local" value={draft.ordersOpenAt} onChange={(e) => setD({ ordersOpenAt: e.target.value })} />
-                </label>
-              )}
-              <label className="scm-field">
-                Until
-                <input type="datetime-local" value={draft.ordersCloseAt} onChange={(e) => setD({ ordersCloseAt: e.target.value })} />
-              </label>
-            </div>
-
-            {draft.mode === 'PRE_ORDER' && (
-              <>
-                <span className="scm-sheet-label">Ready for buyers</span>
-                <div className="scm-field-row">
-                  <label className="scm-field">
-                    From
-                    <input type="datetime-local" value={draft.readyFrom} onChange={(e) => setD({ readyFrom: e.target.value })} />
-                  </label>
-                  <label className="scm-field">
-                    Until
-                    <input type="datetime-local" value={draft.readyUntil} onChange={(e) => setD({ readyUntil: e.target.value })} />
-                  </label>
-                </div>
-              </>
-            )}
-
-            {storeMode === 'BOTH' ? (
-              <label className="scm-field stw-gap">
-                How buyers get it
-                <Select value={draft.fulfillment} onChange={(e) => setD({ fulfillment: e.target.value })}>
-                  <option value="BOTH">Pickup or delivery</option>
-                  <option value="PICKUP">Pickup only</option>
-                  <option value="DELIVERY">Delivery only</option>
-                </Select>
-              </label>
-            ) : (
-              <p className="stw-hint">{fulfillmentLabel(storeMode)}, as your shop is set up. Couriers don&apos;t carry Today items.</p>
-            )}
-
-            <label className="scm-field stw-gap">
-              Note for buyers (optional)
-              <input value={draft.note} maxLength={200} onChange={(e) => setD({ note: e.target.value })} placeholder="e.g. Best eaten warm. Bring your own container." />
-            </label>
-          </div>
-        )}
-      </PhoneSheet>
+      {/* Post an item / Edit post: one question at a time */}
+      {flow.key > 0 && (
+        <TodayPostFlow
+          key={flow.key}
+          open={flow.open}
+          window={flow.window}
+          products={products || []}
+          storeMode={storeMode}
+          onClose={closeFlow}
+          onDone={flowDone}
+        />
+      )}
 
       {/* More time */}
       <PhoneSheet
         open={Boolean(extend)}
-        title={extend?.window.status === 'LIVE' ? 'More time to order' : 'Change the time'}
+        title="More time to order"
         className="stw-sheet"
         onClose={() => setExtend(null)}
         footer={extend && (
@@ -512,31 +418,30 @@ export default function SellerToday() {
         footer={repeat && (
           <>
             <button type="button" className="scm-btn scm-btn--ghost" onClick={() => setRepeat(null)}>Cancel</button>
-            <button type="button" className="scm-btn" onClick={saveRepeat} disabled={busyId === repeat.window.id}>Post</button>
+            <button type="button" className="scm-btn" onClick={saveRepeat} disabled={busyId === repeat.window.id}>
+              {repeat.dates.length > 1 ? `Post for ${repeat.dates.length} days` : 'Post'}
+            </button>
           </>
         )}
       >
         {repeat && (
           <div className="stw-form">
             <p className="stw-hint">
-              {repeat.window.product?.name}: the same times of day ({spanLabel(repeat.window.ordersOpenAt, repeat.window.ordersCloseAt)} last time), on the day you choose.
+              {repeat.window.product?.name}: orders {repeatTimes}, as last time, on each day you pick.
             </p>
-            <div className="stw-days" role="radiogroup" aria-label="Day">
-              {[[repeat.today, 'Today'], [repeat.tomorrow, 'Tomorrow']].map(([day, label]) => (
-                <button key={day} type="button" role="radio" aria-checked={repeat.date === day} className={`scm-chip${repeat.date === day ? ' is-on' : ''}`} onClick={() => setRepeat((r) => ({ ...r, date: day }))}>
-                  {label}
-                </button>
-              ))}
-              <input
-                type="date"
-                aria-label="Another day"
-                value={repeat.date}
-                min={repeat.today}
-                onChange={(e) => e.target.value && setRepeat((r) => ({ ...r, date: e.target.value }))}
-              />
-            </div>
+            <DayCalendar
+              value={repeat.dates}
+              onToggle={(day) => setRepeat((r) => ({ ...r, dates: toggleDay(r.dates, day) }))}
+              min={repeat.today}
+              max={addDays(repeat.today, AHEAD_DAYS - 1)}
+              today={repeat.today}
+              label="Days to post again"
+            />
+            <p className="stw-picked" aria-live="polite">
+              {repeat.dates.length ? <strong>{plural(repeat.dates.length, 'day')}</strong> : 'Tap the days to post it again.'}
+            </p>
             <label className="scm-field stw-gap">
-              How many
+              How many per day
               <input type="number" inputMode="numeric" min="1" step="1" value={repeat.quantity} onChange={(e) => setRepeat((r) => ({ ...r, quantity: e.target.value }))} />
             </label>
           </div>

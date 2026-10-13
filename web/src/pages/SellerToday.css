@@ -1,4 +1,5 @@
-/* Today's menu (SellerToday.jsx): the shop's Available Today posts. */
+/* Today's menu (SellerToday.jsx): the shop's Available Today posts. The
+   step-by-step post / edit sheet is components/seller/TodayPostFlow.css. */
 .stw-banner {
   display: flex;
   align-items: center;
@@ -11,6 +12,13 @@
   font-size: 14px;
 }
 
+/* "Post an item": big and plain. */
+.btn-seller-primary.stw-post {
+  min-height: 48px;
+  padding: 0 22px;
+  font-size: 16px;
+}
+
 .stw-tabs {
   display: flex;
   gap: 8px;
@@ -20,7 +28,7 @@
 }
 
 .stw-tabs button {
-  min-height: 38px;
+  min-height: 40px;
   padding: 0 16px;
   border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 999px;
@@ -48,8 +56,8 @@
   gap: 8px;
   margin: 0 0 10px;
   color: var(--t-neutral-800, #1f2937);
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
 }
 
 .stw-group-title small {
@@ -101,8 +109,8 @@
 
 .stw-thumb {
   flex-shrink: 0;
-  width: 72px;
-  height: 72px;
+  width: 76px;
+  height: 76px;
   border-radius: 12px;
   object-fit: cover;
   background: var(--t-neutral-100, #f3f4f6);
@@ -119,41 +127,27 @@
   min-width: 0;
 }
 
-.stw-card-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-}
-
-.stw-mode {
-  padding: 2px 9px;
+/* The status chip: Taking orders / Starts tomorrow 10:00 AM / Ended. */
+.stw-chip {
+  display: inline-block;
+  padding: 3px 10px;
   border-radius: 999px;
-  background: var(--t-primary-600, #047857);
-  color: #fff;
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.stw-mode.is-made-to-order { background: #b45309; }
-.stw-mode.is-pre-order { background: var(--t-accent-600, #db2777); }
-
-.stw-state {
-  color: var(--t-neutral-600, #4b5563);
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
   font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
-.stw-state.is-live { color: var(--t-primary-700, #047857); font-weight: 500; }
-.stw-state.is-soon { color: #b45309; }
-.stw-state.is-ended { color: var(--t-neutral-500, #6b7280); }
+.stw-chip.is-live { background: var(--t-primary-100, #d1fae5); color: var(--t-primary-800, #065f46); }
+.stw-chip.is-soon { background: #fef3c7; color: #92400e; }
 
 .stw-name {
   margin: 6px 0 4px;
   overflow: hidden;
   color: var(--t-neutral-900, #111827);
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -168,18 +162,30 @@
   text-decoration: underline;
 }
 
+.stw-when,
 .stw-meta {
   display: flex;
-  align-items: center;
-  gap: 5px;
+  align-items: flex-start;
+  gap: 6px;
   margin: 2px 0 0;
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 13px;
   line-height: 1.4;
 }
 
+.stw-when {
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.stw-meta {
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13px;
+}
+
+.stw-when svg,
 .stw-meta svg {
   flex-shrink: 0;
+  margin-top: 2px;
   color: var(--t-neutral-400, #9ca3af);
 }
 
@@ -190,10 +196,12 @@
   font-style: italic;
 }
 
+/* "12 of 20 left". */
 .stw-count {
   display: flex;
-  align-items: center;
-  gap: 18px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
   padding: 10px 12px;
   border-radius: 12px;
   background: var(--t-primary-50, #ecfdf5);
@@ -202,20 +210,20 @@
 .stw-card.is-soon .stw-count { background: #fffbeb; }
 .stw-card.is-ended .stw-count { background: var(--t-neutral-50, #f9fafb); }
 
-.stw-count > div {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
+.stw-count p {
+  margin: 0;
+  color: var(--t-neutral-700, #374151);
+  font-size: 15px;
 }
 
 .stw-count strong {
   color: var(--t-neutral-900, #111827);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.stw-count span {
+.stw-sold {
   color: var(--t-neutral-600, #4b5563);
   font-size: 13px;
 }
@@ -245,8 +253,8 @@
 .stw-stepper button {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 50%;
   background: none;
@@ -272,7 +280,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   border: 0;
   border-radius: 999px;
@@ -282,6 +290,13 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+}
+
+.stw-btn--edit {
+  border: 1px solid var(--t-primary-600, #059669);
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
 }
 
 .stw-btn--ghost {
@@ -316,73 +331,12 @@
   color: var(--t-primary-700, #047857);
 }
 
-/* Posting sheet */
+/* More time / Post again sheets */
 .stw-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding-bottom: 4px;
-}
-
-.stw-form .scm-sheet-label {
-  margin: 8px 0 0;
-}
-
-.stw-form .scm-field-row > .scm-field {
-  flex: 1 1 0;
-}
-
-.stw-modes {
-  display: grid;
-  gap: 8px;
-}
-
-.stw-mode-pick {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 10px 14px;
-  border: 1px solid var(--t-neutral-200, #e5e7eb);
-  border-radius: 12px;
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-neutral-800, #1f2937);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.stw-mode-pick strong {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.stw-mode-pick small {
-  color: var(--t-neutral-500, #6b7280);
-  font-size: 12.5px;
-  line-height: 1.4;
-}
-
-.stw-mode-pick.is-on {
-  border-color: var(--t-primary-600, #059669);
-  background: var(--t-primary-50, #ecfdf5);
-  box-shadow: inset 0 0 0 1px var(--t-primary-600, #059669);
-}
-
-.stw-check {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  color: var(--t-neutral-800, #1f2937);
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.stw-check input {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--t-primary-600, #059669);
 }
 
 .stw-gap {
@@ -396,26 +350,41 @@
   line-height: 1.5;
 }
 
-.stw-days {
+.stw-picked {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 4px 10px;
+  margin: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 
-.stw-days .scm-chip {
-  border: 1px solid var(--t-neutral-200, #e5e7eb);
+.stw-picked strong {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
 }
 
-.stw-days input[type='date'] {
-  min-height: 38px;
-  padding: 0 10px;
-  border: 1px solid var(--t-neutral-200, #e5e7eb);
-  border-radius: 999px;
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-neutral-800, #1f2937);
-  font: inherit;
-  font-size: 14px;
+/* Coming up, by day. */
+.stw-day + .stw-day {
+  margin-top: 16px;
+}
+
+.stw-day-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.stw-day-title small {
+  color: var(--t-neutral-400, #9ca3af);
+  font-size: 12.5px;
+  font-weight: 400;
 }
 
 /* Computers: the sheets open as a centred dialog. */
@@ -445,8 +414,9 @@
   }
 
   .stw-actions .stw-btn {
-    flex: 1;
+    flex: 1 1 auto;
     justify-content: center;
+    white-space: nowrap;
   }
 
   .stw-actions .stw-stepper {

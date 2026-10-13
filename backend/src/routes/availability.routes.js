@@ -15,10 +15,22 @@ const availabilityService = require('../services/availability.service');
  *                         sort, page, pageSize)
  * GET  /today/mine        the seller's windows (?scope=ended for past ones)
  * POST /today             publish a window for an Available Today product
- * PATCH /today/:id        change its times, preparation, fulfilment or note
+ * POST /today/batch       publish it on several days, all or none: { productId,
+ *                         mode, quantity (per day), prepMinutes?, fulfillment?,
+ *                         note?, dates: [YYYY-MM-DD], open: HH:MM | "now",
+ *                         close: HH:MM, readyFrom?, readyUntil?, readyNextDay? }
+ *                         (times of day in Manila) → { windows }
+ * PATCH /today/:id        change anything chosen when posting it: productId,
+ *                         mode, prepMinutes, quantity, fulfillment, note, and
+ *                         its times as moments (ordersOpenAt, ordersCloseAt,
+ *                         readyFrom, readyUntil) or like /batch on one day
+ *                         (date?, open?, close, readyFrom?, readyUntil?,
+ *                         readyNextDay?); once buyers ordered it, the product,
+ *                         kind, day and opening time stay
  * POST /today/:id/quantity { delta }   add to or take from its batch
  * POST /today/:id/end     stop taking orders now
- * POST /today/:id/repeat  { date?, quantity? }   publish it again on another day
+ * POST /today/:id/repeat  { date?, quantity? }   publish it again on another day;
+ *                         { dates: [YYYY-MM-DD], quantity? } on several → { windows }
  */
 
 router.get('/', publicCache(config.cache.ttl.search), asyncHandler(async (req, res) => {
@@ -32,6 +44,10 @@ router.get('/mine', asyncHandler(async (req, res) => {
 
 router.post('/', authenticate, authorize('SELLER'), asyncHandler(async (req, res) => {
   createdResponse(res, await availabilityService.publish(req.user.id, req.body), 'Published');
+}));
+
+router.post('/batch', authenticate, authorize('SELLER'), asyncHandler(async (req, res) => {
+  createdResponse(res, await availabilityService.publishBatch(req.user.id, req.body), 'Published');
 }));
 
 router.patch('/:id', authenticate, authorize('SELLER'), asyncHandler(async (req, res) => {

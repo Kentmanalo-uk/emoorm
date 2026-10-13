@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Navigate, Link } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, CheckCircle, Storefront as Store, Warning, Check, Money,
-  IdentificationCard, Camera, X, FileText, User, MapPin, Wallet, Briefcase, Truck,
-  Package, Buildings, Sparkle,
+  IdentificationCard, Camera, X, FileText, User, MapPin, Wallet, Briefcase,
+  Buildings, Sparkle,
 } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import axios from "../lib/axios";
@@ -40,13 +40,6 @@ const BUSINESS_TYPES = [
   { value: "REGISTERED", label: "Registered business", desc: "DTI / SEC registered", Icon: Buildings },
 ];
 
-// How buyers get their orders: the shop's starting delivery setting.
-const FULFILLMENT_OPTIONS = [
-  { value: "DELIVERY", label: "Deliver to buyers", desc: "Orders go to the buyer's address", Icon: Truck },
-  { value: "PICKUP", label: "Buyers pick up", desc: "Buyers collect orders at your shop", Icon: Store },
-  { value: "BOTH", label: "Both", desc: "Buyers choose delivery or pickup", Icon: Package },
-];
-const fulfillmentLabelOf = (value) => (FULFILLMENT_OPTIONS.find((o) => o.value === value) || FULFILLMENT_OPTIONS[0]).label;
 
 /** The picked methods in card order, known ones only. */
 const orderedMethods = (list) => PAYOUT_METHODS.map((m) => m.value).filter((v) => list.includes(v));
@@ -669,7 +662,7 @@ export default function SellerApply() {
         <main className="apply-main">
           <div className="apply-intro">
             <h1>Open your shop</h1>
-            <p>Six short steps, about two minutes. Your shop goes live once your municipal admin approves it.</p>
+            <p>Five short steps, about two minutes. Your shop goes live once your municipal admin approves it.</p>
           </div>
 
           {/* ── 1 · You ── */}
@@ -736,32 +729,6 @@ export default function SellerApply() {
                 {errors.shopCategories
                   ? <span className="field-error">{errors.shopCategories}</span>
                   : <span className="field-hint">Pick up to {MAX_CATEGORIES}. This is where your products appear.</span>}
-              </div>
-
-              <div className="apply-field">
-                <label htmlFor="apply-shop-desc">Tell buyers about your shop</label>
-                <textarea
-                  id="apply-shop-desc"
-                  rows={3}
-                  value={form.shopDescription}
-                  onChange={(e) => set("shopDescription", e.target.value)}
-                  onBlur={() => touch("shopDescription")}
-                  placeholder="What makes your shop special? Fresh daily, family farm, made to order…"
-                  maxLength={1000}
-                  className={errors.shopDescription ? "input-error" : ""}
-                />
-                {errors.shopDescription
-                  ? <span className="field-error">{errors.shopDescription}</span>
-                  : <span className="field-hint">Optional</span>}
-              </div>
-
-              <div className="apply-field apply-make-it-yours">
-                <span className="apply-field-label">Make it yours <span className="apply-optional">(optional)</span></span>
-                <div className="apply-pics">
-                  <PictureField shape="round" label="Logo" value={form.shopLogoUrl} onChange={(url) => set("shopLogoUrl", url)} />
-                  <PictureField shape="wide" label="Cover photo" value={form.shopCoverUrl} onChange={(url) => set("shopCoverUrl", url)} />
-                </div>
-                <span className="field-hint">Buyers see these on your shop page. You can add them later in Seller Center.</span>
               </div>
             </div>
           </section>
@@ -949,21 +916,6 @@ export default function SellerApply() {
             </div>
           </section>
 
-          {/* ── 6 · How buyers get orders ── */}
-          <section className="apply-section">
-            <SectionHead step={6} title="How buyers get their orders" Icon={Truck}>
-              Deliver, let buyers pick up at your shop, or offer both. You can change it later.
-            </SectionHead>
-            <span className="apply-sr-only" id="apply-fulfil-label">How buyers get orders</span>
-            <OptionCards
-              labelledBy="apply-fulfil-label"
-              className="apply-fulfil"
-              options={FULFILLMENT_OPTIONS}
-              value={form.fulfillmentPreference || "DELIVERY"}
-              onChange={(value) => set("fulfillmentPreference", value)}
-            />
-          </section>
-
           {/* The ID check comes later, in the Seller Center (/seller/verification). */}
           <section className="apply-later" aria-label="Identity verification">
             <IdentificationCard size={22} weight="fill" />
@@ -978,7 +930,7 @@ export default function SellerApply() {
             <Sparkle size={20} weight="fill" />
             <div>
               <strong>After you apply</strong>
-              <p>A short guided setup helps you finish your shop and add your first product. Skip any step and come back to it later.</p>
+              <p>A short guided setup: your logo and cover, a few words about your shop, how buyers get their orders, and your first product.</p>
             </div>
           </section>
         </main>
@@ -994,23 +946,16 @@ export default function SellerApply() {
             </div>
 
             <div className="apply-preview-card">
-              <div className="apply-preview-cover">
-                {form.shopCoverUrl && <img src={resolveImg(form.shopCoverUrl)} alt="" />}
-              </div>
+              <div className="apply-preview-cover" />
               <div className="apply-preview-shop">
-                {form.shopLogoUrl
-                  ? <img className="apply-preview-logo" src={resolveImg(form.shopLogoUrl)} alt="" />
-                  : (
-                    <span className="apply-preview-logo apply-preview-avatar">
-                      {(form.shopName.trim() || "S").charAt(0).toUpperCase()}
-                    </span>
-                  )}
+                <span className="apply-preview-logo apply-preview-avatar">
+                  {(form.shopName.trim() || "S").charAt(0).toUpperCase()}
+                </span>
                 <span className="apply-preview-shop-text">
                   <strong>{form.shopName.trim() || "Your shop name"}</strong>
                   <span>{form.shopAddress || "Shop address"}</span>
                 </span>
               </div>
-              {form.shopDescription.trim() && <p className="apply-preview-desc">{form.shopDescription}</p>}
               {form.shopCategories.length > 0 && (
                 <div className="apply-preview-cats">
                   {form.shopCategories.map((id) => {
@@ -1030,8 +975,6 @@ export default function SellerApply() {
               <dd>{registered ? "Registered business" : "Individual seller"}</dd>
               <dt>Buyers pay</dt>
               <dd>{buyersPay}</dd>
-              <dt>Orders</dt>
-              <dd>{fulfillmentLabelOf(form.fulfillmentPreference)}</dd>
               <dt>Reviewed by</dt>
               <dd>{reviewer}</dd>
             </dl>

@@ -12,7 +12,7 @@ const { ApiError } = require('../middleware/errorHandler');
 const { cleanText } = require('../utils/sanitize');
 const { termsOf, whereFor } = require('../utils/searchTerms');
 const {
-  MODES, DAY_MS, liveNow, isOpen, manilaDay, daysBetween, publicWindow,
+  MODES, DAY_MS, liveNow, isOpen, manilaDay, daysBetween, isDay, addDays, manilaAt, manilaMinutes, dayTitle, publicWindow,
 } = require('../utils/availability');
 const { kindOf } = require('../utils/productKinds');
 
@@ -166,21 +166,29 @@ const shape = (window) => ({
     : undefined,
 });
 
-// Followers hear once when a shop puts something out, not once per item.
+// Followers hear once when a shop puts something out, not once per item, and
+// once for a post on several days (about its first day), not once per day.
 const NOTIFY_GAP_MS = 3 * HOUR_MS;
-const notifyFollowers = async (store, window, productName) => {
+const notifyFollowers = async (store, windows, productName) => {
+  const list = Array.isArray(windows) ? windows : [windows];
+  const first = list[0];
   const since = new Date(Date.now() - NOTIFY_GAP_MS);
   const recent = await prisma.productAvailability.count({
-    where: { storeId: store.id, id: { not: window.id }, createdAt: { gte: since } },
+    where: { storeId: store.id, id: { notIn: list.map((w) => w.id) }, createdAt: { gte: since } },
   });
   if (recent > 0) return;
+  let message = first.mode === 'PRE_ORDER'
+    ? `${productName} is open for pre-order. Order before it closes.`
+    : `${productName} is fresh and available for a limited time.`;
+  if (list.length > 1) {
+    const day = dayTitle(manilaDay(first.ordersOpenAt));
+    message = `${productName} is on the menu on ${list.length} days, starting ${['Today', 'Tomorrow'].includes(day) ? day.toLowerCase() : day}.`;
+  }
   await followService.notifyFollowers(store.id, {
     type: 'STORE_PROMOTION',
-    title: `${store.name}: available today`,
-    message: window.mode === 'PRE_ORDER'
-      ? `${productName} is open for pre-order. Order before it closes.`
-      : `${productName} is fresh and available for a limited time.`,
-    relatedId: window.productId,
+    title: list.length > 1 ? `${store.name}: on the menu` : `${store.name}: available today`,
+    message,
+    relatedId: first.productId,
   });
 };
 
@@ -193,6 +201,22 @@ const notifyFollowers = async (store, window, productName) => {
 const checkPost = async (store, body = {}) => {
   await assertEnabled();
   return { fields: windowFields(body, store), quantity: quantityField(body.quantity) };
+};
+
+/** One of the shop's Available Today products that can be posted. */
+const ownTodayProduct = async (store, productId) => {
+  const product = await prisma.product.findUnique({
+    where: { id: String(productId || '') },
+    select: { id: true, name: true, storeId: true, deletedAt: true, status: true, listingKind: true },
+  });
+  if (!product || product.deletedAt || product.storeId !== store.id) throw new ApiError('Product not found', 404);
+  if (product.listingKind !== 'TODAY') {
+    throw new ApiError('Set this product to Available Today first (Edit product, How you sell it)', 400);
+  }
+  if (!['APPROVED', 'PENDING', 'HIDDEN'].includes(product.status)) {
+    throw new ApiError('This product cannot be sold right now', 400);
+  }
+  return product;
 };
 
 /** Publish a checked window (checkPost) of the store's product: it opens now, or at ordersOpenAt. */
@@ -214,43 +238,284 @@ const publishChecked = async (userId, store, product, { fields, quantity }) => {
 const publish = async (userId, body = {}) => {
   await assertEnabled();
   const store = await sellerStore(userId);
-  const product = await prisma.product.findUnique({
-    where: { id: String(body.productId || '') },
-    select: { id: true, name: true, storeId: true, deletedAt: true, status: true, listingKind: true },
-  });
-  if (!product || product.deletedAt || product.storeId !== store.id) throw new ApiError('Product not found', 404);
-  if (product.listingKind !== 'TODAY') {
-    throw new ApiError('Set this product to Available Today first (Edit product, How you sell it)', 400);
-  }
-  if (!['APPROVED', 'PENDING', 'HIDDEN'].includes(product.status)) {
-    throw new ApiError('This product cannot be sold right now', 400);
-  }
-
+  const product = await ownTodayProduct(store, body.productId);
   const post = await checkPost(store, body);
   const overlap = await availabilityRepository.findOverlap(product.id, post.fields.ordersOpenAt, post.fields.ordersCloseAt);
   if (overlap) throw new ApiError('This product already has a window at that time. Change or end it first.', 409);
   return publishChecked(userId, store, product, post);
 };
 
-/** Change a window's times, preparation, fulfilment or note. */
+// ── Several days at once ────────────────────────────────────────────────
+
+const DAYS_MAX = 31;
+const CLOCK_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/**
+ * The days of a post: distinct Manila dates ("YYYY-MM-DD"), sorted, from
+ * today up to SCHEDULE_AHEAD_DAYS - 1 days ahead (so any time of the last
+ * day still opens within SCHEDULE_AHEAD_DAYS).
+ */
+const dayList = (raw) => {
+  if (!Array.isArray(raw) || raw.length === 0) throw new ApiError('Pick at least one day', 400);
+  if (raw.length > DAYS_MAX) throw new ApiError(`Pick at most ${DAYS_MAX} days at a time`, 400);
+  const today = manilaDay(Date.now());
+  const days = [...new Set(raw)].sort();
+  for (const day of days) {
+    if (!isDay(day)) throw new ApiError('Pick days from the calendar', 400);
+    const ahead = daysBetween(today, day);
+    if (ahead < 0) throw new ApiError(`${dayTitle(day)} has already passed`, 400);
+    if (ahead >= SCHEDULE_AHEAD_DAYS) {
+      throw new ApiError(`${dayTitle(day)}: you can post up to ${SCHEDULE_AHEAD_DAYS} days ahead`, 400);
+    }
+  }
+  return days;
+};
+
+/** A time of day ("HH:MM", Manila) as minutes past midnight. */
+const clockField = (value, label) => {
+  const m = typeof value === 'string' ? CLOCK_RE.exec(value.trim()) : null;
+  if (!m) throw new ApiError(`${label}: choose a time`, 400);
+  return Number(m[1]) * 60 + Number(m[2]);
+};
+
+/** The Manila time of day ("HH:MM") of a moment. */
+const manilaClockOf = (value) => {
+  const m = manilaMinutes(value);
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+};
+
+/** An error about one day of a post: "Wed, Oct 15: Orders must close after they open". */
+const dayError = (day, err) => (err instanceof ApiError
+  ? new ApiError(`${dayTitle(day)}: ${err.message}`, err.statusCode)
+  : err);
+
+/**
+ * One day's window from times of day (Manila):
+ * - open: "HH:MM", or "now" (today only: orders open at once)
+ * - close: "HH:MM"; at or before the open time it is the next day
+ * - readyFrom / readyUntil: "HH:MM", optional except for pre-orders; the
+ *   ready time starts on the order day, or the day after with readyNextDay,
+ *   and "until" at or before "from" is the day after that
+ * @returns {Object} the window's fields as publish takes them
+ */
+const dayWindow = (day, times, mode, now = Date.now(), { openAt = null } = {}) => {
+  const startNow = openAt === null && times.open === 'now';
+  if (startNow && day !== manilaDay(now)) throw new ApiError('"Starting now" is for today only', 400);
+  let openMin;
+  if (openAt !== null) openMin = manilaMinutes(openAt);
+  else openMin = startNow ? manilaMinutes(now) : clockField(times.open, 'Orders open');
+  const closeMin = clockField(times.close, 'Orders close');
+  const ordersCloseAt = manilaAt(day, closeMin) + (closeMin <= openMin ? DAY_MS : 0);
+  let ordersOpenAt;
+  if (openAt !== null) ordersOpenAt = new Date(openAt).toISOString();
+  else if (!startNow) ordersOpenAt = new Date(manilaAt(day, openMin)).toISOString();
+  const out = {
+    ordersOpenAt,
+    ordersCloseAt: new Date(ordersCloseAt).toISOString(),
+  };
+  const custom = times.readyFrom !== undefined && times.readyFrom !== null && times.readyFrom !== '';
+  if (!custom && mode === 'PRE_ORDER') throw new ApiError('Choose when the pre-order is ready', 400);
+  if (custom) {
+    const fromMin = clockField(times.readyFrom, 'Ready from');
+    const untilMin = clockField(times.readyUntil, 'Ready until');
+    const readyDay = addDays(day, times.readyNextDay ? 1 : 0);
+    out.readyFrom = new Date(manilaAt(readyDay, fromMin)).toISOString();
+    out.readyUntil = new Date(manilaAt(readyDay, untilMin) + (untilMin <= fromMin ? DAY_MS : 0)).toISOString();
+  }
+  return out;
+};
+
+/**
+ * Check and publish windows of `product` on several days, all or none. Each
+ * of `posts` ({ day, body }) passes the same checks as one publish; a window
+ * that overlaps another of the product's open or upcoming windows (or one
+ * earlier in this post) stops the whole post. Windows due now open at once;
+ * the clock opens the rest. Followers hear once, about the first day.
+ * @returns {Promise<Object[]>} the created windows, by day
+ */
+const publishDays = async (userId, store, product, posts, quantity) => {
+  const checked = posts.map(({ day, body }) => {
+    try {
+      return { day, fields: windowFields(body, store) };
+    } catch (err) {
+      throw dayError(day, err);
+    }
+  });
+  const created = await availabilityRepository.createMany(
+    product.id,
+    checked.map(({ day, fields }) => ({ label: day, data: { ...fields, quantity, storeId: store.id } })),
+    (day) => new ApiError(`${dayTitle(day)}: This product already has a post at that time. Change or cancel it first.`, 409),
+  );
+  const now = Date.now();
+  for (const row of created) {
+    if (row.ordersOpenAt.getTime() <= now) await availabilityRepository.openWindow(row.id, { actorId: userId });
+  }
+  await invalidateProductIds([product.id]);
+  await notifyFollowers(store, created, product.name).catch((err) => console.error('[today] notify failed:', err.message));
+  const rows = await Promise.all(created.map((row) => availabilityRepository.findById(row.id)));
+  return rows.map(shape);
+};
+
+/**
+ * Publish a product on several days at once, with the same times of day
+ * (Manila) and the same quantity each day:
+ * { productId, mode, quantity, prepMinutes?, fulfillment?, note?,
+ *   dates: ["YYYY-MM-DD", …] (up to 31, within 30 days),
+ *   open: "HH:MM" | "now", close: "HH:MM",
+ *   readyFrom?: "HH:MM", readyUntil?: "HH:MM", readyNextDay?: Boolean }
+ * @returns {Promise<{ windows: Object[] }>}
+ */
+const publishBatch = async (userId, body = {}) => {
+  await assertEnabled();
+  const store = await sellerStore(userId);
+  const product = await ownTodayProduct(store, body.productId);
+  const quantity = quantityField(body.quantity);
+  const days = dayList(body.dates);
+  const mode = body.mode || 'READY_NOW';
+  const now = Date.now();
+  const posts = days.map((day) => {
+    try {
+      return {
+        day,
+        body: {
+          ...dayWindow(day, body, mode, now),
+          mode,
+          prepMinutes: body.prepMinutes,
+          fulfillment: body.fulfillment,
+          note: body.note,
+        },
+      };
+    } catch (err) {
+      throw dayError(day, err);
+    }
+  });
+  return { windows: await publishDays(userId, store, product, posts, quantity) };
+};
+
+const ORDERED = 'Buyers already ordered this post, so';
+const sameMinute = (a, b) => Math.floor(new Date(a).getTime() / MINUTE_MS) === Math.floor(new Date(b).getTime() / MINUTE_MS);
+const prepOf = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
+
+/**
+ * The rules that protect orders already placed on a window, checked against
+ * its latest state: once buyers ordered it, its product, kind (and cooking
+ * time) and day stay, a live window keeps the time its orders opened, and
+ * how many never goes below what was ordered.
+ */
+const guardOrdered = (window, next) => {
+  if (window.soldCount <= 0) return;
+  if (next.productId !== window.productId) throw new ApiError(`${ORDERED} the item can't change.`, 400);
+  if (next.mode !== window.mode || prepOf(next.prepMinutes) !== prepOf(window.prepMinutes)) {
+    throw new ApiError(`${ORDERED} the kind can't change.`, 400);
+  }
+  if (!sameMinute(next.ordersOpenAt, window.ordersOpenAt)) {
+    throw new ApiError(manilaDay(next.ordersOpenAt) !== manilaDay(window.ordersOpenAt)
+      ? `${ORDERED} its day can't change.`
+      : `${ORDERED} the time orders opened can't change.`, 400);
+  }
+  if (next.quantity < window.soldCount) {
+    throw new ApiError(`${ORDERED} how many can't go below ${window.soldCount}.`, 400);
+  }
+};
+
+/**
+ * Change a window: anything chosen when posting it. The body takes
+ * - productId, mode, prepMinutes, quantity (how many in all), fulfillment, note;
+ * - its times either as moments (ordersOpenAt, ordersCloseAt, readyFrom,
+ *   readyUntil), or like POST /today/batch on one day: date ("YYYY-MM-DD",
+ *   Manila; its own day when not sent), open ("HH:MM" or "now"; a live
+ *   window keeps its opening time when not sent), close, and readyFrom /
+ *   readyUntil / readyNextDay for a pre-order.
+ * Anything not sent stays. A live window moved to a later time waits again
+ * (its stock back to 0); moved onto another product, the stock moves with
+ * it. Once buyers ordered it, see guardOrdered.
+ */
 const updateWindow = async (userId, id, body = {}) => {
   await assertEnabled();
   const { store, window } = await ownWindow(userId, id);
-  if (!['SCHEDULED', 'LIVE'].includes(window.status)) throw new ApiError('This window has ended', 400);
-  if (window.status === 'LIVE' && body.ordersOpenAt !== undefined) {
-    throw new ApiError('Orders have already opened', 400);
+  if (!['SCHEDULED', 'LIVE'].includes(window.status)) throw new ApiError('This post has ended', 400);
+  const live = window.status === 'LIVE';
+  const now = Date.now();
+
+  const productId = body.productId === undefined || body.productId === null || body.productId === ''
+    ? window.productId
+    : String(body.productId);
+  const mode = body.mode === undefined ? window.mode : body.mode;
+  const prepMinutes = body.prepMinutes === undefined ? window.prepMinutes : body.prepMinutes;
+  const quantity = body.quantity === undefined ? window.quantity : quantityField(body.quantity);
+  guardOrdered(window, {
+    productId, mode, prepMinutes, quantity, ordersOpenAt: window.ordersOpenAt,
+  });
+  if (productId !== window.productId) await ownTodayProduct(store, productId);
+
+  let times = {};
+  const ofDay = ['date', 'open', 'close'].some((key) => body[key] !== undefined);
+  if (ofDay) {
+    const currentDay = manilaDay(window.ordersOpenAt);
+    const day = body.date === undefined || body.date === null || body.date === '' ? currentDay : body.date;
+    if (!isDay(day)) throw new ApiError('Pick a day from the calendar', 400);
+    if (day !== currentDay) dayList([day]);
+    // A live window keeps the moment its orders opened unless it moves.
+    const keepOpen = day === currentDay && (body.open === undefined
+      || (live && CLOCK_RE.test(String(body.open)) && clockField(body.open, 'Orders open') === manilaMinutes(window.ordersOpenAt)));
+    let openAt = null;
+    if (keepOpen) openAt = window.ordersOpenAt.getTime();
+    else if (body.open === 'now') openAt = now;
+    // A pre-order's ready time stays when no new one is sent.
+    const keepReady = mode === 'PRE_ORDER' && window.mode === 'PRE_ORDER' && (body.readyFrom === undefined || body.readyFrom === null);
+    try {
+      if (body.open === 'now' && day !== manilaDay(now)) throw new ApiError('"Starting now" is for today only', 400);
+      times = dayWindow(day, {
+        open: body.open,
+        close: body.close === undefined ? manilaClockOf(window.ordersCloseAt) : body.close,
+        readyFrom: keepReady ? undefined : body.readyFrom,
+        readyUntil: body.readyUntil,
+        readyNextDay: body.readyNextDay,
+      }, keepReady ? 'READY_NOW' : mode, now, { openAt });
+    } catch (err) {
+      throw dayError(day, err);
+    }
+    if (keepReady) {
+      times.readyFrom = window.readyFrom.toISOString();
+      times.readyUntil = window.readyUntil.toISOString();
+    }
+    // "Ready now" and "made to order" are ready while orders are open (after the cooking time).
+    if (times.readyFrom === undefined) {
+      times.readyFrom = new Date(new Date(times.ordersOpenAt).getTime() + (Number(prepOf(prepMinutes)) || 0) * MINUTE_MS).toISOString();
+      times.readyUntil = times.ordersCloseAt;
+    }
+  } else {
+    if (live && body.ordersOpenAt !== undefined && !sameMinute(body.ordersOpenAt, window.ordersOpenAt) && window.soldCount > 0) {
+      throw new ApiError(`${ORDERED} the time orders opened can't change.`, 400);
+    }
+    times = {
+      ordersOpenAt: body.ordersOpenAt, ordersCloseAt: body.ordersCloseAt, readyFrom: body.readyFrom, readyUntil: body.readyUntil,
+    };
   }
-  if (window.status === 'LIVE' && body.mode !== undefined && body.mode !== window.mode) {
-    throw new ApiError('The kind cannot change once orders are open', 400);
+
+  const fields = windowFields({
+    ...times, mode, prepMinutes, fulfillment: body.fulfillment, note: body.note,
+  }, store, window);
+  const next = { ...fields, productId, quantity };
+  guardOrdered(window, next);
+  const day = manilaDay(fields.ordersOpenAt);
+
+  let result;
+  try {
+    result = await availabilityRepository.reshape(window.id, next, {
+      actorId: userId,
+      check: (latest) => {
+        if (!latest || !['SCHEDULED', 'LIVE'].includes(latest.status)) throw new ApiError('This post has ended', 400);
+        if (latest.status !== window.status) throw new ApiError('This post just changed. Please look again.', 409);
+        guardOrdered(latest, next);
+      },
+      onOverlap: () => new ApiError(`${dayTitle(day)}: This product already has a post at that time. Change or cancel it first.`, 409),
+    });
+  } catch (err) {
+    if (err.code === 'WINDOW_CLOSED') throw new ApiError('This post has ended', 400);
+    throw err;
   }
-  const fields = windowFields(body, store, window);
-  const overlap = await availabilityRepository.findOverlap(window.productId, fields.ordersOpenAt, fields.ordersCloseAt, window.id);
-  if (overlap) throw new ApiError('Another window of this product overlaps that time', 409);
-  if (window.status === 'LIVE') delete fields.ordersOpenAt;
-  await availabilityRepository.update(window.id, fields);
-  if (window.status === 'SCHEDULED' && fields.ordersOpenAt.getTime() <= Date.now()) {
-    await availabilityRepository.openWindow(window.id, { actorId: userId });
-  }
+  if (result.openNow) await availabilityRepository.openWindow(window.id, { actorId: userId });
   return shape(await availabilityRepository.findById(window.id));
 };
 
@@ -281,28 +546,40 @@ const endWindow = async (userId, id) => {
 };
 
 /**
- * Publish a window again on another day: the same times of day, shifted to
- * `date` ("YYYY-MM-DD", Manila), with the same or a new quantity.
+ * Publish a window again: the same times of day, shifted to `date`
+ * ("YYYY-MM-DD", Manila; tomorrow when not given), or to each of `dates`
+ * (all or none, like publishBatch), with the same or a new quantity.
+ * @returns {Promise<Object|{ windows: Object[] }>} the window, or with `dates` the windows
  */
 const repeatWindow = async (userId, id, body = {}) => {
-  const { window } = await ownWindow(userId, id);
-  const targetDay = typeof body.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
-    ? body.date
-    : manilaDay(Date.now() + DAY_MS);
-  const shiftMs = daysBetween(manilaDay(window.ordersOpenAt), targetDay) * DAY_MS;
-  const at = (d) => new Date(new Date(d).getTime() + shiftMs).toISOString();
-  return publish(userId, {
-    productId: window.productId,
-    quantity: body.quantity ?? window.quantity,
-    mode: window.mode,
-    ordersOpenAt: at(window.ordersOpenAt),
-    ordersCloseAt: at(window.ordersCloseAt),
-    readyFrom: at(window.readyFrom),
-    readyUntil: at(window.readyUntil),
-    prepMinutes: window.prepMinutes,
-    fulfillment: window.fulfillment,
-    note: window.note,
-  });
+  const { store, window } = await ownWindow(userId, id);
+  const copyOn = (day) => {
+    const shiftMs = daysBetween(manilaDay(window.ordersOpenAt), day) * DAY_MS;
+    const at = (d) => new Date(new Date(d).getTime() + shiftMs).toISOString();
+    return {
+      productId: window.productId,
+      quantity: body.quantity ?? window.quantity,
+      mode: window.mode,
+      ordersOpenAt: at(window.ordersOpenAt),
+      ordersCloseAt: at(window.ordersCloseAt),
+      readyFrom: at(window.readyFrom),
+      readyUntil: at(window.readyUntil),
+      prepMinutes: window.prepMinutes,
+      fulfillment: window.fulfillment,
+      note: window.note,
+    };
+  };
+
+  if (body.dates !== undefined) {
+    await assertEnabled();
+    const product = await ownTodayProduct(store, window.productId);
+    const quantity = quantityField(body.quantity ?? window.quantity);
+    const posts = dayList(body.dates).map((day) => ({ day, body: copyOn(day) }));
+    return { windows: await publishDays(userId, store, product, posts, quantity) };
+  }
+
+  const targetDay = isDay(body.date) ? body.date : manilaDay(Date.now() + DAY_MS);
+  return publish(userId, copyOn(targetDay));
 };
 
 /** The seller's windows: open and upcoming (default), or recently ended. */
@@ -575,6 +852,7 @@ module.exports = {
   checkPost,
   publishChecked,
   publish,
+  publishBatch,
   updateWindow,
   adjustQuantity,
   endWindow,

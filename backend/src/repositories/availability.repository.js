@@ -144,6 +144,80 @@ const adjustQuantity = async (id, delta, { actorId = null } = {}) => {
 
 const create = (data) => prisma.productAvailability.create({ data });
 
+/**
+ * Create several SCHEDULED windows of one product in one transaction: all or
+ * none. `posts` is [{ data, label }]; before each create the product's open
+ * and upcoming windows are checked for an overlap, and `onOverlap(label)`
+ * makes the error thrown when there is one.
+ */
+const createMany = (productId, posts, onOverlap) => withDeadlockRetry(() => prisma.$transaction(async (tx) => {
+  // Lock the product row so two batches of it cannot both pass the overlap check.
+  await tx.$queryRaw`SELECT id FROM products WHERE id = ${productId} FOR UPDATE`;
+  const rows = [];
+  for (const { data, label } of posts) {
+    if (await findOverlap(productId, data.ordersOpenAt, data.ordersCloseAt, null, tx)) throw onOverlap(label);
+    rows.push(await tx.productAvailability.create({ data: { ...data, productId, status: 'SCHEDULED' } }));
+  }
+  return rows;
+}));
+
+/**
+ * Change a SCHEDULED or LIVE window in one transaction: `next` holds its new
+ * fields, productId and quantity. Under the products' row locks it re-reads
+ * the window and runs `check(latest)` (which throws to refuse), then checks
+ * the product's other windows for an overlap (`onOverlap()` makes the error).
+ * A live window that moves to another product, or to a later opening time,
+ * gives its old product's stock back to 0 (it waits again when it now opens
+ * later); a window still live gets its product's stock set to what is left.
+ * @returns {Promise<{ openNow: Boolean }>} whether a waiting window is due now (call openWindow)
+ */
+const reshape = async (id, next, { actorId = null, check = () => {}, onOverlap } = {}) => {
+  const touched = new Set();
+  const result = await withDeadlockRetry(() => prisma.$transaction(async (tx) => {
+    const first = await tx.productAvailability.findUnique({ where: { id }, select: { productId: true } });
+    if (!first) throw Object.assign(new Error('Not found'), { code: 'WINDOW_CLOSED' });
+    // Lock both products (in a fixed order) so stock and overlaps cannot race.
+    for (const productId of [...new Set([first.productId, next.productId])].sort()) {
+      await tx.$queryRaw`SELECT id FROM products WHERE id = ${productId} FOR UPDATE`;
+    }
+    const window = await tx.productAvailability.findUnique({ where: { id } });
+    check(window);
+    if (await findOverlap(next.productId, next.ordersOpenAt, next.ordersCloseAt, id, tx)) throw onOverlap();
+
+    const now = Date.now();
+    const opensLater = next.ordersOpenAt.getTime() > now;
+    let status = window.status;
+    if (status === 'LIVE' && (next.productId !== window.productId || opensLater)) {
+      await setStockTx(tx, window.productId, 0, 'TODAY_END', id, actorId);
+      if (opensLater) status = 'SCHEDULED';
+    }
+    const claimed = await tx.productAvailability.updateMany({
+      where: { id, status: window.status },
+      data: {
+        productId: next.productId,
+        quantity: next.quantity,
+        mode: next.mode,
+        ordersOpenAt: next.ordersOpenAt,
+        ordersCloseAt: next.ordersCloseAt,
+        readyFrom: next.readyFrom,
+        readyUntil: next.readyUntil,
+        prepMinutes: next.prepMinutes,
+        fulfillment: next.fulfillment,
+        note: next.note,
+        status,
+      },
+    });
+    if (claimed.count === 0) throw Object.assign(new Error('This window is no longer open'), { code: 'WINDOW_CLOSED' });
+    if (status === 'LIVE') {
+      await setStockTx(tx, next.productId, Math.max(0, next.quantity - window.soldCount), 'TODAY_ADJUST', id, actorId);
+    }
+    touched.add(window.productId).add(next.productId);
+    return { openNow: status === 'SCHEDULED' && !opensLater };
+  }));
+  await invalidateProductIds([...touched]);
+  return result;
+};
+
 const update = async (id, data) => {
   const updated = await prisma.productAvailability.update({ where: { id }, data });
   await invalidateProductIds([updated.productId]);
@@ -155,8 +229,11 @@ const findById = (id) => prisma.productAvailability.findUnique({
   include: { product: { select: PRODUCT_SELECT } },
 });
 
-/** Another open or upcoming window of the product whose ordering time overlaps. */
-const findOverlap = (productId, ordersOpenAt, ordersCloseAt, excludeId = null) => prisma.productAvailability.findFirst({
+/**
+ * Another open or upcoming window of the product whose ordering time
+ * overlaps. Pass `db` to check inside a transaction.
+ */
+const findOverlap = (productId, ordersOpenAt, ordersCloseAt, excludeId = null, db = prisma) => db.productAvailability.findFirst({
   where: {
     productId,
     status: { in: ['SCHEDULED', 'LIVE'] },
@@ -199,6 +276,8 @@ module.exports = {
   closeWindow,
   adjustQuantity,
   create,
+  createMany,
+  reshape,
   update,
   findById,
   findOverlap,

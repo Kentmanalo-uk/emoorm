@@ -1,0 +1,98 @@
+/* DayCalendar.jsx: a small month calendar for picking several days. */
+.dcal {
+  padding: 10px 10px 8px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.dcal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+
+.dcal-head strong {
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dcal-nav {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--t-primary-700, #047857);
+  cursor: pointer;
+}
+
+.dcal-nav:hover:not(:disabled) {
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.dcal-nav:disabled {
+  color: var(--t-neutral-300, #d1d5db);
+  cursor: not-allowed;
+}
+
+.dcal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  justify-items: center;
+}
+
+.dcal-wd {
+  padding: 4px 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+}
+
+.dcal-day {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  max-width: 100%;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.dcal-day:hover:not(:disabled):not(.is-on) {
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.dcal-day.is-today {
+  box-shadow: inset 0 0 0 1.5px var(--t-primary-600, #059669);
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+}
+
+.dcal-day.is-on {
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font-weight: 600;
+}
+
+.dcal-day:disabled {
+  color: var(--t-neutral-300, #d1d5db);
+  cursor: not-allowed;
+}
+
+.dcal-day:focus-visible,
+.dcal-nav:focus-visible {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 1px;
+}
