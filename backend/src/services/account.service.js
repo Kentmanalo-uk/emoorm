@@ -197,7 +197,7 @@ const exportData = async (userId) => {
       municipality: { select: { name: true } },
       phoneVerifiedAt: true, phoneVerifiedNumber: true,
       sellerApplicationStatus: true, sellerApplicationDate: true, shopName: true, sellerBusinessType: true,
-      sellerPermitNumber: true, payoutMethod: true, payoutAccountName: true, payoutAccountNumber: true,
+      sellerPermitNumber: true, payoutMethod: true, payoutMethods: true, payoutAccountName: true, payoutAccountNumber: true,
     },
   });
   if (!user) throw new ApiError('Account not found', 404);

@@ -793,4 +793,7 @@ module.exports = {
   getMyServiceAreas,
   replaceMyServiceAreas,
   checkCoverage,
+  isOwnUpload,
+  normalizeAccountNumber,
+  QR_TYPES,
 };

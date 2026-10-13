@@ -334,6 +334,8 @@ model User {
   shopBarangay            String?   @map("shop_barangay")
   shopTagline             String?   @map("shop_tagline")
   shopLogoUrl             String?   @map("shop_logo_url")
+  // The shop's cover photo, picked in the application (becomes its banner).
+  shopCoverUrl            String?   @map("shop_cover_url")
   // Category IDs the shop plans to sell in, e.g. ["uuid", "uuid"].
   shopCategories          Json?     @map("shop_categories")
 
@@ -345,7 +347,14 @@ model User {
 
   // How the seller gets paid and fulfils orders (pre-fills the shop settings)
   payoutMethod            String?   @map("payout_method")
-  payoutAccountName       String?   @map("payout_account_name")
+  // Every way buyers can pay that was picked, e.g. ["GCASH", "COD_ONLY"];
+  // payoutMethod above is the main one (the first online method, else cash).
+  payoutMethods           Json?     @map("payout_methods")
+  // The GCash or QR Ph code buyers scan (optional), and which of the two it
+  // is; it becomes the shop's payment QR.
+  payoutQrUrl             String?   @map("payout_qr_url")
+  payoutQrType            String?   @map("payout_qr_type")
+  payoutAccountName      String?   @map("payout_account_name")
   payoutAccountNumber     String?   @map("payout_account_number")
   fulfillmentPreference   String?   @map("fulfillment_preference")
 

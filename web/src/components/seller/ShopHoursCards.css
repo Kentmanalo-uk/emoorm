@@ -1,4 +1,4 @@
-/* Shop Settings: Away mode and Opening hours. */
+/* Shop Settings: the Away mode and Opening hours forms (opened under their row). */
 .shc-body {
   display: flex;
   flex-direction: column;
@@ -7,28 +7,11 @@
   padding: 4px 20px 20px;
 }
 
-.shc-help,
-.shc-status {
+.shc-help {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.55;
   color: var(--t-neutral-600, #4b5563);
-}
-
-.shc-card.is-away {
-  border: 1px solid var(--t-warning-200, #fde68a);
-  background: var(--t-warning-50, #fffbeb);
-}
-
-.shc-card.is-away .shc-status {
-  color: var(--t-warning-900, #78350f);
-}
-
-.shc-note {
-  margin: 0;
-  font-size: 13px;
-  font-style: italic;
-  color: var(--t-warning-800, #92400e);
 }
 
 .shc-row {

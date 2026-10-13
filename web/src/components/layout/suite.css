@@ -47,7 +47,7 @@
     background: var(--suite-glass);
     backdrop-filter: saturate(1.4) blur(10px);
     -webkit-backdrop-filter: saturate(1.4) blur(10px);
-    border-bottom: var(--suite-hairline);
+    border-bottom: 0;
   }
 
   :is(.ac-shell, .sc-shell):not(.is-phone) :is(.ac-content, .sc-content) {
@@ -64,7 +64,7 @@
     min-height: 36px;
     padding: 4px 24px;
     background: rgba(255, 255, 255, 0.35);
-    border-bottom: var(--suite-hairline);
+    border-bottom: 0;
   }
 
   :is(.ac-shell, .sc-shell) .ac-toolstrip-related,

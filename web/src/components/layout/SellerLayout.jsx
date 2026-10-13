@@ -76,6 +76,7 @@ export default function SellerLayout() {
     location.pathname.startsWith('/seller/store')
     || location.pathname.startsWith('/seller/settings')
     || location.pathname === '/seller/shop-profile'
+    || location.pathname.startsWith('/seller/shop-qr')
   );
   const [unreadCount, setUnreadCount] = useState(() => readCache('seller:unread') ?? 0);
 
@@ -387,6 +388,12 @@ export default function SellerLayout() {
                 <NavLink to="/seller/settings" className={subNavCls}>
                   Settings
                 </NavLink>
+                {/* The printable QR poster: once the shop has a public address. */}
+                {store?.slug && store?.isApproved !== false && (
+                  <NavLink to="/seller/shop-qr" className={subNavCls}>
+                    Shop QR
+                  </NavLink>
+                )}
                 {store?.slug && (
                   <a
                     href={`/store/${store.slug}`}
@@ -692,6 +699,7 @@ const LABELS = {
   '/seller/store': 'Shop Profile',
   '/seller/fulfillment': 'Fulfillment & Payment',
   '/seller/settings': 'Settings',
+  '/seller/shop-qr': 'Shop QR',
 };
 
 /** Phone: the five tabs on the bottom bar. */
@@ -737,6 +745,7 @@ const PHONE_TITLES = {
   '/seller/fulfillment/payment': 'Payment options',
   '/seller/settings': 'Settings',
   '/seller/verification': 'Verify identity',
+  '/seller/shop-qr': 'Shop QR',
 };
 
 function buildCrumbs(pathname) {

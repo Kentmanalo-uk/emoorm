@@ -1,14 +1,125 @@
+/* Shop Settings: the shop's settings as grouped lists of rows, drawn with
+   the Me page's rows (SellerApp.css .sme-*). Rows that open a page end in a
+   chevron; on / off settings carry a switch (PushSetting.css .push-switch);
+   Away mode and Opening hours open their form under the row. */
+
+.sst-body {
+  gap: 12px;
+}
+
+/* A row with a line under its label (a switch, or a form that opens). */
+.sst-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sst-row-text .sme-row-label {
+  flex: none;
+}
+
+.sst-row-text small {
+  color: var(--sa-faint);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.sst-row-text small.is-warn {
+  color: var(--t-warning-700, #b45309);
+}
+
+.sst-toggle.is-busy {
+  cursor: progress;
+}
+
+.sst-toggle .push-switch input:disabled {
+  cursor: progress;
+}
+
+/* Opening hours: the chevron turns down while its form is open. */
+.sst-expand .sh-chev {
+  transition: transform 0.15s;
+}
+
+.sst-expand[aria-expanded='true'] .sh-chev {
+  transform: rotate(90deg);
+}
+
+/* Hairlines between every kind of row, not only row after row. */
+.sst-group > .sst-panel + .sme-row,
+.sst-group > .sme-row + .push-setting,
+.sst-group > .push-setting + .sme-row {
+  border-top: 1px solid var(--sa-line);
+}
+
+/* "Notifications on this device", drawn as one of the rows. */
+.sst .push-setting {
+  gap: 14px;
+  min-height: 48px;
+  padding: 12px 16px;
+}
+
+.sst .push-setting > svg {
+  width: 19px;
+  height: 19px;
+  margin: 0 2.5px;
+  color: var(--sa-ink);
+}
+
+.sst .push-setting-text b {
+  color: var(--sa-text);
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.sst .push-setting-text small {
+  color: var(--sa-faint);
+}
+
+/* A form opened under its row. */
+.sst-panel .shc-body {
+  padding: 0 16px 16px 54px;
+}
+
+/* Danger zone */
+.sst-delete .sme-row-icon,
+.sst-delete .sme-row-label {
+  color: var(--t-danger-600, #dc2626);
+}
+
+/* Deletion scheduled: one line at the top, the details in the Danger zone. */
+.sst-pending-line {
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-900, #78350f);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sst-pending-line span {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 .settings-deletion-pending {
-  border: 1px solid var(--t-warning-200, #fde68a);
   background: var(--t-warning-50, #fffbeb);
 }
 
-.settings-deletion-pending .seller-card-header h2 {
+.settings-deletion-pending > h2 {
   color: var(--t-warning-800, #92400e);
 }
 
 .settings-deletion-body {
-  padding: 4px 20px 20px;
+  padding: 4px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -31,10 +142,34 @@
   margin-top: 6px;
 }
 
-/* ── Mobile (≤768px / ≤480px) ── */
+/* ── Computers: one readable column of cards, like the other seller cards ── */
+@media (min-width: 769px) {
+  .sst-body {
+    max-width: 760px;
+  }
+
+  .sst .sst-group {
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: var(--elev-card);
+  }
+
+  .sst .sst-group > .sme-row:hover {
+    background: var(--t-neutral-50, #f9fafb);
+  }
+}
+
+/* ── Phones (≤768px / ≤480px) ── */
 @media (max-width: 768px) {
-  .sc-content .settings-deletion-pending {
-    border-color: var(--t-warning-200, #fde68a);
+  .sst-panel .shc-body {
+    padding: 0 16px 16px;
+  }
+
+  /* Edge to edge, like the sections under it. */
+  .sst-pending-line {
+    width: auto;
+    margin: 0 calc(-1 * var(--pa-gutter, 12px));
+    border-radius: 0;
   }
 
   .sc-content .settings-deletion-body {
@@ -51,15 +186,5 @@
   .sc-content .settings-deletion-body .btn-seller-primary {
     justify-content: center;
     min-height: 46px;
-  }
-
-  .sc-content .store-danger-body strong {
-    font-size: 15px;
-  }
-
-  .sc-content .store-danger-body p {
-    max-width: none;
-    font-size: 13.5px;
-    line-height: 1.55;
   }
 }

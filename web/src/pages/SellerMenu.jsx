@@ -19,7 +19,8 @@ import Select from '../components/ui/Select';
 
 /*
  * "Me" (phone), drawn like the buyer's Profile: the shop card with its
- * numbers, how the shop is doing, View shop / Decorate, then Finance,
+ * numbers, how the shop is doing, View shop / Decorate, Shop QR (the
+ * printable poster, once the shop is approved), then Finance,
  * Delivery & payment (each part straight to its page), Contact & help and
  * Settings as plain lists, and Log out. Setup steps live on Home ("Complete
  * your shop"), so Settings does not repeat them.
@@ -168,6 +169,14 @@ export default function SellerMenu() {
           ) : <span />}
           <Link to="/seller/decorate"><PaintBrush size={20} weight="fill" /> Decorate my shop</Link>
         </section>
+
+        {/* A QR poster to print for the stall: once buyers can open the shop. */}
+        {canShare && (
+          <section className="sh-card sme-list">
+            <h2>Share your shop</h2>
+            <Row to="/seller/shop-qr" icon={QrCode} label="Shop QR" hint="Print for your stall" />
+          </section>
+        )}
 
         <section className="sh-card sme-list">
           <h2>Finance</h2>

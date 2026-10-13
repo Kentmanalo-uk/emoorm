@@ -9,7 +9,7 @@
 /* Header */
 .register-header {
   background-color: white;
-  border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-bottom: 0;
   padding: 16px 0;
 }
 

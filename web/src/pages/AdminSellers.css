@@ -662,3 +662,35 @@
   background: #fffbeb;
   color: #92400e;
 }
+
+/* The shop logo and cover photo picked in the application */
+.admin-shop-pics {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-shop-pic-logo {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.admin-shop-pic-cover {
+  flex: 1;
+  min-width: 0;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.admin-shop-pic-qr {
+  display: block;
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 10px;
+}

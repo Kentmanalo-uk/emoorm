@@ -500,6 +500,51 @@ const FULFILLMENT_PREFERENCES = ['DELIVERY', 'PICKUP', 'BOTH'];
 const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
 
 /**
+ * The ways to be paid a seller picked: `payoutMethods` (several, e.g. GCash
+ * and cash on delivery), or the single `payoutMethod` older clients send.
+ * Upper-cased, known ones only, each once, in the PAYOUT_METHODS order.
+ * `invalid` says whether anything unknown was sent.
+ */
+const readPayoutMethods = (data) => {
+  const raw = Array.isArray(data.payoutMethods)
+    ? data.payoutMethods
+    : (trimmed(data.payoutMethod) ? [data.payoutMethod] : []);
+  const picked = raw.map((m) => trimmed(m).toUpperCase()).filter(Boolean);
+  return {
+    methods: PAYOUT_METHODS.filter((m) => picked.includes(m)),
+    invalid: picked.some((m) => !PAYOUT_METHODS.includes(m)),
+  };
+};
+
+/** The main method, kept in `payoutMethod`: the first online one, else cash. */
+const mainPayoutMethod = (methods) => methods.find((m) => m !== 'COD_ONLY') || (methods.length ? 'COD_ONLY' : null);
+
+/** What an application holds, as a list (older ones only have payoutMethod). */
+const payoutMethodsOf = (record) => {
+  if (Array.isArray(record?.payoutMethods) && record.payoutMethods.length) return record.payoutMethods;
+  return record?.payoutMethod ? [record.payoutMethod] : [];
+};
+
+/** A shop picture from the application: our own uploads only, else left out. */
+const shopPicture = (value) => {
+  const url = trimmed(value).slice(0, 500);
+  return url && storeService.isOwnUpload(url) ? url : null;
+};
+
+/**
+ * The payment QR picked with the methods: our own upload, kept only while
+ * GCash or QR Ph is picked. Its kind is the one sent when that method is
+ * picked, else the first QR method picked (GCash before QR Ph).
+ */
+const readPayoutQr = (data, methods) => {
+  const picked = storeService.QR_TYPES.filter((type) => methods.includes(type));
+  const url = shopPicture(data.payoutQrUrl);
+  if (!picked.length || !url) return { url: null, type: null };
+  const asked = trimmed(data.payoutQrType).toUpperCase();
+  return { url, type: picked.includes(asked) ? asked : picked[0] };
+};
+
+/**
  * Validate and normalise a seller application on the server. The browser form
  * checks the same rules for a friendlier experience, but this is the gate that
  * actually holds — a direct API call goes through here too.
@@ -546,20 +591,33 @@ const normalizeSellerApplication = async (data = {}) => {
   if (!BUSINESS_TYPES.includes(sellerBusinessType)) {
     throw new ApiError('Invalid business type', 400);
   }
+  // A registered business gives its permit or registration number (the
+  // papers' photo and the TIN are optional); an individual seller none.
+  const registered = sellerBusinessType === 'REGISTERED';
+  const sellerPermitNumber = registered ? trimmed(data.sellerPermitNumber) : '';
+  const sellerBirTin = registered ? trimmed(data.sellerBirTin) : '';
+  if (registered && !sellerPermitNumber) throw new ApiError('Permit or registration number is required', 400);
+  if (sellerPermitNumber.length > 60) throw new ApiError('Use 60 characters or fewer for the permit number', 400);
+  if (sellerBirTin.length > 30) throw new ApiError('Use 30 characters or fewer for the TIN', 400);
+  const sellerPermitUrl = registered ? trimmed(data.sellerPermitUrl).slice(0, 500) : '';
 
   // Payout is asked in the guided setup after applying now (PATCH
   // /seller-application/details). An application that still carries one
   // keeps it when it is complete; a half-filled one (an old saved draft) is
-  // left out rather than holding the application back.
-  let payoutMethod = trimmed(data.payoutMethod).toUpperCase();
-  if (payoutMethod && !PAYOUT_METHODS.includes(payoutMethod)) payoutMethod = '';
+  // left out rather than holding the application back. Several methods can be
+  // picked; the online ones need the account's name and number.
+  let { methods: payoutMethods } = readPayoutMethods(data);
   let payoutAccountNumber = trimmed(data.payoutAccountNumber);
   let payoutAccountName = trimmed(data.payoutAccountName);
-  if (payoutMethod && payoutMethod !== 'COD_ONLY' && (!payoutAccountName || !payoutAccountNumber)) {
-    payoutMethod = '';
+  const online = payoutMethods.some((m) => m !== 'COD_ONLY');
+  if (!online || !payoutAccountName || !payoutAccountNumber) {
+    if (online) payoutMethods = payoutMethods.filter((m) => m === 'COD_ONLY');
     payoutAccountNumber = '';
     payoutAccountName = '';
   }
+  // The GCash or QR Ph code buyers scan, optional; one is enough when both
+  // are picked, and it says which of the two it is.
+  const payoutQr = readPayoutQr(data, payoutMethods);
 
   const fulfillmentPreference = trimmed(data.fulfillmentPreference).toUpperCase() || 'DELIVERY';
   if (!FULFILLMENT_PREFERENCES.includes(fulfillmentPreference)) {
@@ -580,13 +638,17 @@ const normalizeSellerApplication = async (data = {}) => {
     shopMunicipalityId,
     shopBarangay: trimmed(data.shopBarangay) || null,
     shopTagline: shopTagline || null,
-    shopLogoUrl: trimmed(data.shopLogoUrl) || null,
+    shopLogoUrl: shopPicture(data.shopLogoUrl),
+    shopCoverUrl: shopPicture(data.shopCoverUrl),
     shopCategories,
     sellerBusinessType,
-    sellerPermitNumber: trimmed(data.sellerPermitNumber) || null,
-    sellerPermitUrl: trimmed(data.sellerPermitUrl) || null,
-    sellerBirTin: trimmed(data.sellerBirTin) || null,
-    payoutMethod: payoutMethod || null,
+    sellerPermitNumber: sellerPermitNumber || null,
+    sellerPermitUrl: sellerPermitUrl || null,
+    sellerBirTin: sellerBirTin || null,
+    payoutMethod: mainPayoutMethod(payoutMethods),
+    payoutMethods: payoutMethods.length ? payoutMethods : null,
+    payoutQrUrl: payoutQr.url,
+    payoutQrType: payoutQr.type,
     payoutAccountName: payoutAccountName || null,
     payoutAccountNumber: payoutAccountNumber || null,
     fulfillmentPreference,
@@ -609,6 +671,35 @@ const normalizeSellerApplication = async (data = {}) => {
  * The applicant's shop, created from their application or refreshed from it
  * when they re-apply. `approved` decides whether buyers can see it.
  */
+/**
+ * The shop's payment settings the application fills in, only while the shop
+ * has none yet: which QR it takes, the account buyers pay to and, when one
+ * was uploaded, the QR itself. The rules are Payment options' (store.service
+ * updateStore): an uploaded picture, GCash or QR Ph, and a QR goes up only
+ * with the account's name and a number that fits its kind. Cash on delivery
+ * is left as it is (on for a new shop), as with a single method.
+ */
+const paymentFromApplication = (application, store = {}) => {
+  const methods = payoutMethodsOf(application);
+  const picked = storeService.QR_TYPES.filter((type) => methods.includes(type));
+  if (!picked.length) return {};
+  if (store.paymentQrImage || store.paymentQrType || store.paymentAccountName || store.paymentAccountNumber) return {};
+  const qrType = picked.includes(application.payoutQrType) ? application.payoutQrType : picked[0];
+  const changes = { paymentQrType: qrType };
+  const name = trimmed(application.payoutAccountName).slice(0, 120);
+  if (name) changes.paymentAccountName = name;
+  let number = null;
+  try {
+    number = storeService.normalizeAccountNumber(application.payoutAccountNumber || null, qrType);
+  } catch {
+    // Not a number that QR takes (a typo): the seller enters it in Payment options.
+  }
+  if (number) changes.paymentAccountNumber = number;
+  const qr = application.payoutQrUrl;
+  if (qr && name && number && storeService.isOwnUpload(qr)) changes.paymentQrImage = qr;
+  return changes;
+};
+
 const ensureSellerStore = async (user, application, { approved }) => {
   const fulfillmentMode = FULFILLMENT_PREFERENCES.includes(application?.fulfillmentPreference)
     ? application.fulfillmentPreference
@@ -623,9 +714,13 @@ const ensureSellerStore = async (user, application, { approved }) => {
     if (!approved && application) {
       changes.description = application.shopDescription || store.description || null;
       if (application.shopLogoUrl) changes.logo = application.shopLogoUrl;
+      // The cover is the shop's banner, the picture Seller Center edits.
+      if (application.shopCoverUrl) changes.bannerImage = application.shopCoverUrl;
       if (application.shopMunicipalityId) changes.municipalityId = application.shopMunicipalityId;
       if (application.shopAddress) changes.pickupAddress = application.shopAddress;
     }
+    // On applying and on approval: only fills what the shop has not set.
+    if (application) Object.assign(changes, paymentFromApplication(application, store));
     return storeRepository.updateStore(store.id, changes);
   }
   if (!application?.shopName) return null;
@@ -635,6 +730,8 @@ const ensureSellerStore = async (user, application, { approved }) => {
     description: application.shopDescription || null,
     logo: application.shopLogoUrl || null,
     coverImage: null,
+    bannerImage: application.shopCoverUrl || null,
+    ...paymentFromApplication(application),
     businessHours: null,
     ownerId: user.id,
     // The municipality the applicant picked for the shop, which may differ
@@ -756,6 +853,11 @@ const getSellerApplication = async (userId) => {
       sellerPermitUrl: record.sellerPermitUrl || '',
       sellerBirTin: record.sellerBirTin || '',
       payoutMethod: record.payoutMethod || '',
+      payoutMethods: payoutMethodsOf(record),
+      payoutQrUrl: record.payoutQrUrl || '',
+      payoutQrType: record.payoutQrType || '',
+      shopLogoUrl: record.shopLogoUrl || '',
+      shopCoverUrl: record.shopCoverUrl || '',
       payoutAccountName: record.payoutAccountName || '',
       payoutAccountNumber: record.payoutAccountNumber || '',
     },
@@ -801,11 +903,12 @@ const updateSellerDetails = async (userId, data = {}) => {
     }
   }
 
-  if (has('payoutMethod')) {
-    const method = trimmed(data.payoutMethod).toUpperCase();
-    if (!PAYOUT_METHODS.includes(method)) throw new ApiError('Choose how you want to be paid', 400);
-    changes.payoutMethod = method;
-    if (method === 'COD_ONLY') {
+  if (has('payoutMethods') || has('payoutMethod')) {
+    const { methods, invalid } = readPayoutMethods(data);
+    if (invalid || !methods.length) throw new ApiError('Choose how you want to be paid', 400);
+    changes.payoutMethod = mainPayoutMethod(methods);
+    changes.payoutMethods = methods;
+    if (methods.every((m) => m === 'COD_ONLY')) {
       changes.payoutAccountName = null;
       changes.payoutAccountNumber = null;
     } else {
@@ -819,18 +922,42 @@ const updateSellerDetails = async (userId, data = {}) => {
     }
   }
 
+  // The payment QR: kept only while GCash or QR Ph is picked.
+  if (has('payoutQrUrl') || changes.payoutMethods) {
+    const methods = changes.payoutMethods || payoutMethodsOf(record);
+    const sent = has('payoutQrUrl') ? trimmed(data.payoutQrUrl) : record.payoutQrUrl || '';
+    if (sent && !storeService.isOwnUpload(sent)) throw new ApiError('Shop pictures must be uploaded here first', 400);
+    const qr = readPayoutQr({ payoutQrUrl: sent, payoutQrType: has('payoutQrType') ? data.payoutQrType : record.payoutQrType }, methods);
+    changes.payoutQrUrl = qr.url;
+    changes.payoutQrType = qr.type;
+  }
+
+  // The logo and cover picked when applying; the shop shows them too.
+  const pictures = {};
+  for (const [key, storeField] of [['shopLogoUrl', 'logo'], ['shopCoverUrl', 'bannerImage']]) {
+    if (!has(key)) continue;
+    const url = trimmed(data[key]);
+    if (url && !storeService.isOwnUpload(url)) throw new ApiError('Shop pictures must be uploaded here first', 400);
+    changes[key] = url || null;
+    pictures[storeField] = url || null;
+  }
+
   if (!Object.keys(changes).length) throw new ApiError('Nothing to save', 400);
   await userRepository.updateSellerDetails(userId, changes, record.sellerApplicationHistory);
+  if (Object.keys(pictures).length) {
+    const store = await storeRepository.findByOwnerId(userId);
+    if (store) await storeRepository.updateStore(store.id, pictures);
+  }
   return getSellerApplication(userId);
 };
 
 /** Fields the draft is allowed to carry — anything else is dropped. */
 const DRAFT_FIELDS = [
   'shopName', 'shopDescription', 'shopAddress', 'shopTagline', 'shopLogoUrl',
-  'shopCategories', 'province', 'provinceCode', 'municipalityId', 'municipalityName',
+  'shopCoverUrl', 'shopCategories', 'province', 'provinceCode', 'municipalityId', 'municipalityName',
   'municipalityCode', 'barangay', 'barangayCode', 'street', 'sellerBusinessType',
-  'sellerPermitNumber', 'sellerPermitUrl', 'sellerBirTin', 'payoutMethod',
-  'payoutAccountName', 'payoutAccountNumber', 'fulfillmentPreference',
+  'sellerPermitNumber', 'sellerPermitUrl', 'sellerBirTin', 'payoutMethod', 'payoutMethods',
+  'payoutQrUrl', 'payoutQrType', 'payoutAccountName', 'payoutAccountNumber', 'fulfillmentPreference',
   'idType', 'idFrontUrl', 'idBackUrl',
 ];
 

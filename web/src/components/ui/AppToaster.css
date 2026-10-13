@@ -1,9 +1,13 @@
 /* Pop-ups, iPhone style: a frosted banner that glides down from the top and
    lifts away (AppToaster.jsx). The outer box moves in and out; the card
-   inside follows a finger swiping it up. Only one shows at a time. */
+   inside follows a finger swiping it up and does the fading. Only one shows
+   at a time.
+   The outer box only ever moves (transform), never fades: a box with an
+   opacity animation (or will-change: opacity) is a "backdrop root", and the
+   card's blur inside it would see nothing behind, leaving it see-through. */
 .app-toast {
   width: min(400px, calc(100vw - 20px));
-  will-change: transform, opacity;
+  will-change: transform;
 }
 
 .app-toast.is-visible {
@@ -12,6 +16,16 @@
 
 .app-toast.is-hidden {
   animation: app-toast-out 0.36s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* The fade is the card's own (its own opacity keeps its blur). Coming in it
+   only fills backwards, so a swipe's fade (an inline opacity) still works. */
+.app-toast.is-visible .app-toast-card {
+  animation: app-toast-card-in 0.3s ease backwards;
+}
+
+.app-toast.is-hidden .app-toast-card {
+  animation: app-toast-fade-out 0.36s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 .app-toast-card {
@@ -39,9 +53,9 @@
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .app-toast-card {
     border-color: rgba(255, 255, 255, 0.75);
-    background: rgba(255, 255, 255, 0.7);
-    -webkit-backdrop-filter: saturate(180%) blur(24px);
-    backdrop-filter: saturate(180%) blur(24px);
+    background: rgba(255, 255, 255, 0.78);
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    backdrop-filter: blur(18px) saturate(1.6);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.85),
       inset 0 0 0 0.5px rgba(255, 255, 255, 0.4),
@@ -285,16 +299,10 @@ button.app-toast-body {
 /* Glides down from above the screen and settles, without a bounce. */
 @keyframes app-toast-in {
   0% {
-    opacity: 0;
     transform: translateY(calc(-100% - 18px)) scale(0.97);
   }
 
-  35% {
-    opacity: 1;
-  }
-
   100% {
-    opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
@@ -302,13 +310,21 @@ button.app-toast-body {
 /* Lifts back up and away. */
 @keyframes app-toast-out {
   0% {
-    opacity: 1;
     transform: translateY(0) scale(1);
   }
 
   100% {
-    opacity: 0;
     transform: translateY(calc(-100% - 14px)) scale(0.97);
+  }
+}
+
+@keyframes app-toast-card-in {
+  0% {
+    opacity: 0;
+  }
+
+  60% {
+    opacity: 1;
   }
 }
 
@@ -366,14 +382,19 @@ button.app-toast-body {
   }
 }
 
-/* Reduced motion: a plain fade in and out. */
+/* Reduced motion: a plain fade in and out (on the card, so it stays frosted). */
 @media (prefers-reduced-motion: reduce) {
   .app-toast.is-visible,
-  .app-toast-commerce.is-visible {
-    animation: app-toast-fade-in 0.2s ease both;
+  .app-toast.is-hidden {
+    animation: none;
   }
 
-  .app-toast.is-hidden,
+  .app-toast.is-visible .app-toast-card,
+  .app-toast-commerce.is-visible {
+    animation: app-toast-fade-in 0.2s ease backwards;
+  }
+
+  .app-toast.is-hidden .app-toast-card,
   .app-toast-commerce.is-hidden {
     animation: app-toast-fade-out 0.16s ease forwards;
   }

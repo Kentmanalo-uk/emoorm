@@ -148,7 +148,9 @@ export default function SellerWelcome() {
     const mode = form.mode;
     return [
       { key: 'identity', part: 0, done: app?.identityVerified === true },
-      { key: 'business', part: 0 },
+      // Asked in the application now: done once the seller type is given
+      // (a registered business with its permit number).
+      { key: 'business', part: 0, done: Boolean(app?.details?.sellerBusinessType) && (app.details.sellerBusinessType !== 'REGISTERED' || Boolean(app.details.sellerPermitNumber)) },
       { key: 'branding', part: 1, done: stepDone(setup, 'branding') },
       { key: 'about', part: 1, done: Boolean(store?.description) },
       { key: 'mode', part: 1 },

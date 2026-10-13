@@ -112,7 +112,7 @@ const PAGES = {
   '/seller/settings': {
     art: 'settings',
     title: 'Shop settings',
-    text: 'Account-level controls for your shop, separate from your public shop profile.',
+    text: 'Everything about how your shop runs: away mode, hours, delivery, payment and more, in one list.',
   },
 };
 

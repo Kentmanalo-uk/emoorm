@@ -64,7 +64,8 @@ const GUIDES = {
     { target: '.reviews-reply-trigger', title: 'Reply publicly', text: 'Seller replies are visible to buyers. Keep responses helpful, factual, and professional.' },
   ],
   '/seller/settings': [
-    { target: '.store-danger-card', title: 'Destructive account actions', text: 'Deleting a shop affects listings and seller operations. Review the consequences before continuing.' },
+    { target: '.sst-group', title: 'Your shop settings', text: 'Everything about how your shop runs, in groups. Switches save at once; the other rows open their own page.' },
+    { target: '.sst-danger:not(.settings-deletion-pending)', title: 'Destructive account actions', text: 'Deleting a shop affects listings and seller operations. Review the consequences before continuing.' },
     { target: '.settings-deletion-pending', title: 'Deletion pending', text: 'A pending deletion can be cancelled here before the scheduled removal date.' },
   ],
 };

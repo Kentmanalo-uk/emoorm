@@ -51,7 +51,6 @@ import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
 import useAuthStore from './store/authStore';
 import AppInstallPing from './components/AppInstallPing';
 import AppUpdateBar from './components/AppUpdateBar';
-import NewVersionBar from './components/NewVersionBar';
 import { ThemeRuntime } from './hooks/useTheme';
 import { usePhoneLayout } from './hooks/useMobileNav';
 import { isAuthSheetPath, HOME_BACKGROUND } from './lib/authSheet';
@@ -87,6 +86,7 @@ const SellerAnalytics = lazy(() => import('./pages/SellerAnalytics'));
 const SellerFinance = lazy(() => import('./pages/SellerFinance'));
 const SellerVerification = lazy(() => import('./pages/SellerVerification'));
 const SellerMenu = lazy(() => import('./pages/SellerMenu'));
+const SellerShopQr = lazy(() => import('./pages/SellerShopQr'));
 const SellerMarketing = lazy(() => import('./pages/SellerMarketing'));
 const SellerDecorate = lazy(() => import('./pages/SellerDecorate'));
 const SellerTemplates = lazy(() => import('./pages/SellerDecorate').then((m) => ({ default: m.SellerTemplates })));
@@ -205,7 +205,6 @@ function AppRoutes() {
       <OfflineBanner />
       <AppInstallPing />
       <AppUpdateBar />
-      <NewVersionBar />
       <Suspense fallback={<RouteLoading />}>
       <Routes location={background || location}>
         {/* Public routes */}
@@ -291,6 +290,7 @@ function AppRoutes() {
           <Route path="setup" element={<Navigate to="/seller" replace />} />
           <Route path="verification" element={<SellerVerification />} />
           <Route path="menu" element={<SellerMenu />} />
+          <Route path="shop-qr" element={<SellerShopQr />} />
           <Route path="marketing" element={<SellerMarketing />} />
           <Route path="decorate" element={<SellerDecorate />} />
           <Route path="decorate/home" element={<SellerShopHome />} />

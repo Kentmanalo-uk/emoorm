@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react';
-import { inAndroidApp } from './inApp';
 
 /**
  * Keeps a page that has been open across a deploy up to date.
@@ -12,14 +11,15 @@ import { inAndroidApp } from './inApp';
  * switched to), and now and then while it is in view, the page asks the
  * server which build is current.
  *
- * Inside the Android app (or the site installed on the home screen) a new
- * build is simply loaded, as soon as it is safe: not while someone is
- * typing, paying, or uploading. Pages remember where they were and what
- * was picked (lib/inApp.js visitStorage), so the reload lands back on the
- * same spot. In a browser tab, a small card offers to refresh instead: a
- * tab reloading itself is a surprise there.
+ * A new build is simply loaded, everywhere (browser tab, installed site,
+ * Android app), as soon as it is safe: not while someone is typing, paying,
+ * uploading or filling in a dialog. There is nothing to click. Pages
+ * remember where they were and what was picked (lib/inApp.js visitStorage:
+ * the tab's sessionStorage, which a reload keeps), so the reload lands back
+ * on the same spot.
  */
 
+/* global __BUILD_ID__ */
 const RUNNING = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev';
 const CHECK_EVERY_MS = 15 * 60 * 1000;
 // A check is only worth making once the page has been out of view a while.
@@ -38,15 +38,20 @@ let timer = null;
 const listeners = new Set();
 const emit = () => listeners.forEach((listener) => listener());
 
-const autoReloads = () => inAndroidApp()
-  || (typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches);
-
 const typing = () => {
   const el = typeof document !== 'undefined' ? document.activeElement : null;
   return Boolean(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable));
 };
 
-const busy = () => typing() || BUSY_PATHS.test(window.location.pathname);
+// An open dialog or sheet with something to fill in (an address, a reply,
+// a review): a reload would throw away what was typed or picked there.
+const formDialogOpen = () => {
+  if (typeof document === 'undefined') return false;
+  const dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"], [aria-modal="true"], dialog[open]');
+  return Array.from(dialogs).some((d) => d.querySelector('input:not([type="hidden"]), textarea, select, [contenteditable="true"]'));
+};
+
+const busy = () => typing() || formDialogOpen() || BUSY_PATHS.test(window.location.pathname);
 
 /** Loads the current build. */
 export const applyNewBuild = () => {
@@ -81,7 +86,7 @@ export const checkForNewBuild = async () => {
       if (newBuild !== build) {
         newBuild = build;
         emit();
-        if (autoReloads()) reloadWhenSafe();
+        reloadWhenSafe();
       }
       return true;
     } catch {
@@ -101,7 +106,7 @@ const onVisible = () => {
   const away = hiddenAt ? Date.now() - hiddenAt : 0;
   hiddenAt = 0;
   if (away >= MIN_AWAY_MS || Date.now() - lastCheck >= CHECK_EVERY_MS) checkForNewBuild();
-  else if (newBuild && autoReloads()) reloadWhenSafe();
+  else if (newBuild) reloadWhenSafe();
 };
 
 /** Starts watching. Called once, before the app renders. */

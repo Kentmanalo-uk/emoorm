@@ -2594,7 +2594,7 @@ div.pdp-store-followers {
     min-height: 56px;
     padding: env(safe-area-inset-top, 0px) 4px 0;
     background: var(--t-neutral-0, #fff);
-    border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-bottom: 0;
   }
 
   .pdp-m-topbar .pdp-m-icon {

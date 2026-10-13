@@ -17,6 +17,9 @@ import { useRefreshAdminShell } from '../hooks/useAdminShellData';
 import EmptyArt from '../components/ui/EmptyArt';
 import { confirmAction } from '../lib/confirm';
 import Select from '../components/ui/Select';
+import resolveImg from '../lib/media';
+
+const PAYOUT_LABELS = { GCASH: 'GCash', QRPH: 'QR Ph', MAYA: 'Maya', BANK: 'Bank', COD_ONLY: 'Cash on delivery' };
 
 // Bulk approvals go three at a time: each one is a dozen queries and a new
 // shop on a database with a handful of connections, so twenty at once could
@@ -457,6 +460,15 @@ export default function AdminSellers() {
                     <label>Description</label>
                     <p>{selected.shopDescription || '—'}</p>
                   </div>
+                  {(selected.shopLogoUrl || selected.shopCoverUrl) && (
+                    <div className="admin-detail-full">
+                      <label>Logo and Cover Photo</label>
+                      <div className="admin-shop-pics">
+                        {selected.shopLogoUrl && <img className="admin-shop-pic-logo" src={resolveImg(selected.shopLogoUrl)} alt="Shop logo" />}
+                        {selected.shopCoverUrl && <img className="admin-shop-pic-cover" src={resolveImg(selected.shopCoverUrl)} alt="Shop cover" />}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -470,11 +482,25 @@ export default function AdminSellers() {
                   </div>
                   <div><label>Permit / Registration No.</label><p>{selected.sellerPermitNumber || '—'}</p></div>
                   <div><label>BIR TIN</label><p>{selected.sellerBirTin || '—'}</p></div>
-                  <div><label>Payout Method</label><p>{selected.payoutMethod || '—'}</p></div>
+                  <div>
+                    <label>Payment Methods</label>
+                    <p>
+                      {(Array.isArray(selected.payoutMethods) && selected.payoutMethods.length
+                        ? selected.payoutMethods
+                        : [selected.payoutMethod].filter(Boolean)
+                      ).map((m) => PAYOUT_LABELS[m] || m).join(', ') || '—'}
+                    </p>
+                  </div>
                   <div><label>Payout Account</label>
                     <p>{[selected.payoutAccountName, selected.payoutAccountNumber].filter(Boolean).join(' · ') || '—'}</p>
                   </div>
                   <div><label>Fulfillment</label><p>{selected.fulfillmentPreference || '—'}</p></div>
+                  {selected.payoutQrUrl && (
+                    <div>
+                      <label>{PAYOUT_LABELS[selected.payoutQrType] || 'Payment'} QR</label>
+                      <img className="admin-shop-pic-qr" src={resolveImg(selected.payoutQrUrl)} alt="Payment QR code" />
+                    </div>
+                  )}
                   <div className="admin-detail-full">
                     <label>Terms Accepted</label>
                     <p>

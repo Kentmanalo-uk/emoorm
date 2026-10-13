@@ -1,7 +1,7 @@
 /*
  * Phones (≤768px) only: the app look shared by buyer, seller and admin pages.
  *
- * 1. Page headers are solid white bars with a hairline under them, held at
+ * 1. Page headers are solid white bars with no line under them, held at
  *    the top while the page scrolls; most carry the light header wash. Their
  *    buttons are plain icons (the bar is their background), ending with the
  *    page menu (⋯, PageMenu).
@@ -39,7 +39,7 @@
     z-index: 120;
     background: var(--pa-bar) !important;
     box-shadow: none !important;
-    border-bottom: 1px solid var(--pa-line);
+    border-bottom: 0 !important;
   }
 
   /* Bars drawn inside the page's 12px gutter: pulled out to the edges. */
@@ -58,7 +58,7 @@
     padding-right: calc(var(--pa-gutter) - 4px) !important;
     background: var(--pa-bar) !important;
     box-shadow: none !important;
-    border-bottom: 1px solid var(--pa-line);
+    border-bottom: 0 !important;
   }
 
   /* The top bars of the tabs, the inner pages and the Seller Center carry

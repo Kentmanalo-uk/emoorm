@@ -649,7 +649,7 @@
    header wash (index.css). */
 .header {
   background: var(--header-glow);
-  border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-bottom: 0;
   padding: 0;
   position: fixed;
   left: 0;
@@ -1772,16 +1772,10 @@
   }
 }
 
-/* Phones: at the very top of Home the header has no shadow or bottom line, so
-   it runs into the search suggestions under it; they come back once the page
-   scrolls. */
+/* Phones: no line or shadow under the header, like the other phone bars;
+   at the top of Home it runs into the search suggestions under it. */
 @media (max-width: 768px) {
-  .header.is-home {
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
-  }
-
-  .header.is-home.is-at-top {
-    border-bottom-color: transparent;
+  .header {
     box-shadow: none;
   }
 }

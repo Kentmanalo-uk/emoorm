@@ -136,6 +136,7 @@ const SELLER_RULES = [
   [/^\/seller\/fulfillment/, [S.store, S.orders, S.settings]],
   [/^\/seller\/settings/, [S.store, S.fulfillment, S.verify, S.admin]],
   [/^\/seller\/verification/, [S.settings, S.admin]],
+  [/^\/seller\/shop-qr/, [S.marketing, S.decorate, S.store]],
   [/^\/seller\/setup/, [S.admin, S.help]],
 ];
 const SELLER_FALLBACK = [S.home, S.me, S.help];

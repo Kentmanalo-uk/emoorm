@@ -45,3 +45,41 @@ export async function uploadImage(file, options) {
   if (!json?.data?.url) throw new Error('Upload succeeded but no URL returned');
   return json.data;
 }
+
+/**
+ * Upload a business paper or ID photo privately (POST /upload/kyc). Kept
+ * sharp enough to read, like an ID. The answer is an opaque fileId, not a
+ * URL: only the owner and the reviewing admin can open it.
+ *
+ * @param {File} file
+ * @returns {Promise<{ fileId: string }>}
+ */
+export async function uploadKycDocument(file) {
+  if (!file) throw new Error('No file selected');
+  const ready = await uploadableImage(file, { document: true });
+
+  const token =
+    localStorage.getItem('token') || localStorage.getItem('accessToken');
+
+  const fd = new FormData();
+  fd.append('file', ready);
+
+  beginActivity();
+  let resp;
+  let json;
+  try {
+    resp = await fetch(`${API_CONFIG.BASE_URL}/upload/kyc`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    });
+    json = await resp.json().catch(() => ({}));
+  } finally {
+    endActivity();
+  }
+  if (!resp.ok || !json?.success) {
+    throw new Error(json?.message || `Upload failed (${resp.status})`);
+  }
+  if (!json?.data?.fileId) throw new Error('Upload succeeded but no file reference returned');
+  return json.data;
+}
