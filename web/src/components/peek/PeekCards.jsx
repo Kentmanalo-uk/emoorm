@@ -11,6 +11,7 @@ import ProductImage from '../ProductImage';
 import { SaleWas } from '../ui/SaleTag';
 import UserAvatar from '../ui/UserAvatar';
 import { ProductTodayTag } from '../today/TodayTag';
+import { notTakingOrders } from '../../lib/availability';
 
 /*
  * What the long-press previews show (the use*Peek hooks build the actions):
@@ -18,7 +19,8 @@ import { ProductTodayTag } from '../today/TodayTag';
  */
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const outOfStock = (p) => p.stock === 0 && !isStockless(p);
+// An item on its shop's menu but not posted now has its own grey tag instead.
+const outOfStock = (p) => p.stock === 0 && !isStockless(p) && !notTakingOrders(p);
 
 /* ── Product ── */
 

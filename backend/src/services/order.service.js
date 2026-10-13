@@ -36,6 +36,7 @@ const { unitPriceFor, stockForSelection } = require('../utils/variantPricing');
 const {
   kindOf, isStockless, minOrderOf, courierRefusal, cookReady,
 } = require('../utils/productKinds');
+const { isOpen: isWindowOpen } = require('../utils/availability');
 
 const PAYMENT_METHODS = ['COD', 'GCASH', 'QRPH'];
 
@@ -452,6 +453,12 @@ const createOrder = async (userId, data) => {
 
     if (product.storeId !== storeId) {
       throw new ApiError(`Product ${product.name} does not belong to this store`, 400);
+    }
+
+    // An item on the shop's menu (Available Today) sells only through a post
+    // taking orders now; checkoutWindows below checks the post itself.
+    if (product.listingKind === 'TODAY' && !isWindowOpen(product.availability)) {
+      throw new ApiError(`${product.name} isn't taking orders right now.`, 400);
     }
 
     // Cooked-to-order food is never short of stock, but has a minimum order.

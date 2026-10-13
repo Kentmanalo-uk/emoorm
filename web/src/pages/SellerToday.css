@@ -1,5 +1,59 @@
-/* Today's menu (SellerToday.jsx): the shop's Available Today posts. The
-   step-by-step post / edit sheet is components/seller/TodayPostFlow.css. */
+/* Today's menu (SellerToday.jsx): the Menu tab (the shop's Available Today
+   items, posted or not), its posts and "Add from My products". The one-page
+   post / edit form is SellerTodayPost.css. Kept quiet: green only for the
+   main buttons and "Taking orders". */
+/* The tabs, and "Post an item" on the right. */
+.stw-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 0 0 20px;
+}
+
+/* "Post an item": all green, held at the bottom right while the page scrolls
+   (the list leaves room for it at its end). */
+.stw {
+  padding-bottom: 96px;
+}
+
+.stw-post {
+  position: fixed;
+  /* Clear of the tool strip down the right edge on computers. */
+  right: 88px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 20px 6px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-primary-700, #047857);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.stw-post:hover {
+  background: var(--t-primary-800, #065f46);
+}
+
+.stw-post-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+}
+
 .stw-banner {
   display: flex;
   align-items: center;
@@ -12,105 +66,84 @@
   font-size: 14px;
 }
 
-/* "Post an item": big and plain. */
-.btn-seller-primary.stw-post {
-  min-height: 48px;
-  padding: 0 22px;
-  font-size: 16px;
-}
-
 .stw-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 0 0 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  display: inline-flex;
+  gap: 4px;
+  margin: 0;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--t-neutral-200, #e5e7eb);
 }
 
 .stw-tabs button {
   min-height: 40px;
-  padding: 0 16px;
-  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  padding: 0 18px;
+  border: 0;
   border-radius: 999px;
-  background: var(--t-neutral-0, #fff);
+  background: none;
   color: var(--t-neutral-700, #374151);
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   white-space: nowrap;
   cursor: pointer;
 }
 
 .stw-tabs button.is-on {
-  border-color: var(--t-primary-600, #059669);
-  background: var(--t-primary-600, #059669);
-  color: #fff;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-900, #111827);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.08);
 }
 
 .stw-group + .stw-group {
-  margin-top: 22px;
+  margin-top: 28px;
 }
 
 .stw-group-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  color: var(--t-neutral-800, #1f2937);
-  font-size: 17px;
+  margin: 0 0 12px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 18px;
   font-weight: 600;
 }
 
-.stw-group-title small {
-  color: var(--t-neutral-500, #6b7280);
-  font-size: 13px;
-  font-weight: 400;
+/* Coming up, by day. */
+.stw-day + .stw-day {
+  margin-top: 18px;
 }
 
-.stw-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--t-accent-500, #ec4899);
-  box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.5);
-  animation: stw-pulse 1.8s ease-out infinite;
-}
-
-@keyframes stw-pulse {
-  70% { box-shadow: 0 0 0 7px rgba(236, 72, 153, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stw-dot { animation: none; }
+.stw-day-title {
+  margin: 0 0 8px;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .stw-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 14px;
 }
 
 .stw-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
-  padding: 14px;
-  border: 1px solid var(--t-neutral-100, #f3f4f6);
+  padding: 16px;
   border-radius: 16px;
   background: var(--t-neutral-0, #fff);
 }
 
 .stw-card-top {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 }
 
 .stw-thumb {
   flex-shrink: 0;
-  width: 76px;
-  height: 76px;
+  width: 72px;
+  height: 72px;
   border-radius: 12px;
   object-fit: cover;
   background: var(--t-neutral-100, #f3f4f6);
@@ -122,142 +155,425 @@
   color: var(--t-neutral-400, #9ca3af);
 }
 
+.stw-card.is-ended .stw-thumb,
+.stw-card.is-out .stw-thumb {
+  opacity: 0.6;
+}
+
 .stw-card-main {
   flex: 1;
   min-width: 0;
 }
 
-/* The status chip: Taking orders / Starts tomorrow 10:00 AM / Ended. */
-.stw-chip {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--t-neutral-100, #f3f4f6);
-  color: var(--t-neutral-700, #374151);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.stw-chip.is-live { background: var(--t-primary-100, #d1fae5); color: var(--t-primary-800, #065f46); }
-.stw-chip.is-soon { background: #fef3c7; color: #92400e; }
-
 .stw-name {
-  margin: 6px 0 4px;
+  margin: 0;
   overflow: hidden;
   color: var(--t-neutral-900, #111827);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.stw-name a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.stw-name a:hover {
-  text-decoration: underline;
-}
-
-.stw-when,
-.stw-meta {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin: 2px 0 0;
-  line-height: 1.4;
-}
-
-.stw-when {
-  color: var(--t-neutral-800, #1f2937);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.stw-meta {
+/* One status in plain words: Taking orders / Starts tomorrow 10:00 AM / Sold out / Ended. */
+.stw-status {
+  margin: 2px 0 6px;
   color: var(--t-neutral-600, #4b5563);
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
-.stw-when svg,
-.stw-meta svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--t-neutral-400, #9ca3af);
-}
+.stw-status.is-live { color: var(--t-primary-700, #047857); }
+.stw-status.is-soon { color: #b45309; }
+.stw-status.is-out { color: var(--t-danger-600, #dc2626); }
 
-.stw-note {
-  margin: 6px 0 0;
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 13px;
-  font-style: italic;
-}
-
-/* "12 of 20 left". */
-.stw-count {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 14px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--t-primary-50, #ecfdf5);
-}
-
-.stw-card.is-soon .stw-count { background: #fffbeb; }
-.stw-card.is-ended .stw-count { background: var(--t-neutral-50, #f9fafb); }
-
-.stw-count p {
+.stw-line {
   margin: 0;
   color: var(--t-neutral-700, #374151);
   font-size: 15px;
+  line-height: 1.45;
 }
 
-.stw-count strong {
+.stw-line strong {
   color: var(--t-neutral-900, #111827);
-  font-size: 22px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.stw-sold {
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 13px;
-}
-
-.stw-left {
-  margin-left: auto;
-  color: var(--t-accent-700, #be185d);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
+/* Two buttons with words, and ⋯ for the rest. */
 .stw-actions {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 
-.stw-stepper {
+.stw-btn {
   display: inline-flex;
+  flex: 1 1 0;
   align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 0 14px;
   border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.stw-btn--main {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.stw-btn--danger {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.stw-btn--icon {
+  flex: 0 0 46px;
+  width: 46px;
+  padding: 0;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.stw-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stw-more {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.stw-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  min-width: 200px;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--t-neutral-100, #f3f4f6);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.14);
+  list-style: none;
+}
+
+.stw-menu button {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stw-menu button:hover {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.stw-menu button.is-danger {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.stw-empty {
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.stw-empty-link {
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+/* ── Menu ─────────────────────────────────────────────────────────── */
+
+/* "+ Add from My products" and "Create a new menu item". */
+.stw-menu-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  margin: 0 0 14px;
+}
+
+.stw-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px dashed var(--t-primary-400, #34d399);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #047857);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.stw-add:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stw-create {
+  color: var(--t-primary-700, #047857);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* One menu item: photo, name, price, status; Post and ⋯. */
+.stw-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.stw-item .stw-thumb {
+  width: 64px;
+  height: 64px;
+}
+
+.stw-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.stw-price {
+  margin: 2px 0 0;
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stw-item-status {
+  margin: 4px 0 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.stw-item-status.is-live { color: var(--t-primary-700, #047857); }
+.stw-item-status.is-soon { color: #b45309; }
+.stw-item-status.is-out { color: var(--t-danger-600, #dc2626); }
+
+.stw-item-note {
+  margin: 2px 0 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+}
+
+.stw-item-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.stw-btn--small {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 18px;
+}
+
+.stw-item .stw-btn--icon {
+  flex-basis: 40px;
+  width: 40px;
+  min-height: 40px;
+  border-color: transparent;
+}
+
+/* The ⋯ menu of a row opens downwards. */
+.stw-item .stw-menu {
+  top: calc(100% + 6px);
+  bottom: auto;
+}
+
+/* "Add from My products": search, then the list; tapping one asks first. */
+.stw-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stw-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.stw-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--t-neutral-900, #111827);
+  font: inherit;
+  font-size: 16px;
+}
+
+.stw-pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stw-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 6px 10px 6px 6px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stw-pick:hover:not(:disabled) {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.stw-pick:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.stw-pick.is-static {
+  padding: 0;
+  cursor: default;
+}
+
+.stw-pick .stw-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+}
+
+.stw-pick-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stw-pick-text strong {
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stw-pick-text span {
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14px;
+}
+
+.stw-pick-plus {
+  flex-shrink: 0;
+  color: var(--t-primary-600, #059669);
+}
+
+.stw-pick-empty {
+  padding: 12px 4px;
+}
+
+.stw-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (min-width: 769px) {
+  .stw-pick-sheet .scm-sheet-body {
+    max-height: min(60vh, 520px);
+    overflow-y: auto;
+  }
+}
+
+.stw-foot {
+  margin: 20px 0 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.stw-foot a {
+  color: var(--t-primary-700, #047857);
+}
+
+/* Add more / More time sheets */
+.stw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.stw-hint {
+  margin: 0;
+  color: var(--t-neutral-700, #374151);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.stw-stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .stw-stepper button {
   display: grid;
+  flex-shrink: 0;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 0;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 50%;
-  background: none;
+  background: var(--t-neutral-0, #fff);
   color: var(--t-primary-700, #047857);
   cursor: pointer;
 }
@@ -267,124 +583,36 @@
   cursor: not-allowed;
 }
 
-.stw-stepper span {
-  min-width: 34px;
+.stw-stepper input {
+  flex: 1;
+  min-width: 0;
+  height: 60px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 14px;
   color: var(--t-neutral-900, #111827);
-  font-size: 15px;
+  font: inherit;
+  font-size: 28px;
   font-weight: 600;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
-.stw-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--t-primary-600, #059669);
-  color: #fff;
+.stw-adds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stw-adds button {
+  min-height: 46px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-800, #1f2937);
   font: inherit;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   cursor: pointer;
-}
-
-.stw-btn--edit {
-  border: 1px solid var(--t-primary-600, #059669);
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-primary-700, #047857);
-  font-weight: 600;
-}
-
-.stw-btn--ghost {
-  border: 1px solid var(--t-neutral-200, #e5e7eb);
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-neutral-700, #374151);
-}
-
-.stw-btn--danger {
-  border: 1px solid #fecaca;
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-danger-600, #dc2626);
-}
-
-.stw-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.stw-empty {
-  padding: 8px;
-}
-
-.stw-foot {
-  margin: 18px 0 0;
-  color: var(--t-neutral-500, #6b7280);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.stw-foot a {
-  color: var(--t-primary-700, #047857);
-}
-
-/* More time / Post again sheets */
-.stw-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-bottom: 4px;
-}
-
-.stw-gap {
-  margin-top: 6px;
-}
-
-.stw-hint {
-  margin: 0;
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-
-.stw-picked {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  margin: 0;
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-
-.stw-picked strong {
-  color: var(--t-primary-700, #047857);
-  font-weight: 600;
-}
-
-/* Coming up, by day. */
-.stw-day + .stw-day {
-  margin-top: 16px;
-}
-
-.stw-day-title {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin: 0 0 8px;
-  color: var(--t-neutral-700, #374151);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.stw-day-title small {
-  color: var(--t-neutral-400, #9ca3af);
-  font-size: 12.5px;
-  font-weight: 400;
 }
 
 /* Computers: the sheets open as a centred dialog. */
@@ -395,6 +623,7 @@
   }
 
   .scm-sheet.stw-sheet {
+    max-width: 440px;
     border-radius: 20px;
   }
 
@@ -404,22 +633,55 @@
 }
 
 @media (max-width: 768px) {
+  /* Phones: the tabs take the width; "Post an item" floats bottom right. */
+  .stw-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stw-post {
+    right: 16px;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    min-height: 48px;
+    font-size: 14.5px;
+  }
+
+  .stw-post-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .stw-tabs {
+    display: flex;
+  }
+
+  .stw-tabs button {
+    flex: 1 1 auto;
+    padding: 0 10px;
+    font-size: 14px;
+  }
+
+  .stw-item {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .stw-item .stw-thumb {
+    width: 56px;
+    height: 56px;
+  }
+
   .stw-list {
     grid-template-columns: 1fr;
     gap: 12px;
   }
 
-  .stw-card {
-    border: 0;
-  }
-
-  .stw-actions .stw-btn {
-    flex: 1 1 auto;
-    justify-content: center;
-    white-space: nowrap;
-  }
-
-  .stw-actions .stw-stepper {
-    flex: 0 0 auto;
+  /* The phone page is white: a hairline keeps each card in one piece. */
+  .stw-card,
+  .stw-item,
+  .stw-empty {
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
   }
 }

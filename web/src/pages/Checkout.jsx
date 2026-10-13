@@ -510,6 +510,8 @@ const Checkout = () => {
     ? {
       from: Math.min(...todayLines.map((it) => new Date(it.availability.readyFrom).getTime())),
       to: Math.max(...todayLines.map((it) => new Date(it.availability.readyUntil).getTime())),
+      // Only pre-orders: say so ("Pre-order: ready tomorrow…").
+      preOrder: todayLines.every((it) => it.availability.mode === 'PRE_ORDER'),
     }
     : null;
 
@@ -1010,7 +1012,7 @@ const Checkout = () => {
                     </div>
                     {todayReady && (
                       <p className="co-today-ready">
-                        Available Today: ready {spanLabel(todayReady.from, todayReady.to)}
+                        {todayReady.preOrder ? 'Pre-order' : 'Available Today'}: ready {spanLabel(todayReady.from, todayReady.to)}
                       </p>
                     )}
                     {readyNote && (

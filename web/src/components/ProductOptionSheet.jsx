@@ -7,6 +7,7 @@ import {
 } from '../lib/variantPricing';
 import { optionImage, picturedVariation } from '../lib/variationImage';
 import { resolveImg } from '../lib/media';
+import { buyLabel } from '../lib/availability';
 import './ProductOptionSheet.css';
 import useFocusTrap from '../hooks/useFocusTrap';
 
@@ -117,7 +118,7 @@ export default function ProductOptionSheet({
     onConfirm(action);
   };
 
-  const label = shown === 'buy' ? 'Buy now' : 'Add to cart';
+  const label = shown === 'buy' ? buyLabel(product) : 'Add to cart';
 
   return (
     <div className={`pos-root${closing ? ' is-closing' : ''}`}>

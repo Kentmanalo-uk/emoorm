@@ -822,8 +822,8 @@ const getProducts = async (rawOptions) => {
   // If not admin, only show approved products from active, non-suspended stores.
   if (!options.isAdmin) {
     options.status = 'APPROVED';
-    // Available Today products show only while a window takes orders.
-    options.publicListing = true;
+    // Available Today products are listed posted or not (their cards say
+    // whether they take orders); ?today=1 keeps to those taking orders now.
     options.storeIsActive = true;
     options.storeIsSuspended = false;
     options.storeIsApproved = true;

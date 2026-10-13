@@ -1873,6 +1873,28 @@
     font-weight: 700;
   }
 
+  /* On the shop's menu, not posted now. */
+  .shop-m-row-closed {
+    flex-shrink: 0;
+    height: 34px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--t-neutral-200, #e5e7eb);
+    color: var(--t-neutral-600, #4b5563);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: not-allowed;
+  }
+
+  .shop-m-row-opens {
+    margin: 4px 0 0;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 12.5px;
+    text-align: right;
+  }
+
   .shop-m-row-cart:disabled,
   .shop-m-row-buy:disabled {
     opacity: 0.45;

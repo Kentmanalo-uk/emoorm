@@ -257,9 +257,11 @@ export default function SellerLayout() {
   const templateKey = cleanPath.startsWith('/seller/decorate/templates/') ? cleanPath.split('/').pop() : null;
   const phoneTitle = editingProduct
     ? 'Edit product'
-    : templateKey
-      ? (SHOP_TEMPLATES.find((t) => t.key === templateKey)?.name || 'Template')
-      : PHONE_TITLES[cleanPath] || crumbs[crumbs.length - 1]?.label || 'Seller Center';
+    : /^\/seller\/today\/[^/]+\/edit$/.test(cleanPath)
+      ? 'Edit post'
+      : templateKey
+        ? (SHOP_TEMPLATES.find((t) => t.key === templateKey)?.name || 'Template')
+        : PHONE_TITLES[cleanPath] || crumbs[crumbs.length - 1]?.label || 'Seller Center';
   const goBack = () => {
     if (window.history.state?.idx > 0) navigate(-1);
     else if (cleanPath.startsWith('/seller/decorate/templates/')) navigate('/seller/decorate/templates');
@@ -267,6 +269,8 @@ export default function SellerLayout() {
     else if (/^\/seller\/(store|fulfillment)\/[a-z]+$/.test(cleanPath)) navigate(cleanPath.replace(/\/[a-z]+$/, ''));
     // Adding or editing a product: back to My products (a tab of its own).
     else if (cleanPath.startsWith('/seller/products')) navigate('/seller/products');
+    // Posting or editing on Today's menu: back to the menu.
+    else if (cleanPath.startsWith('/seller/today/')) navigate('/seller/today');
     else if (/^\/seller\/(orders|returns|reviews|analytics|finance)/.test(cleanPath)) navigate('/seller');
     else if (cleanPath === '/seller/assistant') navigate('/seller/messages');
     else navigate('/seller/menu');
@@ -686,6 +690,7 @@ const LABELS = {
   '/seller/products': 'My Products',
   '/seller/products/new': 'Add Product',
   '/seller/today': "Today's menu",
+  '/seller/today/new': 'Post an item',
   '/seller/verification': 'Verify identity',
   '/seller/menu': 'Menu',
   '/seller/marketing': 'Marketing',
@@ -718,6 +723,7 @@ const PHONE_TITLES = {
   '/seller/products': 'My products',
   '/seller/products/new': 'Add product',
   '/seller/today': "Today's menu",
+  '/seller/today/new': 'Post an item',
   '/seller/messages': 'Chat',
   '/seller/assistant': 'Ate Moormy',
   '/seller/marketing': 'Marketing',

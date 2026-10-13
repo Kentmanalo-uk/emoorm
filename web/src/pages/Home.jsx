@@ -27,6 +27,7 @@ import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch'
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import TodayRail from '../components/today/TodayRail';
 import { ProductTodayTag } from '../components/today/TodayTag';
+import { notTakingOrders } from '../lib/availability';
 import useProductPeek from '../components/peek/useProductPeek';
 import useStorePeek from '../components/peek/useStorePeek';
 
@@ -477,6 +478,7 @@ const Home = () => {
                 <Link key={product.id} to={`/product/${product.slug}`} className="product-card" {...peekProduct(product)}>
                   <div className="product-image">
                     <ProductImage src={product.images?.[0]} alt={product.name} />
+                    {!notTakingOrders(product) && (
                     <button
                       type="button"
                       className="product-cart-fab"
@@ -485,6 +487,7 @@ const Home = () => {
                     >
                       <ShoppingCart size={16} />
                     </button>
+                    )}
                   </div>
                   <div className="product-info">
                     <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
@@ -725,9 +728,11 @@ function HomeProductCard({ product, onAddToCart }) {
     <Link to={`/product/${product.slug}`} className="product-card" {...peekProduct(product)}>
       <div className="product-image">
         <ProductImage src={product.images?.[0]} alt={product.name} />
+        {!notTakingOrders(product) && (
         <button type="button" className="product-cart-fab" onClick={(e) => onAddToCart(e, product)} aria-label="Add to cart">
           <ShoppingCart size={16} />
         </button>
+        )}
       </div>
       <div className="product-info">
         <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>

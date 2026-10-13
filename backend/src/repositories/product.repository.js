@@ -373,7 +373,6 @@ const findAll = async (options = {}) => {
     maxPrice,
     search,
     stockFilter,
-    publicListing,
     todayOnly,
     listingKind,
     productType,
@@ -397,16 +396,12 @@ const findAll = async (options = {}) => {
     where.AND = [...(where.AND || []), { productType, listingKind: 'REGULAR' }];
   }
 
-  // Available Today products are on public lists only while a window takes
-  // orders; between windows they wait in the seller's catalogue.
-  if (publicListing || todayOnly) {
-    const now = new Date();
-    where.AND = [
-      ...(where.AND || []),
-      todayOnly
-        ? { listingKind: 'TODAY', availabilities: { some: liveNow(now) } }
-        : { OR: [{ listingKind: 'REGULAR' }, { listingKind: 'TODAY', availabilities: { some: liveNow(now) } }] },
-    ];
+  // Available Today products (the shop's menu) are on the public lists
+  // (shop pages, search, categories) posted or not; between
+  // posts their page and card say "Not taking orders yet". Only the Available
+  // Today rails (todayOnly) keep to what takes orders now.
+  if (todayOnly) {
+    where.AND = [...(where.AND || []), { listingKind: 'TODAY', availabilities: { some: liveNow(new Date()) } }];
   }
 
   // A seller's "needs restock" view: out of stock or at/below the product's

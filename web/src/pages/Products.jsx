@@ -19,6 +19,7 @@ import './Products.css';
 import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
 import SearchFilterSheet from '../components/search/SearchFilterSheet';
 import { ProductTodayTag } from '../components/today/TodayTag';
+import { notTakingOrders } from '../lib/availability';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
@@ -683,12 +684,13 @@ const Products = () => {
                     >
                       <div className="product-image">
                         <ProductImage src={product.images?.[0]} alt={product.name} />
-                        {product.stock === 0 && !isStockless(product) && (
+                        {product.stock === 0 && !isStockless(product) && !notTakingOrders(product) && (
                           <div className="product-badge out-of-stock">Out of Stock</div>
                         )}
                         {product.isFeatured && (
                           <div className="product-badge featured">Featured</div>
                         )}
+                        {!notTakingOrders(product) && (
                         <button
                           type="button"
                           className="product-cart-fab"
@@ -697,6 +699,7 @@ const Products = () => {
                         >
                           <ShoppingCart size={16} />
                         </button>
+                        )}
                       </div>
                       {isPhone ? (
                         <div className="product-info srch-card">

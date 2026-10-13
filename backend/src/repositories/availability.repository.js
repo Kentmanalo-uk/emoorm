@@ -218,6 +218,28 @@ const reshape = async (id, next, { actorId = null, check = () => {}, onOverlap }
   return result;
 };
 
+/**
+ * Put a product on the shop's menu (Available Today) or take it off, in one
+ * transaction under the product's row lock: `check(latest, tx)` runs first
+ * (it throws to refuse), then the product's kind changes (`data`) and its
+ * stock goes to 0 in the ledger (TODAY_SWITCH). On the menu a post sets the
+ * stock; off it, the seller sets it again in My products. Orders already
+ * placed took their stock when they were placed, so they are left as they are.
+ * @returns {Promise<Object>} the product row afterwards
+ */
+const switchMenu = async (productId, data, { actorId = null, check = () => {} } = {}) => {
+  const updated = await withDeadlockRetry(() => prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM products WHERE id = ${productId} FOR UPDATE`;
+    const latest = await tx.product.findUnique({ where: { id: productId } });
+    await check(latest, tx);
+    await tx.product.update({ where: { id: productId }, data });
+    await setStockTx(tx, productId, 0, 'TODAY_SWITCH', productId, actorId);
+    return tx.product.findUnique({ where: { id: productId }, select: PRODUCT_SELECT });
+  }));
+  await invalidateProductIds([productId]);
+  return updated;
+};
+
 const update = async (id, data) => {
   const updated = await prisma.productAvailability.update({ where: { id }, data });
   await invalidateProductIds([updated.productId]);
@@ -278,6 +300,7 @@ module.exports = {
   create,
   createMany,
   reshape,
+  switchMenu,
   update,
   findById,
   findOverlap,

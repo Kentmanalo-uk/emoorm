@@ -62,6 +62,7 @@ import { isStockless, productKind } from '../lib/productKinds';
 import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import { ProductTodayTag } from '../components/today/TodayTag';
+import { notTakingOrders, opensLabel } from '../lib/availability';
 import Select from '../components/ui/Select';
 import useProductPeek from '../components/peek/useProductPeek';
 
@@ -1153,6 +1154,8 @@ function ProductCard({ product, store, onAddToCart }) {
     <Link to={`/product/${product.slug}`} className="product-card" {...peekProduct(product, { store })}>
       <div className="product-image">
         <ProductImage src={image} alt={product.name} />
+        {/* On the shop's menu, not posted now: nothing to add yet. */}
+        {!notTakingOrders(product) && (
         <button
           type="button"
           className="product-cart-fab"
@@ -1161,6 +1164,7 @@ function ProductCard({ product, store, onAddToCart }) {
         >
           <ShoppingCart size={16} />
         </button>
+        )}
       </div>
       <div className="product-info">
         <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
@@ -1204,7 +1208,10 @@ function PhoneProductRow({
   const rating = Number(product.averageRating || 0);
   const reviews = Number(product.reviewCount || 0);
   const sold = Number(product.soldCount || 0);
-  const soldOut = Number(product.stock) === 0 && !isStockless(product);
+  // On the shop's menu, not posted now: one grey button, not "Sold out".
+  const waiting = notTakingOrders(product);
+  const opens = waiting ? opensLabel(product.availability) : null;
+  const soldOut = !waiting && Number(product.stock) === 0 && !isStockless(product);
   return (
     <div className="shop-m-row" {...peekProduct(product, { store })}>
       <Link to={`/product/${product.slug}`} className="shop-m-row-img">
@@ -1228,6 +1235,11 @@ function PhoneProductRow({
         </div>
         <div className="shop-m-row-foot">
           <span className="shop-m-row-price"><KindPrice product={product}>₱{price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</KindPrice> <SaleWas product={product} compact /></span>
+          {waiting ? (
+            <button type="button" className="shop-m-row-closed" disabled title={opens || undefined}>
+              Not taking orders yet
+            </button>
+          ) : (
           <div className="shop-m-row-actions">
             <button type="button" className="shop-m-row-cart" onClick={onAdd} disabled={soldOut || closed} aria-label={`Add ${product.name} to cart`}>
               <ShoppingCart size={18} />
@@ -1237,7 +1249,9 @@ function PhoneProductRow({
               Buy
             </button>
           </div>
+          )}
         </div>
+        {opens && <p className="shop-m-row-opens">{opens}</p>}
       </div>
     </div>
   );

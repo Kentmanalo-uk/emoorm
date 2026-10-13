@@ -43,7 +43,8 @@ import {
   estimate, orderEta, readyDay, rangeLabel, dayLabel,
 } from '../lib/eta';
 import {
-  isTodayProduct, isOpen as windowOpen, windowState, spanLabel, dayName, clockLabel, fulfillmentLabel,
+  isTodayProduct, isOpen as windowOpen, windowState, spanLabel, dayName, clockLabel, fulfillmentLabel, opensLabel,
+  buyLabel, preOrderReady,
 } from '../lib/availability';
 import TimeLeft from '../components/ui/TimeLeft';
 import TodayTag, { ProductTodayTag } from '../components/today/TodayTag';
@@ -785,7 +786,10 @@ const ProductDetails = () => {
   const notTakingOrders = product.store?.readyToSell === false || Boolean(away) || todayClosed;
   const closedLabel = away
     ? `Shop away until ${shortDate(away)}`
-    : todayClosed ? windowState(todayWindow).text : 'Not taking orders yet';
+    : 'Not taking orders yet';
+  // On the shop's menu, not posted now: when its next post opens, if one is coming.
+  const menuWaiting = todayClosed && !away && product.store?.readyToSell !== false;
+  const opensText = menuWaiting ? opensLabel(todayWindow) : null;
   const cannotBuy = isOutOfStock || notTakingOrders;
   // Per-option pricing: the chosen option's price, or the range until one is chosen.
   const pricedGroup = pricedVariation(product.variations);
@@ -860,6 +864,8 @@ const ProductDetails = () => {
   const sellerQuote = shipQuote?.productId === product.id && shipQuote.seller?.offered ? shipQuote.seller : null;
   const freeShipping = Boolean(sellerQuote && sellerQuote.covered !== false && sellerQuote.fee != null && Number(sellerQuote.fee) === 0);
   const buyNote = freeShipping ? 'Free shipping' : product.store?.acceptsCod ? 'Cash on delivery' : '';
+  // A live pre-order: under its button, when it is ready instead (the price is right above).
+  const preReady = preOrderReady(product);
 
   return (
     <Layout phoneBar={false} showFooter={!isPhone}>
@@ -1153,7 +1159,7 @@ const ProductDetails = () => {
                           {todayWindow.note && <div className="pdp-row-line pdp-today-note">{todayWindow.note}</div>}
                         </>
                       ) : (
-                        <div className="pdp-row-line"><span className="pdp-today-state is-ended">Not available now. The shop posts it on the days it has it.</span></div>
+                        <div className="pdp-row-line"><span className="pdp-today-state is-ended">Not taking orders yet. The shop posts it on the days it has it.</span></div>
                       )}
                     </div>
                   </div>
@@ -1350,9 +1356,11 @@ const ProductDetails = () => {
                         <Plus size={14} />
                       </button>
                     </div>
-                    <span className={`pdp-stock ${cannotBuy ? 'is-out' : ''}`} aria-live="polite">
+                    <span className={`pdp-stock ${menuWaiting ? 'is-waiting' : cannotBuy ? 'is-out' : ''}`} aria-live="polite">
                       {notTakingOrders
-                        ? (away ? `This shop is away until ${shortDate(away)}` : "This shop isn't taking orders yet")
+                        ? (away ? `This shop is away until ${shortDate(away)}`
+                          : menuWaiting ? `Not taking orders yet${opensText ? ` · ${opensText}` : ''}`
+                            : "This shop isn't taking orders yet")
                         : isOutOfStock ? soldOutLabel(product) : `${countLabel(product, quantity)} selected`}
                       {!cannotBuy && leastQty > 1 && <span className="pdp-stock-min"> · minimum order {leastQty}</span>}
                     </span>
@@ -1374,7 +1382,13 @@ const ProductDetails = () => {
 
               {/* CTAs */}
               <div className="pdp-cta-row">
-                {kind !== 'LIVESTOCK' && (
+                {kind !== 'LIVESTOCK' && menuWaiting && (
+                <button type="button" className="pdp-btn pdp-btn-closed" disabled>
+                  <span>Not taking orders yet</span>
+                  {opensText && <small>{opensText}</small>}
+                </button>
+                )}
+                {kind !== 'LIVESTOCK' && !menuWaiting && (
                 <>
                 <button
                   type="button"
@@ -1382,7 +1396,7 @@ const ProductDetails = () => {
                   disabled={cannotBuy || isAddingToCart}
                   className="pdp-btn pdp-btn-outline"
                 >
-                  Buy Now
+                  {buyLabel(product, { title: true })}
                 </button>
                 <button
                   type="button"
@@ -1675,6 +1689,7 @@ const ProductDetails = () => {
           {cannotBuy ? (
             <button type="button" className="pdp-m-buy pdp-m-closed" disabled>
               <span>{notTakingOrders ? closedLabel : soldOutLabel(product)}</span>
+              {opensText && <small>{opensText}</small>}
             </button>
           ) : (
             <>
@@ -1694,10 +1709,14 @@ const ProductDetails = () => {
                 onClick={() => setSheetMode('buy')}
                 disabled={isAddingToCart}
               >
-                <span>Buy now</span>
+                <span>{buyLabel(product)}</span>
                 <small>
-                  {optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}
-                  {buyNote && <><i aria-hidden="true" />{buyNote}</>}
+                  {preReady || (
+                    <>
+                      {optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}
+                      {buyNote && <><i aria-hidden="true" />{buyNote}</>}
+                    </>
+                  )}
                 </small>
               </button>
             </>

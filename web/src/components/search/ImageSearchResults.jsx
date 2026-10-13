@@ -10,6 +10,7 @@ import EmptyState from '../ui/EmptyState';
 import { SaleWas } from '../ui/SaleTag';
 import KindPrice from '../product/kinds/KindPrice';
 import { ProductTodayTag } from '../today/TodayTag';
+import { notTakingOrders } from '../../lib/availability';
 import useProductPeek from '../peek/useProductPeek';
 import SearchFilterSheet from './SearchFilterSheet';
 import useCartStore from '../../store/cartStore';
@@ -276,10 +277,12 @@ export default function ImageSearchResults({
           <Link key={product.id} to={`/product/${product.slug}`} className="product-card isr-card" {...peekProduct(product)}>
             <div className="product-image">
               <ProductImage src={parseImages(product.images)[0]} alt={product.name} />
-              {product.stock === 0 && !isStockless(product) && <div className="product-badge out-of-stock">Out of Stock</div>}
+              {product.stock === 0 && !isStockless(product) && !notTakingOrders(product) && <div className="product-badge out-of-stock">Out of Stock</div>}
+              {!notTakingOrders(product) && (
               <button type="button" className="product-cart-fab" onClick={(e) => addToCart(e, product)} aria-label="Add to cart">
                 <ShoppingCart size={16} />
               </button>
+              )}
             </div>
             <div className="product-info isr-info">
               <h3 className="product-name"><ProductTodayTag product={product} />{product.name}</h3>

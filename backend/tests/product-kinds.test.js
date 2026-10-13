@@ -680,7 +680,8 @@ test('lists take ?type, and the saved cart carries each product\'s kind', async 
 
   assert.deepEqual(await ids(`/products?storeId=${store.id}&type=LIVESTOCK`), [pig.id]);
   assert.deepEqual(await ids(`/products?storeId=${store.id}&type=REGULAR`), [regular.id]);
-  assert.deepEqual(await ids(`/products?storeId=${store.id}&type=NOT_A_KIND`), [regular.id, pig.id, paluto.id].sort());
+  // The shop's menu items show too, posted or not.
+  assert.deepEqual(await ids(`/products?storeId=${store.id}&type=NOT_A_KIND`), [regular.id, pig.id, paluto.id, today.id].sort());
   assert.deepEqual(await ids('/products/my/products?type=COOK_TO_ORDER', token), [paluto.id]);
   assert.deepEqual(await ids('/products/my/products?type=READY_TO_EAT', token), [today.id]);
   assert.deepEqual(await ids('/products/my/products?kind=TODAY', token), [today.id]);

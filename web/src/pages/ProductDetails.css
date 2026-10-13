@@ -3541,3 +3541,25 @@ a.pdp-pkg-item:hover {
   object-fit: cover;
   background: var(--t-neutral-100, #f3f4f6);
 }
+
+/* On the shop's menu, not posted now: one grey button in place of Buy Now
+   and Add to Cart, with when it opens when a post is coming. */
+.pdp-btn.pdp-btn-closed {
+  grid-column: span 2;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-600, #4b5563);
+  border-color: transparent;
+  opacity: 1;
+}
+
+.pdp-btn-closed small {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* On the shop's menu, not posted now: plain grey, not an error. */
+.pdp-stock.is-waiting {
+  color: var(--t-neutral-500, #6b7280);
+}

@@ -27,8 +27,10 @@ test('publishing a window puts the product on sale now, with its quantity as sto
   const store = await readyShop(seller);
   const item = await todayItem(store);
 
-  // Between windows it waits in the seller's catalogue, off the public lists.
-  assert.ok(!(await listedIds(`/products?storeId=${store.id}`)).includes(item.id));
+  // Between windows it shows on its shop's page (not taking orders), but not
+  // on the lists of what takes orders now.
+  assert.ok((await listedIds(`/products?storeId=${store.id}`)).includes(item.id));
+  assert.ok(!(await listedIds(`/products?storeId=${store.id}&today=1`)).includes(item.id));
 
   const res = await publish(seller, { productId: item.id, quantity: 5, ordersCloseAt: at(3 * HOUR), prepMinutes: 15 });
   assert.equal(res.status, 201, res.body?.message);
@@ -130,7 +132,7 @@ test('the clock opens scheduled windows and ends finished ones (stock to 0, noth
   assert.equal(await stockOf(later.id), 4);
   assert.equal((await h.prisma.productAvailability.findUnique({ where: { id: live.id } })).status, 'ENDED');
   assert.equal(await stockOf(now.id), 0);
-  assert.ok(!(await listedIds(`/products?storeId=${store.id}`)).includes(now.id));
+  assert.ok(!(await listedIds(`/products?storeId=${store.id}&today=1`)).includes(now.id));
 
   // The batch is over: cancelling now returns nothing to sell.
   const cancelled = await h.api('POST', `/orders/${placed.body.data.id}/cancel`, { token: h.token(buyer), body: { reason: 'Too late' } });

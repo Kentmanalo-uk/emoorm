@@ -11,10 +11,12 @@ const { cached } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 const { cleanText } = require('../utils/sanitize');
 const { termsOf, whereFor } = require('../utils/searchTerms');
+const { Prisma } = require('@prisma/client');
 const {
-  MODES, DAY_MS, liveNow, isOpen, manilaDay, daysBetween, isDay, addDays, manilaAt, manilaMinutes, dayTitle, publicWindow,
+  MODES, DAY_MS, liveNow, isOpen, currentWindow, manilaDay, daysBetween, isDay, addDays, manilaAt, manilaMinutes, dayTitle, publicWindow,
 } = require('../utils/availability');
-const { kindOf } = require('../utils/productKinds');
+const { kindOf, validateDetails } = require('../utils/productKinds');
+const { stockedVariation } = require('../utils/variantPricing');
 
 /**
  * Available Today: sellers publish a batch of a product for a limited time
@@ -226,6 +228,9 @@ const publishChecked = async (userId, store, product, { fields, quantity }) => {
   });
   if (fields.ordersOpenAt.getTime() <= Date.now()) {
     await availabilityRepository.openWindow(created.id, { actorId: userId });
+  } else {
+    // Its card and page say when orders open.
+    await invalidateProductIds([product.id]);
   }
   await notifyFollowers(store, created, product.name).catch((err) => console.error('[today] notify failed:', err.message));
   return shape(await availabilityRepository.findById(created.id));
@@ -582,6 +587,160 @@ const repeatWindow = async (userId, id, body = {}) => {
   return publish(userId, copyOn(targetDay));
 };
 
+// ── The menu ────────────────────────────────────────────────────────────
+//
+// The shop's Available Today items. Adding a product to the menu makes it an
+// Available Today item: buyers see it (as "Not taking orders yet") and can
+// order it only through a post. Packages, paluto and live animals keep their
+// own way of ordering, so they stay off the menu.
+
+const MENU_STATUSES = ['APPROVED', 'PENDING', 'HIDDEN'];
+const MENU_KINDS = ['REGULAR', 'READY_TO_EAT'];
+const MENU_SELECT = {
+  id: true, name: true, slug: true, images: true, price: true, salePrice: true, saleStartsAt: true, saleEndsAt: true,
+  status: true, stock: true, listingKind: true, productType: true, variations: true,
+};
+
+const imagesOf = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+/** Why a product can't go on the menu, or null when it can. */
+const menuRefusal = (product) => {
+  if (product.listingKind === 'TODAY') return { status: 409, message: `${product.name} is already on your menu` };
+  if (!MENU_STATUSES.includes(product.status)) return { status: 400, message: `${product.name} can't be sold right now, so it can't go on the menu` };
+  const kind = kindOf(product);
+  if (kind === 'PACKAGE') return { status: 400, message: 'Packages keep their own ordering, so they can\'t go on the menu' };
+  if (kind === 'COOK_TO_ORDER') return { status: 400, message: 'Paluto is cooked when ordered and keeps its own ordering, so it can\'t go on the menu' };
+  if (kind === 'LIVESTOCK') return { status: 400, message: 'Live animals can\'t go on the menu' };
+  if (stockedVariation(product.variations)) {
+    return { status: 400, message: `${product.name} keeps stock per option. Remove the stock per option first (Edit item), then add it.` };
+  }
+  return null;
+};
+
+const menuRow = (product) => ({
+  id: product.id,
+  name: product.name,
+  slug: product.slug,
+  images: imagesOf(product.images),
+  price: product.price,
+  salePrice: product.salePrice,
+  saleStartsAt: product.saleStartsAt,
+  saleEndsAt: product.saleEndsAt,
+  status: product.status,
+});
+
+/**
+ * The shop's menu: its Available Today items, each with the post to show
+ * (taking orders now, else the next one; null when none), and `choices`, the
+ * shop's products that can be added (with `note` when one needs a change first).
+ */
+const listMenu = async (userId) => {
+  const store = await sellerStore(userId);
+  const [items, choices] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        storeId: store.id, deletedAt: null, listingKind: 'TODAY', status: { in: MENU_STATUSES },
+      },
+      select: {
+        ...MENU_SELECT,
+        availabilities: { where: { status: { in: ['LIVE', 'SCHEDULED'] } }, orderBy: { ordersOpenAt: 'asc' }, take: 10 },
+      },
+      orderBy: { name: 'asc' },
+      take: 300,
+    }),
+    prisma.product.findMany({
+      where: {
+        storeId: store.id, deletedAt: null, listingKind: 'REGULAR', productType: { in: MENU_KINDS }, status: { in: MENU_STATUSES },
+      },
+      select: MENU_SELECT,
+      orderBy: { name: 'asc' },
+      take: 500,
+    }),
+  ]);
+  const now = Date.now();
+  return {
+    enabled: await isEnabled(),
+    items: items.map((p) => {
+      const window = currentWindow(p.availabilities, now);
+      return {
+        ...menuRow(p),
+        window: window ? { ...publicWindow(window), remaining: window.status === 'LIVE' ? p.stock : Math.max(0, window.quantity - window.soldCount) } : null,
+        posts: p.availabilities.length,
+      };
+    }),
+    choices: choices.map((p) => ({
+      ...menuRow(p),
+      ...(stockedVariation(p.variations) ? { note: 'Keeps stock per option: edit it first' } : {}),
+    })),
+  };
+};
+
+/** The seller's own product, for the menu. */
+const ownProduct = async (store, productId) => {
+  const product = await prisma.product.findUnique({ where: { id: String(productId || '') } });
+  if (!product || product.deletedAt || product.storeId !== store.id) throw new ApiError('Product not found', 404);
+  return product;
+};
+
+/**
+ * Add one of the shop's products to the menu: it becomes an Available Today
+ * item with no stock until it is posted. Orders already placed keep the stock
+ * they took; a cart line for it fails checkout until it is posted.
+ */
+const addToMenu = async (userId, productId) => {
+  await assertEnabled();
+  const store = await sellerStore(userId);
+  const product = await ownProduct(store, productId);
+  const refuse = (p) => {
+    const why = menuRefusal(p);
+    if (why) throw new ApiError(why.message, why.status);
+  };
+  refuse(product);
+  const updated = await availabilityRepository.switchMenu(product.id, {
+    listingKind: 'TODAY',
+    productType: 'READY_TO_EAT',
+    details: validateDetails('READY_TO_EAT', product.details && typeof product.details === 'object' ? product.details : null) ?? Prisma.DbNull,
+  }, { actorId: userId, check: (latest) => refuse(latest) });
+  return { ...menuRow(updated), listingKind: updated.listingKind, productType: kindOf(updated), stock: updated.stock, window: null, posts: 0 };
+};
+
+/**
+ * Take an item off the menu: back to a regular product with 0 in stock (the
+ * seller sets its stock in My products). Refused while it has a post taking
+ * orders or coming up.
+ */
+const removeFromMenu = async (userId, productId) => {
+  const store = await sellerStore(userId);
+  const product = await ownProduct(store, productId);
+  if (product.listingKind !== 'TODAY') throw new ApiError(`${product.name} isn't on your menu`, 400);
+  const open = { productId: product.id, status: { in: ['LIVE', 'SCHEDULED'] } };
+  const refusal = `${product.name} has posts taking orders or coming up. Stop or cancel its posts first.`;
+  if (await prisma.productAvailability.count({ where: open })) throw new ApiError(refusal, 409);
+  const updated = await availabilityRepository.switchMenu(product.id, {
+    listingKind: 'REGULAR',
+    productType: 'REGULAR',
+    details: validateDetails('REGULAR', product.details && typeof product.details === 'object' ? product.details : null) ?? Prisma.DbNull,
+  }, {
+    actorId: userId,
+    check: async (latest, tx) => {
+      if (!latest || latest.listingKind !== 'TODAY') throw new ApiError(`${product.name} isn't on your menu`, 400);
+      if (await tx.productAvailability.count({ where: open })) throw new ApiError(refusal, 409);
+    },
+  });
+  return { ...menuRow(updated), listingKind: updated.listingKind, productType: kindOf(updated), stock: updated.stock };
+};
+
 /** The seller's windows: open and upcoming (default), or recently ended. */
 const listMine = async (userId, { scope } = {}) => {
   const store = await sellerStore(userId);
@@ -857,6 +1016,9 @@ module.exports = {
   adjustQuantity,
   endWindow,
   repeatWindow,
+  listMenu,
+  addToMenu,
+  removeFromMenu,
   listMine,
   listPublic,
   runClock,

@@ -839,9 +839,11 @@ a.pm-btn {
     background: var(--t-neutral-0, #fff);
   }
 
+  /* 16px from the screen's edge, as Chat's search: the page's 12px gutter
+     plus 4px here. */
   .sc-shell .sc-content .spm-filterbar .products-toolbar {
     margin: 0;
-    padding: 14px 16px 8px;
+    padding: 14px 4px 8px;
     border-radius: 0;
     background: none;
   }
@@ -915,7 +917,7 @@ a.pm-btn {
   .sc-shell .sc-content .spm-filterbar .products-tabs.scm-chips {
     gap: 8px;
     margin: 0;
-    padding: 2px 16px 10px;
+    padding: 2px 4px 10px;
   }
 
   .sc-shell .sc-content .spm-filterbar .products-tabs .scm-chip {

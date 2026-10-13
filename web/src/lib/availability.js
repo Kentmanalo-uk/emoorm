@@ -92,3 +92,49 @@ export const windowState = (w, remaining, now = Date.now()) => {
   if (remaining === 0) return { tone: 'ended', text: 'Sold out' };
   return { tone: 'live', text: `Until ${momentLabel(w.ordersCloseAt, now)}` };
 };
+
+// ── The shop's menu (items not taking orders yet) ──────────────────────
+
+/** An Available Today item with no post taking orders now: on show, "Not taking orders yet". */
+export const notTakingOrders = (product, now = Date.now()) => isTodayProduct(product) && !isOpen(product?.availability, now);
+
+/**
+ * A moment in a few words, for "Opens …" and "Next: …": "Today, 10:00 AM",
+ * "Tomorrow, 10:00 AM", "Tue, 10:00 AM" within the week, else
+ * "Tue, Oct 21, 10:00 AM".
+ */
+export const whenLabel = (d, now = Date.now()) => {
+  const day = dayName(d, now);
+  if (day === 'Today' || day === 'Tomorrow') return `${day}, ${clockLabel(d)}`;
+  const within = time(d) - now < 6 * DAY;
+  const name = new Date(d).toLocaleDateString('en-PH', within ? { weekday: 'short', timeZone: TZ } : { weekday: 'short', month: 'short', day: 'numeric', timeZone: TZ });
+  return `${name}, ${clockLabel(d)}`;
+};
+
+/** When a scheduled post opens: "Opens tomorrow, 10:00 AM"; null when none is coming. */
+export const opensLabel = (w, now = Date.now()) => {
+  if (!w || w.status !== 'SCHEDULED' || time(w.ordersCloseAt) <= now) return null;
+  const at = whenLabel(w.ordersOpenAt, now);
+  return `Opens ${at.startsWith('Today') || at.startsWith('Tomorrow') ? at[0].toLowerCase() + at.slice(1) : at}`;
+};
+
+// ── The buyer's main button ──────────────────────────────────────────────
+
+/**
+ * The buy button's words for what the post is: "Pre-order" for a live
+ * pre-order, "Order now" for one cooked when ordered, else "Buy now".
+ * `title`: "Buy Now" / "Order Now" (the computer page's buttons).
+ */
+export const buyLabel = (product, { title = false } = {}, now = Date.now()) => {
+  const mode = liveMode(product, now);
+  if (mode === 'PRE_ORDER') return 'Pre-order';
+  if (mode === 'MADE_TO_ORDER') return title ? 'Order Now' : 'Order now';
+  return title ? 'Buy Now' : 'Buy now';
+};
+
+/** A live pre-order's ready time, for under its button: "Ready tomorrow, 7:00 AM"; else null. */
+export const preOrderReady = (product, now = Date.now()) => {
+  if (liveMode(product, now) !== 'PRE_ORDER' || !product.availability.readyFrom) return null;
+  const at = whenLabel(product.availability.readyFrom, now);
+  return `Ready ${at.startsWith('Today') || at.startsWith('Tomorrow') ? at[0].toLowerCase() + at.slice(1) : at}`;
+};

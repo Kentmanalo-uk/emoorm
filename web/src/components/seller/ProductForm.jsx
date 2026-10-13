@@ -98,7 +98,15 @@ export default function ProductForm({
   const todayOn = settings?.availableTodayEnabled !== false;
   const recentKey = outlet?.store?.id ? `pf:recent-categories:${outlet.store.id}` : null;
 
-  const [initial, setInitial] = useState(() => toFormState(product));
+  // ?type=today (Create a new menu item in Today's menu): Available Today
+  // food chosen up front; picking a category keeps it when the category allows it.
+  const [initial, setInitial] = useState(() => {
+    const blank = toFormState(product);
+    const presetToday = !product && todayOn && new URLSearchParams(location.search).get('type') === 'today';
+    return presetToday
+      ? { ...blank, kind: 'READY_TO_EAT', kindPicked: true, returnPolicy: RETURN_POLICIES.find((p) => p.key === 'perishable')?.text || '' }
+      : blank;
+  });
   const [form, setForm] = useState(initial);
   const [hasOptions, setHasOptions] = useState(initial.variations.length > 0);
   const [policyMode, setPolicyMode] = useState(() => policyModeFor(initial.returnPolicy));

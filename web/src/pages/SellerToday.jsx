@@ -1,26 +1,24 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  Plus, Minus, Clock, Truck, ArrowClockwise, Stop, CalendarPlus, Info, ForkKnife, PencilSimple,
+  Plus, Minus, Info, ForkKnife, DotsThree, MagnifyingGlass,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import { resolveImg, firstImage } from '../lib/media';
 import { confirmAction } from '../lib/confirm';
 import {
-  isOpen, momentLabel, clockLabel, dayName,
+  isOpen, momentLabel, clockLabel, whenLabel,
 } from '../lib/availability';
-import {
-  addDays, dayTitle, toggleDay, manilaDay,
-} from '../lib/manilaDays';
-import { AHEAD_DAYS, kindOf, getLabel, plural } from '../lib/todayPost';
+import { saleInfo } from '../lib/variantPricing';
+import { BusyLabel } from '../components/ui/Spinner';
+import { dayTitle, manilaDay } from '../lib/manilaDays';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import PhoneSheet from '../components/seller/PhoneSheet';
-import DayCalendar from '../components/seller/DayCalendar';
-import TodayPostFlow from '../components/seller/TodayPostFlow';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
-import TimeLeft from '../components/ui/TimeLeft';
 import './SellerDashboard.css';
 import './SellerToday.css';
 
@@ -32,6 +30,7 @@ const toInput = (value) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 const ms = (v) => new Date(v).getTime();
+const ADD_PICKS = [5, 10, 20];
 
 /** The product photo, or a plain tile when there is none or it fails to load. */
 function Thumb({ src }) {
@@ -42,18 +41,16 @@ function Thumb({ src }) {
 
 /**
  * A post's state in plain words: "Taking orders", "Sold out",
- * "Starts tomorrow 10:00 AM", "Ended" or "Cancelled", with its tone.
+ * "Not open yet", "Ended" or "Cancelled", with its tone.
  */
 const postStatus = (w, ended = false, now = Date.now()) => {
   if (ended || !['LIVE', 'SCHEDULED'].includes(w.status)) {
     return { tone: 'ended', text: w.status === 'CANCELLED' ? 'Cancelled' : 'Ended' };
   }
-  if (w.status === 'SCHEDULED' && ms(w.ordersOpenAt) > now) {
-    const day = dayName(w.ordersOpenAt, now);
-    return { tone: 'soon', text: `Starts ${['Today', 'Tomorrow'].includes(day) ? day.toLowerCase() : day} ${clockLabel(w.ordersOpenAt)}` };
-  }
+  // Coming up is grouped by day and the card shows its times: the state alone.
+  if (w.status === 'SCHEDULED' && ms(w.ordersOpenAt) > now) return { tone: 'soon', text: 'Not open yet' };
   if (!isOpen(w, now)) return { tone: 'ended', text: 'Ended' };
-  if ((w.remaining ?? 1) <= 0) return { tone: 'ended', text: 'Sold out' };
+  if ((w.remaining ?? 1) <= 0) return { tone: 'out', text: 'Sold out' };
   return { tone: 'live', text: 'Taking orders' };
 };
 
@@ -63,45 +60,245 @@ const ordersSpan = (w) => {
   return `Orders ${clockLabel(w.ordersOpenAt)} – ${clockLabel(w.ordersCloseAt)}${next}`;
 };
 
+/** ⋯ on a card: the actions that are not on its two buttons. */
+function MoreMenu({ items, label }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const key = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', key);
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', key); };
+  }, [open]);
+  return (
+    <div className="stw-more" ref={ref}>
+      <button type="button" className="stw-btn stw-btn--icon" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <DotsThree size={22} weight="bold" />
+      </button>
+      {open && (
+        <ul className="stw-menu" role="menu">
+          {items.map((it) => (
+            <li key={it.label} role="none">
+              <button type="button" role="menuitem" className={it.danger ? 'is-danger' : ''} onClick={() => { setOpen(false); it.onClick(); }}>
+                {it.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 /**
- * Today's menu: the shop's Available Today items. "Post an item" walks the
- * seller through it one question at a time (TodayPostFlow): what, is it
- * ready now, how many, when, then a check. Each post can be edited through
- * the same steps; while it is on, add or take away, give it more time or end
- * it; afterwards, post it again on other days. Orders come in through My
- * orders like any other, with a time to confirm them.
+ * A menu item's state in plain words: "Taking orders until 2:00 PM" (green),
+ * "Next: Tomorrow, 10:00 AM" or "Not taking orders yet" (grey).
+ */
+const menuStatus = (item, now = Date.now()) => {
+  const w = item.window;
+  if (w && isOpen(w, now)) {
+    if ((w.remaining ?? 1) <= 0) return { tone: 'out', text: 'Sold out' };
+    return { tone: 'live', text: `Taking orders until ${momentLabel(w.ordersCloseAt, now)}` };
+  }
+  if (w && w.status === 'SCHEDULED' && ms(w.ordersCloseAt) > now) return { tone: 'soon', text: `Next: ${whenLabel(w.ordersOpenAt, now)}` };
+  return { tone: 'idle', text: 'Not taking orders yet' };
+};
+
+const APPROVAL = { PENDING: 'Waiting for approval', HIDDEN: 'Hidden from buyers' };
+
+/**
+ * "Add from My products": the shop's products that can go on the menu,
+ * searchable; tapping one asks first, in the same sheet.
+ */
+function AddFromProducts({
+  open, choices, onClose, onAdd, busy,
+}) {
+  const [query, setQuery] = useState('');
+  const [picked, setPicked] = useState(null);
+  const list = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (choices || []).filter((p) => !q || p.name.toLowerCase().includes(q));
+  }, [choices, query]);
+
+  return (
+    <PhoneSheet
+      open={open}
+      title={picked ? 'Add to your menu?' : 'Add from My products'}
+      className="stw-sheet stw-pick-sheet"
+      onClose={onClose}
+      footer={picked && (
+        <>
+          <button type="button" className="scm-btn scm-btn--ghost" onClick={() => setPicked(null)} disabled={busy}>Back</button>
+          <button type="button" className="scm-btn" onClick={() => onAdd(picked)} disabled={busy}>
+            {busy ? <BusyLabel>Adding…</BusyLabel> : 'Add to menu'}
+          </button>
+        </>
+      )}
+    >
+      {picked ? (
+        <div className="stw-confirm">
+          <div className="stw-pick is-static">
+            <Thumb src={firstImage(picked.images) ? resolveImg(firstImage(picked.images)) : null} />
+            <span className="stw-pick-text">
+              <strong>{picked.name}</strong>
+              <span>{peso(saleInfo(picked).price)}</span>
+            </span>
+          </div>
+          <p className="stw-hint">
+            Add {picked.name} to your menu? It will show as &lsquo;Not taking orders yet&rsquo; until you post it.
+          </p>
+        </div>
+      ) : (
+        <div className="stw-picker">
+          <label className="stw-search">
+            <MagnifyingGlass size={18} aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search your products"
+              aria-label="Search your products"
+              enterKeyHint="search"
+            />
+          </label>
+          {choices === null ? (
+            <div className="stw-pick-list" aria-busy="true">
+              {[0, 1, 2].map((i) => <Skeleton key={i} height={64} radius={12} />)}
+            </div>
+          ) : list.length === 0 ? (
+            <p className="stw-hint stw-pick-empty">
+              {query ? `No products match “${query}”.` : 'No products to add. Packages and paluto keep their own ordering.'}
+            </p>
+          ) : (
+            <ul className="stw-pick-list">
+              {list.map((p) => (
+                <li key={p.id}>
+                  <button type="button" className="stw-pick" disabled={Boolean(p.note)} onClick={() => setPicked(p)}>
+                    <Thumb src={firstImage(p.images) ? resolveImg(firstImage(p.images)) : null} />
+                    <span className="stw-pick-text">
+                      <strong>{p.name}</strong>
+                      <span>{p.note || peso(saleInfo(p).price)}</span>
+                    </span>
+                    {!p.note && <Plus size={18} weight="bold" className="stw-pick-plus" aria-hidden="true" />}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </PhoneSheet>
+  );
+}
+
+/**
+ * Today's menu, on three tabs. Menu: the shop's Available Today items, posted
+ * or not, with Post on each and "Add from My products" (an item on the menu
+ * shows to buyers as "Not taking orders yet" until it is posted). Now and
+ * coming up: Taking orders now and Coming up (by day). Ended. It opens on
+ * Now and coming up when something is posted, else on Menu (?tab=menu|ended
+ * picks one). "Post an item" and Edit open the one-page form
+ * (SellerTodayPost.jsx). On a post: Edit and Add more (or Cancel before it
+ * opens); ⋯ holds More time and Stop. An ended post can be posted again.
  */
 export default function SellerToday() {
-  const [scope, setScope] = useState('active');
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const asked = ['menu', 'active', 'ended'].includes(params.get('tab')) ? params.get('tab') : null;
+  const [scope, setScope] = useState(asked || 'active');
+  // Until the first list is in: then Now and coming up, or Menu when nothing is posted.
+  const [decided, setDecided] = useState(Boolean(asked));
   const [data, setData] = useState(null);
-  const [products, setProducts] = useState(null);
-  const [storeMode, setStoreMode] = useState('BOTH');
+  const [menu, setMenu] = useState(null);
   const [busyId, setBusyId] = useState(null);
-  const [flow, setFlow] = useState({ open: false, key: 0, window: null });
   const [extend, setExtend] = useState(null);
-  const [repeat, setRepeat] = useState(null);
+  const [adding, setAdding] = useState(null);
+  const [picking, setPicking] = useState(false);
+  const [addingId, setAddingId] = useState(null);
+  // A fresh picker (no search, nothing picked) each time it opens.
+  const [pickRound, setPickRound] = useState(0);
+  const first = useRef(!asked);
 
   const load = useCallback(async (which) => {
+    let windows = [];
     try {
       const res = await axios.get('/today/mine', { params: { scope: which === 'ended' ? 'ended' : undefined } });
       setData(res.data || { enabled: true, windows: [] });
+      windows = res.data?.windows || [];
     } catch (err) {
       toast.error(err.message || "Could not load Today's menu");
       setData({ enabled: true, windows: [] });
     }
+    if (first.current) {
+      first.current = false;
+      if (!windows.length) setScope('menu');
+      setDecided(true);
+    }
   }, []);
-  useEffect(() => { setData(null); load(scope); }, [scope, load]);
-
   useEffect(() => {
-    axios.get('/products/my/products', { params: { kind: 'TODAY', pageSize: 100 } })
-      .then((res) => setProducts((res.data || []).filter((p) => !['ARCHIVED', 'SUSPENDED'].includes(p.status))))
-      .catch(() => setProducts([]));
-    axios.get('/stores/my/store')
-      .then((res) => setStoreMode(res.data?.fulfillmentMode || 'DELIVERY'))
-      .catch(() => {});
+    if (scope === 'menu') return;
+    setData(null);
+    load(scope);
+  }, [scope, load]);
+  const loadMenu = useCallback(async () => {
+    try {
+      const res = await axios.get('/today/menu');
+      setMenu(res.data || { enabled: true, items: [], choices: [] });
+    } catch (err) {
+      toast.error(err.message || 'Could not load your menu');
+      setMenu((m) => m || { enabled: true, items: [], choices: [] });
+    }
   }, []);
+  useEffect(() => { loadMenu(); }, [loadMenu]);
 
-  // Live windows tick over on their own: reload when the next one ends or opens.
+  // Back on the menu tab: fresh states (a post may have opened or ended).
+  const pickTab = (key) => {
+    if (key === scope) return;
+    setScope(key);
+    if (key === 'menu') loadMenu();
+  };
+
+  const openPicker = () => { setPickRound((r) => r + 1); setPicking(true); };
+
+  const addToMenu = async (product) => {
+    setAddingId(product.id);
+    try {
+      await axios.post('/today/menu', { productId: product.id });
+      toast.success(`${product.name} is on your menu. Post it when you have it.`);
+      setPicking(false);
+      await loadMenu();
+    } catch (err) {
+      toast.error(err.message || 'That did not work. Please try again.');
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  const removeFromMenu = async (item) => {
+    const ok = await confirmAction({
+      title: `Take ${item.name} off your menu?`,
+      message: 'It becomes a regular product with 0 in stock. Set its stock in My products to sell it there.',
+      confirmLabel: 'Remove from menu',
+      danger: true,
+    });
+    if (!ok) return;
+    setBusyId(item.id);
+    try {
+      await axios.delete(`/today/menu/${item.id}`);
+      toast.success(`${item.name} is off your menu. Set its stock in My products.`);
+      await loadMenu();
+    } catch (err) {
+      toast.error(err.message || 'That did not work. Please try again.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // Live posts tick over on their own: reload when the next one ends or opens.
   useEffect(() => {
     if (scope !== 'active' || !data?.windows?.length) return undefined;
     const now = Date.now();
@@ -131,8 +328,6 @@ export default function SellerToday() {
     }
   };
 
-  const changeQty = (w, delta) => act(w, () => axios.post(`/today/${w.id}/quantity`, { delta }));
-
   const endNow = async (w) => {
     const scheduled = w.status === 'SCHEDULED';
     const ok = await confirmAction({
@@ -158,52 +353,33 @@ export default function SellerToday() {
     if (res) setExtend(null);
   };
 
-  /** A toast for what was posted: one window, or several days. */
-  const posted = (list) => {
-    if (list.length > 1) {
-      const first = dayTitle(manilaDay(ms(list[0].ordersOpenAt)));
-      toast.success(`Posted for ${list.length} days, starting ${['Today', 'Tomorrow'].includes(first) ? first.toLowerCase() : first}`);
-    } else if (list[0]) {
-      toast.success(isOpen(list[0]) ? 'Posted: buyers can order now' : `Posted for ${momentLabel(list[0].ordersOpenAt)}`);
-    }
+  /** Add more: the total to sell, never below what is already taken. */
+  const openAdding = (w) => {
+    const live = w.status === 'LIVE';
+    const taken = live ? w.quantity - (w.remaining ?? 0) : w.soldCount;
+    setAdding({ window: w, total: w.quantity, min: Math.max(1, taken) });
+  };
+  const saveAdding = async () => {
+    const w = adding.window;
+    const total = Math.max(adding.min, adding.total);
+    const delta = total - w.quantity;
+    if (!delta) { setAdding(null); return; }
+    const res = await act(w, () => axios.post(`/today/${w.id}/quantity`, { delta }), `Now ${total} to sell`);
+    if (res) setAdding(null);
   };
 
-  const openRepeat = (w) => {
-    const today = manilaDay();
-    setRepeat({ window: w, dates: [addDays(today, 1)], quantity: String(w.quantity), today });
-  };
-
-  const saveRepeat = async () => {
-    const w = repeat.window;
-    if (!repeat.dates.length) return toast.error('Pick at least one day');
-    const body = { dates: repeat.dates };
-    if (repeat.quantity !== '') body.quantity = Number(repeat.quantity);
-    const res = await act(w, () => axios.post(`/today/${w.id}/repeat`, body));
-    if (res) {
-      posted(res.windows || []);
-      setRepeat(null);
-      setScope('active');
-    }
-    return undefined;
-  };
-
-  /* ── posting and editing ─────────────────────────────────────── */
-  const openFlow = (w = null) => setFlow((f) => ({ open: true, key: f.key + 1, window: w }));
-  const closeFlow = () => setFlow((f) => ({ ...f, open: false }));
-  const flowDone = (result) => {
-    closeFlow();
-    if (result.window) toast.success('Saved');
-    else posted(result.windows);
-    if (scope === 'active') load('active');
-    else setScope('active');
-  };
+  const goPost = (path) => navigate(path, { state: { fromList: true } });
 
   const windows = data?.windows || [];
   const live = windows.filter((w) => w.status === 'LIVE');
   const upcoming = windows.filter((w) => w.status === 'SCHEDULED');
-  const enabled = data?.enabled !== false;
-  const noProducts = products !== null && products.length === 0;
+  const enabled = data?.enabled !== false && menu?.enabled !== false;
+  const items = menu?.items || [];
+  const noItems = menu !== null && items.length === 0;
   const today = manilaDay();
+  const ended = scope === 'ended';
+  const onMenu = scope === 'menu';
+  const empty = data !== null && windows.length === 0;
 
   // Coming up, by the day orders open ("Tomorrow", "Wed, Oct 15").
   const upcomingDays = [];
@@ -215,148 +391,206 @@ export default function SellerToday() {
   }
 
   const card = (w) => {
-    const ended = scope === 'ended';
     const state = postStatus(w, ended);
     const busy = busyId === w.id;
     const img = firstImage(w.product?.images);
     const left = w.remaining ?? Math.max(0, w.quantity - w.soldCount);
     const isLive = w.status === 'LIVE';
+    const name = w.product?.name || 'Item';
     return (
       <article key={w.id} className={`stw-card is-${state.tone}`}>
         <div className="stw-card-top">
           <Thumb src={img ? resolveImg(img) : null} />
           <div className="stw-card-main">
-            <span className={`stw-chip is-${state.tone}`}>{state.text}</span>
-            <h3 className="stw-name">
-              {w.product?.slug ? <Link to={`/product/${w.product.slug}`}>{w.product.name}</Link> : w.product?.name || 'Product'}
-            </h3>
-            <p className="stw-when">
-              <Clock size={15} aria-hidden="true" /> {dayTitle(manilaDay(ms(w.ordersOpenAt)), today)} · {ordersSpan(w)}
+            <h3 className="stw-name">{name}</h3>
+            <p className={`stw-status is-${state.tone}`}>
+              {ended ? `${dayTitle(manilaDay(ms(w.ordersOpenAt)), today)}${w.status === 'CANCELLED' ? ' · Cancelled' : ''}` : state.text}
             </p>
-            <p className="stw-meta">
-              <Truck size={14} aria-hidden="true" /> {kindOf(w.mode).title}
-              {w.mode === 'MADE_TO_ORDER' && w.prepMinutes ? ` (${w.prepMinutes} min)` : ''} · {getLabel(w.fulfillment)}
+            <p className="stw-line">
+              {ordersSpan(w)}
             </p>
-            {w.note && <p className="stw-note">{w.note}</p>}
+            <p className="stw-line">
+              {ended
+                ? <><strong>{w.soldCount}</strong> of {w.quantity} ordered</>
+                : <><strong>{left}</strong> of {w.quantity} left</>}
+            </p>
           </div>
         </div>
 
-        <div className="stw-count">
-          <p>
-            {ended
-              ? <><strong>{w.soldCount}</strong> of {w.quantity} ordered</>
-              : <><strong>{left}</strong> of {w.quantity} left</>}
-          </p>
-          {!ended && w.soldCount > 0 && <span className="stw-sold">{w.soldCount} ordered</span>}
-          {!ended && isLive && <TimeLeft until={w.ordersCloseAt} prefix="Ends in" className="stw-left" />}
+        <div className="stw-actions">
+          {ended ? (
+            <button type="button" className="stw-btn" disabled={busy || !enabled} onClick={() => goPost(`/seller/today/new?again=${w.id}`)}>
+              Post again
+            </button>
+          ) : (
+            <>
+              <button type="button" className="stw-btn" disabled={busy} onClick={() => goPost(`/seller/today/${w.id}/edit`)}>
+                Edit
+              </button>
+              {isLive ? (
+                <>
+                  <button type="button" className="stw-btn stw-btn--main" disabled={busy} onClick={() => openAdding(w)}>
+                    <Plus size={16} weight="bold" /> Add more
+                  </button>
+                  <MoreMenu
+                    label={`More for ${name}`}
+                    items={[
+                      { label: 'More time', onClick: () => setExtend({ window: w, value: toInput(ms(w.ordersCloseAt) + 3600e3) }) },
+                      { label: 'Stop taking orders', danger: true, onClick: () => endNow(w) },
+                    ]}
+                  />
+                </>
+              ) : (
+                <button type="button" className="stw-btn stw-btn--danger" disabled={busy} onClick={() => endNow(w)}>
+                  Cancel
+                </button>
+              )}
+            </>
+          )}
         </div>
-
-        {ended ? (
-          <div className="stw-actions">
-            <button type="button" className="stw-btn" disabled={busy} onClick={() => openRepeat(w)}>
-              <ArrowClockwise size={16} /> Post again
-            </button>
-          </div>
-        ) : (
-          <div className="stw-actions">
-            <div className="stw-stepper" role="group" aria-label={`How many of ${w.product?.name || 'this'}`}>
-              <button
-                type="button"
-                aria-label="One less"
-                disabled={busy || (isLive ? (w.remaining ?? 0) < 1 : w.quantity - w.soldCount <= 1)}
-                onClick={() => changeQty(w, -1)}
-              >
-                <Minus size={16} weight="bold" />
-              </button>
-              <span aria-live="polite">{w.quantity}</span>
-              <button type="button" aria-label="One more" disabled={busy} onClick={() => changeQty(w, 1)}>
-                <Plus size={16} weight="bold" />
-              </button>
-            </div>
-            <button type="button" className="stw-btn stw-btn--edit" disabled={busy} onClick={() => openFlow(w)}>
-              <PencilSimple size={16} /> Edit
-            </button>
-            {isLive && (
-              <button type="button" className="stw-btn stw-btn--ghost" disabled={busy} onClick={() => setExtend({ window: w, value: toInput(ms(w.ordersCloseAt) + 3600e3) })}>
-                <CalendarPlus size={16} /> More time
-              </button>
-            )}
-            <button type="button" className="stw-btn stw-btn--danger" disabled={busy} onClick={() => endNow(w)}>
-              <Stop size={16} /> {isLive ? 'End' : 'Cancel'}
-            </button>
-          </div>
-        )}
       </article>
     );
   };
 
-  const repeatTimes = repeat ? `${clockLabel(repeat.window.ordersOpenAt)} – ${clockLabel(repeat.window.ordersCloseAt)}` : '';
+  /** One item on the menu: photo, name, price, one status; Post, and ⋯ for the rest. */
+  const menuRow = (item) => {
+    const state = menuStatus(item);
+    const busy = busyId === item.id;
+    const img = firstImage(item.images);
+    return (
+      <article key={item.id} className={`stw-item is-${state.tone}`}>
+        <Thumb src={img ? resolveImg(img) : null} />
+        <div className="stw-item-main">
+          <h3 className="stw-name">{item.name}</h3>
+          <p className="stw-price">{peso(saleInfo(item).price)}</p>
+          <p className={`stw-item-status is-${state.tone}`}>{state.text}</p>
+          {APPROVAL[item.status] && <p className="stw-item-note">{APPROVAL[item.status]}</p>}
+        </div>
+        <div className="stw-item-actions">
+          <button
+            type="button"
+            className="stw-btn stw-btn--main stw-btn--small"
+            disabled={busy || !enabled}
+            onClick={() => goPost(`/seller/today/new?product=${item.id}`)}
+          >
+            Post
+          </button>
+          <MoreMenu
+            label={`More for ${item.name}`}
+            items={[
+              { label: 'Edit item', onClick: () => navigate(`/seller/products?edit=${item.id}`, { state: { fromList: true } }) },
+              { label: 'Remove from menu', danger: true, onClick: () => removeFromMenu(item) },
+            ]}
+          />
+        </div>
+      </article>
+    );
+  };
+
+  const addButton = (
+    <button type="button" className="stw-add" onClick={openPicker} disabled={!enabled}>
+      <Plus size={16} weight="bold" /> Add from My products
+    </button>
+  );
+  const createLink = (
+    <Link to="/seller/products/new?type=today" state={{ fromList: true }} className="stw-create">
+      Create a new menu item
+    </Link>
+  );
+
+  const showPost = enabled && items.length > 0;
+  const tabs = [['menu', 'Menu'], ['active', 'Now and coming up'], ['ended', 'Ended']];
 
   return (
     <div className="seller-dashboard stw">
       <div className="seller-container">
-        <SellerPageHead
-          title="Today's menu"
-          subtitle="Post what you cooked or harvested. Buyers order until it ends or sells out."
-          actions={!noProducts && enabled ? (
-            <button type="button" className="btn-seller-primary stw-post" onClick={() => openFlow()} disabled={products === null}>
-              <Plus size={18} weight="bold" /> Post an item
-            </button>
-          ) : null}
-        />
+        <SellerPageHead title="Today's menu" />
 
         {!enabled && (
           <p className="stw-banner"><Info size={16} /> Available Today is turned off for now. Your posts are kept; buyers can&apos;t order them.</p>
         )}
 
-        <div className="stw-tabs" role="tablist" aria-label="Show">
-          {[['active', 'On now & coming up'], ['ended', 'Ended']].map(([key, label]) => (
-            <button key={key} type="button" role="tab" aria-selected={scope === key} className={scope === key ? 'is-on' : ''} onClick={() => setScope(key)}>
-              {label}
+        <div className="stw-top">
+          <div className="stw-tabs" role="tablist" aria-label="Show">
+            {tabs.map(([key, label]) => (
+              <button key={key} type="button" role="tab" aria-selected={decided && scope === key} className={decided && scope === key ? 'is-on' : ''} onClick={() => pickTab(key)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {showPost && (
+            <button type="button" className="stw-post" onClick={() => goPost('/seller/today/new')}>
+              <span className="stw-post-icon" aria-hidden="true"><Plus size={16} weight="bold" /></span>
+              Post an item
             </button>
-          ))}
+          )}
         </div>
 
-        {data === null ? (
+        {onMenu ? (
+          menu === null ? (
+            <div className="stw-list" aria-busy="true">
+              {[0, 1, 2].map((i) => <Skeleton key={i} height={96} radius={16} />)}
+            </div>
+          ) : noItems ? (
+            <div className="stw-empty">
+              <EmptyState
+                className="ui-empty--inset"
+                art="calendar"
+                title="No items on your menu yet"
+                text="Add food you sell. Buyers see it as 'Not taking orders yet' until you post it."
+                actions={enabled ? [{ label: 'Add from My products', onClick: openPicker, icon: Plus }] : []}
+              />
+              <p className="stw-empty-link">{createLink}</p>
+            </div>
+          ) : (
+            <>
+              <div className="stw-menu-bar">
+                {addButton}
+                {createLink}
+              </div>
+              <div className="stw-list stw-list--menu">{items.map(menuRow)}</div>
+            </>
+          )
+        ) : !decided || data === null ? (
           <div className="stw-list" aria-busy="true">
-            {[0, 1].map((i) => <Skeleton key={i} height={190} radius={16} />)}
+            {[0, 1].map((i) => <Skeleton key={i} height={150} radius={16} />)}
           </div>
-        ) : windows.length === 0 ? (
-          <div className="seller-card stw-empty">
-            {noProducts ? (
+        ) : empty ? (
+          <div className="stw-empty">
+            {noItems ? (
               <EmptyState
                 className="ui-empty--inset"
                 art="calendar"
                 title="Nothing to post yet"
-                text={'First add a product and choose "Available Today" under How you sell it. Then post it here on the days you have it.'}
-                actions={[{ label: 'Add a product', to: '/seller/products/new', icon: Plus }]}
+                text="Add items to your menu first, then post them."
+                actions={[{ label: 'Go to Menu', onClick: () => pickTab('menu'), icon: Plus }]}
               />
             ) : (
               <EmptyState
                 className="ui-empty--inset"
                 art="calendar"
-                title={scope === 'ended' ? 'Nothing ended in the last 30 days' : 'Nothing on today\'s menu'}
-                text={scope === 'ended' ? 'Posts that ended show here, so you can post them again.' : 'Tap "Post an item". We will ask a few short questions.'}
-                actions={scope === 'ended' || !enabled ? [] : [{ label: 'Post an item', onClick: () => openFlow(), icon: Plus }]}
+                title={ended ? 'Nothing ended yet' : 'Nothing posted'}
+                text={ended ? 'Posts that ended show here, so you can post them again.' : 'Post what you have today.'}
+                actions={ended || !enabled ? [] : [{ label: 'Post an item', onClick: () => goPost('/seller/today/new'), icon: Plus }]}
               />
             )}
           </div>
-        ) : scope === 'ended' ? (
+        ) : ended ? (
           <div className="stw-list">{windows.map(card)}</div>
         ) : (
           <>
             {live.length > 0 && (
               <section className="stw-group">
-                <h2 className="stw-group-title"><span className="stw-dot" aria-hidden="true" /> On now <small>{live.length}</small></h2>
+                <h2 className="stw-group-title">Taking orders now</h2>
                 <div className="stw-list">{live.map(card)}</div>
               </section>
             )}
             {upcoming.length > 0 && (
               <section className="stw-group">
-                <h2 className="stw-group-title">Coming up <small>{upcoming.length}</small></h2>
+                <h2 className="stw-group-title">Coming up</h2>
                 {upcomingDays.map((g) => (
                   <div key={g.day} className="stw-day">
-                    <h3 className="stw-day-title">{dayTitle(g.day, today)} <small>{g.windows.length}</small></h3>
+                    <h3 className="stw-day-title">{dayTitle(g.day, today)}</h3>
                     <div className="stw-list">{g.windows.map(card)}</div>
                   </div>
                 ))}
@@ -365,25 +599,65 @@ export default function SellerToday() {
           </>
         )}
 
-        {!noProducts && products !== null && (
+        {!onMenu && decided && !empty && !ended && data !== null && (
           <p className="stw-foot">
-            Orders for these show in <Link to="/seller/orders">My orders</Link>. Confirm each one quickly: unconfirmed orders cancel on their own.
+            New orders show in <Link to="/seller/orders">My orders</Link>. Confirm them quickly.
           </p>
         )}
       </div>
 
-      {/* Post an item / Edit post: one question at a time */}
-      {flow.key > 0 && (
-        <TodayPostFlow
-          key={flow.key}
-          open={flow.open}
-          window={flow.window}
-          products={products || []}
-          storeMode={storeMode}
-          onClose={closeFlow}
-          onDone={flowDone}
-        />
-      )}
+      <AddFromProducts
+        key={pickRound}
+        open={picking}
+        choices={menu ? menu.choices || [] : null}
+        busy={Boolean(addingId)}
+        onClose={() => setPicking(false)}
+        onAdd={addToMenu}
+      />
+
+      {/* Add more */}
+      <PhoneSheet
+        open={Boolean(adding)}
+        title="How many to sell"
+        className="stw-sheet"
+        onClose={() => setAdding(null)}
+        footer={adding && (
+          <>
+            <button type="button" className="scm-btn scm-btn--ghost" onClick={() => setAdding(null)}>Cancel</button>
+            <button type="button" className="scm-btn" onClick={saveAdding} disabled={busyId === adding.window.id}>Save</button>
+          </>
+        )}
+      >
+        {adding && (
+          <div className="stw-form">
+            <p className="stw-hint">
+              {adding.window.product?.name}: {adding.window.remaining ?? adding.window.quantity} left now.
+            </p>
+            <div className="stw-stepper" role="group" aria-label="How many in all">
+              <button type="button" aria-label="One less" disabled={adding.total <= adding.min} onClick={() => setAdding((a) => ({ ...a, total: Math.max(a.min, a.total - 1) }))}>
+                <Minus size={22} weight="bold" />
+              </button>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={adding.min}
+                value={adding.total}
+                aria-label="How many in all"
+                onChange={(e) => setAdding((a) => ({ ...a, total: Number(e.target.value.replace(/[^0-9]/g, '')) || 0 }))}
+                onBlur={() => setAdding((a) => ({ ...a, total: Math.max(a.min, a.total) }))}
+              />
+              <button type="button" aria-label="One more" onClick={() => setAdding((a) => ({ ...a, total: a.total + 1 }))}>
+                <Plus size={22} weight="bold" />
+              </button>
+            </div>
+            <div className="stw-adds" role="group" aria-label="Add">
+              {ADD_PICKS.map((n) => (
+                <button key={n} type="button" onClick={() => setAdding((a) => ({ ...a, total: a.total + n }))}>+{n}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </PhoneSheet>
 
       {/* More time */}
       <PhoneSheet
@@ -404,45 +678,6 @@ export default function SellerToday() {
             <label className="scm-field">
               Orders close
               <input type="datetime-local" value={extend.value} onChange={(e) => setExtend((x) => ({ ...x, value: e.target.value }))} />
-            </label>
-          </div>
-        )}
-      </PhoneSheet>
-
-      {/* Post again */}
-      <PhoneSheet
-        open={Boolean(repeat)}
-        title="Post again"
-        className="stw-sheet"
-        onClose={() => setRepeat(null)}
-        footer={repeat && (
-          <>
-            <button type="button" className="scm-btn scm-btn--ghost" onClick={() => setRepeat(null)}>Cancel</button>
-            <button type="button" className="scm-btn" onClick={saveRepeat} disabled={busyId === repeat.window.id}>
-              {repeat.dates.length > 1 ? `Post for ${repeat.dates.length} days` : 'Post'}
-            </button>
-          </>
-        )}
-      >
-        {repeat && (
-          <div className="stw-form">
-            <p className="stw-hint">
-              {repeat.window.product?.name}: orders {repeatTimes}, as last time, on each day you pick.
-            </p>
-            <DayCalendar
-              value={repeat.dates}
-              onToggle={(day) => setRepeat((r) => ({ ...r, dates: toggleDay(r.dates, day) }))}
-              min={repeat.today}
-              max={addDays(repeat.today, AHEAD_DAYS - 1)}
-              today={repeat.today}
-              label="Days to post again"
-            />
-            <p className="stw-picked" aria-live="polite">
-              {repeat.dates.length ? <strong>{plural(repeat.dates.length, 'day')}</strong> : 'Tap the days to post it again.'}
-            </p>
-            <label className="scm-field stw-gap">
-              How many per day
-              <input type="number" inputMode="numeric" min="1" step="1" value={repeat.quantity} onChange={(e) => setRepeat((r) => ({ ...r, quantity: e.target.value }))} />
             </label>
           </div>
         )}

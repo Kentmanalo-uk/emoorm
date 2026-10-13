@@ -95,6 +95,7 @@ const SellerShopHome = lazy(() => import('./pages/SellerShopHome'));
 const SellerFulfillment = lazy(() => import('./pages/SellerFulfillment'));
 const SellerSettings = lazy(() => import('./pages/SellerSettings'));
 const SellerToday = lazy(() => import('./pages/SellerToday'));
+const SellerTodayPost = lazy(() => import('./pages/SellerTodayPost'));
 const SellerWelcome = lazy(() => import('./pages/SellerWelcome'));
 const MunicipalityGallery = lazy(() => import('./pages/MunicipalityGallery'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -305,6 +306,8 @@ function AppRoutes() {
           <Route path="products" element={<SellerProducts />} />
           <Route path="products/new" element={<SellerProducts />} />
           <Route path="today" element={<SellerToday />} />
+          <Route path="today/new" element={<SellerTodayPost />} />
+          <Route path="today/:id/edit" element={<SellerTodayPost />} />
           <Route path="reviews" element={<SellerReviews />} />
           <Route path="questions" element={<SellerQuestions />} />
           <Route path="offers" element={<SellerOffers />} />
