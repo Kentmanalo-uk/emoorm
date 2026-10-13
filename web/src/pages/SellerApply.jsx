@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Navigate, Link } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, CheckCircle, Storefront as Store, Warning, Check, Money,
-  IdentificationCard, Camera, X, FileText,
+  IdentificationCard, Camera, X, FileText, User, MapPin, Wallet, Briefcase, Truck,
+  Package, Buildings, Sparkle,
 } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import axios from "../lib/axios";
@@ -35,15 +36,17 @@ const QR_METHODS = ["GCASH", "QRPH"];
 
 // How the seller sells. A registered business adds its permit details.
 const BUSINESS_TYPES = [
-  { value: "INDIVIDUAL", label: "Individual seller", desc: "Selling under your own name" },
-  { value: "REGISTERED", label: "Registered business", desc: "DTI / SEC registered" },
+  { value: "INDIVIDUAL", label: "Individual seller", desc: "Selling under your own name", Icon: User },
+  { value: "REGISTERED", label: "Registered business", desc: "DTI / SEC registered", Icon: Buildings },
 ];
 
+// How buyers get their orders: the shop's starting delivery setting.
 const FULFILLMENT_OPTIONS = [
-  { value: "DELIVERY", label: "Deliver to buyers" },
-  { value: "PICKUP", label: "Buyers pick up" },
-  { value: "BOTH", label: "Both" },
+  { value: "DELIVERY", label: "Deliver to buyers", desc: "Orders go to the buyer's address", Icon: Truck },
+  { value: "PICKUP", label: "Buyers pick up", desc: "Buyers collect orders at your shop", Icon: Store },
+  { value: "BOTH", label: "Both", desc: "Buyers choose delivery or pickup", Icon: Package },
 ];
+const fulfillmentLabelOf = (value) => (FULFILLMENT_OPTIONS.find((o) => o.value === value) || FULFILLMENT_OPTIONS[0]).label;
 
 /** The picked methods in card order, known ones only. */
 const orderedMethods = (list) => PAYOUT_METHODS.map((m) => m.value).filter((v) => list.includes(v));
@@ -220,6 +223,48 @@ function Pills({ label, options, value, onChange }) {
           {o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** Choices as cards where one is on: an icon, a name, one line on what it means, a radio dot. */
+function OptionCards({ labelledBy, options, value, onChange, className = "" }) {
+  return (
+    <div className={`apply-options ${className}`} role="radiogroup" aria-labelledby={labelledBy}>
+      {options.map(({ value: optionValue, label, desc, Icon }) => {
+        const on = value === optionValue;
+        return (
+          <button
+            type="button"
+            key={optionValue}
+            role="radio"
+            aria-checked={on}
+            className={`apply-pay-method apply-option${on ? " is-active" : ""}`}
+            onClick={() => onChange(optionValue)}
+          >
+            <span className="apply-option-icon" aria-hidden="true"><Icon size={18} weight="fill" /></span>
+            <span className="apply-pay-method-text">
+              <strong className="apply-option-label">{label}</strong>
+              <small>{desc}</small>
+            </span>
+            <span className="apply-option-radio" aria-hidden="true" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** A numbered part of the form: the step, a friendly title, one line on why, an icon. */
+function SectionHead({ step, title, Icon, children }) {
+  return (
+    <div className="apply-section-head">
+      <span className="apply-step-num" aria-hidden="true">{step}</span>
+      <div>
+        <h2>{title}</h2>
+        <p>{children}</p>
+      </div>
+      <Icon size={22} weight="fill" className="apply-section-icon" aria-hidden="true" />
     </div>
   );
 }
@@ -488,18 +533,18 @@ export default function SellerApply() {
   const registered = form.sellerBusinessType === "REGISTERED";
   const qrType = qrTypeOf(form);
   const bothQr = QR_METHODS.every((m) => form.payoutMethods.includes(m));
-  const missing = useMemo(() => [
-    !contactNumber && "Contact number",
-    !form.shopName.trim() && "Shop name",
-    !form.shopCategories.length && "Shop categories",
-    !form.shopAddress.trim() && "Shop address",
-    registered && !form.sellerPermitNumber.trim() && "Permit or registration number",
-    !form.payoutMethods.length && "Payment method",
-    account
-      && (!form.payoutAccountName.trim() || !form.payoutAccountNumber.trim())
-      && `${account.label} account details`,
-    !acceptedTerms && "Accept the seller terms",
-  ].filter(Boolean), [form, contactNumber, acceptedTerms, account, registered]);
+  // Just a count for the preview ("3 items left"): the fields themselves say
+  // what is wrong once the seller tries to submit.
+  const itemsLeft = useMemo(() => [
+    !contactNumber,
+    !form.shopName.trim(),
+    !form.shopCategories.length,
+    !form.shopAddress.trim() || !form.municipalityId,
+    registered && !form.sellerPermitNumber.trim(),
+    !form.payoutMethods.length,
+    account && (!form.payoutAccountName.trim() || !form.payoutAccountNumber.trim()),
+    !acceptedTerms,
+  ].filter(Boolean).length, [form, contactNumber, acceptedTerms, account, registered]);
 
   const submit = async () => {
     setConfirming(false);
@@ -598,17 +643,17 @@ export default function SellerApply() {
     );
   }
 
+  const reviewer = form.municipalityName ? `${form.municipalityName} admin` : "Pick your town";
+  const buyersPay = form.payoutMethods.length
+    ? form.payoutMethods.map((m) => PAYOUT_METHODS.find((p) => p.value === m)?.label).filter(Boolean).join(", ")
+    : "—";
+
   return (
     <div className="apply-page">
       <ApplyBrandHeader />
 
-      <main className="apply-column">
-        <div className="apply-intro">
-          <h1>Open your shop</h1>
-          <p>Just the basics for now: about two minutes.</p>
-        </div>
-
-        {status === "REJECTED" && (
+      {status === "REJECTED" && (
+        <div className="apply-shell apply-shell--notice">
           <div className="apply-reject">
             <Warning size={20} weight="fill" />
             <div>
@@ -617,335 +662,405 @@ export default function SellerApply() {
               <p>Fix that and submit again. The details you entered are still here.</p>
             </div>
           </div>
-        )}
-
-        <div className="apply-notice">
-          <Store size={20} />
-          <div>
-            <strong>Your shop goes live once approved</strong>
-            <p>The municipality you pick below decides which admin reviews your application.</p>
-          </div>
         </div>
+      )}
 
-        {/* ── You ── */}
-        <section className="apply-section">
-          <h2>About You</h2>
-          <div className="apply-info">
-            <div className="apply-info-row"><span>Name</span><strong>{user?.fullName || "—"}</strong></div>
-            <div className="apply-info-row"><span>Email</span><strong>{user?.email || "—"}</strong></div>
-            <ContactNumberField
-              value={contactNumber}
-              onSaved={(next) => {
-                setContactNumber(next);
-                updateUser({ ...user, contactNumber: next });
-              }}
-            />
+      <div className="apply-shell">
+        <main className="apply-main">
+          <div className="apply-intro">
+            <h1>Open your shop</h1>
+            <p>Six short steps, about two minutes. Your shop goes live once your municipal admin approves it.</p>
           </div>
-        </section>
 
-        {/* ── The shop ── */}
-        <section className="apply-section">
-          <h2>Shop Details</h2>
-          <div className="apply-form">
-            <div className="apply-field">
-              <label htmlFor="apply-shop-name">Shop name <span className="req">*</span></label>
-              <input
-                id="apply-shop-name"
-                type="text"
-                value={form.shopName}
-                onChange={(e) => set("shopName", e.target.value)}
-                onBlur={() => touch("shopName")}
-                placeholder="e.g. Maria's Fresh Farm"
-                maxLength={60}
-                className={errors.shopName ? "input-error" : ""}
+          {/* ── 1 · You ── */}
+          <section className="apply-section">
+            <SectionHead step={1} title="About you" Icon={User}>
+              How the admin and your buyers can reach you.
+            </SectionHead>
+            <div className="apply-info">
+              <div className="apply-info-row"><span>Name</span><strong>{user?.fullName || "—"}</strong></div>
+              <div className="apply-info-row"><span>Email</span><strong>{user?.email || "—"}</strong></div>
+              <ContactNumberField
+                value={contactNumber}
+                onSaved={(next) => {
+                  setContactNumber(next);
+                  updateUser({ ...user, contactNumber: next });
+                }}
               />
-              {errors.shopName
-                ? <span className="field-error">{errors.shopName}</span>
-                : <span className="field-hint">{form.shopName.length}/60 · must be unique on Emoorm</span>}
+            </div>
+          </section>
+
+          {/* ── 2 · The shop ── */}
+          <section className="apply-section">
+            <SectionHead step={2} title="Your shop" Icon={Store}>
+              Its name and what it sells. You can change these later.
+            </SectionHead>
+            <div className="apply-form">
+              <div className="apply-field">
+                <label htmlFor="apply-shop-name">Shop name <span className="req">*</span></label>
+                <input
+                  id="apply-shop-name"
+                  type="text"
+                  value={form.shopName}
+                  onChange={(e) => set("shopName", e.target.value)}
+                  onBlur={() => touch("shopName")}
+                  placeholder="e.g. Maria's Fresh Farm"
+                  maxLength={60}
+                  className={errors.shopName ? "input-error" : ""}
+                />
+                {errors.shopName
+                  ? <span className="field-error">{errors.shopName}</span>
+                  : <span className="field-hint">{form.shopName.length}/60 · must be unique on Emoorm</span>}
+              </div>
+
+              <div className="apply-field">
+                <span className="apply-field-label">What do you sell? <span className="req">*</span></span>
+                <div className={`apply-chips${errors.shopCategories ? " input-error" : ""}`}>
+                  {categories.length === 0 && <span className="field-hint">Loading categories…</span>}
+                  {categories.map((c) => {
+                    const active = form.shopCategories.includes(c.id);
+                    return (
+                      <button
+                        type="button"
+                        key={c.id}
+                        className={`apply-chip${active ? " is-active" : ""}`}
+                        aria-pressed={active}
+                        onClick={() => toggleCategory(c.id)}
+                      >
+                        {active && <Check size={13} weight="bold" />}
+                        {c.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.shopCategories
+                  ? <span className="field-error">{errors.shopCategories}</span>
+                  : <span className="field-hint">Pick up to {MAX_CATEGORIES}. This is where your products appear.</span>}
+              </div>
+
+              <div className="apply-field">
+                <label htmlFor="apply-shop-desc">Tell buyers about your shop</label>
+                <textarea
+                  id="apply-shop-desc"
+                  rows={3}
+                  value={form.shopDescription}
+                  onChange={(e) => set("shopDescription", e.target.value)}
+                  onBlur={() => touch("shopDescription")}
+                  placeholder="What makes your shop special? Fresh daily, family farm, made to order…"
+                  maxLength={1000}
+                  className={errors.shopDescription ? "input-error" : ""}
+                />
+                {errors.shopDescription
+                  ? <span className="field-error">{errors.shopDescription}</span>
+                  : <span className="field-hint">Optional</span>}
+              </div>
+
+              <div className="apply-field apply-make-it-yours">
+                <span className="apply-field-label">Make it yours <span className="apply-optional">(optional)</span></span>
+                <div className="apply-pics">
+                  <PictureField shape="round" label="Logo" value={form.shopLogoUrl} onChange={(url) => set("shopLogoUrl", url)} />
+                  <PictureField shape="wide" label="Cover photo" value={form.shopCoverUrl} onChange={(url) => set("shopCoverUrl", url)} />
+                </div>
+                <span className="field-hint">Buyers see these on your shop page. You can add them later in Seller Center.</span>
+              </div>
+            </div>
+          </section>
+
+          {/* ── 3 · Where ── */}
+          <section className="apply-section">
+            <SectionHead step={3} title="Where your shop is" Icon={MapPin}>
+              The town you pick decides which municipal admin reviews your shop.
+            </SectionHead>
+            <div className="apply-form">
+              <div className="apply-field">
+                <PhAddressPicker
+                  value={{
+                    province: form.province,
+                    provinceCode: form.provinceCode,
+                    municipalityId: form.municipalityId,
+                    municipalityName: form.municipalityName,
+                    municipalityCode: form.municipalityCode,
+                    barangay: form.barangay,
+                    barangayCode: form.barangayCode,
+                    street: form.street,
+                  }}
+                  onChange={(next) => {
+                    setForm((prev) => {
+                      const merged = { ...prev, ...next };
+                      const composed = [merged.street, merged.barangay, merged.municipalityName, merged.province]
+                        .map((v) => (v || "").trim())
+                        .filter(Boolean)
+                        .join(", ");
+                      return { ...merged, shopAddress: composed };
+                    });
+                    setErrors((prev) => ({ ...prev, shopAddress: "", municipalityId: "" }));
+                  }}
+                  dbMunicipalities={dbMunicipalities}
+                  dbLoading={dbMunicipalitiesLoading}
+                  errors={{
+                    province: errors.shopAddress,
+                    municipalityId: errors.shopAddress || errors.municipalityId,
+                    barangay: errors.shopAddress,
+                    street: errors.shopAddress,
+                  }}
+                />
+                {(errors.shopAddress || errors.municipalityId) && (
+                  <span className="field-error">{errors.shopAddress || errors.municipalityId}</span>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ── 4 · Selling as ── */}
+          <section className="apply-section">
+            <SectionHead step={4} title="Selling as" Icon={Briefcase}>
+              Registered businesses add their permit. Selling under your own name? Nothing more needed.
+            </SectionHead>
+            <div className="apply-form">
+              <span className="apply-sr-only" id="apply-type-label">How do you sell?</span>
+              <OptionCards
+                labelledBy="apply-type-label"
+                className="apply-types"
+                options={BUSINESS_TYPES}
+                value={form.sellerBusinessType || "INDIVIDUAL"}
+                onChange={(value) => {
+                  set("sellerBusinessType", value);
+                  setErrors((p) => ({ ...p, sellerPermitNumber: "", sellerBirTin: "" }));
+                }}
+              />
+
+              {registered && (
+                <>
+                  <div className="apply-field">
+                    <label htmlFor="apply-permit">Permit or registration number <span className="req">*</span></label>
+                    <input
+                      id="apply-permit"
+                      type="text"
+                      value={form.sellerPermitNumber}
+                      onChange={(e) => set("sellerPermitNumber", e.target.value)}
+                      onBlur={() => touch("sellerPermitNumber")}
+                      placeholder="DTI, SEC or business permit no."
+                      maxLength={60}
+                      className={errors.sellerPermitNumber ? "input-error" : ""}
+                    />
+                    {errors.sellerPermitNumber && <span className="field-error">{errors.sellerPermitNumber}</span>}
+                  </div>
+                  <div className="apply-field">
+                    <span className="apply-field-label">Business permit / DTI / SEC papers</span>
+                    <PapersField value={form.sellerPermitUrl} onChange={(id) => set("sellerPermitUrl", id)} />
+                    <span className="field-hint">Optional · a clear photo or scan. Only the reviewing admin sees it.</span>
+                  </div>
+                  <div className="apply-field">
+                    <label htmlFor="apply-tin">BIR TIN</label>
+                    <input
+                      id="apply-tin"
+                      type="text"
+                      value={form.sellerBirTin}
+                      onChange={(e) => set("sellerBirTin", e.target.value)}
+                      onBlur={() => touch("sellerBirTin")}
+                      placeholder="000-000-000-000"
+                      maxLength={30}
+                      className={errors.sellerBirTin ? "input-error" : ""}
+                    />
+                    {errors.sellerBirTin
+                      ? <span className="field-error">{errors.sellerBirTin}</span>
+                      : <span className="field-hint">Optional</span>}
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* ── 5 · How buyers pay ── */}
+          <section className="apply-section">
+            <SectionHead step={5} title="How buyers pay" Icon={Wallet}>
+              Where your buyers&apos; payments go. You can change it later.
+            </SectionHead>
+            <div className="apply-form">
+              <div className="apply-field">
+                <span className="apply-sr-only" id="apply-pay-label">Payment methods</span>
+                <PaymentMethods
+                  value={form.payoutMethods}
+                  onToggle={(method) => {
+                    setForm((p) => ({ ...p, payoutMethods: toggleMethod(p.payoutMethods, method) }));
+                    setErrors((p) => ({ ...p, payoutMethods: "", payoutAccountName: "", payoutAccountNumber: "" }));
+                  }}
+                />
+                {errors.payoutMethods
+                  ? <span className="field-error">{errors.payoutMethods}</span>
+                  : <span className="field-hint">Pick all that apply. You can change these anytime in Seller Center.</span>}
+              </div>
+
+              {account && (
+                <>
+                  <div className="apply-pay-grid">
+                    <div className="apply-field">
+                      <label htmlFor="apply-pay-name">Account name <span className="req">*</span></label>
+                      <input
+                        id="apply-pay-name"
+                        type="text"
+                        value={form.payoutAccountName}
+                        onChange={(e) => set("payoutAccountName", e.target.value)}
+                        onBlur={() => touch("payoutAccountName")}
+                        placeholder="Name on the account"
+                        autoComplete="name"
+                        className={errors.payoutAccountName ? "input-error" : ""}
+                      />
+                      {errors.payoutAccountName && <span className="field-error">{errors.payoutAccountName}</span>}
+                    </div>
+                    <div className="apply-field">
+                      <label htmlFor="apply-pay-number">
+                        {account.numberLabel} <span className="req">*</span>
+                      </label>
+                      <input
+                        id="apply-pay-number"
+                        type="tel"
+                        inputMode="numeric"
+                        value={form.payoutAccountNumber}
+                        onChange={(e) => set("payoutAccountNumber", e.target.value)}
+                        onBlur={() => touch("payoutAccountNumber")}
+                        placeholder={account.numberPlaceholder}
+                        className={errors.payoutAccountNumber ? "input-error" : ""}
+                      />
+                      {errors.payoutAccountNumber && <span className="field-error">{errors.payoutAccountNumber}</span>}
+                    </div>
+                  </div>
+                  <div className="apply-field">
+                    <span className="apply-field-label">Your QR code <span className="apply-optional">(optional)</span></span>
+                    <div className="apply-qr">
+                      <PictureField shape="square" label="QR code" value={form.payoutQrUrl} onChange={(url) => set("payoutQrUrl", url)} />
+                      <div className="apply-qr-text">
+                        {bothQr && (
+                          <Pills
+                            label="This QR is for"
+                            options={QR_METHODS.map((m) => ({ value: m, label: PAYOUT_METHODS.find((p) => p.value === m).label }))}
+                            value={qrType}
+                            onChange={(value) => set("payoutQrType", value)}
+                          />
+                        )}
+                        <span className="field-hint">
+                          Your {bothQr ? "GCash or QR Ph" : PAYOUT_METHODS.find((p) => p.value === qrType)?.label} QR, so buyers can scan to pay. You can add it later.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* ── 6 · How buyers get orders ── */}
+          <section className="apply-section">
+            <SectionHead step={6} title="How buyers get their orders" Icon={Truck}>
+              Deliver, let buyers pick up at your shop, or offer both. You can change it later.
+            </SectionHead>
+            <span className="apply-sr-only" id="apply-fulfil-label">How buyers get orders</span>
+            <OptionCards
+              labelledBy="apply-fulfil-label"
+              className="apply-fulfil"
+              options={FULFILLMENT_OPTIONS}
+              value={form.fulfillmentPreference || "DELIVERY"}
+              onChange={(value) => set("fulfillmentPreference", value)}
+            />
+          </section>
+
+          {/* The ID check comes later, in the Seller Center (/seller/verification). */}
+          <section className="apply-later" aria-label="Identity verification">
+            <IdentificationCard size={22} weight="fill" />
+            <div>
+              <strong>Verify your identity later</strong>
+              <p>After you apply, verify your ID from your Seller Center. It takes a minute and helps the admin approve your shop faster.</p>
+            </div>
+          </section>
+
+          {/* What comes after: the guided setup. */}
+          <section className="apply-next" aria-label="After you apply">
+            <Sparkle size={20} weight="fill" />
+            <div>
+              <strong>After you apply</strong>
+              <p>A short guided setup helps you finish your shop and add your first product. Skip any step and come back to it later.</p>
+            </div>
+          </section>
+        </main>
+
+        {/* ── Live preview, stays in view while scrolling ── */}
+        <aside className="apply-aside">
+          <div className="apply-preview">
+            <div className="apply-preview-head">
+              <h3>Application preview</h3>
+              <span className={itemsLeft === 0 ? "is-ready" : ""}>
+                {itemsLeft === 0 ? "Ready to submit" : `${itemsLeft} item${itemsLeft === 1 ? "" : "s"} left`}
+              </span>
             </div>
 
-            <div className="apply-field">
-              <label htmlFor="apply-shop-desc">Shop description</label>
-              <textarea
-                id="apply-shop-desc"
-                rows={3}
-                value={form.shopDescription}
-                onChange={(e) => set("shopDescription", e.target.value)}
-                onBlur={() => touch("shopDescription")}
-                placeholder="Tell buyers what makes your shop special"
-                maxLength={1000}
-                className={errors.shopDescription ? "input-error" : ""}
-              />
-              {errors.shopDescription && <span className="field-error">{errors.shopDescription}</span>}
-            </div>
-
-            <div className="apply-field">
-              <PhAddressPicker
-                value={{
-                  province: form.province,
-                  provinceCode: form.provinceCode,
-                  municipalityId: form.municipalityId,
-                  municipalityName: form.municipalityName,
-                  municipalityCode: form.municipalityCode,
-                  barangay: form.barangay,
-                  barangayCode: form.barangayCode,
-                  street: form.street,
-                }}
-                onChange={(next) => {
-                  setForm((prev) => {
-                    const merged = { ...prev, ...next };
-                    const composed = [merged.street, merged.barangay, merged.municipalityName, merged.province]
-                      .map((v) => (v || "").trim())
-                      .filter(Boolean)
-                      .join(", ");
-                    return { ...merged, shopAddress: composed };
-                  });
-                  setErrors((prev) => ({ ...prev, shopAddress: "", municipalityId: "" }));
-                }}
-                dbMunicipalities={dbMunicipalities}
-                dbLoading={dbMunicipalitiesLoading}
-                errors={{
-                  province: errors.shopAddress,
-                  municipalityId: errors.shopAddress || errors.municipalityId,
-                  barangay: errors.shopAddress,
-                  street: errors.shopAddress,
-                }}
-              />
-              {(errors.shopAddress || errors.municipalityId) && (
-                <span className="field-error">{errors.shopAddress || errors.municipalityId}</span>
+            <div className="apply-preview-card">
+              <div className="apply-preview-cover">
+                {form.shopCoverUrl && <img src={resolveImg(form.shopCoverUrl)} alt="" />}
+              </div>
+              <div className="apply-preview-shop">
+                {form.shopLogoUrl
+                  ? <img className="apply-preview-logo" src={resolveImg(form.shopLogoUrl)} alt="" />
+                  : (
+                    <span className="apply-preview-logo apply-preview-avatar">
+                      {(form.shopName.trim() || "S").charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                <span className="apply-preview-shop-text">
+                  <strong>{form.shopName.trim() || "Your shop name"}</strong>
+                  <span>{form.shopAddress || "Shop address"}</span>
+                </span>
+              </div>
+              {form.shopDescription.trim() && <p className="apply-preview-desc">{form.shopDescription}</p>}
+              {form.shopCategories.length > 0 && (
+                <div className="apply-preview-cats">
+                  {form.shopCategories.map((id) => {
+                    const category = categories.find((c) => c.id === id);
+                    return category ? <span key={id}>{category.name}</span> : null;
+                  })}
+                </div>
               )}
             </div>
 
-            <div className="apply-field">
-              <span className="apply-field-label">Shop categories <span className="req">*</span></span>
-              <div className={`apply-chips${errors.shopCategories ? " input-error" : ""}`}>
-                {categories.length === 0 && <span className="field-hint">Loading categories…</span>}
-                {categories.map((c) => {
-                  const active = form.shopCategories.includes(c.id);
-                  return (
-                    <button
-                      type="button"
-                      key={c.id}
-                      className={`apply-chip${active ? " is-active" : ""}`}
-                      aria-pressed={active}
-                      onClick={() => toggleCategory(c.id)}
-                    >
-                      {active && <Check size={13} weight="bold" />}
-                      {c.name}
-                    </button>
-                  );
-                })}
-              </div>
-              {errors.shopCategories
-                ? <span className="field-error">{errors.shopCategories}</span>
-                : <span className="field-hint">Pick up to {MAX_CATEGORIES}. This is where your products appear.</span>}
-            </div>
+            <dl className="apply-preview-list">
+              <dt>Applicant</dt>
+              <dd>{user?.fullName || "—"}</dd>
+              <dt>Contact</dt>
+              <dd>{contactNumber || "—"}</dd>
+              <dt>Selling as</dt>
+              <dd>{registered ? "Registered business" : "Individual seller"}</dd>
+              <dt>Buyers pay</dt>
+              <dd>{buyersPay}</dd>
+              <dt>Orders</dt>
+              <dd>{fulfillmentLabelOf(form.fulfillmentPreference)}</dd>
+              <dt>Reviewed by</dt>
+              <dd>{reviewer}</dd>
+            </dl>
 
-            <div className="apply-field">
-              <span className="apply-field-label">Shop logo and cover photo</span>
-              <div className="apply-pics">
-                <PictureField shape="round" label="Logo" value={form.shopLogoUrl} onChange={(url) => set("shopLogoUrl", url)} />
-                <PictureField shape="wide" label="Cover photo" value={form.shopCoverUrl} onChange={(url) => set("shopCoverUrl", url)} />
-              </div>
-              <span className="field-hint">Optional · you can add these later in Seller Center.</span>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Business ── */}
-        <section className="apply-section">
-          <h2>Business Details</h2>
-          <div className="apply-form">
-            <div className="apply-field">
-              <span className="apply-field-label" id="apply-type-label">How do you sell? <span className="req">*</span></span>
-              <div className="apply-types" role="radiogroup" aria-labelledby="apply-type-label">
-                {BUSINESS_TYPES.map((t) => {
-                  const on = (form.sellerBusinessType || "INDIVIDUAL") === t.value;
-                  return (
-                    <button
-                      type="button"
-                      key={t.value}
-                      role="radio"
-                      aria-checked={on}
-                      className={`apply-pay-method apply-type${on ? " is-active" : ""}`}
-                      onClick={() => {
-                        set("sellerBusinessType", t.value);
-                        setErrors((p) => ({ ...p, sellerPermitNumber: "", sellerBirTin: "" }));
-                      }}
-                    >
-                      <span className="apply-pay-method-text">
-                        <strong className="apply-type-label">{t.label}</strong>
-                        <small>{t.desc}</small>
-                      </span>
-                      <span className="apply-type-radio" aria-hidden="true" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {registered && (
-              <>
-                <div className="apply-field">
-                  <label htmlFor="apply-permit">Permit or registration number <span className="req">*</span></label>
-                  <input
-                    id="apply-permit"
-                    type="text"
-                    value={form.sellerPermitNumber}
-                    onChange={(e) => set("sellerPermitNumber", e.target.value)}
-                    onBlur={() => touch("sellerPermitNumber")}
-                    placeholder="DTI, SEC or business permit no."
-                    maxLength={60}
-                    className={errors.sellerPermitNumber ? "input-error" : ""}
-                  />
-                  {errors.sellerPermitNumber && <span className="field-error">{errors.sellerPermitNumber}</span>}
-                </div>
-                <div className="apply-field">
-                  <span className="apply-field-label">Business permit / DTI / SEC papers</span>
-                  <PapersField value={form.sellerPermitUrl} onChange={(id) => set("sellerPermitUrl", id)} />
-                  <span className="field-hint">Optional · a clear photo or scan. Only the reviewing admin sees it.</span>
-                </div>
-                <div className="apply-field">
-                  <label htmlFor="apply-tin">BIR TIN</label>
-                  <input
-                    id="apply-tin"
-                    type="text"
-                    value={form.sellerBirTin}
-                    onChange={(e) => set("sellerBirTin", e.target.value)}
-                    onBlur={() => touch("sellerBirTin")}
-                    placeholder="000-000-000-000"
-                    maxLength={30}
-                    className={errors.sellerBirTin ? "input-error" : ""}
-                  />
-                  {errors.sellerBirTin
-                    ? <span className="field-error">{errors.sellerBirTin}</span>
-                    : <span className="field-hint">Optional</span>}
-                </div>
-              </>
-            )}
-          </div>
-        </section>
-
-        {/* ── Payments & delivery ── */}
-        <section className="apply-section">
-          <h2>Payments &amp; Delivery</h2>
-          <div className="apply-form">
-            <div className="apply-field">
-              <span className="apply-field-label" id="apply-pay-label">Payment methods <span className="req">*</span></span>
-              <PaymentMethods
-                value={form.payoutMethods}
-                onToggle={(method) => {
-                  setForm((p) => ({ ...p, payoutMethods: toggleMethod(p.payoutMethods, method) }));
-                  setErrors((p) => ({ ...p, payoutMethods: "", payoutAccountName: "", payoutAccountNumber: "" }));
-                }}
+            <label className="apply-terms-check">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
               />
-              {errors.payoutMethods
-                ? <span className="field-error">{errors.payoutMethods}</span>
-                : <span className="field-hint">Pick all that apply. You can change these anytime in Seller Center.</span>}
-            </div>
+              <span>
+                I confirm the information above is accurate and I agree to Emoorm&apos;s{" "}
+                <Link to="/terms" target="_blank" rel="noreferrer">Seller Terms of Service</Link>.
+              </span>
+            </label>
 
-            {account && (
-              <>
-                <div className="apply-field">
-                  <label htmlFor="apply-pay-name">Account name <span className="req">*</span></label>
-                  <input
-                    id="apply-pay-name"
-                    type="text"
-                    value={form.payoutAccountName}
-                    onChange={(e) => set("payoutAccountName", e.target.value)}
-                    onBlur={() => touch("payoutAccountName")}
-                    placeholder="Name on the account"
-                    autoComplete="name"
-                    className={errors.payoutAccountName ? "input-error" : ""}
-                  />
-                  {errors.payoutAccountName && <span className="field-error">{errors.payoutAccountName}</span>}
-                </div>
-                <div className="apply-field">
-                  <label htmlFor="apply-pay-number">
-                    {account.numberLabel} <span className="req">*</span>
-                  </label>
-                  <input
-                    id="apply-pay-number"
-                    type="tel"
-                    inputMode="numeric"
-                    value={form.payoutAccountNumber}
-                    onChange={(e) => set("payoutAccountNumber", e.target.value)}
-                    onBlur={() => touch("payoutAccountNumber")}
-                    placeholder={account.numberPlaceholder}
-                    className={errors.payoutAccountNumber ? "input-error" : ""}
-                  />
-                  {errors.payoutAccountNumber && <span className="field-error">{errors.payoutAccountNumber}</span>}
-                </div>
-                <div className="apply-field">
-                  <span className="apply-field-label">Upload your QR code</span>
-                  <div className="apply-qr">
-                    <PictureField shape="square" label="QR code" value={form.payoutQrUrl} onChange={(url) => set("payoutQrUrl", url)} />
-                    <div className="apply-qr-text">
-                      {bothQr && (
-                        <Pills
-                          label="This QR is for"
-                          options={QR_METHODS.map((m) => ({ value: m, label: PAYOUT_METHODS.find((p) => p.value === m).label }))}
-                          value={qrType}
-                          onChange={(value) => set("payoutQrType", value)}
-                        />
-                      )}
-                      <span className="field-hint">
-                        Optional · your {bothQr ? "GCash or QR Ph" : PAYOUT_METHODS.find((p) => p.value === qrType)?.label} QR, so buyers can scan to pay. You can add it later.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="apply-field">
-              <span className="apply-field-label">How buyers get orders</span>
-              <Pills
-                label="How buyers get orders"
-                options={FULFILLMENT_OPTIONS}
-                value={form.fulfillmentPreference || "DELIVERY"}
-                onChange={(value) => set("fulfillmentPreference", value)}
-              />
-            </div>
+            <button
+              type="button"
+              className="apply-btn-submit"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting…" : "Open my shop"}
+              {!isSubmitting && <ArrowRight size={16} />}
+            </button>
+            <p className="apply-draft-note">Your progress is saved automatically.</p>
           </div>
-        </section>
-
-        {/* The ID check comes later, in the Seller Center (/seller/verification). */}
-        <div className="apply-later">
-          <IdentificationCard size={20} />
-          <div>
-            <strong>Verify your identity later</strong>
-            <p>After you apply, verify your ID from your Seller Center. It takes a minute and helps the admin approve your shop faster.</p>
-          </div>
-        </div>
-
-        <div className="apply-submit">
-          {missing.length > 0 && (
-            <p className="apply-missing">Still needed: {missing.join(", ")}</p>
-          )}
-          <label className="apply-terms-check">
-            <input
-              type="checkbox"
-              checked={acceptedTerms}
-              onChange={(e) => setAcceptedTerms(e.target.checked)}
-            />
-            <span>
-              I confirm the information above is accurate and I agree to Emoorm&apos;s{" "}
-              <Link to="/terms" target="_blank" rel="noreferrer">Seller Terms of Service</Link>.
-            </span>
-          </label>
-          <button
-            type="button"
-            className="apply-btn-submit"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Submitting…" : "Submit seller application"}
-            {!isSubmitting && <ArrowRight size={16} />}
-          </button>
-          <p className="apply-draft-note">Your progress is saved automatically.</p>
-        </div>
-      </main>
+        </aside>
+      </div>
 
       {confirming && (
         <div className="apply-confirm-backdrop" onClick={() => setConfirming(false)}>

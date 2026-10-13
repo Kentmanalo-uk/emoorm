@@ -18,8 +18,10 @@ import './SellerWelcome.css';
 /*
  * The guided setup a new seller sees right after applying: one small thing
  * per screen, in three parts (finish the application, set up the shop, add a
- * product). Every screen can be skipped, and "Skip setup" leaves at any time:
- * whatever is left stays on Home's "Complete your shop" list. Things done
+ * product). Screens can be skipped, and "Skip setup" leaves, except on the
+ * ones a shop needs before buyers can order (REQUIRED: how buyers get orders,
+ * the pickup spot, where it delivers, how buyers pay). Whatever is left stays
+ * on Home's "Complete your shop" list. Things done
  * on other pages (the ID check, couriers, the payment QR, a product) open
  * that page with a "Back to setup" pill to come back.
  */
@@ -46,6 +48,9 @@ const keepSkipped = (set) => {
   try { sessionStorage.setItem(SKIPPED_KEY, JSON.stringify([...set])); } catch { /* storage off */ }
   return set;
 };
+
+// Needed before buyers can order (shopReadiness on the API): no skipping.
+const REQUIRED = new Set(['mode', 'pickup', 'delivery', 'payment']);
 
 const stepDone = (setup, key) => Boolean(setup?.steps?.find((s) => s.key === key)?.done);
 
@@ -414,7 +419,12 @@ export default function SellerWelcome() {
               {!form.acceptsCod && !store.paymentQrImage && <p className="sw-note is-warn">With cash off, buyers need your QR to pay you.</p>}
             </>
           ),
-          primary: { label: 'Save and continue', onClick: () => save(() => putStore({ acceptsCod: form.acceptsCod })) },
+          primary: {
+            label: 'Save and continue',
+            // Buyers need a way to pay: cash, or the shop's QR.
+            disabled: !form.acceptsCod && !store.paymentQrImage,
+            onClick: () => save(() => putStore({ acceptsCod: form.acceptsCod })),
+          },
         };
       case 'product':
         return {
@@ -452,7 +462,7 @@ export default function SellerWelcome() {
                 })}
               </div>
             )}
-            <button type="button" className="sw-skip-all" onClick={leave}>Skip setup</button>
+            {!(step && REQUIRED.has(step.key)) && <button type="button" className="sw-skip-all" onClick={leave}>Skip setup</button>}
           </header>
         )}
         <div className="sw-body" key={current}>{content}</div>
@@ -538,6 +548,7 @@ export default function SellerWelcome() {
       {step.done && <span className="sw-badge"><Check size={12} weight="bold" /> Done</span>}
       <h1 className="sw-title">{s.title}</h1>
       <p className="sw-text">{s.text}</p>
+      {REQUIRED.has(step.key) && !step.done && <p className="sw-required">Needed before buyers can order</p>}
       {s.body && <div className="sw-form">{s.body}</div>}
     </div>,
     {
@@ -546,7 +557,7 @@ export default function SellerWelcome() {
           <button type="button" className="sw-btn" onClick={s.primary.onClick} disabled={saving || s.primary.disabled}>
             {saving ? 'Saving…' : s.primary.label} {!saving && <ArrowRight size={18} />}
           </button>
-          {!step.done && <button type="button" className="sw-btn is-text" onClick={skip} disabled={saving}>Skip for now</button>}
+          {!step.done && !REQUIRED.has(step.key) && <button type="button" className="sw-btn is-text" onClick={skip} disabled={saving}>Skip for now</button>}
         </>
       ),
     },
