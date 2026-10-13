@@ -93,15 +93,14 @@ export default function SellerShopQr() {
     (async () => {
       try {
         await loadPosterFonts();
-        const [matrix, brand, brandWhite, logo] = await Promise.all([
+        const [matrix, brand, logo] = await Promise.all([
           qrMatrix(shopQrUrl(slug)),
           loadBrandMark('/brand-icon.svg'),
-          loadBrandMark('/brand-icon-white.svg'),
           loadShopLogo(logoUrl),
         ]);
         if (cancelled || !canvasRef.current) return;
         drawShopQrPoster(canvasRef.current, {
-          name, town, label: shopQrLabel(slug), matrix, logo, brand, brandWhite,
+          name, town, label: shopQrLabel(slug), matrix, logo, brand,
         });
         setDrawn({ key: drawKey, failed: false });
       } catch {
