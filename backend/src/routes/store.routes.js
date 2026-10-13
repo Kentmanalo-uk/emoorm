@@ -108,6 +108,11 @@ router.put(
   storeController.replaceMyServiceAreas
 );
 
+// The shop's own delivery in one piece: where it delivers and how much
+// (areas, their fees and the fee mode, saved together).
+router.get('/my/delivery', authenticate, authorize('SELLER'), storeController.getMyDelivery);
+router.put('/my/delivery', authenticate, authorize('SELLER'), storeController.saveMyDelivery);
+
 router.get(
   '/',
   publicCache(config.cache.ttl.stores),

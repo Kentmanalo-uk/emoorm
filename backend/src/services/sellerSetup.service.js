@@ -4,6 +4,7 @@ const { ApiError } = require('../middleware/errorHandler');
 const storeRepository = require('../repositories/store.repository');
 const identityVerificationService = require('./identityVerification.service');
 const shopReadiness = require('./shopReadiness.service');
+const { modeOf } = require('./deliveryQuote.service');
 
 /**
  * Seller Setup Service
@@ -55,6 +56,16 @@ const getSetup = async (userId) => {
     (store.latitude == null || store.longitude == null) && 'location',
   ].filter(Boolean);
   const standardFee = store.deliveryFee == null ? null : Number(store.deliveryFee);
+  const feeMode = modeOf(store);
+  const byPlace = feeMode === 'PER_TOWN' || feeMode === 'PER_BARANGAY';
+  const allPriced = areaCount > 0 && areasWithoutFee === 0;
+  const feeDecided = {
+    FREE: true,
+    FLAT: standardFee !== null,
+    PER_TOWN: allPriced,
+    PER_BARANGAY: allPriced,
+    PER_KM: store.deliveryBaseFee != null || standardFee !== null || allPriced,
+  }[feeMode];
   // Couriers only: they deliver all around the province, and the fee is
   // worked out from each product's weight. Ready with a priced courier and
   // the QR buyers pay with.
@@ -86,19 +97,23 @@ const getSetup = async (userId) => {
           allTowns: townCount > 0 && wholeTowns.size >= townCount,
           homeOnly: areaTowns.size === 1 && areaTowns.has(store.municipalityId),
         },
-        // Each area may have its own fee; the rest use the standard fee, and
-        // a store without one uses the platform default. The step asks the
-        // seller to decide: a standard fee (0 is free), or a fee on every area.
-        // Delivery by distance: free, or a starting fee (the km and the fee
-        // per km have the platform's defaults). Decided once the seller set
-        // either (shops from before: their old fees count too).
+        // How much (deliveryQuote.service), decided once the seller set what
+        // its way of pricing needs (the same rule as shopReadiness): free;
+        // one fee for every place; a fee on every town or barangay; or by
+        // distance, a starting fee (the km and the fee per km have the
+        // platform's defaults; shops from before: their old fees count too).
+        // `unpriced` says which places still need a fee.
         byCourier ? { key: 'delivery-fee', done: true, byCourier: true } : {
           key: 'delivery-fee',
-          done: store.deliveryFeeMode === 'FREE' || store.deliveryBaseFee != null
-            || standardFee !== null || (areaCount > 0 && areasWithoutFee === 0) || (byMoormove && areaCount === 0),
+          done: feeDecided || (byMoormove && areaCount === 0),
           // Done by MoorMove riders: MoorMove prices each delivery.
           byMoormove: byMoormove && areaCount === 0,
-          mode: store.deliveryFeeMode === 'FREE' ? 'FREE' : 'PER_KM',
+          mode: feeMode,
+          flatFee: feeMode === 'FLAT' ? standardFee : null,
+          unpriced: byPlace ? {
+            towns: new Set(areas.filter((a) => a.fee === null && (feeMode === 'PER_TOWN' || !a.barangay)).map((a) => a.municipalityId)).size,
+            barangays: feeMode === 'PER_BARANGAY' ? areas.filter((a) => a.fee === null && a.barangay).length : 0,
+          } : null,
           baseFee: store.deliveryBaseFee == null ? null : Number(store.deliveryBaseFee),
           includedKm: store.deliveryIncludedKm == null ? null : Number(store.deliveryIncludedKm),
           perKm: store.deliveryPerKm == null ? null : Number(store.deliveryPerKm),

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  ArrowLeft, ArrowRight, Check, CheckCircle, Clock, UploadSimple, Truck, Storefront, HandCoins,
+  ArrowLeft, ArrowRight, Check, CheckCircle, Clock, UploadSimple, Truck, Storefront, HandCoins, MapPin, Plus,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
@@ -13,6 +13,13 @@ import { useMunicipalities } from '../hooks/useReferenceData';
 import AppLogo from '../components/AppLogo';
 import SellerGuideArt from '../components/seller/SellerGuideArt';
 import { setSetupReturn, clearSetupReturn } from '../lib/setupReturn';
+import useAppSettings, { DEFAULT_APP_SETTINGS } from '../hooks/useAppSettings';
+import {
+  FeeChoice, PlaceRows, PlaceSheet, PlacesSummary,
+} from '../components/seller/delivery/DeliveryPlaces';
+import {
+  isWhole, planFromSaved, planProblems, planRequest, removePlace, sortPlaces, summaryLines,
+} from '../lib/deliveryPlan';
 import './SellerWelcome.css';
 
 /*
@@ -105,6 +112,14 @@ export default function SellerWelcome() {
   const [skipped, setSkipped] = useState(readSkipped);
   const [form, setForm] = useState(null);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  // The delivery step's "Add a place" sheet: { kind, place }.
+  const [placeSheet, setPlaceSheet] = useState(null);
+  const { settings: appSettings } = useAppSettings();
+  const platformRate = {
+    base: Number(appSettings?.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
+    included: Number(appSettings?.deliveryIncludedKm ?? DEFAULT_APP_SETTINGS.deliveryIncludedKm),
+    perKm: Number(appSettings?.deliveryPerKm ?? DEFAULT_APP_SETTINGS.deliveryPerKm),
+  };
 
   // Back from a page the setup sent the seller to: no pill needed any more.
   useEffect(() => { clearSetupReturn(); }, []);
@@ -115,10 +130,14 @@ export default function SellerWelcome() {
         axios.get('/stores/my/store'),
         axios.get('/stores/my/setup'),
         axios.get('/auth/seller-application'),
-        axios.get('/stores/my/service-areas').catch(() => ({ data: [] })),
+        axios.get('/stores/my/delivery').catch(() => ({ data: null })),
       ]);
       const shop = s.data;
       const details = a.data?.details || {};
+      // The places and fees, as saved (the same list as the Delivery page).
+      const plan = planFromSaved(areas.data);
+      const onlyHome = plan.places.length === 1 && !plan.distance && isWhole(plan.places[0])
+        && plan.places[0].municipalityId === shop.municipalityId;
       setStore(shop);
       setSetup(st.data);
       setApp(a.data);
@@ -132,11 +151,10 @@ export default function SellerWelcome() {
         mode: shop.fulfillmentMode || 'DELIVERY',
         pickupAddress: shop.pickupAddress || '',
         pickupInstructions: shop.pickupInstructions || '',
-        hasAreas: (areas.data || []).length > 0,
-        reach: 'HOME',
-        towns: [],
-        feeKind: shop.deliveryFee != null && Number(shop.deliveryFee) > 0 ? 'SAME' : 'FREE',
-        fee: shop.deliveryFee != null && Number(shop.deliveryFee) > 0 ? String(Number(shop.deliveryFee)) : '',
+        // Only the shop's town (with its fee), or a list of places.
+        deliverWhere: plan.places.length && !onlyHome ? 'PLACES' : 'HOME',
+        homeFee: onlyHome ? plan.places[0].fee : null,
+        plan,
         acceptsCod: shop.acceptsCod !== false,
       });
     } catch {
@@ -336,67 +354,105 @@ export default function SellerWelcome() {
         };
       case 'delivery': {
         const homeId = store.municipalityId;
-        const pickTowns = form.reach === 'TOWNS';
+        const settings = () => away('/seller/fulfillment/delivery', 'delivery');
+        const { plan } = form;
+        // Places and fees are both set (buyers can order): nothing to ask.
+        const allSet = plan.places.length > 0 && stepDone(setup, 'delivery-areas') && stepDone(setup, 'delivery-fee');
+        const nameOf = (id) => municipalities.find((m) => m.id === id)?.name
+          || (id === homeId ? store.municipality?.name : '') || 'Town';
+        const lines = summaryLines(plan, nameOf, homeId, platformRate, municipalities.map((m) => m.id));
+        const places = sortPlaces(plan.places, homeId, nameOf);
+        const choose = (where) => {
+          set({ deliverWhere: where });
+          // "Choose places" with none yet: straight to Add a place.
+          if (where === 'PLACES' && !plan.places.length) setPlaceSheet({ kind: 'add' });
+        };
         return {
           art: 'delivery',
           title: 'Where do you deliver?',
-          text: 'And what buyers pay for it.',
-          body: form.hasAreas ? (
+          text: 'And how much buyers pay for delivery there.',
+          body: allSet ? (
             <>
-              <p className="sw-done"><CheckCircle size={20} weight="fill" /> Your delivery places are set.</p>
-              <button type="button" className="sw-link" onClick={() => away('/seller/fulfillment/delivery', 'delivery')}>Change them in Delivery settings</button>
+              <p className="sw-done"><CheckCircle size={20} weight="fill" /> Your delivery places and fees are set.</p>
+              <PlacesSummary lines={lines} />
+              <button type="button" className="sw-link" onClick={settings}>Change them in Delivery settings</button>
             </>
           ) : (
             <>
-              <div className="sw-pills" role="radiogroup" aria-label="Where">
-                {[['HOME', `Only ${town}`], ['ALL', 'All of Mindoro'], ['TOWNS', 'Choose towns']].map(([value, label]) => (
-                  <button key={value} type="button" role="radio" aria-checked={form.reach === value} className={`sw-pill${form.reach === value ? ' is-on' : ''}`} onClick={() => set({ reach: value })}>
-                    {form.reach === value && <Check size={14} weight="bold" />} {label}
+              <div className="sw-choices" role="radiogroup" aria-label="Where you deliver">
+                {[
+                  { value: 'HOME', label: `Only ${town}`, text: `Every barangay in ${town}`, Icon: MapPin },
+                  { value: 'PLACES', label: 'Choose places', text: 'Other towns, or only some barangays', Icon: Plus },
+                ].map(({ value, label, text, Icon }) => (
+                  <button key={value} type="button" role="radio" aria-checked={form.deliverWhere === value} className={`sw-choice${form.deliverWhere === value ? ' is-on' : ''}`} onClick={() => choose(value)}>
+                    <Icon size={22} weight={value === 'HOME' ? 'fill' : 'bold'} className="sw-choice-icon" />
+                    <span><strong>{label}</strong><small>{text}</small></span>
                   </button>
                 ))}
               </div>
-              {pickTowns && (
-                <div className="sw-towns">
-                  {municipalities.map((m) => {
-                    const on = form.towns.includes(m.id);
-                    return (
-                      <button key={m.id} type="button" aria-pressed={on} className={`sw-town${on ? ' is-on' : ''}`} onClick={() => set({ towns: on ? form.towns.filter((t) => t !== m.id) : [...form.towns, m.id] })}>
-                        {m.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <span className="sw-sub">Delivery fee</span>
-              <div className="sw-pills" role="radiogroup" aria-label="Delivery fee">
-                {[['FREE', 'Free'], ['SAME', 'Same fee everywhere']].map(([value, label]) => (
-                  <button key={value} type="button" role="radio" aria-checked={form.feeKind === value} className={`sw-pill${form.feeKind === value ? ' is-on' : ''}`} onClick={() => set({ feeKind: value })}>
-                    {form.feeKind === value && <Check size={14} weight="bold" />} {label}
+              {form.deliverWhere === 'HOME' ? (
+                <>
+                  <span className="sw-sub">How much is delivery?</span>
+                  <FeeChoice value={form.homeFee} onChange={(fee) => set({ homeFee: fee })} label={`Delivery fee in ${town}`} />
+                </>
+              ) : (
+                <>
+                  {places.length > 0 && (
+                    <>
+                      <PlacesSummary lines={lines} />
+                      <PlaceRows
+                        places={places}
+                        plan={plan}
+                        nameOf={nameOf}
+                        homeId={homeId}
+                        onChange={(place) => setPlaceSheet({ kind: 'edit', place })}
+                        onRemove={(place) => set({ plan: removePlace(plan, place.key) })}
+                      />
+                    </>
+                  )}
+                  <button type="button" className="dpl-add" onClick={() => setPlaceSheet({ kind: 'add' })}>
+                    <Plus size={18} weight="bold" /> Add a place
                   </button>
-                ))}
-              </div>
-              {form.feeKind === 'SAME' && (
-                <label className="sw-field sw-money">
-                  <span>Fee per order</span>
-                  <div><em>₱</em><input type="number" inputMode="decimal" min="1" step="1" value={form.fee} onChange={(e) => set({ fee: e.target.value })} placeholder="50" /></div>
-                </label>
+                </>
               )}
               <p className="sw-note">
-                Barangay by barangay, a fee per place, or couriers?{' '}
-                <button type="button" className="sw-link" onClick={() => away('/seller/fulfillment/delivery', 'delivery')}>Open Delivery settings</button>
+                A fee by distance, or couriers?{' '}
+                <button type="button" className="sw-link" onClick={settings}>Set it up in Delivery settings</button>
               </p>
+              <PlaceSheet
+                open={Boolean(placeSheet)}
+                kind={placeSheet?.kind}
+                place={placeSheet?.place}
+                plan={plan}
+                municipalities={municipalities}
+                homeId={homeId}
+                onClose={() => setPlaceSheet(null)}
+                onSave={(next) => {
+                  set({ plan: next });
+                  setPlaceSheet(null);
+                }}
+              />
             </>
           ),
-          primary: form.hasAreas ? { label: 'Continue', onClick: next } : {
+          primary: allSet ? { label: 'Continue', onClick: next } : {
             label: 'Save and continue',
             onClick: () => {
-              const ids = form.reach === 'HOME' ? [homeId] : form.reach === 'ALL' ? municipalities.map((m) => m.id) : form.towns;
-              if (!ids.length) return toast.error('Choose at least one town');
-              if (form.feeKind === 'SAME' && !(Number(form.fee) > 0)) return toast.error('Enter the delivery fee');
-              return save(async () => {
-                await axios.put('/stores/my/service-areas', { areas: ids.map((id) => ({ municipalityId: id })) });
-                await putStore({ deliveryFee: form.feeKind === 'SAME' ? Number(form.fee) : 0 });
-              });
+              let request;
+              if (form.deliverWhere === 'HOME') {
+                if (form.homeFee == null) return toast.error('Choose how much delivery costs');
+                request = planRequest({
+                  ...plan,
+                  distance: false,
+                  places: [{
+                    key: 'home', municipalityId: homeId, barangays: [], fee: form.homeFee,
+                  }],
+                });
+              } else {
+                const problems = planProblems(plan, nameOf);
+                if (problems.length) return toast.error(problems[0].message);
+                request = planRequest(plan);
+              }
+              return save(() => axios.put('/stores/my/delivery', request));
             },
           },
         };
@@ -571,7 +627,7 @@ const LATER_LABELS = {
   about: 'Shop description',
   mode: 'How buyers get orders',
   pickup: 'Pickup spot',
-  delivery: 'Where you deliver',
+  delivery: 'Delivery places and fees',
   payment: 'How buyers pay',
   product: 'Your first product',
 };

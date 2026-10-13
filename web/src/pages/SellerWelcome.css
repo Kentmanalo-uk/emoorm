@@ -714,3 +714,10 @@
     background: var(--t-neutral-0, #fff);
   }
 }
+
+/* The guided delivery step: a fee box for each town */
+.sw-townfees {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

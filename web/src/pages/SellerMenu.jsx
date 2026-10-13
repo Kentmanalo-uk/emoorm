@@ -97,7 +97,14 @@ export default function SellerMenu() {
   const stepDone = (key) => setup?.steps?.find((step) => step.key === key)?.done;
   const deliverySet = !setup || (stepDone('delivery-areas') !== false && stepDone('delivery-fee') !== false);
   const fee = store?.deliveryFee == null ? null : Number(store.deliveryFee);
-  const feeHint = fee === null ? 'Per place' : fee === 0 ? 'Free' : `₱${fee.toLocaleString('en-PH')}`;
+  // How the shop charges for its own delivery (deliveryQuote.service).
+  const feeHint = {
+    FREE: 'Free',
+    FLAT: fee === null ? 'Same fee' : fee === 0 ? 'Free' : `₱${fee.toLocaleString('en-PH')}`,
+    PER_TOWN: 'Per town',
+    PER_BARANGAY: 'Per barangay',
+    PER_KM: 'By distance',
+  }[store?.deliveryFeeMode] || (fee === null ? 'Per place' : fee === 0 ? 'Free' : `₱${fee.toLocaleString('en-PH')}`);
   const ways = [store?.acceptsCod !== false && 'Cash', store?.paymentQrImage && qrMethod(store.paymentQrType).label].filter(Boolean);
 
   return (

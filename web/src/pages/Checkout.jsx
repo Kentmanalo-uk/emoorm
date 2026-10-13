@@ -383,6 +383,8 @@ const Checkout = () => {
               distanceSource: d.distanceSource ?? null,
               reason: d.reason || null,
               needsPin: Boolean(d.needsPin),
+              // Priced by place: the barangay or town the fee is for.
+              place: d.place || null,
             };
           } catch {
             return { id, covered: false, fee: null };
@@ -1253,9 +1255,15 @@ const Checkout = () => {
                             : quoted.reason && quoted.distanceKm != null
                               ? `${quoted.reason}; your pin is ${kmText(quoted.distanceKm)} away`
                               : "Doesn't deliver to your address";
+                          // By distance: how far; by place: where the fee is for ("To Brgy. Poblacion").
+                          const placeName = quoted?.place && !sellerKm
+                            ? (quoted.place.barangay
+                              ? (/^(brgy\.?|bgy\.?|barangay)\s/i.test(quoted.place.barangay) ? quoted.place.barangay : `Brgy. ${quoted.place.barangay}`)
+                              : quoted.place.town)
+                            : null;
                           const distance = sellerKm
                             ? `${sellerKm}${quoted.distanceSource === 'ESTIMATE' ? ' (estimated)' : ''}`
-                            : null;
+                            : placeName ? `To ${placeName}` : null;
                           return (
                             <ChoiceCard
                               name="delivery-option"

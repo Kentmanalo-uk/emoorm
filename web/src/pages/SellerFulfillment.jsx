@@ -9,13 +9,13 @@ import {
   FloppyDisk as Save,
   UploadSimple as Upload,
   Trash as Trash2,
-  X,
-  Plus,
   Storefront as StoreIcon,
   Check,
   CheckCircle,
   Money,
   Warning,
+  ArrowLeft,
+  PencilSimple,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -37,6 +37,10 @@ import { CourierMark } from '../components/orders/CourierTracking';
 import ChoiceCard from '../components/ui/ChoiceCard';
 import { MOORMOVE_COURIER, promosForTown, useMoormove } from '../lib/moormove';
 import useAppSettings, { DEFAULT_APP_SETTINGS } from '../hooks/useAppSettings';
+import DeliveryPlaces from '../components/seller/delivery/DeliveryPlaces';
+import {
+  costShort, emptyPlan, planFromSaved, planProblems, planRequest, whereShort,
+} from '../lib/deliveryPlan';
 
 // "from ₱85": a courier's cheapest fee, for the seller to compare.
 const courierFrom = (c) => {
@@ -65,6 +69,7 @@ const PART_OF_ANCHOR = {
   pickup: 'pickup',
   'delivery-areas': 'delivery',
   'delivery-fee': 'delivery',
+  'delivery-couriers': 'delivery',
   payment: 'payment',
 };
 const partPath = (part, hash = '') => `/seller/fulfillment/${part}${hash}`;
@@ -93,77 +98,14 @@ const MODES = [
   },
 ];
 
-// PSGC (Philippine Standard Geographic Code) — free public API for Philippine locations
-const PSGC_BASE = 'https://psgc.gitlab.io/api';
-const ORIENTAL_MINDORO_CODE = '175200000';
-
-/** A fee as the form holds it: '' (none set) or the amount as text. */
-const feeText = (value) => (value === null || value === undefined || value === '' ? '' : String(Number(value)));
-
-/** A form fee for the API: null (none set), a number, or undefined if invalid. */
-const parseFee = (text, max = 10000) => {
-  const t = String(text ?? '').trim();
-  if (t === '') return null;
-  const n = Number(t);
-  if (!Number.isFinite(n) || n < 0 || n > max) return undefined;
-  return Math.round(n * 100) / 100;
-};
-
-/** A form distance for the API: null (none set), km to 0.1, or undefined if invalid. */
-const parseKm = (text) => {
-  const t = String(text ?? '').trim();
-  if (t === '') return null;
-  const n = Number(t);
-  if (!Number.isFinite(n) || n < 0 || n > 100) return undefined;
-  return Math.round(n * 10) / 10;
-};
-
-const kmLabel = (km) => `${Number(km).toLocaleString('en-PH', { maximumFractionDigits: 1 })} km`;
-
-/** What a delivery of `km` costs at a rate: base + each km past included × perKm, to the whole peso. */
-const feeAt = (rate, km) => Math.round(Math.round((rate.base + Math.max(0, km - rate.included) * rate.perKm) * 100) / 100);
-
-// The distances the seller's preview prices.
-const PREVIEW_KM = [2, 5, 10];
-
-const pesos = (n) => `₱${Number(n).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+// Links to the delivery card of the one-page layout: Delivery has its own
+// page (/seller/fulfillment/delivery) on computers too.
+const DELIVERY_ANCHORS = ['delivery-areas', 'delivery-fee', 'delivery-couriers'];
 
 /**
- * A town's delivery details: all its barangays or some. Each place keeps the
- * fee it had before delivery by distance (it still prices a shop with no pin).
- */
-const emptyTown = () => ({ whole: true, fee: '', barangays: [] });
-
-/** One answer to a question: a card with a title, a short line and a tick when chosen. */
-function Choice({ name, value, checked, onPick, title, desc }) {
-  return (
-    <label className={`sf-mode-card ${checked ? 'is-active' : ''}`}>
-      <input type="radio" name={name} value={value} checked={checked} onChange={() => onPick(value)} />
-      <span className="sf-mode-text">
-        <strong>{title}</strong>
-        <small>{desc}</small>
-      </span>
-      {checked && (
-        <span className="sf-mode-check">
-          <Check size={14} />
-        </span>
-      )}
-    </label>
-  );
-}
-
-const normalizeName = (s) =>
-  (s || '')
-    .toLowerCase()
-    .replace(/\bcity of\b/g, '')
-    .replace(/\bcity\b/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-
-/**
- * /seller/fulfillment, and on phones /seller/fulfillment/<part>. Each part
- * starts from the saved settings: nothing unsaved carries over between them.
+ * /seller/fulfillment, and /seller/fulfillment/<part>: on phones every part,
+ * on computers Delivery. Each part starts from the saved settings: nothing
+ * unsaved carries over between them.
  */
 export default function SellerFulfillmentPage() {
   const { part } = useParams();
@@ -182,18 +124,11 @@ function SellerFulfillment({ part }) {
   const isPhone = usePhoneLayout();
   const [store, setStore] = useState(null);
   const { municipalities } = useMunicipalities();
-  // Delivery is two questions: where (coverage) and how much (feeMode).
-  //   coverage: 'TOWN' (only the shop's town) | 'SOME' (towns it picks) | 'ALL' (all around Mindoro)
-  //   feeMode:  'FREE' | 'PER_KM' (by distance: a starting fee covering the
-  //             first km by road, then a fee for each extra km)
-  // `towns` keeps each town's details ({ [municipalityId]: emptyTown() }) and
-  // survives switching answers, so nothing typed is lost.
-  const [coverage, setCoverage] = useState('');
-  const [feeMode, setFeeMode] = useState('');
-  const [towns, setTowns] = useState({});
-  const [someTowns, setSomeTowns] = useState([]);
-  // The saved areas, until the town list is loaded to tell which answer they match.
-  const [savedAreas, setSavedAreas] = useState(null);
+  // The seller's own delivery: the places delivered to and each one's fee
+  // (lib/deliveryPlan.js). Each change is saved at once (PUT
+  // /stores/my/delivery); `savedDelivery` is what is saved now.
+  const [plan, setPlan] = useState(emptyPlan);
+  const [savedDelivery, setSavedDelivery] = useState(null);
   // Phones: the pickup address as picked (town, barangay, street), once changed.
   const [pickupDraft, setPickupDraft] = useState(null);
   // Phones switch QR payment on and off; computers take it while a QR is up.
@@ -238,12 +173,6 @@ function SellerFulfillment({ part }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  // PSGC barangay cache: { [municipalityId]: { loading, error, list: [{code, name}] } }
-  const [barangayCatalog, setBarangayCatalog] = useState({});
-  // PSGC municipality code lookup, keyed by normalized municipality name
-  const [psgcMuniIndex, setPsgcMuniIndex] = useState({});
-  // 'loading' | 'ready' | 'failed': barangay lists wait for the town codes.
-  const [psgcStatus, setPsgcStatus] = useState('loading');
 
   const [form, setForm] = useState({
     fulfillmentMode: 'DELIVERY',
@@ -258,11 +187,6 @@ function SellerFulfillment({ part }) {
     paymentAccountName: '',
     paymentAccountNumber: '',
     acceptsCod: true,
-    // By distance: blank km settings use the platform's.
-    deliveryBaseFee: '',
-    deliveryIncludedKm: '',
-    deliveryPerKm: '',
-    deliveryMaxKm: '',
   });
   // The platform's defaults, for blank settings and the preview.
   const { settings: appSettings } = useAppSettings();
@@ -275,33 +199,15 @@ function SellerFulfillment({ part }) {
   useEffect(() => {
     (async () => {
       try {
-        const [storeRes, areasRes] = await Promise.all([
+        const [storeRes, deliveryRes] = await Promise.all([
           axios.get('/stores/my/store'),
-          axios.get('/stores/my/service-areas').catch(() => ({ data: [] })),
+          axios.get('/stores/my/delivery'),
         ]);
         const s = storeRes.data;
-        const saved = areasRes.data || [];
         setStore(s);
-
-        const byTown = {};
-        for (const a of saved) {
-          if (!byTown[a.municipalityId]) byTown[a.municipalityId] = { whole: false, fee: '', barangays: [] };
-          const t = byTown[a.municipalityId];
-          if (a.barangay) t.barangays.push({ name: a.barangay, fee: feeText(a.fee) });
-          else {
-            t.whole = true;
-            t.fee = feeText(a.fee);
-          }
-        }
-
-        // How much: free, or by distance (the shop's own settings; blank
-        // ones use the platform's).
-        const mode = s.deliveryFeeMode === 'FREE' ? 'FREE' : 'PER_KM';
-
-        setTowns(byTown);
-        setSomeTowns(Object.keys(byTown));
-        setFeeMode(mode);
-        setSavedAreas(saved);
+        // Where and how much, as saved.
+        setSavedDelivery(deliveryRes.data);
+        setPlan(planFromSaved(deliveryRes.data));
         setForm({
           fulfillmentMode: s.fulfillmentMode || 'DELIVERY',
           pickupAddress: s.pickupAddress || '',
@@ -314,10 +220,6 @@ function SellerFulfillment({ part }) {
           paymentAccountName: s.paymentAccountName || '',
           paymentAccountNumber: s.paymentAccountNumber || '',
           acceptsCod: s.acceptsCod ?? true,
-          deliveryBaseFee: feeText(s.deliveryBaseFee),
-          deliveryIncludedKm: feeText(s.deliveryIncludedKm),
-          deliveryPerKm: feeText(s.deliveryPerKm),
-          deliveryMaxKm: feeText(s.deliveryMaxKm),
         });
         setRiders(s.moormoveEnabled !== false);
         setQrOn(Boolean(s.paymentQrImage));
@@ -328,84 +230,6 @@ function SellerFulfillment({ part }) {
       }
     })();
   }, []);
-
-  // Where: which answer the saved areas match, once the towns are known.
-  useEffect(() => {
-    if (!savedAreas || !store || !municipalities.length) return;
-    setSavedAreas(null);
-    const ids = Object.keys(towns);
-    if (!ids.length) return;
-    if (municipalities.every((m) => towns[m.id]?.whole)) setCoverage('ALL');
-    else if (ids.length === 1 && ids[0] === store.municipalityId) setCoverage('TOWN');
-    else setCoverage('SOME');
-  }, [savedAreas, store, municipalities, towns]);
-
-  // Fetch Oriental Mindoro municipalities from PSGC once (for barangay lookups)
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(
-          `${PSGC_BASE}/provinces/${ORIENTAL_MINDORO_CODE}/municipalities/`
-        );
-        if (!res.ok) {
-          setPsgcStatus('failed');
-          return;
-        }
-        const list = await res.json();
-        const cities = await fetch(
-          `${PSGC_BASE}/provinces/${ORIENTAL_MINDORO_CODE}/cities/`
-        ).then((r) => (r.ok ? r.json() : []));
-        const index = {};
-        for (const m of [...(list || []), ...(cities || [])]) {
-          index[normalizeName(m.name)] = m.code;
-        }
-        setPsgcMuniIndex(index);
-        setPsgcStatus('ready');
-      } catch {
-        // The page still works: barangays can be typed.
-        setPsgcStatus('failed');
-      }
-    })();
-  }, []);
-
-  const loadBarangays = useCallback(
-    async (municipalityId, municipalityName) => {
-      // The town codes are still loading: the picker asks again once they arrive.
-      if (!Object.keys(psgcMuniIndex).length) return;
-      setBarangayCatalog((prev) => {
-        if (prev[municipalityId]?.list || prev[municipalityId]?.loading) return prev;
-        return { ...prev, [municipalityId]: { loading: true } };
-      });
-      try {
-        const code = psgcMuniIndex[normalizeName(municipalityName)];
-        if (!code) {
-          setBarangayCatalog((prev) => ({
-            ...prev,
-            [municipalityId]: { error: 'Barangay list unavailable for this municipality.', list: [] },
-          }));
-          return;
-        }
-        // Try both /municipalities and /cities endpoints (PSGC splits them)
-        let res = await fetch(`${PSGC_BASE}/municipalities/${code}/barangays/`);
-        if (!res.ok) res = await fetch(`${PSGC_BASE}/cities/${code}/barangays/`);
-        if (!res.ok) throw new Error('PSGC lookup failed');
-        const data = await res.json();
-        const list = (data || [])
-          .map((b) => ({ code: b.code, name: b.name }))
-          .sort((a, b) => a.name.localeCompare(b.name));
-        setBarangayCatalog((prev) => ({
-          ...prev,
-          [municipalityId]: { list },
-        }));
-      } catch {
-        setBarangayCatalog((prev) => ({
-          ...prev,
-          [municipalityId]: { error: 'Could not load barangays.', list: [] },
-        }));
-      }
-    },
-    [psgcMuniIndex]
-  );
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -433,53 +257,32 @@ function SellerFulfillment({ part }) {
     (id) => municipalities.find((m) => m.id === id)?.name || '',
     [municipalities]
   );
-  const homeName = nameOf(homeId) || store?.municipality?.name || 'your town';
-  const townOf = (id) => towns[id] || emptyTown();
+  const allTownIds = useMemo(() => municipalities.map((m) => m.id), [municipalities]);
 
-  // The towns delivered to, in the town list's order.
-  const coveredIds = useMemo(() => {
-    if (coverage === 'TOWN') return homeId ? [homeId] : [];
-    if (coverage === 'ALL') return municipalities.map((m) => m.id);
-    if (coverage !== 'SOME') return [];
-    const order = new Map(municipalities.map((m, i) => [m.id, i]));
-    return [...someTowns].sort((a, b) => (order.get(a) ?? 999) - (order.get(b) ?? 999));
-  }, [coverage, homeId, municipalities, someTowns]);
-
-  // Every place buyers can order delivery to: a whole town, or one barangay.
-  const places = useMemo(() => coveredIds.flatMap((id) => {
-    const t = towns[id] || emptyTown();
-    if (coverage === 'ALL' || t.whole) {
-      return [{ key: id, municipalityId: id, barangay: null, name: nameOf(id), sub: 'All barangays', fee: t.fee }];
+  /**
+   * Saves the places list at once (the Delivery page has no separate Save
+   * for it): Me, Home and "Complete your shop" follow. Rejects (after the
+   * toast) so the sheet stays open.
+   */
+  const commitPlan = async (next, message) => {
+    const blocking = planProblems(next, (id) => nameOf(id) || 'this town').filter((p) => p.key !== 'places');
+    if (blocking.length) {
+      toast.error(blocking[0].message);
+      throw new Error(blocking[0].message);
     }
-    return t.barangays.map((b) => ({
-      key: `${id}|${b.name}`, municipalityId: id, barangay: b.name, name: b.name, sub: nameOf(id), fee: b.fee,
-    }));
-  }), [coveredIds, towns, coverage, nameOf]);
-
-  const updateTown = (id, change) => setTowns((prev) => ({ ...prev, [id]: change(prev[id] || emptyTown()) }));
-
-  const setWhole = (id, whole) => {
-    updateTown(id, (t) => ({ ...t, whole }));
-    if (!whole) loadBarangays(id, nameOf(id));
-  };
-
-  const addBarangay = (id, name) => {
-    const clean = String(name || '').trim();
-    if (!clean) return;
-    updateTown(id, (t) => (t.barangays.some((b) => b.name.toLowerCase() === clean.toLowerCase())
-      ? t
-      : { ...t, barangays: [...t.barangays, { name: clean, fee: '' }] }));
-  };
-
-  const removeBarangay = (id, name) => updateTown(id, (t) => ({
-    ...t,
-    barangays: t.barangays.filter((b) => b.name.toLowerCase() !== name.toLowerCase()),
-  }));
-
-  const pickCoverage = (value) => {
-    setCoverage(value);
-    // "Some towns" starts from the shop's own town.
-    if (value === 'SOME' && someTowns.length === 0 && homeId) setSomeTowns([homeId]);
+    try {
+      const saved = await axios.put('/stores/my/delivery', planRequest(next));
+      setPlan(next);
+      setSavedDelivery(saved.data);
+      const charged = { deliveryFeeMode: saved.data.mode, deliveryFee: saved.data.flatFee };
+      setStore((prev) => (prev ? { ...prev, ...charged } : prev));
+      layoutCtx?.setStore?.((prev) => (prev ? { ...prev, ...charged } : prev));
+      layoutCtx?.refreshSetup?.();
+      toast.success(message || 'Saved');
+    } catch (err) {
+      toast.error(err.message || 'Could not save. Please try again.');
+      throw err;
+    }
   };
 
   const savedPinned = validPin(store?.latitude, store?.longitude);
@@ -498,8 +301,6 @@ function SellerFulfillment({ part }) {
     return () => { cancelled = true; };
   }, [ridersOn, store?.id, store?.latitude, store?.longitude, store?.moormoveEnabled, savedPinned]);
 
-  const toggleTown = (id) => setSomeTowns((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
   const showDeliveryAreas = form.fulfillmentMode === 'DELIVERY' || form.fulfillmentMode === 'BOTH';
   const showPickup = form.fulfillmentMode === 'PICKUP' || form.fulfillmentMode === 'BOTH';
   const pickupPinned = validPin(form.latitude, form.longitude);
@@ -513,14 +314,10 @@ function SellerFulfillment({ part }) {
           form.paymentQrImage, form.paymentQrType, form.paymentAccountName.trim(),
           form.paymentAccountNumber.replace(/[\s-]/g, ''), form.paymentInstructions.trim(),
         ] : [])]
-          : [coverage, feeMode, feeMode === 'PER_KM'
-            ? [form.deliveryBaseFee, form.deliveryIncludedKm, form.deliveryPerKm, form.deliveryMaxKm].map((v) => String(v).trim())
-            : null,
-            places.map((pl) => [pl.municipalityId, pl.barangay]),
-            shipping.selfDelivery, [...shipping.courierIds].sort(), ridersOn ? riders : null,
+          : [shipping.selfDelivery, [...shipping.courierIds].sort(), ridersOn ? riders : null,
             !showPickup ? [form.latitude, form.longitude] : null],
   );
-  const partReady = !loading && (part !== 'delivery' || (!savedAreas && shippingLoaded));
+  const partReady = !loading && (part !== 'delivery' || shippingLoaded);
   const [baseline, setBaseline] = useState(null);
   useEffect(() => {
     if (part && partReady && baseline === null) setBaseline(partState(part));
@@ -535,17 +332,13 @@ function SellerFulfillment({ part }) {
   };
 
   /**
-   * @param {String} [scope] - 'all' (the one-page layout) or the part being
-   *   saved: only its settings are checked and sent.
+   * @param {String} [scope] - 'all' (the one-page layout on computers: how
+   *   buyers get orders, pickup and payment; Delivery has its own page) or
+   *   the part being saved: only its settings are checked and sent.
    */
   const saveSettings = async (scope = 'all') => {
     if (!store) return;
-    const has = (p) => scope === 'all' || scope === p;
-    // Saving before the saved areas are matched to an answer would clear them.
-    if (has('delivery') && savedAreas) {
-      toast.error('Your delivery areas are still loading. Try again in a moment.');
-      return;
-    }
+    const has = (p) => scope === p || (scope === 'all' && p !== 'delivery');
     // Validation
     if (has('pickup') && showPickup && !form.pickupAddress.trim()) {
       toast.error('Please provide a pickup address.');
@@ -564,36 +357,11 @@ function SellerFulfillment({ part }) {
       document.getElementById('pickup-pin')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    // Delivery answers are checked while delivery is on; with pickup only they are kept as they are.
-    if (has('delivery') && showDeliveryAreas && shipping.selfDelivery) {
-      if (coverage === 'SOME' && coveredIds.length === 0) {
-        toast.error('Tap at least one town you deliver to.');
-        return;
-      }
-      const noBarangay = coverage && coverage !== 'ALL'
-        ? coveredIds.find((id) => !townOf(id).whole && townOf(id).barangays.length === 0)
-        : null;
-      if (noBarangay) {
-        toast.error(`Pick the barangays you deliver to in ${nameOf(noBarangay)}, or choose All barangays.`);
-        return;
-      }
-      if (!feeMode) {
-        toast.error('Choose free delivery or a fee by distance.');
-        return;
-      }
-      if (feeMode === 'PER_KM') {
-        const max = parseKm(form.deliveryMaxKm);
-        const problem = parseFee(form.deliveryBaseFee, 5000) == null ? 'Enter your starting fee (₱0 to ₱5,000).'
-          : parseKm(form.deliveryIncludedKm) === undefined ? 'The km included must be 0 to 100.'
-            : parseFee(form.deliveryPerKm, 5000) === undefined ? 'Each extra km must cost ₱0 to ₱5,000.'
-              : max === undefined || (max !== null && max < 0.5) ? 'The farthest distance must be 0.5 to 100 km, or left blank.'
-                : null;
-        if (problem) {
-          toast.error(problem);
-          document.getElementById('delivery-fee')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          return;
-        }
-      }
+    // Delivering yourself needs somewhere to deliver (the places save themselves).
+    if (has('delivery') && showDeliveryAreas && shipping.selfDelivery && !plan.places.length) {
+      toast.error('Add at least one place you deliver to.');
+      document.getElementById('delivery-areas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
     }
     // QR payment needs the QR, and the account buyers pay to.
     const qr = scope === 'payment' ? qrOn : Boolean(form.paymentQrImage);
@@ -615,30 +383,9 @@ function SellerFulfillment({ part }) {
       }
     }
 
-    // The fee by distance lives on the shop; blank km settings are the platform's.
-    const deliveryRate = feeMode === 'FREE'
-      ? { deliveryFeeMode: 'FREE' }
-      : feeMode === 'PER_KM'
-        ? {
-          deliveryFeeMode: 'PER_KM',
-          deliveryBaseFee: parseFee(form.deliveryBaseFee, 5000) ?? null,
-          deliveryIncludedKm: parseKm(form.deliveryIncludedKm) ?? null,
-          deliveryPerKm: parseFee(form.deliveryPerKm, 5000) ?? null,
-          deliveryMaxKm: parseKm(form.deliveryMaxKm) ?? null,
-        }
-        : {};
-    // Places keep the fee they had (it only prices a shop with no pin yet).
-    const areas = places.map((p) => ({
-      municipalityId: p.municipalityId,
-      barangay: p.barangay,
-      fee: parseFee(p.fee) ?? null,
-    }));
-    // The form's text boxes go as numbers (deliveryRate), never as typed.
-    const formFields = { ...form };
-    for (const key of ['deliveryBaseFee', 'deliveryIncludedKm', 'deliveryPerKm', 'deliveryMaxKm']) delete formFields[key];
     // A part's page sends only its own settings, so it never touches the others.
     const changes = {
-      all: { ...formFields, ...deliveryRate, ...(ridersOn ? { moormoveEnabled: riders } : {}) },
+      all: { ...form },
       method: { fulfillmentMode: form.fulfillmentMode },
       pickup: {
         pickupAddress: form.pickupAddress,
@@ -656,7 +403,6 @@ function SellerFulfillment({ part }) {
         paymentInstructions: form.paymentInstructions,
       } : { acceptsCod: form.acceptsCod, paymentQrImage: null },
       delivery: {
-        ...deliveryRate,
         ...(ridersOn ? { moormoveEnabled: riders } : {}),
         // The shop pin (riders and fees by distance start there).
         ...(!showPickup && pickupPinned ? { latitude: form.latitude, longitude: form.longitude } : {}),
@@ -671,16 +417,11 @@ function SellerFulfillment({ part }) {
     setSaving(true);
     try {
       const res = await axios.put(`/stores/${store.id}`, changes);
-      if (has('delivery')) {
-        await axios.put('/stores/my/service-areas', { areas });
-        if (shippingLoaded) await axios.put('/couriers/my-store', shipping);
-      }
+      if (has('delivery') && shippingLoaded) await axios.put('/couriers/my-store', shipping);
       // Me and Home show what is saved now (and so does the riders check here).
       setStore((prev) => (prev && res.data ? { ...prev, ...res.data } : prev));
       layoutCtx?.setStore?.((prev) => (prev ? { ...prev, ...res.data } : prev));
       layoutCtx?.refreshSetup?.();
-      // "Some towns" starts from what is saved now, as it would after a reload.
-      if (coverage) setSomeTowns(coveredIds);
       if (scope === 'all') {
         toast.success('Settings saved');
         return;
@@ -688,7 +429,7 @@ function SellerFulfillment({ part }) {
       // A new way to hand orders over may need its part set up next.
       const next = scope !== 'method' ? null
         : showPickup && (!form.pickupAddress.trim() || !pickupPinned) ? 'pickup'
-          : showDeliveryAreas && !places.length ? 'delivery' : null;
+          : showDeliveryAreas && !savedDelivery?.areas?.length ? 'delivery' : null;
       if (next) {
         toast.success(next === 'pickup' ? 'Saved. Now add your pickup spot.' : 'Saved. Now choose where you deliver.');
         navigate(partPath(next), { replace: true });
@@ -703,87 +444,20 @@ function SellerFulfillment({ part }) {
     }
   };
 
-  // By distance as the seller has it now, blanks filled in from the
-  // platform's: { base, included, perKm, max }, or null while a box is wrong.
-  const effectiveRate = (() => {
-    if (feeMode !== 'PER_KM') return null;
-    const base = parseFee(form.deliveryBaseFee, 5000);
-    const included = parseKm(form.deliveryIncludedKm);
-    const perKm = parseFee(form.deliveryPerKm, 5000);
-    const max = parseKm(form.deliveryMaxKm);
-    if (base === undefined || included === undefined || perKm === undefined || max === undefined) return null;
-    return {
-      base: base ?? platformRate.base,
-      included: included ?? platformRate.included,
-      perKm: perKm ?? platformRate.perKm,
-      max: max || null,
-    };
-  })();
-
-  // The answers in one sentence, so the seller can check them.
-  const summary = (() => {
-    if (!coverage || !feeMode || !places.length) return null;
-    const home = townOf(homeId);
-    const where = coverage === 'ALL'
-      ? 'anywhere in Oriental Mindoro'
-      : coverage === 'TOWN'
-        ? (home.whole ? `anywhere in ${homeName}` : `in ${plural(places.length, 'barangay')} of ${homeName}`)
-        : `in ${plural(coveredIds.length, 'town')}`;
-    const rate = effectiveRate;
-    const cost = feeMode === 'FREE'
-      ? 'get free delivery'
-      : rate
-        ? `pay ${pesos(rate.base)} for the first ${kmLabel(rate.included)} by road, then ${pesos(rate.perKm)} for each extra km${
-          rate.max != null ? ` (up to ${kmLabel(rate.max)})` : ''}`
-        : null;
-    if (!cost) return null;
-    return `Buyers ${where} ${cost}.${showPickup ? ' Pickup is always free.' : ''}`;
-  })();
-
-  const townPanel = (id) => {
-    const t = townOf(id);
-    const name = nameOf(id);
-    return (
-      <div key={id} className="sf-area-card sf-town">
-        <div className="sf-area-title">
-          <MapPin size={15} weight="fill" />
-          <strong>{name}</strong>
-        </div>
-        <div className="sf-area-toggle" role="radiogroup" aria-label={`Barangays in ${name}`}>
-          <label className="sf-radio">
-            <input type="radio" name={`brgy-${id}`} checked={t.whole} onChange={() => setWhole(id, true)} />
-            <span>All barangays</span>
-          </label>
-          <label className="sf-radio">
-            <input type="radio" name={`brgy-${id}`} checked={!t.whole} onChange={() => setWhole(id, false)} />
-            <span>Only some barangays</span>
-          </label>
-        </div>
-        {!t.whole && (
-          <BarangayPicker
-            townName={name}
-            psgcStatus={psgcStatus}
-            catalog={barangayCatalog[id]}
-            selected={t.barangays}
-            onLoad={() => loadBarangays(id, name)}
-            onAdd={(b) => addBarangay(id, b)}
-            onRemove={(b) => removeBarangay(id, b)}
-          />
-        )}
-      </div>
-    );
-  };
-
-  // Parts have their own pages on phones only: computers show every part on
-  // one page (scrolled to the part), and phones turn one-page links
-  // (/seller/fulfillment#payment) into the part's page.
+  // Phones: every part on a page of its own. Computers: Delivery on a page
+  // of its own, the other parts as cards on one page (scrolled to the
+  // part). One-page links (/seller/fulfillment#payment) open the part's page.
   if (part && !PARTS[part]) return <Navigate to="/seller/fulfillment" replace />;
-  if (part && !isPhone) {
+  if (part && !isPhone && part !== 'delivery') {
     return <Navigate to={`/seller/fulfillment${location.hash || `#${PARTS[part].anchor}`}`} replace />;
   }
-  const anchorPart = PART_OF_ANCHOR[location.hash.slice(1)];
+  const hashId = location.hash.slice(1);
+  if (!part && !isPhone && DELIVERY_ANCHORS.includes(hashId)) {
+    return <Navigate to={partPath('delivery', location.hash)} replace />;
+  }
+  const anchorPart = PART_OF_ANCHOR[hashId];
   if (!part && isPhone && anchorPart) {
-    return <Navigate to={partPath(anchorPart, location.hash === '#delivery-fee' ? '#delivery-fee' : '')} replace />;
+    return <Navigate to={partPath(anchorPart, DELIVERY_ANCHORS.includes(hashId) ? location.hash : '')} replace />;
   }
 
   if (loading) {
@@ -913,8 +587,38 @@ function SellerFulfillment({ part }) {
           </div>
   );
 
+  // By distance: the shop pin the distances start at (the pickup spot's).
+  const distanceExtras = (
+    <>
+      {!pickupPinned && (
+        <p className="sf-courier-warn sf-rider-warn sf-perkm-pin" role="status">
+          <Warning size={15} weight="fill" />
+          <span>
+            Pin your shop on the map so the fee can be worked out by distance. Until then, buyers pay the fee of their place.{' '}
+            {showPickup
+              ? <Link to={isPhone ? partPath('pickup') : '/seller/fulfillment#pickup-pin'}>Pin your shop in Pickup Location</Link>
+              : (ridersOn && riders ? 'Pin it on the map above.' : 'Pin it on the map below.')}
+          </span>
+        </p>
+      )}
+      {!showPickup && !(ridersOn && riders) && (
+        <div className="form-group sf-pin sf-rider-pin">
+          <label>Your shop pin</label>
+          <p className="sf-pin-help">Delivery distances start here. Drag the pin if the spot moves.</p>
+          <StoreLocationMap
+            value={{ latitude: form.latitude, longitude: form.longitude }}
+            onChange={({ latitude, longitude }) => setForm((prev) => ({ ...prev, latitude, longitude }))}
+            height={isPhone ? 220 : 260}
+            lockToPhilippines
+            hint="Tap the map where your deliveries start."
+          />
+        </div>
+      )}
+    </>
+  );
+
   const deliveryCard = (
-          <div className="seller-card" id="delivery-areas">
+          <div className="seller-card" id="delivery">
             <div className="seller-card-header">
               <h2>
                 <Truck size={16} /> Delivery
@@ -923,7 +627,7 @@ function SellerFulfillment({ part }) {
             <div className="sf-body">
               <section className="sf-q" id="delivery-couriers" aria-labelledby="sf-q-who">
                 <h3 className="sf-q-title" id="sf-q-who">
-                  <span className="sf-q-num" aria-hidden="true">1</span> Who delivers your orders?
+                  <Truck size={22} weight="fill" className="dp-who-icon" aria-hidden="true" /> Who delivers your orders?
                 </h3>
                 <p className="sf-hint sf-hint-lead">
                   Tick all that apply. Buyers choose at checkout and see each courier's fee for their parcel's weight.
@@ -984,9 +688,7 @@ function SellerFulfillment({ part }) {
                         <span>
                           Riders pick up at your shop pin, and your shop has none yet.{' '}
                           {showPickup
-                            ? (isPhone
-                              ? <Link to={partPath('pickup')}>Pin your shop in Pickup Location</Link>
-                              : <a href="#pickup-pin">Pin your shop in Pickup Location</a>)
+                            ? <Link to={isPhone ? partPath('pickup') : '/seller/fulfillment#pickup-pin'}>Pin your shop in Pickup Location</Link>
                             : 'Pin it on the map below.'}
                         </span>
                       </p>
@@ -1023,223 +725,17 @@ function SellerFulfillment({ part }) {
               </section>
 
               {shipping.selfDelivery ? (
-                <>
-              <section className="sf-q" aria-labelledby="sf-q-where">
-                <h3 className="sf-q-title" id="sf-q-where">
-                  <span className="sf-q-num" aria-hidden="true">2</span> Where do you deliver?
-                </h3>
-                <div className="sf-mode-grid" role="radiogroup" aria-labelledby="sf-q-where">
-                  <Choice
-                    name="coverage"
-                    value="TOWN"
-                    checked={coverage === 'TOWN'}
-                    onPick={pickCoverage}
-                    title={`Only in ${homeName}`}
-                    desc="Anywhere in your town, or just some barangays."
-                  />
-                  <Choice
-                    name="coverage"
-                    value="SOME"
-                    checked={coverage === 'SOME'}
-                    onPick={pickCoverage}
-                    title="Some towns"
-                    desc="Choose the towns you deliver to."
-                  />
-                  <Choice
-                    name="coverage"
-                    value="ALL"
-                    checked={coverage === 'ALL'}
-                    onPick={pickCoverage}
-                    title="All around Mindoro"
-                    desc={`All ${municipalities.length || 15} towns of Oriental Mindoro.`}
-                  />
-                </div>
-
-                {coverage === 'TOWN' && homeId && townPanel(homeId)}
-
-                {coverage === 'SOME' && (
-                  <>
-                    <p className="sf-hint sf-hint-lead">Tap the towns you deliver to.</p>
-                    <div className="sf-town-chips">
-                      {municipalities.map((m) => {
-                        const on = someTowns.includes(m.id);
-                        return (
-                          <button
-                            key={m.id}
-                            type="button"
-                            className={`sf-town-chip${on ? ' is-on' : ''}`}
-                            aria-pressed={on}
-                            onClick={() => toggleTown(m.id)}
-                          >
-                            {on ? <Check size={13} weight="bold" /> : <Plus size={13} weight="bold" />}
-                            {m.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {coveredIds.map(townPanel)}
-                  </>
-                )}
-
-                {coverage === 'ALL' && (
-                  <p className="sf-all">
-                    <CheckCircle size={18} weight="fill" /> Buyers in every town of Oriental Mindoro can order delivery.
-                  </p>
-                )}
-              </section>
-
-              <section className="sf-q" id="delivery-fee" aria-labelledby="sf-q-fee">
-                <h3 className="sf-q-title" id="sf-q-fee">
-                  <span className="sf-q-num" aria-hidden="true">3</span> How much is your delivery fee?
-                </h3>
-                <div className="sf-mode-grid sf-fee-modes" role="radiogroup" aria-labelledby="sf-q-fee">
-                  <Choice
-                    name="feeMode"
-                    value="FREE"
-                    checked={feeMode === 'FREE'}
-                    onPick={setFeeMode}
-                    title="Free delivery"
-                    desc="Buyers pay nothing for delivery."
-                  />
-                  <Choice
-                    name="feeMode"
-                    value="PER_KM"
-                    checked={feeMode === 'PER_KM'}
-                    onPick={(value) => {
-                      setFeeMode(value);
-                      // Start from the platform's starting fee, ready to change.
-                      setForm((p) => (String(p.deliveryBaseFee).trim() === '' ? { ...p, deliveryBaseFee: String(platformRate.base) } : p));
-                    }}
-                    title="By distance"
-                    desc="A starting fee, then a fee for each extra km by road."
-                  />
-                </div>
-
-                {feeMode === 'PER_KM' && (
-                  <div className="sf-perkm">
-                    <div className="sf-perkm-grid">
-                      <label className="sf-perkm-field" htmlFor="sf-base-fee">
-                        <span className="sf-perkm-label">Starting fee</span>
-                        <span className="sf-fee-box">
-                          <span className="sf-fee-peso" aria-hidden="true">₱</span>
-                          <input
-                            id="sf-base-fee"
-                            type="number"
-                            min="0"
-                            max="5000"
-                            step="1"
-                            inputMode="decimal"
-                            placeholder={String(platformRate.base)}
-                            value={form.deliveryBaseFee}
-                            onChange={(e) => setForm((p) => ({ ...p, deliveryBaseFee: e.target.value }))}
-                          />
-                        </span>
-                        <small>Covers the first {kmLabel(effectiveRate?.included ?? platformRate.included)}</small>
-                      </label>
-                      <label className="sf-perkm-field" htmlFor="sf-included-km">
-                        <span className="sf-perkm-label">First km included</span>
-                        <span className="sf-fee-box sf-km-box">
-                          <input
-                            id="sf-included-km"
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.5"
-                            inputMode="decimal"
-                            placeholder={String(platformRate.included)}
-                            value={form.deliveryIncludedKm}
-                            onChange={(e) => setForm((p) => ({ ...p, deliveryIncludedKm: e.target.value }))}
-                          />
-                          <span className="sf-fee-unit" aria-hidden="true">km</span>
-                        </span>
-                        <small>Blank: {kmLabel(platformRate.included)}</small>
-                      </label>
-                      <label className="sf-perkm-field" htmlFor="sf-per-km">
-                        <span className="sf-perkm-label">Each extra km</span>
-                        <span className="sf-fee-box">
-                          <span className="sf-fee-peso" aria-hidden="true">₱</span>
-                          <input
-                            id="sf-per-km"
-                            type="number"
-                            min="0"
-                            max="5000"
-                            step="0.5"
-                            inputMode="decimal"
-                            placeholder={String(platformRate.perKm)}
-                            value={form.deliveryPerKm}
-                            onChange={(e) => setForm((p) => ({ ...p, deliveryPerKm: e.target.value }))}
-                          />
-                        </span>
-                        <small>Blank: {pesos(platformRate.perKm)}</small>
-                      </label>
-                      <label className="sf-perkm-field" htmlFor="sf-max-km">
-                        <span className="sf-perkm-label">Farthest distance <em>(optional)</em></span>
-                        <span className="sf-fee-box sf-km-box">
-                          <input
-                            id="sf-max-km"
-                            type="number"
-                            min="0.5"
-                            max="100"
-                            step="0.5"
-                            inputMode="decimal"
-                            placeholder="No limit"
-                            value={form.deliveryMaxKm}
-                            onChange={(e) => setForm((p) => ({ ...p, deliveryMaxKm: e.target.value }))}
-                          />
-                          <span className="sf-fee-unit" aria-hidden="true">km</span>
-                        </span>
-                        <small>Farther buyers can&apos;t choose your delivery</small>
-                      </label>
-                    </div>
-                    {effectiveRate && (
-                      <p className="sf-perkm-preview" role="status">
-                        <span>What buyers pay:</span>{' '}
-                        {PREVIEW_KM.map((km, i) => (
-                          <span key={km} className="sf-perkm-step">
-                            {i > 0 && <span aria-hidden="true"> · </span>}
-                            {kmLabel(km)}{' '}
-                            <strong>
-                              {effectiveRate.max != null && km > effectiveRate.max ? 'too far' : pesos(feeAt(effectiveRate, km))}
-                            </strong>
-                          </span>
-                        ))}
-                      </p>
-                    )}
-                    <p className="sf-hint">
-                      Worked out by road, from your shop pin to the buyer&apos;s pin. Buyers see the km and the fee at checkout.
-                    </p>
-                  </div>
-                )}
-
-                {feeMode === 'PER_KM' && !pickupPinned && (
-                  <p className="sf-courier-warn sf-rider-warn sf-perkm-pin" role="status">
-                    <Warning size={15} weight="fill" />
-                    <span>
-                      Pin your shop on the map so the fee can be worked out by distance. Until then, buyers pay a flat fee.{' '}
-                      {showPickup
-                        ? (isPhone
-                          ? <Link to={partPath('pickup')}>Pin your shop in Pickup Location</Link>
-                          : <a href="#pickup-pin">Pin your shop in Pickup Location</a>)
-                        : (ridersOn && riders ? 'Pin it on the map above.' : 'Pin it on the map below.')}
-                    </span>
-                  </p>
-                )}
-                {feeMode === 'PER_KM' && !showPickup && !(ridersOn && riders) && (
-                  <div className="form-group sf-pin sf-rider-pin">
-                    <label>Your shop pin</label>
-                    <p className="sf-pin-help">Delivery distances start here. Drag the pin if the spot moves.</p>
-                    <StoreLocationMap
-                      value={{ latitude: form.latitude, longitude: form.longitude }}
-                      onChange={({ latitude, longitude }) => setForm((prev) => ({ ...prev, latitude, longitude }))}
-                      height={isPhone ? 220 : 260}
-                      lockToPhilippines
-                      hint="Tap the map where your deliveries start."
-                    />
-                  </div>
-                )}
-              </section>
-
-                </>
+                <DeliveryPlaces
+                  plan={plan}
+                  onCommit={commitPlan}
+                  municipalities={municipalities}
+                  homeId={homeId}
+                  platformRate={platformRate}
+                  pickupToo={showPickup}
+                  distanceExtras={distanceExtras}
+                  savedNote="Each change here is saved right away."
+                  distanceNote={!pickupPinned ? 'Your shop has no pin on the map yet. Until it has one, buyers pay the fee of their place.' : null}
+                />
               ) : (
                 <p className="sf-courier-auto" role="status">
                   <CheckCircle size={18} weight="fill" />
@@ -1248,12 +744,6 @@ function SellerFulfillment({ part }) {
                     shipping fee is worked out from each product&apos;s weight and the courier&apos;s rates. Buyers pay it
                     online with the order.
                   </span>
-                </p>
-              )}
-
-              {summary && shipping.selfDelivery && (
-                <p className="sf-summary" role="status">
-                  <CheckCircle size={18} weight="fill" /> {summary}
                 </p>
               )}
             </div>
@@ -1553,20 +1043,27 @@ function SellerFulfillment({ part }) {
 
   const paymentCard = isPhone ? phonePaymentCard : desktopPaymentCard;
 
+  // Delivery as saved, in a few words: the list on phones, the card on computers.
+  const savedPlan = savedDelivery ? planFromSaved(savedDelivery) : emptyPlan();
+  const savedWhere = whereShort(savedPlan, (id) => nameOf(id) || 'Town', homeId, allTownIds);
+  const savedCost = costShort(savedPlan, platformRate);
+  const savedFeeMissing = !savedCost;
+  const deliveryMissing = shipping.selfDelivery
+    ? !savedWhere || savedFeeMissing
+    : shipping.courierIds.length === 0;
+  const deliveryValue = !shipping.selfDelivery
+    ? (shipping.courierIds.length ? 'Couriers deliver your orders' : 'Choose who delivers')
+    : !savedWhere ? 'Choose where you deliver'
+      : savedFeeMissing ? `${savedWhere} · Set your delivery fee` : `${savedWhere} · ${savedCost}`;
+  const whoDelivers = [
+    shipping.selfDelivery && 'You',
+    ridersOn && riders && 'MoorMove riders',
+    ...courierList.filter((c) => shipping.courierIds.includes(c.id)).map((c) => c.name),
+  ].filter(Boolean).join(' · ') || 'No one yet';
+
   // Phones, the list: each part with what is set now; the parts buyers need
   // before the shop can sell say so while they are missing.
   if (isPhone && !part) {
-    const where = coverage === 'ALL'
-      ? 'All around Mindoro'
-      : coverage === 'TOWN'
-        ? (townOf(homeId).whole ? `Only in ${homeName}` : `${plural(places.length, 'barangay')} in ${homeName}`)
-        : coverage === 'SOME' ? plural(coveredIds.length, 'town') : '';
-    const cost = feeMode === 'FREE'
-      ? 'Free delivery'
-      : feeMode === 'PER_KM' && parseFee(form.deliveryBaseFee, 5000) != null && effectiveRate
-        ? `${pesos(effectiveRate.base)} + ${pesos(effectiveRate.perKm)}/km`
-        : '';
-    const deliveryMissing = !where || !places.length || !cost;
     const ways = [form.acceptsCod && 'Cash on delivery', form.paymentQrImage && `${qrKind.label} QR`].filter(Boolean);
     const pickupSet = Boolean(form.pickupAddress.trim());
     return (
@@ -1593,10 +1090,8 @@ function SellerFulfillment({ part }) {
               <SettingsRow
                 to={partPath('delivery')}
                 icon={MapPin}
-                label="Delivery: couriers, areas &amp; fees"
-                value={deliveryMissing
-                  ? (!where || !places.length ? 'Choose where you deliver' : 'Set your delivery fee')
-                  : `${where} · ${cost}`}
+                label="Delivery: places &amp; fees"
+                value={deliveryValue}
                 missing={deliveryMissing}
                 tag={deliveryMissing ? 'Needed to sell' : null}
               />
@@ -1647,7 +1142,83 @@ function SellerFulfillment({ part }) {
     );
   }
 
-  // Computers: every part on one page, as before.
+  // Computers, Delivery: its own page, centred, with Save pinned at the bottom.
+  if (part === 'delivery') {
+    return (
+      <div className="seller-dashboard dp-page">
+        <div className="seller-container dp-container">
+          <Link to="/seller/fulfillment" className="dp-back"><ArrowLeft size={16} /> Fulfillment &amp; Payment</Link>
+          <SellerPageHead
+            className="sf-head"
+            title="Delivery"
+            subtitle="Who delivers, the places you deliver to, and how much buyers pay there."
+          />
+          {showDeliveryAreas ? deliveryCard : (
+            <div className="seller-card">
+              <div className="sf-body">
+                <p className="sf-hint sf-hint-lead">Delivery is off: buyers pick up their orders.</p>
+                <Link to="/seller/fulfillment#method" className="btn-seller-outline dp-off-link">Change how buyers get their orders</Link>
+              </div>
+            </div>
+          )}
+          {showDeliveryAreas && (
+            <div className="dp-savebar" role="group" aria-label="Save or cancel">
+              <span className="dp-savebar-note">{dirty ? 'You have changes that are not saved yet.' : 'All changes saved.'}</span>
+              <button type="button" className="btn-seller-outline" onClick={leave} disabled={saving}>Cancel</button>
+              <button type="button" className="btn-seller-primary" onClick={() => saveSettings('delivery')} disabled={saving || !dirty}>
+                {saving ? <BusyLabel>Saving…</BusyLabel> : <><Save size={16} /> Save delivery</>}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Computers, the rest: every part on one page; Delivery in short, with a
+  // link to its page.
+  const deliverySummaryCard = (
+    <div className="seller-card" id="delivery-summary">
+      <div className="seller-card-header">
+        <h2>
+          <Truck size={16} /> Delivery
+        </h2>
+        <Link to={partPath('delivery')} className="btn-seller-outline dp-edit">
+          <PencilSimple size={14} /> Edit delivery
+        </Link>
+      </div>
+      <div className="sf-body">
+        <dl className="dp-summary">
+          <div>
+            <dt>Who delivers</dt>
+            <dd>{whoDelivers}</dd>
+          </div>
+          {shipping.selfDelivery && (
+            <>
+              <div>
+                <dt>Delivery places</dt>
+                <dd>{savedWhere || 'Not set yet'}</dd>
+              </div>
+              <div>
+                <dt>How much</dt>
+                <dd>{savedFeeMissing ? 'Not set yet' : savedCost}</dd>
+              </div>
+            </>
+          )}
+        </dl>
+        {deliveryMissing && (
+          <p className="sf-courier-warn sf-rider-warn" role="status">
+            <Warning size={15} weight="fill" />
+            <span>
+              Needed before buyers can order: {deliveryValue.toLowerCase()}.{' '}
+              <Link to={partPath('delivery')}>Set up delivery</Link>
+            </span>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
@@ -1668,7 +1239,7 @@ function SellerFulfillment({ part }) {
 
         {methodCard}
         {showPickup && pickupCard}
-        {showDeliveryAreas && deliveryCard}
+        {showDeliveryAreas && deliverySummaryCard}
         {paymentCard}
 
         <div className="sf-footer-actions">
@@ -1685,7 +1256,6 @@ function SellerFulfillment({ part }) {
   );
 }
 
-/** The barangays chosen in a town (tap × to remove), and a search to add more. */
 /**
  * Products without a weight, each with a kilogram box: a courier can't
  * price them, so couriers wait until every product has one.
@@ -1745,157 +1315,6 @@ function WeightFixer({ products, total, onSaved }) {
       {total > products.length && <p className="sf-hint">Showing {products.length} of {total}. Save these to see the rest.</p>}
       <button type="button" className="sf-weigh-save" onClick={save} disabled={!filled.length || busy}>
         {busy ? 'Saving…' : filled.length ? `Save ${filled.length} weight${filled.length === 1 ? '' : 's'}` : 'Save weights'}
-      </button>
-    </div>
-  );
-}
-
-function BarangayPicker({
-  townName,
-  psgcStatus,
-  catalog,
-  selected,
-  onLoad,
-  onAdd,
-  onRemove,
-}) {
-  const [query, setQuery] = useState('');
-
-  // Load the list once the town codes are in (they may still be on the way).
-  useEffect(() => {
-    if (psgcStatus === 'ready' && !catalog) onLoad();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [psgcStatus]);
-
-  const list = catalog?.list || [];
-  const isLoading = catalog?.loading || (psgcStatus === 'loading' && !catalog);
-  const error = catalog?.error || (psgcStatus === 'failed' ? 'Barangay list unavailable right now.' : null);
-  const selectedLower = useMemo(
-    () => new Set(selected.map((s) => s.name.toLowerCase())),
-    [selected]
-  );
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return list
-      .filter((b) => !selectedLower.has(b.name.toLowerCase()))
-      .filter((b) => (q ? b.name.toLowerCase().includes(q) : true))
-      .slice(0, 200);
-  }, [list, query, selectedLower]);
-
-  const allSelected = list.length > 0 && filtered.length === 0 && !query;
-
-  const addAll = () => {
-    for (const b of list) {
-      if (!selectedLower.has(b.name.toLowerCase())) onAdd(b.name);
-    }
-  };
-
-  return (
-    <div className="sf-area-brgy">
-      {selected.length > 0 ? (
-        <ul className="sf-chip-list" aria-label={`Barangays in ${townName}`}>
-          {selected.map((b) => (
-            <li key={b.name} className="sf-chip">
-              {b.name}
-              <button
-                type="button"
-                className="sf-chip-x"
-                onClick={() => onRemove(b.name)}
-                aria-label={`Remove ${b.name}`}
-              >
-                <X size={12} weight="bold" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="sf-hint">Tap the barangays you deliver to.</p>
-      )}
-
-      {isLoading && (
-        <p className="sf-hint">Loading barangays for {townName}…</p>
-      )}
-      {error && (
-        <p className="sf-hint sf-hint-error">
-          {error} You can still type the name.
-        </p>
-      )}
-
-      {list.length > 0 && (
-        <>
-          <div className="sf-brgy-toolbar">
-            <input
-              type="search"
-              className="form-input"
-              placeholder={`Search ${list.length} barangays…`}
-              aria-label={`Search barangays in ${townName}`}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <button
-              type="button"
-              className="btn-seller-outline"
-              onClick={addAll}
-              disabled={allSelected}
-            >
-              Add all
-            </button>
-          </div>
-          <div className="sf-brgy-options">
-            {allSelected ? (
-              <p className="sf-hint">All barangays selected.</p>
-            ) : filtered.length === 0 ? (
-              <p className="sf-hint">No matches for “{query}”.</p>
-            ) : (
-              filtered.map((b) => (
-                <button
-                  key={b.code}
-                  type="button"
-                  className="sf-brgy-option"
-                  onClick={() => onAdd(b.name)}
-                >
-                  + {b.name}
-                </button>
-              ))
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Manual fallback if PSGC list unavailable */}
-      {list.length === 0 && !isLoading && (
-        <ManualBrgyInput onAdd={onAdd} />
-      )}
-    </div>
-  );
-}
-
-function ManualBrgyInput({ onAdd }) {
-  const [value, setValue] = useState('');
-  const submit = () => {
-    const v = value.trim();
-    if (!v) return;
-    onAdd(v);
-    setValue('');
-  };
-  return (
-    <div className="sf-brgy-toolbar">
-      <input
-        type="text"
-        className="form-input"
-        placeholder="Type barangay name and press Enter"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            submit();
-          }
-        }}
-      />
-      <button type="button" className="btn-seller-outline" onClick={submit}>
-        Add
       </button>
     </div>
   );

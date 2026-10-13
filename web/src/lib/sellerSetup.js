@@ -150,17 +150,29 @@ export const describeStep = (step, { municipality } = {}) => {
           to: '/seller/fulfillment/delivery#delivery-couriers',
         };
       }
-      // Free, or by distance: a starting fee for the first km, then per km.
+      // Free, one fee everywhere, a fee per town or per barangay, or by
+      // distance (a starting fee for the first km, then per km).
       const byDistance = step.baseFee != null
         ? `${peso(step.baseFee)} to start${step.perKm != null ? `, then ${peso(step.perKm)} per extra km` : ', then a fee per extra km'}.`
         : 'A fee by distance.';
+      // "Set a fee for 1 town and 2 barangays."
+      const unpriced = step.unpriced
+        ? joinWords([step.unpriced.towns && plural(step.unpriced.towns, 'town'), step.unpriced.barangays && plural(step.unpriced.barangays, 'barangay')].filter(Boolean))
+        : '';
+      const doneText = {
+        FREE: 'Free delivery.',
+        FLAT: step.flatFee != null ? `${peso(step.flatFee)} for every delivery.` : 'One fee for every delivery.',
+        PER_TOWN: 'A fee for each town you deliver to.',
+        PER_BARANGAY: 'A fee for each barangay you deliver to.',
+      }[step.mode] || `${byDistance}${step.pinned === false ? ' Pin your shop so it can be worked out.' : ''}`;
+      const todoText = unpriced ? `Set a fee for ${unpriced}.`
+        : step.mode === 'FLAT' ? 'Enter your delivery fee.'
+          : 'Free, one fee for everywhere, a fee per town or barangay, or by distance.';
       return {
         ...base,
         title: 'Set your delivery fees',
         label: 'Delivery fees',
-        text: step.done
-          ? (step.mode === 'FREE' ? 'Free delivery.' : `${byDistance}${step.pinned === false ? ' Pin your shop so it can be worked out.' : ''}`)
-          : 'Free, or a fee by distance from your shop.',
+        text: step.done ? doneText : todoText,
         action: 'Set delivery fees',
         icon: Truck,
         to: '/seller/fulfillment/delivery#delivery-fee',

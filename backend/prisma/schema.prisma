@@ -102,11 +102,19 @@ enum FulfillmentMode {
   BOTH
 }
 
-/// How a shop prices its own deliveries: FREE, or PER_KM (a starting fee
-/// that covers the first km, then a fee for each km after, by road from the
-/// shop's pin to the buyer's).
+/// How a shop prices its own deliveries (see deliveryQuote.service):
+///   FREE          nothing, wherever it delivers
+///   FLAT          one fee for every place (Store.deliveryFee)
+///   PER_TOWN      each town its own fee (on that town's service areas)
+///   PER_BARANGAY  each barangay its own fee (on its service area; a whole
+///                 town picked has one fee for the town)
+///   PER_KM        a starting fee that covers the first km, then a fee for
+///                 each km after, by road from the shop's pin to the buyer's
 enum DeliveryFeeMode {
   FREE
+  FLAT
+  PER_TOWN
+  PER_BARANGAY
   PER_KM
 }
 
@@ -761,10 +769,11 @@ model Store {
   paymentAccountName   String?         @db.VarChar(120) @map("payment_account_name")
   paymentAccountNumber String?         @db.VarChar(40) @map("payment_account_number")
   acceptsCod           Boolean         @default(true) @map("accepts_cod")
-  /// Legacy: the old flat delivery fee. Prices delivery only for a shop
-  /// without a pin (no distance to work from); see deliveryFeeMode.
+  /// The one fee of a FLAT shop ("Same fee everywhere"). Also the fallback
+  /// for a PER_TOWN / PER_BARANGAY place left without a fee, and the old fee
+  /// of a PER_KM shop without a pin (no distance to work from).
   deliveryFee          Decimal?        @db.Decimal(10, 2) @map("delivery_fee")
-  /// What the shop charges for its own deliveries: FREE, or PER_KM =
+  /// What the shop charges for its own deliveries (DeliveryFeeMode). PER_KM =
   /// deliveryBaseFee for the first deliveryIncludedKm km by road, then
   /// deliveryPerKm for each km after, up to deliveryMaxKm (blank: no limit).
   /// A blank fee or km uses the platform's (AppSetting deliveryFee,
@@ -860,9 +869,11 @@ model StoreServiceArea {
   municipalityId String   @map("municipality_id")
   municipality   Municipality @relation(fields: [municipalityId], references: [id])
   barangay       String?  // null means "all barangays in this municipality"
-  /// Legacy: what delivery to this area cost (0: free; null: the store's
-  /// standard fee). Areas now only say WHERE a shop delivers; the price is by
-  /// distance (Store.deliveryFeeMode). Still used for a shop with no pin.
+  /// What delivery here costs when the shop prices by place
+  /// (Store.deliveryFeeMode PER_TOWN: every area of a town has the town's
+  /// fee; PER_BARANGAY: each area its own). 0: free; null: not set (the
+  /// shop's deliveryFee, else the platform's). A PER_KM shop with no pin
+  /// still uses it as its old fee for the place.
   fee            Decimal? @db.Decimal(10, 2)
 
   createdAt      DateTime @default(now()) @map("created_at")

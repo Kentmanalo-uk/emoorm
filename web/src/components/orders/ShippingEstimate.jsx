@@ -20,13 +20,17 @@ const pinnedAddress = () => {
   return promise;
 };
 
+/** "Brgy. Poblacion", without doubling a "Brgy." already there. */
+const brgyLabel = (name) => (/^(brgy\.?|bgy\.?|barangay)\s/i.test(name) ? name : `Brgy. ${name}`);
+
 const kmText = (km) => `${Number(km).toLocaleString('en-PH', { maximumFractionDigits: 1 })} km`;
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
 /**
- * What it costs to get one of this product delivered: by the seller (by
- * distance, to the buyer's saved address with a pin; without one, "by
+ * What it costs to get one of this product delivered: by the seller (its
+ * fee for the buyer's town or barangay, "₱30 to Brgy. Poblacion"; or by
+ * distance to the buyer's saved address with a pin, without one "by
  * distance, from ₱base") and by each courier the shop ships with (its rate
  * for the product's weight), with the total. Without the buyer's town,
  * courier fees are "from" prices.
@@ -67,17 +71,34 @@ export default function ShippingEstimate({ product, unitPrice, municipalityId, o
   const seller = quote.seller?.offered ? quote.seller : null;
   if (!couriers.length && !seller) return null;
 
-  const sellerFee = seller && seller.covered !== false && seller.fee != null ? Number(seller.fee) : null;
+  const rate = seller?.rate || {};
+  // Before the buyer's town is known (covered null): free and one fee
+  // everywhere are known already; a fee per town or barangay is "from" the
+  // lowest.
+  const preTown = Boolean(seller) && seller.covered == null && seller.fee == null;
+  const knownFee = !preTown ? null
+    : rate.mode === 'FREE' ? 0
+      : rate.mode === 'FLAT' && rate.flatFee != null ? Number(rate.flatFee) : null;
+  const sellerFee = seller && seller.covered !== false && seller.fee != null ? Number(seller.fee) : knownFee;
   // By distance with no pin to measure to: "by distance, from ₱base".
-  const byDistance = seller && seller.pinned && seller.rate?.mode === 'PER_KM';
-  const sellerFrom = byDistance && sellerFee == null && seller.covered !== false ? Number(seller.rate.baseFee) : null;
+  const byDistance = seller && seller.pinned && rate.mode === 'PER_KM';
+  const byPlace = rate.mode === 'PER_TOWN' || rate.mode === 'PER_BARANGAY';
+  const sellerFrom = sellerFee != null || !seller || seller.covered === false ? null
+    : byDistance ? Number(rate.baseFee)
+      : byPlace && preTown && rate.minFee != null ? Number(rate.minFee) : null;
   const sellerKm = sellerFee != null && seller.distanceKm != null
     ? `${kmText(seller.distanceKm)}${seller.distanceSource === 'ESTIMATE' ? ' (estimated)' : ''}`
+    : null;
+  // Priced by place: the barangay or town the fee is for ("to Brgy. Poblacion").
+  const place = seller?.place && !sellerKm && sellerFee != null
+    ? (seller.place.barangay
+      ? brgyLabel(seller.place.barangay)
+      : seller.place.town)
     : null;
   const tooFar = seller && seller.covered === false && seller.reason && seller.distanceKm != null;
   const fees = [sellerFee ?? sellerFrom, ...couriers.map((c) => Number(c.fee))].filter((v) => v != null);
   const lowest = fees.length ? Math.min(...fees) : null;
-  const isFrom = !municipalityId || couriers.some((c) => c.from) || sellerFrom != null;
+  const isFrom = (!municipalityId && knownFee == null) || couriers.some((c) => c.from) || sellerFrom != null;
 
 
 
@@ -89,10 +110,11 @@ export default function ShippingEstimate({ product, unitPrice, municipalityId, o
         <strong>
           {tooFar ? `up to ${kmText(seller.rate.maxKm)}`
             : seller.covered === false ? 'not to your town'
-              : sellerFee == null ? (sellerFrom != null ? `by distance, from ${peso(sellerFrom)}` : 'fee at checkout')
+              : sellerFee == null ? (sellerFrom != null ? `${byDistance ? 'by distance, ' : ''}from ${peso(sellerFrom)}` : 'fee at checkout')
                 : sellerFee === 0 ? 'Free' : peso(sellerFee)}
         </strong>
         {sellerKm && <span> ({sellerKm})</span>}
+        {place && <span> to {place}</span>}
         {lowest != null && unitPrice > 0 && (
           <span> · With shipping <strong className="ship-est-line-total">{isFrom ? 'from ' : ''}{peso(Number(unitPrice) + lowest)}</strong></span>
         )}
@@ -111,8 +133,10 @@ export default function ShippingEstimate({ product, unitPrice, municipalityId, o
               <small>
                 {tooFar ? `${seller.reason}; your address is ${kmText(seller.distanceKm)} away`
                   : sellerKm ? `${sellerKm} to your address · cash on delivery available`
-                    : sellerFrom != null ? 'Fee by distance · cash on delivery available'
-                      : 'Cash on delivery available'}
+                    : place ? `To ${place} · cash on delivery available`
+                      : sellerFrom != null
+                        ? `${byDistance ? 'Fee by distance' : `Fee depends on your ${rate.mode === 'PER_TOWN' ? 'town' : 'barangay'}`} · cash on delivery available`
+                        : 'Cash on delivery available'}
               </small>
             </span>
             <span className="ship-est-fee">

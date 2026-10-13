@@ -396,7 +396,8 @@ const normalizeDeliveryRate = (field, value) => {
   if (field === 'deliveryMaxKm' && n < 0.5) throw new ApiError('The farthest distance must be at least 0.5 km, or left blank', 400);
   return unit === 'km' ? Math.round(n * 10) / 10 : Math.round(n * 100) / 100;
 };
-const DELIVERY_FEE_MODES = ['FREE', 'PER_KM'];
+// How the shop prices its own delivery (deliveryQuote.service).
+const DELIVERY_FEE_MODES = deliveryQuoteService.MODES;
 
 const QR_TYPES = ['GCASH', 'QRPH'];
 
@@ -481,7 +482,7 @@ const updateStore = async (storeId, userId, rawData) => {
     'acceptsCod',
     'moormoveEnabled',
     'deliveryFee',
-    // Delivery by distance (see deliveryQuote.service).
+    // How delivery is priced, and by distance (see deliveryQuote.service).
     'deliveryFeeMode',
     'deliveryBaseFee',
     'deliveryIncludedKm',
@@ -508,7 +509,7 @@ const updateStore = async (storeId, userId, rawData) => {
         updateData[field] = normalizeDeliveryFee(data[field]);
       } else if (field === 'deliveryFeeMode') {
         const mode = String(data[field] || '').toUpperCase();
-        if (!DELIVERY_FEE_MODES.includes(mode)) throw new ApiError('Choose free delivery or a fee by distance', 400);
+        if (!DELIVERY_FEE_MODES.includes(mode)) throw new ApiError('Choose how you charge for delivery', 400);
         updateData[field] = mode;
       } else if (DELIVERY_RATE_LIMITS[field]) {
         updateData[field] = normalizeDeliveryRate(field, data[field]);

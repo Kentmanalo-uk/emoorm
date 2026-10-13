@@ -1,5 +1,6 @@
 const storeService = require('../services/store.service');
 const storeHomeService = require('../services/storeHome.service');
+const storeDeliveryService = require('../services/storeDelivery.service');
 const storeMapService = require('../services/storeMap.service');
 const sellerAttentionService = require('../services/sellerAttention.service');
 const sellerSetupService = require('../services/sellerSetup.service');
@@ -332,6 +333,16 @@ const replaceMyServiceAreas = asyncHandler(async (req, res) => {
   successResponse(res, areas, 'Service areas updated successfully');
 });
 
+/** GET /stores/my/delivery: where the shop delivers and how much. */
+const getMyDelivery = asyncHandler(async (req, res) => {
+  successResponse(res, await storeDeliveryService.getMyDelivery(req.user.id), 'Delivery settings retrieved');
+});
+
+/** PUT /stores/my/delivery { mode, flatFee?, areas, perKm? }: saved together. */
+const saveMyDelivery = asyncHandler(async (req, res) => {
+  successResponse(res, await storeDeliveryService.saveMyDelivery(req.user.id, req.body), 'Delivery settings saved');
+});
+
 /** GET /stores/:id/coverage?municipalityId=&barangay=&lat=&lng= (lat, lng: the delivery pin). */
 const checkStoreCoverage = asyncHandler(async (req, res) => {
   const {
@@ -367,5 +378,7 @@ module.exports = {
   getStoreServiceAreas,
   getMyServiceAreas,
   replaceMyServiceAreas,
+  getMyDelivery,
+  saveMyDelivery,
   checkStoreCoverage,
 };

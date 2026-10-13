@@ -9,9 +9,10 @@ const prisma = require('../config/database');
  * on, for the way the seller chose to hand orders over:
  *
  *  - Delivering (DELIVERY or BOTH): by the seller, at least one delivery
- *    area and a fee decided (free, or a starting fee by distance; shops from
- *    before delivery by distance: their old standard fee or a fee on every
- *    area); or by a courier with rates, which the buyer pays for online, so
+ *    area and a fee decided (free; one fee everywhere; a fee on every town
+ *    or barangay; or a starting fee by distance, and for shops from before
+ *    delivery by distance their old standard fee or a fee on every area);
+ *    or by a courier with rates, which the buyer pays for online, so
  *    with the shop's payment QR. Courier fees are worked out from weight. Or
  *    by MoorMove riders alone: the shop has riders on and its map pin, the
  *    super admin's MoorMove switch is on, and MoorMove serves the shop's
@@ -41,9 +42,11 @@ const SELL_STEPS = ['delivery-areas', 'delivery-fee', 'pickup', 'payment'];
 
 const hasValue = (field) => ({ AND: [{ [field]: { not: null } }, { [field]: { not: '' } }] });
 
-// Delivering by the seller: somewhere to deliver to, and a fee decided:
-// free, or a starting fee by distance (or, from before delivery by distance,
-// a standard fee or none of the areas left without one).
+// Delivering by the seller: somewhere to deliver to, and a fee decided for
+// the way it prices delivery (deliveryQuote.service): free; one fee for
+// every place; a fee on every town or barangay it delivers to; or by
+// distance, a starting fee (or, from before delivery by distance, a
+// standard fee or none of the areas left without one).
 const SELF_DELIVERY_READY = {
   AND: [
     { selfDelivery: true },
@@ -51,9 +54,16 @@ const SELF_DELIVERY_READY = {
     {
       OR: [
         { deliveryFeeMode: 'FREE' },
-        { deliveryBaseFee: { not: null } },
-        { deliveryFee: { not: null } },
-        { serviceAreas: { none: { fee: null } } },
+        { deliveryFeeMode: 'FLAT', deliveryFee: { not: null } },
+        { deliveryFeeMode: { in: ['PER_TOWN', 'PER_BARANGAY'] }, serviceAreas: { none: { fee: null } } },
+        {
+          deliveryFeeMode: 'PER_KM',
+          OR: [
+            { deliveryBaseFee: { not: null } },
+            { deliveryFee: { not: null } },
+            { serviceAreas: { none: { fee: null } } },
+          ],
+        },
       ],
     },
   ],

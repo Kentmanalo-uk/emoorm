@@ -269,8 +269,9 @@ const quote = async ({
   const delivers = store.fulfillmentMode !== 'PICKUP' && !pickupOnly.length;
 
   // By the seller: { offered, covered, fee, distanceKm, distanceSource, reason,
-  // needsPin, rate: { mode, baseFee, includedKm, perKm, maxKm }, pinned }.
-  // Without a town: just the rate ("fee by distance, from ₱base").
+  // needsPin, place, rate: { mode, baseFee, includedKm, perKm, maxKm,
+  // flatFee?, minFee?, maxFee? }, pinned }. Without a town: just the rate
+  // ("fee by distance, from ₱base", "₱50", "from ₱20").
   let seller = {
     offered: delivers && store.selfDelivery,
     covered: null,
@@ -292,6 +293,8 @@ const quote = async ({
       distanceSource: q.distanceSource,
       reason: q.reason,
       needsPin: Boolean(q.needsPin),
+      // The place the fee is for ({ town, barangay }), when covered.
+      place: q.place || null,
     };
   }
 

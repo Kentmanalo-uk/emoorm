@@ -35,10 +35,3 @@
     vertical-align: 1px;
   }
 }
-
-/* On the shop's menu, not posted now: quiet. */
-.today-tag.is-closed {
-  background: var(--t-neutral-100, #f3f4f6);
-  color: var(--t-neutral-600, #4b5563);
-  font-weight: 500;
-}
