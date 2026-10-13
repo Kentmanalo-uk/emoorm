@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   CaretRight, Storefront, PaintBrush, Wallet, QrCode, Headset, Lifebuoy, ChatText, User, Truck,
@@ -12,6 +12,7 @@ import { qrMethod } from '../lib/qrPayment';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTranslate';
 import { useShare } from '../components/ShareSheet';
 import FeedbackDialog from '../components/feedback/FeedbackDialog';
+import ShopQrPop from '../components/seller/ShopQrPop';
 import './SellerDashboard.css';
 import { readCache, writeCache } from '../lib/pageCache';
 import PageMenu from '../components/layout/PageMenu';
@@ -59,6 +60,8 @@ export default function SellerMenu() {
   const [health, setHealth] = useState(() => readCache('seller:health') ?? null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [language, setLanguageState] = useState(() => getCurrentLanguage());
+  // The shop's logo on the card: the QR card grows out of it.
+  const logoRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,19 +118,23 @@ export default function SellerMenu() {
       </header>
 
       <div className="sh-body">
-        {/* The shop: tap to edit its profile. */}
+        {/* The shop: tap to edit its profile; the QR icon by the name shows the shop's code to scan. */}
         <section className="sh-card sme-card">
-          <Link to="/seller/store" className="sme-id" aria-label="Edit shop profile">
-            <span className="sme-avatar">
+          <div className="sme-id sqp-row">
+            <Link to="/seller/store" className="sqp-row-link" aria-label="Edit shop profile" />
+            <span className="sme-avatar" ref={logoRef}>
               {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : name.trim().charAt(0).toUpperCase()}
             </span>
             <span className="sme-id-text">
-              <strong>{name}</strong>
+              <span className="sqp-name-row">
+                <strong>{name}</strong>
+                {canShare && <ShopQrPop store={store} originRef={logoRef} />}
+              </span>
               {user?.username && <span>@{user.username}</span>}
               {store?.isApproved === false && <em className="sme-private">Private until approved</em>}
             </span>
             <CaretRight size={18} className="sh-chev" />
-          </Link>
+          </div>
           <div className="sme-stats">
             <Link to="/seller/reviews">
               <strong>{stat(health?.rating != null ? Number(health.rating).toFixed(1) : '0.0')}</strong>

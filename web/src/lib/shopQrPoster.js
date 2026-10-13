@@ -2,20 +2,28 @@
  * The Shop QR poster (Seller Center → Me → Shop QR): a portrait sign a seller
  * prints for the stall or counter. Buyers scan it to open the shop.
  *
- * Drawn on a <canvas> at print size, 1240 × 1748 px (A6 at 300 dpi), and the
- * same canvas is the on-screen preview (scaled down with CSS) and the PNG the
- * seller downloads or prints. The PNG says 300 dpi, so photo and print apps
- * size it at 10.5 × 14.8 cm.
+ * Drawn on a <canvas>. At full size it is 1240 × 1748 px (A6 at 300 dpi), the
+ * PNG the seller downloads or prints; the PNG says 300 dpi, so photo and print
+ * apps size it at 10.5 × 14.8 cm. The page's previews and thumbnails draw the
+ * same poster at a smaller scale.
  *
- * A quiet, printed-sign look on plain white, everything centred: the shop's
- * round logo (or its initial on soft green), the shop name, a large QR in one
- * dark ink with the E-MOORM mark in the middle, "Scan to visit our shop" in
- * brand green with the short link under it, and a small E-MOORM mark at the
- * foot. Brand green is the only colour; the rest is ink and grey.
- *
- * The mobile app draws the same poster (mobile/src/components/seller/shopQr/);
- * keep the two in step.
+ * The designs (Minimal, Green, Night, Cream, Split, Sunny), the layout they
+ * share and their graphics (as plain shapes) live in shopQrTemplates.js, a
+ * file the mobile app keeps an identical copy of
+ * (mobile/src/components/seller/shopQr/), so both print the same posters.
+ * Each one carries the same few things: the shop's round logo (or its
+ * initial), the shop name, a large QR with the E-MOORM mark in the middle,
+ * "Scan to visit our shop", the short link, and a small E-MOORM foot.
  */
+
+import {
+  CAP, FOOT, LINK, MID, NAME_W, NAME_WEIGHT, POSTER_H, POSTER_W, SCAN,
+  fitText, layoutName, posterLayout, qrRuns, templateOf,
+} from './shopQrTemplates';
+
+export {
+  DEFAULT_TEMPLATE, POSTER_H, POSTER_W, TEMPLATES, layoutName, logoHole, posterLayout, templateOf,
+} from './shopQrTemplates';
 
 /** The public site. A QR made on localhost or a preview must still open the real shop. */
 export const SITE_ORIGIN = String(import.meta.env.VITE_SITE_URL || 'https://emoorm.shop').replace(/\/+$/, '');
@@ -25,36 +33,9 @@ export const shopQrUrl = (slug) => `${SITE_ORIGIN}/store/${encodeURIComponent(sl
 /** The link as printed under the code: emoorm.shop/store/<slug>. */
 export const shopQrLabel = (slug) => shopQrUrl(slug).replace(/^https?:\/\//, '').replace(/^www\./, '');
 
-export const POSTER_W = 1240;
-export const POSTER_H = 1748;
 const DPI = 300;
-
-const C = {
-  paper: '#FFFFFF',
-  brand: '#055D07',
-  ink: '#10261A', // the name and the QR
-  grey: '#6E7A72', // the link and the foot
-  ring: '#E3E7E3', // the hairline round the logo
-  soft: '#E9F3EA', // the initial's circle
-};
 const FONT = '"DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 const font = (weight, size) => `${weight} ${size}px ${FONT}`;
-
-// ── Geometry (poster px) ────────────────────────────────────────────────
-const MID = POSTER_W / 2;
-const CAP = 0.7; // DM Sans cap height, per px of font size
-const LOGO_R = 96; // a 192 px circle
-const NAME_W = 1000;
-const QR_AREA = 780; // the code is the largest whole-module square that fits
-const GAP = {
-  logoName: 58, // logo to the name's cap line
-  nameQr: 100, // last name baseline to the code (descenders and quiet zone)
-  qrScan: 100, // code to the "Scan…" cap line
-  scanLink: 58, // "Scan…" baseline to the link's baseline
-};
-const SCAN = { size: 50, weight: 500, text: 'Scan to visit our shop' };
-const LINK = { size: 30, min: 22, weight: 500 };
-const FOOT = { cy: 1630, mark: 40, gap: 12, size: 26, weight: 700, text: 'E-MOORM' };
 
 /**
  * The code's modules: { size, cells } with cells[y * size + x] = 1 for dark.
@@ -83,6 +64,7 @@ const loadImage = (src) => new Promise((resolve, reject) => {
 /**
  * One of the site's own SVG logos (same origin, so the canvas stays
  * exportable), with a size set so every browser draws it.
+ * '/brand-icon.svg' is the mark for light paper, '/brand-icon-white.svg' for green or dark.
  */
 export async function loadBrandMark(path = '/brand-icon.svg') {
   try {
@@ -138,87 +120,6 @@ export async function loadPosterFonts() {
   } catch { /* system font then */ }
 }
 
-// ── Layout ──────────────────────────────────────────────────────────────
-
-/**
- * The shop name: one line (72px, down to 52px), or for a long name two
- * balanced lines (56px, down to 44px), the second cut with … if it must be.
- */
-export function layoutName(measure, name) {
-  const text = String(name || 'My shop').trim().replace(/\s+/g, ' ');
-  for (let s = 72; s >= 52; s -= 2) {
-    if (measure(text, s) <= NAME_W) return { lines: [text], size: s };
-  }
-  const words = text.split(' ');
-  if (words.length > 1) {
-    // The split that makes the longer line shortest.
-    let best = null;
-    for (let i = 1; i < words.length; i += 1) {
-      const a = words.slice(0, i).join(' ');
-      const b = words.slice(i).join(' ');
-      const w = Math.max(measure(a, 40), measure(b, 40));
-      if (!best || w < best.w) best = { a, b, w };
-    }
-    for (let s = 56; s >= 44; s -= 2) {
-      if (measure(best.a, s) <= NAME_W && measure(best.b, s) <= NAME_W) return { lines: [best.a, best.b], size: s };
-    }
-    let a = best.a;
-    while (a.length > 1 && measure(`${a}…`, 44) > NAME_W) a = a.slice(0, -1);
-    let b = best.b;
-    while (b.length > 1 && measure(`${b}…`, 44) > NAME_W) b = b.slice(0, -1);
-    return {
-      lines: [
-        measure(best.a, 44) <= NAME_W ? best.a : `${a.trimEnd()}…`,
-        measure(best.b, 44) <= NAME_W ? best.b : `${b.trimEnd()}…`,
-      ],
-      size: 44,
-    };
-  }
-  let one = text;
-  while (one.length > 1 && measure(`${one}…`, 52) > NAME_W) one = one.slice(0, -1);
-  return { lines: [`${one.trimEnd()}…`], size: 52 };
-}
-
-/** Which modules the centre logo covers: an odd square of about a quarter of the code. */
-export function logoHole(size) {
-  let k = Math.round(size * 0.24);
-  if (k % 2 === 0) k += 1;
-  const from = (size - k) / 2;
-  return { from, to: from + k - 1, k };
-}
-
-/**
- * Where everything goes, for a name laid out by layoutName and a code of
- * `n` modules. The logo, name, code and the two lines under it are one
- * column, centred in the space above the foot; the same numbers drive the
- * app's SVG.
- */
-export function posterLayout(title, n) {
-  const lineH = Math.round(title.size * 1.18);
-  const m = Math.floor(QR_AREA / n);
-  const qs = m * n;
-  const nameBlock = CAP * title.size + (title.lines.length - 1) * lineH;
-  const column = 2 * LOGO_R + GAP.logoName + nameBlock + GAP.nameQr + qs
-    + GAP.qrScan + CAP * SCAN.size + GAP.scanLink;
-  const room = FOOT.cy - FOOT.mark / 2;
-  const top = Math.round((room - column) / 2);
-  const logoCy = top + LOGO_R;
-  const nameY = Math.round(top + 2 * LOGO_R + GAP.logoName + CAP * title.size);
-  const lastNameY = nameY + (title.lines.length - 1) * lineH;
-  const qy = Math.round(lastNameY + GAP.nameQr);
-  const qx = Math.round(MID - qs / 2);
-  const scanY = Math.round(qy + qs + GAP.qrScan + CAP * SCAN.size);
-  return {
-    logo: { cx: MID, cy: logoCy, r: LOGO_R },
-    name: { size: title.size, lines: title.lines, y: nameY, lineH },
-    qr: { n, m, qs, qx, qy, hole: logoHole(n) },
-    scanY,
-    linkY: scanY + GAP.scanLink,
-  };
-}
-
-const inFinder = (x, y, n) => (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
-
 // ── Drawing ─────────────────────────────────────────────────────────────
 function roundRectPath(ctx, x, y, w, h, r) {
   const rr = Math.min(r, w / 2, h / 2);
@@ -231,23 +132,69 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-/** Text at `size` px, smaller (down to `min`) and then cut with … until it fits `maxW`. */
-function fitText(ctx, text, weight, size, min, maxW) {
-  let s = size;
+const measurer = (ctx, weight) => (t, s) => {
   ctx.font = font(weight, s);
-  while (s > min && ctx.measureText(text).width > maxW) {
-    s -= 2;
-    ctx.font = font(weight, s);
+  return ctx.measureText(t).width;
+};
+
+/** Fill and/or stroke the current path. */
+function paint(ctx, s) {
+  if (s.fill) {
+    ctx.fillStyle = s.fill;
+    ctx.fill();
   }
-  let out = text;
-  if (ctx.measureText(out).width > maxW) {
-    while (out.length > 1 && ctx.measureText(`${out}…`).width > maxW) out = out.slice(0, -1);
-    out = `${out.trimEnd()}…`;
+  if (s.stroke) {
+    ctx.strokeStyle = s.stroke;
+    ctx.lineWidth = s.sw || 1;
+    ctx.stroke();
   }
-  return { text: out, size: s };
 }
 
-function drawLogo(ctx, { cx, cy, r }, { logo, name }) {
+/** The page: its colour (or gradient), then the design's shapes (shopQrTemplates.js), the code's tile last. */
+function drawGround(ctx, L) {
+  const tpl = L.template;
+  if (tpl.bgTo) {
+    const grad = ctx.createLinearGradient(0, 0, 0, POSTER_H);
+    grad.addColorStop(0, tpl.bg);
+    grad.addColorStop(1, tpl.bgTo);
+    ctx.fillStyle = grad;
+  } else {
+    ctx.fillStyle = tpl.bg;
+  }
+  ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+
+  L.shapes.forEach((s) => {
+    if (s.t === 'rect') {
+      roundRectPath(ctx, s.x, s.y, s.w, s.h, s.r || 0);
+      paint(ctx, s);
+    } else if (s.t === 'circle') {
+      ctx.beginPath();
+      ctx.arc(s.cx, s.cy, s.r, 0, Math.PI * 2);
+      paint(ctx, s);
+    } else if (s.t === 'path') {
+      const path = new Path2D(s.d);
+      if (s.fill) {
+        ctx.fillStyle = s.fill;
+        ctx.fill(path);
+      }
+      if (s.stroke) {
+        ctx.strokeStyle = s.stroke;
+        ctx.lineWidth = s.sw || 1;
+        ctx.lineCap = s.cap || 'butt';
+        ctx.stroke(path);
+        ctx.lineCap = 'butt';
+      }
+    } else if (s.t === 'text') {
+      ctx.font = font(s.weight, s.size);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = s.fill;
+      ctx.fillText(s.text, s.x, s.y);
+    }
+  });
+}
+
+function drawLogo(ctx, { cx, cy, r }, color, { logo, name }) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -257,21 +204,21 @@ function drawLogo(ctx, { cx, cy, r }, { logo, name }) {
     const w = logo.width || logo.naturalWidth;
     const h = logo.height || logo.naturalHeight;
     const scale = Math.max((2 * r) / w, (2 * r) / h);
-    ctx.fillStyle = C.paper;
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
     ctx.drawImage(logo, cx - (w * scale) / 2, cy - (h * scale) / 2, w * scale, h * scale);
     ctx.restore();
-    // A hairline ring, so a logo on white still has an edge.
+    // A ring, so the logo has an edge on any paper.
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = C.ring;
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = color.ring;
+    ctx.lineWidth = color.ringW;
     ctx.stroke();
   } else {
-    ctx.fillStyle = C.soft;
+    ctx.fillStyle = color.soft;
     ctx.fill();
     const letter = (Array.from(String(name || '').trim())[0] || 'S').toUpperCase();
-    ctx.fillStyle = C.brand;
+    ctx.fillStyle = color.letter;
     ctx.font = font(700, 96);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
@@ -280,28 +227,25 @@ function drawLogo(ctx, { cx, cy, r }, { logo, name }) {
   ctx.restore();
 }
 
-function drawQr(ctx, matrix, { n, m, qx, qy, hole }, brand) {
-  const inHole = (x, y) => x >= hole.from && x <= hole.to && y >= hole.from && y <= hole.to;
-
-  ctx.fillStyle = C.ink;
-  for (let y = 0; y < n; y += 1) {
-    for (let x = 0; x < n; x += 1) {
-      if (matrix.cells[y * n + x] && !inFinder(x, y, n) && !inHole(x, y)) ctx.fillRect(qx + x * m, qy + y * m, m, m);
-    }
-  }
+function drawQr(ctx, matrix, { n, m, qx, qy, hole }, color, paper, brand) {
+  // The square modules as one shape, so nothing shows between them at any scale.
+  ctx.beginPath();
+  qrRuns(matrix, hole).forEach(([x, y, len]) => ctx.rect(qx + x * m, qy + y * m, len * m, m));
+  ctx.fillStyle = color.qr;
+  ctx.fill();
 
   // The three corner eyes, softly rounded, in the same ink.
   [[0, 0], [n - 7, 0], [0, n - 7]].forEach(([fx, fy]) => {
     const ex = qx + fx * m;
     const ey = qy + fy * m;
     roundRectPath(ctx, ex, ey, 7 * m, 7 * m, 1.9 * m);
-    ctx.fillStyle = C.ink;
+    ctx.fillStyle = color.qr;
     ctx.fill();
     roundRectPath(ctx, ex + m, ey + m, 5 * m, 5 * m, 1.2 * m);
-    ctx.fillStyle = C.paper;
+    ctx.fillStyle = paper;
     ctx.fill();
     roundRectPath(ctx, ex + 2 * m, ey + 2 * m, 3 * m, 3 * m, 0.8 * m);
-    ctx.fillStyle = C.ink;
+    ctx.fillStyle = color.qr;
     ctx.fill();
   });
 
@@ -315,61 +259,67 @@ function drawQr(ctx, matrix, { n, m, qx, qy, hole }, brand) {
   }
 }
 
-function drawWords(ctx, L, { label, brand }) {
+function drawWords(ctx, L, color, label, footMark) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
-  ctx.fillStyle = C.brand;
+  ctx.fillStyle = color.scan;
   ctx.font = font(SCAN.weight, SCAN.size);
   ctx.fillText(SCAN.text, MID, L.scanY);
 
-  const link = fitText(ctx, label, LINK.weight, LINK.size, LINK.min, NAME_W);
+  const link = fitText(measurer(ctx, LINK.weight), label, LINK.size, LINK.min, NAME_W);
   ctx.font = font(LINK.weight, link.size);
-  ctx.fillStyle = C.grey;
+  ctx.fillStyle = color.link;
   ctx.fillText(link.text, MID, L.linkY);
 
   // The foot: the E-MOORM mark and its name, small.
   ctx.font = font(FOOT.weight, FOOT.size);
   const w = ctx.measureText(FOOT.text).width;
   const left = MID - (FOOT.mark + FOOT.gap + w) / 2;
-  if (brand) ctx.drawImage(brand, left, FOOT.cy - FOOT.mark / 2, FOOT.mark, FOOT.mark);
+  if (footMark) ctx.drawImage(footMark, left, L.footCy - FOOT.mark / 2, FOOT.mark, FOOT.mark);
   ctx.textAlign = 'left';
-  ctx.fillStyle = C.grey;
-  ctx.fillText(FOOT.text, left + FOOT.mark + FOOT.gap, Math.round(FOOT.cy + (FOOT.size * CAP) / 2));
+  ctx.fillStyle = color.foot;
+  ctx.fillText(FOOT.text, left + FOOT.mark + FOOT.gap, Math.round(L.footCy + (FOOT.size * CAP) / 2));
 }
 
 /**
- * Draw the whole poster on `canvas` (resized to 1240 × 1748).
- * `town` and `brandWhite` are accepted for older callers and not drawn.
+ * Draw the whole poster on `canvas`, resized to 1240 × 1748 × `scale`
+ * (1, the default, is the print size; previews and thumbnails pass less).
+ * `template` is a design's key (or the design); Minimal when left out.
+ * `brand` is the E-MOORM mark for light paper, `brandWhite` the one for green
+ * or dark paper (the foot falls back to `brand` without it). `town` is
+ * accepted for older callers and not drawn.
  * @param {HTMLCanvasElement} canvas
  * @param {{ name: string, town?: string, label: string, matrix: {size:number, cells:Uint8Array},
- *   logo?: CanvasImageSource|null, brand?: CanvasImageSource|null, brandWhite?: CanvasImageSource|null }} p
+ *   logo?: CanvasImageSource|null, brand?: CanvasImageSource|null, brandWhite?: CanvasImageSource|null,
+ *   template?: string|object, scale?: number }} p
  */
 export function drawShopQrPoster(canvas, p) {
-  canvas.width = POSTER_W;
-  canvas.height = POSTER_H;
+  const scale = p.scale > 0 ? p.scale : 1;
+  canvas.width = Math.round(POSTER_W * scale);
+  canvas.height = Math.round(POSTER_H * scale);
   const ctx = canvas.getContext('2d');
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.fillStyle = C.paper;
-  ctx.fillRect(0, 0, POSTER_W, POSTER_H);
 
-  const title = layoutName((t, s) => {
-    ctx.font = font(700, s);
-    return ctx.measureText(t).width;
-  }, p.name);
-  const L = posterLayout(title, p.matrix.size);
+  const tpl = templateOf(p.template);
+  const title = layoutName(measurer(ctx, NAME_WEIGHT), p.name);
+  const L = posterLayout(title, p.matrix.size, tpl);
+  const { color } = tpl;
 
-  drawLogo(ctx, L.logo, p);
+  drawGround(ctx, L);
+  drawLogo(ctx, L.logo, color, p);
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.font = font(700, L.name.size);
-  ctx.fillStyle = C.ink;
+  ctx.font = font(NAME_WEIGHT, L.name.size);
+  ctx.fillStyle = color.name;
   L.name.lines.forEach((line, i) => ctx.fillText(line, MID, L.name.y + i * L.name.lineH));
 
-  drawQr(ctx, p.matrix, L.qr, p.brand);
-  drawWords(ctx, L, p);
+  drawQr(ctx, p.matrix, L.qr, color, L.paper, p.brand);
+  const footMark = tpl.marks.foot === 'white' ? (p.brandWhite || p.brand) : p.brand;
+  drawWords(ctx, L, color, p.label, footMark);
 }
 
 // ── PNG out ─────────────────────────────────────────────────────────────
@@ -416,4 +366,16 @@ export async function posterPngBlob(canvas) {
   });
   const bytes = withPrintDpi(new Uint8Array(await blob.arrayBuffer()));
   return new Blob([bytes], { type: 'image/png' });
+}
+
+/** The poster at print size on a fresh canvas, as a print-ready PNG blob (Download PNG, Print). */
+export async function posterPngFor(p) {
+  const canvas = document.createElement('canvas');
+  drawShopQrPoster(canvas, { ...p, scale: 1 });
+  try {
+    return await posterPngBlob(canvas);
+  } finally {
+    canvas.width = 0;
+    canvas.height = 0;
+  }
 }

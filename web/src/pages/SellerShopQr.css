@@ -1,5 +1,6 @@
 /* Shop QR (SellerShopQr.jsx). Phones (.sqr--phone) and computers (.sqr-desk)
-   have their own rules; only the poster sheet is shared. */
+   have their own rules; the poster sheet, the carousel, its dots and the
+   design picker are shared. */
 
 .sqr-sheet {
   position: relative;
@@ -22,7 +23,7 @@
   animation: sqr-wait 1.4s ease-in-out infinite;
 }
 
-.sqr-sheet--wait .sqr-canvas {
+.sqr-sheet--wait canvas {
   opacity: 0;
 }
 
@@ -44,6 +45,157 @@
   text-align: center;
 }
 
+/* ── The carousel: one design per slide, snapping ───────────────────── */
+.sqr-carousel {
+  position: relative;
+}
+
+.sqr-track {
+  position: relative; /* the slides' offsetLeft is measured from here */
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  outline: none;
+}
+
+.sqr-track::-webkit-scrollbar {
+  display: none;
+}
+
+.sqr-track:focus-visible {
+  border-radius: 20px;
+  box-shadow: 0 0 0 3px var(--t-primary-200, #a7f3d0);
+}
+
+.sqr-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+.sqr-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.sqr-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-neutral-300, #cbd5e1);
+  cursor: pointer;
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.sqr-dot.is-on {
+  width: 20px;
+  background: var(--t-primary-600, #047857);
+}
+
+/* ── The design picker: small posters with their names ──────────────── */
+.sqr-picker {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 8px 6px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.sqr-picker::-webkit-scrollbar {
+  display: none;
+}
+
+/* Centred when they fit, scrollable from the first when they do not. */
+.sqr-thumb:first-child { margin-left: auto; }
+.sqr-thumb:last-child { margin-right: auto; }
+
+.sqr-thumb {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-neutral-600, #4b5563);
+  cursor: pointer;
+  scroll-snap-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sqr-thumb-art {
+  position: relative;
+  display: block;
+  width: 58px;
+  aspect-ratio: 1240 / 1748;
+  overflow: visible;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--t-neutral-200, #e5e7eb);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.sqr-thumb-art canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+.sqr-thumb:hover .sqr-thumb-art {
+  transform: translateY(-1px);
+}
+
+.sqr-thumb.is-on .sqr-thumb-art {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--t-primary-600, #047857);
+}
+
+.sqr-thumb:focus-visible {
+  outline: none;
+}
+
+.sqr-thumb:focus-visible .sqr-thumb-art {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--t-primary-300, #6ee7b7);
+}
+
+.sqr-thumb.is-on:focus-visible .sqr-thumb-art {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--t-primary-600, #047857), 0 0 0 7px var(--t-primary-200, #a7f3d0);
+}
+
+.sqr-thumb-tick {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: var(--t-primary-600, #047857);
+  color: #fff;
+}
+
+.sqr-thumb-name {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.sqr-thumb.is-on .sqr-thumb-name {
+  color: var(--t-neutral-900, #0f172a);
+  font-weight: 500;
+}
+
 /* ── Phones ─────────────────────────────────────────────────────────── */
 .sqr--phone {
   padding: 4px 4px calc(84px + env(safe-area-inset-bottom));
@@ -58,13 +210,29 @@
   text-align: center;
 }
 
+/* Edge to edge, each poster a little narrower than the screen so the next one peeks in. */
+.sqr--phone .sqr-track {
+  gap: 12px;
+  margin: 0 calc(50% - 50vw);
+  padding: 4px 11vw 24px;
+  scroll-padding: 0 11vw;
+}
+
+.sqr--phone .sqr-slide {
+  flex-basis: 100%;
+}
+
 .sqr--phone .sqr-sheet {
   max-width: 420px;
   margin: 0 auto;
 }
 
+.sqr--phone .sqr-dots {
+  margin-top: 0;
+}
+
 .sqr--phone .sqr-link {
-  margin: 12px 8px 0;
+  margin: 10px 8px 0;
   overflow-wrap: anywhere;
   color: var(--t-neutral-500, #6b7280);
   font-size: 13px;
@@ -79,16 +247,64 @@
 /* ── Computers ──────────────────────────────────────────────────────── */
 .sqr-desk {
   display: grid;
-  grid-template-columns: minmax(0, 460px) minmax(240px, 340px);
+  grid-template-columns: minmax(0, 500px) minmax(240px, 340px);
   gap: 28px;
   align-items: start;
 }
 
 .sqr-stage {
-  padding: 28px;
+  padding: 28px 52px 20px;
   border: 1px solid var(--t-neutral-100, #f1f5f9);
   border-radius: 16px;
   background: var(--t-neutral-50, #f9fafb);
+}
+
+.sqr-stage .sqr-track {
+  gap: 24px;
+  /* Room for the sheet's shadow, which the scroller would otherwise clip into a box. */
+  margin: -28px -44px -12px;
+  padding: 28px 44px 48px;
+  scroll-padding: 0 44px;
+}
+
+.sqr-arrow {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--t-neutral-700, #374151);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.sqr-arrow:hover:not(:disabled) {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.sqr-arrow:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sqr-arrow:focus-visible {
+  outline: 3px solid var(--t-primary-200, #a7f3d0);
+  outline-offset: 1px;
+}
+
+.sqr-arrow--prev { left: -46px; }
+.sqr-arrow--next { right: -46px; }
+
+/* The picker may use the stage's side padding (the arrows' room), so all six fit. */
+.sqr-stage .sqr-picker {
+  margin: 10px -44px 0;
 }
 
 .sqr-notes {
@@ -134,6 +350,6 @@
 
 @media (max-width: 1023px) {
   .sqr-desk {
-    grid-template-columns: minmax(0, 460px);
+    grid-template-columns: minmax(0, 500px);
   }
 }
