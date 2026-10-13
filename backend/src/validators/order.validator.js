@@ -98,6 +98,8 @@ const createOrderValidation = [
   optionalText('deliveryNotes', 1000, 'Delivery notes'),
   optionalText('checkoutKey', 100, 'Checkout key'),
   optionalText('voucherCode', 64, 'Voucher code'),
+  // The quote token from POST /moormove/quote: charge the rider fee quoted.
+  optionalText('riderQuoteToken', 2048, 'Rider quote'),
 ];
 
 const paymentProofValidation = [

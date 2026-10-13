@@ -64,11 +64,57 @@ const resolveWindow = ({ from, to, granularity } = {}, { daily = true } = {}) =>
 // requests on the remaining orders) are subtracted by the service.
 const EARNED = { status: 'COMPLETED', paymentStatus: { not: 'REFUNDED' } };
 
-const revenueAggregate = (scope) => prisma.order.aggregate({
-  where: { ...scope, ...EARNED },
-  _sum: { total: true },
-  _count: { _all: true },
-});
+// A MoorMove rider's delivery fee is the rider's money, not the shop's: the
+// sales of an order a rider delivered (deliveryPartner MOORMOVE) leave its
+// delivery fee out. A shop's own delivery fee (and the fee of an order the
+// shop took over from a rider) is the shop's and counts. Neither is an
+// unpaid failed-trip fee added to an order (failedTripFees): it pays the
+// shop back what it paid a rider for the buyer's failed trip.
+const RIDER_DELIVERED = { deliveryPartner: 'MOORMOVE' };
+
+/** One order's sales: its total, without a MoorMove rider's fee or failed-trip fees. */
+const saleOf = (o) => Number(o.total || 0)
+  - (o.deliveryPartner === 'MOORMOVE' ? Number(o.deliveryFee || 0) : 0)
+  - Number(o.failedTripFees || 0);
+const SALE_FIELDS = {
+  total: true, deliveryFee: true, deliveryPartner: true, failedTripFees: true,
+};
+
+/** prisma.order.aggregate of `_sum.total` and `_count`, with riders' and failed trips' fees taken out of the total. */
+const salesAggregate = async (where) => {
+  const [all, riders] = await Promise.all([
+    prisma.order.aggregate({ where, _sum: { total: true, failedTripFees: true }, _count: { _all: true } }),
+    prisma.order.aggregate({ where: { ...where, ...RIDER_DELIVERED }, _sum: { deliveryFee: true } }),
+  ]);
+  return {
+    ...all,
+    _sum: {
+      ...all._sum,
+      total: Number(all._sum.total || 0) - Number(riders._sum.deliveryFee || 0) - Number(all._sum.failedTripFees || 0),
+    },
+  };
+};
+
+/**
+ * Sales per store (prisma.order.groupBy by storeId), riders' fees taken out;
+ * with `take`, the best-selling stores first.
+ */
+const salesByStore = async (where, { take } = {}) => {
+  const [rows, riders] = await Promise.all([
+    prisma.order.groupBy({
+      by: ['storeId'], where, _sum: { total: true, failedTripFees: true }, _count: { _all: true },
+    }),
+    prisma.order.groupBy({ by: ['storeId'], where: { ...where, ...RIDER_DELIVERED }, _sum: { deliveryFee: true } }),
+  ]);
+  const fees = new Map(riders.map((r) => [r.storeId, Number(r._sum.deliveryFee || 0)]));
+  const out = rows.map((r) => ({
+    ...r,
+    _sum: { ...r._sum, total: Number(r._sum.total || 0) - (fees.get(r.storeId) || 0) - Number(r._sum.failedTripFees || 0) },
+  }));
+  return take ? out.sort((a, b) => b._sum.total - a._sum.total).slice(0, take) : out;
+};
+
+const revenueAggregate = (scope) => salesAggregate({ ...scope, ...EARNED });
 
 const refundedAggregate = (scope) => prisma.returnRequest.aggregate({
   where: { status: 'REFUNDED', order: { ...scope, ...EARNED } },
@@ -80,7 +126,7 @@ const bucketByDay = (orders) => {
   for (const o of orders) {
     const day = manila.dayKey(o.createdAt);
     const cur = map.get(day) || { total: 0, orders: 0 };
-    cur.total += Number(o.total || 0);
+    cur.total += saleOf(o);
     cur.orders += 1;
     map.set(day, cur);
   }
@@ -100,7 +146,7 @@ const bucketBy = (orders, granularity = 'day') => {
   for (const o of orders) {
     const key = keyOf(o.createdAt);
     const cur = map.get(key) || { total: 0, orders: 0 };
-    cur.total += Number(o.total || 0);
+    cur.total += saleOf(o);
     cur.orders += 1;
     map.set(key, cur);
   }
@@ -186,14 +232,10 @@ const getSellerStats = async (storeId, window) => {
     }),
     prisma.order.findMany({
       where: { ...orderScope, status: 'COMPLETED' },
-      select: { createdAt: true, total: true },
+      select: { createdAt: true, ...SALE_FIELDS },
       orderBy: { createdAt: 'asc' },
     }),
-    prisma.order.aggregate({
-      where: { storeId, status: 'COMPLETED' },
-      _sum: { total: true },
-      _count: { _all: true },
-    }),
+    salesAggregate({ storeId, status: 'COMPLETED' }),
     prisma.orderItem.aggregate({
       where: { order: { storeId, status: 'COMPLETED' } },
       _sum: { quantity: true },
@@ -316,7 +358,7 @@ const getMunicipalityStats = async (municipalityId, window) => {
     prisma.report.count({ where: { municipalityId, status: { in: ['RESOLVED', 'DISMISSED'] } } }),
     prisma.order.findMany({
       where: { ...orderScope, status: 'COMPLETED' },
-      select: { createdAt: true, total: true },
+      select: { createdAt: true, ...SALE_FIELDS },
       orderBy: { createdAt: 'asc' },
     }),
     prisma.user.findMany({
@@ -338,14 +380,7 @@ const getMunicipalityStats = async (municipalityId, window) => {
       orderBy: { createdAt: 'desc' },
       take: 5,
     }),
-    prisma.order.groupBy({
-      by: ['storeId'],
-      where: { ...orderScope, status: 'COMPLETED' },
-      _sum: { total: true },
-      _count: { _all: true },
-      orderBy: { _sum: { total: 'desc' } },
-      take: 5,
-    }),
+    salesByStore({ ...orderScope, status: 'COMPLETED' }, { take: 5 }),
     prisma.orderItem.groupBy({
       by: ['productId'],
       where: {
@@ -359,11 +394,7 @@ const getMunicipalityStats = async (municipalityId, window) => {
       orderBy: { _sum: { subtotal: 'desc' } },
       take: 5,
     }),
-    prisma.order.aggregate({
-      where: { store: { municipalityId }, status: 'COMPLETED' },
-      _sum: { total: true },
-      _count: { _all: true },
-    }),
+    salesAggregate({ store: { municipalityId }, status: 'COMPLETED' }),
     prisma.order.findMany({
       where: { ...orderScope, status: 'COMPLETED' },
       distinct: ['buyerId'],
@@ -466,21 +497,11 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
     revenueAggregate(prevOrderScope),
     // Sales per store in the chosen period and the one before it, for each
     // municipality's share and growth.
-    prisma.order.groupBy({
-      by: ['storeId'],
-      where: { ...orderScope, ...EARNED },
-      _sum: { total: true },
-      _count: { _all: true },
-    }),
-    prisma.order.groupBy({
-      by: ['storeId'],
-      where: { ...prevOrderScope, ...EARNED },
-      _sum: { total: true },
-      _count: { _all: true },
-    }),
+    salesByStore({ ...orderScope, ...EARNED }),
+    salesByStore({ ...prevOrderScope, ...EARNED }),
     prisma.order.findMany({
       where: { ...orderScope, status: 'COMPLETED' },
-      select: { createdAt: true, total: true },
+      select: { createdAt: true, ...SALE_FIELDS },
       orderBy: { createdAt: 'asc' },
     }),
     prisma.municipality.findMany({
@@ -492,14 +513,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
       where: { sellerApplicationStatus: 'PENDING', deletedAt: null },
     }),
     prisma.product.count({ where: { status: 'PENDING', deletedAt: null } }),
-    prisma.order.groupBy({
-      by: ['storeId'],
-      where: { ...orderScope, status: 'COMPLETED' },
-      _sum: { total: true },
-      _count: { _all: true },
-      orderBy: { _sum: { total: 'desc' } },
-      take: 5,
-    }),
+    salesByStore({ ...orderScope, status: 'COMPLETED' }, { take: 5 }),
     prisma.orderItem.groupBy({
       by: ['productId'],
       where: {
@@ -513,11 +527,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
       orderBy: { _sum: { subtotal: 'desc' } },
       take: 5,
     }),
-    prisma.order.aggregate({
-      where: { status: 'COMPLETED', ...orderMuniFilter },
-      _sum: { total: true },
-      _count: { _all: true },
-    }),
+    salesAggregate({ status: 'COMPLETED', ...orderMuniFilter }),
     prisma.order.findMany({
       where: { ...orderScope, status: 'COMPLETED' },
       distinct: ['buyerId'],

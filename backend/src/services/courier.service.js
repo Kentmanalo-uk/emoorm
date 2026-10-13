@@ -204,6 +204,8 @@ const setStoreDelivery = async (storeId, { selfDelivery, courierIds, moormoveEna
   });
   // Checkout reads the shop (cached) to offer its delivery choices.
   if (written) await invalidate([TAGS.stores, TAGS.store(written.id), TAGS.store(written.slug)]);
+  // Riders on or off can make the shop ready to sell, or not.
+  if (moormoveEnabled !== undefined) require('./shopReadiness.service').forget(storeId);
   return getStoreDelivery(storeId);
 };
 

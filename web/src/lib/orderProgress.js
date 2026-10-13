@@ -4,7 +4,7 @@
  * happened) and the server's `deadline` (confirm / pay / auto-complete).
  */
 
-import { riderStatus } from './moormove';
+import { refundAmount, riderStatus } from './moormove';
 
 const PAY_LABEL = { COD: 'Cash on delivery', GCASH: 'GCash (QR)', QRPH: 'QR Ph', BANK_TRANSFER: 'Bank transfer' };
 export const payLabel = (method, pickup = false) => (method === 'COD' && pickup ? 'Cash on pickup' : PAY_LABEL[method] || method || '—');
@@ -153,8 +153,12 @@ export const orderStage = (o) => {
   const by = deadline ? `${when(deadline)} (${timeLeft(deadline)})` : '';
 
   if (o.status === 'CANCELLED') {
+    // A failed rider trip's fee the buyer's payment covers is not returned.
+    const kept = Number(o.failedTripKept) > 0 && Number(o.refundDue) > 0;
     const refund = {
-      PAID: ' The shop will return your payment.',
+      PAID: kept
+        ? ` The shop will return ${peso(o.refundDue)}: the ${peso(o.failedTripKept)} delivery fee covers the failed trip.`
+        : ' The shop will return your payment.',
       PENDING_VERIFICATION: ' If you already paid, the shop will return it.',
       REFUNDED: ' Your payment was refunded.',
     }[o.paymentStatus] || '';
@@ -394,10 +398,10 @@ export const sellerNext = (o) => {
 
   if (o.status === 'CANCELLED') {
     if (o.paymentStatus === 'PAID') {
-      return { tone: 'red', short: 'Refund due', title: "Cancelled: return the buyer's payment", text: `${cancelSummary(o, 'seller')} Send back ${peso(o.total)}, then tap Mark refunded below.`, due: '' };
+      return { tone: 'red', short: 'Refund due', title: "Cancelled: return the buyer's payment", text: `${cancelSummary(o, 'seller')} Send back ${peso(refundAmount(o))}${Number(o.failedTripKept) > 0 && Number(o.refundDue) > 0 ? ` (the ${peso(o.failedTripKept)} delivery fee covers the failed trip)` : ''}, then tap Mark refunded below.`, due: '' };
     }
     if (o.paymentStatus === 'PENDING_VERIFICATION') {
-      return { tone: 'amber', short: 'Check for a refund', title: 'Cancelled before you checked the payment', text: `${cancelSummary(o, 'seller')} If ${peso(o.total)} reached you, send it back, then tap Mark refunded below.`, due: '' };
+      return { tone: 'amber', short: 'Check for a refund', title: 'Cancelled before you checked the payment', text: `${cancelSummary(o, 'seller')} If ${peso(o.total)} reached you, send back ${peso(refundAmount(o))}, then tap Mark refunded below.`, due: '' };
     }
     return { tone: 'grey', short: 'Cancelled', title: 'Cancelled', text: `${cancelSummary(o, 'seller')} Its stock is back in your shop.`, due: '' };
   }
@@ -437,6 +441,10 @@ export const sellerNext = (o) => {
       return { tone: 'amber', short: 'Collect cash', title: r.title, text: r.text, due };
     }
     if (['CONFIRMED', 'PREPARING', 'TO_SHIP', 'READY'].includes(o.status)) {
+      // The delivery failed: the rider is bringing the parcel back.
+      if (rd?.status === 'RETURNING') {
+        return { tone: 'red', short: 'Parcel coming back', title: r.title, text: `${r.text} You can also cancel the order.`, due: '' };
+      }
       if (rd && !['CANCELLED', 'FAILED', 'DELIVERED'].includes(rd.status)) {
         return { tone: r.tone, short: r.title, title: r.title, text: r.text, due: '' };
       }

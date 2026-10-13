@@ -7,7 +7,7 @@ import './OrderReceipt.css';
 import { ReceiptSkeleton } from '../components/ui/PageSkeletons';
 import AppLogo from '../components/AppLogo';
 import { trackingLink } from '../lib/tracking';
-import { orderPromo } from '../lib/moormove';
+import { carriedFeeLines, orderPromo } from '../lib/moormove';
 import { statusLabel } from '../lib/orderProgress';
 import {
   etaLabel, hasPaluto, lineKind, lineNote,
@@ -171,6 +171,10 @@ export default function OrderReceipt() {
           {discountAmount > 0 && (
             <div className="totals-row"><span>Discount{order.voucherCode ? ` (${order.voucherCode})` : ''}</span><span>-{peso(discountAmount)}</span></div>
           )}
+          {/* A failed rider trip's fee from an earlier order, added to this one. */}
+          {carriedFeeLines(order).map((line) => (
+            <div key={line.key} className="totals-row"><span>{line.label}</span><span>{peso(line.amount)}</span></div>
+          ))}
           <div className="totals-row totals-grand"><span>TOTAL</span><span>{peso(totalAmount)}</span></div>
         </section>
 

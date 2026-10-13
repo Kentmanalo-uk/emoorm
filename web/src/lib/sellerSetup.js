@@ -82,6 +82,18 @@ export const describeStep = (step, { municipality } = {}) => {
     }
 
     case 'delivery-areas':
+      // MoorMove riders deliver for the shop: nothing to set up.
+      if (step.byMoormove && step.done) {
+        return {
+          ...base,
+          title: 'Choose where you deliver',
+          label: 'Where you deliver',
+          text: 'Covered by MoorMove riders.',
+          action: 'See delivery',
+          icon: MapPin,
+          to: '/seller/fulfillment/delivery',
+        };
+      }
       // Couriers only: they go all around Mindoro; nothing to choose.
       if (step.byCourier) {
         return {
@@ -115,6 +127,18 @@ export const describeStep = (step, { municipality } = {}) => {
       };
 
     case 'delivery-fee': {
+      // MoorMove riders price each delivery by distance.
+      if (step.byMoormove && step.done) {
+        return {
+          ...base,
+          title: 'Set your delivery fees',
+          label: 'Delivery fees',
+          text: 'Covered by MoorMove riders: they price each delivery by distance.',
+          action: 'See delivery',
+          icon: Truck,
+          to: '/seller/fulfillment/delivery',
+        };
+      }
       if (step.byCourier) {
         return {
           ...base,

@@ -3,6 +3,7 @@ import { X } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import { peso, num } from './format';
+import { riderFeeNote, shopTotalOf } from '../../lib/moormove';
 import './analytics.css';
 
 const DayDetailModal = ({ date, onClose }) => {
@@ -65,7 +66,8 @@ const DayDetailModal = ({ date, onClose }) => {
                   </div>
                   <div>
                     <span className="an-kpi-label">{o.buyer?.name || 'Guest'}</span>
-                    <div style={{ textAlign: 'right', fontWeight: 600, color: 'var(--t-primary-600, #059669)' }}>{peso(o.total)}</div>
+                    <div style={{ textAlign: 'right', fontWeight: 600, color: 'var(--t-primary-600, #059669)' }}>{peso(shopTotalOf(o))}</div>
+                    {riderFeeNote(o) && <div className="an-toplist-sub" style={{ textAlign: 'right' }}>{riderFeeNote(o)}</div>}
                   </div>
                 </div>
                 <ul className="an-day-order-items">

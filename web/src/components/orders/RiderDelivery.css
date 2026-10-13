@@ -595,3 +595,84 @@
   margin-bottom: 4px;
   background: var(--t-neutral-0, #fff);
 }
+
+/* A failed rider trip (seller order details): why, whose fault, who pays,
+   and the buyer's unpaid fee. */
+.rider-trip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.rider-trip p {
+  margin: 0;
+}
+
+.rider-trip-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--t-neutral-900, #111827);
+  font-weight: 600;
+}
+
+.rider-trip-fault {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.rider-trip-fault.is-buyer {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.rider-trip-text {
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.rider-trip-fee {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 10px;
+  color: var(--t-neutral-800, #1f2937);
+}
+
+.rider-trip-fee b {
+  font-weight: 600;
+}
+
+.rider-trip-fee b.is-open {
+  color: #b45309;
+}
+
+.rider-trip-fee b.is-paid {
+  color: var(--t-primary-700, #047857);
+}
+
+/* The confirm sheets' line about who pays for the failed trip. */
+.rider-trip-note {
+  color: var(--t-neutral-800, #1f2937);
+}
+
+@media (max-width: 768px) {
+  .sc-shell :is(.rider-trip-head, .rider-trip-fault, .rider-trip-fee b) {
+    font-weight: 500;
+  }
+}

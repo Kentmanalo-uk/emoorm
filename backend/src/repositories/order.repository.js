@@ -62,6 +62,26 @@ const createOrder = async (data) => {
 // Two checkouts locking the same products: the loser runs again (lib/dbRetry).
 const { withDeadlockRetry } = require('../lib/dbRetry');
 
+/**
+ * The unpaid failed-trip fees an order carries (buyer_unpaid_fees whose
+ * paidOrderId is the order), in the transaction that moves it: paid once the
+ * order is handed over or completed; back to the buyer's open fees (on no
+ * order) if it is cancelled.
+ */
+const settleCarriedFees = async (tx, orderId, status) => {
+  if (['DELIVERED', 'PICKED_UP', 'COMPLETED'].includes(status)) {
+    await tx.buyerUnpaidFee.updateMany({
+      where: { paidOrderId: orderId, status: 'OPEN' },
+      data: { status: 'PAID', paidAt: new Date() },
+    });
+  } else if (status === 'CANCELLED') {
+    await tx.buyerUnpaidFee.updateMany({
+      where: { paidOrderId: orderId, status: 'OPEN' },
+      data: { paidOrderId: null },
+    });
+  }
+};
+
 // Lock products always in the same order (by id), so two orders for the same
 // products wait for each other instead of deadlocking.
 const byProductId = (a, b) => (a.productId < b.productId ? -1 : a.productId > b.productId ? 1 : 0);
@@ -72,14 +92,14 @@ const byProductId = (a, b) => (a.productId < b.productId ? -1 : a.productId > b.
  * @param {Array} itemsData - Order items data
  * @returns {Promise<Object>} Created order with items
  */
-const createOrderWithItems = async (orderData, itemsData, voucherRedemption = null) => {
-  const created = await createOrderTx(orderData, itemsData, voucherRedemption);
+const createOrderWithItems = async (orderData, itemsData, voucherRedemption = null, { unpaidFeeIds = [] } = {}) => {
+  const created = await createOrderTx(orderData, itemsData, voucherRedemption, unpaidFeeIds);
   // Product pages show the stock now left.
   invalidateProductIds(itemsData.map((i) => i.productId));
   return created;
 };
 
-const createOrderTx = (orderData, itemsData, voucherRedemption) => withDeadlockRetry(() => prisma.$transaction(async (tx) => {
+const createOrderTx = (orderData, itemsData, voucherRedemption, unpaidFeeIds = []) => withDeadlockRetry(() => prisma.$transaction(async (tx) => {
     // Take stock under a row lock (per option when the product keeps stock
     // per option); fails if there is not enough. Cooked-to-order food keeps
     // none, and a package only its own (never its items').
@@ -119,6 +139,20 @@ const createOrderTx = (orderData, itemsData, voucherRedemption) => withDeadlockR
     const order = await tx.order.create({
       data: orderData,
     });
+
+    // Unpaid failed-trip fees this order collects (its total includes them,
+    // as failedTripFees): claimed here, so two checkouts can't both take one.
+    if (unpaidFeeIds.length) {
+      const claimed = await tx.buyerUnpaidFee.updateMany({
+        where: { id: { in: unpaidFeeIds }, status: 'OPEN', paidOrderId: null },
+        data: { paidOrderId: order.id },
+      });
+      if (claimed.count !== unpaidFeeIds.length) {
+        const err = new Error('The unpaid delivery fees changed');
+        err.code = 'UNPAID_FEES_CHANGED';
+        throw err;
+      }
+    }
 
     // Create order items
     await Promise.all(
@@ -498,6 +532,7 @@ const updateStatus = async (id, status, expectedStatus = null, actorId = null, n
     });
     if (changed.count === 0) throw stale();
 
+    await settleCarriedFees(tx, id, status);
     await tx.orderStatusHistory.create({
       data: { orderId: id, fromStatus, toStatus: status, actorId, note: note || null },
     });
@@ -669,6 +704,7 @@ const cancelOrderTx = async (id, actorId = null, {
       error.code = 'ORDER_NOT_CANCELLABLE';
       throw error;
     }
+    await settleCarriedFees(tx, id, 'CANCELLED');
 
     const items = await tx.orderItem.findMany({
       where: { orderId: id },

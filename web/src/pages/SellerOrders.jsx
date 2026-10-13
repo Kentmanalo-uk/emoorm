@@ -32,7 +32,8 @@ import Select from '../components/ui/Select';
 import SellerRiderPanel from '../components/orders/SellerRiderPanel';
 import RiderActionSheet from '../components/orders/RiderActionSheet';
 import {
-  isRiderOrder, orderPromo, riderNextAction, riderOpen, riderStatus, useMoormove,
+  carriedFeeLines, fallbackLine, isRiderOrder, orderPromo, refundAmount, refundLine, riderFeeNote, riderNextAction, riderOpen,
+  riderReturning, riderStatus, useMoormove,
 } from '../lib/moormove';
 import { distanceNote } from '../lib/deliveryDistance';
 
@@ -145,7 +146,7 @@ const paymentBadge = (order) => {
 // past its deadline): the shop records the refund once the money is back.
 // Why a seller cancels; a no-show and a refusal count on the buyer's record.
 const cancelReasonsFor = (status, order = null) => {
-  const riderFailed = order?.riderDelivery?.status === 'FAILED' && status === 'TO_SHIP';
+  const riderFailed = ['FAILED', 'RETURNING'].includes(order?.riderDelivery?.status) && status === 'TO_SHIP';
   return [
     ['SELLER_CANCELLED', 'I can\'t fill this order'],
     ['OUT_OF_STOCK', 'Out of stock'],
@@ -197,9 +198,11 @@ function nextStep(order) {
   if (to !== 'CONFIRMED' && isAwaitingPayment(order)) return null;
   return to;
 }
-// Not while a rider is on it (cancel the rider first), nor once a rider has the parcel.
+// Not while a rider is on it (cancel the rider first), nor once a rider has
+// the parcel; a parcel on its way back after a failed delivery may be cancelled.
 const canCancel = (order) => CANCELLABLE.includes(order?.status)
-  && !(isRiderOrder(order) && (riderOpen(order.riderDelivery) || order.status === 'OUT_FOR_DELIVERY'));
+  && !(isRiderOrder(order) && ((riderOpen(order.riderDelivery) && !riderReturning(order.riderDelivery))
+    || order.status === 'OUT_FOR_DELIVERY'));
 
 const ACTION_LABELS = {
   CONFIRMED: { label: 'Confirm order', cls: 'action-confirm' },
@@ -783,7 +786,7 @@ export default function SellerOrders() {
                                 disabled={isUpdating}
                                 onClick={() => askRider(order, riderNext)}
                               >
-                                <span>{riderNext === 'cash' ? 'Cash received' : 'Call a rider'}</span>
+                                <span>{riderNext === 'cash' ? 'Cash received' : riderNext === 'parcel' ? 'Parcel back' : 'Call a rider'}</span>
                               </button>
                             )}
                             {next && (
@@ -921,6 +924,9 @@ export default function SellerOrders() {
                     </strong>
                   </div>
                 )}
+                {fallbackLine(selectedOrder, 'seller') && (
+                  <p className="rider-actions-note">{fallbackLine(selectedOrder, 'seller')}</p>
+                )}
 
                 <SellerRiderPanel
                   order={selectedOrder}
@@ -991,7 +997,10 @@ export default function SellerOrders() {
 
                 {canMarkRefunded(selectedOrder) && (
                   <div className="so-payment-review">
-                    <p>This prepaid order was cancelled. If the buyer&apos;s payment reached you, return it, then record the refund here.</p>
+                    <p>
+                      This prepaid order was cancelled. If the buyer&apos;s payment reached you, return {Number(selectedOrder.refundDue) > 0 ? `₱${refundAmount(selectedOrder).toFixed(2)}` : 'it'}, then record the refund here.
+                      {Number(selectedOrder.failedTripKept) > 0 && ` The ₱${Number(selectedOrder.failedTripKept).toFixed(2)} delivery fee covers the failed trip.`}
+                    </p>
                     <div className="so-payment-actions">
                       <button
                         type="button"
@@ -1102,10 +1111,25 @@ export default function SellerOrders() {
                       <span>−₱{Number(selectedOrder.discountAmount).toFixed(2)}</span>
                     </div>
                   )}
+                  {carriedFeeLines(selectedOrder).map((line) => (
+                    <div key={line.key} className="detail-total-row">
+                      <span>{line.label}</span>
+                      <span>₱{line.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
                   <div className="detail-total-row detail-total-row--bold">
                     <span>Total</span>
                     <span>₱{Number(selectedOrder.total).toFixed(2)}</span>
                   </div>
+                  {riderFeeNote(selectedOrder) && (
+                    <div className="detail-total-row">
+                      <span>
+                        Your sale
+                        <small className="summary-km">{` · ${riderFeeNote(selectedOrder)}`}</small>
+                      </span>
+                      <span>₱{Number(selectedOrder.shopTotal ?? selectedOrder.total).toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Action buttons */}
@@ -1174,6 +1198,9 @@ export default function SellerOrders() {
         onConfirm={confirmCancelOrder}
         onCancel={() => setCancelConfirm(null)}
       >
+        {refundLine(cancelConfirm?.order) && (
+          <p className="so-cancel-refund">{refundLine(cancelConfirm.order)}</p>
+        )}
         <div className="so-cancel-reasons" role="radiogroup" aria-label="Why">
           {cancelReasonsFor(cancelConfirm?.status, cancelConfirm?.order).map(([key, label]) => (
             <label key={key} className={cancelReason === key ? 'is-on' : ''}>

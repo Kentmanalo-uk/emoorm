@@ -146,6 +146,8 @@
 .osd-box-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .osd-box-text p { margin: 0; color: var(--t-neutral-800, #1f2937); font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
 .osd-box-text .osd-sub { color: var(--t-neutral-500, #6b7280); font-size: 13.5px; }
+/* A failed rider trip and who pays its fee. */
+.osd-box-text .osd-trip { color: var(--t-neutral-700, #374151); }
 .osd-line { display: inline-flex; align-items: center; gap: 6px; }
 .osd-line svg { color: var(--t-neutral-500, #636b78); }
 .osd-link {

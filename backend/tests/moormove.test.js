@@ -29,11 +29,15 @@ const fake = {
   created: [],
   quotes: [],
   codReturned: [],
+  parcelReturned: [],
+  // The fee and ride minutes the fake quotes (a test may change them).
+  fee: 75,
+  minutes: 9,
   photo: null,
   server: null,
   seq: 0,
 };
-const OPEN = ['SEARCHING', 'ACCEPTED', 'AT_PICKUP', 'PICKED_UP', 'AT_DROPOFF'];
+const OPEN = ['SEARCHING', 'ACCEPTED', 'AT_PICKUP', 'PICKED_UP', 'AT_DROPOFF', 'RETURNING'];
 // A barangay no MoorMove rider delivers to.
 const NOWHERE = 'Ci Nowhere';
 // A barangay where MoorMove runs a free-delivery promo.
@@ -68,7 +72,7 @@ const startFake = async () => {
       });
     }
     return ok(res, {
-      available: true, vehicleType: 'MOTORCYCLE', distanceKm: 3.2, distanceSource: 'ROAD', fee: 75, listFee: 75, promo: null,
+      available: true, vehicleType: 'MOTORCYCLE', distanceKm: 3.2, distanceSource: 'ROAD', minutes: fake.minutes, fee: fake.fee, listFee: fake.fee, promo: null,
     });
   });
   app.post('/api/partner/jobs', (req, res) => {
@@ -119,6 +123,14 @@ const startFake = async () => {
     const job = fake.jobs.get(req.params.id);
     fake.codReturned.push(req.params.id);
     if (!job.codReturnedAt) Object.assign(job, { codReturnedAt: new Date().toISOString(), updatedAt: later() });
+    return ok(res, job);
+  });
+  app.post('/api/partner/jobs/:id/parcel-returned', (req, res) => {
+    const job = fake.jobs.get(req.params.id);
+    fake.parcelReturned.push(req.params.id);
+    if (job.returnedAt) return ok(res, job);
+    if (job.status !== 'RETURNING') return res.status(409).json({ success: false, message: "This delivery's parcel isn't on its way back" });
+    Object.assign(job, { status: 'FAILED', returnedAt: new Date().toISOString(), updatedAt: later() });
     return ok(res, job);
   });
   app.get('/api/partner/uploads/:id', (req, res) => res.type('image/png').send(fake.photo));
@@ -715,4 +727,475 @@ test('the super admin sees whether MoorMove answers; shops can turn riders off',
   assert.equal(settings.status, 200, settings.body?.message);
   assert.equal(settings.body.data.moormoveEnabled, true);
   assert.equal((await h.api('PUT', '/app-settings', { token: h.token(admin), body: { moormoveEnabled: 'yes' } })).status, 400);
+});
+
+/* ── Rider fees, notices, the way back, locked quotes, rider-only shops ── */
+
+const notesFor = (userId, orderId) => h.prisma.notification.findMany({ where: { userId, relatedId: orderId }, orderBy: { createdAt: 'asc' } });
+const titles = async (userId, orderId) => (await notesFor(userId, orderId)).map((n) => n.title);
+
+test("a rider's delivery fee is not the shop's sales; the shop's own fee is", async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  // By a MoorMove rider: ₱100 goods + ₱60 rider fee. By the shop: ₱100 + ₱30.
+  const byRider = await riderOrder(ctx, { status: 'COMPLETED', paymentStatus: 'PAID' });
+  const byShop = await h.order(ctx.buyer, ctx.store, [{ product: ctx.item }], {
+    fulfillmentMethod: 'DELIVERY', status: 'COMPLETED', paymentStatus: 'PAID', deliveryFee: 30, total: 130,
+  });
+  const stats = await h.api('GET', `/analytics/seller?from=${h.daysAgo(1).toISOString()}&to=${new Date(Date.now() + 60000).toISOString()}`, { token: h.token(ctx.seller) });
+  assert.equal(stats.status, 200, stats.body?.message);
+  assert.equal(stats.body.data.kpis.revenue.value, 230);
+  assert.equal(stats.body.data.kpis.lifetimeRevenue.value, 230);
+  const chart = stats.body.data.salesByDay.reduce((n, d) => n + Number(d.total), 0);
+  assert.equal(chart, 230);
+
+  const day = await h.api('GET', `/analytics/seller/day?date=${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())}`, { token: h.token(ctx.seller) });
+  assert.equal(day.status, 200, day.body?.message);
+  assert.equal(day.body.data.summary.revenue, 230);
+  const riderRow = day.body.data.orders.find((o) => o.id === byRider.id);
+  assert.equal(riderRow.riderFee, 60);
+  assert.equal(riderRow.shopTotal, 100);
+
+  // The order payloads say it too (the Finance list).
+  const list = await h.api('GET', '/orders/store/orders?status=COMPLETED', { token: h.token(ctx.seller) });
+  const listed = new Map(list.body.data.map((o) => [o.id, o]));
+  assert.equal(listed.get(byRider.id).riderFee, 60);
+  assert.equal(listed.get(byRider.id).shopTotal, 100);
+  assert.equal(listed.get(byShop.id).riderFee, 0);
+  assert.equal(listed.get(byShop.id).shopTotal, 130);
+});
+
+test('the buyer hears when a rider takes the order, reaches the shop, gives it back or is called off', async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  const o = await riderOrder(ctx);
+  await book(ctx, o);
+  const row = await rowOf(o);
+
+  await sendEvent(advance(row.jobId, { status: 'ACCEPTED', acceptedAt: new Date().toISOString(), rider: RIDER }));
+  const found = (await notesFor(ctx.buyer.id, o.id)).find((n) => n.title === 'Rider on the way to the shop');
+  assert.ok(found, 'buyer told of the rider');
+  assert.match(found.message, /Ci Rider, motorcycle, CI 123/);
+  assert.match(found.message, new RegExp(`to pick up your order ${o.orderNumber}`));
+  assert.equal(found.type, 'ORDER_READY');
+  assert.equal(found.data?.target?.kind, 'buyer-order');
+
+  await sendEvent(advance(row.jobId, { status: 'AT_PICKUP' }));
+  assert.ok((await titles(ctx.buyer.id, o.id)).includes('Rider at the shop'));
+  const atShop = (await notesFor(ctx.seller.id, o.id)).find((n) => n.title === 'Rider at your shop');
+  assert.match(atShop.message, /The rider is at your shop/);
+
+  // The rider gives it back: the buyer, told of the rider, hears it.
+  await sendEvent(advance(row.jobId, { status: 'SEARCHING', rider: null }));
+  assert.ok((await titles(ctx.buyer.id, o.id)).includes('Finding another rider'));
+
+  // Another rider takes it and the shop calls them off.
+  await sendEvent(advance(row.jobId, { status: 'ACCEPTED', rider: RIDER }));
+  const off = await h.api('DELETE', `/orders/${o.id}/rider`, { token: h.token(ctx.seller), body: { reason: 'Packing again' } });
+  assert.equal(off.status, 200, off.body?.message);
+  const buyerTitles = await titles(ctx.buyer.id, o.id);
+  assert.equal(buyerTitles.filter((t) => t === 'Rider on the way to the shop').length, 2);
+  assert.ok(buyerTitles.includes('Rider called off'));
+
+  // No rider had taken it: calling it off tells the buyer nothing.
+  const o2 = await riderOrder(ctx);
+  await book(ctx, o2);
+  await h.api('DELETE', `/orders/${o2.id}/rider`, { token: h.token(ctx.seller), body: { reason: 'Not yet' } });
+  assert.ok(!(await titles(ctx.buyer.id, o2.id)).includes('Rider called off'));
+});
+
+test("a failed delivery's parcel comes back: Parcel back closes the return, then the seller goes on", async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  const o = await riderOrder(ctx);
+  await book(ctx, o);
+  const row = await rowOf(o);
+  await sendEvent(advance(row.jobId, { status: 'PICKED_UP', rider: RIDER, pickedUpAt: new Date().toISOString() }));
+  // Nothing to confirm yet.
+  assert.equal((await h.api('POST', `/orders/${o.id}/rider/parcel-returned`, { token: h.token(ctx.seller) })).status, 409);
+
+  await sendEvent(advance(row.jobId, { status: 'RETURNING', failedAt: new Date().toISOString(), failReason: 'Nobody home' }));
+  assert.equal((await orderOf(o)).status, 'TO_SHIP');
+  const seen = await h.api('GET', `/orders/${o.id}`, { token: h.token(ctx.seller) });
+  assert.equal(seen.body.data.riderDelivery.status, 'RETURNING');
+  assert.equal(seen.body.data.riderDelivery.parcelReturning, true);
+  assert.equal(seen.body.data.riderDelivery.returnedAt, null);
+  const failed = (await notesFor(ctx.seller.id, o.id)).find((n) => n.title === 'Delivery failed');
+  assert.match(failed.message, /Tap Parcel back/);
+  assert.ok((await titles(ctx.buyer.id, o.id)).includes("Your order couldn't be delivered"));
+
+  // The parcel isn't back yet: no new rider and no delivering it yourself.
+  assert.equal((await book(ctx, o)).status, 409);
+  assert.equal((await h.api('POST', `/orders/${o.id}/rider/self`, { token: h.token(ctx.seller) })).status, 409);
+  // Someone else's order: not theirs to confirm.
+  const other = await setup();
+  assert.equal((await h.api('POST', `/orders/${o.id}/rider/parcel-returned`, { token: h.token(other.seller) })).status, 403);
+
+  const back = await h.api('POST', `/orders/${o.id}/rider/parcel-returned`, { token: h.token(ctx.seller) });
+  assert.equal(back.status, 200, back.body?.message);
+  assert.equal(back.body.data.riderDelivery.status, 'FAILED');
+  assert.equal(back.body.data.riderDelivery.parcelReturning, false);
+  assert.ok(back.body.data.riderDelivery.returnedAt);
+  assert.deepEqual(fake.parcelReturned.filter((id) => id === row.jobId), [row.jobId]);
+  // Asking twice is fine, and MoorMove isn't asked again.
+  assert.equal((await h.api('POST', `/orders/${o.id}/rider/parcel-returned`, { token: h.token(ctx.seller) })).status, 200);
+  assert.equal(fake.parcelReturned.filter((id) => id === row.jobId).length, 1);
+
+  const again = await book(ctx, o);
+  assert.equal(again.status, 200, again.body?.message);
+  assert.equal(again.body.data.riderDelivery.status, 'SEARCHING');
+});
+
+test('the quoted rider fee holds at checkout through its quote token', async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  fake.fee = 75;
+  const quote = await h.api('POST', '/moormove/quote', {
+    token: h.token(ctx.buyer),
+    body: {
+      storeId: ctx.store.id, lat: 13.05, lng: 121.4, items: [{ productId: ctx.item.id, quantity: 1 }], municipalityId: ctx.municipality.id, barangay: 'Poblacion',
+    },
+  });
+  assert.equal(quote.status, 200, quote.body?.message);
+  assert.equal(quote.body.data.fee, 75);
+  assert.equal(quote.body.data.rideMinutes, 9);
+  assert.ok(quote.body.data.eta?.from);
+  assert.ok(quote.body.data.quoteToken);
+  assert.ok(new Date(quote.body.data.quoteExpiresAt) > new Date(Date.now() + 25 * 60000));
+
+  // MoorMove's price moves (its route service came back, say).
+  fake.fee = 90;
+  const asked = fake.quotes.length;
+  const place = (extra) => h.api('POST', '/orders', {
+    token: h.token(ctx.buyer),
+    body: {
+      storeId: ctx.store.id,
+      fulfillmentMethod: 'DELIVERY',
+      deliveryPartner: 'MOORMOVE',
+      paymentMethod: 'COD',
+      contactNumber: '09171234567',
+      deliveryAddress: `Purok 1, Poblacion, ${ctx.municipality.name}, Oriental Mindoro`,
+      buyerMunicipalityId: ctx.municipality.id,
+      buyerBarangay: 'Poblacion',
+      deliveryLatitude: 13.05,
+      deliveryLongitude: 121.4,
+      items: [{ productId: ctx.item.id, quantity: 1 }],
+      ...extra,
+    },
+  });
+  try {
+    const held = await place({ riderQuoteToken: quote.body.data.quoteToken });
+    assert.equal(held.status, 201, held.body?.message);
+    assert.equal(Number((await orderOf(held.body.data)).deliveryFee), 75);
+    assert.equal(Number((await orderOf(held.body.data)).deliveryDistanceKm), 3.2);
+    assert.equal(fake.quotes.length, asked, 'MoorMove was not asked again');
+
+    // A changed token, or one for another pin, is asked about again.
+    const [body, sig] = quote.body.data.quoteToken.split('.');
+    const forged = `${Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(body, 'base64url').toString()), f: 1 })).toString('base64url')}.${sig}`;
+    const tampered = await place({ riderQuoteToken: forged });
+    assert.equal(tampered.status, 201, tampered.body?.message);
+    assert.equal(Number((await orderOf(tampered.body.data)).deliveryFee), 90);
+    const moved = await place({ riderQuoteToken: quote.body.data.quoteToken, deliveryLatitude: 13.07 });
+    assert.equal(moved.status, 201, moved.body?.message);
+    assert.equal(Number((await orderOf(moved.body.data)).deliveryFee), 90);
+    // Another buyer can't use it.
+    const stranger = await h.user('BUYER');
+    assert.equal(moormove.readQuote(quote.body.data.quoteToken).u, ctx.buyer.id);
+    assert.notEqual(stranger.id, ctx.buyer.id);
+  } finally {
+    fake.fee = 75;
+  }
+});
+
+test('"Deliver it myself" keeps the fee, tells the buyer and marks the order', async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  const o = await riderOrder(ctx);
+  const self = await h.api('POST', `/orders/${o.id}/rider/self`, { token: h.token(ctx.seller) });
+  assert.equal(self.status, 200, self.body?.message);
+  assert.equal(self.body.data.deliveryPartner, null);
+  assert.ok(self.body.data.riderFallbackAt);
+  assert.equal(Number(self.body.data.deliveryFee), 60);
+  // The fee is the shop's now.
+  assert.equal(self.body.data.riderFee, 0);
+  assert.equal(self.body.data.shopTotal, 160);
+  const note = (await notesFor(ctx.buyer.id, o.id)).find((n) => n.title === 'The shop will deliver your order');
+  assert.match(note.message, /Delivery fee ₱60\.00, as quoted/);
+});
+
+test('a shop delivering only by MoorMove rider is ready to sell, and its checkout takes riders', async () => {
+  await setEnabled(true);
+  const shopReadiness = require('../src/services/shopReadiness.service');
+  const seller = await h.user('SELLER', { contactNumber: '09171113333' });
+  const store = await h.shop(seller);
+  await h.prisma.store.update({
+    where: { id: store.id },
+    data: {
+      fulfillmentMode: 'DELIVERY', selfDelivery: false, acceptsCod: true, moormoveEnabled: true, latitude: 13.04, longitude: 121.39,
+    },
+  });
+  const item = await h.product(store, { weightGrams: 500 });
+  const buyer = await h.user('BUYER');
+  const { municipality } = await h.reference();
+  client.clearStatusCache();
+  assert.equal(await shopReadiness.isReady(store.id), true);
+  const setupRes = await h.api('GET', '/stores/my/setup', { token: h.token(seller) });
+  assert.equal(setupRes.status, 200, setupRes.body?.message);
+  assert.equal(setupRes.body.data.readyToSell, true);
+  const areasStep = setupRes.body.data.steps.find((s) => s.key === 'delivery-areas');
+  assert.equal(areasStep.done, true);
+  assert.equal(areasStep.byMoormove, true);
+
+  const res = await h.api('POST', '/orders', {
+    token: h.token(buyer),
+    body: {
+      storeId: store.id,
+      fulfillmentMethod: 'DELIVERY',
+      deliveryPartner: 'MOORMOVE',
+      paymentMethod: 'COD',
+      contactNumber: '09171234567',
+      deliveryAddress: `Purok 1, Poblacion, ${municipality.name}, Oriental Mindoro`,
+      buyerMunicipalityId: municipality.id,
+      buyerBarangay: 'Poblacion',
+      deliveryLatitude: 13.05,
+      deliveryLongitude: 121.4,
+      items: [{ productId: item.id, quantity: 1 }],
+    },
+  });
+  assert.equal(res.status, 201, res.body?.message);
+  assert.equal((await orderOf(res.body.data)).deliveryPartner, 'MOORMOVE');
+
+  // Riders off for the shop: not ready any more (it has no other way to deliver).
+  await h.prisma.store.update({ where: { id: store.id }, data: { moormoveEnabled: false } });
+  assert.equal(await shopReadiness.isReady(store.id), false);
+});
+
+/* ── Failed trips: who pays the rider's fee ───────────────────────────── */
+
+const orderRepository = require('../src/repositories/order.repository');
+
+/** Book a rider, let them pick it up, then fail with MoorMove's reason code. */
+const failTrip = async (ctx, o, { failCode, buyerFault, failReason }) => {
+  const booked = await book(ctx, o);
+  assert.equal(booked.status, 200, booked.body?.message);
+  const row = await rowOf(o);
+  await sendEvent(advance(row.jobId, { status: 'PICKED_UP', rider: RIDER, pickedUpAt: new Date().toISOString() }));
+  await sendEvent(advance(row.jobId, {
+    status: 'RETURNING', failedAt: new Date().toISOString(), failReason, failCode, buyerFault,
+  }));
+  return row;
+};
+const parcelBack = (ctx, o) => h.api('POST', `/orders/${o.id}/rider/parcel-returned`, { token: h.token(ctx.seller) });
+const sellerView = async (ctx, o) => (await h.api('GET', `/orders/${o.id}`, { token: h.token(ctx.seller) })).body.data;
+const feeOf = (o) => h.prisma.buyerUnpaidFee.findFirst({ where: { orderId: o.id }, orderBy: { createdAt: 'desc' } });
+
+/** The buyer checks out at a shop (a MoorMove rider, the fake's ₱75 fee). */
+const placeAt = (buyer, ctx, paymentMethod) => h.api('POST', '/orders', {
+  token: h.token(buyer),
+  body: {
+    storeId: ctx.store.id,
+    fulfillmentMethod: 'DELIVERY',
+    deliveryPartner: 'MOORMOVE',
+    paymentMethod,
+    contactNumber: '09171234567',
+    deliveryAddress: `Purok 1, Poblacion, ${ctx.municipality.name}, Oriental Mindoro`,
+    buyerMunicipalityId: ctx.municipality.id,
+    buyerBarangay: 'Poblacion',
+    deliveryLatitude: 13.05,
+    deliveryLongitude: 121.4,
+    items: [{ productId: ctx.item.id, quantity: 1 }],
+  },
+});
+const qrShop = (ctx) => h.prisma.store.update({ where: { id: ctx.store.id }, data: { paymentQrImage: '/uploads/ci-qr.png' } });
+
+test("cash on delivery, the buyer's fault: the shop pays the rider, the buyer owes it on their next order from that shop", async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  await qrShop(ctx);
+  const o = await riderOrder(ctx);
+  await failTrip(ctx, o, { failCode: 'BUYER_REFUSED', buyerFault: true, failReason: 'Buyer refused the parcel' });
+
+  // Who pays, said when it fails.
+  const failed = (await notesFor(ctx.seller.id, o.id)).find((n) => n.title === 'Delivery failed');
+  assert.match(failed.message, /buyer's fault: pay the rider the ₱60\.00 fee when the parcel is back/);
+  const told = (await notesFor(ctx.buyer.id, o.id)).find((n) => n.title === "Your order couldn't be delivered");
+  assert.match(told.message, /^Delivery failed: Buyer refused the parcel\. The ₱60\.00 delivery fee for this trip is charged to you/);
+  let seen = await sellerView(ctx, o);
+  assert.equal(seen.riderDelivery.failCode, 'BUYER_REFUSED');
+  assert.equal(seen.riderDelivery.buyerFault, true);
+  assert.equal(seen.failedTrip.outcome, 'BUYER_OWES');
+  assert.equal(seen.failedTrip.shopPaysRider, 60);
+  assert.equal(seen.unpaidFee, null, 'decided at Parcel back');
+
+  // Parcel back: the buyer owes the shop ₱60 (once, however often it is confirmed).
+  assert.equal((await parcelBack(ctx, o)).status, 200);
+  assert.equal((await parcelBack(ctx, o)).status, 200);
+  assert.equal(await h.prisma.buyerUnpaidFee.count({ where: { orderId: o.id } }), 1);
+  seen = await sellerView(ctx, o);
+  assert.equal(seen.unpaidFee.status, 'OPEN');
+  assert.equal(seen.unpaidFee.amount, 60);
+  assert.equal(seen.refundDue, 0);
+
+  // Checkout knows, for that shop only.
+  const fees = await h.api('GET', '/orders/unpaid-fees', { token: h.token(ctx.buyer) });
+  assert.equal(fees.status, 200, fees.body?.message);
+  assert.equal(fees.body.data.stores.length, 1);
+  const owed = fees.body.data.stores[0];
+  assert.equal(owed.storeId, ctx.store.id);
+  assert.equal(owed.total, 60);
+  assert.equal(owed.codBlocked, true);
+  assert.equal(owed.items[0].orderNumber, o.orderNumber);
+  assert.equal(owed.message, `Pay the ₱60.00 delivery fee from order ${o.orderNumber} first: choose GCash or QR Ph, or it's added to this order.`);
+
+  // No cash on delivery at that shop; another shop still takes it.
+  const cod = await placeAt(ctx.buyer, ctx, 'COD');
+  assert.equal(cod.status, 400);
+  assert.equal(cod.body.message, owed.message);
+  const other = await setup();
+  const elsewhere = await placeAt(ctx.buyer, other, 'COD');
+  assert.equal(elsewhere.status, 201, elsewhere.body?.message);
+  assert.equal(Number((await orderOf(elsewhere.body.data)).failedTripFees), 0);
+
+  // Paid online, the next order from that shop carries the fee.
+  const next = await placeAt(ctx.buyer, ctx, 'GCASH');
+  assert.equal(next.status, 201, next.body?.message);
+  let carrier = await orderOf(next.body.data);
+  assert.equal(Number(carrier.failedTripFees), 60);
+  assert.equal(Number(carrier.total), Number(carrier.subtotal) + Number(carrier.deliveryFee) + 60);
+  assert.equal((await feeOf(o)).paidOrderId, carrier.id);
+  const carried = await sellerView(ctx, carrier);
+  assert.deepEqual(carried.carriedFees.map((f) => [f.orderNumber, f.amount]), [[o.orderNumber, 60]]);
+  // Not the shop's sales: it pays back what the shop paid the rider.
+  assert.equal(carried.shopTotal, Number(carrier.subtotal));
+  assert.equal((await h.api('GET', '/orders/unpaid-fees', { token: h.token(ctx.buyer) })).body.data.stores.length, 0);
+  assert.match((await notesFor(ctx.seller.id, carrier.id)).find((n) => n.title === 'New order').message, new RegExp(`unpaid ₱60\\.00 delivery fee from order ${o.orderNumber}`));
+
+  // Cancelled: the fee is open again.
+  const cancelled = await h.api('PUT', `/orders/${carrier.id}/status`, { token: h.token(ctx.seller), body: { status: 'CANCELLED', cancelReason: 'SELLER_CANCELLED' } });
+  assert.equal(cancelled.status, 200, cancelled.body?.message);
+  let fee = await feeOf(o);
+  assert.equal(fee.status, 'OPEN');
+  assert.equal(fee.paidOrderId, null);
+
+  // Carried again and handed over: paid.
+  const again = await placeAt(ctx.buyer, ctx, 'QRPH');
+  assert.equal(again.status, 201, again.body?.message);
+  carrier = await orderOf(again.body.data);
+  assert.equal((await feeOf(o)).paidOrderId, carrier.id);
+  await h.prisma.order.update({ where: { id: carrier.id }, data: { paymentStatus: 'PAID', status: 'OUT_FOR_DELIVERY', deliveryPartner: null } });
+  await orderRepository.updateStatus(carrier.id, 'DELIVERED', 'OUT_FOR_DELIVERY');
+  fee = await feeOf(o);
+  assert.equal(fee.status, 'PAID');
+  assert.ok(fee.paidAt);
+  assert.equal((await sellerView(ctx, o)).unpaidFee.paidOrderNumber, carrier.orderNumber);
+  // Paid: cash on delivery is open again there.
+  assert.equal((await h.api('GET', '/orders/unpaid-fees', { token: h.token(ctx.buyer) })).body.data.stores.length, 0);
+});
+
+test('the shop (or a super admin) may waive an unpaid fee; nobody else', async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  const o = await riderOrder(ctx);
+  await failTrip(ctx, o, { failCode: 'BUYER_UNREACHABLE', buyerFault: true, failReason: "Buyer not there / didn't answer" });
+  await parcelBack(ctx, o);
+  assert.equal((await feeOf(o)).status, 'OPEN');
+
+  const stranger = await setup();
+  assert.equal((await h.api('POST', `/orders/${o.id}/unpaid-fee/waive`, { token: h.token(stranger.seller) })).status, 403);
+  assert.equal((await h.api('POST', `/orders/${o.id}/unpaid-fee/waive`, { token: h.token(ctx.buyer) })).status, 403);
+  const waived = await h.api('POST', `/orders/${o.id}/unpaid-fee/waive`, { token: h.token(ctx.seller) });
+  assert.equal(waived.status, 200, waived.body?.message);
+  assert.equal(waived.body.data.unpaidFee.status, 'WAIVED');
+  assert.ok(waived.body.data.unpaidFee.waivedAt);
+  assert.equal((await h.api('POST', `/orders/${o.id}/unpaid-fee/waive`, { token: h.token(ctx.seller) })).status, 409);
+  // Cash on delivery at the shop again.
+  const cod = await placeAt(ctx.buyer, ctx, 'COD');
+  assert.equal(cod.status, 201, cod.body?.message);
+
+  // A super admin may waive too.
+  const o2 = await riderOrder(ctx);
+  await failTrip(ctx, o2, { failCode: 'WRONG_ADDRESS', buyerFault: true, failReason: 'Wrong address or pin' });
+  await parcelBack(ctx, o2);
+  const admin = await h.user('SUPER_ADMIN');
+  const byAdmin = await h.api('POST', `/orders/${o2.id}/unpaid-fee/waive`, { token: h.token(admin) });
+  assert.equal(byAdmin.status, 200, byAdmin.body?.message);
+  assert.equal((await feeOf(o2)).status, 'WAIVED');
+  assert.equal((await feeOf(o2)).waivedById, admin.id);
+});
+
+test("the failed order sent out again carries its own unpaid fee: the rider collects it, and it's paid on delivery", async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  const o = await riderOrder(ctx);
+  await failTrip(ctx, o, { failCode: 'BUYER_REFUSED', buyerFault: true, failReason: 'Buyer refused the parcel' });
+  await parcelBack(ctx, o);
+
+  const again = await book(ctx, o);
+  assert.equal(again.status, 200, again.body?.message);
+  assert.equal(again.body.data.failedTripFees, 60);
+  assert.equal(Number(again.body.data.total), 220);
+  assert.equal(again.body.data.unpaidFee.paidOrderId, o.id);
+  assert.deepEqual(again.body.data.carriedFees.map((f) => f.amount), [60]);
+  // The rider collects 220, keeps the 60 fee and brings 160 back (the 100 goods and the 60 the shop paid).
+  assert.equal(fake.created.at(-1).codAmount, 160);
+  assert.equal(again.body.data.shopTotal, 100);
+  // The failed trip is still on record.
+  assert.equal(again.body.data.failedTrip.outcome, 'BUYER_OWES');
+  assert.equal(again.body.data.failedTrip.current, false);
+
+  const row = await rowOf(o);
+  await sendEvent(advance(row.jobId, { status: 'PICKED_UP', rider: RIDER, pickedUpAt: new Date().toISOString() }));
+  await sendEvent(advance(row.jobId, { status: 'DELIVERED', deliveredAt: new Date().toISOString() }));
+  assert.equal((await orderOf(o)).status, 'DELIVERED');
+  assert.equal((await feeOf(o)).status, 'PAID');
+});
+
+test("paid online, the buyer's fault: the rider keeps the fee the shop paid; a cancel refunds the total less it", async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  const o = await riderOrder(ctx, { paymentMethod: 'GCASH', paymentStatus: 'PAID' });
+  await failTrip(ctx, o, { failCode: 'BUYER_REFUSED', buyerFault: true, failReason: 'Buyer refused the parcel' });
+  assert.equal((await rowOf(o)).feePaidBy, 'SENDER');
+  let seen = await sellerView(ctx, o);
+  assert.equal(seen.failedTrip.outcome, 'FEE_KEPT');
+  assert.equal(seen.failedTripKept, 60);
+  assert.equal(seen.refundDue, 100);
+  assert.match((await notesFor(ctx.seller.id, o.id)).find((n) => n.title === 'Delivery failed').message, /rider keeps the ₱60\.00 fee you paid.*refund ₱100\.00/);
+  assert.match((await notesFor(ctx.buyer.id, o.id)).find((n) => n.title === "Your order couldn't be delivered").message, /The ₱60\.00 delivery fee you paid covers this trip/);
+
+  await parcelBack(ctx, o);
+  assert.equal(await h.prisma.buyerUnpaidFee.count({ where: { orderId: o.id } }), 0, 'nothing more is owed');
+  seen = await sellerView(ctx, o);
+  assert.equal(seen.unpaidFee, null);
+
+  const cancelled = await h.api('PUT', `/orders/${o.id}/status`, { token: h.token(ctx.seller), body: { status: 'CANCELLED', cancelReason: 'REFUSED' } });
+  assert.equal(cancelled.status, 200, cancelled.body?.message);
+  const notice = (await notesFor(ctx.buyer.id, o.id)).find((n) => n.title === 'Order cancelled');
+  assert.match(notice.message, /will return ₱100\.00; the ₱60\.00 delivery fee covers the failed trip/);
+  const refunded = await h.api('PATCH', `/orders/${o.id}/payment`, { token: h.token(ctx.seller), body: { paymentStatus: 'REFUNDED' } });
+  assert.equal(refunded.status, 200, refunded.body?.message);
+  assert.match((await notesFor(ctx.buyer.id, o.id)).find((n) => n.title === 'Payment refunded').message, /₱100\.00 refunded; the ₱60\.00 delivery fee covers the failed trip/);
+});
+
+test("not the buyer's fault: no charge to the buyer, and a fee the shop paid comes back", async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  const o = await riderOrder(ctx);
+  await failTrip(ctx, o, { failCode: 'PARCEL_DAMAGED', buyerFault: false, failReason: 'Parcel damaged' });
+  let seen = await sellerView(ctx, o);
+  assert.equal(seen.failedTrip.outcome, 'NO_CHARGE');
+  assert.equal(seen.failedTrip.riderGivesBack, 0);
+  assert.match((await notesFor(ctx.buyer.id, o.id)).find((n) => n.title === "Your order couldn't be delivered").message, /Parcel damaged\. No charge to you/);
+  await parcelBack(ctx, o);
+  assert.equal(await h.prisma.buyerUnpaidFee.count({ where: { orderId: o.id } }), 0);
+  assert.equal((await h.api('GET', '/orders/unpaid-fees', { token: h.token(ctx.buyer) })).body.data.stores.length, 0);
+
+  const paid = await riderOrder(ctx, { paymentMethod: 'QRPH', paymentStatus: 'PAID' });
+  await failTrip(ctx, paid, { failCode: 'WRONG_ITEM', buyerFault: false, failReason: 'Wrong or missing item' });
+  seen = await sellerView(ctx, paid);
+  assert.equal(seen.failedTrip.outcome, 'NO_CHARGE');
+  assert.equal(seen.failedTrip.riderGivesBack, 60);
+  assert.equal(seen.refundDue, 160);
+  assert.match((await notesFor(ctx.seller.id, paid.id)).find((n) => n.title === 'Delivery failed').message, /rider gives back the ₱60\.00 fee you paid/);
 });

@@ -2,7 +2,9 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import ConfirmDialog from '../ui/ConfirmDialog';
-import { orderPromo, promoSellerLine } from '../../lib/moormove';
+import {
+  faultLabel, feeToAdd, orderPromo, parcelBackLine, promoSellerLine, redeliveryLine,
+} from '../../lib/moormove';
 import './RiderDelivery.css';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -20,6 +22,8 @@ const CANCEL_REASONS = [
  *   cancel  "Cancel rider" (before pickup)
  *   self    "Deliver it myself" (after a rider cancelled or the delivery failed)
  *   cash    "Cash received": the rider handed over the buyer's cash
+ *   parcel  "Parcel back": the rider brought back a parcel they couldn't deliver
+ *   waive   "Waive the fee": the buyer's unpaid fee for a failed trip
  *
  *   <RiderActionSheet ask={{ action: 'book', order }} onClose={…} onDone={(order) => …} />
  *
@@ -42,10 +46,16 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
   const number = order.orderNumber ? `#${order.orderNumber}` : 'this order';
   const fee = Number(rd?.fee ?? order.deliveryFee ?? 0);
   const cod = order.paymentMethod === 'COD';
-  const cashBack = Math.max(0, Number(order.total || 0) - fee);
+  // A re-delivery adds the buyer's unpaid fee for the failed trip to this order.
+  const added = feeToAdd(order);
+  const collect = Number(order.total || 0) + added;
+  const cashBack = Math.max(0, collect - fee);
   const held = Number(rd?.codAmount || 0);
   // A MoorMove free-delivery promo: MoorMove pays the rider, the buyer pays no fee.
   const promo = orderPromo(order);
+  // The last failed trip: who pays for it (Parcel back) and what a re-delivery means.
+  const trip = order.failedTrip || null;
+  const unpaid = order.unpaidFee || null;
 
   const run = async () => {
     if (!ask || busy) return;
@@ -55,12 +65,16 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
       const res = action === 'book' ? await axios.post(url)
         : action === 'cancel' ? await axios.delete(url, { data: { reason } })
           : action === 'self' ? await axios.post(`${url}/self`)
-            : await axios.post(`${url}/cash-received`);
+            : action === 'parcel' ? await axios.post(`${url}/parcel-returned`)
+              : action === 'waive' ? await axios.post(`/orders/${order.id}/unpaid-fee/waive`)
+                : await axios.post(`${url}/cash-received`);
       toast.success({
         book: 'Rider called. We\'ll let you know when one takes it.',
         cancel: 'Rider cancelled',
         self: 'Deliver it yourself, then mark it delivered with a photo',
         cash: 'Cash received. Thank you!',
+        parcel: 'Parcel back. Call a rider again or deliver it yourself.',
+        waive: 'Fee waived. The buyer owes nothing for that trip.',
       }[action]);
       onDone?.(res?.data || null);
       onClose?.();
@@ -88,11 +102,17 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
             <dt>Delivery fee</dt>
             <dd>{promo ? 'Free (MoorMove promo)' : peso(fee)}</dd>
           </div>
+          {added > 0 && (
+            <div>
+              <dt>Unpaid fee from the failed trip</dt>
+              <dd>{peso(added)}</dd>
+            </div>
+          )}
           {cod ? (
             <>
               <div>
                 <dt>The rider collects from the buyer</dt>
-                <dd>{peso(order.total)}</dd>
+                <dd>{peso(collect)}</dd>
               </div>
               <div className="is-strong">
                 <dt>The rider brings back to you</dt>
@@ -109,6 +129,7 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
                 : `The buyer already paid you, delivery fee included. Pay the rider ${peso(fee)} when they pick it up; they collect nothing from the buyer.`}
             </p>
           )}
+          {redeliveryLine(order, 'book') && <p className="rider-sheet-note rider-trip-note">{redeliveryLine(order, 'book')}</p>}
         </dl>
       ),
     },
@@ -130,13 +151,39 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
     },
     self: {
       title: 'Deliver it yourself?',
-      message: `No rider will be called for ${number}. You take it to the buyer, then mark it delivered with a photo as usual. ${promo ? 'The buyer still pays no delivery fee.' : `The buyer's delivery fee (${peso(order.deliveryFee)}) stays the same.`}`,
+      message: `No rider will be called for ${number}. You take it to the buyer, then mark it delivered with a photo as usual. ${promo || !(Number(order.deliveryFee) > 0)
+        ? 'Delivery stays free for the buyer.'
+        : `The buyer still pays the ${peso(order.deliveryFee)} delivery fee they were quoted, now to you.`}`,
       confirm: 'Deliver it myself',
+      body: redeliveryLine(order, 'self') ? (
+        <div className="rider-sheet-lines">
+          <p className="rider-sheet-note rider-trip-note">{redeliveryLine(order, 'self')}</p>
+        </div>
+      ) : null,
     },
     cash: {
       title: 'Got the cash from the rider?',
       message: `Only confirm once the rider${rd?.riderName ? `, ${rd.riderName},` : ''} has handed you ${peso(held)} for ${number}.`,
       confirm: 'Cash received',
+    },
+    parcel: {
+      title: 'Got the parcel back?',
+      message: `Only confirm once the rider${rd?.riderName ? `, ${rd.riderName},` : ''} has brought the parcel for ${number} back to your shop. Then you can call a rider again, deliver it yourself, or cancel the order.`,
+      confirm: 'Parcel back',
+      body: trip ? (
+        <div className="rider-sheet-lines">
+          <p className="rider-sheet-note">
+            {trip.failReason ? `${trip.failReason} · ` : ''}<b>{faultLabel(trip)}</b>
+          </p>
+          {parcelBackLine(order) && <p className="rider-sheet-note rider-trip-note">{parcelBackLine(order)}</p>}
+        </div>
+      ) : null,
+    },
+    waive: {
+      title: 'Waive the unpaid fee?',
+      message: `The buyer won't owe the ${peso(unpaid?.amount)} delivery fee for the failed trip of ${number}. You paid the rider, so you cover it. This can't be undone.`,
+      confirm: 'Waive fee',
+      danger: true,
     },
   };
   const sheet = sheets[action] || sheets.book;

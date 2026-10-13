@@ -23,6 +23,7 @@ const courierService = require('./courier.service');
 const shopReadiness = require('./shopReadiness.service');
 const availabilityService = require('./availability.service');
 const moormoveService = require('./moormove.service');
+const unpaidFeeService = require('./unpaidFee.service');
 const { isOpen: riderOpen, withRiderDelivery } = require('./moormove.view');
 const { ApiError } = require('../middleware/errorHandler');
 const { snapshotReturnPolicy } = require('../utils/returnPolicy');
@@ -140,6 +141,16 @@ const sellerCancelReason = (order, reason, { riderFailed = false } = {}) => {
   return key;
 };
 
+/**
+ * A paid-online order's refund if cancelled: { amount (refundDue), kept (the
+ * delivery fee a failed rider trip by the buyer's fault used up) }. The order
+ * must be read with its rider bookings (orderRepository.findById).
+ */
+const refundOf = (order) => {
+  const view = withRiderDelivery(order);
+  return { amount: view.refundDue || 0, kept: view.failedTripKept || 0 };
+};
+
 // Cancellations that were the buyer's doing (an order taken back after the
 // shop accepted it, not collected, refused at the door, or not paid).
 const BUYER_FAULT = ['NO_SHOW', 'REFUSED', 'UNPAID'];
@@ -229,6 +240,9 @@ const createOrder = async (userId, data) => {
     voucherCode,
     courierId,
     deliveryPartner,
+    // POST /moormove/quote's quoteToken: the rider fee the buyer saw, charged
+    // as is while it holds (same shop, pin and package, 30 minutes).
+    riderQuoteToken,
   } = data;
 
   // A MoorMove rider instead of the shop or a courier (delivery only).
@@ -333,6 +347,14 @@ const createOrder = async (userId, data) => {
   if ((paymentMethod === 'GCASH' || paymentMethod === 'QRPH') && !store.paymentQrImage) {
     throw new ApiError('This store has not set up QR payment', 400);
   }
+  // Delivery fees the buyer owes this shop for failed rider trips (their
+  // fault, cash on delivery): this order collects them (see
+  // unpaidFee.service), and it can't be cash on delivery.
+  const owedFees = await unpaidFeeService.openFor(userId, storeId);
+  if (owedFees.length && paymentMethod === 'COD') {
+    throw new ApiError(unpaidFeeService.codBlockMessage(owedFees), 400);
+  }
+  const owedTotal = Math.round(owedFees.reduce((sum, f) => sum + Number(f.amount), 0) * 100) / 100;
 
   // Delivery-only validations. Delivered by the seller: the quote carries the
   // fee for this address, by distance from the shop's pin to the buyer's
@@ -363,7 +385,11 @@ const createOrder = async (userId, data) => {
       }
     } else {
       if (store.selfDelivery === false) {
-        throw new ApiError('This shop ships with couriers. Choose a courier.', 400);
+        // A shop without couriers delivers only with MoorMove riders.
+        const couriers = await prisma.storeCourier.count({ where: { storeId } });
+        throw new ApiError(couriers || store.moormoveEnabled === false
+          ? 'This shop ships with couriers. Choose a courier.'
+          : 'This shop delivers with MoorMove riders. Choose a MoorMove rider.', 400);
       }
       const muniForCoverage = buyerMunicipalityId || buyer.municipalityId;
       const brgyForCoverage = buyerBarangay || buyer.barangay;
@@ -505,7 +531,9 @@ const createOrder = async (userId, data) => {
     }
   }
   // A MoorMove rider: what MoorMove quotes for this parcel from the shop's
-  // pin to the buyer's, asked here (never the price the browser saw).
+  // pin to the buyer's (never a price the browser sends). The fee the buyer
+  // was quoted at checkout holds through its signed quote token; without one
+  // (or once it no longer fits the order) MoorMove is asked again here.
   let riderQuote = null;
   if (partner) {
     riderQuote = await moormoveService.quoteForCheckout({
@@ -514,6 +542,8 @@ const createOrder = async (userId, data) => {
       grams: riderGrams,
       buyerTownId: buyerMunicipalityId || buyer.municipalityId || null,
       buyerBarangay: buyerBarangay || buyer.barangay || null,
+      quoteToken: typeof riderQuoteToken === 'string' ? riderQuoteToken : null,
+      userId,
     });
     if (!riderQuote.available) throw new ApiError(`${riderQuote.reason}. Choose another way to receive it.`, 400);
   }
@@ -530,7 +560,8 @@ const createOrder = async (userId, data) => {
     }
   }
 
-  const grandTotal = Math.max(0, totalAmount + DELIVERY_FEE - discountAmount);
+  // An unpaid failed-trip fee is added after any discount (a voucher doesn't cover it).
+  const grandTotal = Math.max(0, totalAmount + DELIVERY_FEE - discountAmount) + owedTotal;
 
   // The rider carries cash for the shop only up to MoorMove's limit.
   if (riderQuote && paymentMethod === 'COD' && riderQuote.maxCod != null && grandTotal - DELIVERY_FEE > riderQuote.maxCod) {
@@ -565,6 +596,8 @@ const createOrder = async (userId, data) => {
         voucherCode: voucherRecord?.code || null,
         voucherId: voucherRecord?.id || null,
         total: grandTotal,
+        // Unpaid failed-trip fees this order collects (in its total).
+        failedTripFees: owedTotal,
         deliveryAddress: fulfillmentMethod === 'PICKUP'
           ? (store.pickupAddress || deliveryAddress || 'Store pickup')
           : deliveryAddress,
@@ -597,7 +630,7 @@ const createOrder = async (userId, data) => {
       },
       orderItems,
       voucherRecord ? { voucherId: voucherRecord.id, userId, discountAmount } : null,
-      orderItems
+      { unpaidFeeIds: owedFees.map((f) => f.id) },
     );
   } catch (err) {
     if (err.code === 'INSUFFICIENT_STOCK') {
@@ -608,6 +641,9 @@ const createOrder = async (userId, data) => {
     }
     if (err.code === 'VOUCHER_UNAVAILABLE') {
       throw new ApiError(err.message, 400);
+    }
+    if (err.code === 'UNPAID_FEES_CHANGED') {
+      throw new ApiError('Your unpaid delivery fee changed. Check your order and place it again.', 409);
     }
     // A unique violation on (buyerId, checkoutKey) means a concurrent submit
     // of the same checkout won the race. Return that order instead of an
@@ -628,10 +664,15 @@ const createOrder = async (userId, data) => {
       paymentMethod === 'COD' ? `; the rider collects only ₱${Number(grandTotal).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} for the items` : ''}.`
     : null;
 
+  // …and that it pays back the fee the shop paid a rider for a failed trip.
+  const owedNote = owedTotal > 0
+    ? `It includes the buyer's unpaid ${unpaidFeeService.peso(owedTotal)} delivery fee from order ${[...new Set(owedFees.map((f) => f.order?.orderNumber).filter(Boolean))].join(', ')}.`
+    : null;
+
   // Notify the seller (non-blocking on failure)
   try {
     if (store.ownerId) {
-      await notificationService.notifyOrderCreated(store.ownerId, order.id, buyer.fullName, promoNote);
+      await notificationService.notifyOrderCreated(store.ownerId, order.id, buyer.fullName, [promoNote, owedNote].filter(Boolean).join(' ') || null);
     }
   } catch (err) {
     console.error('[createOrder] notification failed:', err.message);
@@ -934,7 +975,9 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelR
     throw new ApiError('A MoorMove rider updates this order', 400);
   }
   const rider = order.riderDeliveries?.[0] || null;
-  if (newStatus === 'CANCELLED' && riderOpen(rider)) {
+  // A parcel the rider is bringing back doesn't hold the order up: the seller
+  // may still cancel it (and tap Parcel back when it arrives).
+  if (newStatus === 'CANCELLED' && riderOpen(rider) && rider.status !== 'RETURNING') {
     throw new ApiError('Cancel the rider first, then cancel the order', 409);
   }
 
@@ -998,6 +1041,8 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelR
           ? order.paymentStatus
           : false,
         cancelReason: updated?.cancelReason || cancelReason,
+        // Less the delivery fee a failed rider trip (the buyer's fault) used up.
+        refund: newStatus === 'CANCELLED' ? refundOf(order) : null,
       });
     }
   } catch (err) {
@@ -1178,7 +1223,9 @@ const verifyPayment = async (orderId, actor, paymentStatus, note = '') => {
         type: 'SYSTEM_ANNOUNCEMENT',
         audience: 'BUYER',
         title: 'Payment refunded',
-        message: `The seller has recorded a refund of your payment for cancelled order ${order.orderNumber}.${reason}`,
+        message: refundOf(order).kept > 0
+          ? `The seller has recorded a refund for cancelled order ${order.orderNumber}: ${unpaidFeeService.peso(refundOf(order).amount)} refunded; the ${unpaidFeeService.peso(refundOf(order).kept)} delivery fee covers the failed trip.${reason}`
+          : `The seller has recorded a refund of your payment for cancelled order ${order.orderNumber}.${reason}`,
         relatedId: orderId,
         target: { kind: 'buyer-order', id: orderId },
       });

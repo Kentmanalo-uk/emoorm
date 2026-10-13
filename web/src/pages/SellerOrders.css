@@ -1148,6 +1148,18 @@ tr.is-moved { box-shadow: inset 3px 0 0 var(--t-primary-600, #059669); }
   background: var(--t-danger-50, #fef2f2);
 }
 
+/* Cancelling a paid-online order: what to refund. */
+.so-cancel-refund {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-800, #92400e);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
 /* The buyer's record under their name. */
 .so-buyer-record {
   display: block;

@@ -1930,6 +1930,12 @@
   color: var(--t-primary-700, #047857);
 }
 
+/* An unpaid delivery fee from a failed rider trip, added to this order. */
+.co-m-ship.co-m-unpaid {
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-800, #92400e);
+}
+
 .co-items-section .co-m-store {
   padding: 0;
 }

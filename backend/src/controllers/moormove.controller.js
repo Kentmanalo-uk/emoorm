@@ -1,6 +1,8 @@
 const moormoveService = require('../services/moormove.service');
 const { successResponse } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorHandler');
+const unpaidFeeService = require('../services/unpaidFee.service');
+const auditLog = require('../services/auditLog.service');
 
 /**
  * MoorMove rider delivery: the option at checkout, the seller's rider
@@ -49,6 +51,32 @@ const cashReceived = asyncHandler(async (req, res) => {
   successResponse(res, await moormoveService.cashReceived(req.params.id, req.user.id), 'Cash received');
 });
 
+/** POST /orders/:id/rider/parcel-returned: a failed delivery's parcel is back at the shop. */
+const parcelReturned = asyncHandler(async (req, res) => {
+  successResponse(res, await moormoveService.parcelReturned(req.params.id, req.user.id), 'Parcel back');
+});
+
+/** GET /orders/unpaid-fees: the buyer's unpaid failed-trip fees by shop, for checkout. */
+const unpaidFees = asyncHandler(async (req, res) => {
+  successResponse(res, await unpaidFeeService.listForBuyer(req.user.id), 'Unpaid delivery fees');
+});
+
+/** POST /orders/:id/unpaid-fee/waive: the shop (or a super admin) waives a failed order's unpaid fee. */
+const waiveUnpaidFee = asyncHandler(async (req, res) => {
+  const fee = await unpaidFeeService.waive(req.params.id, req.user);
+  if (req.user.role === 'SUPER_ADMIN') {
+    await auditLog.record({
+      actor: req.user,
+      action: 'WAIVE_UNPAID_FEE',
+      entity: 'Order',
+      entityId: req.params.id,
+      details: { feeId: fee.id, amount: Number(fee.amount) },
+      req,
+    });
+  }
+  successResponse(res, await moormoveService.sellerOrder(req.params.id), 'Unpaid fee waived');
+});
+
 /** GET /orders/:id/tracking */
 const tracking = asyncHandler(async (req, res) => {
   successResponse(res, await moormoveService.tracking(req.params.id, req.user), 'Delivery tracking');
@@ -86,7 +114,10 @@ module.exports = {
   cancelBooking,
   deliverMyself,
   cashReceived,
+  parcelReturned,
   tracking,
   riderCash,
   receiveEvent,
+  unpaidFees,
+  waiveUnpaidFee,
 };

@@ -6,7 +6,7 @@ const { invalidateProductIds, getStatsForIds } = require('../repositories/produc
 const notificationService = require('./notification.service');
 const followService = require('./storeFollow.service');
 const appSettingService = require('./appSetting.service');
-const { READY_STORE } = require('./shopReadiness.service');
+const { readyStoreWhere } = require('./shopReadiness.service');
 const { cached } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 const { cleanText } = require('../utils/sanitize');
@@ -368,7 +368,7 @@ const listPublic = async (query = {}) => {
       isSuspended: false,
       isApproved: true,
       deletedAt: null,
-      AND: [READY_STORE, { OR: [{ vacationUntil: null }, { vacationUntil: { lte: now } }] }],
+      AND: [await readyStoreWhere(), { OR: [{ vacationUntil: null }, { vacationUntil: { lte: now } }] }],
     };
     const where = { ...liveNow(now), product: productWhere, store: storeWhere };
     if (mode) where.mode = mode;

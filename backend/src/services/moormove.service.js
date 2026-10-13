@@ -5,8 +5,9 @@ const prisma = require('../config/database');
 const config = require('../config/env');
 const client = require('./moormove.client');
 const {
-  FINAL_STATUSES, isOpen, publicRiderDelivery, withRiderDelivery,
+  FINAL_STATUSES, isOpen, publicRiderDelivery, withRiderDelivery, failedTripOf, refundDueOf, failedTripKeptOf,
 } = require('./moormove.view');
+const unpaidFeeService = require('./unpaidFee.service');
 const orderRepository = require('../repositories/order.repository');
 const storeRepository = require('../repositories/store.repository');
 const appSettingService = require('./appSetting.service');
@@ -29,7 +30,16 @@ const { optimizeUpload } = require('../utils/imageOptimizer');
  *   rider picks it up       TO_SHIP -> OUT_FOR_DELIVERY
  *   rider delivers it       OUT_FOR_DELIVERY -> DELIVERED (with the rider's photo;
  *                           cash on delivery becomes paid)
- *   rider can't deliver it  OUT_FOR_DELIVERY -> TO_SHIP (the rider brings it back)
+ *   rider can't deliver it  OUT_FOR_DELIVERY -> TO_SHIP; the booking is RETURNING
+ *                           (the rider brings the parcel back) until the seller
+ *                           taps Parcel back (parcelReturned): then FAILED
+ *
+ * A failed trip that was the buyer's fault (MoorMove's buyerFault: refused,
+ * not there, wrong address) still pays the rider, and the buyer pays its fee
+ * (see moormove.view failedTripOf): paid online, the fee the shop paid at
+ * pickup covers it; cash on delivery, the shop pays the rider when the parcel
+ * is back and the buyer owes the shop (unpaidFee.service). Not the buyer's
+ * fault: the buyer owes nothing.
  *
  * Cash on delivery: the rider collects the order total, keeps the fee and
  * brings the rest back to the shop; the seller confirms it (cashReceived).
@@ -38,7 +48,16 @@ const { optimizeUpload } = require('../utils/imageOptimizer');
  */
 
 const UNKNOWN_WEIGHT_GRAMS = 500;
-const JOB_STATUSES = new Set(['SEARCHING', 'ACCEPTED', 'AT_PICKUP', 'PICKED_UP', 'AT_DROPOFF', 'DELIVERED', 'CANCELLED', 'FAILED']);
+const JOB_STATUSES = new Set(['SEARCHING', 'ACCEPTED', 'AT_PICKUP', 'PICKED_UP', 'AT_DROPOFF', 'DELIVERED', 'CANCELLED', 'FAILED', 'RETURNING']);
+// Statuses in which a rider has taken the job but not the parcel yet.
+const RIDER_COMING = ['ACCEPTED', 'AT_PICKUP'];
+// The buyer's notice that a rider took the order (later notices about the
+// rider are sent only after this one).
+const RIDER_FOUND_TITLE = 'Rider on the way to the shop';
+// A quoted rider fee holds this long at checkout (the quote token).
+const QUOTE_TTL_S = 30 * 60;
+// A ride's minutes when MoorMove doesn't say (town speed).
+const RIDE_KMH = 25;
 // The seller may call the rider off until the parcel is in the rider's hands.
 const CANCELLABLE = ['SEARCHING', 'ACCEPTED', 'AT_PICKUP'];
 const BOOKABLE_FROM = ['CONFIRMED', 'PREPARING', 'TO_SHIP'];
@@ -96,6 +115,20 @@ const availability = async (store) => {
 };
 
 const available = async (store) => (await availability(store)).ok;
+
+/**
+ * The towns (E-MOORM municipality ids) where a shop with MoorMove on and a
+ * map pin is ready to sell by rider alone: MoorMove's open service towns.
+ * null when riders are switched off. Uses MoorMove's last known answer when
+ * it can't be asked right now (never waits on a MoorMove that is down).
+ * @returns {Promise<String[]|null>}
+ */
+const serviceTownIds = async () => {
+  if (!(await systemEnabled())) return null;
+  const status = await client.status({ stale: true });
+  if (!status?.open) return [];
+  return (status.towns || []).filter((t) => t.serviceOpen).map((t) => String(t.id));
+};
 
 /**
  * GET /moormove/status: whether the option exists at all right now, and the
@@ -192,8 +225,97 @@ const parcelGrams = async (storeId, items) => {
 };
 
 const unavailable = (reason) => ({
-  available: false, reason, fee: null, listFee: null, promo: null, distanceKm: null,
+  available: false, reason, fee: null, listFee: null, promo: null, distanceKm: null, rideMinutes: null,
 });
+
+/* The quote token: the rider fee a buyer was quoted, signed, so placing the
+ * order charges exactly that fee without asking MoorMove again (for the same
+ * buyer, shop, drop-off pin to ~11 m, package size and town, for 30 minutes). */
+
+const quoteKey = () => crypto.createHash('sha256').update(`emoorm/moormove-quote/${config.jwt.secret}`).digest();
+const pinKey = (lat, lng) => `${Number(lat).toFixed(4)},${Number(lng).toFixed(4)}`;
+const placeKey = (v) => (v ? String(v).trim().toLowerCase().slice(0, 80) : null);
+
+const signQuote = (data) => {
+  const body = Buffer.from(JSON.stringify(data), 'utf8').toString('base64url');
+  return `${body}.${crypto.createHmac('sha256', quoteKey()).update(body).digest('base64url')}`;
+};
+
+/** The signed quote, or null when it isn't one of ours (or was changed). */
+const readQuote = (token) => {
+  if (typeof token !== 'string' || token.length > 2048) return null;
+  const parts = token.split('.');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  const expected = crypto.createHmac('sha256', quoteKey()).update(parts[0]).digest('base64url');
+  if (parts[1].length !== expected.length || !crypto.timingSafeEqual(Buffer.from(parts[1]), Buffer.from(expected))) return null;
+  try {
+    const data = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    return data && typeof data === 'object' && data.v === 1 ? data : null;
+  } catch {
+    return null;
+  }
+};
+
+/** The quote token for an available quote: { quoteToken, quoteExpiresAt }. */
+const quoteTokenFor = (quote, {
+  userId, storeId, pin, buyerTownId, buyerBarangay,
+}) => {
+  const exp = Math.floor(Date.now() / 1000) + QUOTE_TTL_S;
+  return {
+    quoteToken: signQuote({
+      v: 1,
+      u: userId || null,
+      s: String(storeId),
+      p: pinKey(pin.latitude, pin.longitude),
+      k: quote.packageSize,
+      t: buyerTownId ? String(buyerTownId) : null,
+      b: placeKey(buyerBarangay),
+      f: quote.fee,
+      lf: quote.listFee,
+      pr: quote.promo ? { id: quote.promo.id, title: quote.promo.title } : null,
+      d: quote.distanceKm,
+      ds: quote.distanceSource,
+      m: quote.rideMinutes,
+      vt: quote.vehicleType,
+      e: exp,
+    }),
+    quoteExpiresAt: new Date(exp * 1000),
+  };
+};
+
+/**
+ * The quote a token holds, when it is still good for this checkout: the
+ * same buyer, shop, pin (to ~11 m), package size, town and barangay, and not
+ * expired. Otherwise null (the caller asks MoorMove again).
+ */
+const lockedQuote = (token, {
+  userId, storeId, pin, packageSize, buyerTownId, buyerBarangay,
+}) => {
+  const q = readQuote(token);
+  if (!q || !(q.e > Date.now() / 1000)) return null;
+  if (q.u !== (userId || null) || q.s !== String(storeId) || q.k !== packageSize) return null;
+  if (!pin || pin.latitude == null || q.p !== pinKey(pin.latitude, pin.longitude)) return null;
+  if (q.t !== (buyerTownId ? String(buyerTownId) : null) || q.b !== placeKey(buyerBarangay)) return null;
+  const fee = toNum(q.f);
+  if (fee == null || fee < 0 || (fee === 0 && !q.pr?.id)) return null;
+  return {
+    fee: round2(fee),
+    listFee: toNum(q.lf) ?? round2(fee),
+    promo: fee === 0 ? promoOf(q.pr) : null,
+    distanceKm: toNum(q.d),
+    distanceSource: ['ROAD', 'ESTIMATE'].includes(q.ds) ? q.ds : null,
+    rideMinutes: toNum(q.m),
+    vehicleType: q.vt || null,
+  };
+};
+
+/** The ride's minutes MoorMove gave, or the km at town speed. */
+const rideMinutesOf = (quote) => {
+  const given = toNum(quote?.minutes);
+  if (given != null && given > 0) return Math.round(given);
+  const km = toNum(quote?.distanceKm);
+  return km != null ? Math.max(1, Math.round((km / RIDE_KMH) * 60)) : null;
+};
 
 /** MoorMove's promo { id, title, endsAt } from a quote or status, checked; null when none. */
 const promoOf = (p) => (p && typeof p === 'object' && p.id
@@ -214,13 +336,15 @@ const shopBarangay = async (store) => {
  * What a MoorMove rider would charge to bring this parcel from the shop's
  * pin to the buyer's. The order service charges exactly this (never a price
  * sent by the browser). MoorMove also checks a rider delivers to both the
- * shop's barangay and the buyer's (buyerTownId, buyerBarangay).
+ * shop's barangay and the buyer's (buyerTownId, buyerBarangay). With a quote
+ * token from the buyer's checkout that still holds (see lockedQuote), its fee
+ * is charged without asking MoorMove again (locked: true).
  * @param {{ store: Object, buyerPin: {latitude, longitude}|null, items?: Array, grams?: Number,
- *   buyerTownId?: String, buyerBarangay?: String }} input
- * @returns {Promise<{ available, reason, fee, distanceKm, distanceSource, vehicleType?, packageSize?, maxCod? }>}
+ *   buyerTownId?: String, buyerBarangay?: String, quoteToken?: String, userId?: String }} input
+ * @returns {Promise<{ available, reason, fee, distanceKm, distanceSource, rideMinutes, vehicleType?, packageSize?, maxCod?, locked? }>}
  */
 const quoteForCheckout = async ({
-  store, buyerPin, items, grams, buyerTownId, buyerBarangay,
+  store, buyerPin, items, grams, buyerTownId, buyerBarangay, quoteToken, userId,
 }) => {
   const check = await availability(store);
   if (!check.ok) return unavailable(check.reason);
@@ -234,6 +358,17 @@ const quoteForCheckout = async ({
     weight = parcel.grams;
   }
   const packageSize = packageSizeFor(weight);
+  const maxCod = toNum(check.status?.maxCod);
+  if (quoteToken) {
+    const locked = lockedQuote(quoteToken, {
+      userId, storeId: store.id, pin: buyerPin, packageSize, buyerTownId, buyerBarangay,
+    });
+    if (locked) {
+      return {
+        available: true, reason: null, ...locked, packageSize, maxCod, locked: true,
+      };
+    }
+  }
   let quote;
   try {
     quote = await client.quote({
@@ -260,16 +395,22 @@ const quoteForCheckout = async ({
     distanceKm: toNum(quote.distanceKm),
     // ROAD (by road) or ESTIMATE (MoorMove's route service was out).
     distanceSource: ['ROAD', 'ESTIMATE'].includes(quote.distanceSource) ? quote.distanceSource : null,
+    // The ride from the shop to the buyer once the rider has the parcel.
+    rideMinutes: rideMinutesOf(quote),
     vehicleType: quote.vehicleType || null,
     packageSize,
-    maxCod: toNum(check.status?.maxCod),
+    maxCod,
+    locked: false,
   };
 };
 
 /**
  * POST /moormove/quote: the rider fee for checkout, with when it would
  * arrive. municipalityId and barangay are the delivery address's (default:
- * the buyer's own).
+ * the buyer's own). eta is the shop's preparation window (days); rideMinutes
+ * the ride from the shop once the rider has the parcel. quoteToken (with
+ * quoteExpiresAt, 30 minutes) goes back with the order as riderQuoteToken to
+ * be charged this very fee.
  */
 const checkoutQuote = async (user, {
   storeId, lat, lng, items, municipalityId, barangay,
@@ -291,6 +432,11 @@ const checkoutQuote = async (user, {
   const eta = result.available
     ? estimate(store, { method: 'DELIVERY', courier: false, townId: municipalityId || user?.municipalityId || null })
     : null;
+  const token = result.available
+    ? quoteTokenFor(result, {
+      userId: user?.id, storeId: store.id, pin, buyerTownId, buyerBarangay: buyerBarangay || null,
+    })
+    : { quoteToken: null, quoteExpiresAt: null };
   return {
     available: result.available,
     reason: result.reason,
@@ -301,6 +447,9 @@ const checkoutQuote = async (user, {
     distanceKm: result.distanceKm,
     distanceSource: result.distanceSource ?? null,
     eta,
+    rideMinutes: result.rideMinutes ?? null,
+    quoteToken: token.quoteToken,
+    quoteExpiresAt: token.quoteExpiresAt,
   };
 };
 
@@ -355,7 +504,9 @@ const book = async (orderId, sellerUserId) => {
   if (order.paymentMethod !== 'COD' && order.paymentStatus !== 'PAID') {
     throw new ApiError('Payment must be verified before fulfillment can continue', 409);
   }
-  if (isOpen(await currentRow(order.id))) {
+  const current = await currentRow(order.id);
+  if (current?.status === 'RETURNING') throw new ApiError(PARCEL_AWAY, 409);
+  if (isOpen(current)) {
     throw new ApiError('A rider is already booked for this order', 409);
   }
   if (order.deliveryLatitude == null || order.deliveryLongitude == null) {
@@ -381,11 +532,16 @@ const book = async (orderId, sellerUserId) => {
   const weightOf = new Map(weights.map((p) => [p.id, p.weightGrams]));
   const grams = order.items.reduce((sum, it) => sum + (weightOf.get(it.productId) || UNKNOWN_WEIGHT_GRAMS) * it.quantity, 0);
 
+  // Sent out again after a failed trip by the buyer's fault (cash on
+  // delivery): the fee the buyer owes for it goes on this order.
+  const added = await addOwnFee(order);
+
   // Cash on delivery: the rider collects the total, keeps the fee and brings
-  // the rest back. Paid by QR: the shop pays the rider the fee at pickup.
+  // the rest back (with any unpaid fee, which repays the shop). Paid by QR:
+  // the shop pays the rider the fee at pickup.
   const fee = round2(order.deliveryFee);
   const cod = order.paymentMethod === 'COD';
-  const codAmount = cod ? round2(Math.max(0, Number(order.total) - fee)) : 0;
+  const codAmount = cod ? round2(Math.max(0, Number(order.total) + added - fee)) : 0;
 
   if (order.status !== 'TO_SHIP') {
     try {
@@ -440,6 +596,18 @@ const book = async (orderId, sellerUserId) => {
   return sellerOrder(order.id);
 };
 
+const PARCEL_AWAY = 'The rider is still bringing the parcel back. Tap Parcel back once it is at your shop.';
+
+/** The order's own unpaid failed-trip fee goes on it (see unpaidFee.addToOwnOrder): what was added. */
+async function addOwnFee(order) {
+  try {
+    return await unpaidFeeService.addToOwnOrder(order);
+  } catch (err) {
+    if (err.code === 'UNPAID_FEES_CHANGED') throw new ApiError('This order changed. Refresh and try again.', 409);
+    throw err;
+  }
+}
+
 /** The seller calls the rider off (only before the rider has the parcel). */
 const cancelBooking = async (orderId, sellerUserId, reason) => {
   const order = await sellersOrder(orderId, sellerUserId);
@@ -454,31 +622,77 @@ const cancelBooking = async (orderId, sellerUserId, reason) => {
     throw partnerError(err);
   }
   if (job && job.id && JOB_STATUSES.has(job.status)) {
-      await applyJob(job, { quiet: true });
+    await applyJob(job, { quiet: true });
   } else {
     await prisma.riderDelivery.update({
       where: { id: row.id },
       data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: why },
     });
+    if (RIDER_COMING.includes(row.status)) await tellBuyerRiderOff(order, row);
   }
   return sellerOrder(order.id);
 };
 
-/** No rider after all: the seller delivers it, the usual way (with a photo). */
+/**
+ * No rider after all: the seller delivers it, the usual way (with a photo).
+ * The buyer keeps paying the delivery fee MoorMove quoted (now the shop's):
+ * the order says when (riderFallbackAt) and the buyer is told the fee.
+ */
 const deliverMyself = async (orderId, sellerUserId) => {
   const order = await sellersOrder(orderId, sellerUserId);
   assertRiderOrder(order);
-  if (isOpen(await currentRow(order.id))) throw new ApiError('Cancel the rider first', 409);
+  const row = await currentRow(order.id);
+  if (row?.status === 'RETURNING') throw new ApiError(PARCEL_AWAY, 409);
+  if (isOpen(row)) throw new ApiError('Cancel the rider first', 409);
   if (!BOOKABLE_FROM.includes(order.status)) throw new ApiError('This order is past that step', 409);
-  await prisma.order.updateMany({ where: { id: order.id, deliveryPartner: 'MOORMOVE' }, data: { deliveryPartner: null } });
-  notificationService.createNotification({
-    userId: order.buyerId,
-    type: 'ORDER_READY',
-    title: 'The shop will deliver your order',
-    message: `${order.store?.name || 'The shop'} will deliver order ${order.orderNumber} itself instead of a MoorMove rider.`,
-    relatedId: order.id,
-    target: { kind: 'buyer-order', id: order.id },
-  }).catch((err) => console.error('[moormove] deliver-myself notice failed:', err.message));
+  const { count } = await prisma.order.updateMany({
+    where: { id: order.id, deliveryPartner: 'MOORMOVE' },
+    data: { deliveryPartner: null, riderFallbackAt: new Date() },
+  });
+  const added = count ? await addOwnFee(order) : 0;
+  if (count) {
+    const fee = Number(order.deliveryFee || 0);
+    notificationService.createNotification({
+      userId: order.buyerId,
+      type: 'ORDER_READY',
+      title: 'The shop will deliver your order',
+      message: `${order.store?.name || 'The shop'} will deliver order ${order.orderNumber} itself instead of a MoorMove rider. ${
+        fee > 0 ? `Delivery fee ${peso(fee)}, as quoted.` : 'Delivery stays free.'}${
+        added > 0 ? ` The unpaid ${peso(added)} fee for the failed trip is added: you pay ${peso(Number(order.total) + added)}.` : ''}`,
+      relatedId: order.id,
+      target: { kind: 'buyer-order', id: order.id },
+    }).catch((err) => console.error('[moormove] deliver-myself notice failed:', err.message));
+  }
+  return sellerOrder(order.id);
+};
+
+/**
+ * The rider brought a failed delivery's parcel back: MoorMove closes the
+ * return trip (the rider can take new jobs) and the booking ends FAILED
+ * with returnedAt. The order is already back To ship.
+ */
+const parcelReturned = async (orderId, sellerUserId) => {
+  const order = await sellersOrder(orderId, sellerUserId);
+  const row = await currentRow(order.id);
+  if (!row || (row.status !== 'RETURNING' && !(row.status === 'FAILED' && row.returnedAt))) {
+    throw new ApiError("There's no parcel coming back for this order", 409);
+  }
+  if (!row.returnedAt) {
+    let job;
+    try {
+      job = await client.parcelReturned(row.jobId);
+    } catch (err) {
+      throw partnerError(err);
+    }
+    if (job && job.id && JOB_STATUSES.has(job.status)) await applyJob(job, { quiet: true });
+    await prisma.riderDelivery.updateMany({
+      where: { id: row.id, returnedAt: null },
+      data: { status: 'FAILED', returnedAt: toDate(job?.returnedAt) || new Date() },
+    });
+  }
+  // The buyer's fault, cash on delivery: the buyer now owes the fee the shop
+  // pays the rider (once per trip; MoorMove's update may have done it).
+  await unpaidFeeService.recordFailedTrip(order, (await prisma.riderDelivery.findUnique({ where: { id: row.id } })) || row);
   return sellerOrder(order.id);
 };
 
@@ -573,8 +787,11 @@ const rowFields = (job) => {
     failedAt: toDate(job.failedAt),
     codCollectedAt: job.status === 'DELIVERED' && cod > 0 ? (deliveredAt || new Date()) : null,
     ...(job.codReturnedAt ? { codReturnedAt: toDate(job.codReturnedAt) } : {}),
+    ...(job.returnedAt ? { returnedAt: toDate(job.returnedAt) } : {}),
     cancelReason: cut(job.cancelReason, 255),
     failReason: cut(job.failReason, 255),
+    ...('failCode' in job ? { failCode: cut(job.failCode, 20) } : {}),
+    ...('buyerFault' in job ? { buyerFault: job.buyerFault === true } : {}),
     jobUpdatedAt: toDate(job.updatedAt),
   };
 };
@@ -618,6 +835,59 @@ const notify = (userId, audience, title, message, orderId) => notificationServic
   ...(audience === 'BUYER' ? { target: { kind: 'buyer-order', id: orderId } } : {}),
 }).catch((err) => console.error('[moormove] notice failed:', err.message));
 
+const vehicleOf = (row) => (row.riderVehicle
+  ? `${row.riderVehicle.toLowerCase()}${row.riderPlate ? `, ${row.riderPlate}` : ''}`
+  : null);
+
+/** Whether the buyer was told a rider took this booking (the notices after it depend on it). */
+const buyerToldOfRider = async (order, row) => (await prisma.notification.count({
+  where: {
+    userId: order.buyerId, relatedId: order.id, title: RIDER_FOUND_TITLE, createdAt: { gte: row.createdAt || new Date(0) },
+  },
+})) > 0;
+
+/** The shop called off a rider who had taken the order: the buyer hears it, if told of the rider. */
+async function tellBuyerRiderOff(order, row) {
+  if (!(await buyerToldOfRider(order, row))) return;
+  await notify(order.buyerId, 'BUYER', 'Rider called off', `The rider for order ${order.orderNumber} isn't coming after all. The shop is arranging another rider or will deliver it itself.`, order.id);
+}
+
+/**
+ * Who pays for a failed trip (moormove.view failedTripOf), as the notices say
+ * it: { seller, buyer, back } (back: the seller's line once the parcel is back).
+ */
+const failedTripLines = (order, row) => {
+  const trip = failedTripOf(order, [row]);
+  if (!trip) return { seller: '', buyer: '', back: '' };
+  const fee = peso(trip.fee);
+  switch (trip.outcome) {
+    case 'BUYER_OWES':
+      return {
+        seller: ` It was the buyer's fault: pay the rider the ${fee} fee when the parcel is back. The buyer pays it back on their next order.`,
+        buyer: `The ${fee} delivery fee for this trip is charged to you: it's added to your next order from ${order.store?.name || 'this shop'}.`,
+        back: ` Pay the rider ${fee}. The buyer pays it back on their next order.`,
+      };
+    case 'FEE_KEPT': {
+      const refund = refundDueOf(order, failedTripKeptOf(order, [row]));
+      return {
+        seller: ` It was the buyer's fault: the rider keeps the ${fee} fee you paid, and the buyer covers it. If you cancel, refund ${peso(refund)}.`,
+        buyer: `The ${fee} delivery fee you paid covers this trip.`,
+        back: ` The rider keeps the ${fee} fee you paid. If you cancel, refund ${peso(refund)}.`,
+      };
+    }
+    case 'MOORMOVE_PAYS':
+      return { seller: ' MoorMove pays the rider for this trip.', buyer: 'No charge to you.', back: '' };
+    default:
+      return trip.riderGivesBack > 0
+        ? {
+          seller: ` The buyer isn't charged: the rider gives back the ${peso(trip.riderGivesBack)} fee you paid.`,
+          buyer: 'No charge to you.',
+          back: ` Get back the ${peso(trip.riderGivesBack)} fee you paid the rider.`,
+        }
+        : { seller: " The buyer isn't charged for this trip.", buyer: 'No charge to you.', back: '' };
+  }
+};
+
 /** Move the order along with its current rider booking (see the table at the top). */
 const followJob = async (row, job, { statusChanged, previous, quiet }) => {
   const order = await orderRepository.findById(row.orderId);
@@ -642,20 +912,40 @@ const followJob = async (row, job, { statusChanged, previous, quiet }) => {
   };
   let status = order.status;
 
+  const shopName = order.store?.name || 'the shop';
+  const vehicle = vehicleOf(row);
+  const free = row.promoTitle || order.deliveryPromoTitle;
+  const shopPays = !free && row.feePaidBy === 'SENDER' && Number(row.fee) > 0;
+
   switch (job.status) {
     case 'ACCEPTED':
-      if (statusChanged && !quiet && seller) {
-        const vehicle = row.riderVehicle ? ` (${row.riderVehicle.toLowerCase()}${row.riderPlate ? `, ${row.riderPlate}` : ''})` : '';
-        const free = row.promoTitle || order.deliveryPromoTitle;
-        const pay = free
-          ? ` Free delivery (MoorMove promo: ${free}): you pay the rider nothing.`
-          : row.feePaidBy === 'SENDER' && Number(row.fee) > 0 ? ` Pay the rider the ${peso(row.fee)} delivery fee at pickup.` : '';
-        await notify(seller, 'SELLER', 'A rider is coming', `${riderName}${vehicle} is on the way to pick up order ${number}.${pay}`, order.id);
+      if (statusChanged && previous !== 'AT_PICKUP') {
+        if (!quiet && seller) {
+          const pay = free
+            ? ` Free delivery (MoorMove promo: ${free}): you pay the rider nothing.`
+            : shopPays ? ` Pay the rider the ${peso(row.fee)} delivery fee at pickup.` : '';
+          await notify(seller, 'SELLER', 'A rider is coming', `${riderName}${vehicle ? ` (${vehicle})` : ''} is on the way to pick up order ${number}.${pay}`, order.id);
+        }
+        await notify(order.buyerId, 'BUYER', RIDER_FOUND_TITLE, `A rider is heading to ${shopName} to pick up your order ${number}: ${riderName}${vehicle ? `, ${vehicle}` : ''}.`, order.id);
+      }
+      break;
+    case 'AT_PICKUP':
+      if (statusChanged) {
+        if (!quiet && seller) {
+          const pay = shopPays ? ` and pay the ${peso(row.fee)} delivery fee` : '';
+          await notify(seller, 'SELLER', 'Rider at your shop', `The rider is at your shop for order ${number}: ${riderName}${vehicle ? ` (${vehicle})` : ''}. Hand over the parcel${pay}.`, order.id);
+        }
+        await notify(order.buyerId, 'BUYER', 'Rider at the shop', `${riderName} is at ${shopName} picking up your order ${number}.`, order.id);
       }
       break;
     case 'SEARCHING':
-      if (statusChanged && ['ACCEPTED', 'AT_PICKUP'].includes(previous) && !quiet && seller) {
-        await notify(seller, 'SELLER', 'Finding another rider', `The rider gave order ${number} back. MoorMove is finding another rider.`, order.id);
+      if (statusChanged && RIDER_COMING.includes(previous)) {
+        if (!quiet && seller) {
+          await notify(seller, 'SELLER', 'Finding another rider', `The rider gave order ${number} back. MoorMove is finding another rider.`, order.id);
+        }
+        if (await buyerToldOfRider(order, row)) {
+          await notify(order.buyerId, 'BUYER', 'Finding another rider', `The rider for order ${number} couldn't continue. MoorMove is finding another rider.`, order.id);
+        }
       }
       break;
     case 'PICKED_UP':
@@ -694,17 +984,33 @@ const followJob = async (row, job, { statusChanged, previous, quiet }) => {
         }
       }
       break;
+    case 'RETURNING':
     case 'FAILED': {
+      // RETURNING: the rider is bringing the parcel back. FAILED after it
+      // (returnedAt): the parcel is back. FAILED without a return trip: an
+      // older MoorMove, or its staff closed the job.
       const why = row.failReason ? ` (${row.failReason})` : '';
+      const back = job.status === 'FAILED' && Boolean(row.returnedAt);
+      const wasReturning = previous === 'RETURNING';
       if (status === 'OUT_FOR_DELIVERY') {
-        await step('TO_SHIP', 'OUT_FOR_DELIVERY', `MoorMove rider couldn't deliver it${why}; bringing it back to the shop`);
+        await step('TO_SHIP', 'OUT_FOR_DELIVERY', back
+          ? `MoorMove rider couldn't deliver it${why}; the parcel is back at the shop`
+          : `MoorMove rider couldn't deliver it${why}; bringing it back to the shop`);
       }
-      if (statusChanged && !quiet) {
+      const pays = failedTripLines(order, row);
+      if (statusChanged && !wasReturning && !quiet) {
         if (seller) {
-          await notify(seller, 'SELLER', 'Delivery failed', `The rider couldn't deliver order ${number}${why}. The rider is bringing the parcel back to you. Call a rider again, deliver it yourself, or cancel the order.`, order.id);
+          await notify(seller, 'SELLER', 'Delivery failed', job.status === 'RETURNING'
+            ? `The rider couldn't deliver order ${number}${why} and is bringing the parcel back to your shop.${pays.seller} Tap Parcel back once you have it, then call a rider again, deliver it yourself, or cancel the order.`
+            : `The rider couldn't deliver order ${number}${why}. The rider is bringing the parcel back to you.${pays.seller} Call a rider again, deliver it yourself, or cancel the order.`, order.id);
         }
-        await notify(order.buyerId, 'BUYER', "Your order couldn't be delivered", `The rider couldn't deliver order ${number}${why}. The shop will get in touch.`, order.id);
+        await notify(order.buyerId, 'BUYER', "Your order couldn't be delivered", `Delivery failed: ${row.failReason || "the rider couldn't deliver it"}. ${
+          pays.buyer ? `${pays.buyer} ` : ''}The shop will get in touch about order ${number}.`, order.id);
+      } else if (statusChanged && wasReturning && back && !quiet && seller) {
+        await notify(seller, 'SELLER', 'Parcel back at your shop', `MoorMove marked the parcel for order ${number} as back with you.${pays.back} Call a rider again, deliver it yourself, or cancel the order.`, order.id);
       }
+      // The parcel is back: the buyer's fault on cash on delivery becomes a fee they owe.
+      if (back) await unpaidFeeService.recordFailedTrip(order, row);
       break;
     }
     case 'CANCELLED':
@@ -717,6 +1023,10 @@ const followJob = async (row, job, { statusChanged, previous, quiet }) => {
       if (statusChanged && !quiet && seller) {
         const why = row.cancelReason ? ` (${row.cancelReason})` : '';
         await notify(seller, 'SELLER', 'Rider cancelled', `The MoorMove delivery of order ${number} was cancelled${why}. Call a rider again or deliver it yourself.`, order.id);
+      }
+      // Called off before the rider had the parcel: the buyer, told of the rider, hears it.
+      if (statusChanged && RIDER_COMING.includes(previous) && status !== 'OUT_FOR_DELIVERY') {
+        await tellBuyerRiderOff(order, row);
       }
       break;
     default:
@@ -965,14 +1275,18 @@ module.exports = {
   systemEnabled,
   availability,
   available,
+  serviceTownIds,
   publicStatus,
   health,
   quoteForCheckout,
   checkoutQuote,
+  readQuote,
   book,
   cancelBooking,
   deliverMyself,
+  parcelReturned,
   cashReceived,
+  sellerOrder,
   riderCash,
   applyJob,
   handleEvent,

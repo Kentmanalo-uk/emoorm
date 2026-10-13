@@ -267,6 +267,12 @@ const get = async () => cached.appSettings({}, async () => {
 const update = async (input) => {
   const settings = await appSettingRepository.upsertGlobal(sanitize(input));
   await invalidate(TAGS.appSettings);
+  // MoorMove switched on or off: its status and the shops it makes ready to
+  // sell are asked afresh.
+  if (input && input.moormoveEnabled !== undefined) {
+    require('./moormove.client').clearStatusCache();
+    require('./shopReadiness.service').forget();
+  }
   return settings;
 };
 

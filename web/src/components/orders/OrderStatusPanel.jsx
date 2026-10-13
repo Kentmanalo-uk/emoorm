@@ -4,7 +4,9 @@ import {
 import {
   orderStage, orderSteps, handOver, payLabel, peso, when,
 } from '../../lib/orderProgress';
-import { orderPromo } from '../../lib/moormove';
+import {
+  failedTripBuyerLine, fallbackLine, orderPromo, refundAmount,
+} from '../../lib/moormove';
 import './OrderStatusPanel.css';
 import { distanceNote } from '../../lib/deliveryDistance';
 
@@ -30,7 +32,9 @@ const paymentState = (order, pickup) => {
     }
     if (order.status === 'PENDING') return 'Pay after the shop confirms';
   }
-  if (cancelled && order.paymentStatus === 'PAID') return 'Paid · the shop will return it';
+  if (cancelled && order.paymentStatus === 'PAID') {
+    return Number(order.refundDue) > 0 ? `Paid · the shop will return ${peso(refundAmount(order))}` : 'Paid · the shop will return it';
+  }
   if (cancelled && order.paymentStatus === 'FAILED') return 'Not paid';
   return PAYMENT_STATE[order.paymentStatus] || order.paymentStatus;
 };
@@ -82,6 +86,8 @@ export default function OrderStatusPanel({ order }) {
                 Delivered by {place.by}{promo ? ` · Free delivery (MoorMove promo: ${promo.title})` : Number(order.deliveryFee) > 0 ? ` · ${peso(order.deliveryFee)} fee` : ' · free delivery'}{distanceNote(order)}
               </p>
             )}
+            {!place.pickup && fallbackLine(order) && <p className="osd-sub">{fallbackLine(order)}</p>}
+            {!place.pickup && failedTripBuyerLine(order) && <p className="osd-sub osd-trip">{failedTripBuyerLine(order)}</p>}
             {place.note && <p className="osd-sub">{place.pickup ? 'Shop says: ' : 'Your note: '}{place.note}</p>}
             {order.contactNumber && <p className="osd-line"><Phone size={14} /> {order.contactNumber}</p>}
             {place.mapUrl && (

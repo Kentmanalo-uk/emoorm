@@ -5,6 +5,7 @@ const municipalityRepository = require('../repositories/municipality.repository'
 const { ApiError } = require('../middleware/errorHandler');
 const shopReadiness = require('./shopReadiness.service');
 const { funnelForStore } = require('./productView.service');
+const { riderFeeOf, shopTotalOf } = require('./moormove.view');
 
 /**
  * Analytics Service
@@ -383,6 +384,12 @@ const getSellerDayDetails = async (userId, dateISO) => {
     total: Number(o.total || 0),
     subtotal: Number(o.subtotal || 0),
     deliveryFee: Number(o.deliveryFee || 0),
+    // A MoorMove rider's delivery fee is the rider's: shopTotal is the shop's sale.
+    deliveryPartner: o.deliveryPartner || null,
+    riderFee: riderFeeOf(o),
+    // Unpaid failed-trip fees added to the order: not sales either.
+    failedTripFees: Number(o.failedTripFees || 0),
+    shopTotal: shopTotalOf(o),
     buyer: o.buyer ? { id: o.buyer.id, name: o.buyer.fullName || o.buyer.email, email: o.buyer.email } : null,
     items: o.items.map((it) => ({
       id: it.id,
@@ -397,7 +404,7 @@ const getSellerDayDetails = async (userId, dateISO) => {
 
   const totalRevenue = orders
     .filter((o) => o.status === 'COMPLETED')
-    .reduce((s, o) => s + o.total, 0);
+    .reduce((s, o) => s + o.shopTotal, 0);
   const totalItems = orders.reduce((s, o) => s + o.items.reduce((n, it) => n + it.quantity, 0), 0);
 
   return {

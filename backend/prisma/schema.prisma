@@ -415,6 +415,8 @@ model User {
   // Relations
   store         Store?
   orders        Order[]
+  /// Delivery fees this buyer owes for failed rider trips (their fault).
+  unpaidFees    BuyerUnpaidFee[]
   reviews       Review[]
   wishlistItems WishlistItem[]
   cartItems     CartItem[]
@@ -794,6 +796,8 @@ model Store {
   priceOffers   PriceOffer[]
   availabilities ProductAvailability[]
   orders        Order[]
+  /// Failed-trip delivery fees buyers owe this shop.
+  unpaidFees    BuyerUnpaidFee[]
   conversations Conversation[]
   serviceAreas  StoreServiceArea[]
   followers     StoreFollow[]
@@ -1102,6 +1106,15 @@ model Order {
   /// was out), or NONE (the shop had no pin, so the old flat fee applied).
   deliveryDistanceKm     Decimal? @db.Decimal(6, 2) @map("delivery_distance_km")
   deliveryDistanceSource String?  @db.VarChar(10) @map("delivery_distance_source")
+  /// When the shop took over a MoorMove rider order to deliver it itself
+  /// ("Deliver it myself"): deliveryPartner is then null and the delivery fee
+  /// the buyer paid (MoorMove's quote) stays the shop's.
+  riderFallbackAt        DateTime? @map("rider_fallback_at")
+  /// Delivery fees for failed rider trips the buyer owed (their fault, cash
+  /// on delivery), added to this order's total: each is a BuyerUnpaidFee
+  /// whose paidOrderId is this order (carriedFees). Not the shop's sales:
+  /// it pays the shop back what it paid the rider.
+  failedTripFees         Decimal  @default(0) @db.Decimal(10, 2) @map("failed_trip_fees")
 
   // Delivery Information
   deliveryAddress String      @db.Text @map("delivery_address")
@@ -1137,6 +1150,10 @@ model Order {
   statusHistory   OrderStatusHistory[]
   voucherRedemption VoucherRedemption?
   riderDeliveries RiderDelivery[]
+  /// The fee the buyer owes for this order's own failed rider trip.
+  unpaidFees      BuyerUnpaidFee[] @relation("UnpaidFeeOrder")
+  /// Unpaid fees (of this or an earlier order) added to this order's total.
+  carriedFees     BuyerUnpaidFee[] @relation("UnpaidFeePaidOrder")
 
   // A double-submitted checkout must not become two orders. The application
   // also looks the key up first, but that check-then-insert races under
@@ -1241,8 +1258,17 @@ model RiderDelivery {
   codCollectedAt DateTime? @map("cod_collected_at")
   /// The seller confirmed the rider brought the cash back.
   codReturnedAt  DateTime? @map("cod_returned_at")
+  /// A failed delivery's parcel is back with the shop (status RETURNING until
+  /// then: the rider is bringing it back).
+  returnedAt     DateTime? @map("returned_at")
   cancelReason   String?   @db.VarChar(255) @map("cancel_reason")
   failReason     String?   @db.VarChar(255) @map("fail_reason")
+  /// MoorMove's reason code (BUYER_REFUSED, BUYER_UNREACHABLE, WRONG_ADDRESS,
+  /// PARCEL_DAMAGED, WRONG_ITEM, RIDER_PROBLEM, OTHER; null on older jobs).
+  failCode       String?   @db.VarChar(20) @map("fail_code")
+  /// The failure was the buyer's fault (refused, not there, wrong address):
+  /// the buyer pays the delivery fee for the trip (see BuyerUnpaidFee).
+  buyerFault     Boolean   @default(false) @map("buyer_fault")
   lastEventId    String?   @db.VarChar(64) @map("last_event_id")
   /// MoorMove's updatedAt of the job as last applied: an older copy is ignored.
   jobUpdatedAt   DateTime? @map("job_updated_at")
@@ -1262,6 +1288,51 @@ model MoormoveEvent {
 
   @@index([receivedAt], map: "moormove_events_received_idx")
   @@map("moormove_events")
+}
+
+enum UnpaidFeeStatus {
+  OPEN
+  PAID
+  WAIVED
+}
+
+/// A delivery fee a buyer owes a shop for a failed MoorMove trip that was the
+/// buyer's fault, on a cash-on-delivery order (the shop paid the rider when
+/// the parcel came back). Payments go straight to each shop, so it is
+/// collected on the buyer's next order from the same shop (or on the failed
+/// order itself if the shop delivers it again): paidOrderId is that order,
+/// whose total includes it (orders.failed_trip_fees). PAID once that order is
+/// handed over; back to OPEN (paidOrderId null) if it is cancelled. While one
+/// is OPEN and on no order, the buyer can't pay that shop cash on delivery.
+model BuyerUnpaidFee {
+  id          String          @id @default(uuid())
+  buyerId     String          @map("buyer_id")
+  buyer       User            @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  /// The shop it is owed to.
+  storeId     String          @map("store_id")
+  store       Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// The order whose delivery failed.
+  orderId     String          @map("order_id")
+  order       Order           @relation("UnpaidFeeOrder", fields: [orderId], references: [id], onDelete: Cascade)
+  /// The failed MoorMove job: one fee per failed trip.
+  jobId       String          @unique(map: "buyer_unpaid_fees_job_key") @db.VarChar(64) @map("job_id")
+  amount      Decimal         @db.Decimal(10, 2)
+  reason      String          @db.VarChar(255)
+  status      UnpaidFeeStatus @default(OPEN)
+  /// The order that carries it (its total includes it).
+  paidOrderId String?         @map("paid_order_id")
+  paidOrder   Order?          @relation("UnpaidFeePaidOrder", fields: [paidOrderId], references: [id], onDelete: SetNull)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  paidAt      DateTime?       @map("paid_at")
+  /// Who waived it (the seller or a super admin) and when.
+  waivedById  String?         @db.VarChar(64) @map("waived_by_id")
+  waivedAt    DateTime?       @map("waived_at")
+
+  @@index([buyerId, storeId, status], map: "buyer_unpaid_fees_buyer_idx")
+  @@index([orderId], map: "buyer_unpaid_fees_order_idx")
+  @@index([paidOrderId], map: "buyer_unpaid_fees_paid_order_idx")
+  @@index([storeId], map: "buyer_unpaid_fees_store_idx")
+  @@map("buyer_unpaid_fees")
 }
 
 model OrderItem {

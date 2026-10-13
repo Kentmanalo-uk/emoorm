@@ -62,6 +62,9 @@ const getSetup = async (userId) => {
   const courierReady = byCourier && hasText(store.paymentQrImage) && (await prisma.storeCourier.count({
     where: { storeId: store.id, courier: { isActive: true, NOT: { rates: { equals: Prisma.DbNull } } } },
   })) > 0;
+  // MoorMove riders alone are enough to deliver (they price each delivery):
+  // riders on, the pin set, MoorMove serving the town, the switch on.
+  const byMoormove = delivers && await shopReadiness.ridersReady(store);
 
   const steps = [
     // Already done by the time the checklist exists, so it opens with a tick.
@@ -70,9 +73,13 @@ const getSetup = async (userId) => {
     { key: 'profile', done: profileMissing.length === 0, missing: profileMissing },
     ...(delivers
       ? [
-        byCourier ? { key: 'delivery-areas', done: courierReady, byCourier: true } : {
+        byCourier ? {
+          key: 'delivery-areas', done: courierReady || byMoormove, byCourier: true, byMoormove,
+        } : {
           key: 'delivery-areas',
-          done: areaCount > 0,
+          done: areaCount > 0 || byMoormove,
+          // Done by MoorMove riders (the shop has no delivery areas of its own).
+          byMoormove: byMoormove && areaCount === 0,
           count: areaCount,
           towns: areaTowns.size,
           barangays: areas.filter((a) => a.barangay).length,
@@ -88,7 +95,9 @@ const getSetup = async (userId) => {
         byCourier ? { key: 'delivery-fee', done: true, byCourier: true } : {
           key: 'delivery-fee',
           done: store.deliveryFeeMode === 'FREE' || store.deliveryBaseFee != null
-            || standardFee !== null || (areaCount > 0 && areasWithoutFee === 0),
+            || standardFee !== null || (areaCount > 0 && areasWithoutFee === 0) || (byMoormove && areaCount === 0),
+          // Done by MoorMove riders: MoorMove prices each delivery.
+          byMoormove: byMoormove && areaCount === 0,
           mode: store.deliveryFeeMode === 'FREE' ? 'FREE' : 'PER_KM',
           baseFee: store.deliveryBaseFee == null ? null : Number(store.deliveryBaseFee),
           includedKm: store.deliveryIncludedKm == null ? null : Number(store.deliveryIncludedKm),

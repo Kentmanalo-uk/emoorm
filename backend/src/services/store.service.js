@@ -588,7 +588,10 @@ const updateStore = async (storeId, userId, rawData) => {
     updateData.province = 'Oriental Mindoro';
   }
 
-  return storeRepository.updateStore(storeId, updateData);
+  const saved = await storeRepository.updateStore(storeId, updateData);
+  // Riders on or off can make the shop ready to sell, or not.
+  if ('moormoveEnabled' in updateData) shopReadiness.forget(storeId);
+  return saved;
 };
 
 /**

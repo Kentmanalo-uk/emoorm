@@ -30,7 +30,9 @@ import CourierTracking, { CourierMark } from '../components/orders/CourierTracki
 import OrderStatusPanel from '../components/orders/OrderStatusPanel';
 import RiderCard from '../components/orders/RiderCard';
 import RiderTrackingMap from '../components/orders/RiderTrackingMap';
-import { isRiderOrder, orderPromo, riderOpen } from '../lib/moormove';
+import {
+  carriedFeeLines, isRiderOrder, orderPromo, riderOpen,
+} from '../lib/moormove';
 import {
   BUYER_TABS, buyerBucket, buyerTabFrom, countBuyerTabs, needsPayment,
 } from '../lib/orderProgress';
@@ -898,6 +900,12 @@ const Orders = () => {
                       <span>-₱{parseFloat(selectedOrder.discountAmount).toFixed(2)}</span>
                     </div>
                   )}
+                  {carriedFeeLines(selectedOrder).map((line) => (
+                    <div key={line.key} className="summary-row">
+                      <span>{line.label}</span>
+                      <span>₱{line.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
                   <div className="summary-row summary-total">
                     <span>Total</span>
                     <span>₱{parseFloat(selectedOrder.total).toFixed(2)}</span>

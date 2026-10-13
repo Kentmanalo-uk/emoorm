@@ -28,7 +28,8 @@ const quoteLimiter = rateLimit({
   message: { success: false, message: 'Too many price checks. Please wait a moment.' },
 });
 
-router.get('/status', publicCache(60), moormoveController.status);
+// Short: the super admin's switch should show within seconds.
+router.get('/status', publicCache(10), moormoveController.status);
 router.post('/quote', authenticate, quoteLimiter, moormoveController.quote);
 router.get('/admin/health', authenticate, authorize('SUPER_ADMIN'), moormoveController.health);
 
@@ -36,11 +37,16 @@ const orderRouter = express.Router();
 
 // Before /orders/:id in the order routes.
 orderRouter.get('/store/rider-cash', authenticate, authorize('SELLER'), moormoveController.riderCash);
+// Delivery fees buyers owe for failed rider trips (their fault): the buyer's,
+// for checkout; waived by the shop or a super admin.
+orderRouter.get('/unpaid-fees', authenticate, authorize('BUYER', 'SELLER'), moormoveController.unpaidFees);
+orderRouter.post('/:id/unpaid-fee/waive', authenticate, authorize('SELLER', 'SUPER_ADMIN'), moormoveController.waiveUnpaidFee);
 orderRouter.get('/:id/tracking', authenticate, moormoveController.tracking);
 orderRouter.post('/:id/rider', authenticate, authorize('SELLER'), moormoveController.book);
 orderRouter.delete('/:id/rider', authenticate, authorize('SELLER'), moormoveController.cancelBooking);
 orderRouter.post('/:id/rider/self', authenticate, authorize('SELLER'), moormoveController.deliverMyself);
 orderRouter.post('/:id/rider/cash-received', authenticate, authorize('SELLER'), moormoveController.cashReceived);
+orderRouter.post('/:id/rider/parcel-returned', authenticate, authorize('SELLER'), moormoveController.parcelReturned);
 
 // MoorMove's updates: signed, so not limited like people are, but limited.
 const eventLimiter = rateLimit({

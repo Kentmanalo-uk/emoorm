@@ -71,6 +71,9 @@ const writeGcashReturn = (storeId) => {
 const newCheckoutId = () => window.crypto?.randomUUID?.()
   || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+// A rider quote whose token is about to run out (see staleAt below).
+const quoteRanOut = (quote) => Boolean(quote?.staleAt) && Date.now() >= quote.staleAt;
+
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -182,6 +185,31 @@ const Checkout = () => {
   }, [items]);
 
   const storeIds = useMemo(() => Object.keys(itemsByStore), [itemsByStore]);
+
+  // Delivery fees the buyer still owes for failed rider trips, per shop. An
+  // order from that shop carries them (the server adds them itself) and
+  // can't be cash on delivery until they are paid.
+  const [unpaidFees, setUnpaidFees] = useState([]);
+  const [unpaidFeesAttempt, setUnpaidFeesAttempt] = useState(0);
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let cancelled = false;
+    axios.get('/orders/unpaid-fees', { quiet: true })
+      .then((res) => {
+        const stores = res?.data?.stores ?? res?.stores;
+        if (!cancelled) setUnpaidFees(Array.isArray(stores) ? stores : []);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isAuthenticated, unpaidFeesAttempt]);
+  const feesFor = (storeId) => unpaidFees.find((s) => String(s.storeId) === String(storeId)) || null;
+  const feeLines = (storeId) => (feesFor(storeId)?.items || []);
+  // The shop whose unpaid fee rules out cash on delivery (one shop per checkout).
+  const codFeeBlock = useMemo(
+    () => storeIds.map((id) => unpaidFees.find((s) => String(s.storeId) === String(id)))
+      .find((s) => s && s.codBlocked !== false && Number(s.total) > 0) || null,
+    [storeIds, unpaidFees]
+  );
 
   // Auth + cart guard
   useEffect(() => {
@@ -413,8 +441,11 @@ const Checkout = () => {
   const riderStore = storeInfo[storeIds[0]]?.store || null;
   const ridersOffered = ridersOn && fulfillmentMethod === 'DELIVERY' && Boolean(riderStore)
     && riderStore.moormoveEnabled !== false && validPin(riderStore.latitude, riderStore.longitude);
-  // { key, available, reason, fee, listFee, promo, distanceKm, eta }
+  // { key, available, reason, fee, listFee, promo, distanceKm, eta, rideMinutes,
+  //   quoteToken, quoteExpiresAt, staleAt }
   const [riderQuote, setRiderQuote] = useState(null);
+  // Asks for the rider fee again (the last quote ran out).
+  const [riderRefresh, setRiderRefresh] = useState(0);
   const riderKey = ridersOffered && deliveryPin && validPin(deliveryPin.latitude, deliveryPin.longitude)
     ? JSON.stringify([
       storeIds[0],
@@ -440,15 +471,29 @@ const Checkout = () => {
         municipalityId: municipalityId || undefined,
         barangay: barangay || undefined,
       }, { quiet: true })
-        .then((res) => { if (!cancelled) setRiderQuote({ key: riderKey, ...(res.data || {}) }); })
+        .then((res) => {
+          if (cancelled) return;
+          const quote = res.data || {};
+          // The quote's token holds for 30 minutes: ask again a little before
+          // (at least a minute on, in case this device's clock is off).
+          const left = quote.quoteExpiresAt ? new Date(quote.quoteExpiresAt).getTime() - Date.now() - 30e3 : null;
+          setRiderQuote({ key: riderKey, ...quote, staleAt: left == null ? null : Date.now() + Math.max(60e3, left) });
+        })
         .catch((err) => {
           if (!cancelled) setRiderQuote({ key: riderKey, available: false, reason: err?.status >= 500 || !err?.status ? "Riders can't be reached right now. Try again in a moment." : err?.message || null, fee: null });
         });
     }, 400);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [riderKey]);
+  }, [riderKey, riderRefresh]);
   // Only the answer for this pin and these items counts.
   const riderAnswer = riderQuote && riderQuote.key === riderKey ? riderQuote : null;
+  // A new quote before this one's token runs out, so the order is charged the fee shown.
+  const riderStaleAt = riderAnswer?.staleAt || null;
+  useEffect(() => {
+    if (!riderStaleAt) return undefined;
+    const timer = setTimeout(() => setRiderRefresh((n) => n + 1), Math.max(0, riderStaleAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [riderStaleAt]);
   const riderReady = Boolean(riderAnswer?.available) && riderAnswer.fee != null;
   // A MoorMove free-delivery promo: no fee for the buyer (MoorMove pays the rider).
   const riderPromo = riderReady && Number(riderAnswer.fee) === 0 && riderAnswer.promo ? riderAnswer.promo : null;
@@ -511,12 +556,12 @@ const Checkout = () => {
     const stores = storeIds.map((id) => storeInfo[id]?.store).filter(Boolean);
     if (stores.length === 0) return { cod: true, gcash: true, qrph: true };
     return {
-      // Courier deliveries are paid online.
-      cod: !chosenCourier && stores.every((s) => s.acceptsCod !== false),
+      // Courier deliveries are paid online, and so is an order carrying an unpaid fee.
+      cod: !chosenCourier && !codFeeBlock && stores.every((s) => s.acceptsCod !== false),
       gcash: stores.every((s) => s.paymentQrImage && s.paymentQrType === 'GCASH'),
       qrph: stores.every((s) => s.paymentQrImage && s.paymentQrType === 'QRPH'),
     };
-  }, [storeIds, storeInfo, chosenCourier]);
+  }, [storeIds, storeInfo, chosenCourier, codFeeBlock]);
 
   // Fulfillment availability: the shop's, each Available Today window's, and
   // each product's own (pickup only / delivery only), with why when it is off.
@@ -588,7 +633,11 @@ const Checkout = () => {
     ? (chosenCourier ? Number(chosenCourier.fee) : riderChosen ? Number(riderAnswer.fee) : deliveryFee)
     : 0;
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
-  const total = Math.max(0, subtotal + shippingFee - discountAmount);
+  // Unpaid fees from failed rider trips at this shop, added to its total.
+  const carriedFees = orderableItems.length > 0
+    ? storeIds.reduce((sum, id) => sum + feeLines(id).reduce((n, f) => n + Number(f.amount || 0), 0), 0)
+    : 0;
+  const total = Math.max(0, subtotal + shippingFee - discountAmount) + carriedFees;
 
   // Paluto is cooked after the order, and a package may need ordering ahead:
   // when the order should be ready, by the rules the server sets it with.
@@ -739,6 +788,18 @@ const Checkout = () => {
       scrollToSection(pinOnly ? 'co-pin' : 'co-address');
       return;
     }
+    if (riderChosen && quoteRanOut(riderAnswer)) {
+      setRiderRefresh((n) => n + 1);
+      toast.error('Checking the rider fee again. Look it over, then place your order.');
+      scrollToSection('co-delivery');
+      return;
+    }
+    // An unpaid delivery fee at this shop: paid online with this order, not cash.
+    if (paymentMethod === 'COD' && codFeeBlock) {
+      toast.error(codFeeBlock.message || 'Pay the unpaid delivery fee first: choose GCash or QR Ph.');
+      scrollToSection('co-payment');
+      return;
+    }
     if (fulfillmentMethod === 'DELIVERY' && !sellerDelivers && !chosenCourier && !riderChosen) {
       toast.error('Choose a courier to deliver your order.');
       scrollToSection('co-delivery');
@@ -781,6 +842,8 @@ const Checkout = () => {
         courierId: chosenCourier?.id || undefined,
         // A MoorMove rider: priced by distance on the server, cash on delivery allowed.
         deliveryPartner: riderChosen ? 'MOORMOVE' : undefined,
+        // The quote the buyer saw: the order is charged exactly that fee.
+        riderQuoteToken: riderChosen && riderAnswer.quoteToken ? riderAnswer.quoteToken : undefined,
         voucherCode: appliedVoucher?.voucher?.code || undefined,
         deliveryAddress:
           fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
@@ -819,6 +882,8 @@ const Checkout = () => {
       // The server refused this attempt (stock, address…): the next one is a
       // new checkout, with what is in the cart then.
       if (error?.status && error.status < 500) checkoutIdRef.current = null;
+      // Cash refused for an unpaid fee we didn't know of: look again.
+      if (error?.status === 400 && paymentMethod === 'COD') setUnpaidFeesAttempt((n) => n + 1);
       if (isIdentityRequiredError(error)) {
         showIdentityRequired();
         return;
@@ -1238,6 +1303,9 @@ const Checkout = () => {
                         const eta = riderReady && riderAnswer.eta?.from && riderAnswer.eta?.to
                           ? rangeLabel({ from: new Date(riderAnswer.eta.from), to: new Date(riderAnswer.eta.to) })
                           : null;
+                        // The shop's preparation, then the ride once the rider has it.
+                        const ride = riderReady && riderAnswer.rideMinutes != null ? Math.max(1, Math.round(Number(riderAnswer.rideMinutes))) : null;
+                        const timing = eta ? (ride ? `ready ${eta}, then ~${ride} min ride` : `arrives ${eta}`) : null;
                         const km = riderReady && riderAnswer.distanceKm != null
                           ? `${Number(riderAnswer.distanceKm).toLocaleString('en-PH', { maximumFractionDigits: 1 })} km`
                           : null;
@@ -1252,7 +1320,7 @@ const Checkout = () => {
                             media={<CourierMark courier={MOORMOVE_COURIER} size={30} />}
                             title="MoorMove"
                             badge={riderPromo ? `Free delivery · ${riderPromo.title}, by MoorMove` : null}
-                            desc={why || ['A local rider brings it', km, eta ? `arrives ${eta}` : null, 'cash on delivery OK'].filter(Boolean).join(' · ')}
+                            desc={why || ['A local rider brings it', km, timing, 'cash on delivery OK'].filter(Boolean).join(' · ')}
                             aside={why ? '' : riderPromo ? (
                               <span className="co-free-fee">
                                 {Number(riderAnswer.listFee) > 0 && <s>{peso(riderAnswer.listFee)}</s>}
@@ -1328,6 +1396,12 @@ const Checkout = () => {
                             </span>
                             <span className={riderFree ? 'co-m-free' : undefined}>{fulfillmentMethod === 'PICKUP' ? 'No fee' : riderFree ? 'Free (MoorMove promo)' : !riderChosen && !chosenCourier && sellerFeePending ? 'Drop your pin' : peso(shippingFee)}</span>
                           </div>
+                          {feeLines(id).map((fee) => (
+                            <div key={fee.id} className="co-m-ship co-m-unpaid">
+                              <span>Unpaid delivery fee (order {fee.orderNumber})</span>
+                              <span>{peso(fee.amount)}</span>
+                            </div>
+                          ))}
                         </div>
                       );
                     })}
@@ -1343,7 +1417,7 @@ const Checkout = () => {
                       {[
                         {
                           value: 'COD', label: 'Cash on Delivery / Pickup', desc: 'Pay when you receive/pick up your order', enabled: paymentAvailability.cod, Icon: Money,
-                          off: chosenCourier ? 'Not available with courier delivery' : null,
+                          off: chosenCourier ? 'Not available with courier delivery' : codFeeBlock ? codFeeBlock.message || 'Pay the unpaid delivery fee first' : null,
                         },
                         { value: 'GCASH', label: 'GCash (QR)', desc: 'Pay with GCash after the seller confirms', enabled: paymentAvailability.gcash, Icon: DeviceMobile },
                         { value: 'QRPH', label: 'QR Ph', desc: 'Pay with QR Ph after the seller confirms', enabled: paymentAvailability.qrph, Icon: QrCode },
@@ -1412,6 +1486,12 @@ const Checkout = () => {
                   </span>
                   <span className={riderFree ? 'co-m-free' : undefined}>{fulfillmentMethod === 'PICKUP' ? 'No fee' : riderFree ? 'Free (MoorMove promo)' : !riderChosen && !chosenCourier && sellerFeePending ? 'Drop your pin' : peso(shippingFee)}</span>
                 </div>
+                {orderableItems.length > 0 && storeIds.flatMap(feeLines).map((fee) => (
+                  <div key={fee.id} className="summary-row">
+                    <span>Unpaid delivery fee (order {fee.orderNumber})</span>
+                    <span>{peso(fee.amount)}</span>
+                  </div>
+                ))}
                 {appliedVoucher && discountAmount > 0 && (
                   <div className="summary-row" style={{ color: 'var(--t-primary-600, #059669)' }}>
                     <span>Voucher ({appliedVoucher.voucher.code})</span>

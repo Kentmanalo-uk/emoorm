@@ -8,7 +8,7 @@ import EmptyArt from '../components/ui/EmptyArt';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import DateRangePicker from '../components/analytics/DateRangePicker';
 import RiderCashCard from '../components/seller/RiderCashCard';
-import { useMoormove } from '../lib/moormove';
+import { riderFeeNote, shopTotalOf, useMoormove } from '../lib/moormove';
 import './SellerDashboard.css';
 import '../components/analytics/analytics.css';
 
@@ -78,7 +78,10 @@ const toRow = (o) => ({
   number: (o.orderNumber || o.id).toString(),
   buyer: o.buyer?.fullName || o.buyer?.email || '—',
   items: o.items?.length || 0,
-  amount: Number(o.total || 0),
+  // The shop's sale: a MoorMove rider's delivery fee is the rider's.
+  amount: shopTotalOf(o),
+  riderFee: Number(o.riderFee || 0),
+  riderNote: riderFeeNote(o),
   paymentStatus: o.paymentStatus || '',
   refunded: refundedOf(o),
 });
@@ -177,7 +180,7 @@ export default function SellerFinance() {
       }
 
       const rows = [
-        ['Date', 'Order', 'Buyer', 'Items', 'Payment', 'Refunded (PHP)', 'Amount (PHP)'],
+        ['Date', 'Order', 'Buyer', 'Items', 'Payment', 'Refunded (PHP)', 'Rider fee to MoorMove (PHP)', 'Amount (PHP)'],
         ...all.map((o) => [
           o.date ? new Date(o.date).toLocaleDateString('en-PH') : '',
           o.number,
@@ -185,11 +188,12 @@ export default function SellerFinance() {
           o.items,
           PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus,
           o.refunded === null ? '' : fmtExact(o.refunded),
+          o.riderFee > 0 ? fmtExact(o.riderFee) : '',
           fmtExact(o.amount),
         ]),
         [],
-        ['Refunded', '', '', '', '', '', fmtExact(periodRefunded)],
-        ['Earned this period', '', '', '', '', '', fmtExact(periodTotal)],
+        ['Refunded', '', '', '', '', '', '', fmtExact(periodRefunded)],
+        ['Earned this period', '', '', '', '', '', '', fmtExact(periodTotal)],
       ];
       // Quote every field: buyer names and order references may contain commas.
       const csv = rows
@@ -324,7 +328,10 @@ export default function SellerFinance() {
                       <td style={{ textAlign: 'right' }} data-label="Refunded">
                         {o.refunded === null ? '—' : (o.refunded > 0 ? fmt(o.refunded) : '—')}
                       </td>
-                      <td className="txn-credit">{fmt(o.amount)}</td>
+                      <td className="txn-credit">
+                        {fmt(o.amount)}
+                        {o.riderNote && <small style={{ display: 'block', whiteSpace: 'normal', fontSize: 11.5, fontWeight: 400, color: 'var(--t-neutral-500, #6b7280)' }}>{o.riderNote}</small>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

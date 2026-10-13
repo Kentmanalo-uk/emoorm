@@ -297,14 +297,22 @@ const SELLER_CANCEL_TEXT = {
  *   refundNote: 'PAID' (the seller returns the payment) or
  *   'PENDING_VERIFICATION' (a payment the seller had not checked yet); true = 'PAID'
  */
-const notifyOrderUpdated = async (buyerId, orderId, newStatus, { orderNumber, refundNote, cancelReason } = {}) => {
+const notifyOrderUpdated = async (buyerId, orderId, newStatus, {
+  orderNumber, refundNote, cancelReason, refund: refundDue = null,
+} = {}) => {
   const base = ORDER_STATUS_NOTICES[newStatus] || { type: 'ORDER_CONFIRMED', title: 'Order updated', text: 'was updated' };
   const notice = newStatus === 'CANCELLED' && SELLER_CANCEL_TEXT[cancelReason]
     ? { ...base, text: SELLER_CANCEL_TEXT[cancelReason] }
     : base;
-  const refund = refundNote === 'PENDING_VERIFICATION'
+  // refundDue { amount, kept }: a failed rider trip (the buyer's fault) used
+  // up `kept` of the payment, so the seller returns `amount`.
+  const money = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const kept = refundNote && refundDue && refundDue.kept > 0
+    ? ` The seller will return ${money(refundDue.amount)}; the ${money(refundDue.kept)} delivery fee covers the failed trip.`
+    : null;
+  const refund = kept || (refundNote === 'PENDING_VERIFICATION'
     ? ' If you already paid, the seller will return your payment.'
-    : refundNote ? ' The seller will return your payment.' : '';
+    : refundNote ? ' The seller will return your payment.' : '');
   // Confirmed: a MoorMove free-delivery promo is said again.
   let promo = '';
   if (newStatus === 'CONFIRMED' && orderId) {
