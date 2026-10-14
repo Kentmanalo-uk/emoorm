@@ -20,7 +20,8 @@ import { uploadImage } from '../lib/upload';
 import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import ProductImage from '../components/ProductImage';
 import useAuthStore from '../store/authStore';
-import useCartStore, { cartKeyFor } from '../store/cartStore';
+import { standaloneLine } from '../store/cartStore';
+import { startBuyNow } from '../lib/buyNow';
 import './Orders.css';
 import { useSheetPresence } from '../hooks/useSheetMotion';
 import useEntryState from '../hooks/useEntryState';
@@ -78,7 +79,6 @@ const Orders = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuthStore();
-  const addItem = useCartStore((s) => s.addItem);
 
   // The list as it showed last time: shown at once while it is asked for again.
   const [orders, setOrders] = useState(() => readCache('orders') || []);
@@ -215,8 +215,9 @@ const Orders = () => {
     }
   };
 
-  // "Buy again": re-add each line from current catalogue data, skipping what
-  // can no longer be bought.
+  // "Buy again": each line again from current catalogue data, skipping what
+  // can no longer be bought, straight to checkout like Buy now: the cart is
+  // left as it is (lib/buyNow).
   const handleReorder = async (order) => {
     const lines = order.items || [];
     if (lines.length === 0) return;
@@ -225,9 +226,8 @@ const Orders = () => {
       const results = await Promise.allSettled(
         lines.map((line) => axios.get(`/products/${line.productId || line.product?.id}`)),
       );
-      let added = 0;
       let skipped = 0;
-      const keys = [];
+      const picked = [];
       results.forEach((result, index) => {
         const line = lines[index];
         const product = result.status === 'fulfilled' ? result.value?.data : null;
@@ -240,7 +240,7 @@ const Orders = () => {
         }
         const wanted = Number(line.quantity) || 1;
         try {
-          addItem({
+          picked.push(standaloneLine({
             id: product.id,
             productId: product.id,
             name: product.name,
@@ -260,25 +260,21 @@ const Orders = () => {
             weightGrams: product.weightGrams,
             packageItems: product.packageItems,
             selectedVariations: line.selectedVariations || null,
-          }, Math.max(minOrder(product), stockless ? wanted : Math.min(wanted, stock)));
-          keys.push(cartKeyFor({ id: product.id, selectedVariations: line.selectedVariations || null }));
-          added += 1;
+          }, Math.max(minOrder(product), stockless ? wanted : Math.min(wanted, stock))));
         } catch {
-          // e.g. the cart already holds the full stock of this line
+          // e.g. the shop is away, or the item isn't taking orders today
           skipped += 1;
         }
       });
-      if (added === 0) {
+      if (picked.length === 0) {
         toast.error('None of these items are available right now');
         return;
       }
-      toast.success(skipped > 0
-        ? `${added} item${added === 1 ? '' : 's'} added to cart, ${skipped} unavailable`
-        : `${added} item${added === 1 ? '' : 's'} added to cart`);
+      if (skipped > 0) toast(`${skipped} item${skipped === 1 ? ' is' : 's are'} no longer available`);
       // Straight to checkout with these items.
-      navigate('/checkout', { state: { selectedIds: keys } });
+      startBuyNow(navigate, picked);
     } catch (error) {
-      toast.error(error.message || 'Failed to add items to cart');
+      toast.error(error.message || 'Could not buy these items again');
     } finally {
       setReorderingId(null);
     }
@@ -641,7 +637,7 @@ const Orders = () => {
                       className="order-action-btn is-primary"
                     >
                       <RotateCcw size={16} />
-                      {reorderingId === order.id ? <BusyLabel>Adding…</BusyLabel> : 'Buy again'}
+                      {reorderingId === order.id ? <BusyLabel>Opening…</BusyLabel> : 'Buy again'}
                     </button>
                   )}
 

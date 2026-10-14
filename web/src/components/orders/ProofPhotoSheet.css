@@ -73,36 +73,127 @@
   color: var(--t-primary-700, #047857);
 }
 
-.proof-preview {
+/* Scoped to the sheet: Checkout.css has an older .proof-preview (a 96px
+   square) that, once loaded, shrank this preview to a strip. */
+.proof-sheet .proof-preview {
   position: relative;
+  display: block;
+  flex-shrink: 0;
   overflow: hidden;
   border-radius: 14px;
   background: var(--t-neutral-100, #f3f4f6);
 }
 
-.proof-preview img {
+.proof-sheet .proof-preview img {
   display: block;
   width: 100%;
-  max-height: 300px;
+  height: auto;
+  max-height: min(300px, 38vh);
+  border: 0;
+  border-radius: 0;
   object-fit: contain;
 }
 
-.proof-retake {
+.proof-add {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.proof-add-label {
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* Under the preview: the upload's state, as a band along its bottom. */
+.proof-state {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.proof-state.is-uploading {
+  background: rgba(17, 24, 39, 0.72);
+}
+
+.proof-state.is-ready {
+  background: rgba(4, 120, 87, 0.88);
+}
+
+.proof-state.is-failed {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  background: rgba(185, 28, 28, 0.92);
+}
+
+.proof-sheet .proof-preview.is-uploading img {
+  opacity: 0.7;
+}
+
+.proof-error {
+  display: inline-flex;
+  flex: 1 1 180px;
+  align-items: flex-start;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.proof-error svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.proof-try-again {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 34px;
+  height: 32px;
   padding: 0 12px;
   border: none;
   border-radius: 999px;
-  background: rgba(17, 24, 39, 0.72);
-  color: #fff;
+  background: #fff;
+  color: #b91c1c;
   font: inherit;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+}
+
+.proof-swap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.proof-swap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.proof-swap-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .proof-sheet .cf-dialog-actions {

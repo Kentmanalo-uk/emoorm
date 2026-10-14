@@ -1,5 +1,6 @@
 const { body, validationResult } = require('express-validator');
 const { ApiError } = require('../middleware/errorHandler');
+const config = require('../config/env');
 
 /**
  * Order validation rules.
@@ -16,7 +17,17 @@ const VERIFY_STATUSES = ['PAID', 'FAILED', 'REFUNDED'];
 // once spaces and dashes are stripped.
 const PH_MOBILE = /^(09\d{9}|\+639\d{9})$/;
 const PAYMENT_REFERENCE = /^[A-Za-z0-9 -]+$/;
-const PAYMENT_PROOF_URL = /^\/uploads\/[A-Za-z0-9._-]+\.(jpe?g|png|webp)$/i;
+const PAYMENT_PROOF_URL = /^\/uploads\/[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif)$/i;
+
+// A photo uploaded to E-MOORM: what POST /upload/image answered, which is
+// /uploads/<file>, or the same file behind the CDN when CDN_URL is set
+// (imageOptimizer publicUrl). Nothing from another site.
+const isUploadedPhoto = (value) => {
+  const url = String(value ?? '').trim();
+  const cdn = config.cdn?.url;
+  const local = cdn && url.startsWith(`${cdn}/uploads/`) ? url.slice(cdn.length) : url;
+  return PAYMENT_PROOF_URL.test(local);
+};
 
 const stripPhone = (value) => String(value ?? '').replace(/[\s-]/g, '');
 
@@ -36,7 +47,7 @@ const paymentProofChecks = (chain) => chain
   .withMessage('Payment proof must be an uploaded image')
   .isLength({ max: 255 })
   .withMessage('Payment proof path is too long')
-  .matches(PAYMENT_PROOF_URL)
+  .custom(isUploadedPhoto)
   .withMessage('Payment proof must be an uploaded JPG, PNG or WEBP image');
 
 const optionalText = (field, max, label) => body(field)
@@ -123,7 +134,7 @@ const statusUpdateValidation = [
     .withMessage('The photo must be an uploaded image')
     .isLength({ max: 255 })
     .withMessage('Photo path is too long')
-    .matches(PAYMENT_PROOF_URL)
+    .custom(isUploadedPhoto)
     .withMessage('The photo must be an uploaded JPG, PNG or WEBP image'),
 ];
 
@@ -154,4 +165,5 @@ module.exports = {
   PH_MOBILE,
   PAYMENT_REFERENCE,
   PAYMENT_PROOF_URL,
+  isUploadedPhoto,
 };

@@ -50,10 +50,16 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => cb(null, safeFilename(file)),
 });
 
+// A part sent with no type of its own: some phone pickers (a photo still in
+// the cloud, an Android gallery app) give the file none, and the browser or
+// app then sends it as application/octet-stream. Its bytes decide, as for
+// every upload: assertRealImage() keeps it only when it is really a picture.
+const UNTYPED = new Set(['', 'application/octet-stream', 'binary/octet-stream']);
+
 // A first, cheap gate on the declared type. It is spoofable by design, so it
 // is a filter and not a guarantee; assertRealImage() is the actual check.
 const fileFilter = (req, file, cb) => {
-  if (config.upload.allowedFileTypes.includes(file.mimetype)) {
+  if (config.upload.allowedFileTypes.includes(file.mimetype) || UNTYPED.has(String(file.mimetype || '').toLowerCase())) {
     cb(null, true);
   } else {
     cb(new ApiError('That file is not a photo we can use. Choose a JPG, PNG, HEIC or WebP photo.', 400), false);

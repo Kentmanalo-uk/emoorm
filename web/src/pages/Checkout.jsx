@@ -20,7 +20,8 @@ import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
 import ProductImage from '../components/ProductImage';
-import useCartStore from '../store/cartStore';
+import useCartStore, { checkLines, patchLines } from '../store/cartStore';
+import { buyNowLines, clearBuyNow, saveBuyNow } from '../lib/buyNow';
 import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
@@ -84,16 +85,33 @@ const Checkout = () => {
   const { enabled: ridersOn, promos: riderPromos } = useMoormove();
   const isPhone = usePhoneLayout();
 
+  // Buy now: its own lines, with the quantity picked, and the cart left as
+  // it is (lib/buyNow). null: the cart's lines.
+  const buyNowId = location.state?.buyNow?.id || null;
+  const [buyNowItems, setBuyNowItems] = useState(() => buyNowLines(location.state));
+  useEffect(() => {
+    if (buyNowId && buyNowItems) saveBuyNow(buyNowId, buyNowItems);
+  }, [buyNowId, buyNowItems]);
+  // Leaving checkout forgets them (a refresh keeps them: no unmount then).
+  useEffect(() => () => clearBuyNow(), []);
+
   // Refresh price / stock / availability of every line before anything is placed.
   const [revalidating, setRevalidating] = useState(false);
   useEffect(() => {
     if (!isAuthenticated) return undefined;
     let cancelled = false;
     (async () => {
-      if (useCartStore.getState().items.length === 0) return;
+      if (buyNowItems ? buyNowItems.length === 0 : useCartStore.getState().items.length === 0) return;
       setRevalidating(true);
       try {
-        const { capped, unavailable, raised = [] } = await revalidate();
+        let result;
+        if (buyNowItems) {
+          result = await checkLines(buyNowItems);
+          if (!cancelled) setBuyNowItems((lines) => (lines ? patchLines(lines, result.patches) : lines));
+        } else {
+          result = await revalidate();
+        }
+        const { capped, unavailable, raised = [] } = result;
         if (cancelled) return;
         if (capped.length) toast(`Quantity reduced to available stock: ${capped.join(', ')}`);
         if (raised.length) toast(`Changed to the minimum order: ${raised.join(', ')}`);
@@ -117,10 +135,11 @@ const Checkout = () => {
   const selectedIds = location.state?.selectedIds;
   const incomingVoucherCode = location.state?.voucherCode || '';
   const items = useMemo(() => {
+    if (buyNowItems) return buyNowItems;
     if (!Array.isArray(selectedIds) || selectedIds.length === 0) return allItems;
     const allow = new Set(selectedIds);
     return allItems.filter((it) => allow.has(it.id));
-  }, [allItems, selectedIds]);
+  }, [allItems, selectedIds, buyNowItems]);
 
   const [deliveryForm, setDeliveryForm] = useState({
     fullName: '',
@@ -771,7 +790,9 @@ const Checkout = () => {
       return;
     }
     if (unavailableItems.length > 0) {
-      toast.error('Remove the unavailable items from your cart before placing the order.');
+      toast.error(buyNowItems
+        ? 'This item can\'t be ordered right now.'
+        : 'Remove the unavailable items from your cart before placing the order.');
       return;
     }
     if (orderableItems.length === 0) {
@@ -866,8 +887,11 @@ const Checkout = () => {
           selectedVariations: item.selectedVariations || undefined,
         })),
       });
-      // Only remove the items that were part of this order — leave any unselected items in the cart.
-      if (Array.isArray(selectedIds) && selectedIds.length > 0) {
+      // Buy now never went through the cart: the cart stays as it was.
+      // Otherwise only the items that were part of this order leave it.
+      if (buyNowItems) {
+        clearBuyNow();
+      } else if (Array.isArray(selectedIds) && selectedIds.length > 0) {
         selectedIds.forEach((id) => useCartStore.getState().removeItem(id));
       } else {
         clearCart();
@@ -964,7 +988,12 @@ const Checkout = () => {
 
           <div className="checkout-header">
             <h1 className="checkout-title">Checkout</h1>
-            <Link to="/cart" className="btn-back-to-cart"><ChevronLeft size={18} />Back to Cart</Link>
+            {buyNowItems ? (
+              // Buy now came from the product, not the cart.
+              <button type="button" className="btn-back-to-cart" onClick={() => navigate(-1)}><ChevronLeft size={18} />Back</button>
+            ) : (
+              <Link to="/cart" className="btn-back-to-cart"><ChevronLeft size={18} />Back to Cart</Link>
+            )}
           </div>
 
           <div className="checkout-layout">
@@ -997,8 +1026,17 @@ const Checkout = () => {
                     <AlertTriangle size={16} />
                     <div>
                       <strong>{unavailableItems.length === 1 ? 'An item is' : `${unavailableItems.length} items are`} no longer available</strong>
-                      <p>{unavailableItems.map((it) => it.name).join(', ')}. Remove {unavailableItems.length === 1 ? 'it' : 'them'} from your cart to place this order.</p>
-                      <Link to="/cart" className="btn-back">Back to cart</Link>
+                      {buyNowItems ? (
+                        <>
+                          <p>{unavailableItems.map((it) => it.name).join(', ')} can&apos;t be ordered right now.</p>
+                          <button type="button" className="btn-back" onClick={() => navigate(-1)}>Go back</button>
+                        </>
+                      ) : (
+                        <>
+                          <p>{unavailableItems.map((it) => it.name).join(', ')}. Remove {unavailableItems.length === 1 ? 'it' : 'them'} from your cart to place this order.</p>
+                          <Link to="/cart" className="btn-back">Back to cart</Link>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

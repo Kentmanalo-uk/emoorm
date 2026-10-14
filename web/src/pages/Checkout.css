@@ -33,6 +33,9 @@
   text-decoration: none;
   border-radius: 0;
   transition: all 0.2s;
+  /* Also a button (Buy now goes back to the product). */
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .btn-back-to-cart:hover {

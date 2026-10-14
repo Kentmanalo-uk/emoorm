@@ -31,8 +31,9 @@ const readToken = () => localStorage.getItem('token') || localStorage.getItem('a
 const SIGN_IN_STEP = /\/auth\/(login|register|google|refresh-token|forgot-password|reset-password|verify-email|resend-verification|logout|mfa|qr)(\/|$|\?)/;
 
 // One renewal at a time: every request that fails meanwhile waits for it.
+// Also used by uploads (lib/upload), which go out through fetch.
 let refreshing = null;
-const renewSession = () => {
+export const renewSession = () => {
   if (!refreshing) {
     const refreshToken = localStorage.getItem('refreshToken');
     refreshing = (refreshToken

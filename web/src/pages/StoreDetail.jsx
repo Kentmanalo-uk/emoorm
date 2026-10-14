@@ -44,7 +44,8 @@ import {
   getFollowStatus,
   subscribeToFollowChanges,
 } from '../lib/follow';
-import useCartStore, { cartKeyFor } from '../store/cartStore';
+import useCartStore, { standaloneLine } from '../store/cartStore';
+import { startBuyNow } from '../lib/buyNow';
 import useAuthStore from '../store/authStore';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useEntryState from '../hooks/useEntryState';
@@ -282,36 +283,42 @@ export default function StoreDetail() {
     }
   };
 
-  // Phones: the same rules as the product list (options are picked on the
-  // product page), and guests may fill a cart, as on the product page.
-  const addToCartPhone = (product) => {
+  // Phones: the same rules as the product list (options and animals are
+  // chosen on the product page), and guests may fill a cart, as on the
+  // product page.
+  const needsProductPage = (product) => {
     if (productKind(product) === 'LIVESTOCK' || (Array.isArray(product.variations) && product.variations.length > 0)) {
       navigate(`/product/${product.slug}`);
-      return false;
+      return true;
     }
+    return false;
+  };
+  const phoneLine = (product) => ({
+    id: product.id,
+    productId: product.id,
+    name: product.name,
+    price: saleInfo(product).price,
+    image: (Array.isArray(product.images) ? product.images[0] : null) || '/placeholder-product.png',
+    storeId: store.id,
+    storeName: store.name,
+    storeLogo: store.logo || null,
+    readyToSell: store.readyToSell,
+    vacationUntil: store.vacationUntil,
+    stock: product.stock,
+    listingKind: product.listingKind,
+    availability: product.availability,
+    productType: product.productType,
+    details: product.details,
+    fulfillment: product.fulfillment,
+    weightGrams: product.weightGrams,
+    slug: product.slug,
+    categoryId: product.categoryId,
+    selectedVariations: null,
+  });
+  const addToCartPhone = (product) => {
+    if (needsProductPage(product)) return false;
     try {
-      addItem({
-        id: product.id,
-        productId: product.id,
-        name: product.name,
-        price: saleInfo(product).price,
-        image: (Array.isArray(product.images) ? product.images[0] : null) || '/placeholder-product.png',
-        storeId: store.id,
-        storeName: store.name,
-        storeLogo: store.logo || null,
-        readyToSell: store.readyToSell,
-        vacationUntil: store.vacationUntil,
-        stock: product.stock,
-        listingKind: product.listingKind,
-        availability: product.availability,
-        productType: product.productType,
-        details: product.details,
-        fulfillment: product.fulfillment,
-        weightGrams: product.weightGrams,
-        slug: product.slug,
-        categoryId: product.categoryId,
-        selectedVariations: null,
-      }, 1);
+      addItem(phoneLine(product), 1);
       toast.success(`${product.name} added to cart`);
       return true;
     } catch (error) {
@@ -320,9 +327,19 @@ export default function StoreDetail() {
     }
   };
 
+  // Straight to checkout with just this item (one, or a paluto's minimum
+  // order), leaving the cart as it is (lib/buyNow).
   const buyNowPhone = (product) => {
-    // Straight to checkout with just this item.
-    if (addToCartPhone(product)) navigate('/checkout', { state: { selectedIds: [cartKeyFor({ id: product.id, selectedVariations: null })] } });
+    if (needsProductPage(product)) return;
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${encodeURIComponent(`/store/${slug}`)}`);
+      return;
+    }
+    try {
+      startBuyNow(navigate, [standaloneLine(phoneLine(product), 1)]);
+    } catch (error) {
+      toast.error(error.message || 'This item can\'t be bought right now');
+    }
   };
 
   const handleToggleFollow = async () => {

@@ -17,7 +17,8 @@ import { BusyLabel } from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
 import axios from '../lib/axios';
 import { resolveImg, parseImages } from '../lib/media';
-import useCartStore, { cartKeyFor } from '../store/cartStore';
+import useCartStore, { standaloneLine } from '../store/cartStore';
+import { startBuyNow } from '../lib/buyNow';
 import useAuthStore from '../store/authStore';
 import LivestockDeal from '../components/offers/LivestockDeal';
 import ShippingEstimate from '../components/orders/ShippingEstimate';
@@ -373,45 +374,54 @@ const ProductDetails = () => {
     }
   };
 
-  // `quiet`: Buy now puts the item in the cart only to check it out, so it
-  // says nothing about the cart.
-  const handleAddToCart = ({ quiet = false } = {}) => {
-    if (!isAuthenticated) { loginRedirect(); return; }
+  // The line for the choices made: what Add to cart adds, and what Buy now
+  // checks out on its own.
+  const lineForSelection = () => {
+    const variationDefinitions = Array.isArray(product.variations) ? product.variations : [];
+    return {
+      id: product.id,
+      name: product.name,
+      price: priceForSelection(product, selectedVariations),
+      priceTiers: product.priceTiers,
+      // The chosen option's photo when it has one.
+      image: imageForSelection(product, selectedVariations) || parseImages(product.images)[0] || '/placeholder-product.png',
+      storeId: product.storeId,
+      storeName: product.store?.name,
+      storeLogo: product.store?.logoUrl || product.store?.logo || null,
+      stock: stockForSelection(product, selectedVariations),
+      listingKind: product.listingKind,
+      availability: product.availability,
+      // The kind, so the cart knows a paluto has no stock but a minimum
+      // order, and checkout which ways it can be received.
+      productType: product.productType,
+      details: product.details,
+      fulfillment: product.fulfillment,
+      weightGrams: product.weightGrams,
+      packageItems: product.packageItems,
+      slug: product.slug,
+      categoryId: product.categoryId,
+      productId: product.id,
+      selectedVariations: variationDefinitions.length ? selectedVariations : null,
+    };
+  };
+
+  // Every option group needs a pick (the phone sheet checks this itself).
+  const optionsPicked = () => {
     const variationDefinitions = Array.isArray(product.variations) ? product.variations : [];
     const missingVariation = variationDefinitions.find((variation) => !selectedVariations[variation.name]);
-    if (missingVariation) {
-      setVariationError(missingVariation.name);
-      document.querySelector('.pdp-variations-row')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return false;
-    }
+    if (!missingVariation) return true;
+    setVariationError(missingVariation.name);
+    document.querySelector('.pdp-variations-row')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  };
+
+  const handleAddToCart = () => {
+    if (!isAuthenticated) { loginRedirect(); return false; }
+    if (!optionsPicked()) return false;
     setIsAddingToCart(true);
     try {
-      addItem({
-        id: product.id,
-        name: product.name,
-        price: priceForSelection(product, selectedVariations),
-        priceTiers: product.priceTiers,
-        // The chosen option's photo when it has one.
-        image: imageForSelection(product, selectedVariations) || parseImages(product.images)[0] || '/placeholder-product.png',
-        storeId: product.storeId,
-        storeName: product.store?.name,
-        storeLogo: product.store?.logoUrl || product.store?.logo || null,
-        stock: stockForSelection(product, selectedVariations),
-        listingKind: product.listingKind,
-        availability: product.availability,
-        // The kind, so the cart knows a paluto has no stock but a minimum
-        // order, and checkout which ways it can be received.
-        productType: product.productType,
-        details: product.details,
-        fulfillment: product.fulfillment,
-        weightGrams: product.weightGrams,
-        packageItems: product.packageItems,
-        slug: product.slug,
-        categoryId: product.categoryId,
-        productId: product.id,
-        selectedVariations: variationDefinitions.length ? selectedVariations : null,
-      }, quantity);
-      if (!quiet) toast.success('Added to cart');
+      addItem(lineForSelection(), quantity);
+      toast.success('Added to cart');
       return true;
     } catch (error) {
       toast.error(error.message || 'Failed to add to cart');
@@ -421,16 +431,24 @@ const ProductDetails = () => {
     }
   };
 
-  // Buy Now: straight to checkout with just this item (and its options).
-  const goToCheckout = () => {
-    const variationDefinitions = Array.isArray(product.variations) ? product.variations : [];
-    const key = cartKeyFor({ id: product.id, selectedVariations: variationDefinitions.length ? selectedVariations : null });
-    navigate('/checkout', { state: { selectedIds: [key] } });
+  // Buy Now: straight to checkout with just this item, its options and the
+  // quantity picked here. The cart is left alone: a line already in it keeps
+  // its own quantity and is neither added to nor removed.
+  const buyNow = () => {
+    try {
+      startBuyNow(navigate, [standaloneLine(lineForSelection(), quantity)]);
+      return true;
+    } catch (error) {
+      toast.error(error.message || 'This item can\'t be bought right now');
+      return false;
+    }
   };
 
   const handleBuyNow = async () => {
-    if (isAuthenticated && !(await requireVerifiedIdentity())) return;
-    if (handleAddToCart({ quiet: true }) !== false) goToCheckout();
+    if (!isAuthenticated) { loginRedirect(); return; }
+    if (!optionsPicked()) return;
+    if (!(await requireVerifiedIdentity())) return;
+    buyNow();
   };
 
   // Phone sheet: the sheet has already checked every option group.
@@ -442,9 +460,8 @@ const ProductDetails = () => {
     // The identity dialog shows in place of the sheet.
     if (mode === 'buy' && !(await requireVerifiedIdentity())) { setSheetMode(null); return; }
     // On failure (e.g. more than the stock) the sheet stays open with the toast.
-    if (handleAddToCart({ quiet: mode === 'buy' }) === false) return;
+    if ((mode === 'buy' ? buyNow() : handleAddToCart()) === false) return;
     setSheetMode(null);
-    if (mode === 'buy') goToCheckout();
   };
 
   // From one (a paluto: its minimum order) up to the stock for the choices
