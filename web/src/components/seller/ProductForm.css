@@ -770,6 +770,84 @@
   background: var(--pf-green);
 }
 
+/* Local Delicacies: Packed food or Cooked food, as two big cards. */
+.pf-foodkind {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.pf-foodkind-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  min-height: 96px;
+  padding: 16px;
+  border: 1.5px solid var(--pf-line);
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--pf-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pf-foodkind-btn:focus-visible {
+  outline: 2px solid var(--pf-green);
+  outline-offset: 2px;
+}
+
+.pf-foodkind-btn.is-on {
+  border-color: var(--pf-green);
+  background: var(--pf-green-soft);
+}
+
+.pf-foodkind.is-invalid .pf-foodkind-btn {
+  border-color: var(--t-danger-300, #fca5a5);
+}
+
+.pf-foodkind-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--pf-green);
+}
+
+.pf-foodkind-btn.is-on .pf-foodkind-icon {
+  background: var(--t-neutral-0, #fff);
+}
+
+.pf-foodkind-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pf-foodkind-text strong {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.pf-foodkind-text small {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--pf-muted);
+}
+
+.pf-foodkind-btn .pf-radio {
+  margin-top: 2px;
+}
+
 .pf-policy-text {
   display: flex;
   flex-direction: column;

@@ -49,9 +49,10 @@ function NotesField({ form, set, example }) {
   );
 }
 
-function ServesField({ form, set, error, required, hint }) {
+/** "Good for how many people?", with quick examples to tap (Local Delicacies' short form uses it too). */
+export function ServesField({ form, set, error, required, optional, hint }) {
   return (
-    <Field label="Good for how many people?" required={required} error={error} htmlFor="pf-serves" hint={hint}>
+    <Field label="Good for how many people?" required={required} optional={optional} error={error} htmlFor="pf-serves" hint={hint}>
       <div className="pf-suggest pf-suggest--top">
         {SERVES_EXAMPLES.map((s) => (
           <button type="button" key={s} className={form.serves === s ? 'is-on' : ''} onClick={() => set('serves', s)}>{s}</button>

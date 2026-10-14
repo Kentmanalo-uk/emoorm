@@ -262,7 +262,8 @@ function SellerFulfillment({ part }) {
   /**
    * Saves the places list at once (the Delivery page has no separate Save
    * for it): Me, Home and "Complete your shop" follow. Rejects (after the
-   * toast) so the sheet stays open.
+   * toast) so the panel stays open. message false: no toast (a fee typed on
+   * a line shows its own small "Saved").
    */
   const commitPlan = async (next, message) => {
     const blocking = planProblems(next, (id) => nameOf(id) || 'this town').filter((p) => p.key !== 'places');
@@ -278,7 +279,7 @@ function SellerFulfillment({ part }) {
       setStore((prev) => (prev ? { ...prev, ...charged } : prev));
       layoutCtx?.setStore?.((prev) => (prev ? { ...prev, ...charged } : prev));
       layoutCtx?.refreshSetup?.();
-      toast.success(message || 'Saved');
+      if (message !== false) toast.success(message || 'Saved');
     } catch (err) {
       toast.error(err.message || 'Could not save. Please try again.');
       throw err;
@@ -594,17 +595,16 @@ function SellerFulfillment({ part }) {
         <p className="sf-courier-warn sf-rider-warn sf-perkm-pin" role="status">
           <Warning size={15} weight="fill" />
           <span>
-            Pin your shop on the map so the fee can be worked out by distance. Until then, buyers pay the fee of their place.{' '}
+            Pin your shop so the distance can be worked out.{' '}
             {showPickup
-              ? <Link to={isPhone ? partPath('pickup') : '/seller/fulfillment#pickup-pin'}>Pin your shop in Pickup Location</Link>
-              : (ridersOn && riders ? 'Pin it on the map above.' : 'Pin it on the map below.')}
+              ? <Link to={isPhone ? partPath('pickup') : '/seller/fulfillment#pickup-pin'}>Pin it in Pickup Location</Link>
+              : (ridersOn && riders ? 'Use the map above.' : 'Use the map below.')}
           </span>
         </p>
       )}
       {!showPickup && !(ridersOn && riders) && (
         <div className="form-group sf-pin sf-rider-pin">
           <label>Your shop pin</label>
-          <p className="sf-pin-help">Delivery distances start here. Drag the pin if the spot moves.</p>
           <StoreLocationMap
             value={{ latitude: form.latitude, longitude: form.longitude }}
             onChange={({ latitude, longitude }) => setForm((prev) => ({ ...prev, latitude, longitude }))}
@@ -629,9 +629,6 @@ function SellerFulfillment({ part }) {
                 <h3 className="sf-q-title" id="sf-q-who">
                   <Truck size={22} weight="fill" className="dp-who-icon" aria-hidden="true" /> Who delivers your orders?
                 </h3>
-                <p className="sf-hint sf-hint-lead">
-                  Tick all that apply. Buyers choose at checkout and see each courier's fee for their parcel's weight.
-                </p>
                 <div className="sf-couriers">
                   <ChoiceCard
                     type="checkbox"
@@ -641,7 +638,7 @@ function SellerFulfillment({ part }) {
                     onChange={() => setShipping((prev) => ({ ...prev, selfDelivery: !prev.selfDelivery }))}
                     media={<span className="sf-courier-self"><Truck size={18} weight="fill" /></span>}
                     title="I deliver myself"
-                    desc="Your own delivery fee · cash on delivery allowed"
+                    desc="Your own fee · COD OK"
                   />
                   {ridersOn && (
                     <ChoiceCard
@@ -652,8 +649,8 @@ function SellerFulfillment({ part }) {
                       onChange={() => setRiders((v) => !v)}
                       media={<CourierMark courier={MOORMOVE_COURIER} size={30} />}
                       title="MoorMove"
-                      desc={`Local riders pick up at your shop · fee by distance, paid by the buyer · cash on delivery OK${
-                        promosForTown(riderPromos, store?.municipalityId).length ? ' · Free delivery promo running now' : ''}`}
+                      desc={`Local riders · fee by distance · COD OK${
+                        promosForTown(riderPromos, store?.municipalityId).length ? ' · promo on' : ''}`}
                     />
                   )}
                   {courierList.map((c) => {
@@ -669,7 +666,7 @@ function SellerFulfillment({ part }) {
                         onChange={() => toggleCourier(c.id)}
                         media={<CourierMark courier={c} size={30} />}
                         title={c.name}
-                        desc={from == null ? 'Rates not set yet' : `From ₱${from} · paid online by the buyer`}
+                        desc={from == null ? 'Rates not set yet' : `From ₱${from} · paid online`}
                       />
                     );
                   })}
@@ -678,25 +675,23 @@ function SellerFulfillment({ part }) {
                   <div className="sf-riders">
                     {riders && (
                       <p className="sf-hint sf-rider-help">
-                        Buyers can choose a MoorMove rider at checkout. When an order is packed, tap Call a rider: a rider picks it up at your shop pin.
-                        The buyer pays the delivery fee, worked out by distance. With cash on delivery, the rider collects from the buyer and brings the item money back to you.
+                        Tap Call a rider when an order is packed.
                       </p>
                     )}
                     {riders && !pickupPinned && (
                       <p className="sf-courier-warn sf-rider-warn" role="status">
                         <Warning size={15} weight="fill" />
                         <span>
-                          Riders pick up at your shop pin, and your shop has none yet.{' '}
+                          Riders need your shop pin.{' '}
                           {showPickup
-                            ? <Link to={isPhone ? partPath('pickup') : '/seller/fulfillment#pickup-pin'}>Pin your shop in Pickup Location</Link>
-                            : 'Pin it on the map below.'}
+                            ? <Link to={isPhone ? partPath('pickup') : '/seller/fulfillment#pickup-pin'}>Pin it in Pickup Location</Link>
+                            : 'Use the map below.'}
                         </span>
                       </p>
                     )}
                     {riders && !showPickup && (
                       <div className="form-group sf-pin sf-rider-pin">
                         <label>Your shop pin</label>
-                        <p className="sf-pin-help">Where riders pick up your orders. Drag the pin if the spot moves.</p>
                         <StoreLocationMap
                           value={{ latitude: form.latitude, longitude: form.longitude }}
                           onChange={({ latitude, longitude }) => setForm((prev) => ({ ...prev, latitude, longitude }))}
@@ -709,7 +704,7 @@ function SellerFulfillment({ part }) {
                     {riders && pickupPinned && riderBlock && (
                       <p className="sf-courier-warn sf-rider-warn" role="status">
                         <Warning size={15} weight="fill" />
-                        <span>{riderBlock}. Buyers can choose a rider once it is.</span>
+                        <span>{riderBlock}.</span>
                       </p>
                     )}
                   </div>
@@ -719,7 +714,7 @@ function SellerFulfillment({ part }) {
                 )}
                 {shipping.courierIds.length > 0 && !form.paymentQrImage && (
                   <p className="sf-courier-warn" role="status">
-                    Courier orders are paid online, so buyers can only choose a courier once you add your GCash or QR Ph in Payment options.
+                    Couriers need your GCash or QR Ph in Payment options.
                   </p>
                 )}
               </section>
@@ -731,19 +726,12 @@ function SellerFulfillment({ part }) {
                   municipalities={municipalities}
                   homeId={homeId}
                   platformRate={platformRate}
-                  pickupToo={showPickup}
                   distanceExtras={distanceExtras}
-                  savedNote="Each change here is saved right away."
-                  distanceNote={!pickupPinned ? 'Your shop has no pin on the map yet. Until it has one, buyers pay the fee of their place.' : null}
                 />
               ) : (
                 <p className="sf-courier-auto" role="status">
                   <CheckCircle size={18} weight="fill" />
-                  <span>
-                    <strong>No delivery fee to type.</strong> Couriers deliver all around Oriental Mindoro, and the
-                    shipping fee is worked out from each product&apos;s weight and the courier&apos;s rates. Buyers pay it
-                    online with the order.
-                  </span>
+                  <span>Couriers set the shipping fee from each product&apos;s weight.</span>
                 </p>
               )}
             </div>
@@ -1151,7 +1139,6 @@ function SellerFulfillment({ part }) {
           <SellerPageHead
             className="sf-head"
             title="Delivery"
-            subtitle="Who delivers, the places you deliver to, and how much buyers pay there."
           />
           {showDeliveryAreas ? deliveryCard : (
             <div className="seller-card">

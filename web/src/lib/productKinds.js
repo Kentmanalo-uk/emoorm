@@ -219,11 +219,31 @@ export const allowsMethod = (product, method) => !product?.fulfillment
   || product.fulfillment === 'BOTH'
   || product.fulfillment === method;
 
+/**
+ * Local Delicacies: food sellers add with a short form, as Packed food
+ * (REGULAR, kept in stock) or Cooked food (READY_TO_EAT, posted on Today's
+ * menu with its times). Paluto and packages aren't offered there for new
+ * products (packages have their own form).
+ */
+export const isLocalDelicacies = (category) => !!category && (
+  category.slug === 'local-delicacies' || /^local delicac/i.test(String(category.name || '').trim())
+);
+
 /** The kinds a seller is asked to choose from in a category (one = no question). */
 export const kindsForCategory = (category) => {
+  if (isLocalDelicacies(category)) return ['REGULAR', 'READY_TO_EAT'];
   if (category?.kind === 'FOOD') return ['REGULAR', 'READY_TO_EAT', 'COOK_TO_ORDER'];
   if (category?.kind === 'LIVESTOCK') return ['LIVESTOCK', 'REGULAR'];
   return ['REGULAR'];
+};
+
+/** Local Delicacies' two answers. */
+export const FOOD_KINDS = {
+  REGULAR: { label: 'Packed food', hint: 'Made ahead and kept in stock, like banana chips, bagoong, kakanin in packs.' },
+  READY_TO_EAT: {
+    label: 'Cooked food',
+    hint: "Meals and dishes you cook, like adobo, pancit, kakanin to order. You post them on Today's menu with times.",
+  },
 };
 
 /** The "What kind?" answers for a category, worded for it: [{ key, label, hint }]. */
@@ -233,7 +253,7 @@ export const kindChoices = (category) => {
       LIVESTOCK: { label: 'Live animal, sold per head', hint: 'Like a native pig, goats or chickens' },
       REGULAR: { label: 'Meat or other products', hint: 'Like pork, eggs or longganisa' },
     }
-    : {
+    : isLocalDelicacies(category) ? FOOD_KINDS : {
       REGULAR: { label: 'Packed or regular product', hint: 'Like banana chips, bagoong or kakanin in packs' },
       READY_TO_EAT: { label: 'Ready to eat today', hint: 'Cooked food you sell today, like adobo or pancit' },
       COOK_TO_ORDER: { label: 'Paluto, cooked to order', hint: 'You cook it after someone orders, like paluto bangus' },

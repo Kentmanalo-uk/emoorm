@@ -11,7 +11,7 @@ import { CATEGORY_ICONS, categoryIconKey } from '../../../lib/categoryIcons';
 export const MAX_IMAGES = 10;
 export const NAME_MIN = 2;
 export const NAME_MAX = 200;
-export const DESCRIPTION_MIN = 10;
+export const DESCRIPTION_MIN = 5;
 export const DESCRIPTION_MAX = 5000;
 export const NOTES_MAX = 300;
 export const MAX_GROUPS = 10;
@@ -100,6 +100,12 @@ export const EXAMPLES = {
   READY_TO_EAT: { name: 'e.g. Chicken Adobo', description: 'e.g. Chicken adobo cooked this morning, with plenty of sauce.', price: 'e.g. 120' },
   COOK_TO_ORDER: { name: 'e.g. Paluto Bangus', description: 'e.g. Fresh bangus, grilled or as sinigang. We cook it when you order.', price: 'e.g. 350' },
   LIVESTOCK: { name: 'e.g. Native Pig', description: 'e.g. Healthy native pig raised on our farm. Vaccinated and dewormed.', price: 'e.g. 8500' },
+};
+
+/** Local Delicacies: Packed food (REGULAR) and Cooked food (READY_TO_EAT). */
+export const FOOD_EXAMPLES = {
+  REGULAR: { name: 'e.g. Banana Chips, 250 g pack', description: 'e.g. Crispy and lightly sweet. Made in Bansud.', price: 'e.g. 85' },
+  READY_TO_EAT: { name: 'e.g. Chicken Adobo', description: 'e.g. Tender, with plenty of sauce.', price: 'e.g. 120' },
 };
 
 let groupSeq = 0;

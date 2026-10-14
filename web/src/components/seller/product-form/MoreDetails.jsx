@@ -4,9 +4,11 @@ import { RETURN_POLICIES } from './formState';
 /**
  * "More details (optional)": what most products don't need. A sale price,
  * a lower price for buying many, the size or amount, and returns.
+ * @param {Boolean} [hideSize] - the size is asked higher up (Packed food)
+ * @param {ReactNode} [first] - shown first (Packed food: the weight, when couriers don't need it)
  */
 export default function MoreDetails({
-  form, set, errors, kind, by, policyMode, onPolicy, onClearPolicy,
+  form, set, errors, kind, by, policyMode, onPolicy, onClearPolicy, hideSize = false, first = null,
 }) {
   const unit = kind === 'LIVESTOCK' ? 'animals' : 'pieces';
   const bulkOn = form.priceTiers.length > 0;
@@ -14,7 +16,8 @@ export default function MoreDetails({
 
   return (
     <div className="pf-more-list">
-      {kind === 'REGULAR' && (
+      {first}
+      {kind === 'REGULAR' && !hideSize && (
         <Field label="Size or amount" htmlFor="pf-size" hint="Example: 250 g pack, 1 kilo, 12 pieces">
           <input
             id="pf-size"

@@ -317,7 +317,13 @@ export default function SellerProducts() {
     else navigate('/seller/products', { replace: true });
   };
 
-  const handleSaved = (saved, { created }) => {
+  // next: Local Delicacies' new Cooked food, after "Saved to your menu":
+  // 'post' (Post it now) or 'done'.
+  const handleSaved = (saved, { created, next = null }) => {
+    if (created && isTodayProduct(saved) && next) {
+      navigate(next === 'post' ? `/seller/today/new?product=${saved.id}` : '/seller/today', { replace: true });
+      return;
+    }
     if (created && isTodayProduct(saved)) {
       toast.success("Product added. Post it in Today's menu when you have it.");
       closeForm();

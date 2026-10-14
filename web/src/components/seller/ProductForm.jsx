@@ -2,18 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  CircleNotch, Info, ArrowLeft, Check, CheckCircle, CaretDown, Package, Plus,
+  CircleNotch, Info, ArrowLeft, Check, CheckCircle, CaretDown, Package, Plus, CookingPot, ForkKnife, CalendarPlus,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import useAppSettings from '../../hooks/useAppSettings';
-import { productKind, headsLabel } from '../../lib/productKinds';
+import { productKind, headsLabel, isLocalDelicacies } from '../../lib/productKinds';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import { BusyLabel } from '../ui/Spinner';
 import PhotoPicker from './product-form/PhotoPicker';
 import CategoryPicker from './product-form/CategoryPicker';
 import ChoiceGroup from './product-form/ChoiceGroup';
-import KindDetails from './product-form/KindDetails';
+import KindDetails, { ServesField } from './product-form/KindDetails';
 import MoreDetails from './product-form/MoreDetails';
 import PreviewCard from './product-form/PreviewCard';
 import WayField from './product-form/WayField';
@@ -21,7 +21,7 @@ import {
   Card, Field, MoneyInput, RadioCards, Stepper, Switch,
 } from './product-form/parts';
 import {
-  DETAIL_TITLES, EXAMPLES, RETURN_POLICIES, MAX_GROUPS, NAME_MAX, DESCRIPTION_MAX,
+  DETAIL_TITLES, EXAMPLES, FOOD_EXAMPLES, RETURN_POLICIES, MAX_GROUPS, NAME_MAX, DESCRIPTION_MAX,
   CHOICE_TYPES, FOOD_CHOICE_TYPES,
   toFormState, kindOptions, switchKind, kindOffers, withDrafts, pricedBy, priceSpan, buildPayload,
   checkAll, hasErrors, cardsWithErrors, draftProduct, policyModeFor, guessKind,
@@ -36,10 +36,18 @@ import './ProductForm.css';
  * category, price and how many, choices (only when switched on), how buyers
  * get it, the kind's own questions (food, animals) and "More details",
  * closed until wanted. One button at the bottom saves it.
+ *
+ * Local Delicacies has a shorter form: "What kind is it?" is Packed food
+ * (kept in stock) or Cooked food (a menu item, posted on Today's menu with
+ * its times), and only the food's important parts are asked. An old paluto
+ * there still edits as paluto, with the full form.
  */
 
 const FOOD = ['READY_TO_EAT', 'COOK_TO_ORDER'];
 const RECENT_MAX = 5;
+const FOOD_KIND_ICONS = { REGULAR: Package, READY_TO_EAT: CookingPot };
+// The kinds Local Delicacies' short form is for (an old paluto keeps the full form).
+const SHORT_KINDS = [null, 'REGULAR', 'READY_TO_EAT'];
 
 /** A short line under the category on what was set for this kind. */
 const KIND_NOTES = {
@@ -98,13 +106,21 @@ export default function ProductForm({
   const todayOn = settings?.availableTodayEnabled !== false;
   const recentKey = outlet?.store?.id ? `pf:recent-categories:${outlet.store.id}` : null;
 
-  // ?type=today (Create a new menu item in Today's menu): Available Today
-  // food chosen up front; picking a category keeps it when the category allows it.
+  // ?type=today (Create a new menu item in Today's menu): Local Delicacies'
+  // Cooked food chosen up front; picking another category keeps Available
+  // Today food when that category allows it.
+  const presetToday = !product && todayOn && new URLSearchParams(location.search).get('type') === 'today';
+  const foodCategory = categories.find(isLocalDelicacies) || null;
   const [initial, setInitial] = useState(() => {
     const blank = toFormState(product);
-    const presetToday = !product && todayOn && new URLSearchParams(location.search).get('type') === 'today';
     return presetToday
-      ? { ...blank, kind: 'READY_TO_EAT', kindPicked: true, returnPolicy: RETURN_POLICIES.find((p) => p.key === 'perishable')?.text || '' }
+      ? {
+        ...blank,
+        kind: 'READY_TO_EAT',
+        kindPicked: true,
+        categoryId: foodCategory?.id || '',
+        returnPolicy: RETURN_POLICIES.find((p) => p.key === 'perishable')?.text || '',
+      }
       : blank;
   });
   const [form, setForm] = useState(initial);
@@ -118,8 +134,19 @@ export default function ProductForm({
   const [moreOpen, setMoreOpen] = useState(false);
   // A new live animal just saved: offer to list another like it.
   const [savedAnimal, setSavedAnimal] = useState(null);
+  // New cooked food just saved: offer to post it on Today's menu.
+  const [savedFood, setSavedFood] = useState(null);
   const lastSaved = useRef(null);
   const rootRef = useRef(null);
+
+  // The categories can arrive after the form opens: Cooked food from
+  // Today's menu still starts in Local Delicacies (untouched forms only).
+  useEffect(() => {
+    if (!presetToday || !foodCategory || initial.categoryId) return;
+    const withCategory = (f) => ({ ...f, categoryId: foodCategory.id });
+    if (JSON.stringify(form) === JSON.stringify(initial)) setForm(withCategory);
+    setInitial(withCategory);
+  }, [presetToday, foodCategory?.id]);
 
   // A shop that ships with couriers needs every regular product's weight:
   // it is how the shipping fee is worked out.
@@ -163,6 +190,13 @@ export default function ProductForm({
   const category = categories.find((c) => c.id === form.categoryId) || product?.category || null;
   const kindOpts = form.categoryId ? optionsFor(category) : [];
   const kind = form.kind;
+  // Local Delicacies' short form: Packed food or Cooked food.
+  const foodCat = isLocalDelicacies(category);
+  const short = foodCat && SHORT_KINDS.includes(kind || null);
+  const cooked = short && kind === 'READY_TO_EAT';
+  const packed = short && kind === 'REGULAR';
+  // Cooked food here is a menu item: Today's menu asks how many and when, as it is posted.
+  const settle = (s) => (short ? { ...s, postToday: false } : s);
   const ctx = { kind, kindAsked: kindOpts.length > 1, hasOptions, couriersOn, editing };
   const offers = kindOffers(kind);
   const by = pricedBy(form, ctx);
@@ -197,12 +231,16 @@ export default function ProductForm({
   };
 
   // Choosing a category sets the kind: its only one, the one already
-  // picked, or the one the name points to.
+  // picked, or the one the name points to. Local Delicacies is never
+  // guessed: Packed or Cooked food is the seller's tap.
   const onCategory = (id) => {
-    const opts = id ? optionsFor(categories.find((c) => c.id === id)) : [];
+    const chosen = categories.find((c) => c.id === id);
+    const opts = id ? optionsFor(chosen) : [];
     let next = form.kind;
     if (opts.length === 1) next = opts[0].key;
-    else if (!(form.kindPicked && opts.some((o) => o.key === form.kind))) next = guessKind(form.name, opts);
+    else if (!(form.kindPicked && opts.some((o) => o.key === form.kind))) {
+      next = isLocalDelicacies(chosen) ? null : guessKind(form.name, opts);
+    }
     const picked = opts.length > 1 && form.kindPicked && next === form.kind;
     applyKind({ ...form, categoryId: id, kindPicked: picked }, next);
     setErrors((e) => ({ ...e, categoryId: '', kind: '' }));
@@ -303,16 +341,17 @@ export default function ProductForm({
     // Typed but not added choices count; keep them merged in.
     const state = withDrafts(form);
     if (state !== form) setForm(state);
-    const { errors: errs } = checkAll(state, ctx);
+    const { errors: errs } = checkAll(settle(state), ctx);
     setErrors(errs);
     if (hasErrors(errs)) {
       toast.error('Some parts need fixing. Look for the red words.');
-      if (cardsWithErrors(errs).more) setMoreOpen(true);
+      // Packed food keeps the weight in More details when couriers don't need it.
+      if (cardsWithErrors(errs).more || (packed && !couriersOn && errs.weightKg)) setMoreOpen(true);
       setAttempt((n) => n + 1);
       return;
     }
 
-    const payload = buildPayload(state, { kind, hasOptions, editing, product });
+    const payload = buildPayload(settle(state), { kind, hasOptions, editing, product });
     setSaving(true);
     try {
       const res = editing
@@ -324,6 +363,12 @@ export default function ProductForm({
       if (!editing && kind === 'LIVESTOCK') {
         lastSaved.current = saved;
         setSavedAnimal(saved);
+        window.scrollTo({ top: 0 });
+        return;
+      }
+      if (!editing && cooked && saved?.id) {
+        lastSaved.current = saved;
+        setSavedFood(saved);
         window.scrollTo({ top: 0 });
         return;
       }
@@ -346,22 +391,33 @@ export default function ProductForm({
   };
 
   /* ── which cards are filled in ────────────────────────────────── */
-  const live = cardsWithErrors(checkAll(withDrafts(form), ctx).errors);
-  const showStock = !kind || kind === 'REGULAR' || kind === 'LIVESTOCK';
+  const liveErrors = checkAll(settle(withDrafts(form)), ctx).errors;
+  const live = cardsWithErrors(liveErrors);
+  const askWay = !shopMode || shopMode === 'BOTH';
+  const showStock = short ? packed : !kind || kind === 'REGULAR' || kind === 'LIVESTOCK';
   const showOptions = !!kind && offers.choices;
-  const showWay = kind !== 'LIVESTOCK';
-  const detailTitle = DETAIL_TITLES[kind];
+  // Packed food: asked only when the shop does both; cooked food: Today's menu asks it.
+  const showWay = short ? packed && askWay : kind !== 'LIVESTOCK';
+  const detailTitle = short ? null : DETAIL_TITLES[kind];
   const food = FOOD.includes(kind);
   const types = food ? FOOD_CHOICE_TYPES : CHOICE_TYPES;
-  const priceTitle = kind === 'LIVESTOCK' ? 'Price and how many animals' : showStock ? 'Price and how many' : 'Price';
-  const optionsTitle = food ? 'Flavors or sizes' : 'Sizes or colors';
+  const priceTitle = short
+    ? (cooked ? 'Price and serving' : 'Price and stock')
+    : kind === 'LIVESTOCK' ? 'Price and how many animals' : showStock ? 'Price and how many' : 'Price';
+  const optionsTitle = short
+    ? (cooked ? 'Flavors or add-ons' : 'Sizes or packs')
+    : food ? 'Flavors or sizes' : 'Sizes or colors';
+  // Packed food: the weight sits with the price when couriers need it.
+  const priceDone = short
+    ? !liveErrors.price && !liveErrors.stock && !(couriersOn && liveErrors.weightKg)
+    : !live.price;
 
   const cards = [
     { id: 'photos', title: 'Photos', done: form.images.length > 0 },
     { id: 'about', title: 'Name and category', done: !live.about },
-    { id: 'price', title: priceTitle, done: !live.price },
+    (!short || kind) && { id: 'price', title: priceTitle, done: priceDone },
     showOptions && { id: 'options', title: optionsTitle, done: hasOptions && !live.options, optional: true },
-    showWay && { id: 'way', title: 'How buyers get it', done: !live.way },
+    showWay && { id: 'way', title: 'How buyers get it', done: short || !live.way },
     detailTitle && { id: 'details', title: detailTitle, done: !live.details },
   ].filter(Boolean);
   const doneOf = Object.fromEntries(cards.map((c) => [c.id, c.done]));
@@ -372,20 +428,41 @@ export default function ProductForm({
   };
 
   /* ── what buyers will see ─────────────────────────────────────── */
-  const draft = draftProduct(form, ctx);
-  const askWay = !shopMode || shopMode === 'BOTH';
+  const draft = draftProduct(settle(form), ctx);
   const wayText = WAY_TEXT[askWay ? form.fulfillment : shopMode] || 'Pickup or delivery';
-  const todayQty = kind === 'READY_TO_EAT' && !editing && form.postToday ? parseInt(form.todayQty, 10) || 0 : 0;
-  const ex = EXAMPLES[kind] || EXAMPLES.REGULAR;
+  const todayQty = kind === 'READY_TO_EAT' && !editing && !short && form.postToday ? parseInt(form.todayQty, 10) || 0 : 0;
+  const ex = (short && (FOOD_EXAMPLES[kind] || FOOD_EXAMPLES.REGULAR)) || EXAMPLES[kind] || EXAMPLES.REGULAR;
   const priceWords = PRICE_WORDS[kind] || PRICE_WORDS.REGULAR;
-  const saveLabel = editing ? 'Save changes' : 'Put on sale';
+  const saveLabel = editing ? 'Save changes' : cooked ? 'Save to my menu' : 'Put on sale';
   const policy = RETURN_POLICIES.find((p) => p.key === policyMode);
   const moreSummary = [
-    kind === 'REGULAR' && form.size.trim() && form.size.trim(),
+    kind === 'REGULAR' && !short && form.size.trim() && form.size.trim(),
+    packed && !couriersOn && Number(form.weightKg) > 0 && `${form.weightKg} kg with packaging`,
     !by && form.saleOn && Number(form.salePrice) > 0 && `On sale at ${peso(form.salePrice)}`,
     !by && form.priceTiers.some((t) => t.minQty !== '' && t.price !== '') && 'Cheaper when buying many',
     policy ? `Returns: ${policy.title}` : policyMode === 'custom' && 'Returns: your own words',
-  ].filter(Boolean).join(' · ') || 'Sale price, cheaper for many, returns';
+  ].filter(Boolean).join(' · ') || (packed && !couriersOn ? 'Sale price, cheaper for many, returns, weight' : 'Sale price, cheaper for many, returns');
+
+  if (savedFood) {
+    return (
+      <div className="pf" ref={rootRef}>
+        <section className="pf-done" aria-live="polite">
+          <CheckCircle size={44} weight="fill" className="pf-done-icon" aria-hidden="true" />
+          <h2>Saved to your menu</h2>
+          <p className="pf-done-facts">{savedFood.name} · {peso(Number(savedFood.price) || 0)}</p>
+          <p>Post it on Today&apos;s menu when you have it.</p>
+          <div className="pf-done-actions">
+            <button type="button" className="pf-btn pf-btn--ghost" onClick={() => onSaved?.(savedFood, { created: true, next: 'done' })}>
+              Done
+            </button>
+            <button type="button" className="pf-btn pf-btn--primary" onClick={() => onSaved?.(savedFood, { created: true, next: 'post' })}>
+              <CalendarPlus size={18} weight="bold" /> Post it now
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   if (savedAnimal) {
     const unitPrice = Number(savedAnimal.price) || 0;
@@ -477,8 +554,72 @@ export default function ProductForm({
     READY_TO_EAT: { label: 'It comes in different flavors or sizes', sub: 'Example: Original and Spicy' },
     COOK_TO_ORDER: { label: 'Buyers can pick a flavor or style', sub: 'Example: Grilled or Fried' },
   }[kind] || { label: 'It comes in different sizes or colors', sub: 'Example: Small, Medium, Large' };
+  const shortSwitch = cooked
+    ? { label: 'Buyers can pick a flavor or add-on', sub: 'Example: Original or Spicy, with rice or without' }
+    : { label: 'It comes in different sizes or packs', sub: 'Example: 250g and 500g, or 6 pieces' };
+  const choiceSwitch = short ? shortSwitch : optionsSwitch;
+  const choiceTypes = packed ? CHOICE_TYPES.filter((t) => t.name !== 'Color') : types;
 
-  const showKindNote = !!kind && !!form.categoryId && (kindOpts.length > 1 || kind !== 'REGULAR');
+  const showKindNote = !short && !!kind && !!form.categoryId && (kindOpts.length > 1 || kind !== 'REGULAR');
+
+  // The weight with packaging: couriers work out their fee from it.
+  const weightField = (
+    <Field
+      label="Weight with the packaging"
+      required={couriersOn}
+      optional={!couriersOn}
+      error={errors.weightKg}
+      htmlFor="pf-weight"
+      hint={couriersOn
+        ? 'Couriers use it to work out the delivery fee. Example: 0.5 kg'
+        : 'Only needed if a courier delivers it. Example: 0.5 kg'}
+    >
+      <div className="pf-unit">
+        <input
+          id="pf-weight"
+          className={`pf-input${errors.weightKg ? ' is-invalid' : ''}`}
+          type="number"
+          inputMode="decimal"
+          min="0"
+          step="0.01"
+          value={form.weightKg}
+          onChange={(e) => set('weightKg', e.target.value)}
+        />
+        <span>kg</span>
+      </div>
+    </Field>
+  );
+
+  // Local Delicacies: two big answers (an old paluto keeps its own as a third).
+  const foodKindField = (
+    <div className="pf-field pf-kind" data-invalid={errors.kind ? 'true' : undefined}>
+      <span className="pf-label" id="pf-kind-label">What kind is it?<span className="pf-req" aria-hidden="true"> *</span></span>
+      <div className={`pf-foodkind${errors.kind ? ' is-invalid' : ''}`} role="radiogroup" aria-labelledby="pf-kind-label">
+        {kindOpts.map((o) => {
+          const Icon = FOOD_KIND_ICONS[o.key] || ForkKnife;
+          const on = kind === o.key;
+          return (
+            <button
+              type="button"
+              key={o.key}
+              role="radio"
+              aria-checked={on}
+              className={`pf-foodkind-btn${on ? ' is-on' : ''}`}
+              onClick={() => onKind(o.key)}
+            >
+              <span className="pf-foodkind-icon" aria-hidden="true"><Icon size={26} weight="fill" /></span>
+              <span className="pf-foodkind-text">
+                <strong>{o.label}</strong>
+                <small>{o.hint}</small>
+              </span>
+              <span className="pf-radio" aria-hidden="true" />
+            </button>
+          );
+        })}
+      </div>
+      {errors.kind && <p className="pf-error" role="alert">{errors.kind}</p>}
+    </div>
+  );
 
   const body = (
     <div className="pf-cards-col">
@@ -535,7 +676,8 @@ export default function ProductForm({
           />
         </Field>
 
-        {kindOpts.length > 1 && (
+        {kindOpts.length > 1 && foodCat && foodKindField}
+        {kindOpts.length > 1 && !foodCat && (
           <div className="pf-field pf-kind" data-invalid={errors.kind ? 'true' : undefined}>
             <span className="pf-label" id="pf-kind-label">What kind is it?</span>
             <RadioCards
@@ -548,6 +690,12 @@ export default function ProductForm({
             />
             {errors.kind && <p className="pf-error" role="alert">{errors.kind}</p>}
           </div>
+        )}
+        {short && !kind && (
+          <p className="pf-kind-note" aria-live="polite">
+            <Info size={17} aria-hidden="true" />
+            <span>Tap <strong>Packed food</strong> or <strong>Cooked food</strong>. The rest of the form follows.</span>
+          </p>
         )}
         {showKindNote && (
           <p className="pf-kind-note" aria-live="polite">
@@ -583,18 +731,47 @@ export default function ProductForm({
       </Card>
 
       {/* 3. Price and how many */}
-      <Card id="price" title={priceTitle} done={doneOf.price}>
-        <div className={showStock ? 'pf-grid-2' : ''}>
+      {cooked ? (
+        <Card id="price" title={priceTitle} done={doneOf.price}>
           {priceField}
-          {showStock && stockField}
-        </div>
-      </Card>
+          <ServesField form={form} set={set} optional />
+          <p className="pf-kind-note">
+            <CookingPot size={17} aria-hidden="true" />
+            <span>How many you have, and when buyers can order: you set these each time you post it on Today&apos;s menu.</span>
+          </p>
+        </Card>
+      ) : packed ? (
+        <Card id="price" title={priceTitle} done={doneOf.price}>
+          <div className="pf-grid-2">
+            {priceField}
+            {stockField}
+          </div>
+          <Field label="Size or weight" optional htmlFor="pf-size" hint="Example: 250g pack, 1 kilo, 12 pieces">
+            <input
+              id="pf-size"
+              className="pf-input"
+              value={form.size}
+              maxLength={60}
+              onChange={(e) => set('size', e.target.value)}
+              autoComplete="off"
+            />
+          </Field>
+          {couriersOn && weightField}
+        </Card>
+      ) : !short && (
+        <Card id="price" title={priceTitle} done={doneOf.price}>
+          <div className={showStock ? 'pf-grid-2' : ''}>
+            {priceField}
+            {showStock && stockField}
+          </div>
+        </Card>
+      )}
 
       {/* 4. Sizes, colors or flavors: only when switched on */}
       {showOptions && (
         <Card id="options" title={optionsTitle} done={doneOf.options} optional>
           <div data-invalid={errors.options ? 'true' : undefined}>
-            <Switch checked={hasOptions} onChange={chooseHasOptions} label={optionsSwitch.label} sub={optionsSwitch.sub} />
+            <Switch checked={hasOptions} onChange={chooseHasOptions} label={choiceSwitch.label} sub={choiceSwitch.sub} />
           </div>
           {errors.options && <p className="pf-error" role="alert">{errors.options}</p>}
           {hasOptions && (
@@ -606,7 +783,7 @@ export default function ProductForm({
                   index={index}
                   count={form.variations.length}
                   error={errors[`group-${g.key}`]}
-                  types={types}
+                  types={choiceTypes}
                   showPrice={offers.choicePrices && (g.priced || !form.variations.some((x) => x.key !== g.key && x.priced))}
                   showStock={offers.choiceStock && (g.stocked || !form.variations.some((x) => x.key !== g.key && x.stocked))}
                   photosOn={form.variations.find((x) => x.key !== g.key && hasChoicePhotos(x))?.name.trim() || null}
@@ -619,7 +796,7 @@ export default function ProductForm({
               {form.variations.length < MAX_GROUPS && (
                 <button type="button" className="pf-add-group" onClick={groupActions.add}>
                   <Plus size={17} /> Add another
-                  <small>{food ? 'like Rice as well as Flavor' : 'like Color as well as Size'}</small>
+                  <small>{food ? 'like Rice as well as Flavor' : packed ? 'like Pack size as well as Weight' : 'like Color as well as Size'}</small>
                 </button>
               )}
             </div>
@@ -638,32 +815,7 @@ export default function ProductForm({
             couriersOn={couriersOn}
             label={null}
           />
-          {offers.weight && (
-            <Field
-              label="Weight with the packaging"
-              required={couriersOn}
-              optional={!couriersOn}
-              error={errors.weightKg}
-              htmlFor="pf-weight"
-              hint={couriersOn
-                ? 'Couriers use it to work out the delivery fee. Example: 0.5 kg'
-                : 'Only needed if a courier delivers it. Example: 0.5 kg'}
-            >
-              <div className="pf-unit">
-                <input
-                  id="pf-weight"
-                  className={`pf-input${errors.weightKg ? ' is-invalid' : ''}`}
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  value={form.weightKg}
-                  onChange={(e) => set('weightKg', e.target.value)}
-                />
-                <span>kg</span>
-              </div>
-            </Field>
-          )}
+          {offers.weight && !short && weightField}
         </Card>
       )}
 
@@ -674,36 +826,40 @@ export default function ProductForm({
         </Card>
       )}
 
-      {/* 7. More details: closed until wanted */}
-      <section className={`pf-card pf-card--more${moreOpen ? ' is-open' : ''}`} id="pf-card-more">
-        <button
-          type="button"
-          className="pf-more-toggle"
-          aria-expanded={moreOpen}
-          aria-controls="pf-more-body"
-          onClick={() => setMoreOpen((v) => !v)}
-        >
-          <span className="pf-more-toggle-text">
-            <span className="pf-more-toggle-title">More details <em className="pf-opt">Optional</em></span>
-            <small>{moreSummary}</small>
-          </span>
-          <CaretDown size={20} className="pf-more-caret" aria-hidden="true" />
-        </button>
-        {moreOpen && (
-          <div className="pf-card-body" id="pf-more-body">
-            <MoreDetails
-              form={form}
-              set={set}
-              errors={errors}
-              kind={kind}
-              by={by}
-              policyMode={policyMode}
-              onPolicy={pickPolicy}
-              onClearPolicy={clearPolicy}
-            />
-          </div>
-        )}
-      </section>
+      {/* 7. More details: closed until wanted (Packed food too; not Cooked food) */}
+      {(!short || packed) && (
+        <section className={`pf-card pf-card--more${moreOpen ? ' is-open' : ''}`} id="pf-card-more">
+          <button
+            type="button"
+            className="pf-more-toggle"
+            aria-expanded={moreOpen}
+            aria-controls="pf-more-body"
+            onClick={() => setMoreOpen((v) => !v)}
+          >
+            <span className="pf-more-toggle-text">
+              <span className="pf-more-toggle-title">More details <em className="pf-opt">Optional</em></span>
+              <small>{moreSummary}</small>
+            </span>
+            <CaretDown size={20} className="pf-more-caret" aria-hidden="true" />
+          </button>
+          {moreOpen && (
+            <div className="pf-card-body" id="pf-more-body">
+              <MoreDetails
+                form={form}
+                set={set}
+                errors={errors}
+                kind={kind}
+                by={by}
+                policyMode={policyMode}
+                onPolicy={pickPolicy}
+                onClearPolicy={clearPolicy}
+                hideSize={packed}
+                first={packed && !couriersOn ? weightField : null}
+              />
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 

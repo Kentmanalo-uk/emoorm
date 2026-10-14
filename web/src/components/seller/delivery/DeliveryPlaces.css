@@ -1,16 +1,17 @@
-/* "Delivery places and fees": one list of places, each with its fee, and
-   the guided "Add a place" sheet. White cards, green for chosen and for
-   fees, big tap targets. Self-contained: the guided setup uses it too. */
+/* "Delivery places and fees": the way to charge (Fee per place / By
+   distance), one line per place with its fee right next to it, and one
+   small "Add a place" form, all on the page. White cards, green for chosen
+   and for fees, big tap targets. Self-contained: the guided setup uses it too. */
 
 .dpl {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   padding-top: 18px;
   border-top: 1px solid var(--t-neutral-100, #f1f5f9);
 }
 
-.dpl-head h3 {
+.dpl-title {
   margin: 0;
   color: var(--t-neutral-900, #0f172a);
   font-size: 18px;
@@ -18,11 +19,15 @@
   line-height: 1.3;
 }
 
-.dpl-head p {
-  margin: 4px 0 0;
-  color: var(--t-neutral-600, #475569);
-  font-size: 14px;
-  line-height: 1.45;
+.dpl :focus-visible,
+.dpl-form :focus-visible {
+  outline: 2px solid var(--t-primary-600, #047857);
+  outline-offset: 2px;
+}
+
+.dpl-title:focus,
+.dpl-form-title:focus {
+  outline: none;
 }
 
 /* Buttons */
@@ -31,7 +36,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 48px;
+  min-height: 46px;
   padding: 0 18px;
   border: 1.5px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 999px;
@@ -50,14 +55,14 @@
 }
 
 .dpl-btn.is-primary {
-  border-color: var(--t-primary-600, #059669);
-  background: var(--t-primary-600, #059669);
+  border-color: var(--t-primary-600, #047857);
+  background: var(--t-primary-600, #047857);
   color: #fff;
 }
 
 .dpl-btn.is-primary:hover:not(:disabled) {
-  border-color: var(--t-primary-700, #047857);
-  background: var(--t-primary-700, #047857);
+  border-color: var(--t-primary-700, #03684c);
+  background: var(--t-primary-700, #03684c);
 }
 
 .dpl-btn.is-big {
@@ -67,7 +72,7 @@
 }
 
 .dpl-btn.is-small {
-  min-height: 38px;
+  min-height: 40px;
   padding: 0 14px;
   font-size: 14px;
 }
@@ -78,33 +83,112 @@
   color: #fff;
 }
 
+.dpl-btn.is-ghost {
+  padding: 0 12px;
+  border-color: transparent;
+  background: none;
+  color: var(--t-neutral-600, #475569);
+}
+
+.dpl-btn.is-ghost:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
 .dpl-btn:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
 }
 
-.dpl-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 0;
-  border: 0;
-  background: none;
-  color: var(--t-primary-700, #047857);
+/* How buyers pay: [Fee per place] [By distance], the one in use filled green */
+.dpl-mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dpl-mode.is-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dpl-mode-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 13px 14px;
+  border: 2px solid var(--t-primary-600, #047857);
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #03684c);
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  text-align: left;
   cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
-.dpl-link:hover:not(:disabled) {
-  text-decoration: underline;
+.dpl-mode-opt:hover:not(.is-on) {
+  background: var(--t-primary-50, #ecfdf5);
 }
 
-.dpl-switch {
-  align-self: flex-start;
+.dpl-mode-opt.is-on {
+  background: var(--t-primary-600, #047857);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(4, 120, 87, 0.22);
+  cursor: default;
+}
+
+.dpl-mode-opt.is-on:focus-visible {
+  outline-color: var(--t-primary-800, #065f46);
+  outline-offset: 3px;
+}
+
+.dpl-mode-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+/* A round tick: empty on the other option, white with a green tick on the one in use */
+.dpl-mode-tick {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 50%;
+}
+
+.dpl-mode-tick.is-on {
+  border-color: #fff;
+  background: #fff;
+  color: var(--t-primary-600, #047857);
+}
+
+.dpl-mode-opt strong {
+  font-size: 16.5px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.dpl-mode-opt small {
   color: var(--t-neutral-600, #475569);
-  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.dpl-mode-opt.is-on small {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.dpl-sub-title {
+  margin: 4px 0 -2px;
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 /* Nothing yet: start with the shop's own town */
@@ -113,42 +197,24 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 24px 18px 18px;
+  padding: 18px 16px;
   border: 1.5px dashed var(--t-primary-200, #a7f3d0);
   border-radius: 16px;
   background: var(--t-primary-50, #ecfdf5);
   text-align: center;
 }
 
-.dpl-empty-icon {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-primary-600, #059669);
-}
-
 .dpl-empty strong {
   color: var(--t-neutral-900, #0f172a);
-  font-size: 16.5px;
+  font-size: 16px;
   font-weight: 600;
-}
-
-.dpl-empty p {
-  max-width: 380px;
-  margin: 0 0 6px;
-  color: var(--t-neutral-600, #475569);
-  font-size: 14px;
-  line-height: 1.45;
 }
 
 .dpl-empty .dpl-btn {
   max-width: 420px;
 }
 
-/* What buyers pay */
+/* What buyers pay (the guided setup's "all set") */
 .dpl-summary {
   padding: 14px 16px;
   border-radius: 14px;
@@ -177,120 +243,238 @@
   line-height: 1.45;
 }
 
-.dpl-summary-warn,
-.dpl-summary-note {
-  display: flex;
+/* A ₱ box (fees, distance numbers) */
+.dpl-box {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin: 8px 0 0;
-  font-size: 13px;
+  gap: 4px;
+  height: 46px;
+  padding: 0 12px;
+  border: 1.5px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-500, #64748b);
+  font-size: 16px;
 }
 
-.dpl-summary-warn {
-  color: var(--t-warning-700, #b45309);
+.dpl-box:focus-within {
+  border-color: var(--t-primary-600, #047857);
+}
+
+/* On computers the seller pages fill their fields grey (suite.css); these
+   sit in boxes of their own. */
+.dpl-box input:not(#dpl-none),
+.dpl-search input:not(#dpl-none) {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--t-neutral-900, #0f172a);
+  font: inherit;
+  font-size: 16px;
   font-weight: 500;
 }
 
-.dpl-summary-note {
-  color: var(--t-neutral-600, #475569);
+.dpl-box.has-error {
+  border-color: var(--t-danger-500, #ef4444);
+  background: var(--t-danger-50, #fef2f2);
 }
 
-/* "Same fee for all my places" */
-.dpl-shortcut {
+.dpl-box.is-missing {
+  border-color: var(--t-warning-400, #fbbf24);
+  background: var(--t-warning-50, #fffbeb);
+}
+
+.dpl-box.is-small {
+  width: 92px;
+  height: 40px;
+}
+
+.dpl-box.is-row {
+  width: 78px;
+  height: 40px;
+  padding: 0 9px;
+}
+
+/* Quick amounts: [Free] [₱20] [₱30] [₱50] */
+.dpl-chip {
   display: inline-flex;
   align-items: center;
-  align-self: flex-start;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 16px;
+  justify-content: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 0 12px;
   border: 1.5px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 999px;
   background: var(--t-neutral-0, #fff);
   color: var(--t-neutral-800, #1f2937);
   font: inherit;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.dpl-shortcut svg {
-  color: #f59e0b;
+.dpl-chip:hover:not(.is-on) {
+  border-color: var(--t-primary-300, #6ee7b7);
 }
 
-.dpl-shortcut:hover {
-  border-color: var(--t-primary-600, #059669);
+.dpl-chip.is-on {
+  border-color: var(--t-primary-600, #047857);
+  background: var(--t-primary-600, #047857);
+  color: #fff;
 }
 
-/* The places */
+.dpl-feeq {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dpl-feeq > .dpl-box {
+  width: 88px;
+}
+
+.dpl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dpl-feeq .dpl-chip {
+  padding: 0 11px;
+}
+
+.dpl-feeq .dpl-err {
+  flex-basis: 100%;
+}
+
+/* Same fee for all [₱ ] [Apply to all] */
+.dpl-samefee {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--t-neutral-50, #f8fafc);
+}
+
+.dpl-samefee-label {
+  margin-right: auto;
+  color: var(--t-neutral-700, #334155);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* The places: one line each, the fee at the right */
 .dpl-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+.dpl-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.dpl-row {
-  padding: 14px 14px 6px;
-  border: 1px solid var(--t-neutral-100, #f1f5f9);
-  border-radius: 16px;
-  background: var(--t-neutral-0, #fff);
-  box-shadow: 0 8px 24px rgba(149, 157, 165, 0.08);
+/* A town with barangays of their own: a small heading over its lines */
+.dpl-town {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.dpl-row.is-missing {
-  border-color: var(--t-warning-300, #fcd34d);
+.dpl-town-name {
+  margin: 2px 0 0 4px;
+  color: var(--t-neutral-600, #475569);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* Free delivery: "Free" on every line, nothing to type */
+.dpl-free-tag {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #03684c);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dpl-row {
+  padding: 10px 8px 10px 12px;
+  border: 1px solid var(--t-neutral-100, #f1f5f9);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 6px 18px rgba(149, 157, 165, 0.08);
+}
+
+.dpl-row.is-open {
+  padding-bottom: 14px;
+  border-color: var(--t-primary-300, #6ee7b7);
+  box-shadow: 0 0 0 3px var(--t-primary-50, #ecfdf5);
 }
 
 .dpl-row-top {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
 .dpl-row-pin {
   flex-shrink: 0;
-  margin-top: 1px;
-  color: var(--t-primary-600, #059669);
+  color: var(--t-primary-600, #047857);
 }
 
 .dpl-row-main {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
 .dpl-row-main strong {
   color: var(--t-neutral-900, #0f172a);
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
 .dpl-row-detail {
   color: var(--t-neutral-600, #475569);
-  font-size: 13.5px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .dpl-row-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 2px;
 }
 
 .dpl-tag {
   display: inline-flex;
   align-items: center;
-  padding: 2px 9px;
+  padding: 1px 8px;
   border-radius: 999px;
   background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-primary-700, #047857);
+  color: var(--t-primary-700, #03684c);
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -301,80 +485,83 @@
   color: #be185d;
 }
 
-.dpl-tag.is-grey {
-  background: var(--t-neutral-100, #f3f4f6);
-  color: var(--t-neutral-600, #475569);
-}
-
-.dpl-fee {
+/* A line's fee: [₱ 30] [Free], or the green [✓ Free] */
+.dpl-rowfee {
+  position: relative;
+  display: inline-flex;
   flex-shrink: 0;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-primary-800, #065f46);
-  font-size: 16px;
-  font-weight: 600;
+  align-items: center;
+  gap: 6px;
+}
+
+.dpl-rowfee-state {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 1px;
+  color: var(--t-primary-700, #03684c);
+  font-size: 11.5px;
+  font-weight: 500;
   white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
 }
 
-.dpl-fee.is-free {
-  background: var(--t-primary-600, #059669);
-  color: #fff;
-  font-size: 14px;
+.dpl-rowfee-state.is-on {
+  opacity: 1;
 }
 
-.dpl-fee.is-missing {
-  border: 1.5px solid var(--t-warning-400, #fbbf24);
-  background: var(--t-warning-50, #fffbeb);
-  color: var(--t-warning-800, #92400e);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+.dpl-more {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--t-neutral-500, #64748b);
   cursor: pointer;
 }
 
-.dpl-row-actions,
+.dpl-more:hover,
+.dpl-more.is-on {
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--t-neutral-800, #1f2937);
+}
+
+.dpl-row-menu,
 .dpl-row-ask {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
-  margin-top: 8px;
-  padding-top: 6px;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--t-neutral-100, #f1f5f9);
 }
 
-.dpl-row-actions button {
+.dpl-row-menu button {
   min-height: 40px;
   padding: 0 14px;
   border: 0;
   border-radius: 10px;
-  background: none;
-  color: var(--t-primary-700, #047857);
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #03684c);
   font: inherit;
-  font-size: 14.5px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
 }
 
-.dpl-row-actions button:hover:not(:disabled) {
-  background: var(--t-primary-50, #ecfdf5);
-}
-
-.dpl-row-actions button.is-remove {
+.dpl-row-menu button.is-remove {
   margin-left: auto;
-  color: var(--t-neutral-500, #64748b);
-  font-weight: 500;
-}
-
-.dpl-row-actions button.is-remove:hover:not(:disabled) {
   background: var(--t-danger-50, #fef2f2);
   color: var(--t-danger-600, #dc2626);
-}
-
-.dpl-row-ask {
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-bottom: 8px;
 }
 
 .dpl-row-ask span {
@@ -390,13 +577,13 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-height: 56px;
+  min-height: 52px;
   border: 1.5px dashed var(--t-primary-300, #6ee7b7);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--t-neutral-0, #fff);
-  color: var(--t-primary-700, #047857);
+  color: var(--t-primary-700, #03684c);
   font: inherit;
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -405,312 +592,110 @@
   background: var(--t-primary-50, #ecfdf5);
 }
 
-/* Charging by distance */
-.dpl-distance {
+/* ── Add a place / change one: one small form ── */
+.dpl-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.dpl-distance-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 16px;
+  border: 1.5px solid var(--t-primary-200, #a7f3d0);
   border-radius: 16px;
-  background: #f5f3ff;
-}
-
-.dpl-distance-icon {
-  flex-shrink: 0;
-  color: #8b5cf6;
-}
-
-.dpl-distance-card div {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.dpl-distance-card strong {
-  color: var(--t-neutral-900, #0f172a);
-  font-size: 15.5px;
-  font-weight: 600;
-}
-
-.dpl-distance-card span {
-  color: var(--t-neutral-700, #334155);
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-/* ── The sheet: a bottom sheet on phones, a centred dialog on computers ── */
-.dpl-sheet-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 400;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.45);
-}
-
-.dpl-sheet {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 560px;
-  max-height: 92vh;
-  max-height: 92dvh;
-  border-radius: 22px 22px 0 0;
   background: var(--t-neutral-0, #fff);
-  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  scroll-margin-top: 84px;
+  scroll-margin-bottom: 96px;
 }
 
-.dpl-sheet-grip {
-  align-self: center;
-  width: 40px;
-  height: 4px;
-  margin: 8px 0 0;
-  border-radius: 999px;
-  background: var(--t-neutral-200, #e5e7eb);
-}
-
-.dpl-sheet-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px 0;
-}
-
-.dpl-sheet-round {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
+.dpl-form.is-embedded {
+  margin-top: 12px;
+  padding: 14px 4px 0 0;
   border: 0;
-  border-radius: 50%;
-  background: var(--t-neutral-100, #f3f4f6);
-  color: var(--t-neutral-800, #1f2937);
-  cursor: pointer;
-}
-
-.dpl-sheet-round.is-blank {
-  background: none;
-}
-
-.dpl-sheet-step {
-  color: var(--t-neutral-500, #64748b);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.dpl-sheet-title {
-  margin: 6px 0 0;
-  padding: 0 20px;
-  color: var(--t-neutral-900, #0f172a);
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.dpl-sheet-sub {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin: 0 0 14px;
-  color: var(--t-neutral-600, #475569);
-  font-size: 14.5px;
-  line-height: 1.45;
-}
-
-.dpl-sheet-sub svg {
-  flex-shrink: 0;
-  margin-top: 3px;
-  color: var(--t-primary-600, #059669);
-}
-
-.dpl-sheet-body {
-  flex: 1;
-  min-height: 0;
-  padding: 14px 20px 16px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.dpl-sheet-body:last-child {
-  padding-bottom: calc(20px + env(safe-area-inset-bottom));
-}
-
-.dpl-sheet-foot {
-  display: flex;
-  gap: 10px;
-  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+  border-radius: 0;
+  box-shadow: none;
 }
 
-.dpl-sheet-foot > .dpl-btn {
-  flex: 1;
-}
-
-.dpl-sheet-foot > .dpl-btn.is-primary {
-  flex: 1.6;
-}
-
-@media (min-width: 769px) {
-  .dpl-sheet-backdrop {
-    align-items: center;
-    padding: 24px;
-  }
-
-  .dpl-sheet {
-    max-width: 520px;
-    max-height: min(760px, 90vh);
-    border-radius: 20px;
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
-  }
-
-  .dpl-sheet-grip {
-    display: none;
-  }
-}
-
-.dpl-label {
-  display: block;
-  margin: 12px 0 6px;
-  color: var(--t-neutral-500, #64748b);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.dpl-label:first-child {
-  margin-top: 0;
-}
-
-/* Which town? */
-.dpl-towns {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.dpl-town {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 56px;
-  padding: 10px 14px;
-  border: 1.5px solid var(--t-neutral-100, #f1f5f9);
-  border-radius: 14px;
-  background: var(--t-neutral-0, #fff);
+.dpl-form-title {
+  margin: 0;
   color: var(--t-neutral-900, #0f172a);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
 }
 
-.dpl-town:hover {
-  border-color: var(--t-primary-300, #6ee7b7);
-  background: var(--t-primary-50, #ecfdf5);
-}
-
-.dpl-town.is-home {
-  border-color: var(--t-primary-200, #a7f3d0);
-}
-
-.dpl-town.is-all {
-  margin-top: 4px;
-  background: #eff6ff;
-  border-color: #dbeafe;
-}
-
-.dpl-town.is-all .dpl-town-icon {
-  color: #3b82f6;
-}
-
-.dpl-town-icon {
-  flex-shrink: 0;
-  color: var(--t-primary-600, #059669);
-}
-
-.dpl-town-text {
+.dpl-field {
   display: flex;
-  flex: 1;
   flex-direction: column;
+  gap: 6px;
   min-width: 0;
 }
 
-.dpl-town-text strong {
-  font-size: 16px;
+.dpl-field-label {
+  color: var(--t-neutral-700, #334155);
+  font-size: 13.5px;
   font-weight: 500;
 }
 
-.dpl-town-text small {
+.dpl-field-note {
   color: var(--t-neutral-500, #64748b);
   font-size: 13px;
 }
 
-.dpl-town-check {
-  color: var(--t-primary-600, #059669);
-}
-
-/* Where in the town? */
-.dpl-where {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.dpl-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+.dpl-select:not(#dpl-none) {
   width: 100%;
-  padding: 14px 16px;
+  height: 46px;
+  padding: 0 12px;
   border: 1.5px solid var(--t-neutral-200, #e5e7eb);
-  border-radius: 14px;
-  background: var(--t-neutral-0, #fff);
+  border-radius: 12px;
+  background-color: var(--t-neutral-0, #fff);
+  box-shadow: none;
+  color: var(--t-neutral-900, #0f172a);
   font: inherit;
-  text-align: left;
+  font-size: 15.5px;
   cursor: pointer;
 }
 
-.dpl-option.is-on {
-  border-color: var(--t-primary-600, #059669);
-  background: var(--t-primary-50, #ecfdf5);
+.dpl-select:not(#dpl-none):focus {
+  border-color: var(--t-primary-600, #047857);
+  outline: none;
 }
 
-.dpl-option strong {
-  display: block;
-  color: var(--t-neutral-900, #0f172a);
-  font-size: 16px;
-  font-weight: 600;
+/* [All of Roxas] [Some barangays] */
+.dpl-seg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--t-neutral-100, #f1f5f9);
 }
 
-.dpl-option small {
-  display: block;
-  margin-top: 2px;
-  color: var(--t-neutral-600, #475569);
-  font-size: 13.5px;
-  line-height: 1.4;
+.dpl-seg button {
+  min-height: 40px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--t-neutral-700, #334155);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
-.dpl-radio {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  margin-top: 1px;
-  border: 2px solid var(--t-neutral-300, #d1d5db);
-  border-radius: 50%;
-  background: #fff;
+.dpl-seg button.is-on {
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #03684c);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
 }
 
-.dpl-option.is-on .dpl-radio {
-  border: 7px solid var(--t-primary-600, #059669);
+.dpl-form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dpl-form-foot > .dpl-btn.is-primary {
+  min-width: 120px;
 }
 
 /* The barangays */
@@ -718,36 +703,42 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 4px;
 }
 
 .dpl-brgy-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
 
+.dpl-brgy-bar .dpl-search {
+  flex: 1 1 220px;
+}
+
 .dpl-brgy-count {
-  color: var(--t-neutral-800, #1f2937);
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--t-neutral-700, #334155);
+  font-size: 13.5px;
+  font-weight: 500;
 }
 
 .dpl-brgy-actions {
   display: inline-flex;
+  align-items: center;
   gap: 6px;
+  margin-left: auto;
 }
 
 .dpl-brgy-actions button {
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 12px;
   border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 999px;
   background: var(--t-neutral-0, #fff);
-  color: var(--t-primary-700, #047857);
+  color: var(--t-primary-700, #03684c);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -761,7 +752,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 46px;
+  height: 42px;
   padding: 0 12px;
   border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 12px;
@@ -769,23 +760,19 @@
   color: var(--t-neutral-500, #64748b);
 }
 
-.dpl-search input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--t-neutral-900, #0f172a);
-  font: inherit;
+.dpl-search:focus-within {
+  border-color: var(--t-primary-600, #047857);
+}
+
+.dpl-search input:not(#dpl-none) {
   font-size: 15px;
+  font-weight: 400;
 }
 
 .dpl-checklist {
   display: flex;
   flex-direction: column;
-  max-height: 320px;
+  max-height: 280px;
   margin: 0;
   padding: 4px;
   overflow-y: auto;
@@ -798,7 +785,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 46px;
+  min-height: 44px;
   padding: 6px 10px;
   border-radius: 10px;
   cursor: pointer;
@@ -813,7 +800,7 @@
   width: 20px;
   height: 20px;
   margin: 0;
-  accent-color: var(--t-primary-600, #059669);
+  accent-color: var(--t-primary-600, #047857);
 }
 
 .dpl-check-name {
@@ -836,7 +823,7 @@
 .dpl-check-none,
 .dpl-hint {
   margin: 0;
-  padding: 8px 4px;
+  padding: 6px 4px;
   color: var(--t-neutral-500, #64748b);
   font-size: 13.5px;
   line-height: 1.45;
@@ -853,110 +840,22 @@
   gap: 8px;
 }
 
-.dpl-typed-row input {
+.dpl-typed-row input:not(#dpl-none) {
   flex: 1;
   min-width: 0;
-  height: 44px;
+  height: 42px;
   padding: 0 12px;
   border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 12px;
+  background-color: var(--t-neutral-0, #fff);
+  box-shadow: none;
   font: inherit;
   font-size: 15px;
 }
 
-/* How much? */
-.dpl-fee-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.dpl-fee-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 58px;
-  padding: 0 10px;
-  border: 1.5px solid var(--t-neutral-200, #e5e7eb);
-  border-radius: 14px;
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-neutral-900, #0f172a);
-  font: inherit;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.dpl-fee-btn.is-free {
-  font-size: 16px;
-}
-
-.dpl-fee-btn.is-other {
-  grid-column: 1 / -1;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.dpl-fee-btn.is-on {
-  border-color: var(--t-primary-600, #059669);
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-primary-800, #065f46);
-}
-
-.dpl-fee-btn svg {
-  color: var(--t-primary-600, #059669);
-}
-
-.dpl-amount {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.dpl-amount-label,
-.dpl-km-label {
-  color: var(--t-neutral-800, #1f2937);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.dpl-amount-box {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 52px;
-  padding: 0 14px;
-  border: 1.5px solid var(--t-neutral-200, #e5e7eb);
-  border-radius: 12px;
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-neutral-500, #64748b);
-  font-size: 17px;
-}
-
-.dpl-amount-box:focus-within {
-  border-color: var(--t-primary-600, #059669);
-}
-
-.dpl-amount-box input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--t-neutral-900, #0f172a);
-  font: inherit;
-  font-size: 18px;
-  font-weight: 500;
-}
-
-.dpl-amount.has-error .dpl-amount-box,
-.dpl-km.has-error .dpl-amount-box {
-  border-color: var(--t-danger-500, #ef4444);
-  background: var(--t-danger-50, #fef2f2);
+.dpl-typed-row input:not(#dpl-none):focus {
+  border-color: var(--t-primary-600, #047857);
+  outline: none;
 }
 
 .dpl-err {
@@ -965,11 +864,22 @@
   font-weight: 500;
 }
 
-/* By distance, in the sheet */
+/* ── By distance: the numbers, right under the switch ── */
+.dpl-km-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1.5px solid var(--t-primary-200, #a7f3d0);
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 8px 24px rgba(149, 157, 165, 0.08);
+}
+
 .dpl-km-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 12px;
+  gap: 12px;
 }
 
 .dpl-km {
@@ -979,24 +889,18 @@
   min-width: 0;
 }
 
-.dpl-km .dpl-amount-box {
-  height: 48px;
-  font-size: 15px;
+.dpl-km .dpl-box {
+  width: 100%;
 }
 
-.dpl-km .dpl-amount-box input {
-  font-size: 16px;
-}
-
-.dpl-km small {
-  color: var(--t-neutral-500, #64748b);
-  font-size: 12.5px;
-  line-height: 1.35;
+.dpl-km.has-error .dpl-box {
+  border-color: var(--t-danger-500, #ef4444);
+  background: var(--t-danger-50, #fef2f2);
 }
 
 .dpl-km-preview {
-  margin: 14px 0 0;
-  padding: 10px 12px;
+  margin: 0;
+  padding: 9px 12px;
   border-radius: 12px;
   background: var(--t-neutral-50, #f8fafc);
   color: var(--t-neutral-700, #334155);
@@ -1005,34 +909,109 @@
 }
 
 .dpl-km-preview strong {
-  color: var(--t-primary-700, #047857);
+  color: var(--t-primary-700, #03684c);
   font-weight: 600;
+}
+
+.dpl-km-card .sf-courier-warn,
+.dpl-km-card .sf-pin,
+.dpl-km-card .dpl-pin-note {
+  margin: 0;
+}
+
+.dpl-km-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.dpl-km-state {
+  margin-right: auto;
+  color: var(--t-warning-700, #b45309);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.dpl-km-foot > .dpl-btn.is-ghost {
+  margin-right: auto;
+}
+
+.dpl-km-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  color: var(--t-primary-700, #03684c);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* Phones (the seller app's look): 500 / 400 weights. */
 @media (max-width: 768px) {
-  .dpl-head h3,
+  .dpl-title,
   .dpl-row-main strong,
-  .dpl-fee,
-  .dpl-option strong,
-  .dpl-fee-btn,
-  .dpl-sheet-title,
+  .dpl-mode-opt strong,
   .dpl-empty strong,
   .dpl-summary h4,
   .dpl-add,
-  .dpl-row-actions button,
-  .dpl-link,
-  .dpl-distance-card strong,
-  .dpl-brgy-count {
+  .dpl-sub-title,
+  .dpl-form-title,
+  .dpl-km-preview strong {
     font-weight: 500;
   }
 
-  .dpl-km-grid {
-    grid-template-columns: 1fr 1fr;
+  .dpl-mode-opt small,
+  .dpl-km-saved,
+  .dpl-field-label {
+    font-weight: 400;
+  }
+
+  .dpl-form {
+    padding: 14px;
+  }
+
+  .dpl-km-card {
+    padding: 14px;
+  }
+
+  .dpl-form-foot > .dpl-btn.is-primary {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dpl-town-name,
+  .dpl-free-tag {
+    font-weight: 500;
+  }
+
+  /* Three options side by side on a phone: a little tighter */
+  .dpl-mode.is-3 .dpl-mode-opt {
+    padding: 11px 10px;
+    border-radius: 14px;
+  }
+
+  .dpl-mode.is-3 .dpl-mode-opt strong {
+    font-size: 15px;
+  }
+
+  .dpl-mode.is-3 .dpl-mode-opt small {
+    font-size: 12.5px;
+  }
+
+  .dpl-mode.is-3 .dpl-mode-tick {
+    width: 20px;
+    height: 20px;
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 360px) {
+  .dpl-box.is-row {
+    width: 66px;
+  }
+
   .dpl-km-grid {
     grid-template-columns: 1fr;
   }
@@ -1144,13 +1123,4 @@
 .dpl-pin-note svg {
   flex-shrink: 0;
   margin-top: 2px;
-}
-
-.dpl-head .dpl-head-note {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 6px;
-  color: var(--t-primary-700, #047857);
-  font-size: 13px;
 }

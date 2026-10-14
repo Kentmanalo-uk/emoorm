@@ -15,10 +15,11 @@ import SellerGuideArt from '../components/seller/SellerGuideArt';
 import { setSetupReturn, clearSetupReturn } from '../lib/setupReturn';
 import useAppSettings, { DEFAULT_APP_SETTINGS } from '../hooks/useAppSettings';
 import {
-  FeeChoice, PlaceRows, PlaceSheet, PlacesSummary,
+  FeeChoice, PlaceList, PlacesSummary,
 } from '../components/seller/delivery/DeliveryPlaces';
+import useInlinePanel from '../components/seller/delivery/useInlinePanel';
 import {
-  isWhole, planFromSaved, planProblems, planRequest, removePlace, sortPlaces, summaryLines,
+  isWhole, planFromSaved, planProblems, planRequest, putPlace, removePlace, sortPlaces, summaryLines,
 } from '../lib/deliveryPlan';
 import './SellerWelcome.css';
 
@@ -112,8 +113,8 @@ export default function SellerWelcome() {
   const [skipped, setSkipped] = useState(readSkipped);
   const [form, setForm] = useState(null);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
-  // The delivery step's "Add a place" sheet: { kind, place }.
-  const [placeSheet, setPlaceSheet] = useState(null);
+  // The delivery step's inline "Add a place" / Change / Remove panel: { kind, place }.
+  const { panel: placePanel, open: openPlace, close: closePlace } = useInlinePanel();
   const { settings: appSettings } = useAppSettings();
   const platformRate = {
     base: Number(appSettings?.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
@@ -153,7 +154,7 @@ export default function SellerWelcome() {
         pickupInstructions: shop.pickupInstructions || '',
         // Only the shop's town (with its fee), or a list of places.
         deliverWhere: plan.places.length && !onlyHome ? 'PLACES' : 'HOME',
-        homeFee: onlyHome ? plan.places[0].fee : null,
+        homeFee: onlyHome ? (plan.free ? 0 : plan.places[0].fee) : null,
         plan,
         acceptsCod: shop.acceptsCod !== false,
       });
@@ -365,7 +366,7 @@ export default function SellerWelcome() {
         const choose = (where) => {
           set({ deliverWhere: where });
           // "Choose places" with none yet: straight to Add a place.
-          if (where === 'PLACES' && !plan.places.length) setPlaceSheet({ kind: 'add' });
+          if (where === 'PLACES' && !plan.places.length) openPlace({ kind: 'add' }, 'add');
         };
         return {
           art: 'delivery',
@@ -397,41 +398,28 @@ export default function SellerWelcome() {
                 </>
               ) : (
                 <>
-                  {places.length > 0 && (
-                    <>
-                      <PlacesSummary lines={lines} />
-                      <PlaceRows
-                        places={places}
-                        plan={plan}
-                        nameOf={nameOf}
-                        homeId={homeId}
-                        onChange={(place) => setPlaceSheet({ kind: 'edit', place })}
-                        onRemove={(place) => set({ plan: removePlace(plan, place.key) })}
-                      />
-                    </>
-                  )}
-                  <button type="button" className="dpl-add" onClick={() => setPlaceSheet({ kind: 'add' })}>
-                    <Plus size={18} weight="bold" /> Add a place
-                  </button>
+                  <PlaceList
+                    places={places}
+                    plan={plan}
+                    nameOf={nameOf}
+                    homeId={homeId}
+                    municipalities={municipalities}
+                    panel={placePanel}
+                    onOpen={openPlace}
+                    onClose={closePlace}
+                    onSave={(nextPlan) => {
+                      set({ plan: nextPlan });
+                      closePlace();
+                    }}
+                    onFee={(place, fee) => setForm((f) => ({ ...f, plan: putPlace(f.plan, { ...place, fee }, place.key) }))}
+                    onRemove={(place) => set({ plan: removePlace(plan, place.key) })}
+                  />
                 </>
               )}
               <p className="sw-note">
                 A fee by distance, or couriers?{' '}
                 <button type="button" className="sw-link" onClick={settings}>Set it up in Delivery settings</button>
               </p>
-              <PlaceSheet
-                open={Boolean(placeSheet)}
-                kind={placeSheet?.kind}
-                place={placeSheet?.place}
-                plan={plan}
-                municipalities={municipalities}
-                homeId={homeId}
-                onClose={() => setPlaceSheet(null)}
-                onSave={(next) => {
-                  set({ plan: next });
-                  setPlaceSheet(null);
-                }}
-              />
             </>
           ),
           primary: allSet ? { label: 'Continue', onClick: next } : {
@@ -443,6 +431,7 @@ export default function SellerWelcome() {
                 request = planRequest({
                   ...plan,
                   distance: false,
+                  free: false,
                   places: [{
                     key: 'home', municipalityId: homeId, barangays: [], fee: form.homeFee,
                   }],

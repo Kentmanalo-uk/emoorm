@@ -1,24 +1,25 @@
 /**
  * A seller's own delivery as one plain list: each line is a place and what
- * delivery costs there ("All of Bongabong · ₱30", "Roxas · Cantil, Bagumbayan
- * · Free delivery", "Bongabong · Brgy. Labasan · ₱50"). No way to charge to
- * pick: the list is turned into the request the server knows
- * (PUT /stores/my/delivery, backend storeDelivery.service), priced by
- * deliveryQuote.service:
+ * delivery costs there ("All of Bongabong · ₱30", "Roxas · Brgy. Cantil ·
+ * Free delivery", "Bongabong · Brgy. Labasan · ₱50"). The list is turned
+ * into the request the server knows (PUT /stores/my/delivery, backend
+ * storeDelivery.service), priced by deliveryQuote.service:
  *
  *   every place the same fee   → FLAT (FREE when it is ₱0), the fee kept on each place too
  *   different fees             → PER_BARANGAY: a whole town's line is the town's fee,
  *                                a barangay's line overrides it
- *   "Charge by distance"       → PER_KM; the places stay (where), with their fees kept
+ *   "Free delivery"            → FREE; the places stay, with their fees kept
+ *   "By distance"              → PER_KM; the places stay (where), with their fees kept
  *
  *   plan = {
  *     places: [{ key, municipalityId, barangays: [name] (none: the whole town), fee: Number|null }],
  *     distance: Boolean,
+ *     free: Boolean,
  *     perKm: { baseFee, includedKm, perKm, maxKm } (text as typed),
  *   }
  *
- * A town has at most one whole-town line; its barangays sit in lines of their
- * own, one per fee, and a barangay is in one line only.
+ * A town has at most one whole-town line; each of its barangays with a fee
+ * of its own is a line of its own (one barangay per line), in one line only.
  */
 
 export const MAX_FEE = 5000;
@@ -71,6 +72,7 @@ export const isWhole = (place) => !place.barangays?.length;
 export const emptyPlan = () => ({
   places: [],
   distance: false,
+  free: false,
   perKm: {
     baseFee: '', includedKm: '', perKm: '', maxKm: '',
   },
@@ -94,6 +96,8 @@ export const planFromSaved = (saved, platformFee = null) => {
   const areas = saved?.areas || [];
   const mode = saved?.mode || 'PER_KM';
   plan.distance = mode === 'PER_KM' && p.baseFee != null;
+  // Free delivery (a shop with no places yet is not "free", just empty).
+  plan.free = mode === 'FREE' && areas.length > 0;
   const num = (v) => (v == null ? null : Number(v));
   const shopFee = num(saved?.flatFee);
   const fallback = shopFee ?? num(platformFee);
@@ -106,7 +110,8 @@ export const planFromSaved = (saved, platformFee = null) => {
     const townFee = wholeFee ?? num(inTown.find((a) => a.fee != null)?.fee);
     // What a place costs now, by the saved way to charge.
     const feeOf = (a) => {
-      if (mode === 'FREE') return 0;
+      // Free: the fee kept for the place (shown again when switched back).
+      if (mode === 'FREE') return num(a.fee);
       if (mode === 'FLAT') return shopFee ?? num(platformFee);
       if (mode === 'PER_TOWN') return townFee ?? fallback;
       if (mode === 'PER_BARANGAY') return num(a.fee) ?? wholeFee ?? fallback;
@@ -119,17 +124,10 @@ export const planFromSaved = (saved, platformFee = null) => {
         key: newKey(), municipalityId: id, barangays: [], fee: feeOf(whole),
       });
     }
-    // Barangays in one line per fee.
-    const groups = [];
-    for (const a of inTown.filter((x) => x.barangay)) {
-      const fee = feeOf(a);
-      const group = groups.find((g) => sameFee(g.fee, fee));
-      if (group) group.barangays.push(a.barangay);
-      else groups.push({ fee, barangays: [a.barangay] });
-    }
-    for (const g of groups) {
+    // Each barangay a line of its own, with its own fee.
+    for (const a of inTown.filter((x) => x.barangay).sort((x, y) => byName(x.barangay, y.barangay))) {
       plan.places.push({
-        key: newKey(), municipalityId: id, barangays: g.barangays.sort(byName), fee: g.fee,
+        key: newKey(), municipalityId: id, barangays: [a.barangay], fee: feeOf(a),
       });
     }
   }
@@ -156,9 +154,9 @@ export const wholeTown = (plan, townId, exceptKey = null) => plan.places
 
 /**
  * The list with a place added or changed (editKey: the line being changed).
- * A whole town that is already listed gets the new fee; barangays leave any
- * other line of the town they were in, and join a line of the town with the
- * same fee.
+ * A whole town that is already listed gets the new fee; each barangay picked
+ * becomes a line of its own at this fee, leaving any other line of the town
+ * it was in.
  * @param {{ municipalityId, barangays, fee }} entry
  */
 export const putPlace = (plan, entry, editKey = null) => {
@@ -176,14 +174,14 @@ export const putPlace = (plan, entry, editKey = null) => {
       ? { ...p, barangays: p.barangays.filter((b) => !picked.has(brgyKey(b))) }
       : p))
     .filter((p) => isWhole(p) || p.barangays.length);
-  const same = places.find((p) => p.municipalityId === town && !isWhole(p) && sameFee(p.fee, entry.fee));
-  if (same) {
-    places = places.map((p) => (p === same ? { ...p, barangays: [...p.barangays, ...entry.barangays].sort(byName) } : p));
-  } else {
+  const names = [...entry.barangays]
+    .filter((b, i, all) => all.findIndex((x) => brgyKey(x) === brgyKey(b)) === i)
+    .sort(byName);
+  names.forEach((b, i) => {
     places.push({
-      key: editKey || newKey(), municipalityId: town, barangays: [...entry.barangays].sort(byName), fee: entry.fee,
+      key: (i === 0 && editKey) || newKey(), municipalityId: town, barangays: [b], fee: entry.fee,
     });
-  }
+  });
   return { ...plan, places };
 };
 
@@ -196,22 +194,15 @@ export const putAllTowns = (plan, townIds, fee) => townIds.reduce(
 export const removePlace = (plan, key) => ({ ...plan, places: plan.places.filter((p) => p.key !== key) });
 
 /**
- * One fee for every place. A town's barangay lines join into one, and go
- * when the whole town is listed (the town's fee covers them now).
+ * One fee for every place. A town's barangay lines go when the whole town is
+ * listed (the town's fee covers them now); the others each get the fee.
  */
-export const setAllFees = (plan, fee) => {
-  const places = [];
-  for (const p of plan.places) {
-    if (isWhole(p)) {
-      places.push({ ...p, fee });
-    } else if (!plan.places.some((x) => x.municipalityId === p.municipalityId && isWhole(x))) {
-      const joined = places.find((x) => x.municipalityId === p.municipalityId && !isWhole(x));
-      if (joined) joined.barangays = [...joined.barangays, ...p.barangays].sort(byName);
-      else places.push({ ...p, barangays: [...p.barangays], fee });
-    }
-  }
-  return { ...plan, places };
-};
+export const setAllFees = (plan, fee) => ({
+  ...plan,
+  places: plan.places
+    .filter((p) => isWhole(p) || !plan.places.some((x) => x.municipalityId === p.municipalityId && isWhole(x)))
+    .map((p) => ({ ...p, fee })),
+});
 
 /** Places without a fee (added while charging by distance) get this one. */
 export const fillMissingFees = (plan, fee) => plan.places.reduce(
@@ -242,6 +233,7 @@ export const planRequest = (plan) => {
   if (included !== undefined) km.includedKm = included;
   if (max !== undefined && !(max !== null && max < 0.5)) km.maxKm = max;
   if (plan.distance) return { mode: 'PER_KM', areas, perKm: km };
+  if (plan.free) return { mode: 'FREE', areas, perKm: km };
   const fees = planFees(plan);
   const priced = plan.places.every((p) => p.fee != null);
   if (priced && fees.length === 1) {
@@ -263,6 +255,7 @@ export const planRequest = (plan) => {
 export const planProblems = (plan, nameOf) => {
   const problems = [];
   if (!plan.places.length) problems.push({ key: 'places', message: 'Add at least one place you deliver to.' });
+  if (plan.free) return problems;
   if (!plan.distance) {
     for (const p of unpricedPlaces(plan)) {
       problems.push({ key: p.key, message: `Choose a delivery fee for ${placeName(p, nameOf)}.` });
@@ -356,13 +349,14 @@ export const summaryLines = (plan, nameOf, homeId, platformRate, allTownIds = []
   const pay = (fee) => (fee == null ? 'have no fee yet' : Number(fee) === 0 ? 'get free delivery' : `pay ${pesos(fee)}`);
   const at = (fee) => (fee == null ? 'no fee yet' : Number(fee) === 0 ? 'free' : pesos(fee));
 
-  if (plan.distance) {
+  if (plan.distance || plan.free) {
     const where = towns.map((id) => {
       const inTown = places.filter((p) => p.municipalityId === id);
       if (inTown.some(isWhole)) return nameOf(id);
       const n = inTown.reduce((sum, p) => sum + p.barangays.length, 0);
       return `${nameOf(id)} (${plural(n, 'barangay')})`;
     });
+    if (plan.free) return [`Buyers in ${townList(where)} get free delivery.`];
     const words = distanceWords(plan.perKm, platformRate);
     return [`Buyers in ${townList(where)} pay by distance${words ? `: ${words}` : ''}.`];
   }
@@ -373,7 +367,13 @@ export const summaryLines = (plan, nameOf, homeId, platformRate, allTownIds = []
   for (const id of towns) {
     const inTown = places.filter((p) => p.municipalityId === id);
     const whole = inTown.find(isWhole);
-    const groups = inTown.filter((p) => !isWhole(p));
+    // The town's barangays, those with the same fee together.
+    const groups = [];
+    for (const p of inTown.filter((x) => !isWhole(x))) {
+      const group = groups.find((g) => sameFee(g.fee, p.fee));
+      if (group) group.barangays = [...group.barangays, ...p.barangays].sort(byName);
+      else groups.push({ fee: p.fee, barangays: [...p.barangays] });
+    }
     if (whole && !groups.length) {
       const k = whole.fee == null ? 'none' : String(Number(whole.fee));
       if (!plain.has(k)) {
@@ -424,6 +424,7 @@ export const costShort = (plan, platformRate) => {
     const r = distanceRate(plan.perKm, platformRate);
     return r ? `By distance, from ${pesos(r.base)}` : '';
   }
+  if (plan.free) return 'Free delivery';
   if (unpricedPlaces(plan).length) return '';
   const fees = planFees(plan);
   if (fees.length === 1) return feeLabel(fees[0]);

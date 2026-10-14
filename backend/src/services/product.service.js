@@ -39,7 +39,7 @@ const PRODUCT_TEXT_FIELDS = { name: 200, description: 5000 };
 // ── Validation limits ───────────────────────────────────────────────────
 const NAME_MIN = 2;
 const NAME_MAX = 200;
-const DESCRIPTION_MIN = 10;
+const DESCRIPTION_MIN = 5;
 const DESCRIPTION_MAX = 5000;
 const PRICE_MAX = 9999999.99;
 const QUANTITY_MAX = 1000000;
