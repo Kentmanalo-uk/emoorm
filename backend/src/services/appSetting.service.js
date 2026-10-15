@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS = {
   availableTodayEnabled: true,
   adminTeamMax: 5,
   moormoveEnabled: false,
+  product3dEnabled: false,
 };
 
 // How the homepage shows its categories.
@@ -227,8 +228,13 @@ const sanitize = (input = {}) => {
     data.moormoveEnabled = booleanField(input.moormoveEnabled, 'moormoveEnabled');
   }
 
+  // 3D / AR product views (shape templates made in the seller's browser).
+  if (input.product3dEnabled !== undefined) {
+    data.product3dEnabled = booleanField(input.product3dEnabled, 'product3dEnabled');
+  }
+
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, delivery by distance, verification, category style, Available Today, admin team or MoorMove setting', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, delivery by distance, verification, category style, Available Today, admin team, MoorMove or 3D views setting', 400);
   }
   return data;
 };

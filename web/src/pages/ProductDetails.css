@@ -3563,3 +3563,31 @@ a.pdp-pkg-item:hover {
 .pdp-stock.is-waiting {
   color: var(--t-neutral-500, #6b7280);
 }
+
+/* 3D view: a small chip on the photos (opens Product3dSheet). */
+.pdp-3d-chip {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px 0 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--t-neutral-900, #111827);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.14);
+  cursor: pointer;
+}
+
+.pdp-3d-chip:hover {
+  background: #fff;
+  color: var(--t-primary-700, #047857);
+}

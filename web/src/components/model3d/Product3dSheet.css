@@ -1,0 +1,110 @@
+/* The product page's 3D view: full screen on phones, a large panel on
+   wider screens. */
+.p3d {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.p3d-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.p3d-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(960px, calc(100vw - 48px));
+  height: min(760px, calc(100vh - 48px));
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.p3d-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px 20px;
+}
+
+.p3d-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.p3d-title strong {
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 17px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.p3d-title small {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13.5px;
+  font-weight: 400;
+}
+
+.p3d-close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-800, #1f2937);
+  cursor: pointer;
+}
+
+.p3d-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #f2f3f1;
+}
+
+.p3d-stage .m3d-viewer {
+  position: absolute;
+  inset: 0;
+}
+
+.p3d-hint {
+  margin: 0;
+  padding: 12px 20px 16px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .p3d-panel {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .p3d-head {
+    padding: max(12px, env(safe-area-inset-top)) 12px 10px 16px;
+  }
+
+  .p3d-hint {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}

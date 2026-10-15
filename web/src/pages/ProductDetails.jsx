@@ -1,4 +1,6 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import {
+  useState, useEffect, useLayoutEffect, useMemo, useCallback, lazy, Suspense,
+} from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import useSeo, { productSchema, breadcrumbs, clampText } from '../lib/seo';
@@ -33,6 +35,18 @@ import {
   getFollowStatus, followStore as apiFollowStore, unfollowStore as apiUnfollowStore, subscribeToFollowChanges,
 } from '../lib/follow';
 import './ProductDetails.css';
+import useAppSettings from '../hooks/useAppSettings';
+
+// The 3D view (and model-viewer with it) loads only when a buyer opens it.
+const Product3dSheet = lazy(() => import('../components/model3d/Product3dSheet'));
+
+/** A small cube, for the 3D chip (drawn here: an icon set's icon costs the page more). */
+const CubeMark = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 2.5 3.5 7.2v9.6l8.5 4.7 8.5-4.7V7.2z" />
+    <path d="M3.5 7.2 12 12l8.5-4.8M12 12v9.5" />
+  </svg>
+);
 import {
   pricedVariation, priceForSelection, priceRange, stockedVariation, stockForSelection, unitPriceFor, priceTiersOf,
 } from '../lib/variantPricing';
@@ -239,6 +253,9 @@ const ProductDetails = () => {
   const [storeFollow, setStoreFollow] = useState({ following: false, count: null, busy: false });
   const closeSheet = useCallback(() => setSheetMode(null), []);
   const [zoom, setZoom] = useState({ active: false, x: 50, y: 50 });
+  // The 3D view, open over the page.
+  const [open3d, setOpen3d] = useState(false);
+  const { settings: appSettings } = useAppSettings();
 
   const handleZoomMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -773,6 +790,8 @@ const ProductDetails = () => {
   const gallery = optionPhoto && !images.includes(optionPhoto)
     ? [...images, optionPhoto]
     : images.length ? images : ['/placeholder-product.png'];
+  // Its 3D view, while the super admin has 3D views on.
+  const view3d = appSettings?.product3dEnabled === true && product.model3d?.glbUrl ? product.model3d : null;
   const pickOption = (name, value) => {
     const next = { ...selectedVariations, [name]: value };
     setSelectedVariations(next);
@@ -974,6 +993,11 @@ const ProductDetails = () => {
                 {gallery.length > 1 && (
                   <span className="pdp-m-counter">{activeSlide + 1}/{gallery.length}</span>
                 )}
+                {view3d && (
+                  <button type="button" className="pdp-3d-chip" onClick={() => setOpen3d(true)} aria-label="See it in 3D">
+                    <CubeMark /> 3D
+                  </button>
+                )}
                 {product.status === 'PENDING' && <span className="pdp-status-badge">Pending review</span>}
               </div>
 
@@ -1044,6 +1068,18 @@ const ProductDetails = () => {
                 )}
                 {product.status === 'PENDING' && (
                   <span className="pdp-status-badge">Pending review</span>
+                )}
+                {view3d && (
+                  <button
+                    type="button"
+                    className="pdp-3d-chip"
+                    onClick={() => { setZoom((z) => ({ ...z, active: false })); setOpen3d(true); }}
+                    onMouseEnter={(e) => { e.stopPropagation(); handleZoomLeave(); }}
+                    onMouseMove={(e) => e.stopPropagation()}
+                    aria-label="See it in 3D"
+                  >
+                    <CubeMark /> 3D
+                  </button>
                 )}
               </div>
               <div className="pdp-thumbs">
@@ -1759,6 +1795,12 @@ const ProductDetails = () => {
           priceFrom={startsFrom(product)}
           priceUnit={priceUnit(product)}
         />
+      )}
+
+      {open3d && view3d && (
+        <Suspense fallback={null}>
+          <Product3dSheet model={view3d} name={product.name} onClose={() => setOpen3d(false)} />
+        </Suspense>
       )}
 
       {showReport && (

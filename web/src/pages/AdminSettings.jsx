@@ -103,6 +103,7 @@ export default function AdminSettings() {
       adminTeamMax: String(currentAppSettings.adminTeamMax ?? 5),
       requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
       availableTodayEnabled: currentAppSettings.availableTodayEnabled !== false,
+      product3dEnabled: currentAppSettings.product3dEnabled === true,
       categoryStyle: currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE',
     });
   }, [
@@ -114,6 +115,7 @@ export default function AdminSettings() {
     currentAppSettings.adminTeamMax,
     currentAppSettings.requireBuyerVerification,
     currentAppSettings.availableTodayEnabled,
+    currentAppSettings.product3dEnabled,
     currentAppSettings.categoryStyle,
   ]);
 
@@ -242,6 +244,10 @@ export default function AdminSettings() {
     const availableTodayEnabled = brandingForm.availableTodayEnabled !== false;
     if (availableTodayEnabled !== (currentAppSettings.availableTodayEnabled !== false)) {
       changes.availableTodayEnabled = availableTodayEnabled;
+    }
+    const product3dEnabled = brandingForm.product3dEnabled === true;
+    if (product3dEnabled !== (currentAppSettings.product3dEnabled === true)) {
+      changes.product3dEnabled = product3dEnabled;
     }
     const categoryStyle = brandingForm.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE';
     if (categoryStyle !== (currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE')) {
@@ -531,6 +537,22 @@ export default function AdminSettings() {
             onChange={(e) => setBrandingForm((current) => ({ ...current, availableTodayEnabled: e.target.checked }))}
           />
           <span>Turn on Available Today</span>
+        </label>
+      </Row>
+
+      <Row
+        label="3D views of products"
+        help={brandingForm.product3dEnabled === true
+          ? 'On: sellers can add a 3D view to goods (jar, bottle, box or pouch), and buyers can turn it around and see it in their room on phones that can.'
+          : 'Off: the 3D tool is hidden from sellers and buyers see photos only. 3D views already made are kept for when it is back on.'}
+      >
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={brandingForm.product3dEnabled === true}
+            onChange={(e) => setBrandingForm((current) => ({ ...current, product3dEnabled: e.target.checked }))}
+          />
+          <span>Turn on 3D views</span>
         </label>
       </Row>
 

@@ -1779,3 +1779,15 @@
     box-shadow: none;
   }
 }
+
+/* Desktop: the top bar carries the wash (pink to green, index.css
+   --header-glow-band); the bar with the logo and search is plain white. */
+@media (min-width: 769px) {
+  .topbar {
+    background: var(--header-glow-band);
+  }
+
+  .header {
+    background: var(--t-neutral-0, #fff);
+  }
+}

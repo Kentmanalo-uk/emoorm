@@ -84,3 +84,20 @@ export async function uploadKycDocument(file) {
   if (!data?.fileId) throw new Error('Upload succeeded but no file reference returned');
   return data;
 }
+
+/**
+ * Upload a 3D model of a product (POST /upload/model3d): the GLB or USDZ
+ * the 3D view editor built in this browser. The server checks the bytes.
+ *
+ * @param {Blob} blob
+ * @param {'glb'|'usdz'} kind
+ * @returns {Promise<{ url: string, filename: string, bytes: number }>}
+ */
+export async function uploadModel3d(blob, kind) {
+  if (!blob) throw new Error('No 3D model to upload');
+  const type = kind === 'usdz' ? 'model/vnd.usdz+zip' : 'model/gltf-binary';
+  const file = new File([blob], `product.${kind === 'usdz' ? 'usdz' : 'glb'}`, { type });
+  const data = await send('/upload/model3d', file);
+  if (!data?.url) throw new Error('Upload succeeded but no URL returned');
+  return data;
+}

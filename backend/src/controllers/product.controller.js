@@ -197,6 +197,16 @@ const updateProduct = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Set or clear a product's 3D view (shape template, GLB + USDZ)
+ * @route PUT /api/products/:id/model3d
+ * @access Private (Product owner only)
+ */
+const setModel3d = asyncHandler(async (req, res) => {
+  const product = await productService.setModel3d(req.params.id, req.user.id, req.body);
+  successResponse(res, product, product.model3d ? '3D view saved' : '3D view removed');
+});
+
+/**
  * Adjust stock by a relative amount (restock / manual correction)
  * @route POST /api/products/:id/stock
  * @access Private (Product owner only)
@@ -326,6 +336,7 @@ module.exports = {
   getProductById,
   getProductBySlug,
   updateProduct,
+  setModel3d,
   adjustStock,
   deleteProduct,
   approveProduct,

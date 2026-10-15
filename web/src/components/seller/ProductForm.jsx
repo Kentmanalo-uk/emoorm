@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  CircleNotch, Info, ArrowLeft, Check, CheckCircle, CaretDown, Package, Plus, CookingPot, ForkKnife, CalendarPlus,
+  CircleNotch, Info, ArrowLeft, Check, CheckCircle, CaretDown, Package, Plus, CookingPot, ForkKnife, CalendarPlus, Cube,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
@@ -17,6 +17,8 @@ import KindDetails, { ServesField } from './product-form/KindDetails';
 import MoreDetails from './product-form/MoreDetails';
 import PreviewCard from './product-form/PreviewCard';
 import WayField from './product-form/WayField';
+import Model3dEditor from './product-form/Model3dEditor';
+import { SHAPES as SHAPES_3D } from '../../lib/model3d/templates';
 import {
   Card, Field, MoneyInput, RadioCards, Stepper, Switch,
 } from './product-form/parts';
@@ -92,9 +94,10 @@ const keepRecent = (key, id) => {
  * @param {Array} [recentProducts] - The seller's products, for "Used before"
  * @param {Array<{key, label}>} [sellBlockers] - What the shop still needs
  *   before it can sell; while any are left, buyers see products but cannot order.
+ * @param {Function} [onPatched] - (id, fields): a part saved on its own (the 3D view)
  */
 export default function ProductForm({
-  product = null, categories = [], recentProducts = [], onCancel, onSaved, sellBlockers = [],
+  product = null, categories = [], recentProducts = [], onCancel, onSaved, sellBlockers = [], onPatched,
 }) {
   const editing = !!product;
   const isPhone = usePhoneLayout();
@@ -132,6 +135,11 @@ export default function ProductForm({
   const [confirmLeave, setConfirmLeave] = useState(null);
   const [attempt, setAttempt] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
+  // The 3D view: saved on its own for a product already saved, else sent
+  // with the product. ?section=model3d (My products' "3D view") opens it.
+  const [model3d, setModel3d] = useState(product?.model3d || null);
+  const [open3d, setOpen3d] = useState(() => new URLSearchParams(location.search).get('section') === 'model3d');
+  const [jump3d] = useState(open3d);
   // A new live animal just saved: offer to list another like it.
   const [savedAnimal, setSavedAnimal] = useState(null);
   // New cooked food just saved: offer to post it on Today's menu.
@@ -165,6 +173,13 @@ export default function ProductForm({
     document.body.classList.add('pf-open');
     return () => document.body.classList.remove('pf-open');
   }, []);
+
+  // Opened from My products' "3D view": go straight to it.
+  useEffect(() => {
+    if (!jump3d) return undefined;
+    const t = setTimeout(() => document.getElementById('pf-card-model3d')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+    return () => clearTimeout(t);
+  }, [jump3d]);
 
   // After a save with problems, bring the first one into view.
   useEffect(() => {
@@ -352,6 +367,8 @@ export default function ProductForm({
     }
 
     const payload = buildPayload(settle(state), { kind, hasOptions, editing, product });
+    // A 3D view made before the first save goes with it (later ones save on their own).
+    if (!editing && show3d && model3d) payload.model3d = model3d;
     setSaving(true);
     try {
       const res = editing
@@ -561,6 +578,16 @@ export default function ProductForm({
   const choiceTypes = packed ? CHOICE_TYPES.filter((t) => t.name !== 'Color') : types;
 
   const showKindNote = !short && !!kind && !!form.categoryId && (kindOpts.length > 1 || kind !== 'REGULAR');
+
+  // 3D view: goods kept in stock (packed food too), while the feature is on.
+  const show3d = settings?.product3dEnabled === true && kind === 'REGULAR';
+  const on3dChange = (next) => {
+    setModel3d(next);
+    if (editing) onPatched?.(product.id, { model3d: next });
+  };
+  const summary3d = model3d && SHAPES_3D[model3d.shape]
+    ? `${SHAPES_3D[model3d.shape].label} · ${Object.values(model3d.dims || {}).slice(0, 3).join(' × ')} cm · ${editing ? 'Saved' : 'Saved with the product'}`
+    : 'Let buyers turn it around, and see it in their room on phones that can';
 
   // The weight with packaging: couriers work out their fee from it.
   const weightField = (
@@ -826,7 +853,38 @@ export default function ProductForm({
         </Card>
       )}
 
-      {/* 7. More details: closed until wanted (Packed food too; not Cooked food) */}
+      {/* 7. 3D view: optional, closed until wanted */}
+      {show3d && (
+        <section className={`pf-card pf-card--more pf-card--3d${open3d ? ' is-open' : ''}`} id="pf-card-model3d">
+          <button
+            type="button"
+            className="pf-more-toggle"
+            aria-expanded={open3d}
+            aria-controls="pf-3d-body"
+            onClick={() => setOpen3d((v) => !v)}
+          >
+            <span className="pf-more-toggle-text">
+              <span className="pf-more-toggle-title">
+                <Cube size={19} className="pf-3d-icon" aria-hidden="true" /> 3D view <em className="pf-opt">Optional</em>
+              </span>
+              <small>{summary3d}</small>
+            </span>
+            <CaretDown size={20} className="pf-more-caret" aria-hidden="true" />
+          </button>
+          {open3d && (
+            <div className="pf-card-body" id="pf-3d-body">
+              <Model3dEditor
+                value={model3d}
+                productId={editing ? product.id : null}
+                productName={form.name}
+                onChange={on3dChange}
+              />
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 8. More details: closed until wanted (Packed food too; not Cooked food) */}
       {(!short || packed) && (
         <section className={`pf-card pf-card--more${moreOpen ? ' is-open' : ''}`} id="pf-card-more">
           <button

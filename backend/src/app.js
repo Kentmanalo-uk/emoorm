@@ -21,7 +21,14 @@ const SERVABLE_UPLOAD_TYPES = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.gif': 'image/gif',
+  // 3D product views (POST /upload/model3d checks the bytes). iPhone AR
+  // Quick Look opens a USDZ only when it is served as model/vnd.usdz+zip.
+  '.glb': 'model/gltf-binary',
+  '.usdz': 'model/vnd.usdz+zip',
 };
+
+// 3D models are fetched by script (the 3D viewer), so a CDN copy needs CORS.
+const MODEL_UPLOAD_TYPES = new Set(['.glb', '.usdz']);
 
 const app = express();
 app.disable('x-powered-by');
@@ -110,7 +117,9 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       // 'unsafe-inline' is required by Google Identity Services and the
       // Translate widget, both of which inject inline scripts.
-      scriptSrc: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
+      // 'wasm-unsafe-eval' lets WebAssembly compile (the 3D viewer's model
+      // decoders), and nothing else: eval() and new Function() stay blocked.
+      scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", ...GOOGLE_HOSTS, ...MAP_TILES],
       scriptSrcElem: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
       // Vite emits inline styles, and Leaflet sets them on elements directly.
       styleSrc: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
@@ -118,7 +127,12 @@ app.use(helmet({
       fontSrc: ["'self'", 'data:', ...GOOGLE_HOSTS],
       imgSrc: ["'self'", 'data:', 'blob:', ...MAP_TILES, ...IMAGE_HOSTS, ...GOOGLE_HOSTS],
       // OSRM: the road route from the buyer to a shop's pickup spot (checkout).
-      connectSrc: ["'self'", 'https://psgc.gitlab.io', 'https://router.project-osrm.org', ...GOOGLE_HOSTS, ...MAP_TILES],
+      // blob: and the CDN: the 3D viewer fetches a product's model (and the
+      // seller's preview, built in the page) by script.
+      connectSrc: [
+        "'self'", 'blob:', 'https://psgc.gitlab.io', 'https://router.project-osrm.org', ...GOOGLE_HOSTS, ...MAP_TILES,
+        ...(config.cdn.url ? [config.cdn.url] : []),
+      ],
       frameSrc: ["'self'", 'https://accounts.google.com', 'https://www.google.com'],
       // Nothing on this site belongs in someone else's frame.
       frameAncestors: ["'none'"],
@@ -253,6 +267,8 @@ app.use(
         return;
       }
       res.set('Content-Type', SERVABLE_UPLOAD_TYPES[ext]);
+      // Public files, read without credentials by the 3D viewer.
+      if (MODEL_UPLOAD_TYPES.has(ext)) res.set('Access-Control-Allow-Origin', '*');
       // This directory holds user-supplied files. A locked-down CSP means
       // that even a file that slipped through cannot run script, load a
       // frame, or call home if it is ever rendered.

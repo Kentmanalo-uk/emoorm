@@ -1,12 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
-const { upload, kycUpload, assertRealImage } = require('../middleware/upload');
-const { authenticate } = require('../middleware/auth');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
+const {
+  upload, kycUpload, assertRealImage, modelUpload, assertRealModel,
+} = require('../middleware/upload');
+const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { successResponse } = require('../utils/response');
 const { uploadLimiter } = require('../middleware/security');
-const { optimizeUpload } = require('../utils/imageOptimizer');
+const { optimizeUpload, publicUrl } = require('../utils/imageOptimizer');
+const appSettingService = require('../services/appSetting.service');
 
 /**
  * Upload a single image file
@@ -68,6 +72,56 @@ router.post(
     }
 
     successResponse(res, { fileId: req.file.filename }, 'File uploaded successfully');
+  })
+);
+
+// A seller saving a 3D view sends two models (GLB and USDZ) each time; 40
+// an hour is twenty saves, plenty for trying shapes and sizes.
+const modelLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 40,
+  keyGenerator: (req) => (req.user?.id ? `user:${req.user.id}` : ipKeyGenerator(req.ip)),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: '3D upload limit reached. Try again in an hour.' },
+});
+
+// Refused before the body is read while the super admin has 3D views off.
+const product3dOn = asyncHandler(async (req, res, next) => {
+  const settings = await appSettingService.get();
+  if (settings.product3dEnabled !== true) {
+    return res.status(403).json({ success: false, message: '3D views are switched off for now.' });
+  }
+  return next();
+});
+
+/**
+ * Upload a 3D model of a product: a GLB (Android, WebXR, the web viewer) or
+ * a USDZ (iPhone AR Quick Look), at most 15 MB. Built in the seller's
+ * browser from a shape template (web/src/lib/model3d).
+ * @route POST /api/upload/model3d
+ * @access Private (sellers)
+ */
+router.post(
+  '/model3d',
+  authenticate,
+  authorize('SELLER'),
+  product3dOn,
+  modelLimiter,
+  modelUpload.single('file'),
+  asyncHandler(async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+    const verdict = await assertRealModel(req.file);
+    if (!verdict.ok) {
+      return res.status(400).json({ success: false, message: verdict.reason });
+    }
+    successResponse(
+      res,
+      { url: publicUrl(req.file.filename), filename: req.file.filename, type: verdict.type, bytes: req.file.size },
+      '3D model uploaded'
+    );
   })
 );
 

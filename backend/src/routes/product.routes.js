@@ -120,6 +120,14 @@ router.put(
   productController.updateProduct
 );
 
+// The product's 3D view (shape template + GLB/USDZ uploads), own products only
+router.put(
+  '/:id/model3d',
+  authenticate,
+  authorize('SELLER'),
+  productController.setModel3d
+);
+
 router.delete(
   '/:id',
   authenticate,

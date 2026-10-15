@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate, useOutletContext, useSearchParams } fro
 import {
   Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye, ArrowSquareOut,
   MagnifyingGlass as Search, WarningCircle as AlertCircle, CheckCircle, Clock, X, CircleNotch as Loader2,
-  EyeSlash as EyeOff, Archive, DotsThree, SlidersHorizontal, Check, Minus, Prohibit, CaretRight,
+  EyeSlash as EyeOff, Archive, DotsThree, SlidersHorizontal, Check, Minus, Prohibit, CaretRight, Cube,
 } from '@phosphor-icons/react';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import PhoneSheet from '../components/seller/PhoneSheet';
@@ -26,6 +26,7 @@ import { sellBlockers } from '../lib/sellerSetup';
 import { readCache, writeCache } from '../lib/pageCache';
 import { isTodayProduct, isOpen as windowOpen, windowState } from '../lib/availability';
 import { headsLabel, isStockless, priceUnit, productKind } from '../lib/productKinds';
+import useAppSettings from '../hooks/useAppSettings';
 
 const STATUS_LABELS = {
   PENDING: { label: 'Pending Approval', cls: 'status-pending', icon: <Clock size={12} /> },
@@ -305,9 +306,18 @@ export default function SellerProducts() {
   const openNew = () => navigate('/seller/products/new', { state: { fromList: true } });
   const openNewPackage = () => navigate('/seller/products/new?type=package', { state: { fromList: true } });
 
-  const openEdit = (product) => {
+  // section: 'model3d' opens the form at its 3D view.
+  const openEdit = (product, section = null) => {
     setEditingProduct(product);
-    navigate(`/seller/products?edit=${product.id}`, { state: { fromList: true } });
+    navigate(`/seller/products?edit=${product.id}${section ? `&section=${section}` : ''}`, { state: { fromList: true } });
+  };
+
+  // 3D views: goods kept in stock, while the super admin has them on.
+  const { settings: appSettings } = useAppSettings();
+  const takes3d = (product) => appSettings?.product3dEnabled === true && productKind(product) === 'REGULAR';
+  // A part of a product saved on its own (the 3D view), kept in the list.
+  const patchProduct = (id, fields) => {
+    setProducts((list) => list.map((p) => (p.id === id ? { ...p, ...fields } : p)));
   };
 
   const closeForm = () => {
@@ -459,6 +469,7 @@ export default function SellerProducts() {
             onCancel={closeForm}
             onSaved={handleSaved}
             sellBlockers={blockers}
+            onPatched={patchProduct}
           />
         </div>
       </div>
@@ -887,6 +898,16 @@ export default function SellerProducts() {
                             >
                               <ArrowSquareOut size={15} /><span>View</span>
                             </a>
+                            {takes3d(product) && (
+                              <button
+                                className="seller-icon-btn product-action"
+                                title={product.model3d ? 'Change its 3D view' : 'Add a 3D view'}
+                                aria-label={`3D view of ${product.name}`}
+                                onClick={() => openEdit(product, 'model3d')}
+                              >
+                                <Cube size={15} /><span>3D</span>
+                              </button>
+                            )}
                             <button
                               className="seller-icon-btn seller-icon-btn--danger product-action"
                               title="Delete"
@@ -971,6 +992,15 @@ export default function SellerProducts() {
               ? 'Show to buyers again'
               : 'Hide from buyers'}
             {moreFor.status === 'HIDDEN' ? <Eye size={18} /> : <EyeOff size={18} />}
+          </button>
+        )}
+        {moreFor && takes3d(moreFor) && (
+          <button
+            type="button"
+            className="scm-choice"
+            onClick={() => { const p = moreFor; setMoreFor(null); openEdit(p, 'model3d'); }}
+          >
+            {moreFor.model3d ? '3D view' : 'Add a 3D view'} <Cube size={18} />
           </button>
         )}
         {moreFor?.slug && (

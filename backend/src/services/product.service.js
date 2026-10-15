@@ -17,6 +17,12 @@ const { stockedVariation, pricedVariation, activeSalePrice } = require('../utils
 const {
   PRODUCT_TYPES, FULFILLMENTS, kindOf, isStockless, validateDetails,
 } = require('../utils/productKinds');
+const fs = require('fs');
+const path = require('path');
+const appSettingService = require('./appSetting.service');
+const {
+  validateModel3d, publicModel3d, modelFileNames, kindTakes3d,
+} = require('../utils/model3d');
 
 const computeImageHashSafe = async (images) => {
   const first = Array.isArray(images) ? images[0] : null;
@@ -522,6 +528,74 @@ const assertStoreCanEdit = (store, action) => {
   }
 };
 
+// ── 3D views ────────────────────────────────────────────────────────────
+
+const product3dOn = async () => (await appSettingService.get()).product3dEnabled === true;
+
+/**
+ * The 3D view a save asks for, checked: the stored record, Prisma.DbNull to
+ * clear it, or undefined when the save leaves it alone. Only goods kept in
+ * stock (packed food too) take one, and only while the feature is on.
+ */
+const model3dField = async (data, kind) => {
+  if (!has(data, 'model3d')) return undefined;
+  if (data.model3d === null) return Prisma.DbNull;
+  if (!kindTakes3d(kind)) throw new ApiError('Only goods you keep in stock can have a 3D view', 400);
+  if (!await product3dOn()) throw new ApiError('3D views are switched off for now.', 403);
+  return validateModel3d(data.model3d);
+};
+
+/**
+ * Remove the model files a product no longer uses (a replaced or removed
+ * 3D view), unless another product still points at them. Best effort.
+ */
+const removeReplacedModels = async (productId, before, after) => {
+  const keep = new Set(modelFileNames(after));
+  for (const name of modelFileNames(before)) {
+    if (keep.has(name)) continue;
+    const key = name.endsWith('.glb') ? '$.glbUrl' : '$.usdzUrl';
+    const url = name.endsWith('.glb') ? before.glbUrl : before.usdzUrl;
+    try {
+      const shared = await prisma.product.count({
+        where: { id: { not: productId }, model3d: { path: key, equals: url } },
+      });
+      if (!shared) await fs.promises.unlink(path.join(config.upload.uploadDir, name));
+    } catch {
+      /* already gone, or the check failed: leave the file */
+    }
+  }
+};
+
+/** A product's 3D view as the viewer may see it (null fields dropped). */
+const shown3d = (product, { full, enabled }) => {
+  if (!product || !('model3d' in product)) return product;
+  const { model3d, ...rest } = product;
+  if (!model3d) return { ...rest, model3d: null };
+  if (full) return product;
+  return enabled ? { ...rest, model3d: publicModel3d(model3d) } : rest;
+};
+
+/**
+ * Set or clear a product's 3D view (Owner only).
+ * @route PUT /api/products/:id/model3d { model3d: {...} | null }
+ */
+const setModel3d = async (productId, userId, body = {}) => {
+  const product = await productRepository.findById(productId);
+  if (!product || product.deletedAt) throw new ApiError('Product not found', 404);
+  const store = await storeRepository.findByOwnerId(userId);
+  if (!store || product.storeId !== store.id) {
+    throw new ApiError('You can only update your own products', 403);
+  }
+  assertStoreCanEdit(store, 'update');
+  if (!body || !Object.prototype.hasOwnProperty.call(body, 'model3d')) {
+    throw new ApiError('Send model3d: the 3D view, or null to remove it', 400);
+  }
+  const value = await model3dField({ model3d: body.model3d }, kindOf(product));
+  const updated = await productRepository.updateProduct(productId, { model3d: value }, { actorId: userId });
+  await removeReplacedModels(productId, product.model3d, value === Prisma.DbNull ? null : value);
+  return stripStoreInternals(updated);
+};
+
 // ── Public shaping ──────────────────────────────────────────────────────
 
 const PUBLIC_STORE_FIELDS = [
@@ -600,9 +674,13 @@ const presentDetail = async (product, viewerId, viewerRole, viewerMunicipalityId
   if (!isOwner && !isModerator && !isPubliclyVisible(product)) {
     throw new ApiError('Product not found', 404);
   }
-  const shaped = isOwner || isModerator
-    ? stripStoreInternals(product)
-    : toPublicProduct(product, { withOwner: true });
+  const full = isOwner || isModerator;
+  // The 3D view: in full for its seller and moderators; buyers get the
+  // model (not the label photos), and nothing while the feature is off.
+  const shaped = shown3d(
+    full ? stripStoreInternals(product) : toPublicProduct(product, { withOwner: true }),
+    { full, enabled: full || await product3dOn() },
+  );
   if (shaped.store) {
     shaped.store = { ...shaped.store, readyToSell: await shopReadiness.isReady(product.storeId || product.store.id) };
   }
@@ -748,6 +826,9 @@ const createProduct = async (userId, rawData) => {
   // Animals are listed a few heads at a time: only "sold out" is worth a
   // warning, unless the seller sets their own mark.
   if (kind === 'LIVESTOCK' && !has(data, 'lowStockThreshold')) kindData.lowStockThreshold = 0;
+  // A 3D view made in the form before the product was first saved.
+  const model3d = await model3dField(data, kind);
+  if (model3d && model3d !== Prisma.DbNull) kindData.model3d = model3d;
 
   // Ready-to-eat food can go on sale for today as it is saved: the post is
   // checked here, before anything is saved, and published after.
@@ -840,9 +921,11 @@ const getProducts = async (rawOptions) => {
   // back "add to cart". Asked after the cache; the public lists reuse an
   // answer up to 15 seconds old, since every page view asks.
   const shape = async (result) => {
-    const products = options.isAdmin
+    // Lists leave the 3D view out: the product page asks for it.
+    const products = (options.isAdmin
       ? result.products.map(stripStoreInternals)
-      : result.products.map((p) => toPublicProduct(p));
+      : result.products.map((p) => toPublicProduct(p)))
+      .map(({ model3d, ...p }) => p);
     const ready = await shopReadiness.readyIds(
       products.map((p) => p.storeId || p.store?.id),
       { maxAgeMs: options.isAdmin ? 0 : 15 * 1000 },
@@ -1097,6 +1180,12 @@ const updateProduct = async (productId, userId, rawData) => {
   }
   if (packageItems) updateData.packageItems = { deleteMany: {}, create: packageItems };
 
+  // The 3D view: set or cleared when sent; a product that stops being goods
+  // kept in stock (cooked food, an animal) loses it.
+  const model3d = await model3dField(data, kind);
+  if (model3d !== undefined) updateData.model3d = model3d;
+  else if (product.model3d && !kindTakes3d(kind)) updateData.model3d = Prisma.DbNull;
+
   // Switching away from Available Today ends its windows first (their stock
   // goes to 0, then whatever stock the seller entered applies).
   if (wasToday && kind !== 'READY_TO_EAT') {
@@ -1139,6 +1228,10 @@ const updateProduct = async (productId, userId, rawData) => {
     await prisma.$transaction((tx) => availabilityRepository.setStockTx(tx, productId, 0, 'TODAY_SWITCH', productId, userId));
     await productRepository.invalidateProductIds([productId]);
     updated.stock = 0;
+  }
+
+  if (updateData.model3d !== undefined) {
+    await removeReplacedModels(productId, product.model3d, updateData.model3d === Prisma.DbNull ? null : updateData.model3d);
   }
 
   if (updateData.stock !== undefined) {
@@ -1596,6 +1689,7 @@ module.exports = {
   getMyProducts,
   getMyProductSummary,
   updateProduct,
+  setModel3d,
   adjustStock,
   deleteProduct,
   approveProduct,

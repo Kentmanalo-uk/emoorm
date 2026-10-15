@@ -6,6 +6,7 @@ const config = require('../config/env');
 const { ApiError } = require('./errorHandler');
 const { inspectImageFile, extensionFor, WEB_SAFE_TYPES } = require('../utils/fileType');
 const { toJpegInPlace } = require('../utils/imageOptimizer');
+const { inspectModelFile, MODEL_MAX_BYTES } = require('../utils/model3d');
 
 /**
  * Extension for a stored upload.
@@ -146,5 +147,54 @@ const kycUpload = multer({
   limits: { ...FORM_LIMITS, fileSize: config.upload.maxFileSize },
 });
 
-module.exports = { upload, kycUpload, assertRealImage };
+// 3D models (POST /upload/model3d): a GLB or a USDZ the seller's browser
+// built from a shape template. Stored under a neutral name first; the bytes
+// decide what it is (assertRealModel), never the declared type or the name.
+const MODEL_TYPES = new Set([
+  'model/gltf-binary', 'model/vnd.usdz+zip', 'model/vnd.usd+zip', 'model/usd', 'application/zip', 'application/x-zip-compressed',
+]);
+
+const modelStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, config.upload.uploadDir),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(16).toString('hex')}.bin`),
+});
+
+const modelUpload = multer({
+  storage: modelStorage,
+  fileFilter: (req, file, cb) => {
+    const type = String(file.mimetype || '').toLowerCase();
+    if (MODEL_TYPES.has(type) || UNTYPED.has(type)) cb(null, true);
+    else cb(new ApiError('That file is not a 3D model we can use. Save the 3D view again.', 400), false);
+  },
+  limits: { ...FORM_LIMITS, fileSize: MODEL_MAX_BYTES },
+});
+
+/**
+ * Verify an uploaded 3D model really is a GLB or USDZ, give it the matching
+ * extension (which sets the Content-Type it is served with), or delete it.
+ * @param {Object} file - The multer file object
+ * @returns {Promise<{ok: Boolean, reason: String|null, type: String|null}>}
+ */
+const assertRealModel = async (file) => {
+  if (!file?.path) return { ok: false, reason: 'No file uploaded', type: null };
+  const verdict = await inspectModelFile(file.path);
+  if (!verdict.ok) {
+    await fs.promises.unlink(file.path).catch(() => { });
+    return verdict;
+  }
+  const corrected = path.join(path.dirname(file.path), `${path.basename(file.path, path.extname(file.path))}${verdict.ext}`);
+  try {
+    await fs.promises.rename(file.path, corrected);
+  } catch {
+    await fs.promises.unlink(file.path).catch(() => { });
+    return { ok: false, reason: 'The 3D model could not be saved. Please try again.', type: null };
+  }
+  file.path = corrected;
+  file.filename = path.basename(corrected);
+  return verdict;
+};
+
+module.exports = {
+  upload, kycUpload, assertRealImage, modelUpload, assertRealModel,
+};
 
