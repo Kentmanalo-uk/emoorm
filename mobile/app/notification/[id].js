@@ -7,7 +7,9 @@ import { notificationHref } from '../../src/lib/notificationLink';
 import useAuthStore from '../../src/store/authStore';
 import { font, t } from '../../src/theme';
 import ScreenHeader from '../../src/components/ScreenHeader';
+import EmptyState from '../../src/components/EmptyState';
 import LoadingSkeleton from '../../src/components/LoadingSkeleton';
+import { PageLoader } from '../../src/components/BrandLoader';
 
 /*
  * A single notification, in full (web/src/pages/NotificationDetail.jsx at
@@ -87,7 +89,7 @@ export default function NotificationDetail() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title={barTitle} onBack={goBack} />
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.screen} contentContainerStyle={styles.content}>
         <Pressable
           accessibilityRole="button"
           onPress={goBack}
@@ -98,23 +100,15 @@ export default function NotificationDetail() {
         </Pressable>
 
         {isLoading ? (
-          <View style={styles.loading} accessibilityLabel="Loading notification">
-            <LoadingSkeleton height={72} borderRadius={8} />
-            <LoadingSkeleton height={72} borderRadius={8} />
-          </View>
+          <PageLoader label="Loading notification" />
         ) : error ? (
-          <View style={styles.empty}>
-            <BellIcon size={64} weight="fill" color={t.primary[200]} style={styles.emptyIcon} />
-            <Text style={styles.emptyTitle} accessibilityRole="header">Not available</Text>
-            <Text style={styles.emptyText}>{error}</Text>
-            <Pressable
-              accessibilityRole="link"
-              onPress={() => router.replace(listHref)}
-              style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
-            >
-              <Text style={styles.btnText}>Back to notifications</Text>
-            </Pressable>
-          </View>
+          <EmptyState
+            page
+            icon={BellIcon}
+            title="Not available"
+            text={error}
+            actions={[{ label: 'Back to notifications', onPress: () => router.replace(listHref), variant: 'outline' }]}
+          />
         ) : notification ? (
           <View style={styles.card}>
             <View style={styles.head}>
@@ -166,15 +160,6 @@ const styles = StyleSheet.create({
   headText: { flex: 1, minWidth: 0 },
   meta: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
   body: { marginBottom: 18, fontSize: 15, lineHeight: 24.75, color: t.neutral[700], ...font(400) },
-
-  empty: {
-    alignItems: 'center', paddingTop: 36, paddingHorizontal: 20, paddingBottom: 40, borderRadius: 12,
-    backgroundColor: t.neutral[0],
-  },
-  emptyIcon: { marginBottom: 12 },
-  emptyTitle: { marginBottom: 8, fontSize: 16, lineHeight: 18.4, color: t.neutral[700], textAlign: 'center', ...font(500) },
-  // 14px margin on the website, but the link sits inline in the next line box: 8 on screen.
-  emptyText: { marginBottom: 8, fontSize: 13, lineHeight: 20.8, color: t.neutral[500], textAlign: 'center', ...font(400) },
 
   btn: {
     justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 20, borderWidth: 1,

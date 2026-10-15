@@ -5,6 +5,8 @@ import {
 import { useRouter } from 'expo-router';
 import { ArrowRightIcon, StarIcon } from 'phosphor-react-native';
 import apiClient from '../../api/client';
+import { useProductPeek } from '../peek/ProductPeek';
+import { useStorePeek } from '../peek/StorePeek';
 import { resolveImg } from '../../lib/media';
 import { font, t, text } from '../../theme';
 
@@ -170,11 +172,13 @@ export function MunicipalityGalleryStack({ municipality, id }) {
 /** .municipality-product-card: photo, two-line name, price, five stars and the review count. */
 export function MunicipalityProductCard({ product, style }) {
   const router = useRouter();
+  const peek = useProductPeek()(product);
   return (
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={product.name}
       onPress={() => router.push(`/product/${product.slug}`)}
+      {...peek}
       style={[styles.productCard, style]}
     >
       <View style={styles.productImage}>
@@ -199,10 +203,12 @@ export function MunicipalityStoreRow({ store, fallbackPlace }) {
   const router = useRouter();
   const [failed, setFailed] = useState(false);
   const logo = store.logo ? resolveImg(store.logo) : null;
+  const peek = useStorePeek()(store);
   return (
     <Pressable
       accessibilityRole="link"
       onPress={() => router.push(`/store/${store.slug}`)}
+      {...peek}
       style={({ pressed }) => [styles.storeRow, pressed && styles.storeRowPressed]}
     >
       <View style={styles.storeLogo}>

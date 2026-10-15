@@ -1,12 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
-  ArrowCounterClockwiseIcon, BellIcon, CaretRightIcon, ChatTextIcon, EnvelopeSimpleIcon, EyeIcon, GearIcon,
-  HeartIcon, LifebuoyIcon, FlagIcon, MapPinIcon, PackageIcon, PencilSimpleIcon, QuestionIcon, ShoppingBagIcon,
-  StarIcon, StorefrontIcon,
+  ArrowCounterClockwiseIcon, BellIcon, CaretRightIcon, ChatTextIcon, EnvelopeSimpleIcon, EyeIcon, GearIcon, InfoIcon, ScanIcon,
+  HandshakeIcon, HeartIcon, LifebuoyIcon, FlagIcon, MapPinIcon, PackageIcon, PencilSimpleIcon, QuestionIcon, ShoppingBagIcon,
+  StarIcon, StorefrontIcon, UsersThreeIcon,
 } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { resolveImg } from '../../src/lib/media';
@@ -15,16 +15,21 @@ import { getCacheEntry, refreshCachedData } from '../../src/lib/dataCache';
 import useAuthStore from '../../src/store/authStore';
 import useWishlistStore from '../../src/store/wishlistStore';
 import ShellBarButton from '../../src/components/ShellBarButton';
+import { useTabBarScroll } from '../../src/components/Glass';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import LoadingSkeleton from '../../src/components/LoadingSkeleton';
 import RoleSwitchOverlay, { useAccountSwitchStore } from '../../src/components/RoleSwitchOverlay';
-import CartConfirmDialog from '../../src/components/cart/CartConfirmDialog';
 import { GradientUserIcon, GreenToolIcon, useSvgId } from '../../src/components/profile/ProfileIcons';
 import { PfRow, PfSection, PfTitle, SignOutRow } from '../../src/components/profile/ProfileUI';
 import RecentlyViewed from '../../src/components/profile/RecentlyViewed';
 import { countBuyerTabs, errorText } from '../../src/components/profile/profileLib';
 import { syncWishlist } from '../../src/components/profile/wishlistSync';
+import { openAccountSheet } from '../../src/components/AccountSheet';
 import { font, t } from '../../src/theme';
+import HeaderGlow from '../../src/components/HeaderGlow';
+import { openSwitchAccount } from '../../src/components/SwitchAccountSheet';
+import { loadSavedAccounts, useSavedAccounts } from '../../src/store/savedAccounts';
+import { PageLoader } from '../../src/components/BrandLoader';
 
 const CACHE_KEY = 'profile:summary';
 
@@ -82,7 +87,6 @@ function SignedIn() {
   const cachedShop = useAccountSwitchStore((s) => s.shop);
   const shop = cachedShop && (!cachedShop.ownerId || cachedShop.ownerId === user?.id) ? cachedShop : null;
   const [summary, setSummary] = useState(() => getCacheEntry(CACHE_KEY)?.data || null);
-  const [signOutOpen, setSignOutOpen] = useState(false);
   const [resending, setResending] = useState(false);
   const [switching, setSwitching] = useState(false);
 
@@ -131,15 +135,18 @@ function SignedIn() {
 
   const header = (
     <ProfileHeader>
+      {/* Log in on a computer: scan the website's "Log in with QR" code (qr-scan). */}
       {user?.id ? (
-        <ShellBarButton label="View public profile" onPress={() => router.push(`/u/${user.id}`)}>
-          <EyeIcon size={19} color={t.neutral[700]} />
+        <ShellBarButton label="Scan to log in on a computer" onPress={() => router.push('/qr-scan')}>
+          <ScanIcon size={20} color={t.neutral[700]} />
         </ShellBarButton>
       ) : null}
       <ShellBarButton label="Settings" onPress={() => router.push('/settings')}>
         <GearIcon size={19} color={t.neutral[700]} />
       </ShellBarButton>
-      <ShellPageMenu />
+      <ShellPageMenu
+        extra={user?.id ? [{ key: 'public', Icon: EyeIcon, label: 'View public profile', to: `/u/${user.id}` }] : []}
+      />
     </ProfileHeader>
   );
 
@@ -211,6 +218,7 @@ function SignedIn() {
           <PfRow Icon={HeartIcon} label="Wishlist" hint={wishlistCount || null} onPress={() => router.push('/wishlist')} />
           <PfRow Icon={StorefrontIcon} label="Followed Stores" hint={followingCount || null} onPress={() => router.push('/followed-stores')} />
           <PfRow Icon={StarIcon} label="My Reviews" hint={reviewCount || null} onPress={() => router.push('/reviews')} />
+          <PfRow Icon={HandshakeIcon} label="My Offers" onPress={() => router.push('/offers')} />
         </PfSection>
 
         <PfSection list>
@@ -226,21 +234,12 @@ function SignedIn() {
             : <PfRow first Icon={ShoppingBagIcon} label="Sell on Emoorm" onPress={() => router.push('/seller-apply')} />}
           <PfRow Icon={LifebuoyIcon} label="Help & Support" onPress={() => router.push('/support')} />
           <PfRow Icon={FlagIcon} label="My Reports" onPress={() => router.push('/reports')} />
+          <PfRow Icon={InfoIcon} label="About Emoorm" onPress={() => router.push('/about')} />
           <PfRow Icon={GearIcon} label="Settings" onPress={() => router.push('/settings')} />
         </PfSection>
 
-        <SignOutRow onPress={() => setSignOutOpen(true)} />
+        <SignOutRow onPress={() => openAccountSheet('confirm')} />
       </ProfileScroll>
-
-      <CartConfirmDialog
-        open={signOutOpen}
-        title="Log out?"
-        message="You will need to log in again to place orders and see your account."
-        confirmLabel="Log out"
-        danger
-        onConfirm={async () => { setSignOutOpen(false); await logout(); router.replace('/profile'); }}
-        onCancel={() => setSignOutOpen(false)}
-      />
       <RoleSwitchOverlay visible={switching} target="seller" />
     </View>
   );
@@ -250,6 +249,9 @@ function SignedIn() {
 function Guest() {
   const router = useRouter();
   const toLogin = (redirect) => router.push({ pathname: '/login', params: { redirect } });
+  // Accounts saved on this phone (Switch account): back into one without logging in.
+  const saved = useSavedAccounts((s) => s.accounts);
+  useEffect(() => { loadSavedAccounts(); }, []);
   return (
     <View style={styles.screen}>
       <ProfileScroll
@@ -281,6 +283,12 @@ function Guest() {
           </View>
         </View>
 
+        {saved.length ? (
+          <PfSection list>
+            <PfRow first Icon={UsersThreeIcon} label={`Saved accounts (${saved.length})`} onPress={openSwitchAccount} />
+          </PfSection>
+        ) : null}
+
         <Purchase counts={{}} onOpen={(to) => toLogin(to)} />
 
         <RecentlyViewed />
@@ -305,6 +313,7 @@ function Guest() {
           <PfTitle list>More</PfTitle>
           <PfRow first Icon={ShoppingBagIcon} label="Sell on Emoorm" onPress={() => router.push('/seller-apply')} />
           <PfRow Icon={LifebuoyIcon} label="Help & Support" onPress={() => router.push('/help-center')} />
+          <PfRow Icon={InfoIcon} label="About Emoorm" onPress={() => router.push('/about')} />
         </PfSection>
       </ProfileScroll>
     </View>
@@ -312,22 +321,31 @@ function Guest() {
 }
 
 /**
- * The page scrolls under its bar: the 12px above the bar scrolls away and the
- * bar stays pinned (the website's sticky .profile-mobile-page-header).
+ * The page scrolls under its bar, which is fixed at the top as Home's search
+ * bar is (the 12px above it stays put too).
  */
 function ProfileScroll({ header, children }) {
   const insets = useSafeAreaInsets();
+  const tabScroll = useTabBarScroll();
   return (
     <>
-      <View style={{ height: insets.top, backgroundColor: t.neutral[0] }} />
-      <ScrollView style={styles.scroll} stickyHeaderIndices={[1]} showsVerticalScrollIndicator={false}>
-        <View style={styles.headGap} />
-        {header}
+      <HeaderGlow height={insets.top + GLOW_HEIGHT} />
+      <View style={{ height: insets.top }} />
+      <View style={styles.headGap} />
+      {header}
+      <ScrollView showsHorizontalScrollIndicator={false}
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        {...tabScroll}
+      >
         <View style={styles.content}>{children}</View>
       </ScrollView>
     </>
   );
 }
+
+// How far down the wash reaches under the status bar: the page's bar only (headGap 12 + bar 44).
+const GLOW_HEIGHT = 56;
 
 /** The page's own bar (.profile-mobile-page-header): "Profile" and plain icon buttons. */
 function ProfileHeader({ children }) {
@@ -419,44 +437,7 @@ function LoginGradient() {
 
 /** While the page is asked for the first time (web ProfileSkeleton). */
 function ProfileLoading() {
-  return (
-    <View style={{ gap: 12 }}>
-      <View style={[styles.card, styles.skRow]}>
-        <LoadingSkeleton width={64} height={64} borderRadius={32} />
-        <View style={{ flex: 1, gap: 8 }}>
-          <LoadingSkeleton width="55%" height={16} />
-          <LoadingSkeleton width="40%" height={11} />
-        </View>
-      </View>
-      <View style={[styles.card, styles.skCounts]}>
-        {[0, 1, 2].map((i) => (
-          <View key={i} style={{ alignItems: 'center', gap: 6 }}>
-            <LoadingSkeleton width={28} height={18} />
-            <LoadingSkeleton width={56} height={10} />
-          </View>
-        ))}
-      </View>
-      <View style={[styles.card, { padding: 16, gap: 14 }]}>
-        <LoadingSkeleton width={110} height={14} />
-        <View style={styles.skCounts}>
-          {[0, 1, 2, 3].map((i) => (
-            <View key={i} style={{ alignItems: 'center', gap: 6 }}>
-              <LoadingSkeleton width={28} height={28} borderRadius={8} />
-              <LoadingSkeleton width={48} height={10} />
-            </View>
-          ))}
-        </View>
-      </View>
-      <View style={[styles.card, { padding: 16, gap: 18 }]}>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <View key={i} style={[styles.skRow, { padding: 0 }]}>
-            <LoadingSkeleton width={22} height={22} borderRadius={6} />
-            <LoadingSkeleton width="50%" height={13} />
-          </View>
-        ))}
-      </View>
-    </View>
-  );
+  return <PageLoader minHeight={360} label="Loading your profile" />;
 }
 
 const styles = StyleSheet.create({
@@ -464,17 +445,16 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { gap: 12, paddingTop: 12, paddingBottom: 28 },
 
-  headGap: { height: 12, backgroundColor: t.neutral[0] },
-  headWrap: { backgroundColor: t.neutral[0], zIndex: 120 },
+  headGap: { height: 12 },
+  headWrap: { zIndex: 120 },
   head: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     minHeight: 44, paddingLeft: 12, paddingRight: 8,
-    borderBottomWidth: 1, borderBottomColor: t.neutral[200], backgroundColor: t.neutral[0],
   },
   headTitle: { fontSize: 22, lineHeight: 25.3, letterSpacing: -0.2, color: t.neutral[900], ...font(500) },
   headActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
-  card: { backgroundColor: t.neutral[0], borderBottomWidth: 8, borderBottomColor: t.neutral[100] },
+  card: { borderBottomWidth: 8, borderBottomColor: t.neutral[100] },
   id: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
   pressed: { backgroundColor: t.neutral[50] },
   avatar: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden', backgroundColor: t.primary[50] },

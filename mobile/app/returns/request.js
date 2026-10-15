@@ -228,7 +228,7 @@ export default function ReturnRequest() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Return an order" backTo="/orders" />
-      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]} keyboardShouldPersistTaps="handled">
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>{body}</View>
       </ScrollView>
     </View>

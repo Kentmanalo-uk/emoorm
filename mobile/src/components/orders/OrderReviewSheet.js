@@ -206,7 +206,7 @@ function ReviewForm({ target, onClose, onSuccess }) {
 /* The form scrolls between the sticky title and the sticky buttons. */
 function ScrollBody({ children }) {
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" bounces={false}>
+    <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" bounces={false}>
       {children}
     </ScrollView>
   );
@@ -232,12 +232,15 @@ const styles = StyleSheet.create({
     minHeight: 108, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 10,
     fontSize: 16, lineHeight: 24, ...font(400), color: t.neutral[700],
   },
-  count: { marginTop: 4, marginBottom: 4, textAlign: 'right', fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
+  // .review-char-count: 4px under the textarea plus the ~7px its inline box
+  // leaves under it on the page; the media row's own spacing follows.
+  count: { marginTop: 11, marginBottom: 0, textAlign: 'right', fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
   media: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: t.neutral[100] },
   mediaHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: 8, rowGap: 2, marginBottom: 10 },
   mediaTitle: { fontSize: 13, lineHeight: 20.8, ...font(500), color: t.neutral[700] },
   mediaHint: { fontSize: 11.5, lineHeight: 18.4, ...font(400), color: t.neutral[500] },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  // An 8px grid gap from 4px cell padding: the outer 4px is pulled back on every side.
+  grid: { flexDirection: 'row', flexWrap: 'wrap', margin: -4 },
   cell: { width: '33.333%', padding: 4 },
   tile: { aspectRatio: 1, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: t.neutral[200], backgroundColor: t.neutral[900] },
   tileImg: { width: '100%', height: '100%' },
@@ -249,7 +252,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1, gap: 4, alignItems: 'center', justifyContent: 'center', borderRadius: 8,
     borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.neutral[300], backgroundColor: t.neutral[50],
   },
-  addText: { fontSize: 11.5, lineHeight: 18.4, ...font(500), color: t.neutral[500] },
+  addText: { fontSize: 11.5, lineHeight: 13.8, ...font(500), color: t.neutral[500] },
   actions: {
     flexDirection: 'row', gap: 8, marginTop: 14, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 12,
     borderTopWidth: 1, borderTopColor: t.neutral[100], backgroundColor: t.neutral[0],

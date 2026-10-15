@@ -1,12 +1,11 @@
-import SellerPage from '../../../src/components/seller/SellerPage';
-import SellerPlaceholder from '../../../src/components/seller/SellerPlaceholder';
+import { useLocalSearchParams } from 'expo-router';
+import SellerFulfillmentScreen from '../../../src/components/seller/fulfillment/SellerFulfillmentScreen';
 
-// /seller/fulfillment/:part — STUB: the bar is done (SellerPage → SellerBackBar with the
-// phone title). Port the body from web/src/pages/SellerFulfillment.jsx (one part: method, pickup, delivery, payment).
+// /seller/fulfillment/:part: one part (method, pickup, delivery, payment) with
+// Cancel and Save changes at the bottom (web/src/pages/SellerFulfillment.jsx).
+// Keyed by the part: each part starts from the saved settings.
 export default function SellerFulfillmentPartScreen() {
-  return (
-    <SellerPage>
-      <SellerPlaceholder source="web/src/pages/SellerFulfillment.jsx" />
-    </SellerPage>
-  );
+  const { part } = useLocalSearchParams();
+  const name = Array.isArray(part) ? part[0] : part;
+  return <SellerFulfillmentScreen key={name || 'all'} part={name || null} />;
 }

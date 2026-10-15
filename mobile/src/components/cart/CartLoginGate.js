@@ -1,10 +1,12 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HeartIcon, StorefrontIcon } from 'phosphor-react-native';
 import { border, font, t } from '../../theme';
-import EmptyArt from '../EmptyArt';
+import EmptyState from '../EmptyState';
 import ShellPageMenu from '../ShellPageMenu';
+import HeaderGlow from '../HeaderGlow';
+import { floatingTabBar } from '../Glass';
 
 /*
  * What a signed-out visitor sees on the Cart tab (web/src/components/
@@ -24,21 +26,22 @@ export default function CartLoginGate() {
   ];
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} stickyHeaderIndices={[1]}>
-      <View style={{ height: insets.top + 12, backgroundColor: t.neutral[0] }} />
+    // iOS 26 (native glass tabs): the system insets the scroll view for the
+    // status bar and the floating tab bar itself.
+    <View style={styles.screen}>
+      <HeaderGlow height={insets.top + 12 + 48} />
+      <View style={{ height: insets.top + 12 }} />
       <View style={styles.head}>
         <Text style={styles.heading} numberOfLines={1} accessibilityRole="header">Cart</Text>
         <ShellPageMenu label="Cart options" items={menu} />
       </View>
-      <View style={styles.gate}>
-        <EmptyArt name="cart" size={112} style={styles.art} />
-        <Text style={styles.title}>Your cart is empty</Text>
-        <Text style={styles.body}>Log in to add products and check out.</Text>
-        <Pressable accessibilityRole="link" onPress={toLogin} style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-          <Text style={styles.btnText}>Log in</Text>
-        </Pressable>
-      </View>
+    <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+    >
+      <EmptyState page art="cart" title="Your cart is empty" text="Log in to add products and check out." actions={[{ label: 'Log in', onPress: toLogin, wave: true }]} />
     </ScrollView>
+    </View>
   );
 }
 
@@ -46,7 +49,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1 },
   // .login-gate-head: 48px, 16px in on the left, the ⋯ 8px from the edge;
-  // a solid bar with a hairline that holds at the top (phone-app.css).
+  // it sits on the header wash (HeaderGlow), like the signed-in cart.
   head: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -55,29 +58,7 @@ const styles = StyleSheet.create({
     height: 48,
     paddingLeft: 16,
     paddingRight: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: border.default,
-    backgroundColor: t.neutral[0],
     zIndex: 120,
   },
   heading: { flexShrink: 1, fontSize: 22, lineHeight: 25.3, color: t.neutral[900], ...font(500) },
-  // .login-gate: centred in what is left; the head's 10px margin is added
-  // to the gate's own 24px top padding. The website's page is 100dvh - 68px
-  // tall, 6px more than the space above the 74px tab bar, which centres it
-  // 3px lower: 6px more on top does the same here.
-  gate: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 40, paddingHorizontal: 24, paddingBottom: 64 },
-  art: { marginBottom: 18 },
-  title: { marginBottom: 6, fontSize: 18, lineHeight: 21.6, color: t.neutral[900], textAlign: 'center', ...font(500) },
-  body: { maxWidth: 290, marginBottom: 20, fontSize: 14, lineHeight: 21, color: t.neutral[500], textAlign: 'center', ...font(400) },
-  btn: {
-    minWidth: 140,
-    height: 42,
-    paddingHorizontal: 28,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: t.primary[600],
-  },
-  btnPressed: { backgroundColor: t.primary[700] },
-  btnText: { fontSize: 15, lineHeight: 18, color: '#fff', ...font(500) },
 });

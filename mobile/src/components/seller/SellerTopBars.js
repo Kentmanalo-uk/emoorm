@@ -1,5 +1,5 @@
 import { forwardRef, useRef, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -10,7 +10,10 @@ import { border, font, t } from '../../theme';
 import useAuthStore from '../../store/authStore';
 import { resolveImg } from '../../lib/media';
 import ShellBarButton from '../ShellBarButton';
+import { GlassBackdrop, liquidGlass } from '../Glass';
+import { closeMenu, menuPopStyle, openMenu } from '../menuMotion';
 import ShellPageMenu from '../ShellPageMenu';
+import HeaderGlow from '../HeaderGlow';
 import { useSellerShell } from './SellerShell';
 import { cleanSellerPath, sellerBackTarget, sellerMenuItems, sellerPhoneTitle } from './sellerRoutes';
 
@@ -82,6 +85,7 @@ export function SellerTabHeader({ title, actions, bell = true, menu = true, menu
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.head, { paddingTop: 12 + insets.top }]}>
+      <HeaderGlow />
       {chat ? <ChatTitle /> : (
         <Text style={styles.title} numberOfLines={1} accessibilityRole="header">{title || sellerPhoneTitle(pathname)}</Text>
       )}
@@ -128,29 +132,43 @@ function ChatTitle() {
   const { width } = useWindowDimensions();
   const boxRef = useRef(null);
   const [anchor, setAnchor] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const pop = useRef(new Animated.Value(0)).current;
   const adminCount = waiting['/seller/support']?.count || 0;
-  // The menu opens 8px under the title row, from its left edge (.scm-chat-menu).
-  const open = () => boxRef.current?.measureInWindow((x, y, w, h) => setAnchor({ left: x, top: y + h + 8 }));
-  const close = () => setAnchor(null);
+  // The menu opens 8px under the title row, from its left edge (.scm-chat-menu),
+  // growing out of that corner and shrinking back into it (menuMotion).
+  const open = () => boxRef.current?.measureInWindow((x, y, w, h) => {
+    setAnchor({ left: x, top: y + h + 8 });
+    setExpanded(true);
+    openMenu(pop);
+  });
+  const close = () => {
+    setExpanded(false);
+    closeMenu(pop, () => setAnchor(null));
+  };
   return (
     <View ref={boxRef} collapsable={false} style={styles.chatTitle}>
       <Text style={styles.title} accessibilityRole="header">Chat</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Chatting with buyers. Change"
-        accessibilityState={{ expanded: Boolean(anchor) }}
-        onPress={() => (anchor ? close() : open())}
+        accessibilityState={{ expanded }}
+        onPress={() => (expanded ? close() : open())}
         style={styles.chatSwitch}
       >
-        <Text style={[styles.chatSwitchText, anchor && { color: t.primary[700] }]}>Buyers</Text>
-        <CaretDownIcon size={13} weight="bold" color={anchor ? t.primary[700] : t.neutral[700]} />
+        <Text style={[styles.chatSwitchText, expanded && { color: t.primary[700] }]}>Buyers</Text>
+        <CaretDownIcon size={13} weight="bold" color={expanded ? t.primary[700] : t.neutral[700]} />
       </Pressable>
       <Modal visible={Boolean(anchor)} transparent animationType="none" statusBarTranslucent onRequestClose={close}>
         <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
         {anchor ? (
-          <View style={[styles.chatMenu, { top: anchor.top, left: Math.min(anchor.left, width - 242) }]} accessibilityRole="menu">
+          <Animated.View
+            style={[styles.chatMenu, liquidGlass && styles.chatMenuGlass, { top: anchor.top, left: Math.min(anchor.left, width - 242) }, menuPopStyle(pop, 'top left')]}
+            accessibilityRole="menu"
+          >
+            <GlassBackdrop radius={16} />
             <Pressable accessibilityRole="menuitem" onPress={close} style={({ pressed }) => [styles.chatRow, pressed && styles.chatRowPressed]}>
-              <ChatCircleDotsIcon size={19} weight="fill" color={t.neutral[900]} />
+              <ChatCircleDotsIcon size={24} weight="light" color={t.neutral[900]} />
               <Text style={styles.chatRowText}>Buyers</Text>
               <CheckIcon size={16} weight="bold" color={t.primary[600]} />
             </Pressable>
@@ -159,11 +177,11 @@ function ChatTitle() {
               onPress={() => { close(); router.push('/seller/support'); }}
               style={({ pressed }) => [styles.chatRow, styles.chatRowLine, pressed && styles.chatRowPressed]}
             >
-              <HeadsetIcon size={19} weight="fill" color={t.neutral[900]} />
+              <HeadsetIcon size={24} weight="light" color={t.neutral[900]} />
               <Text style={styles.chatRowText}>Municipal admin</Text>
               {adminCount > 0 ? <Text style={styles.chatCount}>{adminCount}</Text> : null}
             </Pressable>
-          </View>
+          </Animated.View>
         ) : null}
       </Modal>
     </View>
@@ -197,6 +215,7 @@ export function SellerHomeHeader() {
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
   return (
     <View style={[styles.head, styles.ownHead, { paddingTop: 12 + insets.top, paddingBottom: 12 }]}>
+      <HeaderGlow />
       <Pressable accessibilityRole="link" accessibilityLabel="Your shop" onPress={() => router.push('/seller/menu')} style={styles.shop}>
         <Avatar uri={store?.logo} name={name} size={44} fontSize={18} />
         <View style={styles.shopText}>
@@ -225,6 +244,7 @@ export function SellerMeHeader({ onShare }) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.head, styles.ownHead, { paddingTop: 12 + insets.top }]}>
+      <HeaderGlow />
       <Text style={styles.title} accessibilityRole="header">Me</Text>
       <View style={styles.actions}>
         {onShare ? (
@@ -260,6 +280,7 @@ export function SellerBackBar({ title, action, onBack, menu = true, menuItems })
   const goBack = onBack || (() => (router.canGoBack() ? router.back() : router.replace(sellerBackTarget(path))));
   return (
     <View style={[styles.backbar, { paddingTop: insets.top, height: 52 + insets.top }]}>
+      <HeaderGlow />
       <ShellBarButton label="Back" onPress={goBack}>
         <CaretLeftIcon size={22} weight="bold" color={t.neutral[900]} />
       </ShellBarButton>
@@ -282,8 +303,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 8,
     backgroundColor: t.neutral[0],
-    borderBottomWidth: 1,
-    borderBottomColor: border.default,
     zIndex: 120,
   },
   // Home and Me: drawn in the page's 12px gutter, pulled out to the edges
@@ -321,6 +340,8 @@ const styles = StyleSheet.create({
     backgroundColor: t.neutral[0],
     boxShadow: [{ offsetX: 0, offsetY: 12, blurRadius: 30, color: 'rgba(15, 23, 42, 0.14)' }],
   },
+  // iOS 26: Liquid Glass behind the rows instead of the website's white.
+  chatMenuGlass: { backgroundColor: 'transparent', boxShadow: undefined, overflow: 'hidden' },
   chatRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingHorizontal: 16 },
   chatRowLine: { borderTopWidth: 1, borderTopColor: t.neutral[100] },
   chatRowPressed: { backgroundColor: t.neutral[50] },
@@ -344,8 +365,6 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 6,
     backgroundColor: t.neutral[0],
-    borderBottomWidth: 1,
-    borderBottomColor: border.default,
     zIndex: 120,
   },
   backtitle: { flex: 1, minWidth: 0, fontSize: 19, lineHeight: 22.8, color: t.neutral[900], ...font(500) },

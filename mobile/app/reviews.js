@@ -7,7 +7,6 @@ import {
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import ProductImage from '../src/components/ProductImage';
-import LoadingSkeleton from '../src/components/LoadingSkeleton';
 import OrderReviewSheet from '../src/components/orders/OrderReviewSheet';
 import CartConfirmDialog from '../src/components/cart/CartConfirmDialog';
 import { ProfileEmpty } from '../src/components/profile/ProfileUI';
@@ -18,6 +17,7 @@ import { resolveImg } from '../src/lib/media';
 import { toast } from '../src/lib/toast';
 import { invalidateCachedData } from '../src/lib/dataCache';
 import { font, t } from '../src/theme';
+import { PageLoader } from '../src/components/BrandLoader';
 
 /** Five stars the buyer can tap (the website's hover preview is a press here). */
 function StarPicker({ onPick, label }) {
@@ -130,7 +130,7 @@ export default function ProfileReviews() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="My Reviews" backTo="/profile" />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>Your ratings help other buyers choose and help sellers improve.</Text>
 
         <View style={styles.tabs} accessibilityRole="tablist">
@@ -142,12 +142,13 @@ export default function ProfileReviews() {
           <ReviewCardsSkeleton />
         ) : error ? (
           <View style={styles.section}>
-            <ProfileEmpty style={styles.empty} title="Something went wrong" hint={error} action="Try again" onAction={() => { setLoading(true); load(); }} />
+            <ProfileEmpty page style={styles.empty} title="Something went wrong" hint={error} action="Try again" onAction={() => { setLoading(true); load(); }} />
           </View>
         ) : activeTab === 'pending' ? (
           <View style={styles.section}>
             {pending.length === 0 ? (
               <ProfileEmpty
+                page
                 style={styles.empty}
                 art="reviews"
                 title="Nothing waiting for a review"
@@ -208,6 +209,7 @@ export default function ProfileReviews() {
             ) : null}
             {reviews.length === 0 ? (
               <ProfileEmpty
+                page
                 style={styles.empty}
                 art="feedback"
                 title="No reviews yet"
@@ -322,30 +324,12 @@ function TabButton({ label, count, active, muted = false, onPress }) {
 
 /** ReviewCardsSkeleton (web PageSkeletons). */
 function ReviewCardsSkeleton({ count = 3 }) {
-  return (
-    <View style={styles.skList} accessibilityLabel="Loading reviews">
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={styles.skCard}>
-          <View style={styles.skRow}>
-            <LoadingSkeleton width={52} height={52} borderRadius={10} />
-            <View style={styles.skLines}>
-              <LoadingSkeleton height={13} width="70%" />
-              <LoadingSkeleton height={12} width={90} />
-            </View>
-          </View>
-          <View style={{ gap: 8 }}>
-            <LoadingSkeleton height={11} />
-            <LoadingSkeleton height={11} width="60%" />
-          </View>
-        </View>
-      ))}
-    </View>
-  );
+  return <PageLoader label="Loading reviews" />;
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
-  content: { gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
+  content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
   subtitle: { fontSize: 14, lineHeight: 22.4, color: t.neutral[500], ...font(400) },
 
   tabs: { flexDirection: 'row', gap: 4, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: t.neutral[200] },
@@ -359,7 +343,7 @@ const styles = StyleSheet.create({
   countMuted: { backgroundColor: t.neutral[100] },
   countText: { fontSize: 12, lineHeight: 19.2, color: '#fff', ...font(500) },
 
-  section: { marginHorizontal: -12, padding: 14, backgroundColor: t.neutral[0] },
+  section: { flexGrow: 1, marginHorizontal: -12, padding: 14, backgroundColor: t.neutral[0] },
   empty: { marginHorizontal: -12 },
   list: { gap: 12 },
   card: { gap: 16, padding: 16, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 12, backgroundColor: t.neutral[0] },

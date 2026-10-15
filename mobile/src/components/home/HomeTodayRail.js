@@ -62,7 +62,7 @@ export default function HomeTodayRail({ refreshKey = 0 }) {
           <ArrowRightIcon size={19} color={t.primary[600]} />
         </Pressable>
       </View>
-      <ScrollView
+      <ScrollView showsVerticalScrollIndicator={false}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}

@@ -9,6 +9,10 @@ import { CaretDownIcon, CheckIcon, WarningIcon, XIcon } from 'phosphor-react-nat
 import apiClient from '../../api/client';
 import { toast } from '../../lib/toast';
 import { font, t } from '../../theme';
+import { SheetFrame } from '../Sheet';
+
+// The app's one sheet look on every phone (the sign-in sheet's: Sheet.js).
+const framed = true;
 
 const native = Platform.OS !== 'web';
 
@@ -36,6 +40,8 @@ const DESTINATION = "This goes to the municipal admin for the shop's municipalit
 /**
  * Report a listing or a shop (web ReportModal, a bottom sheet on phones).
  * Mounted while open; onClose runs after it has slid away.
+ * Shown in the app's one sheet look (the sign-in sheet's: Sheet.js SheetFrame)
+ * on every phone.
  */
 export default function ReportSheet({ type = 'PRODUCT', productId, storeId, targetName, onClose }) {
   const router = useRouter();
@@ -47,13 +53,27 @@ export default function ReportSheet({ type = 'PRODUCT', productId, storeId, targ
   const [submitting, setSubmitting] = useState(false);
   const [focus, setFocus] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
+  // iOS 26's sheet: shown until closed, then onClose once it has gone down.
+  const [glassOpen, setGlassOpen] = useState(true);
+  const closed = useRef(false);
   const reasons = REPORT_REASONS[type] || REPORT_REASONS.PRODUCT;
 
   useEffect(() => {
+    if (framed) return;
     Animated.timing(progress, { toValue: 1, duration: 300, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: native }).start();
   }, [progress]);
 
+  const finish = () => {
+    if (closed.current) return;
+    closed.current = true;
+    onClose();
+  };
   const close = () => {
+    if (framed) {
+      setGlassOpen(false);
+      setTimeout(finish, 300);
+      return;
+    }
     Animated.timing(progress, { toValue: 0, duration: 240, easing: Easing.bezier(0.4, 0, 1, 1), useNativeDriver: native })
       .start(() => onClose());
   };
@@ -82,23 +102,8 @@ export default function ReportSheet({ type = 'PRODUCT', productId, storeId, targ
   const translateY = progress.interpolate({ inputRange: [0, 1], outputRange: [screenH, 0] });
   const label = reasons.find((r) => r.value === reason)?.label;
 
-  return (
-    <Modal visible transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.root} behavior={native ? 'padding' : undefined}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, { opacity: progress }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
-        </Animated.View>
-        <Animated.View style={[styles.panel, { maxHeight: screenH * 0.9, transform: [{ translateY }] }]} accessibilityViewIsModal>
-          <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]} keyboardShouldPersistTaps="handled">
-            <View style={styles.header}>
-              <View style={styles.titleRow}>
-                <WarningIcon size={20} color={t.danger[500]} />
-                <Text style={styles.title} accessibilityRole="header">{HEADING[type] || 'Report'}</Text>
-              </View>
-              <Pressable style={styles.closeBtn} onPress={close} accessibilityRole="button" accessibilityLabel="Close">
-                <XIcon size={20} color={t.neutral[500]} />
-              </Pressable>
-            </View>
+  const body = (
+          <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.content, framed && styles.glassContent, { paddingBottom: 16 + insets.bottom }]} keyboardShouldPersistTaps="handled">
 
             {targetName ? (
               <Text style={styles.target}>Reporting: <Text style={styles.targetStrong}>{targetName}</Text></Text>
@@ -167,9 +172,19 @@ export default function ReportSheet({ type = 'PRODUCT', productId, storeId, targ
               </Pressable>
             </View>
           </ScrollView>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    </Modal>
+  );
+
+  return (
+    <SheetFrame safeBottom={false}
+      open={glassOpen}
+      onClose={close}
+      title={HEADING[type] || 'Report'}
+      dismissible={!submitting}
+      scroll={false}
+      padded={false}
+    >
+      {body}
+    </SheetFrame>
   );
 }
 
@@ -178,6 +193,8 @@ const styles = StyleSheet.create({
   scrim: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
   panel: { borderTopLeftRadius: 16, borderTopRightRadius: 16, backgroundColor: '#fff', overflow: 'hidden' },
   content: { paddingTop: 18, paddingHorizontal: 16 },
+  // Under the system sheet's grabber.
+  glassContent: { paddingTop: 4 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0, flexShrink: 1 },
   title: { fontSize: 17, lineHeight: 22, ...font(500), color: t.neutral[900] },

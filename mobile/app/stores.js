@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CaretLeftIcon, CaretRightIcon, MagnifyingGlassIcon, XIcon } from 'phosphor-react-native';
 import apiClient from '../src/api/client';
 import Chip from '../src/components/Chip';
-import EmptyArt from '../src/components/EmptyArt';
+import EmptyState from '../src/components/EmptyState';
 import ShellPageMenu from '../src/components/ShellPageMenu';
 import { StoreCardsSkeleton } from '../src/components/shop/ShopSkeletons';
 import StoreListCard from '../src/components/shop/StoreListCard';
@@ -147,7 +147,7 @@ export default function Stores() {
         <ShellPageMenu />
       </View>
 
-      <ScrollView
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.body, { paddingBottom: 24 + insets.bottom }]}
@@ -156,7 +156,7 @@ export default function Stores() {
         <Text style={styles.title} accessibilityRole="header">Stores</Text>
 
         {municipalities.length > 0 ? (
-          <ScrollView
+          <ScrollView showsVerticalScrollIndicator={false}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.towns}
@@ -195,22 +195,15 @@ export default function Stores() {
         {isLoading ? (
           <StoreCardsSkeleton count={6} />
         ) : stores.length === 0 ? (
-          <View style={styles.empty}>
-            <EmptyArt name="stores" size={96} />
-            <Text style={styles.emptyTitle}>
-              {searchQuery ? `No stores match “${searchQuery}”` : townName ? `No stores in ${townName} yet` : 'No stores yet'}
-            </Text>
-            <Text style={styles.emptyText}>{searchQuery ? 'Check the spelling or try another name.' : 'Try another town.'}</Text>
-            {searchQuery || municipalityId ? (
-              <Pressable
-                style={({ pressed }) => [styles.emptyBtn, pressed && styles.pressed]}
-                onPress={() => { setInputValue(''); updateParams({ q: '', municipalityId: '' }); }}
-                accessibilityRole="button"
-              >
-                <Text style={styles.emptyBtnText}>Show all stores</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          <EmptyState
+            page
+            art="stores"
+            title={searchQuery ? `No stores match “${searchQuery}”` : townName ? `No stores in ${townName} yet` : 'No stores yet'}
+            text={searchQuery ? 'Check the spelling or try another name.' : 'Try another town.'}
+            actions={searchQuery || municipalityId
+              ? [{ label: 'Show all stores', onPress: () => { setInputValue(''); updateParams({ q: '', municipalityId: '' }); } }]
+              : null}
+          />
         ) : (
           <View style={styles.grid}>
             {stores.map((store) => <StoreListCard key={store.id} store={store} />)}
@@ -249,7 +242,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   bar: {
     flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 12, paddingBottom: 10, paddingLeft: 6,
-    backgroundColor: t.neutral[0], borderBottomWidth: 1, borderBottomColor: t.neutral[200], zIndex: 120,
+    backgroundColor: t.neutral[0], zIndex: 120,
   },
   back: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   pressed: { backgroundColor: t.neutral[100] },
@@ -265,7 +258,7 @@ const styles = StyleSheet.create({
   clear: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: t.neutral[300] },
 
   scroll: { flex: 1 },
-  body: { paddingHorizontal: 12 },
+  body: { flexGrow: 1, paddingHorizontal: 12 },
   title: { paddingTop: 14, paddingHorizontal: 4, paddingBottom: 10, fontSize: 22, lineHeight: 25.3, ...font(500), color: t.neutral[900] },
   towns: { marginHorizontal: -12, flexGrow: 0 },
   // The website's chip is a button: its text line is 1.2 tall, not the page's 1.6.
@@ -274,17 +267,6 @@ const styles = StyleSheet.create({
   count: { marginHorizontal: 4, marginBottom: 10, fontSize: 13.5, lineHeight: 21.6, ...font(400), color: t.neutral[500] },
   countStrong: { ...font(500), color: t.neutral[900] },
   grid: { gap: 10 },
-
-  empty: {
-    alignItems: 'center', paddingTop: 36, paddingHorizontal: 20, paddingBottom: 30, borderRadius: 16, backgroundColor: t.neutral[0],
-  },
-  emptyTitle: { marginBottom: 6, fontSize: 17, lineHeight: 19.55, ...font(500), color: t.neutral[900], textAlign: 'center' },
-  emptyText: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500], textAlign: 'center' },
-  emptyBtn: {
-    marginTop: 16, height: 38, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: t.primary[600], borderRadius: 999,
-  },
-  emptyBtnText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: t.primary[700] },
 
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 16 },
   pageBtn: {

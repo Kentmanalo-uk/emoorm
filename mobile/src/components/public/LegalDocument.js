@@ -36,7 +36,7 @@ export default function LegalDocument({ title, updated, blocks }) {
   return (
     <View style={styles.screen}>
       <PublicHeader title={title} />
-      <ScrollView contentContainerStyle={styles.page}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.page}>
         <Text style={styles.p}>{updated}</Text>
         {blocks.map((block, i) => {
           if (block.h2) return <Text key={i} style={styles.h2} accessibilityRole="header">{block.h2}</Text>;

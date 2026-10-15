@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CaretDownIcon } from 'phosphor-react-native';
-import Sheet, { SheetOption } from '../Sheet';
+import { SelectSheet } from '../Select';
 import { AuthFieldError, AuthInput, AuthLabel } from './AuthForm';
 import {
   SERVICE_PROVINCE, SERVICE_REGION, listServiceMunicipalities, listBarangaysByMunicipality, normalizeName,
@@ -182,6 +182,8 @@ export default function AuthAddressPicker({
         <SelectBox
           label="City / Municipality"
           text={townName || (dbLoading ? 'Loading municipalities…' : 'Select city / municipality')}
+          placeholder={!townName}
+          open={picking === 'town'}
           error={townError}
           disabled={disabled || dbLoading}
           onPress={() => setPicking('town')}
@@ -198,6 +200,8 @@ export default function AuthAddressPicker({
           <SelectBox
             label="Barangay"
             text={barangayName || (brgyLoading ? 'Loading barangays…' : !townCode ? 'Select a municipality first' : 'Select barangay')}
+            placeholder={!barangayName}
+            open={picking === 'barangay'}
             error={errors.barangay}
             disabled={disabled || !townCode || brgyLoading}
             onPress={() => setPicking('barangay')}
@@ -237,33 +241,39 @@ export default function AuthAddressPicker({
         </View>
       ) : null}
 
-      <Sheet open={picking === 'town'} title="City / Municipality" onClose={() => setPicking(null)}>
-        {municipalities.map((m) => {
-          const supported = dbMuniByNormName.has(normalizeName(m.name));
-          const off = dbMunicipalities.length > 0 && !supported;
-          return (
-            <SheetOption
-              key={m.code}
-              label={`${m.name}${off ? ' (unavailable)' : ''}`}
-              selected={m.code === townCode}
-              onPress={off ? undefined : () => pickTown(m.code)}
-              style={off ? styles.optionOff : undefined}
-            />
-          );
-        })}
-      </Sheet>
+      {/* E-MOORM's own dropdown sheet (ui/Select): untitled, the empty choice first, as the website lists its options. */}
+      <SelectSheet
+        open={picking === 'town'}
+        options={[
+          { value: '', label: dbLoading ? 'Loading municipalities…' : 'Select city / municipality' },
+          ...municipalities.map((m) => {
+            const off = dbMunicipalities.length > 0 && !dbMuniByNormName.has(normalizeName(m.name));
+            return { value: m.code, label: `${m.name}${off ? ' (unavailable)' : ''}`, disabled: off };
+          }),
+        ]}
+        value={townCode || ''}
+        onPick={(code) => (code ? pickTown(code) : setPicking(null))}
+        onClose={() => setPicking(null)}
+      />
 
-      <Sheet open={picking === 'barangay'} title="Barangay" onClose={() => setPicking(null)}>
-        {barangays.map((b) => (
-          <SheetOption key={b.code} label={b.name} selected={b.code === barangayCode} onPress={() => pickBarangay(b.code)} />
-        ))}
-      </Sheet>
+      <SelectSheet
+        open={picking === 'barangay'}
+        options={[
+          { value: '', label: 'Select barangay' },
+          ...barangays.map((b) => ({ value: b.code, label: b.name })),
+        ]}
+        value={barangayCode || ''}
+        onPick={(code) => (code ? pickBarangay(code) : setPicking(null))}
+        onClose={() => setPicking(null)}
+      />
     </View>
   );
 }
 
 /** A dropdown field (the website's <select class="ph-input">). */
-function SelectBox({ label, text, error, disabled, onPress }) {
+function SelectBox({
+  label, text, placeholder = false, open = false, error, disabled, onPress,
+}) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -273,8 +283,10 @@ function SelectBox({ label, text, error, disabled, onPress }) {
       onPress={onPress}
       style={[styles.select, error && styles.selectError, disabled && styles.selectDisabled]}
     >
-      <Text style={[styles.selectText, disabled && styles.selectTextDisabled]} numberOfLines={1}>{text}</Text>
-      <CaretDownIcon size={14} weight="bold" color={disabled ? t.neutral[400] : t.neutral[700]} />
+      <Text style={[styles.selectText, (placeholder || disabled) && styles.selectTextDisabled]} numberOfLines={1}>{text}</Text>
+      <View style={open ? styles.caretOpen : null}>
+        <CaretDownIcon size={14} weight="bold" color={open ? t.primary[600] : t.neutral[500]} />
+      </View>
     </Pressable>
   );
 }
@@ -302,5 +314,6 @@ const styles = StyleSheet.create({
   selectDisabled: { backgroundColor: t.neutral[100] },
   selectText: { flex: 1, fontSize: 16, color: t.neutral[900], ...font(400) },
   selectTextDisabled: { color: t.neutral[500] },
+  caretOpen: { transform: [{ rotate: '180deg' }] },
   optionOff: { opacity: 0.45 },
 });

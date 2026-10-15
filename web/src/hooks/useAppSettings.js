@@ -24,7 +24,7 @@ export const DEFAULT_APP_SETTINGS = {
   // MoorMove rider delivery, switched on by the super admin.
   moormoveEnabled: false,
   // 3D / AR product views, switched on by the super admin.
-  product3dEnabled: false,
+  product3dEnabled: true,
 };
 
 /**

@@ -83,17 +83,7 @@ export default function ChatReportSheet({
   return (
     <InboxSheet open={open} onClose={onClose} maxHeight={0.9} label={HEADING[type] || 'Report'} style={styles.sheet}>
       {(bottom) => (
-        <ScrollView contentContainerStyle={[styles.inner, { paddingBottom: 16 + bottom }]} keyboardShouldPersistTaps="handled">
-          <View style={styles.head}>
-            <View style={styles.titleRow}>
-              <WarningIcon size={20} color={t.danger[500]} />
-              <Text style={styles.title} accessibilityRole="header">{HEADING[type] || 'Report'}</Text>
-            </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.close}>
-              <XIcon size={20} color={t.neutral[500]} />
-            </Pressable>
-          </View>
-
+        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.inner, { paddingBottom: 16 + bottom }]} keyboardShouldPersistTaps="handled">
           {targetName ? (
             <Text style={styles.target}>Reporting: <Text style={styles.targetName}>{targetName}</Text></Text>
           ) : null}

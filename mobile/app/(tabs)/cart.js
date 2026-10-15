@@ -9,11 +9,12 @@ import apiClient from '../../src/api/client';
 import useCartStore from '../../src/store/cartStore';
 import useAuthStore from '../../src/store/authStore';
 import EmptyState from '../../src/components/EmptyState';
-import EmptyArt from '../../src/components/EmptyArt';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import CartStoreGroup from '../../src/components/cart/CartStoreGroup';
 import CartSuggestions from '../../src/components/cart/CartSuggestions';
 import CartBar from '../../src/components/cart/CartBar';
+import HeaderGlow from '../../src/components/HeaderGlow';
+import { floatingTabBar, tabBarTop, useTabBarScroll } from '../../src/components/Glass';
 import CartVoucherCard from '../../src/components/cart/CartVoucherCard';
 import CartConfirmDialog from '../../src/components/cart/CartConfirmDialog';
 import useCartIdentityGate from '../../src/components/cart/useCartIdentityGate';
@@ -48,6 +49,12 @@ export default function Cart() {
   const [storeSlugs, setStoreSlugs] = useState({});
   const [cartSearchText, setCartSearchText] = useState(() => String(params.cartSearch || ''));
   const [confirm, setConfirm] = useState(null); // { title, confirmLabel, onConfirm }
+  // iOS 26: the system's glass tab bar floats over the screen (the safe
+  // area's bottom inset is its height). The scroll view's content clears it
+  // by itself (automatic insets) and the checkout bar floats just above it,
+  // so the cart keeps room for the bar too. Elsewhere nothing changes.
+  const [cartBarHeight, setCartBarHeight] = useState(72);
+  const glassScroll = useTabBarScroll(floatingTabBar ? cartBarHeight + 8 : 0);
 
   // Prices and stock are frozen at add time: refresh every line against the
   // catalogue on each visit (and again after login), flagging what can't be bought.
@@ -111,7 +118,6 @@ export default function Cart() {
     return () => { cancelled = true; };
   }, [cartProductKey, cartCategoryKey]);
 
-  const itemCount = items.reduce((count, item) => (item.unavailable ? count : count + item.quantity), 0);
   const cartSearch = String(params.cartSearch || '').trim().toLowerCase();
   const visibleItems = useMemo(() => {
     if (!cartSearch) return items;
@@ -349,7 +355,6 @@ export default function Cart() {
     <View style={styles.head}>
       <View style={styles.titleRow}>
         <Text style={styles.title} accessibilityRole="header">Cart</Text>
-        {itemCount > 0 ? <View style={styles.count}><Text style={styles.countText}>{itemCount}</Text></View> : null}
       </View>
       <ShellPageMenu items={menuItems} label="Cart options" />
     </View>
@@ -373,11 +378,11 @@ export default function Cart() {
   if (items.length === 0) {
     return (
       <View style={[styles.screen, { paddingTop: insets.top }]}>
-        <ScrollView stickyHeaderIndices={[1]} contentContainerStyle={styles.emptyContent}>
-          <View style={styles.topGap} />
-          {head}
+        <HeaderGlow height={insets.top + 10 + 49} />
+        <View style={styles.topGap} />
+        {head}
+        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.emptyContent} {...glassScroll}>
           <EmptyState
-            flat
             art="cart"
             title="Your cart is empty"
             text="Items you add from products and shops will show up here."
@@ -406,9 +411,14 @@ export default function Cart() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScrollView stickyHeaderIndices={[1]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.topGap} />
-        {head}
+      <HeaderGlow height={insets.top + 10 + 49} />
+      <View style={styles.topGap} />
+      {head}
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        {...glassScroll}
+      >
         <View style={styles.search}>
           <MagnifyingGlassIcon size={16} color={t.neutral[500]} />
           <TextInput
@@ -432,11 +442,7 @@ export default function Cart() {
             </View>
           ) : null}
           {cartSearch && visibleItems.length === 0 ? (
-            <View style={styles.searchEmpty}>
-              <EmptyArt name="search" size={84} />
-              <Text style={styles.searchEmptyTitle}>No cart items found</Text>
-              <Text style={styles.searchEmptyText}>Try another product or store name.</Text>
-            </View>
+            <EmptyState compact art="search" title="No cart items found" text="Try another product or store name." />
           ) : null}
           {groups.map((group) => (
             <CartStoreGroup
@@ -479,6 +485,8 @@ export default function Cart() {
         checkoutLabel={`Check out${selectedItems.length > 0 ? ` (${selectedItems.length})` : ''}`}
         disabled={checkoutDisabled}
         onCheckout={handleCheckout}
+        style={floatingTabBar ? { bottom: tabBarTop(insets) + 8 } : null}
+        onLayout={floatingTabBar ? (e) => setCartBarHeight(Math.round(e.nativeEvent.layout.height)) : undefined}
       />
       {confirmDialog}
       {identityDialog}
@@ -490,7 +498,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { paddingBottom: 24 },
   emptyContent: { paddingBottom: 24 },
-  topGap: { height: 10, backgroundColor: t.neutral[0] },
+  topGap: { height: 10 },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -498,14 +506,9 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 49,
     paddingHorizontal: 12,
-    backgroundColor: t.neutral[0],
-    borderBottomWidth: 1,
-    borderBottomColor: t.neutral[200],
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontSize: 22, lineHeight: 25.3, ...font(500), color: t.neutral[900] },
-  count: { minWidth: 22, paddingVertical: 1, paddingHorizontal: 8, borderRadius: 999, backgroundColor: t.primary[50] },
-  countText: { fontSize: 12, lineHeight: 13.8, ...font(500), color: t.primary[700], textAlign: 'center' },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -537,16 +540,6 @@ const styles = StyleSheet.create({
   noticeWarn: { borderColor: t.warning[200], backgroundColor: t.warning[50] },
   noticeText: { flex: 1, fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[600] },
   noticeTextWarn: { color: t.warning[700] },
-  searchEmpty: {
-    alignItems: 'center',
-    gap: 7,
-    paddingVertical: 32,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: t.neutral[0],
-  },
-  searchEmptyTitle: { marginTop: 5, fontSize: 18, lineHeight: 28.8, ...font(500), color: t.neutral[900], textAlign: 'center' },
-  searchEmptyText: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500], textAlign: 'center' },
   gutter: { paddingHorizontal: 12 },
   suggestions: { marginTop: 8 },
   // The website's empty card ends in an 8px grey rule before the suggestions.

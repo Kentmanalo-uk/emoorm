@@ -1,20 +1,26 @@
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import apiClient from '../../api/client';
 import { API_BASE_URL } from '../../lib/config';
 
 /*
- * "Continue with Google" in the app, the way the website's Android app does
- * it (web/src/lib/appGoogle.js, the browser route): Google will not sign in
- * inside an app, so the phone's browser opens
- *   GET /auth/google/app/start?challenge=<SHA-256 of a secret kept here>
- * and, once Google has answered, comes back to the app at
- *   shop.emoorm.app:/google-signin?ticket=…   (or ?error=…)
- * which opens app/(auth)/google-signin.js; that screen swaps the pass and
- * the secret at POST /auth/google/app/exchange for the same answer as the
- * website's POST /auth/google.
+ * "Continue with Google" in the app (Android and iPhone, Expo Go too). Google
+ * will not sign in inside an app's own views, so an in-app sign-in browser
+ * (expo-web-browser's auth session: Chrome Custom Tabs, iOS's
+ * ASWebAuthenticationSession) opens
+ *   GET /auth/google/app/start?challenge=<SHA-256 of a secret kept here>&return=<this app's link>
+ * and, once Google has answered, the server sends it back to the app's link
+ *   shop.emoorm.app://google-signin?ticket=…   (or ?error=…)
+ *   exp://…/--/google-signin?ticket=…           (Expo Go, while testing)
+ * The browser closes by itself with that address; finishGoogleSignIn swaps
+ * the pass and the secret at POST /auth/google/app/exchange for the same
+ * answer as the website's POST /auth/google. On Android the link also opens
+ * app/(auth)/google-signin.js, which finishes it the same way (only once).
  *
- * The app must answer the shop.emoorm.app scheme (app.json "scheme").
+ * The app must answer the shop.emoorm.app scheme (app.json "scheme"); the
+ * server only sends a pass back to app links (auth.service).
  */
 
 const PENDING_KEY = 'emoorm_google_signin';
@@ -103,7 +109,8 @@ const makeVerifier = () => {
 };
 
 /**
- * Opens Google in the phone's browser. `after` is kept for the return:
+ * Opens Google in the in-app sign-in browser and finishes the sign-in when it
+ * comes back. `after` is kept for the return:
  * { redirect, seller, from: 'login' | 'register' }.
  * @returns {Promise<String|null>} an error message when it could not start
  */
@@ -111,13 +118,60 @@ export async function startGoogleSignIn(after = {}) {
   if (Platform.OS === 'web') return GOOGLE_MESSAGES.unavailable;
   const verifier = makeVerifier();
   const challenge = base64url(sha256(verifier));
+  // This app's own link: shop.emoorm.app://google-signin, or Expo Go's exp://…/--/google-signin.
+  const back = Linking.createURL('google-signin', { scheme: 'shop.emoorm.app' });
+  const startedAt = Date.now();
+  let result;
   try {
     await AsyncStorage.setItem(PENDING_KEY, JSON.stringify({ verifier, after, at: Date.now() }));
-    await Linking.openURL(`${API_BASE_URL}/auth/google/app/start?${new URLSearchParams({ challenge })}`);
-    return null;
+    result = await WebBrowser.openAuthSessionAsync(
+      `${API_BASE_URL}/auth/google/app/start?${new URLSearchParams({ challenge, return: back })}`,
+      back,
+    );
   } catch {
     return GOOGLE_MESSAGES.unavailable;
   }
+  if (result?.type === 'success' && result.url) {
+    await finishGoogleSignIn(Linking.parse(result.url).queryParams || {});
+  } else {
+    // Closed without an answer (Android may still bring one by the link).
+    setTimeout(() => { if (lastAnswerAt < startedAt) deliverGoogleAnswer({ cancelled: true }); }, Platform.OS === 'android' ? 1500 : 0);
+  }
+  return null;
+}
+
+// The answers just finished (Android brings the same one twice: the sign-in
+// browser's result and the link that opens google-signin), with when.
+const finished = new Map();
+const SAME_ANSWER_MS = 15000;
+let lastAnswerAt = 0;
+
+/**
+ * Finishes a sign-in with what the browser came back with ({ ticket } or
+ * { error }): hands the answer to the Log in / Sign up form that asked.
+ * @returns {Promise<{ after: Object, again: Boolean }>} where to go after;
+ *   `again` when this answer was already finished
+ */
+export async function finishGoogleSignIn({ ticket = '', error = '' } = {}) {
+  const key = String(ticket || error || 'none');
+  if (Date.now() - (finished.get(key) || 0) < SAME_ANSWER_MS) return { after: {}, again: true };
+  finished.set(key, Date.now());
+  lastAnswerAt = Date.now();
+  const pending = await takePendingGoogle();
+  if (GOOGLE_CANCELLED.includes(String(error))) {
+    deliverGoogleAnswer({ cancelled: true });
+  } else if (error) {
+    deliverGoogleAnswer({ error: String(error) });
+  } else if (!ticket || !pending?.verifier) {
+    deliverGoogleAnswer({ error: 'expired' });
+  } else {
+    try {
+      deliverGoogleAnswer({ data: await exchangeGoogleTicket(String(ticket), pending.verifier) });
+    } catch (err) {
+      deliverGoogleAnswer({ message: err?.message || 'Google sign-in failed.' });
+    }
+  }
+  return { after: pending?.after || {}, again: false };
 }
 
 /** What startGoogleSignIn kept (the secret and where to go after), once. */

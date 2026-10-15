@@ -4,7 +4,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../api/client';
 import useAuthStore from './authStore';
 import { priceForSelection, pricedVariation, stockForSelection, priceTiersOf } from '../lib/variantPricing';
+import { optionImage } from '../lib/variationImage';
 import { isTodayProduct, isOpen as windowOpen } from '../lib/availability';
+import { isLivestock, isStockless, minOrder } from '../components/orders/orderLines';
+
+// "Out of stock", or "Sold out" for animals (each one is a head).
+const outOfStock = (product) => (isLivestock(product) ? 'Sold out' : 'Out of stock');
+const onlyLeft = (product, stock) => (isLivestock(product)
+  ? `Only ${stock} ${stock === 1 ? 'head' : 'heads'} available`
+  : `Only ${stock} items available in stock`);
 
 /*
  * Port of web/src/store/cartStore.js: the same lines, ids, rules and account
@@ -73,7 +81,8 @@ const savedLine = ({ product, selectedVariations, quantity }) => {
     price: priceForSelection(product, selectedVariations) || Number(product.price),
     basePrice: priceForSelection(product, selectedVariations) || Number(product.price),
     priceTiers: priceTiersOf(product),
-    image: firstImage(product.images),
+    // The chosen option's own photo when it has one.
+    image: optionImage(product.variations, selectedVariations) || firstImage(product.images),
     images: product.images,
     stock,
     storeId: product.storeId,
@@ -83,8 +92,8 @@ const savedLine = ({ product, selectedVariations, quantity }) => {
     variations: product.variations,
     selectedVariations: selectedVariations || null,
     quantity,
-    unavailable: gone || stock <= 0,
-    unavailableReason: gone ? 'This product is not available right now' : stock <= 0 ? 'Out of stock' : null,
+    unavailable: gone || (!isStockless(product) && stock <= 0),
+    unavailableReason: gone ? 'This product is not available right now' : (!isStockless(product) && stock <= 0) ? outOfStock(product) : null,
   };
 };
 const lineFromSaved = (row) => withTierPrice(savedLine(row));
@@ -104,6 +113,167 @@ const unionLines = (saved, local) => {
 const savedShape = (items) => items
   .map((line) => `${line.productId || line.id}|${JSON.stringify(sortedOptions(line.selectedVariations) || null)}|${line.quantity}`)
   .join(',');
+
+// The reasons a product can't be bought right now, whatever the quantity.
+const refuseProduct = (product) => {
+  // Live animals are bought by agreeing a price in chat (Make an offer).
+  if (isLivestock(product)) {
+    throw new Error('Make an offer to the seller to buy live animals');
+  }
+
+  // A shop still setting up shows its products but takes no orders.
+  if (product.readyToSell === false || product.store?.readyToSell === false) {
+    throw new Error("This shop isn't taking orders yet");
+  }
+
+  // Away (Shop Settings): no orders until the date.
+  const away = awayUntil(product.store || product);
+  if (away) throw new Error(`This shop is away until ${shortDate(away)}`);
+
+  // Available Today: only while its window takes orders (when the
+  // caller knows the window; checkout checks it either way).
+  if (isTodayProduct(product) && product.availability !== undefined && !windowOpen(product.availability)) {
+    throw new Error(`${product.name || 'This item'} isn't taking orders right now`);
+  }
+
+  // Validate stock (paluto has none: it is cooked when ordered).
+  if (!isStockless(product) && product.stock !== undefined && product.stock === 0) {
+    throw new Error(isLivestock(product) ? 'Sold out' : 'Product is out of stock');
+  }
+};
+
+/**
+ * A line on its own, with exactly `quantity` (a paluto: at least its minimum
+ * order): what addItem would put in an empty cart. Buy now checks it out
+ * without touching the cart (src/lib/buyNow). Throws the same errors as addItem.
+ */
+export const standaloneLine = (product, quantity = 1) => {
+  refuseProduct(product);
+  const first = Math.max(quantity, minOrder(product));
+  if (!isStockless(product) && product.stock !== undefined && first > product.stock) {
+    throw new Error(onlyLeft(product, product.stock));
+  }
+  // Prices come as Decimal strings from Prisma: kept as numbers.
+  return withTierPrice({
+    ...product,
+    id: cartKeyFor(product),
+    productId: product.productId || product.id,
+    price: Number(product.price),
+    basePrice: Number(product.price),
+    priceTiers: priceTiersOf(product),
+    quantity: first,
+    unavailable: false,
+    unavailableReason: null,
+  });
+};
+
+/** Lines with their patches ({ [lineId]: patch }) applied, bulk prices following the quantity. */
+export const patchLines = (lines, patches) => lines.map((line) => (
+  patches?.[line.id] ? withTierPrice({ ...line, ...patches[line.id] }) : line
+));
+
+/**
+ * Check lines against GET /products/:id: price, name, image, stock and store
+ * name. Lines that are gone, not APPROVED or out of stock are flagged
+ * `unavailable`; quantity is capped to stock, and a paluto raised to its
+ * minimum order. Resolves to { patches, capped, unavailable, raised } (names);
+ * the lines themselves are left as they are.
+ */
+export const checkLines = async (lines) => {
+  const productIds = [...new Set(lines.map((line) => line.productId || line.id))];
+  if (productIds.length === 0) return { patches: {}, capped: [], unavailable: [], raised: [] };
+
+  const results = await Promise.allSettled(productIds.map((id) => apiClient.get(`/products/${id}`)));
+  const products = new Map();
+  results.forEach((result, index) => {
+    const id = productIds[index];
+    if (result.status === 'fulfilled') {
+      products.set(id, { product: result.value?.data || null });
+    } else {
+      products.set(id, { product: null, status: result.reason?.status });
+    }
+  });
+
+  const patches = {};
+  const capped = [];
+  const unavailable = [];
+  const raised = [];
+  lines.forEach((line) => {
+    const entry = products.get(line.productId || line.id);
+    if (!entry) return;
+    const { product, status } = entry;
+    // Network / server failures leave the line as it was.
+    if (!product && status !== 404) return;
+
+    const gone = !product || status === 404;
+    const notApproved = !gone && product.status !== 'APPROVED';
+    const away = !gone && awayUntil(product.store);
+    // Per-option stock: the line's own option's quantity.
+    const stock = gone ? 0 : stockForSelection(product, line.selectedVariations);
+    const patch = { unavailable: false, unavailableReason: null };
+    if (!gone) {
+      patch.name = product.name ?? line.name;
+      patch.price = priceForSelection(product, line.selectedVariations) || Number(line.price);
+      patch.basePrice = patch.price;
+      patch.priceTiers = priceTiersOf(product);
+      patch.image = optionImage(product.variations, line.selectedVariations) || firstImage(product.images) || line.image;
+      patch.stock = stock;
+      patch.slug = product.slug || line.slug;
+      patch.storeId = product.storeId || product.store?.id || line.storeId;
+      patch.storeName = product.store?.name || line.storeName;
+      patch.storeLogo = product.store?.logo || product.store?.logoUrl || line.storeLogo || null;
+      patch.categoryId = product.categoryId || line.categoryId;
+      patch.listingKind = product.listingKind || 'REGULAR';
+      patch.availability = product.availability || null;
+      // The kind and its facts (a package's items, a paluto's minimum).
+      patch.productType = product.productType || line.productType;
+      if (product.details !== undefined) patch.details = product.details;
+      if (product.fulfillment !== undefined) patch.fulfillment = product.fulfillment;
+      if (product.weightGrams !== undefined) patch.weightGrams = product.weightGrams;
+      if (product.packageItems !== undefined) patch.packageItems = product.packageItems;
+    }
+    // The chosen option may have been removed since it was added.
+    const group = !gone ? pricedVariation(product.variations) : null;
+    const optionGone = group && line.selectedVariations
+      && !group.options.includes(line.selectedVariations[group.name]);
+    if (gone) {
+      patch.unavailable = true;
+      patch.unavailableReason = 'This product is no longer available';
+    } else if (isLivestock(product)) {
+      // Added before live animals were sold by offer: buy it from its page.
+      patch.unavailable = true;
+      patch.unavailableReason = 'Make an offer to the seller on its page';
+    } else if (optionGone) {
+      patch.unavailable = true;
+      patch.unavailableReason = 'This option is no longer available';
+    } else if (notApproved) {
+      patch.unavailable = true;
+      patch.unavailableReason = 'This product is not available right now';
+    } else if (away) {
+      patch.unavailable = true;
+      patch.unavailableReason = `The shop is away until ${shortDate(away)}`;
+    } else if (isTodayProduct(product) && !windowOpen(product.availability)) {
+      patch.unavailable = true;
+      patch.unavailableReason = 'No longer taking orders today';
+    } else if (isStockless(product)) {
+      // Cooked when ordered: never out of stock, but a minimum order.
+      const least = minOrder(product);
+      if (line.quantity < least) {
+        patch.quantity = least;
+        raised.push(line.name);
+      }
+    } else if (stock <= 0) {
+      patch.unavailable = true;
+      patch.unavailableReason = outOfStock(product);
+    } else if (line.quantity > stock) {
+      patch.quantity = stock;
+      capped.push(line.name);
+    }
+    if (patch.unavailable) unavailable.push(line.name);
+    patches[line.id] = patch;
+  });
+  return { patches, capped, unavailable, raised };
+};
 
 // Saving to the account waits for a pause in changes (a few taps on +).
 let saveTimer = null;
@@ -222,29 +392,15 @@ const useCartStore = create(
           const cartKey = cartKeyFor(product);
           const existingItem = items.find((item) => item.id === cartKey);
 
-          // A shop still setting up shows its products but takes no orders.
-          if (product.readyToSell === false || product.store?.readyToSell === false) {
-            throw new Error("This shop isn't taking orders yet");
-          }
-
-          // Away (Shop Settings): no orders until the date.
-          const away = awayUntil(product.store || product);
-          if (away) throw new Error(`This shop is away until ${shortDate(away)}`);
-
-          // Available Today: only while its window takes orders (when the
-          // caller knows the window; checkout checks it either way).
-          if (isTodayProduct(product) && product.availability !== undefined && !windowOpen(product.availability)) {
-            throw new Error(`${product.name || 'This item'} isn't taking orders right now`);
-          }
-
-          if (product.stock !== undefined && product.stock === 0) {
-            throw new Error('Product is out of stock');
-          }
+          refuseProduct(product);
+          const stockless = isStockless(product);
+          // A paluto starts at its minimum order.
+          const least = minOrder(product);
 
           if (existingItem) {
-            const newQuantity = existingItem.quantity + quantity;
-            if (product.stock !== undefined && newQuantity > product.stock) {
-              throw new Error(`Only ${product.stock} items available in stock`);
+            const newQuantity = Math.max(existingItem.quantity + quantity, least);
+            if (!stockless && product.stock !== undefined && newQuantity > product.stock) {
+              throw new Error(onlyLeft(product, product.stock));
             }
             commit(items.map((item) => (
               item.id === cartKey
@@ -252,21 +408,7 @@ const useCartStore = create(
                 : item
             )));
           } else {
-            if (product.stock !== undefined && quantity > product.stock) {
-              throw new Error(`Only ${product.stock} items available in stock`);
-            }
-            // Prices come as Decimal strings from Prisma: kept as numbers.
-            commit([...items, {
-              ...product,
-              id: cartKey,
-              productId: product.productId || product.id,
-              price: Number(product.price),
-              basePrice: Number(product.price),
-              priceTiers: priceTiersOf(product),
-              quantity,
-              unavailable: false,
-              unavailableReason: null,
-            }]);
+            commit([...items, standaloneLine(product, quantity)]);
           }
         },
 
@@ -280,8 +422,12 @@ const useCartStore = create(
             return;
           }
           const item = get().items.find((line) => line.id === productId);
-          if (item && item.stock !== undefined && quantity > item.stock) {
-            throw new Error(`Only ${item.stock} items available in stock`);
+          // A paluto never goes below its minimum order, and has no stock to cap it.
+          if (item && quantity < minOrder(item)) {
+            throw new Error(`The minimum order for ${item.name || 'this item'} is ${minOrder(item)}`);
+          }
+          if (item && !isStockless(item) && item.stock !== undefined && quantity > item.stock) {
+            throw new Error(onlyLeft(item, item.stock));
           }
           commit(get().items.map((line) => (
             line.id === productId ? { ...line, quantity } : line
@@ -302,86 +448,12 @@ const useCartStore = create(
 
         // Refresh every line against GET /products/:id. Updates price, name,
         // image, stock and store name; flags lines that are gone, not APPROVED
-        // or out of stock as `unavailable`; caps quantity to stock.
-        // Resolves to { capped: [names], unavailable: [names] }.
+        // or out of stock as `unavailable`; caps quantity to stock (checkLines).
+        // Resolves to { capped: [names], unavailable: [names], raised: [names] }.
         revalidate: async () => {
-          const items = get().items;
-          const productIds = [...new Set(items.map((line) => line.productId || line.id))];
-          if (productIds.length === 0) return { capped: [], unavailable: [] };
-
-          const results = await Promise.allSettled(productIds.map((id) => apiClient.get(`/products/${id}`)));
-          const products = new Map();
-          results.forEach((result, index) => {
-            const id = productIds[index];
-            if (result.status === 'fulfilled') {
-              products.set(id, { product: result.value?.data || null });
-            } else {
-              products.set(id, { product: null, status: result.reason?.status });
-            }
-          });
-
-          const patches = {};
-          const capped = [];
-          const unavailable = [];
-          get().items.forEach((line) => {
-            const entry = products.get(line.productId || line.id);
-            if (!entry) return;
-            const { product, status } = entry;
-            // Network / server failures leave the line as it was.
-            if (!product && status !== 404) return;
-
-            const gone = !product || status === 404;
-            const notApproved = !gone && product.status !== 'APPROVED';
-            const away = !gone && awayUntil(product.store);
-            // Per-option stock: the line's own option's quantity.
-            const stock = gone ? 0 : stockForSelection(product, line.selectedVariations);
-            const patch = { unavailable: false, unavailableReason: null };
-            if (!gone) {
-              patch.name = product.name ?? line.name;
-              patch.price = priceForSelection(product, line.selectedVariations) || Number(line.price);
-              patch.basePrice = patch.price;
-              patch.priceTiers = priceTiersOf(product);
-              patch.image = firstImage(product.images) || line.image;
-              patch.stock = stock;
-              patch.slug = product.slug || line.slug;
-              patch.storeId = product.storeId || product.store?.id || line.storeId;
-              patch.storeName = product.store?.name || line.storeName;
-              patch.storeLogo = product.store?.logo || product.store?.logoUrl || line.storeLogo || null;
-              patch.categoryId = product.categoryId || line.categoryId;
-              patch.listingKind = product.listingKind || 'REGULAR';
-              patch.availability = product.availability || null;
-            }
-            // The chosen option may have been removed since it was added.
-            const group = !gone ? pricedVariation(product.variations) : null;
-            const optionGone = group && line.selectedVariations
-              && !group.options.includes(line.selectedVariations[group.name]);
-            if (gone) {
-              patch.unavailable = true;
-              patch.unavailableReason = 'This product is no longer available';
-            } else if (optionGone) {
-              patch.unavailable = true;
-              patch.unavailableReason = 'This option is no longer available';
-            } else if (notApproved) {
-              patch.unavailable = true;
-              patch.unavailableReason = 'This product is not available right now';
-            } else if (away) {
-              patch.unavailable = true;
-              patch.unavailableReason = `The shop is away until ${shortDate(away)}`;
-            } else if (isTodayProduct(product) && !windowOpen(product.availability)) {
-              patch.unavailable = true;
-              patch.unavailableReason = 'No longer taking orders today';
-            } else if (stock <= 0) {
-              patch.unavailable = true;
-              patch.unavailableReason = 'Out of stock';
-            } else if (line.quantity > stock) {
-              patch.quantity = stock;
-              capped.push(line.name);
-            }
-            if (patch.unavailable) unavailable.push(line.name);
-            patches[line.id] = patch;
-          });
+          const { patches, capped, unavailable, raised } = await checkLines(get().items);
           get().patchItems(patches);
-          return { capped, unavailable };
+          return { capped, unavailable, raised };
         },
 
         // Getters (unavailable lines never count toward totals)

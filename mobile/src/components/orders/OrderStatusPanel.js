@@ -5,7 +5,7 @@ import {
 import { font, t } from '../../theme';
 import { resolveImg } from '../../lib/media';
 import {
-  handOver, orderStage, orderSteps, payLabel, peso, when,
+  failedTripNote, fallbackLine, handOver, orderStage, orderSteps, payLabel, peso, when,
 } from './orderProgress';
 
 const PAYMENT_STATE = {
@@ -13,9 +13,26 @@ const PAYMENT_STATE = {
   PENDING_VERIFICATION: 'Being checked by the shop',
   PAID: 'Paid',
   FAILED: 'Proof rejected: send a new one',
-  EXPIRED: 'Expired',
+  EXPIRED: 'Not paid',
   REFUNDED: 'Refunded',
   PARTIALLY_REFUNDED: 'Partly refunded',
+};
+
+/** The payment line under the method: what the buyer pays, when, or what became of it. */
+const paymentState = (order, pickup) => {
+  const cancelled = order.status === 'CANCELLED';
+  if (order.paymentStatus === 'PENDING') {
+    if (cancelled) return 'Not paid';
+    if (order.paymentMethod === 'COD') {
+      return order.deliveryPartner === 'MOORMOVE' && !pickup
+        ? `Pay ${peso(order.total)} to the rider`
+        : `Pay when you ${pickup ? 'pick it up' : 'receive it'}`;
+    }
+    if (order.status === 'PENDING') return 'Pay after the shop confirms';
+  }
+  if (cancelled && order.paymentStatus === 'PAID') return 'Paid · the shop will return it';
+  if (cancelled && order.paymentStatus === 'FAILED') return 'Not paid';
+  return PAYMENT_STATE[order.paymentStatus] || order.paymentStatus;
 };
 
 /** One section of the order details sheet (.order-details-section). */
@@ -36,15 +53,21 @@ export default function OrderStatusPanel({ order }) {
   const stage = orderStage(order);
   const steps = order.status === 'CANCELLED' ? [] : orderSteps(order);
   const place = handOver(order);
-  const codPending = order.paymentMethod === 'COD' && order.paymentStatus === 'PENDING';
   const PlaceIcon = place.pickup ? StorefrontIcon : MapPinIcon;
   const PayIcon = order.paymentMethod === 'COD' ? MoneyIcon : QrCodeIcon;
+  const failed = failedTripNote(order);
 
   return (
     <>
       <DetailSection>
         <Text style={styles.title}>{stage.title}</Text>
         {stage.text ? <Text style={styles.text}>{stage.text}</Text> : null}
+        {/* A rider couldn't deliver it: why, and whether its delivery fee is charged to the buyer. */}
+        {failed ? (
+          <View style={[styles.failed, order.failedTrip.outcome === 'BUYER_OWES' && styles.failedOwes]}>
+            <Text style={[styles.failedText, order.failedTrip.outcome === 'BUYER_OWES' && styles.failedTextOwes]}>{failed}</Text>
+          </View>
+        ) : null}
         {steps.length > 0 ? (
           <View style={styles.steps} accessibilityLabel="Order progress">
             {steps.map((s, i) => {
@@ -76,6 +99,7 @@ export default function OrderStatusPanel({ order }) {
                 Delivered by {place.by}{Number(order.deliveryFee) > 0 ? ` · ${peso(order.deliveryFee)} fee` : ' · free delivery'}
               </Text>
             ) : null}
+            {!place.pickup && fallbackLine(order) ? <Text style={styles.sub}>{fallbackLine(order)}</Text> : null}
             {place.note ? <Text style={styles.sub}>{place.pickup ? 'Shop says: ' : 'Your note: '}{place.note}</Text> : null}
             {order.contactNumber ? (
               <View style={styles.line2}>
@@ -99,9 +123,7 @@ export default function OrderStatusPanel({ order }) {
           <View style={styles.boxText}>
             <Text style={styles.boxP}>{payLabel(order.paymentMethod, place.pickup)} · {peso(order.total)}</Text>
             <Text style={styles.sub}>
-              {codPending
-                ? `Pay when you ${place.pickup ? 'pick it up' : 'receive it'}`
-                : PAYMENT_STATE[order.paymentStatus] || order.paymentStatus}
+              {paymentState(order, place.pickup)}
               {order.paymentReference ? ` · ref. ${order.paymentReference}` : ''}
             </Text>
           </View>
@@ -139,6 +161,11 @@ const styles = StyleSheet.create({
 
   title: { fontSize: 16, lineHeight: 21.6, ...font(500), color: t.neutral[900] },
   text: { marginTop: 4, fontSize: 14, lineHeight: 21, ...font(400), color: t.neutral[500] },
+  // The failed trip's line: grey when it costs the buyer nothing, amber when it is charged to them.
+  failed: { marginTop: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: t.neutral[50] },
+  failedOwes: { backgroundColor: t.warning[50] },
+  failedText: { fontSize: 13.5, lineHeight: 20, ...font(400), color: t.neutral[700] },
+  failedTextOwes: { color: t.warning[800] },
   steps: { marginTop: 16 },
   step: { flexDirection: 'row', gap: 16, minHeight: 40, paddingBottom: 14 },
   stepLast: { minHeight: 0, paddingBottom: 0 },

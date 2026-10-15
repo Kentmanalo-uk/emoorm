@@ -86,7 +86,7 @@ export default function ReturnDetail() {
   return (
     <View style={styles.screen}>
       {header}
-      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]} keyboardShouldPersistTaps="handled">
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]} keyboardShouldPersistTaps="handled">
         <View style={styles.head}>
           <View style={styles.headText}>
             <Text style={styles.eyebrow}>{(item.requestNumber || '').toUpperCase()}</Text>

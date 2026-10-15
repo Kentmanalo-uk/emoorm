@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import apiClient from '../../src/api/client';
 import { resolveImg } from '../../src/lib/media';
-import { toast } from '../../src/lib/toast';
 import { getCacheEntry, setCachedData } from '../../src/lib/dataCache';
 import { fetchCategories, fetchMunicipalities } from '../../src/lib/referenceData';
 import useAuthStore from '../../src/store/authStore';
 import ProductCard from '../../src/components/ProductCard';
 import HomeHeader, { HomeQuickSearch } from '../../src/components/HomeHeader';
+import { useTabBarScroll } from '../../src/components/Glass';
 import HomeTodayRail from '../../src/components/home/HomeTodayRail';
 import HomeStoresMap from '../../src/components/home/HomeStoresMap';
-import HomeFooter from '../../src/components/home/HomeFooter';
+import StartSellingBubble from '../../src/components/home/StartSellingBubble';
+import { MapTrifoldIcon } from 'phosphor-react-native';
 import {
   BannerCarousel, FALLBACK_BANNERS, PromotionPopup, SideBanners,
 } from '../../src/components/home/HomeBanners';
@@ -24,10 +27,12 @@ import { font, t } from '../../src/theme';
  * Home (web/src/pages/Home.jsx, phone view): quick search words, the banner
  * carousel and the two side banners, Shop by Category, Available Today,
  * Suggested for You, Stores Near You, Explore Municipals, Discover Stores
- * (the map) and Explore Products with "Load more".
+ * (the map) and Explore Products, which loads its next batch on its own as
+ * the page nears the bottom (one request at a time, small batches). The
+ * website's footer lives on the About page in the app (app/about.js).
  */
 
-// Phones: 5 rows of the 2-column grid per "Load more".
+// Phones: 5 rows of the 2-column grid per batch.
 const EXPLORE_BATCH = 5 * 2;
 const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
 // What Home showed last time: shown at once, then refreshed.
@@ -56,12 +61,12 @@ const mapBanner = (b) => ({
 });
 
 export default function Home() {
+  const tabScroll = useTabBarScroll();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const user = useAuthStore((s) => s.user);
   const townId = user?.municipalityId || undefined;
   const [cache] = useState(readCache);
-  const [atTop, setAtTop] = useState(true);
 
   const [banners, setBanners] = useState(() => cache.banners || FALLBACK_BANNERS);
   const [sideBanners, setSideBanners] = useState(() => cache.sideBanners || { top: null, bottom: null });
@@ -70,7 +75,6 @@ export default function Home() {
 
   const [categories, setCategories] = useState(() => cache.categories || []);
   const [categoryIcons, setCategoryIcons] = useState(() => cache.categoryStyle === 'ICON');
-  const [appLogo, setAppLogo] = useState(() => cache.appLogo || null);
   const [municipalities, setMunicipalities] = useState(() => cache.municipalities || []);
   const [featured, setFeatured] = useState(() => cache.featured || []);
   const [nearbyStores, setNearbyStores] = useState(() => cache.nearbyStores || []);
@@ -79,6 +83,9 @@ export default function Home() {
   const [explorePage, setExplorePage] = useState(() => cache.explorePage || 1);
   const [exploreHasMore, setExploreHasMore] = useState(() => Boolean(cache.exploreHasMore));
   const [exploreLoading, setExploreLoading] = useState(false);
+  const [exploreFailed, setExploreFailed] = useState(false);
+  // One request at a time: scroll events come many per second.
+  const exploreBusy = useRef(false);
   const exploreSaved = useRef(cache.explorePage || 1);
 
   // Banners: the carousel, the two side ones and the popup.
@@ -126,8 +133,7 @@ export default function Home() {
       if (cancelled) return;
       const style = settings.categoryStyle || 'IMAGE';
       setCategoryIcons(style === 'ICON');
-      setAppLogo(settings.appLogo || null);
-      patchCache({ categoryStyle: style, appLogo: settings.appLogo || null });
+      patchCache({ categoryStyle: style });
     });
     fetchMunicipalities().then((list) => {
       if (cancelled) return;
@@ -180,10 +186,11 @@ export default function Home() {
         patchCache({ nearbyStores: res.data || [] });
       },
     );
+    // Every shop with a spot: its pin, or placed from its address (pinned: false).
     load(
-      apiClient.get('/stores', { params: { pageSize: 100 } }),
+      apiClient.get('/stores/map'),
       (res) => {
-        const mapped = (res.data || []).filter((store) => store.latitude != null && store.longitude != null);
+        const mapped = res.data || [];
         setMappedStores(mapped);
         patchCache({ mappedStores: mapped });
       },
@@ -192,7 +199,10 @@ export default function Home() {
   }, [townId]);
 
   const loadMoreExplore = useCallback(async () => {
+    if (exploreBusy.current || !exploreHasMore) return;
+    exploreBusy.current = true;
     setExploreLoading(true);
+    setExploreFailed(false);
     try {
       const nextPage = explorePage + 1;
       const res = await apiClient.get('/products', { params: { ...EXPLORE_QUERY, page: nextPage, pageSize: EXPLORE_BATCH } });
@@ -205,12 +215,23 @@ export default function Home() {
       exploreSaved.current = nextPage;
       // Remembered, so coming back finds everything loaded so far.
       patchCache({ explore: next, explorePage: nextPage, exploreHasMore: hasNext });
-    } catch (err) {
-      toast.error(err.message || 'Failed to load more products');
+    } catch {
+      // No retry loop: a quiet "Try again" under the grid instead.
+      setExploreFailed(true);
     } finally {
+      exploreBusy.current = false;
       setExploreLoading(false);
     }
-  }, [explore, explorePage]);
+  }, [explore, explorePage, exploreHasMore]);
+
+  // Near the bottom (about a screen and a half to go): the next batch, so it
+  // is usually there before the grid runs out. Not after a failure; that
+  // waits for "Try again".
+  const onScroll = useCallback(({ nativeEvent }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const left = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    if (left < layoutMeasurement.height * 1.5 && !exploreFailed) loadMoreExplore();
+  }, [loadMoreExplore, exploreFailed]);
 
   // The website's phone grid: 2 columns 4px apart, 12px from the edges.
   const tileWidth = (width - 24 - 4) / 2;
@@ -224,16 +245,14 @@ export default function Home() {
 
   return (
     <View style={styles.screen}>
-      <HomeHeader atTop={atTop} />
-      <ScrollView
+      <HomeHeader />
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         contentContainerStyle={styles.content}
-        scrollEventThrottle={32}
-        onScroll={({ nativeEvent }) => {
-          // As the website: "at the top" means less than 4px down.
-          const top = nativeEvent.contentOffset.y < 4;
-          if (top !== atTop) setAtTop(top);
-        }}
+        onScroll={onScroll}
+        scrollEventThrottle={120}
+        // iOS 26: the glass tab bar floats over the page; the last row scrolls clear of it.
+        {...tabScroll}
       >
         <HomeQuickSearch />
 
@@ -297,29 +316,43 @@ export default function Home() {
 
         {/* Discover Stores map */}
         <View style={[styles.whiteSection, styles.mapSection]}>
-          <SectionHeader title="Discover Stores" arrowLabel="Browse all stores" onArrow={() => router.push('/stores')} />
-          <HomeStoresMap stores={mappedStores} height={340} />
+          <SectionHeader title="Discover Stores" arrowLabel="Open the stores map" onArrow={() => router.push('/store-map')} />
+          {/* A tapped pin, or the button, opens the full map (app/store-map.js). */}
+          <View>
+            <HomeStoresMap
+              stores={mappedStores}
+              height={340}
+              onSelect={(store) => router.push({ pathname: '/store-map', params: { focus: store.id } })}
+            />
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/store-map')}
+              style={({ pressed }) => [styles.mapOpen, pressed && styles.mapOpenPressed]}
+            >
+              <MapTrifoldIcon size={16} weight="fill" color="#fff" />
+              <Text style={styles.mapOpenText}>Open full map</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Explore Products */}
         <View style={[styles.listSection, styles.exploreSection]}>
           <SectionHeader title="Explore Products" arrowLabel="View all products" onArrow={() => router.push('/products')} />
           {explore.length > 0 ? grid(explore) : null}
-          {exploreHasMore ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={loadMoreExplore}
-              disabled={exploreLoading}
-              style={({ pressed }) => [styles.loadMore, exploreLoading && styles.loadMoreBusy, pressed && styles.loadMorePressed]}
-            >
-              <Text style={styles.loadMoreText}>{exploreLoading ? 'Loading…' : 'Load more'}</Text>
-            </Pressable>
-          ) : null}
+          <View style={styles.exploreEnd}>
+            {exploreLoading ? <ActivityIndicator color={t.primary[600]} accessibilityLabel="Loading more products" /> : null}
+            {!exploreLoading && exploreFailed ? (
+              <Pressable accessibilityRole="button" onPress={loadMoreExplore} hitSlop={8}>
+                <Text style={styles.exploreRetry}>Couldn’t load more · <Text style={styles.exploreRetryLink}>Try again</Text></Text>
+              </Pressable>
+            ) : null}
+            {!exploreHasMore && explore.length > 0 ? <Text style={styles.exploreDone}>You’ve seen everything for now</Text> : null}
+          </View>
         </View>
-
-        {/* The website's footer: on phones it shows on the homepage only. */}
-        <HomeFooter municipalities={municipalities} categories={categories} appLogo={appLogo} />
       </ScrollView>
+
+      {/* Floating “Start selling” (buyers and guests; drag it, or × to hide it for a week). */}
+      <StartSellingBubble />
 
       {popup ? <PromotionPopup banner={popup} onClose={() => setPopup(null)} /> : null}
     </View>
@@ -339,6 +372,13 @@ const styles = StyleSheet.create({
   railHeader: { paddingRight: 12 },
   categoriesTitle: { paddingRight: 12, marginBottom: 12, fontSize: 18, lineHeight: 22.5, ...font(500), color: t.neutral[900] },
   mapSection: { paddingHorizontal: 12 },
+  mapOpen: {
+    position: 'absolute', right: 10, bottom: 22, flexDirection: 'row', alignItems: 'center', gap: 6,
+    height: 38, paddingHorizontal: 16, borderRadius: 999, backgroundColor: t.primary[600],
+    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 12, color: 'rgba(4, 120, 87, 0.3)' }],
+  },
+  mapOpenPressed: { backgroundColor: t.primary[700] },
+  mapOpenText: { fontSize: 13.5, lineHeight: 17, color: '#fff', ...font(600) },
 
   // Sections on the page background (Suggested, Stores, Explore).
   listSection: { paddingTop: 16, paddingBottom: 4, paddingHorizontal: 12 },
@@ -346,11 +386,9 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   storesGrid: { gap: 12 },
 
-  loadMore: {
-    marginTop: 16, minHeight: 44, paddingVertical: 12, paddingHorizontal: 32, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: t.primary[600], borderRadius: 12, backgroundColor: t.neutral[0],
-  },
-  loadMoreBusy: { opacity: 0.6 },
-  loadMorePressed: { backgroundColor: t.primary[50] },
-  loadMoreText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: t.primary[600] },
+  // Under the grid: a spinner while the next batch loads, "Try again", or the end.
+  exploreEnd: { minHeight: 56, alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 20 },
+  exploreRetry: { fontSize: 13.5, lineHeight: 18, ...font(400), color: t.neutral[500] },
+  exploreRetryLink: { ...font(500), color: t.primary[600] },
+  exploreDone: { fontSize: 13, lineHeight: 17, ...font(400), color: t.neutral[400] },
 });

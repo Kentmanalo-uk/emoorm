@@ -3,8 +3,10 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { MagnifyingGlassIcon, XIcon } from 'phosphor-react-native';
 import apiClient from '../../api/client';
 import { font, t } from '../../theme';
+import EmptyState from '../EmptyState';
 import ChatProductThumb from './ChatProductThumb';
 import InboxSheet from './InboxSheet';
+import { liquidGlass } from '../Glass';
 import InboxSpinner from './InboxSpinner';
 import { firstImageOf, formatMoney } from './inboxFormat';
 
@@ -45,13 +47,6 @@ export default function ChatProductPicker({ open, storeId, onPick, onClose }) {
     <InboxSheet open={open} onClose={onClose} label="Attach a product" style={styles.sheet}>
       {(bottom) => (
         <View style={[styles.inner, { paddingBottom: 12 + bottom }]}>
-          <View style={styles.head}>
-            <View style={styles.grabber} />
-            <Text style={styles.title} accessibilityRole="header">Attach a product</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.close}>
-              <XIcon size={18} weight="bold" color={t.neutral[700]} />
-            </Pressable>
-          </View>
           <View style={styles.search}>
             <MagnifyingGlassIcon size={16} color={t.neutral[500]} />
             <TextInput
@@ -65,16 +60,14 @@ export default function ChatProductPicker({ open, storeId, onPick, onClose }) {
               underlineColorAndroid="transparent"
             />
           </View>
-          <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+          <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.list} keyboardShouldPersistTaps="handled">
             {loading ? (
               <View style={styles.empty}>
                 <InboxSpinner size={18} color={t.neutral[500]} />
                 <Text style={styles.emptyText}>Loading products…</Text>
               </View>
             ) : items.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>{query ? `No products match “${query}”.` : 'This shop has no products yet.'}</Text>
-              </View>
+              <EmptyState compact text={query ? `No products match “${query}”.` : 'This shop has no products yet.'} />
             ) : items.map((p) => {
               const img = firstImageOf(p);
               return (

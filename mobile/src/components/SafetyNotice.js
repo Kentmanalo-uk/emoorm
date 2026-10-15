@@ -1,12 +1,8 @@
 import { useState } from 'react';
-import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from 'react-native';
+import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CaretDownIcon as CaretDown, ShieldWarningIcon as ShieldWarning } from 'phosphor-react-native';
 import { SAFETY_SUMMARY, SAFETY_TIPS } from '../lib/safetyNotice';
 import { fontFamily, radius, spacing } from '../theme';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 /**
  * Safety & scam prevention strip for a conversation thread.

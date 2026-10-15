@@ -4,6 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { toast } from '../../lib/toast';
 import { font, t } from '../../theme';
+import { SheetFrame } from '../Sheet';
+
+// The app's one sheet look on every phone (the sign-in sheet's: Sheet.js).
+const framed = true;
 
 const native = Platform.OS !== 'web';
 
@@ -48,6 +52,8 @@ export async function pickSearchImage({ source } = {}) {
  * The website's "Search by image" box (web/src/components/layout/
  * ImageSearchModal.jsx) as it shows on phones: a bottom sheet with a dashed
  * drop area and "Browse files". onFile(asset) gets the picked photo.
+ * On iOS 26 the same content sits in the system's Liquid Glass sheet
+ * (NativeSheet); elsewhere, the website's sheet.
  */
 export default function ImageSearchSheet({ open, onClose, onFile }) {
   const insets = useSafeAreaInsets();
@@ -73,46 +79,32 @@ export default function ImageSearchSheet({ open, onClose, onFile }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  if (!mounted) return null;
-
   const browse = async () => {
     const asset = await pickSearchImage();
     if (asset) onFile(asset);
   };
 
-  const translateY = progress.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
-  return (
-    <Modal visible transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
-      <View style={styles.root}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: progress }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
-        </Animated.View>
-        <Animated.View
-          accessibilityViewIsModal
-          style={[
-            styles.card,
-            { maxHeight: screenH * 0.9, paddingBottom: 20 + insets.bottom, opacity: progress, transform: [{ translateY }] },
-          ]}
-        >
-          <Pressable style={styles.close} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" hitSlop={6}>
-            <Text style={styles.closeText}>×</Text>
-          </Pressable>
+  const content = (
+    <>
 
-          <View style={styles.head}>
-            <Text style={styles.title} accessibilityRole="header">Search by image</Text>
-            <Text style={styles.sub}>Find visually similar products from local sellers.</Text>
-          </View>
-
-          <Pressable style={styles.drop} onPress={browse} accessibilityRole="button" accessibilityLabel="Upload or drop image">
-            <Text style={styles.dropTitle}>Upload or drop image</Text>
-            <Text style={styles.dropHint}>PNG, JPG or WebP · up to 8 MB</Text>
-            <View style={styles.dropBtn}>
-              <Text style={styles.dropBtnText}>Browse files</Text>
-            </View>
-          </Pressable>
-        </Animated.View>
+      <View style={styles.head}>
+        <Text style={styles.sub}>Find visually similar products from local sellers.</Text>
       </View>
-    </Modal>
+
+      <Pressable style={styles.drop} onPress={browse} accessibilityRole="button" accessibilityLabel="Upload or drop image">
+        <Text style={styles.dropTitle}>Upload or drop image</Text>
+        <Text style={styles.dropHint}>PNG, JPG or WebP · up to 8 MB</Text>
+        <View style={styles.dropBtn}>
+          <Text style={styles.dropBtnText}>Browse files</Text>
+        </View>
+      </Pressable>
+    </>
+  );
+
+  return (
+    <SheetFrame safeBottom={false} open={open} onClose={onClose} title="Search by image" scroll={false} padded={false}>
+      <View style={[styles.glassCard, { paddingBottom: 20 + insets.bottom }]}>{content}</View>
+    </SheetFrame>
   );
 }
 
@@ -128,6 +120,7 @@ const styles = StyleSheet.create({
     backgroundColor: t.neutral[0],
     boxShadow: [{ offsetX: 0, offsetY: 24, blurRadius: 70, color: 'rgba(0, 0, 0, 0.18)' }],
   },
+  glassCard: { paddingTop: 14, paddingHorizontal: 16 },
   close: { position: 'absolute', top: 14, right: 16, zIndex: 1, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   closeText: { fontSize: 24, lineHeight: 24, ...font(400), color: t.neutral[500] },
   head: { marginBottom: 28 },

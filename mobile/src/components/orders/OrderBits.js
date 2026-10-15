@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { font, t } from '../../theme';
-import LoadingSkeleton from '../LoadingSkeleton';
+import { PageLoader } from '../BrandLoader';
 
 /* Small pieces My Orders and Returns share (Orders.css phone rules). */
 
@@ -78,7 +78,7 @@ export function OrderActions({ buttons, style }) {
 export function OrderTabs({ tabs, active, onChange, counts = {} }) {
   return (
     <View style={styles.tabsWrap}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
+      <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
         {tabs.map((tab) => {
           const on = tab.key === active;
           const count = counts[tab.key] || 0;
@@ -106,33 +106,7 @@ export function OrderTabs({ tabs, active, onChange, counts = {} }) {
 
 /** OrderCardsSkeleton: grey chips, then cards with a shop line, an item and a total. */
 export function OrderCardsSkeleton({ count = 3 }) {
-  return (
-    <View style={styles.sk}>
-      <View style={styles.skChips}>
-        {[0, 1, 2, 3].map((i) => <LoadingSkeleton key={i} height={32} width={78} borderRadius={999} />)}
-      </View>
-      {Array.from({ length: count }).map((_, i) => (
-        // eslint-disable-next-line react/no-array-index-key
-        <View key={i} style={styles.skCard}>
-          <View style={styles.skSpread}>
-            <LoadingSkeleton height={13} width="45%" />
-            <LoadingSkeleton height={20} width={80} borderRadius={999} />
-          </View>
-          <View style={[styles.skRow, { alignItems: 'flex-start' }]}>
-            <LoadingSkeleton width={64} height={64} borderRadius={10} />
-            <View style={styles.skLines}>
-              <LoadingSkeleton height={13} width="80%" />
-              <LoadingSkeleton height={11} width="30%" />
-            </View>
-          </View>
-          <View style={styles.skSpread}>
-            <LoadingSkeleton height={11} width={90} />
-            <LoadingSkeleton height={15} width={80} />
-          </View>
-        </View>
-      ))}
-    </View>
-  );
+  return <PageLoader label="Loading orders" />;
 }
 
 export const cardShadow = {

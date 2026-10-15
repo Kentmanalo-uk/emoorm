@@ -37,7 +37,7 @@ export const normalizeName = (s) => (s || '').toString().toLowerCase()
 
 const SERVICE_REGION = { code: '170000000', name: 'MIMAROPA Region', shortName: 'MIMAROPA' };
 export const SERVICE_PROVINCE = { code: '175200000', name: 'Oriental Mindoro' };
-const MUNICIPALITIES = [
+export const MUNICIPALITIES = [
   ['175201000', 'Baco'], ['175202000', 'Bansud'], ['175203000', 'Bongabong'], ['175204000', 'Bulalacao'],
   ['175205000', 'Calapan City'], ['175206000', 'Gloria'], ['175207000', 'Mansalay'], ['175208000', 'Naujan'],
   ['175209000', 'Pinamalayan'], ['175210000', 'Pola'], ['175211000', 'Puerto Galera'], ['175212000', 'Roxas'],
@@ -51,7 +51,7 @@ const listBarangays = async (code) => {
   return (data || []).map((b) => ({ code: b.code, name: b.name })).sort((a, b) => a.name.localeCompare(b.name));
 };
 
-const barangayKey = (name) => normalizeName(String(name || '').replace(/^(brgy\.?|bgy\.?|barangay)\s+/i, ''));
+export const barangayKey = (name) => normalizeName(String(name || '').replace(/^(brgy\.?|bgy\.?|barangay)\s+/i, ''));
 
 const emptyValue = {
   province: '', provinceCode: '', municipalityId: '', municipalityName: '', municipalityCode: '', barangay: '', barangayCode: '', street: '',
@@ -228,7 +228,7 @@ export function ProfileSelect({ title, value, options, onChange, placeholder = '
         <Text style={[styles.selectText, !selected && styles.placeholder, disabled && { color: t.neutral[500] }, textStyle]} numberOfLines={1}>
           {selected ? selected.label : placeholder}
         </Text>
-        <CaretDownIcon size={16} weight="bold" color={t.neutral[700]} />
+        <CaretDownIcon size={14} weight="bold" color={t.neutral[500]} />
       </Pressable>
       <Sheet open={open} title={title} onClose={() => setOpen(false)}>
         {options.map((o) => (

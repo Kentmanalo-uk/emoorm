@@ -6,17 +6,21 @@ import { CheckCircleIcon, StarIcon } from 'phosphor-react-native';
 import { font, t } from '../../theme';
 import ProductImage from '../ProductImage';
 import { resolveImg } from '../../lib/media';
+import { variationImage } from '../../lib/variationImage';
 import OrderSheetFrame from './OrderSheetFrame';
 import OrderStatusPanel, { DetailSection, OrderProof } from './OrderStatusPanel';
 import CourierTracking, { CourierPending } from './CourierTracking';
 import { OrderBadge, OrderButton } from './OrderBits';
-import { longDateTime, pesoPlain } from './orderProgress';
+import { carriedFeeLines, longDateTime, pesoPlain } from './orderProgress';
+import {
+  countLabel, lineKind, lineNote, lineUnit,
+} from './orderLines';
 
 /**
  * "Order Details" (Orders.jsx's details modal, a bottom sheet on phones):
  * the order number and stage, where it stands (OrderStatusPanel), the
  * hand-over photo, the courier, the items (each with Review once received),
- * the totals, and Order received / Cancel Order / Close at the bottom.
+ * the totals, and Order received / Cancel order / Close at the bottom.
  */
 export default function OrderDetailsSheet({
   open, order, badge, onClose, canReceive = false, canCancel = false, onReceived, onCancel, onReview,
@@ -37,7 +41,7 @@ export default function OrderDetailsSheet({
           ) : null}
           {canCancel ? (
             <Pressable accessibilityRole="button" onPress={onCancel} style={({ pressed }) => [styles.footBtn, styles.cancel, pressed && styles.cancelPressed]}>
-              <Text style={[styles.footText, styles.cancelText]}>Cancel Order</Text>
+              <Text style={[styles.footText, styles.cancelText]}>Cancel order</Text>
             </Pressable>
           ) : null}
           <Pressable accessibilityRole="button" onPress={onClose} style={({ pressed }) => [styles.footBtn, styles.close, pressed && styles.closePressed]}>
@@ -71,13 +75,19 @@ export default function OrderDetailsSheet({
           {(order.items || []).map((item, index) => (
             // eslint-disable-next-line react/no-array-index-key
             <View key={index} style={styles.item}>
-              <ItemThumb src={item.product?.images?.[0]} />
+              <ItemThumb src={variationImage(item.product, item.selectedVariations)} />
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>{item.productName}</Text>
-                <Text style={styles.itemQty}>Quantity: {item.quantity}</Text>
+                {lineNote(item, { choice: true }) ? (
+                  <Text style={styles.itemNote} numberOfLines={3}>{lineNote(item, { choice: true })}</Text>
+                ) : null}
+                <Text style={styles.itemQty}>{lineKind(item) === 'LIVESTOCK' ? countLabel(item) : `Quantity: ${item.quantity}`}</Text>
               </View>
               <View style={styles.itemPrice}>
-                <Text style={styles.price}>{pesoPlain(item.price)}</Text>
+                <Text style={styles.price}>
+                  {pesoPlain(item.price)}
+                  {lineUnit(item) ? <Text style={styles.itemUnit}>{` ${lineUnit(item).trim()}`}</Text> : null}
+                </Text>
                 <Text style={styles.subtotal}>Subtotal: {pesoPlain(item.subtotal)}</Text>
                 {received ? (
                   <OrderButton
@@ -101,6 +111,9 @@ export default function OrderDetailsSheet({
           {Number(order.discountAmount) > 0 ? (
             <SummaryRow label={`Discount${order.voucherCode ? ` (${order.voucherCode})` : ''}`} value={`-${pesoPlain(order.discountAmount)}`} />
           ) : null}
+          {carriedFeeLines(order).map((line) => (
+            <SummaryRow key={line.key} label={line.label} value={pesoPlain(line.amount)} />
+          ))}
           <SummaryRow label="Total" value={pesoPlain(order.total)} total />
         </View>
       </DetailSection>
@@ -157,6 +170,9 @@ const styles = StyleSheet.create({
   itemInfo: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 },
   itemName: { marginBottom: 4, fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[900] },
   itemQty: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500] },
+  // Product kinds (.order-item-note, .order-item-unit).
+  itemNote: { marginBottom: 4, fontSize: 12.5, lineHeight: 17.5, ...font(400), color: t.neutral[600] },
+  itemUnit: { fontSize: 11.2, ...font(500), color: t.neutral[500] },
   itemPrice: { width: '100%', paddingLeft: 68, alignItems: 'flex-start' },
   price: { marginBottom: 4, fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[900] },
   // .order-details-item-price p outranks .item-subtotal: the same dark 14px as the price.

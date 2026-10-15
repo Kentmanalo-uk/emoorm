@@ -78,7 +78,7 @@ export default function SelectProduct() {
       {isLoading ? (
         <ListSkeleton rows={6} imageSize={52} />
       ) : (
-        <FlatList
+        <FlatList showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
           data={filteredProducts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={filteredProducts.length ? styles.list : styles.emptyList}
@@ -102,6 +102,7 @@ export default function SelectProduct() {
           )}
           ListEmptyComponent={
             <EmptyState
+              page
               icon={<Tag size={44} color={colors.gray400} />}
               title={query ? 'No products found' : 'No products yet'}
               message={query ? 'Try another product name.' : 'This store has no listed products.'}

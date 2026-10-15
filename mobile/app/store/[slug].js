@@ -10,7 +10,7 @@ import {
   SquaresFourIcon, StarIcon, StorefrontIcon, TicketIcon, TruckIcon, UserIcon, XIcon,
 } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
-import EmptyArt from '../../src/components/EmptyArt';
+import EmptyState from '../../src/components/EmptyState';
 import ShopHome from '../../src/components/shop/ShopHome';
 import ShopMoreMenu from '../../src/components/shop/ShopMoreMenu';
 import { ShopGridCard, ShopProductRow } from '../../src/components/shop/ShopProductRow';
@@ -23,8 +23,10 @@ import { API_BASE_URL } from '../../src/lib/config';
 import { resolveImg } from '../../src/lib/media';
 import { toast } from '../../src/lib/toast';
 import { saleInfo } from '../../src/lib/variantPricing';
+import { isLivestock } from '../../src/components/orders/orderLines';
 import useAuthStore from '../../src/store/authStore';
-import useCartStore, { cartKeyFor } from '../../src/store/cartStore';
+import useCartStore, { standaloneLine } from '../../src/store/cartStore';
+import { startBuyNow } from '../../src/lib/buyNow';
 import { font, t } from '../../src/theme';
 
 /*
@@ -247,30 +249,40 @@ export default function StoreDetail() {
 
   // Same rules as the product list: options are picked on the product page,
   // and guests may fill a cart.
-  const addToCartPhone = (product) => {
-    if (Array.isArray(product.variations) && product.variations.length > 0) {
+  const needsProductPage = (product) => {
+    // Live animals are bought by making an offer on their page.
+    if (isLivestock(product) || (Array.isArray(product.variations) && product.variations.length > 0)) {
       router.push(`/product/${product.slug}`);
-      return false;
+      return true;
     }
+    return false;
+  };
+  const phoneLine = (product) => ({
+    id: product.id,
+    productId: product.id,
+    name: product.name,
+    price: saleInfo(product).price,
+    image: (Array.isArray(product.images) ? product.images[0] : null) || '/placeholder-product.png',
+    storeId: store.id,
+    storeName: store.name,
+    storeLogo: store.logo || null,
+    readyToSell: store.readyToSell,
+    vacationUntil: store.vacationUntil,
+    stock: product.stock,
+    listingKind: product.listingKind,
+    availability: product.availability,
+    productType: product.productType,
+    details: product.details,
+    fulfillment: product.fulfillment,
+    weightGrams: product.weightGrams,
+    slug: product.slug,
+    categoryId: product.categoryId,
+    selectedVariations: null,
+  });
+  const addToCartPhone = (product) => {
+    if (needsProductPage(product)) return false;
     try {
-      addItem({
-        id: product.id,
-        productId: product.id,
-        name: product.name,
-        price: saleInfo(product).price,
-        image: (Array.isArray(product.images) ? product.images[0] : null) || '/placeholder-product.png',
-        storeId: store.id,
-        storeName: store.name,
-        storeLogo: store.logo || null,
-        readyToSell: store.readyToSell,
-        vacationUntil: store.vacationUntil,
-        stock: product.stock,
-        listingKind: product.listingKind,
-        availability: product.availability,
-        slug: product.slug,
-        categoryId: product.categoryId,
-        selectedVariations: null,
-      }, 1);
+      addItem(phoneLine(product), 1);
       toast.success(`${product.name} added to cart`);
       return true;
     } catch (error) {
@@ -279,12 +291,19 @@ export default function StoreDetail() {
     }
   };
 
-  // Straight to checkout with just this item.
+  // Straight to checkout with just this item (one, or a paluto's minimum
+  // order), leaving the cart as it is (src/lib/buyNow).
   const buyNowPhone = (product) => {
-    if (!addToCartPhone(product)) return;
-    const key = cartKeyFor({ id: product.id, selectedVariations: null });
-    useCartStore.getState().setSelectedItems?.([key]);
-    router.push({ pathname: '/checkout', params: { selectedIds: key } });
+    if (needsProductPage(product)) return;
+    if (!isAuthenticated) {
+      router.push({ pathname: '/login', params: { redirect: `/store/${slug}` } });
+      return;
+    }
+    try {
+      startBuyNow(router, [standaloneLine(phoneLine(product), 1)]);
+    } catch (error) {
+      toast.error(error.message || "This item can't be bought right now");
+    }
   };
 
   const handleToggleFollow = async () => {
@@ -354,21 +373,20 @@ export default function StoreDetail() {
       productsBody = <ShopGridSkeleton width={contentW} />;
     } else if (products.length === 0) {
       productsBody = (
-        <View style={styles.empty}>
-          <EmptyArt name={search ? 'search' : 'products'} size={88} />
-          <Text style={styles.emptyText}>
-            {search
-              ? `No products match “${search}”.`
-              : activeCategory !== 'all'
-                ? 'No products in this category yet.'
-                : 'This store has no products yet.'}
-          </Text>
-          {search || activeCategory !== 'all' ? (
-            <Pressable style={styles.resetBtn} onPress={() => { setRawSearch(''); onCategoryChange('all'); }} accessibilityRole="button">
-              <Text style={styles.resetText}>Reset filters</Text>
-            </Pressable>
-          ) : null}
-        </View>
+        <EmptyState
+          compact
+          style={styles.empty}
+          art={search ? 'search' : 'products'}
+          artSize={88}
+          text={search
+            ? `No products match “${search}”.`
+            : activeCategory !== 'all'
+              ? 'No products in this category yet.'
+              : 'This store has no products yet.'}
+          actions={search || activeCategory !== 'all'
+            ? [{ label: 'Reset filters', onPress: () => { setRawSearch(''); onCategoryChange('all'); } }]
+            : null}
+        />
       );
     } else if (mobileLayout === 'list') {
       productsBody = (
@@ -406,7 +424,7 @@ export default function StoreDetail() {
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollBody}
@@ -469,7 +487,7 @@ export default function StoreDetail() {
                       <Text style={[styles.ratingText, styles.ratingNewText]}>New</Text>
                     </View>
                   )}
-                  <Text style={styles.counts}>
+                  <Text style={styles.counts} numberOfLines={1}>
                     {productCount} {productCount === 1 ? 'product' : 'products'} · {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
                   </Text>
                 </View>
@@ -519,7 +537,7 @@ export default function StoreDetail() {
           ) : null}
 
           {shopVouchers.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vouchers} contentContainerStyle={styles.vouchersRow}>
+            <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} style={styles.vouchers} contentContainerStyle={styles.vouchersRow}>
               {shopVouchers.map((v) => (
                 <Pressable key={v.id} style={styles.voucher} onPress={() => copyCode(v.code)} accessibilityRole="button">
                   <TicketIcon size={18} weight="fill" color={t.danger[700]} />
@@ -555,10 +573,7 @@ export default function StoreDetail() {
           {phoneTab === 'categories' ? (
             <View style={styles.panel}>
               {categories.length === 0 ? (
-                <View style={styles.emptyCats}>
-                  <EmptyArt name="categories" size={72} />
-                  <Text style={styles.muted}>This shop hasn’t sorted its products into categories yet.</Text>
-                </View>
+                <EmptyState compact art="categories" text="This shop hasn’t sorted its products into categories yet." />
               ) : (
                 <View style={styles.cats}>
                   <CategoryTile
@@ -825,7 +840,7 @@ const styles = StyleSheet.create({
   topbar: {
     position: 'absolute', top: 0, left: 0, right: 0, zIndex: 120,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 6, borderBottomWidth: 1,
+    paddingHorizontal: 6,
   },
   topRight: { flexDirection: 'row', alignItems: 'center' },
   icon: { position: 'relative', width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
@@ -846,24 +861,25 @@ const styles = StyleSheet.create({
   bandPerks: { flexDirection: 'row', alignItems: 'center', gap: 3, minWidth: 0, flexShrink: 1 },
   bandPerksText: { fontSize: 12.5, lineHeight: 15, ...font(500), color: t.accent[700], flexShrink: 1 },
 
-  main: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 14, paddingHorizontal: 14, paddingBottom: 12 },
+  main: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 14, paddingHorizontal: 14, paddingBottom: 12 },
   logo: {
-    width: 62, height: 62, flexShrink: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-    borderWidth: 2, borderColor: t.neutral[100], borderRadius: 31,
+    // A round logo, a size up.
+    width: 74, height: 74, flexShrink: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    borderWidth: 2, borderColor: t.neutral[100], borderRadius: 37,
   },
   logoEmpty: {},
-  logoImg: { width: '100%', height: '100%', backgroundColor: t.neutral[0] },
-  logoText: { fontSize: 20, lineHeight: 32, ...font(500), color: '#fff' },
+  logoImg: { width: '100%', height: '100%', borderRadius: 37, backgroundColor: t.neutral[0] },
+  logoText: { fontSize: 26, lineHeight: 34, ...font(600), color: '#fff' },
   idText: { flex: 1, minWidth: 0 },
   name: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%', alignSelf: 'flex-start' },
-  nameText: { flexShrink: 1, fontSize: 17, lineHeight: 21.25, ...font(500), color: t.neutral[900] },
+  nameText: { flexShrink: 1, fontSize: 21, lineHeight: 26, ...font(600), color: t.neutral[900] },
   ratingRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', rowGap: 4, columnGap: 8, marginTop: 6 },
   rating: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 2, paddingHorizontal: 7, borderRadius: 6 },
   ratingText: { fontSize: 12.5, lineHeight: 20, ...font(500), color: '#fff' },
   ratingNew: { backgroundColor: t.neutral[100] },
   ratingNewText: { color: t.neutral[600] },
-  counts: { fontSize: 12.5, lineHeight: 20, ...font(400), color: t.neutral[500] },
-  cta: { width: 98, flexShrink: 0, gap: 6 },
+  counts: { flexShrink: 1, fontSize: 12.5, lineHeight: 20, ...font(400), color: t.neutral[500] },
+  cta: { width: 84, flexShrink: 0, gap: 6 },
   ctaBtn: { height: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   ctaText: { fontSize: 13.5, lineHeight: 16.2, ...font(500) },
   follow: { backgroundColor: t.accent[600] },
@@ -910,8 +926,6 @@ const styles = StyleSheet.create({
 
   panel: { margin: 12, padding: 16, borderRadius: 16, backgroundColor: t.neutral[0] },
   homePanel: { paddingTop: 12, paddingHorizontal: 12, paddingBottom: 4 },
-  emptyCats: { alignItems: 'center' },
-  muted: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500], textAlign: 'center' },
   cats: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, columnGap: 10 },
   cat: { alignItems: 'center', gap: 3 },
   catImg: {
@@ -967,13 +981,8 @@ const styles = StyleSheet.create({
   productsSection: { paddingTop: 12, paddingHorizontal: 12 },
   list: { gap: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  empty: { alignItems: 'center', gap: 10, paddingVertical: 36, paddingHorizontal: 20, borderRadius: 16, backgroundColor: t.neutral[0] },
-  emptyText: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500], textAlign: 'center' },
-  resetBtn: {
-    minHeight: 44, paddingHorizontal: 10, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 999,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  resetText: { fontSize: 13, lineHeight: 15.6, ...font(500), color: t.neutral[600] },
+  // The empty list's white card on the shop's grey page.
+  empty: { borderRadius: 16, backgroundColor: t.neutral[0] },
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 16 },
   pageBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 14,

@@ -38,7 +38,7 @@ export default function SetupReturnPill() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'flex-end', zIndex: 250 },
+  wrap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'flex-end', zIndex: 250 },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',

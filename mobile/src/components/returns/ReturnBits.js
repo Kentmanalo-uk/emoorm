@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CaretRightIcon } from 'phosphor-react-native';
 import { font, t } from '../../theme';
 import ProductImage from '../ProductImage';
+import { variationImage } from '../../lib/variationImage';
 import { OrderBadge, cardShadow } from '../orders/OrderBits';
 import { longDate } from '../orders/orderProgress';
 
@@ -68,7 +69,7 @@ export function ReturnCard({ item, onPress }) {
         <View style={styles.items}>
           {lines.slice(0, 3).map((line) => (
             <View key={line.id} style={styles.item}>
-              <View style={styles.itemImage}><ProductImage src={line.orderItem?.product?.images?.[0]} /></View>
+              <View style={styles.itemImage}><ProductImage src={variationImage(line.orderItem?.product, line.orderItem?.selectedVariations)} /></View>
               <View style={styles.itemText}>
                 <Text style={styles.itemName} numberOfLines={2}>{line.orderItem?.product?.name || line.orderItem?.productName}</Text>
                 <Text style={styles.itemQty}>Qty: {line.quantity}</Text>

@@ -302,7 +302,7 @@ export default function ProfileSupport() {
           </View>
         ) : (
           <>
-            <ScrollView
+            <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
               ref={scrollRef}
               style={{ flex: 1 }}
               contentContainerStyle={styles.messages}
@@ -310,10 +310,7 @@ export default function ProfileSupport() {
               keyboardShouldPersistTaps="handled"
             >
               {active.messages.length === 0 ? (
-                <View style={styles.noMessages}>
-                  <ChatsCircleIcon size={56} weight="fill" color={t.primary[200]} />
-                  <Text style={styles.threadEmptyText}>Send a message to start the conversation.</Text>
-                </View>
+                <EmptyState page icon={ChatsCircleIcon} text="Send a message to start the conversation." />
               ) : null}
               {active.messages.map((m) => {
                 const mine = active.viewerSide === 'admin' ? m.senderId !== active.user?.id : m.senderId === active.user?.id;
@@ -372,7 +369,7 @@ export default function ProfileSupport() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Help & Support" backTo="/profile" />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
         <View>
           <Text style={styles.subtitle}>Your support cases with the municipal team. Looking for an answer instead?</Text>
           <Pressable accessibilityRole="link" onPress={() => router.push('/help-center')} style={styles.helpLink}>
@@ -393,7 +390,7 @@ export default function ProfileSupport() {
           {loadingList ? (
             <Text style={styles.loading}>Loading…</Text>
           ) : conversations.length === 0 ? (
-            <EmptyState inset art="support" title="No support cases yet" text="Start one and your municipal admin will pick it up." />
+            <EmptyState page art="support" title="No support cases yet" text="Start one and your municipal admin will pick it up." />
           ) : (
             conversations.map((c) => {
               const status = c.status || 'OPEN';
@@ -473,7 +470,7 @@ const styles = StyleSheet.create({
   threadScreen: { flex: 1, backgroundColor: t.neutral[0] },
   threadHead: {
     flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 12, paddingLeft: 6, paddingBottom: 8,
-    borderBottomWidth: 1, borderBottomColor: t.neutral[200], backgroundColor: t.neutral[0],
+    backgroundColor: t.neutral[0],
   },
   back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   threadTitle: { flex: 1, minWidth: 0, minHeight: 43 },
@@ -482,7 +479,6 @@ const styles = StyleSheet.create({
   threadSub: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
   threadEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   threadEmptyText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[500], textAlign: 'center', ...font(400) },
-  noMessages: { alignItems: 'center', gap: 8, paddingVertical: 32, paddingHorizontal: 16 },
 
   messages: { flexGrow: 1, gap: 10, paddingVertical: 14, paddingHorizontal: 12, backgroundColor: t.neutral[0] },
   message: {

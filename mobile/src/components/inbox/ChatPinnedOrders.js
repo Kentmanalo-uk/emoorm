@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { font, t } from '../../theme';
 import ChatProductThumb from './ChatProductThumb';
-import { formatMoney, ORDER_STATUS_STYLES } from './inboxFormat';
+import { formatMoney, orderStatusStyle } from './inboxFormat';
 
 /*
  * The orders between this buyer and shop, above the messages (web
@@ -10,7 +10,7 @@ import { formatMoney, ORDER_STATUS_STYLES } from './inboxFormat';
  * number, date and "Reference" button are hidden on phones).
  */
 function PinnedOrderCard({ order }) {
-  const style = ORDER_STATUS_STYLES[order.status] || { label: order.status };
+  const style = orderStatusStyle(order);
   const firstItem = order.items?.[0];
   const extra = Math.max(0, (order.itemCount || 0) - (firstItem?.quantity || 0));
   return (
@@ -36,7 +36,7 @@ export default function ChatPinnedOrders({ orders, sellerSide }) {
         {sellerSide ? 'Buyer orders' : 'Your orders'}
         <Text style={styles.count}> · {orders.length}</Text>
       </Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.track}>
+      <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.track}>
         {orders.map((o) => <PinnedOrderCard key={o.id} order={o} />)}
       </ScrollView>
     </View>

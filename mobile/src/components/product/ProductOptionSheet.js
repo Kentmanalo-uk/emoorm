@@ -10,7 +10,10 @@ import {
   pricedVariation, priceRange, stockedVariation, stockForSelection, unitPriceFor,
 } from '../../lib/variantPricing';
 import { font, t } from '../../theme';
+import { SheetFrame } from '../Sheet';
 import { peso } from './productLib';
+import { imagedVariation, optionImage } from '../../lib/variationImage';
+import { buyLabel } from '../../lib/availability';
 
 const native = Platform.OS !== 'web';
 const PLACEHOLDER = require('../../../assets/pdp-placeholder-product.png');
@@ -19,16 +22,25 @@ const PLACEHOLDER = require('../../../assets/pdp-placeholder-product.png');
  * Phone bottom sheet for picking a product's options and quantity before
  * adding it to the cart or buying it now (web/src/components/ProductOptionSheet.jsx).
  *
- * mode: 'cart' | 'buy' | null (closed). onConfirm() runs the add or buy; the
- * sheet only checks that every option group has a pick first.
+ * mode: 'cart' | 'buy' | null (closed).
+ * onConfirm(action): runs the add ('cart') or buy ('buy'); the sheet only
+ * checks that every option group has a pick first. Opened for Buy now, the
+ * sheet offers both, so a buyer who changes their mind can still add to cart.
+ * limits: { least, most } for the quantity when the product's kind sets them
+ * (a paluto's minimum order and no stock cap); stockText and soldOutText
+ * replace the stock line and "Out of stock" for kinds that word them otherwise;
+ * priceFrom shows sizes' prices as "from ₱350", priceUnit follows the price (" / head").
  */
 export default function ProductOptionSheet({
   mode, product, image, selected, onSelect, quantity, onQuantity, onConfirm, onClose, busy = false,
+  limits = null, stockText = null, soldOutText = 'Out of stock', priceFrom = false, priceUnit = '',
 }) {
   const insets = useSafeAreaInsets();
   const { height: screenH, width: screenW } = useWindowDimensions();
   const [shown, setShown] = useState(mode);
   const [missing, setMissing] = useState('');
+  // Which footer button was pressed, so only that one shows it is working.
+  const [pressed, setPressed] = useState(null);
   const [qtyText, setQtyText] = useState(String(quantity));
   const progress = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef(null);
@@ -41,6 +53,7 @@ export default function ProductOptionSheet({
     if (mode) {
       setShown(mode);
       setMissing('');
+      setPressed(null);
       progress.setValue(0);
       Animated.timing(progress, { toValue: 1, duration: 260, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: native }).start();
       return undefined;
@@ -52,12 +65,14 @@ export default function ProductOptionSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
-  if (!shown || !product) return null;
+  // iOS 26 keeps the system sheet mounted, so it can rise and go down itself.
+  if (!product || !shown) return null;
 
   const variations = Array.isArray(product.variations) ? product.variations.filter((v) => v?.name) : [];
   const stockGroup = stockedVariation(product.variations);
   const stock = stockForSelection(product, selected);
-  const outOfStock = stock <= 0;
+  const { least, most } = limits || { least: 1, most: stock };
+  const outOfStock = most <= 0;
   const optionSoldOut = (groupName, opt) => stockGroup?.name === groupName && Number(stockGroup.stocks?.[opt] || 0) <= 0;
   const picked = variations.filter((v) => selected[v.name]).map((v) => `${v.name}: ${selected[v.name]}`);
   const unpicked = variations.filter((v) => !selected[v.name]).map((v) => v.name);
@@ -68,10 +83,13 @@ export default function ProductOptionSheet({
   const showRange = !!pricedGroup && range.min !== range.max && !chosen;
   const total = unit * quantity;
   const low = product.lowStockThreshold || 5;
+  // Options with their own photo show it, and the head shows the picked one's.
+  const photoGroup = imagedVariation(product.variations);
+  const headImage = optionImage(product.variations, selected) || image;
 
-  const setQty = (n) => onQuantity(Math.max(1, Math.min(stock || 1, n)));
+  const setQty = (n) => onQuantity(Math.max(least, Math.min(most || 1, n)));
 
-  const confirm = () => {
+  const confirm = (action = shown) => {
     const first = variations.find((v) => !selected[v.name]);
     if (first) {
       setMissing(first.name);
@@ -79,163 +97,178 @@ export default function ProductOptionSheet({
       if (y != null) scrollRef.current?.scrollTo({ y: Math.max(0, y - 40), animated: true });
       return;
     }
-    onConfirm();
+    setPressed(action);
+    onConfirm(action);
   };
+  const split = shown === 'buy' && !outOfStock;
 
-  const label = shown === 'buy' ? 'Buy now' : 'Add to cart';
+  const label = shown === 'buy' ? buyLabel(product) : 'Add to cart';
   // The options grid: as many 96px+ columns as fit, 8px apart.
   const innerW = Math.min(screenW, 768) - 32;
   const cols = Math.max(1, Math.floor((innerW + 8) / 104));
   const optionW = (innerW - (cols - 1) * 8) / cols;
   const translateY = progress.interpolate({ inputRange: [0, 1], outputRange: [screenH * 0.8, 0] });
 
-  return (
-    <Modal visible transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
-      <KeyboardAvoidingView style={styles.root} behavior={native ? 'padding' : undefined}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, { opacity: progress }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
-        </Animated.View>
-        <Animated.View
-          style={[styles.sheet, { maxHeight: screenH * 0.78, transform: [{ translateY }] }]}
-          accessibilityViewIsModal
-          accessibilityLabel={`${label}: choose options`}
-        >
-          <Pressable style={styles.close} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
-            <XIcon size={18} weight="bold" color="#fff" />
-          </Pressable>
-
-          <View style={styles.head}>
-            <View style={styles.thumb}>{image ? <ProductImage src={image} /> : <Image source={PLACEHOLDER} style={styles.thumbImg} />}</View>
-            <View style={styles.headInfo}>
-              <Text style={styles.price}>{showRange ? `${peso(range.min)} – ${peso(range.max)}` : peso(unit)}</Text>
-              <View style={[styles.stock, outOfStock ? styles.stockOut : stock <= low ? styles.stockLow : null]}>
-                <Text style={[styles.stockText, outOfStock ? styles.stockOutText : stock <= low ? styles.stockLowText : null]}>
-                  {outOfStock ? 'Out of stock' : stock <= low ? `Only ${stock} left` : `Stock: ${stock}`}
-                </Text>
-              </View>
-              <Text style={styles.picked} numberOfLines={1}>
-                {variations.length === 0 ? product.name : unpicked.length ? `Select ${unpicked.join(', ')}` : picked.join(', ')}
-              </Text>
-            </View>
+  // The sheet's head, options, quantity and buttons (in either sheet).
+  const content = (
+    <>
+      <View style={styles.head}>
+        <View style={styles.thumb}>{headImage ? <ProductImage src={headImage} /> : <Image source={PLACEHOLDER} style={styles.thumbImg} />}</View>
+        <View style={styles.headInfo}>
+          <Text style={styles.price}>
+            {showRange ? (priceFrom ? `from ${peso(range.min)}` : `${peso(range.min)} – ${peso(range.max)}`) : peso(unit)}
+            {priceUnit ? <Text style={styles.priceUnit}>{priceUnit}</Text> : null}
+          </Text>
+          <View style={[styles.stock, outOfStock ? styles.stockOut : !stockText && stock <= low ? styles.stockLow : null]}>
+            <Text style={[styles.stockText, outOfStock ? styles.stockOutText : !stockText && stock <= low ? styles.stockLowText : null]}>
+              {outOfStock ? soldOutText : stockText || (stock <= low ? `Only ${stock} left` : `Stock: ${stock}`)}
+            </Text>
           </View>
+          <Text style={styles.picked} numberOfLines={1}>
+            {variations.length === 0 ? product.name : unpicked.length ? `Select ${unpicked.join(', ')}` : picked.join(', ')}
+          </Text>
+        </View>
+      </View>
 
-          {product.store?.name ? (
-            <View style={styles.banner}>
-              <TruckIcon size={17} weight="fill" color={t.primary[700]} />
-              <Text style={styles.bannerText} numberOfLines={1}>
-                Sold by <Text style={styles.bannerStrong}>{product.store.name}</Text>
+      {product.store?.name ? (
+        <View style={styles.banner}>
+          <TruckIcon size={17} weight="fill" color={t.primary[700]} />
+          <Text style={styles.bannerText} numberOfLines={1}>
+            Sold by <Text style={styles.bannerStrong}>{product.store.name}</Text>
+          </Text>
+          <Text style={styles.bannerNote}>Delivery options at checkout</Text>
+        </View>
+      ) : null}
+
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} ref={scrollRef} style={styles.bodyScroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        {variations.map((v) => {
+          const options = Array.isArray(v.options) ? v.options : [];
+          return (
+            <View key={v.name} style={styles.group} onLayout={(e) => { groupY.current[v.name] = e.nativeEvent.layout.y; }}>
+              <Text style={styles.groupTitle}>
+                {v.name} <Text style={styles.groupCount}>({options.length})</Text>
               </Text>
-              <Text style={styles.bannerNote}>Delivery options at checkout</Text>
-            </View>
-          ) : null}
-
-          <ScrollView ref={scrollRef} style={styles.bodyScroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-            {variations.map((v) => {
-              const options = Array.isArray(v.options) ? v.options : [];
-              return (
-                <View key={v.name} style={styles.group} onLayout={(e) => { groupY.current[v.name] = e.nativeEvent.layout.y; }}>
-                  <Text style={styles.groupTitle}>
-                    {v.name} <Text style={styles.groupCount}>({options.length})</Text>
-                  </Text>
-                  <View style={styles.options} accessibilityRole="radiogroup" accessibilityLabel={v.name}>
-                    {options.map((opt) => {
-                      const on = selected[v.name] === opt;
-                      const soldOut = optionSoldOut(v.name, opt);
-                      const price = pricedGroup?.name === v.name && Number(pricedGroup.prices?.[opt]) > 0 ? pricedGroup.prices[opt] : null;
-                      return (
-                        <Pressable
-                          key={opt}
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: on, disabled: soldOut && !on }}
-                          disabled={soldOut && !on}
-                          onPress={() => {
-                            onSelect(v.name, on ? undefined : opt);
-                            if (missing === v.name) setMissing('');
-                            // Keep the quantity within the new option's stock.
-                            if (!on && stockGroup?.name === v.name) {
-                              const left = Number(stockGroup.stocks?.[opt] || 0);
-                              if (left > 0 && quantity > left) onQuantity(left);
-                            }
-                          }}
-                          style={[
-                            styles.option, { width: optionW },
-                            on && styles.optionOn,
-                            missing === v.name && !on && styles.optionError,
-                            soldOut && styles.optionSoldOut,
-                          ]}
-                        >
-                          <Text style={[styles.optionText, on && styles.optionTextOn]}>{opt}</Text>
-                          {soldOut ? <Text style={styles.optionSoldOutText}>Sold out</Text> : null}
-                          {price != null ? <Text style={[styles.optionPrice, on && styles.optionTextOn]}>{peso(price)}</Text> : null}
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  {missing === v.name ? <Text style={styles.error}>Please select {v.name}.</Text> : null}
-                </View>
-              );
-            })}
-
-            <View style={[styles.group, styles.qtyRow]}>
-              <Text style={[styles.groupTitle, styles.qtyTitle]}>Quantity</Text>
-              <View style={styles.qty}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Decrease quantity"
-                  disabled={quantity <= 1}
-                  onPress={() => setQty(quantity - 1)}
-                  style={styles.qtyBtn}
-                >
-                  <MinusIcon size={15} weight="bold" color={quantity <= 1 ? t.neutral[300] : t.neutral[800]} />
-                </Pressable>
-                <TextInput
-                  value={qtyText}
-                  keyboardType="number-pad"
-                  accessibilityLabel="Quantity"
-                  onChangeText={(raw) => {
-                    const digits = raw.replace(/\D/g, '');
-                    setQtyText(digits);
-                    if (digits) setQty(parseInt(digits, 10));
-                  }}
-                  onBlur={() => setQtyText(String(quantity))}
-                  style={styles.qtyInput}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Increase quantity"
-                  disabled={quantity >= stock}
-                  onPress={() => setQty(quantity + 1)}
-                  style={styles.qtyBtn}
-                >
-                  <PlusIcon size={15} weight="bold" color={quantity >= stock ? t.neutral[300] : t.neutral[800]} />
-                </Pressable>
+              <View style={styles.options} accessibilityRole="radiogroup" accessibilityLabel={v.name}>
+                {options.map((opt) => {
+                  const on = selected[v.name] === opt;
+                  const soldOut = optionSoldOut(v.name, opt);
+                  const price = pricedGroup?.name === v.name && Number(pricedGroup.prices?.[opt]) > 0 ? pricedGroup.prices[opt] : null;
+                  const photo = photoGroup?.name === v.name ? photoGroup.images[opt] : null;
+                  return (
+                    <Pressable
+                      key={opt}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: on, disabled: soldOut && !on }}
+                      disabled={soldOut && !on}
+                      onPress={() => {
+                        onSelect(v.name, on ? undefined : opt);
+                        if (missing === v.name) setMissing('');
+                        // Keep the quantity within the new option's stock.
+                        if (!on && stockGroup?.name === v.name) {
+                          const left = Number(stockGroup.stocks?.[opt] || 0);
+                          if (left > 0 && quantity > left) onQuantity(left);
+                        }
+                      }}
+                      style={[
+                        styles.option, { width: optionW },
+                        on && styles.optionOn,
+                        missing === v.name && !on && styles.optionError,
+                        soldOut && styles.optionSoldOut,
+                      ]}
+                    >
+                      {photo ? <View style={styles.optionThumb}><ProductImage src={photo} /></View> : null}
+                      <Text style={[styles.optionText, on && styles.optionTextOn]}>{opt}</Text>
+                      {soldOut ? <Text style={styles.optionSoldOutText}>Sold out</Text> : null}
+                      {price != null ? <Text style={[styles.optionPrice, on && styles.optionTextOn]}>{peso(price)}</Text> : null}
+                    </Pressable>
+                  );
+                })}
               </View>
+              {missing === v.name ? <Text style={styles.error}>Please select {v.name}.</Text> : null}
             </View>
-            {!outOfStock && quantity >= stock && stock > 1 ? (
-              <Text style={styles.note}>You’ve reached the available stock.</Text>
-            ) : null}
-          </ScrollView>
+          );
+        })}
 
-          <View style={[styles.foot, { paddingBottom: 10 + insets.bottom }]}>
+        <View style={[styles.group, styles.qtyRow]}>
+          <Text style={[styles.groupTitle, styles.qtyTitle]}>
+            Quantity{least > 1 ? <Text style={styles.groupCount}> (minimum {least})</Text> : null}
+          </Text>
+          <View style={styles.qty}>
             <Pressable
               accessibilityRole="button"
-              onPress={confirm}
-              disabled={outOfStock || busy}
-              style={[styles.confirm, shown === 'buy' && styles.confirmBuy, (outOfStock || busy) && styles.confirmOff]}
+              accessibilityLabel="Decrease quantity"
+              disabled={quantity <= least}
+              onPress={() => setQty(quantity - 1)}
+              style={styles.qtyBtn}
             >
-              {outOfStock ? <Text style={styles.confirmText}>Out of stock</Text> : busy ? (
-                <View style={styles.busy}><ActivityIndicator size="small" color="#fff" /><Text style={styles.confirmText}>Please wait…</Text></View>
-              ) : (
-                <>
-                  <Text style={styles.confirmText}>{label}</Text>
-                  {shown === 'buy' ? <Text style={styles.confirmSmall}>{peso(total)}</Text> : null}
-                </>
-              )}
+              <MinusIcon size={15} weight="bold" color={quantity <= least ? t.neutral[300] : t.neutral[800]} />
+            </Pressable>
+            <TextInput
+              value={qtyText}
+              keyboardType="number-pad"
+              accessibilityLabel="Quantity"
+              onChangeText={(raw) => {
+                const digits = raw.replace(/\D/g, '');
+                setQtyText(digits);
+                if (digits) setQty(parseInt(digits, 10));
+              }}
+              onBlur={() => setQtyText(String(quantity))}
+              style={styles.qtyInput}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Increase quantity"
+              disabled={quantity >= most}
+              onPress={() => setQty(quantity + 1)}
+              style={styles.qtyBtn}
+            >
+              <PlusIcon size={15} weight="bold" color={quantity >= most ? t.neutral[300] : t.neutral[800]} />
             </Pressable>
           </View>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    </Modal>
+        </View>
+        {!outOfStock && quantity >= stock && stock > 1 ? (
+          <Text style={styles.note}>You’ve reached the available stock.</Text>
+        ) : null}
+      </ScrollView>
+
+      <View style={[styles.foot, split && styles.footSplit, { paddingBottom: 10 + insets.bottom }]}>
+        {split ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => confirm('cart')}
+            disabled={busy}
+            style={[styles.confirm, styles.confirmSplit, styles.confirmCart, busy && styles.confirmOff]}
+          >
+            {busy && pressed === 'cart' ? (
+              <View style={styles.busy}><ActivityIndicator size="small" color={t.accent[600]} /><Text style={[styles.confirmText, styles.cartText]}>Adding…</Text></View>
+            ) : <Text style={[styles.confirmText, styles.cartText]}>Add to cart</Text>}
+          </Pressable>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => confirm(shown)}
+          disabled={outOfStock || busy}
+          style={[styles.confirm, split && styles.confirmSplit, shown === 'buy' && styles.confirmBuy, (outOfStock || busy) && styles.confirmOff]}
+        >
+          {outOfStock ? <Text style={styles.confirmText}>{soldOutText}</Text> : busy && pressed !== 'cart' ? (
+            <View style={styles.busy}><ActivityIndicator size="small" color="#fff" /><Text style={styles.confirmText}>Please wait…</Text></View>
+          ) : (
+            <>
+              <Text style={styles.confirmText}>{label}</Text>
+              {shown === 'buy' ? <Text style={styles.confirmSmall}>{peso(total)}</Text> : null}
+            </>
+          )}
+        </Pressable>
+      </View>
+    </>
+  );
+
+  // The app's one sheet look on every phone (the sign-in sheet's: Sheet.js
+  // SheetFrame): handle, round × at the left, then the product and options.
+  return (
+    <SheetFrame safeBottom={false} open={Boolean(mode)} onClose={onClose} scroll={false} padded={false} maxHeight={0.82}>
+      {content}
+    </SheetFrame>
   );
 }
 
@@ -246,15 +279,20 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: '#fff',
     boxShadow: [{ offsetX: 0, offsetY: -8, blurRadius: 30, color: 'rgba(15, 23, 42, 0.18)' }],
   },
+  glassClose: {
+    position: 'absolute', top: 0, right: 12, zIndex: 2, width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[100],
+  },
   close: {
     position: 'absolute', top: -52, right: 14, width: 38, height: 38, borderRadius: 19,
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15, 23, 42, 0.62)',
   },
-  head: { flexDirection: 'row', gap: 14, paddingTop: 16, paddingHorizontal: 16, paddingBottom: 12 },
+  head: { flexDirection: 'row', gap: 14, paddingTop: 6, paddingHorizontal: 16, paddingBottom: 12 },
   thumb: { width: 96, height: 96, borderRadius: 12, overflow: 'hidden', backgroundColor: t.neutral[100] },
   thumbImg: { width: '100%', height: '100%' },
   headInfo: { flex: 1, minWidth: 0, justifyContent: 'flex-end', gap: 4 },
   price: { fontSize: 24, lineHeight: 26.4, ...font(500), color: t.accent[500] },
+  priceUnit: { fontSize: 14 },
   stock: { alignSelf: 'flex-start', paddingVertical: 2, paddingHorizontal: 8, borderRadius: 6, backgroundColor: t.primary[50] },
   stockText: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.primary[700] },
   stockLow: { backgroundColor: '#fff7ed' },
@@ -280,6 +318,7 @@ const styles = StyleSheet.create({
     backgroundColor: t.neutral[50], alignItems: 'center', justifyContent: 'center', gap: 2,
   },
   optionOn: { borderColor: t.accent[500], backgroundColor: '#fdf2f8' },
+  optionThumb: { width: 44, height: 44, marginBottom: 2, borderRadius: 8, overflow: 'hidden', backgroundColor: t.neutral[100] },
   optionError: { borderColor: '#fca5a5' },
   optionSoldOut: { opacity: 0.5 },
   optionText: { fontSize: 13.5, lineHeight: 16.875, ...font(400), color: t.neutral[800], textAlign: 'center' },
@@ -299,6 +338,11 @@ const styles = StyleSheet.create({
   foot: { paddingTop: 10, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: t.neutral[150] },
   confirm: { height: 50, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: t.accent[500] },
   confirmBuy: { backgroundColor: t.primary[600] },
+  // Opened for Buy now: Add to cart beside it, the two side by side.
+  footSplit: { flexDirection: 'row', gap: 10 },
+  confirmSplit: { flex: 1, minWidth: 0 },
+  confirmCart: { backgroundColor: t.accent[50], borderWidth: 1.5, borderColor: t.accent[500] },
+  cartText: { color: t.accent[600] },
   confirmOff: { opacity: 0.5 },
   confirmText: { fontSize: 16, lineHeight: 18.4, ...font(500), color: '#fff' },
   confirmSmall: { fontSize: 12, lineHeight: 19.2, ...font(400), color: 'rgba(255,255,255,0.9)' },

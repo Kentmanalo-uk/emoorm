@@ -11,14 +11,15 @@ import { font, t } from '../../theme';
  * media: (color) => element, so the icon can take the card's colour
  * mediaColor: the icon colour when not checked (payment methods have their own)
  * flush: no gap between cards (the phone payment list), so no ring either
+ * box: a checkbox card (square tick, .choice-card-check.is-box)
  */
 export default function CheckoutChoiceCard({
-  checked, disabled, onPress, media, mediaColor, plainMedia, title, desc, aside, style,
+  checked, disabled, onPress, media, mediaColor, plainMedia, title, desc, aside, style, box = false,
 }) {
   const iconColor = checked ? t.primary[700] : (mediaColor || t.neutral[600]);
   return (
     <Pressable
-      accessibilityRole="radio"
+      accessibilityRole={box ? 'checkbox' : 'radio'}
       accessibilityState={{ checked: Boolean(checked), disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
@@ -34,7 +35,7 @@ export default function CheckoutChoiceCard({
         {desc ? <Text style={styles.desc}>{desc}</Text> : null}
       </View>
       {aside != null && aside !== '' ? <Text style={styles.aside}>{aside}</Text> : null}
-      <View style={[styles.check, checked && styles.checkOn]}>
+      <View style={[styles.check, box && styles.checkBox, checked && styles.checkOn]}>
         {checked ? <CheckIcon size={12} weight="bold" color="#fff" /> : null}
       </View>
     </Pressable>
@@ -102,6 +103,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
+  checkBox: { borderRadius: 6 },
   checkOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   mark: { borderRadius: 8, backgroundColor: '#fff' },
   markLogo: { borderWidth: 1, borderColor: t.neutral[200] },

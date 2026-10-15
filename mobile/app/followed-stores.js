@@ -1,20 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
-  BellIcon, BellSlashIcon, MagnifyingGlassIcon, PackageIcon, UsersIcon, XIcon,
+  BellIcon, BellSlashIcon, MagnifyingGlassIcon, UserMinusIcon, XIcon,
 } from 'phosphor-react-native';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
-import LoadingSkeleton from '../src/components/LoadingSkeleton';
 import { ProfileEmpty } from '../src/components/profile/ProfileUI';
-import { ProfileSelect } from '../src/components/profile/ProfileAddressPicker';
+import Select from '../src/components/Select';
 import { errorText } from '../src/components/profile/profileLib';
 import { resolveImg } from '../src/lib/media';
 import { toast } from '../src/lib/toast';
 import { invalidateCachedData } from '../src/lib/dataCache';
 import { font, t } from '../src/theme';
+import { PageLoader } from '../src/components/BrandLoader';
+import { useStorePeek } from '../src/components/peek/StorePeek';
 
 const SORTS = [
   { value: 'recent', label: 'Recently followed' },
@@ -97,7 +97,7 @@ export default function FollowedStores() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Followed Stores" backTo="/profile" />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.subtitle}>Get updates when your favorite stores add new products.</Text>
 
         <View style={styles.toolbar}>
@@ -124,7 +124,7 @@ export default function FollowedStores() {
           <View style={styles.sort}>
             <Text style={styles.sortLabel}>Sort:</Text>
             <View>
-              <ProfileSelect
+              <Select
                 title="Sort followed stores"
                 value={sort}
                 options={SORTS}
@@ -140,6 +140,7 @@ export default function FollowedStores() {
           <StoreCardsSkeleton count={4} />
         ) : isEmpty ? (
           <ProfileEmpty
+            page
             style={styles.emptyCard}
             art={hasFilters ? 'search' : 'following'}
             title={hasFilters ? 'No stores match your search' : 'You are not following any stores yet'}
@@ -168,60 +169,21 @@ export default function FollowedStores() {
   );
 }
 
-/** The banner's fallback: linear-gradient(120deg, primary-500, warning-500). */
-function BannerFallback() {
-  const [w, setW] = useState(366);
-  const h = 84;
-  const a = (120 * Math.PI) / 180;
-  const dx = Math.sin(a);
-  const dy = -Math.cos(a);
-  const len = Math.abs(w * dx) + Math.abs(h * dy);
-  const cx = w / 2;
-  const cy = h / 2;
-  return (
-    <View style={StyleSheet.absoluteFill} onLayout={(e) => setW(e.nativeEvent.layout.width || 366)}>
-      <Svg width="100%" height="100%">
-        <Defs>
-          <LinearGradient
-            id="fsBanner"
-            gradientUnits="userSpaceOnUse"
-            x1={cx - (dx * len) / 2}
-            y1={cy - (dy * len) / 2}
-            x2={cx + (dx * len) / 2}
-            y2={cy + (dy * len) / 2}
-          >
-            <Stop offset="0" stopColor={t.primary[500]} />
-            <Stop offset="1" stopColor={t.warning[500]} />
-          </LinearGradient>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#fsBanner)" />
-      </Svg>
-    </View>
-  );
-}
-
 function FollowedStoreCard({ item, busy, onOpen, onUnfollow, onToggleNotifs }) {
-  const { store, notificationsEnabled, followedAt } = item;
-  const banner = store.bannerImage || store.coverImage;
+  const { store, notificationsEnabled } = item;
   const initials = store.name
     ? store.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
     : '?';
 
-  const followedLabel = useMemo(() => {
-    if (!followedAt) return '';
-    const diff = Math.floor((Date.now() - new Date(followedAt).getTime()) / 1000);
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  }, [followedAt]);
+  // Held: the shop's preview, with Unfollow instead of Follow.
+  const peek = useStorePeek()(store, {
+    onOpen,
+    follow: false,
+    extra: [{ key: 'unfollow', label: 'Unfollow', Icon: UserMinusIcon, destructive: true, onPress: onUnfollow }],
+  });
 
   return (
     <View style={styles.card}>
-      <Pressable accessibilityRole="link" accessibilityLabel={store.name} onPress={onOpen} style={styles.banner}>
-        {banner ? <Image source={{ uri: resolveImg(banner) }} style={styles.bannerImg} resizeMode="cover" /> : <BannerFallback />}
-      </Pressable>
-
       <View style={styles.body}>
         <View style={styles.identity}>
           <View style={styles.avatar}>
@@ -230,19 +192,13 @@ function FollowedStoreCard({ item, busy, onOpen, onUnfollow, onToggleNotifs }) {
               : <Text style={styles.initials}>{initials}</Text>}
           </View>
           <View style={styles.title}>
-            <Pressable accessibilityRole="link" onPress={onOpen}>
+            <Pressable accessibilityRole="link" onPress={onOpen} {...peek}>
               {({ pressed }) => <Text style={[styles.name, pressed && { color: t.primary[600] }]} numberOfLines={1}>{store.name}</Text>}
             </Pressable>
-            {store.municipality?.name ? <Text style={styles.location}>{store.municipality.name}</Text> : null}
+            <Text style={styles.location} numberOfLines={1}>
+              {[store.municipality?.name, `${store.followerCount ?? 0} ${store.followerCount === 1 ? 'Follower' : 'Followers'}`].filter(Boolean).join('  |  ')}
+            </Text>
           </View>
-        </View>
-
-        {store.description ? <Text style={styles.desc} numberOfLines={2}>{store.description}</Text> : null}
-
-        <View style={styles.stats}>
-          <View style={styles.stat}><PackageIcon size={13} color={t.neutral[500]} /><Text style={styles.statText}>{store.productCount} products</Text></View>
-          <View style={styles.stat}><UsersIcon size={13} color={t.neutral[500]} /><Text style={styles.statText}>{store.followerCount} followers</Text></View>
-          <Text style={styles.since}>Followed {followedLabel}</Text>
         </View>
 
         <View style={styles.actions}>
@@ -290,31 +246,14 @@ function FollowedStoreCard({ item, busy, onOpen, onUnfollow, onToggleNotifs }) {
 
 /** StoreCardsSkeleton (web PageSkeletons): a logo, two lines and three thumbs per card. */
 function StoreCardsSkeleton({ count = 4 }) {
-  return (
-    <View style={styles.grid} accessibilityLabel="Loading shops">
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={styles.skCard}>
-          <View style={styles.skRow}>
-            <LoadingSkeleton width={48} height={48} borderRadius={24} />
-            <View style={styles.skLines}>
-              <LoadingSkeleton height={14} width="65%" />
-              <LoadingSkeleton height={11} width="45%" />
-            </View>
-          </View>
-          <View style={styles.skThumbs}>
-            {[0, 1, 2].map((k) => <View key={k} style={{ flex: 1 }}><LoadingSkeleton height={64} borderRadius={10} /></View>)}
-          </View>
-        </View>
-      ))}
-    </View>
-  );
+  return <PageLoader label="Loading shops" />;
 }
 
 const CARD_SHADOW = '0px 1px 2px rgba(15, 23, 42, 0.04)';
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
-  content: { gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
+  content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
   subtitle: { marginTop: 4, fontSize: 13.5, lineHeight: 21.6, color: t.neutral[500], ...font(400) },
 
   toolbar: { gap: 8 },
@@ -328,29 +267,24 @@ const styles = StyleSheet.create({
   searchClear: { position: 'absolute', right: 4, width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 18 },
   sort: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   sortLabel: { fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
-  sortSelect: { minHeight: 40, paddingVertical: 8, paddingLeft: 12, paddingRight: 4, borderColor: 'transparent', borderRadius: 10, gap: 10 },
+  // .profile-main .followed-sort .ui-select on phones.
+  sortSelect: { minHeight: 40, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: 'transparent', borderRadius: 10, backgroundColor: t.neutral[0] },
   sortText: { flexGrow: 0, flexShrink: 1, flexBasis: 'auto', fontSize: 14, lineHeight: 20, color: t.neutral[900] },
 
-  grid: { gap: 12 },
-  card: { borderRadius: 12, overflow: 'hidden', backgroundColor: t.neutral[0], boxShadow: CARD_SHADOW },
-  banner: { height: 84, overflow: 'hidden', backgroundColor: t.primary[500] },
-  bannerImg: { width: '100%', height: '100%' },
-  body: { gap: 10, padding: 14 },
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: -32 },
+  grid: { gap: 0 },
+  // No card around it: a plain row, a hairline between shops.
+  card: { backgroundColor: t.neutral[0], borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.neutral[200] },
+  body: { gap: 14, paddingTop: 6, paddingBottom: 18 },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatar: {
-    width: 56, height: 56, borderRadius: 28, borderWidth: 3, borderColor: t.neutral[0], overflow: 'hidden',
+    width: 64, height: 64, borderRadius: 32, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
   avatarImg: { width: '100%', height: '100%' },
-  initials: { fontSize: 15, lineHeight: 24, color: '#fff', ...font(500) },
-  title: { flex: 1, minWidth: 0, gap: 2, marginTop: 24 },
-  name: { fontSize: 15, lineHeight: 18, color: t.neutral[900], ...font(500) },
-  location: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
-  desc: { fontSize: 13, lineHeight: 18.2, color: t.neutral[600], ...font(400) },
-  stats: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
-  stat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statText: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
-  since: { fontSize: 11.5, lineHeight: 18.4, color: t.neutral[500], ...font(400) },
+  initials: { fontSize: 20, lineHeight: 26, color: '#fff', ...font(500) },
+  title: { flex: 1, minWidth: 0, gap: 3 },
+  name: { fontSize: 18, lineHeight: 23, color: t.neutral[900], ...font(600) },
+  location: { fontSize: 13.5, lineHeight: 18, color: t.neutral[500], ...font(400) },
   actions: { flexDirection: 'row', gap: 6 },
   btn: {
     flex: 1, minWidth: 0, minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,

@@ -22,6 +22,7 @@ export const PHONE_TITLES = {
   '/seller/products': 'My products',
   '/seller/products/new': 'Add product',
   '/seller/today': "Today's menu",
+  '/seller/today/post': 'Post an item',
   '/seller/messages': 'Chat',
   '/seller/assistant': 'Ate Moormy',
   '/seller/marketing': 'Marketing',
@@ -34,6 +35,8 @@ export const PHONE_TITLES = {
   '/seller/notifications': 'Notifications',
   '/seller/reviews': 'Reviews',
   '/seller/questions': 'Questions',
+  '/seller/offers': 'Offers',
+  '/seller/offers': 'Offers',
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop profile',
@@ -48,6 +51,7 @@ export const PHONE_TITLES = {
   '/seller/fulfillment/payment': 'Payment options',
   '/seller/settings': 'Settings',
   '/seller/verification': 'Verify identity',
+  '/seller/shop-qr': 'Shop QR',
 };
 
 // The breadcrumb labels the website falls back on for a path with no phone title.
@@ -68,6 +72,8 @@ const LABELS = {
   '/seller/decorate/home': 'Shop home',
   '/seller/reviews': 'Reviews',
   '/seller/questions': 'Buyer questions',
+  '/seller/offers': 'Offers',
+  '/seller/offers': 'Offers',
   '/seller/analytics': 'Analytics',
   '/seller/finance': 'Finance',
   '/seller/store': 'Shop Profile',
@@ -113,6 +119,8 @@ export function sellerBackTarget(pathname) {
   if (/^\/seller\/(store|fulfillment)\/[a-z]+$/.test(path)) return path.replace(/\/[a-z]+$/, '');
   // Adding or editing a product: back to My products (a tab of its own).
   if (path.startsWith('/seller/products')) return '/seller/products';
+  // Posting or editing on Today's menu: back to the menu.
+  if (path.startsWith('/seller/today/')) return '/seller/today';
   if (/^\/seller\/(orders|returns|reviews|analytics|finance)/.test(path)) return '/seller';
   if (path === '/seller/assistant') return '/seller/messages';
   return '/seller/menu';
@@ -176,6 +184,7 @@ const SELLER_RULES = [
   [/^\/seller\/fulfillment/, [S.store, S.orders, S.settings]],
   [/^\/seller\/settings/, [S.store, S.fulfillment, S.verify, S.admin]],
   [/^\/seller\/verification/, [S.settings, S.admin]],
+  [/^\/seller\/shop-qr/, [S.marketing, S.decorate, S.store]],
   [/^\/seller\/setup/, [S.admin, S.help]],
 ];
 const SELLER_FALLBACK = [S.home, S.me, S.help];

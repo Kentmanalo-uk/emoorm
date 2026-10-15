@@ -1,9 +1,11 @@
 import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Font from 'expo-font';
+import { loadFontsByFetch } from '../src/lib/devFonts';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { Image, View, StyleSheet, Text, TextInput } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Appearance, View, StyleSheet, Text, TextInput } from 'react-native';
 import Toast from 'react-native-toast-message';
 import {
   useFonts,
@@ -17,12 +19,51 @@ import useAuthStore from '../src/store/authStore';
 import { colors, fontFamily } from '../src/theme';
 import { toastConfig } from '../src/lib/toast';
 import { AccountSwitchHost } from '../src/components/RoleSwitchOverlay';
+import { liquidGlass } from '../src/components/Glass';
+import { AccountSheetHost } from '../src/components/AccountSheet';
+import { HeroFlightHost } from '../src/components/HeroFlight';
+import BrandSplash from '../src/components/BrandSplash';
+import { LoaderOverlayHost } from '../src/components/BrandLoader';
+import { CommerceHudHost } from '../src/components/CommerceHud';
+import { PeekHost } from '../src/components/Peek';
+import { SwitchAccountHost } from '../src/components/SwitchAccountSheet';
+
+// Log in, Sign up and the password screens open as a sheet over the page the
+// shopper was on (web pages/AuthSheet.css). iOS 26: the system's own sheet
+// (swipe down to close). Elsewhere: it slides up from the bottom over the
+// page, which stays behind it as on the website.
+const AUTH_SHEET = liquidGlass
+  ? { presentation: 'modal', gestureEnabled: true }
+  : {
+    presentation: 'transparentModal',
+    animation: 'slide_from_bottom',
+    animationDuration: 380,
+    // The page stays visible behind the sheet: no screen colour of its own.
+    contentStyle: { backgroundColor: 'transparent' },
+  };
 
 SplashScreen.preventAutoHideAsync().catch(() => { });
+
+// How long the opening waits for the fonts before it shows the app anyway.
+const FONT_WAIT_MS = 8000;
+const FONTS = {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+  DMSans_800ExtraBold,
+};
+
+// The app is light only, like the website: a phone in dark mode must not
+// turn the system's own parts dark (the iOS 26 glass bars, tab bars, sheets
+// and menus) under the app's light pages. app.json says the same for builds;
+// this also covers Expo Go, which ignores it.
+try { Appearance.setColorScheme('light'); } catch { /* not on every platform */ }
 
 const PROTECTED_PATHS = [
   '/conversation',
   '/orders',
+  '/offers',
   '/checkout',
   '/wishlist',
   '/addresses',
@@ -56,18 +97,33 @@ export default function RootLayout() {
   const hydrate = useAuthStore((s) => s.hydrate);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [fontsLoaded] = useFonts({
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_600SemiBold,
-    DMSans_700Bold,
-    DMSans_800ExtraBold,
-  });
+  const [fontsReady, fontError] = useFonts(FONTS);
+  // The app opens with DM Sans, or with the phone's own font when DM Sans
+  // fails or takes too long (useFonts never turns true after an error).
+  const [fontWait, setFontWait] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setFontWait(false), FONT_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  // DM Sans that fails to load (Expo Go on some iPhones can't download
+  // assets at all) is fetched another way (lib/devFonts) or asked for once
+  // more, before the app opens, so the first screens already use it.
+  const [fontRetried, setFontRetried] = useState(false);
+  useEffect(() => {
+    if (!fontError) return undefined;
+    let live = true;
+    (__DEV__ ? loadFontsByFetch(FONTS) : Font.loadAsync(FONTS))
+      .catch((e) => console.warn('Fonts did not load:', e?.message || e))
+      .finally(() => { if (live) setFontRetried(true); });
+    return () => { live = false; };
+  }, [fontError]);
+  const fontsLoaded = fontsReady || fontRetried || !fontWait;
   const requiresLogin = !isAuthenticated && PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
 
   useEffect(() => {
     if (isHydrated && fontsLoaded && requiresLogin) {
@@ -78,22 +134,29 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, isHydrated, pathname, requiresLogin, router]);
 
-  useEffect(() => {
-    if (isHydrated && fontsLoaded && !requiresLogin) SplashScreen.hideAsync().catch(() => { });
-  }, [fontsLoaded, isHydrated, requiresLogin]);
-
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
       {!isHydrated || !fontsLoaded || requiresLogin ? (
-        <View style={styles.splash}>
-          <Image source={require('../assets/brand-icon.png')} style={styles.splashImage} resizeMode="contain" />
-        </View>
+        // Under the opening splash (BrandSplash) until the first page can show.
+        <View style={styles.splash} />
       ) : (
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="product/[slug]" />
+          <Stack.Screen
+            name="product/[slug]"
+            // Opened from a product card: the page fades in while the card's
+            // photo flies to its gallery (components/HeroFlight).
+            options={({ route }) => (route.params?.via === 'card' ? { animation: 'fade', animationDuration: 260 } : {})}
+          />
           <Stack.Screen name="store/[slug]" />
+          {/* Search swaps in at once (no slide), and so do its results: a
+              search word (q), or a category picked on the search page. */}
+          <Stack.Screen name="search" options={{ animation: 'none' }} />
+          <Stack.Screen
+            name="products"
+            options={({ route }) => (route.params?.q || route.params?.via === 'search' ? { animation: 'none' } : {})}
+          />
           <Stack.Screen name="stores" />
           <Stack.Screen name="help-center" />
           <Stack.Screen name="conversation/[id]" />
@@ -111,23 +174,29 @@ export default function RootLayout() {
           <Stack.Screen name="qr-approve" />
           <Stack.Screen name="design-system" options={{ headerShown: true, title: 'Design System' }} />
           <Stack.Protected guard={!isAuthenticated}>
-            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(auth)" options={AUTH_SHEET} />
           </Stack.Protected>
         </Stack>
       )}
       {/* The account switch's fade-out runs over whichever page it lands on. */}
       <AccountSwitchHost />
+      <AccountSheetHost />
+      {/* Settings → Switch account: the accounts saved on this phone. */}
+      <SwitchAccountHost />
+      {/* The loader in the middle of the screen while a page loads (PageLoader). */}
+      <LoaderOverlayHost />
+      <HeroFlightHost />
+      {/* Long-press previews of products, shops, chats… (components/Peek). */}
+      <PeekHost />
+      {/* The opening: the logo builds itself, then fades over the first page. */}
+      <BrandSplash ready={isHydrated && fontsLoaded && !requiresLogin} />
       <Toast config={toastConfig} topOffset={52} />
+      {/* "Added to cart" / wishlist: fades in and out in the middle. */}
+      <CommerceHudHost />
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  splash: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgPrimary,
-  },
-  splashImage: { width: 180, height: 180 },
+  splash: { flex: 1, backgroundColor: colors.bgPrimary },
 });

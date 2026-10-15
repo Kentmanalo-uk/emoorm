@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ID_PHOTO, uploadableImage } from '../../lib/uploadableImage';
 import {
   Image, Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
@@ -233,7 +234,9 @@ const styles = StyleSheet.create({
 });
 
 /** A web camera shot is a data: URL; the form needs it as a file. */
-export const assetToUpload = async (asset, fallbackName) => {
+export const assetToUpload = async (picked, fallbackName) => {
+  // Any photo the phone can open, made a sharp JPEG (the ID's text is read from it).
+  const asset = await uploadableImage(picked, ID_PHOTO);
   if (asset.file) return asset.file;
   if (Platform.OS === 'web') {
     const blob = await (await fetch(asset.uri)).blob();

@@ -51,7 +51,7 @@ model AppSetting {
   /// 3D / AR product views (a shape template the seller fills in, turned
   /// into a model in their browser). Off until a super admin turns it on;
   /// the models stay stored while it is off.
-  product3dEnabled Boolean @default(false) @map("product3d_enabled")
+  product3dEnabled Boolean @default(true) @map("product3d_enabled")
 
   /// Delivery by distance, the defaults for shops that leave theirs blank:
   /// deliveryFee above is the starting fee, which covers the first

@@ -6,7 +6,16 @@ import { font, t } from '../../theme';
 import { useSellerShell } from './SellerShell';
 import { SellerBackBar, SellerTabHeader } from './SellerTopBars';
 import { PHONE_OWN_HEADER, PHONE_TABS, cleanSellerPath, sellerHref } from './sellerRoutes';
+import { useTabBarScroll } from '../Glass';
 import { setupNextTo } from './sellerSetup';
+
+/**
+ * For a Seller Center tab page's own FlatList/ScrollView:
+ * {...useSellerTabScroll()}. iOS 26: the seller tab bar lies over the bottom
+ * of the page (glass the page shows through), so the last items scroll clear
+ * of it. Elsewhere: nothing (the bar sits under the page).
+ */
+export const useSellerTabScroll = () => useTabBarScroll(0, 68);
 
 /*
  * One Seller Center page on phones (web .sc-content inside SellerLayout):
@@ -30,6 +39,7 @@ import { setupNextTo } from './sellerSetup';
 export default function SellerPage({
   header, title, action, menuItems, onBack, scroll = true, refreshing, onRefresh, contentStyle, privateLine = true, children,
 }) {
+  const tabScroll = useSellerTabScroll();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const path = cleanSellerPath(pathname);
@@ -44,7 +54,8 @@ export default function SellerPage({
     <View style={styles.screen}>
       {bar || null}
       {scroll ? (
-        <ScrollView
+        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+          {...(isTab ? tabScroll : null)}
           style={styles.flex}
           contentContainerStyle={[styles.content, { paddingBottom: bottom }, contentStyle]}
           keyboardShouldPersistTaps="handled"

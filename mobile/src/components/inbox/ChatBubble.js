@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CheckIcon, ChecksIcon, PushPinIcon } from 'phosphor-react-native';
+import {
+  CheckIcon, ChecksIcon, HandshakeIcon, PushPinIcon,
+} from 'phosphor-react-native';
 import { resolveImg } from '../../lib/media';
 import { font, t } from '../../theme';
 import ChatProductThumb from './ChatProductThumb';
-import { formatClock, formatMoney, ORDER_STATUS_STYLES } from './inboxFormat';
+import { formatClock, formatMoney, orderStatusStyle } from './inboxFormat';
 
 /*
  * One message in a chat on phones (web Messenger.jsx MessageBubble with the
  * phone rules of Messenger.css): grey on the left from the other side,
  * green on the right from you, with an order, a product card, a photo and
- * the text, then the time (and Sent / Seen ticks on yours).
+ * the text, then the time (and Sent / Seen ticks on yours). A step of a
+ * livestock deal is green with a handshake, and shows no product card (its
+ * deal card follows it in the chat).
  */
 
 const PHOTO_MAX = 220;
@@ -35,21 +39,24 @@ function BubblePhoto({ uri, onOpen }) {
 
 export default function ChatBubble({ message, isSelf, seen, onOpenImage }) {
   const router = useRouter();
-  const product = message.product;
+  // A step of a livestock deal: its card shows the animal, so no product card.
+  const dealStep = Boolean(message.offerId);
+  const product = dealStep ? null : message.product;
   const hasMedia = Boolean(message.imageUrl);
   const mediaOnly = hasMedia && !message.body && !product && !message.order;
   const photo = hasMedia ? resolveImg(message.imageUrl) || message.imageUrl : null;
 
   return (
     <View style={[styles.row, isSelf && styles.rowSelf]}>
-      <View style={[styles.bubble, isSelf && styles.bubbleSelf, mediaOnly && styles.mediaOnly]}>
+      <View style={[styles.bubble, isSelf && styles.bubbleSelf, mediaOnly && styles.mediaOnly, dealStep && (isSelf ? styles.dealSelf : styles.deal)]}>
+        {dealStep ? <HandshakeIcon size={13} weight="fill" color={isSelf ? t.neutral[0] : t.primary[900]} style={styles.dealIcon} /> : null}
         {message.order ? (
           <View style={[styles.order, isSelf && styles.orderSelf]}>
             <PushPinIcon size={11} color={isSelf ? t.neutral[0] : t.warning[800]} />
             <View>
               <Text style={[styles.orderNum, isSelf && styles.onSelf]}>Order #{message.order.orderNumber}</Text>
               <Text style={[styles.orderMeta, isSelf && styles.onSelf]}>
-                {ORDER_STATUS_STYLES[message.order.status]?.label || message.order.status}
+                {orderStatusStyle(message.order).label}
                 {' · '}
                 {formatMoney(message.order.total)}
               </Text>
@@ -70,7 +77,7 @@ export default function ChatBubble({ message, isSelf, seen, onOpenImage }) {
           </Pressable>
         ) : null}
         {photo ? <BubblePhoto uri={photo} onOpen={() => onOpenImage(message.imageUrl)} /> : null}
-        {message.body ? <Text style={[styles.text, isSelf && styles.onSelf]} selectable>{message.body}</Text> : null}
+        {message.body ? <Text style={[styles.text, isSelf && styles.onSelf, dealStep && !isSelf && styles.dealText]} selectable>{message.body}</Text> : null}
         <View style={[styles.time, mediaOnly && styles.timeMedia]}>
           <Text style={[styles.timeText, isSelf && styles.timeSelf]}>{formatClock(message.createdAt)}</Text>
           {isSelf ? (seen ? (
@@ -106,6 +113,10 @@ const styles = StyleSheet.create({
     boxShadow: '0px 1px 1px rgba(15, 23, 42, 0.04)',
   },
   bubbleSelf: { backgroundColor: t.primary[600] },
+  deal: { backgroundColor: t.primary[50] },
+  dealSelf: { backgroundColor: t.primary[600] },
+  dealText: { color: t.primary[900] },
+  dealIcon: { opacity: 0.8 },
   mediaOnly: { padding: 4 },
   onSelf: { color: t.neutral[0] },
   text: { fontSize: 14, lineHeight: 21, color: t.neutral[900], ...font(400) },

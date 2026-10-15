@@ -1,11 +1,19 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRef } from 'react';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MapPinIcon, StarIcon } from 'phosphor-react-native';
 import { saleInfo } from '../lib/variantPricing';
 import { font, t } from '../theme';
 import ProductImage from './ProductImage';
+import { ProductStats } from './ProductStats';
+import { canFlyHero, launchHero, productGalleryBox } from './HeroFlight';
+import { resolveImg } from '../lib/media';
 import { SaleWas } from './SaleTag';
 import { ProductTodayTag } from './TodayTag';
+import { notTakingOrders } from '../lib/availability';
+import { useProductPeek } from './peek/ProductPeek';
+import { isStockless, priceUnit, startsFrom } from './orders/orderLines';
 
 /*
  * The website's phone product tile.
@@ -17,7 +25,8 @@ import { ProductTodayTag } from './TodayTag';
  *
  * Pass the API's `product`; the card fills the width its parent gives it
  * (the website's grids: 2 columns, 4px apart). Tapping opens the product
- * unless `onPress` is given. Phones have no add-to-cart button on the card.
+ * unless `onPress` is given. Phones have no add-to-cart button on the card;
+ * holding it opens its preview with Add to cart (components/peek).
  *
  * Older callers still pass name / price / imageUrl / rating / reviewCount
  * with variant "grid" (48% wide) or "list" (a row).
@@ -38,7 +47,28 @@ export default function ProductCard({
   const look = variant || (product ? 'home' : 'grid');
   const result = look === 'result';
   const list = look === 'list';
-  const open = onPress || (p.slug ? () => router.push(`/product/${p.slug}`) : undefined);
+  const photoRef = useRef(null);
+  const photoAspect = useRef(0);
+  const insets = useSafeAreaInsets();
+  const { width: screenW } = useWindowDimensions();
+  // Opening the product: the photo flies from the card to the page's gallery.
+  const openProduct = () => {
+    const uri = p.images?.[0] ? resolveImg(p.images[0]) : null;
+    if (!uri || !canFlyHero() || !photoRef.current) {
+      router.push(`/product/${p.slug}`);
+      return;
+    }
+    photoRef.current.measureInWindow((x, y, width, height) => {
+      const flying = launchHero({
+        slug: p.slug, uri, from: { x, y, width, height }, to: productGalleryBox(insets, screenW), aspect: photoAspect.current,
+      });
+      if (!flying) { router.push(`/product/${p.slug}`); return; }
+      // The flight is on screen and moving (native) before the page is built.
+      requestAnimationFrame(() => router.push({ pathname: '/product/[slug]', params: { slug: p.slug, via: 'card' } }));
+    });
+  };
+  const open = onPress || (p.slug ? openProduct : undefined);
+  const peekProduct = useProductPeek();
   const { price: now } = saleInfo(p);
   const town = p.municipality?.name || p.store?.municipality?.name;
 
@@ -47,11 +77,19 @@ export default function ProductCard({
       accessibilityRole="button"
       accessibilityLabel={p.name}
       onPress={open}
+      {...(product ? peekProduct(p, { onOpen: open }) : null)}
       style={[styles.card, look === 'grid' && styles.cardGrid, list && styles.cardList, style]}
     >
-      <View style={[styles.image, list && styles.imageList]}>
-        <ProductImage src={p.images?.[0]} style={StyleSheet.absoluteFill} />
-        {result && p.stock === 0 ? <Text style={[styles.badge, styles.badgeOut]}>Out of Stock</Text> : null}
+      <View ref={photoRef} collapsable={false} style={[styles.image, list && styles.imageList]}>
+        <ProductImage
+          src={p.images?.[0]}
+          style={StyleSheet.absoluteFill}
+          onLoad={(e) => {
+            const { width: w, height: h } = e?.nativeEvent?.source || {};
+            if (w && h) photoAspect.current = w / h;
+          }}
+        />
+        {result && p.stock === 0 && !isStockless(p) && !notTakingOrders(p) ? <Text style={[styles.badge, styles.badgeOut]}>Out of Stock</Text> : null}
         {result && p.isFeatured ? <Text style={[styles.badge, styles.badgeFeatured]}>Featured</Text> : null}
       </View>
 
@@ -65,7 +103,9 @@ export default function ProductCard({
           <>
             <View style={styles.priceRow}>
               <Text style={styles.priceResult}>
+                <KindFrom product={p} base={styles.priceResult} />
                 ₱{now.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <KindUnit product={p} base={styles.priceResult} />
               </Text>
               <SaleWas product={p} compact style={styles.was} />
             </View>
@@ -80,7 +120,11 @@ export default function ProductCard({
         ) : (
           <>
             <View style={[styles.priceRow, styles.priceRowHome]}>
-              <Text style={styles.price}>₱{now.toFixed(2)}</Text>
+              <Text style={styles.price}>
+                <KindFrom product={p} base={styles.price} />
+                ₱{now.toFixed(2)}
+                <KindUnit product={p} base={styles.price} />
+              </Text>
               <SaleWas product={p} compact style={styles.was} />
             </View>
             <ProductStats product={p} />
@@ -91,40 +135,19 @@ export default function ProductCard({
   );
 }
 
-/** Five small stars for an average rating (filled up to the rounded rating). */
-export function ProductStars({ rating, size = 11 }) {
-  const filled = Math.round(Number(rating || 0));
-  return (
-    <View style={styles.stars} accessibilityLabel={`Rated ${Number(rating || 0).toFixed(1)} of 5`}>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <StarIcon
-          key={i}
-          size={size}
-          weight={i < filled ? 'fill' : 'regular'}
-          color={i < filled ? t.warning[500] : t.neutral[300]}
-        />
-      ))}
-    </View>
-  );
+// What the price is for (web KindPrice): "from" before a paluto priced by
+// size, " / head" or " / package" after the amount, at 0.78 of its size.
+const kindSize = (base) => ({ fontSize: Math.round((StyleSheet.flatten(base)?.fontSize || 16) * 0.78), ...font(500) });
+function KindFrom({ product, base }) {
+  return startsFrom(product) ? <Text style={kindSize(base)}>from </Text> : null;
+}
+function KindUnit({ product, base }) {
+  const unit = priceUnit(product);
+  return unit ? <Text style={kindSize(base)}>{unit}</Text> : null;
 }
 
-/** Stars only from real reviews; sold only from settled orders; else "New". */
-export function ProductStats({ product }) {
-  const reviews = Number(product.reviewCount || 0);
-  const sold = Number(product.soldCount || 0);
-  return (
-    <View style={styles.stats}>
-      {reviews === 0 && sold === 0 ? <Text style={styles.count}>New</Text> : null}
-      {reviews > 0 ? (
-        <>
-          <ProductStars rating={product.averageRating} />
-          <Text style={styles.count}>({reviews})</Text>
-        </>
-      ) : null}
-      {sold > 0 ? <Text style={styles.count}>{sold} sold</Text> : null}
-    </View>
-  );
-}
+// Still exported from here for older imports.
+export { ProductStars, ProductStats } from './ProductStats';
 
 /** The result tile's "★ 4.5 | 12 sold" (or "New"), divided by thin rules. */
 function ResultMeta({ product }) {
@@ -170,9 +193,6 @@ const styles = StyleSheet.create({
   // The space between the price and the old price.
   was: { marginLeft: 4 },
 
-  stats: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 12, marginTop: 2 },
-  stars: { flexDirection: 'row', alignItems: 'center', gap: 1 },
-  count: { fontSize: 12, lineHeight: 12, ...font(400), color: t.neutral[500] },
 
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
   metaRule: { paddingLeft: 8, borderLeftWidth: 1, borderLeftColor: t.neutral[200] },

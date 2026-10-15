@@ -98,7 +98,7 @@ export default function PublicProfile() {
   const shell = (title, children) => (
     <View style={styles.screen}>
       <PublicHeader title={title} />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* The website's grey .pp is at least the viewport less 200px tall. */}
         <View style={[styles.pp, { minHeight: Math.max(0, height - 200) }]}>{children}</View>
       </ScrollView>

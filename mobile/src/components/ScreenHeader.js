@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { border, font, t, text } from '../theme';
 import ShellBarButton from './ShellBarButton';
+import HeaderGlow from './HeaderGlow';
 import ShellPageMenu from './ShellPageMenu';
 
 /**
@@ -28,6 +29,7 @@ export default function ScreenHeader({
   const goBack = onBack || (() => (router.canGoBack() ? router.back() : router.replace(backTo)));
   return (
     <View style={[styles.bar, { paddingTop: insets.top, height: 52 + insets.top }]}>
+      <HeaderGlow />
       <ShellBarButton label="Back" onPress={goBack}>
         <CaretLeftIcon size={22} weight="bold" color={text.strong} />
       </ShellBarButton>
@@ -52,8 +54,6 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 6,
     backgroundColor: t.neutral[0],
-    borderBottomWidth: 1,
-    borderBottomColor: border.default,
     zIndex: 120,
   },
   text: { flex: 1, minWidth: 0 },

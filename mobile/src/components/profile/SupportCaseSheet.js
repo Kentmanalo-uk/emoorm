@@ -8,7 +8,11 @@ import { PaperPlaneRightIcon, XIcon } from 'phosphor-react-native';
 import apiClient from '../../api/client';
 import { toast } from '../../lib/toast';
 import { font, t } from '../../theme';
-import { ProfileSelect } from './ProfileAddressPicker';
+import Select from '../Select';
+import { SheetFrame } from '../Sheet';
+
+// The app's one sheet look on every phone (the sign-in sheet's: Sheet.js).
+const framed = true;
 import {
   MESSAGE_MAX, SUBJECT_MAX, SUPPORT_CATEGORIES, errorText,
 } from './profileLib';
@@ -43,7 +47,8 @@ function Input({ multiline = false, style, ...props }) {
 /**
  * "New support case" (web components/support/SupportChat.jsx NewCaseDialog,
  * a bottom sheet on phones): what it is about, a subject and the message.
- * onOpened(conversation) gets the new case.
+ * onOpened(conversation) gets the new case. On iOS 26 the form sits in the
+ * system's Liquid Glass sheet (NativeSheet); elsewhere, the website's sheet.
  */
 export default function SupportCaseSheet({ open, onClose, onOpened }) {
   const insets = useSafeAreaInsets();
@@ -99,64 +104,53 @@ export default function SupportCaseSheet({ open, onClose, onOpened }) {
 
   const translateY = progress.interpolate({ inputRange: [0, 1], outputRange: [screenH, 0] });
 
+  const body = (
+    <>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled" bounces={false}>
+        <Field label="What is it about?">
+          <Select
+            title="What is it about?"
+            value={form.category}
+            options={CATEGORY_OPTIONS}
+            onChange={set('category')}
+            style={styles.select}
+            textStyle={styles.selectText}
+          />
+        </Field>
+        <Field label="Subject">
+          <Input value={form.subject} onChangeText={set('subject')} maxLength={SUBJECT_MAX} placeholder="e.g. My order has not arrived" />
+        </Field>
+        <Field label="Tell us more">
+          <Input
+            multiline
+            value={form.message}
+            onChangeText={set('message')}
+            maxLength={MESSAGE_MAX}
+            placeholder="Include order numbers or store names that help us sort this out."
+          />
+        </Field>
+        <View style={styles.foot}>
+          <Pressable accessibilityRole="button" onPress={close} disabled={saving} style={[styles.btn, styles.btnGhost, saving && styles.off]}>
+            <Text style={[styles.btnText, { color: t.neutral[700] }]}>Cancel</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={submit}
+            disabled={saving}
+            style={({ pressed }) => [styles.btn, styles.btnGreen, pressed && { backgroundColor: t.primary[700] }, saving && styles.off]}
+          >
+            {saving ? <ActivityIndicator size={14} color="#fff" /> : <PaperPlaneRightIcon size={14} weight="fill" color="#fff" />}
+            <Text style={[styles.btnText, { color: '#fff' }]}>{saving ? 'Sending…' : 'Start case'}</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </>
+  );
+
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.root} behavior={native ? 'padding' : undefined}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: progress }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityRole="button" accessibilityLabel="Close" />
-        </Animated.View>
-        <Animated.View
-          accessibilityViewIsModal
-          accessibilityLabel="New support case"
-          style={[styles.panel, { maxHeight: screenH * 0.85, paddingBottom: insets.bottom, transform: [{ translateY }] }]}
-        >
-          <View style={styles.head}>
-            <Text style={styles.title}>New support case</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={close} style={styles.x}>
-              <XIcon size={16} color={t.neutral[500]} />
-            </Pressable>
-          </View>
-          <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled" bounces={false}>
-            <Field label="What is it about?">
-              <ProfileSelect
-                title="What is it about?"
-                value={form.category}
-                options={CATEGORY_OPTIONS}
-                onChange={set('category')}
-                style={styles.select}
-                textStyle={styles.selectText}
-              />
-            </Field>
-            <Field label="Subject">
-              <Input value={form.subject} onChangeText={set('subject')} maxLength={SUBJECT_MAX} placeholder="e.g. My order has not arrived" />
-            </Field>
-            <Field label="Tell us more">
-              <Input
-                multiline
-                value={form.message}
-                onChangeText={set('message')}
-                maxLength={MESSAGE_MAX}
-                placeholder="Include order numbers or store names that help us sort this out."
-              />
-            </Field>
-            <View style={styles.foot}>
-              <Pressable accessibilityRole="button" onPress={close} disabled={saving} style={[styles.btn, styles.btnGhost, saving && styles.off]}>
-                <Text style={[styles.btnText, { color: t.neutral[700] }]}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={submit}
-                disabled={saving}
-                style={({ pressed }) => [styles.btn, styles.btnGreen, pressed && { backgroundColor: t.primary[700] }, saving && styles.off]}
-              >
-                {saving ? <ActivityIndicator size={14} color="#fff" /> : <PaperPlaneRightIcon size={14} weight="fill" color="#fff" />}
-                <Text style={[styles.btnText, { color: '#fff' }]}>{saving ? 'Sending…' : 'Start case'}</Text>
-              </Pressable>
-            </View>
-          </ScrollView>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    </Modal>
+    <SheetFrame safeBottom={false} open={open} onClose={close} title="New support case" dismissible={!saving} scroll={false} padded={false} maxHeight={0.85}>
+      <View style={{ flexShrink: 1, paddingBottom: insets.bottom }}>{body}</View>
+    </SheetFrame>
   );
 }
 
@@ -173,7 +167,11 @@ const styles = StyleSheet.create({
   form: { gap: 12, paddingTop: 6, paddingHorizontal: 16, paddingBottom: 16 },
   field: { gap: 5 },
   label: { fontSize: 12.5, lineHeight: 20, color: t.neutral[700], ...font(500) },
-  select: { minHeight: 46, paddingVertical: 9, paddingHorizontal: 11, borderRadius: 8, borderColor: t.neutral[300] },
+  // .sc-case-form .ui-select
+  select: {
+    minHeight: 46, paddingVertical: 9, paddingHorizontal: 11, borderWidth: 1, borderRadius: 8, borderColor: t.neutral[300],
+    backgroundColor: t.neutral[0],
+  },
   selectText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[900] },
   input: {
     minHeight: 46, paddingVertical: 9, paddingHorizontal: 11, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8,

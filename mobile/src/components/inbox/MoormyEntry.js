@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     backgroundColor: t.neutral[0],
     boxShadow: '0px 6px 20px -12px rgba(236, 72, 153, 0.45)',
   },
-  edgeClip: { ...StyleSheet.absoluteFillObject, borderRadius: 18, overflow: 'hidden' },
+  edgeClip: { ...StyleSheet.absoluteFill, borderRadius: 18, overflow: 'hidden' },
   edgeStrip: { position: 'absolute', top: 0, bottom: 0, left: 0 },
   introInner: {
     // The website's 1.5px gradient border and 14/14/12 padding, as it lands

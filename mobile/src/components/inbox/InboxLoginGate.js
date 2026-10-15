@@ -1,10 +1,10 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import {
   ArrowsClockwiseIcon, ChecksIcon, EnvelopeOpenIcon, FunnelIcon, MagnifyingGlassIcon, StorefrontIcon,
 } from 'phosphor-react-native';
-import { font, t } from '../../theme';
-import EmptyArt from '../EmptyArt';
+import { t } from '../../theme';
+import EmptyState from '../EmptyState';
 import ShellBarButton from '../ShellBarButton';
 import ShellPageMenu from '../ShellPageMenu';
 import InboxPageHead, { InboxTopGap } from './InboxPageHead';
@@ -45,7 +45,7 @@ export default function InboxLoginGate({ page }) {
   const gate = GATES[page];
   const toLogin = () => router.push({ pathname: '/login', params: { redirect: pathname } });
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} stickyHeaderIndices={[1]}>
+    <View style={styles.screen}>
       <InboxTopGap gap={12} />
       <InboxPageHead title={gate.heading} padLeft={16} padRight={8} toolGap={2}>
         <ShellBarButton label={`Search ${gate.heading.toLowerCase()}: log in first`} onPress={toLogin}>
@@ -53,29 +53,14 @@ export default function InboxLoginGate({ page }) {
         </ShellBarButton>
         <ShellPageMenu label={`${gate.heading} options`} items={gate.menu.map((m) => ({ ...m, onPress: toLogin }))} />
       </InboxPageHead>
-      <View style={styles.gate}>
-        <EmptyArt name={gate.art} size={112} style={styles.art} />
-        <Text style={styles.title}>{gate.title}</Text>
-        <Text style={styles.body}>{gate.body}</Text>
-        <Pressable accessibilityRole="link" onPress={toLogin} style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-          <Text style={styles.btnText}>Log in</Text>
-        </Pressable>
-      </View>
+    <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.screen} contentContainerStyle={styles.content}>
+      <EmptyState page art={gate.art} title={gate.title} text={gate.body} actions={[{ label: 'Log in', onPress: toLogin, wave: true }]} />
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1 },
-  gate: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 34, paddingHorizontal: 24, paddingBottom: 64 },
-  art: { marginBottom: 18 },
-  title: { marginBottom: 6, fontSize: 18, lineHeight: 21.6, color: t.neutral[900], textAlign: 'center', ...font(500) },
-  body: { maxWidth: 290, marginBottom: 20, fontSize: 14, lineHeight: 21, color: t.neutral[500], textAlign: 'center', ...font(400) },
-  btn: {
-    minWidth: 140, height: 42, paddingHorizontal: 28, borderRadius: 999, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: t.primary[600],
-  },
-  btnPressed: { backgroundColor: t.primary[700] },
-  btnText: { fontSize: 15, lineHeight: 18, color: '#fff', ...font(500) },
 });

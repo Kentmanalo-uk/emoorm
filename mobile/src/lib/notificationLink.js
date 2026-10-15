@@ -35,6 +35,9 @@ const ROUTES = {
   'seller-product': ({ id }) => withId('/seller/products', id),
   product: ({ slug }) => (slug ? `/product/${slug}` : null),
   'seller-questions': ({ id }) => withId('/seller/questions', id),
+  // Price offers on livestock
+  'buyer-offers': () => '/offers',
+  'seller-offers': () => '/seller/offers',
 
   // Stores
   store: ({ slug }) => (slug ? `/store/${slug}` : null),
@@ -107,7 +110,9 @@ const WEB_PATHS = [
   [/^\/profile\/?$/, () => '/profile'],
   [/^\/profile\/messages\/?$/, () => '/messages'],
   [/^\/profile\/notifications\/?$/, () => '/notifications'],
-  [/^\/profile\/(orders|returns|addresses|wishlist|followed-stores|reviews|settings|verification|support|reports)(\/.*)?$/, (m) => `/${m[1]}${m[2] || ''}`],
+  // A settings part's own page: /settings?part=<part> in the app.
+  [/^\/profile\/settings\/([^/]+)\/?$/, (m) => `/settings?part=${m[1]}`],
+  [/^\/profile\/(orders|returns|addresses|wishlist|followed-stores|reviews|settings|verification|support|reports|offers)(\/.*)?$/, (m) => `/${m[1]}${m[2] || ''}`],
   [/^\/notifications\/(.+)$/, (m) => `/notification/${m[1]}`],
   [/^\/orders\/([^/]+)\/receipt\/?$/, (m) => `/receipt/${m[1]}`],
   [/^\/help\/?$/, () => '/help-center'],
@@ -125,7 +130,7 @@ export function appPath(webPath) {
   }
   const c = new URLSearchParams(query).get('c');
   if (out === '/messages' && c) return `/conversation/${c}`;
-  return query ? `${out}?${query}` : out;
+  return query ? `${out}${out.includes('?') ? '&' : '?'}${query}` : out;
 }
 
 export default notificationRoute;

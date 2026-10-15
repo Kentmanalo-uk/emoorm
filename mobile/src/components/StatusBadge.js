@@ -1,20 +1,24 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontFamily, radius, spacing, typography } from '../theme';
+import { statusLabel } from './orders/orderProgress';
 
-// Mirrors getStatusBadge() in web/src/pages/Orders.jsx — keep labels/tones in sync.
-export const ORDER_STATUS_BADGES = {
-  PENDING: { label: 'Pending Payment', tone: 'neutral' },
-  CONFIRMED: { label: 'Confirmed', tone: 'neutral' },
-  PREPARING: { label: 'Preparing', tone: 'neutral' },
-  TO_SHIP: { label: 'To Ship', tone: 'accent' },
-  OUT_FOR_DELIVERY: { label: 'Out for Delivery', tone: 'accent' },
-  DELIVERED: { label: 'Delivered', tone: 'accent' },
-  READY: { label: 'Ready for Pickup', tone: 'accent' },
-  READY_FOR_PICKUP: { label: 'Ready for Pickup', tone: 'accent' },
-  PICKED_UP: { label: 'Picked Up', tone: 'accent' },
-  COMPLETED: { label: 'Completed', tone: 'success' },
-  CANCELLED: { label: 'Cancelled', tone: 'danger' },
+// An order status as a badge: the words every order screen uses (orderProgress statusLabel).
+const ORDER_STATUS_TONES = {
+  PENDING: 'neutral',
+  CONFIRMED: 'neutral',
+  PREPARING: 'neutral',
+  TO_SHIP: 'accent',
+  READY: 'accent',
+  OUT_FOR_DELIVERY: 'accent',
+  SHIPPED: 'accent',
+  DELIVERED: 'accent',
+  READY_FOR_PICKUP: 'accent',
+  PICKED_UP: 'accent',
+  COMPLETED: 'success',
+  CANCELLED: 'danger',
 };
+export const ORDER_STATUS_BADGES = Object.fromEntries(Object.entries(ORDER_STATUS_TONES)
+  .map(([status, tone]) => [status, { label: statusLabel(status), tone }]));
 
 const TONE_COLORS = {
   neutral: { bg: colors.gray100, text: colors.gray700 },

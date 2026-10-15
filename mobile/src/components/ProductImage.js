@@ -26,7 +26,7 @@ const loadPlaceholder = () => {
  * faint brand logo at 70% (the website's phone placeholder).
  * `src` may be a stored path or a full URL.
  */
-export default function ProductImage({ src, style, resizeMode = 'cover' }) {
+export default function ProductImage({ src, style, resizeMode = 'cover', onLoad }) {
   const uri = src ? resolveImg(src) : null;
   const [failed, setFailed] = useState(false);
   const [custom, setCustom] = useState(placeholder);
@@ -46,7 +46,7 @@ export default function ProductImage({ src, style, resizeMode = 'cover' }) {
       </View>
     );
   }
-  return <Image source={{ uri }} style={[styles.image, style]} resizeMode={resizeMode} onError={() => setFailed(true)} />;
+  return <Image source={{ uri }} style={[styles.image, style]} resizeMode={resizeMode} onLoad={onLoad} onError={() => setFailed(true)} />;
 }
 
 const styles = StyleSheet.create({

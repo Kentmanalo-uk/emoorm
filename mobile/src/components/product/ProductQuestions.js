@@ -6,6 +6,7 @@ import apiClient from '../../api/client';
 import useAuthStore from '../../store/authStore';
 import { toast } from '../../lib/toast';
 import { font, t } from '../../theme';
+import EmptyState from '../EmptyState';
 import ProductSection, { SectionBody, SectionHead, SectionTitle } from './ProductSection';
 import { longDate } from './productLib';
 
@@ -81,10 +82,7 @@ export default function ProductQuestions({ product, isOwnProduct = false, sectio
           </View>
         ) : null}
         {data === null ? null : items.length === 0 ? (
-          <View style={styles.empty}>
-            <QuestionIcon size={18} color={t.neutral[500]} />
-            <Text style={styles.emptyText}>No questions yet.</Text>
-          </View>
+          <EmptyState compact icon={QuestionIcon} text="No questions yet." />
         ) : (
           <View>
             {items.map((q, i) => (
@@ -126,8 +124,6 @@ const styles = StyleSheet.create({
   button: { height: 46, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600] },
   buttonOff: { opacity: 0.5 },
   buttonText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: '#fff' },
-  empty: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  emptyText: { fontSize: 13.5, lineHeight: 21.6, ...font(400), color: t.neutral[500] },
   item: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: t.neutral[100] },
   itemFirst: { paddingTop: 0, borderTopWidth: 0 },
   qa: { flexDirection: 'row', gap: 10 },

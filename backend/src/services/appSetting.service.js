@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS = {
   availableTodayEnabled: true,
   adminTeamMax: 5,
   moormoveEnabled: false,
-  product3dEnabled: false,
+  product3dEnabled: true,
 };
 
 // How the homepage shows its categories.

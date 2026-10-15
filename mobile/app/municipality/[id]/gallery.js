@@ -5,7 +5,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeftIcon, MapPinIcon } from 'phosphor-react-native';
 import apiClient from '../../../src/api/client';
-import EmptyArt from '../../../src/components/EmptyArt';
+import EmptyState from '../../../src/components/EmptyState';
 import PublicHeader from '../../../src/components/public/PublicHeader';
 import { MunicipalitySeal } from '../../../src/components/public/MunicipalityParts';
 import { resolveImg } from '../../../src/lib/media';
@@ -43,7 +43,7 @@ export default function MunicipalityGallery() {
   return (
     <View style={styles.screen}>
       <PublicHeader title={`${municipality?.name || 'Municipality'} Gallery`} />
-      <ScrollView style={styles.screen} contentContainerStyle={styles.page}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.screen} contentContainerStyle={styles.page}>
         <View style={styles.header}>
           <Pressable accessibilityRole="link" onPress={() => router.push(`/municipality/${id}`)} style={styles.back}>
             <ArrowLeftIcon size={16} color={t.success[100]} />
@@ -64,10 +64,7 @@ export default function MunicipalityGallery() {
           {loading ? (
             <View style={styles.message}><Text style={styles.messageText}>Loading gallery…</Text></View>
           ) : gallery.length === 0 ? (
-            <View style={styles.message}>
-              <EmptyArt name="gallery" size={104} />
-              <Text style={styles.messageText}>No gallery images have been uploaded yet.</Text>
-            </View>
+            <EmptyState page art="gallery" title="No gallery images have been uploaded yet." />
           ) : (
             <View style={styles.grid}>
               {gallery.map((image, index) => {
@@ -103,7 +100,7 @@ const styles = StyleSheet.create({
   tagline: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   taglineText: { flexShrink: 1, fontSize: 13, lineHeight: 20.8, color: t.secondary[50], ...font(400) },
 
-  content: { padding: GUTTER },
+  content: { flexGrow: 1, padding: GUTTER },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   photo: { borderRadius: 12, backgroundColor: t.secondary[50] },
 

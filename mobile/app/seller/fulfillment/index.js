@@ -1,12 +1,7 @@
-import SellerPage from '../../../src/components/seller/SellerPage';
-import SellerPlaceholder from '../../../src/components/seller/SellerPlaceholder';
+import SellerFulfillmentScreen from '../../../src/components/seller/fulfillment/SellerFulfillmentScreen';
 
-// /seller/fulfillment — STUB: the bar is done (SellerPage → SellerBackBar with the
-// phone title). Port the body from web/src/pages/SellerFulfillment.jsx.
-export default function SellerFulfillmentScreen() {
-  return (
-    <SellerPage>
-      <SellerPlaceholder source="web/src/pages/SellerFulfillment.jsx" />
-    </SellerPage>
-  );
+// /seller/fulfillment: Delivery & payment, its parts as a list
+// (web/src/pages/SellerFulfillment.jsx, phone layout).
+export default function SellerFulfillmentListScreen() {
+  return <SellerFulfillmentScreen part={null} />;
 }

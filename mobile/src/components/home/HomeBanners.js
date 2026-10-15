@@ -15,9 +15,9 @@ import { t } from '../../theme';
  */
 
 export const FALLBACK_BANNERS = [
-  { id: 'fallback-1', image: require('../../../assets/banners/banner-qoute.png'), linkUrl: null, title: 'Emoorm' },
-  { id: 'fallback-2', image: require('../../../assets/banners/buy-now-qoute.png'), linkUrl: null, title: 'Buy now' },
-  { id: 'fallback-3', image: require('../../../assets/banners/discover-mindoro.png'), linkUrl: null, title: 'Discover Mindoro' },
+  { id: 'fallback-1', image: require('../../../assets/banners/banner-qoute.jpg'), linkUrl: null, title: 'Emoorm' },
+  { id: 'fallback-2', image: require('../../../assets/banners/buy-now-qoute.jpg'), linkUrl: null, title: 'Buy now' },
+  { id: 'fallback-3', image: require('../../../assets/banners/discover-mindoro.jpg'), linkUrl: null, title: 'Discover Mindoro' },
 ];
 
 const SLIDE_MS = 600;
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   hidden: { opacity: 0 },
 
   // Over the whole screen, under the top bar (zIndex 10).
-  promoBackdrop: { ...StyleSheet.absoluteFillObject, zIndex: 5, backgroundColor: 'rgba(15, 23, 42, 0.58)' },
+  promoBackdrop: { ...StyleSheet.absoluteFill, zIndex: 5, backgroundColor: 'rgba(15, 23, 42, 0.58)' },
   promoCentre: { position: 'absolute', top: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'flex-start' },
   promoDialog: {
     backgroundColor: t.neutral[0],

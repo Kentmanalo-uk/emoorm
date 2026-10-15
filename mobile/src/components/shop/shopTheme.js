@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { t } from '../../theme';
+import stopPaint from '../../lib/stopPaint';
 
 /*
  * A shop's own colours (web StoreDetail: --shop-primary / --shop-secondary)
@@ -71,7 +72,7 @@ export function ShopGradient({ angle = 180, stops, radial, style }) {
         <Svg width={size.w} height={size.h}>
           <Defs>
             <LinearGradient id={`${id}l`} gradientUnits="userSpaceOnUse" {...line}>
-              {stops.map(([color, offset], i) => <Stop key={i} offset={offset} stopColor={color} />)}
+              {stops.map(([color, offset], i) => <Stop key={i} offset={offset} {...stopPaint(color)} />)}
             </LinearGradient>
             {radial ? (
               <RadialGradient
@@ -85,7 +86,7 @@ export function ShopGradient({ angle = 180, stops, radial, style }) {
                 ry={radial.ry * size.h}
               >
                 {radial.stops.map(([color, offset, op = 1], i) => (
-                  <Stop key={i} offset={offset} stopColor={color} stopOpacity={op} />
+                  <Stop key={i} offset={offset} {...stopPaint(color, op)} />
                 ))}
               </RadialGradient>
             ) : null}

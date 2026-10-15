@@ -5,6 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuthHeader from '../AuthHeader';
+import { liquidGlass } from '../Glass';
 import { font, t } from '../../theme';
 
 const CLOSE_MS = 260;
@@ -35,10 +36,15 @@ const AuthSheet = forwardRef(function AuthSheet({
     else router.replace('/');
   };
 
-  // Slides the sheet down from wherever it is, then leaves.
+  // Slides the sheet down from wherever it is, then leaves. On iOS 26 the
+  // sheet is a native page sheet (presentation: 'modal') with a white card
+  // of its own: sliding this form away first left that card behind, which
+  // then slid down after it (a second sheet). There the native dismissal
+  // is the only one.
   const close = () => {
     if (leaving.current) return;
     leaving.current = true;
+    if (liquidGlass) { leave(); return; }
     Animated.timing(drag, {
       toValue: screenH, duration: CLOSE_MS, easing: Easing.bezier(0.4, 0, 1, 1), useNativeDriver: native,
     }).start(() => leave());
@@ -69,11 +75,12 @@ const AuthSheet = forwardRef(function AuthSheet({
             switchLabel={switchLabel}
             switchBold={switchBold}
             onSwitch={() => switchTo && router.replace(switchTo)}
-            panHandlers={pan.panHandlers}
+            // iOS 26: the native sheet's own swipe-down closes it.
+            panHandlers={liquidGlass ? undefined : pan.panHandlers}
           />
         ) : null}
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView
+          <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
             ref={ref}
             style={styles.flex}
             keyboardShouldPersistTaps="handled"
@@ -81,7 +88,8 @@ const AuthSheet = forwardRef(function AuthSheet({
             contentContainerStyle={[
               styles.content,
               { paddingBottom: 24 + insets.bottom },
-              !bar && { paddingTop: insets.top },
+              // (iOS 26: the page sheet already sits below the status bar.)
+              !bar && !liquidGlass && { paddingTop: insets.top },
               contentStyle,
             ]}
           >

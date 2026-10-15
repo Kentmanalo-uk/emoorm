@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CaretRightIcon, EyeIcon, EyeSlashIcon, SignOutIcon } from 'phosphor-react-native';
-import EmptyArt from '../EmptyArt';
+import EmptyState from '../EmptyState';
 import { font, t } from '../../theme';
 
 /*
@@ -191,20 +191,23 @@ const BTN = {
   solidDanger: { box: { backgroundColor: t.danger[600], borderColor: t.danger[600] }, color: '#fff', pressed: { backgroundColor: t.danger[700] } },
 };
 
-/** The profile pages' empty card (.profile-section .empty-state). */
-/** section: drawn in its .profile-section, edge to edge on a 12px-gutter page (14px above and below). */
-export function ProfileEmpty({ art, title, hint, action, onAction, artSize = 96, section = false, style }) {
+/**
+ * The profile pages' empty state, in the app's one empty look (EmptyState).
+ * page: the page's whole content (its scroll content must flexGrow: 1);
+ * compact: inside a card or a section among other content.
+ */
+export function ProfileEmpty({ art, title, hint, action, onAction, artSize, page = false, compact = false, style }) {
   return (
-    <View style={[styles.empty, section && styles.emptySection, style]}>
-      {art ? <EmptyArt name={art} size={artSize} /> : null}
-      <Text style={styles.emptyTitle}>{title}</Text>
-      {hint ? <Text style={styles.emptyHint}>{hint}</Text> : null}
-      {action ? (
-        <Pressable accessibilityRole="button" onPress={onAction} style={({ pressed }) => [styles.emptyBtn, pressed && { backgroundColor: t.primary[700] }]}>
-          <Text style={styles.emptyBtnText}>{action}</Text>
-        </Pressable>
-      ) : null}
-    </View>
+    <EmptyState
+      page={page}
+      compact={compact}
+      art={art}
+      artSize={artSize}
+      title={title}
+      text={hint}
+      actions={action ? [{ label: action, onPress: onAction }] : null}
+      style={style}
+    />
   );
 }
 
@@ -281,13 +284,6 @@ const styles = StyleSheet.create({
   },
   btnOff: { opacity: 0.55 },
   btnText: { fontSize: 14, lineHeight: 16.8, ...font(500) },
-
-  empty: { alignItems: 'center', gap: 8, paddingVertical: 32, paddingHorizontal: 16 },
-  emptySection: { marginHorizontal: -10, marginVertical: 14 },
-  emptyTitle: { fontSize: 16, lineHeight: 25.6, color: t.neutral[700], textAlign: 'center', ...font(500) },
-  emptyHint: { fontSize: 13, lineHeight: 19.5, color: t.neutral[500], textAlign: 'center', ...font(400) },
-  emptyBtn: { alignItems: 'center', justifyContent: 'center', height: 44, marginTop: 8, paddingHorizontal: 22, borderRadius: 10, backgroundColor: t.primary[600] },
-  emptyBtnText: { fontSize: 14, lineHeight: 22.4, color: '#fff', ...font(500) },
 
   subtitle: { fontSize: 13, lineHeight: 19.5, color: t.neutral[500], ...font(400) },
 });

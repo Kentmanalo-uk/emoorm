@@ -7,8 +7,8 @@ import { appPath } from '../../lib/notificationLink';
 import { border, font, surface, t, text } from '../../theme';
 
 /*
- * The website's footer (web/src/components/layout/Footer.jsx + Footer.css),
- * which on phones shows on the homepage only: the town seals and the app
+ * The website's footer (web/src/components/layout/Footer.jsx + Footer.css).
+ * In the app it closes the About Emoorm page (app/about.js), not Home: the town seals and the app
  * mark, the link columns, contact details, the "about" text with its
  * directory of categories, places and guides, and the copyright line.
  */

@@ -42,7 +42,7 @@ export default function NotFound() {
   return (
     <View style={styles.screen}>
       <PublicHeader title="Page not found" />
-      <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.screen} contentContainerStyle={styles.scrollContent}>
         {/* The website's grey section is at least the viewport less 160px. */}
         <View style={[styles.section, { minHeight: Math.max(0, height - 160) }]}>
           <View style={styles.card}>

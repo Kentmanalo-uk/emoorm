@@ -3,12 +3,14 @@ import { Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImageIcon, PaperPlaneTiltIcon, PushPinIcon, TagIcon, XIcon } from 'phosphor-react-native';
 import { font, t } from '../../theme';
+import Glass from '../Glass';
 import InboxSpinner from './InboxSpinner';
 
 /*
  * The chat's message box on phones (web Messenger.jsx .msgr-composer):
  * what goes with the next message (a photo, a product, an order), then the
  * product and photo buttons, the round grey input and the send arrow.
+ * iOS 26: a Liquid Glass bar; elsewhere the website's white bar with its line.
  */
 const ChatComposer = forwardRef(function ChatComposer({
   draft, onChangeDraft, onSend, canSend, sending,
@@ -21,7 +23,7 @@ const ChatComposer = forwardRef(function ChatComposer({
   const hasAttachments = Boolean(attachedOrder || pendingImage || pendingProduct);
 
   return (
-    <View style={[styles.composer, { paddingBottom: 8 + insets.bottom }]}>
+    <Glass style={[styles.composer, { paddingBottom: 8 + insets.bottom }]} fallbackStyle={styles.composerLook}>
       {hasAttachments ? (
         <View style={styles.attachments}>
           {pendingImage ? (
@@ -108,16 +110,15 @@ const ChatComposer = forwardRef(function ChatComposer({
             : <PaperPlaneTiltIcon size={20} weight="fill" color={canSend ? t.success[500] : t.neutral[300]} />}
         </Pressable>
       </View>
-    </View>
+    </Glass>
   );
 });
 
 export default ChatComposer;
 
 const styles = StyleSheet.create({
-  composer: {
-    paddingTop: 8, paddingHorizontal: 8, borderTopWidth: 1, borderTopColor: t.neutral[150], backgroundColor: t.neutral[0],
-  },
+  composer: { paddingTop: 8, paddingHorizontal: 8 },
+  composerLook: { borderTopWidth: 1, borderTopColor: t.neutral[150], backgroundColor: t.neutral[0] },
   attachments: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingTop: 2, paddingHorizontal: 4, paddingBottom: 8 },
   attachImage: { width: 64, height: 64, borderRadius: 10, overflow: 'hidden', backgroundColor: t.neutral[100] },
   fill: { width: '100%', height: '100%' },
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(17, 24, 39, 0.7)',
   },
-  attachBusy: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.6)' },
+  attachBusy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.6)' },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '100%', paddingVertical: 5, paddingLeft: 10, paddingRight: 6,
     borderRadius: 999, backgroundColor: t.primary[50],

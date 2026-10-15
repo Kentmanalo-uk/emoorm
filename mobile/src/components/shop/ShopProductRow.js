@@ -1,14 +1,34 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useProductPeek } from '../peek/ProductPeek';
 import { PlusIcon, ShoppingCartIcon, StarIcon } from 'phosphor-react-native';
 import ProductImage from '../ProductImage';
 import ShopTileImage from './ShopTileImage';
 import { SaleWas } from '../SaleTag';
 import { ProductTodayTag } from '../TodayTag';
 import { saleInfo } from '../../lib/variantPricing';
+import { notTakingOrders, opensLabel } from '../../lib/availability';
+import { isStockless, priceUnit, startsFrom } from '../orders/orderLines';
 import { font, t } from '../../theme';
 
 const money = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * A card's price with what it is for (web product/kinds/KindPrice.jsx): "from"
+ * before a paluto priced by size, " / head" or " / package" after the
+ * amount, smaller (0.78em) in the price's colour.
+ */
+function KindPrice({ product, amount, size }) {
+  const unit = priceUnit(product);
+  const word = { fontSize: size * 0.78, ...font(500) };
+  return (
+    <>
+      {startsFrom(product) ? <Text style={word}>from </Text> : null}
+      {amount}
+      {unit ? <Text style={word}>{unit}</Text> : null}
+    </>
+  );
+}
 
 /**
  * The shop page's product list on phones (web StoreDetail PhoneProductRow):
@@ -23,17 +43,22 @@ export function ShopProductRow({ product, onAdd, onBuy, closed = false }) {
   const rating = Number(product.averageRating || 0);
   const reviews = Number(product.reviewCount || 0);
   const sold = Number(product.soldCount || 0);
-  const soldOut = Number(product.stock) === 0;
+  // On the shop's menu, not posted now: one grey button, not "Sold out".
+  const waiting = notTakingOrders(product);
+  const opens = waiting ? opensLabel(product.availability) : null;
+  // Paluto has no stock: it is cooked when ordered.
+  const soldOut = !waiting && Number(product.stock) === 0 && !isStockless(product);
   const off = soldOut || closed;
   const open = () => router.push(`/product/${product.slug}`);
+  const peek = useProductPeek()(product);
   return (
     <View style={styles.row}>
-      <Pressable style={styles.img} onPress={open} accessibilityRole="link" accessibilityLabel={product.name}>
+      <Pressable style={styles.img} onPress={open} {...peek} accessibilityRole="link" accessibilityLabel={product.name}>
         <ShopTileImage src={images[0] || null} />
         {soldOut ? <Text style={styles.soldout}>Sold out</Text> : null}
       </Pressable>
       <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={2} onPress={open} accessibilityRole="link">{product.name}</Text>
+        <Text style={styles.name} numberOfLines={2} onPress={open} onLongPress={peek.onLongPress} accessibilityRole="link">{product.name}</Text>
         <View style={styles.meta}>
           {reviews > 0 ? (
             <View style={styles.stars}>
@@ -47,9 +72,14 @@ export function ShopProductRow({ product, onAdd, onBuy, closed = false }) {
         </View>
         <View style={styles.foot}>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{money(price)}</Text>
+            <Text style={styles.price}><KindPrice product={product} amount={money(price)} size={17} /></Text>
             <SaleWas product={product} compact />
           </View>
+          {waiting ? (
+            <View style={styles.closed} accessibilityRole="button" accessibilityState={{ disabled: true }}>
+              <Text style={styles.closedText}>Not taking orders yet</Text>
+            </View>
+          ) : (
           <View style={styles.actions}>
             <Pressable
               style={[styles.cart, off && styles.disabled]}
@@ -71,7 +101,9 @@ export function ShopProductRow({ product, onAdd, onBuy, closed = false }) {
               <Text style={styles.buyText}>Buy</Text>
             </Pressable>
           </View>
+          )}
         </View>
+        {opens ? <Text style={styles.opens}>{opens}</Text> : null}
       </View>
     </View>
   );
@@ -89,8 +121,9 @@ export function ShopGridCard({ product, accent, style }) {
   const images = Array.isArray(product.images) ? product.images : [];
   const reviews = Number(product.reviewCount ?? 0);
   const stars = Math.round(Number(product.averageRating || 0));
+  const peek = useProductPeek()(product);
   return (
-    <Pressable style={[styles.card, style]} onPress={() => router.push(`/product/${product.slug}`)} accessibilityRole="link">
+    <Pressable style={[styles.card, style]} onPress={() => router.push(`/product/${product.slug}`)} {...peek} accessibilityRole="link">
       <View style={styles.cardImg}>
         <ProductImage src={images[0] || null} />
       </View>
@@ -100,7 +133,7 @@ export function ShopGridCard({ product, accent, style }) {
           {product.name}
         </Text>
         <View style={styles.cardPriceRow}>
-          <Text style={[styles.cardPrice, { color: accent }]}>₱{price.toFixed(2)} </Text>
+          <Text style={[styles.cardPrice, { color: accent }]}><KindPrice product={product} amount={`₱${price.toFixed(2)}`} size={15} />{' '}</Text>
           <SaleWas product={product} compact />
         </View>
         <View style={styles.ratingRow}>
@@ -154,6 +187,13 @@ const styles = StyleSheet.create({
   },
   buyText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: '#fff' },
   disabled: { opacity: 0.45 },
+  // .shop-m-row-closed, .shop-m-row-opens
+  closed: {
+    flexShrink: 0, height: 34, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 8, backgroundColor: t.neutral[200],
+  },
+  closedText: { fontSize: 13, lineHeight: 16, ...font(600), color: t.neutral[600] },
+  opens: { marginTop: 4, fontSize: 12.5, lineHeight: 17, ...font(400), color: t.neutral[500], textAlign: 'right' },
 
   card: { minWidth: 0, overflow: 'hidden', borderRadius: 0, backgroundColor: t.neutral[0] },
   cardImg: { position: 'relative', width: '100%', aspectRatio: 1, overflow: 'hidden', backgroundColor: t.neutral[100] },

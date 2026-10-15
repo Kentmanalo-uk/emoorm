@@ -26,3 +26,6 @@ ppt/
 screenshot/
 # Word and Excel lock files left while a document is open.
 ~$*
+
+# React Native APK builds: too big for GitHub (published from web/public/downloads)
+/apk-react-native/

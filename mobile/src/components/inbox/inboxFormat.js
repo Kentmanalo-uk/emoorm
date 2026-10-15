@@ -1,3 +1,5 @@
+import { statusLabel } from '../orders/orderProgress';
+
 /*
  * Times, money and text helpers of the website's Messenger
  * (web/src/components/messenger/Messenger.jsx) and Notifications page.
@@ -64,11 +66,22 @@ export const timeAgo = (dateStr) => {
   return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 };
 
-export const ORDER_STATUS_STYLES = {
-  PENDING: { label: 'Pending', tone: 'amber' },
-  CONFIRMED: { label: 'Confirmed', tone: 'blue' },
-  PREPARING: { label: 'Preparing', tone: 'blue' },
-  READY: { label: 'Ready for pickup', tone: 'teal' },
-  COMPLETED: { label: 'Completed', tone: 'green' },
-  CANCELLED: { label: 'Cancelled', tone: 'red' },
+// An order's status in a chat (words from orders/orderProgress statusLabel).
+const ORDER_TONES = {
+  PENDING: 'amber',
+  CONFIRMED: 'blue',
+  PREPARING: 'blue',
+  TO_SHIP: 'blue',
+  READY: 'teal',
+  READY_FOR_PICKUP: 'teal',
+  OUT_FOR_DELIVERY: 'teal',
+  SHIPPED: 'teal',
+  DELIVERED: 'green',
+  PICKED_UP: 'green',
+  COMPLETED: 'green',
+  CANCELLED: 'red',
 };
+export const orderStatusStyle = (order) => ({
+  label: statusLabel(order?.status, order?.fulfillmentMethod),
+  tone: ORDER_TONES[order?.status] || 'gray',
+});

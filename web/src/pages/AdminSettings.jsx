@@ -103,7 +103,7 @@ export default function AdminSettings() {
       adminTeamMax: String(currentAppSettings.adminTeamMax ?? 5),
       requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
       availableTodayEnabled: currentAppSettings.availableTodayEnabled !== false,
-      product3dEnabled: currentAppSettings.product3dEnabled === true,
+      product3dEnabled: currentAppSettings.product3dEnabled !== false,
       categoryStyle: currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE',
     });
   }, [
@@ -246,7 +246,7 @@ export default function AdminSettings() {
       changes.availableTodayEnabled = availableTodayEnabled;
     }
     const product3dEnabled = brandingForm.product3dEnabled === true;
-    if (product3dEnabled !== (currentAppSettings.product3dEnabled === true)) {
+    if (product3dEnabled !== (currentAppSettings.product3dEnabled !== false)) {
       changes.product3dEnabled = product3dEnabled;
     }
     const categoryStyle = brandingForm.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE';

@@ -10,8 +10,6 @@ import apiClient from '../src/api/client';
 import ProductImage from '../src/components/ProductImage';
 import SearchCameraGlyph from '../src/components/search/SearchCameraGlyph';
 import SearchCategoryIcon from '../src/components/search/SearchCategoryIcon';
-import ImageSearchSheet from '../src/components/search/ImageSearchSheet';
-import { setPendingImage } from '../src/components/search/imageSearchStore';
 import { clearRecent, loadRecent, removeRecentTerm, saveRecent } from '../src/lib/shellSearch';
 import { fetchCategories } from '../src/lib/referenceData';
 import { resolveImg } from '../src/lib/media';
@@ -64,7 +62,6 @@ function SearchStart({ initial }) {
   const [iconStyle, setIconStyle] = useState(false);
   // Products matching the words typed, with the words they were asked for.
   const [found, setFound] = useState({ term: '', list: [] });
-  const [imageOpen, setImageOpen] = useState(false);
   const typed = q.trim();
 
   useEffect(() => {
@@ -121,7 +118,7 @@ function SearchStart({ initial }) {
     saveRecent(word).then(setRecent);
     router.push({ pathname: '/products', params: { q: word } });
   };
-  const openCategory = (id) => router.push({ pathname: '/products', params: { category: id } });
+  const openCategory = (id) => router.push({ pathname: '/products', params: { category: id, via: 'search' } });
   const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const togglePopular = () => {
     const next = !popularHidden;
@@ -167,7 +164,7 @@ function SearchStart({ initial }) {
           ) : null}
           <Pressable
             style={({ pressed }) => [styles.camera, pressed && styles.cameraPressed]}
-            onPress={() => setImageOpen(true)}
+            onPress={() => router.push('/search-by-image')}
             accessibilityRole="button"
             accessibilityLabel="Search by image"
           >
@@ -184,7 +181,7 @@ function SearchStart({ initial }) {
         </View>
       </View>
 
-      <ScrollView
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
         keyboardShouldPersistTaps="handled"
@@ -257,7 +254,7 @@ function SearchStart({ initial }) {
                 {popularHidden ? (
                   <Text style={styles.hiddenNote}>Popular searches are hidden.</Text>
                 ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.popular} contentContainerStyle={styles.popularRow}>
+                  <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} style={styles.popular} contentContainerStyle={styles.popularRow}>
                     {popular.map((p) => (
                       <Pressable key={p.id} style={styles.pop} onPress={() => search(p.name)} accessibilityRole="button" accessibilityLabel={p.name}>
                         <View style={styles.popImg}><ProductImage src={p.images?.[0]} /></View>
@@ -303,15 +300,6 @@ function SearchStart({ initial }) {
         )}
       </ScrollView>
 
-      <ImageSearchSheet
-        open={imageOpen}
-        onClose={() => setImageOpen(false)}
-        onFile={(asset) => {
-          setImageOpen(false);
-          setPendingImage(asset);
-          router.push('/search-by-image');
-        }}
-      />
     </View>
   );
 }

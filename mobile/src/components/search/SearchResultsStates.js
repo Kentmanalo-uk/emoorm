@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WarningCircleIcon } from 'phosphor-react-native';
 import Chip from '../Chip';
-import EmptyArt from '../EmptyArt';
+import EmptyState from '../EmptyState';
 import { POPULAR_SUGGESTIONS } from '../../lib/shellSearch';
 import { font, t } from '../../theme';
+import { PageLoader } from '../BrandLoader';
 
 /**
  * The phone results page's "nothing found" card (web Products.jsx
@@ -14,20 +15,15 @@ import { font, t } from '../../theme';
 export function SearchResultsEmpty({ searchQuery, showClear, onClear, onSearch }) {
   return (
     <View style={styles.empty}>
-      <EmptyArt name="search" size={96} />
-      <Text style={styles.emptyTitle} accessibilityRole="header">
-        {searchQuery ? `No results for “${searchQuery}”` : 'No products found'}
-      </Text>
-      <Text style={styles.emptyText}>
-        {searchQuery
+      <EmptyState
+        art="search"
+        style={styles.emptyState}
+        title={searchQuery ? `No results for “${searchQuery}”` : 'No products found'}
+        text={searchQuery
           ? 'Check the spelling, or try a shorter or more general word.'
           : 'Try another category or price range.'}
-      </Text>
-      {showClear ? (
-        <Pressable style={({ pressed }) => [styles.emptyBtn, pressed && styles.emptyBtnPressed]} onPress={onClear} accessibilityRole="button">
-          <Text style={styles.emptyBtnText}>Clear filters</Text>
-        </Pressable>
-      ) : null}
+        actions={showClear ? [{ label: 'Clear filters', onPress: onClear, variant: 'outline' }] : []}
+      />
       <View style={styles.tryBox}>
         <Text style={styles.tryLabel}>Try searching for</Text>
         <View style={styles.tryChips}>
@@ -70,39 +66,16 @@ export function SkeletonBar({ width = '100%', height = 12, radius = 6, style }) 
 
 /** The results' loading cards (web Skeleton.Cards: one column on a phone). */
 export function SearchSkeletonCards({ count = 12 }) {
-  return (
-    <View style={styles.skCards}>
-      {Array.from({ length: count }).map((_, i) => (
-        // eslint-disable-next-line react/no-array-index-key
-        <View key={i} style={styles.skCard}>
-          <SkeletonBar height={168} radius={0} />
-          <View style={styles.skBody}>
-            <SkeletonBar height={13} width="90%" />
-            <SkeletonBar height={11} width="60%" />
-            <View style={styles.skFoot}>
-              <SkeletonBar height={14} width={70} />
-              <SkeletonBar height={22} width={22} radius={11} />
-            </View>
-          </View>
-        </View>
-      ))}
-    </View>
-  );
+  return <PageLoader minHeight={320} label="Loading products" />;
 }
 
 const styles = StyleSheet.create({
   empty: {
-    alignItems: 'center', paddingTop: 32, paddingHorizontal: 20, paddingBottom: 24,
+    alignItems: 'center', paddingHorizontal: 20, paddingBottom: 24,
     borderRadius: 16, backgroundColor: t.neutral[0],
   },
-  emptyTitle: { marginTop: 0, marginBottom: 6, fontSize: 17, lineHeight: 19.55, ...font(500), color: t.neutral[900], textAlign: 'center' },
-  emptyText: { maxWidth: 280, fontSize: 14, lineHeight: 21, ...font(400), color: t.neutral[500], textAlign: 'center' },
-  emptyBtn: {
-    marginTop: 16, height: 38, paddingHorizontal: 22, borderRadius: 999, borderWidth: 1, borderColor: t.primary[600],
-    alignItems: 'center', justifyContent: 'center',
-  },
-  emptyBtnPressed: { backgroundColor: t.primary[50] },
-  emptyBtnText: { fontSize: 14, lineHeight: 20, ...font(500), color: t.primary[700] },
+  // The card gives the sides; the suggestions follow straight after.
+  emptyState: { paddingHorizontal: 0, paddingBottom: 0 },
   tryBox: { width: '100%', marginTop: 24, paddingTop: 18, borderTopWidth: 1, borderTopColor: t.neutral[100] },
   tryLabel: { marginBottom: 10, fontSize: 13, lineHeight: 20.8, ...font(500), color: t.neutral[500], textAlign: 'center' },
   tryChips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },

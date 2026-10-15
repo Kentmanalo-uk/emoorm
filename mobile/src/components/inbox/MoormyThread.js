@@ -283,7 +283,7 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
         />
       </View>
 
-      <ScrollView
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.box}
         contentContainerStyle={styles.messages}
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   head: {
     flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 56, paddingHorizontal: 8, paddingBottom: 8,
-    borderBottomWidth: 1, borderBottomColor: t.neutral[150], backgroundColor: t.neutral[0],
+    backgroundColor: t.neutral[0],
   },
   back: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   pressed: { backgroundColor: t.neutral[100] },

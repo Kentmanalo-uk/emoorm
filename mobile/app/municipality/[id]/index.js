@@ -5,14 +5,14 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowRightIcon, MapPinIcon } from 'phosphor-react-native';
 import apiClient from '../../../src/api/client';
-import EmptyArt from '../../../src/components/EmptyArt';
-import LoadingSkeleton from '../../../src/components/LoadingSkeleton';
+import EmptyState from '../../../src/components/EmptyState';
 import PublicHeader from '../../../src/components/public/PublicHeader';
 import {
   MunicipalityGalleryStack, MunicipalityProductCard, MunicipalitySeal, MunicipalitySectionHead, MunicipalityStoreRow,
 } from '../../../src/components/public/MunicipalityParts';
 import { resolveImg } from '../../../src/lib/media';
-import { font, t, text } from '../../../src/theme';
+import { font, t } from '../../../src/theme';
+import { PageLoader } from '../../../src/components/BrandLoader';
 
 /*
  * web/src/pages/MunicipalityShowcase.jsx + MunicipalityShowcase.css and
@@ -25,18 +25,7 @@ const readList = (response) => (Array.isArray(response?.data) ? response.data : 
 
 /** HighlightCardsSkeleton: two columns of a 140px block and two lines. */
 function HighlightCardsSkeleton({ count = 6, itemWidth }) {
-  return (
-    <View style={styles.skeleton} accessibilityLabel="Loading highlights">
-      {Array.from({ length: count }).map((_, i) => (
-        // eslint-disable-next-line react/no-array-index-key
-        <View key={i} style={[styles.skeletonCard, { width: itemWidth }]}>
-          <LoadingSkeleton height={140} borderRadius={12} />
-          <LoadingSkeleton height={12} width="75%" borderRadius={6} />
-          <LoadingSkeleton height={11} width="45%" borderRadius={6} />
-        </View>
-      ))}
-    </View>
-  );
+  return <PageLoader minHeight={200} label="Loading highlights" />;
 }
 
 function Action({ label, primary, onPress }) {
@@ -54,10 +43,7 @@ function Action({ label, primary, onPress }) {
 
 function Empty({ art, label }) {
   return (
-    <View style={styles.empty}>
-      <EmptyArt name={art} size={80} />
-      <Text style={styles.emptyText}>{label}</Text>
-    </View>
+    <EmptyState compact style={styles.empty} art={art} artSize={80} text={label} />
   );
 }
 
@@ -98,7 +84,7 @@ export default function MunicipalityShowcase() {
   return (
     <View style={styles.screen}>
       <PublicHeader title={name || 'Municipality'} />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.page}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.page}>
         <View style={styles.hero}>
           {/* The seal again, faint and grey, off the right edge behind the band. */}
           {logo ? <Image source={{ uri: logo }} style={styles.heroMark} resizeMode="contain" /> : null}
@@ -244,12 +230,6 @@ const styles = StyleSheet.create({
   storeList: { gap: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 
-  empty: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: t.neutral[0],
-  },
-  emptyText: { fontSize: 14, lineHeight: 22.4, color: text.muted, textAlign: 'center', ...font(400) },
+  // The section's empty state on a white card.
+  empty: { borderRadius: 12, backgroundColor: t.neutral[0] },
 });

@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  Fragment, useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
+import {
+  AppState, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import {
-  ArrowsClockwiseIcon, CaretLeftIcon, FlagIcon, PackageIcon, StorefrontIcon, UserIcon, XIcon,
+  ArrowsClockwiseIcon, CaretLeftIcon, FlagIcon, HandshakeIcon, PackageIcon, PhoneIcon, StorefrontIcon, UserIcon, XIcon,
 } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { toast } from '../../src/lib/toast';
@@ -25,12 +27,20 @@ import InboxSpinner from '../../src/components/inbox/InboxSpinner';
 import MoormyThread from '../../src/components/inbox/MoormyThread';
 import { dayLabel } from '../../src/components/inbox/inboxFormat';
 import { photoProblem, uploadChatPhoto } from '../../src/components/inbox/chatUpload';
+import DealCard, { dealWeight } from '../../src/components/offers/DealCard';
+import {
+  OPEN as OPEN_DEALS, dealStatus, heads, peso as dealPeso, telHref,
+} from '../../src/components/offers/offerText';
 
 /*
  * One chat, full screen (web Messenger.jsx with a conversation open on a
  * phone: ?c=<id>). Buyers and sellers both land here; `role` in the
  * conversation says which side this is. /conversation/moormy is Ate
  * Moormy's chat (buyers), with ?ask=<question> asked as it opens.
+ *
+ * Livestock deals are talked over here: each deal's card follows its latest
+ * step, open deals are kept in view under the header (a tap goes to the
+ * card), and either side can call the other while a deal is open.
  */
 
 const POLL_INTERVAL_MS = 5000;
@@ -75,6 +85,8 @@ function StoreChat({ id, onBack }) {
   const scrollY = useRef(0);
   const contentH = useRef(0);
   const keepFromBottom = useRef(null);
+  // Where each deal's card sits in the messages, for the strips above them.
+  const dealY = useRef({});
   const convoRef = useRef(null);
   useEffect(() => { convoRef.current = activeConvo; }, [activeConvo]);
 
@@ -240,6 +252,26 @@ function StoreChat({ id, onBack }) {
     return out;
   }, [activeConvo, earlier.messages]);
 
+  // Livestock deals: each one's card goes after its latest step in the chat.
+  const dealsById = useMemo(() => new Map((activeConvo?.deals || []).map((d) => [d.id, d])), [activeConvo]);
+  const lastStepOf = useMemo(() => {
+    const last = new Map();
+    timeline.forEach((entry) => { if (entry.kind === 'msg' && entry.message.offerId) last.set(entry.message.offerId, entry.message.id); });
+    return last;
+  }, [timeline]);
+  const openDeals = (activeConvo?.deals || []).filter((d) => OPEN_DEALS.includes(d.status));
+  const dealSide = activeConvo?.role === 'seller' ? 'seller' : 'buyer';
+  const dealPhone = openDeals.map((d) => (dealSide === 'buyer' ? d.sellerPhone : d.buyerPhone)).find(Boolean) || null;
+  const refreshDeals = () => {
+    fetchConversation({ silent: true }).then(() => scrollToBottom());
+  };
+  const showDeal = (dealId) => {
+    const y = dealY.current[dealId];
+    if (y == null) return;
+    stickToEnd.current = false;
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+  };
+
   const canSend = !sending && Boolean(draft.trim() || pendingImage || pendingProduct || attachedOrderId);
 
   const menuItems = activeConvo ? [
@@ -321,12 +353,42 @@ function StoreChat({ id, onBack }) {
           <Text style={styles.name} numberOfLines={1}>{activeHeader.title}</Text>
           <Text style={styles.sub} numberOfLines={1}>{activeHeader.subtitle}</Text>
         </Pressable>
+        {dealPhone ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={dealSide === 'buyer' ? 'Call the seller' : 'Call the buyer'}
+            onPress={() => Linking.openURL(telHref(dealPhone)).catch(() => toast.error('Could not start the call'))}
+            style={({ pressed }) => [styles.call, pressed && styles.callPressed]}
+          >
+            <PhoneIcon size={20} weight="fill" color={t.primary[700]} />
+          </Pressable>
+        ) : null}
         <ShellPageMenu label="Conversation options" items={menuItems} />
       </View>
 
+      {openDeals.length > 0 ? (
+        <View style={styles.deals} accessibilityLabel="Deals in this chat">
+          {openDeals.map((d) => (
+            <Pressable
+              key={d.id}
+              accessibilityRole="button"
+              accessibilityHint={dealStatus(d, dealSide).label}
+              onPress={() => showDeal(d.id)}
+              style={styles.dealStrip}
+            >
+              <HandshakeIcon size={16} weight="fill" color={t.primary[600]} />
+              <Text style={[styles.dealName, dealWeight(dealSide, 700)]} numberOfLines={1}>{d.product?.name}</Text>
+              <Text style={[styles.dealPrice, dealWeight(dealSide, 600)]}>
+                {d.finalTotal != null ? dealPeso(d.finalTotal) : `${heads(d.quantity)} · ${dealPeso(d.total)}`}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
       <ChatPinnedOrders orders={activeConvo.pinnedOrders} sellerSide={isSellerSide} />
 
-      <ScrollView
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.messagesBox}
         contentContainerStyle={[styles.messages, timeline.length === 0 && styles.messagesEmptyBox]}
@@ -376,13 +438,21 @@ function StoreChat({ id, onBack }) {
           timeline.map((entry) => (entry.kind === 'day' ? (
             <ChatDay key={entry.key} label={entry.label} />
           ) : (
-            <ChatBubble
-              key={entry.key}
-              message={entry.message}
-              isSelf={entry.message.senderId === currentUser?.id}
-              seen={Boolean(otherReadAt) && new Date(otherReadAt) >= new Date(entry.message.createdAt)}
-              onOpenImage={setViewerImage}
-            />
+            // A message, and a deal's card after its latest step (both in the list's flow).
+            <Fragment key={entry.key}>
+              <ChatBubble
+                message={entry.message}
+                isSelf={entry.message.senderId === currentUser?.id}
+                seen={Boolean(otherReadAt) && new Date(otherReadAt) >= new Date(entry.message.createdAt)}
+                onOpenImage={setViewerImage}
+              />
+              {entry.message.offerId && lastStepOf.get(entry.message.offerId) === entry.message.id
+                && dealsById.has(entry.message.offerId) ? (
+                  <View style={styles.dealRow} onLayout={(e) => { dealY.current[entry.message.offerId] = e.nativeEvent.layout.y; }}>
+                    <DealCard deal={dealsById.get(entry.message.offerId)} side={dealSide} onChanged={refreshDeals} />
+                  </View>
+                ) : null}
+            </Fragment>
           )))
         )}
       </ScrollView>
@@ -444,7 +514,7 @@ const styles = StyleSheet.create({
   bareBar: { minHeight: 56, paddingHorizontal: 8, justifyContent: 'center' },
   head: {
     flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 56, paddingHorizontal: 8, paddingBottom: 8,
-    borderBottomWidth: 1, borderBottomColor: t.neutral[150], backgroundColor: t.neutral[0],
+    backgroundColor: t.neutral[0],
   },
   back: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   pressed: { backgroundColor: t.neutral[100] },
@@ -478,5 +548,22 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: t.danger[200], backgroundColor: t.danger[100],
   },
   errorText: { flex: 1, fontSize: 12.5, lineHeight: 20, color: t.danger[800], ...font(400) },
+  call: {
+    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto',
+    backgroundColor: t.primary[50],
+  },
+  callPressed: { backgroundColor: t.primary[100] },
+  // Open deals, kept in view above the messages.
+  deals: {
+    gap: 6, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: t.neutral[0],
+    borderBottomWidth: 1, borderBottomColor: t.neutral[200],
+  },
+  dealStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12,
+    backgroundColor: t.primary[50],
+  },
+  dealName: { flex: 1, minWidth: 0, fontSize: 13, lineHeight: 20.8, color: t.neutral[800] },
+  dealPrice: { flexShrink: 0, fontSize: 13, lineHeight: 20.8, color: t.neutral[800] },
+  dealRow: { alignItems: 'center', paddingVertical: 4 },
   errorX: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
 });

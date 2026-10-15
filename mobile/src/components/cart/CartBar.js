@@ -1,16 +1,22 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Glass, { floatingTabBar } from '../Glass';
 import { font, t } from '../../theme';
 import { CartRoundCheck } from './CartStoreGroup';
 
 /*
  * The phone cart's checkout bar above the tab bar (web Cart.jsx .cart-m-bar):
  * an optional note line, then All · total and delivery fee · Check out (n).
+ *
+ * Android and older iPhones: the website's white bar, in the page's flow
+ * just above the tab bar. iOS 26: Liquid Glass floating over the cart, just
+ * above the system's glass tab bar; the cart gives it its `bottom` (style)
+ * and keeps room for it (onLayout reports its height).
  */
 export default function CartBar({
-  note, noteBad, allSelected, onToggleAll, totalLabel, feeLabel, offLabel, checkoutLabel, disabled, onCheckout,
+  note, noteBad, allSelected, onToggleAll, totalLabel, feeLabel, offLabel, checkoutLabel, disabled, onCheckout, style, onLayout,
 }) {
   return (
-    <View style={styles.bar}>
+    <Glass fallbackStyle={BAR_LOOK} style={[floatingTabBar ? styles.float : styles.bar, style]} onLayout={onLayout}>
       {note ? <Text style={[styles.note, noteBad && styles.noteBad]}>{note}</Text> : null}
       <View style={styles.row}>
         <View style={styles.all}>
@@ -32,24 +38,29 @@ export default function CartBar({
           <Text style={styles.ctaText}>{checkoutLabel}</Text>
         </Pressable>
       </View>
-    </View>
+    </Glass>
   );
 }
+
+// The website's bar: white, a hairline on top and a soft shadow above.
+const BAR_LOOK = {
+  borderTopWidth: 1,
+  borderTopColor: t.neutral[200],
+  backgroundColor: t.neutral[0],
+  shadowColor: '#0f172a',
+  shadowOffset: { width: 0, height: -4 },
+  shadowOpacity: 0.06,
+  shadowRadius: 16,
+  elevation: 8,
+};
 
 const styles = StyleSheet.create({
   // On the website the bar's bottom 6px sit under the tab bar (the bar is
   // fixed 68px up, the 74px tab bar covers it): tuck it under the same way.
-  bar: {
-    marginBottom: -6,
-    borderTopWidth: 1,
-    borderTopColor: t.neutral[200],
-    backgroundColor: t.neutral[0],
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 8,
-    zIndex: 115,
+  bar: { marginBottom: -6, zIndex: 115 },
+  // iOS 26: a glass capsule over the cart, above the floating tab bar.
+  float: {
+    position: 'absolute', left: 10, right: 10, zIndex: 115, borderRadius: 26, overflow: 'hidden',
   },
   note: {
     paddingVertical: 7,

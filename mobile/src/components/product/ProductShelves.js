@@ -3,13 +3,15 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useRouter } from 'expo-router';
 import { CaretRightIcon, PlusIcon } from 'phosphor-react-native';
 import ProductImage from '../ProductImage';
-import { ProductStats } from '../ProductCard';
+import { ProductStats } from '../ProductStats';
 import { SaleWas } from '../SaleTag';
 import { ProductTodayTag } from '../TodayTag';
 import { saleInfo } from '../../lib/variantPricing';
 import { resolveImg } from '../../lib/media';
 import { font, t } from '../../theme';
 import { parseImages, peso } from './productLib';
+import KindPrice from './KindPrice';
+import { useProductPeek } from '../peek/ProductPeek';
 
 /**
  * Under the shop card on phones: the same shop's products, or similar ones,
@@ -17,6 +19,7 @@ import { parseImages, peso } from './productLib';
  */
 export function ShopShelf({ sameShop, related, onQuickAdd }) {
   const router = useRouter();
+  const peekProduct = useProductPeek();
   const [tab, setTab] = useState('same');
   if (!sameShop.length && !related.length) return null;
   const tabs = [['same', 'Same store', sameShop], ['similar', 'Similar items', related]].filter(([, , list]) => list.length > 0);
@@ -34,15 +37,15 @@ export function ShopShelf({ sameShop, related, onQuickAdd }) {
           );
         })}
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+      <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {list.slice(0, 12).map((p) => (
           <View key={p.id} style={styles.card}>
-            <Pressable style={styles.img} onPress={() => router.push(`/product/${p.slug}`)} accessibilityLabel={p.name}>
+            <Pressable style={styles.img} onPress={() => router.push(`/product/${p.slug}`)} {...peekProduct(p)} accessibilityLabel={p.name}>
               <ShelfImage src={parseImages(p.images)[0]} />
             </Pressable>
             <Text style={styles.name} numberOfLines={2} onPress={() => router.push(`/product/${p.slug}`)}>{p.name}</Text>
             <View style={styles.foot}>
-              <Text style={styles.price} numberOfLines={1}>{peso(saleInfo(p).price)}</Text>
+              <Text style={styles.price} numberOfLines={1}><KindPrice product={p} size={14}>{peso(saleInfo(p).price)}</KindPrice></Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Add ${p.name} to cart`}
@@ -73,6 +76,7 @@ function ShelfImage({ src }) {
 /** "You may also like": a heading on the grey, white cards in two columns. */
 export function RelatedGrid({ products, categoryId, sectionRef }) {
   const router = useRouter();
+  const peekProduct = useProductPeek();
   const [w, setW] = useState(0);
   if (!products.length) return null;
   const card = w ? (w - 8) / 2 : 0;
@@ -87,7 +91,7 @@ export function RelatedGrid({ products, categoryId, sectionRef }) {
       </View>
       <View style={styles.grid} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
         {card ? products.map((p) => (
-          <Pressable key={p.id} style={[styles.gCard, { width: card }]} onPress={() => router.push(`/product/${p.slug}`)} accessibilityRole="button" accessibilityLabel={p.name}>
+          <Pressable key={p.id} style={[styles.gCard, { width: card }]} onPress={() => router.push(`/product/${p.slug}`)} {...peekProduct(p)} accessibilityRole="button" accessibilityLabel={p.name}>
             <View style={[styles.gImage, { height: card }]}>
               <ProductImage src={parseImages(p.images)[0]} />
             </View>
@@ -97,7 +101,7 @@ export function RelatedGrid({ products, categoryId, sectionRef }) {
                 {p.name}
               </Text>
               <View style={styles.gPriceRow}>
-                <Text style={styles.gPrice}>{peso(saleInfo(p).price)}</Text>
+                <Text style={styles.gPrice}><KindPrice product={p} size={15}>{peso(saleInfo(p).price)}</KindPrice></Text>
                 <SaleWas product={p} compact style={styles.gWas} />
               </View>
               <ProductStats product={{ ...p, soldCount: 0 }} />

@@ -24,6 +24,7 @@ import ProfileAddressPicker from './ProfileAddressPicker';
 import {
   adoptTokens, cleanUsername, contactProblem, errorText, fetchIdentityStatus, fullNameProblem, passwordProblem, usernameProblem,
 } from './profileLib';
+import { PageLoader } from '../BrandLoader';
 
 /*
  * Settings on phones, one part per page (web/src/pages/ProfileSettingsPhone.jsx):
@@ -63,7 +64,7 @@ function PartFrame({ title, children, bar }) {
     <View style={styles.screen}>
       <ScreenHeader title={title} backTo="/settings" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, bar && { paddingBottom: 96 }]} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={[styles.content, bar && { paddingBottom: 96 }]} keyboardShouldPersistTaps="handled">
           {children}
         </ScrollView>
         {bar}
@@ -86,11 +87,7 @@ function PartPage({ title, children, onSave, saving, canSave }) {
 export function PartLoading({ part }) {
   return (
     <PartFrame title={PARTS[part]}>
-      <PsCard style={{ gap: 10 }}>
-        <LoadingSkeleton height={14} />
-        <LoadingSkeleton height={14} />
-        <LoadingSkeleton height={14} width="60%" />
-      </PsCard>
+      <PageLoader label="Loading" />
     </PartFrame>
   );
 }
@@ -138,8 +135,6 @@ export function ProfilePart() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [1, 1] });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) { toast.error('Photo must be under 5 MB'); return; }
-    if (asset.mimeType && !/^image\/(jpe?g|png|webp)$/i.test(asset.mimeType)) { toast.error('Only JPEG, PNG, or WebP images allowed'); return; }
     setUploading(true);
     try {
       const uploaded = await uploadImage(asset);
@@ -176,7 +171,7 @@ export function ProfilePart() {
               <PsButton label="Remove" variant="ghost" onPress={() => setForm((f) => ({ ...f, profilePhoto: '' }))} disabled={uploading} style={{ flex: 1 }} />
             ) : null}
           </View>
-          <Text style={styles.photoHint}>JPG, PNG, or WebP. Max 5 MB.</Text>
+          <Text style={styles.photoHint}>Any photo from your phone.</Text>
         </View>
       </View>
 
@@ -560,7 +555,7 @@ const styles = StyleSheet.create({
   photoImg: { width: '100%', height: '100%' },
   photoFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[100] },
   photoInitial: { fontSize: 24, lineHeight: 38.4, color: t.neutral[500], ...font(500) },
-  photoBusy: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.75)' },
+  photoBusy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.75)' },
   photoActions: { flex: 1, minWidth: 0, gap: 6 },
   photoBtns: { flexDirection: 'row', gap: 6 },
   photoHint: { marginTop: 2, fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },

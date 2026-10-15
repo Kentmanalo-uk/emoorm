@@ -1,12 +1,12 @@
 import { useId } from 'react';
 import { View } from 'react-native';
 import Svg, {
-  Circle, ClipPath, Defs, Ellipse, FeDropShadow, FeGaussianBlur, Filter, G, LinearGradient, Path, Rect, Stop,
+  Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop,
 } from 'react-native-svg';
 import {
   ArrowCounterClockwiseIcon, ArrowUpRightIcon, BellIcon, CalendarBlankIcon, CameraIcon, ChartBarIcon, ChartLineUpIcon,
   ChatCircleDotsIcon, ChatCircleTextIcon, ChatTeardropTextIcon, CheckCircleIcon, ClockCounterClockwiseIcon, ClockIcon,
-  CoffeeIcon, CoinsIcon, CreditCardIcon, DeviceMobileIcon, EnvelopeSimpleIcon, FlagIcon, GearIcon, HeadsetIcon, HeartIcon,
+  CoffeeIcon, CoinsIcon, CreditCardIcon, DeviceMobileIcon, EnvelopeSimpleIcon, FlagIcon, GearIcon, HandshakeIcon, HeadsetIcon, HeartIcon,
   HeartbeatIcon, HouseIcon, IdentificationCardIcon, ImageSquareIcon, ImagesIcon, KeyIcon, LaptopIcon, LightningIcon,
   MagnifyingGlassIcon, MapPinIcon, MapTrifoldIcon, MegaphoneIcon, NotePencilIcon, PackageIcon, PaperPlaneTiltIcon,
   PercentIcon, PiggyBankIcon, PlusIcon, ReceiptIcon, RocketLaunchIcon, ShieldCheckIcon, ShoppingBagIcon, ShoppingCartIcon,
@@ -16,10 +16,13 @@ import {
 import { t } from '../theme';
 
 /**
- * Picture for an empty state (web/src/components/ui/EmptyArt.jsx): a small
- * glassmorphism scene in the theme's greens with a touch of teal, one per
- * topic. Same scene names as the website. Decorative (hidden from screen
- * readers): the heading beside it says what is empty.
+ * Picture for an empty state, in the Start selling sticker's style
+ * (home/StartSellingBubble): flat shapes in the brand's green, pink and gold
+ * on a soft pink-to-mint disc, white details, round badges with a white rim,
+ * and one small sparkle. One per topic; same scene names as the website's
+ * (web/src/components/ui/EmptyArt.jsx), which keeps its own glass look.
+ * Decorative (hidden from screen readers): the heading beside it says what
+ * is empty.
  *
  * `size` is the website's prop; the app draws the website's phone size
  * (a quarter larger, then 1.4×, at most 260 tall).
@@ -55,6 +58,8 @@ const SCENES = {
   reviews: { layout: 'bubbles', main: StarIcon, a: ChatCircleTextIcon, b: HeartIcon },
   support: { layout: 'bubbles', main: HeadsetIcon, a: ChatCircleDotsIcon, b: ShieldCheckIcon },
   announcements: { layout: 'bubbles', main: MegaphoneIcon, a: UsersThreeIcon, b: SparkleIcon },
+  // Livestock deals: a handshake over a price, talked over in chat.
+  offers: { layout: 'bubbles', main: HandshakeIcon, a: TagIcon, b: ChatCircleDotsIcon },
   // A storefront with an awning: shops and shopping.
   stores: { layout: 'shop', main: StorefrontIcon, a: MapPinIcon, b: StarIcon },
   following: { layout: 'shop', main: HeartIcon, a: BellIcon, b: StarIcon },
@@ -85,11 +90,15 @@ const MAX_H = 260;
 /** The height the scene takes for a `size` (to lay out around it). */
 export const emptyArtHeight = (size = 96) => Math.min(Math.round(size * SCALE) * PHONE, MAX_H);
 
-/** A four-point sparkle centred on (x, y). */
+/** A four-point sparkle centred on (x, y), straight-edged like the Start selling sticker's. */
 const sparklePath = (x, y, r) => {
-  const k = r * 0.18;
-  return `M${x} ${y - r}C${x + k} ${y - k} ${x + k} ${y - k} ${x + r} ${y}C${x + k} ${y + k} ${x + k} ${y + k} ${x} ${y + r}C${x - k} ${y + k} ${x - k} ${y + k} ${x - r} ${y}C${x - k} ${y - k} ${x - k} ${y - k} ${x} ${y - r}Z`;
+  const p = r * 0.29;
+  const q = r * 0.71;
+  return `M${x} ${y - r}l${p} ${q} ${q} ${p} ${-q} ${p} ${-p} ${q} ${-p} ${-q} ${-q} ${-p} ${q} ${-p}Z`;
 };
+
+// Icons on a gold badge are drawn in dark amber (the peso on the sticker's coin).
+const GOLD_INK = '#92400e';
 
 // A Phosphor icon's filled paths (its 256-unit drawing), to place inside the
 // scene's own <Svg> instead of nesting another <Svg>.
@@ -103,102 +112,145 @@ export default function EmptyArt({ name, size = 96, style }) {
   const url = (part) => `url(#${id}-${part})`;
 
   // ── Building blocks ──
-  const icon = (Icon, x, y, s) => (
-    <G transform={`translate(${x} ${y}) scale(${s / 256})`} fill={url('main')}>
+  // A Phosphor icon, `s` wide, its corner at (x, y).
+  const icon = (Icon, x, y, s, fill = '#ffffff') => (
+    <G transform={`translate(${x} ${y}) scale(${s / 256})`} fill={fill}>
       {iconPaths(Icon)}
     </G>
   );
-  const glass = { fill: url('glass'), stroke: url('edge'), strokeWidth: 1.3 };
-  const chip = (cx, cy, r, Icon) => (
+  // A round sticker badge (the Start selling coin): a gradient disc with a
+  // white rim and its icon in the middle.
+  const badge = (cx, cy, r, Icon, tone = 'pink') => (
     <G>
-      <Circle cx={cx} cy={cy} r={r} {...glass} filter={url('lift')} />
-      {icon(Icon, cx - r * 0.6, cy - r * 0.6, r * 1.2)}
+      <Circle cx={cx} cy={cy + 1.5} r={r} fill={t.primary[900]} opacity="0.12" />
+      <Circle cx={cx} cy={cy} r={r} fill={url(tone)} stroke="#ffffff" strokeWidth="2.6" />
+      {icon(Icon, cx - r * 0.56, cy - r * 0.56, r * 1.12, tone === 'gold' ? GOLD_INK : '#ffffff')}
     </G>
   );
-  const sparkle = (x, y, r, fill) => <Path d={sparklePath(x, y, r)} fill={fill} />;
-  const bar = (x, y, wBar, hBar, fill = t.primary[200], opacity = 0.9) => (
-    <Rect x={x} y={y} width={wBar} height={hBar} rx={hBar / 2} fill={fill} opacity={opacity} />
-  );
+  const bar = (x, y, wBar, hBar, fill) => <Rect x={x} y={y} width={wBar} height={hBar} rx={hBar / 2} fill={fill} />;
 
   // ── The compositions ──
   const layouts = {
-    card: () => (
-      <>
-        <Rect x="62" y="30" width="84" height="96" rx="20" transform="rotate(-9 104 78)" {...glass} opacity="0.5" />
-        <Rect x="56" y="34" width="88" height="96" rx="22" {...glass} strokeWidth="1.4" filter={url('lift')} />
-        <Path d="M56 34h52L56 112Z" fill="#ffffff" opacity="0.3" clipPath={url('clip-card')} />
-        {icon(scene.main, 70, 52, 60)}
-        {chip(148, 112, 16, scene.a)}
-      </>
-    ),
+    // A phone with a list on screen, and the topic's badge beside it.
     device: () => (
       <>
-        <Rect x="70" y="14" width="62" height="128" rx="16" {...glass} strokeWidth="1.5" filter={url('lift')} />
-        <Rect x="91" y="21" width="20" height="4" rx="2" fill="#ffffff" opacity="0.9" />
-        {[52, 78].map((y, i) => (
-          <G key={y} opacity={1 - i * 0.35}>
-            <Rect x="77" y={y} width="48" height="18" rx="7" fill="#ffffff" opacity="0.75" />
-            <Circle cx="86" cy={y + 9} r="4.5" fill={t.primary[300]} />
-            {bar(94, y + 7.25, 24, 3.5)}
+        <Rect x="72" y="16" width="58" height="118" rx="13" fill={url('green')} />
+        <Rect x="77" y="27" width="48" height="98" rx="7" fill="#ffffff" />
+        <Rect x="93" y="20" width="16" height="3" rx="1.5" fill="#ffffff" opacity="0.75" />
+        {[[40, t.accent[400], 1], [60, t.primary[400], 1], [80, '#fbbf24', 0.55]].map(([y, dot, op]) => (
+          <G key={y} opacity={op}>
+            <Rect x="81" y={y} width="40" height="16" rx="5" fill={t.primary[50]} />
+            <Circle cx="89" cy={y + 8} r="4" fill={dot} />
+            {bar(96, y + 4.5, 20, 3, t.primary[300])}
+            {bar(96, y + 10, 13, 2.5, t.primary[200])}
           </G>
         ))}
-        <Circle cx="138" cy="46" r="25" {...glass} strokeWidth="1.5" filter={url('lift')} />
-        {icon(scene.main, 122, 30, 32)}
-        <Circle cx="157" cy="27" r="5.5" fill={t.primary[500]} stroke="#ffffff" strokeWidth="2" />
+        <Rect x="88" y="108" width="26" height="8" rx="4" fill={t.primary[500]} />
+        {badge(140, 42, 22, scene.main, 'pink')}
+        <Circle cx="156" cy="25" r="6" fill={url('gold')} stroke="#ffffff" strokeWidth="2" />
+        {badge(60, 106, 13, scene.a, 'gold')}
       </>
     ),
+    // Parcels: an amber box with a label in front, a pink one behind.
     stack: () => (
       <>
-        <Rect x="80" y="30" width="76" height="70" rx="16" transform="rotate(8 118 65)" {...glass} opacity="0.6" />
-        <Rect x="50" y="48" width="86" height="82" rx="18" {...glass} strokeWidth="1.5" filter={url('lift')} />
-        <Path d="M50 48h44L50 102Z" fill="#ffffff" opacity="0.3" clipPath={url('clip-stack')} />
-        {icon(scene.main, 67, 63, 52)}
-        {chip(150, 112, 16, scene.a)}
+        <G transform="rotate(7 126 60)">
+          <Rect x="98" y="34" width="56" height="50" rx="6" fill={url('pink')} />
+          <Rect x="121" y="34" width="10" height="50" fill="#ffffff" opacity="0.45" />
+        </G>
+        <Rect x="46" y="60" width="84" height="72" rx="6" fill={url('amber')} />
+        <Rect x="42" y="52" width="92" height="16" rx="4" fill={url('amberLid')} />
+        <Rect x="100" y="52" width="11" height="80" fill="#fde68a" opacity="0.85" />
+        <Rect x="54" y="80" width="38" height="38" rx="6" fill="#ffffff" />
+        {icon(scene.main, 59, 85, 28, t.primary[600])}
+        {badge(146, 116, 16, scene.a, 'green')}
       </>
     ),
+    // A chart board: bars, a rising line, and a gold coin with the topic.
     chart: () => (
       <>
-        <Rect x="40" y="34" width="120" height="94" rx="18" {...glass} strokeWidth="1.5" filter={url('lift')} />
-        {[[60, 30], [82, 48], [104, 38], [126, 60]].map(([x, hBar], i) => (
-          <Rect key={x} x={x} y={114 - hBar} width="14" height={hBar} rx="5" fill={url('main')} opacity={0.55 + i * 0.15} />
+        <Rect x="38" y="30" width="116" height="98" rx="12" fill="#ffffff" stroke={t.primary[100]} strokeWidth="2" />
+        <Path d="M38 42a12 12 0 0 1 12 -12h92a12 12 0 0 1 12 12v6h-116Z" fill={url('green')} />
+        {[50, 58, 66].map((x) => <Circle key={x} cx={x} cy="39" r="2.5" fill="#ffffff" opacity="0.85" />)}
+        {[[54, 26, 'green'], [76, 44, 'pink'], [98, 34, 'green'], [120, 56, 'pink']].map(([x, hBar, tone]) => (
+          <Rect key={x} x={x} y={116 - hBar} width="15" height={hBar} rx="4" fill={url(tone)} />
         ))}
-        <Circle cx="156" cy="36" r="21" {...glass} strokeWidth="1.5" filter={url('lift')} />
-        {icon(scene.main, 143, 23, 26)}
+        <Path d="M61.5 82L83.5 64L105.5 74L127.5 52" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {[[61.5, 82], [83.5, 64], [105.5, 74], [127.5, 52]].map(([x, y]) => (
+          <Circle key={x} cx={x} cy={y} r="3.2" fill="#ffffff" stroke="#f59e0b" strokeWidth="2" />
+        ))}
+        {badge(154, 32, 20, scene.main, 'gold')}
       </>
     ),
+    // A magnifier over a product card.
     lens: () => (
       <>
-        <Rect x="104" y="34" width="56" height="64" rx="13" {...glass} opacity="0.55" />
-        <Circle cx="94" cy="72" r="38" fill="#ffffff" opacity="0.6" filter={url('lift')} />
-        <Circle cx="94" cy="72" r="38" fill="none" stroke={url('main')} strokeWidth="8" />
-        <Path d="M74 54a26 26 0 0 1 30 -8" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" opacity="0.9" />
-        <Path d="M122 100L146 124" stroke={url('main')} strokeWidth="13" strokeLinecap="round" />
-        {icon(scene.a, 78, 56, 32)}
+        <Rect x="100" y="32" width="58" height="74" rx="9" fill="#ffffff" stroke={t.primary[100]} strokeWidth="2" />
+        <Rect x="107" y="39" width="44" height="30" rx="5" fill={t.primary[100]} />
+        {bar(107, 76, 36, 4, t.primary[200])}
+        {bar(107, 85, 26, 4, t.accent[200])}
+        <Rect x="107" y="94" width="20" height="7" rx="3.5" fill={t.accent[400]} />
+        <Path d="M116 102L140 126" stroke={url('pink')} strokeWidth="13" strokeLinecap="round" />
+        <Circle cx="90" cy="74" r="34" fill="#e0f2fe" stroke={url('green')} strokeWidth="9" />
+        <Path d="M70 60a24 24 0 0 1 22 -10" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" />
+        {icon(scene.a, 74, 58, 32, t.primary[600])}
       </>
     ),
+    // A folded map, a dotted road, and a pink pin.
     map: () => (
       <>
-        <Path d="M100 116L34 90L100 64L166 90Z" fill={t.primary[300]} opacity="0.4" transform="translate(0 7)" />
-        <Path d="M100 116L34 90L100 64L166 90Z" {...glass} strokeWidth="1.5" filter={url('lift')} />
-        <Ellipse cx="100" cy="90" rx="14" ry="5" fill={t.primary[800]} opacity="0.18" />
-        {icon(scene.main, 70, 22, 62)}
+        <Path d="M40 52L80 42L80 122L40 132Z" fill={t.primary[200]} />
+        <Path d="M80 42L120 52L120 132L80 122Z" fill={t.primary[50]} />
+        <Path d="M120 52L160 42L160 122L120 132Z" fill={t.primary[200]} />
+        <Path d="M48 112C70 92 100 114 152 72" fill="none" stroke={t.accent[300]} strokeWidth="3" strokeDasharray="5 5" strokeLinecap="round" />
+        <Ellipse cx="100" cy="101" rx="11" ry="3.5" fill={t.primary[900]} opacity="0.2" />
+        <Path d="M100 99C100 99 75 73 75 56a25 25 0 0 1 50 0C125 73 100 99 100 99Z" fill={url('pink')} stroke="#ffffff" strokeWidth="2.6" />
+        <Circle cx="100" cy="56" r="10" fill="#ffffff" />
+        <Circle cx="100" cy="56" r="4.5" fill={t.accent[500]} />
+        {badge(150, 108, 15, scene.a, 'green')}
       </>
     ),
+    // Two speech bubbles: a pink one typing behind, a green one with the topic.
     bubbles: () => (
       <>
-        <Path d="M100 24h44a20 20 0 0 1 20 20v12a20 20 0 0 1 -20 20h-4l4 14l-18 -14h-26a20 20 0 0 1 -20 -20v-12a20 20 0 0 1 20 -20Z" {...glass} opacity="0.6" />
-        <Path d="M60 56h50a22 22 0 0 1 22 22v18a22 22 0 0 1 -22 22h-38l-22 16l4 -16a22 22 0 0 1 -16 -22v-18a22 22 0 0 1 22 -22Z" {...glass} strokeWidth="1.5" filter={url('lift')} />
-        {icon(scene.main, 66, 63, 48)}
+        <Path d="M108 24h40a16 16 0 0 1 16 16v10a16 16 0 0 1 -16 16h-4l5 12l-17 -12h-24a16 16 0 0 1 -16 -16v-10a16 16 0 0 1 16 -16Z" fill={url('pink')} />
+        {[116, 128, 140].map((x) => <Circle key={x} cx={x} cy="45" r="3.2" fill="#ffffff" />)}
+        <Path d="M60 56h50a22 22 0 0 1 22 22v18a22 22 0 0 1 -22 22h-38l-22 16l4 -16a22 22 0 0 1 -16 -22v-18a22 22 0 0 1 22 -22Z" fill={url('green')} stroke="#ffffff" strokeWidth="3" />
+        {icon(scene.main, 68, 70, 34)}
+        {badge(148, 110, 14, scene.a, 'gold')}
       </>
     ),
+    // The Start selling shop, larger, with the topic's badge.
     shop: () => (
       <>
-        <Rect x="52" y="60" width="96" height="76" rx="10" {...glass} strokeWidth="1.5" filter={url('lift')} />
-        <Rect x="44" y="42" width="112" height="22" rx="8" fill={url('main')} />
-        {[58, 86, 114, 142].map((x) => <Rect key={x} x={x - 7} y="42" width="14" height="22" fill="#ffffff" opacity="0.3" />)}
-        <Rect x="87" y="92" width="26" height="44" rx="6" fill="#ffffff" opacity="0.6" />
-        <Circle cx="160" cy="36" r="22" {...glass} strokeWidth="1.5" filter={url('lift')} />
-        {icon(scene.main, 146, 22, 28)}
+        <Rect x="68" y="22" width="56" height="14" rx="4" fill={t.primary[700]} />
+        <Rect x="79" y="27" width="34" height="4" rx="2" fill="#ffffff" opacity="0.85" />
+        <Rect x="58" y="58" width="76" height="72" rx="5" fill={url('green')} />
+        <Path d="M54 36H138L142 56H50Z" fill="#ffffff" />
+        {[0, 2, 4].map((i) => (
+          <Path key={i} d={`M${54 + i * 16.8} 36H${70.8 + i * 16.8}L${50 + (i + 1) * 18.4} 56H${50 + i * 18.4}Z`} fill={t.accent[500]} />
+        ))}
+        {[0, 1, 2, 3, 4].map((i) => (
+          <Circle key={i} cx={59.2 + i * 18.4} cy="56" r="9.2" fill={i % 2 ? '#ffffff' : t.accent[500]} />
+        ))}
+        <Rect x="68" y="80" width="22" height="50" rx="4" fill="#ffffff" opacity="0.95" />
+        <Circle cx="84.5" cy="106" r="2" fill={t.primary[600]} />
+        <Rect x="98" y="80" width="26" height="20" rx="4" fill="#e0f2fe" />
+        <Path d="M111 80V100M98 90H124" stroke={t.primary[500]} strokeWidth="2" />
+        {badge(152, 36, 20, scene.main, 'pink')}
+        {badge(148, 112, 13, scene.a, 'gold')}
+      </>
+    ),
+    // A card with the topic in a green disc.
+    card: () => (
+      <>
+        <Rect x="66" y="30" width="80" height="96" rx="12" fill={t.accent[100]} transform="rotate(-8 106 78)" />
+        <Rect x="56" y="32" width="84" height="100" rx="12" fill="#ffffff" stroke={t.primary[100]} strokeWidth="2" />
+        <Circle cx="98" cy="68" r="22" fill={url('green')} />
+        {icon(scene.main, 85, 55, 26)}
+        {bar(72, 100, 52, 5, t.primary[200])}
+        {bar(80, 110, 36, 4, t.accent[200])}
+        {badge(142, 120, 15, scene.a, 'gold')}
       </>
     ),
   };
@@ -213,48 +265,40 @@ export default function EmptyArt({ name, size = 96, style }) {
     >
       <Svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} width={w} height={h} style={{ overflow: 'visible' }}>
         <Defs>
-          <LinearGradient id={`${id}-main`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={t.primary[300]} />
-            <Stop offset="1" stopColor={t.primary[700]} />
+          <LinearGradient id={`${id}-sky`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={t.accent[50]} />
+            <Stop offset="1" stopColor={t.primary[50]} />
           </LinearGradient>
-          <LinearGradient id={`${id}-blob`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={t.primary[200]} />
-            <Stop offset="1" stopColor={t.primary[500]} />
+          <LinearGradient id={`${id}-green`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={t.primary[400]} />
+            <Stop offset="1" stopColor={t.primary[600]} />
           </LinearGradient>
-          <LinearGradient id={`${id}-teal`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#a5f3fc" />
-            <Stop offset="1" stopColor="#14b8a6" />
+          <LinearGradient id={`${id}-pink`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={t.accent[400]} />
+            <Stop offset="1" stopColor={t.accent[600]} />
           </LinearGradient>
-          <LinearGradient id={`${id}-glass`} x1="0" y1="0" x2="0.7" y2="1">
-            <Stop offset="0" stopColor="#ffffff" stopOpacity="0.9" />
-            <Stop offset="1" stopColor="#ffffff" stopOpacity="0.4" />
+          <LinearGradient id={`${id}-gold`} x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor="#fde68a" />
+            <Stop offset="1" stopColor="#f59e0b" />
           </LinearGradient>
-          <LinearGradient id={`${id}-edge`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#ffffff" stopOpacity="1" />
-            <Stop offset="1" stopColor="#ffffff" stopOpacity="0.25" />
+          <LinearGradient id={`${id}-amber`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#fcd34d" />
+            <Stop offset="1" stopColor="#f59e0b" />
           </LinearGradient>
-          <Filter id={`${id}-blur`} x="-50%" y="-50%" width="200%" height="200%">
-            <FeGaussianBlur stdDeviation="9" />
-          </Filter>
-          <Filter id={`${id}-lift`} x="-40%" y="-40%" width="180%" height="190%">
-            <FeDropShadow dx="0" dy="6" stdDeviation="6" floodColor={t.primary[800]} floodOpacity={0.16} />
-          </Filter>
-          <ClipPath id={`${id}-clip-card`}><Rect x="56" y="34" width="88" height="96" rx="22" /></ClipPath>
-          <ClipPath id={`${id}-clip-stack`}><Rect x="48" y="54" width="84" height="78" rx="17" /></ClipPath>
+          <LinearGradient id={`${id}-amberLid`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#fbbf24" />
+            <Stop offset="1" stopColor="#d97706" />
+          </LinearGradient>
         </Defs>
 
-        {/* Colour behind the glass, and the ground shadow. */}
-        <G filter={url('blur')}>
-          <Circle cx="76" cy="64" r="44" fill={url('blob')} opacity="0.65" />
-          <Circle cx="134" cy="104" r="34" fill={url('teal')} opacity="0.42" />
-        </G>
-        <Ellipse cx="100" cy="148" rx="50" ry="6" fill={t.primary[800]} opacity="0.1" />
+        {/* The soft pink-to-mint disc behind, and the ground shadow. */}
+        <Circle cx="100" cy="76" r="70" fill={url('sky')} />
+        <Rect x="46" y="136" width="108" height="6" rx="3" fill={t.primary[900]} opacity="0.12" />
 
         {draw()}
 
-        {/* Two faint sparkles. */}
-        {sparkle(176, 92, 5.5, t.primary[300])}
-        {sparkle(28, 54, 4.5, '#5eead4')}
+        {/* One small gold sparkle: clean, not busy. */}
+        <Path d={sparklePath(32, 40, 4.5)} fill="#fbbf24" />
       </Svg>
     </View>
   );

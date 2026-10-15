@@ -78,7 +78,7 @@ export default function DesignSystemDemo() {
 
   return (
     <>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.container}>
         <Section id="home" only={params.only} title="Product card: home">
           {grid([...products, SAMPLE.sale, SAMPLE.today], 'home')}
         </Section>
@@ -96,7 +96,7 @@ export default function DesignSystemDemo() {
         </Section>
 
         <Section id="today" only={params.only} title="Available Today card">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
+          <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
             {[...today, todayItem({ mode: 'MADE_TO_ORDER' }), todayItem({ mode: 'PRE_ORDER', remaining: 0 })].map((item) => (
               <TodayCard key={item.id} item={item} onPress={() => { }} style={styles.railCard} />
             ))}

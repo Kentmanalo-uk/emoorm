@@ -7,6 +7,7 @@ import { saleInfo } from '../../lib/variantPricing';
 import { font, t } from '../../theme';
 import { clearRecentlyViewed, onRecentChange, recentlyViewed } from './recentViews';
 import { PfSection, PfTitle } from './ProfileUI';
+import { useProductPeek } from '../peek/ProductPeek';
 
 /**
  * Profile, under My Purchase: the products opened lately on this device,
@@ -15,6 +16,7 @@ import { PfSection, PfTitle } from './ProfileUI';
  */
 export default function RecentlyViewed({ userId = null }) {
   const router = useRouter();
+  const peekProduct = useProductPeek();
   const [items, setItems] = useState([]);
 
   useEffect(() => {
@@ -35,9 +37,9 @@ export default function RecentlyViewed({ userId = null }) {
           <Text style={styles.clearText}>Clear</Text>
         </Pressable>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} style={styles.scroller}>
+      <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} style={styles.scroller}>
         {items.map((p) => (
-          <Pressable key={p.id} accessibilityRole="link" onPress={() => router.push(`/product/${p.slug}`)} style={styles.card}>
+          <Pressable key={p.id} accessibilityRole="link" onPress={() => router.push(`/product/${p.slug}`)} {...peekProduct(p)} style={styles.card}>
             <View style={styles.img}><ProductImage src={p.images?.[0]} style={StyleSheet.absoluteFill} /></View>
             <Text style={styles.name} numberOfLines={2}>{p.name}</Text>
             <Text style={styles.price}>{peso(saleInfo(p).price)}</Text>

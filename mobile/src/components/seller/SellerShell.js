@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import apiClient from '../../api/client';
 import useAuthStore from '../../store/authStore';
 import { getCacheEntry, setCachedData } from '../../lib/dataCache';
 import { startAccountSwitch, useAccountSwitchStore } from '../RoleSwitchOverlay';
+import { openAccountSheet } from '../AccountSheet';
 import { fetchSellerSetup } from './sellerSetup';
 
 /*
@@ -136,24 +137,8 @@ export function SellerShellProvider({ children }) {
 
   const switchToPersonal = useCallback(() => startAccountSwitch('personal', '/profile'), []);
 
-  // "Sign out?" then home (the website's ConfirmDialog).
-  const requestLogout = useCallback(() => {
-    const signOut = async () => {
-      await logout();
-      router.replace('/');
-    };
-    const title = 'Sign out?';
-    const message = 'You will need to sign in again to manage your shop.';
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      if (globalThis.confirm?.(`${title}\n\n${message}`)) signOut();
-      return;
-    }
-    Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: signOut },
-    ]);
-  }, [logout, router]);
+  // Log out: the account sheet asks first (a bottom sheet on every phone).
+  const requestLogout = useCallback(() => openAccountSheet('confirm'), []);
 
   const value = useMemo(() => ({
     store, setStore, setup, refreshSetup, unreadCount, waiting, refreshCounts, switchToPersonal, requestLogout,

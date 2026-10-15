@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { font, t } from '../../theme';
+import stopPaint from '../../lib/stopPaint';
 
 // Ate Moormy's pink and green (web Moormy.css --mmy-*).
 export const MMY = {
@@ -23,7 +24,7 @@ export function GradientFill({ colors = [MMY.pink, MMY.green], radius = 0, diago
       <Svg width="100%" height="100%">
         <Defs>
           <LinearGradient id={id} x1="0" y1="0" x2="1" y2={diagonal ? '1' : '0'}>
-            {colors.map((c, i) => <Stop key={`${c}${i}`} offset={String(i / (colors.length - 1))} stopColor={c} />)}
+            {colors.map((c, i) => <Stop key={`${c}${i}`} offset={String(i / (colors.length - 1))} {...stopPaint(c)} />)}
           </LinearGradient>
         </Defs>
         <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id})`} />

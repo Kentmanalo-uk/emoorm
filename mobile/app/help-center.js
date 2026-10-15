@@ -4,14 +4,17 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  EnvelopeSimpleIcon, FacebookLogoIcon, LifebuoyIcon, PaperPlaneRightIcon,
+  EnvelopeSimpleIcon, FacebookLogoIcon, InstagramLogoIcon, LifebuoyIcon, PaperPlaneRightIcon,
 } from 'phosphor-react-native';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
-import { ProfileSelect } from '../src/components/profile/ProfileAddressPicker';
+import Select from '../src/components/Select';
 import {
-  FACEBOOK_URL, MESSAGE_MAX, SUBJECT_MAX, SUPPORT_CATEGORIES, SUPPORT_EMAIL, errorText,
+  MESSAGE_MAX, SUBJECT_MAX, SUPPORT_CATEGORIES, errorText,
 } from '../src/components/profile/profileLib';
+import {
+  FACEBOOK_URL, GMAIL, INSTAGRAM_HANDLE, INSTAGRAM_URL, SUPPORT_EMAIL,
+} from '../src/lib/contact';
 import useAuthStore from '../src/store/authStore';
 import { toast } from '../src/lib/toast';
 import { font, t } from '../src/theme';
@@ -151,7 +154,7 @@ function GetHelpPanel({ onLayout }) {
         <View style={styles.form}>
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>What is it about?</Text>
-            <ProfileSelect
+            <Select
               title="What is it about?"
               value={form.category}
               options={CATEGORY_OPTIONS}
@@ -211,10 +214,34 @@ function GetHelpPanel({ onLayout }) {
           <EnvelopeSimpleIcon size={16} weight="fill" color={t.primary[700]} />
           <Text style={styles.reachLinkText}>{SUPPORT_EMAIL}</Text>
         </Pressable>
-        <Pressable accessibilityRole="link" onPress={() => Linking.openURL(FACEBOOK_URL).catch(() => {})} style={styles.reachLink}>
-          <FacebookLogoIcon size={16} weight="fill" color={t.primary[700]} />
-          <Text style={styles.reachLinkText}>Message us on Facebook</Text>
-        </Pressable>
+        {/* Socials: Facebook, Instagram and Gmail as round icon buttons. */}
+        <View style={styles.socials}>
+          <Text style={styles.reachText}>Socials:</Text>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Emoorm on Facebook"
+            onPress={() => Linking.openURL(FACEBOOK_URL).catch(() => {})}
+            style={({ pressed }) => [styles.social, pressed && styles.socialPressed]}
+          >
+            <FacebookLogoIcon size={17} weight="fill" color="#1877f2" />
+          </Pressable>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={`Emoorm on Instagram, ${INSTAGRAM_HANDLE}`}
+            onPress={() => Linking.openURL(INSTAGRAM_URL).catch(() => {})}
+            style={({ pressed }) => [styles.social, pressed && styles.socialPressed]}
+          >
+            <InstagramLogoIcon size={17} weight="fill" color="#e1306c" />
+          </Pressable>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={`Email ${GMAIL}`}
+            onPress={() => Linking.openURL(`mailto:${GMAIL}`).catch(() => {})}
+            style={({ pressed }) => [styles.social, pressed && styles.socialPressed]}
+          >
+            <EnvelopeSimpleIcon size={17} weight="fill" color="#ea4335" />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -234,7 +261,7 @@ export default function HelpCenter() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Help & Support" />
-      <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={[styles.subtitle, { marginBottom: 4 }]}>
           Answers to the usual questions, and a way to reach a real person when you need one.
         </Text>
@@ -305,7 +332,10 @@ const styles = StyleSheet.create({
   form: { gap: 14 },
   field: { gap: 6 },
   fieldLabel: { fontSize: 12.5, lineHeight: 20, color: t.neutral[700], ...font(500) },
-  select: { minHeight: 46, paddingVertical: 9, paddingHorizontal: 11, borderRadius: 8, borderColor: t.neutral[300] },
+  select: {
+    minHeight: 46, paddingVertical: 9, paddingHorizontal: 11, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8,
+    backgroundColor: t.neutral[0],
+  },
   selectText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[900] },
   input: {
     minHeight: 46, paddingVertical: 9, paddingHorizontal: 11, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8,
@@ -330,6 +360,9 @@ const styles = StyleSheet.create({
   reachText: { fontSize: 13.5, lineHeight: 21.6, color: t.neutral[500], ...font(400) },
   reachLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   reachLinkText: { fontSize: 13.5, lineHeight: 21.6, color: t.primary[700], ...font(500) },
+  socials: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  social: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[100] },
+  socialPressed: { backgroundColor: t.neutral[200] },
 
   topics: { gap: 12 },
   topicCard: {

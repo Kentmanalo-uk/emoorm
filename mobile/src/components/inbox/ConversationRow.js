@@ -12,10 +12,11 @@ import { formatTime } from './inboxFormat';
  *
  * Pass `item` (a conversation from GET /messages/conversations) with
  * `currentUserId`, or the parts directly (Ate Moormy's row: `moormy`,
- * `avatar`, `title`, `titleAfter`, `time`, `preview`).
+ * `avatar`, `title`, `titleAfter`, `time`, `preview`). `peek`: the row's
+ * long-press preview props (components/peek/ConversationPeek).
  */
 export default function ConversationRow({
-  item, currentUserId, onPress, moormy = false, avatar, title: titleProp, titleAfter, time: timeProp, preview: previewProp,
+  item, currentUserId, onPress, moormy = false, avatar, title: titleProp, titleAfter, time: timeProp, preview: previewProp, peek,
 }) {
   let title = titleProp;
   let preview = previewProp;
@@ -47,6 +48,7 @@ export default function ConversationRow({
       accessibilityRole="button"
       accessibilityLabel={`${title}${isUnread ? `, ${unread} unread` : ''}`}
       onPress={onPress}
+      {...peek}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       {moormy ? <GradientFill diagonal={false} colors={['rgba(236, 72, 153, 0.05)', 'rgba(16, 185, 129, 0.05)']} /> : null}

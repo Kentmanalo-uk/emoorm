@@ -6,7 +6,8 @@ import {
 } from 'phosphor-react-native';
 import apiClient from '../src/api/client';
 import useAuthStore from '../src/store/authStore';
-import useCartStore from '../src/store/cartStore';
+import useCartStore, { checkLines, patchLines } from '../src/store/cartStore';
+import { buyNowLines, clearBuyNow, saveBuyNow } from '../src/lib/buyNow';
 import ScreenHeader from '../src/components/ScreenHeader';
 import CheckoutChoiceCard, { CheckoutCourierMark } from '../src/components/checkout/CheckoutChoiceCard';
 import CheckoutAddressPicker from '../src/components/checkout/CheckoutAddressPicker';
@@ -15,6 +16,9 @@ import {
   CheckoutStatus, CheckoutStoreItems, CheckoutSuccess, CheckoutSummary,
 } from '../src/components/checkout/CheckoutParts';
 import useCartIdentityGate, { isIdentityRequiredError } from '../src/components/cart/useCartIdentityGate';
+import LocationPicker from '../src/components/maps/LocationPicker';
+import PickupRoute from '../src/components/maps/PickupRoute';
+import { validPin } from '../src/components/maps/mapUtils';
 import { cartPeso as peso, storeDeliveryFee, useCartSettings } from '../src/components/cart/cartSettings';
 import { spanLabel } from '../src/lib/availability';
 import { toast } from '../src/lib/toast';
@@ -34,6 +38,12 @@ import { font, t } from '../src/theme';
 const CONTACT_NUMBER_RE = /^(09\d{9}|\+639\d{9})$/;
 const normalizeContact = (value) => String(value || '').replace(/[\s-]/g, '');
 const QR_LABELS = { GCASH: 'GCash', QRPH: 'QR Ph' };
+/** "To Brgy. Poblacion" (or "To Roxas"): where the seller's fee is for, when it is priced by place. */
+const placeText = (place) => {
+  if (!place) return '';
+  if (!place.barangay) return place.town ? `To ${place.town}` : '';
+  return `To ${/^(brgy\.?|bgy\.?|barangay)\s/i.test(place.barangay) ? place.barangay : `Brgy. ${place.barangay}`}`;
+};
 const newCheckoutId = () => globalThis.crypto?.randomUUID?.()
   || `${Date.now()}-${Math.random().toString(16).slice(2)}${Math.random().toString(16).slice(2)}`;
 
@@ -59,6 +69,8 @@ export default function Checkout() {
   const settings = useCartSettings();
 
   const scrollRef = useRef(null);
+  // The bottom bar floats over the page: the page keeps room for it.
+  const [barHeight, setBarHeight] = useState(120);
   const sectionY = useRef({});
   const markSection = (key) => (e) => { sectionY.current[key] = e.nativeEvent.layout.y; };
   const scrollToSection = (key) => {
@@ -66,18 +78,36 @@ export default function Checkout() {
     if (y != null) scrollRef.current?.scrollTo({ y, animated: true });
   };
 
+  // Buy now: its own lines, with the quantity picked, and the cart left as
+  // it is (src/lib/buyNow). null: the cart's lines.
+  const buyNowId = (Array.isArray(params.buyNow) ? params.buyNow[0] : params.buyNow) || null;
+  const [buyNowItems, setBuyNowItems] = useState(() => buyNowLines(buyNowId));
+  useEffect(() => {
+    if (buyNowId && buyNowItems) saveBuyNow(buyNowId, buyNowItems);
+  }, [buyNowId, buyNowItems]);
+  // Leaving checkout forgets them.
+  useEffect(() => () => clearBuyNow(), []);
+
   // Refresh price / stock / availability of every line before anything is placed.
   const [revalidating, setRevalidating] = useState(false);
   useEffect(() => {
     if (!isAuthenticated) return undefined;
     let cancelled = false;
     (async () => {
-      if (useCartStore.getState().items.length === 0) return;
+      if (buyNowItems ? buyNowItems.length === 0 : useCartStore.getState().items.length === 0) return;
       setRevalidating(true);
       try {
-        const { capped, unavailable } = await revalidate();
+        let result;
+        if (buyNowItems) {
+          result = await checkLines(buyNowItems);
+          if (!cancelled) setBuyNowItems((lines) => (lines ? patchLines(lines, result.patches) : lines));
+        } else {
+          result = await revalidate();
+        }
+        const { capped, unavailable, raised = [] } = result;
         if (cancelled) return;
         if (capped.length) toast.info(`Quantity reduced to available stock: ${capped.join(', ')}`);
+        if (raised.length) toast.info(`Changed to the minimum order: ${raised.join(', ')}`);
         if (unavailable.length) toast.error(`${unavailable.length} ${unavailable.length === 1 ? 'item is' : 'items are'} no longer available`);
       } catch {
         // Leave the lines as they are; the server re-checks at order time.
@@ -97,10 +127,11 @@ export default function Checkout() {
   const selectedIds = useMemo(() => parseIds(params.selectedIds), [params.selectedIds]);
   const incomingVoucherCode = String(params.voucherCode || '');
   const items = useMemo(() => {
+    if (buyNowItems) return buyNowItems;
     if (!Array.isArray(selectedIds) || selectedIds.length === 0) return allItems;
     const allow = new Set(selectedIds);
     return allItems.filter((it) => allow.has(it.id));
-  }, [allItems, selectedIds]);
+  }, [allItems, selectedIds, buyNowItems]);
 
   const [deliveryForm, setDeliveryForm] = useState({
     fullName: '',
@@ -135,6 +166,11 @@ export default function Checkout() {
   const [selectedAddressId, setSelectedAddressId] = useState(null); // null = manual entry
   const [addressesLoaded, setAddressesLoaded] = useState(false);
   const pinnedAddress = savedAddresses.find((a) => a.id === selectedAddressId) || null;
+  // The exact delivery spot, for the rider: the saved address's own pin, or
+  // one dropped here (a one-off address, or a saved one that has none yet,
+  // which is then saved back to it). Every delivery order carries one.
+  const [deliveryPin, setDeliveryPin] = useState(null);
+  const pinSpot = useRef({ form: 0, pin: 0 });
 
   const [storeInfo, setStoreInfo] = useState({}); // { [storeId]: { store, error, covered, fee, checked } }
   const [storesLoading, setStoresLoading] = useState(false);
@@ -160,7 +196,7 @@ export default function Checkout() {
       router.replace('/cart');
       return;
     }
-    if (items.length === 0 && !orderSuccess && useCartStore.persist.hasHydrated()) {
+    if (items.length === 0 && !orderSuccess && (buyNowItems || useCartStore.persist.hasHydrated())) {
       router.replace('/cart');
     }
   }, [isAuthenticated, items, orderSuccess, storeIds]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -176,6 +212,7 @@ export default function Checkout() {
 
   const applySavedAddress = (addr) => {
     setSelectedAddressId(addr.id);
+    setDeliveryPin(validPin(addr.latitude, addr.longitude) ? { latitude: addr.latitude, longitude: addr.longitude } : null);
     setDeliveryForm((prev) => ({
       ...prev,
       fullName: addr.fullName || '',
@@ -249,6 +286,26 @@ export default function Checkout() {
     return () => { cancelled = true; };
   }, [storeKey, storeLoadAttempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Delivery fees of failed rider trips the buyer still owes, per shop
+  // (GET /orders/unpaid-fees): an order from that shop carries them, and
+  // can't be cash on delivery. The server adds them to the order itself.
+  const [unpaidFees, setUnpaidFees] = useState([]);
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let live = true;
+    apiClient.get('/orders/unpaid-fees')
+      .then((res) => { if (live) setUnpaidFees(res?.data?.stores || res?.stores || []); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [isAuthenticated]);
+  const owedFor = (id) => unpaidFees.find((s) => String(s.storeId) === String(id)) || null;
+  const owedLines = (id) => (owedFor(id)?.items || []).map((it, i) => ({
+    key: it.id || String(i), label: `Unpaid delivery fee (order ${it.orderNumber || '—'})`, amount: Number(it.amount) || 0,
+  }));
+  const owed = owedFor(storeIds[0]);
+  const owedTotal = owedLines(storeIds[0]).reduce((sum, line) => sum + line.amount, 0);
+  const codBlocked = Boolean(owed?.codBlocked);
+
   // A store that failed to load blocks checkout: its rules are unknown.
   const storeLoadFailed = !storesLoading && storeIds.some((id) => storeInfo[id]?.error);
 
@@ -260,14 +317,15 @@ export default function Checkout() {
     const results = await Promise.all(storeIds.map(async (id) => {
       try {
         const res = await apiClient.get(`/stores/${id}/coverage`, { params: query });
-        return { id, covered: !!res.data?.covered, fee: res.data?.fee ?? null };
+        // place: the barangay or town the fee is for (priced by place).
+        return { id, covered: !!res.data?.covered, fee: res.data?.fee ?? null, place: res.data?.place || null };
       } catch {
         return { id, covered: false, fee: null };
       }
     }));
     setStoreInfo((prev) => {
       const next = { ...prev };
-      results.forEach(({ id, covered, fee }) => { next[id] = { ...(next[id] || {}), covered, fee, checked: true }; });
+      results.forEach(({ id, covered, fee, place }) => { next[id] = { ...(next[id] || {}), covered, fee, place, checked: true }; });
       return next;
     });
   }, [fulfillmentMethod, deliveryForm.municipalityId, deliveryForm.barangay, storeKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -303,6 +361,8 @@ export default function Checkout() {
     ? {
       from: Math.min(...todayLines.map((it) => new Date(it.availability.readyFrom).getTime())),
       to: Math.max(...todayLines.map((it) => new Date(it.availability.readyUntil).getTime())),
+      // Only pre-orders: say so ("Pre-order: ready tomorrow…").
+      preOrder: todayLines.every((it) => it.availability.mode === 'PRE_ORDER'),
     }
     : null;
 
@@ -325,12 +385,12 @@ export default function Checkout() {
     const stores = storeIds.map((id) => storeInfo[id]?.store).filter(Boolean);
     if (stores.length === 0) return { cod: true, gcash: true, qrph: true };
     return {
-      // Courier deliveries are paid online.
-      cod: !chosenCourier && stores.every((s) => s.acceptsCod !== false),
+      // Courier deliveries are paid online; so is an order carrying an unpaid fee.
+      cod: !chosenCourier && !codBlocked && stores.every((s) => s.acceptsCod !== false),
       gcash: stores.every((s) => s.paymentQrImage && s.paymentQrType === 'GCASH'),
       qrph: stores.every((s) => s.paymentQrImage && s.paymentQrType === 'QRPH'),
     };
-  }, [storeKey, storeInfo, chosenCourier]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [storeKey, storeInfo, chosenCourier, codBlocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fulfillmentAvailability = useMemo(() => {
     const stores = storeIds.map((id) => storeInfo[id]?.store).filter(Boolean);
@@ -371,7 +431,7 @@ export default function Checkout() {
     ? (chosenCourier ? Number(chosenCourier.fee) : deliveryFee)
     : 0;
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
-  const total = Math.max(0, subtotal + shippingFee - discountAmount);
+  const total = Math.max(0, subtotal + shippingFee - discountAmount) + (orderableItems.length > 0 ? owedTotal : 0);
 
   const applyVoucher = async (codeOverride) => {
     const code = String(codeOverride ?? voucherInput ?? '').trim();
@@ -426,6 +486,7 @@ export default function Checkout() {
       if (!deliveryForm.street.trim()) errs.street = 'Street / house address is required.';
       if (!deliveryForm.barangay.trim()) errs.barangay = 'Barangay is required.';
       if (!deliveryForm.municipality.trim()) errs.municipality = 'Municipality is required.';
+      if (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude)) errs.pin = 'Pin your delivery spot on the map so the rider can find you.';
     }
     setDeliveryErrors(errs);
     return Object.keys(errs).length === 0;
@@ -444,7 +505,9 @@ export default function Checkout() {
       return;
     }
     if (unavailableItems.length > 0) {
-      toast.error('Remove the unavailable items from your cart before placing the order.');
+      toast.error(buyNowItems
+        ? 'This item can\'t be ordered right now.'
+        : 'Remove the unavailable items from your cart before placing the order.');
       return;
     }
     if (orderableItems.length === 0) {
@@ -452,13 +515,26 @@ export default function Checkout() {
       return;
     }
     if (!validateDelivery()) {
-      toast.error(fulfillmentMethod === 'DELIVERY' ? 'Please complete your delivery address.' : 'Please complete your contact details.');
-      scrollToSection('address');
+      const pinOnly = fulfillmentMethod === 'DELIVERY' && (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude))
+        && deliveryForm.street.trim() && deliveryForm.barangay.trim() && deliveryForm.municipality.trim();
+      toast.error(pinOnly ? 'Pin your delivery spot on the map.' : fulfillmentMethod === 'DELIVERY' ? 'Please complete your delivery address.' : 'Please complete your contact details.');
+      if (pinOnly) {
+        const y = sectionY.current.address;
+        if (y != null) scrollRef.current?.scrollTo({ y: Math.max(0, y + pinSpot.current.form + pinSpot.current.pin - 80), animated: true });
+      } else {
+        scrollToSection('address');
+      }
       return;
     }
     if (fulfillmentMethod === 'DELIVERY' && !sellerDelivers && !chosenCourier) {
       toast.error('Choose a courier to deliver your order.');
       scrollToSection('delivery');
+      return;
+    }
+    // Cash on delivery waits until the shop's unpaid delivery fee is paid.
+    if (paymentMethod === 'COD' && codBlocked) {
+      toast.error(owed?.message || 'Pay the unpaid delivery fee first: choose GCash or QR Ph.');
+      scrollToSection('payment');
       return;
     }
     if (anyCoverageMissing) {
@@ -496,8 +572,9 @@ export default function Checkout() {
         deliveryAddress: fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
         contactNumber: normalizeContact(deliveryForm.contactNumber),
         deliveryNotes: notes || undefined,
-        ...(fulfillmentMethod === 'DELIVERY' && pinnedAddress?.latitude != null
-          ? { deliveryLatitude: pinnedAddress.latitude, deliveryLongitude: pinnedAddress.longitude }
+        // The delivery spot on the map, for the rider.
+        ...(fulfillmentMethod === 'DELIVERY' && deliveryPin
+          ? { deliveryLatitude: deliveryPin.latitude, deliveryLongitude: deliveryPin.longitude }
           : {}),
         buyerMunicipalityId: deliveryForm.municipalityId || undefined,
         buyerBarangay: deliveryForm.barangay || undefined,
@@ -508,14 +585,21 @@ export default function Checkout() {
           selectedVariations: item.selectedVariations || undefined,
         })),
       });
-      // Only the lines of this order leave the cart.
+      // Buy now never went through the cart: the cart stays as it was.
+      // Otherwise only the lines of this order leave the cart.
       setOrderSuccess(true);
-      if (Array.isArray(selectedIds) && selectedIds.length > 0) {
+      if (buyNowItems) {
+        clearBuyNow();
+      } else if (Array.isArray(selectedIds) && selectedIds.length > 0) {
         selectedIds.forEach((id) => useCartStore.getState().removeItem(id));
       } else {
         clearCart();
       }
       if (response?.data?.id) setOrderId(response.data.id);
+      // A saved address pinned here for the first time keeps its pin.
+      if (fulfillmentMethod === 'DELIVERY' && pinnedAddress && !validPin(pinnedAddress.latitude, pinnedAddress.longitude) && deliveryPin) {
+        apiClient.put(`/addresses/${pinnedAddress.id}`, { latitude: deliveryPin.latitude, longitude: deliveryPin.longitude }).catch(() => {});
+      }
       toast.success('Order placed successfully!');
     } catch (error) {
       // Refused (stock, address…): the next attempt is a new checkout.
@@ -538,7 +622,7 @@ export default function Checkout() {
     return (
       <View style={styles.screen}>
         <ScreenHeader title="Order Placed Successfully!" backTo="/cart" />
-        <ScrollView contentContainerStyle={styles.successContent}>
+        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.successContent}>
           <CheckoutSuccess
             orderId={orderId}
             payLater={payLater}
@@ -568,7 +652,7 @@ export default function Checkout() {
   const payments = [
     {
       value: 'COD', label: 'Cash on Delivery / Pickup', desc: 'Pay when you receive/pick up your order', enabled: paymentAvailability.cod, Icon: MoneyIcon, color: '#059669',
-      off: chosenCourier ? 'Not available with courier delivery' : null,
+      off: codBlocked ? (owed?.message || 'Pay the unpaid delivery fee first: choose GCash or QR Ph.') : chosenCourier ? 'Not available with courier delivery' : null,
     },
     { value: 'GCASH', label: 'GCash (QR)', desc: 'Pay with GCash after the seller confirms', enabled: paymentAvailability.gcash, Icon: DeviceMobileIcon, color: t.info[600] },
     { value: 'QRPH', label: 'QR Ph', desc: 'Pay with QR Ph after the seller confirms', enabled: paymentAvailability.qrph, Icon: QrCodeIcon, color: t.danger[700] },
@@ -576,9 +660,9 @@ export default function Checkout() {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader title="Checkout" backTo="/cart" />
+      <ScreenHeader title="Checkout" backTo={buyNowItems ? '/' : '/cart'} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} ref={scrollRef} style={styles.flex} contentContainerStyle={[styles.content, { paddingBottom: 18 + barHeight }]} keyboardShouldPersistTaps="handled">
           {storeLoadFailed ? (
             <CheckoutSection>
               <CheckoutStatus
@@ -595,8 +679,12 @@ export default function Checkout() {
               <CheckoutStatus
                 tone="bad"
                 title={`${unavailableItems.length === 1 ? 'An item is' : `${unavailableItems.length} items are`} no longer available`}
-                lines={[`${unavailableItems.map((it) => it.name).join(', ')}. Remove ${unavailableItems.length === 1 ? 'it' : 'them'} from your cart to place this order.`]}
-                action={{ label: 'Back to cart', onPress: () => router.replace('/cart') }}
+                lines={[buyNowItems
+                  ? `${unavailableItems.map((it) => it.name).join(', ')} can't be ordered right now.`
+                  : `${unavailableItems.map((it) => it.name).join(', ')}. Remove ${unavailableItems.length === 1 ? 'it' : 'them'} from your cart to place this order.`]}
+                action={buyNowItems
+                  ? { label: 'Go back', onPress: () => (router.canGoBack() ? router.back() : router.replace('/')) }
+                  : { label: 'Back to cart', onPress: () => router.replace('/cart') }}
               />
             </CheckoutSection>
           ) : null}
@@ -605,7 +693,7 @@ export default function Checkout() {
             <>
               <CheckoutSection title="Fulfillment Method" onLayout={markSection('fulfillment')}>
                 {todayReady ? (
-                  <Text style={styles.todayReady}>Available Today: ready {spanLabel(todayReady.from, todayReady.to)}</Text>
+                  <Text style={styles.todayReady}>{todayReady.preOrder ? 'Pre-order' : 'Available Today'}: ready {spanLabel(todayReady.from, todayReady.to)}</Text>
                 ) : null}
                 <View style={[styles.choices, styles.fulfillmentChoices]}>
                   <CheckoutChoiceCard
@@ -634,11 +722,11 @@ export default function Checkout() {
                     addresses={savedAddresses}
                     selectedId={selectedAddressId}
                     onPick={applySavedAddress}
-                    onManual={() => setSelectedAddressId(null)}
+                    onManual={() => { setSelectedAddressId(null); setDeliveryPin(null); }}
                   />
                 ) : null}
 
-                <View style={styles.addressForm}>
+                <View style={styles.addressForm} onLayout={(e) => { pinSpot.current.form = e.nativeEvent.layout.y; }}>
                   <CheckoutField
                     label="Full Name"
                     value={deliveryForm.fullName}
@@ -690,6 +778,29 @@ export default function Checkout() {
                       />
                     </View>
                   ) : null}
+
+                  {!pickup ? (
+                    <View style={styles.pin} onLayout={(e) => { pinSpot.current.pin = e.nativeEvent.layout.y; }}>
+                      <Text style={styles.pinLabel}>Pin your delivery spot</Text>
+                      <Text style={styles.pinHelp}>
+                        {pinnedAddress && deliveryPin && validPin(pinnedAddress.latitude, pinnedAddress.longitude)
+                          ? 'From your saved address. Drag the pin if the spot has moved.'
+                          : 'Tap the map at your house (or use your location). The rider follows this pin.'}
+                      </Text>
+                      <LocationPicker
+                        value={deliveryPin}
+                        onChange={({ latitude, longitude }) => {
+                          setDeliveryPin({ latitude, longitude });
+                          if (deliveryErrors.pin) setDeliveryErrors((prev) => ({ ...prev, pin: '' }));
+                        }}
+                        height={240}
+                        lockToPhilippines
+                        hint="Tap the map where the house is."
+                        error={Boolean(deliveryErrors.pin)}
+                      />
+                      {deliveryErrors.pin ? <Text style={styles.pinError}>{deliveryErrors.pin}</Text> : null}
+                    </View>
+                  ) : null}
                 </View>
 
                 {storeIds.length > 0 ? (
@@ -705,7 +816,9 @@ export default function Checkout() {
                             title={storeName}
                             lines={[`Pickup at: ${info?.store?.pickupAddress || '—'}`]}
                             note={info?.store?.pickupInstructions || ''}
-                          />
+                          >
+                            {info?.store ? <PickupRoute store={info.store} /> : null}
+                          </CheckoutStatus>
                         );
                       }
                       if (!info?.checked) return null;
@@ -738,7 +851,7 @@ export default function Checkout() {
                           onPress={() => setDeliveryChoice('SELLER')}
                           media={(color) => <TruckIcon size={20} weight="fill" color={color} />}
                           title="Delivered by the seller"
-                          desc={notHere ? "Doesn't deliver to your address" : 'Cash on delivery or online payment'}
+                          desc={notHere ? "Doesn't deliver to your address" : [placeText(quoted?.place), 'Cash on delivery or online payment'].filter(Boolean).join(' · ')}
                           aside={notHere ? '' : deliveryFee === 0 ? 'Free' : peso(deliveryFee)}
                         />
                       );
@@ -781,11 +894,12 @@ export default function Checkout() {
                     pickup={pickup}
                     shipLabel={pickup ? 'Pickup at the store' : chosenCourier ? `Shipping · ${chosenCourier.name}` : 'Delivery fee'}
                     shipAmount={pickup ? 'No fee' : peso(shippingFee)}
+                    extras={owedLines(id)}
                   />
                 ))}
               </CheckoutSection>
 
-              <CheckoutSection title="Payment Method">
+              <CheckoutSection title="Payment Method" onLayout={markSection('payment')}>
                 <View style={[styles.choices, styles.paymentChoices]}>
                   {payments.map(({ value, label, desc, enabled, Icon, color, off }) => (
                     <CheckoutChoiceCard
@@ -829,6 +943,7 @@ export default function Checkout() {
             shipAmount={shipAmount}
             voucher={appliedVoucher}
             discountAmount={discountAmount}
+            extras={orderableItems.length > 0 ? owedLines(storeIds[0]) : []}
             total={total}
             voucherInput={voucherInput}
             onVoucherInput={setVoucherInput}
@@ -846,6 +961,7 @@ export default function Checkout() {
           label={placeLabel}
           disabled={placeDisabled}
           onPress={handlePlaceOrder}
+          onLayout={(e) => setBarHeight(Math.round(e.nativeEvent.layout.height))}
         />
       </KeyboardAvoidingView>
       {identityDialog}
@@ -878,6 +994,12 @@ const styles = StyleSheet.create({
   },
   addressForm: { gap: 10, marginBottom: 16 },
   picker: {},
+  // The delivery spot on the map (.checkout-pin, a .form-group: margin 4px 0 14px).
+  pin: { marginTop: 4, marginBottom: 14, gap: 6 },
+  pinLabel: { fontSize: 12.5, lineHeight: 20, ...font(600), color: t.neutral[700] },
+  // .checkout-pin-help: margin 2px 0 8px, on top of the group's 6px gap.
+  pinHelp: { marginTop: 2, marginBottom: 8, fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500] },
+  pinError: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.danger[600] },
   statusList: { gap: 8, marginBottom: 16 },
   deliveryNote: {
     marginTop: 12,

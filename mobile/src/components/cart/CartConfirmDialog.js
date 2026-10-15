@@ -74,7 +74,7 @@ export default function CartConfirmDialog({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 23, 42, 0.5)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15, 23, 42, 0.5)' },
   dock: { flex: 1, justifyContent: 'flex-end' },
   panel: {
     backgroundColor: t.neutral[0],

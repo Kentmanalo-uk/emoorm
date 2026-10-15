@@ -1,14 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../lib/config';
 import { STORAGE_KEYS } from '../../api/client';
+import { uploadableImage } from '../../lib/uploadableImage';
 
 /*
  * A photo for a chat message (web Messenger.jsx handlePickImage + the
- * POST /upload/image in sendMessage): the same types, the same 5 MB limit
- * and the same words when a photo will not do.
+ * POST /upload/image in sendMessage). Any photo the phone can open is sent:
+ * it is made a JPEG the server accepts first (lib/uploadableImage).
  */
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const typeOf = (asset) => {
   const type = asset?.mimeType || asset?.file?.type;
@@ -17,16 +16,17 @@ const typeOf = (asset) => {
   return { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' }[ext] || 'image/jpeg';
 };
 
-/** Why a picked photo cannot be sent, or '' when it can. */
+/** Why a picked file cannot be sent, or '' when it can (any picture can). */
 export function photoProblem(asset) {
-  if (!IMAGE_TYPES.includes(typeOf(asset))) return 'Send a JPG, PNG, WebP or GIF photo.';
-  const size = asset?.fileSize || asset?.file?.size || 0;
-  if (size > MAX_IMAGE_BYTES) return 'That photo is over 5 MB. Choose a smaller one.';
+  if (!asset) return 'Choose a photo.';
+  const type = String(asset.mimeType || asset.file?.type || '').toLowerCase();
+  if (type && !type.startsWith('image/')) return 'Send a photo.';
   return '';
 }
 
 /** Uploads the photo and returns its URL. */
-export async function uploadChatPhoto(asset) {
+export async function uploadChatPhoto(picked) {
+  const asset = await uploadableImage(picked, { prefix: 'chat-photo' });
   const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   const type = typeOf(asset);
   const form = new FormData();

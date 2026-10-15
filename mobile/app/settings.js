@@ -2,18 +2,19 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  CalendarBlankIcon, DatabaseIcon, EnvelopeSimpleIcon, HouseIcon, LockKeyIcon, MapPinIcon, PhoneIcon, ShieldCheckIcon,
-  UserCircleIcon,
+  CalendarBlankIcon, DatabaseIcon, EnvelopeSimpleIcon, HouseIcon, InfoIcon, LockKeyIcon, MapPinIcon, PhoneIcon, ShieldCheckIcon,
+  UserCircleIcon, UsersThreeIcon,
 } from 'phosphor-react-native';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
-import CartConfirmDialog from '../src/components/cart/CartConfirmDialog';
+import { openSwitchAccount } from '../src/components/SwitchAccountSheet';
 import useAuthStore from '../src/store/authStore';
 import { PfSection, PfTitle, SettingsList, SettingsRow, SignOutRow } from '../src/components/profile/ProfileUI';
 import {
   AddressPart, ContactPart, DataPart, PartLoading, PasswordPart, ProfilePart, useFreshAccount,
 } from '../src/components/profile/SettingsParts';
 import { fetchIdentityStatus, homeAddressLine, longDate } from '../src/components/profile/profileLib';
+import { openAccountSheet } from '../src/components/AccountSheet';
 import { t } from '../src/theme';
 
 const IDENTITY_VALUES = {
@@ -46,7 +47,6 @@ function SettingsHub() {
   const logout = useAuthStore((s) => s.logout);
   const [addresses, setAddresses] = useState(null);
   const [identity, setIdentity] = useState(null);
-  const [signOutOpen, setSignOutOpen] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -76,7 +76,7 @@ function SettingsHub() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Account Settings" backTo="/profile" />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
         <PfSection list>
           <PfTitle list>Profile</PfTitle>
           <SettingsList>
@@ -136,21 +136,19 @@ function SettingsHub() {
           <SettingsList>
             <SettingsRow Icon={CalendarBlankIcon} label="Member since" value={longDate(user?.createdAt)} />
             <SettingsRow onPress={() => open('/settings?part=data')} Icon={DatabaseIcon} label="Your data" value="Download a copy, or delete your account" />
+            <SettingsRow onPress={openSwitchAccount} Icon={UsersThreeIcon} label="Switch account" value="Use another account saved on this phone" />
           </SettingsList>
         </PfSection>
 
-        <SignOutRow onPress={() => setSignOutOpen(true)} />
-      </ScrollView>
+        <PfSection list>
+          <PfTitle list>About</PfTitle>
+          <SettingsList>
+            <SettingsRow onPress={() => router.push('/about')} Icon={InfoIcon} label="About Emoorm" value="Who we are, guides, policies and the shop directory" />
+          </SettingsList>
+        </PfSection>
 
-      <CartConfirmDialog
-        open={signOutOpen}
-        title="Log out?"
-        message="You will need to log in again to place orders and see your account."
-        confirmLabel="Log out"
-        danger
-        onConfirm={async () => { setSignOutOpen(false); await logout(); router.replace('/profile'); }}
-        onCancel={() => setSignOutOpen(false)}
-      />
+        <SignOutRow onPress={() => openAccountSheet('confirm')} />
+      </ScrollView>
     </View>
   );
 }

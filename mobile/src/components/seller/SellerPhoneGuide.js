@@ -8,6 +8,7 @@ import { useAccountSwitchStore } from '../RoleSwitchOverlay';
 import SellerGuideArt from './SellerGuideArt';
 import { completeGuide, shouldShowGuide } from './sellerGuides';
 import { useSellerShell } from './SellerShell';
+import { SheetFrame } from '../Sheet';
 
 /**
  * Phones: the first time a shop opens a Seller Center page, a small sheet
@@ -32,7 +33,7 @@ export const GUIDE_PAGES = {
   '/seller/products/new': {
     art: 'newProduct',
     title: 'Add a product',
-    text: 'Clear photos, a fair price and the stock you have. New listings may get a quick check before buyers see them.',
+    text: 'Answer a few easy questions, one step at a time: name, photos and price first, then the details for your kind of product. Check how buyers will see it, then save.',
   },
   '/seller/today': {
     art: 'today',
@@ -117,7 +118,7 @@ export const GUIDE_PAGES = {
   '/seller/settings': {
     art: 'settings',
     title: 'Shop settings',
-    text: 'Account-level controls for your shop, separate from your public shop profile.',
+    text: 'Everything about how your shop runs: away mode, hours, delivery, payment and more, in one list.',
   },
 };
 
@@ -158,60 +159,35 @@ export default function SellerPhoneGuide() {
   };
 
   if (!open) return null;
-  return <GuideSheet page={shown.page} closing={shown.closing} onClose={close} />;
+  // The app's one sheet look on every phone (the sign-in sheet's: Sheet.js).
+  return <GuideFrame page={shown.page} closing={shown.closing} onClose={close} />;
 }
 
-function GuideSheet({ page, closing, onClose }) {
-  const insets = useSafeAreaInsets();
-  const { width, height: screenH } = useWindowDimensions();
-  const [sheetH, setSheetH] = useState(0);
-  const fade = useRef(new Animated.Value(0)).current;
-  const rise = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (closing) {
-      Animated.parallel([
-        Animated.timing(fade, { toValue: 0, duration: CLOSE_MS, easing: Easing.in(Easing.ease), useNativeDriver: true }),
-        Animated.timing(rise, { toValue: 0, duration: CLOSE_MS, easing: Easing.in(Easing.ease), useNativeDriver: true }),
-      ]).start();
-      return;
-    }
-    Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-      Animated.timing(rise, { toValue: 1, duration: OPEN_MS, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: true }),
-    ]).start();
-  }, [closing, fade, rise]);
-
-  const travel = sheetH || screenH;
-  const artW = Math.min(280, width - 48);
-
+function GuideBody({ page, artW, onClose }) {
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
-      <View style={styles.root}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: fade }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
-        </Animated.View>
-        <Animated.View
-          onLayout={(e) => setSheetH(e.nativeEvent.layout.height)}
-          style={[styles.sheet, {
-            paddingBottom: 18 + insets.bottom,
-            transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [travel, 0] }) }],
-          }]}
-          accessibilityViewIsModal
-          accessibilityRole="alert"
-        >
-          <View style={styles.handle} />
-          <SellerGuideArt name={page.art} width={artW} style={styles.art} />
-          <Text style={styles.title} accessibilityRole="header">{page.title}</Text>
-          <Text style={styles.text}>{page.text}</Text>
-          <Pressable accessibilityRole="button" onPress={onClose} style={({ pressed }) => [styles.ok, pressed && styles.okPressed]}>
-            <Text style={styles.okText}>Got it</Text>
-          </Pressable>
-        </Animated.View>
-      </View>
-    </Modal>
+    <>
+      <SellerGuideArt name={page.art} width={artW} style={styles.art} />
+      <Text style={styles.title} accessibilityRole="header">{page.title}</Text>
+      <Text style={styles.text}>{page.text}</Text>
+      <Pressable accessibilityRole="button" onPress={onClose} style={({ pressed }) => [styles.ok, pressed && styles.okPressed]}>
+        <Text style={styles.okText}>Got it</Text>
+      </Pressable>
+    </>
   );
 }
+
+function GuideFrame({ page, closing, onClose }) {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  return (
+    <SheetFrame safeBottom={false} open={!closing} onClose={onClose} scroll={false} padded={false}>
+      <View style={[styles.glassBody, { paddingBottom: 18 + insets.bottom }]}>
+        <GuideBody page={page} artW={Math.min(280, width - 48)} onClose={onClose} />
+      </View>
+    </SheetFrame>
+  );
+}
+
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
@@ -226,6 +202,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     boxShadow: [{ offsetX: 0, offsetY: -8, blurRadius: 30, color: 'rgba(15, 23, 42, 0.12)' }],
   },
+  // Inside the native sheet: no panel of its own (the glass is the sheet).
+  glassBody: { width: '100%', alignItems: 'center', paddingHorizontal: 24 },
   handle: { width: 36, height: 4, marginBottom: 6, borderRadius: 999, backgroundColor: t.neutral[200] },
   art: { marginBottom: 6 },
   title: { marginBottom: 6, fontSize: 20, lineHeight: 26, color: t.neutral[900], textAlign: 'center', ...font(500) },

@@ -23,6 +23,7 @@ const BLOCKS = [
     'Products you list, order, review, message about, or add to your cart/wishlist.',
     'Order details such as items purchased, delivery/pickup address, and order status.',
     'Messages you send through the in-app messaging feature between buyers and sellers.',
+    'If you use our Android app: a random install number made on your phone, the app version, your phone model and Android version, when you last opened the app, and the account you signed in with. We use this to know how many people use the app and to remind those on an old version to update.',
   ] },
 
   { h2: 'What we do not collect' },
@@ -55,5 +56,5 @@ const BLOCKS = [
 ];
 
 export default function PrivacyPolicy() {
-  return <LegalDocument title="Privacy Policy" updated="Last updated: August 2026" blocks={BLOCKS} />;
+  return <LegalDocument title="Privacy Policy" updated="Last updated: October 2026" blocks={BLOCKS} />;
 }

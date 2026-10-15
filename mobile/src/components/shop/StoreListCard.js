@@ -1,39 +1,13 @@
-import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CaretRightIcon, MapPinIcon, PackageIcon } from 'phosphor-react-native';
-import { resolveImg } from '../../lib/media';
 import { font, t } from '../../theme';
-import { ShopGradient } from './shopTheme';
 import ShopTileImage from './ShopTileImage';
+import StoreListLogo from './StoreListLogo';
+import { useStorePeek } from '../peek/StorePeek';
 
-const initialsOf = (name) => (name
-  ? name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
-  : '?');
-
-// The API returns the logo as `logo`; older rows may carry `logoUrl`.
-const logoOf = (store) => {
-  const raw = store.logoUrl || store.logo;
-  return raw ? resolveImg(raw) || raw : null;
-};
-
-/** A shop's logo, or its initials on the site's green when it has none. */
-export function StoreListLogo({ store, style, textStyle }) {
-  const [failed, setFailed] = useState(false);
-  const src = logoOf(store);
-  return (
-    <View style={[styles.logo, style]}>
-      {src && !failed ? (
-        <Image source={{ uri: src }} style={styles.logoImg} resizeMode="cover" onError={() => setFailed(true)} />
-      ) : (
-        <>
-          <ShopGradient angle={135} stops={[[t.primary[500], 0], [t.primary[700], 1]]} />
-          <Text style={[styles.logoText, textStyle]}>{initialsOf(store.name)}</Text>
-        </>
-      )}
-    </View>
-  );
-}
+// Still exported from here for older imports.
+export { StoreListLogo };
 
 /**
  * A shop in the stores list on phones (web Stores.jsx PhoneStoreCard, with
@@ -45,10 +19,12 @@ export default function StoreListCard({ store }) {
   const router = useRouter();
   const count = store._count?.products ?? 0;
   const previews = (store.products || []).slice(0, 3);
+  const peek = useStorePeek()(store);
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       onPress={() => router.push(`/store/${store.slug}`)}
+      {...peek}
       accessibilityRole="link"
       accessibilityLabel={store.name}
     >
@@ -92,12 +68,6 @@ const styles = StyleSheet.create({
   },
   pressed: { transform: [{ scale: 0.99 }] },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logo: {
-    width: 52, height: 52, flexShrink: 0, overflow: 'hidden', borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
-  },
-  logoImg: { width: '100%', height: '100%', backgroundColor: t.neutral[0] },
-  logoText: { fontSize: 17, lineHeight: 20.4, ...font(500), color: t.neutral[0] },
   text: { flex: 1, minWidth: 0 },
   name: { marginBottom: 4, fontSize: 15.5, lineHeight: 17.825, ...font(500), color: t.neutral[900] },
   meta: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 4, columnGap: 12 },

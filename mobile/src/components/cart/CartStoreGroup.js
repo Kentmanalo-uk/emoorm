@@ -6,6 +6,7 @@ import {
 import CartProductImage from './CartProductImage';
 import { font, t } from '../../theme';
 import { cartPeso } from './cartSettings';
+import { useProductPeek } from '../peek/ProductPeek';
 
 /*
  * The phone cart's shop groups (web/src/pages/Cart.jsx .cart-m-store, Cart.css
@@ -41,6 +42,22 @@ function CartLine({ item, selected, onToggle, onQuantity, onRemove, onRemoveNow 
     : null;
   const atOne = item.quantity <= 1;
   const maxed = item.quantity >= (item.stock || 999);
+  // Held: the product as the line knows it, with Remove from cart.
+  const peek = useProductPeek()({
+    id: item.productId || item.id,
+    slug: item.slug,
+    name: options ? `${item.name} (${options})` : item.name,
+    images: item.image ? [item.image] : [],
+    price: item.price,
+    stock: item.stock,
+    listingKind: item.listingKind,
+    productType: item.productType,
+    store: item.storeSlug ? { name: item.storeName, slug: item.storeSlug } : item.store,
+  }, {
+    onOpen: open,
+    cart: false,
+    extra: [{ key: 'remove', label: 'Remove from cart', Icon: TrashIcon, destructive: true, onPress: item.unavailable ? onRemoveNow : onRemove }],
+  });
   return (
     <View style={styles.item}>
       <CartRoundCheck
@@ -49,11 +66,11 @@ function CartLine({ item, selected, onToggle, onQuantity, onRemove, onRemoveNow 
         onPress={onToggle}
         label={`Select ${item.name}`}
       />
-      <Pressable onPress={open} style={[styles.img, item.unavailable && styles.dim]} accessibilityLabel={item.name}>
+      <Pressable onPress={open} {...peek} style={[styles.img, item.unavailable && styles.dim]} accessibilityLabel={item.name}>
         <CartProductImage src={item.image} style={styles.imgFill} />
       </Pressable>
       <View style={styles.body}>
-        <Pressable onPress={open} style={styles.nameWrap}>
+        <Pressable onPress={open} {...peek} style={styles.nameWrap}>
           <Text style={[styles.name, item.unavailable && styles.dim]} numberOfLines={1}>{item.name}</Text>
         </Pressable>
         {options ? (

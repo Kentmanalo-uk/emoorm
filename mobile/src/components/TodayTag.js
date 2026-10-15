@@ -23,8 +23,11 @@ export default function TodayTag({ mode, size = 10.5, style }) {
   );
 }
 
-/** On a product card: the tag when the product is a live Available Today item. */
-export function ProductTodayTag({ product, size, style }) {
+/**
+ * On a product card: the tag when the product is a live Available Today
+ * item; nothing for a menu item that isn't posted now (its page says so).
+ */
+export function ProductTodayTag({ product, size = 10.5, style }) {
   const mode = liveMode(product);
   return mode ? <TodayTag mode={mode} size={size} style={style} /> : null;
 }

@@ -11,7 +11,9 @@ import useCartStore from '../src/store/cartStore';
 import useAuthStore from '../src/store/authStore';
 import { resolveImg } from '../src/lib/media';
 import { saleInfo } from '../src/lib/variantPricing';
+import { isLivestock } from '../src/components/orders/orderLines';
 import { toast } from '../src/lib/toast';
+import { useProductPeek } from '../src/components/peek/ProductPeek';
 import { font, t } from '../src/theme';
 
 /**
@@ -34,6 +36,8 @@ export default function Wishlist() {
   useEffect(() => { if (isAuthenticated) syncWishlist(); }, [isAuthenticated]);
 
   const handleAddToCart = (product) => {
+    // Live animals are bought by making an offer on their page.
+    if (isLivestock(product)) { router.push(`/product/${product.slug}`); return; }
     if (!isAuthenticated) { router.push('/login'); return; }
     try {
       addItem({ ...product, quantity: 1 }, 1);
@@ -59,7 +63,7 @@ export default function Wishlist() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="My Wishlist" backTo="/profile" />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
         {items.length > 0 ? (
           <View style={styles.header}>
             <Pressable
@@ -79,7 +83,7 @@ export default function Wishlist() {
 
         {items.length === 0 ? (
           <ProfileEmpty
-            section
+            page
             art="wishlist"
             title="Your wishlist is empty"
             hint="Save products you love and come back to them anytime."
@@ -124,10 +128,11 @@ function WishlistCard({ width, product, onOpen, onStore, onAddToCart, onRemove }
     : null;
   const images = Array.isArray(product.images) ? product.images : [];
   const out = product.stock === 0;
+  const peek = useProductPeek()(product, { onOpen });
 
   return (
     <View style={[styles.card, { width }]}>
-      <Pressable accessibilityRole="link" accessibilityLabel={product.name} onPress={onOpen} style={styles.imgWrap}>
+      <Pressable accessibilityRole="link" accessibilityLabel={product.name} onPress={onOpen} {...peek} style={styles.imgWrap}>
         {images[0]
           ? <Image source={{ uri: resolveImg(images[0]) || images[0] }} style={styles.img} resizeMode="cover" />
           : <View style={styles.noImg}><PackageIcon size={28} color={t.neutral[300]} /></View>}
@@ -139,7 +144,7 @@ function WishlistCard({ width, product, onOpen, onStore, onAddToCart, onRemove }
       </Pressable>
 
       <View style={styles.body}>
-        <Pressable accessibilityRole="link" onPress={onOpen}>
+        <Pressable accessibilityRole="link" onPress={onOpen} {...peek}>
           <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         </Pressable>
 
@@ -171,7 +176,7 @@ function WishlistCard({ width, product, onOpen, onStore, onAddToCart, onRemove }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
-  content: { gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
+  content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
 
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: -12 },
   clear: {

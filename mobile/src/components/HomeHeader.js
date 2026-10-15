@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import HeaderGlow from './HeaderGlow';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { MagnifyingGlassIcon } from 'phosphor-react-native';
-import { border, font, t, text } from '../theme';
+import { font, t, text } from '../theme';
 import { fetchCategories } from '../lib/referenceData';
 import { loadRecent, PLACEHOLDER_SUGGESTIONS, POPULAR_SUGGESTIONS, saveRecent } from '../lib/shellSearch';
 
@@ -45,17 +46,17 @@ function useRotatingPlaceholder() {
  * Home's top bar on phones (web .header.is-home): logo, then a square grey
  * search bar with the camera and the green search button flush at its end.
  * Phones search on their own page, so the bar is a button, not a field:
- * no keyboard opens here.
- * atTop: the page is scrolled to the very top (no hairline/shadow then).
+ * no keyboard opens here. No line under it, scrolled or not.
  */
-export default function HomeHeader({ atTop = true }) {
+export default function HomeHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [placeholder, opacity] = useRotatingPlaceholder();
   const openSearch = () => router.push('/search');
 
   return (
-    <View style={[styles.header, { paddingTop: insets.top }, !atTop && styles.headerScrolled]}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
+      <HeaderGlow />
       <View style={styles.row}>
         <Pressable accessibilityRole="link" accessibilityLabel="Emoorm home" onPress={() => router.replace('/')}>
           <Image source={require('../../assets/brand-icon.png')} style={styles.logo} />
@@ -113,7 +114,7 @@ export function HomeQuickSearch() {
   };
 
   return (
-    <ScrollView
+    <ScrollView showsVerticalScrollIndicator={false}
       horizontal
       showsHorizontalScrollIndicator={false}
       style={styles.chips}
@@ -132,26 +133,25 @@ export function HomeQuickSearch() {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: t.neutral[0],
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
     zIndex: 10,
-  },
-  headerScrolled: {
-    borderBottomColor: border.default,
-    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 3, color: 'rgba(0, 0, 0, 0.05)' }],
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 57, paddingHorizontal: 10 },
   logo: { width: 28, height: 28 },
-  search: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'stretch', height: 44, backgroundColor: t.neutral[100] },
+  // White inside a green outline; the green search button sits inside the outline.
+  search: {
+    flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'stretch', height: 44, overflow: 'hidden',
+    borderWidth: 1, borderColor: t.primary[600], backgroundColor: t.neutral[0],
+  },
   field: { flex: 1, minWidth: 0, justifyContent: 'center', paddingLeft: 16 },
   placeholder: { fontSize: 15, lineHeight: 24, color: t.neutral[400], ...font(400) },
   camera: { width: 40, alignItems: 'center', justifyContent: 'center' },
-  cameraPressed: { backgroundColor: t.neutral[200] },
+  cameraPressed: { backgroundColor: t.neutral[100] },
   searchButton: { width: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600] },
 
-  chips: { flexGrow: 0, backgroundColor: t.neutral[0] },
+  chips: { flexGrow: 0 },
   chipsRow: { gap: 6, paddingVertical: 8, paddingHorizontal: 12 },
-  chip: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: t.neutral[100] },
-  chipPressed: { backgroundColor: t.neutral[200] },
+  // Each suggestion on its own plain white box.
+  chip: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: t.neutral[0] },
+  chipPressed: { backgroundColor: t.neutral[100] },
   chipText: { fontSize: 12, lineHeight: 14.4, color: t.neutral[600], ...font(400) },
 });

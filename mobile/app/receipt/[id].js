@@ -8,9 +8,14 @@ import { CaretLeftIcon, PrinterIcon } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { resolveImg } from '../../src/lib/media';
 import { toast } from '../../src/lib/toast';
-import LoadingSkeleton from '../../src/components/LoadingSkeleton';
 import { font, t } from '../../src/theme';
-import { peso, receiptDate, trackingLink } from '../../src/components/orders/orderProgress';
+import {
+  carriedFeeLines, peso, receiptDate, statusLabel, trackingLink,
+} from '../../src/components/orders/orderProgress';
+import {
+  etaLabel, hasPaluto, lineKind, lineNote,
+} from '../../src/components/orders/orderLines';
+import { PageLoader } from '../../src/components/BrandLoader';
 
 /*
  * The order receipt (web/src/pages/OrderReceipt.jsx + OrderReceipt.css at
@@ -36,27 +41,12 @@ const paymentLabel = (m) => ({
 
 const fulfillmentLabel = (m) => (m === 'PICKUP' ? 'Store Pickup' : 'Delivery');
 
-const statusLabel = (status, fulfillmentMethod) => ({
-  PENDING: 'Pending',
-  CONFIRMED: 'Confirmed',
-  PREPARING: 'Preparing',
-  READY: fulfillmentMethod === 'PICKUP' ? 'Ready for Pickup' : 'Ready',
-  READY_FOR_PICKUP: 'Ready for Pickup',
-  TO_SHIP: 'To Ship',
-  OUT_FOR_DELIVERY: 'Out for Delivery',
-  SHIPPED: 'Shipped',
-  DELIVERED: 'Delivered',
-  PICKED_UP: 'Picked Up',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
-})[status] || status || '—';
-
 const paymentStatusLabel = (order) => ({
   PENDING: order.paymentMethod === 'COD' ? 'Unpaid' : 'Awaiting payment',
   PENDING_VERIFICATION: 'Awaiting verification',
   PAID: 'Paid',
   FAILED: 'Proof rejected — resubmit',
-  EXPIRED: 'Expired',
+  EXPIRED: 'Not paid (expired)',
   REFUNDED: 'Refunded',
   PARTIALLY_REFUNDED: 'Partially refunded',
 })[order.paymentStatus] || order.paymentStatus || '—';
@@ -157,6 +147,10 @@ export default function OrderReceipt() {
     order.paymentReference ? ['Reference', order.paymentReference] : null,
     ['Payment Status', paymentStatusLabel(order)],
     ['Status', statusLabel(order.status, order.fulfillmentMethod)],
+    // Paluto is cooked after the order: when it is ready.
+    hasPaluto(order.items) && order.etaFrom
+      ? [order.fulfillmentMethod === 'PICKUP' ? 'Ready for pickup' : 'Expected', etaLabel(order)]
+      : null,
     order.trackingNumber ? ['Courier', order.courier?.name || order.courierName] : null,
     order.trackingNumber ? ['Tracking No.', order.trackingNumber, trackingLink(order)] : null,
   ].filter(Boolean);
@@ -165,7 +159,7 @@ export default function OrderReceipt() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={[styles.page, { paddingBottom: 24 + insets.bottom }]}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.page, { paddingBottom: 24 + insets.bottom }]}>
         {toolbar}
 
         <View style={styles.paper}>
@@ -226,6 +220,9 @@ export default function OrderReceipt() {
             {discountAmount > 0 ? (
               <TotalsRow label={`Discount${order.voucherCode ? ` (${order.voucherCode})` : ''}`} value={`-${peso(discountAmount)}`} />
             ) : null}
+            {carriedFeeLines(order).map((line) => (
+              <TotalsRow key={line.key} label={line.label} value={peso(line.amount)} />
+            ))}
             <TotalsRow label="TOTAL" value={peso(totalAmount)} grand />
           </View>
 
@@ -311,6 +308,9 @@ function ReceiptTable({ items }) {
           <View style={[styles.td, styles.colName]}>
             <Text style={styles.itemName}>{it.product?.name || it.productName || 'Item'}</Text>
             {it.product?.unit ? <Text style={styles.itemUnit}>per {it.product.unit}</Text> : null}
+            {lineKind(it) === 'LIVESTOCK' ? <Text style={styles.itemUnit}>per head</Text> : null}
+            {lineKind(it) === 'PACKAGE' ? <Text style={styles.itemUnit}>per package</Text> : null}
+            {lineNote(it, { choice: true }) ? <Text style={styles.itemUnit}>{lineNote(it, { choice: true })}</Text> : null}
           </View>
           <Text style={[styles.td, styles.tdText, styles.colQty, styles.center]}>{it.quantity}</Text>
           <View style={[styles.td, styles.right, col('price')]}>
@@ -346,31 +346,7 @@ function ProofImage({ uri }) {
 
 /** The website's ReceiptSkeleton: one white card of grey bars. */
 function ReceiptSkeleton() {
-  return (
-    <View style={styles.sk} accessibilityLabel="Loading receipt">
-      <View style={styles.skCard}>
-        <View style={styles.skSpread}>
-          <LoadingSkeleton height={18} width={120} borderRadius={6} />
-          <LoadingSkeleton height={12} width={90} borderRadius={6} />
-        </View>
-        <View style={{ gap: 8 }}>
-          <LoadingSkeleton height={11} borderRadius={6} />
-          <LoadingSkeleton height={11} borderRadius={6} />
-          <LoadingSkeleton height={11} width="68%" borderRadius={6} />
-        </View>
-        {[0, 1, 2].map((i) => (
-          <View key={i} style={styles.skSpread}>
-            <LoadingSkeleton height={12} width="55%" borderRadius={6} />
-            <LoadingSkeleton height={12} width={64} borderRadius={6} />
-          </View>
-        ))}
-        <View style={[styles.skSpread, styles.skTotal]}>
-          <LoadingSkeleton height={16} width={60} borderRadius={6} />
-          <LoadingSkeleton height={16} width={90} borderRadius={6} />
-        </View>
-      </View>
-    </View>
-  );
+  return <PageLoader minHeight={360} label="Loading receipt" />;
 }
 
 /** The receipt as plain text, for the phone's share sheet. */
@@ -392,6 +368,7 @@ function receiptText(order) {
     `Items Subtotal: ${peso(order.subtotal)}`,
     `${order.fulfillmentMethod === 'PICKUP' ? 'Pickup Fee' : 'Delivery Fee'}: ${Number(order.deliveryFee || 0) === 0 ? 'FREE' : peso(order.deliveryFee)}`,
     Number(order.discountAmount) > 0 ? `Discount${order.voucherCode ? ` (${order.voucherCode})` : ''}: -${peso(order.discountAmount)}` : null,
+    ...carriedFeeLines(order).map((line) => `${line.label}: ${peso(line.amount)}`),
     `TOTAL: ${peso(order.total)}`,
   ];
   return lines.filter((l) => l !== null).join('\n');

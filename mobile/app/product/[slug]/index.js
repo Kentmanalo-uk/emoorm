@@ -13,18 +13,22 @@ import {
 import apiClient from '../../../src/api/client';
 import ShellBarButton from '../../../src/components/ShellBarButton';
 import ShellPageMenu from '../../../src/components/ShellPageMenu';
-import EmptyArt from '../../../src/components/EmptyArt';
-import { SaleEnds } from '../../../src/components/SaleTag';
+import EmptyState from '../../../src/components/EmptyState';
+import Glass, { liquidGlass } from '../../../src/components/Glass';
 import TodayTag from '../../../src/components/TodayTag';
-import LoadingSkeleton from '../../../src/components/LoadingSkeleton';
+import { heroImageReady } from '../../../src/components/HeroFlight';
+import { PageLoader } from '../../../src/components/BrandLoader';
 import useAuthStore from '../../../src/store/authStore';
-import useCartStore from '../../../src/store/cartStore';
+import useCartStore, { standaloneLine } from '../../../src/store/cartStore';
+import { startBuyNow } from '../../../src/lib/buyNow';
 import useWishlistStore from '../../../src/store/wishlistStore';
 import { getCachedData, setCachedData, invalidateCachedData } from '../../../src/lib/dataCache';
 import { resolveImg } from '../../../src/lib/media';
+import { optionImage } from '../../../src/lib/variationImage';
 import { toast } from '../../../src/lib/toast';
 import {
-  fulfillmentLabel, isOpen as windowOpen, isTodayProduct, leftLabel, spanLabel, windowState,
+  buyLabel, clockLabel, dayName, fulfillmentLabel, isOpen as windowOpen, isTodayProduct, leftLabel, opensLabel, preOrderReady, spanLabel,
+  windowState,
 } from '../../../src/lib/availability';
 import {
   priceForSelection, pricedVariation, priceRange, priceTiersOf, saleInfo, stockForSelection, unitPriceFor,
@@ -39,9 +43,19 @@ import IdentityDialog from '../../../src/components/product/IdentityDialog';
 import ProductSection, { SectionBody, SectionHead, SectionTitle } from '../../../src/components/product/ProductSection';
 import { RelatedGrid, ShopShelf } from '../../../src/components/product/ProductShelves';
 import {
-  awayUntil, cartKeyFor, cartRefusal, dayLabel, estimate, fetchIdentityStatus, followStore, getFollowStatus, localDate, money,
-  parseImages, peso, rangeLabel, readyDay, recordView, shortDate, storeServiceLines, subscribeToFollowChanges, unfollowStore,
+  awayUntil, cartRefusal, dayLabel, estimate, fetchIdentityStatus, followStore, getFollowStatus, localDate, money,
+  orderEta, parseImages, peso, quickCartLine, rangeLabel, readyDay, recordView, shortDate, storeServiceLines, subscribeToFollowChanges,
+  unfollowStore,
 } from '../../../src/components/product/productLib';
+import {
+  cookReady, isStockless, minOrder, packageSavings, priceUnit, productKind,
+} from '../../../src/components/product/productKinds';
+import {
+  countLabel, pageUnit, quantityBounds, receiveMode, soldOutLabel, startsFrom,
+} from '../../../src/components/product/kindBuying';
+import KindRows, { hasKindRows } from '../../../src/components/product/KindRows';
+import PriceNotes from '../../../src/components/product/PriceNotes';
+import LivestockDeal from '../../../src/components/offers/LivestockDeal';
 
 const PLACEHOLDER = require('../../../assets/pdp-placeholder-product.png');
 
@@ -52,6 +66,7 @@ const PHONE_SECTIONS = [
   ['details', 'Details'],
   ['foryou', 'For you'],
 ];
+// (components/HeroFlight PRODUCT_HEAD_H is the same: the photo flight lands under it.)
 const HEAD_H = 56;
 const TABS_H = 42;
 
@@ -82,7 +97,8 @@ function ProductPage({ slug }) {
   const [product, setProduct] = useState(() => getCachedData(`product:${slug}`) || null);
   const [isLoading, setIsLoading] = useState(() => !getCachedData(`product:${slug}`));
   const [activeSlide, setActiveSlide] = useState(0);
-  const [quantity, setQuantity] = useState(1);
+  // One piece, or a paluto's minimum order.
+  const [quantity, setQuantity] = useState(() => minOrder(getCachedData(`product:${slug}`)));
   const [selectedVariations, setSelectedVariations] = useState({});
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [sameShopProducts, setSameShopProducts] = useState([]);
@@ -100,8 +116,11 @@ function ProductPage({ slug }) {
   const [phoneTab, setPhoneTab] = useState({ on: false, key: 'overview' });
   const [galleryH, setGalleryH] = useState(Math.round((screenW * 6) / 5));
   const [band, setBand] = useState({ w: 0, h: 0 });
+  // iOS 26: the action bar floats over the page in glass; the page leaves room under it.
+  const [barH, setBarH] = useState(0);
 
   const scrollRef = useRef(null);
+  const galleryRef = useRef(null);
   const contentRef = useRef(null);
   const sectionY = useRef({});
   const sectionNodes = useRef({});
@@ -145,6 +164,7 @@ function ProductPage({ slug }) {
         const res = await apiClient.get(`/products/slug/${slug}`);
         if (!live) return;
         setProduct(res.data);
+        setQuantity((q) => Math.max(q, minOrder(res.data)));
         setCachedData(`product:${slug}`, res.data);
         if (!kept) loadAround(res.data);
       } catch (error) {
@@ -231,30 +251,43 @@ function ProductPage({ slug }) {
     }
   };
 
+  // The line for the choices made: what Add to cart adds, and what Buy now
+  // checks out on its own.
+  const lineForSelection = () => {
+    const defs = Array.isArray(product.variations) ? product.variations : [];
+    return {
+      id: product.id,
+      name: product.name,
+      price: priceForSelection(product, selectedVariations),
+      priceTiers: product.priceTiers,
+      image: optionImage(product.variations, selectedVariations) || parseImages(product.images)[0] || null,
+      storeId: product.storeId,
+      storeName: product.store?.name,
+      storeLogo: product.store?.logoUrl || product.store?.logo || null,
+      storeSlug: product.store?.slug,
+      stock: stockForSelection(product, selectedVariations),
+      listingKind: product.listingKind,
+      availability: product.availability,
+      // The kind, so the cart knows a paluto has no stock but a minimum
+      // order, and checkout which ways it can be received.
+      productType: product.productType,
+      details: product.details,
+      fulfillment: product.fulfillment,
+      weightGrams: product.weightGrams,
+      packageItems: product.packageItems,
+      slug: product.slug,
+      categoryId: product.categoryId,
+      productId: product.id,
+      selectedVariations: defs.length ? selectedVariations : null,
+      store: product.store,
+    };
+  };
+
   const handleAddToCart = () => {
     if (!isAuthenticated) { loginRedirect(); return false; }
-    const defs = Array.isArray(product.variations) ? product.variations : [];
     setIsAddingToCart(true);
     try {
-      const line = {
-        id: product.id,
-        name: product.name,
-        price: priceForSelection(product, selectedVariations),
-        priceTiers: product.priceTiers,
-        image: parseImages(product.images)[0] || null,
-        storeId: product.storeId,
-        storeName: product.store?.name,
-        storeLogo: product.store?.logoUrl || product.store?.logo || null,
-        storeSlug: product.store?.slug,
-        stock: stockForSelection(product, selectedVariations),
-        listingKind: product.listingKind,
-        availability: product.availability,
-        slug: product.slug,
-        categoryId: product.categoryId,
-        productId: product.id,
-        selectedVariations: defs.length ? selectedVariations : null,
-        store: product.store,
-      };
+      const line = lineForSelection();
       const refusal = cartRefusal(line);
       if (refusal) throw new Error(refusal);
       addItem(line, quantity);
@@ -268,12 +301,20 @@ function ProductPage({ slug }) {
     }
   };
 
-  // Buy now: straight to checkout with just this line selected.
-  const goToCheckout = () => {
-    const defs = Array.isArray(product.variations) ? product.variations : [];
-    const key = cartKeyFor({ id: product.id, selectedVariations: defs.length ? selectedVariations : null });
-    // The checkout screen reads its lines as a JSON list of cart keys.
-    router.push({ pathname: '/checkout', params: { selectedIds: JSON.stringify([key]) } });
+  // Buy now: straight to checkout with just this item, its options and the
+  // quantity picked here. The cart is left alone: a line already in it keeps
+  // its own quantity and is neither added to nor removed.
+  const buyNow = () => {
+    try {
+      const line = lineForSelection();
+      const refusal = cartRefusal(line);
+      if (refusal) throw new Error(refusal);
+      startBuyNow(router, [standaloneLine(line, quantity)]);
+      return true;
+    } catch (error) {
+      toast.error(error.message || "This item can't be bought right now");
+      return false;
+    }
   };
 
   const requireVerifiedIdentity = async () => {
@@ -288,15 +329,15 @@ function ProductPage({ slug }) {
     return false;
   };
 
-  // The sheet has already checked every option group.
-  const confirmSheet = async () => {
-    const mode = sheetMode;
+  // The sheet has already checked every option group. `action` is the
+  // button pressed: the sheet opened for Buy now also offers Add to cart.
+  const confirmSheet = async (action) => {
+    const mode = action || sheetMode;
     if (!isAuthenticated) { setSheetMode(null); loginRedirect(); return; }
     if (mode === 'buy' && !(await requireVerifiedIdentity())) { setSheetMode(null); return; }
     // On failure (e.g. more than the stock) the sheet stays open with the toast.
-    if (handleAddToCart() === false) return;
+    if ((mode === 'buy' ? buyNow() : handleAddToCart()) === false) return;
     setSheetMode(null);
-    if (mode === 'buy') goToCheckout();
   };
 
   const closeSheet = useCallback(() => setSheetMode(null), []);
@@ -308,29 +349,10 @@ function ProductPage({ slug }) {
       return;
     }
     try {
-      const line = {
-        id: p.id,
-        productId: p.id,
-        name: p.name,
-        price: saleInfo(p).price,
-        priceTiers: p.priceTiers,
-        image: parseImages(p.images)[0] || null,
-        storeId: p.storeId || p.store?.id,
-        storeName: p.store?.name,
-        storeLogo: p.store?.logo || null,
-        storeSlug: p.store?.slug,
-        readyToSell: p.store?.readyToSell,
-        vacationUntil: p.store?.vacationUntil,
-        stock: p.stock,
-        listingKind: p.listingKind,
-        availability: p.availability,
-        slug: p.slug,
-        categoryId: p.categoryId,
-        selectedVariations: null,
-      };
+      const line = quickCartLine(p, saleInfo(p).price);
       const refusal = cartRefusal(line);
       if (refusal) throw new Error(refusal);
-      addItem(line, 1);
+      addItem(line, minOrder(p));
       toast.success('Added to cart');
     } catch (err) {
       toast.error(err.message || 'Could not add to cart');
@@ -340,7 +362,7 @@ function ProductPage({ slug }) {
   const handleShare = async () => {
     try {
       const url = `https://emoorm.shop/product/${product.slug}`;
-      await Share.share({ title: product.name, message: `${product.name} — ${peso(product.price)} on E-MOORM ${url}`, url });
+      await Share.share({ title: product.name, message: `${product.name} — ${startsFrom(product) ? 'from ' : ''}${peso(product.price)}${priceUnit(product)} on E-MOORM ${url}`, url });
     } catch {
       // Closing the share menu needs no message.
     }
@@ -371,10 +393,16 @@ function ProductPage({ slug }) {
     Animated.timing(tabsAnim, { toValue: phoneTab.on ? 1 : 0, duration: 200, useNativeDriver: true }).start();
   }, [phoneTab.on, tabsAnim]);
 
+  // Measured afresh on a tap: the panels above may have grown since.
   const goToSection = (key) => {
-    const top = sectionY.current[key];
-    const y = key === 'overview' || top == null ? 0 : top - TABS_H + 1;
-    scrollRef.current?.scrollTo({ y, animated: true });
+    const go = (top) => {
+      const y = key === 'overview' || top == null ? 0 : Math.max(0, top - TABS_H + 1);
+      scrollRef.current?.scrollTo({ y, animated: true });
+    };
+    const node = sectionNodes.current[key];
+    const content = contentRef.current;
+    if (key === 'overview' || !node?.measureLayout || !content) { go(sectionY.current[key]); return; }
+    node.measureLayout(content, (x, y) => { sectionY.current[key] = y; go(y); }, () => go(sectionY.current[key]));
   };
   // Where each section starts in the scrolled content. Measured again
   // whenever the content changes size (onLayout alone misses a section
@@ -392,6 +420,18 @@ function ProductPage({ slug }) {
     });
   };
 
+  // A picked option with its own photo shows it in the gallery (in front
+  // when it is not one of the product's photos); other picks go back.
+  const optionPhoto = product ? optionImage(product.variations, selectedVariations) : null;
+  useEffect(() => {
+    if (!product) return;
+    const list = withPhoto(parseImages(product.images), optionPhoto);
+    const i = optionPhoto ? Math.max(0, list.indexOf(optionPhoto)) : 0;
+    galleryRef.current?.scrollTo({ x: i * screenW, animated: true });
+    setActiveSlide(i);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optionPhoto]);
+
   /* ── derived ─────────────────────────────────────────────────────────── */
 
   const etaLines = useMemo(() => {
@@ -401,8 +441,23 @@ function ProductPage({ slug }) {
       const w = product.availability;
       return w ? [`Ready ${spanLabel(w.readyFrom, w.readyUntil)}`] : [];
     }
-    const mode = st.fulfillmentMode || 'DELIVERY';
     const lower = (s) => s.replace(/Today|Tomorrow/g, (w) => w.toLowerCase());
+    // A paluto: from its cooking time; one cooking time is one moment.
+    if (isStockless(product)) {
+      const r = cookReady(product.details);
+      const when = new Date(r.to) - new Date(r.from) > 60e3 ? spanLabel(r.from, r.to) : `${dayName(r.from)} at ${clockLabel(r.from)}`;
+      return [`Ready ${lower(when)} if you order now`];
+    }
+    const mode = receiveMode(product);
+    const town = user?.municipalityId;
+    // A package: no sooner than its notice.
+    if (productKind(product) === 'PACKAGE') {
+      const eta = (method) => orderEta(st, [product], { method, townId: town });
+      return [
+        ...(mode !== 'PICKUP' ? [`Arrives ${lower(rangeLabel(eta('DELIVERY')))} if delivered by the shop`] : []),
+        ...(mode !== 'DELIVERY' ? [`Ready for pickup ${lower(rangeLabel(eta('PICKUP')))}`] : []),
+      ];
+    }
     return [
       ...(mode !== 'PICKUP' ? [`Arrives ${lower(rangeLabel(estimate(st, { method: 'DELIVERY', townId: user?.municipalityId })))} if delivered by the shop`] : []),
       ...(mode !== 'DELIVERY' ? [`Ready for pickup ${lower(dayLabel(readyDay(st)))}`] : []),
@@ -427,7 +482,12 @@ function ProductPage({ slug }) {
   }
 
   const images = parseImages(product.images);
-  const isOutOfStock = product.stock === 0;
+  const slides = withPhoto(images, optionPhoto);
+  // A paluto is cooked when ordered: never out of stock.
+  const isOutOfStock = !isStockless(product) && product.stock === 0;
+  const kind = productKind(product);
+  const livestock = kind === 'LIVESTOCK';
+  const { least: leastQty, most: mostQty } = quantityBounds(product, selectedVariations);
   const away = awayUntil(product.store);
   const todayItem = isTodayProduct(product);
   const todayWindow = product.availability || null;
@@ -435,7 +495,10 @@ function ProductPage({ slug }) {
   const notTakingOrders = product.store?.readyToSell === false || Boolean(away) || todayClosed;
   const closedLabel = away
     ? `Shop away until ${shortDate(away)}`
-    : todayClosed ? windowState(todayWindow).text : 'Not taking orders yet';
+    : 'Not taking orders yet';
+  // On the shop's menu, not posted now: when its next post opens, if one is coming.
+  const menuWaiting = todayClosed && !away && product.store?.readyToSell !== false;
+  const opensText = menuWaiting ? opensLabel(todayWindow) : null;
   const cannotBuy = isOutOfStock || notTakingOrders;
   const pricedGroup = pricedVariation(product.variations);
   const range = priceRange(product);
@@ -443,10 +506,16 @@ function ProductPage({ slug }) {
   const optionChosen = !!(pricedGroup && selectedVariations[pricedGroup.name]);
   const unitPrice = unitPriceFor(product, selectedVariations, quantity);
   const tiers = priceTiersOf(product);
-  const priceLabel = optionPriced && !optionChosen ? `${money(range.min)} – ₱${money(range.max)}` : money(unitPrice);
+  // A paluto's sizes read as where they start: "from ₱350".
+  const fromPrice = startsFrom(product) && !optionChosen;
+  const priceLabel = fromPrice ? money(range.min)
+    : optionPriced && !optionChosen ? `${money(range.min)} – ₱${money(range.max)}` : money(unitPrice);
+  const unitWords = pageUnit(product);
+  const savings = packageSavings(product);
   const place = product.municipality?.name || product.store?.municipality?.name || 'Oriental Mindoro';
   const soldCount = Number(product.soldCount ?? 0);
-  const serviceLines = storeServiceLines(product.store);
+  // The product's own pickup / delivery when it has one, else the shop's.
+  const serviceLines = storeServiceLines(product.store, product.store && receiveMode(product));
   const avgRating = Number(product.averageRating ?? ratingStats?.averageRating ?? 0);
   const reviewCount = Number(product.reviewCount ?? ratingStats?.totalReviews ?? reviews.length);
   const shopLogo = product.store && (product.store.logoUrl || product.store.logo) ? resolveImg(product.store.logoUrl || product.store.logo) : '';
@@ -454,22 +523,44 @@ function ProductPage({ slug }) {
   const sellerQuote = shipQuote?.productId === product.id && shipQuote.seller?.offered ? shipQuote.seller : null;
   const freeShipping = Boolean(sellerQuote && sellerQuote.covered !== false && sellerQuote.fee != null && Number(sellerQuote.fee) === 0);
   const buyNote = freeShipping ? 'Free shipping' : product.store?.acceptsCod ? 'Cash on delivery' : '';
+  // A live pre-order: under its button, when it is ready instead (the price is right above).
+  const preReady = preOrderReady(product);
   const defs = Array.isArray(product.variations) ? product.variations : [];
   const optionsValue = (() => {
     const picked = defs.filter((v) => selectedVariations[v.name]).map((v) => `${v.name}: ${selectedVariations[v.name]}`);
-    const qty = `Qty ${quantity}`;
+    const qty = kind === 'PACKAGE' ? countLabel(product, quantity)
+      : `Qty ${quantity}${leastQty > 1 ? ` (min. ${leastQty})` : ''}`;
     if (!defs.length) return qty;
     if (picked.length < defs.length) return `Select ${defs.map((v) => v.name).join(', ')}`;
     return `${picked.join(', ')} · ${qty}`;
   })();
   const isOwnStore = Boolean(user?.id && (product.store?.ownerId || product.store?.owner?.id) === user.id);
   const sale = saleInfo(product);
-  // A countdown (last three days of a sale) or bulk prices crowd the band:
-  // the old price drops under the price and the place gives way first.
-  const saleLeft = sale.endsAt ? sale.endsAt.getTime() - Date.now() : null;
-  const crowded = tiers.length > 0 || (saleLeft != null && saleLeft > 0 && saleLeft <= 3 * 86400e3);
+  // The rows after the kind's own: the first of them has no line on top.
+  const kindRows = hasKindRows(product);
   const description = product.description || '';
   const longDesc = description.length > 260;
+
+  // The bar's Shop (its logo) and Chat (unread messages from this shop).
+  const barActions = (chatTo) => (
+    <>
+      <Pressable style={styles.action} onPress={() => router.push(product.store ? `/store/${product.store.slug}` : '/stores')} accessibilityRole="link">
+        {shopLogo && failedLogo !== shopLogo
+          ? <Image source={{ uri: shopLogo }} style={styles.shopLogo} onError={() => setFailedLogo(shopLogo)} />
+          : <StorefrontIcon size={21} color={t.neutral[700]} />}
+        <Text style={styles.actionText}>Shop</Text>
+      </Pressable>
+      <Pressable style={styles.action} onPress={() => router.push(chatTo)} accessibilityRole="link">
+        <View>
+          <ChatCircleIcon size={21} color={t.neutral[700]} />
+          {chatUnread > 0 ? (
+            <View style={styles.actionBadge}><Text style={styles.badgeText}>{chatUnread > 99 ? '99+' : chatUnread}</Text></View>
+          ) : null}
+        </View>
+        <Text style={styles.actionText}>Chat</Text>
+      </Pressable>
+    </>
+  );
 
   const menuItems = [
     {
@@ -504,36 +595,24 @@ function ProductPage({ slug }) {
           </ShellBarButton>
           <ShellPageMenu items={menuItems} label="More options" />
         </View>
-        <Animated.View
-          pointerEvents={phoneTab.on ? 'auto' : 'none'}
-          accessibilityElementsHidden={!phoneTab.on}
-          style={[styles.tabs, {
-            opacity: tabsAnim,
-            transform: [{ translateY: tabsAnim.interpolate({ inputRange: [0, 1], outputRange: [-TABS_H, 0] }) }],
-          }]}
-        >
-          {PHONE_SECTIONS.map(([key, label]) => (
-            <Pressable key={key} style={styles.tab} onPress={() => goToSection(key)} accessibilityRole="tab" accessibilityState={{ selected: phoneTab.key === key }}>
-              <Text style={[styles.tabText, phoneTab.key === key && styles.tabTextOn]}>{label}</Text>
-              {phoneTab.key === key ? <View style={styles.tabLine} /> : null}
-            </Pressable>
-          ))}
-        </Animated.View>
       </View>
 
-      <ScrollView
+      <ScrollView showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, liquidGlass && { paddingBottom: 19 + barH }]}
         onContentSizeChange={measureSections}
         onScroll={onScroll}
         scrollEventThrottle={32}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* One box round the content, so each section can be measured against it. */}
+        <View ref={contentRef} collapsable={false}>
         {/* Gallery: one photo per screen width, swipe to change */}
         <View style={styles.gallery} onLayout={(e) => { setGalleryH(e.nativeEvent.layout.height); sectionY.current.overview = 0; }}>
-          <ScrollView
+          <ScrollView showsVerticalScrollIndicator={false}
+            ref={galleryRef}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
@@ -543,46 +622,50 @@ function ProductPage({ slug }) {
               if (i !== activeSlide) setActiveSlide(i);
             }}
           >
-            {(images.length ? images : [null]).map((img, i) => (
-              <GallerySlide key={`${img}-${i}`} src={img} width={screenW} label={i === 0 ? product.name : `${product.name} ${i + 1}`} />
+            {(slides.length ? slides : [null]).map((img, i) => (
+              <GallerySlide
+                key={`${img}-${i}`}
+                src={img}
+                width={screenW}
+                label={i === 0 ? product.name : `${product.name} ${i + 1}`}
+                onShown={i === 0 ? () => heroImageReady(slug) : undefined}
+              />
             ))}
           </ScrollView>
-          {images.length > 1 ? (
-            <View style={styles.counter}><Text style={styles.counterText}>{activeSlide + 1}/{images.length}</Text></View>
+          {slides.length > 1 ? (
+            <View style={styles.counter}><Text style={styles.counterText}>{activeSlide + 1}/{slides.length}</Text></View>
           ) : null}
           {product.status === 'PENDING' ? (
             <View style={styles.pending}><Text style={styles.pendingText}>PENDING REVIEW</Text></View>
           ) : null}
         </View>
 
-        {/* Price band: brand green under the price, accent pink on the right */}
+        {/* Price band: the price and what it is for, the town, and what it was
+            or what a package saves (brand green under the price, accent pink
+            on the right); then the price's notes, a line each, on white. */}
         <View style={styles.priceBand} onLayout={(e) => setBand({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
           {band.w ? <BandGradient w={band.w} h={band.h} /> : null}
-          <View style={[styles.priceMain, crowded && styles.priceMainCrowded]}>
+          <View style={styles.priceTop}>
             <View style={styles.priceLine}>
+              {fromPrice ? <Text style={[styles.priceWords, styles.priceFrom]}>from</Text> : null}
               <Text style={styles.pricePeso}>₱</Text>
-              {/* Inline on the website: a range wraps after the dash, the small ₱ stays on line one. */}
-              {priceLabel.split(' – ').map((part, i, all) => (
-                <Text key={part} style={styles.priceText}>{i < all.length - 1 ? `${part} – ` : part}</Text>
-              ))}
+              <Text style={styles.priceText}>{priceLabel}</Text>
+              {unitWords ? <Text style={[styles.priceWords, styles.priceUnit]}>{unitWords}</Text> : null}
             </View>
-            {sale.regular ? (
-              <View style={[styles.bandWas, crowded && styles.bandWasCrowded]}>
-                <Text style={styles.bandWasOld}>{peso(sale.regular)}</Text>
-                <Text style={styles.bandWasOff}>-{Math.round((1 - sale.price / sale.regular) * 100)}%</Text>
-              </View>
-            ) : null}
-          </View>
-          {/* The countdown and bulk prices sit in the band's row, as on the website. */}
-          <SaleEnds product={product} style={styles.bandEnds} />
-          {tiers.length > 0 ? <BandBulk tiers={tiers} /> : null}
-          <View style={[styles.priceSide, crowded && styles.priceSideCrowded]}>
             <View style={styles.place}>
               <MapPinIcon size={12} color="#fff" />
               <Text style={styles.placeText} numberOfLines={1}>{place}</Text>
             </View>
           </View>
+          {sale.regular ? (
+            <View style={styles.bandWas}>
+              <Text style={styles.bandWasOld}>{peso(sale.regular)}</Text>
+              <Text style={styles.bandWasOff}>-{Math.round((1 - sale.price / sale.regular) * 100)}%</Text>
+            </View>
+          ) : null}
+          {savings ? <PackageSave savings={savings} /> : null}
         </View>
+        <PriceNotes product={product} tiers={tiers} negotiable={livestock} style={styles.notes} />
 
         {/* Title, rating, and the grey card of rows */}
         <View style={styles.heroInfo}>
@@ -629,8 +712,10 @@ function ProductPage({ slug }) {
           </View>
 
           <View style={styles.rows}>
+            {/* The kind's own rows: a paluto's serving, an animal's facts, a package's items. */}
+            <KindRows product={product} Row={Row} />
             {todayItem ? (
-              <Row label="Available today:">
+              <Row label="Available today:" top={kindRows}>
                 {todayWindow ? (
                   <>
                     <View style={[styles.line, styles.lineWrap]}>
@@ -654,36 +739,59 @@ function ProductPage({ slug }) {
                   </>
                 ) : (
                   <View style={styles.line}>
-                    <Text style={[styles.lineText, styles.todayState, styles.today_ended]}>Not available now. The shop posts it on the days it has it.</Text>
+                    <Text style={[styles.lineText, styles.todayState, styles.today_ended]}>Not taking orders yet. The shop posts it on the days it has it.</Text>
                   </View>
                 )}
               </Row>
             ) : null}
 
-            <Row label="Delivery Options:" top={Boolean(todayItem)}>
-              <View style={styles.line}>
-                <MapPinIcon size={14} color={t.neutral[500]} style={styles.lineIcon} />
-                <Text style={[styles.lineText, styles.lineStrong]}>{place}</Text>
-              </View>
-              {etaLines.map((text) => (
-                <View style={styles.line} key={text}>
-                  <CalendarCheckIcon size={14} color={t.primary[700]} style={styles.lineIcon} />
-                  <Text style={[styles.lineText, styles.eta]}>{text}</Text>
+            {/* Livestock is not delivered or checked out: the price is agreed
+                in chat and the animals are paid for at the meetup. */}
+            {livestock ? (
+              <Row label="How to buy:" top={kindRows || todayItem}>
+                <View style={styles.line}>
+                  <MapPinIcon size={14} color={t.neutral[500]} style={styles.lineIcon} />
+                  <Text style={[styles.lineText, styles.lineStrong]}>{place}</Text>
                 </View>
-              ))}
-              {serviceLines.length > 0 ? serviceLines.map(({ Icon, text }) => (
-                <View style={styles.line} key={text}>
-                  <Icon size={14} color={t.neutral[500]} style={styles.lineIcon} />
-                  <Text style={styles.lineText}>{text}</Text>
+                <View style={styles.line}>
+                  <ChatCircleIcon size={14} color={t.neutral[500]} style={styles.lineIcon} />
+                  <Text style={styles.lineText}>Make an offer and agree on the price in chat</Text>
                 </View>
-              )) : (
-                <Text style={[styles.lineText, styles.muted]}>Fulfilment and payment options are shown at checkout</Text>
-              )}
-            </Row>
+                <View style={styles.line}>
+                  <StorefrontIcon size={14} color={t.neutral[500]} style={styles.lineIcon} />
+                  <Text style={styles.lineText}>Meet the seller, see the animals, and pay in person</Text>
+                </View>
+              </Row>
+            ) : (
+              <Row label="Delivery Options:" top={kindRows || todayItem}>
+                <View style={styles.line}>
+                  <MapPinIcon size={14} color={t.neutral[500]} style={styles.lineIcon} />
+                  <Text style={[styles.lineText, styles.lineStrong]}>{place}</Text>
+                </View>
+                {etaLines.map((text) => (
+                  <View style={styles.line} key={text}>
+                    <CalendarCheckIcon size={14} color={t.primary[700]} style={styles.lineIcon} />
+                    <Text style={[styles.lineText, styles.eta]}>{text}</Text>
+                  </View>
+                ))}
+                {serviceLines.length > 0 ? serviceLines.map(({ Icon, text }) => (
+                  <View style={styles.line} key={text}>
+                    <Icon size={14} color={t.neutral[500]} style={styles.lineIcon} />
+                    <Text style={styles.lineText}>{text}</Text>
+                  </View>
+                )) : (
+                  <Text style={[styles.lineText, styles.muted]}>Fulfilment and payment options are shown at checkout</Text>
+                )}
+              </Row>
+            )}
 
-            <ShippingRow product={product} unitPrice={unitPrice} municipalityId={isAuthenticated ? user?.municipalityId : undefined} onQuote={setShipQuote} />
+            {/* Delivery by the seller and by couriers, priced for the buyer's town
+                (none for a product that is pickup only, nor for livestock). */}
+            {product.fulfillment !== 'PICKUP' && !livestock ? (
+              <ShippingRow product={product} unitPrice={unitPrice} municipalityId={isAuthenticated ? user?.municipalityId : undefined} onQuote={setShipQuote} />
+            ) : null}
 
-            <Row label="Return & Warranty:" top>
+            <Row label="Return & Warranty:" top last={livestock && !product.returnPolicy}>
               <View style={styles.line}>
                 <InfoIcon size={14} color={t.neutral[500]} style={styles.lineIcon} />
                 <Text style={styles.lineText}>{product.returnPolicy ? 'See seller policy below' : 'No seller return policy provided'}</Text>
@@ -691,16 +799,18 @@ function ProductPage({ slug }) {
             </Row>
 
             {product.returnPolicy ? (
-              <Row label="Seller return policy:">
+              <Row label="Seller return policy:" last={livestock} style={styles.policyRow}>
                 <Text style={styles.policy}>{product.returnPolicy}</Text>
               </Row>
             ) : null}
 
-            <Pressable style={styles.optionsRow} onPress={() => setSheetMode('cart')} accessibilityRole="button">
-              <Text style={[styles.rowLabel, styles.optionsLabel]}>{defs.length > 0 ? 'Options' : 'Quantity'}</Text>
-              <Text style={styles.optionsValue} numberOfLines={1}>{optionsValue}</Text>
-              <CaretRightIcon size={16} color={t.neutral[500]} />
-            </Pressable>
+            {!livestock ? (
+              <Pressable style={styles.optionsRow} onPress={() => setSheetMode('cart')} accessibilityRole="button">
+                <Text style={[styles.rowLabel, styles.optionsLabel]}>{defs.length > 0 ? 'Options' : 'Quantity'}</Text>
+                <Text style={styles.optionsValue} numberOfLines={1}>{optionsValue}</Text>
+                <CaretRightIcon size={16} color={t.neutral[500]} />
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
@@ -731,10 +841,7 @@ function ProductPage({ slug }) {
           ) : null}
           <SectionBody>
             {reviews.length === 0 ? (
-              <View style={styles.reviewsEmpty}>
-                <EmptyArt name="reviews" size={72} style={styles.reviewsEmptyArt} />
-                <Text style={styles.reviewsEmptyText}>No reviews yet. Be the first to review this product.</Text>
-              </View>
+              <EmptyState compact art="reviews" text="No reviews yet. Be the first to review this product." />
             ) : reviews.slice(0, 10).map((r, i, all) => <ReviewItem key={r.id} review={r} last={i === all.length - 1} />)}
           </SectionBody>
         </ProductSection>
@@ -788,11 +895,14 @@ function ProductPage({ slug }) {
         <ProductSection sectionRef={sectionRef('details')}>
           <SectionHead><SectionTitle>Specifications</SectionTitle></SectionHead>
           <SectionBody style={styles.specsBody}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.specs}>
+            <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.specs}>
               <Spec label="Category" value={product.category?.name || '—'} />
               <Spec label="Origin" value={place} />
               <Spec label="Sold by" value={product.store?.name || '—'} />
-              <Spec label="Stock" value={String(product.stock)} />
+              <Spec
+                label={livestock ? 'Heads available' : kind === 'PACKAGE' ? 'Packages available' : 'Stock'}
+                value={isStockless(product) ? 'Cooked when ordered' : String(product.stock)}
+              />
               <Spec label="SKU" value={product.id?.slice(0, 8).toUpperCase()} />
               <Spec label="Listed" value={localDate(product.createdAt)} />
             </ScrollView>
@@ -819,71 +929,114 @@ function ProductPage({ slug }) {
         </View>
 
         <RelatedGrid products={relatedProducts} categoryId={product.categoryId} sectionRef={sectionRef('foryou')} />
+        </View>
       </ScrollView>
 
-      {/* Action bar: Shop (its logo), Chat, add to cart, Buy now */}
-      <View style={[styles.actionbar, { paddingBottom: 8 + insets.bottom }]}>
-        <Pressable style={styles.action} onPress={() => router.push(product.store ? `/store/${product.store.slug}` : '/stores')} accessibilityRole="link">
-          {shopLogo && failedLogo !== shopLogo
-            ? <Image source={{ uri: shopLogo }} style={styles.shopLogo} onError={() => setFailedLogo(shopLogo)} />
-            : <StorefrontIcon size={21} color={t.neutral[700]} />}
-          <Text style={styles.actionText}>Shop</Text>
-        </Pressable>
-        <Pressable style={styles.action} onPress={() => router.push(product.store ? `/messages?store=${product.store.id}` : '/messages')} accessibilityRole="link">
-          <View>
-            <ChatCircleIcon size={21} color={t.neutral[700]} />
-            {chatUnread > 0 ? (
-              <View style={styles.actionBadge}><Text style={styles.badgeText}>{chatUnread > 99 ? '99+' : chatUnread}</Text></View>
-            ) : null}
-          </View>
-          <Text style={styles.actionText}>Chat</Text>
-        </Pressable>
-        {cannotBuy ? (
-          <View style={[styles.buy, styles.closed]} accessibilityState={{ disabled: true }}>
-            <Text style={[styles.buyText, styles.closedText]} numberOfLines={1}>{notTakingOrders ? closedLabel : 'Out of stock'}</Text>
-          </View>
-        ) : (
-          <>
-            <Pressable
-              style={[styles.addcart, isAddingToCart && styles.disabled]}
-              onPress={() => setSheetMode('cart')}
-              disabled={isAddingToCart}
-              accessibilityRole="button"
-              accessibilityLabel="Add to cart"
-            >
-              <ShoppingCartSimpleIcon size={26} color={t.primary[700]} />
-              <View style={styles.addcartPlus}><PlusIcon size={11} weight="bold" color={t.primary[700]} /></View>
+      {/* The section tabs, hanging under the top bar once the photos are
+          scrolled past (they slide out from under it). A layer of the screen
+          rather than a child overflowing the bar, so Android can tap them. */}
+      <View
+        pointerEvents={phoneTab.on ? 'box-none' : 'none'}
+        style={[styles.tabsClip, { top: insets.top + HEAD_H }]}
+      >
+        <Animated.View
+          accessibilityElementsHidden={!phoneTab.on}
+          importantForAccessibility={phoneTab.on ? 'auto' : 'no-hide-descendants'}
+          accessibilityRole="tablist"
+          style={[styles.tabs, {
+            opacity: tabsAnim,
+            transform: [{ translateY: tabsAnim.interpolate({ inputRange: [0, 1], outputRange: [-TABS_H, 0] }) }],
+          }]}
+        >
+          {PHONE_SECTIONS.map(([key, label]) => (
+            <Pressable key={key} style={styles.tab} onPress={() => goToSection(key)} accessibilityRole="tab" accessibilityState={{ selected: phoneTab.key === key }}>
+              <Text style={[styles.tabText, phoneTab.key === key && styles.tabTextOn]} numberOfLines={1}>{label}</Text>
+              {phoneTab.key === key ? <View style={styles.tabLine} /> : null}
             </Pressable>
-            <Pressable style={[styles.buy, isAddingToCart && styles.disabled]} onPress={() => setSheetMode('buy')} disabled={isAddingToCart} accessibilityRole="button">
-              <Text style={styles.buyText}>Buy now</Text>
-              <View style={styles.buySmall}>
-                <Text style={styles.buySmallText}>
-                  {optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}
-                </Text>
-                {buyNote ? (
-                  <>
-                    <View style={styles.buyRule} />
-                    <Text style={styles.buySmallText}>{buyNote}</Text>
-                  </>
-                ) : null}
-              </View>
-            </Pressable>
-          </>
-        )}
+          ))}
+        </Animated.View>
       </View>
 
-      <ProductOptionSheet
-        mode={sheetMode}
-        product={product}
-        image={images[0]}
-        selected={selectedVariations}
-        onSelect={(name, value) => setSelectedVariations((current) => ({ ...current, [name]: value }))}
-        quantity={quantity}
-        onQuantity={setQuantity}
-        onConfirm={confirmSheet}
-        onClose={closeSheet}
-        busy={isAddingToCart}
-      />
+      {/* Action bar: Shop (its logo), Chat, then add to cart and Buy now, or
+          for a live animal Send offer. On iOS 26 it floats over the page in
+          Liquid Glass; elsewhere it is the website's white bar. */}
+      <Glass
+        style={[styles.actionbar, liquidGlass && styles.actionbarFloat, { paddingBottom: 8 + insets.bottom }]}
+        fallbackStyle={styles.actionbarLook}
+        onLayout={(e) => setBarH(e.nativeEvent.layout.height)}
+      >
+        {livestock ? (
+          <LivestockDeal
+            product={product}
+            listPrice={unitPrice}
+            cannotBuy={cannotBuy}
+            closedLabel={notTakingOrders ? closedLabel : soldOutLabel(product)}
+          >
+            {(chatTo) => barActions(chatTo)}
+          </LivestockDeal>
+        ) : (
+          <>
+            {barActions(product.store ? `/messages?store=${product.store.id}` : '/messages')}
+            {cannotBuy ? (
+              <View style={[styles.buy, styles.closed]} accessibilityState={{ disabled: true }}>
+                <Text style={[styles.buyText, styles.closedText]} numberOfLines={1}>{notTakingOrders ? closedLabel : soldOutLabel(product)}</Text>
+                {opensText ? <Text style={styles.closedSmall} numberOfLines={1}>{opensText}</Text> : null}
+              </View>
+            ) : (
+              <>
+                <Pressable
+                  style={[styles.addcart, isAddingToCart && styles.disabled]}
+                  onPress={() => setSheetMode('cart')}
+                  disabled={isAddingToCart}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add to cart"
+                >
+                  <ShoppingCartSimpleIcon size={26} color={t.primary[700]} />
+                  <View style={styles.addcartPlus}><PlusIcon size={11} weight="bold" color={t.primary[700]} /></View>
+                </Pressable>
+                <Pressable style={[styles.buy, isAddingToCart && styles.disabled]} onPress={() => setSheetMode('buy')} disabled={isAddingToCart} accessibilityRole="button">
+                  <Text style={styles.buyText}>{buyLabel(product)}</Text>
+                  {preReady ? (
+                    <View style={styles.buySmall}><Text style={styles.buySmallText}>{preReady}</Text></View>
+                  ) : (
+                    <View style={styles.buySmall}>
+                      <Text style={styles.buySmallText}>
+                        {optionPriced && !optionChosen ? `from ${peso(range.min)}` : peso(unitPrice * quantity)}
+                      </Text>
+                      {buyNote ? (
+                        <>
+                          <View style={styles.buyRule} />
+                          <Text style={styles.buySmallText}>{buyNote}</Text>
+                        </>
+                      ) : null}
+                    </View>
+                  )}
+                </Pressable>
+              </>
+            )}
+          </>
+        )}
+      </Glass>
+
+      {!livestock ? (
+        <ProductOptionSheet
+          mode={sheetMode}
+          product={product}
+          image={images[0]}
+          selected={selectedVariations}
+          onSelect={(name, value) => setSelectedVariations((current) => ({ ...current, [name]: value }))}
+          quantity={quantity}
+          onQuantity={setQuantity}
+          onConfirm={confirmSheet}
+          onClose={closeSheet}
+          busy={isAddingToCart}
+          limits={{ least: leastQty, most: mostQty }}
+          stockText={isStockless(product) ? 'Cooked when you order' : null}
+          soldOutText={soldOutLabel(product)}
+          priceFrom={startsFrom(product)}
+          priceUnit={priceUnit(product)}
+        />
+      ) : null}
 
       {showReport ? (
         <ReportSheet type="PRODUCT" productId={product.id} targetName={product.name} onClose={() => setShowReport(false)} />
@@ -902,9 +1055,9 @@ function ProductPage({ slug }) {
 const HeartFill = (props) => <HeartIcon {...props} weight="fill" />;
 
 /** A .pdp-row: rows after the first have a faint line on top too (phone CSS). */
-function Row({ label, children, last, top }) {
+function Row({ label, children, last, top, style }) {
   return (
-    <View style={[styles.row, top && styles.rowTop, last && styles.rowLast]}>
+    <View style={[styles.row, top && styles.rowTop, last && styles.rowLast, style]}>
       <Text style={styles.rowLabel}>{label}</Text>
       <View style={styles.rowContent}>{children}</View>
     </View>
@@ -929,7 +1082,10 @@ function Spec({ label, value }) {
   );
 }
 
-function GallerySlide({ src, width, label }) {
+// The gallery's photos, with an option's own photo in front when it is not one of them.
+const withPhoto = (images, photo) => (photo && !images.includes(photo) ? [photo, ...images] : images);
+
+function GallerySlide({ src, width, label, onShown }) {
   const [failed, setFailed] = useState(false);
   const uri = src ? resolveImg(src) : null;
   return (
@@ -938,11 +1094,13 @@ function GallerySlide({ src, width, label }) {
         source={uri && !failed ? { uri } : PLACEHOLDER}
         style={styles.slideImg}
         resizeMode="cover"
-        onError={() => setFailed(true)}
+        onLoad={onShown}
+        onError={() => { setFailed(true); onShown?.(); }}
       />
     </View>
   );
 }
+
 
 function StoreAvatar({ uri }) {
   const [failed, setFailed] = useState(false);
@@ -987,23 +1145,14 @@ function BandGradient({ w, h }) {
   );
 }
 
-/**
- * Bulk prices inside the price band (web .sale-bulk as a flex item of the
- * band): it narrows to its longest word, so the words stack.
- */
-function BandBulk({ tiers }) {
-  const tierText = tiers.map((tier) => `${tier.minQty}+ ${peso(tier.price)} each`);
-  // About 7px a character at 12.5px: the narrowest the website lets it get.
-  const longest = Math.max(...['Buy', 'more,', 'pay', 'less:', ...tierText.join(' ').split(' ')].map((w) => w.length));
+const shortPeso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+
+/** A package's saving: what the items cost one by one, crossed out, and how much less it is. */
+function PackageSave({ savings }) {
   return (
-    <View style={[styles.bandBulk, { minWidth: 20 + longest * 7 }]}>
-      <Text style={[styles.bandBulkText, styles.bandBulkLead]}>Buy more, pay less:</Text>
-      {tierText.map((text, i) => (
-        <Text key={text} style={styles.bandBulkText}>
-          {i > 0 ? <Text style={styles.bandBulkDot}>·  </Text> : null}
-          {text}
-        </Text>
-      ))}
+    <View style={styles.save}>
+      <Text style={styles.saveOld} accessibilityLabel={`Bought one by one ${shortPeso(savings.value)}`}>{shortPeso(savings.value)}</Text>
+      <Text style={styles.saveOff}>Save {shortPeso(savings.saved)}</Text>
     </View>
   );
 }
@@ -1046,26 +1195,17 @@ function ProductSkeleton({ insets, width, onBack }) {
           <View style={styles.search} />
         </View>
       </View>
-      <ScrollView style={styles.scroll} accessibilityLabel="Loading product">
-        <LoadingSkeleton width={width} height={Math.round((width * 6) / 5)} borderRadius={0} />
-        <View style={styles.skelBlock}>
-          <LoadingSkeleton width="92%" height={18} />
-          <LoadingSkeleton width="72%" height={18} />
-          <LoadingSkeleton width={180} height={34} borderRadius={4} />
-          <LoadingSkeleton width="100%" height={120} borderRadius={12} />
-        </View>
-        <View style={[styles.skelBlock, styles.skelGap]}>
-          <LoadingSkeleton width={140} height={16} />
-          <LoadingSkeleton width="100%" height={13} />
-          <LoadingSkeleton width="80%" height={13} />
-        </View>
-      </ScrollView>
+      {/* Where the photo will be (a card's photo lands here: components/HeroFlight),
+          then the loader in the space under it. */}
+      <View style={[styles.slide, { width, height: Math.round((width * 6) / 5) }]} />
+      <PageLoader style={styles.flex1} label="Loading product" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[100] },
+  flex1: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   // The page's bottom padding above the action bar (layout-main 76px + 8px, less the 65px bar).
   scrollContent: { paddingBottom: 19 },
@@ -1073,7 +1213,7 @@ const styles = StyleSheet.create({
   head: { zIndex: 130, backgroundColor: '#fff' },
   topbar: {
     zIndex: 1, flexDirection: 'row', alignItems: 'center', gap: 2, height: HEAD_H, paddingHorizontal: 4,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: t.neutral[200],
+    backgroundColor: '#fff',
   },
   search: {
     flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, marginHorizontal: 4, paddingHorizontal: 14,
@@ -1085,8 +1225,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#fff', backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',
   },
   badgeText: { fontSize: 10.5, lineHeight: 13, ...font(500), color: '#fff', textAlign: 'center' },
+  // Room under the tabs for their shadow; it clips them while they slide in.
+  tabsClip: { position: 'absolute', left: 0, right: 0, height: TABS_H + 14, overflow: 'hidden', zIndex: 120, elevation: 4 },
   tabs: {
-    position: 'absolute', left: 0, right: 0, top: '100%', height: TABS_H, flexDirection: 'row',
+    height: TABS_H, flexDirection: 'row',
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: t.neutral[200],
     boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 10, color: 'rgba(15, 23, 42, 0.05)' }],
   },
@@ -1103,30 +1245,30 @@ const styles = StyleSheet.create({
   pending: { position: 'absolute', left: 12, bottom: 12, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 3, backgroundColor: t.warning[100] },
   pendingText: { fontSize: 11, lineHeight: 14, ...font(500), color: t.warning[800], letterSpacing: 0.22 },
 
-  priceBand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 14, paddingHorizontal: 16, overflow: 'hidden' },
-  priceMain: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', flexShrink: 1 },
+  // The price, where it is, and what it was (then its notes on white).
+  priceBand: { alignItems: 'flex-start', gap: 8, paddingVertical: 14, paddingHorizontal: 16, overflow: 'hidden' },
+  priceTop: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, width: '100%' },
+  priceLine: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
   pricePeso: { marginRight: 2, fontSize: 18, lineHeight: 30, ...font(500), color: '#fff', top: -2 },
   priceText: { fontSize: 30, lineHeight: 30, ...font(500), color: '#fff', letterSpacing: -0.3 },
-  priceLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', flexShrink: 1 },
-  priceMainCrowded: { flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 },
-  bandWas: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 8 },
-  bandWasCrowded: { height: 30 },
-  bandEnds: { flexShrink: 0, alignSelf: 'center' },
-  bandBulk: {
-    flexShrink: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', rowGap: 4, columnGap: 8,
-    paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, backgroundColor: t.primary[50],
+  // "from" and " / head": 15px, a little above the price's foot.
+  priceWords: { fontSize: 15, lineHeight: 30, ...font(500), color: '#fff', top: 1 },
+  priceFrom: { marginRight: 4 },
+  priceUnit: { marginLeft: 4 },
+  bandWas: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  save: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
+  saveOld: { fontSize: 13, lineHeight: 15, ...font(400), color: 'rgba(255, 255, 255, 0.8)', textDecorationLine: 'line-through' },
+  saveOff: {
+    paddingVertical: 4, paddingHorizontal: 8, borderRadius: 999, overflow: 'hidden',
+    fontSize: 13, lineHeight: 15, ...font(500), color: t.primary[700], backgroundColor: '#fff',
   },
-  bandBulkText: { flexShrink: 1, fontSize: 12.5, lineHeight: 20, ...font(400), color: t.primary[800] },
-  bandBulkLead: { ...font(500) },
-  bandBulkDot: { color: t.primary[400] },
-  priceSideCrowded: { flexShrink: 1000, minWidth: 0, overflow: 'hidden' },
-  bandWasOld: { fontSize: 13, lineHeight: 13, ...font(400), color: 'rgba(255,255,255,0.8)', textDecorationLine: 'line-through' },
+  notes: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: t.neutral[100], backgroundColor: '#fff' },
+  bandWasOld: { fontSize: 13, lineHeight: 13, ...font(400), color: 'rgba(255, 255, 255, 0.85)', textDecorationLine: 'line-through' },
   bandWasOff: {
     paddingVertical: 2, paddingHorizontal: 5, borderRadius: 4, overflow: 'hidden',
     fontSize: 11, lineHeight: 11, ...font(500), color: t.danger[700], backgroundColor: t.danger[50],
   },
-  priceSide: { alignItems: 'flex-end', gap: 5, minWidth: 0, maxWidth: '45%', flexShrink: 0 },
-  place: { flexDirection: 'row', alignItems: 'center', gap: 4, opacity: 0.88, maxWidth: '100%' },
+  place: { flexShrink: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3, opacity: 0.88 },
   placeText: { flexShrink: 1, fontSize: 12, lineHeight: 19.2, ...font(400), color: '#fff' },
 
   heroInfo: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 14, backgroundColor: '#fff', gap: 12 },
@@ -1157,6 +1299,8 @@ const styles = StyleSheet.create({
   lineStrong: { ...font(500), color: t.neutral[900] },
   eta: { ...font(500), color: t.primary[700] },
   muted: { color: t.neutral[500] },
+  // .pdp-return-policy: rounded, so its line fades at the ends.
+  policyRow: { borderRadius: 8 },
   policy: { fontSize: 14, lineHeight: 21.7, ...font(400), color: t.neutral[700] },
   todayTag: { marginRight: 0 },
   todayState: { fontSize: 14, lineHeight: 21, ...font(500), color: t.primary[700] },
@@ -1181,9 +1325,6 @@ const styles = StyleSheet.create({
   },
   askLinkText: { fontSize: 13.5, lineHeight: 21.6, ...font(500), color: t.primary[700] },
   askCaret: { marginLeft: 'auto' },
-  reviewsEmpty: { paddingVertical: 4 },
-  reviewsEmptyArt: { alignSelf: 'center' },
-  reviewsEmptyText: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500] },
 
   storeCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 6, backgroundColor: '#fff' },
   storeLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -1223,11 +1364,14 @@ const styles = StyleSheet.create({
   seeMoreText: { fontSize: 13.5, lineHeight: 21.6, ...font(500), color: t.primary[700] },
   caretUp: { transform: [{ rotate: '180deg' }] },
 
-  actionbar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, paddingHorizontal: 10,
+  actionbar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, paddingHorizontal: 10 },
+  // The website's white bar (Android and older iPhones).
+  actionbarLook: {
     borderTopWidth: 1, borderTopColor: t.neutral[200], backgroundColor: '#fff',
     boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: 'rgba(15, 23, 42, 0.06)' }],
   },
+  // iOS 26: over the page's foot, so the glass shows it through.
+  actionbarFloat: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   action: { width: 46, flexShrink: 0, alignItems: 'center', gap: 2 },
   actionText: { fontSize: 11, lineHeight: 17.6, ...font(500), color: t.neutral[700] },
   shopLogo: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: t.neutral[200] },
@@ -1244,12 +1388,11 @@ const styles = StyleSheet.create({
   buyRule: { width: 1, height: 10, backgroundColor: '#fff', opacity: 0.6 },
   closed: { backgroundColor: t.neutral[300], opacity: 0.5 },
   closedText: { color: t.neutral[700] },
+  closedSmall: { marginTop: 2, fontSize: 11.5, lineHeight: 13.8, ...font(500), color: t.neutral[700] },
   disabled: { opacity: 0.5 },
 
   notFound: { alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: '#fff' },
   notFoundTitle: { fontSize: 20, lineHeight: 26, ...font(500), color: t.neutral[900] },
   notFoundBtn: { height: 44, paddingHorizontal: 20, borderRadius: 8, backgroundColor: t.primary[600], justifyContent: 'center' },
   notFoundBtnText: { fontSize: 14, ...font(500), color: '#fff' },
-  skelBlock: { padding: 16, gap: 12, backgroundColor: '#fff' },
-  skelGap: { marginTop: 8 },
 });

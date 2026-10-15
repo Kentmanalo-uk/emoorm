@@ -2,78 +2,103 @@ import { cloneElement, isValidElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { font, t } from '../theme';
 import EmptyArt from './EmptyArt';
+import WeightWaveText from './WeightWaveText';
 
 /**
- * The shared "nothing here yet" card (web/src/components/ui/EmptyState.jsx):
- * a large centred white card with a picture, a title, one line of text and
- * up to two actions.
+ * The app's one "nothing here yet" look, everywhere (the signed-out Messages /
+ * Notifications / Cart page, web/src/components/LoginGate.jsx): a picture, a
+ * title, one short line, and a green pill button. Centred, sitting a little
+ * above the middle so it reads as centred on the screen.
  *
- * art:     an EmptyArt scene name (preferred)
- * icon:    a Phosphor icon component or element, used when there is no `art`
- *          (drawn as the website does: 80, filled, light green)
- * text:    the line under the title (`message` also works)
- * actions: [{ label, onPress, variant?: 'primary' | 'outline', icon? }]
- *          (`actionLabel` + `onAction` also work for one primary action)
- * inset:   inside a card or list that is already white: no card, less room
- * flat:    on the website's flat phone pages (phone-app.css): square corners
+ * art:      an EmptyArt scene name (preferred)
+ * icon:     a Phosphor icon component or element, used when there is no `art`
+ * text:     the line under the title (`message` also works)
+ * actions:  [{ label, onPress, variant?: 'primary' | 'outline', icon?, wave? }]
+ *           (wave: the label in the Start selling sticker's bold wave)
+ *           (`actionLabel` + `onAction` also work for one primary action)
+ * page:     fills the space it is given (give it flex: 1, or a list's
+ *           contentContainerStyle flexGrow: 1) and centres in it
+ * compact:  inside a card or section: a smaller picture and less room
+ * artSize:  the EmptyArt size (default 112, compact 72)
+ * inset / flat: older names: inset reads as compact; flat is the default now
+ *
+ * Pieces that cannot use the component (a custom layout) take the same look
+ * from `emptyStyles` and `EmptyActions`.
  */
 export default function EmptyState({
-  art, icon, title, text, message, actions, actionLabel, onAction, inset = false, flat = false, style,
+  art, icon, title, text, message, actions, actionLabel, onAction,
+  page = false, compact = false, inset = false, artSize, style, children,
 }) {
+  const small = compact || inset;
   const body = text ?? message;
   const list = (actions || (actionLabel && onAction ? [{ label: actionLabel, onPress: onAction }] : [])).filter(Boolean);
-  const iconProps = { size: 80, weight: 'fill', color: t.primary[200] };
+  const iconProps = { size: small ? 56 : 80, weight: 'fill', color: t.primary[200] };
   let iconNode = null;
   if (!art && icon) {
     iconNode = isValidElement(icon) ? cloneElement(icon, iconProps) : (() => { const Icon = icon; return <Icon {...iconProps} />; })();
   }
 
   return (
-    <View style={[styles.card, flat && styles.flat, inset && styles.inset, style]}>
-      {art ? <EmptyArt name={art} size={112} style={styles.art} /> : null}
-      {iconNode ? <View style={styles.icon}>{iconNode}</View> : null}
-      <Text style={styles.title} accessibilityRole="header">{title}</Text>
-      {body ? <Text style={styles.text}>{body}</Text> : null}
-      {list.length ? (
-        <View style={styles.actions}>
-          {list.map(({ label, onPress, variant = 'primary', icon: ActionIcon }) => {
-            const outline = variant === 'outline';
-            return (
-              <Pressable key={label} accessibilityRole="button" onPress={onPress} style={[styles.btn, outline ? styles.btnOutline : styles.btnPrimary]}>
-                {ActionIcon ? <ActionIcon size={18} color={outline ? t.neutral[800] : '#fff'} /> : null}
-                <Text style={[styles.btnText, outline && styles.btnTextOutline]}>{label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
+    <View style={[emptyStyles.wrap, page && emptyStyles.page, small && emptyStyles.compact, style]}>
+      {art ? <EmptyArt name={art} size={artSize ?? (small ? 72 : 112)} style={emptyStyles.art} /> : null}
+      {iconNode ? <View style={emptyStyles.art}>{iconNode}</View> : null}
+      {title ? <Text style={[emptyStyles.title, small && emptyStyles.titleSmall]} accessibilityRole="header">{title}</Text> : null}
+      {body ? <Text style={[emptyStyles.body, small && emptyStyles.bodySmall]}>{body}</Text> : null}
+      {children}
+      <EmptyActions actions={list} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 420,
-    paddingVertical: 48,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: t.neutral[0],
-  },
-  flat: { borderRadius: 0 },
-  inset: { minHeight: 0, paddingVertical: 28, paddingHorizontal: 16, borderRadius: 0, backgroundColor: 'transparent' },
-  art: { marginBottom: 16 },
-  icon: { marginBottom: 20 },
-  title: { marginBottom: 8, fontSize: 19, lineHeight: 24.7, ...font(500), color: t.neutral[800], textAlign: 'center' },
-  text: { maxWidth: 300, fontSize: 14.5, lineHeight: 21.75, ...font(400), color: t.neutral[500], textAlign: 'center' },
-  actions: { alignSelf: 'center', alignItems: 'stretch', gap: 10, width: '100%', maxWidth: 260, marginTop: 24 },
+/** The pill buttons under an empty state: green, or white with a hairline. */
+export function EmptyActions({ actions }) {
+  if (!actions?.length) return null;
+  return (
+    <View style={emptyStyles.actions}>
+      {actions.map(({ label, onPress, variant = 'primary', icon: ActionIcon, wave }) => {
+        const outline = variant === 'outline';
+        return (
+          <Pressable
+            key={label}
+            accessibilityRole="button"
+            onPress={onPress}
+            style={({ pressed }) => [
+              emptyStyles.btn,
+              outline ? emptyStyles.btnOutline : emptyStyles.btnPrimary,
+              pressed && (outline ? emptyStyles.btnOutlinePressed : emptyStyles.btnPrimaryPressed),
+            ]}
+          >
+            {ActionIcon ? <ActionIcon size={18} color={outline ? t.neutral[800] : '#fff'} /> : null}
+            {wave
+              ? <WeightWaveText text={label} style={[emptyStyles.btnText, outline && emptyStyles.btnTextOutline]} />
+              : <Text style={[emptyStyles.btnText, outline && emptyStyles.btnTextOutline]}>{label}</Text>}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// The signed-out page's measures (InboxLoginGate / CartLoginGate).
+export const emptyStyles = StyleSheet.create({
+  wrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 32, paddingBottom: 40, paddingHorizontal: 24 },
+  // A whole page: centred in the space, lifted a little (more room below).
+  page: { flex: 1, paddingTop: 24, paddingBottom: 120 },
+  compact: { paddingTop: 20, paddingBottom: 24, paddingHorizontal: 16 },
+  art: { marginBottom: 18 },
+  title: { marginBottom: 6, fontSize: 18, lineHeight: 21.6, color: t.neutral[900], textAlign: 'center', ...font(500) },
+  titleSmall: { fontSize: 16, lineHeight: 20 },
+  body: { maxWidth: 290, fontSize: 14, lineHeight: 21, color: t.neutral[500], textAlign: 'center', ...font(400) },
+  bodySmall: { fontSize: 13.5, lineHeight: 19.5 },
+  actions: { alignItems: 'center', gap: 10, marginTop: 20 },
   btn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    height: 46, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1,
+    minWidth: 140, height: 42, paddingHorizontal: 28, borderRadius: 999, borderWidth: 1,
   },
   btnPrimary: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
+  btnPrimaryPressed: { borderColor: t.primary[700], backgroundColor: t.primary[700] },
   btnOutline: { borderColor: t.neutral[300], backgroundColor: '#fff' },
-  btnText: { fontSize: 15, lineHeight: 20, ...font(500), color: '#fff' },
+  btnOutlinePressed: { backgroundColor: t.neutral[50] },
+  btnText: { fontSize: 15, lineHeight: 18, color: '#fff', ...font(500) },
   btnTextOutline: { color: t.neutral[800] },
 });

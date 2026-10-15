@@ -1,21 +1,25 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { CheckIcon, MapPinIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from 'phosphor-react-native';
+import {
+  CheckIcon, InfoIcon, MapPinIcon, PencilSimpleIcon, PlusIcon, SparkleIcon, TrashIcon, WarningCircleIcon,
+} from 'phosphor-react-native';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
-import EmptyArt from '../src/components/EmptyArt';
+import EmptyState from '../src/components/EmptyState';
 import LoadingSkeleton from '../src/components/LoadingSkeleton';
 import CartConfirmDialog from '../src/components/cart/CartConfirmDialog';
 import { toast } from '../src/lib/toast';
 import { fetchMunicipalities } from '../src/lib/referenceData';
 import useAuthStore from '../src/store/authStore';
-import ProfileAddressPicker from '../src/components/profile/ProfileAddressPicker';
-import AddressPinMap from '../src/components/profile/AddressPinMap';
+import ProfileAddressPicker, { normalizeName } from '../src/components/profile/ProfileAddressPicker';
+import { addressFromPin } from '../src/lib/pinAddress';
+import LocationPicker from '../src/components/maps/LocationPicker';
 import { useFreshAccount } from '../src/components/profile/SettingsParts';
 import { font, t } from '../src/theme';
+import { PageLoader } from '../src/components/BrandLoader';
 
 const emptyForm = {
   label: '',
@@ -29,7 +33,7 @@ const emptyForm = {
   barangay: '',
   barangayCode: '',
   street: '',
-  // Optional pin for the rider.
+  // The pin for the rider: every address has one.
   latitude: null,
   longitude: null,
 };
@@ -50,10 +54,13 @@ export default function Addresses() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState({});
-  const [pinOpen, setPinOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  // What the last pin filled in: { tone: 'busy' | 'ok' | 'partial' | 'outside' | 'off', text }.
+  const [pinNote, setPinNote] = useState(null);
+  const pinAsk = useRef(0);
+  const autoStreet = useRef('');
 
   const loadAddresses = async () => {
     const res = await apiClient.get('/addresses');
@@ -77,6 +84,52 @@ export default function Addresses() {
     if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
+  // A pin (tapped, dragged or the phone's location) fills the town, barangay
+  // and street from the spot. A street the person typed is kept; one the pin
+  // wrote is replaced by the next pin's.
+  const fillFromPin = async (pin) => {
+    const ask = ++pinAsk.current;
+    setPinNote({ tone: 'busy', text: 'Finding the address at the pin…' });
+    let found;
+    try {
+      found = await addressFromPin(pin);
+    } catch {
+      if (ask === pinAsk.current) setPinNote({ tone: 'off', text: 'Pinned. We couldn’t look up the address here — fill it in below.' });
+      return;
+    }
+    if (ask !== pinAsk.current) return;
+    if (found.outside) {
+      setPinNote({ tone: 'outside', text: 'This spot is outside Oriental Mindoro. E‑MOORM delivers in Oriental Mindoro only.' });
+      return;
+    }
+    const db = found.municipalityName
+      ? municipalities.find((m) => normalizeName(m.name) === normalizeName(found.municipalityName))
+      : null;
+    setFormData((prev) => {
+      const next = { ...prev };
+      if (found.municipalityName) {
+        Object.assign(next, { municipalityName: found.municipalityName, municipalityCode: found.municipalityCode, municipalityId: db?.id || '' });
+        // A new town: the old barangay can't stay.
+        if (normalizeName(prev.municipalityName) !== normalizeName(found.municipalityName)) Object.assign(next, { barangay: '', barangayCode: '' });
+      }
+      if (found.barangay) Object.assign(next, { barangay: found.barangay, barangayCode: found.barangayCode });
+      if (found.street && (!prev.street.trim() || prev.street === autoStreet.current)) {
+        next.street = found.street;
+        autoStreet.current = found.street;
+      }
+      return next;
+    });
+    setFormErrors((prev) => ({ ...prev, municipalityId: found.municipalityName ? '' : prev.municipalityId, barangay: found.barangay ? '' : prev.barangay }));
+    const place = [found.barangay, found.municipalityName].filter(Boolean).join(', ');
+    if (found.municipalityName && found.barangay) {
+      setPinNote({ tone: 'ok', text: `Filled in from the pin: ${place}. Check the street and house number.` });
+    } else if (found.municipalityName) {
+      setPinNote({ tone: 'partial', text: `Filled in ${found.municipalityName} from the pin. Pick the barangay below.` });
+    } else {
+      setPinNote({ tone: 'partial', text: 'Pinned. We couldn’t tell the town here — pick it below.' });
+    }
+  };
+
   const validate = () => {
     const errs = {};
     if (!formData.fullName.trim()) errs.fullName = 'Recipient name is required.';
@@ -85,13 +138,13 @@ export default function Addresses() {
     if (!formData.municipalityId) errs.municipalityId = 'City / Municipality is required.';
     if (!formData.barangay.trim()) errs.barangay = 'Barangay is required.';
     if (!formData.street.trim()) errs.street = 'Street / house address is required.';
+    if (formData.latitude == null || formData.longitude == null) errs.pin = 'Pin the house on the map so the rider can find it.';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const openAddForm = () => {
     setEditingId(null);
-    setPinOpen(false);
     // The first address starts from the account's own address.
     const fromProfile = addresses.length === 0 && user?.municipalityId;
     setFormData({
@@ -107,6 +160,8 @@ export default function Addresses() {
       } : {}),
     });
     setFormErrors({});
+    setPinNote(null);
+    autoStreet.current = '';
     setFormOpen(true);
   };
 
@@ -128,8 +183,9 @@ export default function Addresses() {
       latitude: addr.latitude ?? null,
       longitude: addr.longitude ?? null,
     });
-    setPinOpen(addr.latitude != null);
     setFormErrors({});
+    setPinNote(null);
+    autoStreet.current = '';
     setFormOpen(true);
   };
 
@@ -138,7 +194,6 @@ export default function Addresses() {
     setEditingId(null);
     setFormData(emptyForm);
     setFormErrors({});
-    setPinOpen(false);
   };
 
   const handleSave = async () => {
@@ -194,12 +249,7 @@ export default function Addresses() {
   let body;
   if (isLoading) {
     body = (
-      <View style={styles.card}>
-        <LoadingSkeleton height={13} />
-        <LoadingSkeleton height={13} style={{ marginTop: 8 }} />
-        <LoadingSkeleton height={13} width="60%" style={{ marginTop: 8 }} />
-        <LoadingSkeleton height={36} width={160} borderRadius={8} style={{ marginTop: 20 }} />
-      </View>
+      <PageLoader label="Loading addresses" />
     );
   } else if (formOpen) {
     body = (
@@ -214,6 +264,25 @@ export default function Addresses() {
           <FormInput value={formData.contactNumber} onChangeText={(v) => setField('contactNumber', v)} placeholder="09XXXXXXXXX" keyboardType="phone-pad" error={formErrors.contactNumber} />
         </FormField>
 
+        <View style={styles.pinGroup}>
+          <Text style={styles.formLabel}>Pin the house on the map</Text>
+          <Text style={styles.pinHelp}>Tap where the house is, or use your location. We fill in the address from the pin, and the rider follows it to your door.</Text>
+          <LocationPicker
+            value={{ latitude: formData.latitude, longitude: formData.longitude }}
+            onChange={({ latitude, longitude }) => {
+              setFormData((prev) => ({ ...prev, latitude, longitude }));
+              if (formErrors.pin) setFormErrors((prev) => ({ ...prev, pin: '' }));
+              fillFromPin({ latitude, longitude });
+            }}
+            height={260}
+            lockToPhilippines
+            hint="Tap the map where the house is."
+            error={Boolean(formErrors.pin)}
+          />
+          {formErrors.pin ? <Text style={styles.formError}>{formErrors.pin}</Text> : null}
+          {pinNote ? <PinNote note={pinNote} /> : null}
+        </View>
+
         <ProfileAddressPicker
           value={formData}
           // The picker hands back the whole value it last saw; the pin is not its to change.
@@ -222,31 +291,6 @@ export default function Addresses() {
           dbLoading={muniLoading}
           errors={formErrors}
         />
-
-        <View style={styles.pinGroup}>
-          {pinOpen ? (
-            <>
-              <Text style={styles.formLabel}>Pin it on the map (optional)</Text>
-              <Text style={styles.pinHelp}>Tap where the house is. The rider gets a map link with your order.</Text>
-              <AddressPinMap
-                value={{ latitude: formData.latitude, longitude: formData.longitude }}
-                onChange={({ latitude, longitude }) => setFormData((prev) => ({ ...prev, latitude, longitude }))}
-                height={260}
-                hint="Tap the map where the house is."
-              />
-              {formData.latitude != null ? (
-                <Pressable accessibilityRole="button" onPress={() => setFormData((prev) => ({ ...prev, latitude: null, longitude: null }))} style={[styles.pinBtn, styles.pinClear]}>
-                  <Text style={[styles.pinBtnText, { color: t.neutral[600] }]}>Remove the pin</Text>
-                </Pressable>
-              ) : null}
-            </>
-          ) : (
-            <Pressable accessibilityRole="button" onPress={() => setPinOpen(true)} style={styles.pinBtn}>
-              <MapPinIcon size={16} color={t.primary[700]} />
-              <Text style={styles.pinBtnText}>Pin it on the map (optional)</Text>
-            </Pressable>
-          )}
-        </View>
 
         <View style={styles.formActions}>
           <Pressable accessibilityRole="button" onPress={closeForm} style={[styles.formBtn, styles.formCancel]}>
@@ -267,14 +311,12 @@ export default function Addresses() {
           <Text style={styles.addText}>Add new address</Text>
         </Pressable>
         {addresses.length === 0 ? (
-          <View style={styles.empty}>
-            <EmptyArt name="addresses" size={88} />
-            <Text style={styles.emptyText}>You have no saved addresses yet.</Text>
-            <Pressable accessibilityRole="button" onPress={openAddForm} style={[styles.actionBtn, styles.emptyBtn]}>
-              <PlusIcon size={16} color={t.neutral[700]} />
-              <Text style={styles.actionText}>Add your first address</Text>
-            </Pressable>
-          </View>
+          <EmptyState
+            page
+            art="addresses"
+            title="You have no saved addresses yet."
+            actions={[{ label: 'Add your first address', onPress: openAddForm, icon: PlusIcon, variant: 'outline' }]}
+          />
         ) : (
           <View style={styles.list}>
             {addresses.map((addr) => (
@@ -299,7 +341,12 @@ export default function Addresses() {
                           <MapPinIcon size={13} weight="fill" color={t.primary[700]} />
                           <Text style={styles.pinnedText}>Pinned on the map</Text>
                         </View>
-                      ) : null}
+                      ) : (
+                        <View style={styles.unpinned}>
+                          <MapPinIcon size={13} color={t.accent[600]} />
+                          <Text style={styles.unpinnedText}>Not pinned yet: edit to pin it on the map</Text>
+                        </View>
+                      )}
                       <Text style={styles.locationLine}>{addr.municipality?.name || '—'}, {addr.province || 'Oriental Mindoro'}</Text>
                     </View>
                   </View>
@@ -323,7 +370,7 @@ export default function Addresses() {
     <View style={styles.screen}>
       <ScreenHeader title="My Addresses" backTo="/profile" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, formOpen && { paddingTop: 24 }]} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={[styles.content, formOpen && { paddingTop: 24 }, !isLoading && !formOpen && addresses.length === 0 && styles.grow]} keyboardShouldPersistTaps="handled">
           {body}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -372,6 +419,24 @@ function FormInput({ error, ...props }) {
   );
 }
 
+/** What the pin filled in (or why it couldn't), under the map. */
+function PinNote({ note }) {
+  const look = {
+    busy: [null, t.neutral[600], t.neutral[100]],
+    ok: [SparkleIcon, t.primary[800], t.primary[50]],
+    partial: [InfoIcon, t.warning[800], t.warning[50]],
+    off: [InfoIcon, t.neutral[700], t.neutral[100]],
+    outside: [WarningCircleIcon, t.danger[700], t.danger[50]],
+  }[note.tone] || [InfoIcon, t.neutral[700], t.neutral[100]];
+  const [Icon, color, bg] = look;
+  return (
+    <View style={[styles.pinNote, { backgroundColor: bg }]} accessibilityLiveRegion="polite">
+      {Icon ? <Icon size={16} weight="fill" color={color} /> : <ActivityIndicator size="small" color={color} />}
+      <Text style={[styles.pinNoteText, { color }]}>{note.text}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 24 },
@@ -382,11 +447,7 @@ const styles = StyleSheet.create({
   },
   addText: { fontSize: 13, lineHeight: 15.6, color: '#fff', ...font(500) },
 
-  empty: {
-    alignItems: 'center', gap: 10, marginHorizontal: -12, paddingVertical: 32, paddingHorizontal: 16, backgroundColor: t.neutral[0],
-  },
-  emptyText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[500], textAlign: 'center', ...font(400) },
-  emptyBtn: { minHeight: 44, paddingHorizontal: 18 },
+  grow: { flexGrow: 1 },
 
   list: { gap: 12 },
   card: {
@@ -425,13 +486,13 @@ const styles = StyleSheet.create({
   },
   formError: { fontSize: 12, lineHeight: 18, color: t.danger[500], ...font(400) },
   pinGroup: { gap: 6 },
-  pinHelp: { marginBottom: 8, fontSize: 13, lineHeight: 19.5, color: t.neutral[500], ...font(400) },
-  pinBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12,
-    borderWidth: 1, borderStyle: 'dashed', borderColor: t.neutral[300], borderRadius: 8, backgroundColor: '#fff',
-  },
-  pinClear: { alignSelf: 'flex-start', marginTop: 8, borderStyle: 'solid' },
-  pinBtnText: { fontSize: 13.5, lineHeight: 21.6, color: t.primary[700], ...font(400) },
+  pinHelp: { marginBottom: 8, fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
+  pinNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 4, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12 },
+  pinNoteText: { flex: 1, fontSize: 13, lineHeight: 18.5, ...font(500) },
+  // An address saved before pins were required (.address-unpinned; the card's
+  // `.address-location p { margin: 0 }` wins over its own 4px top margin).
+  unpinned: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  unpinnedText: { flexShrink: 1, fontSize: 12.5, lineHeight: 18.75, color: t.accent[600], ...font(400) },
   formActions: { flexDirection: 'row', gap: 8, paddingTop: 4 },
   formBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 46, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   formCancel: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: '#fff' },

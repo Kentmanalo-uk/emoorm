@@ -8,9 +8,12 @@ import useCartStore from '../../src/store/cartStore';
 import useAuthStore from '../../src/store/authStore';
 
 // Bottom nav (the website's .mobile-bottom-nav): Home, Cart, Messages,
-// Notifications, Profile. `products` and `orders` stay routable here (linked
-// from Home/Profile) but are not tabs; the bar hides on them, as the website
-// shows it on the five tab pages only.
+// Notifications, Profile. Products and My Purchase live outside the tabs
+// (app/products.js, app/orders.js), so the bar shows on these five only, as
+// the website shows it.
+//
+// Every phone shows the website's bar and icons (ShellTabBar); on iOS 26 its
+// background is Liquid Glass.
 export default function TabsLayout() {
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -57,8 +60,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="messages" options={{ title: 'Messages' }} />
       <Tabs.Screen name="notifications" options={{ title: 'Notifications' }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
-      <Tabs.Screen name="products" options={{ href: null }} />
-      <Tabs.Screen name="orders" options={{ href: null }} />
     </Tabs>
   );
 }

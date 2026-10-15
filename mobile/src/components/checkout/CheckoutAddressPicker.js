@@ -17,8 +17,8 @@ import { font, t } from '../../theme';
 
 const PSGC_BASE = 'https://psgc.gitlab.io/api';
 const SERVICE_REGION = { code: '170000000', name: 'MIMAROPA Region', shortName: 'MIMAROPA' };
-const SERVICE_PROVINCE = { code: '175200000', name: 'Oriental Mindoro' };
-const SERVICE_MUNICIPALITIES = [
+export const SERVICE_PROVINCE = { code: '175200000', name: 'Oriental Mindoro' };
+export const SERVICE_MUNICIPALITIES = [
   { code: '175201000', name: 'Baco' },
   { code: '175202000', name: 'Bansud' },
   { code: '175203000', name: 'Bongabong' },
@@ -59,7 +59,7 @@ const cachedFetch = (url) => {
   return promise;
 };
 
-const listBarangays = async (code) => {
+export const listBarangays = async (code) => {
   if (!code) return [];
   let data = await cachedFetch(`${PSGC_BASE}/municipalities/${code}/barangays/`).catch(() => null);
   if (!data) data = await cachedFetch(`${PSGC_BASE}/cities/${code}/barangays/`).catch(() => []);
@@ -75,7 +75,7 @@ function SelectBox({ value, placeholder, disabled, error, onPress }) {
       style={[styles.input, styles.select, error && styles.inputError, disabled && styles.selectDisabled]}
     >
       <Text style={[styles.selectText, !value && styles.selectPlaceholder]} numberOfLines={1}>{value || placeholder}</Text>
-      <CaretDownIcon size={16} weight="bold" color={t.neutral[900]} />
+      <CaretDownIcon size={14} weight="bold" color={t.neutral[500]} />
     </Pressable>
   );
 }

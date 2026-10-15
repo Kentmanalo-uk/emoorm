@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { XIcon } from 'phosphor-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font, t } from '../theme';
+import { liquidGlass } from './Glass';
 
 /**
  * The top of the phone Log in / Sign up / password sheet (web
@@ -15,9 +16,11 @@ import { font, t } from '../theme';
  */
 export default function AuthHeader({ onClose, onSwitch, switchLabel, switchBold = false, panHandlers }) {
   const insets = useSafeAreaInsets();
+  // iOS 26: the system's page sheet already sits below the status bar.
+  const top = liquidGlass ? 0 : insets.top;
   return (
-    <View style={[styles.bar, { paddingTop: 14 + insets.top }]} {...panHandlers}>
-      <View style={[styles.grabber, { top: 6 + insets.top }]} />
+    <View style={[styles.bar, { paddingTop: 14 + top }]} {...panHandlers}>
+      <View style={[styles.grabber, { top: 6 + top }]} />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Close"

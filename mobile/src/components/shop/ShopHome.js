@@ -8,6 +8,7 @@ import { resolveImg } from '../../lib/media';
 import { saleInfo } from '../../lib/variantPricing';
 import { font, t } from '../../theme';
 import { ShopGradient, alpha, mix } from './shopTheme';
+import { useProductPeek } from '../peek/ProductPeek';
 
 /*
  * A shop's Home tab (web/src/components/shop/ShopHome.jsx + ShopHome.css):
@@ -46,7 +47,7 @@ function Section({ section: s, width, accent, onAddToCart }) {
       <View style={styles.sec}>
         <Title text={s.title} accent={accent} />
         {s.style === 'slider' ? <Slider images={images} width={width} /> : s.style === 'cards' ? (
-          <ScrollView
+          <ScrollView showsVerticalScrollIndicator={false}
             horizontal
             showsHorizontalScrollIndicator={false}
             snapToInterval={Math.round(width * 0.82) + 10}
@@ -80,7 +81,7 @@ function Section({ section: s, width, accent, onAddToCart }) {
     if (s.style === 'carousel') {
       const w = width * 0.42;
       list = (
-        <ScrollView
+        <ScrollView showsVerticalScrollIndicator={false}
           horizontal
           showsHorizontalScrollIndicator={false}
           snapToInterval={w + 10}
@@ -165,7 +166,7 @@ function Slider({ images, width }) {
 
   return (
     <View style={styles.slider}>
-      <ScrollView
+      <ScrollView showsVerticalScrollIndicator={false}
         ref={track}
         horizontal
         pagingEnabled
@@ -194,10 +195,12 @@ function ProductTile({ product: p, accent, big = false, row = false, onAddToCart
   const reviews = Number(p.reviewCount || 0);
   const sold = Number(p.soldCount || 0);
   const out = Number(p.stock) === 0;
+  const peek = useProductPeek()(p);
   return (
     <View style={[styles.tileWrap, style]}>
       <Pressable
         onPress={p.slug ? () => router.push(`/product/${p.slug}`) : undefined}
+        {...peek}
         accessibilityRole="link"
         style={[
           styles.tile,
@@ -269,7 +272,7 @@ function Gallery({ images, styleName, width }) {
   if (styleName === 'strip') {
     const w = images.length === 1 ? width : width * 0.64;
     return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={w + 10} decelerationRate="fast" contentContainerStyle={styles.carouselGap}>
+      <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} snapToInterval={w + 10} decelerationRate="fast" contentContainerStyle={styles.carouselGap}>
         {images.map((img, i) => <GalleryItem key={key(img, i)} img={img} style={{ width: w, height: w * 0.75 }} />)}
       </ScrollView>
     );

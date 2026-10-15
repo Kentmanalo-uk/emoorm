@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-na
 import { useRouter } from 'expo-router';
 import { StarIcon } from 'phosphor-react-native';
 import CartProductImage from './CartProductImage';
+import { useProductPeek } from '../peek/ProductPeek';
 import { font, t } from '../../theme';
 
 /*
@@ -36,6 +37,7 @@ function SuggestionRating({ product }) {
 
 export default function CartSuggestions({ suggestions, loading, style }) {
   const router = useRouter();
+  const peekProduct = useProductPeek();
   const { width } = useWindowDimensions();
   // Two columns 8px apart inside the page's 12px gutters.
   const cardW = Math.floor((Math.min(width, 768) - 24 - 8) / 2);
@@ -59,7 +61,7 @@ export default function CartSuggestions({ suggestions, loading, style }) {
             </View>
           ))
           : suggestions.map((product) => (
-            <Pressable key={product.id} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/product/${product.slug}`)} accessibilityRole="link">
+            <Pressable key={product.id} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/product/${product.slug}`)} {...peekProduct(product)} accessibilityRole="link">
               <View style={styles.image}>
                 <CartProductImage src={Array.isArray(product.images) ? product.images[0] : product.images} style={styles.imageFill} />
               </View>

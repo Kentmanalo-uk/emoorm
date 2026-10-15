@@ -2,11 +2,11 @@ import { useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import SellerPage from '../../../src/components/seller/SellerPage';
 import { SellerProductsHeader } from '../../../src/components/seller/SellerTopBars';
-import { LegacyProducts } from '../../../src/components/seller/legacy/LegacySellerScreens';
+import SellerProductsList from '../../../src/components/seller/products/SellerProductsList';
 
-// /seller/products (My products). STUB: the bar is done (SellerProductsHeader:
-// + Add product, bell, ⋯). Port the body from web/src/pages/SellerProducts.jsx
-// (the phone list); until then the old inventory keeps the page useful.
+// /seller/products (My products): the phone list of web/src/pages/
+// SellerProducts.jsx. The bar is SellerProductsHeader (+ Add product, bell, ⋯);
+// the body brings its own FlatList (SellerProductsList).
 export default function SellerProductsScreen() {
   const router = useRouter();
   const { edit } = useLocalSearchParams();
@@ -17,7 +17,7 @@ export default function SellerProductsScreen() {
   }, [edit, router]);
   return (
     <SellerPage header={<SellerProductsHeader />} scroll={false}>
-      <LegacyProducts />
+      <SellerProductsList />
     </SellerPage>
   );
 }

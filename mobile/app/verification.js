@@ -12,13 +12,14 @@ import {
 import apiClient, { STORAGE_KEYS } from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import LoadingSkeleton from '../src/components/LoadingSkeleton';
-import { ProfileSelect } from '../src/components/profile/ProfileAddressPicker';
+import Select from '../src/components/Select';
 import IdCamera, { assetToUpload } from '../src/components/profile/IdCamera';
 import { errorText, fetchIdentityStatus } from '../src/components/profile/profileLib';
 import { API_BASE_URL } from '../src/lib/config';
 import { invalidateCachedData } from '../src/lib/dataCache';
 import { toast } from '../src/lib/toast';
 import { font, t } from '../src/theme';
+import { PageLoader } from '../src/components/BrandLoader';
 
 const STATUS_META = {
   NOT_VERIFIED: {
@@ -46,8 +47,6 @@ const STATUS_META = {
     text: 'We could not verify your identity.',
   },
 };
-
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 /** POST /identity-verification: the ID type and the photos, read on the server (up to two minutes). */
 async function submitIdentityVerification(idType, front, back) {
@@ -160,17 +159,8 @@ export default function ProfileVerification() {
 
   const pickFile = (side, selected) => {
     if (!selected) return;
-    const type = selected.mimeType || selected.file?.type || 'image/jpeg';
-    if (!IMAGE_TYPES.includes(type)) {
-      toast.error('Use a JPG, PNG, or WebP image.');
-      return;
-    }
-    const size = selected.fileSize || selected.file?.size || 0;
-    if (size > 5 * 1024 * 1024) {
-      toast.error('Image must be 5 MB or smaller.');
-      return;
-    }
-    setFiles((cur) => ({ ...cur, [side]: { ...selected, mimeType: type } }));
+    // Any photo the phone can open; it is made a sharp JPEG as it is sent.
+    setFiles((cur) => ({ ...cur, [side]: selected }));
   };
 
   const uploadFor = async (side) => {
@@ -237,7 +227,7 @@ export default function ProfileVerification() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Identity Verification" backTo="/profile" />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.subtitle}>
           {status?.requiredForCheckout === false
             ? 'Verification is optional right now, but a verified account is ready if it becomes required.'
@@ -245,11 +235,7 @@ export default function ProfileVerification() {
         </Text>
 
         {loading ? (
-          <View style={styles.card} accessibilityLabel="Loading">
-            <LoadingSkeleton height={60} borderRadius={12} />
-            <LoadingSkeleton height={44} borderRadius={10} />
-            <LoadingSkeleton height={140} borderRadius={12} />
-          </View>
+          <PageLoader label="Loading" />
         ) : (
           <View>
             <View style={styles.status} accessibilityLiveRegion="polite">
@@ -314,7 +300,7 @@ export default function ProfileVerification() {
 
                 <View style={styles.field}>
                   <Text style={styles.label}>ID type</Text>
-                  <ProfileSelect
+                  <Select
                     title="ID type"
                     value={idType}
                     options={idOptions}
@@ -322,6 +308,7 @@ export default function ProfileVerification() {
                     placeholder="Select your ID"
                     disabled={submitting}
                     style={styles.select}
+                    textStyle={styles.selectText}
                   />
                 </View>
 
@@ -445,7 +432,12 @@ const styles = StyleSheet.create({
   field: { gap: 8 },
   label: { fontSize: 13, lineHeight: 20.8, color: t.neutral[700], ...font(500) },
   optional: { fontStyle: 'italic', ...font(500) },
-  select: { minHeight: 46, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderColor: t.neutral[300] },
+  // .profile-main .idv-input on phones (the ID type field).
+  select: {
+    minHeight: 46, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderRadius: 10, borderColor: t.neutral[300],
+    backgroundColor: t.neutral[0],
+  },
+  selectText: { fontSize: 16, lineHeight: 24, color: t.neutral[900] },
 
   drop: {
     alignItems: 'center', gap: 8, paddingVertical: 20, paddingHorizontal: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: t.neutral[300],

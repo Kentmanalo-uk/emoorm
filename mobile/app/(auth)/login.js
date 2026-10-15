@@ -41,7 +41,8 @@ export default function Login({ seller = false }) {
   const storeLogin = useAuthStore((s) => s.login);
   // The switch to the Seller Center (the website's startAccountSwitch).
   const [switching, setSwitching] = useState(false);
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  // Switch account sends an account whose session ended here with its email.
+  const [formData, setFormData] = useState({ email: typeof params.email === 'string' ? params.email : '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);

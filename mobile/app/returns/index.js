@@ -62,7 +62,7 @@ export default function Returns() {
   return (
     <View style={styles.screen}>
       {header}
-      <ScrollView
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} colors={[t.primary[600]]} />}
@@ -77,6 +77,7 @@ export default function Returns() {
 
         {visible.length === 0 ? (
           <OrdersEmpty
+            page
             art="returns"
             title="No return requests found"
             hint="Completed orders can be returned within the seller's return policy window."
@@ -98,7 +99,7 @@ export default function Returns() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
-  content: { paddingTop: 12, paddingHorizontal: 12, gap: 12 },
+  content: { flexGrow: 1, paddingTop: 12, paddingHorizontal: 12, gap: 12 },
   skeleton: { paddingTop: 12, paddingHorizontal: 12 },
   head: { flexDirection: 'row', alignItems: 'center' },
   startLink: { minHeight: 32, justifyContent: 'center' },

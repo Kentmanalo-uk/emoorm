@@ -2,8 +2,11 @@
   "expo": {
     "name": "E-MOORM",
     "slug": "mike-fernandez",
-    "scheme": "emoorm",
-    "version": "1.0.0",
+    "scheme": [
+      "emoorm",
+      "shop.emoorm.app"
+    ],
+    "version": "2.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,12 +22,13 @@
       "bundleIdentifier": "com.emoorm.marketplace",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "E-MOORM uses your photos for product images, payment proof, profile photos, and reviews.",
-        "NSCameraUsageDescription": "E-MOORM uses the camera for image search and marketplace uploads."
+        "NSCameraUsageDescription": "E-MOORM uses the camera for image search and marketplace uploads.",
+        "NSPhotoLibraryAddUsageDescription": "E-MOORM saves your shop's QR poster to your photos when you ask."
       },
       "icon": "./assets/app.icon"
     },
     "android": {
-      "package": "com.emoorm.marketplace",
+      "package": "shop.emoorm.app",
       "permissions": [
         "CAMERA",
         "READ_MEDIA_IMAGES",
@@ -37,7 +41,28 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "versionCode": 11,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "emoorm.shop"
+            },
+            {
+              "scheme": "https",
+              "host": "www.emoorm.shop"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -55,6 +80,17 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "E-MOORM shows your recent photos so you can search for products by image.",
+          "savePhotosPermission": "E-MOORM saves your shop's QR poster to your photos when you ask.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": [
+            "photo"
+          ]
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#ffffff",
@@ -62,7 +98,17 @@
           "imageWidth": 180,
           "resizeMode": "contain"
         }
-      ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "E-MOORM uses your location to show the way to a shop's pickup spot and to pin your delivery address."
+        }
+      ],
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-image",
+      "expo-sharing"
     ],
     "owner": "devbymikes-team"
   }

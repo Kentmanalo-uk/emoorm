@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  BellSlashIcon, ChatCircleDotsIcon, CheckCircleIcon, ChecksIcon, InfoIcon, MagnifyingGlassIcon, PackageIcon,
+  BellSlashIcon, ChatCircleDotsIcon, CheckCircleIcon, ChecksIcon, HandshakeIcon, InfoIcon, MagnifyingGlassIcon, PackageIcon,
   QuestionIcon, ScalesIcon, ShoppingBagIcon, StarIcon, StorefrontIcon, TagIcon, TrashIcon, WarningCircleIcon, XCircleIcon,
   XIcon,
 } from 'phosphor-react-native';
@@ -14,17 +15,20 @@ import useAuthStore from '../../src/store/authStore';
 import { font, t } from '../../src/theme';
 import EmptyState from '../../src/components/EmptyState';
 import ShellBarButton from '../../src/components/ShellBarButton';
+import { useTabBarScroll } from '../../src/components/Glass';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import CartConfirmDialog from '../../src/components/cart/CartConfirmDialog';
 import InboxPageHead, { InboxTopGap } from '../../src/components/inbox/InboxPageHead';
 import InboxLoginGate from '../../src/components/inbox/InboxLoginGate';
 import NotificationPicture from '../../src/components/inbox/NotificationPicture';
+import NotificationCategories, { NOTIFICATION_CATEGORIES, minusOne } from '../../src/components/inbox/NotificationCategories';
+import { useNotificationPeek } from '../../src/components/peek/NotificationPeek';
 import { NotificationListSkeleton } from '../../src/components/inbox/InboxSkeletons';
 import { timeAgo } from '../../src/components/inbox/inboxFormat';
 
 /*
  * The buyer's Notifications tab (web/src/pages/Notifications.jsx with its
- * phone CSS): the title bar with the unread count, search and ⋯, the
+ * phone CSS): the title bar with search and ⋯, the
  * All / Unread pills, then one row per notification (its picture or the
  * kind's gradient icon, the title with the unread dot, the message, the
  * time, and Mark read / Delete at the right). A row opens what it is about
@@ -37,7 +41,7 @@ const CACHE_KEY = `notifications:${AUDIENCE}`;
 // web TYPE_CONFIG: the kind's icon and colour.
 const C = {
   info: t.info[500], green: t.primary[600], greenLight: t.primary[500], orange: t.orange[500],
-  danger: t.danger[500], warning: t.warning[500], neutral: t.neutral[500],
+  danger: t.danger[500], warning: t.warning[500], neutral: t.neutral[500], success: t.success[600],
 };
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { Icon: ShoppingBagIcon, color: C.info },
@@ -72,6 +76,7 @@ const TYPE_CONFIG = {
   LOW_STOCK: { Icon: WarningCircleIcon, color: C.warning },
   PRICE_DROP: { Icon: TagIcon, color: C.greenLight },
   PRODUCT_QUESTION: { Icon: QuestionIcon, color: C.info },
+  PRICE_OFFER: { Icon: HandshakeIcon, color: C.success },
   PRODUCT_ANSWER: { Icon: ChatCircleDotsIcon, color: C.greenLight },
   RETURN_DISPUTED: { Icon: ScalesIcon, color: C.danger },
   RETURN_DISPUTE_RESOLVED: { Icon: ScalesIcon, color: C.info },
@@ -82,7 +87,7 @@ const getConfig = (type) => TYPE_CONFIG[type] || TYPE_CONFIG.DEFAULT;
 /** Phones: the gradient (ToolGradients) a kind's icon is filled with, from its colour. */
 const GRADIENT_OF = {
   [C.green]: 'green', [C.greenLight]: 'green', [C.info]: 'blue', [C.orange]: 'orange',
-  [C.danger]: 'rose', [C.warning]: 'amber', [C.neutral]: 'slate',
+  [C.danger]: 'rose', [C.warning]: 'amber', [C.neutral]: 'slate', [C.success]: 'slate',
 };
 
 export default function Notifications() {
@@ -92,7 +97,9 @@ export default function Notifications() {
 }
 
 function NotificationList() {
+  const tabScroll = useTabBarScroll();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   // The first view ("All", page 1) as it showed last time: shown at once
   // while it is asked for again.
   const [saved] = useState(() => getCachedData(CACHE_KEY));
@@ -100,6 +107,9 @@ function NotificationList() {
   const [unreadCount, setUnreadCount] = useState(() => saved?.unreadCount ?? 0);
   const [isLoading, setIsLoading] = useState(() => !saved);
   const [filter, setFilter] = useState('all'); // all | unread
+  // One group (chats | orders | alerts | promos), or null for all of them.
+  const [category, setCategory] = useState(null);
+  const [unreadByCategory, setUnreadByCategory] = useState({});
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(() => saved?.pagination || { totalPages: 0, total: 0 });
   const [searchText, setSearchText] = useState('');
@@ -126,12 +136,13 @@ function NotificationList() {
   };
 
   const fetchNotifications = useCallback(async () => {
-    const firstView = filter === 'all' && page === 1 && !search;
+    const firstView = filter === 'all' && page === 1 && !search && !category;
     const kept = firstView ? getCachedData(CACHE_KEY) : undefined;
     firstViewFresh.current = false;
     if (kept) {
       setNotifications(kept.items || []);
       setUnreadCount(kept.unreadCount ?? 0);
+      if (kept.unreadByCategory) setUnreadByCategory(kept.unreadByCategory);
       if (kept.pagination) setPagination(kept.pagination);
     } else {
       setIsLoading(true);
@@ -139,10 +150,12 @@ function NotificationList() {
     try {
       const params = { page, pageSize: 20, audience: AUDIENCE };
       if (filter === 'unread') params.isRead = false;
+      if (category) params.category = category;
       if (search) params.search = search;
       const res = await apiClient.get('/notifications', { params });
       setNotifications(res.data || []);
       setUnreadCount(res.unreadCount ?? 0);
+      if (res.unreadByCategory) setUnreadByCategory(res.unreadByCategory);
       if (res.pagination) setPagination(res.pagination);
       firstViewFresh.current = firstView;
     } catch (err) {
@@ -151,7 +164,7 @@ function NotificationList() {
     } finally {
       setIsLoading(false);
     }
-  }, [filter, page, search]);
+  }, [filter, page, search, category]);
 
   // Asked again on each visit to the tab, and when the view changes.
   useFocusEffect(useCallback(() => { fetchNotifications(); }, [fetchNotifications]));
@@ -159,8 +172,8 @@ function NotificationList() {
   // Marked read, deleted…: the saved first view follows what is shown.
   useEffect(() => {
     if (!firstViewFresh.current || isLoading) return;
-    setCachedData(CACHE_KEY, { items: notifications, unreadCount, pagination });
-  }, [isLoading, notifications, unreadCount, pagination]);
+    setCachedData(CACHE_KEY, { items: notifications, unreadCount, unreadByCategory, pagination });
+  }, [isLoading, notifications, unreadCount, unreadByCategory, pagination]);
 
   const handleMarkRead = async (notif) => {
     if (notif.isRead) return;
@@ -168,6 +181,7 @@ function NotificationList() {
       await apiClient.put(`/notifications/${notif.id}/read`);
       setNotifications((prev) => prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)));
       setUnreadCount((c) => Math.max(0, c - 1));
+      setUnreadByCategory((counts) => minusOne(counts, notif.type));
     } catch (err) {
       console.error(err);
     }
@@ -186,6 +200,7 @@ function NotificationList() {
       await apiClient.put('/notifications/read-all', null, { params: { audience: AUDIENCE } });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
+      setUnreadByCategory({});
       toast.success('All notifications marked as read');
     } catch {
       toast.error('Failed to mark all as read');
@@ -208,10 +223,16 @@ function NotificationList() {
       await apiClient.delete('/notifications', { params: { audience: AUDIENCE } });
       setNotifications([]);
       setUnreadCount(0);
+      setUnreadByCategory({});
       toast.success('All notifications deleted');
     } catch {
       toast.error('Failed to delete notifications');
     }
+  };
+
+  const changeCategory = (next) => {
+    setCategory(next);
+    setPage(1);
   };
 
   const changeFilter = (next) => {
@@ -232,38 +253,34 @@ function NotificationList() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView
+      {/* The bar is fixed at the top (as Home's search bar): the space above it
+          stays put and only the page under it scrolls. */}
+      <InboxTopGap />
+      <InboxPageHead
+        title="Notifications"
+        padLeft={12}
+        padRight={8}
+        style={styles.head}
+      >
+        <ShellBarButton
+          label={searchOpen ? 'Close search' : 'Search notifications'}
+          onPress={() => (searchOpen ? closeSearch() : openSearch())}
+          accessibilityState={{ expanded: searchOpen }}
+        >
+          {searchOpen
+            ? <XIcon size={19} weight="bold" color={t.primary[700]} />
+            : <MagnifyingGlassIcon size={19} color={t.neutral[700]} />}
+        </ShellBarButton>
+        <ShellPageMenu label="Notification options" items={menuItems} />
+      </InboxPageHead>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.screen}
         contentContainerStyle={styles.content}
-        stickyHeaderIndices={[1]}
         keyboardShouldPersistTaps="handled"
+        {...tabScroll}
       >
-        <InboxTopGap />
-        <InboxPageHead
-          title="Notifications"
-          padLeft={12}
-          padRight={8}
-          style={styles.head}
-          badge={unreadCount > 0 ? (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText} numberOfLines={1}>{unreadCount} unread</Text>
-            </View>
-          ) : null}
-        >
-          <ShellBarButton
-            label={searchOpen ? 'Close search' : 'Search notifications'}
-            onPress={() => (searchOpen ? closeSearch() : openSearch())}
-            accessibilityState={{ expanded: searchOpen }}
-          >
-            {searchOpen
-              ? <XIcon size={19} weight="bold" color={t.primary[700]} />
-              : <MagnifyingGlassIcon size={19} color={t.neutral[700]} />}
-          </ShellBarButton>
-          <ShellPageMenu label="Notification options" items={menuItems} />
-        </InboxPageHead>
-
-        <View style={styles.body}>
+        <View style={[styles.body, !isLoading && notifications.length === 0 && styles.bodyGrow]}>
           {searchOpen ? (
             <View style={styles.search}>
               <MagnifyingGlassIcon size={16} color={t.neutral[500]} />
@@ -285,6 +302,8 @@ function NotificationList() {
               ) : null}
             </View>
           ) : null}
+
+          <NotificationCategories value={category} onChange={changeCategory} unread={unreadByCategory} />
 
           <View style={styles.filters}>
             {[['all', 'All'], ['unread', 'Unread']].map(([key, label]) => {
@@ -312,13 +331,15 @@ function NotificationList() {
             <NotificationListSkeleton />
           ) : notifications.length === 0 ? (
             <EmptyState
+              page
               art="notifications"
               icon={BellSlashIcon}
-              flat
               style={styles.empty}
               title={search
                 ? `No notifications match “${search}”`
-                : filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+                : category
+                  ? `No ${filter === 'unread' ? 'unread ' : ''}${NOTIFICATION_CATEGORIES.find((c) => c.key === category).label.toLowerCase()} notifications`
+                  : filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
               text={search
                 ? 'Try another word, or clear the search.'
                 : filter === 'unread'
@@ -385,10 +406,19 @@ function NotificationRow({ notif, first, onOpen, onMarkRead, onDelete }) {
   const cfg = getConfig(notif.type);
   const href = notificationHref(notif);
   const unread = !notif.isRead;
+  // Held: the whole notification, bigger, with Open, Mark as read and Delete.
+  const peek = useNotificationPeek()(notif, {
+    art: <NotificationPicture picture={notif.picture} Icon={cfg.Icon} color={cfg.color} gradient={GRADIENT_OF[cfg.color]} size={64} />,
+    time: timeAgo(notif.createdAt),
+    onOpen: href ? onOpen : undefined,
+    onMarkRead,
+    onDelete,
+  });
   return (
     <Pressable
       accessibilityRole={href ? 'link' : undefined}
       onPress={onOpen}
+      {...peek}
       style={({ pressed }) => [styles.item, !first && styles.itemLine, pressed && styles.itemPressed]}
     >
       {/* The product (orders, returns), the person (messages) or the shop,
@@ -426,9 +456,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, paddingBottom: 24 },
   head: { height: 48 },
-  unreadBadge: { flexShrink: 0, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 999, backgroundColor: t.secondary[50] },
-  unreadBadgeText: { fontSize: 12, lineHeight: 19.2, color: t.primary[700], ...font(500) },
   body: { paddingTop: 8, paddingHorizontal: 12 },
+  bodyGrow: { flexGrow: 1 },
 
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, marginBottom: 12, paddingHorizontal: 12,

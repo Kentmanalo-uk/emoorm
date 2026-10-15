@@ -3,6 +3,7 @@ import {
 } from 'phosphor-react-native';
 import apiClient from '../../api/client';
 import { isOpen as windowOpen, isTodayProduct } from '../../lib/availability';
+import { cookReady, isStockless, productKind } from './productKinds';
 
 /*
  * The product page's helpers, ported from the website:
@@ -32,11 +33,11 @@ export const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimu
 /** "1,250.00". */
 export const money = (n) => Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// Fulfilment / payment lines come from the store record, never hardcoded.
-export const storeServiceLines = (store) => {
+// Fulfilment / payment lines come from the store record, never hardcoded;
+// `mode` narrows them to a pickup-only or delivery-only product.
+export const storeServiceLines = (store, mode = store?.fulfillmentMode) => {
   if (!store) return [];
   const lines = [];
-  const mode = store.fulfillmentMode;
   if (mode === 'DELIVERY' || mode === 'BOTH') lines.push({ Icon: TruckIcon, text: 'Delivery available' });
   if (mode === 'PICKUP' || mode === 'BOTH') lines.push({ Icon: StorefrontIcon, text: 'Pickup available' });
   if (store.acceptsCod) lines.push({ Icon: MoneyIcon, text: 'Cash on delivery accepted' });
@@ -95,6 +96,28 @@ export const estimate = (store, { method, courier = false, townId = null } = {},
 };
 
 const sameDay = (a, b) => shortDate(a) === shortDate(b);
+
+/**
+ * When an order of these products would come (web lib/eta orderEta): the
+ * goods' estimate, a paluto's cooking time, and no sooner than a package's
+ * notice. Returns { from, to } or null.
+ */
+export const orderEta = (store, products, how, now = new Date()) => {
+  const goods = products.filter((p) => !isStockless(p));
+  const parts = [
+    ...(goods.length ? [estimate(store, how, now)] : []),
+    ...products.filter(isStockless).map((p) => cookReady(p.details, now)),
+  ];
+  if (!parts.length) return null;
+  let from = Math.max(...parts.map((p) => p.from.getTime()));
+  let to = Math.max(...parts.map((p) => p.to.getTime()));
+  const noticeHours = Math.max(0, ...products
+    .filter((p) => productKind(p) === 'PACKAGE')
+    .map((p) => Number(p.details?.noticeHours) || 0));
+  from = Math.max(from, now.getTime() + noticeHours * 3600e3);
+  to = Math.max(to, from);
+  return { from: new Date(from), to: new Date(to) };
+};
 
 /** "Today", "Tomorrow", or "Oct 6". */
 export const dayLabel = (d, now = new Date()) => {
@@ -173,6 +196,8 @@ export const cartKeyFor = (product) => product.cartKey
  * same words.
  */
 export const cartRefusal = (product) => {
+  // Live animals are bought by agreeing a price in chat (Make an offer).
+  if (productKind(product) === 'LIVESTOCK') return 'Make an offer to the seller to buy live animals';
   if (product.readyToSell === false || product.store?.readyToSell === false) return "This shop isn't taking orders yet";
   const away = awayUntil(product.store || product);
   if (away) return `This shop is away until ${shortDate(away)}`;
@@ -181,6 +206,36 @@ export const cartRefusal = (product) => {
   }
   return null;
 };
+
+/**
+ * A cart line for a product with no options to choose (the product page's
+ * "add from the shop's row", and the long-press preview's Add to cart).
+ */
+export const quickCartLine = (p, price) => ({
+  id: p.id,
+  productId: p.id,
+  name: p.name,
+  price,
+  priceTiers: p.priceTiers,
+  image: parseImages(p.images)[0] || null,
+  storeId: p.storeId || p.store?.id,
+  storeName: p.store?.name,
+  storeLogo: p.store?.logo || null,
+  storeSlug: p.store?.slug,
+  readyToSell: p.store?.readyToSell,
+  vacationUntil: p.store?.vacationUntil,
+  stock: p.stock,
+  listingKind: p.listingKind,
+  availability: p.availability,
+  productType: p.productType,
+  details: p.details,
+  fulfillment: p.fulfillment,
+  weightGrams: p.weightGrams,
+  packageItems: p.packageItems,
+  slug: p.slug,
+  categoryId: p.categoryId,
+  selectedVariations: null,
+});
 
 /* ── recently viewed (web/src/lib/recentlyViewed.js) ─────────────────── */
 

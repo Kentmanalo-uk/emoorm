@@ -5,6 +5,7 @@ import {
 } from 'phosphor-react-native';
 import CartProductImage from '../cart/CartProductImage';
 import { cartPeso as peso } from '../cart/cartSettings';
+import Glass from '../Glass';
 import { font, t } from '../../theme';
 
 /*
@@ -97,8 +98,11 @@ export function CheckoutField({ label, value, onChangeText, placeholder, error, 
   );
 }
 
-/** A shop's status line (.store-status ok / bad), with an optional button under it. */
-export function CheckoutStatus({ tone = 'ok', Icon, title, lines = [], note, action, style }) {
+/**
+ * A shop's status line (.store-status ok / bad), with an optional button
+ * under it; children go last (the pickup route).
+ */
+export function CheckoutStatus({ tone = 'ok', Icon, title, lines = [], note, action, style, children }) {
   const bad = tone === 'bad';
   const color = bad ? t.danger[800] : t.primary[800];
   const Glyph = Icon || (bad ? WarningIcon : CheckCircleIcon);
@@ -116,6 +120,7 @@ export function CheckoutStatus({ tone = 'ok', Icon, title, lines = [], note, act
             <Text style={styles.statusBtnText}>{action.label}</Text>
           </Pressable>
         ) : null}
+        {children}
       </View>
     </View>
   );
@@ -125,8 +130,11 @@ const variationText = (item) => (item.selectedVariations && Object.keys(item.sel
   ? Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(', ')
   : '');
 
-/** One shop's lines and its delivery fee row (.co-m-store). */
-export function CheckoutStoreItems({ storeName, items, pickup, shipLabel, shipAmount, first }) {
+/**
+ * One shop's lines and its delivery fee row (.co-m-store); `extras` are more
+ * fee rows ({ key, label, amount }: an unpaid delivery fee of a failed trip).
+ */
+export function CheckoutStoreItems({ storeName, items, pickup, shipLabel, shipAmount, first, extras = [] }) {
   return (
     <View style={!first && styles.storeNext}>
       <View style={styles.storeHead}>
@@ -162,6 +170,15 @@ export function CheckoutStoreItems({ storeName, items, pickup, shipLabel, shipAm
         </View>
         <Text style={styles.shipText}>{shipAmount}</Text>
       </View>
+      {extras.map((line) => (
+        <View key={line.key} style={[styles.ship, styles.extraShip]}>
+          <View style={styles.shipLeft}>
+            <WarningIcon size={16} color={t.warning[700]} />
+            <Text style={[styles.shipText, styles.extraText]}>{line.label}</Text>
+          </View>
+          <Text style={styles.shipText}>{peso(line.amount)}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -185,7 +202,7 @@ export function CheckoutPayLater({ shopName, total, methodLabel }) {
 
 /** Order Summary with the voucher field (.checkout-summary). */
 export function CheckoutSummary({
-  itemCount, subtotal, shipLabel, shipAmount, voucher, discountAmount, total,
+  itemCount, subtotal, shipLabel, shipAmount, voucher, discountAmount, total, extras = [],
   voucherInput, onVoucherInput, voucherLoading, onApply, onRemove,
 }) {
   const canApply = !voucherLoading && Boolean(voucherInput.trim()) && subtotal !== 0;
@@ -206,6 +223,12 @@ export function CheckoutSummary({
           <Text style={[styles.rowText, styles.rowGreen]}>-{peso(discountAmount)}</Text>
         </View>
       ) : null}
+      {extras.map((line) => (
+        <View key={line.key} style={styles.row}>
+          <Text style={[styles.rowText, styles.rowLabel]}>{line.label}</Text>
+          <Text style={styles.rowText}>{peso(line.amount)}</Text>
+        </View>
+      ))}
       <View style={styles.divider} />
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>Total</Text>
@@ -247,11 +270,16 @@ export function CheckoutSummary({
   );
 }
 
-/** The bottom bar: voucher saving, Total (n items) and Place Order (.co-m-bar). */
-export function CheckoutBar({ saving, itemCount, total, busy, label, disabled, onPress }) {
+/**
+ * The bottom bar: voucher saving, Total (n items) and Place Order (.co-m-bar,
+ * fixed to the bottom over the page). iOS 26: Liquid Glass; elsewhere the
+ * website's white bar with its shadow. onLayout reports its height, for the
+ * page's room at the bottom.
+ */
+export function CheckoutBar({ saving, itemCount, total, busy, label, disabled, onPress, onLayout }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={styles.bar}>
+    <Glass fallbackStyle={BAR_FALLBACK} style={styles.bar} onLayout={onLayout}>
       {saving ? <Text style={styles.saving}>{saving}</Text> : null}
       <View style={[styles.barRow, { paddingBottom: 10 + insets.bottom }]}>
         <View style={styles.barTotal}>
@@ -269,9 +297,15 @@ export function CheckoutBar({ saving, itemCount, total, busy, label, disabled, o
           <Text style={styles.ctaText}>{label}</Text>
         </Pressable>
       </View>
-    </View>
+    </Glass>
   );
 }
+
+// The website's .co-m-bar: white with a soft shadow above.
+const BAR_FALLBACK = {
+  backgroundColor: '#fff',
+  boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: 'rgba(15, 23, 42, 0.08)' }],
+};
 
 /** "Order Placed Successfully!" (.order-success-card). */
 export function CheckoutSuccess({ orderId, payLater, onReceipt, onOrders, onShop }) {
@@ -418,6 +452,9 @@ const styles = StyleSheet.create({
   },
   shipLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   shipText: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[800] },
+  // An unpaid delivery fee of a failed rider trip, added to this order.
+  extraShip: { backgroundColor: t.warning[50] },
+  extraText: { flexShrink: 1 },
 
   payLater: {
     flexDirection: 'row',
@@ -439,6 +476,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 6 },
   rowText: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[700] },
   rowGreen: { color: t.primary[600] },
+  rowLabel: { flexShrink: 1 },
   divider: { height: 1, marginVertical: 8, backgroundColor: t.neutral[200] },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   totalLabel: { fontSize: 15, lineHeight: 24, ...font(500), color: t.neutral[900] },
@@ -476,14 +514,7 @@ const styles = StyleSheet.create({
   voucherBtnTextBack: { color: t.neutral[700] },
   voucherNote: { marginTop: 6, fontSize: 12, lineHeight: 19.2, ...font(400), color: t.primary[600] },
 
-  bar: {
-    backgroundColor: '#fff',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 12,
-  },
+  bar: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 130 },
   saving: { paddingVertical: 8, paddingHorizontal: 16, backgroundColor: t.accent[50], color: t.accent[600], fontSize: 13, lineHeight: 20.8, ...font(400) },
   barRow: { gap: 8, paddingTop: 10, paddingHorizontal: 16 },
   barTotal: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },

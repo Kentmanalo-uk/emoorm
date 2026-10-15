@@ -12,11 +12,11 @@ import EmptyState from '../src/components/EmptyState';
 import ScreenHeader from '../src/components/ScreenHeader';
 import TodayCard from '../src/components/TodayCard';
 import TodayChoiceSheet from '../src/components/today/TodayChoiceSheet';
-import TodaySkeleton from '../src/components/today/TodaySkeleton';
 import { isOpen, MODES } from '../src/lib/availability';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
 import useAuthStore from '../src/store/authStore';
 import { font, t } from '../src/theme';
+import { PageLoader } from '../src/components/BrandLoader';
 
 const SORTS = [
   { key: 'ending', label: 'Ending soon' },
@@ -140,13 +140,16 @@ export default function AvailableToday() {
   const filtered = Boolean(q || mode || category || (town && town !== 'near') || delivers);
   const clearAll = () => { setDraft(''); set({ q: null, mode: null, category: null, sort: null, delivers: null, town: null }); };
 
-  const results = state.loading && state.page === 1 && !refreshing ? (
+  const showLoader = state.loading && state.page === 1 && !refreshing;
+  // Nothing to show: the empty state fills the space under the filters.
+  const isEmpty = !showLoader && items.length === 0;
+  const results = showLoader ? (
     <View style={styles.grid} accessibilityState={{ busy: true }}>
-      {Array.from({ length: 4 }, (_, i) => <TodaySkeleton key={i} height={250} radius={12} style={cell} />)}
+      <PageLoader minHeight={320} style={{ width: '100%' }} label="Loading" />
     </View>
   ) : items.length === 0 ? (
     <EmptyState
-      flat
+      page
       art="calendar"
       style={styles.empty}
       title={state.enabled ? 'Nothing available right now' : 'Available Today is off for now'}
@@ -179,12 +182,13 @@ export default function AvailableToday() {
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScreenHeader title="Available Today" />
-      <ScrollView
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         style={styles.scroll}
+        contentContainerStyle={isEmpty ? styles.grow : null}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[t.primary[600]]} tintColor={t.primary[600]} />}
       >
-        <View style={[styles.page, { minHeight: screenH * 0.6 }]}>
+        <View style={[styles.page, { minHeight: screenH * 0.6 }, isEmpty && styles.grow]}>
           <View style={styles.top}>
             <View style={styles.search} accessibilityRole="search">
               <MagnifyingGlassIcon size={18} color={t.neutral[500]} />
@@ -207,7 +211,7 @@ export default function AvailableToday() {
               ) : null}
             </View>
 
-            <ScrollView
+            <ScrollView showsVerticalScrollIndicator={false}
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.chipRow}
@@ -220,7 +224,7 @@ export default function AvailableToday() {
               ))}
             </ScrollView>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.chipRowInner}>
+            <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.chipRowInner}>
               <Chip
                 variant="today"
                 icon={MapPinIcon}
@@ -248,7 +252,7 @@ export default function AvailableToday() {
             </ScrollView>
           </View>
 
-          <View style={styles.body}>
+          <View style={[styles.body, isEmpty && styles.grow]}>
             {!state.loading && items.length > 0 ? (
               <View style={styles.count}>
                 <Text style={styles.countText}>
@@ -298,6 +302,7 @@ export default function AvailableToday() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
+  grow: { flexGrow: 1 },
   page: { paddingBottom: 32, backgroundColor: t.neutral[100] },
 
   top: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: t.neutral[0] },

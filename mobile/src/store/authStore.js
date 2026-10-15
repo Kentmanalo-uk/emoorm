@@ -8,14 +8,24 @@ const useAuthStore = create((set) => ({
   isAuthenticated: false,
   isHydrated: false,
 
+  // Reads the saved sign-in. Always ends hydrated: a damaged saved user (or
+  // storage that fails) opens the app signed out instead of holding it on the splash.
   hydrate: async () => {
-    const [token, userJson] = await AsyncStorage.multiGet([
-      STORAGE_KEYS.ACCESS_TOKEN,
-      STORAGE_KEYS.USER,
-    ]).then((pairs) => pairs.map(([, value]) => value));
-
+    let user = null;
+    let token = null;
+    try {
+      const [savedToken, userJson] = await AsyncStorage.multiGet([
+        STORAGE_KEYS.ACCESS_TOKEN,
+        STORAGE_KEYS.USER,
+      ]).then((pairs) => pairs.map(([, value]) => value));
+      token = savedToken;
+      user = userJson ? JSON.parse(userJson) : null;
+    } catch {
+      user = null;
+      token = null;
+    }
     set({
-      user: userJson ? JSON.parse(userJson) : null,
+      user,
       isAuthenticated: Boolean(token),
       isHydrated: true,
     });
@@ -30,6 +40,8 @@ const useAuthStore = create((set) => ({
       ...(refreshToken ? [[STORAGE_KEYS.REFRESH_TOKEN, refreshToken]] : []),
     ]);
     set({ user, isAuthenticated: true });
+    // Listed under Settings → Switch account (store/savedAccounts).
+    require('./savedAccounts').rememberAccount(user).catch(() => {});
   },
 
   updateUser: async (user) => {
@@ -37,7 +49,17 @@ const useAuthStore = create((set) => ({
     set({ user });
   },
 
-  logout: async () => {
+  // `forget`: also ask the server to end this device's session (its refresh
+  // token stops renewing), as the website does. Best effort: signing out here
+  // does not wait for it. The API client passes false when the session has
+  // already ended on the server.
+  logout: async ({ forget = true } = {}) => {
+    if (forget) {
+      const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+      if (refreshToken) {
+        require('../api/client').default.post('/auth/logout', { refreshToken }).catch(() => {});
+      }
+    }
     await AsyncStorage.multiRemove([
       STORAGE_KEYS.ACCESS_TOKEN,
       STORAGE_KEYS.REFRESH_TOKEN,

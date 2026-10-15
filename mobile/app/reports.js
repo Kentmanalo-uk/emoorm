@@ -72,16 +72,17 @@ export default function ProfileReports() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="My Reports" backTo="/profile" />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>Products and sellers you reported, and what your municipal team decided.</Text>
 
         <View style={styles.section}>
           {loading ? (
             <Text style={styles.muted}>Loading your reports…</Text>
           ) : error ? (
-            <ProfileEmpty style={styles.empty} title="Something went wrong" hint={error} action="Try again" onAction={() => { setLoading(true); load(); }} />
+            <ProfileEmpty page style={styles.empty} title="Something went wrong" hint={error} action="Try again" onAction={() => { setLoading(true); load(); }} />
           ) : reports.length === 0 ? (
             <ProfileEmpty
+              page
               style={styles.empty}
               art="reports"
               title="You have not reported anything"
@@ -135,10 +136,10 @@ export default function ProfileReports() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
-  content: { gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
+  content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
   subtitle: { fontSize: 13, lineHeight: 19.5, color: t.neutral[500], ...font(400) },
 
-  section: { marginHorizontal: -12, padding: 14, backgroundColor: t.neutral[0] },
+  section: { flexGrow: 1, marginHorizontal: -12, padding: 14, backgroundColor: t.neutral[0] },
   empty: { marginHorizontal: -12 },
   muted: { fontSize: 15, lineHeight: 24, color: t.neutral[500], ...font(400) },
   list: { gap: 12 },

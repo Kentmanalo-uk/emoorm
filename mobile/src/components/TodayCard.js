@@ -4,10 +4,11 @@ import { ClockIcon, MapPinIcon, StarIcon } from 'phosphor-react-native';
 import { isEndingSoon, shortLeft, windowState } from '../lib/availability';
 import { saleInfo } from '../lib/variantPricing';
 import { font, t } from '../theme';
-import { ProductStars } from './ProductCard';
+import { ProductStars } from './ProductStats';
 import ProductImage from './ProductImage';
 import { peso, SaleWas } from './SaleTag';
 import TodayTag from './TodayTag';
+import { useProductPeek } from './peek/ProductPeek';
 
 /**
  * One Available Today listing (an item from GET /today) as a product tile
@@ -31,6 +32,9 @@ export default function TodayCard({ item, result = false, onPress, style }) {
   const town = store?.municipality?.name;
   const soon = isEndingSoon(item.ordersCloseAt);
   const open = onPress || (() => router.push(`/product/${product.slug}`));
+  const peekProduct = useProductPeek();
+  // Held: its preview, with what is left today as its stock.
+  const peek = peekProduct({ ...product, store: product.store || store, stock: soldOut ? 0 : remaining ?? product.stock }, { onOpen: open });
 
   const left = !soldOut && state.tone === 'live' ? (
     <View key="left" style={styles.time} accessibilityLabel={state.text}>
@@ -55,7 +59,7 @@ export default function TodayCard({ item, result = false, onPress, style }) {
   if (reviews === 0 && sold === 0) meta.push(<Text key="new" style={[styles.metaText, styles.newText]}>New</Text>);
 
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={product.name} onPress={open} style={[styles.card, style]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={product.name} onPress={open} {...peek} style={[styles.card, style]}>
       <View style={styles.image}>
         <ProductImage src={product.images?.[0]} style={StyleSheet.absoluteFill} />
         {!soldOut && remaining != null && remaining <= 5 ? (
@@ -116,7 +120,7 @@ const styles = StyleSheet.create({
     position: 'absolute', right: 6, bottom: 6, paddingVertical: 1, paddingHorizontal: 6, borderRadius: 3, overflow: 'hidden',
     backgroundColor: 'rgba(17, 24, 39, 0.72)', color: '#fff', fontSize: 11, lineHeight: 16.5, ...font(500),
   },
-  cover: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.72)' },
+  cover: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.72)' },
   coverText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[800] },
 
   info: { flex: 1, paddingTop: 8, paddingHorizontal: 10, paddingBottom: 10, gap: 3 },

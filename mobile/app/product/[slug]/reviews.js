@@ -6,7 +6,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CaretLeftIcon, StarIcon } from 'phosphor-react-native';
 import apiClient from '../../../src/api/client';
-import EmptyArt from '../../../src/components/EmptyArt';
+import EmptyState from '../../../src/components/EmptyState';
 import ShellPageMenu from '../../../src/components/ShellPageMenu';
 import { resolveImg } from '../../../src/lib/media';
 import { font, t } from '../../../src/theme';
@@ -66,26 +66,26 @@ function ReviewsPage({ slug }) {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      {/* The bar is held at the top once the 12px above it scrolls away (.prv-top is sticky). */}
-      <ScrollView stickyHeaderIndices={[1]} contentContainerStyle={[styles.page, { paddingBottom: 24 + insets.bottom }]}>
-        <View style={styles.topGap} />
-        <View style={styles.top}>
-          <Pressable style={styles.back} onPress={goBack} accessibilityRole="button" accessibilityLabel="Back">
-            <CaretLeftIcon size={20} weight="bold" color={t.neutral[700]} />
-          </Pressable>
-          <View style={styles.titleRow}>
-            <Text style={styles.title} accessibilityRole="header">Reviews</Text>
-            {total > 0 ? <View style={styles.count}><Text style={styles.countText}>{total}</Text></View> : null}
-          </View>
-          <ShellPageMenu />
+      {/* The bar is fixed at the top; only the reviews under it scroll. */}
+      <View style={styles.topGap} />
+      <View style={styles.top}>
+        <Pressable style={styles.back} onPress={goBack} accessibilityRole="button" accessibilityLabel="Back">
+          <CaretLeftIcon size={20} weight="bold" color={t.neutral[700]} />
+        </Pressable>
+        <View style={styles.titleRow}>
+          <Text style={styles.title} accessibilityRole="header">Reviews</Text>
+          {total > 0 ? <View style={styles.count}><Text style={styles.countText}>{total}</Text></View> : null}
         </View>
-
+        <ShellPageMenu />
+      </View>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.page, { paddingBottom: 24 + insets.bottom }]}>
         {missing ? (
-          <View style={[styles.card, styles.cardLast, styles.empty]}>
-            <EmptyArt name="reviews" size={120} />
-            <Text style={styles.emptyTitle}>Product not found</Text>
-            <Text style={styles.emptyLink} onPress={() => router.push('/products')}>Browse products</Text>
-          </View>
+          <EmptyState
+            page
+            art="reviews"
+            title="Product not found"
+            actions={[{ label: 'Browse products', onPress: () => router.push('/products') }]}
+          />
         ) : (
           <>
             {product ? (
@@ -135,7 +135,7 @@ function ReviewsPage({ slug }) {
             ) : null}
 
             {stats && total > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chips} accessibilityRole="tablist">
+              <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chips} accessibilityRole="tablist">
                 <Pressable style={[styles.chip, !rating && styles.chipOn]} onPress={() => pickRating(null)} accessibilityRole="tab" accessibilityState={{ selected: !rating }}>
                   <Text style={[styles.chipText, !rating && styles.chipTextOn]}>All</Text>
                   <Text style={[styles.chipCount, !rating && styles.chipCountOn]}>{total}</Text>
@@ -193,11 +193,12 @@ function ReviewList({ productId, rating }) {
 
   if (!loading && items.length === 0) {
     return (
-      <View style={[styles.card, styles.cardLast, styles.empty]}>
-        <EmptyArt name="reviews" size={120} />
-        <Text style={styles.emptyTitle}>{rating ? `No ${rating}-star reviews yet` : 'No reviews yet'}</Text>
-        <Text style={styles.emptyText}>{rating ? 'Try another rating.' : 'Be the first to review this product after you buy it.'}</Text>
-      </View>
+      <EmptyState
+        page
+        art="reviews"
+        title={rating ? `No ${rating}-star reviews yet` : 'No reviews yet'}
+        text={rating ? 'Try another rating.' : 'Be the first to review this product after you buy it.'}
+      />
     );
   }
 
@@ -251,11 +252,11 @@ const styles = StyleSheet.create({
   // Phones: a white page whose sections run edge to edge, each closed by an
   // 8px grey band (web/src/styles/phone-app.css).
   screen: { flex: 1, backgroundColor: '#fff' },
-  page: { backgroundColor: '#fff' },
+  page: { flexGrow: 1, backgroundColor: '#fff' },
   topGap: { height: 12 },
   top: {
     flexDirection: 'row', alignItems: 'center', gap: 10, height: 41, marginBottom: 14, paddingLeft: 12, paddingRight: 8,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: t.neutral[200],
+    backgroundColor: '#fff',
   },
   back: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -301,8 +302,7 @@ const styles = StyleSheet.create({
     marginTop: 4, marginBottom: 16, paddingVertical: 11, borderRadius: 999, borderWidth: 1, borderColor: t.primary[600], alignItems: 'center',
   },
   moreText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.primary[700] },
+  // The "Couldn't load reviews" line.
   empty: { alignItems: 'center', gap: 6, paddingVertical: 36, paddingHorizontal: 20 },
-  emptyTitle: { marginTop: 8, fontSize: 17, lineHeight: 20.4, ...font(500), color: t.neutral[900], textAlign: 'center' },
   emptyText: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500], textAlign: 'center' },
-  emptyLink: { marginTop: 8, fontSize: 15, lineHeight: 24, ...font(500), color: t.primary[700] },
 });

@@ -4,8 +4,9 @@ import { useRouter } from 'expo-router';
 import { ArrowRightIcon, StorefrontIcon } from 'phosphor-react-native';
 import { resolveImg } from '../../lib/media';
 import { font, t, text } from '../../theme';
-import EmptyArt from '../EmptyArt';
+import EmptyState from '../EmptyState';
 import HomeCategoryIcon from './HomeCategoryIcon';
+import { useStorePeek } from '../peek/StorePeek';
 
 /*
  * The pieces of Home's sections on phones (web/src/pages/Home.jsx and the
@@ -37,18 +38,13 @@ export const sectionTitleStyle = { fontSize: 18, lineHeight: 22.5, ...font(500),
 /** Phones' illustrated empty state for a section (.home-empty). */
 export function HomeEmpty({ art, title, body, action, onAction }) {
   return (
-    <View style={styles.empty}>
-      <EmptyArt name={art} size={120} style={styles.emptyArt} />
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyBody}>{body}</Text>
-      <Pressable
-        accessibilityRole="link"
-        onPress={onAction}
-        style={({ pressed }) => [styles.emptyBtn, pressed && styles.emptyBtnPressed]}
-      >
-        <Text style={styles.emptyBtnText}>{action}</Text>
-      </Pressable>
-    </View>
+    <EmptyState
+      compact
+      art={art}
+      title={title}
+      text={body}
+      actions={action ? [{ label: action, onPress: onAction }] : null}
+    />
   );
 }
 
@@ -59,7 +55,7 @@ export function HomeEmpty({ art, title, body, action, onAction }) {
 export function CategoryStrip({ categories, icons }) {
   const router = useRouter();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
+    <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
       {categories.map((cat) => (
         <Pressable
           key={cat.id}
@@ -88,6 +84,7 @@ export function CategoryStrip({ categories, icons }) {
 export function HomeStoreCard({ store }) {
   const router = useRouter();
   const open = () => router.push(`/store/${store.slug}`);
+  const peek = useStorePeek()(store, { onOpen: open });
   const initials = store.name?.split(' ').slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
   const images = (store.products || [])
     .map((product) => {
@@ -99,7 +96,7 @@ export function HomeStoreCard({ store }) {
 
   return (
     <View style={styles.storeCard}>
-      <Pressable accessibilityRole="link" accessibilityLabel={store.name} onPress={open} style={styles.storeMain}>
+      <Pressable accessibilityRole="link" accessibilityLabel={store.name} onPress={open} {...peek} style={styles.storeMain}>
         <View style={styles.storeLogo}>
           {store.logo ? (
             <Image source={{ uri: resolveImg(store.logo) || store.logo }} style={styles.fill} resizeMode="cover" />
@@ -152,14 +149,11 @@ export function MunicipalityRail({ municipalities }) {
   const router = useRouter();
   if (!municipalities.length) {
     return (
-      <View style={styles.muniEmpty}>
-        <EmptyArt name="places" size={80} />
-        <Text style={styles.muniEmptyText}>Municipality showcases are coming soon.</Text>
-      </View>
+      <EmptyState compact art="places" text="Municipality showcases are coming soon." />
     );
   }
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.muniRow}>
+    <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.muniRow}>
       {municipalities.map((m) => (
         <Pressable
           key={m.id}
@@ -189,17 +183,6 @@ const styles = StyleSheet.create({
   title: { flex: 1, minWidth: 0, ...sectionTitleStyle },
   arrow: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   arrowPressed: { transform: [{ translateX: 2 }] },
-
-  empty: { alignItems: 'center', paddingTop: 24, paddingHorizontal: 20, paddingBottom: 28 },
-  emptyArt: { marginBottom: 16 },
-  emptyTitle: { marginBottom: 6, fontSize: 16, lineHeight: 24, ...font(500), color: t.neutral[900], textAlign: 'center' },
-  emptyBody: { maxWidth: 280, marginBottom: 18, fontSize: 13.5, lineHeight: 20.25, ...font(400), color: t.neutral[500], textAlign: 'center' },
-  emptyBtn: {
-    height: 40, paddingHorizontal: 20, borderRadius: 10, borderWidth: 1, borderColor: t.primary[600],
-    alignItems: 'center', justifyContent: 'center',
-  },
-  emptyBtnPressed: { backgroundColor: t.primary[50] },
-  emptyBtnText: { fontSize: 14, lineHeight: 20, ...font(500), color: t.primary[700] },
 
   catRow: { gap: 10, paddingRight: 12, paddingBottom: 2 },
   catCard: { width: 72 },
@@ -241,6 +224,4 @@ const styles = StyleSheet.create({
   },
   muniInitial: { fontSize: 24, lineHeight: 30, ...font(500), color: t.primary[700] },
   muniName: { width: '100%', fontSize: 12, lineHeight: 19.2, ...font(500), color: t.neutral[800], textAlign: 'center' },
-  muniEmpty: { alignItems: 'center', padding: 20 },
-  muniEmptyText: { fontSize: 14, lineHeight: 22, ...font(400), color: t.neutral[500], textAlign: 'center' },
 });

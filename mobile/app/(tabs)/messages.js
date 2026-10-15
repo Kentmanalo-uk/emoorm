@@ -15,7 +15,9 @@ import ShellPageMenu from '../../src/components/ShellPageMenu';
 import InboxPageHead, { InboxTopGap } from '../../src/components/inbox/InboxPageHead';
 import InboxLoginGate from '../../src/components/inbox/InboxLoginGate';
 import ConversationRow from '../../src/components/inbox/ConversationRow';
+import { useConversationPeek } from '../../src/components/peek/ConversationPeek';
 import MoormyEntry from '../../src/components/inbox/MoormyEntry';
+import { useTabBarScroll } from '../../src/components/Glass';
 import { ConversationListSkeleton } from '../../src/components/inbox/InboxSkeletons';
 
 /*
@@ -61,6 +63,13 @@ function MessagesList() {
 
   // Each visit to the tab (and back from a chat) asks again.
   useFocusEffect(useCallback(() => { fetchConversations(); }, [fetchConversations]));
+
+  // Held: the chat's preview; Mark as read there clears its count at once.
+  const peekChat = useConversationPeek();
+  const markRead = (id) => {
+    setConversations((list) => list.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)));
+    apiClient.post(`/messages/conversations/${id}/read`).catch(() => fetchConversations());
+  };
 
   const openChat = useCallback((id, params) => {
     router.push({ pathname: '/conversation/[id]', params: { id, ...params } });
@@ -126,13 +135,13 @@ function MessagesList() {
   const firstName = String(currentUser?.fullName || '').trim().split(/\s+/)[0];
   const empty = !loadingList && filtered.length === 0;
 
+  // iOS 26: the glass tab bar floats over the list; the last chats scroll clear of it.
+  const tabScroll = useTabBarScroll();
+
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      stickyHeaderIndices={[1]}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={styles.screen}>
+      {/* The bar is fixed at the top (as Home's search bar): the space above it
+          stays put and only the page under it scrolls. */}
       <InboxTopGap />
       <InboxPageHead title="Messages">
         <ShellBarButton label={searchOpen ? 'Close search' : 'Search chats'} onPress={toggleSearch} accessibilityState={{ expanded: searchOpen }}>
@@ -142,8 +151,13 @@ function MessagesList() {
         </ShellBarButton>
         <ShellPageMenu label="Chat options" items={menuItems} />
       </InboxPageHead>
-
-      <View style={styles.list}>
+    <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      {...tabScroll}
+    >
+      <View style={[styles.list, empty && styles.listGrow]}>
         {searchOpen || searchQuery ? (
           <View style={styles.search}>
             <MagnifyingGlassIcon size={16} color={t.neutral[500]} />
@@ -184,9 +198,9 @@ function MessagesList() {
           <ConversationListSkeleton />
         ) : empty ? (
           <EmptyState
+            page
             art="messages"
             icon={ChatTextIcon}
-            style={styles.empty}
             title={searchQuery
               ? `No chats match “${searchQuery}”`
               : unreadOnly ? 'No unread chats' : 'No conversations yet'}
@@ -201,11 +215,18 @@ function MessagesList() {
           />
         ) : (
           filtered.map((c) => (
-            <ConversationRow key={c.id} item={c} currentUserId={currentUser?.id} onPress={() => openChat(c.id)} />
+            <ConversationRow
+              key={c.id}
+              item={c}
+              currentUserId={currentUser?.id}
+              onPress={() => openChat(c.id)}
+              peek={peekChat(c, { currentUserId: currentUser?.id, onOpen: () => openChat(c.id), onMarkRead: () => markRead(c.id) })}
+            />
           ))
         )}
       </View>
     </ScrollView>
+    </View>
   );
 }
 
@@ -213,6 +234,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, paddingBottom: 16 },
   list: { paddingTop: 6 },
+  listGrow: { flexGrow: 1 },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, marginHorizontal: 12, marginBottom: 8,
     paddingHorizontal: 12, borderRadius: 10, backgroundColor: t.neutral[100],
@@ -227,5 +249,4 @@ const styles = StyleSheet.create({
     borderColor: t.primary[600], borderRadius: 999, backgroundColor: t.primary[50],
   },
   filterPillText: { fontSize: 13, lineHeight: 16, color: t.primary[700], ...font(400) },
-  empty: { minHeight: 420, marginTop: 0, marginHorizontal: 12, marginBottom: 16, paddingVertical: 48, paddingHorizontal: 24 },
 });

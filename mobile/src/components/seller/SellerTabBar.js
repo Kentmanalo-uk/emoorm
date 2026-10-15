@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatCircleDotsIcon, HouseIcon, MegaphoneIcon, PackageIcon, UserIcon } from 'phosphor-react-native';
 import { font, t } from '../../theme';
+import { GlassBackdrop, floatingTabBar, liquidGlass } from '../Glass';
+import { openAccountSheet } from '../AccountSheet';
 import { useSellerShell } from './SellerShell';
 
 // The tabs, by route name in app/seller/(tabs).
@@ -25,7 +27,12 @@ export default function SellerTabBar({ state, navigation }) {
   const current = state.routes[state.index]?.name;
 
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(8, insets.bottom) }]} accessibilityRole="tablist" accessibilityLabel="Seller sections">
+    <View
+      style={[styles.bar, liquidGlass && styles.barGlass, floatingTabBar && styles.barOver, { paddingBottom: Math.max(8, insets.bottom) }]}
+      accessibilityRole="tablist"
+      accessibilityLabel="Seller sections"
+    >
+      <GlassBackdrop radius={0} white={0.62} />
       {state.routes.filter((route) => TABS[route.name]).map((route) => {
         const { label, Icon, badge } = TABS[route.name];
         const active = route.name === current;
@@ -42,7 +49,12 @@ export default function SellerTabBar({ state, navigation }) {
             accessibilityState={{ selected: active }}
             accessibilityLabel={count ? `${label}, ${count} unread` : label}
             onPress={onPress}
-            onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
+            onLongPress={() => {
+              navigation.emit({ type: 'tabLongPress', target: route.key });
+              // Hold Me: the account sheet (switch account, log out).
+              if (route.name === 'menu') openAccountSheet();
+            }}
+            delayLongPress={350}
             style={styles.tab}
           >
             <View>
@@ -62,13 +74,15 @@ export default function SellerTabBar({ state, navigation }) {
 }
 
 const styles = StyleSheet.create({
+  // iOS 26: Liquid Glass behind the icons instead of the website's white.
+  barGlass: { backgroundColor: 'transparent' },
+  // iOS 26: over the bottom of the page, full width, so the page shows through.
+  barOver: { position: 'absolute', left: 0, right: 0, bottom: 0, boxShadow: undefined },
   bar: {
     flexDirection: 'row',
     minHeight: 68,
     paddingTop: 7,
     paddingHorizontal: 6,
-    borderTopWidth: 1,
-    borderTopColor: t.neutral[200],
     backgroundColor: 'rgba(255, 255, 255, 0.98)',
     boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: 'rgba(15, 23, 42, 0.08)' }],
   },
