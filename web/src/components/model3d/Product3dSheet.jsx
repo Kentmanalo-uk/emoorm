@@ -13,8 +13,12 @@ import './Product3dSheet.css';
 
 const SHAPE_WORDS = { jar: 'jar', bottle: 'bottle', box: 'box', pouch: 'pouch' };
 
+// Made in the seller's browser from the shop's own photos (not a preset shape).
+const isGenerated = (model) => model?.source === 'generated' || model?.shape === 'scan';
+
 const sizeLine = (model) => {
   const d = model?.dims || {};
+  if (isGenerated(model)) return [d.heightCm && `${d.heightCm} cm tall`, d.widthCm && `${d.widthCm} cm wide`].filter(Boolean).join(', ');
   if (model?.shape === 'box') return `${d.width} × ${d.height} × ${d.depth} cm`;
   if (model?.shape === 'pouch') return `${d.width} × ${d.height} cm`;
   if (d.height && d.diameter) return `${d.height} cm tall, ${d.diameter} cm across`;
@@ -43,7 +47,7 @@ export default function Product3dSheet({ model, name, onClose }) {
         <header className="p3d-head">
           <div className="p3d-title">
             <strong>{name}</strong>
-            <small>{[SHAPE_WORDS[model.shape] && `3D ${SHAPE_WORDS[model.shape]}`, sizeLine(model)].filter(Boolean).join(' · ')}</small>
+            <small>{[isGenerated(model) ? '3D model' : SHAPE_WORDS[model.shape] && `3D ${SHAPE_WORDS[model.shape]}`, sizeLine(model)].filter(Boolean).join(' · ')}</small>
           </div>
           <button type="button" className="p3d-close" onClick={onClose} aria-label="Close 3D view">
             <X size={20} weight="bold" />
@@ -59,6 +63,7 @@ export default function Product3dSheet({ model, name, onClose }) {
             onArChange={setArOk}
           />
         </div>
+        {isGenerated(model) && <p className="p3d-made">3D model made from the shop&apos;s photos</p>}
         <p className="p3d-hint">
           {arOk
             ? 'Drag to turn it, pinch to zoom. Tap View in your space to see it at its real size.'

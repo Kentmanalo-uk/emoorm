@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -10,6 +11,10 @@ const { ApiError } = require('../middleware/errorHandler');
  * and uploads two files: a GLB (Android Scene Viewer, WebXR and the web
  * viewer) and a USDZ (iPhone AR Quick Look). The product keeps the template
  * and the files' addresses in `model3d`.
+ *
+ * Or the browser generates the model from the seller's photos (no outside
+ * service: web/src/lib/model3d/generate); that record says source
+ * "generated" and its GLB is read here to check it is real 3D geometry.
  *
  * This file checks both halves: the uploaded bytes (inspectModelFile) and
  * the record a seller saves (validateModel3d).
@@ -84,13 +89,16 @@ const DIM_LABELS = {
 };
 
 /**
- * Check a 3D view a seller saves on a product.
- * @param {Object|null} input - { shape, dims, capColor?, glbUrl, usdzUrl, posterUrl?, labelUrls: { front, back? } }
- * @returns {Object|null} The record to store (null clears it)
+ * Check a 3D view a seller saves on a product: a shape template, or a model
+ * generated from the seller's photos (source "generated", shape "scan").
+ * @param {Object|null} input - template: { shape, dims, capColor?, glbUrl, usdzUrl, posterUrl?, labelUrls: { front, back? } };
+ *   generated: see validateGenerated
+ * @returns {Object|null|Promise<Object>} The record to store (null clears it)
  */
 const validateModel3d = (input) => {
   if (input === null) return null;
   if (typeof input !== 'object' || Array.isArray(input)) throw new ApiError('Check the 3D view', 400);
+  if (input.source === 'generated' || String(input.shape || '').toLowerCase() === 'scan') return validateGenerated(input);
 
   const shape = String(input.shape || '').toLowerCase();
   const spec = SHAPES[shape];
@@ -138,13 +146,18 @@ const validateModel3d = (input) => {
   return out;
 };
 
-/** What buyers get: the model and its size, not the seller's label photos. */
+/**
+ * What buyers get: the model and its size, not the seller's label photos,
+ * photos or cutout. A generated model says so (source), so the viewer can
+ * tell buyers it was made from the shop's photos.
+ */
 const publicModel3d = (model) => {
   if (!model || typeof model !== 'object' || !model.glbUrl) return null;
   const out = {
     shape: model.shape, dims: model.dims, glbUrl: model.glbUrl, usdzUrl: model.usdzUrl, updatedAt: model.updatedAt,
   };
   if (model.posterUrl) out.posterUrl = model.posterUrl;
+  if (model.source === 'generated') out.source = 'generated';
   return out;
 };
 
@@ -246,6 +259,178 @@ const inspectModelFile = async (filePath) => {
   return refuse('That file is not a 3D model we can use. Save the 3D view again.');
 };
 
+// ── What a GLB holds ────────────────────────────────────────────────────
+
+const mat4 = {
+  identity: () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+  // Column-major, as glTF stores them.
+  multiply: (a, b) => {
+    const out = new Array(16).fill(0);
+    for (let c = 0; c < 4; c += 1) {
+      for (let r = 0; r < 4; r += 1) {
+        for (let k = 0; k < 4; k += 1) out[c * 4 + r] += a[k * 4 + r] * b[c * 4 + k];
+      }
+    }
+    return out;
+  },
+  fromNode: (node) => {
+    if (Array.isArray(node.matrix) && node.matrix.length === 16) return node.matrix.map(Number);
+    const [tx, ty, tz] = Array.isArray(node.translation) ? node.translation : [0, 0, 0];
+    const [x, y, z, w] = Array.isArray(node.rotation) ? node.rotation : [0, 0, 0, 1];
+    const [sx, sy, sz] = Array.isArray(node.scale) ? node.scale : [1, 1, 1];
+    return [
+      (1 - 2 * (y * y + z * z)) * sx, (2 * (x * y + z * w)) * sx, (2 * (x * z - y * w)) * sx, 0,
+      (2 * (x * y - z * w)) * sy, (1 - 2 * (x * x + z * z)) * sy, (2 * (y * z + x * w)) * sy, 0,
+      (2 * (x * z + y * w)) * sz, (2 * (y * z - x * w)) * sz, (1 - 2 * (x * x + y * y)) * sz, 0,
+      tx, ty, tz, 1,
+    ];
+  },
+  apply: (m, [x, y, z]) => [
+    m[0] * x + m[4] * y + m[8] * z + m[12],
+    m[1] * x + m[5] * y + m[9] * z + m[13],
+    m[2] * x + m[6] * y + m[10] * z + m[14],
+  ],
+};
+
+/**
+ * What a GLB's JSON says about its geometry: triangles, vertices, whether
+ * it is coloured (a texture or vertex colours), and its outer size in
+ * metres from each mesh's POSITION min/max placed by its node.
+ * @param {Buffer} buf - a GLB that inspectGlb accepted
+ */
+const glbStats = (buf) => {
+  const json = JSON.parse(buf.toString('utf8', 20, 20 + buf.readUInt32LE(12)));
+  const accessors = Array.isArray(json.accessors) ? json.accessors : [];
+  const meshes = Array.isArray(json.meshes) ? json.meshes : [];
+  const nodes = Array.isArray(json.nodes) ? json.nodes : [];
+  const materials = Array.isArray(json.materials) ? json.materials : [];
+  const images = Array.isArray(json.images) ? json.images : [];
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  let triangles = 0;
+  let vertices = 0;
+  let coloured = false;
+  let placed = 0;
+
+  const visit = (index, parent, depth) => {
+    const node = nodes[index];
+    if (!node || depth > 32) return;
+    const world = mat4.multiply(parent, mat4.fromNode(node));
+    const mesh = Number.isInteger(node.mesh) ? meshes[node.mesh] : null;
+    for (const prim of mesh?.primitives || []) {
+      const position = accessors[prim?.attributes?.POSITION];
+      if (!position || !Number.isFinite(position.count)) continue;
+      const mode = prim.mode === undefined ? 4 : prim.mode;
+      vertices += position.count;
+      if (mode === 4) {
+        const index3 = Number.isInteger(prim.indices) ? accessors[prim.indices] : null;
+        triangles += Math.floor((index3 ? index3.count : position.count) / 3);
+      }
+      const material = Number.isInteger(prim.material) ? materials[prim.material] : null;
+      if (prim.attributes.COLOR_0 !== undefined) coloured = true;
+      if (material?.pbrMetallicRoughness?.baseColorTexture && images.length) coloured = true;
+      if (Array.isArray(position.min) && Array.isArray(position.max) && position.min.length === 3) {
+        for (const cx of [position.min[0], position.max[0]]) {
+          for (const cy of [position.min[1], position.max[1]]) {
+            for (const cz of [position.min[2], position.max[2]]) {
+              const p = mat4.apply(world, [cx, cy, cz]);
+              for (let a = 0; a < 3; a += 1) {
+                if (p[a] < min[a]) min[a] = p[a];
+                if (p[a] > max[a]) max[a] = p[a];
+              }
+            }
+          }
+        }
+        placed += 1;
+      }
+    }
+    for (const child of node.children || []) visit(child, world, depth + 1);
+  };
+  const scene = (json.scenes || [])[Number.isInteger(json.scene) ? json.scene : 0];
+  for (const root of scene?.nodes || []) visit(root, mat4.identity(), 0);
+  const size = placed ? max.map((v, a) => v - min[a]) : [0, 0, 0];
+  return {
+    triangles, vertices, coloured, size, meshes: meshes.length,
+  };
+};
+
+// ── Models generated from the seller's photos ───────────────────────────
+
+const GENERATED_STRATEGIES = ['lathe', 'inflate', 'hull'];
+const QUALITIES = ['good', 'fair', 'poor'];
+const GENERATED_RANGE = [1, 300];
+const MIN_TRIANGLES = 500;
+const MIN_DEPTH_SHARE = 0.04;
+
+/**
+ * A model the seller's browser made from their photos (web/src/lib/model3d/generate):
+ * { source: 'generated', shape: 'scan', strategy: lathe|inflate|hull,
+ *   dims: { heightCm, widthCm? }, glbUrl, usdzUrl, posterUrl?, cutoutUrl,
+ *   photoUrls: { front, side?, back? }, quality?: good|fair|poor }.
+ * The GLB itself is read and must be real 3D: enough triangles, depth
+ * (not a flat picture), coloured, and as tall as the seller said.
+ */
+const validateGenerated = async (input) => {
+  const strategy = String(input.strategy || '').toLowerCase();
+  if (!GENERATED_STRATEGIES.includes(strategy)) throw new ApiError('Say how the 3D model was made (lathe, inflate or hull)', 400);
+  const raw = input.dims && typeof input.dims === 'object' && !Array.isArray(input.dims) ? input.dims : {};
+  const dims = { heightCm: cm(raw.heightCm, GENERATED_RANGE, 'Height') };
+  if (raw.widthCm !== undefined && raw.widthCm !== null && raw.widthCm !== '') dims.widthCm = cm(raw.widthCm, GENERATED_RANGE, 'Width');
+
+  if (!ownUpload(input.glbUrl, GLB_FILE)) throw new ApiError('The 3D model (GLB) must be one of your uploads', 400);
+  if (!ownUpload(input.usdzUrl, USDZ_FILE)) throw new ApiError('The iPhone 3D model (USDZ) must be one of your uploads', 400);
+  if (!ownUpload(input.cutoutUrl, IMAGE_FILE)) throw new ApiError('The cut-out photo must be one of your uploads', 400);
+  const photos = input.photoUrls && typeof input.photoUrls === 'object' && !Array.isArray(input.photoUrls) ? input.photoUrls : {};
+  if (!ownUpload(photos.front, IMAGE_FILE)) throw new ApiError('Add the front photo the 3D model was made from', 400);
+  const photoUrls = { front: photos.front.trim() };
+  for (const key of ['side', 'back']) {
+    if (photos[key] === undefined || photos[key] === null || photos[key] === '') continue;
+    if (!ownUpload(photos[key], IMAGE_FILE)) throw new ApiError(`The ${key} photo must be an uploaded image`, 400);
+    photoUrls[key] = photos[key].trim();
+  }
+  if (strategy === 'hull' && !photoUrls.side) throw new ApiError('A model made from several photos needs its side photo', 400);
+
+  // The model itself.
+  let buf;
+  try {
+    buf = await fs.promises.readFile(path.join(config.upload.uploadDir, localPath(input.glbUrl).slice('/uploads/'.length)));
+  } catch {
+    throw new ApiError('The 3D model file was not found. Save the 3D view again.', 400);
+  }
+  if (!inspectGlb(buf).ok) throw new ApiError('The 3D model file is damaged. Save the 3D view again.', 400);
+  const stats = glbStats(buf);
+  const largest = Math.max(...stats.size);
+  const smallest = Math.min(...stats.size);
+  if (stats.triangles < MIN_TRIANGLES) throw new ApiError('That 3D model is too simple to be made from photos', 400);
+  if (!(largest > 0) || smallest < largest * MIN_DEPTH_SHARE) throw new ApiError('That 3D model is flat: it needs real depth', 400);
+  if (!stats.coloured) throw new ApiError('That 3D model has no colours from the photos', 400);
+  const heightM = dims.heightCm / 100;
+  if (Math.abs(stats.size[1] - heightM) > Math.max(0.005, heightM * 0.03)) {
+    throw new ApiError(`The 3D model is ${Math.round(stats.size[1] * 1000) / 10} cm tall, not ${dims.heightCm} cm. Save the 3D view again.`, 400);
+  }
+
+  const out = {
+    source: 'generated',
+    shape: 'scan',
+    strategy,
+    dims,
+    glbUrl: input.glbUrl.trim(),
+    usdzUrl: input.usdzUrl.trim(),
+    cutoutUrl: input.cutoutUrl.trim(),
+    photoUrls,
+  };
+  if (input.posterUrl !== undefined && input.posterUrl !== null && input.posterUrl !== '') {
+    if (!ownUpload(input.posterUrl, IMAGE_FILE)) throw new ApiError('The 3D preview picture must be an uploaded image', 400);
+    out.posterUrl = input.posterUrl.trim();
+  }
+  if (input.quality !== undefined && input.quality !== null) {
+    if (!QUALITIES.includes(input.quality)) throw new ApiError('The 3D quality must be good, fair or poor', 400);
+    out.quality = input.quality;
+  }
+  out.updatedAt = new Date().toISOString();
+  return out;
+};
+
 /** Whether a product of this kind can have a 3D view: goods kept in stock (packed food too). */
 const kindTakes3d = (kind) => kind === 'REGULAR';
 
@@ -259,5 +444,7 @@ module.exports = {
   inspectModelFile,
   inspectGlb,
   inspectUsdz,
+  glbStats,
+  validateGenerated,
   kindTakes3d,
 };

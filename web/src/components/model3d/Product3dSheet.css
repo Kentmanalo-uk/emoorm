@@ -83,6 +83,13 @@
   inset: 0;
 }
 
+.p3d-made {
+  margin: 10px 20px 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  font-weight: 400;
+}
+
 .p3d-hint {
   margin: 0;
   padding: 12px 20px 16px;

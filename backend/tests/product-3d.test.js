@@ -10,6 +10,7 @@ const zlib = require('zlib');
 const h = require('./helpers');
 const config = require('../src/config/env');
 const appSettingService = require('../src/services/appSetting.service');
+const { glbStats } = require('../src/utils/model3d');
 
 const stored = new Set();
 let wasOn = false;
@@ -314,4 +315,251 @@ test('buyers see the model while 3D views are on, and nothing when off', async (
     await appSettingService.update({ product3dEnabled: true });
   }
   assert.equal((await h.api('GET', `/products/slug/${item.slug}`)).body.data.model3d.glbUrl, files.glbUrl);
+});
+
+// ── Models generated from the seller's photos ───────────────────────────
+// Made in the seller's browser (no outside service): PUT stores one only
+// when its GLB is real 3D geometry, coloured, at the height given.
+
+/**
+ * A GLB of a closed lumpy solid (a UV sphere pushed out of round), `size`
+ * metres across (x, y, z), with a texture unless textured is false.
+ * flat: every z is 0 (a picture on a plane). rings x segments sets the
+ * triangle count (2 * rings * segments).
+ */
+function solidGlb({
+  size = [0.08, 0.2, 0.08], rings = 16, segments = 24, flat = false, textured = true, nodeScale = null,
+} = {}) {
+  const pos = [];
+  const uv = [];
+  for (let r = 0; r <= rings; r += 1) {
+    const v = r / rings;
+    const theta = v * Math.PI;
+    for (let s = 0; s <= segments; s += 1) {
+      const u = s / segments;
+      const phi = u * Math.PI * 2;
+      const bump = 1 + 0.12 * Math.sin(phi * 3) * Math.sin(theta * 2);
+      const x = Math.sin(theta) * Math.cos(phi) * bump;
+      const y = Math.cos(theta);
+      const z = flat ? 0 : Math.sin(theta) * Math.sin(phi) * bump;
+      pos.push(x, y, z);
+      uv.push(u, v);
+    }
+  }
+  // Scale to the size asked for (bounding box exactly `size`).
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i += 3) for (let a = 0; a < 3; a += 1) { min[a] = Math.min(min[a], pos[i + a]); max[a] = Math.max(max[a], pos[i + a]); }
+  for (let i = 0; i < pos.length; i += 3) {
+    for (let a = 0; a < 3; a += 1) {
+      const ext = max[a] - min[a];
+      pos[i + a] = ext > 0 ? ((pos[i + a] - min[a]) / ext - (a === 1 ? 0 : 0.5)) * size[a] : 0;
+    }
+  }
+  const idx = [];
+  for (let r = 0; r < rings; r += 1) {
+    for (let s = 0; s < segments; s += 1) {
+      const a = r * (segments + 1) + s;
+      const b = a + segments + 1;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+  }
+  const pMin = [Infinity, Infinity, Infinity];
+  const pMax = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i += 3) for (let a = 0; a < 3; a += 1) { pMin[a] = Math.min(pMin[a], pos[i + a]); pMax[a] = Math.max(pMax[a], pos[i + a]); }
+
+  const posBuf = Buffer.from(new Float32Array(pos).buffer);
+  const uvBuf = Buffer.from(new Float32Array(uv).buffer);
+  const idxBuf = Buffer.from(new Uint32Array(idx).buffer);
+  const pad4 = (b) => Buffer.concat([b, Buffer.alloc((4 - (b.length % 4)) % 4)]);
+  const parts = [posBuf, uvBuf, idxBuf, ...(textured ? [PNG] : [])].map(pad4);
+  const views = [];
+  let offset = 0;
+  for (const p of parts) { views.push({ buffer: 0, byteOffset: offset, byteLength: p.length }); offset += p.length; }
+  const bin = Buffer.concat(parts);
+  const doc = {
+    asset: { version: '2.0' },
+    buffers: [{ byteLength: bin.length }],
+    bufferViews: views,
+    accessors: [
+      {
+        bufferView: 0, componentType: 5126, count: pos.length / 3, type: 'VEC3', min: pMin, max: pMax,
+      },
+      { bufferView: 1, componentType: 5126, count: uv.length / 2, type: 'VEC2' },
+      { bufferView: 2, componentType: 5125, count: idx.length, type: 'SCALAR' },
+    ],
+    materials: [textured
+      ? { pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }
+      : { pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1] } }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0, TEXCOORD_0: 1 }, indices: 2, material: 0 }] }],
+    nodes: [{ children: [1], ...(nodeScale ? { scale: nodeScale } : {}) }, { mesh: 0 }],
+    scenes: [{ nodes: [0] }],
+    scene: 0,
+  };
+  if (textured) {
+    doc.images = [{ bufferView: 3, mimeType: 'image/png' }];
+    doc.textures = [{ source: 0 }];
+  }
+  let text = Buffer.from(JSON.stringify(doc));
+  text = Buffer.concat([text, Buffer.alloc((4 - (text.length % 4)) % 4, 0x20)]);
+  const chunk = (type, data) => {
+    const head = Buffer.alloc(8);
+    head.writeUInt32LE(data.length, 0);
+    head.write(type, 4, 'latin1');
+    return Buffer.concat([head, data]);
+  };
+  const body = Buffer.concat([chunk('JSON', text), chunk('BIN\0', bin)]);
+  const header = Buffer.alloc(12);
+  header.write('glTF', 0, 'latin1');
+  header.writeUInt32LE(2, 4);
+  header.writeUInt32LE(12 + body.length, 8);
+  return Buffer.concat([header, body]);
+}
+
+async function seller() {
+  const user = await h.user('SELLER');
+  const store = await h.shop(user);
+  return { user, store, token: h.token(user) };
+}
+
+async function upload(token, glbOptions) {
+  const g = await sendModel(token, solidGlb(glbOptions), 'p.glb', 'model/gltf-binary');
+  assert.equal(g.status, 200, JSON.stringify(g.body));
+  const u = await sendModel(token, usdz(), 'p.usdz', 'model/vnd.usdz+zip');
+  assert.equal(u.status, 200, JSON.stringify(u.body));
+  return { glbUrl: g.body.data.url, usdzUrl: u.body.data.url };
+}
+
+const generated = (files, extra = {}) => ({
+  source: 'generated',
+  shape: 'scan',
+  strategy: 'lathe',
+  dims: { heightCm: 20 },
+  glbUrl: files.glbUrl,
+  usdzUrl: files.usdzUrl,
+  posterUrl: '/uploads/poster-ci.webp',
+  cutoutUrl: '/uploads/cutout-ci.webp',
+  photoUrls: { front: '/uploads/front-ci.jpg' },
+  quality: 'good',
+  ...extra,
+});
+
+test('glbStats reads triangles, colour and the placed size of a GLB', () => {
+  const s = glbStats(solidGlb({ size: [0.1, 0.3, 0.05] }));
+  assert.equal(s.triangles, 2 * 16 * 24);
+  assert.equal(s.coloured, true);
+  assert.ok(Math.abs(s.size[0] - 0.1) < 1e-6 && Math.abs(s.size[1] - 0.3) < 1e-6 && Math.abs(s.size[2] - 0.05) < 1e-6, JSON.stringify(s.size));
+  // A node scale counts (the model's real size is what AR shows).
+  const scaled = glbStats(solidGlb({ size: [0.1, 0.3, 0.05], nodeScale: [2, 2, 2] }));
+  assert.ok(Math.abs(scaled.size[1] - 0.6) < 1e-6);
+  assert.equal(glbStats(solidGlb({ textured: false })).coloured, false);
+});
+
+test('a seller saves a 3D model generated from photos; buyers see it, marked as made from photos', async () => {
+  const s = await seller();
+  const item = await h.product(s.store);
+  const files = await upload(s.token);
+  const res = await put3d(s.token, item.id, generated(files, { dims: { heightCm: 20, widthCm: 8 }, photoUrls: { front: '/uploads/front-ci.jpg', back: '/uploads/back-ci.jpg' } }));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const saved = res.body.data.model3d;
+  assert.equal(saved.source, 'generated');
+  assert.equal(saved.shape, 'scan');
+  assert.equal(saved.strategy, 'lathe');
+  assert.deepEqual(saved.dims, { heightCm: 20, widthCm: 8 });
+  assert.equal(saved.cutoutUrl, '/uploads/cutout-ci.webp');
+  assert.deepEqual(saved.photoUrls, { front: '/uploads/front-ci.jpg', back: '/uploads/back-ci.jpg' });
+  assert.equal(saved.quality, 'good');
+
+  const shown = await h.api('GET', `/products/slug/${item.slug}`);
+  const m = shown.body.data.model3d;
+  assert.equal(m.source, 'generated');
+  assert.equal(m.glbUrl, files.glbUrl);
+  assert.deepEqual(m.dims, { heightCm: 20, widthCm: 8 });
+  assert.equal(m.photoUrls, undefined, 'the seller\'s photos are not sent to buyers');
+  assert.equal(m.cutoutUrl, undefined);
+  assert.equal(m.strategy, undefined);
+
+  // Replacing it with a template removes the generated model's files.
+  const files2 = await upload(s.token, { size: [0.08, 0.1, 0.08] });
+  const jar = {
+    shape: 'jar', dims: { height: 10, diameter: 8, lidHeight: 2 }, glbUrl: files2.glbUrl, usdzUrl: files2.usdzUrl, labelUrls: { front: '/uploads/front-ci.webp' },
+  };
+  assert.equal((await put3d(s.token, item.id, jar)).status, 200);
+  assert.equal(fs.existsSync(path.join(config.upload.uploadDir, path.basename(files.glbUrl))), false);
+});
+
+test('a generated model must be real 3D: flat, too simple, uncoloured or the wrong height is refused', async () => {
+  const s = await seller();
+  const item = await h.product(s.store);
+  const cases = [
+    ['a flat picture on a plane', { size: [0.08, 0.2, 0.08], flat: true }, /flat/],
+    ['too few triangles', { rings: 4, segments: 6 }, /too simple/],
+    ['no colours', { textured: false }, /no colours/],
+    ['the wrong height', { size: [0.08, 0.3, 0.08] }, /30 cm tall, not 20 cm/],
+    ['a sliver (depth under 4% of its height)', { size: [0.08, 0.2, 0.006] }, /flat/],
+  ];
+  for (const [what, options, message] of cases) {
+    const files = await upload(s.token, options);
+    const res = await put3d(s.token, item.id, generated(files));
+    assert.equal(res.status, 400, `${what}: ${JSON.stringify(res.body)}`);
+    assert.match(res.body.message, message, what);
+  }
+  const row = await h.prisma.product.findUnique({ where: { id: item.id }, select: { model3d: true } });
+  assert.equal(row.model3d, null, 'nothing was saved');
+});
+
+test('a generated record is checked field by field', async () => {
+  const s = await seller();
+  const item = await h.product(s.store);
+  const files = await upload(s.token);
+  const bad = [
+    generated(files, { strategy: 'template' }),
+    generated(files, { strategy: undefined }),
+    generated(files, { dims: {} }),
+    generated(files, { dims: { heightCm: 900 } }),
+    generated(files, { dims: { heightCm: 20, widthCm: 0 } }),
+    generated(files, { cutoutUrl: 'https://example.com/cut.png' }),
+    generated(files, { cutoutUrl: undefined }),
+    generated(files, { photoUrls: {} }),
+    generated(files, { photoUrls: { front: '/uploads/f.jpg', side: 'javascript:alert(1)' } }),
+    generated(files, { strategy: 'hull' }), // several photos need the side one
+    generated(files, { quality: 'perfect' }),
+    generated(files, { glbUrl: '/uploads/does-not-exist.glb' }),
+    generated(files, { glbUrl: 'https://example.com/m.glb' }),
+  ];
+  for (const model3d of bad) {
+    const res = await put3d(s.token, item.id, model3d);
+    assert.equal(res.status, 400, `${JSON.stringify(model3d)} → ${JSON.stringify(res.body)}`);
+  }
+  // Hull with its side photo is fine.
+  const hull = await put3d(s.token, item.id, generated(files, { strategy: 'hull', photoUrls: { front: '/uploads/f.jpg', side: '/uploads/s.jpg' } }));
+  assert.equal(hull.status, 200, JSON.stringify(hull.body));
+});
+
+test('generated models follow the same rules: own products, goods only, switch on', async () => {
+  const s = await seller();
+  const files = await upload(s.token);
+  const other = await seller();
+  const theirs = await h.product(other.store);
+  assert.equal((await put3d(s.token, theirs.id, generated(files))).status, 403);
+  const animal = await h.product(s.store, { productType: 'LIVESTOCK' });
+  assert.equal((await put3d(s.token, animal.id, generated(files))).status, 400);
+  const mine = await h.product(s.store);
+  await appSettingService.update({ product3dEnabled: false });
+  try {
+    assert.equal((await put3d(s.token, mine.id, generated(files))).status, 403);
+  } finally {
+    await appSettingService.update({ product3dEnabled: true });
+  }
+  // Saved with a new product, as the form does before the first save.
+  const created = await h.api('POST', '/products', {
+    token: s.token,
+    body: {
+      name: 'Ci Generated 3D', description: 'Made by the generated 3D tests.', price: 99, stock: 2, images: ['/uploads/ci-photo.webp'],
+      categoryId: (await h.reference()).category.id, model3d: generated(files),
+    },
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.equal(created.body.data.model3d.source, 'generated');
+  await h.prisma.product.update({ where: { id: created.body.data.id }, data: { deletedAt: new Date() } });
 });

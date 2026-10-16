@@ -585,8 +585,10 @@ export default function ProductForm({
     setModel3d(next);
     if (editing) onPatched?.(product.id, { model3d: next });
   };
-  const summary3d = model3d && SHAPES_3D[model3d.shape]
-    ? `${SHAPES_3D[model3d.shape].label} · ${Object.values(model3d.dims || {}).slice(0, 3).join(' × ')} cm · ${editing ? 'Saved' : 'Saved with the product'}`
+  const summary3d = model3d && (model3d.source === 'generated' || model3d.shape === 'scan')
+    ? `Made from your photos · ${model3d.dims?.heightCm} cm tall · ${editing ? 'Saved' : 'Saved with the product'}`
+    : model3d && SHAPES_3D[model3d.shape]
+    ? `Simple shape: ${SHAPES_3D[model3d.shape].label} · ${Object.values(model3d.dims || {}).slice(0, 3).join(' × ')} cm · ${editing ? 'Saved' : 'Saved with the product'}`
     : 'Let buyers turn it around, and see it in their room on phones that can';
 
   // The weight with packaging: couriers work out their fee from it.
