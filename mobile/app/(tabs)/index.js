@@ -19,7 +19,7 @@ import {
   BannerCarousel, FALLBACK_BANNERS, PromotionPopup, SideBanners,
 } from '../../src/components/home/HomeBanners';
 import {
-  CategoryStrip, HomeEmpty, HomeStoreCard, MunicipalityRail, SectionHeader,
+  CategoryStrip, HomeEmpty, HomeStoreRow, MunicipalityRail, SectionHeader,
 } from '../../src/components/home/HomeSections';
 import { font, t } from '../../src/theme';
 
@@ -289,9 +289,7 @@ export default function Home() {
         <View style={styles.listSection}>
           <SectionHeader title="Stores Near You" arrowLabel="View all stores" onArrow={() => router.push('/stores')} />
           {nearbyStores.length > 0 ? (
-            <View style={styles.storesGrid}>
-              {nearbyStores.map((store) => <HomeStoreCard key={store.id} store={store} />)}
-            </View>
+            <HomeStoreRow stores={nearbyStores} />
           ) : (
             <HomeEmpty
               art="stores"
@@ -384,7 +382,6 @@ const styles = StyleSheet.create({
   listSection: { paddingTop: 16, paddingBottom: 4, paddingHorizontal: 12 },
   exploreSection: { paddingBottom: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  storesGrid: { gap: 12 },
 
   // Under the grid: a spinner while the next batch loads, "Try again", or the end.
   exploreEnd: { minHeight: 56, alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 20 },

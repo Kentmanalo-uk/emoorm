@@ -271,46 +271,56 @@
   right: 0;
 }
 
-/* Carousel Dots */
+/* Carousel Dots: small white dots, the active one a short bar. Each dot is
+   a 24px target (WCAG 2.2) with the mark drawn inside. */
 .banner-dots {
+  --banner-dot: 6px;
+  --banner-bar: 20px;
   position: absolute;
-  bottom: 4px;
+  bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 0;
+  align-items: center;
   z-index: 10;
 }
 
-/* Each dot is a 24px target (WCAG 2.2); the dot itself is drawn inside. */
 .banner-dot {
   display: grid;
   place-items: center;
-  width: 24px;
+  width: 16px;
   height: 24px;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .banner-dot::before {
   content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.5);
-  transition: all 0.2s;
+  width: var(--banner-dot);
+  height: var(--banner-dot);
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 3px rgba(15, 23, 42, 0.25);
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s;
 }
 
 .banner-dot-active {
-  width: 32px;
+  width: calc(var(--banner-bar) + 10px);
 }
 
 .banner-dot-active::before {
-  width: 24px;
-  border-radius: 4px;
-  background-color: white;
+  width: var(--banner-bar);
+  background-color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner-dot,
+  .banner-dot::before {
+    transition: none;
+  }
 }
 
 /* Banner Sidebar */
@@ -674,126 +684,6 @@
   gap: 16px;
 }
 
-.home-stores-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.home-store-card {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  min-height: 132px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--t-neutral-0, #fff);
-}
-
-.home-store-main {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  align-items: center;
-  gap: 15px;
-  padding: 18px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.home-store-logo {
-  display: grid;
-  flex: 0 0 76px;
-  place-items: center;
-  width: 76px;
-  height: 76px;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-primary-600, #059669);
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.home-store-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.home-store-copy {
-  min-width: 0;
-}
-
-.home-store-main h3 {
-  margin: 0;
-  color: var(--t-secondary-950, #17231c);
-  font-size: 19px;
-  font-weight: 650;
-  line-height: 1.2;
-}
-
-.home-store-main p {
-  margin: 3px 0 0;
-  color: var(--t-neutral-500, #64748b);
-  font-size: 12.5px;
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.home-store-products {
-  display: flex;
-  flex: 0 0 155px;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 12px;
-  padding: 18px;
-}
-
-.home-store-product-stack {
-  display: flex;
-  justify-content: flex-end;
-  min-height: 46px;
-  padding-left: 20px;
-}
-
-.home-store-product-stack img,
-.home-store-product-empty {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  margin-left: -12px;
-  border: 3px solid var(--t-neutral-0, #fff);
-  border-radius: 50%;
-  background: var(--t-neutral-100, #f1f5f3);
-  color: var(--t-neutral-500, #636b78);
-  object-fit: cover;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, .1);
-}
-
-.home-store-product-stack> :first-child {
-  margin-left: 0;
-}
-
-.home-store-view-products {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--t-primary-700, #047857);
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.home-store-view-products:hover {
-  color: var(--t-primary-800, #065f46);
-}
-
 .home-explore-section {
   background: var(--t-neutral-50, #f7f7f7);
 }
@@ -867,7 +757,6 @@
   text-decoration: none;
   transition: box-shadow 0.15s ease;
 }
-
 
 .product-card .product-image {
   position: relative;
@@ -978,7 +867,6 @@
   text-decoration: none;
   transition: all 0.2s ease;
 }
-
 
 .store-image {
   position: relative;
@@ -1168,7 +1056,6 @@
   text-decoration: underline;
 }
 
-
 @media (max-width: 1024px) {
   .banner-grid {
     grid-template-columns: 1fr;
@@ -1242,7 +1129,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     height: auto;
   }
-
 
   @media (max-width: 480px) {
 
@@ -1378,8 +1264,7 @@
     }
 
     .products-section .products-grid,
-    .stores-grid,
-    .home-stores-grid {
+    .stores-grid {
       grid-template-columns: repeat(2, 1fr);
     }
   }
@@ -1393,36 +1278,8 @@
       height: 220px;
     }
 
-    .home-stores-grid {
-      grid-template-columns: 1fr;
-    }
-
     .home-explore-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .home-store-card {
-      align-items: stretch;
-      flex-direction: column;
-    }
-
-    .home-store-main {
-      padding: 14px 14px 8px;
-    }
-
-    .home-store-logo {
-      flex-basis: 64px;
-      width: 64px;
-      height: 64px;
-    }
-
-    .home-store-products {
-      width: 100%;
-      flex: none;
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 14px 14px;
     }
 
     .banner-sidebar {
@@ -1492,44 +1349,31 @@
 
 /* ── Mobile (≤768px / ≤480px) ── */
 @media (max-width: 768px) {
-  /* Carousel controls: small round buttons (not stretched by the global
-     44px button min-height) and slim dots. */
+  /* Phones: no arrows (a swipe moves the slides) and a smaller pill of
+     dots (not stretched by the global 44px button min-height). */
   .banner-control {
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
-    border-radius: 50%;
-    background-color: rgba(0, 0, 0, 0.28);
+    display: none;
   }
 
-  .banner-control-prev {
-    left: 8px;
-  }
-
-  .banner-control-next {
-    right: 8px;
+  .banner-carousel {
+    touch-action: pan-y;
   }
 
   .banner-dots {
-    bottom: 2px;
+    --banner-dot: 5px;
+    --banner-bar: 16px;
+    bottom: 4px;
   }
 
   .banner-dot {
-    min-width: 24px;
-    min-height: 24px;
-  }
-
-  .banner-dot::before {
-    width: 6px;
-    height: 6px;
+    width: 12px;
+    min-width: 12px;
+    height: 20px;
+    min-height: 20px;
   }
 
   .banner-dot-active {
-    width: 26px;
-  }
-
-  .banner-dot-active::before {
-    width: 18px;
+    width: calc(var(--banner-bar) + 8px);
   }
 
   /* The two side banners become a compact 2-up row under the carousel. */
@@ -1677,50 +1521,6 @@
     transform: none;
   }
 
-  /* Stores near you */
-  .home-stores-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .home-store-card {
-    min-height: 0;
-    border-radius: 12px;
-  }
-
-  .home-store-main h3 {
-    overflow: hidden;
-    font-size: 16px;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .home-store-product-stack img,
-  .home-store-product-empty {
-    width: 36px;
-    height: 36px;
-    margin-left: -10px;
-    border-width: 2px;
-    box-shadow: 0 1px 4px rgba(15, 23, 42, .1);
-  }
-
-  /* Hide alt text of product thumbs that fail to load. */
-  .home-store-product-stack img {
-    font-size: 0;
-    color: transparent;
-  }
-
-  .home-store-product-stack {
-    min-height: 36px;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .home-store-view-products {
-    min-height: 36px;
-  }
-
   /* Municipalities rail */
   .municipality-rail {
     gap: 12px;
@@ -1829,28 +1629,6 @@
 
   .municipality-rail {
     padding-right: 12px;
-  }
-
-  /* Store cards: logo + name on top, product thumbs + link below. */
-  .home-store-main {
-    gap: 12px;
-    padding: 14px 14px 6px;
-  }
-
-  .home-store-logo {
-    flex-basis: 52px;
-    width: 52px;
-    height: 52px;
-    font-size: 16px;
-  }
-
-  .home-store-products {
-    gap: 12px;
-    padding: 6px 14px 14px;
-  }
-
-  .home-store-product-stack {
-    padding-left: 10px;
   }
 
   .banner-section ~ .products-section .products-grid {
@@ -2030,4 +1808,230 @@
 
 .banner-sidebar .banner-card-image img {
   transform: scale(1.03);
+}
+
+/* Stores Near You: a shop window. A strip of the shop's product photos on
+   top (one large and two small, or its cover when it has none), the logo
+   overlapping the strip's edge, then the name, place and a footer with the
+   product count and the link. Three across on desktop, two on tablets, a
+   side-scrolling row on phones. */
+.home-stores-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-store-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.home-store-media {
+  display: grid;
+  gap: 2px;
+  height: 150px;
+  overflow: hidden;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-300, #6ee7b7);
+}
+
+.home-store-media.is-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.home-store-media.is-3 {
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.home-store-media.is-3> :first-child {
+  grid-row: span 2;
+}
+
+.home-store-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  /* Hide alt text of photos that fail to load. */
+  font-size: 0;
+  color: transparent;
+}
+
+/* No photos yet: the shop's own logo, soft and large, fills the strip. */
+.home-store-media img.home-store-media-blur {
+  filter: blur(22px) saturate(1.15);
+  opacity: 0.85;
+  transform: scale(1.35);
+}
+
+.home-store-media-empty {
+  display: grid;
+  place-items: center;
+}
+
+.home-store-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 0 16px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.home-store-logo {
+  display: grid;
+  position: relative;
+  flex: 0 0 60px;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-top: -30px;
+  overflow: hidden;
+  border: 3px solid var(--t-neutral-0, #fff);
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-600, #059669);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.home-store-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-store-copy {
+  min-width: 0;
+  padding-top: 10px;
+}
+
+.home-store-main h3 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--t-secondary-950, #17231c);
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-store-main p {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-store-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding: 14px 16px 16px;
+}
+
+.home-store-count {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.home-store-view-products {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--t-primary-700, #047857);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.home-store-view-products:hover {
+  color: var(--t-primary-800, #065f46);
+}
+
+@media (max-width: 1024px) {
+  .home-stores-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Phones: one row that scrolls sideways, the next card peeking in. */
+@media (max-width: 768px) {
+  .home-stores-grid {
+    grid-template-columns: none;
+    grid-auto-columns: 78%;
+    grid-auto-flow: column;
+    gap: 12px;
+    margin: 0 -16px;
+    padding: 0 16px 4px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding: 0 16px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .home-stores-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-store-card {
+    scroll-snap-align: start;
+  }
+
+  .home-store-media {
+    height: 128px;
+  }
+
+  .home-store-main {
+    padding: 0 14px;
+  }
+
+  .home-store-logo {
+    flex-basis: 52px;
+    width: 52px;
+    height: 52px;
+    margin-top: -26px;
+    font-size: 15px;
+  }
+
+  .home-store-copy {
+    padding-top: 8px;
+  }
+
+  .home-store-main h3 {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .home-store-foot {
+    padding: 12px 14px 14px;
+  }
+
+  .home-store-view-products {
+    min-height: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-stores-grid {
+    margin: 0 -12px;
+    padding: 0 12px 4px;
+    scroll-padding: 0 12px;
+  }
 }

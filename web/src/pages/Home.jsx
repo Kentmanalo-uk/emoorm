@@ -168,6 +168,22 @@ const Home = () => {
     setCurrentIndex((prev) => prev - 1);
   };
 
+  // Phones: a sideways swipe moves a slide (the arrows are hidden there).
+  const swipeRef = useRef(null);
+  const onSwipeStart = (e) => {
+    const t = e.touches[0];
+    swipeRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onSwipeEnd = (e) => {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(t.clientY - start.y) * 1.5) return;
+    if (dx < 0) handleNext(); else handlePrev();
+  };
+
   const goToSlide = (index) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
@@ -362,7 +378,7 @@ const Home = () => {
         <div className="container">
           <div className="banner-grid">
             {/* Left: Carousel */}
-            <div className="banner-carousel">
+            <div className="banner-carousel" onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
               <div
                 className="banner-carousel-inner"
                 style={{
@@ -751,33 +767,44 @@ function HomeStoreCard({ store }) {
       const image = Array.isArray(product.images) ? product.images[0] : product.images;
       return image ? { id: product.id, name: product.name, src: resolveImg(image) || image } : null;
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, 3);
+  const cover = store.coverImage || store.bannerImage;
+  const town = store.municipality?.name;
+  const address = store.pickupAddress || '';
+  // The town once, even when the address already ends with it.
+  const place = (town && address.toLowerCase().includes(town.toLowerCase())
+    ? address
+    : [address, town].filter(Boolean).join(', ')) || 'Oriental Mindoro';
+  const count = store._count?.products || 0;
+  const to = `/store/${store.slug}`;
+  const fallback = (e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder-product.png'; };
 
   return (
     <article className="home-store-card" {...peekStore(store)}>
-      <Link to={`/store/${store.slug}`} className="home-store-main">
+      <Link to={to} className={`home-store-media is-${productImages.length || 1}`} tabIndex={-1} aria-hidden="true">
+        {productImages.length > 0 ? productImages.map((image) => (
+          <img key={image.id} src={image.src} alt="" loading="lazy" onError={fallback} />
+        )) : cover ? (
+          <img src={resolveImg(cover) || cover} alt="" loading="lazy" onError={fallback} />
+        ) : store.logo ? (
+          <img className="home-store-media-blur" src={resolveImg(store.logo) || store.logo} alt="" loading="lazy" />
+        ) : (
+          <span className="home-store-media-empty"><Storefront size={28} /></span>
+        )}
+      </Link>
+      <Link to={to} className="home-store-main">
         <div className="home-store-logo">
           {store.logo ? <img src={resolveImg(store.logo) || store.logo} alt={`${store.name} logo`} /> : <span>{initials}</span>}
         </div>
         <div className="home-store-copy">
           <h3>{store.name}</h3>
-          <p>{[store.pickupAddress, store.municipality?.name].filter(Boolean).join(', ') || 'Oriental Mindoro'}</p>
+          <p>{place}</p>
         </div>
       </Link>
-      <div className="home-store-products">
-        <div className="home-store-product-stack" aria-hidden="true">
-          {productImages.length > 0 ? productImages.map((image) => (
-            <img
-              key={image.id}
-              src={image.src}
-              alt=""
-              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder-product.png'; }}
-            />
-          )) : (
-            <span className="home-store-product-empty"><Storefront size={18} /></span>
-          )}
-        </div>
-        <Link to={`/store/${store.slug}`} className="home-store-view-products">
+      <div className="home-store-foot">
+        <span className="home-store-count">{count === 0 ? 'No products yet' : count === 1 ? '1 product' : `${count} products`}</span>
+        <Link to={to} className="home-store-view-products">
           View products <ArrowRight size={15} />
         </Link>
       </div>

@@ -3,14 +3,14 @@ import {
   Animated, BackHandler, Easing, Image, Linking, PanResponder, Platform, Pressable, StyleSheet, View, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretLeftIcon, CaretRightIcon, XIcon } from 'phosphor-react-native';
+import { XIcon } from 'phosphor-react-native';
 import { appPath } from '../../lib/notificationLink';
 import { t } from '../../theme';
 
 /*
  * Home's banner block on phones (web/src/pages/Home.jsx + Home.css):
- * the carousel (16:9, edge to edge, round arrows and slim dots, a new slide
- * every 5s), the two side banners as a 2-up row under it, and the
+ * the carousel (16:9, edge to edge, swiped sideways, small dots with the
+ * active one a short bar, a new slide every 5s), the two side banners as a 2-up row under it, and the
  * once-per-visit promotion popup.
  */
 
@@ -121,39 +121,25 @@ export function BannerCarousel({ banners }) {
         ))}
       </Animated.View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Previous banner"
-        onPress={() => goTo(index - 1)}
-        style={[styles.control, styles.controlPrev]}
-      >
-        <CaretLeftIcon size={20} color="#fff" />
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Next banner"
-        onPress={() => goTo(index + 1)}
-        style={[styles.control, styles.controlNext]}
-      >
-        <CaretRightIcon size={20} color="#fff" />
-      </Pressable>
-
-      <View style={styles.dots} pointerEvents="box-none">
-        {banners.map((_, i) => {
-          const active = realIndex === i;
-          return (
-            <Pressable
-              key={i}
-              accessibilityRole="button"
-              accessibilityLabel={`Show banner ${i + 1} of ${count}`}
-              accessibilityState={{ selected: active }}
-              onPress={() => goTo(i + 1)}
-              style={[styles.dot, active && styles.dotActiveTarget]}
-            >
-              <View style={[styles.dotMark, active && styles.dotMarkActive]} />
-            </Pressable>
-          );
-        })}
+      <View style={styles.dotsRow} pointerEvents="box-none">
+        <View style={styles.dots}>
+          {banners.map((_, i) => {
+            const active = realIndex === i;
+            return (
+              <Pressable
+                key={i}
+                accessibilityRole="button"
+                accessibilityLabel={`Show banner ${i + 1} of ${count}`}
+                accessibilityState={{ selected: active }}
+                onPress={() => goTo(i + 1)}
+                hitSlop={{ top: 6, bottom: 6 }}
+                style={[styles.dot, active && styles.dotActiveTarget]}
+              >
+                <View style={[styles.dotMark, active && styles.dotMarkActive]} />
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -291,20 +277,16 @@ const styles = StyleSheet.create({
   track: { flexDirection: 'row', height: '100%' },
   slideImage: { width: '100%', height: '100%' },
 
-  // Small round arrows, 8px in from the edges.
-  control: {
-    position: 'absolute', top: '50%', marginTop: -16, width: 32, height: 32, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.28)',
+  // Small white dots, the active one a short bar (Home.css .banner-dots).
+  dotsRow: { position: 'absolute', bottom: 4, left: 0, right: 0, alignItems: 'center' },
+  dots: { flexDirection: 'row', alignItems: 'center' },
+  dot: { width: 12, height: 20, alignItems: 'center', justifyContent: 'center' },
+  dotActiveTarget: { width: 24 },
+  dotMark: {
+    width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 3, color: 'rgba(15, 23, 42, 0.25)' }],
   },
-  controlPrev: { left: 8 },
-  controlNext: { right: 8 },
-
-  // Each dot is a 24px target; the dot itself is drawn inside.
-  dots: { position: 'absolute', bottom: 2, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center' },
-  dot: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-  dotActiveTarget: { width: 26 },
-  dotMark: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255, 255, 255, 0.5)' },
-  dotMarkActive: { width: 18, borderRadius: 4, backgroundColor: '#fff' },
+  dotMarkActive: { width: 16, backgroundColor: '#fff' },
 
   // Phones: two banners side by side, 4px apart, square corners.
   // 7px under the carousel (the grid's 0.5rem gap at the phone's 14px root).

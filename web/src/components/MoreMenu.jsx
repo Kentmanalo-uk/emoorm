@@ -4,7 +4,7 @@ import { DotsThree } from '@phosphor-icons/react';
 import './MoreMenu.css';
 
 // As long as the panel's shrink-back in MoreMenu.css: it stays mounted till then.
-const CLOSE_MS = 180;
+const CLOSE_MS = 200;
 
 // Row icons: larger, with thinner lines (a filled icon, e.g. a saved heart, stays filled).
 const rowIcon = (icon) => (isValidElement(icon)
@@ -12,9 +12,9 @@ const rowIcon = (icon) => (isValidElement(icon)
   : icon);
 
 /**
- * The "⋯" button with a small pop-over menu. The menu grows out of the
- * button's corner on a soft spring when it opens, its rows sliding in one
- * after another, and shrinks back into that corner when it closes (the
+ * The "⋯" button with a small pop-over menu. The menu eases out of the
+ * button's corner when it opens (no spring, no bounce), its rows fading in
+ * one after another, and eases back into that corner when it closes (the
  * app's menuMotion). It closes when you pick an item, tap outside it, or
  * press Escape.
  *
