@@ -66,7 +66,7 @@ export function runGenerator(input, onProgress) {
   };
   worker.onerror = (e) => {
     finish();
-    const err = new Error('The 3D maker stopped unexpectedly. Try again.');
+    const err = new Error('Something went wrong. Try again.');
     err.code = 'failed';
     err.detail = e?.message;
     settle.reject(err);
@@ -101,6 +101,210 @@ export function runGenerator(input, onProgress) {
   };
 }
 
+/* ── A 360° video ── */
+
+const VIDEO_MB = 1024 * 1024;
+export const VIDEO_LIMITS = { maxBytes: 200 * VIDEO_MB, maxSeconds: 62, minSeconds: 2 };
+const VIDEO_TYPES = /\.(mp4|m4v|mov|webm|mkv|3gp)$/i;
+
+const videoError = (code, message) => Object.assign(new Error(message), { code });
+const UNREADABLE = 'This video can\'t be read here. Try recording again or another format.';
+
+/**
+ * How much to take from a video on this device: fewer frames, a coarser
+ * grid and a smaller texture where memory is short (navigator.deviceMemory,
+ * in GB, where the browser tells).
+ */
+export function videoPlan() {
+  const mem = typeof navigator !== 'undefined' ? navigator.deviceMemory : undefined;
+  const low = typeof mem === 'number' && mem < 4;
+  return {
+    count: low ? 24 : 36,
+    resolution: typeof mem === 'number' && mem >= 6 ? 160 : 128,
+    atlas: low ? 1536 : 2048,
+  };
+}
+
+/** Wait for one of the element's events (or fail on 'error' / after `ms`). */
+const once = (el, event, ms) => new Promise((resolve, reject) => {
+  let timer = null;
+  const done = (fn, v) => {
+    clearTimeout(timer);
+    el.removeEventListener(event, ok);
+    el.removeEventListener('error', bad);
+    fn(v);
+  };
+  const ok = () => done(resolve);
+  const bad = () => done(reject, videoError('unreadable', UNREADABLE));
+  el.addEventListener(event, ok);
+  el.addEventListener('error', bad);
+  timer = setTimeout(() => done(reject, videoError('unreadable', UNREADABLE)), ms);
+});
+
+/** A video element on the file (in this page only), its metadata read. */
+async function openVideo(file) {
+  if (!file) throw videoError('unreadable', UNREADABLE);
+  if (file.size > VIDEO_LIMITS.maxBytes) throw videoError('too-big', 'Video too large. Keep it under 200 MB.');
+  if (file.type && !file.type.startsWith('video/') && !VIDEO_TYPES.test(file.name || '')) throw videoError('unreadable', UNREADABLE);
+  const url = URL.createObjectURL(file);
+  const el = document.createElement('video');
+  el.muted = true;
+  el.playsInline = true;
+  el.setAttribute('playsinline', '');
+  el.preload = 'auto';
+  const close = () => {
+    el.removeAttribute('src');
+    try { el.load(); } catch { /* gone already */ }
+    URL.revokeObjectURL(url);
+  };
+  try {
+    const meta = once(el, 'loadedmetadata', 15000);
+    el.src = url;
+    await meta;
+    if (!el.videoWidth || !el.videoHeight) throw videoError('unreadable', UNREADABLE);
+    let duration = el.duration;
+    if (!Number.isFinite(duration)) {
+      // Some recordings don't say how long they are until the end is looked for.
+      const found = once(el, 'durationchange', 8000).catch(() => {});
+      el.currentTime = 1e7;
+      await found;
+      duration = el.duration;
+      el.currentTime = 0;
+    }
+    if (!Number.isFinite(duration) || duration <= 0) throw videoError('unreadable', UNREADABLE);
+    if (duration > VIDEO_LIMITS.maxSeconds) throw videoError('too-long', 'Video too long. Keep it under 60 s.');
+    if (duration < VIDEO_LIMITS.minSeconds) throw videoError('too-short', 'The video is too short. Record a slow circle.');
+    return { el, duration, close };
+  } catch (err) {
+    close();
+    throw err;
+  }
+}
+
+/** A chosen video's length (seconds), read here; throws with a plain reason when it can't be used. */
+export async function probeVideo(file) {
+  const v = await openVideo(file);
+  v.close();
+  return { duration: v.duration };
+}
+
+/**
+ * Frames evenly spaced through a video, read in this page one at a time
+ * (seek, wait for the frame, draw it small) and handed on at once, so they
+ * are never all held here. Nothing is uploaded.
+ * @param {File} file
+ * @param {{ count, edge, onFrame: (index, { width, height, data }) => void, stopped: () => boolean }} options
+ */
+export async function readVideoFrames(file, {
+  count, edge = 512, onFrame, stopped = () => false,
+}) {
+  const { el, duration, close } = await openVideo(file);
+  try {
+    // Some phones decode nothing until the video has played once.
+    try { await el.play(); el.pause(); } catch { /* seeking still works */ }
+    const scale = Math.min(1, edge / Math.max(el.videoWidth, el.videoHeight));
+    const width = Math.max(1, Math.round(el.videoWidth * scale));
+    const height = Math.max(1, Math.round(el.videoHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const frameShown = () => new Promise((resolve) => {
+      let finished = false;
+      const end = () => { if (!finished) { finished = true; resolve(); } };
+      if (typeof el.requestVideoFrameCallback === 'function') el.requestVideoFrameCallback(end);
+      setTimeout(end, 250);
+    });
+    for (let i = 0; i < count; i += 1) {
+      if (stopped()) return;
+      const t = Math.min(duration - 0.05, ((i + 0.5) / count) * duration);
+      const seeked = once(el, 'seeked', 8000);
+      const shown = frameShown();
+      el.currentTime = Math.max(0, t);
+      await seeked;
+      await shown;
+      if (stopped()) return;
+      ctx.drawImage(el, 0, 0, width, height);
+      const { data } = ctx.getImageData(0, 0, width, height);
+      onFrame(i, { width, height, data });
+    }
+  } catch (err) {
+    if (err.code) throw err;
+    throw videoError('unreadable', UNREADABLE);
+  } finally {
+    close();
+  }
+}
+
+/**
+ * A 360° video to a carved 3D model: frames read here, carved in a Web
+ * Worker (video/pipeline.js). Nothing leaves the device.
+ * @param {File} file
+ * @param {Function} onProgress - ({ stage, label, progress, done?, total? })
+ * @returns {{ promise: Promise<object>, cancel: Function }}
+ */
+export function runVideoGenerator(file, onProgress) {
+  const plan = videoPlan();
+  const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+  let settle;
+  let over = false;
+  const promise = new Promise((resolve, reject) => {
+    settle = { resolve, reject };
+  });
+  const finish = () => { over = true; worker.terminate(); };
+  // Reading takes the first fifth of the bar, the carving the rest.
+  const READ = 20;
+  worker.onmessage = ({ data }) => {
+    if (over) return;
+    if (data.type === 'progress') {
+      onProgress?.({ ...data, progress: READ + Math.round((data.progress || 0) * ((100 - READ) / 100)) });
+    } else if (data.type === 'done') {
+      finish();
+      settle.resolve(data.result);
+    } else if (data.type === 'error') {
+      finish();
+      settle.reject(Object.assign(new Error(data.message), { code: data.code, detail: data.detail }));
+    }
+  };
+  worker.onerror = (e) => {
+    if (over) return;
+    finish();
+    settle.reject(Object.assign(new Error('Something went wrong. Try again.'), { code: 'failed', detail: e?.message }));
+  };
+  worker.postMessage({ id: 1, type: 'video-begin', count: plan.count });
+  onProgress?.({
+    stage: 'read', label: 'Reading video…', progress: 1, done: 0, total: plan.count,
+  });
+  readVideoFrames(file, {
+    count: plan.count,
+    stopped: () => over,
+    onFrame: (index, frame) => {
+      if (over) return;
+      const data = frame.data;
+      worker.postMessage({ id: 1, type: 'video-frame', index, frame: { width: frame.width, height: frame.height, data } }, [data.buffer]);
+      onProgress?.({
+        stage: 'read', label: 'Reading video…', progress: Math.round(((index + 1) / plan.count) * READ), done: index + 1, total: plan.count,
+      });
+    },
+  }).then(() => {
+    if (over) return;
+    worker.postMessage({ id: 1, type: 'video-run', options: { resolution: plan.resolution, atlas: plan.atlas } });
+  }).catch((err) => {
+    if (over) return;
+    finish();
+    settle.reject(err);
+  });
+  return {
+    promise,
+    plan,
+    cancel: () => {
+      if (over) return;
+      finish();
+      settle.reject(Object.assign(new Error('Stopped.'), { code: 'cancelled' }));
+    },
+  };
+}
+
 /**
  * A cutout session for fixing a photo's cutout: the worker prepares the
  * photo once (superpixels, cues), then each refine (taps, a box, brush
@@ -119,13 +323,13 @@ export function openCutout(photo) {
     waiting.delete(data.id);
     if (data.type === 'cutout') job.resolve(data);
     else {
-      const err = new Error(data.message || 'The cutout could not be made.');
+      const err = new Error(data.message || 'Couldn\'t cut it out.');
       err.code = data.code;
       job.reject(err);
     }
   };
   worker.onerror = () => {
-    for (const job of waiting.values()) job.reject(new Error('The cutout tool stopped unexpectedly. Try again.'));
+    for (const job of waiting.values()) job.reject(new Error('Something went wrong. Try again.'));
     waiting.clear();
   };
   const ask = (message, transfer = []) => new Promise((resolve, reject) => {
@@ -276,14 +480,14 @@ export async function buildGeneratedFiles(result, options) {
     const expected = sizeOf(group);
     const glbBuffer = await exportGlb(group, { maxTextureSize: 2048 });
     const glbCheck = await checkGlb(glbBuffer, expected);
-    if (!glbCheck.ok) throw new Error(`The 3D model came out wrong (${glbCheck.problem || 'empty'}). Please try again.`);
+    if (!glbCheck.ok) throw new Error(`The 3D file came out wrong (${glbCheck.problem || 'empty'}). Try again.`);
     const back = await readBack(glbBuffer);
-    if (back.triangles < 500 || !back.textured) throw new Error('The 3D model lost its shape or its colours when saved. Please try again.');
+    if (back.triangles < 500 || !back.textured) throw new Error('The 3D file lost its shape. Try again.');
     const usdzBuffer = await exportUsdz(group, { maxTextureSize: 1024 });
     const usdzCheck = checkUsdz(usdzBuffer);
-    if (!usdzCheck.ok) throw new Error(`The iPhone 3D file came out wrong (${usdzCheck.problem}). Please try again.`);
+    if (!usdzCheck.ok) throw new Error(`The iPhone file came out wrong (${usdzCheck.problem}). Try again.`);
     if (glbBuffer.byteLength > FILE_LIMIT || usdzBuffer.byteLength > FILE_LIMIT) {
-      throw new Error('The 3D files came out too large. Try again with smaller photos.');
+      throw new Error('3D files too large. Try smaller photos.');
     }
     const poster = await renderPoster(group);
     return {

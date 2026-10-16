@@ -133,6 +133,9 @@ app.use(helmet({
         "'self'", 'blob:', 'https://psgc.gitlab.io', 'https://router.project-osrm.org', ...GOOGLE_HOSTS, ...MAP_TILES,
         ...(config.cdn.url ? [config.cdn.url] : []),
       ],
+      // blob: the seller's own 360° video, read in the page to make its 3D
+      // view (it is never uploaded).
+      mediaSrc: ["'self'", 'blob:'],
       frameSrc: ["'self'", 'https://accounts.google.com', 'https://www.google.com'],
       // Nothing on this site belongs in someone else's frame.
       frameAncestors: ["'none'"],

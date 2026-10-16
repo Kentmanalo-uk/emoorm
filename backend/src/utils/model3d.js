@@ -354,41 +354,53 @@ const glbStats = (buf) => {
   };
 };
 
-// ── Models generated from the seller's photos ───────────────────────────
+// ── Models generated from the seller's photos or video ──────────────────
 
-const GENERATED_STRATEGIES = ['lathe', 'inflate', 'hull'];
+const GENERATED_STRATEGIES = ['lathe', 'inflate', 'hull', 'video'];
 const QUALITIES = ['good', 'fair', 'poor'];
 const GENERATED_RANGE = [1, 300];
 const MIN_TRIANGLES = 500;
 const MIN_DEPTH_SHARE = 0.04;
 
 /**
- * A model the seller's browser made from their photos (web/src/lib/model3d/generate):
- * { source: 'generated', shape: 'scan', strategy: lathe|inflate|hull,
- *   dims: { heightCm, widthCm? }, glbUrl, usdzUrl, posterUrl?, cutoutUrl,
- *   photoUrls: { front, side?, back? }, quality?: good|fair|poor }.
+ * A model the seller's browser made from their photos or a 360° video
+ * (web/src/lib/model3d/generate):
+ * { source: 'generated', shape: 'scan', strategy: lathe|inflate|hull|video,
+ *   dims: { heightCm, widthCm? }, glbUrl, usdzUrl, posterUrl?,
+ *   views? (photos or video frames used), coverage? (degrees round, video),
+ *   quality?: good|fair|poor }.
+ * Only the model files and the poster are kept: the seller's photos, video
+ * frames and cutouts never leave their device. photoUrls / cutoutUrl sent
+ * by an older page are ignored (not stored); records saved before this
+ * keep theirs and still read fine.
  * The GLB itself is read and must be real 3D: enough triangles, depth
  * (not a flat picture), coloured, and as tall as the seller said.
  */
 const validateGenerated = async (input) => {
   const strategy = String(input.strategy || '').toLowerCase();
-  if (!GENERATED_STRATEGIES.includes(strategy)) throw new ApiError('Say how the 3D model was made (lathe, inflate or hull)', 400);
+  if (!GENERATED_STRATEGIES.includes(strategy)) throw new ApiError('Say how the 3D model was made (lathe, inflate, hull or video)', 400);
   const raw = input.dims && typeof input.dims === 'object' && !Array.isArray(input.dims) ? input.dims : {};
   const dims = { heightCm: cm(raw.heightCm, GENERATED_RANGE, 'Height') };
   if (raw.widthCm !== undefined && raw.widthCm !== null && raw.widthCm !== '') dims.widthCm = cm(raw.widthCm, GENERATED_RANGE, 'Width');
 
   if (!ownUpload(input.glbUrl, GLB_FILE)) throw new ApiError('The 3D model (GLB) must be one of your uploads', 400);
   if (!ownUpload(input.usdzUrl, USDZ_FILE)) throw new ApiError('The iPhone 3D model (USDZ) must be one of your uploads', 400);
-  if (!ownUpload(input.cutoutUrl, IMAGE_FILE)) throw new ApiError('The cut-out photo must be one of your uploads', 400);
-  const photos = input.photoUrls && typeof input.photoUrls === 'object' && !Array.isArray(input.photoUrls) ? input.photoUrls : {};
-  if (!ownUpload(photos.front, IMAGE_FILE)) throw new ApiError('Add the front photo the 3D model was made from', 400);
-  const photoUrls = { front: photos.front.trim() };
-  for (const key of ['side', 'back']) {
-    if (photos[key] === undefined || photos[key] === null || photos[key] === '') continue;
-    if (!ownUpload(photos[key], IMAGE_FILE)) throw new ApiError(`The ${key} photo must be an uploaded image`, 400);
-    photoUrls[key] = photos[key].trim();
+  // How many photos or frames it was made from, and (video) how far round.
+  const given = (v) => v !== undefined && v !== null && v !== '';
+  const whole = (v, [min, max], message) => {
+    const n = Number(v);
+    if (typeof v === 'boolean' || !Number.isInteger(n) || n < min || n > max) throw new ApiError(message, 400);
+    return n;
+  };
+  let views = null;
+  let coverage = null;
+  if (strategy === 'video') {
+    views = whole(input.views, [8, 120], 'A video model needs its frame count (8 to 120)');
+    coverage = whole(input.coverage, [30, 360], 'A video model needs how far round it went (30 to 360 degrees)');
+  } else if (given(input.views)) {
+    views = whole(input.views, [1, 3], 'A model from photos uses 1 to 3 photos');
   }
-  if (strategy === 'hull' && !photoUrls.side) throw new ApiError('A model made from several photos needs its side photo', 400);
+  if (strategy === 'hull' && views !== null && views < 2) throw new ApiError('A model made from several photos needs at least 2', 400);
 
   // The model itself.
   let buf;
@@ -416,9 +428,9 @@ const validateGenerated = async (input) => {
     dims,
     glbUrl: input.glbUrl.trim(),
     usdzUrl: input.usdzUrl.trim(),
-    cutoutUrl: input.cutoutUrl.trim(),
-    photoUrls,
   };
+  if (views !== null) out.views = views;
+  if (coverage !== null) out.coverage = coverage;
   if (input.posterUrl !== undefined && input.posterUrl !== null && input.posterUrl !== '') {
     if (!ownUpload(input.posterUrl, IMAGE_FILE)) throw new ApiError('The 3D preview picture must be an uploaded image', 400);
     out.posterUrl = input.posterUrl.trim();

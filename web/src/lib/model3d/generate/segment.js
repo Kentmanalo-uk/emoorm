@@ -47,9 +47,9 @@ export class SegmentError extends Error {
 }
 
 export const SEGMENT_MESSAGES = {
-  'no-object': 'We couldn\'t find the object. Use a plain background and keep the whole object in the photo.',
-  'cut-off': 'The object seems cut off at the edges of the photo. Step back so the whole object is in the frame.',
-  cluttered: 'There is too much going on behind the object. Put it on a plain background (a wall, a sheet of paper or a cloth) and try again.',
+  'no-object': 'Couldn\'t find the object. Try a plainer background.',
+  'cut-off': 'The object is cut off. Fit all of it in the photo.',
+  cluttered: 'Background too busy. Try a plainer one.',
 };
 
 const WORK_EDGE = 352;
@@ -89,7 +89,7 @@ function gradientOf(lab, w, h) {
  * fixes the cutout).
  * @param {{ width, height, data }} img - RGBA, about 512 px on the long side
  */
-export function prepareCutout(img) {
+export function prepareCutout(img, { light = false } = {}) {
   const t0 = now();
   const W = img.width;
   const H = img.height;
@@ -98,7 +98,7 @@ export function prepareCutout(img) {
   const h = work.height;
   const labW = toLab(work);
   const sp = slic(labW, w, h, { count: SUPERPIXELS });
-  const cues = computeCues(sp, sharpnessMap(labW, w, h));
+  const cues = computeCues(sp, sharpnessMap(labW, w, h), { light });
   // A few pixels of each region, for the colour models.
   const K = sp.count;
   const samplesOf = new Int32Array(K * PER).fill(-1);
@@ -499,7 +499,7 @@ function refinePixels(st, cut, hardMask) {
  * superpixel cut: pixel colour models, the superpixel bias as a prior,
  * and 4-neighbour contrast-sensitive smoothing; 3 rounds.
  */
-function pixelGrabcut(st, cut, box, hardMask, hardFg = null, hardBg = null) {
+function pixelGrabcut(st, cut, box, hardMask, hardFg = null, hardBg = null, rounds = 2) {
   const {
     W, H, w, h, sp, lab,
   } = st;
@@ -533,7 +533,7 @@ function pixelGrabcut(st, cut, box, hardMask, hardFg = null, hardBg = null) {
     if (x + 1 < W) { const j = i + 1; right[i] = LAMBDA * Math.exp(-st.beta * ((lab[i * 3] - lab[j * 3]) ** 2 + (lab[i * 3 + 1] - lab[j * 3 + 1]) ** 2 + (lab[i * 3 + 2] - lab[j * 3 + 2]) ** 2)); }
     if (i + W < W * H) { const j = i + W; down[i] = LAMBDA * Math.exp(-st.beta * ((lab[i * 3] - lab[j * 3]) ** 2 + (lab[i * 3 + 1] - lab[j * 3 + 1]) ** 2 + (lab[i * 3 + 2] - lab[j * 3 + 2]) ** 2)); }
   }
-  for (let round = 0; round < 2; round += 1) {
+  for (let round = 0; round < rounds; round += 1) {
     if (round > 0) {
       const pick = (want) => sampleLab(lab, W * H, (i) => (want ? mask[i] === 1 : mask[i] === 0 && (inside[i] || (i % 3 === 0))), 12000);
       const fgS = pick(true); const bgS = pick(false);
@@ -691,7 +691,9 @@ const iouOf = (a, b) => {
  * @returns {{ mask, box, area, holes, confidence, lowConfidence, report }}
  * @throws {SegmentError} no-object
  */
-export function cutout(st, { taps = [], box = null, overrides = null } = {}) {
+export function cutout(st, {
+  taps = [], box = null, overrides = null, fast = false,
+} = {}) {
   const t0 = now();
   const { sp, W, H } = st;
   const K = sp.count;
@@ -857,7 +859,7 @@ export function cutout(st, { taps = [], box = null, overrides = null } = {}) {
   const rivalsFrom = (box || taps.length) ? [] : results;
   // The best, finished at full size.
   const top = results[0];
-  let mask = PIXEL_MODE === 'grabcut' ? pixelGrabcut(st, top.cut, top.box, overrides, hardFg, hardBg) : refinePixels(st, top.cut, overrides);
+  let mask = PIXEL_MODE === 'grabcut' ? pixelGrabcut(st, top.cut, top.box, overrides, hardFg, hardBg, fast ? 1 : 2) : refinePixels(st, top.cut, overrides);
   if (box) {
     for (let y = 0; y < H; y += 1) {
       for (let x = 0; x < W; x += 1) {

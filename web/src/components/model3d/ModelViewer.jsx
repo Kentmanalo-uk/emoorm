@@ -103,12 +103,12 @@ export default function ModelViewer({
       {failed ? (
         <div className="m3d-state">
           <Cube size={30} aria-hidden="true" />
-          <span>The 3D view could not load.</span>
+          <span>Couldn&apos;t load 3D.</span>
         </div>
       ) : (!ready || (!loaded && !poster)) && (
         <div className="m3d-state" aria-live="polite">
           <CircleNotch size={26} className="m3d-spin" aria-hidden="true" />
-          <span>Loading 3D view…</span>
+          <span>Loading 3D…</span>
         </div>
       )}
     </div>

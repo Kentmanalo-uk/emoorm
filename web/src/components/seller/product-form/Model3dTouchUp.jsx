@@ -20,16 +20,17 @@ import {
 const loadGenerator = () => import('../../../lib/model3d/generate/index.js');
 const MASK_EDGE = 512;
 const BRUSH = [
-  { key: 's', label: 'Small', r: 5 },
-  { key: 'm', label: 'Medium', r: 12 },
-  { key: 'l', label: 'Large', r: 24 },
+  { key: 's', label: 'S', aria: 'Small brush', r: 5 },
+  { key: 'm', label: 'M', aria: 'Medium brush', r: 12 },
+  { key: 'l', label: 'L', aria: 'Large brush', r: 24 },
 ];
 
+// One line for the tool in hand.
 const HINTS = {
-  add: 'Tap the object, or a part of it that is missing.',
-  remove: 'Tap anything that isn\'t the object.',
-  box: 'Drag a box around the object.',
-  brush: 'Paint over a stubborn bit. Last resort: tap and box are quicker.',
+  add: 'Tap the object.',
+  remove: 'Tap what isn\'t the object.',
+  box: 'Drag a box around it.',
+  brush: 'Paint over the wrong bit.',
 };
 
 /**
@@ -201,7 +202,7 @@ export default function Model3dTouchUp({
       if (err.code === 'cancelled') return;
       // Keep what was there and say why.
       current.current = history.current.pop() || current.current;
-      setError(err.message || 'That didn\'t work. Try another tap.');
+      setError(err.message || 'Didn\'t work. Tap again.');
     } finally {
       setStatus('ready');
       redraw();
@@ -296,46 +297,46 @@ export default function Model3dTouchUp({
   };
 
   const tools = [
-    { key: 'add', label: 'Add', icon: PlusCircle },
-    { key: 'remove', label: 'Remove', icon: MinusCircle },
-    { key: 'box', label: 'Draw around', icon: BoundingBox },
+    { key: 'add', label: 'Add', aria: 'Add: tap the object', icon: PlusCircle },
+    { key: 'remove', label: 'Remove', aria: 'Remove: tap what isn\'t the object', icon: MinusCircle },
+    { key: 'box', label: 'Draw', aria: 'Draw around the object', icon: BoundingBox },
   ];
 
   return createPortal(
-    <div className="m3d-touch" role="dialog" aria-modal="true" aria-label="Fix the cutout">
+    <div className="m3d-touch" role="dialog" aria-modal="true" aria-label="Fix the cutout: the bright part, outlined in green, becomes the 3D model">
       <div className="m3d-touch-backdrop" onClick={() => onDone(null)} aria-hidden="true" />
       <div className="m3d-touch-panel">
         <header className="m3d-touch-head">
-          <div>
-            <strong>Fix the cutout{title !== 'front' ? ` (${title} photo)` : ''}</strong>
-            <small>Bright, with the green outline, is what becomes the 3D model.</small>
-          </div>
+          <strong>Fix cutout{title !== 'front' ? ` · ${title}` : ''}</strong>
           <button type="button" className="m3d-touch-close" onClick={() => onDone(null)} aria-label="Close without changes">
             <X size={20} weight="bold" />
           </button>
         </header>
 
         <div className="m3d-touch-tools m3d-touch-tools--main" role="toolbar" aria-label="Fix the cutout">
-          {tools.map(({ key, label, icon: Icon }) => (
+          {tools.map(({
+            key, label, aria, icon: Icon,
+          }) => (
             <button
               key={key}
               type="button"
+              aria-label={aria}
               aria-pressed={tool === key}
               className={`m3d-tool${tool === key ? ' is-on' : ''}`}
               onClick={() => setTool(key)}
             >
-              <Icon size={22} weight={tool === key ? 'fill' : 'regular'} />
+              <Icon size={20} weight={tool === key ? 'fill' : 'regular'} aria-hidden="true" />
               <span>{label}</span>
             </button>
           ))}
-          <button type="button" className="m3d-tool" onClick={undo} disabled={!snap.canUndo || status === 'updating'}>
-            <ArrowCounterClockwise size={22} />
+          <button type="button" className="m3d-tool" onClick={undo} disabled={!snap.canUndo || status === 'updating'} aria-label="Undo the last change">
+            <ArrowCounterClockwise size={20} aria-hidden="true" />
             <span>Undo</span>
           </button>
         </div>
 
         <p className={`m3d-touch-hint${error ? ' is-error' : ''}`} aria-live="polite">
-          {error || (status === 'opening' ? 'Getting the photo ready…' : HINTS[tool])}
+          {error || (status === 'opening' ? 'Getting ready…' : HINTS[tool])}
         </p>
 
         <div className="m3d-touch-stage">
@@ -355,7 +356,7 @@ export default function Model3dTouchUp({
           )}
           {(status === 'updating' || status === 'opening') && img && (
             <span className="m3d-stage-busy m3d-touch-busy">
-              <CircleNotch size={16} className="m3d-spin" aria-hidden="true" /> {status === 'opening' ? 'Getting ready' : 'Updating'}
+              <CircleNotch size={16} className="m3d-spin" aria-label={status === 'opening' ? 'Getting ready' : 'Updating'} />
             </span>
           )}
         </div>
@@ -367,21 +368,21 @@ export default function Model3dTouchUp({
             className={`m3d-seg-btn${tool === 'brush' ? ' is-on' : ''}`}
             onClick={() => setTool(tool === 'brush' ? 'add' : 'brush')}
           >
-            <PaintBrush size={16} /> Brush
+            <PaintBrush size={15} aria-hidden="true" /> Brush
           </button>
           {tool === 'brush' && (
             <>
               <div className="m3d-seg" role="radiogroup" aria-label="Brush paints">
-                <button type="button" role="radio" aria-checked={brushAdd} className={`m3d-seg-btn${brushAdd ? ' is-on' : ''}`} onClick={() => setBrushAdd(true)}>
-                  <HandTap size={16} /> Object
+                <button type="button" role="radio" aria-checked={brushAdd} aria-label="Paint object" className={`m3d-seg-btn${brushAdd ? ' is-on' : ''}`} onClick={() => setBrushAdd(true)}>
+                  <HandTap size={15} aria-hidden="true" /> Add
                 </button>
-                <button type="button" role="radio" aria-checked={!brushAdd} className={`m3d-seg-btn${!brushAdd ? ' is-on' : ''}`} onClick={() => setBrushAdd(false)}>
-                  <Eraser size={16} /> Background
+                <button type="button" role="radio" aria-checked={!brushAdd} aria-label="Paint background" className={`m3d-seg-btn${!brushAdd ? ' is-on' : ''}`} onClick={() => setBrushAdd(false)}>
+                  <Eraser size={15} aria-hidden="true" /> Erase
                 </button>
               </div>
               <div className="m3d-seg" role="radiogroup" aria-label="Brush size">
                 {BRUSH.map((b) => (
-                  <button key={b.key} type="button" role="radio" aria-checked={size === b.key} className={`m3d-seg-btn${size === b.key ? ' is-on' : ''}`} onClick={() => setSize(b.key)}>
+                  <button key={b.key} type="button" role="radio" aria-checked={size === b.key} aria-label={b.aria} className={`m3d-seg-btn${size === b.key ? ' is-on' : ''}`} onClick={() => setSize(b.key)}>
                     {b.label}
                   </button>
                 ))}
@@ -395,7 +396,7 @@ export default function Model3dTouchUp({
             Start over
           </button>
           <button type="button" className="pf-btn pf-btn--primary" onClick={done} disabled={!img || !snap.hasMask || status === 'updating'}>
-            Use this cutout
+            Use this
           </button>
         </div>
       </div>

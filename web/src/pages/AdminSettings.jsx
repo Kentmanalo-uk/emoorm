@@ -543,8 +543,8 @@ export default function AdminSettings() {
       <Row
         label="3D views of products"
         help={brandingForm.product3dEnabled === true
-          ? 'On: sellers can add a 3D view to goods, made on their device from their own photos (or a simple jar, bottle, box or pouch), and buyers can turn it around and see it in their room on phones that can.'
-          : 'Off: the 3D tool is hidden from sellers and buyers see photos only. 3D views already made are kept for when it is back on.'}
+          ? 'On: sellers can add 3D views; buyers can turn them and see them in AR.'
+          : 'Off: 3D views are hidden; saved ones are kept.'}
       >
         <label className="st-toggle">
           <input

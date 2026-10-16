@@ -82,7 +82,12 @@ export function sharpnessMap(lab, width, height) {
 }
 
 /** The cues that don't depend on where the seller tapped (computed once per photo). */
-export function computeCues(sp, focus) {
+/**
+ * @param {object} [options]
+ * @param {Boolean} [options.light] - skip boundary connectivity (the slow,
+ *   all-pairs part): for a cut guided by a box, as video frames are
+ */
+export function computeCues(sp, focus, { light = false } = {}) {
   const K = sp.count;
   const { edges } = sp;
 
@@ -92,8 +97,8 @@ export function computeCues(sp, focus) {
   const appWeight = new Float64Array(edges.count);
   for (let e = 0; e < edges.count; e += 1) appWeight[e] = colourDist(sp, edges.from[e], edges.to[e]);
   const bndCon = new Float64Array(K);
-  const geo = new Float32Array(K * K);
-  for (let p = 0; p < K; p += 1) {
+  const geo = new Float32Array(light ? 0 : K * K);
+  for (let p = 0; p < (light ? 0 : K); p += 1) {
     // Beyond 3.5 sigma a region adds nothing to the sums.
     const d = dijkstra(sp, [[p, 0]], appWeight, 3.5 * SIGMA_CLR);
     let area = 0; let len = 0;
@@ -106,7 +111,10 @@ export function computeCues(sp, focus) {
     }
     bndCon[p] = len / Math.sqrt(Math.max(area, 1e-6));
   }
-  const bgProb = Float64Array.from(bndCon, (b) => 1 - Math.exp(-(b * b) / 2));
+  // Light: touching the border is the background guess instead.
+  const bgProb = light
+    ? Float64Array.from(sp.border, (b) => (b > 0 ? 0.9 : 0.3))
+    : Float64Array.from(bndCon, (b) => 1 - Math.exp(-(b * b) / 2));
 
   // Uniqueness and background-weighted contrast, in one pass over the
   // pairs (each pair's spatial weight and colour distance computed once).

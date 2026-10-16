@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { CaretDown } from '@phosphor-icons/react';
 import Model3dFromPhotos from './Model3dFromPhotos';
+import Model3dFromVideo from './Model3dFromVideo';
 import SimpleShapeEditor from './Model3dSimple';
 import './Model3dEditor.css';
 
 /*
  * The product's "3D view", two ways:
  *
- *  - Make 3D from photos (the main way): the object's own shape, found in
- *    the seller's photos and built in this browser (Model3dFromPhotos).
+ *  - Made from the object itself (the main way), in this browser: from
+ *    photos (Model3dFromPhotos) or from one slow 360° video round it
+ *    (Model3dFromVideo), picked with the switch at the top.
  *  - Simple shape instead: a preset jar, bottle, box or pouch with the
  *    label photo put on it (Model3dSimple). Kept in its own fold and
  *    labelled for what it is: it is never presented as made from photos.
@@ -17,6 +19,11 @@ import './Model3dEditor.css';
  */
 
 const isGenerated = (m) => !!m && (m.source === 'generated' || m.shape === 'scan');
+const isVideo = (m) => isGenerated(m) && m.strategy === 'video';
+const MODES = [
+  { key: 'photos', label: 'Photos' },
+  { key: 'video', label: '360° video' },
+];
 
 /**
  * @param {Object|null} value - the product's model3d (as saved)
@@ -29,19 +36,45 @@ export default function Model3dEditor({
 }) {
   const simple = value && !isGenerated(value) ? value : null;
   const [simpleOpen, setSimpleOpen] = useState(!!simple);
+  const [mode, setMode] = useState(isVideo(value) ? 'video' : 'photos');
+  const generated = isGenerated(value) ? value : null;
 
   return (
     <div className="m3d-ways">
-      <section className="m3d-way" aria-labelledby="m3d-way-photos">
-        <h3 className="m3d-way-title" id="m3d-way-photos">Make 3D from photos</h3>
-        <Model3dFromPhotos
-          key={isGenerated(value) ? value.glbUrl : 'none'}
-          value={isGenerated(value) ? value : null}
-          hasSimple={!!simple}
-          productId={productId}
-          productName={productName}
-          onChange={onChange}
-        />
+      <section className="m3d-way" aria-label={mode === 'video' ? '3D from a 360° video' : '3D from photos'}>
+        <div className="m3d-seg m3d-mode" role="radiogroup" aria-label="Make it from">
+          {MODES.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              role="radio"
+              aria-checked={mode === m.key}
+              className={`m3d-seg-btn${mode === m.key ? ' is-on' : ''}`}
+              onClick={() => setMode(m.key)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+        {mode === 'video' ? (
+          <Model3dFromVideo
+            key={isVideo(value) ? value.glbUrl : 'none'}
+            value={isVideo(value) ? value : null}
+            replaces={!!value && !isVideo(value)}
+            productId={productId}
+            productName={productName}
+            onChange={onChange}
+          />
+        ) : (
+          <Model3dFromPhotos
+            key={generated && !isVideo(generated) ? generated.glbUrl : 'none'}
+            value={generated && !isVideo(generated) ? generated : null}
+            hasSimple={!!simple || isVideo(value)}
+            productId={productId}
+            productName={productName}
+            onChange={onChange}
+          />
+        )}
       </section>
 
       <section className={`m3d-way m3d-way--simple${simpleOpen ? ' is-open' : ''}`}>
@@ -52,13 +85,10 @@ export default function Model3dEditor({
           aria-controls="m3d-simple-body"
           onClick={() => setSimpleOpen((v) => !v)}
         >
-          <span>
-            <strong>Simple shape instead (jar, bottle, box, pouch)</strong>
-            <small>
-              {simple
-                ? 'Saved on this product now.'
-                : 'Not made from your photos: a plain shape in your sizes with your label photo on it.'}
-            </small>
+          <span className="m3d-way-toggle-title">
+            <strong>Simple shape</strong>
+            <em className="m3d-tag" aria-label="Not made from your photos: a jar, bottle, box or pouch with your label on it">Not from photos</em>
+            {simple && <em className="m3d-tag m3d-tag--on">Saved</em>}
           </span>
           <CaretDown size={18} aria-hidden="true" />
         </button>

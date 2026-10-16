@@ -585,11 +585,12 @@ export default function ProductForm({
     setModel3d(next);
     if (editing) onPatched?.(product.id, { model3d: next });
   };
+  // A few words when there is one; nothing when not.
   const summary3d = model3d && (model3d.source === 'generated' || model3d.shape === 'scan')
-    ? `Made from your photos · ${model3d.dims?.heightCm} cm tall · ${editing ? 'Saved' : 'Saved with the product'}`
+    ? `From photos · ${model3d.dims?.heightCm} cm`
     : model3d && SHAPES_3D[model3d.shape]
-    ? `Simple shape: ${SHAPES_3D[model3d.shape].label} · ${Object.values(model3d.dims || {}).slice(0, 3).join(' × ')} cm · ${editing ? 'Saved' : 'Saved with the product'}`
-    : 'Let buyers turn it around, and see it in their room on phones that can';
+      ? `${SHAPES_3D[model3d.shape].label} · simple shape`
+      : '';
 
   // The weight with packaging: couriers work out their fee from it.
   const weightField = (
@@ -869,7 +870,7 @@ export default function ProductForm({
               <span className="pf-more-toggle-title">
                 <Cube size={19} className="pf-3d-icon" aria-hidden="true" /> 3D view <em className="pf-opt">Optional</em>
               </span>
-              <small>{summary3d}</small>
+              {summary3d && <small>{summary3d}</small>}
             </span>
             <CaretDown size={20} className="pf-more-caret" aria-hidden="true" />
           </button>

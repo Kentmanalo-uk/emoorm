@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  Camera, CircleNotch, Cube, Info, Trash, X,
+  Camera, CircleNotch, Cube, Trash, X,
 } from '@phosphor-icons/react';
 import axios from '../../../lib/axios';
 import { resolveImg } from '../../../lib/media';
@@ -178,7 +178,7 @@ export default function SimpleShapeEditor({
         previewUrl.current = url;
         setPreview({ url, busy: false, error: '' });
       } catch (err) {
-        if (!cancelled) setPreview((p) => ({ ...p, busy: false, error: err.message || 'The preview could not be made.' }));
+        if (!cancelled) setPreview((p) => ({ ...p, busy: false, error: err.message || 'Couldn\'t show the preview.' }));
       }
     }, 450);
     return () => { cancelled = true; clearTimeout(timer); };
@@ -193,11 +193,11 @@ export default function SimpleShapeEditor({
 
   const save = async () => {
     setTried(true);
-    if (!shape) { toast.error('Pick a shape first.'); return; }
-    if (!sizeOk) { toast.error('Check the sizes marked in red.'); return; }
-    if (!front) { toast.error('Add a photo of the front label.'); return; }
+    if (!shape) { toast.error('Pick a shape.'); return; }
+    if (!sizeOk) { toast.error('Check the sizes.'); return; }
+    if (!front) { toast.error('Add a front label photo.'); return; }
     try {
-      setStep('Making the 3D model…');
+      setStep('Making…');
       const m = await loadGenerator();
       const [f, b] = await Promise.all([bitmapOf(front), bitmapOf(back)]);
       const files = await m.buildModelFiles({
@@ -232,9 +232,9 @@ export default function SimpleShapeEditor({
         saved = res?.data?.model3d || model3d;
       }
       onChange?.(saved);
-      toast.success(productId ? 'Simple shape saved. Buyers see it on the product page now.' : 'Simple shape ready. It is saved with the product.');
+      toast.success(productId ? 'Simple shape saved.' : 'Saved with the product.');
     } catch (err) {
-      toast.error(err.message || 'Could not save the 3D view. Please try again.');
+      toast.error(err.message || 'Couldn\'t save. Try again.');
     } finally {
       setStep('');
     }
@@ -251,19 +251,19 @@ export default function SimpleShapeEditor({
       setFront(null);
       setBack(null);
       setTried(false);
-      toast.success('3D view removed from the product.');
+      toast.success('3D view removed.');
     } catch (err) {
-      toast.error(err.message || 'Could not remove the 3D view.');
+      toast.error(err.message || 'Couldn\'t remove it.');
     } finally {
       setStep('');
     }
   };
 
   return (
-    <div className="m3d-ed">
+    <div className={`m3d-ed${shape ? '' : ' is-idle'}`}>
       <div className="m3d-ed-controls">
         <div className="pf-field">
-          <span className="pf-label" id="m3d-shape-label">What shape is it?</span>
+          <span className="pf-label" id="m3d-shape-label">Shape</span>
           <div className="m3d-shapes" role="radiogroup" aria-labelledby="m3d-shape-label">
             {SHAPE_KEYS.map((key) => (
               <button
@@ -277,7 +277,6 @@ export default function SimpleShapeEditor({
               >
                 <ShapeIcon shape={key} />
                 <strong>{SHAPES[key].label}</strong>
-                <small>{SHAPES[key].hint}</small>
               </button>
             ))}
           </div>
@@ -286,11 +285,7 @@ export default function SimpleShapeEditor({
         {spec && (
           <>
             <div className="pf-field">
-              <span className="pf-label">Size in cm</span>
-              <p className="m3d-tip">
-                <Info size={16} aria-hidden="true" />
-                <span>Measure the real product with a ruler. Buyers see it at this size in their room.</span>
-              </p>
+              <span className="pf-label">Size (cm)</span>
               <div className={`m3d-dims m3d-dims--${spec.fields.length}`}>
                 {spec.fields.map((f) => (
                   <label key={f.key} className={`m3d-dim${errors[f.key] ? ' is-invalid' : ''}`} htmlFor={`m3d-${f.key}`}>
@@ -340,15 +335,11 @@ export default function SimpleShapeEditor({
 
             <div className="pf-field">
               <span className="pf-label">Label photos</span>
-              <p className="m3d-tip">
-                <Camera size={16} aria-hidden="true" />
-                <span>Take the photo straight on, label filling the frame. Good light, no glare.</span>
-              </p>
               <div className="m3d-labels">
                 <LabelPicker
                   id="m3d-front"
-                  title="Front label"
-                  hint="Add the front"
+                  title="Front"
+                  hint="Add"
                   value={front}
                   onPick={pick('front')}
                   required
@@ -356,48 +347,50 @@ export default function SimpleShapeEditor({
                 />
                 <LabelPicker
                   id="m3d-back"
-                  title="Back label"
-                  hint="Add the back"
+                  title="Back"
+                  hint="Add"
                   value={back}
                   onPick={pick('back')}
                   onClear={back ? () => setBack(null) : null}
                 />
               </div>
-              {tried && !front && <p className="pf-error" role="alert">Add a photo of the front label.</p>}
+              {tried && !front && <p className="pf-error" role="alert">Add a front label photo.</p>}
             </div>
           </>
         )}
       </div>
 
-      <div className="m3d-ed-preview">
-        <div className="m3d-stage">
-          {sizeOk && preview.url ? (
-            <ModelViewer src={preview.url} alt={`3D preview of ${productName || 'the product'}`} />
-          ) : (
-            <div className="m3d-stage-empty">
-              <Cube size={34} aria-hidden="true" />
-              <span>{shape ? (sizeOk ? 'Making the preview…' : 'Fix the sizes to see it') : 'Pick a shape to see it in 3D'}</span>
-            </div>
-          )}
-          {preview.busy && preview.url && (
-            <span className="m3d-stage-busy"><CircleNotch size={16} className="m3d-spin" aria-hidden="true" /> Updating</span>
-          )}
+      {shape && (
+        <div className="m3d-ed-preview">
+          <div className="m3d-stage">
+            {sizeOk && preview.url ? (
+              <ModelViewer src={preview.url} alt={`3D preview of ${productName || 'the product'}`} />
+            ) : (
+              <div className="m3d-stage-empty">
+                <Cube size={26} aria-hidden="true" />
+                <span>{sizeOk ? 'Making…' : 'Check the sizes'}</span>
+              </div>
+            )}
+            {preview.busy && preview.url && (
+              <span className="m3d-stage-busy"><CircleNotch size={16} className="m3d-spin" aria-label="Updating" /></span>
+            )}
+          </div>
+          {preview.error && <p className="m3d-stage-note" role="alert">{preview.error}</p>}
         </div>
-        <p className="m3d-stage-note">
-          {preview.error || (value ? 'Saved. Buyers can turn it around on the product page.' : 'Drag to turn it. This is what buyers see.')}
-        </p>
-      </div>
+      )}
 
       <div className="m3d-ed-actions">
         {(value || shape) && (
           <button type="button" className="pf-btn pf-btn--ghost m3d-remove" onClick={remove} disabled={busy}>
-            <Trash size={17} /> {value ? 'Remove 3D view' : 'Clear'}
+            <Trash size={17} /> {value ? 'Remove' : 'Clear'}
           </button>
         )}
-        <button type="button" className="pf-btn pf-btn--primary m3d-save" onClick={save} disabled={busy || !shape}>
-          {busy ? <CircleNotch size={17} className="m3d-spin" /> : <Cube size={17} weight="bold" />}
-          {step || 'Save simple shape'}
-        </button>
+        {shape && (
+          <button type="button" className="pf-btn pf-btn--primary m3d-save" onClick={save} disabled={busy} aria-label={step ? undefined : 'Save the simple shape'}>
+            {busy ? <CircleNotch size={17} className="m3d-spin" /> : <Cube size={17} weight="bold" />}
+            {step || 'Save'}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -127,9 +127,11 @@ export function rasterTriangle(a, b, c, w, h, visit, grow = 0) {
  * @param {Float32Array} normals - smooth vertex normals of that mesh
  * @param {object} sources - { front, back?, side? }: each { image (RGBA with
  *   the background bled over), toImage(x, y, z, out) writing [px, py] into out }
+ * @param {object} [options]
+ * @param {Function} [options.painter] - (x, y, z, nx, ny, nz, data, offset): paints a texel itself
  * @returns {{ mesh: { positions, normals, uvs, indices }, atlas: { width, height, data } }}
  */
-export function bakeTexture(mesh, normals, sources, { size = 1024 } = {}) {
+export function bakeTexture(mesh, normals, sources, { size = 1024, painter = null } = {}) {
   const { positions: p, indices: f } = mesh;
   const vcount = p.length / 3;
   const { min, max, size: ext } = boundsOf(p);
@@ -214,7 +216,8 @@ export function bakeTexture(mesh, normals, sources, { size = 1024 } = {}) {
   const level = (s, ny) => {
     if (s.rows && Math.abs(ny) > 0.7) uv[1] = Math.min(s.rows[1], Math.max(s.rows[0], uv[1]));
   };
-  const paint = (x, y, z, nx, ny, nz, o) => {
+  // A painter of its own (the video frames) writes the texel's colour itself.
+  const paint = painter ? (x, y, z, nx, ny, nz, o) => painter(x, y, z, nx, ny, nz, data, o) : (x, y, z, nx, ny, nz, o) => {
     const nyN = ny / (Math.hypot(nx, ny, nz) || 1);
     if (!multi) {
       sources.front.toImage(x, y, z, uv);

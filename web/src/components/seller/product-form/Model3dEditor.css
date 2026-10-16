@@ -1,7 +1,8 @@
 /* The product form's "3D view" editor: made from photos (photo slots,
    progress, the turning model with its quality) or a simple shape (shapes,
-   sizes, label photos). Phones: one column, the preview under the
-   answers. Wider: the preview sits beside the controls. */
+   sizes, label photos). Few words, tight spacing. Phones: one column, the
+   preview under the answers. Wider: the preview beside the controls, once
+   there is something to show in it. */
 
 .m3d-ed {
   display: grid;
@@ -10,7 +11,7 @@
     'controls'
     'preview'
     'actions';
-  gap: 20px;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -18,7 +19,7 @@
   grid-area: controls;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -48,6 +49,18 @@
   .m3d-ed-preview {
     position: sticky;
     top: 88px;
+  }
+
+  /* Nothing to preview yet: the controls take the width. */
+  .m3d-ed.is-idle {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'controls'
+      'actions';
+  }
+
+  .m3d-ed.is-idle .m3d-ed-controls {
+    max-width: 620px;
   }
 }
 
@@ -81,13 +94,6 @@
   font-weight: 500;
 }
 
-.m3d-shape small {
-  color: var(--pf-muted, #6b7280);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.3;
-}
-
 .m3d-shape:hover:not(:disabled) {
   border-color: var(--pf-green, #059669);
 }
@@ -100,22 +106,6 @@
 }
 
 /* ── Tips ── */
-.m3d-tip {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0;
-  color: var(--pf-muted, #6b7280);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.45;
-}
-
-.m3d-tip svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--pf-green, #059669);
-}
 
 /* ── Sizes ── */
 .m3d-dims {
@@ -207,7 +197,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   aspect-ratio: 4 / 3;
   border: 1.5px dashed var(--t-neutral-300, #d1d5db);
   border-radius: 14px;
@@ -323,7 +313,6 @@
   line-height: 1.4;
 }
 
-
 /* ── Phones ── */
 @media (max-width: 768px) {
   .m3d-shapes {
@@ -367,13 +356,6 @@
   min-width: 0;
 }
 
-.m3d-way-title {
-  margin: 0 0 12px;
-  color: var(--pf-ink, #111827);
-  font-size: 16px;
-  font-weight: 500;
-}
-
 .m3d-way--simple {
   border: 1px solid var(--pf-line, #e5e7eb);
   border-radius: 14px;
@@ -386,7 +368,7 @@
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border: 0;
   background: none;
   color: inherit;
@@ -395,10 +377,11 @@
   cursor: pointer;
 }
 
-.m3d-way-toggle span {
+.m3d-way-toggle-title {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -408,11 +391,19 @@
   font-weight: 500;
 }
 
-.m3d-way-toggle small {
+.m3d-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
   color: var(--pf-muted, #6b7280);
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.4;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.m3d-tag--on {
+  background: var(--pf-green-soft, #ecfdf5);
+  color: var(--pf-green-dark, #047857);
 }
 
 .m3d-way-toggle svg {
@@ -452,42 +443,21 @@
 }
 
 .m3d-note {
-  margin: 8px 2px 0;
+  margin: 6px 2px 0;
   color: var(--pf-muted, #6b7280);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 400;
-  line-height: 1.45;
-}
-
-.m3d-tip--warn svg {
-  color: #b45309;
+  line-height: 1.4;
 }
 
 .m3d-photos-off {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--t-neutral-50, #f9fafb);
-  color: var(--t-neutral-700, #374151);
+  margin: 0;
+  color: var(--pf-muted, #6b7280);
   font-size: 14px;
   font-weight: 400;
-  line-height: 1.45;
-}
-
-.m3d-photos-off svg {
-  flex-shrink: 0;
-  margin-top: 1px;
-  color: var(--pf-muted, #6b7280);
 }
 
 /* ── Saved ── */
-.m3d-saved {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 
 .m3d-saved-line {
   display: flex;
@@ -596,28 +566,21 @@
 .m3d-result {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+}
+
+.m3d-result-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .m3d-quality {
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  grid-template-areas:
-    'label label label'
-    'bars word word'
-    'note note note';
+  display: inline-flex;
   align-items: center;
-  gap: 6px 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--pf-line, #e5e7eb);
-  border-radius: 12px;
-}
-
-.m3d-quality-label {
-  grid-area: label;
-  color: var(--pf-muted, #6b7280);
-  font-size: 13px;
-  font-weight: 400;
+  gap: 8px;
 }
 
 .m3d-quality-bars {
@@ -638,44 +601,24 @@
 .m3d-quality.is-poor .m3d-quality-bars i.is-on { background: var(--pf-danger, #dc2626); }
 
 .m3d-quality strong {
-  grid-area: word;
   color: var(--pf-ink, #111827);
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 500;
-}
-
-.m3d-quality-note {
-  grid-area: note;
-  color: var(--pf-muted, #6b7280);
-  font-size: 13px;
-  font-weight: 400;
 }
 
 .m3d-warn {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #fffbeb;
   color: #92400e;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
-  line-height: 1.4;
 }
 
 .m3d-warn svg {
   flex-shrink: 0;
-  margin-top: 1px;
   color: #d97706;
-}
-
-.m3d-how {
-  margin: 0;
-  color: var(--t-neutral-700, #374151);
-  font-size: 14px;
-  font-weight: 400;
 }
 
 .m3d-choice {
@@ -720,36 +663,34 @@
   opacity: 0.55;
 }
 
-.m3d-hint {
-  color: var(--pf-muted, #6b7280);
-  font-size: 12.5px;
-  font-weight: 400;
-}
-
 .m3d-turns {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+  color: var(--pf-muted, #6b7280);
+  font-size: 13px;
+  font-weight: 400;
 }
 
 /* The hint sits on its own line under the two buttons. */
-.m3d-turns span {
-  order: 3;
-  flex-basis: 100%;
-  color: var(--pf-muted, #6b7280);
-  font-size: 12.5px;
-  font-weight: 400;
-  line-height: 1.35;
+.m3d-turn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 50%;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  cursor: pointer;
 }
 
-.m3d-turns .pf-btn {
-  flex-shrink: 0;
-  min-height: 38px;
-  padding: 0 12px;
-  font-size: 14px;
+.m3d-turn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* ── Touch up ── */
@@ -795,12 +736,6 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-}
-
-.m3d-touch-head div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
 }
 
 .m3d-touch-head strong {
@@ -911,9 +846,9 @@
 .m3d-check {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 10px;
-  padding: 12px 14px;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 8px 8px 12px;
   border: 1px solid #fde68a;
   border-radius: 12px;
   background: #fffbeb;
@@ -924,34 +859,21 @@
   color: #b45309;
 }
 
-.m3d-check div {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.m3d-check strong {
-  color: #78350f;
-  font-size: 14px;
-  font-weight: 500;
-}
-
 .m3d-check span {
-  color: #92400e;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+  color: #78350f;
+  font-size: 13.5px;
+  font-weight: 500;
 }
 
 .m3d-check .pf-btn {
   flex-shrink: 0;
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 12px;
   border-color: #f59e0b;
   background: #fff;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 .m3d-touch-tools--main {
@@ -1017,13 +939,6 @@
 }
 
 @media (max-width: 768px) {
-  .m3d-check {
-    flex-wrap: wrap;
-  }
-
-  .m3d-check .pf-btn {
-    width: 100%;
-  }
 
   .m3d-tool {
     min-height: 56px;
@@ -1046,4 +961,100 @@
     padding: 0 8px;
     font-size: 12px;
   }
+}
+
+/* ── Photos or a 360° video ── */
+
+.m3d-mode {
+  margin-bottom: 14px;
+}
+
+.m3d-vpick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.m3d-vrecord {
+  display: inline-flex;
+  flex: 1 1 220px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--pf-green, #059669);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.m3d-vrecord:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.m3d-vchoose {
+  flex: 0 1 auto;
+  min-height: 64px;
+}
+
+.m3d-vpick.is-invalid .m3d-vrecord {
+  box-shadow: 0 0 0 2px var(--pf-danger, #dc2626);
+}
+
+.m3d-vclip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 2px 0;
+  color: var(--pf-ink, #111827);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.m3d-vclip svg {
+  color: var(--pf-green, #059669);
+}
+
+.m3d-vprogress-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--pf-ink, #111827);
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.m3d-vprogress-line svg {
+  flex-shrink: 0;
+  color: var(--pf-green, #059669);
+}
+
+@media (max-width: 480px) {
+  .m3d-vchoose {
+    flex: 1 1 100%;
+    min-height: 48px;
+  }
+}
+
+/* A video is in: recording again steps back, Make 3D leads. */
+.m3d-vrecord.is-again {
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  background: var(--t-neutral-0, #fff);
+  color: var(--pf-green-dark, #047857);
+  min-height: 52px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.m3d-vrecord.is-again ~ .m3d-vchoose {
+  min-height: 52px;
 }

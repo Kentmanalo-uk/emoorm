@@ -438,8 +438,7 @@ const generated = (files, extra = {}) => ({
   glbUrl: files.glbUrl,
   usdzUrl: files.usdzUrl,
   posterUrl: '/uploads/poster-ci.webp',
-  cutoutUrl: '/uploads/cutout-ci.webp',
-  photoUrls: { front: '/uploads/front-ci.jpg' },
+  views: 1,
   quality: 'good',
   ...extra,
 });
@@ -459,16 +458,22 @@ test('a seller saves a 3D model generated from photos; buyers see it, marked as 
   const s = await seller();
   const item = await h.product(s.store);
   const files = await upload(s.token);
-  const res = await put3d(s.token, item.id, generated(files, { dims: { heightCm: 20, widthCm: 8 }, photoUrls: { front: '/uploads/front-ci.jpg', back: '/uploads/back-ci.jpg' } }));
+  // An older page may still send the photos and cutout: they are not kept.
+  const res = await put3d(s.token, item.id, generated(files, {
+    dims: { heightCm: 20, widthCm: 8 }, views: 2, photoUrls: { front: '/uploads/front-ci.jpg', back: '/uploads/back-ci.jpg' }, cutoutUrl: '/uploads/cutout-ci.webp',
+  }));
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const saved = res.body.data.model3d;
   assert.equal(saved.source, 'generated');
   assert.equal(saved.shape, 'scan');
   assert.equal(saved.strategy, 'lathe');
   assert.deepEqual(saved.dims, { heightCm: 20, widthCm: 8 });
-  assert.equal(saved.cutoutUrl, '/uploads/cutout-ci.webp');
-  assert.deepEqual(saved.photoUrls, { front: '/uploads/front-ci.jpg', back: '/uploads/back-ci.jpg' });
+  assert.equal(saved.views, 2);
+  assert.equal(saved.photoUrls, undefined, 'photos are not stored');
+  assert.equal(saved.cutoutUrl, undefined, 'the cutout is not stored');
   assert.equal(saved.quality, 'good');
+  const row = await h.prisma.product.findUnique({ where: { id: item.id }, select: { model3d: true } });
+  assert.deepEqual(Object.keys(row.model3d).sort(), ['dims', 'glbUrl', 'posterUrl', 'quality', 'shape', 'source', 'strategy', 'updatedAt', 'usdzUrl', 'views']);
 
   const shown = await h.api('GET', `/products/slug/${item.slug}`);
   const m = shown.body.data.model3d;
@@ -518,11 +523,15 @@ test('a generated record is checked field by field', async () => {
     generated(files, { dims: {} }),
     generated(files, { dims: { heightCm: 900 } }),
     generated(files, { dims: { heightCm: 20, widthCm: 0 } }),
-    generated(files, { cutoutUrl: 'https://example.com/cut.png' }),
-    generated(files, { cutoutUrl: undefined }),
-    generated(files, { photoUrls: {} }),
-    generated(files, { photoUrls: { front: '/uploads/f.jpg', side: 'javascript:alert(1)' } }),
-    generated(files, { strategy: 'hull' }), // several photos need the side one
+    generated(files, { views: 0 }),
+    generated(files, { views: 4 }), // photos: 1 to 3
+    generated(files, { views: 'many' }),
+    generated(files, { strategy: 'hull', views: 1 }), // several photos
+    generated(files, { strategy: 'video', views: undefined, coverage: 360 }),
+    generated(files, { strategy: 'video', views: 36, coverage: undefined }),
+    generated(files, { strategy: 'video', views: 4, coverage: 360 }),
+    generated(files, { strategy: 'video', views: 36, coverage: 400 }),
+    generated(files, { strategy: 'video', views: 36, coverage: 10 }),
     generated(files, { quality: 'perfect' }),
     generated(files, { glbUrl: '/uploads/does-not-exist.glb' }),
     generated(files, { glbUrl: 'https://example.com/m.glb' }),
@@ -531,9 +540,41 @@ test('a generated record is checked field by field', async () => {
     const res = await put3d(s.token, item.id, model3d);
     assert.equal(res.status, 400, `${JSON.stringify(model3d)} → ${JSON.stringify(res.body)}`);
   }
-  // Hull with its side photo is fine.
-  const hull = await put3d(s.token, item.id, generated(files, { strategy: 'hull', photoUrls: { front: '/uploads/f.jpg', side: '/uploads/s.jpg' } }));
+  // Hull from two photos is fine.
+  const hull = await put3d(s.token, item.id, generated(files, { strategy: 'hull', views: 2 }));
   assert.equal(hull.status, 200, JSON.stringify(hull.body));
+});
+
+test('a 3D model carved from a 360° video keeps its frame count and how far round, nothing else', async () => {
+  const s = await seller();
+  const item = await h.product(s.store);
+  const files = await upload(s.token);
+  const res = await put3d(s.token, item.id, generated(files, {
+    strategy: 'video', views: 36, coverage: 300, quality: 'fair', photoUrls: { front: '/uploads/frame-ci.jpg' }, cutoutUrl: '/uploads/cut-ci.webp', frames: ['/uploads/f1.jpg'],
+  }));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const saved = res.body.data.model3d;
+  assert.equal(saved.strategy, 'video');
+  assert.equal(saved.views, 36);
+  assert.equal(saved.coverage, 300);
+  assert.equal(saved.quality, 'fair');
+  for (const k of ['photoUrls', 'cutoutUrl', 'frames']) assert.equal(saved[k], undefined, `${k} is not stored`);
+  // Buyers: the model and that it was made from the shop's own capture.
+  const shown = (await h.api('GET', `/products/slug/${item.slug}`)).body.data.model3d;
+  assert.equal(shown.source, 'generated');
+  assert.equal(shown.glbUrl, files.glbUrl);
+  assert.equal(shown.views, undefined);
+  // Old records with photos still read fine (owner sees them as saved).
+  await h.prisma.product.update({
+    where: { id: item.id },
+    data: { model3d: { ...saved, photoUrls: { front: '/uploads/old-front.jpg' }, cutoutUrl: '/uploads/old-cut.webp' } },
+  });
+  const own = await h.api('GET', `/products/${item.id}`, { token: s.token });
+  assert.equal(own.status, 200);
+  assert.equal(own.body.data.model3d.photoUrls.front, '/uploads/old-front.jpg');
+  const pub = (await h.api('GET', `/products/slug/${item.slug}`)).body.data.model3d;
+  assert.equal(pub.photoUrls, undefined);
+  assert.equal(pub.cutoutUrl, undefined);
 });
 
 test('generated models follow the same rules: own products, goods only, switch on', async () => {

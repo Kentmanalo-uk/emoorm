@@ -11,41 +11,37 @@
 export const SHAPES = {
   jar: {
     label: 'Jar',
-    hint: 'Peanut butter, jam, bagoong',
     fields: [
-      { key: 'height', label: 'Height, lid included', min: 3, max: 50, initial: 10 },
-      { key: 'diameter', label: 'Width across', min: 2, max: 40, initial: 8 },
+      { key: 'height', label: 'Height', min: 3, max: 50, initial: 10 },
+      { key: 'diameter', label: 'Width', min: 2, max: 40, initial: 8 },
       { key: 'lidHeight', label: 'Lid height', min: 0.3, max: 10, initial: 2 },
     ],
-    cap: 'Lid colour',
+    cap: 'Lid',
     labelWrap: true,
   },
   bottle: {
     label: 'Bottle',
-    hint: 'Vinegar, honey, oil, drinks',
     fields: [
-      { key: 'height', label: 'Height, cap included', min: 5, max: 60, initial: 22 },
-      { key: 'diameter', label: 'Width across', min: 2, max: 30, initial: 7 },
+      { key: 'height', label: 'Height', min: 5, max: 60, initial: 22 },
+      { key: 'diameter', label: 'Width', min: 2, max: 30, initial: 7 },
       { key: 'neckDiameter', label: 'Neck width', min: 0.8, max: 15, initial: 2.6 },
-      { key: 'neckHeight', label: 'Neck length, cap included', min: 0.5, max: 30, initial: 6 },
+      { key: 'neckHeight', label: 'Neck length', min: 0.5, max: 30, initial: 6 },
     ],
-    cap: 'Cap colour',
+    cap: 'Cap',
     labelWrap: true,
   },
   box: {
     label: 'Box',
-    hint: 'Pasalubong boxes, soap, tea',
     fields: [
-      { key: 'width', label: 'Width (front)', min: 0.5, max: 150, initial: 15 },
+      { key: 'width', label: 'Width', min: 0.5, max: 150, initial: 15 },
       { key: 'height', label: 'Height', min: 0.5, max: 150, initial: 20 },
-      { key: 'depth', label: 'Depth (side)', min: 0.5, max: 150, initial: 6 },
+      { key: 'depth', label: 'Depth', min: 0.5, max: 150, initial: 6 },
     ],
     cap: null,
     labelWrap: false,
   },
   pouch: {
     label: 'Pouch',
-    hint: 'Chips, dried fish, coffee',
     fields: [
       { key: 'width', label: 'Width', min: 3, max: 80, initial: 16 },
       { key: 'height', label: 'Height', min: 3, max: 80, initial: 24 },

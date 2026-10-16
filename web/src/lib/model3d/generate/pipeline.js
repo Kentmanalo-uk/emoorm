@@ -91,11 +91,11 @@ export function generate(input, onProgress = () => {}) {
   const t0 = now();
   const timings = {};
   const names = ['front', 'side', 'back'].filter((n) => input.views?.[n]);
-  if (!names.includes('front')) throw new GenerateError('no-front', 'Add a photo of the front.');
+  if (!names.includes('front')) throw new GenerateError('no-front', 'Add a front photo.');
   const shapeChoice = input.shape || 'auto';
 
   // ── Finding the object… ──
-  onProgress({ stage: 'segment', label: 'Finding the object…', progress: 2 });
+  onProgress({ stage: 'segment', label: 'Finding object…', progress: 2 });
   const seg = {};
   names.forEach((name, n) => {
     const photo = fitImage(input.views[name], TEX_EDGE);
@@ -114,7 +114,7 @@ export function generate(input, onProgress = () => {}) {
       }
     } catch (err) {
       if (err instanceof SegmentError) {
-        const message = name === 'front' ? err.message : `${err.message} (${VIEW_WORDS[name]} photo)`;
+        const message = name === 'front' ? err.message : `${VIEW_WORDS[name][0].toUpperCase()}${VIEW_WORDS[name].slice(1)} photo: ${err.message}`;
         throw new GenerateError(err.code, message, name);
       }
       throw err;
@@ -126,7 +126,7 @@ export function generate(input, onProgress = () => {}) {
     };
     onProgress({
       stage: 'segment',
-      label: 'Finding the object…',
+      label: 'Finding object…',
       progress: 5 + Math.round(((n + 1) / names.length) * 25),
       view: name,
       cutout,
@@ -140,7 +140,7 @@ export function generate(input, onProgress = () => {}) {
 
   // ── Building the shape… ──
   const t1 = now();
-  onProgress({ stage: 'shape', label: 'Building the shape…', progress: 32 });
+  onProgress({ stage: 'shape', label: 'Building…', progress: 32 });
   const front = seg.front;
   const shape = analyzeMask(front.mask, front.width, front.height, front.box);
   let strategy;
@@ -162,18 +162,18 @@ export function generate(input, onProgress = () => {}) {
       : shape;
     volume = singleViewVolume(front, s, strategy);
   }
-  onProgress({ stage: 'shape', label: 'Building the shape…', progress: 45 });
+  onProgress({ stage: 'shape', label: 'Building…', progress: 45 });
   let mesh = marchingCubes(volume);
   const rawTriangles = mesh.indices.length / 3;
   mesh = keepMainPieces(mesh);
   taubinSmooth(mesh, 4);
-  onProgress({ stage: 'shape', label: 'Building the shape…', progress: 55 });
+  onProgress({ stage: 'shape', label: 'Building…', progress: 55 });
   mesh = decimate(mesh, TARGET_TRIANGLES);
   timings.shape = Math.round(now() - t1);
 
   // ── Painting it… ──
   const t2 = now();
-  onProgress({ stage: 'paint', label: 'Painting it…', progress: 68 });
+  onProgress({ stage: 'paint', label: 'Painting…', progress: 68 });
   const normals = fieldNormals(volume, mesh.positions, vertexNormals(mesh));
   const { frame } = volume;
   const fr = frame.front;
@@ -221,9 +221,9 @@ export function generate(input, onProgress = () => {}) {
   const largest = Math.max(...bounds.size);
   const smallest = Math.min(...bounds.size);
   const fail = (message) => { throw new GenerateError('shape', message); };
-  if (triangles < MIN_TRIANGLES) fail('The 3D shape came out too simple. Try a closer, sharper photo.');
-  if (!(largest > 0) || smallest < largest * MIN_DEPTH_SHARE) fail('The 3D shape came out flat. Try a photo from a little further away, with the whole object in it.');
-  if (topo.nonManifold > triangles * 0.002 || topo.open > topo.edges * 0.002) fail('The 3D shape came out with gaps. Try again, or use a photo on a plainer background.');
+  if (triangles < MIN_TRIANGLES) fail('Shape too simple. Try a closer photo.');
+  if (!(largest > 0) || smallest < largest * MIN_DEPTH_SHARE) fail('Shape came out flat. Try another photo.');
+  if (topo.nonManifold > triangles * 0.002 || topo.open > topo.edges * 0.002) fail('Shape has gaps. Try another photo.');
 
   const frontSil = silhouette(mesh, (x, y) => [fr.ax + x, fr.yb - y], front.width, front.height);
   const scores = { front: iou(frontSil, front.mask) };

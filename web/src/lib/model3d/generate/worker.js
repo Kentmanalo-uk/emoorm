@@ -1,6 +1,7 @@
 import { generate, transferables, GenerateError } from './pipeline.js';
 import { fitImage } from './image.js';
 import { prepareCutout, cutout, SegmentError } from './segment.js';
+import { generateFromVideo } from './video/pipeline.js';
 
 /*
  * The 3D generator's Web Worker: the heavy work (segmentation, the solid,
@@ -18,19 +19,28 @@ import { prepareCutout, cutout, SegmentError } from './segment.js';
  *        { id, type: 'cutout-refine', hints: { taps, box, overrides } }
  *   out: { id, type: 'cutout', mask: { width, height, data }, confidence, lowConfidence, reasons, ms }
  *        { id, type: 'error', code, message }
+ *
+ * And a 360° video: its frames come in one by one as the page reads them
+ * (so the page never holds them all), then the carving runs on them:
+ *   in:  { id, type: 'video-begin', count }
+ *        { id, type: 'video-frame', index, frame: { width, height, data } }
+ *        { id, type: 'video-run', options }   (see video/pipeline.js)
+ *   out: progress / done / error as above
+ * The frames are dropped as soon as the model is made (or it fails).
  * Image buffers are handed over (transferred), not copied.
  */
 
 let session = null;
+let video = null;
 
-const fail = (id, err) => {
+const fail = (id, err, fallback = 'Couldn\'t make it. Try clearer photos.') => {
   const known = err instanceof GenerateError || err instanceof SegmentError;
   self.postMessage({
     id,
     type: 'error',
     code: known ? err.code : 'failed',
     view: err instanceof GenerateError ? err.view : null,
-    message: known ? err.message : 'We couldn\'t make a 3D model from these photos. Try again, or try clearer photos on a plain background.',
+    message: known ? err.message : fallback,
     detail: known ? null : String(err?.message || err),
   });
 };
@@ -52,6 +62,27 @@ self.onmessage = (event) => {
   const {
     id, type, input, photo, hints,
   } = event.data || {};
+  if (type === 'video-begin') {
+    video = { frames: new Array(event.data.count || 0).fill(null) };
+    return;
+  }
+  if (type === 'video-frame') {
+    if (video && event.data.index >= 0 && event.data.index < video.frames.length) video.frames[event.data.index] = event.data.frame;
+    return;
+  }
+  if (type === 'video-run') {
+    const frames = video ? video.frames.filter(Boolean) : [];
+    video = null;
+    try {
+      const result = generateFromVideo(frames, event.data.options || {}, (p) => self.postMessage({ id, type: 'progress', ...p }));
+      frames.length = 0;
+      self.postMessage({ id, type: 'done', result }, transferables(result));
+    } catch (err) {
+      frames.length = 0;
+      fail(id, err, 'Couldn\'t make it. Try another video.');
+    }
+    return;
+  }
   if (type === 'generate') {
     try {
       const result = generate(input, (p) => {
