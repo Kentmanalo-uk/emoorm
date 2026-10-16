@@ -65,8 +65,12 @@
     max-width: none;
     margin: 0;
     padding: 0 20px calc(24px + env(safe-area-inset-bottom, 0px));
+    /* Up and down only: overflow-y alone would let it slide sideways
+       whenever anything inside ends up a pixel too wide on a phone. */
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
     background: var(--t-neutral-0, #fff);
     animation: auth-sheet-up 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -395,5 +399,14 @@
   .is-sheet .fp-card,
   .is-sheet .rp-card {
     animation: none;
+  }
+}
+
+/* Phone sheets: fields never push the sheet wider than the screen. */
+@media (max-width: 768px) {
+  .is-sheet .login-form-container :is(input, select, textarea),
+  .is-sheet .register-form-container :is(input, select, textarea) {
+    min-width: 0;
+    max-width: 100%;
   }
 }

@@ -14,7 +14,6 @@ import {
   MagnifyingGlass as Search,
   X,
   Heart,
-  Users,
   SealCheck,
   ShareNetwork,
   Truck,
@@ -842,17 +841,10 @@ export default function StoreDetail() {
           </>
         )}
 
-        {/* Hero */}
+        {/* Hero (computers; phones have their own header above): the cover,
+            then the shop's logo, name, one line of numbers and its actions,
+            then a short about. */}
         <div className="shop-hero">
-          <div className="shop-hero-banner">
-            {banner ? (
-              <img src={resolveImg(banner)} alt="" />
-            ) : (
-              <div className="shop-hero-banner-fallback" />
-            )}
-            <div className="shop-hero-overlay" />
-          </div>
-
           <div className="shop-container">
             <nav className="shop-breadcrumbs">
               <Link to="/">Home</Link>
@@ -862,60 +854,44 @@ export default function StoreDetail() {
               <span>{store.name}</span>
             </nav>
 
+            <div className="shop-hero-banner">
+              {banner ? (
+                <img src={resolveImg(banner)} alt="" />
+              ) : (
+                <div className="shop-hero-banner-fallback" />
+              )}
+            </div>
+
             <div className="shop-hero-card">
-              <div className="shop-hero-identity">
-                <div className="shop-avatar">
-                  {store.logo ? (
-                    <img src={resolveImg(store.logo)} alt={store.name} />
-                  ) : (
-                    <span>{initials}</span>
+              <div className="shop-avatar">
+                {store.logo ? (
+                  <img src={resolveImg(store.logo)} alt={store.name} />
+                ) : (
+                  <span>{initials}</span>
+                )}
+              </div>
+
+              <div className="shop-hero-title">
+                <h1>
+                  {store.name}
+                  {store.owner?.identityVerified && (
+                    <span className="shop-verified" title="Seller verified: identity checked with a government ID">
+                      <SealCheck size={22} weight="fill" aria-label="Seller verified" />
+                    </span>
                   )}
-                </div>
-                <div className="shop-hero-title">
-                  <div className="shop-name-row">
-                    <h1>{store.name}</h1>
-                    {store.isActive && !store.isSuspended && (
-                      <span className="shop-badge">Active</span>
-                    )}
-                    {store.owner?.identityVerified && (
-                      <span
-                        className="shop-badge shop-badge-verified"
-                        title="This seller's identity was verified with a government ID"
-                      >
-                        <SealCheck size={12} weight="fill" /> Seller verified
-                      </span>
-                    )}
-                  </div>
-                  {store.owner?.username && (
-                    <p className="shop-username">@{store.owner.username}</p>
+                </h1>
+                <p className="shop-meta">
+                  <span>
+                    <Star size={15} weight="fill" className="shop-meta-star" />
+                    <b>{rating > 0 ? rating.toFixed(1) : 'New'}</b>
+                    {reviewCount > 0 && <> ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</>}
+                  </span>
+                  <span><b>{productCount}</b> {productCount === 1 ? 'product' : 'products'}</span>
+                  <span><b>{followerCount}</b> {followerCount === 1 ? 'follower' : 'followers'}</span>
+                  {store.municipality?.name && (
+                    <span><MapPin size={15} /> {store.municipality.name}</span>
                   )}
-                  {store.description && (
-                    <p className="shop-tagline">{store.description}</p>
-                  )}
-                  <div className="shop-stats-row">
-                    <div className="shop-stat">
-                      <Star size={14} className="shop-stat-icon" />
-                      <strong>{rating > 0 ? rating.toFixed(1) : '—'}</strong>
-                      <span>({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</span>
-                    </div>
-                    <div className="shop-stat">
-                      <Package size={14} className="shop-stat-icon" />
-                      <strong>{productCount}</strong>
-                      <span>products</span>
-                    </div>
-                    <div className="shop-stat">
-                      <Users size={14} className="shop-stat-icon" />
-                      <strong>{followerCount}</strong>
-                      <span>{followerCount === 1 ? 'follower' : 'followers'}</span>
-                    </div>
-                    {store.municipality?.name && (
-                      <div className="shop-stat">
-                        <MapPin size={14} className="shop-stat-icon" />
-                        <span>{store.municipality.name}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                </p>
               </div>
 
               <div className="shop-hero-actions">
@@ -926,70 +902,99 @@ export default function StoreDetail() {
                     onClick={handleToggleFollow}
                     disabled={followBusy}
                   >
-                    {followBusy ? <Spinner size={14} /> : <Heart size={14} weight={isFollowing ? 'fill' : 'regular'} />}
+                    {followBusy ? <Spinner size={15} /> : <Heart size={15} weight={isFollowing ? 'fill' : 'regular'} />}
                     {isFollowing ? 'Following' : 'Follow'}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="shop-btn shop-btn-outline"
-                  onClick={openChat}
-                >
-                  <MessageCircle size={14} /> Message
+                <button type="button" className="shop-btn shop-btn-outline" onClick={openChat}>
+                  <MessageCircle size={15} /> Message
                 </button>
-                <button
-                  type="button"
-                  className="shop-btn shop-btn-outline"
-                  onClick={openReport}
-                >
-                  <Flag size={14} /> Report
-                </button>
+                <MoreMenu
+                  label="More for this shop"
+                  className="shop-hero-more"
+                  buttonClassName="shop-btn shop-btn-outline shop-btn-icon"
+                  iconSize={18}
+                  items={[
+                    { key: 'share', icon: <ShareNetwork />, label: 'Share shop', onClick: shareStore },
+                    { key: 'report', icon: <Flag />, label: 'Report shop', onClick: openReport, danger: true },
+                  ]}
+                />
               </div>
             </div>
+
+            {(store.description || store.owner?.fullName || store.pickupAddress || week.length > 0 || store.businessHours) && (
+              <div className="shop-about">
+                {store.description && <p className="shop-tagline">{store.description}</p>}
+                <ul className="shop-details">
+                  {store.owner?.fullName && (
+                    <li><User size={15} /> {store.owner.fullName}</li>
+                  )}
+                  {store.pickupAddress && (
+                    <li><MapPin size={15} /> {store.pickupAddress}</li>
+                  )}
+                  {week.length > 0 ? (
+                    <li>
+                      <Clock size={15} />
+                      <span className="shop-hours is-inline">
+                        {hoursNow && <b className={hoursNow.startsWith('Open') ? 'is-open' : ''}>{hoursNow}</b>}
+                        <span>{week.join(' · ')}</span>
+                      </span>
+                    </li>
+                  ) : store.businessHours && (
+                    <li><Clock size={15} /> {store.businessHours}</li>
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Contact + seller info strip */}
-        <div className="shop-container">
-          {!isPhone && awayNotice}
-          {!isPhone && voucherStrip}
-          <div className="shop-info-strip">
-            {store.owner?.fullName && (
-              <div className="shop-info-item">
-                <span className="shop-info-label">Seller</span>
-                <span>{store.owner.fullName}</span>
-              </div>
-            )}
-            {store.pickupAddress && (
-              <div className="shop-info-item">
-                <MapPin size={14} />
-                <span>{store.pickupAddress}</span>
-              </div>
-            )}
-            {week.length > 0 ? (
-              <div className="shop-info-item">
-                <span className="shop-info-label">Hours</span>
-                <span className="shop-hours is-inline">
-                  {hoursNow && <b className={hoursNow.startsWith('Open') ? 'is-open' : ''}>{hoursNow}</b>}
-                  <span>{week.join(' · ')}</span>
-                </span>
-              </div>
-            ) : store.businessHours && (
-              <div className="shop-info-item">
-                <span className="shop-info-label">Hours</span>
-                <span>{store.businessHours}</span>
-              </div>
-            )}
+        {/* Away notice and vouchers (computers) */}
+        {!isPhone && (awayNotice || voucherStrip) && (
+          <div className="shop-container">
+            {awayNotice}
+            {voucherStrip}
           </div>
-        </div>
+        )}
 
         {/* Products */}
         <div className={`shop-container shop-products-section${isPhone && phoneTab !== 'products' ? ' is-hidden-phone' : ''}`}>
-          {/* Toolbar */}
+          {/* One row: the tabs, then search and sort (computers). */}
           <div className="shop-toolbar">
-            <div className="shop-toolbar-left">
-              <h2>Products</h2>
-              <span className="shop-toolbar-count">{pagination.total || 0}</span>
+            <div className="shop-tabs">
+              {hasHome && !isPhone && (
+                <button
+                  type="button"
+                  className={`shop-tab shop-tab-home ${deskView === 'home' ? 'is-active' : ''}`}
+                  onClick={() => setDeskTab('home')}
+                >
+                  Home
+                </button>
+              )}
+              <button
+                type="button"
+                className={`shop-tab ${deskView !== 'home' && activeCategory === 'all' ? 'is-active' : ''}`}
+                onClick={() => { setDeskTab('products'); onCategoryChange('all'); }}
+              >
+                All Products
+              </button>
+              <button
+                type="button"
+                className={`shop-tab ${deskView !== 'home' && activeCategory === 'new' ? 'is-active' : ''}`}
+                onClick={() => { setDeskTab('products'); onCategoryChange('new'); }}
+              >
+                New Listings
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`shop-tab ${deskView !== 'home' && activeCategory === c.id ? 'is-active' : ''}`}
+                  onClick={() => { setDeskTab('products'); onCategoryChange(c.id); }}
+                >
+                  {c.name}
+                </button>
+              ))}
             </div>
             <div className="shop-toolbar-right">
               <div className="shop-search">
@@ -998,7 +1003,8 @@ export default function StoreDetail() {
                   type="text"
                   value={rawSearch}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Search products…"
+                  placeholder={`Search ${store.name}`}
+                  aria-label="Search this shop's products"
                 />
                 {rawSearch && (
                   <button
@@ -1012,7 +1018,6 @@ export default function StoreDetail() {
                 )}
               </div>
               <div className="shop-sort">
-                <label>Sort:</label>
                 <Select value={sortKey} onChange={(e) => onSortChange(e.target.value)} aria-label="Sort products">
                   {SORTS.map((s) => (
                     <option key={s.key} value={s.key}>{s.label}</option>
@@ -1020,43 +1025,6 @@ export default function StoreDetail() {
                 </Select>
               </div>
             </div>
-          </div>
-
-          {/* Category tabs */}
-          <div className="shop-tabs">
-            {hasHome && !isPhone && (
-              <button
-                type="button"
-                className={`shop-tab shop-tab-home ${deskView === 'home' ? 'is-active' : ''}`}
-                onClick={() => setDeskTab('home')}
-              >
-                Home
-              </button>
-            )}
-            <button
-              type="button"
-              className={`shop-tab ${deskView !== 'home' && activeCategory === 'all' ? 'is-active' : ''}`}
-              onClick={() => { setDeskTab('products'); onCategoryChange('all'); }}
-            >
-              All Products
-            </button>
-            <button
-              type="button"
-              className={`shop-tab ${deskView !== 'home' && activeCategory === 'new' ? 'is-active' : ''}`}
-              onClick={() => { setDeskTab('products'); onCategoryChange('new'); }}
-            >
-              New Listings
-            </button>
-            {categories.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={`shop-tab ${deskView !== 'home' && activeCategory === c.id ? 'is-active' : ''}`}
-                onClick={() => { setDeskTab('products'); onCategoryChange(c.id); }}
-              >
-                {c.name}
-              </button>
-            ))}
           </div>
 
           {/* Home (computers), or the grid */}
