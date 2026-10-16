@@ -887,3 +887,163 @@
     flex: 1;
   }
 }
+
+/* ── Fixing the cutout ── */
+.m3d-label-fix {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pf-green, #059669);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.m3d-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  background: #fffbeb;
+}
+
+.m3d-check > svg {
+  flex-shrink: 0;
+  color: #b45309;
+}
+
+.m3d-check div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.m3d-check strong {
+  color: #78350f;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.m3d-check span {
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.m3d-check .pf-btn {
+  flex-shrink: 0;
+  min-height: 38px;
+  padding: 0 14px;
+  border-color: #f59e0b;
+  background: #fff;
+  font-size: 14px;
+}
+
+.m3d-touch-tools--main {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.m3d-tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 62px;
+  padding: 8px 6px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.m3d-tool.is-on {
+  border-color: var(--pf-green, #059669);
+  background: var(--pf-green-soft, #ecfdf5);
+  color: var(--pf-green-dark, #047857);
+  box-shadow: inset 0 0 0 1px var(--pf-green, #059669);
+}
+
+.m3d-tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.m3d-touch-hint {
+  margin: 0;
+  color: var(--t-neutral-700, #374151);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.m3d-touch-hint.is-error {
+  color: var(--pf-danger, #dc2626);
+}
+
+.m3d-touch-stage {
+  position: relative;
+}
+
+.m3d-touch-busy {
+  top: 10px;
+  left: 10px;
+}
+
+.m3d-touch-canvas.is-add,
+.m3d-touch-canvas.is-remove {
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .m3d-check {
+    flex-wrap: wrap;
+  }
+
+  .m3d-check .pf-btn {
+    width: 100%;
+  }
+
+  .m3d-tool {
+    min-height: 56px;
+    font-size: 13px;
+  }
+
+  .m3d-touch-canvas {
+    max-height: 52vh;
+  }
+
+  /* Three small slots: Change shows as its icon, so Fix fits beside it. */
+  .m3d-labels--3 .m3d-label-change-text {
+    display: none;
+  }
+
+  .m3d-labels--3 .m3d-label-fix {
+    right: 4px;
+    bottom: 4px;
+    min-height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+}

@@ -1,37 +1,78 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CircleNotch, Eraser, PaintBrush, X } from '@phosphor-icons/react';
+import {
+  ArrowCounterClockwise, BoundingBox, CircleNotch, Eraser, HandTap, MinusCircle, PaintBrush, PlusCircle, X,
+} from '@phosphor-icons/react';
 
 /*
- * Touch up the cutout: the front photo with what was found as the object
- * shown bright and the rest dimmed. Paint to add to the object, Erase to
- * take away. Done makes the 3D model again from this outline.
+ * Fix the cutout: the photo with what is picked as the object bright, the
+ * rest dimmed and a clear outline round it. The quick ways:
+ *  - Add: tap the object (or a part that's missing): that whole region
+ *    becomes object and the cut is made again round it;
+ *  - Remove: tap what isn't the object;
+ *  - Draw around: drag a box round the object; everything outside it is
+ *    background.
+ * The brush is the last resort, for a stubborn bit. Undo steps back.
+ * The cut runs in a worker that keeps the photo prepared, so a tap comes
+ * back in a fraction of a second. Done makes the 3D model from this mask.
  */
 
+const loadGenerator = () => import('../../../lib/model3d/generate/index.js');
 const MASK_EDGE = 512;
-const SIZES = [
-  { key: 's', label: 'Small', r: 6 },
-  { key: 'm', label: 'Medium', r: 14 },
-  { key: 'l', label: 'Large', r: 28 },
+const BRUSH = [
+  { key: 's', label: 'Small', r: 5 },
+  { key: 'm', label: 'Medium', r: 12 },
+  { key: 'l', label: 'Large', r: 24 },
 ];
 
-export default function Model3dTouchUp({ photo, mask, onDone }) {
+const HINTS = {
+  add: 'Tap the object, or a part of it that is missing.',
+  remove: 'Tap anything that isn\'t the object.',
+  box: 'Drag a box around the object.',
+  brush: 'Paint over a stubborn bit. Last resort: tap and box are quicker.',
+};
+
+/**
+ * @param {Promise|object} photo - decodePhoto() result (or a promise of it)
+ * @param {object} [mask] - the cutout found so far ({ width, height, data })
+ * @param {String} title - which photo ('front', 'side', 'back')
+ * @param {Function} onDone - (mask | null)
+ */
+export default function Model3dTouchUp({
+  photo, mask, title = 'front', onDone,
+}) {
   const canvasRef = useRef(null);
   const [img, setImg] = useState(null);
-  const [mode, setMode] = useState('add');
+  const [tool, setTool] = useState('add');
+  const [brushAdd, setBrushAdd] = useState(true);
   const [size, setSize] = useState('m');
-  const data = useRef(null);
-  const dims = useRef(null);
-  const original = useRef(null);
-  const drawing = useRef(false);
-  const last = useRef(null);
+  const [status, setStatus] = useState('opening'); // opening | ready | updating
+  const [error, setError] = useState('');
+  // What the buttons need, refreshed with each redraw (not read from refs while rendering).
+  const [snap, setSnap] = useState({ canUndo: false, hasMask: false, hasAuto: false });
+  const session = useRef(null);
+  const current = useRef(null); // { mask, hints }
+  const history = useRef([]);
+  const autoMask = useRef(null);
+  const drag = useRef(null);
   const frame = useRef(0);
-  const [changed, setChanged] = useState(false);
 
-  // The photo at the mask's size, once.
+  const redraw = () => {
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => setSnap({
+      canUndo: history.current.length > 0,
+      hasMask: !!current.current?.mask.some((v) => v),
+      hasAuto: !!autoMask.current,
+      n: Date.now(),
+    }));
+  };
+
+  // The photo at the cutout's size, the first mask, and the session.
   useEffect(() => {
     let gone = false;
-    Promise.resolve(photo).then((p) => {
+    let s = null;
+    (async () => {
+      const p = await Promise.resolve(photo);
       if (gone || !p) return;
       const scale = Math.min(1, MASK_EDGE / Math.max(p.width, p.height));
       const w = mask?.width || Math.max(1, Math.round(p.width * scale));
@@ -45,31 +86,33 @@ export default function Model3dTouchUp({ photo, mask, onDone }) {
       small.height = h;
       const ctx = small.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(full, 0, 0, w, h);
-      dims.current = { w, h };
-      data.current = mask ? new Uint8Array(mask.data) : new Uint8Array(w * h);
-      original.current = data.current.slice();
+      current.current = { mask: mask ? Uint8Array.from(mask.data) : new Uint8Array(w * h), hints: { taps: [], box: null, overrides: null } };
       setImg({ pixels: ctx.getImageData(0, 0, w, h), w, h });
-    });
-    return () => { gone = true; };
+      const m = await loadGenerator();
+      if (gone) return;
+      s = m.openCutout(p);
+      session.current = s;
+      try {
+        const r = await s.ready;
+        if (gone) return;
+        autoMask.current = r.mask.data;
+        // Without a cutout yet (the photo failed), start from the automatic one.
+        if (!mask && r.mask.width === w && r.mask.height === h) current.current.mask = Uint8Array.from(r.mask.data);
+        setStatus('ready');
+        redraw();
+      } catch (err) {
+        if (gone || err.code === 'cancelled') return;
+        // Nothing found automatically: the seller can still tap, box or paint.
+        setStatus('ready');
+        setError(err.message);
+      }
+    })();
+    return () => {
+      gone = true;
+      s?.close();
+      cancelAnimationFrame(frame.current);
+    };
   }, [photo, mask]);
-
-  const draw = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !img) return;
-    const { w, h } = img;
-    const out = new ImageData(new Uint8ClampedArray(img.pixels.data), w, h);
-    const m = data.current;
-    for (let i = 0; i < w * h; i += 1) {
-      if (m[i]) continue;
-      // Not the object: dimmed and tinted.
-      out.data[i * 4] = out.data[i * 4] * 0.35 + 20;
-      out.data[i * 4 + 1] = out.data[i * 4 + 1] * 0.35 + 20;
-      out.data[i * 4 + 2] = out.data[i * 4 + 2] * 0.35 + 30;
-    }
-    canvas.getContext('2d').putImageData(out, 0, 0);
-  };
-
-  useEffect(() => { draw(); });
 
   // Esc cancels; the page behind doesn't scroll.
   useEffect(() => {
@@ -83,96 +126,276 @@ export default function Model3dTouchUp({ photo, mask, onDone }) {
     };
   }, [onDone]);
 
-  // A stroke: discs along the line from the last point, so a quick swipe
-  // leaves no gaps between the points the pointer reported.
-  const paintAt = (e) => {
+  // Draw: the photo, the background dimmed, the outline, taps and the box.
+  useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !dims.current) return;
-    const rect = canvas.getBoundingClientRect();
-    const { w, h } = dims.current;
-    const x = ((e.clientX - rect.left) / rect.width) * w;
-    const y = ((e.clientY - rect.top) / rect.height) * h;
-    const r = (SIZES.find((s) => s.key === size)?.r || 14) * (Math.max(w, h) / MASK_EDGE);
-    const v = mode === 'add' ? 1 : 0;
-    const m = data.current;
+    if (!canvas || !img || !current.current) return;
+    const { w, h } = img;
+    const m = current.current.mask;
+    const out = new ImageData(new Uint8ClampedArray(img.pixels.data), w, h);
+    const d = out.data;
+    for (let i = 0; i < w * h; i += 1) {
+      const x = i % w;
+      if (m[i]) {
+        const edge = x === 0 || x === w - 1 || i < w || i >= w * (h - 1) || !m[i - 1] || !m[i + 1] || !m[i - w] || !m[i + w];
+        if (edge) { d[i * 4] = 34; d[i * 4 + 1] = 230; d[i * 4 + 2] = 120; }
+        continue;
+      }
+      // A thin dark ring outside the outline, so it reads on light photos too.
+      const ring = (x > 0 && m[i - 1]) || (x < w - 1 && m[i + 1]) || (i >= w && m[i - w]) || (i + w < w * h && m[i + w]);
+      if (ring) { d[i * 4] = 6; d[i * 4 + 1] = 70; d[i * 4 + 2] = 40; continue; }
+      d[i * 4] = d[i * 4] * 0.32 + 18;
+      d[i * 4 + 1] = d[i * 4 + 1] * 0.32 + 18;
+      d[i * 4 + 2] = d[i * 4 + 2] * 0.32 + 26;
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.putImageData(out, 0, 0);
+    const { taps, box } = current.current.hints;
+    const sc = Math.max(w, h) / 400;
+    for (const t of taps) {
+      ctx.beginPath();
+      ctx.arc(t.x * w, t.y * h, 7 * sc, 0, Math.PI * 2);
+      ctx.fillStyle = t.kind === 'remove' ? '#dc2626' : '#16a34a';
+      ctx.fill();
+      ctx.lineWidth = 2 * sc;
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(t.x * w - 3.5 * sc, t.y * h); ctx.lineTo(t.x * w + 3.5 * sc, t.y * h);
+      if (t.kind !== 'remove') { ctx.moveTo(t.x * w, t.y * h - 3.5 * sc); ctx.lineTo(t.x * w, t.y * h + 3.5 * sc); }
+      ctx.stroke();
+    }
+    const b = drag.current?.box || box;
+    if (b) {
+      ctx.setLineDash([6 * sc, 4 * sc]);
+      ctx.lineWidth = 2 * sc;
+      ctx.strokeStyle = '#fbbf24';
+      ctx.strokeRect(b.x0 * w, b.y0 * h, (b.x1 - b.x0) * w, (b.y1 - b.y0) * h);
+      ctx.setLineDash([]);
+    }
+  });
+
+  const pointAt = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)),
+    };
+  };
+
+  /** Re-cut with new hints; each result is kept for Undo. */
+  const recut = async (hints) => {
+    const s = session.current;
+    if (!s) return;
+    history.current.push(current.current);
+    current.current = { mask: current.current.mask, hints };
+    setStatus('updating');
+    setError('');
+    redraw();
+    try {
+      await s.ready.catch(() => null);
+      const r = await s.refine(hints);
+      if (current.current.hints !== hints) return; // a newer change won
+      current.current = { mask: Uint8Array.from(r.mask.data), hints };
+    } catch (err) {
+      if (err.code === 'cancelled') return;
+      // Keep what was there and say why.
+      current.current = history.current.pop() || current.current;
+      setError(err.message || 'That didn\'t work. Try another tap.');
+    } finally {
+      setStatus('ready');
+      redraw();
+    }
+  };
+
+  // Brush strokes: straight onto the mask and into the overrides.
+  const paintStroke = (from, to) => {
+    const { w, h } = img;
+    const cur = current.current;
+    const over = cur.hints.overrides;
+    const r = (BRUSH.find((b) => b.key === size)?.r || 12) * (Math.max(w, h) / MASK_EDGE);
+    const v = brushAdd ? 1 : 0;
     const dab = (cx, cy) => {
       for (let yy = Math.max(0, Math.floor(cy - r)); yy <= Math.min(h - 1, Math.ceil(cy + r)); yy += 1) {
         for (let xx = Math.max(0, Math.floor(cx - r)); xx <= Math.min(w - 1, Math.ceil(cx + r)); xx += 1) {
-          if ((xx + 0.5 - cx) ** 2 + (yy + 0.5 - cy) ** 2 <= r * r) m[yy * w + xx] = v;
+          if ((xx + 0.5 - cx) ** 2 + (yy + 0.5 - cy) ** 2 > r * r) continue;
+          cur.mask[yy * w + xx] = v;
+          over[yy * w + xx] = v ? 1 : 2;
         }
       }
     };
-    const from = last.current || { x, y };
-    const steps = Math.max(1, Math.ceil(Math.hypot(x - from.x, y - from.y) / Math.max(1, r * 0.4)));
-    for (let s = 1; s <= steps; s += 1) dab(from.x + ((x - from.x) * s) / steps, from.y + ((y - from.y) * s) / steps);
-    last.current = { x, y };
-    if (!changed) setChanged(true);
-    cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(draw);
+    const ax = from.x * w; const ay = from.y * h; const bx = to.x * w; const by = to.y * h;
+    const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / Math.max(1, r * 0.4)));
+    for (let k = 1; k <= steps; k += 1) dab(ax + ((bx - ax) * k) / steps, ay + ((by - ay) * k) / steps);
+    redraw();
   };
 
-  const done = () => {
-    const { w, h } = dims.current;
-    onDone({ width: w, height: h, data: data.current.slice() });
+  const onDown = (e) => {
+    if (!img || status === 'opening') return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const p = pointAt(e);
+    drag.current = { start: p, last: p, moved: false, box: null };
+    if (tool === 'brush') {
+      // A stroke is one Undo step.
+      const cur = current.current;
+      history.current.push({ mask: cur.mask.slice(), hints: { ...cur.hints, overrides: cur.hints.overrides ? cur.hints.overrides.slice() : null } });
+      if (!cur.hints.overrides) cur.hints = { ...cur.hints, overrides: new Uint8Array(img.w * img.h) };
+      cur.mask = cur.mask.slice();
+      paintStroke(p, p);
+    }
   };
+  const onMove = (e) => {
+    const dg = drag.current;
+    if (!dg) return;
+    const p = pointAt(e);
+    if (Math.hypot(p.x - dg.start.x, p.y - dg.start.y) > 0.015) dg.moved = true;
+    if (tool === 'brush') paintStroke(dg.last, p);
+    else if (tool === 'box' && dg.moved) {
+      dg.box = {
+        x0: Math.min(dg.start.x, p.x), y0: Math.min(dg.start.y, p.y), x1: Math.max(dg.start.x, p.x), y1: Math.max(dg.start.y, p.y),
+      };
+      redraw();
+    }
+    dg.last = p;
+  };
+  const onUp = () => {
+    const dg = drag.current;
+    drag.current = null;
+    if (!dg || tool === 'brush') { redraw(); return; }
+    const cur = current.current.hints;
+    if (tool === 'box') {
+      const b = dg.box;
+      if (!b || (b.x1 - b.x0) < 0.05 || (b.y1 - b.y0) < 0.05) { redraw(); return; }
+      // Taps inside the new box still count.
+      const taps = cur.taps.filter((t) => t.x >= b.x0 && t.x <= b.x1 && t.y >= b.y0 && t.y <= b.y1);
+      recut({ taps, box: b, overrides: cur.overrides });
+      setTool('add');
+      return;
+    }
+    if (dg.moved) { redraw(); return; }
+    recut({ ...cur, taps: [...cur.taps, { x: dg.start.x, y: dg.start.y, kind: tool === 'remove' ? 'remove' : 'add' }] });
+  };
+
+  const undo = () => {
+    const prev = history.current.pop();
+    if (!prev) return;
+    current.current = prev;
+    setError('');
+    redraw();
+  };
+  const startOver = () => {
+    if (!autoMask.current) return;
+    history.current.push(current.current);
+    current.current = { mask: Uint8Array.from(autoMask.current), hints: { taps: [], box: null, overrides: null } };
+    setError('');
+    redraw();
+  };
+  const done = () => {
+    const { w, h } = img;
+    onDone({ width: w, height: h, data: current.current.mask.slice() });
+  };
+
+  const tools = [
+    { key: 'add', label: 'Add', icon: PlusCircle },
+    { key: 'remove', label: 'Remove', icon: MinusCircle },
+    { key: 'box', label: 'Draw around', icon: BoundingBox },
+  ];
 
   return createPortal(
-    <div className="m3d-touch" role="dialog" aria-modal="true" aria-label="Touch up the cutout">
+    <div className="m3d-touch" role="dialog" aria-modal="true" aria-label="Fix the cutout">
       <div className="m3d-touch-backdrop" onClick={() => onDone(null)} aria-hidden="true" />
       <div className="m3d-touch-panel">
         <header className="m3d-touch-head">
           <div>
-            <strong>Touch up the cutout</strong>
-            <small>Bright is the object. Paint to add to it, erase to take away.</small>
+            <strong>Fix the cutout{title !== 'front' ? ` (${title} photo)` : ''}</strong>
+            <small>Bright, with the green outline, is what becomes the 3D model.</small>
           </div>
           <button type="button" className="m3d-touch-close" onClick={() => onDone(null)} aria-label="Close without changes">
             <X size={20} weight="bold" />
           </button>
         </header>
+
+        <div className="m3d-touch-tools m3d-touch-tools--main" role="toolbar" aria-label="Fix the cutout">
+          {tools.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={tool === key}
+              className={`m3d-tool${tool === key ? ' is-on' : ''}`}
+              onClick={() => setTool(key)}
+            >
+              <Icon size={22} weight={tool === key ? 'fill' : 'regular'} />
+              <span>{label}</span>
+            </button>
+          ))}
+          <button type="button" className="m3d-tool" onClick={undo} disabled={!snap.canUndo || status === 'updating'}>
+            <ArrowCounterClockwise size={22} />
+            <span>Undo</span>
+          </button>
+        </div>
+
+        <p className={`m3d-touch-hint${error ? ' is-error' : ''}`} aria-live="polite">
+          {error || (status === 'opening' ? 'Getting the photo ready…' : HINTS[tool])}
+        </p>
+
         <div className="m3d-touch-stage">
           {img ? (
             <canvas
               ref={canvasRef}
               width={img.w}
               height={img.h}
-              className="m3d-touch-canvas"
-              onPointerDown={(e) => { drawing.current = true; last.current = null; e.currentTarget.setPointerCapture?.(e.pointerId); paintAt(e); }}
-              onPointerMove={(e) => { if (drawing.current) paintAt(e); }}
-              onPointerUp={() => { drawing.current = false; last.current = null; }}
-              onPointerCancel={() => { drawing.current = false; last.current = null; }}
+              className={`m3d-touch-canvas is-${tool}`}
+              onPointerDown={onDown}
+              onPointerMove={onMove}
+              onPointerUp={onUp}
+              onPointerCancel={() => { drag.current = null; redraw(); }}
             />
           ) : (
             <div className="m3d-stage-empty"><CircleNotch size={26} className="m3d-spin" aria-hidden="true" /> Opening the photo…</div>
           )}
+          {(status === 'updating' || status === 'opening') && img && (
+            <span className="m3d-stage-busy m3d-touch-busy">
+              <CircleNotch size={16} className="m3d-spin" aria-hidden="true" /> {status === 'opening' ? 'Getting ready' : 'Updating'}
+            </span>
+          )}
         </div>
+
         <div className="m3d-touch-tools">
-          <div className="m3d-seg" role="radiogroup" aria-label="Brush">
-            <button type="button" role="radio" aria-checked={mode === 'add'} className={`m3d-seg-btn${mode === 'add' ? ' is-on' : ''}`} onClick={() => setMode('add')}>
-              <PaintBrush size={16} /> Paint
-            </button>
-            <button type="button" role="radio" aria-checked={mode === 'erase'} className={`m3d-seg-btn${mode === 'erase' ? ' is-on' : ''}`} onClick={() => setMode('erase')}>
-              <Eraser size={16} /> Erase
-            </button>
-          </div>
-          <div className="m3d-seg" role="radiogroup" aria-label="Brush size">
-            {SIZES.map((s) => (
-              <button key={s.key} type="button" role="radio" aria-checked={size === s.key} className={`m3d-seg-btn${size === s.key ? ' is-on' : ''}`} onClick={() => setSize(s.key)}>
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="m3d-touch-actions">
           <button
             type="button"
-            className="pf-btn pf-btn--ghost"
-            disabled={!changed}
-            onClick={() => { data.current = original.current.slice(); setChanged(false); draw(); }}
+            aria-pressed={tool === 'brush'}
+            className={`m3d-seg-btn${tool === 'brush' ? ' is-on' : ''}`}
+            onClick={() => setTool(tool === 'brush' ? 'add' : 'brush')}
           >
+            <PaintBrush size={16} /> Brush
+          </button>
+          {tool === 'brush' && (
+            <>
+              <div className="m3d-seg" role="radiogroup" aria-label="Brush paints">
+                <button type="button" role="radio" aria-checked={brushAdd} className={`m3d-seg-btn${brushAdd ? ' is-on' : ''}`} onClick={() => setBrushAdd(true)}>
+                  <HandTap size={16} /> Object
+                </button>
+                <button type="button" role="radio" aria-checked={!brushAdd} className={`m3d-seg-btn${!brushAdd ? ' is-on' : ''}`} onClick={() => setBrushAdd(false)}>
+                  <Eraser size={16} /> Background
+                </button>
+              </div>
+              <div className="m3d-seg" role="radiogroup" aria-label="Brush size">
+                {BRUSH.map((b) => (
+                  <button key={b.key} type="button" role="radio" aria-checked={size === b.key} className={`m3d-seg-btn${size === b.key ? ' is-on' : ''}`} onClick={() => setSize(b.key)}>
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="m3d-touch-actions">
+          <button type="button" className="pf-btn pf-btn--ghost" onClick={startOver} disabled={!snap.hasAuto || status !== 'ready'}>
             Start over
           </button>
-          <button type="button" className="pf-btn pf-btn--primary" onClick={done} disabled={!img}>
-            Make 3D from this
+          <button type="button" className="pf-btn pf-btn--primary" onClick={done} disabled={!img || !snap.hasMask || status === 'updating'}>
+            Use this cutout
           </button>
         </div>
       </div>

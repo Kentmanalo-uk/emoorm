@@ -137,6 +137,74 @@ export function upsampleMask(mask, sw, sh, dw, dh) {
   return { hard, alpha };
 }
 
+/** Box mean of a Float32Array image (radius r), via running sums. */
+function boxMean(src, w, h, r) {
+  const tmp = new Float32Array(w * h);
+  const out = new Float32Array(w * h);
+  for (let y = 0; y < h; y += 1) {
+    let s = 0;
+    const row = y * w;
+    for (let x = -r; x <= r; x += 1) s += src[row + Math.min(w - 1, Math.max(0, x))];
+    for (let x = 0; x < w; x += 1) {
+      tmp[row + x] = s / (2 * r + 1);
+      s += src[row + Math.min(w - 1, x + r + 1)] - src[row + Math.max(0, x - r)];
+    }
+  }
+  for (let x = 0; x < w; x += 1) {
+    let s = 0;
+    for (let y = -r; y <= r; y += 1) s += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+    for (let y = 0; y < h; y += 1) {
+      out[y * w + x] = s / (2 * r + 1);
+      s += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+    }
+  }
+  return out;
+}
+
+/**
+ * The mask at the photo's size, edge-aware: bilinear first, then a guided
+ * filter (He et al.) with the photo's lightness as the guide, so the edge
+ * snaps to the object's real outline; a hard mask and a soft 1-2 px alpha.
+ */
+export function guidedUpsampleMask(mask, sw, sh, photo, { radius = 3, eps = 0.01 } = {}) {
+  const { width: dw, height: dh, data } = photo;
+  const n = dw * dh;
+  const p = new Float32Array(n);
+  for (let y = 0; y < dh; y += 1) {
+    const fy = Math.max(0, Math.min(sh - 1, ((y + 0.5) * sh) / dh - 0.5));
+    const y0 = Math.floor(fy); const y1 = Math.min(sh - 1, y0 + 1); const ty = fy - y0;
+    for (let x = 0; x < dw; x += 1) {
+      const fx = Math.max(0, Math.min(sw - 1, ((x + 0.5) * sw) / dw - 0.5));
+      const x0 = Math.floor(fx); const x1 = Math.min(sw - 1, x0 + 1); const tx = fx - x0;
+      p[y * dw + x] = (mask[y0 * sw + x0] * (1 - tx) + mask[y0 * sw + x1] * tx) * (1 - ty)
+        + (mask[y1 * sw + x0] * (1 - tx) + mask[y1 * sw + x1] * tx) * ty;
+    }
+  }
+  const I = new Float32Array(n);
+  for (let i = 0; i < n; i += 1) I[i] = (0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]) / 255;
+  const II = new Float32Array(n); const Ip = new Float32Array(n);
+  for (let i = 0; i < n; i += 1) { II[i] = I[i] * I[i]; Ip[i] = I[i] * p[i]; }
+  const mI = boxMean(I, dw, dh, radius); const mp = boxMean(p, dw, dh, radius);
+  const mII = boxMean(II, dw, dh, radius); const mIp = boxMean(Ip, dw, dh, radius);
+  const A = new Float32Array(n); const B = new Float32Array(n);
+  for (let i = 0; i < n; i += 1) {
+    const varI = mII[i] - mI[i] * mI[i];
+    const cov = mIp[i] - mI[i] * mp[i];
+    A[i] = cov / (varI + eps);
+    B[i] = mp[i] - A[i] * mI[i];
+  }
+  const mA = boxMean(A, dw, dh, radius); const mB = boxMean(B, dw, dh, radius);
+  const hard = new Uint8Array(n);
+  const alpha = new Uint8ClampedArray(n);
+  for (let i = 0; i < n; i += 1) {
+    // Only near the edge may the filter move it (deep inside or outside stays put).
+    const q = mp[i] > 0.01 && mp[i] < 0.99 ? mA[i] * I[i] + mB[i] : p[i];
+    hard[i] = q >= 0.5 ? 1 : 0;
+    alpha[i] = Math.max(0, Math.min(255, Math.round(((q - 0.3) / 0.4) * 255)));
+  }
+  return { hard, alpha };
+}
+
 /**
  * The photo with its background painted over by the nearest object colour
  * (a breadth-first fill outwards from the object), so sampling it at the

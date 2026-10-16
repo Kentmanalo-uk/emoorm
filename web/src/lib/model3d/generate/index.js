@@ -101,6 +101,52 @@ export function runGenerator(input, onProgress) {
   };
 }
 
+/**
+ * A cutout session for fixing a photo's cutout: the worker prepares the
+ * photo once (superpixels, cues), then each refine (taps, a box, brush
+ * overrides) comes back quickly.
+ * @param {{ width, height, data }} photo - decodePhoto()
+ * @returns {{ ready: Promise<object>, refine: (hints) => Promise<object>, close: Function }}
+ *   each result: { mask: { width, height, data }, confidence, lowConfidence, reasons, ms }
+ */
+export function openCutout(photo) {
+  const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+  let next = 1;
+  const waiting = new Map();
+  worker.onmessage = ({ data }) => {
+    const job = waiting.get(data.id);
+    if (!job) return;
+    waiting.delete(data.id);
+    if (data.type === 'cutout') job.resolve(data);
+    else {
+      const err = new Error(data.message || 'The cutout could not be made.');
+      err.code = data.code;
+      job.reject(err);
+    }
+  };
+  worker.onerror = () => {
+    for (const job of waiting.values()) job.reject(new Error('The cutout tool stopped unexpectedly. Try again.'));
+    waiting.clear();
+  };
+  const ask = (message, transfer = []) => new Promise((resolve, reject) => {
+    const id = next;
+    next += 1;
+    waiting.set(id, { resolve, reject });
+    worker.postMessage({ ...message, id }, transfer);
+  });
+  const data = new Uint8ClampedArray(photo.data);
+  const ready = ask({ type: 'cutout-open', photo: { width: photo.width, height: photo.height, data } }, [data.buffer]);
+  return {
+    ready,
+    refine: (hints) => ask({ type: 'cutout-refine', hints }),
+    close: () => {
+      for (const job of waiting.values()) job.reject(Object.assign(new Error('Closed.'), { code: 'cancelled' }));
+      waiting.clear();
+      worker.terminate();
+    },
+  };
+}
+
 /** RGBA pixels as a canvas. */
 export function pixelsToCanvas({ width, height, data }) {
   const canvas = document.createElement('canvas');

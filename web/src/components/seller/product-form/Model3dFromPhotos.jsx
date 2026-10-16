@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  ArrowArcLeft, ArrowArcRight, Camera, Check, CircleNotch, Cube, Info, PaintBrush, Trash, Warning, X,
+  ArrowArcLeft, ArrowArcRight, Camera, Check, CircleNotch, Cube, HandTap, Info, PaintBrush, Trash, Warning, X,
 } from '@phosphor-icons/react';
 import axios from '../../../lib/axios';
 import { resolveImg } from '../../../lib/media';
@@ -67,7 +67,7 @@ const numberOr = (v) => {
 
 /** One photo slot: empty, or the photo (with its cutout over it once found). */
 function PhotoSlot({
-  view, value, cutout, onPick, onClear, invalid, busy,
+  view, value, cutout, onPick, onClear, onFix, invalid, busy,
 }) {
   const inputRef = useRef(null);
   const src = cutout || value?.preview || (value?.url ? resolveImg(value.url) : null);
@@ -93,8 +93,13 @@ function PhotoSlot({
         <div className={`m3d-label-photo${cutout ? ' is-cutout' : ''}`}>
           <img src={src} alt={cutout ? `${view.title} photo, object found` : `${view.title} photo`} />
           {!busy && (
-            <button type="button" className="m3d-label-change" onClick={() => inputRef.current?.click()}>
-              <Camera size={16} /> Change
+            <button type="button" className="m3d-label-change" onClick={() => inputRef.current?.click()} aria-label={`Change the ${view.title.toLowerCase()} photo`}>
+              <Camera size={16} /> <span className="m3d-label-change-text">Change</span>
+            </button>
+          )}
+          {onFix && cutout && !busy && (
+            <button type="button" className="m3d-label-fix" onClick={onFix} aria-label={`Fix the ${view.title.toLowerCase()} cutout`}>
+              <PaintBrush size={15} /> Fix
             </button>
           )}
           {onClear && !busy && (
@@ -184,6 +189,8 @@ export default function Model3dFromPhotos({
   const runId = useRef(0);
   const [step, setStep] = useState('');
   const [touchUp, setTouchUp] = useState(null);
+  // Per photo: whether its automatic cutout needs a look (low confidence).
+  const [checks, setChecks] = useState({});
 
   const job = useRef(null);
   const decoded = useRef(new Map());
@@ -259,7 +266,7 @@ export default function Model3dFromPhotos({
     setPhase('working');
     setFailure(null);
     setProgress({ stage: 'segment', label: 'Finding the object…', progress: 1 });
-    if (!reuseMasks && !editedMasks) { setCutouts({}); cutoutPixels.current = {}; masks.current = {}; }
+    if (!reuseMasks && !editedMasks) { setCutouts({}); setChecks({}); cutoutPixels.current = {}; masks.current = {}; }
     try {
       const m = await loadGenerator();
       const input = { views: {}, shape: shapeChoice };
@@ -267,7 +274,11 @@ export default function Model3dFromPhotos({
       if (reuseMasks || editedMasks) input.masks = { ...masks.current, ...(editedMasks || {}) };
       const run = m.runGenerator(input, (p) => {
         setProgress({ stage: p.stage, label: p.label, progress: p.progress });
-        if (p.mask) masks.current[p.view] = p.mask;
+        if (p.mask) {
+          masks.current[p.view] = p.mask;
+          const { view, lowConfidence, reasons } = p;
+          setChecks((c) => ({ ...c, [view]: { low: !!lowConfidence, reasons: reasons || [] } }));
+        }
         if (p.cutout) {
           cutoutPixels.current[p.view] = p.cutout;
           m.cutoutPng(p.cutout).then((blob) => {
@@ -296,6 +307,7 @@ export default function Model3dFromPhotos({
   const pick = (key) => (file) => {
     setPhotos((all) => ({ ...all, [key]: { file, preview: track(URL.createObjectURL(file)) } }));
     setCutouts((c) => ({ ...c, [key]: undefined }));
+    setChecks((c) => ({ ...c, [key]: undefined }));
     delete masks.current[key];
     if (phase !== 'photos' && phase !== 'saved') { setPhase('photos'); setResult(null); }
   };
@@ -379,10 +391,14 @@ export default function Model3dFromPhotos({
     }
   };
 
+  const openFix = (view) => setTouchUp({ view, photo: photoOf(view), mask: masks.current[view] });
   const finishTouchUp = (edited) => {
     const { view } = touchUp;
     setTouchUp(null);
-    if (edited) make({ editedMasks: { [view]: edited }, reuseMasks: true });
+    if (!edited) return;
+    // The seller's mask is used as it is: no automatic re-cut on top.
+    setChecks((c) => ({ ...c, [view]: { low: false, reasons: [], fixed: true } }));
+    make({ editedMasks: { [view]: edited }, reuseMasks: true });
   };
 
   if (!available) {
@@ -399,6 +415,8 @@ export default function Model3dFromPhotos({
   const warn = stats && stats.quality !== 'good';
   // Touch up: fix the found outline, or (when nothing usable was found) paint the object in.
   const canTouchUp = phase === 'preview' || (phase === 'failed' && !!photos.front && (!failure?.view || failure.view === 'front'));
+  // Photos whose cutout is shown and may be wrong.
+  const doubtful = VIEWS.filter((v) => photos[v.key] && cutouts[v.key] && checks[v.key]?.low);
 
   return (
     <div className="m3d-ed m3d-ed--photos">
@@ -429,7 +447,7 @@ export default function Model3dFromPhotos({
               <span className="pf-label">Photos of the object</span>
               <p className="m3d-tip">
                 <Camera size={16} aria-hidden="true" />
-                <span>One object, plain background, the whole object in the frame, good light. More photos = more accurate shape.</span>
+                <span>The whole object in the frame, in good light. A plain background works best; on a busy one, check the cutout. More photos = more accurate shape.</span>
               </p>
               <div className="m3d-labels m3d-labels--3">
                 {VIEWS.map((v) => (
@@ -440,12 +458,29 @@ export default function Model3dFromPhotos({
                     cutout={cutouts[v.key]}
                     onPick={pick(v.key)}
                     onClear={!v.required && photos[v.key] ? clear(v.key) : null}
+                    onFix={phase !== 'working' ? () => openFix(v.key) : null}
                     invalid={v.required && tried && !photos[v.key]}
                     busy={busy}
                   />
                 ))}
               </div>
               {tried && !photos.front && <p className="pf-error" role="alert">Add a photo of the front.</p>}
+              {phase !== 'working' && doubtful.length > 0 && (
+                <div className="m3d-check" role="status">
+                  <HandTap size={20} aria-hidden="true" />
+                  <div>
+                    <strong>Not quite right? Tap the object, or draw around it.</strong>
+                    <span>
+                      {doubtful.some((v) => checks[v.key].reasons.includes('busy-background'))
+                        ? 'The background is busy, so check what was picked as the object.'
+                        : 'Check what was picked as the object.'}
+                    </span>
+                  </div>
+                  <button type="button" className="pf-btn pf-btn--ghost" onClick={() => openFix(doubtful[0].key)} disabled={busy}>
+                    Fix the cutout
+                  </button>
+                </div>
+              )}
               {!photos.back && (
                 <p className="m3d-note">The back is guessed from your photo unless you add a back photo.</p>
               )}
@@ -591,8 +626,8 @@ export default function Model3dFromPhotos({
           </button>
         )}
         {canTouchUp && (
-          <button type="button" className="pf-btn pf-btn--ghost" onClick={() => setTouchUp({ view: 'front', photo: photoOf('front'), mask: masks.current.front })} disabled={busy}>
-            <PaintBrush size={17} /> Touch up the cutout
+          <button type="button" className="pf-btn pf-btn--ghost" onClick={() => openFix(failure?.view || 'front')} disabled={busy}>
+            <PaintBrush size={17} /> Fix the cutout
           </button>
         )}
         {phase === 'saved' && (
@@ -622,6 +657,7 @@ export default function Model3dFromPhotos({
         <Model3dTouchUp
           photo={touchUp.photo}
           mask={touchUp.mask}
+          title={touchUp.view}
           onDone={finishTouchUp}
         />
       )}

@@ -1,5 +1,5 @@
 import {
-  fitImage, maskBox, resizeMask, upsampleMask, bleedObjectColours, cutoutImage,
+  fitImage, maskBox, resizeMask, guidedUpsampleMask, bleedObjectColours, cutoutImage,
 } from './image.js';
 import { segmentObject, checkMask, SegmentError } from './segment.js';
 import { analyzeMask, looksRound } from './analyze.js';
@@ -109,7 +109,8 @@ export function generate(input, onProgress = () => {}) {
           : resizeMask(Uint8Array.from(given.data, (v) => (v ? 1 : 0)), given.width, given.height, small.width, small.height);
         found = checkMask(m, small.width, small.height);
       } else {
-        found = segmentObject(small);
+        // The seller's taps and box, when they steered the cutout.
+        found = segmentObject(small, input.hints?.[name] || undefined);
       }
     } catch (err) {
       if (err instanceof SegmentError) {
@@ -118,7 +119,7 @@ export function generate(input, onProgress = () => {}) {
       }
       throw err;
     }
-    const { hard, alpha } = upsampleMask(found.mask, small.width, small.height, photo.width, photo.height);
+    const { hard, alpha } = guidedUpsampleMask(found.mask, small.width, small.height, photo);
     const cutout = cutoutImage(photo, alpha);
     seg[name] = {
       ...found, width: small.width, height: small.height, photo, photoMask: hard, scale: photo.width / small.width,
@@ -130,6 +131,9 @@ export function generate(input, onProgress = () => {}) {
       view: name,
       cutout,
       mask: { width: small.width, height: small.height, data: found.mask },
+      confidence: found.confidence,
+      lowConfidence: !!found.lowConfidence,
+      reasons: found.reasons || [],
     });
   });
   timings.segment = Math.round(now() - t0);
