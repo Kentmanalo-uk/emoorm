@@ -39,6 +39,8 @@ import ProductQuestions from '../../../src/components/product/ProductQuestions';
 import ReviewItem, { Stars } from '../../../src/components/product/ReviewItem';
 import ShippingEstimate from '../../../src/components/product/ShippingEstimate';
 import ReportSheet from '../../../src/components/product/ReportSheet';
+import Product3dSheet, { Product3dChip } from '../../../src/components/product/Product3dSheet';
+import { useCartSettings } from '../../../src/components/cart/cartSettings';
 import IdentityDialog from '../../../src/components/product/IdentityDialog';
 import ProductSection, { SectionBody, SectionHead, SectionTitle } from '../../../src/components/product/ProductSection';
 import { RelatedGrid, ShopShelf } from '../../../src/components/product/ProductShelves';
@@ -109,6 +111,9 @@ function ProductPage({ slug }) {
   const [shipQuote, setShipQuote] = useState(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  // The 3D view, open over the page (while the super admin has 3D views on).
+  const [open3d, setOpen3d] = useState(false);
+  const appSettings = useCartSettings();
   const [sheetMode, setSheetMode] = useState(null);
   const [identityOpen, setIdentityOpen] = useState(false);
   const [storeFollow, setStoreFollow] = useState({ following: false, count: null, busy: false });
@@ -487,6 +492,8 @@ function ProductPage({ slug }) {
   const isOutOfStock = !isStockless(product) && product.stock === 0;
   const kind = productKind(product);
   const livestock = kind === 'LIVESTOCK';
+  // Its 3D view, while the super admin has 3D views on (on unless switched off).
+  const view3d = appSettings?.product3dEnabled !== false && product.model3d?.glbUrl ? product.model3d : null;
   const { least: leastQty, most: mostQty } = quantityBounds(product, selectedVariations);
   const away = awayUntil(product.store);
   const todayItem = isTodayProduct(product);
@@ -637,6 +644,12 @@ function ProductPage({ slug }) {
           ) : null}
           {product.status === 'PENDING' ? (
             <View style={styles.pending}><Text style={styles.pendingText}>PENDING REVIEW</Text></View>
+          ) : null}
+          {view3d ? (
+            <Product3dChip
+              onPress={() => setOpen3d(true)}
+              style={[styles.chip3d, product.status === 'PENDING' && styles.chip3dRaised]}
+            />
           ) : null}
         </View>
 
@@ -1038,6 +1051,9 @@ function ProductPage({ slug }) {
         />
       ) : null}
 
+      {open3d && view3d ? (
+        <Product3dSheet model={view3d} name={product.name} onClose={() => setOpen3d(false)} />
+      ) : null}
       {showReport ? (
         <ReportSheet type="PRODUCT" productId={product.id} targetName={product.name} onClose={() => setShowReport(false)} />
       ) : null}
@@ -1244,6 +1260,9 @@ const styles = StyleSheet.create({
   counterText: { fontSize: 12, lineHeight: 19.2, ...font(500), color: '#fff', letterSpacing: 0.24 },
   pending: { position: 'absolute', left: 12, bottom: 12, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 3, backgroundColor: t.warning[100] },
   pendingText: { fontSize: 11, lineHeight: 14, ...font(500), color: t.warning[800], letterSpacing: 0.22 },
+  // The 3D chip (.pdp-3d-chip), above the pending badge when there is one.
+  chip3d: { position: 'absolute', left: 12, bottom: 12 },
+  chip3dRaised: { bottom: 40 },
 
   // The price, where it is, and what it was (then its notes on white).
   priceBand: { alignItems: 'flex-start', gap: 8, paddingVertical: 14, paddingHorizontal: 16, overflow: 'hidden' },

@@ -1,17 +1,19 @@
 {
   "name": "E-MOORM",
   "package": "shop.emoorm.app",
-  "version": "2.0.0",
-  "versionCode": 10,
+  "version": "2.1.0",
+  "versionCode": 12,
   "minAndroid": "7.0",
-  "file": "/downloads/E-MOORM-2.0.0.apk",
-  "size": 84925263,
-  "sha256": "f5ded4e17a4877b0cbdd7891079d1298dd683c7956e32cde0c7c9cd7e7b7d134",
+  "file": "/downloads/E-MOORM-2.1.0.apk",
+  "size": 88281324,
+  "sha256": "2a9a5ee145205f8a1f9d708aeb139a9d88d73aa207ae499abc875ef09c69f0c0",
   "certificateSha256": "9F:60:02:EF:10:02:55:0F:51:DA:63:3E:B5:CF:3B:0D:37:28:2C:B8:08:6C:AF:0F:57:0C:C4:AD:8F:A0:AB:22",
-  "released": "2026-10-10",
+  "released": "2026-10-20",
   "notes": [
-    "A brand-new app made for phones: quicker screens, smooth scrolling and animations built for touch, in place of the website in a frame.",
-    "Shopping, chat, orders and the Seller Center are all here, and emoorm.shop links open straight in the app.",
-    "After updating, sign in once more to pick up your account, cart and orders."
+    "Today's menu: see what food shops have ready now, or pre-order for later, and sellers post and edit their menu in the app.",
+    "Delivery by a MoorMove rider at checkout, with the fee shown before you order; sellers can call a rider, cancel one, or deliver it themselves.",
+    "See products in 3D and, on supported phones, view them in your space.",
+    "Opening a shop is five short steps, and each shop sets a delivery fee for every place it delivers to, or free delivery.",
+    "Shop QR posters to save and share, a fresher home page, and smoother menus."
   ]
 }

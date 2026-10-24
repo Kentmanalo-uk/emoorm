@@ -554,6 +554,7 @@ export default function ProductForm({
             policyMode={policyMode}
             onPolicy={pickPolicy}
             onClearPolicy={clearPolicy}
+            product={product}
           />
         ) : null}
         ctx={{
@@ -605,6 +606,7 @@ export default function ProductForm({
         policyMode={policyMode}
         onPolicy={pickPolicy}
         onClearPolicy={clearPolicy}
+        product={product}
       />
     );
   } else {

@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  CheckCircleIcon, FileTextIcon, FlagIcon, PackageIcon, XCircleIcon,
+  CheckCircleIcon, FileTextIcon, FlagIcon, MoneyIcon, MotorcycleIcon, PackageIcon, TruckIcon, XCircleIcon,
 } from 'phosphor-react-native';
 import apiClient from '../../../api/client';
 import { resolveImg } from '../../../lib/media';
@@ -20,7 +20,7 @@ import {
 } from '../../orders/orderProgress';
 import {
   ACTION_LABELS, isRiderOrder, statusOf, canCancel, canMarkRefunded, canWaiveFee, cookingFor, etaLabel, faultLabel, kgLabel, lineNote, mediumStamp, money,
-  nextStep, orderNo, paymentBadge, qrUnpaid, qtyLabel, riderFeeNote, riderReturning, sellerFallbackLine, sellerNext,
+  nextStep, orderNo, paymentBadge, qrUnpaid, qtyLabel, riderActions, riderFeeNote, sellerFallbackLine, sellerNext,
 } from './sellerOrderLib';
 
 const native = Platform.OS !== 'web';
@@ -125,8 +125,105 @@ const ACTION_STYLE = {
   cancel: { border: t.danger[600], ink: t.danger[600] },
 };
 
+/**
+ * The MoorMove buttons under the next step (web SellerRiderPanel): Parcel
+ * back, Cash received, Call a rider (again), Deliver it myself, Cancel rider,
+ * and the note about who delivers. Each asks first (the screen's sheets).
+ */
+function RiderButtons({
+  order, ridersOn, busy, onParcelBack, onRider,
+}) {
+  const ra = riderActions(order, ridersOn);
+  if (!ra) return null;
+  const any = ra.parcel || ra.cash || ra.book || ra.self || ra.cancel;
+  if (!any && !ra.note && !ra.promoLine) return null;
+  const ask = (action) => onRider?.(order, action);
+  return (
+    <View style={styles.riderBox}>
+      {ra.promoLine ? <Text style={styles.promoLine}>{ra.promoLine}</Text> : null}
+      {any ? (
+        <View style={styles.riderRow}>
+          {ra.parcel ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={() => onParcelBack?.(order)}
+              style={({ pressed }) => [styles.parcelBtn, styles.riderBtn, (pressed || busy) && styles.actionOff]}
+            >
+              <PackageIcon size={16} weight="fill" color="#fff" />
+              <Text style={styles.parcelText}>Parcel back</Text>
+            </Pressable>
+          ) : null}
+          {ra.cash ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={() => ask('cash')}
+              style={({ pressed }) => [styles.parcelBtn, styles.riderBtn, (pressed || busy) && styles.actionOff]}
+            >
+              <MoneyIcon size={16} weight="fill" color="#fff" />
+              <Text style={styles.parcelText}>Cash received</Text>
+            </Pressable>
+          ) : null}
+          {ra.book ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={() => ask('book')}
+              style={({ pressed }) => [styles.parcelBtn, styles.riderBtn, (pressed || busy) && styles.actionOff]}
+            >
+              <MotorcycleIcon size={16} weight="fill" color="#fff" />
+              <Text style={styles.parcelText}>{ra.bookLabel}</Text>
+            </Pressable>
+          ) : null}
+          {ra.self ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={() => ask('self')}
+              style={({ pressed }) => [styles.selfBtn, styles.riderBtn, (pressed || busy) && styles.actionOff]}
+            >
+              <TruckIcon size={16} weight="fill" color={t.neutral[700]} />
+              <Text style={styles.selfText}>Deliver it myself</Text>
+            </Pressable>
+          ) : null}
+          {ra.cancel ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={() => ask('cancel')}
+              style={({ pressed }) => [styles.quietBtn, (pressed || busy) && styles.actionOff]}
+            >
+              <Text style={styles.quietText}>Cancel rider</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+      {ra.note ? (
+        <Text style={styles.riderNote}>
+          {ra.note}
+          {ra.selfLink ? (
+            <>
+              {' '}
+              <Text
+                accessibilityRole="button"
+                disabled={busy}
+                onPress={busy ? undefined : () => ask('self')}
+                style={styles.riderLink}
+              >
+                Deliver it myself instead
+              </Text>
+            </>
+          ) : null}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 function DetailBody({
   order, updatingId, verifyingId, onStep, onPayment, onReject, onRefund, onReport, onView, onLeave, onParcelBack, onWaive,
+  ridersOn, onRider,
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -138,8 +235,6 @@ function DetailBody({
   const tone = TONES[next.tone] || TONES.grey;
   const actionLook = ACTION_STYLE[ACTION_LABELS[step]?.cls] || {};
   const verifying = verifyingId === order.id;
-  // A MoorMove rider couldn't deliver it and is bringing the parcel back.
-  const returning = isRiderOrder(order) && riderReturning(order.riderDelivery);
   const fallback = pickup ? '' : sellerFallbackLine(order);
   const feeNote = riderFeeNote(order);
   // A rider trip that failed, and the delivery fee the buyer owes for it.
@@ -175,17 +270,13 @@ function DetailBody({
             <Text style={[styles.ospTitle, { color: tone.ink }]}>{next.title}</Text>
             {next.text ? <Text style={styles.ospText}>{next.text}</Text> : null}
           </View>
-          {returning ? (
-            <Pressable
-              accessibilityRole="button"
-              disabled={updatingId === order.id}
-              onPress={() => onParcelBack?.(order)}
-              style={({ pressed }) => [styles.parcelBtn, (pressed || updatingId === order.id) && styles.actionOff]}
-            >
-              <PackageIcon size={16} weight="fill" color="#fff" />
-              <Text style={styles.parcelText}>Parcel back</Text>
-            </Pressable>
-          ) : null}
+          <RiderButtons
+            order={order}
+            ridersOn={ridersOn}
+            busy={updatingId === order.id}
+            onParcelBack={onParcelBack}
+            onRider={onRider}
+          />
         </View>
       ) : null}
 
@@ -447,7 +538,8 @@ function DetailBody({
 /**
  * <OrderDetailSheet order={selected} onClose updatingId verifyingId
  *   onStep(orderId, status) onPayment(orderId, 'PAID') onReject(orderId)
- *   onRefund(orderId) onReport(buyer) onView(uri, title) onParcelBack(order) onWaive(order) />
+ *   onRefund(orderId) onReport(buyer) onView(uri, title) onParcelBack(order) onWaive(order)
+ *   ridersOn onRider(order, 'book' | 'self' | 'cancel' | 'cash') />
  * Open while `order` is set; it keeps the last order on screen while it slides away.
  */
 export default function OrderDetailSheet({ order, onClose, ...actions }) {
@@ -529,6 +621,24 @@ const styles = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, backgroundColor: t.primary[600],
   },
   parcelText: { fontSize: 14, lineHeight: 20, ...font(600), color: '#fff' },
+  // The rider buttons (web .rider-actions): side by side, wrapping; Deliver it
+  // myself outlined, Cancel rider a quiet red word.
+  riderBox: { gap: 8 },
+  riderRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  riderBtn: { flexGrow: 1, flexShrink: 1, flexBasis: 140 },
+  selfBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44,
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0],
+  },
+  selfText: { fontSize: 14, lineHeight: 20, ...font(600), color: t.neutral[700] },
+  quietBtn: { minHeight: 44, justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 14 },
+  quietText: { fontSize: 14, lineHeight: 20, ...font(500), color: t.danger[600] },
+  riderNote: { fontSize: 12.5, lineHeight: 18, ...font(400), color: t.neutral[600] },
+  riderLink: { ...font(600), color: t.primary[700], textDecorationLine: 'underline' },
+  promoLine: {
+    paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, overflow: 'hidden', backgroundColor: t.primary[50],
+    fontSize: 12.5, lineHeight: 18, ...font(500), color: t.primary[800],
+  },
   note: { marginTop: -4, fontSize: 12.5, lineHeight: 18, ...font(400), color: t.neutral[600] },
 
   // The failed trip: whose fault, and the fee the buyer owes for it (Waive while unpaid).

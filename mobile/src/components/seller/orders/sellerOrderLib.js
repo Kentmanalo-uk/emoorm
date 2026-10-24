@@ -161,6 +161,128 @@ const RIDER_FINAL = ['DELIVERED', 'CANCELLED', 'FAILED'];
 export const riderOpen = (rd) => Boolean(rd) && !RIDER_FINAL.includes(rd.status);
 /** The delivery failed after pickup and the rider is bringing the parcel back. */
 export const riderReturning = (rd) => rd?.status === 'RETURNING';
+/** Picked up: the rider has the parcel (also on the way back to the shop). */
+export const riderHasParcel = (rd) => ['PICKED_UP', 'AT_DROPOFF', 'DELIVERED', 'RETURNING'].includes(rd?.status);
+/** Cash the rider collected for the shop and has not handed over yet. */
+export const riderCashHeld = (o) => {
+  const rd = o?.riderDelivery;
+  return Boolean(rd) && rd.status === 'DELIVERED' && Number(rd.codAmount) > 0 && !rd.codReturnedAt;
+};
+// Steps where the parcel waits at the shop for a rider.
+const AT_SHOP = ['CONFIRMED', 'PREPARING', 'TO_SHIP'];
+/** A QR order is handed over only once its payment is confirmed. */
+export const awaitingPayment = (o) => Boolean(o?.paymentMethod) && o.paymentMethod !== 'COD' && o.paymentStatus !== 'PAID';
+
+/** An order's MoorMove free-delivery promo `{ title }`, or null. */
+export const orderPromo = (o) => {
+  if (o?.deliveryPartner !== 'MOORMOVE') return null;
+  if (o.deliveryPromo) return o.deliveryPromo;
+  return o.riderDelivery?.promoTitle ? { title: o.riderDelivery.promoTitle } : null;
+};
+
+/** The seller's line for a free-delivery promo order (who pays what), or ''. */
+export const promoSellerLine = (o) => (orderPromo(o)
+  ? `Free delivery promo by MoorMove: the buyer pays no delivery fee and you pay the rider nothing${
+    o.paymentMethod === 'COD' ? `; the rider collects only ${peso(o.total)} for the items` : ''}.`
+  : '');
+
+/** The order's own unpaid fee a re-delivery adds to it (not added anywhere yet), or 0. */
+export const feeToAdd = (o) => (o?.failedTrip?.outcome === 'BUYER_OWES' && o?.unpaidFee?.status === 'OPEN' && !o.unpaidFee.paidOrderId
+  ? Number(o.unpaidFee.amount || 0)
+  : 0);
+
+/**
+ * What the seller can do with a MoorMove order from its details
+ * (web SellerRiderPanel): Parcel back, Cash received, Call a rider (again),
+ * Deliver it myself, Cancel rider, and the note under them. `enabled`: riders
+ * are on for the site. Null when the panel shows nothing.
+ */
+export const riderActions = (o, enabled) => {
+  if (!isRiderOrder(o)) return null;
+  const rd = o.riderDelivery || null;
+  // Nothing to do yet: a new order, or a QR order not paid yet.
+  if (!rd && (o.status === 'PENDING' || o.status === 'CANCELLED')) return null;
+  const open = riderOpen(rd);
+  const atShop = AT_SHOP.includes(o.status);
+  const waitingPay = awaitingPayment(o);
+  const canBook = Boolean(enabled) && atShop && !open && !waitingPay;
+  const canSelf = atShop && !open && !waitingPay;
+  const promo = orderPromo(o);
+  let note = '';
+  if (canSelf && !rd && enabled) {
+    note = `The buyer chose a MoorMove rider (${promo ? 'free delivery' : `${peso(o.deliveryFee)} delivery fee`}). Pack it, then call a rider: one picks it up at your shop pin.`;
+  } else if (canSelf && !enabled) {
+    note = "MoorMove riders aren't available right now. Deliver it yourself, or cancel the order.";
+  } else if (waitingPay && atShop && !rd) {
+    note = "Call a rider once the buyer's payment is confirmed.";
+  }
+  return {
+    parcel: riderReturning(rd),
+    cash: riderCashHeld(o),
+    book: canBook,
+    bookLabel: rd ? 'Call a rider again' : 'Call a rider',
+    // A button once a rider booking ended (or riders are off); else the note's link.
+    self: canSelf && (Boolean(rd) || !enabled),
+    selfLink: canSelf && !rd && Boolean(enabled),
+    cancel: open && !riderHasParcel(rd),
+    promoLine: promoSellerLine(o),
+    note,
+  };
+};
+
+/** "Juan" from "Juan Dela Cruz", or ''. */
+const riderFirstName = (rd) => (rd?.riderName ? String(rd.riderName).trim().split(/\s+/)[0] : '');
+
+/**
+ * Where a rider delivery stands, in the seller's words (the seller half of
+ * web lib/moormove riderStatus): `{ title, text, tone }`.
+ */
+export const sellerRiderStatus = (rd) => {
+  const name = riderFirstName(rd) || 'The rider';
+  switch (rd?.status) {
+    case 'SEARCHING':
+      return { tone: 'amber', title: 'Finding a rider…', text: 'Riders nearby are being asked. Keep the parcel ready at your shop.' };
+    case 'ACCEPTED':
+      return { tone: 'blue', title: `${name} is coming to your shop`, text: 'Have the parcel ready to hand over.' };
+    case 'AT_PICKUP':
+      return { tone: 'blue', title: 'Rider is at the shop', text: `Hand the parcel to ${name}.` };
+    case 'PICKED_UP':
+      return { tone: 'blue', title: 'Picked up — on the way to the buyer', text: `${name} has the parcel.` };
+    case 'AT_DROPOFF':
+      return { tone: 'green', title: "Rider is at the buyer's place", text: `${name} is handing it over.` };
+    case 'DELIVERED':
+      if (Number(rd.codAmount) > 0) {
+        return rd.codReturnedAt
+          ? { tone: 'green', title: 'Delivered', text: `You received the ${peso(rd.codAmount)} cash from the rider.` }
+          : { tone: 'amber', title: `Delivered — ${peso(rd.codAmount)} with the rider`, text: `${name} brings the cash back to your shop. Tap Cash received once you have it.` };
+      }
+      return { tone: 'green', title: 'Delivered', text: 'The rider handed the order to the buyer.' };
+    case 'RETURNING':
+      return {
+        tone: 'red',
+        title: 'Delivery failed: the rider is bringing the parcel back',
+        text: `${rd.failReason ? `${rd.failReason}. ` : ''}Tap Parcel back once it is at your shop.`,
+      };
+    case 'FAILED':
+      // returnedAt: the seller confirmed the parcel is back (after RETURNING).
+      if (rd.returnedAt) {
+        return {
+          tone: 'amber',
+          title: 'Parcel back at your shop',
+          text: `${rd.failReason ? `The delivery failed: ${rd.failReason}. ` : ''}Call a rider again or deliver it yourself.`,
+        };
+      }
+      return {
+        tone: 'red',
+        title: "The delivery didn't go through",
+        text: `${rd.failReason ? `${rd.failReason}. ` : ''}Once the parcel is back at your shop, call a rider again or deliver it yourself.`,
+      };
+    case 'CANCELLED':
+      return { tone: 'grey', title: 'Rider cancelled', text: `${rd.cancelReason ? `${rd.cancelReason}. ` : ''}Call another rider or deliver it yourself.` };
+    default:
+      return { tone: 'grey', title: '', text: '' };
+  }
+};
 
 /** The seller's line for an order they took over from a MoorMove rider, or ''. */
 export const sellerFallbackLine = (o) => fallbackLine(o, 'seller');
@@ -268,48 +390,43 @@ export const sellerNext = (o) => {
   if (o.status === 'CONFIRMED' && isQr(o) && o.paymentStatus === 'PENDING') {
     return { tone: 'blue', short: 'Waiting for payment', title: "Waiting for the buyer's payment", text: `The buyer pays ${peso(o.total)} with your QR${deadline ? ` by ${shortWhen(deadline)}` : ''}. You'll be told when they send it; it is cancelled if they don't pay.`, due };
   }
-  // A MoorMove rider takes it from packing on. The app can't call a rider
-  // yet: that is done in Seller Center on the website.
+  // A MoorMove rider takes it: the rider's step decides what is next
+  // (the buttons are in the details: riderActions).
   if (isRiderOrder(o)) {
     const rd = o.riderDelivery || null;
-    const cashHeld = rd?.status === 'DELIVERED' && Number(rd.codAmount) > 0 && !rd.codReturnedAt;
-    if (cashHeld && ['DELIVERED', 'COMPLETED'].includes(o.status)) {
-      return { tone: 'amber', short: 'Collect cash', title: `Delivered — ${peso(rd.codAmount)} with the rider`, text: 'The rider brings the cash back to your shop. Confirm Cash received in Seller Center on the website once you have it.', due };
+    const r = rd ? sellerRiderStatus(rd) : null;
+    if (riderCashHeld(o) && ['DELIVERED', 'COMPLETED'].includes(o.status)) {
+      return { tone: 'amber', short: 'Collect cash', title: r.title, text: r.text, due };
     }
     if (['CONFIRMED', 'PREPARING', 'TO_SHIP', 'READY'].includes(o.status)) {
       // The delivery failed: the rider is bringing the parcel back.
       if (riderReturning(rd)) {
-        return {
-          tone: 'red',
-          short: 'Parcel coming back',
-          title: 'Delivery failed: the rider is bringing the parcel back',
-          text: `${rd.failReason ? `${rd.failReason}. ` : ''}Tap Parcel back once it is at your shop. You can also cancel the order.`,
-          due: '',
-        };
+        return { tone: 'red', short: 'Parcel coming back', title: r.title, text: `${r.text} You can also cancel the order.`, due: '' };
       }
-      // The rider brought it back: call a rider again (on the website) or cancel.
-      if (rd?.status === 'FAILED' && rd.returnedAt) {
+      if (riderOpen(rd)) {
+        return { tone: r.tone, short: r.title, title: r.title, text: r.text, due: '' };
+      }
+      // The rider cancelled, or the delivery failed: call a rider again, deliver it yourself, or cancel.
+      if (rd && ['CANCELLED', 'FAILED'].includes(rd.status)) {
         return {
           tone: 'amber',
           short: 'Call a rider again',
-          title: 'Parcel back at your shop',
-          text: `${rd.failReason ? `The delivery failed: ${rd.failReason}. ` : ''}Call a rider again or deliver it yourself from Seller Center on the website. You can also cancel the order.${redeliveryNote(o) ? ` ${redeliveryNote(o)}` : ''}`,
+          title: r.title,
+          text: `${r.text} You can also cancel the order.${redeliveryNote(o) ? ` ${redeliveryNote(o)}` : ''}`,
           due: '',
         };
-      }
-      if (riderOpen(rd)) {
-        return { tone: 'blue', short: 'Rider booked', title: 'A MoorMove rider is booked', text: 'Keep the parcel ready at your shop. The order moves on by itself when the rider picks it up.', due: '' };
       }
       return {
         tone: 'amber',
         short: 'Call a rider',
         title: o.status === 'TO_SHIP' ? 'Call a rider' : 'Pack it, then call a rider',
-        text: `The buyer chose a MoorMove rider.${rd && ['CANCELLED', 'FAILED'].includes(rd.status) ? ' The last rider booking did not go through.' : ''} When the parcel is packed, call a rider from Seller Center on the website: a rider picks it up at your shop pin.`,
+        text: 'The buyer chose a MoorMove rider. When the parcel is packed, tap Call a rider: a rider picks it up at your shop pin.',
         due: '',
       };
     }
     if (o.status === 'OUT_FOR_DELIVERY') {
-      return { tone: 'blue', short: 'With the rider', title: 'With the rider', text: 'The rider is delivering it. This order updates on its own.', due: '' };
+      const t2 = r?.title ? r : { title: 'With the rider', text: 'The rider is delivering it. This order updates on its own.' };
+      return { tone: 'blue', short: 'With the rider', title: t2.title, text: t2.text, due: '' };
     }
   }
   // An older READY delivery going by courier is marked packed (To ship) first: only that can be shipped.

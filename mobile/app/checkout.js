@@ -12,9 +12,10 @@ import ScreenHeader from '../src/components/ScreenHeader';
 import CheckoutChoiceCard, { CheckoutCourierMark } from '../src/components/checkout/CheckoutChoiceCard';
 import CheckoutAddressPicker from '../src/components/checkout/CheckoutAddressPicker';
 import {
-  CheckoutBar, CheckoutField, CheckoutPayLater, CheckoutSavedAddresses, CheckoutSection,
+  CheckoutBar, CheckoutField, CheckoutMoormoveMark, CheckoutPayLater, CheckoutSavedAddresses, CheckoutSection,
   CheckoutStatus, CheckoutStoreItems, CheckoutSuccess, CheckoutSummary,
 } from '../src/components/checkout/CheckoutParts';
+import { rangeLabel } from '../src/components/orders/orderProgress';
 import useCartIdentityGate, { isIdentityRequiredError } from '../src/components/cart/useCartIdentityGate';
 import LocationPicker from '../src/components/maps/LocationPicker';
 import PickupRoute from '../src/components/maps/PickupRoute';
@@ -30,7 +31,8 @@ import { font, t } from '../src/theme';
  * payment, notes and the summary with a voucher — and a bottom bar with the
  * total and Place Order. Same calls and rules as the website: the cart's
  * selected lines only, one shop per order, its coverage and fee for the
- * address, couriers (paid online), Available Today windows, and QR payments
+ * address, couriers (paid online), a MoorMove rider (its signed quote's fee,
+ * by distance to the pin), Available Today windows, and QR payments
  * made later from To Pay once the seller confirms.
  */
 
@@ -44,6 +46,15 @@ const placeText = (place) => {
   if (!place.barangay) return place.town ? `To ${place.town}` : '';
   return `To ${/^(brgy\.?|bgy\.?|barangay)\s/i.test(place.barangay) ? place.barangay : `Brgy. ${place.barangay}`}`;
 };
+/**
+ * MoorMove's free-delivery promos for a shop in this town (web lib/moormove
+ * promosForTown): a promo without towns runs everywhere.
+ */
+const promosForTown = (promos, townId) => (promos || []).filter((p) => !Array.isArray(p.townIds)
+  || (townId != null && p.townIds.map(String).includes(String(townId))));
+// The rider quote's token ran out (web quoteRanOut): ask for the fee again.
+const quoteRanOut = (quote) => Boolean(quote?.staleAt) && Date.now() >= quote.staleAt;
+const kmText = (km) => `${Number(km).toLocaleString('en-PH', { maximumFractionDigits: 1 })} km`;
 const newCheckoutId = () => globalThis.crypto?.randomUUID?.()
   || `${Date.now()}-${Math.random().toString(16).slice(2)}${Math.random().toString(16).slice(2)}`;
 
@@ -67,6 +78,28 @@ export default function Checkout() {
   const revalidate = useCartStore((s) => s.revalidate);
   const { requireVerifiedIdentity, showIdentityRequired, identityDialog } = useCartIdentityGate();
   const settings = useCartSettings();
+  // MoorMove riders (web lib/moormove useMoormove): offered only while the
+  // super admin has them on and the server can reach MoorMove; with the
+  // free-delivery promos MoorMove runs now.
+  const ridersSwitch = settings?.moormoveEnabled === true;
+  const [riderStatus, setRiderStatus] = useState({ enabled: false, promos: [] });
+  useEffect(() => {
+    if (!ridersSwitch) {
+      setRiderStatus({ enabled: false, promos: [] });
+      return undefined;
+    }
+    let live = true;
+    apiClient.get('/moormove/status')
+      .then((res) => {
+        if (!live) return;
+        const on = res?.data?.enabled === true;
+        setRiderStatus({ enabled: on, promos: on && Array.isArray(res.data.promos) ? res.data.promos : [] });
+      })
+      .catch(() => { if (live) setRiderStatus({ enabled: false, promos: [] }); });
+    return () => { live = false; };
+  }, [ridersSwitch]);
+  const ridersOn = ridersSwitch && riderStatus.enabled;
+  const riderPromos = ridersOn ? riderStatus.promos : [];
 
   const scrollRef = useRef(null);
   // The bottom bar floats over the page: the page keeps room for it.
@@ -355,6 +388,81 @@ export default function Checkout() {
     return () => { cancelled = true; };
   }, [quoteKey, fulfillmentMethod]);
 
+  // A MoorMove rider: offered when riders are on and the shop takes them
+  // (its pin is where the rider picks up). The fee is by distance, so it
+  // waits for the buyer's pin; the server prices the order the same way.
+  const riderStore = storeInfo[storeIds[0]]?.store || null;
+  const ridersOffered = ridersOn && fulfillmentMethod === 'DELIVERY' && Boolean(riderStore)
+    && riderStore.moormoveEnabled !== false && validPin(riderStore.latitude, riderStore.longitude);
+  // { key, available, reason, fee, listFee, promo, distanceKm, distanceSource,
+  //   eta, rideMinutes, quoteToken, quoteExpiresAt, staleAt }
+  const [riderQuote, setRiderQuote] = useState(null);
+  // Asks for the rider fee again (the last quote ran out).
+  const [riderRefresh, setRiderRefresh] = useState(0);
+  const riderKey = ridersOffered && deliveryPin && validPin(deliveryPin.latitude, deliveryPin.longitude)
+    ? JSON.stringify([
+      storeIds[0],
+      Number(deliveryPin.latitude).toFixed(6),
+      Number(deliveryPin.longitude).toFixed(6),
+      orderableItems.map((it) => [it.productId || it.id, it.quantity]),
+      deliveryForm.municipalityId || null,
+      deliveryForm.barangay || null,
+    ])
+    : null;
+  useEffect(() => {
+    if (!riderKey) return undefined;
+    const [storeId, lat, lng, lines, municipalityId, barangay] = JSON.parse(riderKey);
+    let cancelled = false;
+    // A pin being dragged settles first.
+    const timer = setTimeout(() => {
+      apiClient.post('/moormove/quote', {
+        storeId,
+        lat: Number(lat),
+        lng: Number(lng),
+        items: lines.map(([productId, quantity]) => ({ productId, quantity })),
+        // The buyer's town and barangay: whether a rider covers this area.
+        municipalityId: municipalityId || undefined,
+        barangay: barangay || undefined,
+      })
+        .then((res) => {
+          if (cancelled) return;
+          const quote = res?.data || {};
+          // The quote's token holds for 30 minutes: ask again a little before
+          // (at least a minute on, in case this phone's clock is off).
+          const left = quote.quoteExpiresAt ? new Date(quote.quoteExpiresAt).getTime() - Date.now() - 30e3 : null;
+          setRiderQuote({ key: riderKey, ...quote, staleAt: left == null ? null : Date.now() + Math.max(60e3, left) });
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setRiderQuote({
+              key: riderKey,
+              available: false,
+              reason: err?.status >= 500 || !err?.status ? "Riders can't be reached right now. Try again in a moment." : err?.message || null,
+              fee: null,
+            });
+          }
+        });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [riderKey, riderRefresh]);
+  // Only the answer for this pin and these items counts.
+  const riderAnswer = riderQuote && riderQuote.key === riderKey ? riderQuote : null;
+  // A new quote before this one's token runs out, so the order is charged the fee shown.
+  const riderStaleAt = riderAnswer?.staleAt || null;
+  useEffect(() => {
+    if (!riderStaleAt) return undefined;
+    const timer = setTimeout(() => setRiderRefresh((n) => n + 1), Math.max(0, riderStaleAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [riderStaleAt]);
+  const riderReady = Boolean(riderAnswer?.available) && riderAnswer.fee != null;
+  // A MoorMove free-delivery promo: no fee for the buyer (MoorMove pays the rider).
+  const riderPromo = riderReady && Number(riderAnswer.fee) === 0 && riderAnswer.promo ? riderAnswer.promo : null;
+  // Promos MoorMove runs for this shop's town, for the banner over the options
+  // (not when no rider can come to this address).
+  const shopPromos = ridersOffered && !(riderAnswer && !riderReady)
+    ? promosForTown(riderPromos, riderStore?.municipalityId)
+    : [];
+
   // Available Today lines: by the shop or picked up, ready in their window.
   const todayLines = useMemo(() => items.filter((it) => it.listingKind === 'TODAY' && it.availability), [items]);
   const todayReady = todayLines.length
@@ -371,13 +479,18 @@ export default function Checkout() {
   const onlineReady = Boolean(shipQuote?.onlinePaymentReady);
   const courierChoices = shipQuote?.couriers || [];
   const courierPickable = (c) => c.fee != null && onlineReady && !todayLines.length;
-  const choiceValid = (choice) => (choice === 'SELLER'
-    ? sellerReaches
-    : courierChoices.some((c) => c.id === choice && courierPickable(c)));
+  // The pick, or the first way that works when it no longer does.
+  const choiceValid = (choice) => {
+    if (choice === 'SELLER') return sellerReaches;
+    if (choice === 'MOORMOVE') return riderReady;
+    return courierChoices.some((c) => c.id === choice && courierPickable(c));
+  };
   const activeChoice = choiceValid(deliveryChoice)
     ? deliveryChoice
-    : (sellerReaches ? 'SELLER' : courierChoices.find(courierPickable)?.id || 'SELLER');
-  const chosenCourier = fulfillmentMethod === 'DELIVERY' && activeChoice !== 'SELLER'
+    : (sellerReaches ? 'SELLER' : courierChoices.find(courierPickable)?.id || (riderReady ? 'MOORMOVE' : 'SELLER'));
+  const riderChosen = fulfillmentMethod === 'DELIVERY' && activeChoice === 'MOORMOVE' && riderReady;
+  const riderFree = riderChosen && Boolean(riderPromo);
+  const chosenCourier = fulfillmentMethod === 'DELIVERY' && activeChoice !== 'SELLER' && activeChoice !== 'MOORMOVE'
     ? courierChoices.find((c) => c.id === activeChoice) || null
     : null;
 
@@ -418,7 +531,7 @@ export default function Checkout() {
     }
   }, [paymentAvailability, paymentMethod]);
 
-  const anyCoverageMissing = fulfillmentMethod === 'DELIVERY' && !chosenCourier
+  const anyCoverageMissing = fulfillmentMethod === 'DELIVERY' && !chosenCourier && !riderChosen
     && storeIds.some((id) => storeInfo[id]?.checked && !storeInfo[id]?.covered);
 
   // One store per checkout: its fee for this address, or its standard fee until the quote is in.
@@ -428,8 +541,12 @@ export default function Checkout() {
     ? Number(quoted.fee)
     : storeDeliveryFee(checkoutStore, settings, 'DELIVERY');
   const shippingFee = orderableItems.length > 0 && fulfillmentMethod === 'DELIVERY'
-    ? (chosenCourier ? Number(chosenCourier.fee) : deliveryFee)
+    ? (chosenCourier ? Number(chosenCourier.fee) : riderChosen ? Number(riderAnswer.fee) : deliveryFee)
     : 0;
+  // How far the rider goes (the fee is by distance), beside the fee.
+  const kmNote = riderChosen && riderAnswer.distanceKm != null
+    ? ` · ${kmText(riderAnswer.distanceKm)}${riderAnswer.distanceSource === 'ESTIMATE' ? ' (estimated distance)' : ''}`
+    : '';
   const discountAmount = appliedVoucher ? Number(appliedVoucher.discountAmount || 0) : 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount) + (orderableItems.length > 0 ? owedTotal : 0);
 
@@ -526,7 +643,14 @@ export default function Checkout() {
       }
       return;
     }
-    if (fulfillmentMethod === 'DELIVERY' && !sellerDelivers && !chosenCourier) {
+    // The rider fee's quote ran out: ask again and let the buyer look it over.
+    if (riderChosen && quoteRanOut(riderAnswer)) {
+      setRiderRefresh((n) => n + 1);
+      toast.error('Checking the rider fee again. Look it over, then place your order.');
+      scrollToSection('delivery');
+      return;
+    }
+    if (fulfillmentMethod === 'DELIVERY' && !sellerDelivers && !chosenCourier && !riderChosen) {
       toast.error('Choose a courier to deliver your order.');
       scrollToSection('delivery');
       return;
@@ -568,6 +692,10 @@ export default function Checkout() {
         // QR orders are paid later, from To Pay, once the seller confirms.
         paymentMethod,
         courierId: chosenCourier?.id || undefined,
+        // A MoorMove rider: priced by distance on the server, cash on delivery allowed.
+        deliveryPartner: riderChosen ? 'MOORMOVE' : undefined,
+        // The quote the buyer saw: the order is charged exactly that fee.
+        riderQuoteToken: riderChosen && riderAnswer.quoteToken ? riderAnswer.quoteToken : undefined,
         voucherCode: appliedVoucher?.voucher?.code || undefined,
         deliveryAddress: fulfillmentMethod === 'DELIVERY' ? buildDeliveryAddress() : pickupAddr,
         contactNumber: normalizeContact(deliveryForm.contactNumber),
@@ -645,8 +773,13 @@ export default function Checkout() {
     ? storeIds.map((id) => storeInfo[id]?.store).find((s) => s?.paymentQrImage)
     : null;
   const pickup = fulfillmentMethod === 'PICKUP';
-  const shipLabel = pickup ? 'Pickup' : chosenCourier ? `Shipping (${chosenCourier.name})` : 'Delivery Fee';
-  const shipAmount = pickup ? 'No fee' : peso(shippingFee);
+  let shipLabel = 'Delivery Fee';
+  if (pickup) shipLabel = 'Pickup';
+  else if (chosenCourier) shipLabel = `Shipping (${chosenCourier.name})`;
+  else if (riderChosen) shipLabel = 'Rider fee';
+  let shipAmount = peso(shippingFee);
+  if (pickup) shipAmount = 'No fee';
+  else if (riderFree) shipAmount = 'Free (MoorMove promo)';
   const courierHelp = courierChoices.some(courierPickable);
 
   const payments = [
@@ -829,9 +962,11 @@ export default function Checkout() {
                           key={id}
                           tone="bad"
                           title={storeName}
-                          lines={[courierHelp
-                            ? 'The seller does not deliver here, but a courier can. Choose one below.'
-                            : 'Does not deliver to your address. Choose Pickup or update your address.']}
+                          lines={[riderReady
+                            ? 'The seller does not deliver here, but a MoorMove rider can. Choose it below.'
+                            : courierHelp
+                              ? 'The seller does not deliver here, but a courier can. Choose one below.'
+                              : 'Does not deliver to your address. Choose Pickup or update your address.']}
                         />
                       );
                     })}
@@ -839,8 +974,13 @@ export default function Checkout() {
                 ) : null}
               </CheckoutSection>
 
-              {!pickup && shipQuote && (sellerDelivers || courierChoices.length > 0) ? (
+              {!pickup && ((shipQuote && (sellerDelivers || courierChoices.length > 0)) || ridersOffered) ? (
                 <CheckoutSection title="Delivery Option" onLayout={markSection('delivery')}>
+                  {shopPromos.length > 0 ? (
+                    <Text style={styles.promoBanner}>
+                      MoorMove free delivery: {shopPromos.map((p) => `${p.title}${p.maxKm ? ` (within ${p.maxKm} km)` : ''}`).join(' · ')}
+                    </Text>
+                  ) : null}
                   <View style={styles.choices}>
                     {sellerDelivers ? (() => {
                       const notHere = quoted?.checked && !quoted.covered;
@@ -874,7 +1014,55 @@ export default function Checkout() {
                         />
                       );
                     })}
+                    {ridersOffered ? (() => {
+                      const pinned = deliveryPin && validPin(deliveryPin.latitude, deliveryPin.longitude);
+                      let why = null;
+                      if (!pinned) why = 'Drop your pin to see the rider fee';
+                      else if (!riderAnswer) why = 'Checking the rider fee…';
+                      else if (!riderReady) why = riderAnswer.reason || 'No rider for this address right now';
+                      const eta = riderReady && riderAnswer.eta?.from && riderAnswer.eta?.to
+                        ? rangeLabel({ from: new Date(riderAnswer.eta.from), to: new Date(riderAnswer.eta.to) })
+                        : null;
+                      // The shop's preparation, then the ride once the rider has it.
+                      const ride = riderReady && riderAnswer.rideMinutes != null ? Math.max(1, Math.round(Number(riderAnswer.rideMinutes))) : null;
+                      let timing = null;
+                      if (eta) timing = ride ? `ready ${eta}, then ~${ride} min ride` : `arrives ${eta}`;
+                      const km = riderReady && riderAnswer.distanceKm != null ? kmText(riderAnswer.distanceKm) : null;
+                      let aside = '';
+                      if (!why) {
+                        aside = riderPromo ? (
+                          <Text style={styles.freeFee}>
+                            {Number(riderAnswer.listFee) > 0 ? <Text style={styles.freeFeeWas}>{peso(riderAnswer.listFee)}{'\n'}</Text> : null}
+                            Free
+                          </Text>
+                        ) : peso(riderAnswer.fee);
+                      }
+                      return (
+                        <CheckoutChoiceCard
+                          checked={activeChoice === 'MOORMOVE'}
+                          disabled={Boolean(why)}
+                          onPress={() => setDeliveryChoice('MOORMOVE')}
+                          plainMedia
+                          media={<CheckoutMoormoveMark size={30} />}
+                          title={riderPromo ? (
+                            <>
+                              MoorMove{'\n'}
+                              <Text style={styles.promoBadge}>{` Free delivery · ${riderPromo.title}, by MoorMove `}</Text>
+                            </>
+                          ) : 'MoorMove'}
+                          desc={why || ['A local rider brings it', km, timing, 'cash on delivery OK'].filter(Boolean).join(' · ')}
+                          aside={aside}
+                        />
+                      );
+                    })() : null}
                   </View>
+                  {riderChosen ? (
+                    <Text style={styles.deliveryNote}>
+                      A MoorMove rider picks up your order at the shop and brings it to your pin. You can see the rider on a map in My Orders.
+                      {riderFree ? ` You pay no delivery fee: MoorMove's ${riderPromo.title} promo covers it.` : ''}
+                      {paymentMethod === 'COD' ? ` Pay ${peso(total)} to the rider when it arrives${riderFree ? ', for the items only' : ''}.` : ''}
+                    </Text>
+                  ) : null}
                   {chosenCourier ? (
                     <Text style={styles.deliveryNote}>
                       Courier deliveries are paid online with GCash or QR Ph after the seller confirms your order.
@@ -892,8 +1080,10 @@ export default function Checkout() {
                     storeName={storeInfo[id]?.store?.name || itemsByStore[id][0]?.storeName || 'Store'}
                     items={itemsByStore[id]}
                     pickup={pickup}
-                    shipLabel={pickup ? 'Pickup at the store' : chosenCourier ? `Shipping · ${chosenCourier.name}` : 'Delivery fee'}
-                    shipAmount={pickup ? 'No fee' : peso(shippingFee)}
+                    shipLabel={pickup ? 'Pickup at the store' : chosenCourier ? `Shipping · ${chosenCourier.name}` : riderChosen ? 'MoorMove rider' : 'Delivery fee'}
+                    shipAmount={shipAmount}
+                    shipNote={kmNote}
+                    shipFree={riderFree}
                     extras={owedLines(id)}
                   />
                 ))}
@@ -941,6 +1131,8 @@ export default function Checkout() {
             subtotal={subtotal}
             shipLabel={shipLabel}
             shipAmount={shipAmount}
+            shipNote={kmNote}
+            shipFree={riderFree}
             voucher={appliedVoucher}
             discountAmount={discountAmount}
             extras={orderableItems.length > 0 ? owedLines(storeIds[0]) : []}
@@ -1012,6 +1204,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19.5,
     ...font(400),
+  },
+  // MoorMove free-delivery promo (.co-mm-promo-banner): the banner over the
+  // options, the green badge on the MoorMove choice (.co-mm-promo
+  // .choice-card-badge) and its usual fee struck through (.co-free-fee).
+  promoBanner: {
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: t.primary[50],
+    color: t.primary[800],
+    fontSize: 13,
+    lineHeight: 18.2,
+    ...font(600),
+  },
+  promoBadge: {
+    backgroundColor: t.primary[100],
+    color: t.primary[800],
+    fontSize: 11,
+    ...font(600),
+  },
+  freeFee: { color: t.primary[700] },
+  freeFeeWas: {
+    color: t.neutral[400],
+    fontSize: 12,
+    ...font(500),
+    textDecorationLine: 'line-through',
   },
   notes: {
     height: 95,

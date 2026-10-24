@@ -21,6 +21,7 @@ import ProofPhotoSheet from '../../src/components/seller/orders/ProofPhotoSheet'
 import ShipOrderSheet from '../../src/components/seller/orders/ShipOrderSheet';
 import BuyerReportSheet from '../../src/components/seller/orders/BuyerReportSheet';
 import PhotoViewer from '../../src/components/seller/orders/PhotoViewer';
+import RiderActionSheet from '../../src/components/seller/orders/RiderActionSheet';
 import {
   PAGE_SIZE, SELLER_TABS, STATUS_MAP, cancelReasonsFor, parcelBackNote, refundNote, sellerTabFrom, sellerTabOf, tabCount,
 } from '../../src/components/seller/orders/sellerOrderLib';
@@ -88,6 +89,10 @@ export default function SellerOrdersScreen() {
   const [parcelConfirm, setParcelConfirm] = useState(null);
   // Letting the buyer off a failed trip's delivery fee: { order }.
   const [waiveConfirm, setWaiveConfirm] = useState(null);
+  // MoorMove riders: on for the site (web useMoormove), and the step being
+  // asked (Call a rider, Deliver it myself, Cancel rider, Cash received): { action, order }.
+  const [ridersOn, setRidersOn] = useState(false);
+  const [riderAsk, setRiderAsk] = useState(null);
   // Handing an order over asks for a photo first: proof of delivery or of pickup.
   const [proofRequest, setProofRequest] = useState(null);
   // Shipping with a courier asks for the courier and the tracking number.
@@ -103,6 +108,18 @@ export default function SellerOrdersScreen() {
   }, [search]);
 
   const hasFilters = Boolean(debouncedSearch || from || to || paymentFilter);
+
+  // Riders are offered only while the super admin has them on and the server can reach MoorMove.
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.get('/app-settings')
+      .then((res) => (res?.data?.moormoveEnabled === true
+        ? apiClient.get('/moormove/status').then((s) => s?.data?.enabled === true)
+        : false))
+      .then((on) => { if (!cancelled) setRidersOn(on); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Only the newest request may set the list (tabs and filters change fast).
   const requestId = useRef(0);
@@ -378,6 +395,15 @@ export default function SellerOrdersScreen() {
     }
   };
 
+  // A rider step went through: the order as the server has it now (or, when
+  // it had moved on meanwhile, the list again).
+  const riderDone = (updated) => {
+    const before = riderAsk?.order;
+    if (!updated?.id) { loadOrders(); return; }
+    applyOrderUpdate(updated.id, updated);
+    if (before && updated.status && updated.status !== before.status) moveToTab(updated.id, updated.status);
+  };
+
   const confirmCancelOrder = async () => {
     if (!cancelConfirm) return;
     await handleStatusChange(cancelConfirm.orderId, 'CANCELLED', null, { cancelReason });
@@ -523,6 +549,14 @@ export default function SellerOrdersScreen() {
         onView={(uri, title) => setPhoto({ uri, title })}
         onParcelBack={(order) => setParcelConfirm({ order })}
         onWaive={(order) => setWaiveConfirm({ order })}
+        ridersOn={ridersOn}
+        onRider={(order, action) => setRiderAsk({ action, order })}
+      />
+
+      <RiderActionSheet
+        ask={riderAsk}
+        onClose={() => setRiderAsk(null)}
+        onDone={riderDone}
       />
 
       <ShipOrderSheet

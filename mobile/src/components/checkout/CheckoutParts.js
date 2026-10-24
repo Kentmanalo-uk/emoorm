@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import {
   CheckCircleIcon, ClockCountdownIcon, StorefrontIcon, TruckIcon, WarningIcon,
 } from 'phosphor-react-native';
@@ -131,10 +132,32 @@ const variationText = (item) => (item.selectedVariations && Object.keys(item.sel
   : '');
 
 /**
+ * MoorMove's logo as a courier mark (web CourierMark with MOORMOVE_COURIER,
+ * /couriers/moormove.svg on its white chip): drawn here, since an image
+ * can't show an SVG file.
+ */
+export function CheckoutMoormoveMark({ size = 30 }) {
+  const inner = size - 2;
+  return (
+    <View style={[styles.mmMark, { width: Math.round(size * 1.75), height: size }]}>
+      <Svg width={inner} height={inner} viewBox="0 0 64 64">
+        <Rect width={64} height={64} rx={16} fill="#055D07" />
+        <Path d="M14 44V22l10 13 8-10 8 10 10-13v22" fill="none" stroke="#fff" strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
+        <Circle cx={50} cy={16} r={5} fill="#F5A400" />
+      </Svg>
+    </View>
+  );
+}
+
+/**
  * One shop's lines and its delivery fee row (.co-m-store); `extras` are more
  * fee rows ({ key, label, amount }: an unpaid delivery fee of a failed trip).
+ * shipNote: " · 3.2 km" beside the label (.co-km); shipFree: the amount in
+ * green (.co-m-free, a MoorMove free-delivery promo).
  */
-export function CheckoutStoreItems({ storeName, items, pickup, shipLabel, shipAmount, first, extras = [] }) {
+export function CheckoutStoreItems({
+  storeName, items, pickup, shipLabel, shipAmount, shipNote = '', shipFree = false, first, extras = [],
+}) {
   return (
     <View style={!first && styles.storeNext}>
       <View style={styles.storeHead}>
@@ -166,9 +189,12 @@ export function CheckoutStoreItems({ storeName, items, pickup, shipLabel, shipAm
       <View style={styles.ship}>
         <View style={styles.shipLeft}>
           {pickup ? <StorefrontIcon size={16} color={t.neutral[800]} /> : <TruckIcon size={16} color={t.neutral[800]} />}
-          <Text style={styles.shipText}>{shipLabel}</Text>
+          <Text style={[styles.shipText, styles.extraText]}>
+            {shipLabel}
+            {shipNote ? <Text style={styles.km}>{shipNote}</Text> : null}
+          </Text>
         </View>
-        <Text style={styles.shipText}>{shipAmount}</Text>
+        <Text style={[styles.shipText, shipFree && styles.free]}>{shipAmount}</Text>
       </View>
       {extras.map((line) => (
         <View key={line.key} style={[styles.ship, styles.extraShip]}>
@@ -202,7 +228,7 @@ export function CheckoutPayLater({ shopName, total, methodLabel }) {
 
 /** Order Summary with the voucher field (.checkout-summary). */
 export function CheckoutSummary({
-  itemCount, subtotal, shipLabel, shipAmount, voucher, discountAmount, total, extras = [],
+  itemCount, subtotal, shipLabel, shipAmount, shipNote = '', shipFree = false, voucher, discountAmount, total, extras = [],
   voucherInput, onVoucherInput, voucherLoading, onApply, onRemove,
 }) {
   const canApply = !voucherLoading && Boolean(voucherInput.trim()) && subtotal !== 0;
@@ -214,8 +240,11 @@ export function CheckoutSummary({
         <Text style={styles.rowText}>{peso(subtotal)}</Text>
       </View>
       <View style={styles.row}>
-        <Text style={styles.rowText}>{shipLabel}</Text>
-        <Text style={styles.rowText}>{shipAmount}</Text>
+        <Text style={[styles.rowText, styles.rowLabel]}>
+          {shipLabel}
+          {shipNote ? <Text style={styles.km}>{shipNote}</Text> : null}
+        </Text>
+        <Text style={[styles.rowText, shipFree && styles.free]}>{shipAmount}</Text>
       </View>
       {voucher && discountAmount > 0 ? (
         <View style={styles.row}>
@@ -455,6 +484,19 @@ const styles = StyleSheet.create({
   // An unpaid delivery fee of a failed rider trip, added to this order.
   extraShip: { backgroundColor: t.warning[50] },
   extraText: { flexShrink: 1 },
+  // The km a delivery is priced on, beside its fee (.co-km).
+  km: { fontSize: 12.5, ...font(400), color: t.neutral[500] },
+  // A MoorMove free-delivery promo's "Free (MoorMove promo)" (.co-m-free).
+  free: { color: t.primary[700] },
+  // The MoorMove logo on its white chip (.courier-mark.is-logo).
+  mmMark: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: t.neutral[200],
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   payLater: {
     flexDirection: 'row',

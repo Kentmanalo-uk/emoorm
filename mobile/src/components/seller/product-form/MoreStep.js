@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { PlusIcon } from 'phosphor-react-native';
 import { font, t } from '../../../theme';
 import ChoiceGroup from './ChoiceGroup';
+import Model3dNote from './Model3dNote';
 import {
   Checkbox, DateTimeField, Field, FieldError, Hint, MoneyInput, MoreRow, PF, PfInput, Radio, RadioCards, UnitInput,
 } from './parts';
@@ -18,7 +19,7 @@ const FOOD = ['READY_TO_EAT', 'COOK_TO_ORDER'];
  */
 export default function MoreStep({
   form, set, errors, kind, offers, by, couriersOn, open, onToggleRow,
-  hasOptions, onHasOptions, groupActions, policyMode, onPolicy, onClearPolicy,
+  hasOptions, onHasOptions, groupActions, policyMode, onPolicy, onClearPolicy, product = null,
 }) {
   const food = FOOD.includes(kind);
   const groups = hasOptions ? form.variations.filter((g) => g.name.trim() || g.choices.length) : [];
@@ -253,6 +254,7 @@ export default function MoreStep({
           </View>
         ) : null}
       </MoreRow>
+      <Model3dNote product={product} kind={kind} />
     </View>
   );
 }
