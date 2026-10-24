@@ -838,6 +838,26 @@
   background: var(--t-neutral-0, #fff);
 }
 
+/* Computers, QR log in: the card alone in the middle, a larger code */
+.login-page.is-qr .login-container {
+  grid-template-columns: minmax(0, 480px);
+  justify-content: center;
+}
+
+.login-page.is-qr .login-form-container {
+  align-items: center;
+}
+
+.login-page.is-qr .login-form-card {
+  max-width: 480px;
+}
+
+.login-page.is-qr .login-qr-image {
+  width: 300px;
+  height: 300px;
+  padding: 12px;
+}
+
 .login-qr-hint {
   margin: 16px 0 0;
   font-size: 13.5px;

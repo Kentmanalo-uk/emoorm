@@ -10,6 +10,8 @@ import PhAddressPicker from '../components/common/PhAddressPicker';
 import AppLogo from '../components/AppLogo';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import AuthSheetBar from '../components/AuthSheetBar';
+import AuthHero from '../components/auth/AuthHero';
+import Footer from '../components/layout/Footer';
 import './AuthSheet.css';
 import './Login.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
@@ -417,7 +419,7 @@ const Login = ({ seller = false }) => {
 
   return (
     <div
-      className={`login-page${seller ? ' is-seller' : ''}${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}
+      className={`login-page${seller ? ' is-seller' : ''}${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}${showQrLogin && !isPhone ? ' is-qr' : ''}`}
       role={isPhone ? 'dialog' : undefined}
       aria-modal={isPhone ? 'true' : undefined}
       aria-label={isPhone ? (seller ? 'Seller log in' : 'Log in') : undefined}
@@ -430,7 +432,10 @@ const Login = ({ seller = false }) => {
             <span className="login-logo-text">emoorm</span>
           </Link>
           <div className="login-header-actions">
-            <Link to={signUpPath} className="login-header-link">Sign Up</Link>
+            <Link to={seller ? '/login' : '/seller/login'} className="auth-header-link">
+              {seller ? <ShoppingBag size={16} weight="fill" /> : <Storefront size={16} weight="fill" />}
+              {seller ? 'Buyer Login' : 'Seller Login'}
+            </Link>
           </div>
         </div>
       </header>
@@ -438,25 +443,12 @@ const Login = ({ seller = false }) => {
       {/* Main Content */}
       <div className="login-content" role={isPhone ? undefined : 'main'}>
         <div className="login-container">
-          {/* Left Side - Hero */}
-          <div className="login-hero">
-            <div className="login-hero-brand">
-              <AppLogo className="login-hero-icon" alt="" />
-              <span className="login-hero-text">emoorm</span>
+          {/* Left Side - Hero (QR log in: the card alone, centred) */}
+          {!(showQrLogin && !isPhone) && (
+            <div className="login-hero">
+              <AuthHero seller={seller} />
             </div>
-            {seller ? (
-              <h1 className="register-hero-title">
-                Seller Center<br />
-                <span className="register-hero-title-highlight">run your shop<br />from one place</span>
-              </h1>
-            ) : (
-              <h1 className="register-hero-title">
-                Made in Mindoro<br />
-                <span className="register-hero-title-highlight">home of its farmers,<br />fishers and makers</span>
-              </h1>
-            )}
-
-          </div>
+          )}
 
           {/* Right Side - Form */}
           <div className="login-form-container">
@@ -666,6 +658,8 @@ const Login = ({ seller = false }) => {
           </div>
         </div>
       </div>
+
+      {!isPhone && <Footer />}
     </div>
   );
 };

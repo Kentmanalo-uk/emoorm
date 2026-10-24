@@ -4,6 +4,7 @@ import { EnvelopeSimple } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import AppLogo from '../components/AppLogo';
 import AuthSheetBar from '../components/AuthSheetBar';
+import Footer from '../components/layout/Footer';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import './ForgotPassword.css';
 import './AuthSheet.css';
@@ -70,18 +71,6 @@ const ForgotPassword = () => {
       </header>
 
       <div className="fp-content" role={isPhone ? undefined : 'main'}>
-        {!isPhone && (
-          <div className="fp-hero" aria-hidden="true">
-            <div className="fp-hero-brand">
-              <AppLogo className="fp-hero-icon" alt="" />
-              <span className="fp-hero-text">emoorm</span>
-            </div>
-            <p className="fp-hero-title">
-              Made in Mindoro<br />
-              <span>home of its farmers,<br />fishers and makers</span>
-            </p>
-          </div>
-        )}
         <div className="fp-card">
           {isPhone && <AuthSheetBar switchTo="/login" switchLabel="Log in" />}
           {submitted ? (
@@ -148,6 +137,8 @@ const ForgotPassword = () => {
           )}
         </div>
       </div>
+
+      {!isPhone && <Footer />}
     </div>
   );
 };

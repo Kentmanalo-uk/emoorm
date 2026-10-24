@@ -402,6 +402,33 @@
   }
 }
 
+/* Tablet and computer: the green area fills the screen under the 70px
+   header, so the footer only shows on scrolling. */
+@media (min-width: 769px) {
+  .login-page:not(.is-sheet) .login-content,
+  .register-page:not(.is-sheet) .register-content,
+  .fp-page:not(.is-sheet) .fp-content {
+    min-height: calc(100vh - 70px);
+    min-height: calc(100dvh - 70px);
+  }
+}
+
+/* Page header (tablet and computer): the other way in */
+.auth-header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--t-neutral-600, #4b5563);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.auth-header-link:hover {
+  color: var(--t-primary-700, #047857);
+}
+
 /* Phone sheets: fields never push the sheet wider than the screen. */
 @media (max-width: 768px) {
   .is-sheet .login-form-container :is(input, select, textarea),

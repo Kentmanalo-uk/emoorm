@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
+import { Eye, EyeSlash as EyeOff, Storefront } from '@phosphor-icons/react';
 import { useGoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -10,6 +10,8 @@ import PhAddressPicker from '../components/common/PhAddressPicker';
 import AppLogo from '../components/AppLogo';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import AuthSheetBar from '../components/AuthSheetBar';
+import AuthHero from '../components/auth/AuthHero';
+import Footer from '../components/layout/Footer';
 import { BusyLabel } from '../components/ui/Spinner';
 import './AuthSheet.css';
 import './Register.css';
@@ -301,7 +303,10 @@ const Register = () => {
             <AppLogo className="register-logo-icon" alt="" />
             <span className="register-logo-text">emoorm</span>
           </Link>
-          <Link to={loginPath} className="register-header-link">Log In</Link>
+          <Link to="/seller/login" className="auth-header-link">
+            <Storefront size={16} weight="fill" />
+            Seller Login
+          </Link>
         </div>
       </header>
 
@@ -310,15 +315,7 @@ const Register = () => {
         <div className="register-container">
           {/* Left Side - Hero */}
           <div className="register-hero">
-            <div className="register-hero-brand">
-              <AppLogo className="register-hero-icon" alt="" />
-              <span className="register-hero-text">emoorm</span>
-            </div>
-            <h1 className="register-hero-title">
-              Made in Mindoro<br />
-              <span className="register-hero-title-highlight">home of its farmers,<br />fishers and makers</span>
-            </h1>
-
+            <AuthHero />
           </div>
 
           {/* Right Side - Form */}
@@ -540,6 +537,8 @@ const Register = () => {
           </div>
         </div>
       </div>
+
+      {!isPhone && <Footer />}
     </div>
   );
 };

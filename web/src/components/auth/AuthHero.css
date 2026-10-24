@@ -1,0 +1,307 @@
+/* Log in / Sign up: the left side on computers */
+.auth-hero {
+  --auth-accent: #d9f99d;
+  --auth-chip: var(--t-primary-600, #059669);
+  --auth-sticker-light: #fda4af;
+  --auth-sticker: #f43f5e;
+  --auth-sticker-dark: #be123c;
+
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+  max-width: 440px;
+  color: #ffffff;
+}
+
+.auth-hero.is-seller {
+  --auth-accent: #fde68a;
+  --auth-chip: #d97706;
+  --auth-sticker-light: #fde68a;
+  --auth-sticker: #f59e0b;
+  --auth-sticker-dark: #b45309;
+}
+
+/* Stage: every piece placed on a 440 x 380 box */
+.auth-stage {
+  position: relative;
+  width: 440px;
+  height: 356px;
+}
+
+.auth-glow {
+  position: absolute;
+  left: 30px;
+  top: -10px;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 68%);
+}
+
+.auth-card {
+  position: absolute;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 24px 48px rgba(2, 44, 34, 0.28);
+}
+
+.auth-card-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+
+.auth-card-back {
+  left: 6px;
+  top: 112px;
+  width: 150px;
+  height: 178px;
+  rotate: -7deg;
+}
+
+/* Main card: a product "story" */
+.auth-card-main {
+  left: 120px;
+  top: 14px;
+  display: flex;
+  flex-direction: column;
+  width: 224px;
+  height: 318px;
+  border-radius: 28px;
+}
+
+.auth-story {
+  display: flex;
+  gap: 5px;
+  padding: 14px 16px 0;
+}
+
+.auth-story span {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.auth-story span.is-done { background: var(--auth-chip); }
+.auth-story span.is-now { background: linear-gradient(90deg, var(--auth-chip) 55%, var(--t-neutral-200, #e5e7eb) 55%); }
+
+.auth-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px 0;
+}
+
+.auth-card-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.auth-card-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+  color: var(--t-neutral-900, #111827);
+}
+
+.auth-card-title strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.auth-card-title span {
+  font-size: 11px;
+  color: var(--t-neutral-500, #6b7280);
+  white-space: nowrap;
+}
+
+.auth-card-photo {
+  position: relative;
+  flex: 1;
+}
+
+.auth-card-photo .auth-card-img {
+  position: absolute;
+  inset: 0;
+  padding: 14px 18px 52px;
+  object-fit: contain;
+}
+
+.auth-pill {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--auth-chip);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.auth-round {
+  position: absolute;
+  left: 298px;
+  top: 236px;
+  width: 116px;
+  height: 116px;
+  padding: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 20px 40px rgba(2, 44, 34, 0.3);
+}
+
+.auth-round-clip {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.auth-round img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* The product photos have a white margin; fill the circle */
+  scale: 1.45;
+}
+
+/* A notification, half over the main card */
+.auth-note {
+  position: absolute;
+  left: 270px;
+  top: 74px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 10px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 16px;
+  /* Frosted glass over the card and the green behind it */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.34) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 16px 36px rgba(2, 44, 34, 0.22);
+  color: var(--t-neutral-900, #111827);
+  white-space: nowrap;
+}
+
+.auth-note-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--t-primary-600, #059669);
+}
+
+.auth-note-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.auth-note-text strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.auth-note-text span {
+  font-size: 11px;
+  color: var(--t-neutral-700, #374151);
+}
+
+.auth-sticker {
+  position: absolute;
+  left: 60px;
+  top: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: #ffffff;
+  background: radial-gradient(circle at 32% 28%, var(--auth-sticker-light) 0%, var(--auth-sticker) 42%, var(--auth-sticker-dark) 100%);
+  box-shadow: inset 0 -5px 8px rgba(0, 0, 0, 0.16), 0 12px 24px rgba(2, 44, 34, 0.3);
+}
+
+/* Headline */
+.auth-hero-title {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  color: #ffffff;
+}
+
+.auth-hero-title span {
+  color: var(--auth-accent);
+}
+
+/* Depth layers: each follows the pointer (--px / --py, set by AuthHero)
+   by its own --depth in px, so near pieces move more than far ones */
+.auth-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translate3d(
+    calc(var(--px, 0) * var(--depth, 10) * 1px),
+    calc(var(--py, 0) * var(--depth, 10) * 1px),
+    0
+  );
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The main card also tilts toward the pointer */
+.auth-layer-main .auth-card-main {
+  transform: perspective(900px)
+    rotateY(calc(var(--px, 0) * 8deg))
+    rotateX(calc(var(--py, 0) * -8deg));
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Computers: every log in and sign up page keeps the brand-green gradient */
+@media (min-width: 1025px) {
+  /* Lifts the white card off the green */
+  .login-page .login-form-card,
+  .register-page .register-form-card {
+    box-shadow: 0 30px 70px rgba(2, 44, 34, 0.28);
+  }
+}
+
+/* Shorter laptop screens: shrink the stage rather than push the form */
+@media (max-height: 820px) {
+  .auth-hero { gap: 20px; }
+
+  .auth-stage {
+    margin-bottom: -50px;
+    scale: 0.86;
+    transform-origin: top left;
+  }
+
+  .auth-hero-title { font-size: 46px; }
+}
