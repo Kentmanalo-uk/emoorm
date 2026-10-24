@@ -5,9 +5,14 @@ mobile/node_modules/
 # Local environment and generated upload files
 **/.env
 **/.env.*
+# Env files named like production.env (secrets for the host's settings).
+*.env
 !**/.env.example
 backend/uploads/
 backend/uploads-private/
+# A copy of the live site's uploads (payment receipts and chat photos
+# among them): kept on this PC, never in the public repo.
+production-uploads/
 .claude/
 
 # The Android app's project (built and signed on this PC; its signing key
