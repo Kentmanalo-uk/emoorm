@@ -14,6 +14,8 @@ import useAccountSwitchStore from '../../store/accountSwitchStore';
 import axios from '../../lib/axios';
 import { notificationHref } from '../../lib/notificationLink';
 import LanguageSwitcher from '../LanguageSwitcher';
+import LanguageChoice from '../LanguageChoice';
+import { useLanguageIntro, dismissLanguageTip } from '../../lib/languageIntro';
 import AppLogo from '../AppLogo';
 import ImageSearchModal from './ImageSearchModal';
 import InstallAppBar from './InstallAppBar';
@@ -121,6 +123,9 @@ const Header = () => {
   // page has its own back button and gets the full height.
   const isTabPage = isBottomNavTab(location.pathname);
   const isPhone = usePhoneLayout();
+  // First visit: the language card; then, on Home, a pointer at the switch.
+  const languageIntro = useLanguageIntro();
+  const showLanguageTip = languageIntro.tip && location.pathname === '/';
   // Before the page shows, so it is laid out (and scrolled back) with it.
   useLayoutEffect(() => {
     document.body.classList.toggle('no-bottom-nav', !isTabPage);
@@ -438,7 +443,7 @@ const Header = () => {
               </div>
             </div>
             <span className="topbar-divider">|</span>
-            <LanguageSwitcher variant="topbar" />
+            <LanguageSwitcher variant="topbar" tip={showLanguageTip && !isPhone} onTipDone={dismissLanguageTip} />
             <span className="topbar-divider">|</span>
             <div className="account-hover">
               {isAuthenticated ? (
@@ -656,6 +661,8 @@ const Header = () => {
               <ShoppingCart size={24} />
               {cartCount > 0 && <span className="header-cart-badge">{cartCount}</span>}
             </Link>
+            {/* Phones have no topbar: the language switch sits beside the search. */}
+            <LanguageSwitcher variant="phone" tip={showLanguageTip && isPhone} onTipDone={dismissLanguageTip} />
           </div>}
 
           {isCartPage && (
@@ -755,6 +762,7 @@ const Header = () => {
         onFile={handleImageFileSelected}
       />
       {feedbackOpen && <FeedbackDialog onClose={() => setFeedbackOpen(false)} />}
+      {languageIntro.asking && <LanguageChoice />}
 
     </>
   );

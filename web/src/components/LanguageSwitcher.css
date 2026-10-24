@@ -165,6 +165,132 @@
   background: var(--t-neutral-50, #f9fafb);
 }
 
+/* ─── Variant: phone (buyer header, beside the search bar) ─── */
+
+.lang-switch--phone {
+  display: none;
+  flex: none;
+}
+
+.lang-switch--phone .lang-switch__trigger {
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 40px;
+  height: 44px;
+  color: var(--t-primary-600, #059669);
+}
+
+.lang-switch--phone .lang-switch__label {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--t-neutral-700, #374151);
+}
+
+@media (max-width: 768px) {
+  .lang-switch--phone {
+    display: inline-flex;
+  }
+}
+
+/* ─── Pointer after the first-visit choice ───────────── */
+
+.lang-switch__tip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 24px));
+  padding: 10px 10px 10px 12px;
+  border-radius: 12px;
+  background: var(--t-neutral-900, #111827);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+  box-shadow: 0 12px 32px -10px rgba(15, 23, 42, 0.45);
+  transform: translateX(-50%);
+  animation: langTipIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.lang-switch__tip-arrow {
+  position: absolute;
+  top: -5px;
+  left: calc(50% - 6px);
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+.lang-switch__tip-icon {
+  flex: none;
+  color: var(--t-primary-300, #6ee7b7);
+}
+
+.lang-switch__tip p {
+  margin: 0;
+  min-width: 150px;
+}
+
+.lang-switch__tip button {
+  flex: none;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lang-switch__tip button:hover {
+  background: var(--t-primary-700, #047857);
+}
+
+/* On phones the button sits at the right edge: the bubble hangs left of it. */
+.lang-switch--phone .lang-switch__tip {
+  left: auto;
+  right: 0;
+  transform: none;
+  animation-name: langTipInPhone;
+}
+
+.lang-switch--phone .lang-switch__tip-arrow {
+  left: auto;
+  right: 14px;
+}
+
+@keyframes langTipIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+  }
+}
+
+@keyframes langTipInPhone {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-switch__tip {
+    animation: none;
+  }
+}
+
 /* ─── Hide Google Translate chrome ───────────────────── */
 
 .goog-te-banner-frame.skiptranslate,

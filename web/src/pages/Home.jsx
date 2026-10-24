@@ -13,6 +13,7 @@ import ChatDock from '../components/chat/ChatDock';
 import { readCache, patchCache } from '../lib/pageCache';
 import EmptyArt from '../components/ui/EmptyArt';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import { useLanguageIntro } from '../lib/languageIntro';
 import axios from '../lib/axios';
 import { saleInfo } from '../lib/variantPricing';
 import { SaleWas } from '../components/ui/SaleTag';
@@ -95,9 +96,8 @@ const Home = () => {
             const mappedPopup = mapBanner(popup);
             const sessionKey = `emoorm.promotion-popup.${mappedPopup.id}.${mappedPopup.updatedAt || ''}`;
             if (sessionStorage.getItem(sessionKey) !== 'seen') {
-              setPromotionPopup(mappedPopup);
+              setPromotionPopup({ ...mappedPopup, sessionKey });
               setPopupOpen(true);
-              sessionStorage.setItem(sessionKey, 'seen');
             }
           }
         }
@@ -109,6 +109,14 @@ const Home = () => {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // The promotion waits for the first-visit language card and its pointer,
+  // and counts as seen only once it has shown (choosing Tagalog reloads).
+  const languageIntro = useLanguageIntro();
+  const showPromotion = popupOpen && promotionPopup && !languageIntro.asking && !languageIntro.tip;
+  useEffect(() => {
+    if (showPromotion) sessionStorage.setItem(promotionPopup.sessionKey, 'seen');
+  }, [showPromotion, promotionPopup]);
 
   useEffect(() => {
     if (!popupOpen) return undefined;
@@ -363,7 +371,7 @@ const Home = () => {
   return (
     <Layout>
       <h1 className="sr-only">Emoorm, Oriental Mindoro&apos;s local online marketplace</h1>
-      {popupOpen && promotionPopup && (
+      {showPromotion && (
         <PromotionPopup banner={promotionPopup} onClose={() => setPopupOpen(false)} />
       )}
       {isPhone && quickTerms.length > 0 && (
