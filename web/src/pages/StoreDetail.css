@@ -74,11 +74,23 @@
   font-weight: 500;
 }
 
+/* The profile: one white card, the cover across its top */
+.shop-profile {
+  overflow: hidden;
+  border: 1px solid var(--t-neutral-100, #f1f5f9);
+  border-radius: 20px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.shop-profile-body {
+  padding: 0 28px 20px;
+}
+
 .shop-hero-banner {
   position: relative;
-  height: 280px;
+  height: 220px;
   overflow: hidden;
-  border-radius: 20px;
   background: var(--t-neutral-100, #f1f5f9);
 }
 
@@ -100,8 +112,7 @@
 .shop-hero-card {
   display: flex;
   align-items: flex-end;
-  gap: 22px;
-  padding: 0 8px 0 32px;
+  gap: 20px;
 }
 
 .shop-avatar {
@@ -111,11 +122,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 124px;
-  height: 124px;
-  margin-top: -62px;
+  width: 112px;
+  height: 112px;
+  margin-top: -56px;
   overflow: hidden;
-  border: 5px solid var(--t-neutral-0, #fff);
+  border: 4px solid var(--t-neutral-0, #fff);
   border-radius: 50%;
   background: var(--shop-primary);
   color: var(--t-neutral-0, #fff);
@@ -133,7 +144,7 @@
 .shop-hero-title {
   flex: 1;
   min-width: 0;
-  padding-top: 14px;
+  padding-top: 16px;
 }
 
 .shop-hero-title h1 {
@@ -142,7 +153,7 @@
   gap: 8px;
   margin: 0;
   color: var(--t-neutral-900, #0f172a);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -153,34 +164,18 @@
   color: var(--t-primary-600, #059669);
 }
 
-.shop-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 0;
-  margin: 6px 0 0;
+/* The about, two lines at most (all of it on hover) */
+.shop-tagline {
+  display: -webkit-box;
+  max-width: 640px;
+  margin: 4px 0 0;
+  overflow: hidden;
   color: var(--t-neutral-500, #64748b);
   font-size: 14px;
-}
-
-.shop-meta > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.shop-meta > span + span::before {
-  content: '';
-  width: 3px;
-  height: 3px;
-  margin: 0 12px;
-  border-radius: 50%;
-  background: var(--t-neutral-300, #cbd5e1);
-}
-
-.shop-meta b {
-  color: var(--t-neutral-900, #0f172a);
-  font-weight: 600;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .shop-meta-star {
@@ -192,6 +187,133 @@
   align-items: center;
   gap: 10px;
   padding-bottom: 4px;
+}
+
+/* Under the name: numbers | facts | vouchers */
+.shop-profile-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 28px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.shop-stats {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shop-stats li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 22px;
+  border-left: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.shop-stats li:first-child {
+  padding-left: 4px;
+  border-left: 0;
+}
+
+.shop-stats b {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.shop-stats span {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+}
+
+.shop-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shop-facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--t-neutral-50, #f8fafc);
+  color: var(--t-neutral-700, #334155);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: default;
+}
+
+.shop-facts svg {
+  color: var(--shop-primary);
+}
+
+.shop-facts li.is-open {
+  background: color-mix(in srgb, var(--t-primary-600, #059669) 10%, white);
+  color: var(--t-primary-700, #047857);
+}
+
+.shop-facts li.is-open svg {
+  color: var(--t-primary-600, #059669);
+}
+
+/* Vouchers: small tickets, click to copy the code */
+.shop-tickets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.shop-ticket {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border: 1px dashed var(--t-danger-300, #fca5a5);
+  border-radius: 10px;
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-700, #b91c1c);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.shop-ticket:hover {
+  border-color: var(--t-danger-400, #f87171);
+  background: var(--t-danger-100, #fee2e2);
+}
+
+.shop-ticket b {
+  font-weight: 600;
+}
+
+.shop-ticket code {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--t-neutral-0, #fff);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.shop-ticket svg:last-child {
+  opacity: 0.7;
 }
 
 .shop-hero-actions .shop-btn {
@@ -210,50 +332,6 @@
   width: 42px;
   padding: 0;
   justify-content: center;
-}
-
-.shop-about {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px 48px;
-  margin: 14px 0 0;
-  /* Lined up under the name: the card's 32px + the logo + the gap. */
-  padding: 0 8px 0 178px;
-}
-
-.shop-tagline {
-  flex: 1 1 420px;
-  max-width: 680px;
-  margin: 0;
-  color: var(--t-neutral-600, #475569);
-  font-size: 14.5px;
-  line-height: 1.6;
-}
-
-.shop-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: var(--t-neutral-600, #475569);
-  font-size: 13.5px;
-}
-
-.shop-details li {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  max-width: 420px;
-}
-
-.shop-details svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--t-neutral-400, #94a3b8);
 }
 
 .shop-btn {
@@ -459,7 +537,11 @@
 
   .shop-hero-actions {
     width: 100%;
-    padding-left: 146px;
+    padding-left: 132px;
+  }
+
+  .shop-tickets {
+    margin-left: 0;
   }
 
   .shop-search input {

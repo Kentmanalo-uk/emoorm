@@ -30,6 +30,7 @@ import {
   Plus,
   AirplaneTilt,
   Ticket,
+  Copy,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
@@ -854,6 +855,7 @@ export default function StoreDetail() {
               <span>{store.name}</span>
             </nav>
 
+            <div className="shop-profile">
             <div className="shop-hero-banner">
               {banner ? (
                 <img src={resolveImg(banner)} alt="" />
@@ -862,6 +864,7 @@ export default function StoreDetail() {
               )}
             </div>
 
+            <div className="shop-profile-body">
             <div className="shop-hero-card">
               <div className="shop-avatar">
                 {store.logo ? (
@@ -880,18 +883,9 @@ export default function StoreDetail() {
                     </span>
                   )}
                 </h1>
-                <p className="shop-meta">
-                  <span>
-                    <Star size={15} weight="fill" className="shop-meta-star" />
-                    <b>{rating > 0 ? rating.toFixed(1) : 'New'}</b>
-                    {reviewCount > 0 && <> ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</>}
-                  </span>
-                  <span><b>{productCount}</b> {productCount === 1 ? 'product' : 'products'}</span>
-                  <span><b>{followerCount}</b> {followerCount === 1 ? 'follower' : 'followers'}</span>
-                  {store.municipality?.name && (
-                    <span><MapPin size={15} /> {store.municipality.name}</span>
-                  )}
-                </p>
+                {store.description && (
+                  <p className="shop-tagline" title={store.description}>{store.description}</p>
+                )}
               </div>
 
               <div className="shop-hero-actions">
@@ -922,38 +916,74 @@ export default function StoreDetail() {
               </div>
             </div>
 
-            {(store.description || store.owner?.fullName || store.pickupAddress || week.length > 0 || store.businessHours) && (
-              <div className="shop-about">
-                {store.description && <p className="shop-tagline">{store.description}</p>}
-                <ul className="shop-details">
-                  {store.owner?.fullName && (
-                    <li><User size={15} /> {store.owner.fullName}</li>
-                  )}
-                  {store.pickupAddress && (
-                    <li><MapPin size={15} /> {store.pickupAddress}</li>
-                  )}
-                  {week.length > 0 ? (
-                    <li>
-                      <Clock size={15} />
-                      <span className="shop-hours is-inline">
-                        {hoursNow && <b className={hoursNow.startsWith('Open') ? 'is-open' : ''}>{hoursNow}</b>}
-                        <span>{week.join(' · ')}</span>
-                      </span>
-                    </li>
-                  ) : store.businessHours && (
-                    <li><Clock size={15} /> {store.businessHours}</li>
-                  )}
-                </ul>
-              </div>
-            )}
+            {/* One line under it all: the numbers, the shop's facts as icon
+                chips (details on hover), and its vouchers. */}
+            <div className="shop-profile-foot">
+              <ul className="shop-stats">
+                <li title={reviewCount > 0 ? `${rating.toFixed(1)} from ${reviewCount} ${reviewCount === 1 ? 'review' : 'reviews'}` : 'No reviews yet'}>
+                  <b><Star size={15} weight="fill" className="shop-meta-star" />{rating > 0 ? rating.toFixed(1) : 'New'}</b>
+                  <span>{reviewCount > 0 ? `${reviewCount} ${reviewCount === 1 ? 'review' : 'reviews'}` : 'Rating'}</span>
+                </li>
+                <li>
+                  <b>{productCount}</b>
+                  <span>{productCount === 1 ? 'Product' : 'Products'}</span>
+                </li>
+                <li>
+                  <b>{followerCount}</b>
+                  <span>{followerCount === 1 ? 'Follower' : 'Followers'}</span>
+                </li>
+              </ul>
+
+              <ul className="shop-facts">
+                {store.municipality?.name && (
+                  <li title={store.pickupAddress ? `${store.pickupAddress}, ${store.municipality.name}` : store.municipality.name}>
+                    <MapPin size={15} weight="fill" /> {store.municipality.name}
+                  </li>
+                )}
+                {(hoursNow || store.businessHours) && (
+                  <li
+                    className={hoursNow?.startsWith('Open') ? 'is-open' : undefined}
+                    title={week.length > 0 ? week.join('\n') : store.businessHours}
+                  >
+                    <Clock size={15} weight="fill" /> {hoursNow || 'Hours'}
+                  </li>
+                )}
+                {offersDelivery && <li><Truck size={15} weight="fill" /> Delivery</li>}
+                {offersPickup && <li><Storefront size={15} weight="fill" /> Pickup</li>}
+                {store.acceptsCod && <li title="Cash on delivery"><Money size={15} weight="fill" /> COD</li>}
+                {store.owner?.fullName && (
+                  <li title="Seller"><User size={15} weight="fill" /> {store.owner.fullName}</li>
+                )}
+              </ul>
+
+              {shopVouchers.length > 0 && (
+                <div className="shop-tickets" aria-label="Shop vouchers">
+                  {shopVouchers.map((v) => (
+                    <button
+                      type="button"
+                      key={v.id}
+                      className="shop-ticket"
+                      onClick={() => copyCode(v.code)}
+                      title={`Copy ${v.code}`}
+                    >
+                      <Ticket size={15} weight="fill" />
+                      <b>{voucherSummary(v)}</b>
+                      <code>{v.code}</code>
+                      <Copy size={13} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            </div>
+            </div>
           </div>
         </div>
 
-        {/* Away notice and vouchers (computers) */}
-        {!isPhone && (awayNotice || voucherStrip) && (
+        {/* Away notice (computers) */}
+        {!isPhone && awayNotice && (
           <div className="shop-container">
             {awayNotice}
-            {voucherStrip}
           </div>
         )}
 
