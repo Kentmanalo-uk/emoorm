@@ -180,7 +180,7 @@ function adminAccessChanged(decoded, user) {
  * @param {Array<String>} allowedRoles - Array of allowed roles
  */
 const authorize = (...allowedRoles) => {
-  return (req, res, next) => {
+  const check = (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -197,6 +197,9 @@ const authorize = (...allowedRoles) => {
 
     next();
   };
+  // Read by the /api reference page (lib/apiDocs.js) to say who may call a route.
+  check.roles = allowedRoles;
+  return check;
 };
 
 /**
