@@ -5,7 +5,7 @@ import {
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
   ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X,
   CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check, Sparkle,
-  NotePencil, Question, Handshake,
+  NotePencil, Question, Handshake, GraduationCap,
 } from '@phosphor-icons/react';
 import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
@@ -410,6 +410,10 @@ export default function SellerLayout() {
                 )}
               </div>
             </div>
+
+            <NavLink to="/sell/academy" className={navCls} title="Seller Academy">
+              <GraduationCap size={17} weight="fill" /> <span>Seller Academy</span>
+            </NavLink>
           </nav>
 
           <div className={`sc-account${accountOpen ? ' is-open' : ''}`} ref={accountRef}>

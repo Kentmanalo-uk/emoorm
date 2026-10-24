@@ -69,6 +69,12 @@
 }
 
 /* Review banner */
+/* Seller Academy card: the identity card, in green */
+.sd-idv.is-academy .sd-idv-icon {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-600, #059669);
+}
+
 .sd-review-banner {
   display: flex;
   align-items: center;

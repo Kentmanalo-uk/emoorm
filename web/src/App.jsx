@@ -127,6 +127,7 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const CookiePolicy = lazy(() => import('./pages/CookiePolicy'));
 const AppDownload = lazy(() => import('./pages/AppDownload'));
 const SellerTutorial = lazy(() => import('./pages/SellerTutorial'));
+const SellerAcademy = lazy(() => import('./pages/SellerAcademy'));
 const AdminAppUsers = lazy(() => import('./pages/AdminAppUsers'));
 const AdminTeam = lazy(() => import('./pages/AdminTeam'));
 const SellerOffers = lazy(() => import('./pages/SellerOffers'));
@@ -231,6 +232,8 @@ function AppRoutes() {
         <Route path="/municipality/:id/gallery" element={<MunicipalityGallery />} />
         <Route path="/sell" element={<Sell />} />
         <Route path="/sell/tutorial" element={<SellerTutorial />} />
+        <Route path="/sell/academy" element={<SellerAcademy />} />
+        <Route path="/sell/academy/:slug" element={<SellerAcademy />} />
         <Route path="/search/image" element={<SearchByImage />} />
         <Route path="/about" element={<About />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />

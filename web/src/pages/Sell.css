@@ -548,7 +548,13 @@
   flex-wrap: wrap;
 }
 
-/* The seller tutorial, under the hero buttons. */
+/* The seller tutorial and the Academy, under the hero buttons. */
+.sell-hero-learn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+}
+
 .sell-hero-watch {
   display: inline-flex;
   align-items: center;

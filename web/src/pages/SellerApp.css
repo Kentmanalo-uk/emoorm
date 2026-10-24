@@ -43,6 +43,7 @@
 .sh-banner.is-pink { --tone: #db2777; --g1: #fb7185; --g2: #ec4899; --g3: #a21caf; }
 .sh-banner.is-violet { --tone: #7c3aed; --g1: #a78bfa; --g2: #7c3aed; --g3: #4338ca; }
 .sh-banner.is-blue { --tone: #2563eb; --g1: #22d3ee; --g2: #3b82f6; --g3: #1e40af; }
+.sh-banner.is-green { --tone: #047857; --g1: #34d399; --g2: #059669; --g3: #065f46; }
 
 /* ── Shared: cards, section heads, header buttons ───────────── */
 .sh-body {

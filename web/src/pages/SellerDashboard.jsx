@@ -8,6 +8,7 @@ import {
   IdentificationCard, ArrowRight, Wallet, CaretRight, LockSimple, Bell, Receipt,
   ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, PlusCircle, Check, ExclamationMark,
   Sparkle, Palette, Heart, UsersThree, LinkSimple, ChatCircleDots, CookingPot,
+  GraduationCap, BookOpen, Lightbulb,
 } from '@phosphor-icons/react';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -344,6 +345,18 @@ export default function SellerDashboard() {
             <span>Some dashboard data couldn't be loaded. Try refreshing the page.</span>
           </div>
         )}
+
+        {/* Seller Academy: free lessons, one click away */}
+        <section className="sd-idv is-academy" aria-label="Seller Academy">
+          <span className="sd-idv-icon"><GraduationCap size={24} weight="fill" /></span>
+          <div className="sd-idv-body">
+            <strong>Seller Academy</strong>
+            <p>Free, simple lessons: better photos, faster orders, more buyers.</p>
+          </div>
+          <Link to="/sell/academy" className="sd-card-btn">
+            Start learning <ArrowRight size={15} weight="bold" />
+          </Link>
+        </section>
 
         <div className="sd">
 
@@ -773,6 +786,7 @@ function HomeTips({ onShare }) {
   // Each tip is a little poster: a big title, the main icon on a frosted tile,
   // and two small accents floating around it.
   const slides = [
+    { key: 'academy', title: 'Seller Academy', text: 'Free, simple lessons to sell more.', cta: 'Start learning', to: '/sell/academy', Icon: GraduationCap, accents: [BookOpen, Lightbulb], tone: 'green' },
     { key: 'decorate', title: 'Decorate your shop', text: 'Pick a ready-made look in one tap.', cta: 'Choose a template', to: '/seller/decorate', Icon: PaintBrush, accents: [Palette, Sparkle], tone: 'pink' },
     { key: 'announce', title: 'Tell your followers', text: 'Share news or promote a product.', cta: 'Open Marketing', to: '/seller/marketing', Icon: Megaphone, accents: [UsersThree, Heart], tone: 'violet' },
     { key: 'share', title: 'Share your shop', text: 'Send your shop link to friends and groups.', cta: 'Share now', onClick: onShare, Icon: ShareNetwork, accents: [LinkSimple, ChatCircleDots], tone: 'blue' },

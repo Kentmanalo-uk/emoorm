@@ -1,0 +1,179 @@
+/* iPhone 17 Pro Max (78 mm wide; ~1.2 mm black border round the screen),
+   drawn in CSS. .pf is the size container: every part is in cqw (1cqw = 1%
+   of the phone's width), so the phone scales as one piece. The screen grows
+   to the screenshot's own height, so the whole screen always shows. */
+.pf {
+  --pf-frame: #2b3a4f;          /* Deep Blue aluminium */
+  --pf-frame-hi: #5a6c86;
+  --pf-frame-lo: #19232f;
+  display: inline-block;
+  width: var(--pf-w, 280px);
+  max-width: 100%;
+  container-type: inline-size;
+  vertical-align: top;
+}
+
+/* The aluminium band */
+.pf-body {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0.85cqw;
+  border-radius: 15.8cqw;
+  background:
+    linear-gradient(135deg, var(--pf-frame-hi) 0%, var(--pf-frame) 18%, var(--pf-frame-lo) 50%, var(--pf-frame) 82%, var(--pf-frame-hi) 100%);
+  box-shadow:
+    inset 0 0 0 0.25cqw rgba(255, 255, 255, 0.18),
+    inset 0 0 0 0.6cqw rgba(0, 0, 0, 0.25),
+    0 1.5cqw 3cqw rgba(15, 23, 42, 0.16),
+    0 10cqw 20cqw rgba(15, 23, 42, 0.2);
+}
+
+/* The thin black border round the screen */
+.pf-bezel {
+  display: block;
+  width: 100%;
+  padding: 1.5cqw;
+  border-radius: 15cqw;
+  background: #05070a;
+}
+
+.pf-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 13.6cqw;
+  background: #fff;
+}
+
+/* Status bar, with the Dynamic Island in the middle */
+.pf-status {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  height: 10.6cqw;
+  padding: 1.2cqw 7cqw 0 9cqw;
+  background: #fff;
+  color: #0b0b0c;
+}
+
+.pf-time {
+  font-size: 4.2cqw;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pf-island {
+  position: absolute;
+  top: 2.3cqw;
+  left: 50%;
+  width: 29cqw;
+  height: 8.2cqw;
+  border-radius: 999px;
+  background: #000;
+  transform: translateX(-50%);
+}
+
+/* The front camera's lens, a hint of blue in the island */
+.pf-island::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 3.6cqw;
+  width: 2.5cqw;
+  height: 2.5cqw;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #33415c 0%, #0b1120 70%);
+  transform: translateY(-50%);
+}
+
+.pf-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2cqw;
+}
+
+.pf-icons svg {
+  width: 4.4cqw;
+  height: 4.4cqw;
+}
+
+.pf-icons svg:last-child {
+  width: 6.2cqw;
+  height: 6.2cqw;
+}
+
+/* The whole screenshot, never cropped */
+.pf-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  animation: pf-shot-in 0.35s ease both;
+}
+
+@keyframes pf-shot-in {
+  from { opacity: 0; transform: translateY(1.5cqw); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-shot { animation: none; }
+}
+
+/* Home bar, in its own strip under the app so it never covers a button */
+.pf-home {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  height: 5.6cqw;
+  background: #fff;
+}
+
+.pf-home::after {
+  content: '';
+  position: absolute;
+  top: 2cqw;
+  left: 50%;
+  width: 35cqw;
+  height: 1.4cqw;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.85);
+  transform: translateX(-50%);
+}
+
+/* A soft reflection across the glass */
+.pf-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0) 72%, rgba(255, 255, 255, 0.05) 100%);
+  pointer-events: none;
+}
+
+/* Side buttons: Action and volume on the left; side button and Camera
+   Control on the right. Slim, just off the band. */
+.pf-btn {
+  position: absolute;
+  width: 0.9cqw;
+  border-radius: 0.8cqw;
+  background: linear-gradient(90deg, var(--pf-frame-lo), var(--pf-frame-hi));
+}
+
+.pf-btn.is-action { left: -0.6cqw; top: 19%; height: 6%; }
+.pf-btn.is-vol-up { left: -0.6cqw; top: 28%; height: 9%; }
+.pf-btn.is-vol-down { left: -0.6cqw; top: 39%; height: 9%; }
+.pf-btn.is-power { right: -0.6cqw; top: 27%; height: 13%; background: linear-gradient(90deg, var(--pf-frame-hi), var(--pf-frame-lo)); }
+
+.pf-btn.is-camera {
+  right: -0.5cqw;
+  top: 56%;
+  width: 0.8cqw;
+  height: 8%;
+  background: linear-gradient(90deg, #8a96a8, #3a4658);
+}
