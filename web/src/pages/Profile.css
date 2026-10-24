@@ -1554,6 +1554,21 @@
   font-size: 13px;
 }
 
+/* Language: the phone's own picker, invisible over the whole row. */
+.pf-m-lang {
+  position: relative;
+}
+
+.pf-m-lang select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
 /* ── log out ── */
 .pf-m-signout {
   display: inline-flex;

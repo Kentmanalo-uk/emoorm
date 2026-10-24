@@ -1,22 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { CaretDown as ChevronDown, Globe, Check, Translate } from '@phosphor-icons/react';
+import { CaretDown as ChevronDown, Globe, Check } from '@phosphor-icons/react';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTranslate';
+import LanguageTip from './LanguageTip';
 import './LanguageSwitcher.css';
-
-// The pointer after the first-visit choice, in the language just chosen.
-const TIP_TEXT = {
-  en: { text: 'You can change the language here anytime.', ok: 'Got it' },
-  tl: { text: 'Dito mo puwedeng palitan ang wika kahit kailan.', ok: 'Sige' },
-  ceb: { text: 'Diri nimo mailisan ang pinulongan bisan kanus-a.', ok: 'Sige' },
-};
 
 /**
  * Compact language dropdown. Variants:
  *   - "topbar"     : light grey buyer topbar (default)
  *   - "shell"      : white pill for Seller / Admin center topbars
- *   - "phone"      : icon button in the buyer header on phones
  *
- * `tip`: show the "change the language here" pointer under the button;
+ * `tip`: show the "change the language here" card under the button;
  * `onTipDone` hears when it is dismissed (Got it, or the menu opened).
  */
 export default function LanguageSwitcher({ variant = 'topbar', tip = false, onTipDone }) {
@@ -43,7 +36,6 @@ export default function LanguageSwitcher({ variant = 'topbar', tip = false, onTi
   }, [open]);
 
   const active = LANGUAGES.find((l) => l.code === current) || LANGUAGES[0];
-  const tipText = TIP_TEXT[current] || TIP_TEXT.en;
 
   const toggle = () => {
     if (tip) onTipDone?.();
@@ -64,27 +56,16 @@ export default function LanguageSwitcher({ variant = 'topbar', tip = false, onTi
         onClick={toggle}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={variant === 'phone' ? `Language: ${active.label}` : undefined}
         title="Change language"
       >
         {variant === 'shell' ? <Globe size={15} /> : null}
-        {variant === 'phone' ? <Translate size={20} weight="fill" className="lang-switch__icon" /> : null}
         <span className="lang-switch__label">
           {variant === 'shell' ? active.label : active.short}
         </span>
-        {variant !== 'phone' && (
-          <ChevronDown size={14} className={`lang-switch__caret ${open ? 'is-open' : ''}`} />
-        )}
+        <ChevronDown size={14} className={`lang-switch__caret ${open ? 'is-open' : ''}`} />
       </button>
 
-      {tip && !open && (
-        <div className="lang-switch__tip" role="status">
-          <span className="lang-switch__tip-arrow" aria-hidden="true" />
-          <Translate size={18} weight="fill" className="lang-switch__tip-icon" aria-hidden="true" />
-          <p>{tipText.text}</p>
-          <button type="button" onClick={() => onTipDone?.()}>{tipText.ok}</button>
-        </div>
-      )}
+      {tip && !open && <LanguageTip variant="topbar" onDone={() => onTipDone?.()} />}
 
       {open && (
         <ul className="lang-switch__menu" role="listbox">

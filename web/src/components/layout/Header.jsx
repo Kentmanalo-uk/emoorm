@@ -15,6 +15,7 @@ import axios from '../../lib/axios';
 import { notificationHref } from '../../lib/notificationLink';
 import LanguageSwitcher from '../LanguageSwitcher';
 import LanguageChoice from '../LanguageChoice';
+import LanguageTip from '../LanguageTip';
 import { useLanguageIntro, dismissLanguageTip } from '../../lib/languageIntro';
 import AppLogo from '../AppLogo';
 import ImageSearchModal from './ImageSearchModal';
@@ -661,8 +662,6 @@ const Header = () => {
               <ShoppingCart size={24} />
               {cartCount > 0 && <span className="header-cart-badge">{cartCount}</span>}
             </Link>
-            {/* Phones have no topbar: the language switch sits beside the search. */}
-            <LanguageSwitcher variant="phone" tip={showLanguageTip && isPhone} onTipDone={dismissLanguageTip} />
           </div>}
 
           {isCartPage && (
@@ -723,7 +722,7 @@ const Header = () => {
         </div>
       )}
 
-      {isTabPage && <InstallAppBar />}
+      {isTabPage && !(showLanguageTip && isPhone) && <InstallAppBar />}
       {isTabPage && <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <Link className={location.pathname === '/' ? 'is-active' : ''} to="/" aria-current={location.pathname === '/' ? 'page' : undefined}>
           <HomeIcon size={21} weight={location.pathname === '/' ? 'fill' : 'light'} />
@@ -750,10 +749,17 @@ const Header = () => {
           </span>
           <span>Notifications</span>
         </Link>
-        <Link className={location.pathname.startsWith('/profile') ? 'is-active' : ''} to="/profile" aria-current={location.pathname.startsWith('/profile') ? 'page' : undefined}>
+        <Link
+          className={location.pathname.startsWith('/profile') ? 'is-active' : ''}
+          to="/profile"
+          aria-current={location.pathname.startsWith('/profile') ? 'page' : undefined}
+          onClick={showLanguageTip ? dismissLanguageTip : undefined}
+        >
           <User size={21} weight={location.pathname.startsWith('/profile') ? 'fill' : 'light'} />
           <span>Profile</span>
         </Link>
+        {/* Phones change the language in Profile (More): point there once. */}
+        {showLanguageTip && isPhone && <LanguageTip variant="nav" onDone={dismissLanguageTip} />}
       </nav>}
 
       <ImageSearchModal

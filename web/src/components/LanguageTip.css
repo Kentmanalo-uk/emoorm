@@ -1,0 +1,125 @@
+/* The "change language anytime" card after the first-visit choice. */
+
+.lang-tip {
+  position: absolute;
+  z-index: 1001;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  row-gap: 12px;
+  width: 290px;
+  max-width: calc(100vw - 24px);
+  padding: 14px 14px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-900, #111827);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+  box-shadow: 0 16px 40px -12px rgba(15, 23, 42, 0.28);
+}
+
+.lang-tip-arrow {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  background: var(--t-neutral-0, #fff);
+}
+
+.lang-tip-icon {
+  color: var(--t-primary-600, #059669);
+}
+
+.lang-tip-copy strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lang-tip-copy p {
+  margin: 2px 0 0;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.lang-tip-ok {
+  grid-column: 1 / -1;
+  justify-self: end;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lang-tip-ok:hover {
+  background: var(--t-primary-700, #047857);
+}
+
+/* Computers: hangs under the topbar switch. */
+.lang-tip--topbar {
+  top: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  animation: langTipDown 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.lang-tip--topbar .lang-tip-arrow {
+  top: -7px;
+  left: calc(50% - 6px);
+  border-right: none;
+  border-bottom: none;
+  transform: rotate(45deg);
+}
+
+/* Phones: stands above the bottom navigation, pointing at Profile, the last
+   of its five tabs (the bar has 6px of padding a side; the card sits 8px in). */
+.lang-tip--nav {
+  right: 8px;
+  bottom: calc(100% + 12px);
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  width: 340px;
+  max-width: calc(100vw - 16px);
+  animation: langTipUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.lang-tip--nav .lang-tip-ok {
+  grid-column: auto;
+}
+
+.lang-tip--nav .lang-tip-arrow {
+  bottom: -7px;
+  right: calc((100vw - 12px) / 10 - 8px);
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+@keyframes langTipDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+  }
+}
+
+@keyframes langTipUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-tip {
+    animation: none;
+  }
+}
