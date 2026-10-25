@@ -3,13 +3,9 @@ import EmptyArt from '../ui/EmptyArt';
 import { Link } from 'react-router-dom';
 import {
   ChatCircleDots, X, CaretLeft, PaperPlaneRight, ArrowSquareOut, ChatsCircle, CircleNotch, Storefront,
-  Headset, ArrowUUpLeft,
+  Headset,
 } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
-import ConfirmDialog from '../ui/ConfirmDialog';
-import {
-  canUnsend, unsendMessage, replaceMessage, unsentLabel,
-} from '../../lib/unsend';
 import { resolveImg } from '../../lib/media';
 import { CASE_STATUS_LABELS } from '../../lib/supportCategories';
 import useAuthStore from '../../store/authStore';
@@ -65,11 +61,9 @@ const toItem = (c, kind, userId) => {
     name: seller ? c.buyer?.fullName || 'Buyer' : c.store?.name || 'Store',
     avatar: seller ? c.buyer?.profilePhoto : c.store?.logo,
     subtitle: seller ? 'Customer' : 'Store',
-    preview: c.lastMessage?.unsent
-      ? unsentLabel(c.lastMessage.senderId === userId, seller ? c.buyer?.fullName : c.store?.name)
-      : c.lastMessage
-        ? `${c.lastMessage.senderId === userId ? 'You: ' : ''}${c.lastMessage.body || 'Order update'}`
-        : 'Start the conversation',
+    preview: c.lastMessage
+      ? `${c.lastMessage.senderId === userId ? 'You: ' : ''}${c.lastMessage.body || 'Order update'}`
+      : 'Start the conversation',
     time: c.lastMessageAt,
     unread: c.unreadCount || 0,
   };
@@ -207,27 +201,6 @@ export default function ChatDock() {
     }
   };
 
-  // Unsend one of my own shop-chat messages (its first hour), after asking.
-  const [unsendTarget, setUnsendTarget] = useState(null);
-  const [unsending, setUnsending] = useState(false);
-  const confirmUnsend = async () => {
-    if (!unsendTarget || unsending) return;
-    const { convoId, message } = unsendTarget;
-    setUnsending(true);
-    try {
-      const updated = await unsendMessage(convoId, message.id);
-      setThread((cur) => (cur && cur.key === `store:${convoId}`
-        ? { ...cur, data: { ...cur.data, messages: replaceMessage(cur.data.messages, updated) } }
-        : cur));
-      loadStore();
-    } catch (err) {
-      setError(err.message || 'Could not unsend the message');
-    } finally {
-      setUnsending(false);
-      setUnsendTarget(null);
-    }
-  };
-
   const storeItems = (storeConvos || []).map((c) => toItem(c, 'store', user?.id));
   const supportItems = (supportConvos || []).map((c) => toItem(c, 'support', user?.id));
   const unreadItems = [...storeItems, ...supportItems].filter((i) => i.unread > 0).sort(byTimeDesc);
@@ -342,34 +315,13 @@ export default function ChatDock() {
           )}
           {active?.messages.map((m) => {
             const mine = m.senderId === user?.id;
-            if (m.unsentAt) {
-              return (
-                <div key={m.id} className={`cd-msg is-unsent${mine ? ' is-mine' : ''}`}>
-                  <p>{unsentLabel(mine, selectedItem?.name)}</p>
-                </div>
-              );
-            }
-            const unsendable = !isSupport && canUnsend(m, user?.id);
             return (
               <div key={m.id} className={`cd-msg${mine ? ' is-mine' : ''}`}>
                 {!mine && isSupport && m.sender?.fullName && <span className="cd-msg-name">{m.sender.fullName}</span>}
                 {m.imageUrl && <img src={resolveImg(m.imageUrl)} alt="" className="cd-msg-img" />}
                 {m.body && <p>{m.body}</p>}
                 {!m.body && !m.imageUrl && m.order && <p>Order {m.order.orderNumber}</p>}
-                <span className="cd-msg-foot">
-                  {unsendable && (
-                    <button
-                      type="button"
-                      className="cd-msg-unsend"
-                      onClick={() => setUnsendTarget({ convoId: selected.id, message: m })}
-                      aria-label="Unsend message"
-                      title="Unsend"
-                    >
-                      <ArrowUUpLeft size={12} weight="bold" /> Unsend
-                    </button>
-                  )}
-                  <time>{formatTime(m.createdAt)}</time>
-                </span>
+                <time>{formatTime(m.createdAt)}</time>
               </div>
             );
           })}
@@ -462,17 +414,6 @@ export default function ChatDock() {
         <span>Messages</span>
         {unreadTotal > 0 && <span className="cd-count">{unreadTotal > 9 ? '9+' : unreadTotal}</span>}
       </button>
-
-      <ConfirmDialog
-        open={Boolean(unsendTarget)}
-        title="Unsend this message?"
-        message={`It will be removed for you and ${selectedItem?.name || 'them'}. The chat shows that a message was unsent.`}
-        confirmLabel="Unsend"
-        danger
-        loading={unsending}
-        onConfirm={confirmUnsend}
-        onCancel={() => setUnsendTarget(null)}
-      />
     </div>
   );
 }

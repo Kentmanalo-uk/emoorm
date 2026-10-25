@@ -5,12 +5,8 @@ import {
   PaperPlaneTilt as Send, ChatText as MessageSquare, Storefront as StoreIcon, User as UserIcon,
   Package, PushPin as Pin, ArrowsClockwise as RefreshCw, CircleNotch as Loader2,
   MagnifyingGlass, CaretLeft, Tag as TagIcon, Image as ImageIcon,
-  Check, Checks, X, Flag, EnvelopeOpen, Funnel, Phone, Handshake, ArrowUUpLeft,
+  Check, Checks, X, Flag, EnvelopeOpen, Funnel, Phone, Handshake,
 } from '@phosphor-icons/react';
-import ConfirmDialog from '../ui/ConfirmDialog';
-import {
-  canUnsend, unsendMessage as requestUnsend, replaceMessage, unsentLabel,
-} from '../../lib/unsend';
 import toast from 'react-hot-toast';
 import axiosInstance from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
@@ -126,9 +122,7 @@ function ConversationListItem({
     : item.store?.name || 'Store';
   const subtitle = isSellerView ? 'Buyer' : 'Store';
 
-  const lastPreview = item.lastMessage?.unsent
-    ? unsentLabel(item.lastMessage.senderId === currentUserId, title)
-    : item.lastMessage
+  const lastPreview = item.lastMessage
     ? item.lastMessage.senderId === currentUserId
       ? `You: ${item.lastMessage.body}`
       : item.lastMessage.body
@@ -211,35 +205,23 @@ function PinnedOrderCard({ order, onAttach }) {
   );
 }
 
-// `onUnsend`: given while the viewer can still take this message back (an hour).
-function MessageBubble({ message, isSelf, seen, onOpenImage, senderName, onUnsend }) {
+function MessageBubble({ message, isSelf, seen, onOpenImage }) {
   // A step of a livestock deal: its card shows the animal, so no product card.
   const product = message.offerId ? null : message.product;
   const hasMedia = Boolean(message.imageUrl);
-  const avatar = !isSelf && (
-    <div className="msgr-bubble-avatar">
-      <UserAvatar
-        src={message.sender?.profilePhoto}
-        name={message.sender?.fullName}
-        alt=""
-        fallbackIcon={UserIcon}
-        iconSize={14}
-      />
-    </div>
-  );
-  if (message.unsentAt) {
-    return (
-      <div className={`msgr-bubble-row ${isSelf ? 'is-self' : ''}`}>
-        {avatar}
-        <div className="msgr-bubble is-unsent">
-          <p className="msgr-bubble-text">{unsentLabel(isSelf, senderName)}</p>
-        </div>
-      </div>
-    );
-  }
   return (
     <div className={`msgr-bubble-row ${isSelf ? 'is-self' : ''}`}>
-      {avatar}
+      {!isSelf && (
+        <div className="msgr-bubble-avatar">
+          <UserAvatar
+            src={message.sender?.profilePhoto}
+            name={message.sender?.fullName}
+            alt=""
+            fallbackIcon={UserIcon}
+            iconSize={14}
+          />
+        </div>
+      )}
       <div className={`msgr-bubble${hasMedia && !message.body && !product && !message.order ? ' is-media-only' : ''}${message.offerId ? ' is-deal-step' : ''}`}>
         {message.offerId && <Handshake size={13} weight="fill" className="msgr-bubble-deal-icon" aria-hidden="true" />}
         {message.order && (
@@ -281,18 +263,6 @@ function MessageBubble({ message, isSelf, seen, onOpenImage, senderName, onUnsen
             : <Check size={12} weight="bold" className="msgr-bubble-check" aria-label="Sent" />)}
         </span>
       </div>
-      {/* After the bubble: the reversed row of your own messages puts it on its left. */}
-      {onUnsend && (
-        <MoreMenu
-          className="msgr-bubble-more"
-          label="Message options"
-          iconSize={18}
-          align={isSelf ? 'right' : 'left'}
-          items={[{
-            key: 'unsend', icon: <ArrowUUpLeft />, label: 'Unsend', danger: true, onClick: () => onUnsend(message),
-          }]}
-        />
-      )}
     </div>
   );
 }
@@ -723,26 +693,6 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
   const earlierHere = earlier.id && earlier.id === activeConvo?.id ? earlier : null;
   const hasEarlier = earlierHere && earlierHere.hasMore !== null ? earlierHere.hasMore : Boolean(activeConvo?.hasEarlier);
 
-  // Unsend: the message asked about, then the confirmation.
-  const [unsendTarget, setUnsendTarget] = useState(null);
-  const [unsending, setUnsending] = useState(false);
-  const confirmUnsend = async () => {
-    if (!unsendTarget || !activeConvo || unsending) return;
-    const convoId = activeConvo.id;
-    setUnsending(true);
-    try {
-      const updated = await requestUnsend(convoId, unsendTarget.id);
-      setActiveConvo((c) => (c && c.id === convoId ? { ...c, messages: replaceMessage(c.messages, updated) } : c));
-      setEarlier((cur) => (cur.id === convoId ? { ...cur, messages: replaceMessage(cur.messages, updated) } : cur));
-      fetchConversations();
-    } catch (err) {
-      toast.error(err?.message || 'Could not unsend the message');
-    } finally {
-      setUnsending(false);
-      setUnsendTarget(null);
-    }
-  };
-
   const loadEarlier = async () => {
     if (!activeConvo || earlierHere?.loading) return;
     const id = activeConvo.id;
@@ -1101,8 +1051,6 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                       isSelf={entry.message.senderId === currentUser?.id}
                       seen={Boolean(otherReadAt) && new Date(otherReadAt) >= new Date(entry.message.createdAt)}
                       onOpenImage={setViewerImage}
-                      senderName={activeHeader?.title}
-                      onUnsend={canUnsend(entry.message, currentUser?.id) ? setUnsendTarget : undefined}
                     />
                     {entry.message.offerId && lastStepOf.get(entry.message.offerId) === entry.message.id
                       && dealsById.has(entry.message.offerId) && (
@@ -1257,17 +1205,6 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
           onClose={() => setReportOpen(false)}
         />
       )}
-
-      <ConfirmDialog
-        open={Boolean(unsendTarget)}
-        title="Unsend this message?"
-        message={`It will be removed for you and ${activeHeader?.title || 'them'}. The chat shows that a message was unsent.`}
-        confirmLabel="Unsend"
-        danger
-        loading={unsending}
-        onConfirm={confirmUnsend}
-        onCancel={() => setUnsendTarget(null)}
-      />
     </div>
     </>
   );

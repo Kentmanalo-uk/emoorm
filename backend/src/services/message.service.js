@@ -70,43 +70,6 @@ const shapePinnedOrders = (orders) =>
     })),
   }));
 
-// How long after sending a message its sender can still unsend it.
-const UNSEND_WINDOW_MS = 60 * 60 * 1000;
-
-// The line the "New message" notification shows for a message.
-const notificationPreview = (body, imageUrl) => {
-  const text = body || (imageUrl ? 'Sent a photo' : 'Shared an item');
-  return text.length > 120 ? `${text.slice(0, 117)}...` : text;
-};
-
-/** One message as the chat shows it (`unsentAt`: taken back, content gone). */
-const shapeMessage = (m) => ({
-  id: m.id,
-  body: m.body,
-  imageUrl: m.imageUrl,
-  senderId: m.senderId,
-  sender: m.sender,
-  orderId: m.orderId,
-  order: m.order
-    ? {
-      id: m.order.id,
-      orderNumber: m.order.orderNumber,
-      name: orderDisplayName(m.order.items),
-      status: m.order.status,
-      fulfillmentMethod: m.order.fulfillmentMethod,
-      total: Number(m.order.total),
-      createdAt: m.order.createdAt,
-    }
-    : null,
-  productId: m.productId,
-  product: shapeMessageProduct(m.product),
-  offerId: m.offerId ?? null,
-  offerEvent: m.offerEvent ?? null,
-  createdAt: m.createdAt,
-  readAt: m.readAt,
-  unsentAt: m.unsentAt ?? null,
-});
-
 // The viewer's last read moment in a conversation, on whichever side they are.
 const lastReadFor = (conversation, viewerId) => (
   resolveRole(conversation, viewerId) === 'buyer' ? conversation.buyerLastReadAt : conversation.sellerLastReadAt
@@ -133,14 +96,11 @@ const shapeConversationSummary = (conversation, viewerId, { unreadCount = 0, las
     lastMessage: lastMessage
       ? {
         id: lastMessage.id,
-        body: lastMessage.unsentAt
-          ? 'Message unsent'
-          : lastMessage.body
-            || (lastMessage.imageUrl ? 'Photo' : lastMessage.productId ? 'Product' : lastMessage.orderId ? 'Order' : ''),
+        body: lastMessage.body
+          || (lastMessage.imageUrl ? 'Photo' : lastMessage.productId ? 'Product' : lastMessage.orderId ? 'Order' : ''),
         senderId: lastMessage.senderId,
         createdAt: lastMessage.createdAt,
         hasOrder: Boolean(lastMessage.orderId),
-        unsent: Boolean(lastMessage.unsentAt),
       }
       : null,
     unreadCount,
@@ -285,7 +245,31 @@ const getConversation = async (conversationId, userId, { before = null } = {}) =
     deals,
     // The newest messages; earlier ones come a page at a time (?before=).
     hasEarlier,
-    messages: messages.map(shapeMessage),
+    messages: messages.map((m) => ({
+      id: m.id,
+      body: m.body,
+      imageUrl: m.imageUrl,
+      senderId: m.senderId,
+      sender: m.sender,
+      orderId: m.orderId,
+      order: m.order
+        ? {
+          id: m.order.id,
+          orderNumber: m.order.orderNumber,
+          name: orderDisplayName(m.order.items),
+          status: m.order.status,
+          fulfillmentMethod: m.order.fulfillmentMethod,
+          total: Number(m.order.total),
+          createdAt: m.order.createdAt,
+        }
+        : null,
+      productId: m.productId,
+      product: shapeMessageProduct(m.product),
+      offerId: m.offerId,
+      offerEvent: m.offerEvent,
+      createdAt: m.createdAt,
+      readAt: m.readAt,
+    })),
   };
 };
 
@@ -362,11 +346,12 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
       const senderName = side === 'buyer'
         ? (conversation.buyer?.fullName || 'A customer')
         : (conversation.store?.name || 'A store');
+      const body = trimmed || (trimmedImageUrl ? 'Sent a photo' : 'Shared an item');
       await notificationService.createNotification({
         userId: recipientId,
         type: 'STORE_MESSAGE',
         title: `New message from ${senderName}`,
-        message: notificationPreview(trimmed, trimmedImageUrl),
+        message: body.length > 120 ? `${body.slice(0, 117)}...` : body,
         relatedId: conversationId,
         // The recipient reads it in the feed for the role they hold in this
         // conversation: the seller in their dashboard, the buyer in the bell.
@@ -382,61 +367,29 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
     console.error('[sendMessage] notification failed:', err.message);
   }
 
-  return shapeMessage(message);
-};
-
-/**
- * Unsend: the sender takes a message back within UNSEND_WINDOW_MS of sending
- * it. Its text, photo and attached product or order are wiped, and the chat
- * shows "unsent a message" in its place. A step of a livestock deal stays
- * (the deal's record depends on it).
- */
-const unsendMessage = async (conversationId, messageId, userId) => {
-  const conversation = await messageRepository.findConversationById(conversationId);
-  if (!conversation) {
-    throw new ApiError('Conversation not found', 404);
-  }
-  resolveRole(conversation, userId);
-
-  const message = await messageRepository.findMessageById(messageId);
-  if (!message || message.conversationId !== conversationId) {
-    throw new ApiError('Message not found', 404);
-  }
-  if (message.senderId !== userId) {
-    throw new ApiError('You can only unsend your own messages', 403);
-  }
-  if (message.offerId) {
-    throw new ApiError('Offer updates cannot be unsent', 400);
-  }
-  if (message.unsentAt) {
-    throw new ApiError('This message was already unsent', 409);
-  }
-  const now = new Date();
-  if (now - new Date(message.createdAt) > UNSEND_WINDOW_MS) {
-    throw new ApiError('A message can only be unsent within an hour of sending it', 400);
-  }
-
-  const updated = await messageRepository.unsendMessage(messageId, now);
-
-  // The "New message" notification quoted it: say it was unsent instead.
-  // Matched by chat, moment and text (it records no message id).
-  try {
-    const preview = notificationPreview(message.body, message.imageUrl);
-    const sentAt = new Date(message.createdAt).getTime();
-    await prisma.notification.updateMany({
-      where: {
-        type: 'STORE_MESSAGE',
-        relatedId: conversationId,
-        message: preview,
-        createdAt: { gte: new Date(sentAt - 5000), lte: new Date(sentAt + 120000) },
-      },
-      data: { message: 'Message unsent' },
-    });
-  } catch (err) {
-    console.error('[unsendMessage] notification update failed:', err.message);
-  }
-
-  return shapeMessage(updated);
+  return {
+    id: message.id,
+    body: message.body,
+    imageUrl: message.imageUrl,
+    senderId: message.senderId,
+    sender: message.sender,
+    orderId: message.orderId,
+    order: message.order
+      ? {
+        id: message.order.id,
+        orderNumber: message.order.orderNumber,
+        name: orderDisplayName(message.order.items),
+        status: message.order.status,
+        fulfillmentMethod: message.order.fulfillmentMethod,
+        total: Number(message.order.total),
+        createdAt: message.order.createdAt,
+      }
+      : null,
+    productId: message.productId,
+    product: shapeMessageProduct(message.product),
+    createdAt: message.createdAt,
+    readAt: message.readAt,
+  };
 };
 
 /**
@@ -497,8 +450,6 @@ module.exports = {
   openConversationWithBuyer,
   getConversation,
   sendMessage,
-  unsendMessage,
-  UNSEND_WINDOW_MS,
   markConversationRead,
   rateConversationService,
 };

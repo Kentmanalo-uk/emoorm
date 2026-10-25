@@ -367,7 +367,6 @@
   "POST /api/messages/conversations": "Open (or reuse) a chat with a store, or a seller with a buyer.",
   "GET /api/messages/conversations/:id": "One chat with its messages (and any price offer).",
   "POST /api/messages/conversations/:id/messages": "Send a message.",
-  "DELETE /api/messages/conversations/:id/messages/:messageId": "Unsend your own message, within an hour of sending it.",
   "POST /api/messages/conversations/:id/read": "Mark the chat read (not rate limited).",
   "POST /api/messages/conversations/:id/rate-service": "Buyer rates the shop's chat service.",
   "GET /api/notifications": "The caller's notifications (feed buyer/seller, category, paging), each with its target and picture.",

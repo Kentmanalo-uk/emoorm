@@ -78,7 +78,6 @@ export const ENDPOINTS = {
     CONVERSATIONS: '/messages/conversations',
     CONVERSATION: (id) => `/messages/conversations/${id}`,
     SEND: (id) => `/messages/conversations/${id}/messages`,
-    UNSEND: (id, messageId) => `/messages/conversations/${id}/messages/${messageId}`,
     MARK_READ: (id) => `/messages/conversations/${id}/read`,
     RATE_SERVICE: (id) => `/messages/conversations/${id}/rate-service`,
   },

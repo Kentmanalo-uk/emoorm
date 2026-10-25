@@ -12,7 +12,6 @@ router.get('/conversations', messageController.listConversations);
 router.post('/conversations', messageController.openConversation);
 router.get('/conversations/:id', messageController.getConversation);
 router.post('/conversations/:id/messages', messageController.sendMessage);
-router.delete('/conversations/:id/messages/:messageId', messageController.unsendMessage);
 router.post('/conversations/:id/read', messageController.markRead);
 router.post('/conversations/:id/rate-service', messageController.rateService);
 

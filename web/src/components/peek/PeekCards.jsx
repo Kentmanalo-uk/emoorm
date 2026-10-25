@@ -115,7 +115,6 @@ const SHOWN = 6;
 
 /** What a message says, in a line (photos, products and orders have no text of their own). */
 const lineOf = (m) => {
-  if (m.unsentAt) return 'Message unsent';
   if (m.body) return m.body;
   if (m.imageUrl) return 'Photo';
   if (m.product?.name) return `Product: ${m.product.name}`;

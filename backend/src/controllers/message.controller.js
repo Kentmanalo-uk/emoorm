@@ -50,12 +50,6 @@ const sendMessage = asyncHandler(async (req, res) => {
   createdResponse(res, message, 'Message sent');
 });
 
-// DELETE /messages/conversations/:id/messages/:messageId: unsend (sender, within an hour).
-const unsendMessage = asyncHandler(async (req, res) => {
-  const message = await messageService.unsendMessage(req.params.id, req.params.messageId, req.user.id);
-  successResponse(res, message, 'Message unsent');
-});
-
 const markRead = asyncHandler(async (req, res) => {
   const result = await messageService.markConversationRead(req.params.id, req.user.id);
   successResponse(res, result, 'Marked as read');
@@ -76,7 +70,6 @@ module.exports = {
   openConversation,
   getConversation,
   sendMessage,
-  unsendMessage,
   markRead,
   rateService,
 };
