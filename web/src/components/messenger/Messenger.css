@@ -2276,3 +2276,62 @@
     display: none;
   }
 }
+
+/* Unsend: the "⋯" beside your own message (its first hour). It shows on
+   hover with a mouse, always on touch screens, and opens upward so the
+   newest messages at the bottom of the chat do not cut it off. */
+.msgr-bubble-more {
+  align-self: center;
+}
+
+.msgr-bubble-more .more-menu-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.msgr-bubble-more .more-menu-btn:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
+}
+
+.msgr-bubble-row:hover .msgr-bubble-more .more-menu-btn,
+.msgr-bubble-more .more-menu-btn:focus-visible,
+.msgr-bubble-more .more-menu-btn[aria-expanded='true'] {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .msgr-bubble-more .more-menu-btn {
+    opacity: 1;
+  }
+}
+
+.msgr-bubble-more .more-menu-pop {
+  top: auto;
+  bottom: calc(100% + 6px);
+  min-width: 160px;
+  transform-origin: bottom right;
+}
+
+.msgr-bubble-more .more-menu-pop.is-left {
+  transform-origin: bottom left;
+}
+
+/* Where an unsent message was. */
+.msgr-bubble.is-unsent,
+.msgr-bubble-row.is-self .msgr-bubble.is-unsent {
+  border: 1px dashed var(--t-neutral-300, #d1d5db);
+  background: transparent;
+  color: var(--t-neutral-500, #6b7280);
+  font-style: italic;
+}

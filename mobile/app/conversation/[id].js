@@ -2,7 +2,7 @@ import {
   Fragment, useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  AppState, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  Alert, AppState, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,8 @@ import {
   ArrowsClockwiseIcon, CaretLeftIcon, FlagIcon, HandshakeIcon, PackageIcon, PhoneIcon, StorefrontIcon, UserIcon, XIcon,
 } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
+import { ENDPOINTS } from '../../src/api/endpoints';
+import { canUnsend, replaceMessage } from '../../src/lib/unsend';
 import { toast } from '../../src/lib/toast';
 import useAuthStore from '../../src/store/authStore';
 import { font, t } from '../../src/theme';
@@ -213,6 +215,31 @@ function StoreChat({ id, onBack }) {
   // When the other side last read the chat: my messages up to then are seen.
   const otherReadAt = activeConvo ? (isSellerSide ? activeConvo.buyerLastReadAt : activeConvo.sellerLastReadAt) : null;
   const hasEarlier = earlier.hasMore !== null ? earlier.hasMore : Boolean(activeConvo?.hasEarlier);
+
+  // Unsend (long press on one of my messages of the last hour), after asking.
+  const unsend = (message) => {
+    Alert.alert(
+      'Unsend this message?',
+      `It will be removed for you and ${activeHeader?.title || 'them'}. The chat shows that a message was unsent.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unsend',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await apiClient.delete(ENDPOINTS.MESSAGES.UNSEND(id, message.id));
+              const updated = res.data;
+              setActiveConvo((c) => (c ? { ...c, messages: replaceMessage(c.messages, updated) } : c));
+              setEarlier((cur) => ({ ...cur, messages: replaceMessage(cur.messages, updated) }));
+            } catch (err) {
+              toast.error(err?.message || 'Could not unsend the message');
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const loadEarlier = async () => {
     if (!activeConvo || earlier.loading) return;
@@ -445,6 +472,8 @@ function StoreChat({ id, onBack }) {
                 isSelf={entry.message.senderId === currentUser?.id}
                 seen={Boolean(otherReadAt) && new Date(otherReadAt) >= new Date(entry.message.createdAt)}
                 onOpenImage={setViewerImage}
+                senderName={activeHeader?.title}
+                onUnsend={canUnsend(entry.message, currentUser?.id) ? unsend : undefined}
               />
               {entry.message.offerId && lastStepOf.get(entry.message.offerId) === entry.message.id
                 && dealsById.has(entry.message.offerId) ? (

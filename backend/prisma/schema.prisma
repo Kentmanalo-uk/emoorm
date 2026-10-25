@@ -1656,6 +1656,9 @@ model Message {
 
   readAt    DateTime? @map("read_at")
   createdAt DateTime  @default(now()) @map("created_at")
+  // Taken back by its sender (within an hour): the content is wiped and the
+  // chat shows "unsent a message" in its place.
+  unsentAt  DateTime? @map("unsent_at")
 
   @@index([conversationId, createdAt])
   @@map("messages")
