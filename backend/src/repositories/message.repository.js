@@ -121,7 +121,7 @@ const latestMessages = async (ids) => {
   if (ids.length === 0) return byConversation;
   const rows = await prisma.$queryRaw`
     SELECT m.id, m.body, m.image_url AS imageUrl, m.sender_id AS senderId, m.created_at AS createdAt,
-      m.order_id AS orderId, m.product_id AS productId, m.conversation_id AS conversationId
+      m.order_id AS orderId, m.product_id AS productId, m.unsent_at AS unsentAt, m.conversation_id AS conversationId
     FROM messages m
     JOIN (
       SELECT conversation_id, MAX(created_at) AS newest
@@ -155,6 +155,23 @@ const listMessages = async (conversationId, { take = 100, before = null } = {}) 
 const createMessage = async ({ conversationId, senderId, body, imageUrl = null, orderId = null, productId = null }) =>
   prisma.message.create({
     data: { conversationId, senderId, body, imageUrl, orderId, productId },
+    include: messageInclude,
+  });
+
+const findMessageById = async (id) =>
+  prisma.message.findUnique({
+    where: { id },
+    select: {
+      id: true, conversationId: true, senderId: true, body: true, imageUrl: true,
+      offerId: true, createdAt: true, unsentAt: true,
+    },
+  });
+
+/** Unsend: the row stays (the chat says "unsent a message"), its content goes. */
+const unsendMessage = async (id, at) =>
+  prisma.message.update({
+    where: { id },
+    data: { unsentAt: at, body: '', imageUrl: null, orderId: null, productId: null },
     include: messageInclude,
   });
 
@@ -228,6 +245,8 @@ module.exports = {
   listConversationsForStore,
   listMessages,
   createMessage,
+  findMessageById,
+  unsendMessage,
   touchConversation,
   markRead,
   countUnreadInConversation,

@@ -61,3 +61,41 @@ test('the chat list gives each chat its unread count and newest message', async 
   const seller = await h.api('GET', '/messages/conversations', { token: h.token(sellerA) });
   assert.deepEqual(seller.body.data.map((c) => [c.id, c.role, c.unreadCount]), [[a.id, 'seller', 1]]);
 });
+
+test('a sender can unsend a message within an hour, and only their own', async () => {
+  const buyer = await h.user('BUYER');
+  const seller = await h.user('SELLER');
+  const store = await h.shop(seller);
+  const convo = await h.prisma.conversation.create({ data: { buyerId: buyer.id, storeId: store.id, lastMessageAt: new Date() } });
+
+  const sent = await h.api('POST', `/messages/conversations/${convo.id}/messages`, { token: h.token(buyer), body: { body: 'oops, wrong chat' } });
+  assert.equal(sent.status, 201, sent.body?.message);
+  const id = sent.body.data.id;
+  const note = await h.prisma.notification.findFirst({ where: { relatedId: convo.id, type: 'STORE_MESSAGE' } });
+  assert.equal(note?.message, 'oops, wrong chat');
+
+  // Not the other side's to take back.
+  const theirs = await h.api('DELETE', `/messages/conversations/${convo.id}/messages/${id}`, { token: h.token(seller) });
+  assert.equal(theirs.status, 403, JSON.stringify(theirs.body));
+
+  const unsent = await h.api('DELETE', `/messages/conversations/${convo.id}/messages/${id}`, { token: h.token(buyer) });
+  assert.equal(unsent.status, 200, unsent.body?.message);
+  assert.equal(unsent.body.data.body, '');
+  assert.ok(unsent.body.data.unsentAt);
+  const again = await h.api('DELETE', `/messages/conversations/${convo.id}/messages/${id}`, { token: h.token(buyer) });
+  assert.equal(again.status, 409);
+
+  // The chat and the list show it as unsent; the notification no longer quotes it.
+  const view = await h.api('GET', `/messages/conversations/${convo.id}`, { token: h.token(seller) });
+  const row = view.body.data.messages.find((m) => m.id === id);
+  assert.deepEqual([row.body, Boolean(row.unsentAt)], ['', true]);
+  const list = await h.api('GET', '/messages/conversations', { token: h.token(seller) });
+  assert.equal(list.body.data.find((c) => c.id === convo.id).lastMessage.body, 'Message unsent');
+  const scrubbed = await h.prisma.notification.findUnique({ where: { id: note.id } });
+  assert.equal(scrubbed.message, 'Message unsent');
+
+  // More than an hour old: too late.
+  const old = await h.prisma.message.create({ data: { conversationId: convo.id, senderId: buyer.id, body: 'old', createdAt: new Date(Date.now() - 61 * 60e3) } });
+  const late = await h.api('DELETE', `/messages/conversations/${convo.id}/messages/${old.id}`, { token: h.token(buyer) });
+  assert.equal(late.status, 400);
+});

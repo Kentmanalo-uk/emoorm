@@ -295,6 +295,44 @@
   color: var(--t-neutral-500, #636b78);
 }
 
+/* The time, and Unsend before it on my messages of the last hour. */
+.cd-msg-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cd-msg-unsend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.cd-msg-unsend:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* Where an unsent message was. */
+.cd-msg.is-unsent,
+.cd-msg.is-unsent.is-mine {
+  border: 1px dashed var(--t-neutral-300, #d1d5db);
+  background: transparent;
+  box-shadow: none;
+  color: var(--t-neutral-500, #636b78);
+  font-style: italic;
+  padding-bottom: 8px;
+}
+
 .cd-msg.is-mine time {
   color: rgba(255, 255, 255, 0.75);
 }
