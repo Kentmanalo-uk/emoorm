@@ -2,43 +2,7 @@ import { Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Profile from './pages/Profile';
-import Products from './pages/Products';
-import SearchStart from './pages/SearchStart';
-import ProductDetails from './pages/ProductDetails';
 import ProductTransitions from './lib/productTransition';
-import ProductReviews from './pages/ProductReviews';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import OrderReceipt from './pages/OrderReceipt';
-import Orders from './pages/Orders';
-import Messages from './pages/Messages';
-import Addresses from './pages/Addresses';
-import Stores from './pages/Stores';
-import StoreDetail from './pages/StoreDetail';
-import PublicProfile from './pages/PublicProfile';
-import MunicipalityShowcase from './pages/MunicipalityShowcase';
-import Wishlist from './pages/Wishlist';
-import Notifications from './pages/Notifications';
-import ProfileLayout from './components/layout/ProfileLayout';
-import ProfileReviews from './pages/ProfileReviews';
-import ProfileFollowedStores from './pages/ProfileFollowedStores';
-import ProfileMessages from './pages/ProfileMessages';
-import ProfileSettings from './pages/ProfileSettings';
-import ProfileVerification from './pages/ProfileVerification';
-import ProfileSupport from './pages/ProfileSupport';
-import ProfileReports from './pages/ProfileReports';
-import ProfileOffers from './pages/ProfileOffers';
-import NotFound from './pages/NotFound';
-import HelpCenter from './pages/HelpCenter';
-import Returns from './pages/Returns';
-import ReturnRequest from './pages/ReturnRequest';
-import ReturnDetail from './pages/ReturnDetail';
-import { WishlistContent } from './pages/Wishlist';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import RoleGate from './components/RoleGate';
@@ -62,6 +26,46 @@ import { RouteTitles } from './lib/routeTitles';
 import ConfirmHost from './components/ui/ConfirmHost';
 import PeekHost from './components/peek/PeekHost';
 import OfflineBanner from './components/ui/OfflineBanner';
+
+// Every page but Home loads when first opened, so a phone's first visit
+// downloads only what the page in front of it needs. The pages shoppers
+// move to next are fetched once the first page has loaded (preloadPages).
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Products = lazy(() => import('./pages/Products'));
+const SearchStart = lazy(() => import('./pages/SearchStart'));
+const ProductDetails = lazy(() => import('./pages/ProductDetails'));
+const ProductReviews = lazy(() => import('./pages/ProductReviews'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const OrderReceipt = lazy(() => import('./pages/OrderReceipt'));
+const Orders = lazy(() => import('./pages/Orders'));
+const Messages = lazy(() => import('./pages/Messages'));
+const Addresses = lazy(() => import('./pages/Addresses'));
+const Stores = lazy(() => import('./pages/Stores'));
+const StoreDetail = lazy(() => import('./pages/StoreDetail'));
+const PublicProfile = lazy(() => import('./pages/PublicProfile'));
+const MunicipalityShowcase = lazy(() => import('./pages/MunicipalityShowcase'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const ProfileLayout = lazy(() => import('./components/layout/ProfileLayout'));
+const ProfileReviews = lazy(() => import('./pages/ProfileReviews'));
+const ProfileFollowedStores = lazy(() => import('./pages/ProfileFollowedStores'));
+const ProfileMessages = lazy(() => import('./pages/ProfileMessages'));
+const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
+const ProfileVerification = lazy(() => import('./pages/ProfileVerification'));
+const ProfileSupport = lazy(() => import('./pages/ProfileSupport'));
+const ProfileReports = lazy(() => import('./pages/ProfileReports'));
+const ProfileOffers = lazy(() => import('./pages/ProfileOffers'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const HelpCenter = lazy(() => import('./pages/HelpCenter'));
+const Returns = lazy(() => import('./pages/Returns'));
+const ReturnRequest = lazy(() => import('./pages/ReturnRequest'));
+const ReturnDetail = lazy(() => import('./pages/ReturnDetail'));
+const WishlistContent = lazy(() => import('./pages/Wishlist').then((m) => ({ default: m.WishlistContent })));
 
 // Pages most shoppers never open (the Seller Center, the admin panel, legal
 // and app pages) load when first visited instead of with every page.
@@ -134,6 +138,36 @@ const SellerOffers = lazy(() => import('./pages/SellerOffers'));
 const SearchByImage = lazy(() => import('./pages/SearchByImage'));
 const AvailableToday = lazy(() => import('./pages/AvailableToday'));
 const SellerReturns = lazy(() => import('./pages/SellerReturns'));
+
+// Where shoppers usually go from the first page: fetched in the background
+// once it has loaded, so opening them does not wait on the network.
+const NEXT_PAGES = [
+  () => import('./pages/Products'),
+  () => import('./pages/ProductDetails'),
+  () => import('./pages/StoreDetail'),
+  () => import('./pages/Stores'),
+  () => import('./pages/Cart'),
+  () => import('./pages/Login'),
+  () => import('./components/layout/ProfileLayout'),
+  () => import('./pages/Profile'),
+];
+
+const preloadPages = () => {
+  // Not on a data saver or a 2G connection: there the pages load when opened.
+  const connection = navigator.connection;
+  if (connection?.saveData || /2g/.test(connection?.effectiveType || '')) return;
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+  const next = (i) => {
+    if (i >= NEXT_PAGES.length) return;
+    idle(() => NEXT_PAGES[i]().catch(() => {}).finally(() => next(i + 1)));
+  };
+  next(0);
+};
+
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'complete') preloadPages();
+  else window.addEventListener('load', preloadPages, { once: true });
+}
 
 /** Shown for the moment a page loaded on demand is on its way. */
 function RouteLoading() {
@@ -360,6 +394,7 @@ function AppRoutes() {
       </Routes>
       </Suspense>
       {background && (
+        <Suspense fallback={null}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/seller/login" element={<Login seller />} />
@@ -367,6 +402,7 @@ function AppRoutes() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
+        </Suspense>
       )}
     </>
   );

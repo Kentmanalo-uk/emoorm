@@ -422,7 +422,8 @@ test('a MoorMove free-delivery promo: no delivery fee at checkout, and buyer and
   assert.match(sellerNote.message, /you pay the rider nothing/);
   assert.match(sellerNote.message, /the rider collects only ₱100\.00 for the items/);
   // The buyer, when ordering and when the shop confirms.
-  const buyerNote = await h.prisma.notification.findFirst({ where: { userId: ctx.buyer.id, relatedId: saved.id } });
+  // Sent after the answer (order.service), so it may take a moment.
+  const buyerNote = await h.eventually(() => h.prisma.notification.findFirst({ where: { userId: ctx.buyer.id, relatedId: saved.id } }));
   assert.match(buyerNote.message, new RegExp(`Free delivery \\(MoorMove promo: ${PROMO.title}\\)`));
   const confirmed = await h.api('PUT', `/orders/${saved.id}/status`, { token: h.token(ctx.seller), body: { status: 'CONFIRMED' } });
   assert.equal(confirmed.status, 200, confirmed.body?.message);
@@ -922,7 +923,7 @@ test('"Deliver it myself" keeps the fee, tells the buyer and marks the order', a
   // The fee is the shop's now.
   assert.equal(self.body.data.riderFee, 0);
   assert.equal(self.body.data.shopTotal, 160);
-  const note = (await notesFor(ctx.buyer.id, o.id)).find((n) => n.title === 'The shop will deliver your order');
+  const note = await h.eventually(async () => (await notesFor(ctx.buyer.id, o.id)).find((n) => n.title === 'The shop will deliver your order'));
   assert.match(note.message, /Delivery fee ₱60\.00, as quoted/);
 });
 

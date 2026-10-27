@@ -245,13 +245,15 @@ const inFlight = new Map();
  * @param {String} options.key - Key from buildKey()
  * @param {Number} options.ttl - Seconds to keep the value
  * @param {String[]} [options.tags] - Tags for later invalidation
+ * @param {Function} [options.tagsOf] - More tags, from the loaded value (e.g.
+ *   the products a list holds, so a change to one clears only lists with it)
  * @param {Boolean} [options.shared] - Must be true: an explicit acknowledgement
  *   that this response is identical for every caller. Anything user-specific
  *   belongs in the client cache, never here.
  * @param {Function} loader - Async function producing the value on a miss
  * @returns {Promise<*>} Cached or freshly loaded value
  */
-const remember = async ({ key, ttl, tags = [], shared = false }, loader) => {
+const remember = async ({ key, ttl, tags = [], tagsOf, shared = false }, loader) => {
   if (!shared) {
     throw new Error(`[cache] refusing to cache "${key}": pass shared:true to confirm the response is not user-specific`);
   }
@@ -271,7 +273,9 @@ const remember = async ({ key, ttl, tags = [], shared = false }, loader) => {
     // undefined is not representable in JSON, and null is usually "not
     // found": caching it would let anyone fill the cache with lookups of
     // things that do not exist. Neither is stored; the next asker loads again.
-    if (value !== undefined && value !== null) await set(key, value, ttl, tags);
+    if (value !== undefined && value !== null) {
+      await set(key, value, ttl, tagsOf ? [...new Set([...tags, ...tagsOf(value)])] : tags);
+    }
     return value;
   })().finally(() => inFlight.delete(key));
 

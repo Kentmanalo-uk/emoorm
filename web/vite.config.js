@@ -4,24 +4,26 @@ import postcss from 'postcss'
 
 /**
  * Phones: bold text reads heavy on a small screen, so in the buyer-facing
- * stylesheets every rule that sets a bold weight (600–900) also gets a
- * phone-only copy at medium (500). Built from the stylesheets themselves, so
- * new styles are covered without a hand-kept list.
+ * stylesheets every bold weight (600–900) is written as
+ * `var(--phone-bold, <weight>)`; on phones the buyer app's roots set
+ * --phone-bold to medium (500, src/index.css), everywhere else the weight
+ * stays. Built from the stylesheets themselves, so new styles are covered
+ * without a hand-kept list. (It used to add a phone-only copy of every bold
+ * selector, some 50 kB of repeated selectors.)
  *
  * Left alone: the Seller Center and admin panel, the Sell landing page and the
  * app's download page (their display type is part of the design), keyframes,
  * and rules that only apply on wider screens. Scoped to the buyer app's roots
  * (.layout and the Log in / Sign up pages) so shared components elsewhere are
- * untouched. Headings are set to regular weight separately, in index.css, and
- * win over this (except on the download page, whose titles stay bold).
+ * untouched (outside those roots the variable is not set). Headings are set
+ * to regular weight separately, in index.css, and win over this (except on
+ * the download page, whose titles stay bold).
  *
  * Runs only on buyer stylesheets; a file it cannot parse is left as it is.
  */
 function phoneMediumWeights() {
   const SRC_CSS = /[\\/]web[\\/]src[\\/].*\.css$/;
   const SKIP_FILE = /[\\/]components[\\/](admin|seller)[\\/]|[\\/]pages[\\/](Admin|Seller|Sell|AppDownload)[^\\/]*\.css$|(Admin|Seller)Layout/i;
-  const ROOTS = ':where(.layout, .login-page, .register-page)';
-  const OWN_ROOT = /^\.(layout|login-page|register-page)\b/;
   const weightOf = (v) => {
     const t = String(v).replace('!important', '').trim();
     if (t === 'bold' || t === 'bolder') return 700;
@@ -41,25 +43,22 @@ function phoneMediumWeights() {
         this.warn(`phone-medium-weights: skipped ${file} (${err.reason || err.message})`);
         return null;
       }
-      const selectors = new Set();
+      let changed = false;
       root.walkDecls('font-weight', (decl) => {
-        if (weightOf(decl.value) < 600) return;
+        const weight = weightOf(decl.value);
+        if (weight < 600) return;
         const rule = decl.parent;
         if (!rule || rule.type !== 'rule') return;
         for (let a = rule.parent; a && a.type !== 'root'; a = a.parent) {
           if (a.type === 'atrule' && (/keyframes/i.test(a.name) || /min-width/.test(a.params))) return;
         }
-        rule.selectors.forEach((raw) => {
-          const s = raw.trim();
-          if (/^(html|body|:root)\b/.test(s)) return;
-          selectors.add(OWN_ROOT.test(s) ? s : `${ROOTS} ${s}`);
-        });
+        // A rule for the page itself is left as it is.
+        if (rule.selectors.every((raw) => /^(html|body|:root)\b/.test(raw.trim()))) return;
+        decl.value = `var(--phone-bold, ${weight})`;
+        changed = true;
       });
-      if (!selectors.size) return null;
-      return {
-        code: `${code}\n\n/* phone-medium-weights (vite.config.js) */\n@media (max-width: 768px) {\n  ${[...selectors].join(',\n  ')} {\n    font-weight: 500 !important;\n  }\n}\n`,
-        map: null,
-      };
+      if (!changed) return null;
+      return { code: root.toString(), map: null };
     },
   };
 }

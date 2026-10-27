@@ -32,6 +32,27 @@ export const resolveImg = (path) => {
 
 export default resolveImg;
 
+// The smaller copies the server keeps next to each uploaded photo
+// (backend/src/lib/imageSizes.js): <name>-w320.webp, -w640, -w960.
+export const PHOTO_WIDTHS = [320, 640, 960];
+// The stored photo itself is at most this wide (imageOptimizer MAX_EDGE).
+const STORED_WIDTH = 1600;
+const UPLOAD_PHOTO = /^(\/uploads\/)([^/?#]+)\.(webp|jpe?g|png)$/i;
+
+/**
+ * A `srcset` for an uploaded photo, so the browser downloads the size it
+ * shows rather than the 1600px original; undefined for anything else (a
+ * photo on another site, a private photo, a placeholder).
+ */
+export const srcSetFor = (path) => {
+  const url = resolveImg(path);
+  if (!url || !url.startsWith(`${BACKEND_URL}/uploads/`)) return undefined;
+  const m = UPLOAD_PHOTO.exec(url.slice(BACKEND_URL.length));
+  if (!m || /-w\d+$/.test(m[2])) return undefined;
+  const base = `${BACKEND_URL}${m[1]}${m[2]}`;
+  return [...PHOTO_WIDTHS.map((w) => `${base}-w${w}.webp ${w}w`), `${url} ${STORED_WIDTH}w`].join(', ');
+};
+
 /**
  * A product's images as a list, whatever shape the API gave them in: a list,
  * a JSON list in a string (older rows), or one plain path.

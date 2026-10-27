@@ -10,6 +10,11 @@ const { invalidate, TAGS } = require('../lib/cachePolicy');
  */
 const invalidateStore = async (store) => {
   if (!store) return;
+  // Its products' search column carries the shop's name.
+  if (store.id) {
+    await require('./productStats.repository').refreshSearchText({ storeId: store.id })
+      .catch((err) => console.error('[search] refresh failed:', err.message));
+  }
   await invalidate([
     TAGS.stores,
     TAGS.products,

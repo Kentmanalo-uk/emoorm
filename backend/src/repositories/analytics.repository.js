@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
 const manila = require('../utils/manilaTime');
 const { ApiError } = require('../middleware/errorHandler');
@@ -72,14 +73,6 @@ const EARNED = { status: 'COMPLETED', paymentStatus: { not: 'REFUNDED' } };
 // shop back what it paid a rider for the buyer's failed trip.
 const RIDER_DELIVERED = { deliveryPartner: 'MOORMOVE' };
 
-/** One order's sales: its total, without a MoorMove rider's fee or failed-trip fees. */
-const saleOf = (o) => Number(o.total || 0)
-  - (o.deliveryPartner === 'MOORMOVE' ? Number(o.deliveryFee || 0) : 0)
-  - Number(o.failedTripFees || 0);
-const SALE_FIELDS = {
-  total: true, deliveryFee: true, deliveryPartner: true, failedTripFees: true,
-};
-
 /** prisma.order.aggregate of `_sum.total` and `_count`, with riders' and failed trips' fees taken out of the total. */
 const salesAggregate = async (where) => {
   const [all, riders] = await Promise.all([
@@ -116,44 +109,68 @@ const salesByStore = async (where, { take } = {}) => {
 
 const revenueAggregate = (scope) => salesAggregate({ ...scope, ...EARNED });
 
+// ── Totals worked out by the database ───────────────────────────────────
+// The charts, buyer counts and category totals used to load every order (or
+// sold line) of the period and add them up here; these ask MySQL for the
+// totals instead. `scope`: { storeId } | { municipalityId } | {} (all).
+
+/** SQL for the orders of a scope in a window (orders o, joined to stores s when needed). */
+const orderFilter = ({ storeId, municipalityId }, from, to) => Prisma.sql`
+  FROM orders o
+  ${municipalityId ? Prisma.sql`JOIN stores s ON s.id = o.store_id` : Prisma.empty}
+  WHERE o.created_at >= ${from} AND o.created_at <= ${to}
+  ${storeId ? Prisma.sql`AND o.store_id = ${storeId}` : Prisma.empty}
+  ${municipalityId ? Prisma.sql`AND s.municipality_id = ${municipalityId}` : Prisma.empty}`;
+
+// Manila's calendar (UTC+8, no daylight saving), as utils/manilaTime.
+const BUCKET_FORMAT = { day: '%Y-%m-%d', month: '%Y-%m', year: '%Y' };
+
+/**
+ * Completed orders' sales per Manila day, month or year: [{ date, total, orders }],
+ * oldest first, without riders' and failed trips' fees (as salesAggregate).
+ */
+const salesSeries = async (scope, w, granularity = 'day') => {
+  const format = BUCKET_FORMAT[granularity] || BUCKET_FORMAT.day;
+  const rows = await prisma.$queryRaw`
+    SELECT DATE_FORMAT(DATE_ADD(o.created_at, INTERVAL 8 HOUR), ${format}) AS bucket,
+      SUM(o.total - IF(o.delivery_partner = 'MOORMOVE', o.delivery_fee, 0) - o.failed_trip_fees) AS total,
+      COUNT(*) AS orders
+    ${orderFilter(scope, w.from, w.to)}
+    AND o.status = 'COMPLETED'
+    GROUP BY bucket
+    ORDER BY bucket`;
+  return rows.map((r) => ({ date: r.bucket, total: Number(r.total || 0), orders: Number(r.orders) }));
+};
+
+/** How many different buyers completed an order in the window. */
+const countBuyers = async (scope, w) => {
+  const [row] = await prisma.$queryRaw`
+    SELECT COUNT(DISTINCT o.buyer_id) AS n ${orderFilter(scope, w.from, w.to)} AND o.status = 'COMPLETED'`;
+  return Number(row?.n || 0);
+};
+
+/** A shop's five best categories in the window (not cancelled), by money taken. */
+const topCategoriesOf = async (storeId, w) => {
+  const rows = await prisma.$queryRaw`
+    SELECT c.id, c.name, c.slug, SUM(oi.quantity) AS quantity, SUM(oi.subtotal) AS revenue
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    JOIN products p ON p.id = oi.product_id
+    JOIN categories c ON c.id = p.category_id
+    WHERE o.store_id = ${storeId} AND o.status <> 'CANCELLED'
+      AND o.created_at >= ${w.from} AND o.created_at <= ${w.to}
+    GROUP BY c.id, c.name, c.slug
+    ORDER BY revenue DESC
+    LIMIT 5`;
+  return rows.map((r) => ({
+    id: r.id, name: r.name, slug: r.slug, quantity: Number(r.quantity || 0), revenue: Number(r.revenue || 0),
+  }));
+};
+
 const refundedAggregate = (scope) => prisma.returnRequest.aggregate({
   where: { status: 'REFUNDED', order: { ...scope, ...EARNED } },
   _sum: { refundedAmount: true },
 });
-
-const bucketByDay = (orders) => {
-  const map = new Map();
-  for (const o of orders) {
-    const day = manila.dayKey(o.createdAt);
-    const cur = map.get(day) || { total: 0, orders: 0 };
-    cur.total += saleOf(o);
-    cur.orders += 1;
-    map.set(day, cur);
-  }
-  return Array.from(map.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, v]) => ({ date, total: v.total, orders: v.orders }));
-};
-
-const bucketBy = (orders, granularity = 'day') => {
-  // Manila days, months and years: the calendar the shops and buyers live by.
-  const keyOf = (d) => {
-    if (granularity === 'month') return manila.monthKey(d);
-    if (granularity === 'year') return manila.yearKey(d);
-    return manila.dayKey(d);
-  };
-  const map = new Map();
-  for (const o of orders) {
-    const key = keyOf(o.createdAt);
-    const cur = map.get(key) || { total: 0, orders: 0 };
-    cur.total += saleOf(o);
-    cur.orders += 1;
-    map.set(key, cur);
-  }
-  return Array.from(map.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, v]) => ({ date, total: v.total, orders: v.orders }));
-};
 
 const getSellerDayDetails = async (storeId, dateISO) => {
   const start = manila.dayStart(dateISO);
@@ -189,8 +206,9 @@ const getSellerStats = async (storeId, window) => {
     productsByStatus,
     lowStock,
     topSoldItems,
-    topCategoryRows,
-    windowOrders,
+    topCategories,
+    salesByDay,
+    salesBucketed,
     lifetimeRevenue,
     lifetimeUnitsSold,
     uniqueBuyers,
@@ -210,10 +228,14 @@ const getSellerStats = async (storeId, window) => {
       _count: { _all: true },
     }),
     prisma.product.findMany({
-      where: { storeId, deletedAt: null, listingKind: 'REGULAR', productType: { not: 'COOK_TO_ORDER' } },
+      where: {
+        storeId, deletedAt: null, listingKind: 'REGULAR', productType: { not: 'COOK_TO_ORDER' },
+        stock: { lte: prisma.product.fields.lowStockThreshold },
+      },
       select: { id: true, name: true, slug: true, images: true, stock: true, lowStockThreshold: true, status: true },
       orderBy: { stock: 'asc' },
-    }).then((products) => products.filter((product) => product.stock <= product.lowStockThreshold).slice(0, 5)),
+      take: 5,
+    }),
     prisma.orderItem.groupBy({
       by: ['productId'],
       where: {
@@ -223,28 +245,15 @@ const getSellerStats = async (storeId, window) => {
       orderBy: { _sum: { subtotal: 'desc' } },
       take: 5,
     }),
-    prisma.orderItem.groupBy({
-      by: ['productId'],
-      where: {
-        order: { storeId, status: { not: 'CANCELLED' }, createdAt: { gte: w.from, lte: w.to } },
-      },
-      _sum: { quantity: true, subtotal: true },
-    }),
-    prisma.order.findMany({
-      where: { ...orderScope, status: 'COMPLETED' },
-      select: { createdAt: true, ...SALE_FIELDS },
-      orderBy: { createdAt: 'asc' },
-    }),
+    topCategoriesOf(storeId, w),
+    salesSeries({ storeId }, w, 'day'),
+    salesSeries({ storeId }, w, granularity),
     salesAggregate({ storeId, status: 'COMPLETED' }),
     prisma.orderItem.aggregate({
       where: { order: { storeId, status: 'COMPLETED' } },
       _sum: { quantity: true },
     }),
-    prisma.order.findMany({
-      where: { ...orderScope, status: 'COMPLETED' },
-      distinct: ['buyerId'],
-      select: { buyerId: true },
-    }),
+    countBuyers({ storeId }, w),
     refundedAggregate(orderScope),
     refundedAggregate(prevOrderScope),
   ]);
@@ -257,31 +266,6 @@ const getSellerStats = async (storeId, window) => {
     })
     : [];
 
-  // Aggregate categories from ALL sold items in window
-  const catProductIds = topCategoryRows.map((r) => r.productId);
-  const catProductInfo = catProductIds.length
-    ? await prisma.product.findMany({
-      where: { id: { in: catProductIds } },
-      select: {
-        id: true,
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    })
-    : [];
-  const catInfoById = new Map(catProductInfo.map((p) => [p.id, p.category]));
-  const catAgg = new Map();
-  for (const row of topCategoryRows) {
-    const cat = catInfoById.get(row.productId);
-    if (!cat) continue;
-    const cur = catAgg.get(cat.id) || { id: cat.id, name: cat.name, slug: cat.slug, quantity: 0, revenue: 0 };
-    cur.quantity += Number(row._sum.quantity || 0);
-    cur.revenue += Number(row._sum.subtotal || 0);
-    catAgg.set(cat.id, cur);
-  }
-  const topCategories = Array.from(catAgg.values())
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5);
-
   return {
     window: w,
     granularity,
@@ -292,12 +276,12 @@ const getSellerStats = async (storeId, window) => {
     lowStock,
     topSoldItems,
     productDetails,
-    salesByDay: bucketByDay(windowOrders),
-    salesBucketed: bucketBy(windowOrders, granularity),
+    salesByDay,
+    salesBucketed,
     lifetimeRevenue,
     lifetimeUnitsSold,
     topCategories,
-    uniqueBuyers: uniqueBuyers.length,
+    uniqueBuyers,
     refundedAgg,
     previousRefundedAgg,
   };
@@ -320,7 +304,7 @@ const getMunicipalityStats = async (municipalityId, window) => {
     previousRevenueAgg,
     pendingReports,
     resolvedReports,
-    windowOrders,
+    salesByDay,
     recentSellers,
     recentProducts,
     topStoreRows,
@@ -356,11 +340,7 @@ const getMunicipalityStats = async (municipalityId, window) => {
     revenueAggregate(prevOrderScope),
     prisma.report.count({ where: { municipalityId, status: { in: ['PENDING', 'UNDER_REVIEW'] } } }),
     prisma.report.count({ where: { municipalityId, status: { in: ['RESOLVED', 'DISMISSED'] } } }),
-    prisma.order.findMany({
-      where: { ...orderScope, status: 'COMPLETED' },
-      select: { createdAt: true, ...SALE_FIELDS },
-      orderBy: { createdAt: 'asc' },
-    }),
+    salesSeries({ municipalityId }, w),
     prisma.user.findMany({
       where: {
         sellerApplicationStatus: 'PENDING',
@@ -395,11 +375,7 @@ const getMunicipalityStats = async (municipalityId, window) => {
       take: 5,
     }),
     salesAggregate({ store: { municipalityId }, status: 'COMPLETED' }),
-    prisma.order.findMany({
-      where: { ...orderScope, status: 'COMPLETED' },
-      distinct: ['buyerId'],
-      select: { buyerId: true },
-    }),
+    countBuyers({ municipalityId }, w),
     refundedAggregate(orderScope),
     refundedAggregate(prevOrderScope),
   ]);
@@ -434,7 +410,7 @@ const getMunicipalityStats = async (municipalityId, window) => {
     previousRevenueAgg,
     pendingReports,
     resolvedReports,
-    salesByDay: bucketByDay(windowOrders),
+    salesByDay,
     recentSellers,
     recentProducts,
     topStoreRows,
@@ -442,7 +418,7 @@ const getMunicipalityStats = async (municipalityId, window) => {
     topProductRows,
     productDetails,
     lifetimeRevenue,
-    uniqueBuyers: uniqueBuyers.length,
+    uniqueBuyers,
     refundedAgg,
     previousRefundedAgg,
   };
@@ -467,7 +443,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
     previousRevenueAgg,
     salesByStoreAll,
     salesByStorePrevious,
-    windowOrders,
+    salesByDay,
     municipalities,
     pendingReports,
     pendingSellers,
@@ -499,11 +475,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
     // municipality's share and growth.
     salesByStore({ ...orderScope, ...EARNED }),
     salesByStore({ ...prevOrderScope, ...EARNED }),
-    prisma.order.findMany({
-      where: { ...orderScope, status: 'COMPLETED' },
-      select: { createdAt: true, ...SALE_FIELDS },
-      orderBy: { createdAt: 'asc' },
-    }),
+    salesSeries({ municipalityId: filterMunicipalityId }, w),
     prisma.municipality.findMany({
       select: { id: true, name: true, code: true, adminId: true },
       orderBy: { name: 'asc' },
@@ -528,11 +500,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
       take: 5,
     }),
     salesAggregate({ status: 'COMPLETED', ...orderMuniFilter }),
-    prisma.order.findMany({
-      where: { ...orderScope, status: 'COMPLETED' },
-      distinct: ['buyerId'],
-      select: { buyerId: true },
-    }),
+    countBuyers({ municipalityId: filterMunicipalityId }, w),
     refundedAggregate(orderScope),
     refundedAggregate(prevOrderScope),
   ]);
@@ -565,7 +533,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
     previousRevenueAgg,
     salesByStoreAll,
     salesByStorePrevious,
-    salesByDay: bucketByDay(windowOrders),
+    salesByDay,
     municipalities,
     pendingReports,
     pendingSellers,
@@ -575,7 +543,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
     topProductRows,
     topProducts,
     lifetimeRevenue,
-    uniqueBuyers: uniqueBuyers.length,
+    uniqueBuyers,
     refundedAgg,
     previousRefundedAgg,
   };

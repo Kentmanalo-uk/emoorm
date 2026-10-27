@@ -5,15 +5,18 @@
  *
  *  - pages: from the network; the app's page itself is kept, so the app
  *    still opens offline (it then shows what it saved: lists, product pages);
- *  - the app's built files (/assets/…, named by their content): kept once
- *    fetched, since a new release has new names;
+ *  - the app's built files (/assets/name-<hash>.js…, named by their
+ *    content): kept once fetched, since a new release has new names; the
+ *    oldest go once there are more than a release or two's worth;
  *  - photos: kept, up to a few hundred, refreshed in the background;
  *  - the public catalogue (products, categories, shops, questions): from
  *    the network, or the last answer when offline.
  *
  * Nothing personal is kept here (orders, messages, the account): those always
  * go to the network. When no copy exists, the offline page is shown. */
-const VERSION = 'v5';
+// v6: the banners under /assets/banners/ were kept as built files (never
+// refreshed), and the built files were never thrown away.
+const VERSION = 'v6';
 const SHELL = `emoorm-shell-${VERSION}`;
 const STATIC = `emoorm-static-${VERSION}`;
 const IMAGES = `emoorm-images-${VERSION}`;
@@ -24,6 +27,10 @@ const OFFLINE = '/offline.html';
 const OFFLINE_LOGO = '/icon-192x192.png';
 const APP_PAGE = '/index.html';
 const MAX_IMAGES = 300;
+const MAX_STATIC = 500;
+// What the build writes into /assets/: name-<8-character hash>.ext, nothing
+// in a folder (public/assets/banners/… is copied as it is).
+const BUILT_FILE = /^\/assets\/[^/]+-[A-Za-z0-9_-]{8}\.[a-z0-9]+$/;
 const MAX_DATA = 200;
 
 // Public, the same for everyone: safe to keep and show offline.
@@ -101,12 +108,12 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Built files: named by content, so a kept copy is always right.
-  if (path.startsWith('/assets/')) {
+  if (BUILT_FILE.test(path)) {
     event.respondWith((async () => {
       const kept = await caches.match(request);
       if (kept) return kept;
       const response = await fetch(request);
-      event.waitUntil(put(STATIC, request, response.clone()));
+      event.waitUntil(put(STATIC, request, response.clone(), MAX_STATIC));
       return response;
     })());
     return;

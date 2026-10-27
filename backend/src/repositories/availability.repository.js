@@ -89,7 +89,7 @@ const openWindow = async (id, { actorId = null } = {}) => {
     await setStockTx(tx, window.productId, Math.max(0, window.quantity - window.soldCount), 'TODAY_OPEN', id, actorId);
     return window.productId;
   }));
-  if (opened) await invalidateProductIds([opened]);
+  if (opened) await invalidateProductIds([opened], { lists: true });
   return Boolean(opened);
 };
 
@@ -104,7 +104,7 @@ const closeWindow = async (id, { actorId = null } = {}) => {
     if (!window || !['LIVE', 'SCHEDULED'].includes(window.status)) return null;
     return (await closeTx(tx, window, { actorId })) ? window.productId : null;
   }));
-  if (closed) await invalidateProductIds([closed]);
+  if (closed) await invalidateProductIds([closed], { lists: true });
   return Boolean(closed);
 };
 
@@ -138,7 +138,7 @@ const adjustQuantity = async (id, delta, { actorId = null } = {}) => {
     }
     return tx.productAvailability.update({ where: { id }, data: { quantity: { increment: delta } } });
   }));
-  await invalidateProductIds([result.productId]);
+  await invalidateProductIds([result.productId], { lists: true });
   return result;
 };
 
@@ -214,7 +214,7 @@ const reshape = async (id, next, { actorId = null, check = () => {}, onOverlap }
     touched.add(window.productId).add(next.productId);
     return { openNow: status === 'SCHEDULED' && !opensLater };
   }));
-  await invalidateProductIds([...touched]);
+  await invalidateProductIds([...touched], { lists: true });
   return result;
 };
 
@@ -236,13 +236,13 @@ const switchMenu = async (productId, data, { actorId = null, check = () => {} } 
     await setStockTx(tx, productId, 0, 'TODAY_SWITCH', productId, actorId);
     return tx.product.findUnique({ where: { id: productId }, select: PRODUCT_SELECT });
   }));
-  await invalidateProductIds([productId]);
+  await invalidateProductIds([productId], { lists: true });
   return updated;
 };
 
 const update = async (id, data) => {
   const updated = await prisma.productAvailability.update({ where: { id }, data });
-  await invalidateProductIds([updated.productId]);
+  await invalidateProductIds([updated.productId], { lists: true });
   return updated;
 };
 

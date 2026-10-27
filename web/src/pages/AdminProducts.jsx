@@ -325,7 +325,7 @@ export default function AdminProducts() {
                         <td>
                           <div className="admin-product-cell">
                             {img
-                              ? <ProductImage src={img} alt="" className="admin-product-thumb" />
+                              ? <ProductImage sizes="96px" src={img} alt="" className="admin-product-thumb" />
                               : <div className="admin-product-thumb-placeholder"><Package size={16} /></div>}
                             <span className="admin-product-name">{p.name}</span>
                           </div>

@@ -1,4 +1,12 @@
 const prisma = require('../config/database');
+const { refreshStats } = require('./productStats.repository');
+
+// The product's rating, kept on its row, follows each review written,
+// changed or removed here.
+const recount = async (review) => {
+  if (review?.productId) await refreshStats([review.productId]);
+  return review;
+};
 
 /**
  * Review Repository
@@ -10,8 +18,7 @@ const prisma = require('../config/database');
  * @param {Object} data - Review data
  * @returns {Promise<Object>} Created review
  */
-const createReview = async (data) => {
-  return prisma.review.create({
+const createReview = async (data) => recount(await prisma.review.create({
     data,
     include: {
       user: {
@@ -29,8 +36,7 @@ const createReview = async (data) => {
         },
       },
     },
-  });
-};
+}));
 
 /**
  * Find review by ID
@@ -137,8 +143,7 @@ const findAll = async (options = {}) => {
  * @param {Object} data - Update data
  * @returns {Promise<Object>} Updated review
  */
-const updateReview = async (id, data) => {
-  return prisma.review.update({
+const updateReview = async (id, data) => recount(await prisma.review.update({
     where: { id },
     data,
     include: {
@@ -156,20 +161,17 @@ const updateReview = async (id, data) => {
         },
       },
     },
-  });
-};
+}));
 
 /**
  * Soft delete review
  * @param {String} id - Review ID
  * @returns {Promise<Object>} Deleted review
  */
-const softDeleteReview = async (id) => {
-  return prisma.review.update({
-    where: { id },
-    data: { deletedAt: new Date() },
-  });
-};
+const softDeleteReview = async (id) => recount(await prisma.review.update({
+  where: { id },
+  data: { deletedAt: new Date() },
+}));
 
 /**
  * Get average rating for product

@@ -487,7 +487,7 @@ const Orders = () => {
                   <div className="order-items">
                     {order.items?.slice(0, 3).map((item, index) => (
                       <div key={index} className="order-item">
-                        <ProductImage src={lineImage(item.product, item.selectedVariations)} alt={item.productName} className="order-item-image" />
+                        <ProductImage sizes="96px" src={lineImage(item.product, item.selectedVariations)} alt={item.productName} className="order-item-image" />
                         <div className="order-item-details">
                           <p className="order-item-name">{item.productName}</p>
                           {lineNote(item, { choice: true }) && <p className="order-item-note">{lineNote(item, { choice: true })}</p>}
@@ -833,7 +833,7 @@ const Orders = () => {
                 <div className="order-details-items">
                   {selectedOrder.items?.map((item, index) => (
                     <div key={index} className="order-details-item">
-                      <ProductImage src={lineImage(item.product, item.selectedVariations)} alt={item.productName} />
+                      <ProductImage sizes="96px" src={lineImage(item.product, item.selectedVariations)} alt={item.productName} />
                       <div className="order-details-item-info">
                         <p className="item-name">{item.productName}</p>
                         {lineNote(item, { choice: true }) && <p className="order-item-note">{lineNote(item, { choice: true })}</p>}

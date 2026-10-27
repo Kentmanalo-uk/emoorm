@@ -57,10 +57,16 @@ const findBySlug = async (slug) => {
  * @returns {Promise<Object>} Updated category
  */
 const updateCategory = async (id, data) => {
-  return prisma.category.update({
+  const updated = await prisma.category.update({
     where: { id },
     data,
   });
+  // Its products' search column carries the category's name.
+  if (data.name !== undefined) {
+    await require('./productStats.repository').refreshSearchText({ categoryId: id })
+      .catch((err) => console.error('[search] refresh failed:', err.message));
+  }
+  return updated;
 };
 
 /**

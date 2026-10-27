@@ -33,6 +33,9 @@ const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development'
     ? ['error', 'warn']
     : ['error'],
+  // The search column (products.search_text) is for WHERE only: never read
+  // out, so no answer carries a second copy of every description.
+  omit: { product: { searchText: true } },
 });
 
 // No connect here: the server connects after it starts listening

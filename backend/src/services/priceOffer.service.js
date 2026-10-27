@@ -163,11 +163,13 @@ const chatLine = async (offer, senderId, event, body) => {
   try {
     const convo = await conversationFor(offer.buyerId, offer.storeId);
     const now = new Date();
-    await prisma.message.create({
+    // A busy moment can make MySQL drop this insert as a deadlock's loser:
+    // it is tried again, or the deal would go on without its chat line.
+    await withDeadlockRetry(() => prisma.message.create({
       data: {
         conversationId: convo.id, senderId, body, productId: offer.productId, offerId: offer.id, offerEvent: event, createdAt: now,
       },
-    });
+    }));
     await prisma.conversation.update({ where: { id: convo.id }, data: { lastMessageAt: now } });
     return convo.id;
   } catch (err) {

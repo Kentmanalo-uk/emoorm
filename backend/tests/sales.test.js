@@ -34,7 +34,13 @@ test('checkout charges the sale price while it is on, and the regular price afte
 
   const set = await h.api('PUT', `/products/${item.id}`, { token: h.token(seller), body: { salePrice: 75, saleEndsAt: h.daysAgo(-1).toISOString() } });
   assert.equal(set.status, 200, set.body?.message);
-  const notice = await h.prisma.notification.findFirst({ where: { userId: buyer.id, type: 'PRICE_DROP' } });
+  // Sent after the answer (product.service notifySale).
+  const findNotice = () => h.prisma.notification.findFirst({ where: { userId: buyer.id, type: 'PRICE_DROP' } });
+  let notice = await findNotice();
+  for (let i = 0; i < 40 && !notice; i += 1) {
+    await new Promise((r) => setTimeout(r, 50));
+    notice = await findNotice();
+  }
   assert.match(notice.message, /₱75\.00/);
 
   const onSale = await order(buyer, store, item);

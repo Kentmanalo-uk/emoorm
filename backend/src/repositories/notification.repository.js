@@ -185,9 +185,22 @@ const getUnreadCount = async (userId, audience) => {
   });
 };
 
+/** Unread notifications per feed (BUYER, SELLER, ADMIN), in one query. */
+const getUnreadCountsByAudience = async (userId) => {
+  const groups = await prisma.notification.groupBy({
+    by: ['audience'],
+    where: { userId, isRead: false, deletedAt: null },
+    _count: { _all: true },
+  });
+  const byAudience = { BUYER: 0, SELLER: 0, ADMIN: 0 };
+  for (const g of groups) byAudience[g.audience] = g._count._all;
+  return byAudience;
+};
+
 module.exports = {
   createNotification,
   createMany,
+  getUnreadCountsByAudience,
   findById,
   findByUserId,
   markAsRead,

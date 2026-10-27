@@ -160,7 +160,7 @@ export default function SearchStart() {
             ))}
             {matches.map((p) => (
               <button type="button" key={p.id} className="ss-sug-row" onClick={() => search(p.name)}>
-                <span className="ss-sug-thumb"><ProductImage src={p.images?.[0]} alt="" /></span>
+                <span className="ss-sug-thumb"><ProductImage sizes="96px" src={p.images?.[0]} alt="" /></span>
                 <span className="ss-sug-text">{p.name}</span>
               </button>
             ))}
@@ -202,7 +202,7 @@ export default function SearchStart() {
                   <div className="ss-popular">
                     {popular.map((p) => (
                       <button type="button" key={p.id} className="ss-pop" onClick={() => search(p.name)}>
-                        <span className="ss-pop-img"><ProductImage src={p.images?.[0]} alt="" /></span>
+                        <span className="ss-pop-img"><ProductImage sizes="96px" src={p.images?.[0]} alt="" /></span>
                         <span className="ss-pop-name">{p.name}</span>
                       </button>
                     ))}

@@ -517,8 +517,36 @@ const countUnreadChats = async (userId) => {
   return Number(rows[0]?.n || 0);
 };
 
+/** A seller's chats (with buyers of their shop) with a message not read yet. */
+const countUnreadShopChats = async (userId) => {
+  const rows = await prisma.$queryRaw`
+    SELECT COUNT(DISTINCT c.id) AS n
+    FROM conversations c
+    JOIN stores s ON s.id = c.store_id
+    JOIN messages m ON m.conversation_id = c.id
+    WHERE s.owner_id = ${userId}
+      AND m.sender_id <> ${userId}
+      AND m.unsent_at IS NULL
+      AND (c.seller_last_read_at IS NULL OR m.created_at > c.seller_last_read_at)`;
+  return Number(rows[0]?.n || 0);
+};
+
+/** Help-desk cases with a reply this person has not read yet. */
+const countUnreadSupportCases = async (userId) => {
+  const rows = await prisma.$queryRaw`
+    SELECT COUNT(DISTINCT c.id) AS n
+    FROM support_conversations c
+    JOIN support_messages m ON m.conversation_id = c.id
+    WHERE c.user_id = ${userId}
+      AND m.sender_id <> ${userId}
+      AND (c.user_last_read_at IS NULL OR m.created_at > c.user_last_read_at)`;
+  return Number(rows[0]?.n || 0);
+};
+
 module.exports = {
   countUnreadChats,
+  countUnreadSupportCases,
+  countUnreadShopChats,
   listMyConversations,
   openConversationWithStore,
   openConversationWithBuyer,

@@ -84,6 +84,7 @@ const createReview = async (userId, data) => {
     });
     return row.id;
   });
+  await require('../repositories/productStats.repository').refreshStats([productId]);
 
   return reviewRepository.findById(createdId);
 };

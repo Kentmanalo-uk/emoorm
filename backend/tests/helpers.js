@@ -117,6 +117,9 @@ async function product(store, extra = {}) {
   seq += 1;
   const p = await withDeadlockRetry(() => prisma.product.create({ data: { name: `Ci Product ${RUN} ${seq}`, slug: `ci-product-${RUN}-${seq}`, description: 'A product made by the tests.', price: 100, stock: 20, storeId: store.id, categoryId: category.id, municipalityId: store.municipalityId, status: 'APPROVED', images: [], ...extra } }));
   made.products.push(p.id);
+  // Made straight in the database, so the search column the repository
+  // keeps (productStats.repository) is written here too.
+  await require('../src/repositories/productStats.repository').refreshSearchText({ productIds: [p.id] });
   return p;
 }
 
@@ -158,6 +161,22 @@ async function api(method, path, { token: bearer, body, headers = {} } = {}) {
 
 const daysAgo = (d) => new Date(Date.now() - d * 86400e3);
 
+/**
+ * Something the app does after answering (a notice sent in the background):
+ * asks again until it is there, up to a few seconds, rather than waiting a
+ * fixed time that a busy machine (every test file at once) overruns.
+ * @param {Function} look - async () => value; a truthy value ends the wait
+ */
+async function eventually(look, { ms = 4000 } = {}) {
+  const end = Date.now() + ms;
+  let value = await look();
+  while (!value && Date.now() < end) {
+    await new Promise((r) => setTimeout(r, 50));
+    value = await look();
+  }
+  return value;
+}
+
 /** Remove everything the tests made, then stop the app and the database client. */
 async function cleanup() {
   // Test files run side by side; their deletes can deadlock each other.
@@ -196,4 +215,4 @@ async function cleanup() {
   await step(() => prisma.$disconnect());
 }
 
-module.exports = { prisma, startApp, reference, otherTown, user, token, shop, product, order, api, daysAgo, cleanup, RUN };
+module.exports = { prisma, startApp, reference, otherTown, user, token, shop, product, order, api, daysAgo, eventually, cleanup, RUN };

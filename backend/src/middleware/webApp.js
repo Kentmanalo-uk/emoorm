@@ -180,6 +180,13 @@ const mountWebApp = (app) => {
 
   // Hashed bundles under /assets are immutable; everything else in the build
   // (icons, manifest, robots) may be replaced in place, so it revalidates.
+  // Vite writes its bundles straight into assets/ as name-<8-character
+  // hash>.ext; folders under assets/ (the banners) and the files beside
+  // index.html are copied as they are, so they are not fingerprinted however
+  // their names look (apple-touch-icon.png was taken for a hash and kept a
+  // year).
+  const assetsDir = path.join(root, 'assets');
+  const HASHED = /-[A-Za-z0-9_-]{8}\.(?:js|css|woff2?|png|jpe?g|svg|webp|gif|glb|wasm)$/;
   app.use(express.static(root, {
     index: false,
     etag: true,
@@ -189,7 +196,7 @@ const mountWebApp = (app) => {
       // Vite fingerprints with a mixed-case base64-ish hash (index-CkPZ5RF5.js),
       // not hex, so the character class has to cover the full alphabet or
       // every bundle silently revalidates on each page view.
-      if (/[.-][A-Za-z0-9_-]{8,}\.(?:js|css|woff2?|png|jpe?g|svg|webp)$/.test(filePath)) {
+      if (path.dirname(filePath) === assetsDir && HASHED.test(path.basename(filePath))) {
         res.set('Cache-Control', 'public, max-age=31536000, immutable');
       } else {
         res.set('Cache-Control', 'public, max-age=0, must-revalidate');

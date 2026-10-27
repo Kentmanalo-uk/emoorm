@@ -18,7 +18,7 @@ import ProductImage from '../components/ProductImage';
 import { BusyLabel } from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
 import axios from '../lib/axios';
-import { resolveImg, parseImages } from '../lib/media';
+import { resolveImg, parseImages, srcSetFor } from '../lib/media';
 import useCartStore, { standaloneLine } from '../store/cartStore';
 import { startBuyNow } from '../lib/buyNow';
 import useAuthStore from '../store/authStore';
@@ -983,6 +983,8 @@ const ProductDetails = () => {
                     <div className="pdp-m-slide" key={i}>
                       <img
                         src={resolveImg(img) || img}
+                        srcSet={srcSetFor(img)}
+                        sizes="100vw"
                         alt={i === 0 ? product.name : `${product.name} ${i + 1}`}
                         loading={i === 0 ? 'eager' : 'lazy'}
                         onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
@@ -1091,7 +1093,7 @@ const ProductDetails = () => {
                     className={`pdp-thumb ${selectedImage === i ? 'is-active' : ''}`}
                     aria-label={`View image ${i + 1}`}
                   >
-                    <img src={resolveImg(img) || img} alt={`${product.name} ${i + 1}`} onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }} />
+                    <img src={resolveImg(img) || img} srcSet={srcSetFor(img)} sizes="80px" alt={`${product.name} ${i + 1}`} onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }} />
                   </button>
                 ))}
               </div>

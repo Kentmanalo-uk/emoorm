@@ -82,9 +82,15 @@ const getNotificationById = asyncHandler(async (req, res) => {
  * @access Private (Authenticated users)
  */
 const getUnreadCount = asyncHandler(async (req, res) => {
-  const count = await notificationService.getUnreadCount(req.user.id, req.query.audience);
-
-  successResponse(res, { count }, 'Unread count retrieved successfully');
+  if (req.query.audience) {
+    const count = await notificationService.getUnreadCount(req.user.id, req.query.audience);
+    return successResponse(res, { count }, 'Unread count retrieved successfully');
+  }
+  // Every feed at once: the site's one poller (web NotificationWatcher) hands
+  // each badge its own count from this.
+  const byAudience = await notificationService.getUnreadCountsByAudience(req.user.id);
+  const count = byAudience.BUYER + byAudience.SELLER + byAudience.ADMIN;
+  return successResponse(res, { count, byAudience }, 'Unread count retrieved successfully');
 });
 
 /**

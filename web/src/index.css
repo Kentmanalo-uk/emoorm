@@ -624,12 +624,22 @@ html body #root .title-medium {
   font-weight: 500;
 }
 
+/* Phones: the bold weights of the buyer stylesheets read as medium. The
+   build writes each one as var(--phone-bold, <weight>) (vite.config.js
+   phoneMediumWeights); outside these roots, and on wider screens, the
+   variable is unset and the weight stays. */
+@media (max-width: 768px) {
+  .layout, .login-page, .register-page {
+    --phone-bold: 500;
+  }
+}
+
 /* Phones: headings in the medium weight, not bold — page titles, section
    titles ("Shop by Category", "My Purchase", "Orders & shopping" ...) and
    card titles. Names keep their own weight so they still stand out in
    lists: products, shops, stores, people. */
 @media (max-width: 768px) {
-  /* #root: outranks the phone medium-weight copies (vite.config.js). */
+  /* #root: outranks the buyer stylesheets' own weights. */
   html body #root .layout-main :is(h1, h2, h3, h4):not(
     .product-name, .pdp-title, .store-card-name, .followed-store-name,
     .cart-suggestion-name, .address-name, .profile-name, .pp-name,

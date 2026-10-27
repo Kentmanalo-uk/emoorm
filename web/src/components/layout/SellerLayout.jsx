@@ -47,6 +47,7 @@ import '../../pages/SellerSettings.css';
 import '../../pages/SellerReturns.css';
 import UserAvatar from '../ui/UserAvatar';
 import { readCache, writeCache } from '../../lib/pageCache';
+import { useUnreadCounts } from '../../lib/unreadCounts';
 import { afterSignOutPath } from '../../lib/afterSignOut';
 // The business-suite look shared with the admin panel, last so it wins.
 import './suite.css';
@@ -78,7 +79,15 @@ export default function SellerLayout() {
     || location.pathname === '/seller/shop-profile'
     || location.pathname.startsWith('/seller/shop-qr')
   );
-  const [unreadCount, setUnreadCount] = useState(() => readCache('seller:unread') ?? 0);
+  // The bell's count, from the site's one poller (lib/unreadCounts); the
+  // number last seen shows until its first answer.
+  const [cachedUnread] = useState(() => readCache('seller:unread') ?? 0);
+  const countsReady = useUnreadCounts((s) => s.ready);
+  const liveUnread = useUnreadCounts((s) => s.notifications.SELLER);
+  const unreadCount = countsReady ? liveUnread : cachedUnread;
+  useEffect(() => {
+    if (countsReady) writeCache('seller:unread', liveUnread);
+  }, [countsReady, liveUnread]);
 
   // New orders, returns to review, unread messages and low stock, counted
   // once on the server so the sidebar can point at the work. The endpoint is
@@ -117,30 +126,8 @@ export default function SellerLayout() {
           writeCache('seller:store', null);
         }
       }
-      try {
-        const n = await axios.get('/notifications/unread/count', { params: { audience: 'SELLER' } });
-        if (!cancelled) setUnreadCount(n.data?.count ?? 0);
-        writeCache('seller:unread', n.data?.count ?? 0);
-      } catch {
-        /* ignore */
-      }
     })();
     return () => { cancelled = true; };
-  }, [allowed]);
-
-  // A new notification just popped up (NotificationWatcher): count it now.
-  useEffect(() => {
-    if (!allowed) return undefined;
-    const refresh = () => {
-      axios.get('/notifications/unread/count', { params: { audience: 'SELLER' } })
-        .then((n) => {
-          setUnreadCount(n.data?.count ?? 0);
-          writeCache('seller:unread', n.data?.count ?? 0);
-        })
-        .catch(() => { /* the next page counts again */ });
-    };
-    window.addEventListener('emoorm:notifications', refresh);
-    return () => window.removeEventListener('emoorm:notifications', refresh);
   }, [allowed]);
 
   // Keep the switch animation's shop logo in sync (also after profile edits).

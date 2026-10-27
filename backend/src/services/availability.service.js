@@ -230,7 +230,7 @@ const publishChecked = async (userId, store, product, { fields, quantity }) => {
     await availabilityRepository.openWindow(created.id, { actorId: userId });
   } else {
     // Its card and page say when orders open.
-    await invalidateProductIds([product.id]);
+    await invalidateProductIds([product.id], { lists: true });
   }
   await notifyFollowers(store, created, product.name).catch((err) => console.error('[today] notify failed:', err.message));
   return shape(await availabilityRepository.findById(created.id));
@@ -355,7 +355,7 @@ const publishDays = async (userId, store, product, posts, quantity) => {
   for (const row of created) {
     if (row.ordersOpenAt.getTime() <= now) await availabilityRepository.openWindow(row.id, { actorId: userId });
   }
-  await invalidateProductIds([product.id]);
+  await invalidateProductIds([product.id], { lists: true });
   await notifyFollowers(store, created, product.name).catch((err) => console.error('[today] notify failed:', err.message));
   const rows = await Promise.all(created.map((row) => availabilityRepository.findById(row.id)));
   return rows.map(shape);
@@ -1003,7 +1003,7 @@ const checkoutWindows = async (products, { method, courier }) => {
 };
 
 /** After a write that changed what is on sale, clear the cached lists. */
-const refresh = (productIds) => invalidateProductIds(productIds);
+const refresh = (productIds) => invalidateProductIds(productIds, { lists: true });
 
 module.exports = {
   CONFIRM_MINUTES,

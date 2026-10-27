@@ -37,7 +37,7 @@ function PackageItems({ product, made, ahead }) {
             const onSale = Boolean(item.slug) && !item.deletedAt && item.status === 'APPROVED';
             const body = (
               <>
-                <span className="pdp-pkg-img"><ProductImage src={parseImages(item.images)[0]} alt="" /></span>
+                <span className="pdp-pkg-img"><ProductImage sizes="96px" src={parseImages(item.images)[0]} alt="" /></span>
                 <span className="pdp-pkg-qty">{it.quantity}×</span>
                 <span className="pdp-pkg-name">{item.name || 'Item'}</span>
               </>

@@ -17,7 +17,6 @@ import EmptyState from '../components/ui/EmptyState';
 import MoreMenu from '../components/MoreMenu';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useEntryState from '../hooks/useEntryState';
-import './SellerDashboard.css';
 import './Notifications.css';
 import NotificationPicture from '../components/NotificationPicture';
 import ToolGradients from '../components/ui/ToolGradients';

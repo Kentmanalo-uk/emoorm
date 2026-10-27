@@ -136,6 +136,9 @@ const requestDeletion = async (userId, proof = {}, req) => {
     prisma.pushToken.deleteMany({ where: { userId: user.id } }),
     prisma.cartItem.deleteMany({ where: { userId: user.id } }),
   ]);
+  // The closed shop leaves the cached shop and product lists at once.
+  const { invalidate, TAGS } = require('../lib/cachePolicy');
+  await invalidate([TAGS.stores, TAGS.products]);
 
   await auditLogService.record({
     actor: { id: user.id, email: user.email, role: user.role },

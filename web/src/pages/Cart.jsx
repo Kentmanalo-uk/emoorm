@@ -624,7 +624,7 @@ const Cart = () => {
                             label={`Select ${item.name}`}
                           />
                           <Link to={`/product/${item.slug || item.id}`} className="cart-m-item-img">
-                            <ProductImage src={item.image} alt={item.name} />
+                            <ProductImage sizes="96px" src={item.image} alt={item.name} />
                           </Link>
                           <div className="cart-m-item-body">
                             <Link to={`/product/${item.slug || item.id}`} className="cart-m-item-name">{item.name}</Link>
@@ -751,7 +751,7 @@ const Cart = () => {
                               to={`/product/${item.slug || item.id}`}
                               className="cart-item-image"
                             >
-                              <ProductImage src={item.image} alt={item.name} />
+                              <ProductImage sizes="96px" src={item.image} alt={item.name} />
                             </Link>
 
                             <div className="cart-item-details">

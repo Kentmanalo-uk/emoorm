@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { productKind } from '../lib/productKinds';
 import useSeo from '../lib/seo';
@@ -6,7 +6,7 @@ import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, MapTr
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
-import HomeStoresMap from '../components/home/HomeStoresMap';
+import HomeStoresMap from '../components/home/HomeStoresMapLazy';
 import StartSellingSticker from '../components/home/StartSellingSticker';
 import Spinner from '../components/ui/Spinner';
 import ChatDock from '../components/chat/ChatDock';
@@ -53,8 +53,6 @@ const Home = () => {
 
   // Phones get illustrated empty states; wider screens keep the plain line.
   const isPhone = usePhoneLayout();
-  const [currentIndex, setCurrentIndex] = useState(1); // Start at 1 (first real slide)
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const fallbackBanners = [
     { id: 'fallback-1', imageUrl: '/assets/banners/banner-qoute.webp', linkUrl: null, title: 'Emoorm' },
@@ -127,86 +125,10 @@ const Home = () => {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [popupOpen]);
 
-  const banners = bannerData.map((b) => b.imageUrl);
-
-  // Create extended slides array: [last, ...real slides, first]
-  const extendedSlides = banners.length > 0
-    ? [banners[banners.length - 1], ...banners, banners[0]]
-    : [];
-
-  // Restart autoplay from the first real slide whenever the banner set changes.
-  useEffect(() => {
-    setCurrentIndex(1);
-    setIsTransitioning(false);
-  }, [banners.length]);
-
-  // Auto-advance carousel without depending on the render-scoped click handler.
-  useEffect(() => {
-    if (banners.length <= 1 || isTransitioning) return undefined;
-    const timer = setTimeout(() => {
-      setIsTransitioning(true);
-      setCurrentIndex((previous) => previous + 1);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [banners.length, currentIndex, isTransitioning]);
-
-  // Handle transition end - reset position without animation
-  const handleTransitionEnd = () => {
-    setIsTransitioning(false);
-
-    // If we're at the clone of the first slide (index 0), jump to real first slide (index 1)
-    if (currentIndex === 0) {
-      setCurrentIndex(banners.length);
-    }
-    // If we're at the clone of the last slide (last index), jump to real last slide
-    else if (currentIndex === extendedSlides.length - 1) {
-      setCurrentIndex(1);
-    }
-  };
-
-  const handleNext = () => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    setCurrentIndex((prev) => prev + 1);
-  };
-
-  const handlePrev = () => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    setCurrentIndex((prev) => prev - 1);
-  };
-
-  // Phones: a sideways swipe moves a slide (the arrows are hidden there).
-  const swipeRef = useRef(null);
-  const onSwipeStart = (e) => {
-    const t = e.touches[0];
-    swipeRef.current = { x: t.clientX, y: t.clientY };
-  };
-  const onSwipeEnd = (e) => {
-    const start = swipeRef.current;
-    swipeRef.current = null;
-    if (!start) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - start.x;
-    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(t.clientY - start.y) * 1.5) return;
-    if (dx < 0) handleNext(); else handlePrev();
-  };
-
-  const goToSlide = (index) => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    setCurrentIndex(index + 1); // +1 because of cloned slide at start
-  };
-
-  // Get current real slide index for pagination
-  const getRealIndex = () => {
-    if (currentIndex === 0) return banners.length - 1;
-    if (currentIndex === extendedSlides.length - 1) return 0;
-    return currentIndex - 1;
-  };
-
-  const { addItem } = useCartStore();
-  const { user } = useAuthStore();
+  // Selectors: Home re-renders only when these change, not on every cart or
+  // session update.
+  const addItem = useCartStore((st) => st.addItem);
+  const user = useAuthStore((st) => st.user);
   // Hold a card: its preview with quick actions.
   const peekProduct = useProductPeek();
 
@@ -356,7 +278,8 @@ const Home = () => {
     return () => observer.disconnect();
   }, [exploreHasMore, exploreFailed, exploreLoading, exploreProducts.length, loadMoreExplore]);
 
-  const handleAddToCart = (e, product) => {
+  // Stable, so the memoised cards below do not all re-render with Home.
+  const handleAddToCart = useCallback((e, product) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     // Live animals are bought by making an offer on their page.
     if (productKind(product) === 'LIVESTOCK') { navigate(`/product/${product.slug}`); return; }
@@ -366,7 +289,7 @@ const Home = () => {
     } catch (err) {
       toast.error(err.message);
     }
-  };
+  }, [addItem, navigate]);
 
   return (
     <Layout>
@@ -386,59 +309,7 @@ const Home = () => {
         <div className="container">
           <div className="banner-grid">
             {/* Left: Carousel */}
-            <div className="banner-carousel" onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
-              <div
-                className="banner-carousel-inner"
-                style={{
-                  transform: `translateX(-${currentIndex * 100}%)`,
-                  transition: isTransitioning ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
-                }}
-                onTransitionEnd={handleTransitionEnd}
-              >
-                {extendedSlides.map((banner, index) => {
-                  const realIndex = index === 0
-                    ? bannerData.length - 1
-                    : index === extendedSlides.length - 1
-                      ? 0
-                      : index - 1;
-                  const info = bannerData[realIndex] || {};
-                  const img = <img src={banner} alt={info.title || `Banner ${index}`} />;
-                  return (
-                    <div key={`${info.id || 'slide'}-${index}`} className="banner-slide">
-                      {info.linkUrl ? (
-                        info.linkUrl.startsWith('http') ? (
-                          <a href={info.linkUrl} target="_blank" rel="noopener noreferrer">{img}</a>
-                        ) : (
-                          <Link to={info.linkUrl}>{img}</Link>
-                        )
-                      ) : img}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Carousel Controls */}
-              <button type="button" className="banner-control banner-control-prev" onClick={handlePrev} aria-label="Previous banner">
-                <ChevronLeft size={20} />
-              </button>
-              <button type="button" className="banner-control banner-control-next" onClick={handleNext} aria-label="Next banner">
-                <ChevronRight size={20} />
-              </button>
-
-              {/* Carousel Dots */}
-              <div className="banner-dots">
-                {banners.map((_, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    className={`banner-dot ${getRealIndex() === index ? 'banner-dot-active' : ''}`}
-                    onClick={() => goToSlide(index)}
-                    aria-label={`Show banner ${index + 1} of ${banners.length}`}
-                    aria-current={getRealIndex() === index ? 'true' : undefined}
-                  />
-                ))}
-              </div>
-            </div>
+            <HomeBannerCarousel bannerData={bannerData} />
 
             {/* Right: Two Cards */}
             <div className="banner-sidebar">
@@ -657,6 +528,150 @@ const Home = () => {
 };
 
 /** Placeholder with the card's shape while banners (or their images) load. */
+/**
+ * The banner carousel: its own component, so a slide moving every five
+ * seconds re-renders the carousel alone, not the whole of Home (the product
+ * grid used to re-render with every slide).
+ */
+function HomeBannerCarousel({ bannerData }) {
+  const [currentIndex, setCurrentIndex] = useState(1); // Start at 1 (first real slide)
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const banners = bannerData.map((b) => b.imageUrl);
+
+  // Create extended slides array: [last, ...real slides, first]
+  const extendedSlides = banners.length > 0
+    ? [banners[banners.length - 1], ...banners, banners[0]]
+    : [];
+
+  // Restart autoplay from the first real slide whenever the banner set changes.
+  useEffect(() => {
+    setCurrentIndex(1);
+    setIsTransitioning(false);
+  }, [banners.length]);
+
+  // Auto-advance carousel without depending on the render-scoped click handler.
+  useEffect(() => {
+    if (banners.length <= 1 || isTransitioning) return undefined;
+    const timer = setTimeout(() => {
+      setIsTransitioning(true);
+      setCurrentIndex((previous) => previous + 1);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [banners.length, currentIndex, isTransitioning]);
+
+  // Handle transition end - reset position without animation
+  const handleTransitionEnd = () => {
+    setIsTransitioning(false);
+
+    // If we're at the clone of the first slide (index 0), jump to real first slide (index 1)
+    if (currentIndex === 0) {
+      setCurrentIndex(banners.length);
+    }
+    // If we're at the clone of the last slide (last index), jump to real last slide
+    else if (currentIndex === extendedSlides.length - 1) {
+      setCurrentIndex(1);
+    }
+  };
+
+  const handleNext = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setCurrentIndex((prev) => prev + 1);
+  };
+
+  const handlePrev = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setCurrentIndex((prev) => prev - 1);
+  };
+
+  // Phones: a sideways swipe moves a slide (the arrows are hidden there).
+  const swipeRef = useRef(null);
+  const onSwipeStart = (e) => {
+    const t = e.touches[0];
+    swipeRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onSwipeEnd = (e) => {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(t.clientY - start.y) * 1.5) return;
+    if (dx < 0) handleNext(); else handlePrev();
+  };
+
+  const goToSlide = (index) => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setCurrentIndex(index + 1); // +1 because of cloned slide at start
+  };
+
+  // Get current real slide index for pagination
+  const getRealIndex = () => {
+    if (currentIndex === 0) return banners.length - 1;
+    if (currentIndex === extendedSlides.length - 1) return 0;
+    return currentIndex - 1;
+  };
+
+  return (
+    <div className="banner-carousel" onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
+      <div
+        className="banner-carousel-inner"
+        style={{
+          transform: `translateX(-${currentIndex * 100}%)`,
+          transition: isTransitioning ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
+        }}
+        onTransitionEnd={handleTransitionEnd}
+      >
+        {extendedSlides.map((banner, index) => {
+          const realIndex = index === 0
+            ? bannerData.length - 1
+            : index === extendedSlides.length - 1
+              ? 0
+              : index - 1;
+          const info = bannerData[realIndex] || {};
+          const img = <img src={banner} alt={info.title || `Banner ${index}`} />;
+          return (
+            <div key={`${info.id || 'slide'}-${index}`} className="banner-slide">
+              {info.linkUrl ? (
+                info.linkUrl.startsWith('http') ? (
+                  <a href={info.linkUrl} target="_blank" rel="noopener noreferrer">{img}</a>
+                ) : (
+                  <Link to={info.linkUrl}>{img}</Link>
+                )
+              ) : img}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Carousel Controls */}
+      <button type="button" className="banner-control banner-control-prev" onClick={handlePrev} aria-label="Previous banner">
+        <ChevronLeft size={20} />
+      </button>
+      <button type="button" className="banner-control banner-control-next" onClick={handleNext} aria-label="Next banner">
+        <ChevronRight size={20} />
+      </button>
+
+      {/* Carousel Dots */}
+      <div className="banner-dots">
+        {banners.map((_, index) => (
+          <button
+            key={index}
+            type="button"
+            className={`banner-dot ${getRealIndex() === index ? 'banner-dot-active' : ''}`}
+            onClick={() => goToSlide(index)}
+            aria-label={`Show banner ${index + 1} of ${banners.length}`}
+            aria-current={getRealIndex() === index ? 'true' : undefined}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SideBannerSkeleton() {
   return <div className="banner-card banner-card-skeleton" aria-hidden="true" />;
 }
@@ -746,7 +761,7 @@ function ProductStats({ product }) {
   );
 }
 
-function HomeProductCard({ product, onAddToCart }) {
+const HomeProductCard = memo(function HomeProductCard({ product, onAddToCart }) {
   const peekProduct = useProductPeek();
   return (
     <Link to={`/product/${product.slug}`} className="product-card" {...peekProduct(product)}>
@@ -765,9 +780,9 @@ function HomeProductCard({ product, onAddToCart }) {
       </div>
     </Link>
   );
-}
+});
 
-function HomeStoreCard({ store }) {
+const HomeStoreCard = memo(function HomeStoreCard({ store }) {
   const peekStore = useStorePeek();
   const initials = store.name?.split(' ').slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
   const productImages = (store.products || [])
@@ -818,6 +833,6 @@ function HomeStoreCard({ store }) {
       </div>
     </article>
   );
-}
+});
 
 export default Home;

@@ -126,6 +126,47 @@ const createNotification = async (data) => {
   return created;
 };
 
+// Rows written per statement when one notice goes to many people.
+const MANY_BATCH = 1000;
+
+/**
+ * The same notice to many people at once (a sale on a product they saved):
+ * written a thousand rows per statement instead of one by one, then pushed
+ * to the browsers of those who turned push on. Types and audiences are as
+ * for createNotification.
+ * @param {String[]} userIds
+ * @param {{ type, title, message, relatedId?, audience? }} notice
+ * @returns {Promise<{ sent: Number }>}
+ */
+const notifyMany = async (userIds, { type, title, message, relatedId = null, audience }) => {
+  const ids = [...new Set((userIds || []).filter(Boolean))];
+  if (!ids.length) return { sent: 0 };
+  const resolvedAudience = audience || DEFAULT_AUDIENCE[type] || 'BUYER';
+  if (!AUDIENCES.includes(resolvedAudience)) throw new ApiError('Invalid notification audience', 400);
+  const rows = ids.map((userId) => ({
+    userId, type, title, message, audience: resolvedAudience, relatedId, isRead: false,
+  }));
+  for (let i = 0; i < rows.length; i += MANY_BATCH) {
+    // eslint-disable-next-line no-await-in-loop
+    await notificationRepository.createMany(rows.slice(i, i + MANY_BATCH));
+  }
+  if (pushService.enabled()) {
+    const withPush = await prisma.pushToken.findMany({
+      where: { userId: { in: ids }, platform: 'web', endpoint: { not: null } },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    // One person at a time, after the rows are written: never holds anyone up.
+    (async () => {
+      for (const { userId } of withPush) {
+        // eslint-disable-next-line no-await-in-loop
+        await pushService.sendToUser(userId, { title, message }).catch((err) => console.error('[push]', err.message));
+      }
+    })();
+  }
+  return { sent: rows.length };
+};
+
 /**
  * Get user notifications
  * @param {String} userId - User ID
@@ -235,6 +276,9 @@ const deleteAllNotifications = async (userId, audience) => {
 const getUnreadCount = async (userId, audience) => {
   return notificationRepository.getUnreadCount(userId, audience);
 };
+
+/** Unread notifications per feed: { BUYER, SELLER, ADMIN }. */
+const getUnreadCountsByAudience = (userId) => notificationRepository.getUnreadCountsByAudience(userId);
 
 // Helper functions for creating specific notifications
 
@@ -491,6 +535,7 @@ module.exports = {
   notifyMunicipalAdmins,
   notifySuperAdmins,
   createNotification,
+  notifyMany,
   getUserNotifications,
   getNotificationById,
   markAsRead,
@@ -498,6 +543,7 @@ module.exports = {
   deleteNotification,
   deleteAllNotifications,
   getUnreadCount,
+  getUnreadCountsByAudience,
   // Helper functions
   notifyOrderCreated,
   promoLine,

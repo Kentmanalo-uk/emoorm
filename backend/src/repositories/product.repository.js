@@ -4,6 +4,7 @@ const { stockedVariation, totalOptionStock, activeSalePrice } = require('../util
 const { invalidate, TAGS } = require('../lib/cachePolicy');
 const { liveNow, currentWindow, publicWindow } = require('../utils/availability');
 const { kindOf } = require('../utils/productKinds');
+const { refreshSearchText } = require('./productStats.repository');
 
 /**
  * Drop the cached copies a product write makes stale. Invalidation lives at
@@ -15,6 +16,9 @@ const { kindOf } = require('../utils/productKinds');
  */
 const invalidateProducts = async (products) => {
   const list = (Array.isArray(products) ? products : [products]).filter(Boolean);
+  // Its search column follows its name, description and category.
+  await refreshSearchText({ productIds: list.map((p) => p.id) })
+    .catch((err) => console.error('[search] refresh failed:', err.message));
   const tags = [TAGS.products, TAGS.stores];
   for (const product of list) {
     // Detail entries are keyed by id AND by slug, so both need clearing.
@@ -29,16 +33,35 @@ const invalidateProducts = async (products) => {
 };
 
 /**
- * The same, from product ids alone (stock taken by an order, given back by a
- * cancellation or a return): looks up their slugs and shops first. Never
- * throws; a cache that stays stale a little longer is not worth failing for.
+ * After a stock change (taken by an order, given back by a cancellation or a
+ * return, a selling window opening or closing): only the cached answers that
+ * show these products go — their pages, their shops' pages, and the lists
+ * and searches holding them (tagged per product, lib/cachePolicy
+ * productTagsOf). Clearing every list on every purchase left the catalogue
+ * cache nearly always empty. A list a product should now join (back in
+ * stock) shows it when that list expires (a minute at most).
+ *
+ * `lists: true` clears every product list too, for a change that puts a
+ * product on lists it was not on (approved, a selling window opened, the
+ * Available Today switch): those are a seller's or an admin's, not a sale.
+ * Never throws; a cache that stays stale a little longer is not worth
+ * failing for.
  */
-const invalidateProductIds = async (ids) => {
+const invalidateProductIds = async (ids, { lists = false } = {}) => {
   const unique = [...new Set((ids || []).filter(Boolean))];
   if (!unique.length) return;
   try {
-    const rows = await prisma.product.findMany({ where: { id: { in: unique } }, select: { id: true, slug: true, storeId: true } });
-    await invalidateProducts(rows);
+    const rows = await prisma.product.findMany({
+      where: { id: { in: unique } },
+      select: { id: true, slug: true, storeId: true, store: { select: { slug: true } } },
+    });
+    const tags = lists ? [TAGS.products] : [];
+    for (const row of rows) {
+      tags.push(TAGS.product(row.id), TAGS.product(row.slug));
+      if (row.storeId) tags.push(TAGS.store(row.storeId));
+      if (row.store?.slug) tags.push(TAGS.store(row.store.slug));
+    }
+    await invalidate(tags);
   } catch (err) {
     console.error('[cache] product invalidation failed:', err.message);
   }
@@ -202,63 +225,44 @@ const LIST_INCLUDE = {
 const roundRating = (value) => Math.round(Number(value || 0) * 10) / 10;
 
 /**
- * Rating and sales aggregates for a set of products in two grouped queries,
- * regardless of how many products are asked for.
+ * Rating and sales figures for a set of products, as kept on their rows
+ * (productStats.repository: sold means handed over, the order settled).
  * @param {String[]} ids - Product IDs
  * @returns {Promise<Map<String, {averageRating:Number, reviewCount:Number, soldCount:Number}>>}
  */
-// Orders that count as a sale: delivered, picked up or completed. Pending,
-// in-progress and cancelled orders are not sales yet (or ever).
-const SETTLED_ORDER_STATUSES = ['COMPLETED', 'DELIVERED', 'PICKED_UP'];
-
 const getStatsForIds = async (ids) => {
   const stats = new Map();
   const unique = [...new Set((ids || []).filter(Boolean))];
   if (unique.length === 0) return stats;
-
-  const [ratings, sales] = await Promise.all([
-    prisma.review.groupBy({
-      by: ['productId'],
-      where: { productId: { in: unique }, deletedAt: null },
-      _avg: { rating: true },
-      _count: { _all: true },
-    }),
-    prisma.orderItem.groupBy({
-      by: ['productId'],
-      // Sold means handed over: the order is settled, not merely placed.
-      where: { productId: { in: unique }, order: { status: { in: SETTLED_ORDER_STATUSES } } },
-      _sum: { quantity: true },
-    }),
-  ]);
-
-  for (const id of unique) {
-    stats.set(id, { averageRating: 0, reviewCount: 0, soldCount: 0 });
-  }
-  for (const row of ratings) {
-    const entry = stats.get(row.productId);
-    if (!entry) continue;
-    entry.averageRating = roundRating(row._avg.rating);
-    entry.reviewCount = row._count._all || 0;
-  }
-  for (const row of sales) {
-    const entry = stats.get(row.productId);
-    if (!entry) continue;
-    entry.soldCount = row._sum.quantity || 0;
-  }
+  const rows = await prisma.product.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, soldCount: true, ratingAvg: true, reviewCount: true },
+  });
+  for (const id of unique) stats.set(id, { averageRating: 0, reviewCount: 0, soldCount: 0 });
+  for (const row of rows) stats.set(row.id, statsOf(row));
   return stats;
 };
 
+/** The figures of a product row, under the names the API has always used. */
+const statsOf = (row) => ({
+  averageRating: roundRating(row.ratingAvg),
+  reviewCount: row.reviewCount || 0,
+  soldCount: row.soldCount || 0,
+});
+
 /**
- * Attach averageRating / reviewCount / soldCount to a list of products.
+ * Attach averageRating / reviewCount / soldCount to a list of products (read
+ * from their own rows; looked up only for rows loaded without them).
  * @param {Object[]} products
  * @returns {Promise<Object[]>}
  */
 const withStatsList = async (products) => {
   const list = withImagesList(products);
-  const stats = await getStatsForIds(list.map((p) => p.id));
-  return list.map((p) => ({
+  const missing = list.filter((p) => !('soldCount' in p)).map((p) => p.id);
+  const looked = missing.length ? await getStatsForIds(missing) : new Map();
+  return list.map(({ ratingAvg, ...p }) => ({
     ...p,
-    ...(stats.get(p.id) || { averageRating: 0, reviewCount: 0, soldCount: 0 }),
+    ...('soldCount' in p ? statsOf({ ...p, ratingAvg }) : (looked.get(p.id) || { averageRating: 0, reviewCount: 0, soldCount: 0 })),
   }));
 };
 
@@ -474,7 +478,8 @@ const findAll = async (options = {}) => {
   const direction = sortOrder === 'asc' ? 'asc' : 'desc';
   let orderBy;
   if (sortBy === 'orderCount') {
-    orderBy = { orderItems: { _count: direction } };
+    // Popularity: units sold (kept on the row, products_sold_idx).
+    orderBy = [{ soldCount: direction }, { createdAt: 'desc' }];
   } else {
     orderBy = { [SORTABLE_COLUMNS.has(sortBy) ? sortBy : 'createdAt']: direction };
   }
@@ -505,7 +510,7 @@ const RANK_POOL = 300;
 const rankedSearch = async (where, words, search, page, pageSize) => {
   const pool = await prisma.product.findMany({
     where,
-    select: { id: true, name: true, createdAt: true, _count: { select: { orderItems: true } } },
+    select: { id: true, name: true, createdAt: true, soldCount: true },
     take: RANK_POOL,
   });
   const ranked = pool

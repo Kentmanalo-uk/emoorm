@@ -179,7 +179,7 @@ function PinnedOrderCard({ order, onAttach }) {
   return (
     <div className="msgr-pin-card">
       <div className="msgr-pin-thumb">
-        <ProductImage src={thumb} alt="" />
+        <ProductImage sizes="96px" src={thumb} alt="" />
       </div>
       <div className="msgr-pin-body">
         <div className="msgr-pin-row-top">
@@ -247,7 +247,7 @@ function MessageBubble({ message, isSelf, seen, onOpenImage, onUnsend }) {
         {product && (
           <Link to={`/product/${product.slug}`} className="msgr-bubble-product">
             <span className="msgr-bubble-product-img">
-              <ProductImage src={product.image} alt="" />
+              <ProductImage sizes="96px" src={product.image} alt="" />
             </span>
             <span className="msgr-bubble-product-text">
               <span className="msgr-bubble-product-name">{product.name}</span>
@@ -347,7 +347,7 @@ function ProductPicker({ storeId, onPick: onPickProp, onClose: onCloseProp }) {
             return (
               <button type="button" key={p.id} className="msgr-sheet-item" onClick={() => onPick({ id: p.id, name: p.name, price: Number(p.price), image: img, slug: p.slug })}>
                 <span className="msgr-sheet-item-img">
-                  <ProductImage src={img} alt="" />
+                  <ProductImage sizes="96px" src={img} alt="" />
                 </span>
                 <span className="msgr-sheet-item-text">
                   <span className="msgr-sheet-item-name">{p.name}</span>
@@ -491,12 +491,19 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     });
   }, [activeId, fetchConversation, scrollToBottom]);
 
+  // How many messages the open chat shows, for the poll below: kept in a ref
+  // so that each poll's answer does not stop and restart the poll.
+  const messageCountRef = useRef(0);
+  useEffect(() => {
+    messageCountRef.current = activeConvo?.messages?.length || 0;
+  }, [activeConvo]);
+
   // Poll for new messages every few seconds
   useEffect(() => {
     if (!activeId || activeId === MOORMY_ID) return undefined;
     const interval = pollWhileVisible(async () => {
       if (activeIdRef.current !== activeId) return;
-      const prevCount = activeConvo?.messages?.length || 0;
+      const prevCount = messageCountRef.current;
       const next = await fetchConversation(activeId, { silent: true });
       if (next && (next.messages?.length || 0) > prevCount) {
         scrollToBottom();
@@ -505,7 +512,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
       }
     }, POLL_INTERVAL_MS);
     return () => interval();
-  }, [activeId, activeConvo, fetchConversation, fetchConversations, scrollToBottom]);
+  }, [activeId, fetchConversation, fetchConversations, scrollToBottom]);
 
   const filteredConversations = useMemo(() => {
     const roleScoped =

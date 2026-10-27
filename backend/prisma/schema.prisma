@@ -3,6 +3,8 @@
 
 generator client {
   provider = "prisma-client-js"
+  // omitApi: products.search_text is never sent out (src/config/database.js).
+  previewFeatures = ["omitApi"]
 }
 
 datasource db {
@@ -977,6 +979,17 @@ model Product {
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
+  // Kept with the product so lists need not add them up on every request
+  // (repositories/productStats.repository.js: refreshed when an order settles
+  // or a review changes, and checked against the orders and reviews hourly).
+  // Sold: units in delivered, picked-up or completed orders.
+  soldCount   Int           @default(0) @map("sold_count")
+  ratingAvg   Float         @default(0) @map("rating_avg")
+  reviewCount Int           @default(0) @map("review_count")
+  // Name, description, category and shop in one column: search reads one
+  // table instead of joining three (productStats.repository refreshSearchText).
+  searchText  String?       @db.Text @map("search_text")
+
   // Relations
   orderItems  OrderItem[]
   reviews     Review[]
@@ -1002,6 +1015,7 @@ model Product {
   @@index([storeId, deletedAt, status, createdAt], map: "products_store_idx")
   @@index([status, deletedAt, price], map: "products_price_idx")
   @@index([deletedAt, status, createdAt], map: "products_moderation_idx")
+  @@index([status, deletedAt, soldCount], map: "products_sold_idx")
 }
 
 /// One of the shop's products inside a package (a PACKAGE product), and how

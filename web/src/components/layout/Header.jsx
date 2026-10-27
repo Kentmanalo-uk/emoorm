@@ -28,6 +28,7 @@ import { usePhoneLayout } from '../../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm } from '../../lib/buyerSearch';
 import { afterSignOutPath } from '../../lib/afterSignOut';
 import { pollWhileVisible } from '../../lib/visiblePoll';
+import { useUnreadCounts, countOneRead, refreshChatCounts } from '../../lib/unreadCounts';
 
 const NOTIF_TYPE = {
   ORDER_RECEIVED: { Icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New order' },
@@ -101,9 +102,11 @@ const Header = () => {
   // note, so navigating away from what you were doing to send it is wrong.
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  // Chats with a message from a shop not read yet (the Messages tab's badge).
-  const [unreadChats, setUnreadChats] = useState(0);
+  // The badges' counts, polled once for the whole site (lib/unreadCounts,
+  // by NotificationWatcher): the bell's, and the chats with a message from a
+  // shop not read yet (the Messages tab's).
+  const unreadCount = useUnreadCounts((s) => s.notifications.BUYER);
+  const unreadChats = useUnreadCounts((s) => s.chats);
   const [recentNotifs, setRecentNotifs] = useState([]);
   const [headerHidden, setHeaderHidden] = useState(false);
   // At the very top of the page: phones drop the header's shadow there, so it
@@ -169,49 +172,26 @@ const Header = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // When the chat badge was last asked for.
-  const chatCountAt = useRef(0);
-
-  // Poll unread count + recent notifications when authenticated
+  // The bell's newest five: when signed in, when its count moves, and when a
+  // notification popped up or was read elsewhere (NotificationWatcher).
   useEffect(() => {
     if (!isAuthenticated) {
-      setUnreadCount(0);
-      setUnreadChats(0);
       setRecentNotifs([]);
-      return;
+      return undefined;
     }
-    const fetchAll = async () => {
-      chatCountAt.current = Date.now();
-      try {
-        const [countRes, listRes, chatRes] = await Promise.all([
-          axios.get('/notifications/unread/count', { params: { audience: 'BUYER' }, quiet: true }),
-          axios.get('/notifications', { params: { page: 1, pageSize: 5, audience: 'BUYER' }, quiet: true }),
-          axios.get('/messages/unread-count', { quiet: true }).catch(() => null),
-        ]);
-        setUnreadCount(countRes.data?.count ?? 0);
-        setRecentNotifs(listRes.data || []);
-        if (chatRes) setUnreadChats(chatRes.data?.count ?? 0);
-      } catch { /* silent */ }
-    };
-    fetchAll();
-    const interval = pollWhileVisible(fetchAll, 5 * 60 * 1000);
-    // A new one just popped up (NotificationWatcher): count it now.
-    window.addEventListener('emoorm:notifications', fetchAll);
-    return () => {
-      interval();
-      window.removeEventListener('emoorm:notifications', fetchAll);
-    };
-  }, [isAuthenticated]);
+    const fetchRecent = () => axios.get('/notifications', { params: { page: 1, pageSize: 5, audience: 'BUYER' }, quiet: true })
+      .then((res) => setRecentNotifs(res.data || []))
+      .catch(() => { /* silent */ });
+    fetchRecent();
+    window.addEventListener('emoorm:notifications', fetchRecent);
+    return () => window.removeEventListener('emoorm:notifications', fetchRecent);
+  }, [isAuthenticated, unreadCount]);
 
-  // Opening a tab (reading chats there, say) refreshes the chat badge, unless
-  // the poll above just asked (on first load both would).
+  // Opening a tab (reading chats there, say) refreshes the chat badge (a
+  // request made a moment ago by the poller is not repeated).
   useEffect(() => {
     if (!isAuthenticated || !isTabPage) return;
-    if (Date.now() - chatCountAt.current < 2000) return;
-    chatCountAt.current = Date.now();
-    axios.get('/messages/unread-count', { quiet: true })
-      .then((res) => setUnreadChats(res.data?.count ?? 0))
-      .catch(() => {});
+    refreshChatCounts();
   }, [isAuthenticated, isTabPage, location.pathname, location.search]);
 
   // The bell preview is a shortcut, not a dead list: a row marks itself read
@@ -219,7 +199,7 @@ const Header = () => {
   const openNotif = (n) => {
     if (!n.isRead) {
       setRecentNotifs((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
-      setUnreadCount((c) => Math.max(0, c - 1));
+      countOneRead('BUYER');
       axios.put(`/notifications/${n.id}/read`).catch(() => { /* the next poll will correct it */ });
     }
     const href = notificationHref(n);

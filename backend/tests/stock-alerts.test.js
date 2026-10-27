@@ -19,8 +19,11 @@ test('the seller hears once when an order brings a product down to its low-stock
   const notices = () => h.prisma.notification.findMany({ where: { userId: seller.id, type: 'LOW_STOCK' } });
 
   assert.equal((await order()).status, 201);
-  await new Promise((r) => setTimeout(r, 300));
-  const first = await notices();
+  // Told after the answer.
+  const first = await h.eventually(async () => {
+    const found = await notices();
+    return found.length ? found : null;
+  });
   assert.equal(first.length, 1);
   assert.equal(first[0].audience, 'SELLER');
   assert.match(first[0].message, /Only 5 left/);

@@ -9,7 +9,14 @@ const listConversations = asyncHandler(async (req, res) => {
 
 // GET /messages/unread-count: chats with a message the buyer hasn't read.
 const unreadCount = asyncHandler(async (req, res) => {
-  successResponse(res, { count: await messageService.countUnreadChats(req.user.id) }, 'Unread chats');
+  const [count, support, shop] = await Promise.all([
+    messageService.countUnreadChats(req.user.id),
+    messageService.countUnreadSupportCases(req.user.id),
+    req.user.role === 'SELLER' ? messageService.countUnreadShopChats(req.user.id) : 0,
+  ]);
+  // count: chats with shops; shop: a seller's chats with buyers; support:
+  // help-desk cases (the chat bubble counts all three).
+  successResponse(res, { count, shop, support }, 'Unread chats');
 });
 
 const openConversation = asyncHandler(async (req, res) => {

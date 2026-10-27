@@ -180,7 +180,7 @@ const ProfileReviews = () => {
                 return (
                   <li key={item.productId} className="rv-card rv-card--pending">
                     <Link to={item.product?.slug ? `/product/${item.product.slug}` : '#'} className="rv-thumb">
-                      <ProductImage src={product.images[0]} alt={product.name} />
+                      <ProductImage sizes="96px" src={product.images[0]} alt={product.name} />
                     </Link>
                     <div className="rv-body">
                       <div className="rv-name">{product.name}</div>
@@ -240,7 +240,7 @@ const ProfileReviews = () => {
                 return (
                   <li key={review.id} className="rv-card">
                     <Link to={review.product?.slug ? `/product/${review.product.slug}` : '#'} className="rv-thumb">
-                      <ProductImage src={product.images[0]} alt={product.name} />
+                      <ProductImage sizes="96px" src={product.images[0]} alt={product.name} />
                     </Link>
                     <div className="rv-body">
                       <div className="rv-name">{product.name}</div>

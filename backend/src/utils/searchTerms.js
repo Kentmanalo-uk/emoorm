@@ -52,12 +52,13 @@ const variantsOf = (word) => {
 };
 
 /** Prisma filter: every word found somewhere, through any of its variants. */
+// products.search_text holds the name, description, category and shop
+// (repositories/productStats.repository.js), so a search reads one table.
+// The name is asked too, for a row whose search column is not written yet.
 const whereFor = (words) => words.map((word) => ({
   OR: variantsOf(word).flatMap((v) => [
+    { searchText: { contains: v } },
     { name: { contains: v } },
-    { description: { contains: v } },
-    { category: { name: { contains: v } } },
-    { store: { name: { contains: v } } },
   ]),
 }));
 
@@ -74,7 +75,7 @@ const scoreOf = (product, words, query) => {
     if (hit) score += 15;
   }
   // A little for what sells, a little for what is new.
-  score += Math.min(10, Number(product._count?.orderItems || 0));
+  score += Math.min(10, Number(product.soldCount ?? product._count?.orderItems ?? 0));
   score += Math.max(0, 5 - (Date.now() - new Date(product.createdAt).getTime()) / (30 * 86400e3));
   return score;
 };

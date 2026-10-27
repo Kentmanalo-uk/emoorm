@@ -16,6 +16,7 @@ import useAuthStore from '../../store/authStore';
 import SafetyNotice from '../common/SafetyNotice';
 import './ChatDock.css';
 import { pollWhileVisible } from '../../lib/visiblePoll';
+import { useUnreadCounts, countChatRead, refreshChatCounts } from '../../lib/unreadCounts';
 
 const LIST_POLL_MS = 30000;
 const THREAD_POLL_MS = 5000;
@@ -62,6 +63,7 @@ const toItem = (c, kind, userId) => {
     key: `store:${c.id}`,
     kind,
     id: c.id,
+    role: c.role,
     name: seller ? c.buyer?.fullName || 'Buyer' : c.store?.name || 'Store',
     avatar: seller ? c.buyer?.profilePhoto : c.store?.logo,
     subtitle: seller ? 'Customer' : 'Store',
@@ -113,17 +115,20 @@ export default function ChatDock() {
 
   const loadLists = useCallback(() => Promise.all([loadStore(), loadSupport()]), [loadStore, loadSupport]);
 
-  // Keeps the unread badge fresh while closed.
+  // The chats are loaded while the dock is open. Closed, its badge comes
+  // from the site's unread counts (lib/unreadCounts), not from the lists.
   useEffect(() => {
-    if (!isAuthenticated) return undefined;
+    if (!open || !isAuthenticated) return undefined;
     loadLists();
     const timer = pollWhileVisible(loadLists, LIST_POLL_MS);
     return () => timer();
-  }, [isAuthenticated, loadLists]);
-
-  useEffect(() => {
-    if (open && isAuthenticated) loadLists();
   }, [open, isAuthenticated, loadLists]);
+  const closedUnread = useUnreadCounts((s) => s.chats + s.shop + s.support);
+
+  // The newest message of the other side already marked read, per chat: the
+  // thread is fetched every few seconds, but marked read only when something
+  // new came in.
+  const markedRead = useRef(new Map());
 
   const selectedKey = selected ? `${selected.kind}:${selected.id}` : null;
 
@@ -140,7 +145,14 @@ export default function ChatDock() {
         setThread({ key, data: res.data });
         setError('');
         if (selected.kind === 'store') {
-          axios.post(`/messages/conversations/${selected.id}/read`).catch(() => {});
+          const theirs = (res.data?.messages || []).filter((m) => m.senderId !== user?.id);
+          const newest = theirs[theirs.length - 1]?.id || null;
+          if (newest && markedRead.current.get(key) !== newest) {
+            markedRead.current.set(key, newest);
+            axios.post(`/messages/conversations/${selected.id}/read`, undefined, { quiet: true })
+              .then(() => refreshChatCounts())
+              .catch(() => {});
+          }
         }
       })
       .catch((err) => { if (!cancelled) setError(err.message || 'Could not load messages'); });
@@ -150,7 +162,7 @@ export default function ChatDock() {
       cancelled = true;
       timer();
     };
-  }, [open, selected]);
+  }, [open, selected, user?.id]);
 
   const active = thread && thread.key === selectedKey ? thread.data : null;
   const messageCount = active?.messages?.length || 0;
@@ -173,6 +185,8 @@ export default function ChatDock() {
   };
 
   const select = (kind, id) => {
+    const item = (kind === 'support' ? supportItems : storeItems).find((i) => i.id === id);
+    if (item?.unread > 0) countChatRead(kind === 'support' ? 'support' : (item.role === 'seller' ? 'shop' : 'store'));
     setSelected({ kind, id });
     setDraft('');
     setError('');
@@ -234,6 +248,8 @@ export default function ChatDock() {
   const listLoading = tab === 'support' ? supportConvos === null : storeConvos === null
     || (tab === 'unread' && supportConvos === null);
   const unreadTotal = unreadItems.reduce((sum, i) => sum + i.unread, 0);
+  // The bar: the open dock's own count; closed, chats with something unread.
+  const barUnread = open && storeConvos !== null ? unreadTotal : closedUnread;
   const selectedItem = [...storeItems, ...supportItems].find((i) => i.key === selectedKey);
 
   const fullLink = !selected
@@ -447,11 +463,11 @@ export default function ChatDock() {
         className="cd-bar"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label={unreadTotal ? `Messages, ${unreadTotal} unread` : 'Messages'}
+        aria-label={barUnread ? `Messages, ${barUnread} unread` : 'Messages'}
       >
         <ChatCircleDots size={20} weight="fill" />
         <span>Messages</span>
-        {unreadTotal > 0 && <span className="cd-count">{unreadTotal > 9 ? '9+' : unreadTotal}</span>}
+        {barUnread > 0 && <span className="cd-count">{barUnread > 9 ? '9+' : barUnread}</span>}
       </button>
 
       <ConfirmDialog

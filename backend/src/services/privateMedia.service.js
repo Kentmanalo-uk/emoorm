@@ -115,7 +115,11 @@ const migratePublicPhotos = async () => {
       return ref;
     }
     if (await usedPublicly(file)) stats.keptPublic += 1;
-    else await fs.promises.unlink(from).catch(() => {});
+    else {
+      await fs.promises.unlink(from).catch(() => {});
+      // Its smaller copies (lib/imageSizes), if any were made, go too.
+      await require('../lib/imageSizes').removeSizes(from);
+    }
     stats.moved += 1;
     const next = `${privateMedia.PREFIX}${file}`;
     done.set(ref, next);

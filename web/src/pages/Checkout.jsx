@@ -1415,7 +1415,7 @@ const Checkout = () => {
                           </div>
                           {itemsByStore[id].map((item) => (
                             <div key={item.id} className={`co-m-item${item.unavailable ? ' is-unavailable' : ''}`}>
-                              <ProductImage src={item.image || item.images?.[0]} alt={item.name} className="co-m-item-img" />
+                              <ProductImage sizes="96px" src={item.image || item.images?.[0]} alt={item.name} className="co-m-item-img" />
                               <div className="co-m-item-info">
                                 <p className="co-m-item-name">{item.name}</p>
                                 {variationText(item) && <p className="co-m-item-var">{variationText(item)}</p>}

@@ -130,7 +130,7 @@ export default function ProductOptionSheet({
 
         <div className="pos-head">
           <div className="pos-thumb">
-            <ProductImage src={image} alt={product.name} />
+            <ProductImage sizes="96px" src={image} alt={product.name} />
           </div>
           <div className="pos-head-info">
             <div className="pos-price">

@@ -1069,16 +1069,15 @@ const notifySale = async (store, before, after) => {
     const when = startsLater
       ? ` from ${new Date(after.saleStartsAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' })}`
       : '';
-    for (const { userId } of fans) {
-      if (userId === store.ownerId) continue;
-      await notificationService.createNotification({
-        userId,
+    await notificationService.notifyMany(
+      fans.map((f) => f.userId).filter((id) => id !== store.ownerId),
+      {
         type: 'PRICE_DROP',
         title: `On sale: ${after.name}`,
         message: `Now ${peso(after.salePrice)} (was ${peso(after.price)})${when} at ${store.name}.`,
         relatedId: after.id,
-      });
-    }
+      },
+    );
   } catch (err) {
     console.error('[product] sale notification failed:', err.message);
   }
@@ -1226,7 +1225,7 @@ const updateProduct = async (productId, userId, rawData) => {
   // Now sold in Available Today windows: no stock until a window opens.
   if (!wasToday && kind === 'READY_TO_EAT' && Number(updated.stock) > 0) {
     await prisma.$transaction((tx) => availabilityRepository.setStockTx(tx, productId, 0, 'TODAY_SWITCH', productId, userId));
-    await productRepository.invalidateProductIds([productId]);
+    await productRepository.invalidateProductIds([productId], { lists: true });
     updated.stock = 0;
   }
 
@@ -1234,11 +1233,14 @@ const updateProduct = async (productId, userId, rawData) => {
     await removeReplacedModels(productId, product.model3d, updateData.model3d === Prisma.DbNull ? null : updateData.model3d);
   }
 
+  // Followers and wishlists hear about it after the seller has their answer
+  // (a shop with thousands of followers must not hold the save open). Both
+  // are best effort and never throw.
   if (updateData.stock !== undefined) {
-    await notifyRestock(store, product, updated);
+    setImmediate(() => notifyRestock(store, product, updated));
   }
   if (updateData.salePrice !== undefined || updateData.saleStartsAt !== undefined) {
-    await notifySale(store, product, updated);
+    setImmediate(() => notifySale(store, product, updated));
   }
 
   return stripStoreInternals(updated);
@@ -1312,7 +1314,7 @@ const adjustStock = async (productId, userId, body = {}) => {
     throw err;
   }
 
-  await notifyRestock(store, product, updated);
+  setImmediate(() => notifyRestock(store, product, updated));
   return stripStoreInternals(updated);
 };
 
@@ -1381,7 +1383,7 @@ const approveProduct = async (productId, adminId, actor) => {
   if (claimed.count === 0) {
     throw new ApiError('This product was already reviewed. Refresh to see it.', 409);
   }
-  await productRepository.invalidateProductIds([productId]);
+  await productRepository.invalidateProductIds([productId], { lists: true });
   const updated = await productRepository.findById(productId);
 
   let approvedStore = null;

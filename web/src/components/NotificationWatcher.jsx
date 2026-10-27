@@ -5,6 +5,7 @@ import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import { notificationHref } from '../lib/notificationLink';
 import { pollWhileVisible } from '../lib/visiblePoll';
+import { setNotificationCounts, refreshChatCounts, clearUnreadCounts } from '../lib/unreadCounts';
 
 /**
  * New notifications pop up while the site is open. Every half minute (and
@@ -17,6 +18,10 @@ import { pollWhileVisible } from '../lib/visiblePoll';
  * Nothing pops up for what was already there when the site opened, nor for
  * the page the person is already looking at. The bell and the sidebars
  * hear about it too ('emoorm:notifications'), to update their counts.
+ *
+ * This is also the site's one poller of the badge counts (lib/unreadCounts):
+ * each check hands the header, the sidebars and the chat bubble their
+ * counts, so none of them polls on its own.
  */
 
 const EVERY_MS = 30000;
@@ -50,7 +55,10 @@ export default function NotificationWatcher() {
   const userId = isAuthenticated ? user?.id : null;
 
   useEffect(() => {
-    if (!userId) return undefined;
+    if (!userId) {
+      clearUnreadCounts();
+      return undefined;
+    }
     let stopped = false;
     let lastCount = null;
     let newest = null;
@@ -62,7 +70,12 @@ export default function NotificationWatcher() {
     const check = async (look = false) => {
       if (stopped || document.visibilityState === 'hidden') return;
       try {
-        const countRes = await axios.get('/notifications/unread/count');
+        const [countRes] = await Promise.all([
+          axios.get('/notifications/unread/count'),
+          refreshChatCounts(),
+        ]);
+        if (stopped) return;
+        setNotificationCounts(countRes.data?.byAudience);
         const count = countRes.data?.count ?? 0;
         const first = newest === null;
         const grew = lastCount !== null && count > lastCount;

@@ -38,6 +38,9 @@ router.post(
     // original if the image cannot be processed, so an upload never fails
     // because of optimisation.
     const optimized = await optimizeUpload(req.file);
+    // The smaller copies for lists (lib/imageSizes), made after answering.
+    const stored = path.join(path.dirname(req.file.path), optimized.filename);
+    setImmediate(() => require('../lib/imageSizes').makeSizes(stored).catch(() => {}));
 
     successResponse(
       res,

@@ -1,5 +1,6 @@
 const prisma = require('../config/database');
 const { invalidateProductIds } = require('./product.repository');
+const { SETTLED_ORDER_STATUSES, refreshStatsForOrders } = require('./productStats.repository');
 const { changeStock, giveBack } = require('./stockLedger');
 const { stageWhere } = require('../utils/orderStages');
 const { isOpen } = require('../utils/availability');
@@ -504,7 +505,8 @@ const updateStatus = async (id, status, expectedStatus = null, actorId = null, n
   if (status === 'COMPLETED') data.completedAt = new Date();
   if (status === 'CANCELLED') data.cancelledAt = new Date();
 
-  return prisma.$transaction(async (tx) => {
+  let settledNow = false;
+  const updated = await prisma.$transaction(async (tx) => {
     const current = await tx.order.findUnique({
       where: { id },
       select: { status: true, paymentMethod: true, paymentStatus: true },
@@ -541,8 +543,14 @@ const updateStatus = async (id, status, expectedStatus = null, actorId = null, n
     await tx.orderStatusHistory.create({
       data: { orderId: id, fromStatus, toStatus: status, actorId, note: note || null },
     });
+    settledNow = SETTLED_ORDER_STATUSES.includes(status) && !SETTLED_ORDER_STATUSES.includes(fromStatus);
     return tx.order.findUnique({ where: { id } });
   });
+  // Handed over: its products' sold counts go up (kept on their rows).
+  if (settledNow) {
+    await refreshStatsForOrders([id]).catch((err) => console.error('[stats] sold count refresh failed:', err.message));
+  }
+  return updated;
 };
 
 /**

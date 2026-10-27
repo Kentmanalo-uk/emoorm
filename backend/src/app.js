@@ -256,6 +256,8 @@ app.use(express.urlencoded({ extended: true, limit: config.bodyLimit }));
 // browser then serves them without ever coming back here.
 app.use(
   '/uploads',
+  // A photo's smaller copy that is not made yet is made first (lib/imageSizes).
+  require('./lib/imageSizes').serveSized,
   immutableAsset,
   express.static(config.upload.uploadDir, {
     maxAge: config.httpCache.uploadsMaxAge * 1000,

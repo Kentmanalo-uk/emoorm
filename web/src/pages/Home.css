@@ -702,6 +702,13 @@
   position: relative;
 }
 
+/* Where the map goes until it loads (HomeStoresMapLazy): the map's own
+   border and ground colour, so the swap is not noticed. */
+.home-map-placeholder {
+  border: 1px solid var(--t-secondary-100, #dbe4df);
+  background: var(--t-neutral-150, #edf2ef);
+}
+
 .discover-stores-empty {
   position: absolute;
   inset: 0;

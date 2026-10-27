@@ -114,7 +114,7 @@ export default function Returns() {
                   <div className="order-items">
                     {lines.slice(0, 3).map((line) => (
                       <div key={line.id} className="order-item">
-                        <ProductImage
+                        <ProductImage sizes="96px"
                           src={lineImage(line.orderItem?.product, line.orderItem?.selectedVariations)}
                           alt={line.orderItem?.productName}
                           className="order-item-image"

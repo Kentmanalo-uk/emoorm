@@ -177,6 +177,23 @@ const startServer = async () => {
         const stats = await require('./src/services/privateMedia.service').migratePublicPhotos();
         if (stats.moved || stats.missing) console.log('[private-photos] moved from /uploads:', stats);
       }, 7 * 24 * 60 * 60 * 1000), 45 * 1000).unref();
+      // Smaller copies of photos uploaded before they existed (lib/
+      // imageSizes), one photo at a time; later runs find little to do.
+      const makeImageSizes = () => runtimeStatus.runJob('image-sizes', async () => {
+        const stats = await require('./src/lib/imageSizes').makeMissingSizes();
+        if (stats.made) console.log('[image-sizes] made:', stats);
+      }, 24 * 60 * 60 * 1000);
+      setTimeout(makeImageSizes, 5 * 60 * 1000).unref();
+      // The sold counts, ratings and search column kept on each product,
+      // checked against the orders and reviews (repositories/
+      // productStats.repository): puts right any change another path missed.
+      const reconcileProducts = () => runtimeStatus.runJob('product-stats', async () => {
+        const fixed = await require('./src/repositories/productStats.repository').reconcileAll();
+        if (fixed.figures || fixed.search) console.log('[product-stats] rows put right:', fixed);
+      }, 60 * 60 * 1000);
+      setTimeout(reconcileProducts, 2 * 60 * 1000).unref();
+      setInterval(reconcileProducts, 60 * 60 * 1000).unref();
+      setInterval(makeImageSizes, 24 * 60 * 60 * 1000).unref();
 
       // Signed-in sessions whose refresh token has expired are forgotten.
       const purgeSessions = () => runtimeStatus.runJob(
