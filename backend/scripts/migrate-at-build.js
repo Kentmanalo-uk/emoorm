@@ -13,8 +13,13 @@
  * Without DATABASE_URL in the build's environment this does nothing and the
  * server migrates at start-up as before (the fallback stays in server.js).
  *
+ * When it succeeds it leaves backend/.migrated-at-build, so the server does
+ * not run the migration again at start-up (another Prisma engine starting
+ * just as the new version boots is what runs the account out of processes).
+ *
  * Run: node backend/scripts/migrate-at-build.js (from anywhere).
  */
+const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 
@@ -24,6 +29,10 @@ require(path.join(backendDir, 'node_modules', 'dotenv')).config({ path: path.joi
 
 const redact = (text) => String(text || '').replace(/(\w+:\/\/[^:\s/]+:)[^@\s]+@/g, '$1****@');
 const RETRY_AFTER_MS = [5000, 15000, 30000];
+const MARKER = path.join(backendDir, '.migrated-at-build');
+
+// A marker from an earlier build must not stand for this one.
+fs.rmSync(MARKER, { force: true });
 
 if (!process.env.DATABASE_URL) {
   console.log('[migrate:build] No DATABASE_URL in the build environment: skipped. The server will migrate when it starts.');
@@ -39,6 +48,7 @@ const run = (attempt = 0) => {
       .filter((l) => !/Update available|prisma@latest|major-version-upgrade|^[│┌└]/.test(l));
     if (!err) {
       lines.forEach((line) => console.log(`[migrate:build] ${line}`));
+      fs.writeFileSync(MARKER, `${new Date().toISOString()}\n`);
       process.exit(0);
     }
     console.error(`[migrate:build] prisma migrate deploy failed (attempt ${attempt + 1}):`);

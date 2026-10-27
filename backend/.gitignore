@@ -7,3 +7,4 @@ dist
 /src/generated/prisma
 /uploads-private
 /.ocr-cache
+/.migrated-at-build

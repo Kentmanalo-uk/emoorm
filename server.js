@@ -5,16 +5,18 @@
  * emoorm.shop needs just this one Node app: pages and /api on one domain.
  *
  * Database migrations are applied by the build, before this version goes
- * live (backend/scripts/migrate-at-build.js). As a fallback it also runs
- * `prisma migrate deploy` shortly after it starts (it only runs migration
- * files already in the repo, in order; it never resets or drops the
- * database). Set RUN_MIGRATIONS=false to skip that.
+ * live (backend/scripts/migrate-at-build.js), which leaves
+ * backend/.migrated-at-build. Without that file (a build that could not
+ * migrate) it runs `prisma migrate deploy` shortly after it starts instead
+ * (it only runs migration files already in the repo, in order; it never
+ * resets or drops the database). Set RUN_MIGRATIONS=false to skip that.
  */
 // The hosting account has a cap on processes and threads (EAGAIN when it is
 // reached). Node's thread pool (file system, crypto, zlib, DNS) starts 4
 // threads; 2 are plenty here. Must be set before anything uses the pool.
 process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || '2';
 
+const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 
@@ -41,6 +43,13 @@ const runtimeStatus = require('./backend/src/lib/runtimeStatus');
 
 if (process.env.RUN_MIGRATIONS === 'false') {
   runtimeStatus.setMigrations('skipped');
+} else if (fs.existsSync(path.join(backendDir, '.migrated-at-build'))) {
+  // Already applied by this version's build. Running it again would start
+  // another Prisma engine just as the new version boots, while the old one is
+  // still shutting down: that ran the account out of processes, and the
+  // database stayed unreachable for minutes, for this site and MoorMove.
+  console.log('[migrate] Applied by the build.');
+  runtimeStatus.setMigrations('ok');
 } else {
   runtimeStatus.setMigrations('running');
   // Prisma's CLI, run with this same Node binary: Hostinger's runtime has no
@@ -50,7 +59,7 @@ if (process.env.RUN_MIGRATIONS === 'false') {
   // account can be out of processes for a moment: Prisma's engine then fails
   // to start (EAGAIN). Try again a few times; `migrate deploy` only applies
   // what is still pending, so another run is harmless.
-  const RETRY_AFTER_MS = [15000, 45000, 120000];
+  const RETRY_AFTER_MS = [15000, 45000, 120000, 300000, 600000];
   // The build applies migrations before the swap (backend/scripts/
   // migrate-at-build.js), so this is normally a quick "nothing pending". It
   // waits a few seconds so it does not compete with start-up itself.
@@ -67,10 +76,12 @@ if (process.env.RUN_MIGRATIONS === 'false') {
         // (503), so the host's checks and an uptime monitor notice.
         console.error(`[migrate] prisma migrate deploy failed (attempt ${attempt + 1}):`);
         lines.slice(0, 20).forEach((line) => console.error(`[migrate]   ${line}`));
-        runtimeStatus.setMigrations('failed');
         if (attempt < RETRY_AFTER_MS.length) {
           setTimeout(() => migrate(attempt + 1), RETRY_AFTER_MS[attempt]).unref();
+          return;
         }
+        // Out of tries: unhealthy until the next start.
+        runtimeStatus.setMigrations('failed');
         return;
       }
       lines.forEach((line) => console.log(`[migrate] ${line}`));
