@@ -172,7 +172,10 @@ app.use(compression());
 // step gets its own bucket: a household behind one address that registers
 // twice should not be locked out of signing in, and a password guess should
 // not spend the register quota.
-const authLimiter = () => rateLimit({
+// Counted in the database: a restart does not hand out fresh tries.
+const authLimiter = (step) => rateLimit({
+  store: require('./lib/securityCounters').keptStore(`auth-${step}`),
+  passOnStoreError: true,
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
@@ -360,7 +363,7 @@ if (config.nodeEnv === 'development') {
 for (const step of ['login', 'register', 'forgot-password', 'qr/create', 'google/app/exchange', 'google', 'change-password']) {
   // Google sign-in steps (one of them hashes a new password), changing the
   // password (a stolen session guessing the current one).
-  app.use(`${config.apiPrefix}/auth/${step}`, authLimiter());
+  app.use(`${config.apiPrefix}/auth/${step}`, authLimiter(step));
 }
 
 // Renewing a session: a generous limit (each tab renews on its own), but a
@@ -406,6 +409,15 @@ const healthDetailAllowed = (req) => {
   if (token && given && given.length === token.length && require('crypto').timingSafeEqual(Buffer.from(given), Buffer.from(token))) return true;
   return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket?.remoteAddress) && !req.get('x-forwarded-for');
 };
+// For an uptime monitor (with HEALTH_TOKEN): its call wakes a server the
+// host put to sleep, and starts every background job that is due (one that
+// no copy of the server ran within its interval). Answers which it started.
+app.get('/health/run-jobs', (req, res) => {
+  if (!healthDetailAllowed(req)) return res.status(404).json({ success: false, message: 'Not found' });
+  const started = require('./lib/runtimeStatus').runDue();
+  return res.json({ success: true, started, timestamp: new Date().toISOString() });
+});
+
 app.get('/health', async (req, res) => {
   if (Date.now() - healthCache.at < 5000 && healthCache.body) {
     const { body, status } = healthCache;
@@ -429,7 +441,9 @@ app.get('/health', async (req, res) => {
     runtime.migrations === 'failed' && 'Database migrations failed',
     runtime.lateJobs.length > 0 && `Background jobs late: ${runtime.lateJobs.join(', ')}`,
   ].filter(Boolean);
-  const { isResendConfigured, isSmtpConfigured } = require('./utils/email');
+  const { isResendConfigured, isSmtpConfigured, outboxCounts } = require('./utils/email');
+  // Emails waiting to be sent again, and those given up on (reported only).
+  const outbox = db === 'up' ? await outboxCounts().catch(() => null) : null;
   const body = {
     success: problems.length === 0,
     message: problems.length ? problems.join('; ') : 'Server is healthy',
@@ -437,6 +451,7 @@ app.get('/health', async (req, res) => {
     migrations: runtime.migrations,
     jobs: runtime.jobs,
     email: isResendConfigured() ? 'resend' : isSmtpConfigured() ? 'smtp' : 'none',
+    emailOutbox: outbox,
     cache: require('./lib/cache').getStats(),
     load: overloadStats(),
     timestamp: new Date().toISOString(),

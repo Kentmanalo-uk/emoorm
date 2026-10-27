@@ -12,6 +12,7 @@ import {
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
+import LoadFailed from '../components/ui/LoadFailed';
 import ReportModal from '../components/ReportModal';
 import Skeleton from '../components/ui/Skeleton';
 import ProductImage from '../components/ProductImage';
@@ -19,6 +20,16 @@ import { BusyLabel } from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
 import axios from '../lib/axios';
 import { resolveImg, parseImages, srcSetFor } from '../lib/media';
+
+// A smaller copy of the photo failed: the photo itself, then the placeholder.
+const photoFallback = (e) => {
+  const img = e.currentTarget;
+  if (img.srcset) {
+    img.removeAttribute('srcset');
+    return;
+  }
+  img.src = '/placeholder-product.png';
+};
 import useCartStore, { standaloneLine } from '../store/cartStore';
 import { startBuyNow } from '../lib/buyNow';
 import useAuthStore from '../store/authStore';
@@ -216,6 +227,9 @@ const ProductDetails = () => {
   // A product seen before shows at once while it is asked for again.
   const [product, setProduct] = useState(() => readCache(`product:${slug}`) || null);
   const [isLoading, setIsLoading] = useState(() => !readCache(`product:${slug}`));
+  // It could not be asked for (offline, the server busy) and no copy is
+  // saved: "Couldn't load", not "Product not found" (it may well exist).
+  const [loadFailed, setLoadFailed] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariations, setSelectedVariations] = useState({});
@@ -308,6 +322,7 @@ const ProductDetails = () => {
     // minimum order, nothing picked), from its saved copy when it has one.
     // The fresh copy then only updates it, so a choice already made is kept.
     const kept = readCache(`product:${slug}`);
+    setLoadFailed(false);
     setSelectedImage(0);
     setQuantity(minOrder(kept));
     setSelectedVariations({});
@@ -338,6 +353,8 @@ const ProductDetails = () => {
         writeCache(`product:${slug}`, null);
         toast.error('Product not found');
         navigate('/products', { replace: true });
+      } else if (!kept) {
+        setLoadFailed(true);
       }
     } finally {
       setIsLoading(false);
@@ -770,6 +787,10 @@ const ProductDetails = () => {
     );
   }
 
+  if (!product && loadFailed) {
+    return <Layout><LoadFailed what="this product" onRetry={fetchProduct} page /></Layout>;
+  }
+
   if (!product) {
     return (
       <Layout>
@@ -987,7 +1008,7 @@ const ProductDetails = () => {
                         sizes="100vw"
                         alt={i === 0 ? product.name : `${product.name} ${i + 1}`}
                         loading={i === 0 ? 'eager' : 'lazy'}
-                        onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
+                        onError={photoFallback}
                       />
                     </div>
                   ))}
@@ -1093,7 +1114,7 @@ const ProductDetails = () => {
                     className={`pdp-thumb ${selectedImage === i ? 'is-active' : ''}`}
                     aria-label={`View image ${i + 1}`}
                   >
-                    <img src={resolveImg(img) || img} srcSet={srcSetFor(img)} sizes="80px" alt={`${product.name} ${i + 1}`} onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }} />
+                    <img src={resolveImg(img) || img} srcSet={srcSetFor(img)} sizes="80px" alt={`${product.name} ${i + 1}`} onError={photoFallback} />
                   </button>
                 ))}
               </div>

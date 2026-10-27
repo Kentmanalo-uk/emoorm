@@ -5,7 +5,11 @@ const controller = require('../controllers/account.controller');
 const { authenticate, authorize } = require('../middleware/auth');
 
 // A full export reads every table the user appears in: a few a day is plenty.
+const { keptStore } = require('../lib/securityCounters');
+
 const exportLimiter = rateLimit({
+  store: keptStore('account-export'),
+  passOnStoreError: true,
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,
@@ -15,6 +19,8 @@ const exportLimiter = rateLimit({
 
 // Guessing the password here is as sensitive as at the login.
 const closeLimiter = rateLimit({
+  store: keptStore('account-close'),
+  passOnStoreError: true,
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,

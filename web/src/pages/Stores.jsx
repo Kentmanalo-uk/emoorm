@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
+import LoadFailed from '../components/ui/LoadFailed';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MagnifyingGlass as Search, MapPin, Package, CaretLeft as ChevronLeft, CaretRight as ChevronRight, X,
@@ -35,6 +36,8 @@ export default function Stores() {
   const [kept] = useState(() => readCache(listKey(page, searchQuery, municipalityId)));
   const [stores, setStores] = useState(() => kept?.stores || []);
   const [isLoading, setIsLoading] = useState(() => !kept);
+  // The list could not be asked for and nothing is saved: not "No stores yet".
+  const [loadFailed, setLoadFailed] = useState(false);
   const [pagination, setPagination] = useState(() => kept?.pagination || { total: 0, totalPages: 0 });
   // Only the latest request is shown: an earlier one can answer after it.
   const latestRequest = useRef(0);
@@ -43,6 +46,7 @@ export default function Stores() {
     const request = ++latestRequest.current;
     const key = listKey(page, searchQuery, municipalityId);
     const saved = readCache(key);
+    setLoadFailed(false);
     if (saved) {
       setStores(saved.stores || []);
       if (saved.pagination) setPagination(saved.pagination);
@@ -69,6 +73,7 @@ export default function Stores() {
       }, { visitOnly: page !== 1 || Boolean(searchQuery || municipalityId) });
     } catch (err) {
       console.error('Failed to fetch stores:', err);
+      if (request === latestRequest.current && !saved) setLoadFailed(true);
     } finally {
       if (request === latestRequest.current) setIsLoading(false);
     }
@@ -205,7 +210,7 @@ export default function Stores() {
           )}
 
           {/* Results count */}
-          {!isLoading && (
+          {!isLoading && !loadFailed && (
             <p className="stores-count">
               {pagination.total > 0
                 ? <>
@@ -223,6 +228,8 @@ export default function Stores() {
           {/* Store grid */}
           {isLoading ? (
             <StoreCardsSkeleton count={6} />
+          ) : loadFailed ? (
+            <LoadFailed what="the stores" onRetry={fetchStores} />
           ) : stores.length === 0 ? (
             isPhone ? (
               <div className="stores-m-empty">

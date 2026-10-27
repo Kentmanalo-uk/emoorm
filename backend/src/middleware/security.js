@@ -1,5 +1,9 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const config = require('../config/env');
+// The limits that guard accounts and money are counted in the database, so
+// a restart does not reset them (lib/securityCounters); the rest stay in
+// memory.
+const { keptStore } = require('../lib/securityCounters');
 
 // Keyed on the account when there is one: a throwaway account cannot fill
 // the disk by rotating addresses, and a household behind one address does
@@ -24,6 +28,8 @@ const imageSearchLimiter = rateLimit({
 // Submitting a seller application notifies every municipal admin, so it is
 // capped the same way identity verification is.
 const sellerApplyLimiter = rateLimit({
+  store: keptStore('seller-apply'),
+  passOnStoreError: true,
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,
@@ -38,6 +44,8 @@ const sellerApplyLimiter = rateLimit({
 // attacker clears that in minutes. This is the control that makes the second
 // factor worth having.
 const mfaLimiter = rateLimit({
+  store: keptStore('mfa'),
+  passOnStoreError: true,
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
@@ -55,6 +63,8 @@ const mfaLimiter = rateLimit({
 // no matter how many IPs the requests come from. Normalised so that
 // spacing and letter case cannot be used to mint fresh buckets.
 const forgotPasswordEmailLimiter = rateLimit({
+  store: keptStore('forgot-email'),
+  passOnStoreError: true,
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,
@@ -70,6 +80,8 @@ const forgotPasswordEmailLimiter = rateLimit({
 // probe. The ceiling is higher because a shared public IP — a household, an
 // internet cafe, a mobile CGNAT range — may hold several real people.
 const forgotPasswordIpLimiter = rateLimit({
+  store: keptStore('forgot-ip'),
+  passOnStoreError: true,
   windowMs: 60 * 60 * 1000,
   max: 20,
   standardHeaders: true,
@@ -83,6 +95,8 @@ const forgotPasswordIpLimiter = rateLimit({
 // Password reset tokens are long and random, but the endpoint should still
 // not be a free oracle to hammer.
 const passwordResetLimiter = rateLimit({
+  store: keptStore('password-reset'),
+  passOnStoreError: true,
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
@@ -99,6 +113,8 @@ const passwordResetLimiter = rateLimit({
 // doing nothing extra against an attacker with several accounts. The account
 // is the thing worth limiting, and `authenticate` has already established it.
 const checkoutLimiter = rateLimit({
+  store: keptStore('checkout'),
+  passOnStoreError: true,
   windowMs: 10 * 60 * 1000,
   max: 40,
   standardHeaders: true,
@@ -113,6 +129,8 @@ const checkoutLimiter = rateLimit({
 // endpoint is a code-guessing oracle. Keyed on the account for the same
 // reason as checkout.
 const voucherValidateLimiter = rateLimit({
+  store: keptStore('voucher'),
+  passOnStoreError: true,
   windowMs: 10 * 60 * 1000,
   max: 30,
   standardHeaders: true,
@@ -132,6 +150,8 @@ const isLocalNetworkOrigin = (origin) => config.nodeEnv !== 'production' && PRIV
 // Switching between saved accounts (and adopting old saved sessions): a
 // person switches a handful of times; a script trying cookies does not get far.
 const sessionSwitchLimiter = rateLimit({
+  store: keptStore('session-switch'),
+  passOnStoreError: true,
   windowMs: 15 * 60 * 1000,
   max: 30,
   standardHeaders: true,

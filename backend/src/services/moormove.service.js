@@ -599,9 +599,9 @@ const book = async (orderId, sellerUserId) => {
 const PARCEL_AWAY = 'The rider is still bringing the parcel back. Tap Parcel back once it is at your shop.';
 
 /** The order's own unpaid failed-trip fee goes on it (see unpaidFee.addToOwnOrder): what was added. */
-async function addOwnFee(order) {
+async function addOwnFee(order, options) {
   try {
-    return await unpaidFeeService.addToOwnOrder(order);
+    return await unpaidFeeService.addToOwnOrder(order, options);
   } catch (err) {
     if (err.code === 'UNPAID_FEES_CHANGED') throw new ApiError('This order changed. Refresh and try again.', 409);
     throw err;
@@ -645,11 +645,15 @@ const deliverMyself = async (orderId, sellerUserId) => {
   if (row?.status === 'RETURNING') throw new ApiError(PARCEL_AWAY, 409);
   if (isOpen(row)) throw new ApiError('Cancel the rider first', 409);
   if (!BOOKABLE_FROM.includes(order.status)) throw new ApiError('This order is past that step', 409);
-  const { count } = await prisma.order.updateMany({
-    where: { id: order.id, deliveryPartner: 'MOORMOVE' },
-    data: { deliveryPartner: null, riderFallbackAt: new Date() },
+  // The switch and the unpaid fee it brings are one write: if the fee cannot
+  // be added (it changed meanwhile), the order stays a rider order.
+  const { count, added } = await prisma.$transaction(async (tx) => {
+    const switched = await tx.order.updateMany({
+      where: { id: order.id, deliveryPartner: 'MOORMOVE' },
+      data: { deliveryPartner: null, riderFallbackAt: new Date() },
+    });
+    return { count: switched.count, added: switched.count ? await addOwnFee(order, { tx }) : 0 };
   });
-  const added = count ? await addOwnFee(order) : 0;
   if (count) {
     const fee = Number(order.deliveryFee || 0);
     notificationService.createNotification({

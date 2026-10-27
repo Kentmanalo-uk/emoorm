@@ -34,6 +34,7 @@ import {
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
+import LoadFailed from '../components/ui/LoadFailed';
 import ReportModal from '../components/ReportModal';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
@@ -146,6 +147,9 @@ export default function StoreDetail() {
   const [products, setProducts] = useState(() => keptProducts?.products || []);
   const [pagination, setPagination] = useState(() => keptProducts?.pagination || { total: 0, totalPages: 0 });
   const [isLoadingStore, setIsLoadingStore] = useState(() => !store);
+  // The shop could not be asked for (offline, the server busy) and no copy
+  // of it is saved: say so, with Try again, rather than a blank page.
+  const [storeFailed, setStoreFailed] = useState(false);
   const [isLoadingProducts, setIsLoadingProducts] = useState(() => !keptProducts);
   const [showReport, setShowReport] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
@@ -174,10 +178,13 @@ export default function StoreDetail() {
   const fetchStore = async () => {
     const request = ++storeRequest.current;
     const kept = readCache(storeKey(slug));
+    setStoreFailed(false);
     if (kept) {
       setStore(kept);
       setIsLoadingStore(false);
     } else {
+      // Not the shop of the page before.
+      setStore(null);
       setIsLoadingStore(true);
     }
     try {
@@ -208,8 +215,10 @@ export default function StoreDetail() {
         // Gone (or hidden now): forget the saved copy too.
         writeCache(storeKey(slug), null);
         navigate('/stores');
+      } else if (kept) {
+        toast.error('Could not refresh this shop. Showing what was saved.');
       } else {
-        toast.error('Failed to load store');
+        setStoreFailed(true);
       }
     } finally {
       if (request === storeRequest.current) setIsLoadingStore(false);
@@ -470,7 +479,11 @@ export default function StoreDetail() {
     );
   }
 
-  if (!store) return null;
+  if (!store) {
+    return storeFailed
+      ? <Layout><LoadFailed what="this shop" onRetry={fetchStore} page /></Layout>
+      : null;
+  }
 
   const initials = store.name
     ? store.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()

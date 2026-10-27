@@ -7,6 +7,7 @@ import {
   Smiley, Truck, Laptop, Coffee, NotePencil, ArrowCounterClockwise, UsersThree, IdentificationCard,
   MagnifyingGlass, Flag, ChatTeardropText, SquaresFour, ShoppingCart, UserPlus, Megaphone,
   ImageSquare, UploadSimple, Ticket, Percent, Headset, Images, Camera, Key, DeviceMobile, Handshake,
+  WifiSlash, ArrowClockwise,
 } from '@phosphor-icons/react';
 import './EmptyArt.css';
 
@@ -73,6 +74,8 @@ const SCENES = {
   workspace: { layout: 'card', main: Laptop, a: Coffee, b: NotePencil },
   calendar: { layout: 'card', main: CalendarBlank, a: Clock, b: CheckCircle },
   security: { layout: 'card', main: ShieldCheck, a: Key, b: DeviceMobile },
+  // Something did not load (components/ui/LoadFailed).
+  offline: { layout: 'card', main: WifiSlash, a: ArrowClockwise, b: Clock },
 };
 
 // The scene is 200 × 160; it is drawn a quarter larger than the `size`

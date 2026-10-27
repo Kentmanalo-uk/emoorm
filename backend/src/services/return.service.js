@@ -337,7 +337,9 @@ const markRefunded = async (id, seller, payload) => {
     throw new ApiError('Refund amount exceeds approved amount', 400);
   }
 
-  const updated = await returnRepository.updateRequest(id, {
+  // The return and the order's payment status change together
+  // (returnRepository.refundTx).
+  const updated = await returnRepository.refundTx(id, request.orderId, {
     status: 'REFUNDED',
     refundedAmount,
     refundMethod: method,
@@ -351,20 +353,6 @@ const markRefunded = async (id, seller, payload) => {
       reference: payload.refundReference || null,
     }),
   }, { fromStatus: ['APPROVED', 'RECEIVED'] }).catch(staleReturn);
-
-  // Reflect the refund on the order itself: fully refunded once the refunded
-  // returns cover what was paid for the items (after any voucher; returns
-  // never include the delivery fee), partially until then.
-  try {
-    const totalRefunded = await returnRepository.sumRefundedForOrder(request.orderId);
-    const order = updated.order || request.order || {};
-    const itemsPaid = Math.max(0, Number(order.subtotal ?? order.total ?? 0) - Number(order.discountAmount || 0));
-    await orderRepository.updateOrder(request.orderId, {
-      paymentStatus: totalRefunded + 0.005 >= itemsPaid ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
-    });
-  } catch (err) {
-    console.error('[markRefunded] order payment status update failed:', err.message);
-  }
 
   await notify(
     request.buyerId,

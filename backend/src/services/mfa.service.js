@@ -7,19 +7,32 @@ const { generateMfaToken, verifyMfaToken } = require('../utils/jwt');
 const { ApiError } = require('../middleware/errorHandler');
 const sessionService = require('./session.service');
 const { makeGuard } = require('../utils/attemptGuard');
+const counters = require('../lib/securityCounters');
 
 // A sign-in's code step: five wrong codes spend the step-up token, and a
 // token that completed a sign-in is not accepted again. Six digits are
 // guessable by a script that may try without limit; this is the limit.
+// Kept in the database (lib/securityCounters): a restart does not reset it.
 const MFA_TRY_LIMIT = 5;
-const codeTries = makeGuard({ limit: MFA_TRY_LIMIT, windowMs: 10 * 60 * 1000 });
-const spentTokens = makeGuard({ limit: 1, windowMs: 10 * 60 * 1000 });
-const assertStepUsable = (decoded) => {
+const STEP_WINDOW_MS = 10 * 60 * 1000;
+const codeTries = makeGuard({ name: 'mfa-code', limit: MFA_TRY_LIMIT, windowMs: STEP_WINDOW_MS });
+const spentTokens = makeGuard({ name: 'mfa-step', limit: 1, windowMs: STEP_WINDOW_MS });
+const assertStepUsable = async (decoded) => {
   const id = decoded?.jti;
   if (!id) return;
-  if (spentTokens.lockedFor(id) || codeTries.lockedFor(id)) {
+  const [spent, tried] = await Promise.all([spentTokens.lockedFor(id), codeTries.lockedFor(id)]);
+  if (spent || tried) {
     throw new ApiError('MFA session expired, please sign in again', 401);
   }
+};
+
+/**
+ * Spend a sign-in's step-up token: true for the one request that does it
+ * (two requests at once with the same token: only the first goes on).
+ */
+const spendStep = async (decoded) => {
+  if (!decoded?.jti) return true;
+  return (await counters.hit(`mfa-step:${decoded.jti}`, STEP_WINDOW_MS)).hits === 1;
 };
 
 const ISSUER = 'Emoorm Admin';
@@ -187,15 +200,10 @@ const regenerateBackupCodes = async (userId, code) => {
  */
 // A six-digit code just accepted for an account is not accepted again while
 // it could still be valid (someone who saw it over a shoulder, or a second
-// send of the same request). One process: kept in memory.
-const recentCodes = new Map(); // userId -> { code, until }
+// send of the same request). Kept in the database, and claimed in one step:
+// of two requests with the same code, only the first is taken.
 const REUSE_WINDOW_MS = 2 * 60 * 1000;
-const codeWasJustUsed = (userId, code) => {
-  const now = Date.now();
-  for (const [id, entry] of recentCodes) if (entry.until < now) recentCodes.delete(id);
-  const entry = recentCodes.get(userId);
-  return Boolean(entry && entry.code === code && entry.until >= now);
-};
+const claimCode = async (userId, code) => (await counters.hit(`mfa-used:${userId}:${code}`, REUSE_WINDOW_MS)).hits === 1;
 
 /**
  * A signed-in admin's current authenticator code, asked again before a step
@@ -206,10 +214,9 @@ const confirmCode = async (userId, code) => {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { mfaEnabled: true, mfaSecret: true } });
   if (!user?.mfaEnabled || !user.mfaSecret) throw new ApiError('Set up two-factor sign-in first', 403);
   const trimmed = String(code || '').replace(/\s/g, '');
-  if (!/^\d{6}$/.test(trimmed) || codeWasJustUsed(userId, trimmed) || !verifyTotp(user.mfaSecret, trimmed)) {
+  if (!/^\d{6}$/.test(trimmed) || !verifyTotp(user.mfaSecret, trimmed) || !await claimCode(userId, trimmed)) {
     throw new ApiError('That code is not right. Enter the 6-digit code from your authenticator app.', 400);
   }
-  recentCodes.set(userId, { code: trimmed, until: Date.now() + REUSE_WINDOW_MS });
 };
 
 const verifyLogin = async (mfaToken, code) => {
@@ -219,7 +226,7 @@ const verifyLogin = async (mfaToken, code) => {
   } catch {
     throw new ApiError('MFA session expired, please sign in again', 401);
   }
-  assertStepUsable(decoded);
+  await assertStepUsable(decoded);
 
   const user = await prisma.user.findUnique({ where: { id: decoded.id } });
   if (user && (user.deletedAt || !user.isActive)) throw new ApiError('Account is not active', 403);
@@ -233,8 +240,7 @@ const verifyLogin = async (mfaToken, code) => {
   let usedBackup = false;
 
   if (/^\d{6}$/.test(trimmed)) {
-    ok = !codeWasJustUsed(user.id, trimmed) && verifyTotp(user.mfaSecret, trimmed);
-    if (ok) recentCodes.set(user.id, { code: trimmed, until: Date.now() + REUSE_WINDOW_MS });
+    ok = verifyTotp(user.mfaSecret, trimmed) && await claimCode(user.id, trimmed);
   } else {
     // Treat as backup code. It is crossed off only if the list is still the
     // one it was found in, so two requests cannot both spend the same code.
@@ -253,10 +259,10 @@ const verifyLogin = async (mfaToken, code) => {
   }
 
   if (!ok) {
-    if (decoded.jti) codeTries.fail(decoded.jti);
+    if (decoded.jti) await codeTries.fail(decoded.jti);
     throw new ApiError('Invalid verification code', 401);
   }
-  if (decoded.jti) spentTokens.fail(decoded.jti);
+  if (!await spendStep(decoded)) throw new ApiError('MFA session expired, please sign in again', 401);
 
   await prisma.user.update({
     where: { id: user.id },
@@ -281,15 +287,15 @@ const completeSetupDuringLogin = async (mfaToken, code) => {
   } catch {
     throw new ApiError('MFA setup session expired, please sign in again', 401);
   }
-  assertStepUsable(decoded);
+  await assertStepUsable(decoded);
   let setup;
   try {
     setup = await completeSetup(decoded.id, code);
   } catch (err) {
-    if (decoded.jti) codeTries.fail(decoded.jti);
+    if (decoded.jti) await codeTries.fail(decoded.jti);
     throw err;
   }
-  if (decoded.jti) spentTokens.fail(decoded.jti);
+  if (!await spendStep(decoded)) throw new ApiError('MFA setup session expired, please sign in again', 401);
   const user = await userRepository.findById(decoded.id);
   const tokens = await sessionService.issue(user);
   return { user, ...tokens, backupCodes: setup.backupCodes };

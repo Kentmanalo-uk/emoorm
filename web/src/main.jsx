@@ -10,6 +10,18 @@ import { startCuratedTagalog } from './lib/tagalog';
 import { bootTheme } from './hooks/useTheme';
 import { setupPwaInstall } from './lib/pwaInstall';
 import { startFreshnessWatch } from './lib/freshness';
+import { guardAgainstTranslate } from './lib/translateGuard';
+import ErrorBoundary from './components/ErrorBoundary';
+import { reloadForNewVersion } from './lib/reloadForUpdate';
+
+// Translation (ours or the browser's) rewrites the page's text; React must
+// not crash on the nodes it moved (lib/translateGuard).
+guardAgainstTranslate();
+// A page's code that a deploy replaced while this tab was open: reload once
+// for the new version instead of failing (lib/reloadForUpdate).
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadForNewVersion()) event.preventDefault();
+});
 
 // Google's translator loads only for someone who chose another language
 // (choosing one reloads the page); English pages skip its scripts.
@@ -62,8 +74,10 @@ if (!GOOGLE_CLIENT_ID && import.meta.env.PROD) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <App />
-    </GoogleOAuthProvider>
+    <ErrorBoundary>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <App />
+      </GoogleOAuthProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );

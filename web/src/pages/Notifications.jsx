@@ -14,6 +14,7 @@ import useAuthStore from '../store/authStore';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import EmptyArt from '../components/ui/EmptyArt';
 import EmptyState from '../components/ui/EmptyState';
+import LoadFailed from '../components/ui/LoadFailed';
 import MoreMenu from '../components/MoreMenu';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useEntryState from '../hooks/useEntryState';
@@ -114,6 +115,8 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   // Each group's unread count (chats | orders | alerts | promos).
   const [unreadByCategory, setUnreadByCategory] = useState(() => saved?.unreadByCategory || {});
   const [isLoading, setIsLoading] = useState(() => !saved);
+  // The list could not be asked for and nothing is saved: not "No notifications yet".
+  const [loadFailed, setLoadFailed] = useState(false);
   // The filter, page and search of this visit: Back from a notification
   // finds the list as it was left.
   const [filter, setFilter] = useEntryState('filter', 'all'); // all | unread
@@ -157,6 +160,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
     const firstView = filter === 'all' && page === 1 && !search && !category;
     const kept = firstView ? readCache(cacheKey) : undefined;
     firstViewFresh.current = false;
+    setLoadFailed(false);
     if (kept) {
       setNotifications(kept.items || []);
       setUnreadCount(kept.unreadCount ?? 0);
@@ -179,7 +183,8 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
       firstViewFresh.current = firstView;
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load notifications');
+      if (kept) toast.error('Could not refresh your notifications');
+      else setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -435,6 +440,8 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
               <div key={i} className="notif-skeleton" />
             ))}
           </div>
+        ) : loadFailed ? (
+          <LoadFailed what="your notifications" onRetry={fetchNotifications} />
         ) : notifications.length === 0 && !isSeller ? (
           <EmptyState
             className="notif-empty-state"

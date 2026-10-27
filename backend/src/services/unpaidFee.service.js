@@ -104,11 +104,14 @@ const recordFailedTrip = async (order, row) => {
  * The shop sends a failed cash-on-delivery order out again: the buyer's
  * unpaid fee for its own failed trip goes on it (its total and the cash the
  * rider collects). Nothing for a fee already on another order.
+ * `tx`: run inside the caller's transaction (it then stands or falls with
+ * the caller's other writes).
  * @returns {Promise<Number>} what was added
  */
-const addToOwnOrder = async (order) => {
+const addToOwnOrder = async (order, { tx: outer } = {}) => {
   if (!order || order.paymentMethod !== 'COD') return 0;
-  return prisma.$transaction(async (tx) => {
+  const inTx = (run) => (outer ? run(outer) : prisma.$transaction(run));
+  return inTx(async (tx) => {
     const fees = await tx.buyerUnpaidFee.findMany({
       where: { orderId: order.id, status: 'OPEN', paidOrderId: null },
       select: { id: true, amount: true },

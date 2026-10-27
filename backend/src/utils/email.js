@@ -102,7 +102,7 @@ const getTransporter = () => {
  *          that must not fail on a send error catch it themselves.
  * `attachments`: [{ filename, content: Buffer }] (the backup email).
  */
-const sendMail = async ({ to, subject, html, text, attachments }) => {
+const deliver = async ({ to, subject, html, text, attachments }) => {
   const from = config.resend?.from || config.email?.from || 'noreply@emoorm.shop';
 
   if (isResendConfigured()) {
@@ -141,6 +141,124 @@ const sendMail = async ({ to, subject, html, text, attachments }) => {
     delivered: kind === 'smtp',
     transport: kind,
   };
+};
+
+// ── Outbox: an email the provider could not take now is sent later ──────
+// A failure that may pass (the provider down, slow or rate limiting, the
+// network gone) puts the email in email_outbox, and the email-outbox job
+// (server.js) tries again: after 2, 4, 8… minutes, eight tries in all (about
+// eight hours). A refusal that will not pass (an address the provider
+// rejects) still throws. Emails with attachments (the backup) are not kept.
+
+const OUTBOX_MAX_ATTEMPTS = 8;
+const OUTBOX_KEEP_DAYS = 14;
+// The provider's own word for a message it will never take.
+const PERMANENT = /validation|invalid|not allowed|forbidden|unauthori[sz]ed|missing_required|restricted/i;
+
+const isPermanent = (err) => PERMANENT.test(`${err?.name || ''} ${err?.message || ''}`);
+const nextAttemptAfter = (attempts) => new Date(Date.now() + 2 ** Math.min(attempts, 8) * 60 * 1000);
+const outboxDb = () => require('../config/database');
+
+// Tests replace the transport with one that fails on purpose.
+let deliverNow = deliver;
+const setDeliverForTests = (fn) => { deliverNow = fn || deliver; };
+
+/**
+ * Send one message (Resend, else SMTP, else the dev transport). When it
+ * cannot be sent now for a reason that may pass, it is queued and sent later
+ * (see above): the answer then says `queued: true` and nothing is thrown.
+ *
+ * @returns {Promise<{ messageId: string|null, delivered: boolean, transport: string, queued?: boolean }>}
+ * @throws  {Error} when the message is refused for good, or cannot be queued
+ */
+const sendMail = async (message) => {
+  try {
+    return await deliverNow(message);
+  } catch (err) {
+    if (isPermanent(err) || message.attachments?.length) throw err;
+    try {
+      await outboxDb().emailOutbox.create({
+        data: {
+          to: String(message.to).slice(0, 320),
+          subject: String(message.subject || '').slice(0, 300),
+          html: message.html || null,
+          text: message.text || null,
+          lastError: String(err?.message || err).slice(0, 500),
+          nextAttemptAt: nextAttemptAfter(1),
+        },
+      });
+    } catch (queueErr) {
+      console.error('[email] could not queue a failed email:', queueErr.message);
+      throw err;
+    }
+    console.error(`[email] send failed, queued to try again: ${err?.message || err}`);
+    return { messageId: null, delivered: false, transport: 'outbox', queued: true };
+  }
+};
+
+/**
+ * Try the queued emails that are due (the email-outbox job). Each is claimed
+ * first, so two servers running at once (a deploy) never send one twice.
+ * @returns {Promise<{ sent: Number, failed: Number, gaveUp: Number }>}
+ */
+const flushOutbox = async ({ limit = 20 } = {}) => {
+  const db = outboxDb();
+  const now = new Date();
+  const stats = { sent: 0, failed: 0, gaveUp: 0 };
+  // Given up on two weeks ago: gone.
+  await db.emailOutbox.deleteMany({ where: { attempts: { gte: OUTBOX_MAX_ATTEMPTS }, createdAt: { lt: new Date(now - OUTBOX_KEEP_DAYS * 86400e3) } } });
+  const due = await db.emailOutbox.findMany({
+    where: {
+      attempts: { lt: OUTBOX_MAX_ATTEMPTS },
+      nextAttemptAt: { lte: now },
+      OR: [{ claimedUntil: null }, { claimedUntil: { lt: now } }],
+    },
+    orderBy: { nextAttemptAt: 'asc' },
+    take: limit,
+  });
+  for (const row of due) {
+    // eslint-disable-next-line no-await-in-loop
+    const claimed = await db.emailOutbox.updateMany({
+      where: { id: row.id, OR: [{ claimedUntil: null }, { claimedUntil: { lt: new Date() } }] },
+      data: { claimedUntil: new Date(Date.now() + 5 * 60 * 1000) },
+    });
+    if (!claimed.count) continue;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await deliverNow({ to: row.to, subject: row.subject, html: row.html || undefined, text: row.text || undefined });
+      // eslint-disable-next-line no-await-in-loop
+      await db.emailOutbox.delete({ where: { id: row.id } });
+      stats.sent += 1;
+    } catch (err) {
+      const attempts = row.attempts + 1;
+      const gaveUp = attempts >= OUTBOX_MAX_ATTEMPTS || isPermanent(err);
+      // eslint-disable-next-line no-await-in-loop
+      await db.emailOutbox.update({
+        where: { id: row.id },
+        data: {
+          attempts: gaveUp ? OUTBOX_MAX_ATTEMPTS : attempts,
+          lastError: String(err?.message || err).slice(0, 500),
+          nextAttemptAt: nextAttemptAfter(attempts),
+          claimedUntil: null,
+        },
+      });
+      if (gaveUp) {
+        stats.gaveUp += 1;
+        console.error(`[email] gave up on an email to ${row.to} after ${attempts} tries: ${err?.message || err}`);
+      } else stats.failed += 1;
+    }
+  }
+  return stats;
+};
+
+/** Emails waiting in the outbox, and those given up on (for /health). */
+const outboxCounts = async () => {
+  const db = outboxDb();
+  const [waiting, gaveUp] = await Promise.all([
+    db.emailOutbox.count({ where: { attempts: { lt: OUTBOX_MAX_ATTEMPTS } } }),
+    db.emailOutbox.count({ where: { attempts: { gte: OUTBOX_MAX_ATTEMPTS } } }),
+  ]);
+  return { waiting, gaveUp };
 };
 
 const escapeHtml = (str) =>
@@ -631,6 +749,10 @@ module.exports = {
   sendNewOrderEmail,
   sendOrderAcceptedEmail,
   sendMail,
+  flushOutbox,
+  outboxCounts,
+  setDeliverForTests,
+  OUTBOX_MAX_ATTEMPTS,
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
   sendWelcomeEmail,

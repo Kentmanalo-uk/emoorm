@@ -26,6 +26,7 @@ import { RouteTitles } from './lib/routeTitles';
 import ConfirmHost from './components/ui/ConfirmHost';
 import PeekHost from './components/peek/PeekHost';
 import OfflineBanner from './components/ui/OfflineBanner';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Every page but Home loads when first opened, so a phone's first visit
 // downloads only what the page in front of it needs. The pages shoppers
@@ -241,6 +242,8 @@ function AppRoutes() {
       <OfflineBanner />
       <AppInstallPing />
       <AppUpdateBar />
+      {/* A page that crashes shows "Reload" in its place; another page clears it. */}
+      <ErrorBoundary resetKey={(background || location).pathname}>
       <Suspense fallback={<RouteLoading />}>
       <Routes location={background || location}>
         {/* Public routes */}
@@ -393,6 +396,7 @@ function AppRoutes() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       </Suspense>
+      </ErrorBoundary>
       {background && (
         <Suspense fallback={null}>
         <Routes>

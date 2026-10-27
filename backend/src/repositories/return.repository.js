@@ -160,6 +160,36 @@ const sumRefundedForOrder = async (orderId) => {
   return Number(agg._sum.refundedAmount || 0);
 };
 
+/**
+ * Record a refund and what it does to the order's payment, all or nothing:
+ * the return becomes REFUNDED (only from one of `fromStatus`), and the
+ * order is fully refunded once its refunded returns cover what was paid for
+ * the items (after any voucher; returns never include the delivery fee),
+ * partly refunded until then. The order row is locked first, so two refunds
+ * of the same order at once add up right. (They were two separate writes:
+ * a failure between them left a refunded return on an order still "paid".)
+ * @returns {Promise<Object>} the return request afterwards
+ */
+const refundTx = async (id, orderId, data, { fromStatus }) => withDeadlockRetry(() => prisma.$transaction(async (tx) => {
+  const [order] = await tx.$queryRaw`SELECT subtotal, total, discount_amount AS discountAmount FROM orders WHERE id = ${orderId} FOR UPDATE`;
+  const changed = await tx.returnRequest.updateMany({ where: { id, status: { in: [].concat(fromStatus) } }, data });
+  if (changed.count === 0) {
+    const err = new Error('Return request changed');
+    err.code = 'STALE_RETURN_STATUS';
+    throw err;
+  }
+  if (order) {
+    const agg = await tx.returnRequest.aggregate({ where: { orderId, status: 'REFUNDED' }, _sum: { refundedAmount: true } });
+    const totalRefunded = Number(agg._sum.refundedAmount || 0);
+    const itemsPaid = Math.max(0, Number(order.subtotal ?? order.total ?? 0) - Number(order.discountAmount || 0));
+    await tx.order.update({
+      where: { id: orderId },
+      data: { paymentStatus: totalRefunded + 0.005 >= itemsPaid ? 'REFUNDED' : 'PARTIALLY_REFUNDED' },
+    });
+  }
+  return tx.returnRequest.findUnique({ where: { id }, include: REQUEST_INCLUDE });
+}));
+
 const updateItemRestock = (id, restockOnReceive) =>
   prisma.returnRequestItem.update({ where: { id }, data: { restockOnReceive } });
 
@@ -224,6 +254,7 @@ module.exports = {
   getUsedQuantitiesForOrder,
   updateRequest,
   sumRefundedForOrder,
+  refundTx,
   updateItemRestock,
   generateRequestNumber,
   incrementProductStock,

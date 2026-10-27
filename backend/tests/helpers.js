@@ -16,6 +16,9 @@ for (const key of ['RESEND_API_KEY', 'SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 
 // Never the internet's route service: distances are estimates (straight line
 // × 1.3) unless a test points ROUTING_URL at its own fake one.
 process.env.ROUTING_URL = 'off';
+// The app's sensitive rate limits count in the database; here, where every
+// file signs in from one address, they count in memory (lib/securityCounters).
+process.env.EMOORM_TESTS = '1';
 require('dotenv').config();
 // Only ever a scratch database: its name must say so (emoorm_ci, emoorm_test…).
 const dbName = (process.env.DATABASE_URL || '').split('?')[0].split('/').pop() || '';

@@ -21,6 +21,8 @@ const idImageUpload = multer({
 });
 
 const submitLimiter = rateLimit({
+  store: require('../lib/securityCounters').keptStore('id-submit'),
+  passOnStoreError: true,
   windowMs: 15 * 60 * 1000,
   limit: 10,
   standardHeaders: true,

@@ -927,6 +927,28 @@ test('"Deliver it myself" keeps the fee, tells the buyer and marks the order', a
   assert.match(note.message, /Delivery fee ₱60\.00, as quoted/);
 });
 
+test('"Deliver it myself" is all or nothing: when its unpaid fee cannot be added, the order stays a rider order', async () => {
+  await setEnabled(true);
+  const ctx = await setup();
+  const o = await riderOrder(ctx);
+  const unpaidFee = require('../src/services/unpaidFee.service');
+  const real = unpaidFee.addToOwnOrder;
+  unpaidFee.addToOwnOrder = async () => { throw Object.assign(new Error('The unpaid fee changed'), { code: 'UNPAID_FEES_CHANGED' }); };
+  try {
+    const self = await h.api('POST', `/orders/${o.id}/rider/self`, { token: h.token(ctx.seller) });
+    assert.equal(self.status, 409, self.body?.message);
+  } finally {
+    unpaidFee.addToOwnOrder = real;
+  }
+  const after = await h.prisma.order.findUnique({ where: { id: o.id }, select: { deliveryPartner: true, riderFallbackAt: true } });
+  assert.equal(after.deliveryPartner, 'MOORMOVE');
+  assert.equal(after.riderFallbackAt, null);
+  // Tried again once the fee is fine: it goes through.
+  const again = await h.api('POST', `/orders/${o.id}/rider/self`, { token: h.token(ctx.seller) });
+  assert.equal(again.status, 200, again.body?.message);
+  assert.equal(again.body.data.deliveryPartner, null);
+});
+
 test('a shop delivering only by MoorMove rider is ready to sell, and its checkout takes riders', async () => {
   await setEnabled(true);
   const shopReadiness = require('../src/services/shopReadiness.service');

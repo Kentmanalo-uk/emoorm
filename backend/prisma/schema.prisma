@@ -2060,3 +2060,40 @@ model TeamChatRead {
   @@id([userId, thread])
   @@map("team_chat_reads")
 }
+
+/// Emails that could not be sent when they were asked for (the provider
+/// down or slow, the network gone): tried again with growing gaps by the
+/// email-outbox job (utils/email.js). A sent one is deleted at once (it may
+/// carry a sign-in or reset link); one given up on stays two weeks with its
+/// last error, then goes.
+model EmailOutbox {
+  id            String    @id @default(uuid())
+  to            String    @db.VarChar(320)
+  subject       String    @db.VarChar(300)
+  html          String?   @db.MediumText
+  text          String?   @db.MediumText
+  attempts      Int       @default(1)
+  lastError     String?   @db.VarChar(500) @map("last_error")
+  nextAttemptAt DateTime  @map("next_attempt_at")
+  /// Taken by a sender until then, so two servers never send it twice.
+  claimedUntil  DateTime? @map("claimed_until")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([nextAttemptAt])
+  @@map("email_outbox")
+}
+
+/// Short-lived security counters that must survive a restart
+/// (lib/securityCounters.js): wrong passwords and MFA codes per account,
+/// one-time MFA tokens and codes, phone codes, and the sensitive rate
+/// limits (sign in, password reset, MFA, checkout, vouchers…). A row means
+/// nothing once expires_at has passed; a daily job removes those.
+model SecurityCounter {
+  name      String   @id @db.VarChar(191)
+  hits      Int      @default(0)
+  expiresAt DateTime @map("expires_at")
+  data      Json?
+
+  @@index([expiresAt])
+  @@map("security_counters")
+}

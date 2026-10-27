@@ -227,8 +227,10 @@ const getDummyHash = async () => {
 // - fifty for one account from all addresses together (a guessing spread
 //   over many addresses), which does lock the account for everyone.
 // The IP limiter catches one source trying many accounts.
-const loginTries = makeGuard({ limit: 10, windowMs: 15 * 60 * 1000 });
-const accountTries = makeGuard({ limit: 50, windowMs: 15 * 60 * 1000 });
+// Both kept in the database (utils/attemptGuard), so a restart does not
+// reset them.
+const loginTries = makeGuard({ name: 'login', limit: 10, windowMs: 15 * 60 * 1000 });
+const accountTries = makeGuard({ name: 'login-account', limit: 50, windowMs: 15 * 60 * 1000 });
 const LOGIN_KEY = (email) => String(email || '').trim().toLowerCase();
 const SOURCE_KEY = (email, ip) => `${LOGIN_KEY(email)}|${ip || '?'}`;
 
@@ -239,7 +241,10 @@ const SOURCE_KEY = (email, ip) => `${LOGIN_KEY(email)}|${ip || '?'}`;
  * @param {String} [meta.ip] - the caller's address (req.ip)
  */
 const login = async (email, password, { ip } = {}) => {
-  const lockedFor = Math.max(loginTries.lockedFor(SOURCE_KEY(email, ip)), accountTries.lockedFor(LOGIN_KEY(email)));
+  const lockedFor = Math.max(...await Promise.all([
+    loginTries.lockedFor(SOURCE_KEY(email, ip)),
+    accountTries.lockedFor(LOGIN_KEY(email)),
+  ]));
   if (lockedFor) {
     throw new ApiError(`Too many failed sign-in attempts. Try again in ${Math.ceil(lockedFor / 60)} minute${lockedFor > 60 ? 's' : ''}.`, 429);
   }
@@ -251,11 +256,10 @@ const login = async (email, password, { ip } = {}) => {
   // the password learns anything about the account.
   const isPasswordValid = await comparePassword(password, user?.password || await getDummyHash());
   if (!user || !isPasswordValid) {
-    loginTries.fail(SOURCE_KEY(email, ip));
-    accountTries.fail(LOGIN_KEY(email));
+    await Promise.all([loginTries.fail(SOURCE_KEY(email, ip)), accountTries.fail(LOGIN_KEY(email))]);
     throw new ApiError('Invalid email or password', 401);
   }
-  loginTries.clear(SOURCE_KEY(email, ip));
+  await loginTries.clear(SOURCE_KEY(email, ip));
 
   // Check if user is deleted
   if (user.deletedAt) {

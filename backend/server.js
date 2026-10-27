@@ -184,6 +184,7 @@ const startServer = async () => {
         if (stats.made) console.log('[image-sizes] made:', stats);
       }, 24 * 60 * 60 * 1000);
       setTimeout(makeImageSizes, 5 * 60 * 1000).unref();
+      setInterval(makeImageSizes, 24 * 60 * 60 * 1000).unref();
       // The sold counts, ratings and search column kept on each product,
       // checked against the orders and reviews (repositories/
       // productStats.repository): puts right any change another path missed.
@@ -193,7 +194,22 @@ const startServer = async () => {
       }, 60 * 60 * 1000);
       setTimeout(reconcileProducts, 2 * 60 * 1000).unref();
       setInterval(reconcileProducts, 60 * 60 * 1000).unref();
-      setInterval(makeImageSizes, 24 * 60 * 60 * 1000).unref();
+      // Emails the provider could not take when they were sent, tried again
+      // (utils/email.js outbox).
+      const flushEmails = () => runtimeStatus.runJob('email-outbox', async () => {
+        const stats = await require('./src/utils/email').flushOutbox();
+        if (stats.sent || stats.failed || stats.gaveUp) console.log('[email-outbox]', stats);
+      }, 2 * 60 * 1000);
+      setTimeout(flushEmails, 60 * 1000).unref();
+      setInterval(flushEmails, 2 * 60 * 1000).unref();
+      // Security counters that ended (lib/securityCounters) go, once a day.
+      const purgeCounters = () => runtimeStatus.runJob(
+        'security-counters',
+        () => require('./src/lib/securityCounters').purgeExpired(),
+        24 * 60 * 60 * 1000,
+      );
+      setTimeout(purgeCounters, 4 * 60 * 1000).unref();
+      setInterval(purgeCounters, 24 * 60 * 60 * 1000).unref();
 
       // Signed-in sessions whose refresh token has expired are forgotten.
       const purgeSessions = () => runtimeStatus.runJob(
