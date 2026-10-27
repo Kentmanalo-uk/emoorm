@@ -28,7 +28,9 @@ const DEFAULT_DESCRIPTION =
   + 'Handcrafted goods, fresh produce and island-made products, delivered or '
   + 'ready for pickup in your municipality.';
 
-const DEFAULT_IMAGE = `${ORIGIN}/icon-512x512.png`;
+// The share picture for pages without one of their own: 1200 x 630, the
+// size link previews (Facebook, Messenger, X) show large.
+const DEFAULT_IMAGE = `${ORIGIN}/og-image.jpg`;
 
 /** Collapse whitespace and cut on a word boundary — meta descriptions get
  *  truncated by Google around 160 characters, mid-word looks broken. */
@@ -123,7 +125,7 @@ const STATIC_PAGES = {
     priority: '0.4',
     changefreq: 'yearly',
   },
-  '/privacy-policy': {
+  '/privacy': {
     title: `Privacy Policy — ${SITE}`,
     description: `How ${SITE} collects, uses and protects your personal information.`,
     priority: '0.3',
@@ -135,7 +137,54 @@ const STATIC_PAGES = {
     priority: '0.3',
     changefreq: 'yearly',
   },
+  '/cookies': {
+    title: `Cookie Policy — ${SITE}`,
+    description: `The few cookies and the storage ${SITE} uses, and why.`,
+    priority: '0.2',
+    changefreq: 'yearly',
+  },
+  '/today': {
+    title: `Available Today — ${SITE}`,
+    description: `Cooked food and fresh goods ready today from local shops across ${REGION}: order now or pre-order for later.`,
+    priority: '0.8',
+    changefreq: 'daily',
+  },
+  '/stores/map': {
+    title: `Shops on the map — ${SITE}`,
+    description: `Find local shops near you across ${REGION} on the map.`,
+    priority: '0.6',
+    changefreq: 'weekly',
+  },
+  '/sell/tutorial': {
+    title: `How selling works — ${SITE}`,
+    description: `A short walk through opening a shop on ${SITE}: listing products, taking orders and getting paid.`,
+    priority: '0.4',
+    changefreq: 'monthly',
+  },
+  '/sell/academy': {
+    title: `Seller Academy — ${SITE}`,
+    description: `Short lessons for sellers on ${SITE}: photos that sell, pricing, packing and keeping buyers coming back.`,
+    priority: '0.4',
+    changefreq: 'monthly',
+  },
 };
+
+/**
+ * The paths the web app has (web/src/App.jsx), for telling a page from a
+ * typo: anything else answers 404 (its page still says "Page not found").
+ * Pages behind a sign-in are not listed: they are private (isPrivatePath)
+ * and never 404 here.
+ */
+const KNOWN_PATHS = [
+  /^\/$/,
+  /^\/(products|search|search\/image|stores|stores\/map|today|sell|sell\/tutorial|sell\/academy|about|privacy|terms|cookies|app|help|login|register|wishlist)$/,
+  /^\/(app-google|forgot-password|reset-password|verify-email|customer-care|feedback)$/,
+  /^\/seller\/(login|apply|welcome)$/,
+  /^\/sell\/academy\/[^/]+$/,
+  /^\/product\/[^/]+(\/reviews)?$/, /^\/store\/[^/]+$/, /^\/u\/[^/]+$/,
+  /^\/municipality\/[^/]+(\/gallery)?$/, /^\/category\/[^/]+$/,
+];
+const isKnownPath = (path) => KNOWN_PATHS.some((re) => re.test(path));
 
 /**
  * Routes that must never be indexed: anything behind a login, anything
@@ -397,6 +446,24 @@ const rememberMeta = (key, value) => {
   return value;
 };
 
+/** A product, shop, town or category that is gone (or hidden): a 404, kept out of the index. */
+const gone = (base) => ({ ...base, noindex: true, jsonLd: [], notFound: true });
+
+/** A category page (/category/<slug>). */
+const categoryMeta = async (slug) => {
+  const category = await prisma.category.findFirst({
+    where: { slug, isActive: true },
+    select: { name: true, slug: true, description: true },
+  });
+  if (!category) return null;
+  return {
+    title: `${category.name} — shop local on ${SITE}`,
+    description: clamp(plain(category.description)
+      || `${category.name} from local sellers across ${REGION}, on ${SITE}.`),
+    canonical: `${ORIGIN}/category/${encodeURIComponent(category.slug)}`,
+  };
+};
+
 /**
  * Resolve any path to the tags the HTML should carry.
  * Never throws: a database hiccup degrades to the site defaults rather than
@@ -424,6 +491,12 @@ const resolve = async (pathname) => {
     return { ...base, title: `${SITE}`, noindex: true, jsonLd: [] };
   }
 
+  // A path the site does not have: its page says so, and the answer is a
+  // real 404 (it used to be 200, so typos and old links were indexed).
+  if (!isKnownPath(clean)) {
+    return { ...base, title: `Page not found — ${SITE}`, noindex: true, jsonLd: [], notFound: true };
+  }
+
   const staticPage = STATIC_PAGES[clean];
   if (staticPage) {
     return {
@@ -443,19 +516,25 @@ const resolve = async (pathname) => {
       const meta = await productMeta(decodeURIComponent(match[1]));
       // A product that is gone, hidden or awaiting approval must not be
       // advertised as if it were live.
-      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : { ...base, noindex: true, jsonLd: [] });
+      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : gone(base));
     }
 
     match = clean.match(/^\/store\/([^/]+)$/);
     if (match) {
       const meta = await storeMeta(decodeURIComponent(match[1]));
-      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : { ...base, noindex: true, jsonLd: [] });
+      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : gone(base));
     }
 
     match = clean.match(/^\/municipality\/([^/]+)$/);
     if (match) {
       const meta = await municipalityMeta(decodeURIComponent(match[1]));
-      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : { ...base, noindex: true, jsonLd: [] });
+      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : gone(base));
+    }
+
+    match = clean.match(/^\/category\/([^/]+)$/);
+    if (match) {
+      const meta = await categoryMeta(decodeURIComponent(match[1]));
+      return rememberMeta(clean, meta ? { ...base, ...meta, noindex: base.noindex } : gone(base));
     }
   } catch (err) {
     console.error('[seo] metadata lookup failed:', err.message);
@@ -470,6 +549,7 @@ module.exports = {
   plain,
   absolute,
   isPrivatePath,
+  isKnownPath,
   STATIC_PAGES,
   PRIVATE_PREFIXES,
   ORIGIN,

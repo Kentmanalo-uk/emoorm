@@ -214,7 +214,6 @@ const adoptStoredSessions = async () => {
     const saved = readJson(key);
     removeKey(key);
     if (!saved?.refreshToken) continue;
-    // eslint-disable-next-line no-await-in-loop
     await sessions.post('/auth/sessions/adopt', { refreshToken: saved.refreshToken }).catch(() => {});
   }
   if (keys.length) loadReady();

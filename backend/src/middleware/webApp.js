@@ -76,8 +76,12 @@ const renderTags = (meta) => {
     `<meta property="og:description" content="${escapeHtml(meta.description)}" />`,
     `<meta property="og:url" content="${escapeHtml(meta.canonical)}" />`,
     `<meta property="og:image" content="${escapeHtml(meta.image)}" />`,
-    '<meta property="og:image:width" content="512" />',
-    '<meta property="og:image:height" content="512" />',
+    // The size only where it is known: the site's own picture (a product's or
+    // a shop's photo is whatever size it was uploaded).
+    ...(meta.image === seoService.DEFAULT_IMAGE ? [
+      '<meta property="og:image:width" content="1200" />',
+      '<meta property="og:image:height" content="630" />',
+    ] : []),
     '<meta property="og:locale" content="en_PH" />',
 
     // X / Twitter.
@@ -226,7 +230,12 @@ const mountWebApp = (app) => {
       // A function, not a string: in a replacement string `$&`, `$'` and `` $` ``
       // splice in parts of the template, and the head carries product and shop
       // names that sellers type, so a name with them could rewrite the page.
-      const html = stripped.replace('</head>', () => `    ${head}\n  </head>`);
+      // The page's name and summary in the body too, for a crawler or a
+      // browser that runs no JavaScript (the app draws everything else).
+      const summary = `<noscript><h1>${escapeHtml(meta.title)}</h1><p>${escapeHtml(meta.description)}</p></noscript>`;
+      const html = stripped
+        .replace('</head>', () => `    ${head}\n  </head>`)
+        .replace('<div id="root"></div>', () => `${summary}<div id="root"></div>`);
 
       res.set('Content-Type', 'text/html; charset=utf-8');
       // The shell is identical for everyone, but its tags depend on data that

@@ -1056,7 +1056,7 @@ const ProductDetails = () => {
             {product.category && (
               <>
                 <ChevronRightSm size={14} />
-                <Link to={`/products?category=${product.categoryId}`}>{product.category.name}</Link>
+                <Link to={product.category?.slug ? `/category/${product.category.slug}` : `/products?category=${product.categoryId}`}>{product.category.name}</Link>
               </>
             )}
             <ChevronRightSm size={14} />

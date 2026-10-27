@@ -329,7 +329,7 @@ const Home = () => {
           <div className="categories-grid">
             {sharedCategories.map((cat) => (
               <Link
-                to={`/products?category=${cat.id}`}
+                to={cat.slug ? `/category/${cat.slug}` : `/products?category=${cat.id}`}
                 key={cat.id}
                 className="category-card"
               >

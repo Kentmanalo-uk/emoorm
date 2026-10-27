@@ -257,6 +257,8 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/products" element={<Products />} />
+        {/* A category's own address (search engines list these). */}
+        <Route path="/category/:categorySlug" element={<Products />} />
         <Route path="/search" element={<SearchRoute />} />
         <Route path="/product/:slug" element={<ProductDetails />} />
         <Route path="/product/:slug/reviews" element={<ProductReviews />} />

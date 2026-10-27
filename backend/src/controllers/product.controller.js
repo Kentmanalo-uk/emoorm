@@ -7,6 +7,7 @@ const {
   paginatedResponse,
 } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorHandler');
+const prisma = require('../config/database');
 
 /**
  * Product Controller
@@ -51,7 +52,8 @@ const getProducts = asyncHandler(async (req, res) => {
     page = 1,
     pageSize = 20,
     storeId,
-    categoryId,
+    categoryId: categoryIdParam,
+    categorySlug,
     municipalityId,
     status,
     minPrice,
@@ -63,6 +65,14 @@ const getProducts = asyncHandler(async (req, res) => {
     kind,
     today,
   } = req.query;
+
+  // A category page (/category/<slug>) asks by the category's slug.
+  let categoryId = categoryIdParam;
+  if (!categoryId && categorySlug) {
+    const category = await prisma.category.findUnique({ where: { slug: String(categorySlug) }, select: { id: true } });
+    // An unknown slug finds nothing, rather than every product.
+    categoryId = category?.id || '__none__';
+  }
 
   // Municipal admins are scoped to their assigned municipality.
   const scopedMunicipalityId =

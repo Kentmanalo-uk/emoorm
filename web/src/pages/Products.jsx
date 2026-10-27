@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, ShoppingCart, Star, WarningCircle,
   CaretLeft, MagnifyingGlass, CaretUp, MapPin,
@@ -71,9 +71,10 @@ const SORTS = {
 };
 
 /** GET /products parameters for the list as filtered and paged. */
-const listParams = ({ page, pageSize, category, municipalityId, search, minPrice, maxPrice, sort }) => {
+const listParams = ({ page, pageSize, category, categorySlug, municipalityId, search, minPrice, maxPrice, sort }) => {
   const params = { page, pageSize };
   if (category) params.categoryId = category;
+  else if (categorySlug) params.categorySlug = categorySlug;
   if (municipalityId) params.municipalityId = municipalityId;
   if (search) params.search = search;
   if (minPrice) params.minPrice = minPrice;
@@ -157,6 +158,12 @@ const Products = () => {
 
   // Filters
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
+  // A category page (/category/<slug>, the address search engines list):
+  // that category, until another filter is picked (which moves to /products).
+  const { categorySlug } = useParams();
+  const pathCategorySlug = categorySlug && !searchParams.get('category') ? categorySlug : '';
+  const pathCategoryId = pathCategorySlug ? (categories.find((c) => c.slug === pathCategorySlug)?.id || '') : '';
+  const activeCategory = selectedCategory || pathCategoryId;
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const municipalityId = searchParams.get('municipalityId') || '';
   const imageSearch = searchParams.get('imageSearch') === '1';
@@ -206,13 +213,15 @@ const Products = () => {
     setImageSearchPreview('');
     fetchProducts();
     return undefined;
-  }, [selectedCategory, searchQuery, sortBy, priceRange, pagination.page, municipalityId, imageSearch]);
+  }, [activeCategory, pathCategorySlug, searchQuery, sortBy, priceRange, pagination.page, municipalityId, imageSearch]);
 
   const fetchProducts = async () => {
     const params = listParams({
       page: pagination.page,
       pageSize: pagination.pageSize,
-      category: selectedCategory,
+      category: activeCategory,
+      // Before the category list has arrived: asked by its slug.
+      categorySlug: activeCategory ? undefined : pathCategorySlug,
       municipalityId,
       search: searchQuery,
       minPrice: priceRange.min,
@@ -294,6 +303,11 @@ const Products = () => {
 
   const updateURL = (params) => {
     const newParams = new URLSearchParams(searchParams);
+    // On a category page the category is part of the address: a change of
+    // filters goes on from /products, carrying the category unless changed.
+    if (categorySlug && pathCategoryId && !newParams.has('category') && !('category' in params)) {
+      newParams.set('category', pathCategoryId);
+    }
     Object.entries(params).forEach(([key, value]) => {
       if (value) {
         newParams.set(key, value);
@@ -301,6 +315,10 @@ const Products = () => {
         newParams.delete(key);
       }
     });
+    if (categorySlug) {
+      navigate(`/products${newParams.toString() ? `?${newParams}` : ''}`);
+      return;
+    }
     setSearchParams(newParams);
   };
 
@@ -312,10 +330,11 @@ const Products = () => {
     setImageSearchPreview('');
     sessionStorage.removeItem('emoorm.image-search');
     setPagination(prev => ({ ...prev, page: 1 }));
-    setSearchParams({});
+    if (categorySlug) navigate('/products');
+    else setSearchParams({});
   };
 
-  const hasActiveFilters = selectedCategory || searchQuery || priceRange.min || priceRange.max || sortBy !== 'newest';
+  const hasActiveFilters = activeCategory || searchQuery || priceRange.min || priceRange.max || sortBy !== 'newest';
 
   /* ── Phones: the page brings its own search bar (the site header is Home
      only), filter chips and a friendlier empty state. Tapping the bar opens
@@ -360,9 +379,9 @@ const Products = () => {
   };
   const resetFilters = () => applyFilters({ category: '', municipalityId: '', minPrice: '', maxPrice: '' });
 
-  const activeCategoryName = categories.find((c) => c.id === selectedCategory)?.name;
+  const activeCategoryName = categories.find((c) => c.id === activeCategory)?.name;
   const activeMunicipalityName = municipalities.find((m) => m.id === municipalityId)?.name;
-  const filterCount = [selectedCategory, municipalityId, priceActive].filter(Boolean).length;
+  const filterCount = [activeCategory, municipalityId, priceActive].filter(Boolean).length;
   const minParam = searchParams.get('minPrice');
   const maxParam = searchParams.get('maxPrice');
   const priceLabel = priceActive
@@ -437,7 +456,7 @@ const Products = () => {
                     <input
                       type="radio"
                       name="category"
-                      checked={!selectedCategory}
+                      checked={!activeCategory}
                       onChange={() => handleCategoryChange('')}
                     />
                     <span>All Categories</span>
@@ -447,7 +466,7 @@ const Products = () => {
                       <input
                         type="radio"
                         name="category"
-                        checked={selectedCategory === category.id}
+                        checked={activeCategory === category.id}
                         onChange={() => handleCategoryChange(category.id)}
                       />
                       <span>{category.name}</span>
@@ -573,7 +592,7 @@ const Products = () => {
                     <button type="button" className={`srch-m-fchip${municipalityId ? ' is-active' : ''}`} onClick={() => setFilterSheet('municipality')}>
                       <MapPin size={15} /> {activeMunicipalityName || 'Municipality'} <ChevronDown size={12} />
                     </button>
-                    <button type="button" className={`srch-m-fchip${selectedCategory ? ' is-active' : ''}`} onClick={() => setFilterSheet('category')}>
+                    <button type="button" className={`srch-m-fchip${activeCategory ? ' is-active' : ''}`} onClick={() => setFilterSheet('category')}>
                       {activeCategoryName || 'Category'} <ChevronDown size={12} />
                     </button>
                     <button type="button" className={`srch-m-fchip${priceActive ? ' is-active' : ''}`} onClick={() => setFilterSheet('price')}>
@@ -598,7 +617,7 @@ const Products = () => {
                     onClose={() => setFilterSheet(null)}
                     municipalities={municipalities}
                     categories={categories}
-                    value={{ municipalityId, category: selectedCategory, minPrice: minParam || '', maxPrice: maxParam || '' }}
+                    value={{ municipalityId, category: activeCategory, minPrice: minParam || '', maxPrice: maxParam || '' }}
                     onChange={applyFilters}
                     onReset={resetFilters}
                   />
@@ -650,7 +669,7 @@ const Products = () => {
                       ? 'Check the spelling, or try a shorter or more general word.'
                       : 'Try another category or price range.'}
                   </p>
-                  {(selectedCategory || priceActive || municipalityId) && (
+                  {(activeCategory || priceActive || municipalityId) && (
                     <button type="button" className="srch-m-empty-btn" onClick={resetFilters}>Clear filters</button>
                   )}
                   <div className="srch-m-empty-try">

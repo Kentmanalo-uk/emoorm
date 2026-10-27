@@ -54,7 +54,9 @@ function PlatformAnalytics() {
     downloadCSV(`platform-analytics-${data.window.from.slice(0, 10)}_${data.window.to.slice(0, 10)}.csv`, csv);
   };
 
-  const k = data?.kpis || {};
+  // The same object between renders (a new {} each time made the memo below
+  // recompute every render).
+  const k = useMemo(() => data?.kpis || {}, [data]);
   const usersByRole = useMemo(() => ({
     BUYER: k.buyers?.value || 0,
     SELLER: k.sellers?.value || 0,

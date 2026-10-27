@@ -72,7 +72,8 @@ const buildSitemap = async () => {
       take: 20000,
     }),
     prisma.store.findMany({
-      where: { deletedAt: null, isActive: true, isApproved: true },
+      // Suspended shops are not open to anyone: not listed (VISIBLE_STORE).
+      where: { deletedAt: null, ...VISIBLE_STORE },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: 'desc' },
       take: 5000,
@@ -119,7 +120,7 @@ const buildSitemap = async () => {
   for (const c of categories) {
     if (!c.slug) continue;
     entries.push(urlEntry({
-      loc: `${ORIGIN}/products?category=${encodeURIComponent(c.slug)}`,
+      loc: `${ORIGIN}/category/${encodeURIComponent(c.slug)}`,
       lastmod: day(c.updatedAt),
       changefreq: 'weekly',
       priority: '0.5',
@@ -166,6 +167,9 @@ router.get('/sitemap.xml', async (req, res) => {
 /**
  * @route GET /robots.txt
  */
+// The privacy page's old address (the sitemap listed it): its new one, for good.
+router.get('/privacy-policy', (req, res) => res.redirect(301, '/privacy'));
+
 router.get('/robots.txt', (req, res) => {
   res.set('Content-Type', 'text/plain; charset=utf-8');
   res.set('Cache-Control', 'public, max-age=3600');

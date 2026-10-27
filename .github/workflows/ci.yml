@@ -1,5 +1,6 @@
-# Runs on every push and pull request: the website must lint and build, and
-# the API tests must pass against a fresh MySQL with every migration applied.
+# Runs on every push and pull request: the website must lint, pass its unit
+# tests (vitest) and build, and the API tests must pass against a fresh MySQL
+# with every migration applied.
 name: CI
 
 on:
@@ -21,6 +22,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm run lint
+      - run: npm test
       - run: npm run build
 
   backend:

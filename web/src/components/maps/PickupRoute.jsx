@@ -8,6 +8,7 @@ import {
 import { resolveImg } from '../../lib/media';
 import 'leaflet/dist/leaflet.css';
 import './PickupRoute.css';
+import { validPin } from '../../lib/pins';
 
 /**
  * Checkout, pickup: where the shop is, and how to get there from here.
@@ -22,15 +23,9 @@ import './PickupRoute.css';
  * the straight-line distance stands in, marked as such.
  */
 
+// What counts as a pin: lib/pins.
 const OSRM = 'https://router.project-osrm.org/route/v1/driving';
 
-// Inside the Philippines: anything else (0,0 from an unset pin) is no pin.
-export const validPin = (lat, lng) => {
-  const a = Number(lat);
-  const b = Number(lng);
-  return lat !== null && lat !== undefined && lat !== '' && Number.isFinite(a) && Number.isFinite(b)
-    && a >= 4 && a <= 22 && b >= 116 && b <= 127;
-};
 
 const km = (m) => (m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`);
 const mins = (s) => {
@@ -118,10 +113,9 @@ function FitView({ points }) {
 }
 
 export default function PickupRoute({ store }) {
-  const shop = useMemo(
-    () => (validPin(store?.latitude, store?.longitude) ? [Number(store.latitude), Number(store.longitude)] : null),
-    [store?.latitude, store?.longitude],
-  );
+  const lat = store?.latitude;
+  const lng = store?.longitude;
+  const shop = useMemo(() => (validPin(lat, lng) ? [Number(lat), Number(lng)] : null), [lat, lng]);
   const [me, setMe] = useState(null);
   const [locStatus, setLocStatus] = useState('idle'); // idle | asking | denied | unavailable | ok
   const [route, setRoute] = useState(null); // { line, distance, duration, steps, byRoad }
@@ -256,7 +250,6 @@ export default function PickupRoute({ store }) {
       {guideOpen && route?.steps?.length > 0 && (
         <ol className="pr-steps">
           {route.steps.map((step, i) => (
-            // eslint-disable-next-line react/no-array-index-key
             <li key={i}>
               <span className="pr-step-icon"><StepIcon step={step} /></span>
               <span className="pr-step-text">{stepText(step, store.name)}</span>

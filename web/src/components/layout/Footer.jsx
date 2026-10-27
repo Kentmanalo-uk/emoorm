@@ -165,7 +165,7 @@ const Footer = () => {
             <ul className="footer-links">
               {categories.length > 0 ? (
                 categories.map((c) => (
-                  <li key={c.id}><Link to={`/products?category=${c.id}`}>{c.name}</Link></li>
+                  <li key={c.id}><Link to={c.slug ? `/category/${c.slug}` : `/products?category=${c.id}`}>{c.name}</Link></li>
                 ))
               ) : (
                 <li><Link to="/products">Browse All Products</Link></li>
@@ -302,7 +302,7 @@ const Footer = () => {
               {allCategories.length > 0 && (
                 <div className="footer-directory-group">
                   <h3>Shop by Category</h3>
-                  <LinkList items={allCategories.map((c) => ({ key: c.id, to: `/products?category=${c.id}`, label: c.name }))} />
+                  <LinkList items={allCategories.map((c) => ({ key: c.id, to: c.slug ? `/category/${c.slug}` : `/products?category=${c.id}`, label: c.name }))} />
                 </div>
               )}
 

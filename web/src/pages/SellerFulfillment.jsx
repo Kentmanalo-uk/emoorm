@@ -32,7 +32,7 @@ import PhoneSaveBar from '../components/seller/PhoneSaveBar';
 import PickupAddressField from '../components/seller/PickupAddressField';
 import { pickupGap } from '../lib/pickupAddress';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
-import { validPin } from '../components/maps/PickupRoute';
+import { validPin } from '../lib/pins';
 import { CourierMark } from '../components/orders/CourierTracking';
 import ChoiceCard from '../components/ui/ChoiceCard';
 import { MOORMOVE_COURIER, promosForTown, useMoormove } from '../lib/moormove';

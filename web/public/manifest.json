@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "E-Moorm - Hyperlocal Marketplace",
-  "short_name": "E-Moorm",
+  "name": "E-MOORM - Hyperlocal Marketplace",
+  "short_name": "E-MOORM",
   "description": "Discover and purchase authentic, locally produced goods from Oriental Mindoro, Philippines. Shop handcrafted products, fresh produce, and unique items from local sellers.",
   "start_url": "/",
   "scope": "/",
@@ -141,18 +141,32 @@
   ],
   "screenshots": [
     {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/app-preview/ad-landscape.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
       "form_factor": "wide",
-      "label": "E-Moorm Marketplace"
+      "label": "E-MOORM: local, all in one place"
     },
     {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/app-preview/preview-1.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
       "form_factor": "narrow",
-      "label": "E-Moorm Mobile"
+      "label": "The marketplace of Mindoreño goods"
+    },
+    {
+      "src": "/app-preview/preview-2.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Start selling: a free shop for local buyers"
+    },
+    {
+      "src": "/app-preview/preview-3.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Manage your shop"
     }
   ]
 }

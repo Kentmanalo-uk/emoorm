@@ -4,7 +4,7 @@ import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet';
 import axios from '../../lib/axios';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import { seenAgo } from '../../lib/moormove';
-import { validPin } from '../maps/PickupRoute';
+import { validPin } from '../../lib/pins';
 import 'leaflet/dist/leaflet.css';
 import './RiderDelivery.css';
 

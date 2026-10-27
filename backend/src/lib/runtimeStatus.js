@@ -97,9 +97,14 @@ const runDue = () => {
   return started;
 };
 
-/** Jobs that have not run for over twice their interval. */
+/**
+ * Jobs that have not run for over twice their interval. A job on its first
+ * run (still checking its lock) is not late yet.
+ */
 const lateJobs = (now = Date.now()) => Object.entries(status.jobs)
-  .filter(([, j]) => !j.lastRun || now - new Date(j.lastRun).getTime() > 2 * j.every + 60 * 1000)
+  .filter(([, j]) => (j.lastRun
+    ? now - new Date(j.lastRun).getTime() > 2 * j.every + 60 * 1000
+    : !j.running))
   .map(([name]) => name);
 
 const snapshot = () => ({
