@@ -130,7 +130,9 @@ export default function PeekHost() {
 
 function PeekLayer({ peek }) {
   const actions = (peek.actions || []).filter(Boolean);
-  const trapRef = useFocusTrap(true);
+  // Escape closes it (only the top dialog listens). `close` is defined
+  // below; it is looked up when Escape is pressed.
+  const trapRef = useFocusTrap(true, { onClose: () => close() });
   const stageRef = useRef(null);
   const dimRef = useRef(null);
   const cardRef = useRef(null);
@@ -230,27 +232,19 @@ function PeekLayer({ peek }) {
     setTimeout(finish, CLOSE_MS + 260);
   }, [peek, reduced]);
 
-  // Escape closes it; the page under it does not scroll while it is open.
+  // The page under it does not scroll while it is open.
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        close();
-      }
-    };
     const stage = stageRef.current;
     const stuck = (e) => {
       if (stage.scrollHeight <= stage.clientHeight + 1 && e.cancelable) e.preventDefault();
     };
-    document.addEventListener('keydown', onKey);
     stage.addEventListener('wheel', stuck, { passive: false });
     stage.addEventListener('touchmove', stuck, { passive: false });
     return () => {
-      document.removeEventListener('keydown', onKey);
       stage.removeEventListener('wheel', stuck);
       stage.removeEventListener('touchmove', stuck);
     };
-  }, [close]);
+  }, []);
 
   // The arrow keys walk the preview and its actions, as in a menu.
   const onKeyDown = (e) => {

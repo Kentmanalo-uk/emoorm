@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from '@phosphor-icons/react';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 /**
  * A bottom sheet for the Seller Center on phones: filters, "more" actions,
@@ -11,12 +11,7 @@ import { useSheetPresence } from '../../hooks/useSheetMotion';
 export default function PhoneSheet({ open, title, onClose, children, footer, className = '' }) {
   const { mounted, closing } = useSheetPresence(open);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  const trapRef = useFocusTrap(open, { onClose });
 
   if (!mounted) return null;
 
@@ -27,6 +22,7 @@ export default function PhoneSheet({ open, title, onClose, children, footer, cla
       role="presentation"
     >
       <div
+        ref={trapRef}
         className={`scm-sheet ui-sheet-panel ${className}`.trim()}
         role="dialog"
         aria-modal="true"

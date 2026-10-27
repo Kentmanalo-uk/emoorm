@@ -224,7 +224,7 @@
 }
 
 .of-label i {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-style: normal;
   font-weight: 400;
 }
@@ -485,7 +485,7 @@
 }
 
 .of-row-prices s {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .of-row-prices strong {
@@ -942,7 +942,7 @@
 
 .of-deal-price s {
   margin-left: 6px;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .of-deal-price strong {

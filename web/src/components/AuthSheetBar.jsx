@@ -72,7 +72,8 @@ export default function AuthSheetBar({ switchTo, switchLabel }) {
       onPointerCancel={onPointerUp}
     >
       <span className="auth-sheet-grabber" aria-hidden="true" />
-      <button type="button" className="auth-sheet-close" onClick={close} aria-label="Close">
+      {/* data-sheet-close: what Escape presses (the pages' useFocusTrap). */}
+      <button type="button" className="auth-sheet-close" data-sheet-close onClick={close} aria-label="Close">
         <X size={20} weight="bold" />
       </button>
       <Link to={switchTo} replace state={{ ...location.state, fromSheet: true }} className="auth-sheet-switch">

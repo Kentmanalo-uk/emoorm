@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Truck, Barcode, X, CircleNotch } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import { CourierMark } from './CourierTracking';
 import ChoiceCard from '../ui/ChoiceCard';
 import '../ui/ConfirmDialog.css';
@@ -136,15 +137,13 @@ export default function ShipOrderSheet({ open, couriers = [], orderNumber, onCan
   }
   if (!open && openedFor !== null) setOpenedFor(null);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => {
-      if (e.key !== 'Escape' || busy) return;
+  // Escape stops the scanner first, then closes the sheet.
+  const trapRef = useFocusTrap(open, {
+    onClose: () => {
+      if (busy) return;
       if (scanning) setScanning(false); else onCancel?.();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, busy, scanning, onCancel]);
+    },
+  });
 
   const [onRead] = useState(() => (value) => {
     setTracking(value);
@@ -167,6 +166,7 @@ export default function ShipOrderSheet({ open, couriers = [], orderNumber, onCan
     <div
       className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`}
       onClick={() => !busy && onCancel?.()}
+      ref={trapRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="ship-title"

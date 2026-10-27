@@ -133,7 +133,8 @@ export default function SellerPhoneGuide({ store, setStore }) {
   // { key, closing } for the sheet on screen.
   const [shown, setShown] = useState(null);
   const open = Boolean(shown && shown.key === guideKey);
-  const trapRef = useFocusTrap(open && !shown.closing);
+  // Escape closes it (only the top dialog listens).
+  const trapRef = useFocusTrap(open && !shown.closing, { onClose: close });
 
   useEffect(() => {
     if (!eligible) return undefined;
@@ -147,13 +148,6 @@ export default function SellerPhoneGuide({ store, setStore }) {
     setShown({ key: guideKey, closing: true });
     setTimeout(() => setShown(null), CLOSE_MS);
   };
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') close(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  });
 
   if (!open) return null;
   return (

@@ -5,6 +5,7 @@ import { completeGuide, shouldShowGuide } from '../../lib/sellerGuides';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import SellerPhoneGuide from './SellerPhoneGuide';
 import { useSetupReturn } from '../../lib/setupReturn';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './SellerCenterGuide.css';
 
 const GUIDES = {
@@ -138,11 +139,12 @@ function SellerCenterTour({ store, setStore }) {
     completeGuide(guideKey, setStore);
   };
   const next = () => stepIndex >= availableSteps.length - 1 ? finish() : setStepIndex((index) => index + 1);
+  const guideRef = useFocusTrap(active && Boolean(step) && Boolean(position), { onClose: finish });
 
   if (!active || !step || !position) return null;
   const { rect, top, left, width } = position;
   return (
-    <div className="seller-guide" role="dialog" aria-modal="true" aria-labelledby="seller-guide-title">
+    <div className="seller-guide" role="dialog" aria-modal="true" aria-labelledby="seller-guide-title" ref={guideRef}>
       <div className="seller-guide-focus" style={{ top: rect.top - 6, left: rect.left - 6, width: rect.width + 12, height: rect.height + 12 }} />
       <section className="seller-guide-tip" style={{ top, left, width }}>
         <header><span>{stepIndex + 1} of {availableSteps.length}</span><button type="button" onClick={finish} aria-label="Close guide"><X size={16} /></button></header>

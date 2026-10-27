@@ -295,6 +295,9 @@ function ProfileSettings() {
           <label className="ps-field">
             <span className="ps-label">Contact number</span>
             <input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
               name="contactNumber"
               value={form.contactNumber}
               onChange={handleChange}

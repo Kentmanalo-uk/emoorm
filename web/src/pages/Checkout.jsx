@@ -1145,19 +1145,23 @@ const Checkout = () => {
                           value={deliveryForm.fullName}
                           onChange={handleDeliveryChange}
                         />
-                        {deliveryErrors.fullName && <span className="form-error">{deliveryErrors.fullName}</span>}
+                        {deliveryErrors.fullName && <span className="form-error" role="alert">{deliveryErrors.fullName}</span>}
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Contact Number</label>
+                        <label className="form-label" htmlFor="checkout-contact">Contact Number</label>
                         <input
-                          type="text"
+                          id="checkout-contact"
+                          type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          aria-invalid={Boolean(deliveryErrors.contactNumber)}
                           name="contactNumber"
                           className={`form-input ${deliveryErrors.contactNumber ? 'form-input-error' : ''}`}
                           placeholder="09xxxxxxxxx"
                           value={deliveryForm.contactNumber}
                           onChange={handleDeliveryChange}
                         />
-                        {deliveryErrors.contactNumber && <span className="form-error">{deliveryErrors.contactNumber}</span>}
+                        {deliveryErrors.contactNumber && <span className="form-error" role="alert">{deliveryErrors.contactNumber}</span>}
                       </div>
 
                       {fulfillmentMethod === 'DELIVERY' && (
@@ -1217,7 +1221,7 @@ const Checkout = () => {
                             lockToPhilippines
                             hint="Tap the map where the house is."
                           />
-                          {deliveryErrors.pin && <span className="form-error">{deliveryErrors.pin}</span>}
+                          {deliveryErrors.pin && <span className="form-error" role="alert">{deliveryErrors.pin}</span>}
                         </div>
                       )}
                     </div>

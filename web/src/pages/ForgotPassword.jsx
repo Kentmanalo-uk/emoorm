@@ -6,6 +6,7 @@ import AppLogo from '../components/AppLogo';
 import AuthSheetBar from '../components/AuthSheetBar';
 import Footer from '../components/layout/Footer';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useFocusTrap from '../hooks/useFocusTrap';
 import './ForgotPassword.css';
 import './AuthSheet.css';
 import { BusyLabel } from '../components/ui/Spinner';
@@ -13,6 +14,11 @@ import { BusyLabel } from '../components/ui/Spinner';
 const ForgotPassword = () => {
   const location = useLocation();
   const isPhone = usePhoneLayout();
+  // On phones the page is a modal sheet: focus stays in it, and Escape does
+  // what the sheet's close button does (slide away, back to the page under it).
+  const sheetRef = useFocusTrap(isPhone, {
+    onClose: () => sheetRef.current?.querySelector('[data-sheet-close]')?.click(),
+  });
   // Opened from the Log in sheet: swap in place instead of sliding up again.
   const sheetSwitched = Boolean(location.state?.fromSheet);
   const [email, setEmail] = useState('');
@@ -56,6 +62,7 @@ const ForgotPassword = () => {
 
   return (
     <div
+      ref={sheetRef}
       className={`fp-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}
       role={isPhone ? 'dialog' : undefined}
       aria-modal={isPhone ? 'true' : undefined}

@@ -251,7 +251,7 @@
 .sa-card:hover .sa-card-top .sa-tone { transform: scale(1.08); }
 
 .sa-card-num {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 13px;
   font-weight: 600;
 }

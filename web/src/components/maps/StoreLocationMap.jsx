@@ -7,6 +7,7 @@ import { MapPin, NavigationArrow, Storefront, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import Spinner from '../ui/Spinner';
 import { resolveImg } from '../../lib/media';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import 'leaflet/dist/leaflet.css';
 import './StoreLocationMap.css';
 
@@ -55,7 +56,9 @@ const CARD_MORPH_MS = 320;
  */
 function StoreMapCard({ store, open, onClose, onClosed, onMouseEnter, onMouseLeave }) {
   const map = useMap();
-  const cardRef = useRef(null);
+  // The card's own ref doubles as the focus trap's.
+  // Opened by hovering a pin: Escape closes it, but focus stays where it is.
+  const cardRef = useFocusTrap(open, { onClose, modal: false });
   const [point, setPoint] = useState(() => map.latLngToContainerPoint([store.latitude, store.longitude]));
   const [grown, setGrown] = useState(false);
   const expanded = open && grown;
@@ -71,7 +74,7 @@ function StoreMapCard({ store, open, onClose, onClosed, onMouseEnter, onMouseLea
     if (!cardRef.current) return;
     L.DomEvent.disableClickPropagation(cardRef.current);
     L.DomEvent.disableScrollPropagation(cardRef.current);
-  }, []);
+  }, [cardRef]);
 
   // Grow on the next frame so the transition runs; shrink, then unmount.
   useEffect(() => {
@@ -97,15 +100,7 @@ function StoreMapCard({ store, open, onClose, onClosed, onMouseEnter, onMouseLea
       if (dx || dy) map.panBy([dx, dy], { animate: true, duration: 0.25 });
     }, CARD_MORPH_MS);
     return () => clearTimeout(timer);
-  }, [expanded, map]);
-
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [expanded, map, cardRef]);
 
   const logo = resolveImg(store.logo);
   const address = [store.pickupAddress, store.municipality?.name, store.province || 'Oriental Mindoro']

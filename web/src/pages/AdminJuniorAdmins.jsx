@@ -8,6 +8,7 @@ import '../components/admin/AdminLayout.css';
 import './AdminJuniorAdmins.css';
 import { confirmAction } from '../lib/confirm';
 import Select from '../components/ui/Select';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const toDateInput = (date) => {
@@ -138,6 +139,8 @@ export default function AdminJuniorAdmins() {
 }
 
 function AssignAdminModal({ municipalities, onClose, onAssigned }) {
+  // Keyboard: focus in, Tab stays, Escape closes (hooks/useFocusTrap).
+  const trapRef = useFocusTrap(true, { onClose });
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -204,6 +207,10 @@ function AssignAdminModal({ municipalities, onClose, onAssigned }) {
       }}
     >
       <div
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Assign Municipal Admin"
         onClick={(e) => e.stopPropagation()}
         style={{ background: 'var(--t-neutral-0, #fff)', width: 'min(560px, 100%)', padding: 24, maxHeight: '90vh', overflowY: 'auto' }
 }

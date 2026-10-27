@@ -108,6 +108,11 @@ function AuthDropdown({ label, variant, onClick, to, title, subtitle, items }) {
       className="sell-auth-wrap"
       onMouseEnter={() => { cancelClose(); setOpen(true); }}
       onMouseLeave={scheduleClose}
+      // Keyboard too: it opens when Tab reaches the button, its links follow,
+      // and it closes when focus moves on (or on Escape).
+      onFocus={() => { cancelClose(); setOpen(true); }}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) scheduleClose(); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
     >
       <button
         className={variant === 'primary' ? 'sell-nav-btn-primary' : 'sell-nav-btn-ghost'}

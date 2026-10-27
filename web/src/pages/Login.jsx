@@ -9,6 +9,7 @@ import useAccountSwitchStore from '../store/accountSwitchStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import AppLogo from '../components/AppLogo';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useFocusTrap from '../hooks/useFocusTrap';
 import AuthSheetBar from '../components/AuthSheetBar';
 import AuthHero from '../components/auth/AuthHero';
 import Footer from '../components/layout/Footer';
@@ -28,6 +29,11 @@ const Login = ({ seller = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isPhone = usePhoneLayout();
+  // On phones the page is a modal sheet: focus stays in it, and Escape does
+  // what the sheet's close button does (slide away, back to the page under it).
+  const sheetRef = useFocusTrap(isPhone, {
+    onClose: () => sheetRef.current?.querySelector('[data-sheet-close]')?.click(),
+  });
   // Switching between Log in and Sign up swaps the sheet without sliding it
   // up again.
   const sheetSwitched = Boolean(location.state?.fromSheet);
@@ -419,6 +425,7 @@ const Login = ({ seller = false }) => {
 
   return (
     <div
+      ref={sheetRef}
       className={`login-page${seller ? ' is-seller' : ''}${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}${showQrLogin && !isPhone ? ' is-qr' : ''}`}
       role={isPhone ? 'dialog' : undefined}
       aria-modal={isPhone ? 'true' : undefined}
@@ -531,13 +538,15 @@ const Login = ({ seller = false }) => {
                       type="email"
                       id="email"
                       name="email"
+                      autoComplete="username"
+                      aria-invalid={Boolean(errors.email)}
                       className={`login-form-input ${errors.email ? 'login-form-input-error' : ''}`}
                       placeholder="you@example.com"
                       value={formData.email}
                       onChange={handleChange}
                     />
                     {errors.email && (
-                      <span className="login-form-error">{errors.email}</span>
+                      <span className="login-form-error" role="alert">{errors.email}</span>
                     )}
                   </div>
 
@@ -577,7 +586,7 @@ const Login = ({ seller = false }) => {
                       </button>
                     </div>
                     {errors.password && (
-                      <span className="login-form-error">{errors.password}</span>
+                      <span className="login-form-error" role="alert">{errors.password}</span>
                     )}
                   </div>
 
@@ -689,7 +698,7 @@ function GoogleCompleteProfile({
           value={form.fullName}
           onChange={(e) => onChange('fullName', e.target.value)}
         />
-        {errors.fullName && <span className="login-form-error">{errors.fullName}</span>}
+        {errors.fullName && <span className="login-form-error" role="alert">{errors.fullName}</span>}
       </div>
 
       <div className="login-form-group">
@@ -697,12 +706,13 @@ function GoogleCompleteProfile({
         <input
           id="google-contactNumber"
           type="tel"
+          autoComplete="tel"
           placeholder="09123456789"
           className={`login-form-input ${errors.contactNumber ? 'login-form-input-error' : ''}`}
           value={form.contactNumber}
           onChange={(e) => onChange('contactNumber', e.target.value)}
         />
-        {errors.contactNumber && <span className="login-form-error">{errors.contactNumber}</span>}
+        {errors.contactNumber && <span className="login-form-error" role="alert">{errors.contactNumber}</span>}
       </div>
 
       <div className="login-form-group">
@@ -737,7 +747,7 @@ function GoogleCompleteProfile({
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
-        {errors.password && <span className="login-form-error">{errors.password}</span>}
+        {errors.password && <span className="login-form-error" role="alert">{errors.password}</span>}
       </div>
 
       <div className="login-form-group">
@@ -749,7 +759,7 @@ function GoogleCompleteProfile({
           value={form.confirmPassword}
           onChange={(e) => onChange('confirmPassword', e.target.value)}
         />
-        {errors.confirmPassword && <span className="login-form-error">{errors.confirmPassword}</span>}
+        {errors.confirmPassword && <span className="login-form-error" role="alert">{errors.confirmPassword}</span>}
       </div>
 
       <button type="submit" className="login-form-submit" disabled={isLoading}>

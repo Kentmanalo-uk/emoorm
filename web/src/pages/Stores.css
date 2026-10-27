@@ -647,7 +647,7 @@
   }
 
   .stores-m-field input::placeholder {
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .stores-m-field input::-webkit-search-cancel-button {

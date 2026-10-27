@@ -70,7 +70,8 @@ export function useShare() {
 }
 
 function ShareSheet({ open, payload, onClose }) {
-  const trapRef = useFocusTrap(open);
+  // Escape closes it (only the top dialog listens).
+  const trapRef = useFocusTrap(open, { onClose });
   const [shown, setShown] = useState(null);
   const [closing, setClosing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -89,13 +90,6 @@ function ShareSheet({ open, payload, onClose }) {
     return () => clearTimeout(timer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  useEffect(() => {
-    if (!shown) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [shown, onClose]);
 
   if (!shown) return null;
 

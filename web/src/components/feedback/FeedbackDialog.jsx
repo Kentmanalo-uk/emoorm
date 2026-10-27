@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { X, Star, PaperPlaneTilt } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -6,6 +6,7 @@ import axios from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
 import './FeedbackDialog.css';
 import { useSheetClose } from '../../hooks/useSheetMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import { BusyLabel } from '../ui/Spinner';
 import Select from '../ui/Select';
 
@@ -40,11 +41,7 @@ export default function FeedbackDialog({ onClose: onCloseProp }) {
   const [submitting, setSubmitting] = useState(false);
 
   // Escape closes it, like every other dialog in the app.
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const trapRef = useFocusTrap(true, { onClose });
 
   const submit = async (e) => {
     e.preventDefault();
@@ -72,6 +69,7 @@ export default function FeedbackDialog({ onClose: onCloseProp }) {
   return (
     <div className={`fbd-overlay ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} onClick={() => onClose()} role="presentation">
       <div
+        ref={trapRef}
         className="fbd-modal ui-sheet-panel"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

@@ -52,7 +52,8 @@ export default function ProductOptionSheet({
   const [pressed, setPressed] = useState(null);
   const timer = useRef(null);
   const bodyRef = useRef(null);
-  const trapRef = useFocusTrap(Boolean(mode));
+  // Escape closes it (only the top dialog listens).
+  const trapRef = useFocusTrap(Boolean(mode), { onClose });
 
   // Keep the sheet mounted while it slides away.
   useEffect(() => {
@@ -72,11 +73,8 @@ export default function ProductOptionSheet({
 
   useEffect(() => {
     if (!shown) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
     document.body.classList.add('pos-open');
     return () => {
-      document.removeEventListener('keydown', onKey);
       document.body.classList.remove('pos-open');
     };
   }, [shown, onClose]);

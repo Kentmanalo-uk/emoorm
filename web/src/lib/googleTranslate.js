@@ -53,8 +53,38 @@ export function getCurrentLanguage() {
   return 'en';
 }
 
-export function setLanguage(code) {
-  if (!LANGUAGES.some((l) => l.code === code)) return;
+// Fields the person typed into (not filled by the page), to tell whether a
+// language change would throw away something they wrote. Search boxes do
+// not count: a search is quickly typed again.
+const typedInto = new WeakSet();
+const isTextField = (el) => (el.tagName === 'TEXTAREA'
+  || (el.tagName === 'INPUT' && !/^(hidden|checkbox|radio|file|submit|button|reset|range|color|search|image)$/i.test(el.type)));
+const isSearch = (el) => /search/i.test(`${el.getAttribute('aria-label') || ''} ${el.getAttribute('placeholder') || ''} ${el.name || ''}`);
+if (typeof document !== 'undefined') {
+  document.addEventListener('input', (e) => {
+    if (e.isTrusted && isTextField(e.target) && !isSearch(e.target)) typedInto.add(e.target);
+  }, true);
+}
+const hasTypedWork = () => [...document.querySelectorAll('input, textarea')]
+  .some((el) => typedInto.has(el) && el.value.trim() !== '');
+
+/**
+ * Switch the site's language. It reloads the page (Google's translator reads
+ * its cookie at load), so when something typed is still on the page the
+ * person is asked first. Resolves false when they keep the page as it is.
+ */
+export async function setLanguage(code) {
+  if (!LANGUAGES.some((l) => l.code === code)) return false;
+  if (hasTypedWork()) {
+    const { confirmAction } = await import('./confirm');
+    const go = await confirmAction({
+      title: 'Change the language?',
+      message: 'The page reloads in the new language, and what you have typed here will be lost.',
+      confirmLabel: 'Change language',
+      cancelLabel: 'Stay',
+    });
+    if (!go) return false;
+  }
   localStorage.setItem(STORAGE_KEY, code);
 
   if (code === PAGE_LANG) {
@@ -64,6 +94,7 @@ export function setLanguage(code) {
   }
   // Google Translate reads the cookie at load; reload for a clean re-render.
   window.location.reload();
+  return true;
 }
 
 export function loadGoogleTranslate() {

@@ -17,6 +17,7 @@ import gcashLogo from "../assets/payments/gcash.svg";
 import qrphLogo from "../assets/payments/qrph.svg";
 import "./SellerApply.css";
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
+import useFocusTrap from "../hooks/useFocusTrap";
 
 const MAX_CATEGORIES = 5;
 
@@ -326,6 +327,7 @@ function ContactNumberField({ value, onSaved }) {
         <input
           id="apply-contact"
           type="tel"
+          autoComplete="tel"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="09171234567"
@@ -375,6 +377,7 @@ export default function SellerApply() {
   // from then on, and goes to the guided setup rather than the Seller Center.
   const [applied, setApplied] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const confirmRef = useFocusTrap(confirming, { onClose: () => setConfirming(false) });
 
   // The municipality is deliberately NOT pre-filled from the profile: the
   // picker would show nothing while the form quietly carried the account's own
@@ -702,7 +705,7 @@ export default function SellerApply() {
                   className={errors.shopName ? "input-error" : ""}
                 />
                 {errors.shopName
-                  ? <span className="field-error">{errors.shopName}</span>
+                  ? <span className="field-error" role="alert">{errors.shopName}</span>
                   : <span className="field-hint">{form.shopName.length}/60 · must be unique on Emoorm</span>}
               </div>
 
@@ -727,7 +730,7 @@ export default function SellerApply() {
                   })}
                 </div>
                 {errors.shopCategories
-                  ? <span className="field-error">{errors.shopCategories}</span>
+                  ? <span className="field-error" role="alert">{errors.shopCategories}</span>
                   : <span className="field-hint">Pick up to {MAX_CATEGORIES}. This is where your products appear.</span>}
               </div>
             </div>
@@ -772,7 +775,7 @@ export default function SellerApply() {
                   }}
                 />
                 {(errors.shopAddress || errors.municipalityId) && (
-                  <span className="field-error">{errors.shopAddress || errors.municipalityId}</span>
+                  <span className="field-error" role="alert">{errors.shopAddress || errors.municipalityId}</span>
                 )}
               </div>
             </div>
@@ -810,7 +813,7 @@ export default function SellerApply() {
                       maxLength={60}
                       className={errors.sellerPermitNumber ? "input-error" : ""}
                     />
-                    {errors.sellerPermitNumber && <span className="field-error">{errors.sellerPermitNumber}</span>}
+                    {errors.sellerPermitNumber && <span className="field-error" role="alert">{errors.sellerPermitNumber}</span>}
                   </div>
                   <div className="apply-field">
                     <span className="apply-field-label">Business permit / DTI / SEC papers</span>
@@ -830,7 +833,7 @@ export default function SellerApply() {
                       className={errors.sellerBirTin ? "input-error" : ""}
                     />
                     {errors.sellerBirTin
-                      ? <span className="field-error">{errors.sellerBirTin}</span>
+                      ? <span className="field-error" role="alert">{errors.sellerBirTin}</span>
                       : <span className="field-hint">Optional</span>}
                   </div>
                 </>
@@ -854,7 +857,7 @@ export default function SellerApply() {
                   }}
                 />
                 {errors.payoutMethods
-                  ? <span className="field-error">{errors.payoutMethods}</span>
+                  ? <span className="field-error" role="alert">{errors.payoutMethods}</span>
                   : <span className="field-hint">Pick all that apply. You can change these anytime in Seller Center.</span>}
               </div>
 
@@ -873,7 +876,7 @@ export default function SellerApply() {
                         autoComplete="name"
                         className={errors.payoutAccountName ? "input-error" : ""}
                       />
-                      {errors.payoutAccountName && <span className="field-error">{errors.payoutAccountName}</span>}
+                      {errors.payoutAccountName && <span className="field-error" role="alert">{errors.payoutAccountName}</span>}
                     </div>
                     <div className="apply-field">
                       <label htmlFor="apply-pay-number">
@@ -889,7 +892,7 @@ export default function SellerApply() {
                         placeholder={account.numberPlaceholder}
                         className={errors.payoutAccountNumber ? "input-error" : ""}
                       />
-                      {errors.payoutAccountNumber && <span className="field-error">{errors.payoutAccountNumber}</span>}
+                      {errors.payoutAccountNumber && <span className="field-error" role="alert">{errors.payoutAccountNumber}</span>}
                     </div>
                   </div>
                   <div className="apply-field">
@@ -1007,7 +1010,7 @@ export default function SellerApply() {
 
       {confirming && (
         <div className="apply-confirm-backdrop" onClick={() => setConfirming(false)}>
-          <div className="apply-confirm" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div className="apply-confirm" role="dialog" aria-modal="true" ref={confirmRef} onClick={(e) => e.stopPropagation()}>
             <h3>Open your shop?</h3>
             <p>
               The {form.municipalityName || "municipal"} admin will be notified and will review your

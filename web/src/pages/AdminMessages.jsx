@@ -15,6 +15,7 @@ import './AdminNotifications.css';
 import './AdminMessages.css';
 import { pollWhileVisible } from '../lib/visiblePoll';
 import Select from '../components/ui/Select';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const LIST_POLL_MS = 20000;
 const THREAD_POLL_MS = 6000;
@@ -66,12 +67,7 @@ function NewThreadDialog({ open, onClose, onCreated }) {
     return () => { cancelled = true; };
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  const trapRef = useFocusTrap(open, { onClose });
 
   if (!open) return null;
 
@@ -104,6 +100,7 @@ function NewThreadDialog({ open, onClose, onCreated }) {
     <div className="am-dialog-overlay" onClick={onClose}>
       <form
         className="am-dialog"
+        ref={trapRef}
         role="dialog"
         aria-modal="true"
         aria-label="New message to a municipal admin"

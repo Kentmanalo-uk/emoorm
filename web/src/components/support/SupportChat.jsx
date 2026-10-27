@@ -17,9 +17,11 @@ import NewMessageDialog from './NewMessageDialog';
 import SafetyNotice from '../common/SafetyNotice';
 import './SupportChat.css';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import { BusyLabel } from '../ui/Spinner';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import Select from '../ui/Select';
+import LoadFailed from '../ui/LoadFailed';
 
 const THREAD_POLL_MS = 5000;
 const LIST_POLL_MS = 15000;
@@ -280,15 +282,13 @@ function NewCaseDialog({ open, onClose, onOpened }) {
   const [form, setForm] = useState({ category: 'ORDER', subject: '', message: '' });
   const [saving, setSaving] = useState(false);
   const firstRef = useRef(null);
+  const dialogRef = useFocusTrap(open, { onClose });
 
   useEffect(() => {
-    if (!open) return undefined;
-    requestAnimationFrame(() => firstRef.current?.focus());
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+    if (open) requestAnimationFrame(() => firstRef.current?.focus());
+  }, [open]);
 
+  const savingRef = useRef(false);
   if (!sheet.mounted) return null;
 
   const set = (key) => (e) => setForm((current) => ({ ...current, [key]: e.target.value }));
@@ -305,6 +305,9 @@ function NewCaseDialog({ open, onClose, onOpened }) {
       toast.error('Tell us what you need help with.');
       return;
     }
+    // A double tap starts one case, not two.
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const res = await axios.post('/support/cases', { category: form.category, subject, message });
@@ -315,13 +318,14 @@ function NewCaseDialog({ open, onClose, onOpened }) {
     } catch (err) {
       toast.error(err.message || 'Could not start your case');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   return (
     <div className={`sc-dialog-overlay ui-sheet-backdrop${sheet.closing ? ' is-closing' : ''}`} onClick={onClose}>
-      <div className="sc-dialog ui-sheet-panel" role="dialog" aria-modal="true" aria-label="New support case" onClick={(e) => e.stopPropagation()}>
+      <div className="sc-dialog ui-sheet-panel" ref={dialogRef} role="dialog" aria-modal="true" aria-label="New support case" onClick={(e) => e.stopPropagation()}>
         <div className="sc-dialog-head">
           <strong>New support case</strong>
           <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
@@ -451,11 +455,20 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   const [loadingList, setLoadingList] = useState(true);
   const [draft, setDraft] = useState(initialDraft);
   const [sending, setSending] = useState(false);
+  // Set at once (state takes a render): Enter pressed twice sends once.
+  const sendingRef = useRef(false);
+  // What could not be done, shown where it happened (not only a toast):
+  // the list, the open conversation, the message being sent.
+  const [listFailed, setListFailed] = useState(false);
+  const [threadFailed, setThreadFailed] = useState(null); // conversation id
+  const [sendError, setSendFailure] = useState(null); // { id, text }
   const [filter, setFilter] = useState('all');
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   // Per-conversation override of the identity panel visibility: { id, open }.
   const [panelToggle, setPanelToggle] = useState({ id: null, open: false });
+  // Bumped by "Try again" on a conversation that did not load.
+  const [threadRetry, setThreadRetry] = useState(0);
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
   const listUrl = isAdmin ? '/support/inbox' : '/support/cases';
@@ -469,9 +482,12 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   const [isWide] = useState(() => window.innerWidth > 768);
   const activeId = selectedId || (isWide ? visibleConversations[0]?.id : null) || null;
 
-  const refreshList = useCallback(() => axios.get(listUrl)
-    .then((res) => setConversations(res.data || []))
-    .catch((err) => toast.error(err.message || 'Failed to load conversations'))
+  const refreshList = useCallback(() => axios.get(listUrl, { quiet: true })
+    .then((res) => {
+      setConversations(res.data || []);
+      setListFailed(false);
+    })
+    .catch(() => setListFailed(true))
     .finally(() => setLoadingList(false)), [listUrl]);
 
   useEffect(() => {
@@ -483,20 +499,22 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   useEffect(() => {
     if (!activeId) return undefined;
     let cancelled = false;
-    const fetchThread = () => axios.get(`/support/cases/${activeId}`)
+    const fetchThread = () => axios.get(`/support/cases/${activeId}`, { quiet: true })
       .then((res) => {
         if (cancelled) return;
         setThread(res.data);
+        setThreadFailed(null);
         setConversations((prev) => prev.map((c) => (c.id === activeId ? { ...c, unreadCount: 0 } : c)));
       })
-      .catch((err) => toast.error(err.message || 'Failed to load messages'));
+      // Shown in the conversation's place; the next poll tries again.
+      .catch(() => { if (!cancelled) setThreadFailed(activeId); });
     fetchThread();
     const timer = pollWhileVisible(fetchThread, THREAD_POLL_MS);
     return () => {
       cancelled = true;
       timer();
     };
-  }, [activeId]);
+  }, [activeId, threadRetry]);
 
   const messageCount = thread?.messages?.length || 0;
   useEffect(() => {
@@ -504,20 +522,24 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   }, [messageCount, activeId]);
 
   const send = async (event) => {
-    event.preventDefault();
+    event?.preventDefault();
     const body = draft.trim();
-    if (!body || !activeId) return;
+    if (!body || !activeId || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
+    setSendFailure(null);
     try {
-      const res = await axios.post(`/support/cases/${activeId}/messages`, { body });
+      const res = await axios.post(`/support/cases/${activeId}/messages`, { body }, { quiet: true });
       setDraft('');
       setThread((prev) => (prev
         ? { ...prev, status: isAdmin ? prev.status : 'OPEN', messages: [...prev.messages, res.data] }
         : prev));
       refreshList();
     } catch (err) {
-      toast.error(err.message || 'Failed to send message');
+      // The message stays in the box, with what went wrong just above it.
+      setSendFailure({ id: activeId, text: err.message || 'Your message was not sent.' });
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -631,6 +653,8 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
         )}
         {loadingList ? (
           <p className="sc-empty">Loading…</p>
+        ) : listFailed && conversations.length === 0 ? (
+          <LoadFailed what="your conversations" onRetry={refreshList} compact />
         ) : visibleConversations.length === 0 ? (
           <EmptyState
             className="ui-empty--inset"
@@ -700,7 +724,9 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
       </aside>
 
       <section className="sc-thread">
-        {!active ? (
+        {!active && activeId && threadFailed === activeId ? (
+          <LoadFailed what="this conversation" onRetry={() => setThreadRetry((n) => n + 1)} compact />
+        ) : !active ? (
           <div className="sc-empty sc-thread-empty">
             {!activeId && <EmptyArt name="support" size={88} />}
             <p>{activeId ? 'Loading messages…' : 'Select a conversation'}</p>
@@ -804,6 +830,12 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                 {canRate && <RatingPrompt conversation={active} onRated={handleRated} />}
 
                 <SafetyNotice />
+                {sendError?.id === activeId && (
+                  <p className="sc-send-error" role="alert">
+                    <span>Not sent: {sendError.text}</span>
+                    <button type="button" onClick={() => send()} disabled={sending}>Try again</button>
+                  </p>
+                )}
                 <form className="sc-composer" onSubmit={send}>
                   {isAdmin && <QuickReplies onPick={insertQuickReply} disabled={sending} />}
                   <textarea
@@ -812,6 +844,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) send(e);
+                      else if (sendError) setSendFailure(null);
                     }}
                     placeholder="Type a message…"
                     rows={1}

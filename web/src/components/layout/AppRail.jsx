@@ -4,6 +4,7 @@ import { Translate, Bell, SignOut, Check, BellSlash, WarningCircle } from '@phos
 import axios from '../../lib/axios';
 import { notificationHref } from '../../lib/notificationLink';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../../lib/googleTranslate';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './AppRail.css';
 
 const formatTime = (value) => {
@@ -44,19 +45,15 @@ export default function AppRail({
     ?.map((n) => (readHere.has(n.id) ? { ...n, isRead: true } : n)) ?? null;
   const [confirmOpen, setConfirmOpen] = useState(false);
   const logoutRef = useRef(null);
+  const trapRef = useFocusTrap(confirmOpen, { onClose: () => setConfirmOpen(false) });
 
   useEffect(() => {
     if (!confirmOpen) return undefined;
     const onDown = (event) => {
       if (logoutRef.current && !logoutRef.current.contains(event.target)) setConfirmOpen(false);
     };
-    const onKey = (event) => { if (event.key === 'Escape') setConfirmOpen(false); };
     document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
+    return () => document.removeEventListener('mousedown', onDown);
   }, [confirmOpen]);
 
   const loadNotifications = useCallback(() => {
@@ -81,8 +78,27 @@ export default function AppRail({
   };
 
   const pickLanguage = (code) => {
+    setLangOpen(false);
     if (code !== current) setLanguage(code);
   };
+
+  // The language list opens on hover and keyboard focus (AppRail.css), and
+  // on a tap or click too: a tap on a tablet neither hovers nor focuses.
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef(null);
+  useEffect(() => {
+    if (!langOpen) return undefined;
+    const away = (e) => { if (!langRef.current?.contains(e.target)) setLangOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setLangOpen(false); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('touchstart', away);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('touchstart', away);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [langOpen]);
 
   return (
     <aside className="sr-rail notranslate" translate="no" aria-label="Quick actions">
@@ -101,8 +117,15 @@ export default function AppRail({
           </linearGradient>
         </defs>
       </svg>
-      <div className="sr-item">
-        <button type="button" className="sr-btn sr-btn--lang" aria-label="Change language" aria-haspopup="listbox">
+      <div ref={langRef} className={`sr-item${langOpen ? ' is-open' : ''}`}>
+        <button
+          type="button"
+          className="sr-btn sr-btn--lang"
+          aria-label="Change language"
+          aria-haspopup="listbox"
+          aria-expanded={langOpen}
+          onClick={() => setLangOpen((v) => !v)}
+        >
           <Translate size={26} weight="fill" />
         </button>
         <div className="sr-flyout sr-flyout--lang" role="listbox" aria-label="Language">
@@ -170,6 +193,7 @@ export default function AppRail({
           <SignOut size={26} weight="fill" />
         </button>
         <div
+          ref={trapRef}
           className="sr-flyout sr-flyout--logout"
           role="dialog"
           aria-label="Confirm sign out"

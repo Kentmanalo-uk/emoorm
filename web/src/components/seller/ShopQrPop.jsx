@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Printer, QrCode, X } from '@phosphor-icons/react';
 import { logoHole, qrMatrix, shopQrLabel, shopQrUrl } from '../../lib/shopQrPoster';
 import { resolveImg } from '../../lib/media';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './ShopQrPop.css';
 
 /*
@@ -226,29 +227,29 @@ function ShopQrLayer({ store, matrix, originRef, iconRef, onClosed }) {
     list[0].finished.then(onClosed).catch(() => {});
   }, [onClosed]);
 
-  // Escape closes; focus comes back to the icon.
+  // Escape closes and Tab stays on the card (the focus trap); the card is
+  // both refs.
+  const trapRef = useFocusTrap(true, { onClose: close });
+  const setCard = useCallback((el) => {
+    cardRef.current = el;
+    trapRef(el);
+  }, [trapRef]);
+
+  // Focus the card itself; focus comes back to the icon.
   useEffect(() => {
     const icon = iconRef.current;
-    const onKey = (e) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        close();
-      }
-    };
-    document.addEventListener('keydown', onKey, true);
     cardRef.current?.focus({ preventScroll: true });
     return () => {
-      document.removeEventListener('keydown', onKey, true);
       icon?.focus?.({ preventScroll: true });
     };
-  }, [close, iconRef]);
+  }, [iconRef]);
 
   return createPortal(
     <div className="sqp-layer" ref={layerRef}>
       <div className="sqp-dim" ref={dimRef} onClick={close} aria-hidden="true" />
       <div
         className="sqp-card"
-        ref={cardRef}
+        ref={setCard}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"

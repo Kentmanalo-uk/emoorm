@@ -374,7 +374,7 @@
 }
 
 .sw-field em {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-style: normal;
   font-weight: 400;
 }
@@ -402,7 +402,7 @@
 
 .sw-field > small {
   align-self: flex-end;
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
   font-size: 12px;
 }
 

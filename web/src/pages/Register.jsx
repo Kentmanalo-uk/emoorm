@@ -9,6 +9,7 @@ import useAuthStore from '../store/authStore';
 import PhAddressPicker from '../components/common/PhAddressPicker';
 import AppLogo from '../components/AppLogo';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useFocusTrap from '../hooks/useFocusTrap';
 import AuthSheetBar from '../components/AuthSheetBar';
 import AuthHero from '../components/auth/AuthHero';
 import Footer from '../components/layout/Footer';
@@ -20,6 +21,11 @@ const Register = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isPhone = usePhoneLayout();
+  // On phones the page is a modal sheet: focus stays in it, and Escape does
+  // what the sheet's close button does (slide away, back to the page under it).
+  const sheetRef = useFocusTrap(isPhone, {
+    onClose: () => sheetRef.current?.querySelector('[data-sheet-close]')?.click(),
+  });
   const sheetSwitched = Boolean(location.state?.fromSheet);
   const [searchParams] = useSearchParams();
   const { login: storeLogin } = useAuthStore();
@@ -291,6 +297,7 @@ const Register = () => {
 
   return (
     <div
+      ref={sheetRef}
       className={`register-page${isPhone ? ' is-sheet' : ''}${sheetSwitched ? ' is-switched' : ''}`}
       role={isPhone ? 'dialog' : undefined}
       aria-modal={isPhone ? 'true' : undefined}
@@ -351,7 +358,7 @@ const Register = () => {
                     onChange={handleChange}
                   />
                   {errors.fullName && (
-                    <span className="register-form-error">{errors.fullName}</span>
+                    <span className="register-form-error" role="alert">{errors.fullName}</span>
                   )}
                 </div>
 
@@ -364,6 +371,8 @@ const Register = () => {
                     type="email"
                     id="email"
                     name="email"
+                    autoComplete="email"
+                    aria-invalid={Boolean(errors.email)}
                     className={`register-form-input ${errors.email ? 'register-form-input-error' : ''}`}
                     placeholder="you@example.com"
                     value={formData.email}
@@ -371,7 +380,7 @@ const Register = () => {
                     disabled={!!googleProfile}
                   />
                   {errors.email && (
-                    <span className="register-form-error">{errors.email}</span>
+                    <span className="register-form-error" role="alert">{errors.email}</span>
                   )}
                 </div>
 
@@ -403,13 +412,14 @@ const Register = () => {
                     type="tel"
                     id="contactNumber"
                     name="contactNumber"
+                    autoComplete="tel"
                     className={`register-form-input ${errors.contactNumber ? 'register-form-input-error' : ''}`}
                     placeholder="09123456789"
                     value={formData.contactNumber}
                     onChange={handleChange}
                   />
                   {errors.contactNumber && (
-                    <span className="register-form-error">{errors.contactNumber}</span>
+                    <span className="register-form-error" role="alert">{errors.contactNumber}</span>
                   )}
                 </div>
 
@@ -439,7 +449,7 @@ const Register = () => {
                     </button>
                   </div>
                   {errors.password && (
-                    <span className="register-form-error">{errors.password}</span>
+                    <span className="register-form-error" role="alert">{errors.password}</span>
                   )}
                 </div>
 
@@ -469,7 +479,7 @@ const Register = () => {
                     </button>
                   </div>
                   {errors.confirmPassword && (
-                    <span className="register-form-error">{errors.confirmPassword}</span>
+                    <span className="register-form-error" role="alert">{errors.confirmPassword}</span>
                   )}
                 </div>
 

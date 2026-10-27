@@ -792,7 +792,7 @@
   }
 
   .msgr-list-search input::placeholder {
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .msgr-list-scroll {

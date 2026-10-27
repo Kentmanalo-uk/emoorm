@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Warning } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import '../ui/ConfirmDialog.css';
 import './ReasonDialog.css';
 import './DeleteUserDialog.css';
@@ -41,12 +42,8 @@ export default function DeleteUserDialog({ open, user, onDeleted, onCancel }) {
     return () => { cancelled = true; };
   }, [open, user?.id]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape' && !busy) onCancel?.(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, busy, onCancel]);
+  // Escape cancels, but not while the deletion is running.
+  const dialogRef = useFocusTrap(open && Boolean(user), { onClose: () => { if (!busy) onCancel?.(); } });
 
   if (!open || !user) return null;
 
@@ -72,7 +69,7 @@ export default function DeleteUserDialog({ open, user, onDeleted, onCancel }) {
   const shown = ROWS.filter(([key]) => (counts[key] || 0) > 0);
 
   return (
-    <div className="cf-dialog-backdrop" onClick={() => !busy && onCancel?.()} role="dialog" aria-modal="true" aria-labelledby="del-user-title">
+    <div className="cf-dialog-backdrop" onClick={() => !busy && onCancel?.()} role="dialog" aria-modal="true" aria-labelledby="del-user-title" ref={dialogRef}>
       <form className="cf-dialog del-user-dialog" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <div className="cf-dialog-body reason-dialog-body">
           <span className="del-user-icon" aria-hidden="true"><Warning size={22} weight="fill" /></span>

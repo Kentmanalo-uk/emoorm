@@ -75,16 +75,10 @@ export default function SwitchAccountSheet({ open, onClose }) {
   const [busy, setBusy] = useState(null);
   const [removing, setRemoving] = useState(null);
   const { mounted, closing } = useSheetPresence(open);
-  const trapRef = useFocusTrap(open && !removing);
+  // Escape closes it (not while an account is being removed).
+  const trapRef = useFocusTrap(open && !removing, { onClose });
 
   useEffect(() => { if (open) loadSavedAccounts(); }, [open]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape' && !removing) onClose?.(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, removing, onClose]);
 
   // The signed-in account first, then the others as saved.
   const list = user?.id && !accounts.some((a) => a.id === user.id)

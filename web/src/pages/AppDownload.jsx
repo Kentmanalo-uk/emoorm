@@ -11,6 +11,7 @@ import Layout from '../components/layout/Layout';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useSheetPresence } from '../hooks/useSheetMotion';
+import useFocusTrap from '../hooks/useFocusTrap';
 import useSeo from '../lib/seo';
 import { androidAppVersion } from '../lib/inApp';
 import {
@@ -161,21 +162,12 @@ function Sheet({
   open, onClose, title, children,
 }) {
   const { mounted, closing } = useSheetPresence(open);
-  const panel = useRef(null);
+  const panel = useFocusTrap(open, { onClose });
 
+  // The sheet itself takes focus (after the trap noted the opener).
   useEffect(() => {
-    if (!open) return undefined;
-    const before = document.activeElement;
-    panel.current?.focus();
-    const onKey = (event) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      before?.focus?.();
-    };
-  }, [open, onClose]);
+    if (open) panel.current?.focus();
+  }, [open, panel]);
 
   if (!mounted) return null;
   return (
@@ -369,6 +361,7 @@ function AdVideo({ src, poster, width, height, className = '' }) {
 function PreviewViewer({ start, onClose }) {
   const track = useRef(null);
   const done = useRef(null);
+  const dialog = useFocusTrap(true, { onClose });
   const [index, setIndex] = useState(start);
   const count = PREVIEWS.length;
 
@@ -388,8 +381,7 @@ function PreviewViewer({ start, onClose }) {
   useEffect(() => {
     done.current?.focus();
     const onKey = (event) => {
-      if (event.key === 'Escape') onClose();
-      else if (event.key === 'ArrowRight') go(1);
+      if (event.key === 'ArrowRight') go(1);
       else if (event.key === 'ArrowLeft') go(-1);
     };
     window.addEventListener('keydown', onKey);
@@ -399,7 +391,7 @@ function PreviewViewer({ start, onClose }) {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = overflow;
     };
-  }, [go, onClose]);
+  }, [go]);
 
   const onScroll = () => {
     const el = track.current;
@@ -407,7 +399,7 @@ function PreviewViewer({ start, onClose }) {
   };
 
   return (
-    <div className="appdl-viewer" role="dialog" aria-modal="true" aria-label="Screenshots">
+    <div ref={dialog} className="appdl-viewer" role="dialog" aria-modal="true" aria-label="Screenshots">
       <div className="appdl-viewer-bar">
         <span>{`${index + 1} of ${count}`}</span>
         <button ref={done} type="button" className="appdl-viewer-done" onClick={onClose}>Done</button>

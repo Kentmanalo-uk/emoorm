@@ -24,6 +24,7 @@ import useAuthStore from '../store/authStore';
 import './Home.css';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import useAppSettings from '../hooks/useAppSettings';
+import useFocusTrap from '../hooks/useFocusTrap';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import TodayRail from '../components/today/TodayRail';
@@ -115,15 +116,6 @@ const Home = () => {
   useEffect(() => {
     if (showPromotion) sessionStorage.setItem(promotionPopup.sessionKey, 'seen');
   }, [showPromotion, promotionPopup]);
-
-  useEffect(() => {
-    if (!popupOpen) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') setPopupOpen(false);
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [popupOpen]);
 
   // Selectors: Home re-renders only when these change, not on every cart or
   // session update.
@@ -706,9 +698,11 @@ function PromotionPopup({ banner, onClose }) {
     setClosing(true);
     window.setTimeout(onClose, PROMO_CLOSE_MS);
   };
+  const trapRef = useFocusTrap(true, { onClose: close });
 
   return (
     <div
+      ref={trapRef}
       className={`home-promo-backdrop${closing ? ' is-closing' : ''}`}
       role="dialog"
       aria-modal="true"

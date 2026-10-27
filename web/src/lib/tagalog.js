@@ -317,18 +317,35 @@ const TL_ATTR = {
 const ATTRS = ['placeholder', 'aria-label', 'title'];
 const SKIP = 'script,style,textarea,input,[contenteditable],.notranslate-user';
 
+// The elements this file keeps Google off (data-tl), so the mark can come off
+// again when their text changes to one that is not in the list.
+const kept = (el) => el?.dataset?.tl === '1';
+const OURS = new Set(Object.values(TL));
+const release = (el) => {
+  el.removeAttribute('translate');
+  el.classList.remove('notranslate');
+  delete el.dataset.tl;
+};
+
 const swapText = (node) => {
   const raw = node.nodeValue;
   const key = raw.trim();
   const tl = key && TL[key];
-  if (!tl) return;
+  const el = node.parentElement;
+  if (!tl) {
+    // A button whose text changed ("Follow" to "Following 12"): it was ours,
+    // it is not any more, so Google may translate it again (it stayed in
+    // English before).
+    if (kept(el) && !OURS.has(key)) release(el);
+    return;
+  }
   // Writing a text, even the same one, is a change the observer sees again.
   if (tl !== key) node.nodeValue = raw.replace(key, tl);
   // The element holding only this text: keep Google off it.
-  const el = node.parentElement;
   if (el && el.childNodes.length === 1 && !el.classList.contains('notranslate')) {
     el.setAttribute('translate', 'no');
     el.classList.add('notranslate');
+    el.dataset.tl = '1';
   }
 };
 

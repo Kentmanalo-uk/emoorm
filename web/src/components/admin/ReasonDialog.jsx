@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import '../ui/ConfirmDialog.css';
 import './ReasonDialog.css';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 /**
  * Confirmation dialog that asks the admin for a reason (sent to the affected
@@ -34,24 +35,16 @@ export default function ReasonDialog({
   const [reason, setReason] = useState('');
   const { mounted, closing } = useSheetPresence(open);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape' && !loading) onCancel?.();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, loading, onCancel]);
-
-  if (!mounted) return null;
-  const trimmed = reason.trim();
-  const disabled = loading || (required && trimmed.length < 3);
-
   const close = () => {
     if (loading) return;
     setReason('');
     onCancel?.();
   };
+  const trapRef = useFocusTrap(open, { onClose: close });
+
+  if (!mounted) return null;
+  const trimmed = reason.trim();
+  const disabled = loading || (required && trimmed.length < 3);
 
   const submit = (event) => {
     event.preventDefault();
@@ -61,7 +54,7 @@ export default function ReasonDialog({
   };
 
   return (
-    <div className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`} onClick={close} role="dialog" aria-modal="true" aria-labelledby="reason-dialog-title">
+    <div className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`} ref={trapRef} onClick={close} role="dialog" aria-modal="true" aria-labelledby="reason-dialog-title">
       <form className="cf-dialog reason-dialog ui-sheet-panel" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <div className="cf-dialog-body reason-dialog-body">
           <h3 id="reason-dialog-title">{title}</h3>

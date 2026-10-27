@@ -571,7 +571,7 @@ function SellerFulfillment({ part }) {
                   lockToPhilippines
                   hint="Tap the map where buyers collect their orders."
                 />
-                {pinError && <span className="form-error">{pinError}</span>}
+                {pinError && <span className="form-error" role="alert">{pinError}</span>}
               </div>
               <div className="form-group">
                 <label>Pickup instructions (optional)</label>

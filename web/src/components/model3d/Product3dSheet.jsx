@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from '@phosphor-icons/react';
 import { resolveImg } from '../../lib/media';
 import ModelViewer from './ModelViewer';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './Product3dSheet.css';
 
 /*
@@ -31,21 +32,17 @@ const sizeWords = (model) => {
 };
 
 export default function Product3dSheet({ model, name, onClose }) {
+  const trapRef = useFocusTrap(true, { onClose });
 
-  // Esc closes; the page behind doesn't scroll.
+  // The page behind doesn't scroll.
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
-    document.addEventListener('keydown', onKey);
     const { overflow } = document.body.style;
     document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = overflow;
-    };
-  }, [onClose]);
+    return () => { document.body.style.overflow = overflow; };
+  }, []);
 
   return createPortal(
-    <div className="p3d" role="dialog" aria-modal="true" aria-label={`3D view of ${name}`}>
+    <div className="p3d" ref={trapRef} role="dialog" aria-modal="true" aria-label={`3D view of ${name}`}>
       <div className="p3d-backdrop" onClick={onClose} aria-hidden="true" />
       <div className="p3d-panel">
         <header className="p3d-head">

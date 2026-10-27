@@ -196,6 +196,33 @@
   text-align: right;
 }
 
+/* A message that was not sent: what went wrong, over the box that still
+   holds it. */
+.sc-send-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--t-danger-200, #fecaca);
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-600, #dc2626);
+  font-size: 13px;
+}
+
+.sc-send-error button {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid var(--t-danger-200, #fecaca);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-danger-600, #dc2626);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .sc-composer {
   display: flex;
   align-items: flex-end;

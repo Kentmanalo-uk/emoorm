@@ -16,6 +16,7 @@ import ShopHome from '../components/shop/ShopHome';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { BusyLabel } from '../components/ui/Spinner';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useFocusTrap from '../hooks/useFocusTrap';
 import './SellerDashboard.css';
 import './SellerShopHome.css';
 import Select from '../components/ui/Select';
@@ -71,6 +72,7 @@ export default function SellerShopHome() {
   const [preset, setPreset] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [removing, setRemoving] = useState(null);
+  const previewRef = useFocusTrap(isPhone && previewOpen, { onClose: () => setPreviewOpen(false) });
 
   useEffect(() => {
     let cancelled = false;
@@ -261,7 +263,7 @@ export default function SellerShopHome() {
       </div>
 
       {isPhone && previewOpen && (
-        <div className="shb-sheet" role="dialog" aria-modal="true" aria-label="Preview">
+        <div className="shb-sheet" role="dialog" aria-modal="true" aria-label="Preview" ref={previewRef}>
           <div className="shb-sheet-head">
             <strong>What buyers see</strong>
             <button type="button" className="shb-icon-btn" onClick={() => setPreviewOpen(false)} aria-label="Close preview"><X size={18} /></button>

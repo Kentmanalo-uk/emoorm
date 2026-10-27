@@ -356,20 +356,24 @@ const Addresses = () => {
               className={`form-input ${formErrors.fullName ? 'error' : ''}`}
               placeholder="Juan Dela Cruz"
             />
-            {formErrors.fullName && <span className="form-error">{formErrors.fullName}</span>}
+            {formErrors.fullName && <span className="form-error" role="alert">{formErrors.fullName}</span>}
           </div>
 
           <div className="form-group">
-            <label className="form-label">Contact Number</label>
+            <label className="form-label" htmlFor="address-contact">Contact Number</label>
             <input
-              type="text"
+              id="address-contact"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              aria-invalid={Boolean(formErrors.contactNumber)}
               name="contactNumber"
               value={formData.contactNumber}
               onChange={handleChange}
               className={`form-input ${formErrors.contactNumber ? 'error' : ''}`}
               placeholder="09XXXXXXXXX"
             />
-            {formErrors.contactNumber && <span className="form-error">{formErrors.contactNumber}</span>}
+            {formErrors.contactNumber && <span className="form-error" role="alert">{formErrors.contactNumber}</span>}
           </div>
 
           {/* The pin comes first: pinning fills in the town, barangay and street below it. */}
@@ -387,7 +391,7 @@ const Addresses = () => {
               lockToPhilippines
               hint="Tap the map where the house is."
             />
-            {formErrors.pin && <span className="form-error">{formErrors.pin}</span>}
+            {formErrors.pin && <span className="form-error" role="alert">{formErrors.pin}</span>}
             {pinNote && <PinNote note={pinNote} />}
           </div>
 

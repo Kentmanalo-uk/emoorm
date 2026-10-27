@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X, Warning as AlertTriangle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -59,13 +59,8 @@ const DESTINATION = {
 export default function ReportModal({ type, productId, storeId, reportedBuyerId, targetName, onClose: onCloseProp }) {
   // Phones: slide down before the parent removes the sheet.
   const [sheetClosing, onClose] = useSheetClose(onCloseProp);
-  const trapRef = useFocusTrap(true);
   // Escape closes it, as every other dialog.
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const trapRef = useFocusTrap(true, { onClose });
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);

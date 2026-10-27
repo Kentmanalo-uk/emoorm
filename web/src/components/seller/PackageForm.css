@@ -245,7 +245,7 @@
 .pkf-input::placeholder,
 .pkf-money input::placeholder,
 .pkf-count input::placeholder {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .pkf-input:focus,
@@ -1026,7 +1026,7 @@
 }
 
 .pkf-preview-body h3.is-empty {
-  color: var(--t-neutral-400, #9ca3af);
+  color: var(--t-neutral-500, #636b78);
 }
 
 .pkf-preview-price {

@@ -4,12 +4,14 @@ import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import { peso, num } from './format';
 import { riderFeeNote, shopTotalOf } from '../../lib/moormove';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './analytics.css';
 
 const DayDetailModal = ({ date, onClose }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const dialogRef = useFocusTrap(Boolean(date), { onClose });
 
   useEffect(() => {
     if (!date) return;
@@ -24,7 +26,7 @@ const DayDetailModal = ({ date, onClose }) => {
   if (!date) return null;
 
   return (
-    <div className="an-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="an-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" ref={dialogRef}>
       <div className="an-modal" onClick={(e) => e.stopPropagation()}>
         <div className="an-modal-head">
           <h2 className="an-card-title">Sales for {date}</h2>

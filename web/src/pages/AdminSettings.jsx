@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -36,10 +36,11 @@ function DeliveryExample({ form }) {
 
 // Settings row: label and help on the left, controls on the right.
 function Row({ label, help, children }) {
+  const id = useId();
   return (
-    <div className="st-row">
+    <div className="st-row" role="group" aria-labelledby={id}>
       <div className="st-row-label">
-        <strong>{label}</strong>
+        <strong id={id}>{label}</strong>
         {help && <span>{help}</span>}
       </div>
       <div className="st-row-control">{children}</div>
@@ -712,10 +713,10 @@ export default function AdminSettings() {
         <input className="st-input" type="text" value={profileForm.fullName} onChange={(e) => setProfileForm((p) => ({ ...p, fullName: e.target.value }))} required />
       </Row>
       <Row label="Contact number">
-        <input className="st-input" type="tel" value={profileForm.contactNumber} onChange={(e) => setProfileForm((p) => ({ ...p, contactNumber: e.target.value }))} placeholder="+63…" />
+        <input className="st-input" type="tel" autoComplete="tel" value={profileForm.contactNumber} onChange={(e) => setProfileForm((p) => ({ ...p, contactNumber: e.target.value }))} placeholder="+63…" />
       </Row>
       <Row label="Email" help="Contact a super admin to change your email.">
-        <input className="st-input" type="email" value={user?.email || ''} disabled />
+        <input className="st-input" type="email" autoComplete="email" value={user?.email || ''} disabled />
       </Row>
       <footer className="st-panel-foot">
         <button type="submit" className="st-btn st-btn-primary" disabled={savingProfile}>

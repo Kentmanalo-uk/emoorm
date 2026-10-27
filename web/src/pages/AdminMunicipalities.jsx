@@ -12,6 +12,7 @@ import EmptyArt from '../components/ui/EmptyArt';
 import '../components/admin/AdminLayout.css';
 import { confirmAction } from '../lib/confirm';
 import Select from '../components/ui/Select';
+import { keyActivate } from '../lib/keyActivate';
 
 export default function AdminMunicipalities() {
   const [municipalities, setMunicipalities] = useState([]);
@@ -223,6 +224,8 @@ export default function AdminMunicipalities() {
                         <div
                           className="admin-mun-logo-upload"
                           onClick={() => logoInputRefs.current[mun.id]?.click()}
+                          {...keyActivate(() => logoInputRefs.current[mun.id]?.click())}
+                          aria-label={`Upload the logo for ${mun.name}`}
                           title="Upload municipal admin logo"
                         >
                           {mun.logo ? (

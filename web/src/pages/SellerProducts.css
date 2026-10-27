@@ -889,7 +889,7 @@ a.pm-btn {
   }
 
   .sc-shell .sc-content .spm-filterbar .products-search-input::placeholder {
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .sc-shell .sc-content .spm-filterbar .products-search-input::-webkit-search-cancel-button {

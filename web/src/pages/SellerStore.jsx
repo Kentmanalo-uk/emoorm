@@ -312,9 +312,12 @@ function SellerStore({ part }) {
 
   const contactField = (
                   <div className="form-group">
-                    <label>Contact Number</label>
+                    <label htmlFor="store-contact">Contact Number</label>
                     <input
-                      type="text"
+                      id="store-contact"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       name="contactNumber"
                       value={form.contactNumber}
                       onChange={handleChange}

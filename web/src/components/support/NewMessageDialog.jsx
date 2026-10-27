@@ -3,6 +3,7 @@ import { MagnifyingGlass, X, CircleNotch, UserCircle } from '@phosphor-icons/rea
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 const SEARCH_DELAY_MS = 300;
 const MESSAGEABLE = new Set(['BUYER', 'SELLER']);
@@ -33,13 +34,12 @@ export default function NewMessageDialog({ open, onClose, onOpened }) {
     };
   }, [open, query]);
 
+  const trapRef = useFocusTrap(open, { onClose });
+
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) return;
     requestAnimationFrame(() => inputRef.current?.focus());
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -61,7 +61,7 @@ export default function NewMessageDialog({ open, onClose, onOpened }) {
 
   return (
     <div className="sc-dialog-overlay" onClick={onClose}>
-      <div className="sc-dialog" role="dialog" aria-modal="true" aria-label="New message" onClick={(e) => e.stopPropagation()}>
+      <div className="sc-dialog" ref={trapRef} role="dialog" aria-modal="true" aria-label="New message" onClick={(e) => e.stopPropagation()}>
         <div className="sc-dialog-head">
           <strong>New message</strong>
           <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>

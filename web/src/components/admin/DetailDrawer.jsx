@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import '../../pages/AdminSellers.css';
 
 const EXIT_MS = 220;
@@ -24,14 +25,8 @@ export default function DetailDrawer({ item, onClose, children }) {
     return () => clearTimeout(timer);
   }, [closing]);
 
-  useEffect(() => {
-    if (!item) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') onClose?.();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [item, onClose]);
+  // Live only while an item is open, not during the exit animation.
+  const panelRef = useFocusTrap(Boolean(item), { onClose });
 
   if (!rendered) return null;
 
@@ -44,6 +39,7 @@ export default function DetailDrawer({ item, onClose, children }) {
         className="admin-detail-panel"
         role="dialog"
         aria-modal="true"
+        ref={panelRef}
         onClick={(event) => event.stopPropagation()}
       >
         {children(rendered)}

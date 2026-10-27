@@ -6,6 +6,7 @@ import {
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import {
   MIN_SHARE, below, heads, peso,
 } from './offerText';
@@ -32,20 +33,16 @@ function Sheet({
   title, label, onClose, onSubmit, children,
 }) {
   const isPhone = usePhoneLayout();
+  const trapRef = useFocusTrap(true, { onClose });
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
     const { overflow } = document.body.style;
     document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = overflow;
-    };
-  }, [onClose]);
+    return () => { document.body.style.overflow = overflow; };
+  }, []);
 
   return createPortal(
     <div className={`of-backdrop${isPhone ? ' is-sheet' : ''}`} onClick={onClose} role="presentation">
-      <form className="of-dialog" role="dialog" aria-modal="true" aria-label={label || title} onClick={(e) => e.stopPropagation()} onSubmit={onSubmit} noValidate>
+      <form className="of-dialog" ref={trapRef} role="dialog" aria-modal="true" aria-label={label || title} onClick={(e) => e.stopPropagation()} onSubmit={onSubmit} noValidate>
         {isPhone && <span className="of-grip" aria-hidden="true" />}
         <div className="of-dialog-head">
           <h2>{title}</h2>

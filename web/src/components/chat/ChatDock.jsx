@@ -17,6 +17,7 @@ import SafetyNotice from '../common/SafetyNotice';
 import './ChatDock.css';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import { useUnreadCounts, countChatRead, refreshChatCounts } from '../../lib/unreadCounts';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 const LIST_POLL_MS = 30000;
 const THREAD_POLL_MS = 5000;
@@ -171,12 +172,8 @@ export default function ChatDock() {
     if (messageCount) bottomRef.current?.scrollIntoView({ block: 'end' });
   }, [messageCount, selectedKey]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (event) => { if (event.key === 'Escape') setOpen(false); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open]);
+  // A dock beside the page, not a modal: Escape closes it, Tab moves on.
+  const trapRef = useFocusTrap(open, { onClose: () => setOpen(false), modal: false });
 
   const clearUnread = (kind, id) => {
     const reset = (list) => (list || []).map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c));
@@ -404,6 +401,7 @@ export default function ChatDock() {
   return (
     <div className={`cd-root${open ? ' is-open' : ''}`}>
       <section
+        ref={trapRef}
         className={`cd-panel${selected ? ' has-thread' : ''}${isAuthenticated ? '' : ' is-guest'}`}
         role="dialog"
         aria-label="Messages"

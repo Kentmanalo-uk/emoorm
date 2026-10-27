@@ -10,6 +10,7 @@ import UserAvatar from '../components/ui/UserAvatar';
 import EmptyArt from '../components/ui/EmptyArt';
 import TeamChat from '../components/admin/TeamChat';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useFocusTrap from '../hooks/useFocusTrap';
 import useAuthStore from '../store/authStore';
 import axios from '../lib/axios';
 import { confirmAction } from '../lib/confirm';
@@ -50,14 +51,10 @@ const isoDay = (offsetDays) => {
 const endOfDay = (value) => new Date(`${value}T23:59:00`).toISOString();
 
 function Dialog({ title, onClose, children }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const trapRef = useFocusTrap(true, { onClose });
   return createPortal(
     <div className="at-backdrop" onClick={onClose} role="presentation">
-      <div className="at-dialog" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+      <div className="at-dialog" ref={trapRef} role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="at-dialog-head">
           <h2>{title}</h2>
           <button type="button" className="at-icon-btn" onClick={onClose} aria-label="Close"><X size={18} /></button>
@@ -257,6 +254,10 @@ export default function AdminTeam() {
     setOpenChat(thread);
   };
   const showPhoneChat = isPhone && (phoneChats || Boolean(openChat));
+  // Escape closes the whole sheet, from the list or from a thread.
+  const chatTrapRef = useFocusTrap(showPhoneChat, {
+    onClose: () => { setPhoneChats(false); setOpenChat(null); },
+  });
 
   const load = useCallback(() => {
     setLoading(true);
@@ -394,7 +395,7 @@ export default function AdminTeam() {
       </div>
 
       {showPhoneChat && createPortal(
-        <div className="at-chat-sheet" role="dialog" aria-modal="true" aria-label="Team chat">
+        <div className="at-chat-sheet" ref={chatTrapRef} role="dialog" aria-modal="true" aria-label="Team chat">
           {!openChat && (
             <button type="button" className="at-chat-close" onClick={() => setPhoneChats(false)} aria-label="Close">
               <X size={20} />

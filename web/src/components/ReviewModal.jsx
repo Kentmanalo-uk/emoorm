@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { X, Star, Image as ImageIcon, Video, Trash as Trash2 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -25,13 +25,8 @@ const MAX_VIDEO_MB = 50;
 export default function ReviewModal({ product, orderId, onClose: onCloseProp, onSuccess, initialRating = 0, intro, existing }) {
   // Phones: slide down before the parent removes the sheet.
   const [sheetClosing, onClose] = useSheetClose(onCloseProp);
-  const trapRef = useFocusTrap(true);
   // Escape closes it, as every other dialog.
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const trapRef = useFocusTrap(true, { onClose });
   const editing = Boolean(existing?.id);
   const [rating, setRating] = useState(existing?.rating || initialRating || 0);
   const [hovered, setHovered] = useState(0);

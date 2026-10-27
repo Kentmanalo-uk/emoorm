@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Check, X } from '@phosphor-icons/react';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './SearchFilterSheet.css';
 
 const TITLES = {
@@ -39,12 +40,7 @@ export default function SearchFilterSheet({
     }
   }
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  const trapRef = useFocusTrap(open, { onClose });
 
   if (!mounted) return null;
   const all = shown === 'all';
@@ -61,7 +57,7 @@ export default function SearchFilterSheet({
 
   return (
     <div className={`sfs-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`} onClick={onClose} role="presentation">
-      <div className="sfs ui-sheet-panel" role="dialog" aria-modal="true" aria-label={TITLES[shown]} onClick={(e) => e.stopPropagation()}>
+      <div className="sfs ui-sheet-panel" ref={trapRef} role="dialog" aria-modal="true" aria-label={TITLES[shown]} onClick={(e) => e.stopPropagation()}>
         <div className="sfs-head">
           <h2>{TITLES[shown]}</h2>
           <button type="button" className="sfs-close" onClick={onClose} aria-label="Close"><X size={20} /></button>

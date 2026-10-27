@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   ArrowCounterClockwise, BoundingBox, CircleNotch, Eraser, HandTap, MinusCircle, PaintBrush, PlusCircle, X,
 } from '@phosphor-icons/react';
+import useFocusTrap from '../../../hooks/useFocusTrap';
 
 /*
  * Fix the cutout: the photo with what is picked as the object bright, the
@@ -115,17 +116,13 @@ export default function Model3dTouchUp({
     };
   }, [photo, mask]);
 
-  // Esc cancels; the page behind doesn't scroll.
+  // Esc cancels (the trap); the page behind doesn't scroll.
+  const trapRef = useFocusTrap(true, { onClose: () => onDone(null) });
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onDone(null); };
-    document.addEventListener('keydown', onKey);
     const { overflow } = document.body.style;
     document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = overflow;
-    };
-  }, [onDone]);
+    return () => { document.body.style.overflow = overflow; };
+  }, []);
 
   // Draw: the photo, the background dimmed, the outline, taps and the box.
   useEffect(() => {
@@ -303,7 +300,7 @@ export default function Model3dTouchUp({
   ];
 
   return createPortal(
-    <div className="m3d-touch" role="dialog" aria-modal="true" aria-label="Fix the cutout: the bright part, outlined in green, becomes the 3D model">
+    <div className="m3d-touch" ref={trapRef} role="dialog" aria-modal="true" aria-label="Fix the cutout: the bright part, outlined in green, becomes the 3D model">
       <div className="m3d-touch-backdrop" onClick={() => onDone(null)} aria-hidden="true" />
       <div className="m3d-touch-panel">
         <header className="m3d-touch-head">

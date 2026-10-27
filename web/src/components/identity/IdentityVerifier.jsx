@@ -12,6 +12,7 @@ import { IMAGE_ACCEPT, uploadableImage } from '../../lib/uploadableImage';
 import Skeleton from '../ui/Skeleton';
 import '../../pages/ProfileVerification.css';
 import Select from '../ui/Select';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 const STATUS_META = {
   NOT_VERIFIED: {
@@ -102,6 +103,7 @@ function CameraCapture({ side, onCapture, onClose }) {
   const [placeHelp, setPlaceHelp] = useState(false);
   const [review, setReview] = useState(null); // { file, url, check }
   const title = side === 'back' ? 'Back of your ID' : 'Front of your ID';
+  const trapRef = useFocusTrap(true, { onClose });
 
   // The back camera, as sharp as the phone gives.
   useEffect(() => {
@@ -129,17 +131,14 @@ function CameraCapture({ side, onCapture, onClose }) {
     };
   }, []);
 
-  // Full screen: nothing behind it scrolls, and Escape closes it.
+  // Full screen: nothing behind it scrolls (Escape is the focus trap's).
   useEffect(() => {
     const { overflow } = document.body.style;
     document.body.style.overflow = 'hidden';
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = overflow;
-      document.removeEventListener('keydown', onKey);
     };
-  }, [onClose]);
+  }, []);
 
   const takePhoto = useCallback((check) => {
     const video = videoRef.current;
@@ -222,7 +221,7 @@ function CameraCapture({ side, onCapture, onClose }) {
   const warning = review && review.check !== 'good' ? REVIEW_WARNINGS[review.check] : null;
 
   return (
-    <div className="idv-cam" role="dialog" aria-modal="true" aria-label={`Take a photo: ${title}`}>
+    <div className="idv-cam" ref={trapRef} role="dialog" aria-modal="true" aria-label={`Take a photo: ${title}`}>
       <video ref={videoRef} autoPlay playsInline muted className="idv-cam-video" hidden={phase === 'review'} />
 
       <div className="idv-cam-top">

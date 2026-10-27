@@ -8,6 +8,7 @@ import PageMenu from './layout/PageMenu';
 import GradientUserIcon from './ui/GradientUserIcon';
 import ToolGradients from './ui/ToolGradients';
 import RecentlyViewed from './account/RecentlyViewed';
+import LanguageRow from './account/LanguageRow';
 import '../pages/Profile.css';
 import './ProfileGuest.css';
 
@@ -108,6 +109,8 @@ export default function ProfileGuest() {
                   <h2>More</h2>
                   <Row link={{ to: '/sell' }} icon={ShoppingBag} label="Sell on Emoorm" />
                   <Row link={{ to: '/help' }} icon={Lifebuoy} label="Help & Support" />
+                  {/* Guests too: the first-visit tip points here. */}
+                  <LanguageRow />
                 </section>
               </div>
             </div>

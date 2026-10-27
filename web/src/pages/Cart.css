@@ -389,8 +389,8 @@
 }
 
 .quantity-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1154,8 +1154,8 @@
   }
 
   .quantity-btn {
-    width: 26px;
-    height: 26px;
+    width: 36px;
+    height: 36px;
   }
 
   .quantity-display {
@@ -1592,9 +1592,9 @@
 
   /* Touch-friendly quantity stepper and remove button */
   .cart-page .quantity-btn {
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
   }
 
   .cart-page .quantity-display {
@@ -1838,7 +1838,7 @@
   }
 
   .cart-m-search input::placeholder {
-    color: var(--t-neutral-400, #9ca3af);
+    color: var(--t-neutral-500, #636b78);
   }
 
   .cart-page .breadcrumbs,
@@ -2084,11 +2084,12 @@
     border-radius: 8px;
   }
 
+  /* Steppers are tapped with a thumb: 40 x 36 at least (they were 32 x 30). */
   .cart-m-stepper button {
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 30px;
+    width: 40px;
+    height: 36px;
     padding: 0;
     border: none;
     background: var(--t-neutral-0, #fff);
@@ -2107,7 +2108,7 @@
     border-right: 1px solid var(--t-neutral-200, #e5e7eb);
     color: var(--t-neutral-900, #111827);
     font-size: 14px;
-    line-height: 30px;
+    line-height: 36px;
     text-align: center;
   }
 

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { CaretDown, Check } from '@phosphor-icons/react';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './Select.css';
 
 /**
@@ -112,6 +113,8 @@ export default function Select({
     setOpen(false);
     if (refocus) trigger.current?.focus();
   }, []);
+  // The phone sheet is modal: focus stays in it and Escape closes it.
+  const sheetRef = useFocusTrap(open && isPhone, { onClose: hide });
 
   const pick = (i) => {
     if (!choosable(i)) return;
@@ -159,7 +162,8 @@ export default function Select({
       }
       return;
     }
-    if (key === 'Escape') { e.preventDefault(); hide(); return; }
+    // Stop here so a dialog this field sits in stays open.
+    if (key === 'Escape') { e.preventDefault(); e.stopPropagation(); hide(); return; }
     if (key === 'Tab') { hide(false); return; }
     if (key === 'ArrowDown') { e.preventDefault(); setActive((a) => step(a, 1)); return; }
     if (key === 'ArrowUp') { e.preventDefault(); setActive((a) => step(a, -1)); return; }
@@ -172,6 +176,11 @@ export default function Select({
       const hit = options.findIndex((o, i) => choosable(i) && o.label.toLowerCase().startsWith(typed.current.text));
       if (hit >= 0) setActive(hit);
     }
+  };
+  // In the sheet, Escape and Tab belong to the focus trap.
+  const onSheetKeyDown = (e) => {
+    if (e.key === 'Escape' || e.key === 'Tab') return;
+    onKeyDown(e);
   };
 
   const label = rest['aria-label'] || title || placeholder || '';
@@ -251,11 +260,12 @@ export default function Select({
         >
           <div
             className="ui-select-sheet ui-sheet-panel"
+            ref={sheetRef}
             role="dialog"
             aria-modal="true"
             aria-label={label || 'Choose an option'}
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={onKeyDown}
+            onKeyDown={onSheetKeyDown}
           >
             <span className="ui-select-sheet-grip" aria-hidden="true" />
             {label && <p className="ui-select-sheet-title">{label}</p>}

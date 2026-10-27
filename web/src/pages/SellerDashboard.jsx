@@ -22,6 +22,7 @@ import { getSellerFollowerStats, subscribeToFollowChanges } from '../lib/follow'
 import { completeGuide, shouldShowGuide } from '../lib/sellerGuides';
 import { describeStep, sellBlockers, setupNextTo } from '../lib/sellerSetup';
 import PageMenu from '../components/layout/PageMenu';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const DASHBOARD_GUIDE = 'dashboard';
 import './SellerDashboard.css';
@@ -636,11 +637,13 @@ function DashboardTour({ steps, onFinish, onClose }) {
     else setStepIndex((current) => current + 1);
   };
 
+  const tourRef = useFocusTrap(Boolean(position), { onClose: finish });
+
   if (!position) return null;
   const { rect, top, left, tooltipWidth } = position;
 
   return (
-    <div className="sd-tour" role="dialog" aria-modal="true" aria-labelledby="sd-tour-title">
+    <div className="sd-tour" role="dialog" aria-modal="true" aria-labelledby="sd-tour-title" ref={tourRef}>
       <div
         className="sd-tour-spotlight"
         style={{

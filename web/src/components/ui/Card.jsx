@@ -1,4 +1,5 @@
 import './Card.css';
+import { keyActivate } from '../../lib/keyActivate';
 
 const Card = ({
   children,
@@ -17,7 +18,7 @@ const Card = ({
   ].filter(Boolean).join(' ');
 
   return (
-    <div className={cardClass} onClick={onClick} {...props}>
+    <div className={cardClass} onClick={onClick} {...(onClick ? keyActivate(onClick) : {})} {...props}>
       {children}
     </div>
   );

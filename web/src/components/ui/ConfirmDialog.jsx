@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Warning as AlertTriangle, Question as HelpCircle, CircleNotch as Loader2 } from '@phosphor-icons/react';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
@@ -36,16 +35,9 @@ export default function ConfirmDialog({
 }) {
   // Phones: stays up while it slides away after closing.
   const { mounted, closing } = useSheetPresence(open);
-  const trapRef = useFocusTrap(open);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape' && !loading) onCancel?.();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, loading, onCancel]);
+  // Escape cancels (not while the action is running); over a sheet, only
+  // this dialog closes.
+  const trapRef = useFocusTrap(open, { onClose: () => { if (!loading) onCancel?.(); } });
 
   if (!mounted) return null;
 

@@ -22,6 +22,7 @@ import MoreMenu from '../MoreMenu';
 import ReportModal from '../ReportModal';
 import EmptyState from '../ui/EmptyState';
 import { useSheetClose } from '../../hooks/useSheetMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './Messenger.css';
 import { ConversationListSkeleton } from '../ui/PageSkeletons';
 import { readCache, writeCache } from '../../lib/pageCache';
@@ -311,15 +312,11 @@ function ProductPicker({ storeId, onPick: onPickProp, onClose: onCloseProp }) {
     return () => { live = false; clearTimeout(t); };
   }, [storeId, query]);
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const sheetRef = useFocusTrap(true, { onClose });
 
   return (
     <div className={`msgr-sheet-backdrop ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} onClick={() => onClose()} role="presentation">
-      <div className="msgr-sheet ui-sheet-panel" role="dialog" aria-modal="true" aria-label="Attach a product" onClick={(e) => e.stopPropagation()}>
+      <div ref={sheetRef} className="msgr-sheet ui-sheet-panel" role="dialog" aria-modal="true" aria-label="Attach a product" onClick={(e) => e.stopPropagation()}>
         <div className="msgr-sheet-head">
           <span className="msgr-sheet-grabber" aria-hidden="true" />
           <h3>Attach a product</h3>
@@ -613,13 +610,8 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     return () => document.body.classList.remove('messenger-chat-open');
   }, [activeId]);
 
-  // Escape closes the full-screen photo.
-  useEffect(() => {
-    if (!viewerImage) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') setViewerImage(null); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [viewerImage]);
+  // The full-screen photo keeps focus; Escape closes it.
+  const viewerRef = useFocusTrap(Boolean(viewerImage), { onClose: () => setViewerImage(null) });
 
   // The input grows with the text, up to about five lines.
   useEffect(() => {
@@ -1235,7 +1227,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
       )}
 
       {viewerImage && (
-        <div className="msgr-viewer" role="dialog" aria-modal="true" aria-label="Photo" onClick={() => setViewerImage(null)}>
+        <div ref={viewerRef} className="msgr-viewer" role="dialog" aria-modal="true" aria-label="Photo" onClick={() => setViewerImage(null)}>
           <button type="button" className="msgr-viewer-close" onClick={() => setViewerImage(null)} aria-label="Close photo">
             <X size={20} weight="bold" />
           </button>

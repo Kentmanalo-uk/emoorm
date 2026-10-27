@@ -7,6 +7,7 @@ import './styles/motion.css';
 import App from './App.jsx';
 import { loadGoogleTranslate, getCurrentLanguage } from './lib/googleTranslate';
 import { startCuratedTagalog } from './lib/tagalog';
+import { keepOriginalText } from './lib/noTranslate';
 import { bootTheme } from './hooks/useTheme';
 import { setupPwaInstall } from './lib/pwaInstall';
 import { startFreshnessWatch } from './lib/freshness';
@@ -26,7 +27,12 @@ window.addEventListener('vite:preloadError', (event) => {
 // Google's translator loads only for someone who chose another language
 // (choosing one reloads the page); English pages skip its scripts.
 const language = getCurrentLanguage();
-if (language !== 'en') loadGoogleTranslate();
+// Prices, names and chat messages stay as written (lib/noTranslate); marked
+// before the translator starts.
+if (language !== 'en') {
+  keepOriginalText();
+  loadGoogleTranslate();
+}
 // Tagalog: our own wording for the app's buttons and labels, ahead of Google's.
 if (language === 'tl') startCuratedTagalog();
 

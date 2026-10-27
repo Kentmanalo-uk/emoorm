@@ -2349,7 +2349,7 @@
 }
 
 .seller-search input::placeholder {
-  color: var(--t-neutral-400, #a8aeb8);
+  color: var(--t-neutral-500, #636b78);
 }
 
 /* The browser's own clear affordance would sit beside ours. */

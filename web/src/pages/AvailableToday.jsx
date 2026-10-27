@@ -12,6 +12,7 @@ import useAuthStore from '../store/authStore';
 import useSeo from '../lib/seo';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useSheetPresence } from '../hooks/useSheetMotion';
+import useFocusTrap from '../hooks/useFocusTrap';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import { MODES, isOpen } from '../lib/availability';
 import '../components/search/SearchFilterSheet.css';
@@ -36,17 +37,12 @@ function ChoiceSheet({ title, options, value, onPick, onClose, open }) {
   const [shown, setShown] = useState({ title, options, value });
   if (open && (shown.title !== title || shown.value !== value || shown.options !== options)) setShown({ title, options, value });
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  const trapRef = useFocusTrap(open, { onClose });
 
   if (!mounted) return null;
   return (
     <div className={`sfs-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`} onClick={onClose} role="presentation">
-      <div className="sfs ui-sheet-panel" role="dialog" aria-modal="true" aria-label={shown.title} onClick={(e) => e.stopPropagation()}>
+      <div className="sfs ui-sheet-panel" ref={trapRef} role="dialog" aria-modal="true" aria-label={shown.title} onClick={(e) => e.stopPropagation()}>
         <div className="sfs-head">
           <h2>{shown.title}</h2>
           <button type="button" className="sfs-close" onClick={onClose} aria-label="Close"><X size={20} /></button>

@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Translate, CaretRight } from '@phosphor-icons/react';
 import { chooseFirstLanguage } from '../lib/languageIntro';
+import useFocusTrap from '../hooks/useFocusTrap';
 import './LanguageChoice.css';
 
 const CHOICES = [
@@ -16,20 +17,19 @@ const CHOICES = [
  * English.
  */
 export default function LanguageChoice() {
-  const dialogRef = useRef(null);
+  // Escape answers it (English) rather than skipping it.
+  const dialogRef = useFocusTrap(true, { onClose: () => chooseFirstLanguage('en') });
 
   useEffect(() => {
-    // Focus the card, not an option, so neither language looks picked.
+    // Focus the card, not an option, so neither language looks picked (this
+    // runs after the trap has focused the first option).
     dialogRef.current?.focus({ preventScroll: true });
-    const onKey = (e) => { if (e.key === 'Escape') chooseFirstLanguage('en'); };
-    document.addEventListener('keydown', onKey);
     const { overflow } = document.body.style;
     document.body.style.overflow = 'hidden';
     return () => {
-      document.removeEventListener('keydown', onKey);
       document.body.style.overflow = overflow;
     };
-  }, []);
+  }, [dialogRef]);
 
   return createPortal(
     <div className="lang-choice-backdrop notranslate" translate="no" role="presentation">

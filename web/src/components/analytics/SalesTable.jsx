@@ -2,6 +2,7 @@ import { useState } from 'react';
 import EmptyState from './EmptyState';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import './analytics.css';
+import { keyActivate } from '../../lib/keyActivate';
 
 const SalesTable = ({
   rows = [],
@@ -43,6 +44,7 @@ const SalesTable = ({
                 key={r[labelKey]}
                 className={clickable ? 'an-table-row-clickable' : ''}
                 onClick={clickable ? () => onSelect(r) : undefined}
+                {...(clickable ? keyActivate(() => onSelect(r)) : {})}
               >
                 <td>{formatLabel(r[labelKey])}</td>
                 <td style={{ textAlign: 'right' }}>{r.orders}</td>

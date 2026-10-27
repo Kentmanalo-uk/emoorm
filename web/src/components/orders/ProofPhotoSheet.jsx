@@ -5,6 +5,7 @@ import {
 import { uploadPrivateImage } from '../../lib/upload';
 import { IMAGE_ACCEPT } from '../../lib/uploadableImage';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import '../ui/ConfirmDialog.css';
 import './ProofPhotoSheet.css';
 
@@ -45,12 +46,7 @@ export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, 
   const uploading = photo?.status === 'uploading';
   const busy = saving || uploading;
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape' && !saving) onCancel?.(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, saving, onCancel]);
+  const trapRef = useFocusTrap(open, { onClose: () => { if (!saving) onCancel?.(); } });
 
   if (!mounted) return null;
 
@@ -98,6 +94,7 @@ export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, 
     <div
       className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`}
       onClick={() => !saving && onCancel?.()}
+      ref={trapRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="proof-title"

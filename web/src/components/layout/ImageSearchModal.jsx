@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import ImageSearchPicker from '../search/ImageSearchPicker';
 import './ImageSearchModal.css';
 
@@ -20,6 +21,7 @@ const ImageSearchModal = ({ open, onClose, onFile }) => {
   useEffect(() => { closeRef.current = onClose; });
   // Stays up while it fades away after closing.
   const { mounted, closing } = useSheetPresence(open && !isPhone);
+  const trapRef = useFocusTrap(open && !isPhone, { onClose });
 
   // Phones: the camera page, not a dialog.
   useEffect(() => {
@@ -31,13 +33,10 @@ const ImageSearchModal = ({ open, onClose, onFile }) => {
   useEffect(() => {
     if (!open || isPhone) return undefined;
     const t = requestAnimationFrame(() => setEntered(true));
-    const onKey = (e) => { if (e.key === 'Escape') closeRef.current(); };
-    document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     return () => {
       cancelAnimationFrame(t);
       setEntered(false);
-      document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
     };
   }, [open, isPhone]);
@@ -46,6 +45,7 @@ const ImageSearchModal = ({ open, onClose, onFile }) => {
 
   return (
     <div
+      ref={trapRef}
       className={`ism-overlay ui-sheet-backdrop${closing ? ' is-closing' : ''} ${entered ? 'ism-overlay-in' : ''}`}
       onClick={onClose}
       role="dialog"
