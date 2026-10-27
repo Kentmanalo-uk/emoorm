@@ -99,6 +99,7 @@ const countUnreadByConversation = async (viewerId, items) => {
     by: ['conversationId'],
     where: {
       senderId: { not: viewerId },
+      unsentAt: null,
       OR: items.map(({ conversationId, since }) => ({
         conversationId,
         ...(since ? { createdAt: { gt: since } } : {}),
@@ -121,14 +122,15 @@ const latestMessages = async (ids) => {
   if (ids.length === 0) return byConversation;
   const rows = await prisma.$queryRaw`
     SELECT m.id, m.body, m.image_url AS imageUrl, m.sender_id AS senderId, m.created_at AS createdAt,
-      m.order_id AS orderId, m.product_id AS productId, m.unsent_at AS unsentAt, m.conversation_id AS conversationId
+      m.order_id AS orderId, m.product_id AS productId, m.conversation_id AS conversationId
     FROM messages m
     JOIN (
       SELECT conversation_id, MAX(created_at) AS newest
       FROM messages
-      WHERE conversation_id IN (${Prisma.join(ids)})
+      WHERE conversation_id IN (${Prisma.join(ids)}) AND unsent_at IS NULL
       GROUP BY conversation_id
     ) t ON t.conversation_id = m.conversation_id AND t.newest = m.created_at
+    WHERE m.unsent_at IS NULL
     ORDER BY m.id DESC`;
   for (const { conversationId, ...message } of rows) {
     // Two messages in the same millisecond: either is the newest; keep one.
@@ -143,7 +145,8 @@ const latestMessages = async (ids) => {
  */
 const listMessages = async (conversationId, { take = 100, before = null } = {}) => {
   const rows = await prisma.message.findMany({
-    where: { conversationId, ...(before ? { createdAt: { lt: before } } : {}) },
+    // unsentAt: rows from before unsending deleted the message; never shown.
+    where: { conversationId, unsentAt: null, ...(before ? { createdAt: { lt: before } } : {}) },
     include: messageInclude,
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: take + 1,
@@ -167,12 +170,24 @@ const findMessageById = async (id) =>
     },
   });
 
-/** Unsend: the row stays (the chat says "unsent a message"), its content goes. */
-const unsendMessage = async (id, at) =>
-  prisma.message.update({
-    where: { id },
-    data: { unsentAt: at, body: '', imageUrl: null, orderId: null, productId: null },
-    include: messageInclude,
+/**
+ * Unsend: the message is hidden from both sides (unsentAt) but kept, with
+ * its photo, for moderators for UNSENT_KEEP_DAYS (message.service), and the
+ * chat's last-message time goes back to the newest one still shown (so the
+ * chat list does not sort by a message nobody sees).
+ */
+const hideMessage = async (id, conversationId, at = new Date()) =>
+  prisma.$transaction(async (tx) => {
+    await tx.message.update({ where: { id }, data: { unsentAt: at } });
+    const newest = await tx.message.findFirst({
+      where: { conversationId, unsentAt: null },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    await tx.conversation.update({
+      where: { id: conversationId },
+      data: { lastMessageAt: newest?.createdAt ?? null },
+    });
   });
 
 const touchConversation = async (conversationId, at) =>
@@ -197,6 +212,7 @@ const countUnreadInConversation = async (conversationId, senderIdNot, since) =>
     where: {
       conversationId,
       senderId: { not: senderIdNot },
+      unsentAt: null,
       ...(since ? { createdAt: { gt: since } } : {}),
     },
   });
@@ -246,7 +262,7 @@ module.exports = {
   listMessages,
   createMessage,
   findMessageById,
-  unsendMessage,
+  hideMessage,
   touchConversation,
   markRead,
   countUnreadInConversation,

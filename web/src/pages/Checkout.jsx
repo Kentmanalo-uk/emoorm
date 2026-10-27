@@ -351,7 +351,7 @@ const Checkout = () => {
       const only = results.length === 1 ? results[0] : null;
       if (!gcashRestored.current && only?.store) {
         gcashRestored.current = true;
-        if (readGcashReturn() === only.id && only.store.paymentQrImage && only.store.paymentQrType === 'GCASH') {
+        if (readGcashReturn() === only.id && (only.store.hasPaymentQr || only.store.paymentQrImage) && only.store.paymentQrType === 'GCASH') {
           setPaymentMethod('GCASH');
         }
       }
@@ -581,8 +581,8 @@ const Checkout = () => {
     return {
       // Courier deliveries are paid online, and so is an order carrying an unpaid fee.
       cod: !chosenCourier && !codFeeBlock && stores.every((s) => s.acceptsCod !== false),
-      gcash: stores.every((s) => s.paymentQrImage && s.paymentQrType === 'GCASH'),
-      qrph: stores.every((s) => s.paymentQrImage && s.paymentQrType === 'QRPH'),
+      gcash: stores.every((s) => (s.hasPaymentQr || s.paymentQrImage) && s.paymentQrType === 'GCASH'),
+      qrph: stores.every((s) => (s.hasPaymentQr || s.paymentQrImage) && s.paymentQrType === 'QRPH'),
     };
   }, [storeIds, storeInfo, chosenCourier, codFeeBlock]);
 
@@ -970,7 +970,7 @@ const Checkout = () => {
     : storesLoading ? 'Loading store details…' : 'Place Order';
 
   const activeQrStore = (paymentMethod === 'GCASH' || paymentMethod === 'QRPH')
-    ? storeIds.map((id) => storeInfo[id]?.store).find((s) => s?.paymentQrImage)
+    ? storeIds.map((id) => storeInfo[id]?.store).find((s) => s?.hasPaymentQr || s?.paymentQrImage)
     : null;
 
 

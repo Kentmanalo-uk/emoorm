@@ -8,7 +8,7 @@ import {
   ArrowClockwiseIcon, CameraIcon, CheckCircleIcon, ImageSquareIcon, StorefrontIcon, TruckIcon, WarningCircleIcon,
 } from 'phosphor-react-native';
 import OrderSheetFrame from '../../orders/OrderSheetFrame';
-import { uploadImage } from '../../../lib/upload';
+import { uploadPrivateImage } from '../../../lib/upload';
 import { toast } from '../../../lib/toast';
 import { font, t } from '../../../theme';
 
@@ -61,7 +61,7 @@ export default function ProofPhotoSheet({
     const mine = attempt.current;
     setPhoto({ asset, status: 'uploading', url: null, error: null });
     try {
-      const { url } = await uploadImage(asset);
+      const { url } = await uploadPrivateImage(asset);
       if (attempt.current === mine) setPhoto((cur) => (cur?.asset === asset ? { ...cur, status: 'ready', url } : cur));
     } catch (err) {
       if (attempt.current === mine) {

@@ -797,9 +797,10 @@ const rowFields = (job) => {
 };
 
 /**
- * Copy the rider's delivery photo into the public uploads (checked as an
- * image and optimised like any upload). Its URL, or null when it couldn't
- * be had: the reconcile job tries again later.
+ * Copy the rider's delivery photo into the private photos (checked as an
+ * image and optimised like any upload, then moved out of the public folder:
+ * lib/privateMedia). Its reference, or null when it couldn't be had: the
+ * reconcile job tries again later.
  */
 const copyProofPhoto = async (uploadId) => {
   if (!uploadId) return null;
@@ -818,7 +819,7 @@ const copyProofPhoto = async (uploadId) => {
       throw new Error(verdict.reason);
     }
     const optimized = await optimizeUpload({ path: filePath, filename, size: buffer.length });
-    return optimized.url;
+    return require('../lib/privateMedia').adopt(path.join(dir, optimized.filename));
   } catch (err) {
     console.warn(`[moormove] delivery photo ${uploadId} not copied: ${err.message}`);
     return null;

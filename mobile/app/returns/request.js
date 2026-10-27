@@ -11,7 +11,7 @@ import {
 import apiClient from '../../src/api/client';
 import ScreenHeader from '../../src/components/ScreenHeader';
 import { toast } from '../../src/lib/toast';
-import { uploadImage } from '../../src/lib/upload';
+import { uploadPrivateImage } from '../../src/lib/upload';
 import { font, t } from '../../src/theme';
 import { cardShadow } from '../../src/components/orders/OrderBits';
 import { ReturnsPrimary } from '../../src/components/returns/ReturnBits';
@@ -81,7 +81,7 @@ export default function ReturnRequest() {
       for (const photo of photos) {
         if (!uploadedRef.current.has(photo.uri)) {
           // eslint-disable-next-line no-await-in-loop
-          const result = await uploadImage(photo);
+          const result = await uploadPrivateImage(photo);
           uploadedRef.current.set(photo.uri, result?.url);
         }
         urls.push(uploadedRef.current.get(photo.uri));

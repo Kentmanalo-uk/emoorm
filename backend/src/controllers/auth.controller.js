@@ -1,5 +1,6 @@
 const authService = require('../services/auth.service');
 const sessionService = require('../services/session.service');
+const sessionCookie = require('../lib/sessionCookie');
 const userPurgeService = require('../services/userPurge.service');
 const auditLog = require('../services/auditLog.service');
 const identityVerificationService = require('../services/identityVerification.service');
@@ -10,7 +11,8 @@ const {
   noContentResponse,
   paginatedResponse,
 } = require('../utils/response');
-const { asyncHandler } = require('../middleware/errorHandler');
+const { asyncHandler, ApiError } = require('../middleware/errorHandler');
+const { verifyRefreshToken } = require('../utils/jwt');
 
 /**
  * Authentication Controller
@@ -36,7 +38,7 @@ const register = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const result = await authService.login(email, password);
+  const result = await authService.login(email, password, { ip: req.ip });
 
   successResponse(res, result, 'Login successful');
 });
@@ -47,7 +49,8 @@ const login = asyncHandler(async (req, res) => {
  * @access Public
  */
 const refreshToken = asyncHandler(async (req, res) => {
-  const { refreshToken } = req.body;
+  // From the body (the app), or the website's session cookie.
+  const refreshToken = req.body?.refreshToken || sessionCookie.read(req);
 
   const tokens = await authService.refreshToken(refreshToken);
 
@@ -63,7 +66,8 @@ const logout = asyncHandler(async (req, res) => {
   // The refresh token this device holds stops renewing. The access token
   // runs out on its own within the hour. A device that sends no refresh
   // token is simply forgetting its own copy.
-  await sessionService.revoke(req.body?.refreshToken, req.user.id);
+  await sessionService.revoke(req.body?.refreshToken || sessionCookie.read(req), req.user.id);
+  sessionCookie.clear(res);
   successResponse(res, null, 'Logout successful');
 });
 
@@ -75,6 +79,7 @@ const logout = asyncHandler(async (req, res) => {
  */
 const logoutAll = asyncHandler(async (req, res) => {
   await sessionService.revokeAll(req.user.id);
+  sessionCookie.clear(res);
   successResponse(res, null, 'Signed out everywhere');
 });
 
@@ -562,7 +567,86 @@ const googleAppExchange = asyncHandler(async (req, res) => {
   successResponse(res, result, 'Google sign-in successful');
 });
 
+/*
+ * Switch account on the website, with sessions in httpOnly cookies
+ * (lib/sessionCookie): an account set aside keeps its session in its own
+ * cookie, and switching renews it here, so the page never holds a refresh
+ * token. The app keeps its own list with the tokens in its secure storage.
+ */
+const userIdOf = (token) => {
+  try {
+    return verifyRefreshToken(String(token)).id || null;
+  } catch {
+    return null;
+  }
+};
+
+// GET /auth/sessions/kept: the accounts set aside in this browser.
+const keptSessions = asyncHandler(async (req, res) => {
+  const userIds = sessionCookie.keptUserIds(req)
+    .filter((id) => userIdOf(sessionCookie.read(req, sessionCookie.keptName(id))) === id);
+  successResponse(res, { userIds }, 'Kept sessions');
+});
+
+// POST /auth/sessions/keep: set the signed-in account aside (Add another account).
+const keepSession = asyncHandler(async (req, res) => {
+  const token = sessionCookie.read(req);
+  const userId = token ? userIdOf(token) : null;
+  if (userId) sessionCookie.set(res, token, sessionCookie.keptName(userId));
+  sessionCookie.clear(res);
+  successResponse(res, { userId }, userId ? 'Session kept' : 'Nothing to keep');
+});
+
+// POST /auth/sessions/switch { userId }: sign in as an account set aside; the
+// signed-in one is set aside in its place.
+const switchSession = asyncHandler(async (req, res) => {
+  const userId = String(req.body?.userId || '');
+  const name = sessionCookie.keptName(userId);
+  const kept = sessionCookie.read(req, name);
+  if (!kept || userIdOf(kept) !== userId) {
+    sessionCookie.clear(res, name);
+    throw new ApiError('Sign in again to use this account', 401);
+  }
+  let tokens;
+  try {
+    tokens = await authService.refreshToken(kept);
+  } catch (err) {
+    sessionCookie.clear(res, name);
+    throw err;
+  }
+  const current = sessionCookie.read(req);
+  const currentId = current ? userIdOf(current) : null;
+  if (currentId && currentId !== userId) sessionCookie.set(res, current, sessionCookie.keptName(currentId));
+  sessionCookie.clear(res, name);
+  // The new pair: its refresh token becomes the session cookie (app.js).
+  successResponse(res, tokens, 'Switched account');
+});
+
+// POST /auth/sessions/forget { userId }: take an account set aside off this browser.
+const forgetSession = asyncHandler(async (req, res) => {
+  const userId = String(req.body?.userId || '');
+  const name = sessionCookie.keptName(userId);
+  const kept = sessionCookie.read(req, name);
+  if (kept && userIdOf(kept) === userId) await sessionService.revoke(kept, userId);
+  sessionCookie.clear(res, name);
+  successResponse(res, null, 'Account removed from this browser');
+});
+
+// POST /auth/sessions/adopt { refreshToken }: a session set aside before
+// cookies (kept in the page's storage) moves into its cookie, renewed.
+const adoptSession = asyncHandler(async (req, res) => {
+  const tokens = await authService.refreshToken(req.body?.refreshToken);
+  const userId = userIdOf(tokens.refreshToken);
+  sessionCookie.set(res, tokens.refreshToken, sessionCookie.keptName(userId));
+  successResponse(res, { userId }, 'Session kept');
+});
+
 module.exports = {
+  keptSessions,
+  keepSession,
+  switchSession,
+  forgetSession,
+  adoptSession,
   googleAppTicket,
   register,
   login,

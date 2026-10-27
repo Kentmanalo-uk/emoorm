@@ -106,7 +106,8 @@ const getStoreById = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Store not found' });
   }
 
-  successResponse(res, store, 'Store retrieved successfully');
+  const withPayment = await storeService.canSeePayment(req.user, store.id);
+  successResponse(res, storeService.toPublicStore(store, { withPayment }), 'Store retrieved successfully');
 });
 
 /**
@@ -125,7 +126,8 @@ const getStoreBySlug = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Store not found' });
   }
 
-  successResponse(res, store, 'Store retrieved successfully');
+  const withPayment = await storeService.canSeePayment(req.user, store.id);
+  successResponse(res, storeService.toPublicStore(store, { withPayment }), 'Store retrieved successfully');
 });
 
 // GET /api/stores/slug/:slug/storefront — public shop profile aggregate
@@ -137,10 +139,11 @@ const getStorefront = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Store not found' });
   }
   const followStatus = await followService.getFollowStatus(req.user?.id || null, store.id);
+  const withPayment = isOwner || await storeService.canSeePayment(req.user, store.id);
   successResponse(
     res,
     {
-      ...store,
+      ...storeService.toPublicStore(store, { withPayment }),
       followerCount: followStatus.followerCount,
       isFollowing: followStatus.following,
       notificationsEnabled: followStatus.notificationsEnabled,

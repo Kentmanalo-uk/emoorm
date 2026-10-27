@@ -12,7 +12,7 @@ import {
 } from 'phosphor-react-native';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
-import { canUnsend, replaceMessage } from '../../src/lib/unsend';
+import { canUnsend, withoutMessage } from '../../src/lib/unsend';
 import { toast } from '../../src/lib/toast';
 import useAuthStore from '../../src/store/authStore';
 import { font, t } from '../../src/theme';
@@ -216,11 +216,11 @@ function StoreChat({ id, onBack }) {
   const otherReadAt = activeConvo ? (isSellerSide ? activeConvo.buyerLastReadAt : activeConvo.sellerLastReadAt) : null;
   const hasEarlier = earlier.hasMore !== null ? earlier.hasMore : Boolean(activeConvo?.hasEarlier);
 
-  // Unsend (long press on one of my messages of the last hour), after asking.
+  // Unsend (long press on one of my messages of the last 5 hours), after asking.
   const unsend = (message) => {
     Alert.alert(
       'Unsend this message?',
-      `It will be removed for you and ${activeHeader?.title || 'them'}. The chat shows that a message was unsent.`,
+      `It will be removed for you and ${activeHeader?.title || 'them'}, with nothing left in its place.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -228,10 +228,9 @@ function StoreChat({ id, onBack }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              const res = await apiClient.delete(ENDPOINTS.MESSAGES.UNSEND(id, message.id));
-              const updated = res.data;
-              setActiveConvo((c) => (c ? { ...c, messages: replaceMessage(c.messages, updated) } : c));
-              setEarlier((cur) => ({ ...cur, messages: replaceMessage(cur.messages, updated) }));
+              await apiClient.delete(ENDPOINTS.MESSAGES.UNSEND(id, message.id));
+              setActiveConvo((c) => (c ? { ...c, messages: withoutMessage(c.messages, message.id) } : c));
+              setEarlier((cur) => ({ ...cur, messages: withoutMessage(cur.messages, message.id) }));
             } catch (err) {
               toast.error(err?.message || 'Could not unsend the message');
             }
@@ -472,7 +471,6 @@ function StoreChat({ id, onBack }) {
                 isSelf={entry.message.senderId === currentUser?.id}
                 seen={Boolean(otherReadAt) && new Date(otherReadAt) >= new Date(entry.message.createdAt)}
                 onOpenImage={setViewerImage}
-                senderName={activeHeader?.title}
                 onUnsend={canUnsend(entry.message, currentUser?.id) ? unsend : undefined}
               />
               {entry.message.offerId && lastStepOf.get(entry.message.offerId) === entry.message.id

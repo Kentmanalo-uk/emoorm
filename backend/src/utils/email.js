@@ -1,6 +1,13 @@
-const nodemailer = require('nodemailer');
-const { Resend } = require('resend');
 const config = require('../config/env');
+const { withTimeout } = require('../lib/withTimeout');
+
+// Loaded on the first email, not at server start.
+// eslint-disable-next-line global-require
+const nodemailer = () => require('nodemailer');
+
+// A send that has not been accepted by now is reported as failed (callers
+// that must not fail catch it), instead of holding the request open.
+const SEND_TIMEOUT_MS = 15000;
 
 const SANDBOX_SENDER = 'onboarding@resend.dev';
 
@@ -15,10 +22,14 @@ const isSmtpConfigured = () =>
   Boolean(config.email?.host && config.email?.user && config.email?.password);
 
 const buildJsonTransporter = () =>
-  nodemailer.createTransport({ jsonTransport: true });
+  nodemailer().createTransport({ jsonTransport: true });
 
 const getResend = () => {
-  if (!cachedResend) cachedResend = new Resend(config.resend.apiKey);
+  if (!cachedResend) {
+    // eslint-disable-next-line global-require
+    const { Resend } = require('resend');
+    cachedResend = new Resend(config.resend.apiKey);
+  }
   return cachedResend;
 };
 
@@ -54,8 +65,11 @@ const getTransporter = () => {
   }
 
   if (isSmtpConfigured()) {
-    cachedTransporter = nodemailer.createTransport({
+    cachedTransporter = nodemailer().createTransport({
       host: config.email.host,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: SEND_TIMEOUT_MS,
       port: config.email.port,
       secure: config.email.port === 465,
       auth: {
@@ -86,20 +100,22 @@ const getTransporter = () => {
  *          reached an inbox.
  * @throws  {Error} when a configured transport rejects the message. Callers
  *          that must not fail on a send error catch it themselves.
+ * `attachments`: [{ filename, content: Buffer }] (the backup email).
  */
-const sendMail = async ({ to, subject, html, text }) => {
-  const from = config.resend?.from || config.email?.from || 'noreply@emoorm.com';
+const sendMail = async ({ to, subject, html, text, attachments }) => {
+  const from = config.resend?.from || config.email?.from || 'noreply@emoorm.shop';
 
   if (isResendConfigured()) {
     warnIfSandboxSender(from);
 
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await withTimeout(getResend().emails.send({
       from,
       to: [to],
       subject,
       html,
       text,
-    });
+      ...(attachments?.length ? { attachments } : {}),
+    }), SEND_TIMEOUT_MS * (attachments?.length ? 4 : 1), 'Resend send');
 
     // The SDK reports failures in `error` rather than by throwing, so an
     // unchecked call here would record every rejected send as a success.
@@ -114,7 +130,7 @@ const sendMail = async ({ to, subject, html, text }) => {
 
   const { transporter, kind } = getTransporter();
 
-  const info = await transporter.sendMail({ from, to, subject, text, html });
+  const info = await transporter.sendMail({ from, to, subject, text, html, ...(attachments?.length ? { attachments } : {}) });
 
   if (kind === 'json') {
     console.log(`[email] (dev) queued message for ${to}: ${subject}`);

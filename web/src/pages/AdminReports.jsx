@@ -52,6 +52,69 @@ const TYPE_LABEL = { PRODUCT: 'Product', SELLER: 'Seller', BUYER: 'Buyer' };
 /** Evidence is stored as a JSON array of URLs. */
 const evidenceList = (report) => (Array.isArray(report?.evidence) ? report.evidence : []);
 
+/**
+ * The chat between the two people a report is about, loaded on request (the
+ * server logs each look). Messages the sender unsent are shown, marked: they
+ * are kept hidden for 30 days so a report about the chat can be checked.
+ */
+function ReportChat({ reportId }) {
+  const [state, setState] = useState({ status: 'idle', data: null, error: '' });
+  const load = async () => {
+    setState({ status: 'loading', data: null, error: '' });
+    try {
+      const res = await axios.get(`/reports/${reportId}/conversation`);
+      setState({ status: 'done', data: res.data, error: '' });
+    } catch (err) {
+      setState({ status: 'error', data: null, error: err.message || 'Could not load the chat' });
+    }
+  };
+  const data = state.data;
+  return (
+    <div className="admin-detail-section">
+      <h4><MessageSquare size={13} /> Chat between them</h4>
+      {state.status === 'idle' && (
+        <button type="button" className="admin-btn admin-btn-outline" onClick={load}>
+          Show the chat
+        </button>
+      )}
+      {state.status === 'loading' && <p className="admin-report-chat-note">Loading the chat…</p>}
+      {state.status === 'error' && (
+        <p className="admin-report-chat-note" role="alert">
+          {state.error} <button type="button" className="admin-link" onClick={load}>Try again</button>
+        </p>
+      )}
+      {state.status === 'done' && (!data?.conversationId ? (
+        <p className="admin-report-chat-note">They have no chat on E-MOORM.</p>
+      ) : (
+        <>
+          <p className="admin-report-chat-note">
+            {data.buyer?.fullName || 'Buyer'} and {data.store?.name || 'the shop'}, newest {data.messages.length} messages.
+            Your look at this chat is recorded in the audit log.
+          </p>
+          <ol className="admin-report-chat">
+            {data.messages.map((m) => (
+              <li key={m.id} className={`is-${m.from}${m.unsentAt ? ' is-unsent' : ''}`}>
+                <span className="admin-report-chat-who">
+                  {m.from === 'buyer' ? (data.buyer?.fullName || 'Buyer') : (data.store?.name || 'Shop')}
+                  {' · '}
+                  {dateTime(m.createdAt)}
+                  {m.unsentAt && <b> · Unsent {dateTime(m.unsentAt)}</b>}
+                </span>
+                {m.body && <span className="admin-report-chat-text">{m.body}</span>}
+                {m.imageUrl && (
+                  <a href={resolveImg(m.imageUrl)} target="_blank" rel="noopener noreferrer" className="admin-report-chat-photo">
+                    <img src={resolveImg(m.imageUrl)} alt="Photo in the chat" />
+                  </a>
+                )}
+              </li>
+            ))}
+          </ol>
+        </>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminReports() {
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -545,6 +608,8 @@ export default function AdminReports() {
                     </div>
                   )}
                 </div>
+
+                <ReportChat key={selected.id} reportId={selected.id} />
 
                 {(settled || selected.resolutionNotes) && (
                   <div className="admin-detail-section">

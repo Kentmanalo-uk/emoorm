@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Camera, ImageSquare, ArrowClockwise, CircleNotch, Truck, Storefront, CheckCircle, WarningCircle,
 } from '@phosphor-icons/react';
-import { uploadImage } from '../../lib/upload';
+import { uploadPrivateImage } from '../../lib/upload';
 import { IMAGE_ACCEPT } from '../../lib/uploadableImage';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import '../ui/ConfirmDialog.css';
@@ -66,8 +66,9 @@ export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, 
     const mine = attempt.current;
     setPhoto((cur) => ({ file, preview: cur?.file === file ? cur.preview : URL.createObjectURL(file), status: 'uploading', url: null, error: null }));
     try {
-      // Any photo goes; uploadImage shrinks it and the server converts HEIC and the like.
-      const { url } = await uploadImage(file);
+      // Any photo goes; it is shrunk here and the server converts HEIC and the like.
+      // Private: only the shop and the buyer see the proof.
+      const { url } = await uploadPrivateImage(file);
       if (attempt.current === mine) setPhoto((cur) => (cur?.file === file ? { ...cur, status: 'ready', url } : cur));
     } catch (err) {
       if (attempt.current === mine) {

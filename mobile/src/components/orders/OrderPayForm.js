@@ -8,7 +8,7 @@ import {
 } from 'phosphor-react-native';
 import { resolveImg } from '../../lib/media';
 import { toast } from '../../lib/toast';
-import { uploadImage } from '../../lib/upload';
+import { uploadPrivateImage } from '../../lib/upload';
 import { font, t } from '../../theme';
 import { peso } from './orderProgress';
 import { OrderButton } from './OrderBits';
@@ -57,7 +57,7 @@ export default function OrderPayForm({ order, apiClient, onDone, onCancel }) {
     if (result.canceled || !result.assets?.[0]) return;
     setUploading(true);
     try {
-      const res = await uploadImage(result.assets[0]);
+      const res = await uploadPrivateImage(result.assets[0]);
       setUrl(res.url);
       toast.success('Proof uploaded');
     } catch (err) {

@@ -79,6 +79,32 @@ const scope = async (db, userId) => {
   return { stores, storeIds, productIds, orders: removed, orderIds: removed.map((o) => o.id), keptIds: kept.map((o) => o.id) };
 };
 
+/**
+ * The private photo references on the rows a purge deletes: the messages in
+ * the user's chats (as buyer or as shop) and the ones they sent, the orders
+ * it removes, the returns and the reports.
+ */
+const privatePhotosOf = async (userId) => {
+  const privateMedia = require('../lib/privateMedia');
+  const s = await scope(prisma, userId);
+  const storeOr = s.storeIds.length ? [{ storeId: { in: s.storeIds } }] : [];
+  const [messages, orders, returns, reports] = await Promise.all([
+    prisma.message.findMany({
+      where: { imageUrl: { startsWith: privateMedia.PREFIX }, OR: [{ senderId: userId }, { conversation: { OR: [{ buyerId: userId }, ...storeOr] } }] },
+      select: { imageUrl: true },
+    }),
+    prisma.order.findMany({ where: { id: { in: s.orderIds.length ? s.orderIds : ['__none__'] } }, select: { paymentProofUrl: true, fulfillmentProofUrl: true } }),
+    prisma.returnRequest.findMany({ where: { OR: [{ buyerId: userId }, { orderId: { in: s.orderIds.length ? s.orderIds : ['__none__'] } }, ...storeOr] }, select: { photos: true } }),
+    prisma.report.findMany({ where: { OR: [{ reporterId: userId }, { reportedSellerId: userId }, { reportedBuyerId: userId }] }, select: { evidence: true } }),
+  ]);
+  return [
+    ...messages.map((m) => m.imageUrl),
+    ...orders.flatMap((o) => [o.paymentProofUrl, o.fulfillmentProofUrl]),
+    ...returns.flatMap((r) => (Array.isArray(r.photos) ? r.photos : [])),
+    ...reports.flatMap((r) => (Array.isArray(r.evidence) ? r.evidence : [])),
+  ].filter((ref) => privateMedia.isPrivateRef(ref));
+};
+
 const previewPurge = async (userId, actor) => {
   const user = await loadTarget(userId, actor);
   const s = await scope(prisma, userId);
@@ -114,6 +140,10 @@ const purgeUser = async (userId, actor, confirm, req) => {
   }
   const user = await loadTarget(userId, actor);
   const preview = await previewPurge(userId, actor);
+  // Private photos on the rows about to go (chat photos, payment and
+  // delivery proofs, return photos, report evidence): their files are
+  // deleted once the rows are.
+  const doomedPhotos = await privatePhotosOf(userId);
 
   await prisma.$transaction(async (tx) => {
     const s = await scope(tx, userId);
@@ -230,6 +260,8 @@ const purgeUser = async (userId, actor, confirm, req) => {
     await tx.notification.deleteMany({ where: { OR: [{ userId }, { relatedId: userId }] } });
     await tx.user.delete({ where: { id: userId } });
   }, { timeout: 60000, maxWait: 10000 });
+
+  await require('../lib/privateMedia').remove(doomedPhotos);
 
   await auditLogService.record({
     actor,

@@ -1,4 +1,4 @@
-const sharp = require('sharp');
+const sharp = require('../lib/sharp');
 // A small file can claim enormous dimensions; decoding it would take the
 // server's memory. 40 megapixels covers any phone photo.
 const MAX_INPUT_PIXELS = 40e6;

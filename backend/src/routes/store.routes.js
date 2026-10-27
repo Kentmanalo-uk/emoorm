@@ -130,8 +130,11 @@ router.get(
   storeController.checkStoreCoverage
 );
 
+// optionalAuth: a buyer with a QR-paid order here also gets the shop's
+// payment details (store.service canSeePayment).
 router.get(
   '/:id',
+  optionalAuth,
   storeController.getStoreById
 );
 

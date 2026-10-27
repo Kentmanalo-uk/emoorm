@@ -301,6 +301,22 @@ const findById = async (id) => {
 };
 
 /**
+ * Several products by id, in one query, as a Map of id to product (with the
+ * same fields as findById, without the sales and rating stats): checkout
+ * loads every line's product at once instead of one query (and two stats
+ * queries) per line.
+ * @param {String[]} ids
+ * @returns {Promise<Map<String, Object>>}
+ */
+const findManyByIds = async (ids) => {
+  const unique = [...new Set((ids || []).filter((id) => typeof id === 'string' && id))];
+  if (!unique.length) return new Map();
+  const rows = await prisma.product.findMany({ where: { id: { in: unique } }, include: DETAIL_INCLUDE });
+  // As findById shapes them (images, kind, the live Available Today window).
+  return new Map(withImagesList(rows).map((p) => [p.id, p]));
+};
+
+/**
  * Find product by slug
  * @param {String} slug - Product slug
  * @returns {Promise<Object|null>} Product or null
@@ -783,6 +799,7 @@ module.exports = {
   invalidateProductIds,
   createProduct,
   findById,
+  findManyByIds,
   findBySlug,
   findAll,
   updateProduct,

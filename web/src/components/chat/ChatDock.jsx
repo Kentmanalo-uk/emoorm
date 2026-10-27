@@ -8,7 +8,7 @@ import {
 import axios from '../../lib/axios';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import {
-  canUnsend, unsendMessage, replaceMessage, unsentLabel,
+  canUnsend, unsendMessage, withoutMessage,
 } from '../../lib/unsend';
 import { resolveImg } from '../../lib/media';
 import { CASE_STATUS_LABELS } from '../../lib/supportCategories';
@@ -65,11 +65,9 @@ const toItem = (c, kind, userId) => {
     name: seller ? c.buyer?.fullName || 'Buyer' : c.store?.name || 'Store',
     avatar: seller ? c.buyer?.profilePhoto : c.store?.logo,
     subtitle: seller ? 'Customer' : 'Store',
-    preview: c.lastMessage?.unsent
-      ? unsentLabel(c.lastMessage.senderId === userId, seller ? c.buyer?.fullName : c.store?.name)
-      : c.lastMessage
-        ? `${c.lastMessage.senderId === userId ? 'You: ' : ''}${c.lastMessage.body || 'Order update'}`
-        : 'Start the conversation',
+    preview: c.lastMessage
+      ? `${c.lastMessage.senderId === userId ? 'You: ' : ''}${c.lastMessage.body || 'Order update'}`
+      : 'Start the conversation',
     time: c.lastMessageAt,
     unread: c.unreadCount || 0,
   };
@@ -215,9 +213,9 @@ export default function ChatDock() {
     const { convoId, message } = unsendTarget;
     setUnsending(true);
     try {
-      const updated = await unsendMessage(convoId, message.id);
+      await unsendMessage(convoId, message.id);
       setThread((cur) => (cur && cur.key === `store:${convoId}`
-        ? { ...cur, data: { ...cur.data, messages: replaceMessage(cur.data.messages, updated) } }
+        ? { ...cur, data: { ...cur.data, messages: withoutMessage(cur.data.messages, message.id) } }
         : cur));
       loadStore();
     } catch (err) {
@@ -342,13 +340,6 @@ export default function ChatDock() {
           )}
           {active?.messages.map((m) => {
             const mine = m.senderId === user?.id;
-            if (m.unsentAt) {
-              return (
-                <div key={m.id} className={`cd-msg is-unsent${mine ? ' is-mine' : ''}`}>
-                  <p>{unsentLabel(mine, selectedItem?.name)}</p>
-                </div>
-              );
-            }
             const unsendable = !isSupport && canUnsend(m, user?.id);
             return (
               <div key={m.id} className={`cd-msg${mine ? ' is-mine' : ''}`}>
@@ -466,7 +457,7 @@ export default function ChatDock() {
       <ConfirmDialog
         open={Boolean(unsendTarget)}
         title="Unsend this message?"
-        message={`It will be removed for you and ${selectedItem?.name || 'them'}. The chat shows that a message was unsent.`}
+        message={`It will be removed for you and ${selectedItem?.name || 'them'}, with nothing left in its place.`}
         confirmLabel="Unsend"
         danger
         loading={unsending}

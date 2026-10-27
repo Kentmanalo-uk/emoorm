@@ -95,12 +95,14 @@ export default function SwitchAccountSheet({ open, onClose }) {
 
   // Set the signed-in account aside (still signed in, kept here) and open the
   // login: for another account, or one whose session ended.
-  const loginAs = (email) => {
+  const loginAs = async (email) => {
     const params = new URLSearchParams({ redirect: '/profile' });
     if (email) params.set('email', email);
     const to = `/login?${params}`;
     onClose?.();
-    if (user) setCurrentAside(() => logout(to, { forget: false }));
+    // The session moves to its own cookie on the server first, then this
+    // browser signs out here (so the login page opens signed out).
+    if (user) await setCurrentAside(() => logout(to, { forget: false }));
     navigate(to, { replace: true });
     prefillLoginEmail(email);
   };

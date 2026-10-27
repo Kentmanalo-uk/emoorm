@@ -8,8 +8,13 @@ const prisma = require('../config/database');
 const config = require('../config/env');
 
 const UPLOAD_FILE = /^\/uploads\/[A-Za-z0-9._-]+$/;
+const privateMedia = require('../lib/privateMedia');
+
+// A photo uploaded here: a private one (POST /upload/private-image, the
+// default for chat photos now), or a public /uploads one (older app versions).
 const isOwnUpload = (url) =>
-  UPLOAD_FILE.test(url)
+  privateMedia.isPrivateRef(url)
+  || UPLOAD_FILE.test(url)
   || (Boolean(config.cdn?.url) && url.startsWith(`${config.cdn.url}/uploads/`) && UPLOAD_FILE.test(url.slice(config.cdn.url.length)));
 
 /**
@@ -71,7 +76,7 @@ const shapePinnedOrders = (orders) =>
   }));
 
 // How long after sending a message its sender can still unsend it.
-const UNSEND_WINDOW_MS = 60 * 60 * 1000;
+const UNSEND_WINDOW_MS = 5 * 60 * 60 * 1000;
 
 // The line the "New message" notification shows for a message.
 const notificationPreview = (body, imageUrl) => {
@@ -79,7 +84,7 @@ const notificationPreview = (body, imageUrl) => {
   return text.length > 120 ? `${text.slice(0, 117)}...` : text;
 };
 
-/** One message as the chat shows it (`unsentAt`: taken back, content gone). */
+/** One message as the chat shows it. */
 const shapeMessage = (m) => ({
   id: m.id,
   body: m.body,
@@ -104,7 +109,6 @@ const shapeMessage = (m) => ({
   offerEvent: m.offerEvent ?? null,
   createdAt: m.createdAt,
   readAt: m.readAt,
-  unsentAt: m.unsentAt ?? null,
 });
 
 // The viewer's last read moment in a conversation, on whichever side they are.
@@ -133,14 +137,11 @@ const shapeConversationSummary = (conversation, viewerId, { unreadCount = 0, las
     lastMessage: lastMessage
       ? {
         id: lastMessage.id,
-        body: lastMessage.unsentAt
-          ? 'Message unsent'
-          : lastMessage.body
-            || (lastMessage.imageUrl ? 'Photo' : lastMessage.productId ? 'Product' : lastMessage.orderId ? 'Order' : ''),
+        body: lastMessage.body
+          || (lastMessage.imageUrl ? 'Photo' : lastMessage.productId ? 'Product' : lastMessage.orderId ? 'Order' : ''),
         senderId: lastMessage.senderId,
         createdAt: lastMessage.createdAt,
         hasOrder: Boolean(lastMessage.orderId),
-        unsent: Boolean(lastMessage.unsentAt),
       }
       : null,
     unreadCount,
@@ -295,7 +296,7 @@ const getConversation = async (conversationId, userId, { before = null } = {}) =
  */
 const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, productId }) => {
   const trimmed = (body || '').trim();
-  const trimmedImageUrl = (imageUrl || '').trim();
+  const trimmedImageUrl = privateMedia.normalize((imageUrl || '').trim());
   if (!trimmed && !trimmedImageUrl && !orderId && !productId) {
     throw new ApiError('Message, image, order, or product is required', 400);
   }
@@ -387,9 +388,12 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
 
 /**
  * Unsend: the sender takes a message back within UNSEND_WINDOW_MS of sending
- * it. Its text, photo and attached product or order are wiped, and the chat
- * shows "unsent a message" in its place. A step of a livestock deal stays
- * (the deal's record depends on it).
+ * it. It is gone from the chat for both sides with nothing in its place, and
+ * so is the "New message" notification that quoted it. The message itself
+ * (and its photo) is kept, hidden, for UNSENT_KEEP_DAYS, so a report about
+ * the chat can still be checked (moderation shows it, marked unsent), then
+ * erased by purgeUnsent. A step of a livestock deal stays (the deal's record
+ * depends on it).
  */
 const unsendMessage = async (conversationId, messageId, userId) => {
   const conversation = await messageRepository.findConversationById(conversationId);
@@ -409,17 +413,16 @@ const unsendMessage = async (conversationId, messageId, userId) => {
     throw new ApiError('Offer updates cannot be unsent', 400);
   }
   if (message.unsentAt) {
-    throw new ApiError('This message was already unsent', 409);
+    throw new ApiError('Message not found', 404);
   }
-  const now = new Date();
-  if (now - new Date(message.createdAt) > UNSEND_WINDOW_MS) {
-    throw new ApiError('A message can only be unsent within an hour of sending it', 400);
+  if (Date.now() - new Date(message.createdAt) > UNSEND_WINDOW_MS) {
+    throw new ApiError('A message can only be unsent within 5 hours of sending it', 400);
   }
 
-  const updated = await messageRepository.unsendMessage(messageId, now);
+  await messageRepository.hideMessage(messageId, conversationId);
 
-  // The "New message" notification quoted it: say it was unsent instead.
-  // Matched by chat, moment and text (it records no message id).
+  // The "New message" notification quoted it: it goes too. Matched by chat,
+  // moment and text (it records no message id).
   try {
     const preview = notificationPreview(message.body, message.imageUrl);
     const sentAt = new Date(message.createdAt).getTime();
@@ -428,15 +431,38 @@ const unsendMessage = async (conversationId, messageId, userId) => {
         type: 'STORE_MESSAGE',
         relatedId: conversationId,
         message: preview,
+        deletedAt: null,
         createdAt: { gte: new Date(sentAt - 5000), lte: new Date(sentAt + 120000) },
       },
-      data: { message: 'Message unsent' },
+      data: { deletedAt: new Date() },
     });
   } catch (err) {
-    console.error('[unsendMessage] notification update failed:', err.message);
+    console.error('[unsendMessage] notification removal failed:', err.message);
   }
 
-  return shapeMessage(updated);
+  return { id: messageId, conversationId, unsent: true };
+};
+
+// How long an unsent message is kept (hidden) for moderators.
+const UNSENT_KEEP_DAYS = 30;
+
+/**
+ * Erase messages unsent more than UNSENT_KEEP_DAYS ago, with their private
+ * photo files. Daily job (server.js "unsent-purge").
+ * @returns {Promise<Number>} how many were erased
+ */
+const purgeUnsent = async () => {
+  const privateMedia = require('../lib/privateMedia');
+  const before = new Date(Date.now() - UNSENT_KEEP_DAYS * 86400e3);
+  const old = await prisma.message.findMany({
+    where: { unsentAt: { lt: before } },
+    select: { id: true, imageUrl: true },
+    take: 1000,
+  });
+  if (!old.length) return 0;
+  await prisma.message.deleteMany({ where: { id: { in: old.map((m) => m.id) } } });
+  await privateMedia.remove(old.map((m) => m.imageUrl).filter((u) => privateMedia.isPrivateRef(u)));
+  return old.length;
 };
 
 /**
@@ -486,6 +512,7 @@ const countUnreadChats = async (userId) => {
     JOIN messages m ON m.conversation_id = c.id
     WHERE c.buyer_id = ${userId}
       AND m.sender_id <> ${userId}
+      AND m.unsent_at IS NULL
       AND (c.buyer_last_read_at IS NULL OR m.created_at > c.buyer_last_read_at)`;
   return Number(rows[0]?.n || 0);
 };
@@ -498,7 +525,9 @@ module.exports = {
   getConversation,
   sendMessage,
   unsendMessage,
+  purgeUnsent,
   UNSEND_WINDOW_MS,
+  UNSENT_KEEP_DAYS,
   markConversationRead,
   rateConversationService,
 };

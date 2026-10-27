@@ -99,25 +99,31 @@ const createOrderWithItems = async (orderData, itemsData, voucherRedemption = nu
   return created;
 };
 
+// A checkout locks each product's stock row in turn; a busy moment can queue
+// it behind other checkouts. Prisma's defaults (2 s to get a connection, 5 s
+// to finish) failed those with a 500; a timeout now comes back as 503 "busy,
+// try again" (errorHandler, P2028), safe to retry since the checkout key
+// stops a second order.
+const ORDER_TX_LIMITS = { maxWait: 10000, timeout: 15000 };
+
 const createOrderTx = (orderData, itemsData, voucherRedemption, unpaidFeeIds = []) => withDeadlockRetry(() => prisma.$transaction(async (tx) => {
     // Take stock under a row lock (per option when the product keeps stock
     // per option); fails if there is not enough. Cooked-to-order food keeps
     // none, and a package only its own (never its items').
     // Each line remembers whether it took any, for cancellations and returns.
     const tookNone = new Set();
+    const movements = [];
     for (const item of [...itemsData].sort(byProductId)) {
       const balanceAfter = await changeStock(tx, item.productId, item.selectedVariations, -item.quantity);
       if (balanceAfter === null) tookNone.add(item);
       else {
-        await tx.inventoryMovement.create({
-          data: {
-            productId: item.productId,
-            quantityDelta: -item.quantity,
-            balanceAfter,
-            reason: 'SALE',
-            referenceId: orderData.checkoutKey || orderData.orderNumber,
-            actorId: orderData.buyerId,
-          },
+        movements.push({
+          productId: item.productId,
+          quantityDelta: -item.quantity,
+          balanceAfter,
+          reason: 'SALE',
+          referenceId: orderData.checkoutKey || orderData.orderNumber,
+          actorId: orderData.buyerId,
         });
       }
       // Available Today: counted against its window, which must still be
@@ -134,6 +140,9 @@ const createOrderTx = (orderData, itemsData, voucherRedemption, unpaidFeeIds = [
         }
       }
     }
+
+    // The stock records, in one insert.
+    if (movements.length) await tx.inventoryMovement.createMany({ data: movements });
 
     // Create order
     const order = await tx.order.create({
@@ -154,18 +163,14 @@ const createOrderTx = (orderData, itemsData, voucherRedemption, unpaidFeeIds = [
       }
     }
 
-    // Create order items
-    await Promise.all(
-      itemsData.map((item) =>
-        tx.orderItem.create({
-          data: {
-            ...item,
-            orderId: order.id,
-            stockTaken: !tookNone.has(item),
-          },
-        })
-      )
-    );
+    // Create order items, in one insert.
+    await tx.orderItem.createMany({
+      data: itemsData.map((item) => ({
+        ...item,
+        orderId: order.id,
+        stockTaken: !tookNone.has(item),
+      })),
+    });
 
     if (voucherRedemption && voucherRedemption.voucherId) {
       // Voucher limits are re-checked here, inside the transaction, and never
@@ -256,7 +261,7 @@ const createOrderTx = (orderData, itemsData, voucherRedemption, unpaidFeeIds = [
         },
       },
     });
-  }));
+  }, ORDER_TX_LIMITS));
 
 const findByCheckoutKey = async (buyerId, checkoutKey) => {
   if (!checkoutKey) return null;

@@ -39,7 +39,26 @@ test('signing out stops this device renewing; signing out everywhere ends the ot
   assert.equal((await h.api('GET', '/auth/profile', { token: laptop.accessToken })).status, 401);
 });
 
-test('ten wrong passwords lock the account for a while, whatever the address', async () => {
+test('wrong passwords from one address lock that address only; fifty from many lock the account', async () => {
+  const authService = require('../src/services/auth.service');
+  const buyer = await h.user('BUYER');
+  const tryLogin = (password, ip) => authService.login(buyer.email, password, { ip }).then(() => 200, (e) => e.statusCode);
+  for (let i = 0; i < 10; i += 1) assert.equal(await tryLogin('Wrong#1234', '203.0.113.1'), 401);
+  // That address is locked out of this account...
+  assert.equal(await tryLogin('Testing#123', '203.0.113.1'), 429);
+  // ...but the owner, elsewhere, still signs in.
+  assert.equal(await tryLogin('Testing#123', '198.51.100.7'), 200);
+
+  // Guessing spread over many addresses: fifty in all lock the account.
+  const other = await h.user('BUYER');
+  const tryOther = (password, ip) => authService.login(other.email, password, { ip }).then(() => 200, (e) => e.statusCode);
+  for (let a = 0; a < 5; a += 1) {
+    for (let i = 0; i < 10; i += 1) assert.equal(await tryOther('Wrong#1234', `203.0.113.${10 + a}`), 401);
+  }
+  assert.equal(await tryOther('Testing#123', '198.51.100.8'), 429);
+});
+
+test('ten wrong passwords from one address lock the password step there', async () => {
   const buyer = await h.user('BUYER');
   for (let i = 0; i < 10; i += 1) {
     const res = await h.api('POST', '/auth/login', { body: { email: buyer.email, password: 'Wrong#1234' } });

@@ -55,7 +55,8 @@ export default function ReturnRequest() {
           // Any photo goes: shrunk here when the browser can open it, converted by the server otherwise.
           const body = new FormData();
           body.append('file', await uploadableImage(file));
-          const result = await axios.post('/upload/image', body, { headers: { 'Content-Type': 'multipart/form-data' } });
+          // Private: only the buyer, the shop and the admins see return photos.
+          const result = await axios.post('/upload/private-image', body, { headers: { 'Content-Type': 'multipart/form-data' } });
           uploadedRef.current.set(file, result.data?.url);
         }
         urls.push(uploadedRef.current.get(file));

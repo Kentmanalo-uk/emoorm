@@ -56,6 +56,18 @@ export async function uploadImage(picked) {
   return json.data;
 }
 
+// A private photo (POST /upload/private-image): a payment or delivery proof,
+// a chat or return photo. Never public: the API shows it through signed links
+// to the people the order, chat or return is theirs. `url` is the reference
+// to send; `previewUrl` shows it now.
+export async function uploadPrivateImage(picked) {
+  if (!picked) throw new Error('No image selected');
+  const asset = await uploadableImage(picked);
+  const json = await send('/upload/private-image', (form) => form.append('file', filePart(asset, 'photo')));
+  if (!json?.data?.url) throw new Error('Upload succeeded but no URL was returned');
+  return json.data;
+}
+
 // Uploads a sensitive KYC document (ID front/back, selfie) to a private,
 // non-public storage location. The returned fileId is an opaque token, not a
 // browsable URL — the document can only be viewed later via the authenticated

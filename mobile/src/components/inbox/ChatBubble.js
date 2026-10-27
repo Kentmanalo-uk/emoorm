@@ -5,7 +5,6 @@ import {
   CheckIcon, ChecksIcon, HandshakeIcon, PushPinIcon,
 } from 'phosphor-react-native';
 import { resolveImg } from '../../lib/media';
-import { unsentLabel } from '../../lib/unsend';
 import { font, t } from '../../theme';
 import ChatProductThumb from './ChatProductThumb';
 import { formatClock, formatMoney, orderStatusStyle } from './inboxFormat';
@@ -39,9 +38,8 @@ function BubblePhoto({ uri, onOpen }) {
 }
 
 // `onUnsend`: given while you can still take this message back (its first
-// hour); a long press on the bubble asks for it. `senderName` names the other
-// side in "… unsent a message".
-export default function ChatBubble({ message, isSelf, seen, onOpenImage, senderName, onUnsend }) {
+// 5 hours); a long press on the bubble asks for it.
+export default function ChatBubble({ message, isSelf, seen, onOpenImage, onUnsend }) {
   const router = useRouter();
   // A step of a livestock deal: its card shows the animal, so no product card.
   const dealStep = Boolean(message.offerId);
@@ -49,16 +47,6 @@ export default function ChatBubble({ message, isSelf, seen, onOpenImage, senderN
   const hasMedia = Boolean(message.imageUrl);
   const mediaOnly = hasMedia && !message.body && !product && !message.order;
   const photo = hasMedia ? resolveImg(message.imageUrl) || message.imageUrl : null;
-
-  if (message.unsentAt) {
-    return (
-      <View style={[styles.row, isSelf && styles.rowSelf]}>
-        <View style={[styles.bubble, styles.unsent]}>
-          <Text style={styles.unsentText}>{unsentLabel(isSelf, senderName)}</Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.row, isSelf && styles.rowSelf]}>
@@ -133,11 +121,6 @@ const styles = StyleSheet.create({
     boxShadow: '0px 1px 1px rgba(15, 23, 42, 0.04)',
   },
   bubbleSelf: { backgroundColor: t.primary[600] },
-  // Where an unsent message was (.msgr-bubble.is-unsent).
-  unsent: {
-    backgroundColor: 'transparent', borderWidth: 1, borderStyle: 'dashed', borderColor: t.neutral[300], boxShadow: 'none',
-  },
-  unsentText: { fontSize: 13.5, lineHeight: 20, color: t.neutral[500], ...font(400) },
   deal: { backgroundColor: t.primary[50] },
   dealSelf: { backgroundColor: t.primary[600] },
   dealText: { color: t.primary[900] },

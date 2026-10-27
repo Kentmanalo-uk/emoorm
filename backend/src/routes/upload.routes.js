@@ -48,6 +48,35 @@ router.post(
 );
 
 /**
+ * Upload a private photo: a payment or delivery proof, a chat photo, a return
+ * or report photo. Checked and re-encoded like /image, then kept out of the
+ * public folder (lib/privateMedia). Answers the reference to send with the
+ * order, message, return or report (`url`), and a signed `previewUrl` to
+ * show it now.
+ * @route POST /api/upload/private-image
+ * @access Private
+ */
+router.post(
+  '/private-image',
+  authenticate,
+  uploadLimiter,
+  upload.single('file'),
+  asyncHandler(async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+    const verdict = await assertRealImage(req.file);
+    if (!verdict.ok) {
+      return res.status(400).json({ success: false, message: verdict.reason });
+    }
+    const optimized = await optimizeUpload(req.file);
+    const privateMedia = require('../lib/privateMedia');
+    const ref = await privateMedia.adopt(path.join(path.dirname(req.file.path), optimized.filename));
+    successResponse(res, { url: ref, previewUrl: privateMedia.sign(ref) }, 'File uploaded successfully');
+  })
+);
+
+/**
  * Upload a sensitive KYC document (ID photo / selfie).
  * Stored in a private directory that is never served statically. The
  * returned fileId is an opaque token — it is NOT a browsable URL. Retrieval

@@ -229,7 +229,7 @@ before(async () => {
 after(async () => {
   await setEnabled(false).catch(() => {});
   await h.prisma.moormoveEvent.deleteMany({ where: { id: { startsWith: `ci-ev-${h.RUN}-` } } });
-  for (const url of copied) await fs.promises.unlink(path.join(config.upload.uploadDir, path.basename(url))).catch(() => {});
+  for (const url of copied) await fs.promises.unlink(require('../src/lib/privateMedia').pathOf(url) || path.join(config.upload.uploadDir, path.basename(url))).catch(() => {});
   await new Promise((resolve) => fake.server.close(resolve));
   await h.cleanup();
 });
@@ -560,9 +560,11 @@ test("delivered by the rider: delivered, cash on delivery paid, with the rider's
   const now = await orderOf(o);
   assert.equal(now.status, 'DELIVERED');
   assert.equal(now.paymentStatus, 'PAID');
-  assert.match(now.fulfillmentProofUrl || '', /\/uploads\/[A-Za-z0-9._-]+\.(webp|png)$/);
+  // A private photo (lib/privateMedia): out of the public folder.
+  assert.match(now.fulfillmentProofUrl || '', /^\/private-media\/[A-Za-z0-9._-]+\.(webp|png)$/);
   copied.push(now.fulfillmentProofUrl);
-  assert.ok(fs.existsSync(path.join(config.upload.uploadDir, path.basename(now.fulfillmentProofUrl))));
+  assert.ok(fs.existsSync(require('../src/lib/privateMedia').pathOf(now.fulfillmentProofUrl)));
+  assert.equal(fs.existsSync(path.join(config.upload.uploadDir, path.basename(now.fulfillmentProofUrl))), false);
   const saved = await rowOf(o);
   assert.equal(saved.status, 'DELIVERED');
   assert.ok(saved.codCollectedAt);

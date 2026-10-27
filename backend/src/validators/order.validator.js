@@ -1,6 +1,7 @@
 const { body, validationResult } = require('express-validator');
 const { ApiError } = require('../middleware/errorHandler');
 const config = require('../config/env');
+const privateMedia = require('../lib/privateMedia');
 
 /**
  * Order validation rules.
@@ -24,6 +25,8 @@ const PAYMENT_PROOF_URL = /^\/uploads\/[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif)$/i;
 // (imageOptimizer publicUrl). Nothing from another site.
 const isUploadedPhoto = (value) => {
   const url = String(value ?? '').trim();
+  // A private photo (POST /upload/private-image), signed or not.
+  if (privateMedia.isPrivateRef(url)) return /\.(jpe?g|png|webp|gif)$/i.test(privateMedia.fileOf(url));
   const cdn = config.cdn?.url;
   const local = cdn && url.startsWith(`${cdn}/uploads/`) ? url.slice(cdn.length) : url;
   return PAYMENT_PROOF_URL.test(local);

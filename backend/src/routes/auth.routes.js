@@ -5,6 +5,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const {
   sellerApplyLimiter,
   passwordResetLimiter,
+  sessionSwitchLimiter,
   forgotPasswordEmailLimiter,
   forgotPasswordIpLimiter,
 } = require('../middleware/security');
@@ -64,6 +65,14 @@ router.post(
   validate,
   authController.refreshToken
 );
+
+// Switch account on the website, with each kept session in its own httpOnly
+// cookie (auth.controller). The cookies are the credentials here.
+router.get('/sessions/kept', authController.keptSessions);
+router.post('/sessions/keep', authController.keepSession);
+router.post('/sessions/switch', sessionSwitchLimiter, authController.switchSession);
+router.post('/sessions/forget', authController.forgetSession);
+router.post('/sessions/adopt', sessionSwitchLimiter, authController.adoptSession);
 
 // Validation runs first so the email-keyed limiter always sees a well-formed
 // address, and a malformed body is rejected without consuming anyone's quota.

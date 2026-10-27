@@ -1,18 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowClockwiseIcon, CameraIcon, ChatsCircleIcon, CircleNotchIcon, IdentificationCardIcon, LockSimpleIcon,
   ShieldCheckIcon, ShieldWarningIcon, UploadSimpleIcon, XCircleIcon,
 } from 'phosphor-react-native';
-import apiClient, { STORAGE_KEYS } from '../../../api/client';
+import apiClient, { authedFetch } from '../../../api/client';
 import LoadingSkeleton from '../../LoadingSkeleton';
 import Select from '../../Select';
 import IdCamera, { assetToUpload } from '../../profile/IdCamera';
 import { fetchIdentityStatus } from '../../profile/profileLib';
-import { API_BASE_URL } from '../../../lib/config';
 import { invalidateCachedData } from '../../../lib/dataCache';
 import { toast } from '../../../lib/toast';
 import { font, t } from '../../../theme';
@@ -56,19 +54,18 @@ const STATUS_META = {
 
 /** POST /identity-verification (multipart): the ID type and the photos, read on the server (up to two minutes). */
 async function submitIdentityVerification(idType, front, back) {
-  const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-  const form = new FormData();
-  form.append('idType', idType);
-  form.append('idImage', await assetToUpload(front, 'id-front.jpg'));
-  if (back) form.append('idBackImage', await assetToUpload(back, 'id-back.jpg'));
+  const frontPart = await assetToUpload(front, 'id-front.jpg');
+  const backPart = back ? await assetToUpload(back, 'id-back.jpg') : null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120000);
   try {
-    const response = await fetch(`${API_BASE_URL}/identity-verification`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: form,
-      signal: controller.signal,
+    // authedFetch renews a lapsed session once (a fresh form for the retry).
+    const response = await authedFetch('/identity-verification', () => {
+      const form = new FormData();
+      form.append('idType', idType);
+      form.append('idImage', frontPart);
+      if (backPart) form.append('idBackImage', backPart);
+      return { method: 'POST', body: form, signal: controller.signal };
     });
     const json = await response.json().catch(() => ({}));
     if (!response.ok || json?.success === false) throw new Error(json?.message || `Verification failed (${response.status})`);

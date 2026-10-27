@@ -8,7 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { SaveFormat, manipulateAsync } from 'expo-image-manipulator';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 // Library photos on iPhones are ph:// assets, which React Native's Image no
 // longer draws; expo-image does (and is quick for a strip of thumbnails).
 import { Image as LibraryImage } from 'expo-image';
@@ -23,8 +22,7 @@ import ProductCard from '../src/components/ProductCard';
 import SearchFilterSheet from '../src/components/search/SearchFilterSheet';
 import { pickSearchImage } from '../src/components/search/ImageSearchSheet';
 import { saveImageSearch, takePendingImage } from '../src/components/search/imageSearchStore';
-import { STORAGE_KEYS } from '../src/api/client';
-import { API_BASE_URL } from '../src/lib/config';
+import { authedFetch } from '../src/api/client';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
 import { font, t } from '../src/theme';
 
@@ -72,22 +70,16 @@ async function prepare(uri) {
 }
 
 async function searchByImage(photo) {
-  const form = new FormData();
-  if (photo.file) {
-    form.append('image', photo.file);
-  } else if (Platform.OS === 'web') {
-    // The web build's photos are blob:/data: URLs: send the bytes.
-    const blob = await (await fetch(photo.uri)).blob();
-    form.append('image', blob, photo.fileName || 'image-search.jpg');
-  } else {
-    form.append('image', { uri: photo.uri, name: photo.fileName, type: photo.mimeType || 'image/jpeg' });
-  }
+  // The web build's photos are blob:/data: URLs: their bytes are sent.
+  const blob = !photo.file && Platform.OS === 'web' ? await (await fetch(photo.uri)).blob() : null;
   // fetch, not axios: React Native sends a FormData body reliably this way.
-  const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN).catch(() => null);
-  const res = await fetch(`${API_BASE_URL}/products/search-by-image`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: form,
+  // authedFetch renews a lapsed session once (a fresh form for the retry).
+  const res = await authedFetch('/products/search-by-image', () => {
+    const form = new FormData();
+    if (photo.file) form.append('image', photo.file);
+    else if (blob) form.append('image', blob, photo.fileName || 'image-search.jpg');
+    else form.append('image', { uri: photo.uri, name: photo.fileName, type: photo.mimeType || 'image/jpeg' });
+    return { method: 'POST', body: form };
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok || json.success === false) throw new Error(json.message || 'Image search failed');

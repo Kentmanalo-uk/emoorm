@@ -32,6 +32,11 @@ const staleReturn = (err) => {
 // Photos come from our own uploads (the request page uploads them first);
 // any other address would be loaded by the seller's browser.
 const OWN_UPLOAD = /^\/uploads\/[A-Za-z0-9._-]+$/;
+const privateMedia = require('../lib/privateMedia');
+// A return photo: private (POST /upload/private-image) or, from older app
+// versions, a public upload. Stored without a link signature.
+const returnPhoto = (p) => (typeof p === 'string' ? privateMedia.normalize(p) : null);
+const isReturnPhoto = (p) => typeof p === 'string' && (privateMedia.isPrivateRef(p) || OWN_UPLOAD.test(p));
 
 const getOrderDeliveredAt = (order) => {
   if (order.completedAt) return new Date(order.completedAt);
@@ -139,7 +144,7 @@ const createRequest = async (buyerId, payload) => {
       status: 'REQUESTED',
       reason,
       buyerNote: typeof buyerNote === 'string' ? buyerNote.slice(0, 2000) || null : null,
-      photos: Array.isArray(photos) ? photos.filter((p) => typeof p === 'string' && OWN_UPLOAD.test(p)).slice(0, 5) : null,
+      photos: Array.isArray(photos) ? photos.map(returnPhoto).filter(isReturnPhoto).slice(0, 5) : null,
       requestedAmount,
       returnPolicySnapshot: requestedItems[0]?.orderItem?.returnPolicySnapshot || null,
       history: withHistory(null, { status: 'REQUESTED', by: buyerId }),

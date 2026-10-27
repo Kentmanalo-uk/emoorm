@@ -32,23 +32,30 @@ const SIGN_IN_STEP = /\/auth\/(login|register|google|refresh-token|forgot-passwo
 
 // One renewal at a time: every request that fails meanwhile waits for it.
 // Also used by uploads (lib/upload), which go out through fetch.
+// The refresh token is an httpOnly cookie the server sets (X-Session:
+// cookie), out of reach of the page. A browser signed in before that still
+// has one in localStorage: it is sent once, becomes the cookie, and leaves
+// the storage.
 let refreshing = null;
 export const renewSession = () => {
   if (!refreshing) {
-    const refreshToken = localStorage.getItem('refreshToken');
-    refreshing = (refreshToken
-      ? axios.post(`${API_CONFIG.BASE_URL}/auth/refresh-token`, { refreshToken }).then((res) => {
-        const { accessToken, refreshToken: next } = res.data?.data || {};
+    const stored = localStorage.getItem('refreshToken');
+    refreshing = (stored || readToken()
+      ? axios.post(`${API_CONFIG.BASE_URL}/auth/refresh-token`, stored ? { refreshToken: stored } : {}, {
+        withCredentials: true,
+        headers: { 'X-Session': 'cookie' },
+      }).then((res) => {
+        const { accessToken } = res.data?.data || {};
         if (!accessToken) throw new Error('No token');
-        if (authHandlers.setTokens) authHandlers.setTokens(accessToken, next || refreshToken);
+        localStorage.removeItem('refreshToken');
+        if (authHandlers.setTokens) authHandlers.setTokens(accessToken);
         else {
           localStorage.setItem('token', accessToken);
           localStorage.setItem('accessToken', accessToken);
-          if (next) localStorage.setItem('refreshToken', next);
         }
         return accessToken;
       })
-      : Promise.reject(new Error('No refresh token')))
+      : Promise.reject(new Error('Not signed in')))
       .finally(() => { refreshing = null; });
   }
   return refreshing;
@@ -69,8 +76,14 @@ const endSession = () => {
 const axiosInstance = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
+  // The session cookie (refresh token) travels with requests to /api/auth,
+  // also in development, where the page and the API are on two ports.
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    // Sign-in answers set the refresh token as an httpOnly cookie instead of
+    // putting it in the page (backend lib/sessionCookie).
+    'X-Session': 'cookie',
   },
 });
 

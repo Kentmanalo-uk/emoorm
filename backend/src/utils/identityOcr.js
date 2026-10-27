@@ -3,9 +3,13 @@ const path = require('path');
 // server's memory. 40 megapixels covers any phone photo.
 const MAX_INPUT_PIXELS = 40e6;
 const fs = require('fs');
-const sharp = require('sharp');
-const { createWorker, PSM } = require('tesseract.js');
+const sharp = require('../lib/sharp');
 const config = require('../config/env');
+
+// tesseract.js (a worker thread and its WebAssembly) is loaded on the first
+// ID check, not at server start.
+// eslint-disable-next-line global-require
+const tesseract = () => require('tesseract.js');
 const { scoreText } = require('./identityMatch');
 
 /**
@@ -22,16 +26,38 @@ const GOOD_ENOUGH_SCORE = 30;
 let workerPromise = null;
 let queue = Promise.resolve();
 
+// The worker is a thread with its own memory: it is stopped once no ID has
+// been read for IDLE_STOP_MS (the next check starts a new one, a few seconds
+// slower), and a read that runs past JOB_TIMEOUT_MS is abandoned and its
+// worker replaced, so one stuck image cannot hold up everyone behind it.
+const IDLE_STOP_MS = 2 * 60 * 1000;
+const JOB_TIMEOUT_MS = 90 * 1000;
+let idleTimer = null;
+
 const getWorker = () => {
   if (!workerPromise) {
     const cachePath = path.resolve(config.identity.ocrCachePath);
     fs.mkdirSync(cachePath, { recursive: true });
-    workerPromise = createWorker('eng', 1, { cachePath }).catch((err) => {
+    workerPromise = tesseract().createWorker('eng', 1, { cachePath }).catch((err) => {
       workerPromise = null;
       throw err;
     });
   }
   return workerPromise;
+};
+
+const stopWorker = async () => {
+  if (!workerPromise) return;
+  const pending = workerPromise;
+  workerPromise = null;
+  const worker = await pending.catch(() => null);
+  if (worker) await worker.terminate().catch(() => {});
+};
+
+const scheduleIdleStop = () => {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { if (waiting === 0) stopWorker(); }, IDLE_STOP_MS);
+  idleTimer.unref?.();
 };
 
 // A read takes seconds of CPU, and jobs run one after another, so a long
@@ -52,10 +78,22 @@ const exclusive = (task, { isCancelled } = {}) => {
     return Promise.reject(ocrError('OCR_BUSY', 'Identity OCR queue is full'));
   }
   waiting += 1;
+  clearTimeout(idleTimer);
   const start = () => {
     waiting -= 1;
     if (isCancelled?.()) throw ocrError('OCR_CANCELLED', 'Identity OCR request went away before its turn');
-    return task();
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        // The worker may still be busy with the abandoned image: replace it.
+        stopWorker();
+        reject(ocrError('OCR_TIMEOUT', 'Identity OCR took too long'));
+      }, JOB_TIMEOUT_MS);
+    });
+    return Promise.race([task(), timeout]).finally(() => {
+      clearTimeout(timer);
+      scheduleIdleStop();
+    });
   };
   const run = queue.then(start, start);
   queue = run.catch(() => {});
@@ -102,6 +140,7 @@ const recognize = async (worker, png, psm) => {
  * @returns {Promise<{text: String, confidence: Number, angle: Number, passes: Number}>}
  */
 const recognizeId = (buffer, { accept = () => false, isCancelled } = {}) => exclusive(async () => {
+  const { PSM } = tesseract();
   const base = await baseImage(buffer);
   const worker = await getWorker();
   const attempts = [];
@@ -149,10 +188,8 @@ const recognizeId = (buffer, { accept = () => false, isCancelled } = {}) => excl
 }, { isCancelled });
 
 const shutdown = async () => {
-  if (!workerPromise) return;
-  const worker = await workerPromise.catch(() => null);
-  workerPromise = null;
-  if (worker) await worker.terminate();
+  clearTimeout(idleTimer);
+  await stopWorker();
 };
 
 module.exports = { recognizeId, shutdown };

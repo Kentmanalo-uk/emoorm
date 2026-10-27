@@ -226,7 +226,8 @@ const exportData = async (userId) => {
       select: {
         createdAt: true,
         store: { select: { name: true } },
-        messages: { orderBy: { createdAt: 'asc' }, select: { body: true, createdAt: true, senderId: true } },
+        // Not what the other side unsent (it is hidden from this account).
+        messages: { where: { OR: [{ unsentAt: null }, { senderId: userId }] }, orderBy: { createdAt: 'asc' }, select: { body: true, createdAt: true, senderId: true } },
       },
     }),
     prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 500, select: { type: true, title: true, message: true, isRead: true, createdAt: true } }),

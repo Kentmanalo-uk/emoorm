@@ -70,6 +70,23 @@ export async function uploadImage(file, options) {
 }
 
 /**
+ * Upload a private photo (POST /upload/private-image): a payment or delivery
+ * proof, a chat photo, a return photo. It is never public: the API shows it
+ * through signed links to the people the order, chat or return is theirs.
+ * `url` is the reference to send; `previewUrl` shows it now.
+ *
+ * @param {File} file
+ * @returns {Promise<{ url: string, previewUrl: string }>}
+ */
+export async function uploadPrivateImage(file) {
+  if (!file) throw new Error('No file selected');
+  const ready = await uploadableImage(file);
+  const data = await send('/upload/private-image', ready);
+  if (!data?.url) throw new Error('Upload succeeded but no URL returned');
+  return data;
+}
+
+/**
  * Upload a business paper or ID photo privately (POST /upload/kyc). Kept
  * sharp enough to read, like an ID. The answer is an opaque fileId, not a
  * URL: only the owner and the reviewing admin can open it.

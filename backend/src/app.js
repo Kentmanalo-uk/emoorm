@@ -68,24 +68,33 @@ if (config.nodeEnv === 'production' && canonicalHost && !canonicalHost.startsWit
   });
 }
 
-// Third parties the web app genuinely loads. Kept as one list so the policy
-// below reads as "these, and nothing else".
-// Google Identity Services and the Translate widget both pull from several
-// hosts and change them without notice, so these are matched by wildcard
-// rather than pinned one subdomain at a time.
-const GOOGLE_HOSTS = [
-  'https://*.google.com',
-  'https://*.googleapis.com',
-  'https://*.gstatic.com',
-  'https://accounts.google.com',
-  'https://apis.google.com',
+// Third parties the web app genuinely loads, pinned host by host (recorded
+// from the live site with Tagalog on and on the sign-in page, 2026-10-27).
+// No wildcards over shared hosting (*.googleapis.com includes Google Cloud
+// Storage, where anyone can publish a file): a script there would run here.
+// Google sign-in (Identity Services): its script, style, frame and token calls.
+const GOOGLE_SIGN_IN = ['https://accounts.google.com'];
+// Google Translate (Tagalog/Bisaya): the widget's scripts, its API, its style
+// sheets and images.
+const GOOGLE_TRANSLATE = [
+  'https://translate.google.com',
+  'https://translate.googleapis.com',
+  'https://translate-pa.googleapis.com',
 ];
-const MAP_TILES = ['https://*.tile.openstreetmap.org', 'https://unpkg.com'];
+const GOOGLE_STATIC = ['https://www.gstatic.com'];
+const GOOGLE_FONTS_CSS = ['https://fonts.googleapis.com'];
+const GOOGLE_FONTS = ['https://fonts.gstatic.com'];
+const MAP_TILES = ['https://*.tile.openstreetmap.org'];
 const IMAGE_HOSTS = [
   'https://images.unsplash.com',
   'https://via.placeholder.com',
+  // Google account photos (sign in with Google).
   'https://*.googleusercontent.com',
+  // Translate's widget icons.
+  'https://www.google.com',
 ];
+const SCRIPT_HOSTS = [...GOOGLE_SIGN_IN, ...GOOGLE_TRANSLATE];
+const STYLE_HOSTS = [...GOOGLE_SIGN_IN, ...GOOGLE_TRANSLATE, ...GOOGLE_STATIC, ...GOOGLE_FONTS_CSS];
 
 // Helmet — security headers.
 //
@@ -119,18 +128,18 @@ app.use(helmet({
       // Translate widget, both of which inject inline scripts.
       // 'wasm-unsafe-eval' lets WebAssembly compile (the 3D viewer's model
       // decoders), and nothing else: eval() and new Function() stay blocked.
-      scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", ...GOOGLE_HOSTS, ...MAP_TILES],
-      scriptSrcElem: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", ...SCRIPT_HOSTS],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", ...SCRIPT_HOSTS],
       // Vite emits inline styles, and Leaflet sets them on elements directly.
-      styleSrc: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
-      styleSrcElem: ["'self'", "'unsafe-inline'", ...GOOGLE_HOSTS, ...MAP_TILES],
-      fontSrc: ["'self'", 'data:', ...GOOGLE_HOSTS],
-      imgSrc: ["'self'", 'data:', 'blob:', ...MAP_TILES, ...IMAGE_HOSTS, ...GOOGLE_HOSTS],
+      styleSrc: ["'self'", "'unsafe-inline'", ...STYLE_HOSTS],
+      styleSrcElem: ["'self'", "'unsafe-inline'", ...STYLE_HOSTS],
+      fontSrc: ["'self'", 'data:', ...GOOGLE_FONTS],
+      imgSrc: ["'self'", 'data:', 'blob:', ...MAP_TILES, ...IMAGE_HOSTS, ...GOOGLE_TRANSLATE, ...GOOGLE_STATIC, ...GOOGLE_FONTS],
       // OSRM: the road route from the buyer to a shop's pickup spot (checkout).
       // blob: and the CDN: the 3D viewer fetches a product's model (and the
       // seller's preview, built in the page) by script.
       connectSrc: [
-        "'self'", 'blob:', 'https://psgc.gitlab.io', 'https://router.project-osrm.org', ...GOOGLE_HOSTS, ...MAP_TILES,
+        "'self'", 'blob:', 'https://psgc.gitlab.io', 'https://router.project-osrm.org', ...GOOGLE_SIGN_IN, ...GOOGLE_TRANSLATE,
         ...(config.cdn.url ? [config.cdn.url] : []),
       ],
       // blob: the seller's own 360° video, read in the page to make its 3D
@@ -186,7 +195,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session'],
 }));
 
 app.use(csrfOriginGuard);
@@ -281,6 +290,48 @@ app.use(
   })
 );
 
+// Private photos (payment and delivery proofs, chat, return and report
+// photos): only with a valid, unexpired signature, which the API puts on the
+// link when it shows the photo to someone allowed to see it
+// (lib/privateMedia). Cached by that browser only, until the link expires.
+app.get('/private-media/:file', (req, res) => {
+  const privateMedia = require('./lib/privateMedia');
+  const { file } = req.params;
+  const ext = path.extname(file).toLowerCase();
+  if (!privateMedia.verify(file, req.query.e, req.query.s) || !SERVABLE_UPLOAD_TYPES[ext] || MODEL_UPLOAD_TYPES.has(ext)) {
+    return res.status(404).json({ success: false, message: 'Not found' });
+  }
+  const maxAge = Math.max(0, Number(req.query.e) - Math.floor(Date.now() / 1000));
+  res.set('Cache-Control', `private, max-age=${maxAge}`);
+  res.set('Content-Type', SERVABLE_UPLOAD_TYPES[ext]);
+  res.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Referrer-Policy', 'no-referrer');
+  return res.sendFile(path.join(privateMedia.mediaDir(), file), { dotfiles: 'deny' }, (err) => {
+    if (err && !res.headersSent) res.status(404).json({ success: false, message: 'Not found' });
+  });
+});
+
+// Every JSON answer: private photo references become signed links for this
+// response (lib/privateMedia signDeep). Who may see a record is decided by
+// the route that answers with it, so the link goes only where the photo may.
+// And for the website (X-Session: cookie), a refresh token in the answer
+// becomes its httpOnly session cookie instead (lib/sessionCookie).
+app.use((req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = (body) => {
+    let out = require('./lib/privateMedia').signDeep(body);
+    const sessionCookie = require('./lib/sessionCookie');
+    if (sessionCookie.wants(req) && out?.data && typeof out.data.refreshToken === 'string') {
+      sessionCookie.set(res, out.data.refreshToken);
+      const { refreshToken, ...data } = out.data; // eslint-disable-line no-unused-vars
+      out = { ...out, data };
+    }
+    return json(out);
+  };
+  next();
+});
+
 // Crawler entry points. Registered before the API's no-store blanket so they
 // keep the long cache lifetimes they set for themselves.
 app.use('/', seoRoutes);
@@ -349,7 +400,7 @@ app.use(config.apiPrefix, apiRoutes);
 let healthCache = { at: 0, body: null, status: 200 };
 const healthDetailAllowed = (req) => {
   const token = process.env.HEALTH_TOKEN;
-  const given = req.query.token || (req.get('authorization') || '').replace(/^Bearers+/i, '');
+  const given = req.query.token || (req.get('authorization') || '').replace(/^Bearer\s+/i, '');
   if (token && given && given.length === token.length && require('crypto').timingSafeEqual(Buffer.from(given), Buffer.from(token))) return true;
   return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket?.remoteAddress) && !req.get('x-forwarded-for');
 };

@@ -4,6 +4,8 @@ const storeRepository = require('../repositories/store.repository');
 const userRepository = require('../repositories/user.repository');
 const notificationService = require('./notification.service');
 const { ApiError } = require('../middleware/errorHandler');
+const prisma = require('../config/database');
+const auditLog = require('./auditLog.service');
 
 /**
  * Report Service
@@ -32,6 +34,10 @@ const VALID_STATUSES = ['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'DISMISSED'];
 const MAX_DESCRIPTION = 2000;
 const MAX_EVIDENCE = 5;
 const EVIDENCE_PHOTO = /^\/uploads\/[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif)$/i;
+const privateMedia = require('../lib/privateMedia');
+// Private (POST /upload/private-image) or, from older app versions, public.
+const isEvidencePhoto = (e) => typeof e === 'string'
+  && (EVIDENCE_PHOTO.test(e) || (privateMedia.isPrivateRef(e) && /\.(jpe?g|png|webp|gif)$/i.test(privateMedia.fileOf(e))));
 
 /**
  * Create report
@@ -64,7 +70,7 @@ const createReport = async (userId, data) => {
   // Evidence is our own uploaded photos only: anything else would be loaded
   // by the admin's browser when the report is opened.
   if (evidence != null && (!Array.isArray(evidence) || evidence.length > MAX_EVIDENCE
-    || !evidence.every((e) => typeof e === 'string' && EVIDENCE_PHOTO.test(e)))) {
+    || !evidence.every(isEvidencePhoto))) {
     throw new ApiError(`Evidence must be up to ${MAX_EVIDENCE} uploaded photos`, 400);
   }
 
@@ -152,7 +158,7 @@ const createReport = async (userId, data) => {
     ...target,
     reason,
     description: text || null,
-    evidence: evidence && evidence.length ? evidence : null,
+    evidence: evidence && evidence.length ? evidence.map((e) => privateMedia.normalize(e)) : null,
     status: 'PENDING',
     municipalityId,
   });
@@ -202,6 +208,65 @@ const getReportById = async (id, userId, userRole, userMunicipalityId) => {
   return report;
 };
 
+/**
+ * The chat between the two people a report is about, for the admin handling
+ * it: the reporter and the reported shop (a shop or product report), or the
+ * reporting shop and the reported buyer. Messages the sender unsent are
+ * included and marked (they are kept, hidden, for 30 days for this), so a
+ * report about something said in the chat can still be checked.
+ * @returns {Promise<{ conversationId: String|null, buyer: Object|null, store: Object|null, messages: Array }>}
+ */
+const getReportConversation = async (reportId, actor) => {
+  const report = await getReportById(reportId, actor.id, actor.role, actor.municipalityId);
+  let buyerId = null;
+  let storeId = null;
+  if (report.type === 'BUYER') {
+    buyerId = report.reportedBuyerId;
+    storeId = (await storeRepository.findByOwnerId(report.reporterId))?.id || null;
+  } else if (report.type === 'SELLER') {
+    buyerId = report.reporterId;
+    storeId = report.reportedSellerId ? (await storeRepository.findByOwnerId(report.reportedSellerId))?.id || null : null;
+  } else if (report.productId) {
+    buyerId = report.reporterId;
+    storeId = (await prisma.product.findUnique({ where: { id: report.productId }, select: { storeId: true } }))?.storeId || null;
+  }
+  const empty = { conversationId: null, buyer: null, store: null, messages: [] };
+  if (!buyerId || !storeId) return empty;
+  const conversation = await prisma.conversation.findUnique({
+    where: { buyerId_storeId: { buyerId, storeId } },
+    select: {
+      id: true,
+      buyer: { select: { id: true, fullName: true } },
+      store: { select: { id: true, name: true, ownerId: true } },
+    },
+  });
+  if (!conversation) return empty;
+  // The newest 300, oldest first.
+  const rows = await prisma.message.findMany({
+    where: { conversationId: conversation.id },
+    orderBy: { createdAt: 'desc' },
+    take: 300,
+    select: { id: true, senderId: true, body: true, imageUrl: true, createdAt: true, unsentAt: true, offerEvent: true },
+  });
+  await auditLog.record({
+    actor,
+    action: 'VIEW_REPORT_CHAT',
+    entity: 'Report',
+    entityId: report.id,
+    details: { conversationId: conversation.id, messages: rows.length },
+    municipalityId: report.municipalityId,
+  });
+  return {
+    conversationId: conversation.id,
+    buyer: conversation.buyer,
+    store: { id: conversation.store.id, name: conversation.store.name },
+    messages: rows.reverse().map((m) => ({
+      ...m,
+      from: m.senderId === conversation.buyer.id ? 'buyer' : 'shop',
+    })),
+  };
+};
+
 const getAllReports = async (options) => reportRepository.findAll(options);
 
 const getMyReports = async (userId, options) =>
@@ -245,6 +310,7 @@ const updateReportStatus = async (reportId, status, resolutionNotes, actor) => {
 module.exports = {
   createReport,
   getReportById,
+  getReportConversation,
   getAllReports,
   getMyReports,
   updateReportStatus,

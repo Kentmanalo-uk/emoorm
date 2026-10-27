@@ -83,4 +83,29 @@ apiClient.interceptors.response.use(
   }
 );
 
+/**
+ * fetch() to the API with the signed-in token, renewing a lapsed session
+ * once like apiClient does (access tokens last an hour). For multipart
+ * uploads, which go through fetch: `makeInit()` builds the request (a fresh
+ * FormData each time, since a sent form can't be reused everywhere).
+ *
+ * @param {String} path - e.g. '/upload/image'
+ * @param {Function} makeInit - () => fetch init without the Authorization header
+ * @returns {Promise<Response>}
+ */
+export async function authedFetch(path, makeInit) {
+  const call = (token) => {
+    const init = makeInit();
+    return fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers: { ...(init.headers || {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+  };
+  const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN).catch(() => null);
+  const response = await call(token);
+  if (response.status !== 401 || !token) return response;
+  const fresh = await refreshTokens().catch(() => null);
+  return fresh ? call(fresh) : response;
+}
+
 export default apiClient;

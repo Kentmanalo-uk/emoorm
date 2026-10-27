@@ -26,6 +26,15 @@ router.get(
   reportController.getReportById
 );
 
+// The chat between the two people the report is about, unsent messages
+// included (admins, logged).
+router.get(
+  '/:id/conversation',
+  authenticate,
+  authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
+  reportController.getReportConversation
+);
+
 // Admin routes
 router.get(
   '/',

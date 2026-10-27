@@ -4,7 +4,6 @@ import { font, t } from '../../theme';
 import ChatAvatar from './ChatAvatar';
 import { GradientFill } from './InboxGradient';
 import { formatTime } from './inboxFormat';
-import { unsentLabel } from '../../lib/unsend';
 
 /**
  * A chat in the Messages list on phones (web .msgr-convo-item): the shop's
@@ -27,11 +26,9 @@ export default function ConversationRow({
   if (item) {
     const isSellerView = item.role === 'seller';
     title = isSellerView ? item.buyer?.fullName || 'Buyer' : item.store?.name || 'Store';
-    preview = item.lastMessage?.unsent
-      ? unsentLabel(item.lastMessage.senderId === currentUserId, title)
-      : item.lastMessage
-        ? item.lastMessage.senderId === currentUserId ? `You: ${item.lastMessage.body}` : item.lastMessage.body
-        : 'Start the conversation';
+    preview = item.lastMessage
+      ? item.lastMessage.senderId === currentUserId ? `You: ${item.lastMessage.body}` : item.lastMessage.body
+      : 'Start the conversation';
     time = formatTime(item.lastMessageAt);
     unread = item.unreadCount || 0;
     pic = (

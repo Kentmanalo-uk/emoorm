@@ -1,6 +1,10 @@
-const { OAuth2Client } = require('google-auth-library');
 const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
+const { withTimeout } = require('../lib/withTimeout');
+
+// Google answers within a second or two; past this the sign-in is reported
+// as unavailable instead of hanging.
+const GOOGLE_TIMEOUT_MS = 10000;
 
 let cachedClient = null;
 
@@ -18,6 +22,9 @@ const getClient = (redirectUri = POPUP_REDIRECT_URI) => {
     throw new ApiError('Google sign-in is not configured on this server', 503);
   }
   if (!cachedClient) {
+    // Loaded on the first Google sign-in, not at server start.
+    // eslint-disable-next-line global-require
+    const { OAuth2Client } = require('google-auth-library');
     cachedClient = new OAuth2Client(
       config.google.clientId,
       config.google.clientSecret,
@@ -37,11 +44,12 @@ const verifyIdToken = async (idToken) => {
   const client = getClient();
   let ticket;
   try {
-    ticket = await client.verifyIdToken({
+    ticket = await withTimeout(client.verifyIdToken({
       idToken,
       audience: config.google.clientId,
-    });
-  } catch {
+    }), GOOGLE_TIMEOUT_MS, 'Google token check');
+  } catch (err) {
+    if (err.code === 'TIMEOUT') throw new ApiError('Google sign-in is not answering. Please try again.', 503);
     throw new ApiError('Invalid Google credentials', 401);
   }
   const payload = ticket.getPayload();
@@ -76,12 +84,13 @@ const exchangeCodeForProfile = async (code, redirectUri = POPUP_REDIRECT_URI) =>
   const client = getClient();
   let tokens;
   try {
-    const response = await client.getToken({
+    const response = await withTimeout(client.getToken({
       code,
       redirect_uri: redirectUri,
-    });
+    }), GOOGLE_TIMEOUT_MS, 'Google code exchange');
     tokens = response.tokens;
-  } catch {
+  } catch (err) {
+    if (err.code === 'TIMEOUT') throw new ApiError('Google sign-in is not answering. Please try again.', 503);
     throw new ApiError('Invalid Google authorization code', 401);
   }
   if (!tokens?.id_token) {

@@ -16,7 +16,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import { lineImage } from '../lib/variationImage';
-import { uploadImage } from '../lib/upload';
+import { uploadPrivateImage } from '../lib/upload';
 import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import ProductImage from '../components/ProductImage';
 import useAuthStore from '../store/authStore';
@@ -331,7 +331,8 @@ const Orders = () => {
     if (!file) return;
     setProofForm((f) => (f ? { ...f, uploading: true } : f));
     try {
-      const res = await uploadImage(file);
+      // Private: only the shop and the buyer see a payment proof.
+      const res = await uploadPrivateImage(file);
       setProofForm((f) => (f ? { ...f, url: res.url, uploading: false } : f));
       toast.success('Proof uploaded');
     } catch (err) {

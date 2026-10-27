@@ -4,10 +4,17 @@
  * Runs the backend, which also serves the built web app from web/dist, so
  * emoorm.shop needs just this one Node app: pages and /api on one domain.
  *
- * Right after it starts it applies any pending database migrations (`prisma
- * migrate deploy` only runs migration files already in the repo, in order;
- * it never resets or drops the database). Set RUN_MIGRATIONS=false to skip.
+ * Database migrations are applied by the build, before this version goes
+ * live (backend/scripts/migrate-at-build.js). As a fallback it also runs
+ * `prisma migrate deploy` shortly after it starts (it only runs migration
+ * files already in the repo, in order; it never resets or drops the
+ * database). Set RUN_MIGRATIONS=false to skip that.
  */
+// The hosting account has a cap on processes and threads (EAGAIN when it is
+// reached). Node's thread pool (file system, crypto, zlib, DNS) starts 4
+// threads; 2 are plenty here. Must be set before anything uses the pool.
+process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || '2';
+
 const path = require('path');
 const { execFile } = require('child_process');
 
@@ -44,6 +51,10 @@ if (process.env.RUN_MIGRATIONS === 'false') {
   // to start (EAGAIN). Try again a few times; `migrate deploy` only applies
   // what is still pending, so another run is harmless.
   const RETRY_AFTER_MS = [15000, 45000, 120000];
+  // The build applies migrations before the swap (backend/scripts/
+  // migrate-at-build.js), so this is normally a quick "nothing pending". It
+  // waits a few seconds so it does not compete with start-up itself.
+  const START_DELAY_MS = 10000;
   const migrate = (attempt = 0) => {
     execFile(process.execPath, [prismaCli, 'migrate', 'deploy'], { cwd: backendDir }, (err, stdout, stderr) => {
       const lines = redact(`${stdout || ''}\n${stderr || ''}`)
@@ -66,5 +77,5 @@ if (process.env.RUN_MIGRATIONS === 'false') {
       runtimeStatus.setMigrations('ok');
     });
   };
-  migrate();
+  setTimeout(() => migrate(), START_DELAY_MS).unref();
 }

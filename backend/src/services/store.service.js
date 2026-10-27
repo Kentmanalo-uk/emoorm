@@ -73,6 +73,51 @@ const withPublicOwner = (store) => {
   };
 };
 
+// A shop's payment details (GCash/QR Ph name, number, QR, instructions): the
+// number is usually the seller's personal mobile, so they are only for a
+// buyer who has an order with the shop to pay by QR (and admins).
+const PAYMENT_FIELDS = ['paymentQrImage', 'paymentAccountName', 'paymentAccountNumber', 'paymentInstructions'];
+// Moderation and housekeeping fields that are nobody else's business.
+const PRIVATE_FIELDS = ['suspensionReason', 'deletionRequestedAt', 'sellerGuides', 'deletedAt'];
+
+/**
+ * A store as the public sees it: no moderation fields, and no payment
+ * details unless `withPayment`. `hasPaymentQr` says whether the shop takes
+ * QR payment (checkout and product pages only need that).
+ * @param {Object} store
+ * @param {Object} [options]
+ * @param {Boolean} [options.withPayment]
+ */
+const toPublicStore = (store, { withPayment = false } = {}) => {
+  if (!store) return store;
+  const out = { ...store, hasPaymentQr: Boolean(store.paymentQrImage) };
+  if (!out.hasPaymentQr) out.paymentQrType = null;
+  for (const key of PRIVATE_FIELDS) delete out[key];
+  if (!withPayment) for (const key of PAYMENT_FIELDS) delete out[key];
+  return out;
+};
+
+/**
+ * May this viewer see the shop's payment details? Admins, and a buyer with an
+ * order at the shop paid by QR (GCash / QR Ph) that is not cancelled.
+ * @param {Object|undefined} user - req.user
+ * @param {String} storeId
+ */
+const canSeePayment = async (user, storeId) => {
+  if (!user) return false;
+  if (user.role === 'SUPER_ADMIN' || user.role === 'MUNICIPAL_ADMIN') return true;
+  const order = await prisma.order.findFirst({
+    where: {
+      buyerId: user.id,
+      storeId,
+      paymentMethod: { in: ['GCASH', 'QRPH'] },
+      status: { not: 'CANCELLED' },
+    },
+    select: { id: true },
+  });
+  return Boolean(order);
+};
+
 /**
  * Read a store through the shared cache.
  *
@@ -331,7 +376,10 @@ const getStores = async (options = {}) => {
   if (options.includeInactive || options.isAdmin || options.excludeOwnerId) {
     const result = await storeRepository.findAll(options);
     const ready = await shopReadiness.readyIds(result.stores.map((s) => s.id));
-    return { ...result, stores: result.stores.map((s) => ({ ...s, readyToSell: ready.has(s.id) })) };
+    // Admins moderate with every field; a seller browsing other shops gets
+    // the public view.
+    const shape = options.isAdmin ? (s) => s : (s) => toPublicStore(s);
+    return { ...result, stores: result.stores.map((s) => ({ ...shape(s), readyToSell: ready.has(s.id) })) };
   }
   return cached.storeList(
     {
@@ -352,7 +400,8 @@ const getStores = async (options = {}) => {
       const ready = await shopReadiness.readyIds(result.stores.map((s) => s.id));
       return {
         ...result,
-        stores: result.stores.map((s) => ({ ...s, readyToSell: ready.has(s.id) })),
+        // The public directory: no payment details or moderation fields.
+        stores: result.stores.map((s) => ({ ...toPublicStore(s), readyToSell: ready.has(s.id) })),
       };
     }
   );
@@ -777,6 +826,8 @@ const checkCoverage = async (storeId, municipalityId, barangay, pin = null) => {
 };
 
 module.exports = {
+  toPublicStore,
+  canSeePayment,
   completeGuide,
   createStore,
   getStoreById,

@@ -17,6 +17,12 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * @route POST /api/reports
  * @access Private (Authenticated users)
  */
+// GET /reports/:id/conversation (admin): the chat the report is about.
+const getReportConversation = asyncHandler(async (req, res) => {
+  const data = await reportService.getReportConversation(req.params.id, req.user);
+  successResponse(res, data, 'Conversation retrieved');
+});
+
 const createReport = asyncHandler(async (req, res) => {
   const report = await reportService.createReport(req.user.id, req.body);
 
@@ -142,5 +148,6 @@ module.exports = {
   getAllReports,
   getMyReports,
   getReportById,
+  getReportConversation,
   updateReportStatus,
 };

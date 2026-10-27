@@ -88,9 +88,11 @@ const useAuthStore = create(
       logout: (to = null, { forget = true } = {}) => {
         // The server forgets this device's session (its refresh token stops
         // renewing). Best effort: the sign-out here does not wait for it.
+        // The session is the httpOnly cookie (or, signed in before that, a
+        // token still in storage); the server ends it and clears the cookie.
         const refreshToken = localStorage.getItem('refreshToken');
-        if (forget && refreshToken && localStorage.getItem('token')) {
-          axiosInstance.post('/auth/logout', { refreshToken }, { quiet: true }).catch(() => {});
+        if (forget && localStorage.getItem('token')) {
+          axiosInstance.post('/auth/logout', refreshToken ? { refreshToken } : {}, { quiet: true }).catch(() => {});
         }
         set({
           user: null,

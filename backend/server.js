@@ -23,14 +23,22 @@ const describeCache = () => {
   return `Redis at ${target} — falls back to in-process if it is unreachable`;
 };
 
-// Test database connection
-const testDatabaseConnection = async () => {
+// Connect to the database in the background. The server is already
+// listening (Hostinger restarts an app that has not called listen() within
+// 3 seconds), and a database that is briefly unreachable at boot must not
+// put it in a restart loop: /health answers 503 meanwhile, queries that run
+// before the connection is up wait for it (Prisma connects on first use),
+// and this keeps trying with growing pauses.
+const CONNECT_RETRY_MS = [2000, 5000, 10000, 30000, 60000];
+
+const connectDatabase = async (attempt = 0) => {
   try {
     await prisma.$connect();
     console.log('✓ Database connected successfully');
   } catch (error) {
-    console.error('✗ Database connection failed:', error.message);
-    process.exit(1);
+    const wait = CONNECT_RETRY_MS[Math.min(attempt, CONNECT_RETRY_MS.length - 1)];
+    console.error(`✗ Database connection failed (attempt ${attempt + 1}), retrying in ${wait / 1000}s:`, error.message);
+    setTimeout(() => connectDatabase(attempt + 1), wait).unref();
   }
 };
 
@@ -44,11 +52,9 @@ const startServer = async () => {
     // localhost canonical URL.
     assertSafeToStart();
 
-    // Test database connection
-    await testDatabaseConnection();
-
-    // Start Express server
+    // Listen first, then connect (see connectDatabase).
     httpServer = app.listen(PORT, () => {
+      connectDatabase();
       console.log('================================================');
       console.log('  E-MOORM Backend Server');
       console.log('================================================');
@@ -130,6 +136,47 @@ const startServer = async () => {
       );
       setTimeout(eraseClosed, 60 * 1000).unref();
       setInterval(eraseClosed, 24 * 60 * 60 * 1000).unref();
+
+      // Daily backup: the database and the uploads (scripts/backup.js), in
+      // its own process so the dump and the archives never slow requests.
+      // Hostinger cron jobs do not run on this account, so the server does it:
+      // 10 minutes after start, then a check every 6 hours; --if-due makes it do
+      // nothing until the newest backup is BACKUP_EVERY_HOURS (20) old, so a
+      // restart (every deploy) does not start another. BACKUP_ENABLED=false
+      // turns it off.
+      if (process.env.BACKUP_ENABLED !== 'false' && config.nodeEnv === 'production') {
+        const runBackup = () => runtimeStatus.runJob('backup', () => new Promise((resolve, reject) => {
+          const { execFile } = require('child_process');
+          execFile(process.execPath, [require('path').join(__dirname, 'scripts', 'backup.js'), '--if-due'], {
+            cwd: __dirname,
+            timeout: 20 * 60 * 1000,
+            maxBuffer: 4 * 1024 * 1024,
+          }, (err, stdout, stderr) => {
+            const out = `${stdout || ''}${stderr || ''}`.trim();
+            if (out) console.log(out.split('\n').filter((l) => !/injected env/.test(l)).join('\n'));
+            if (err) reject(new Error(`backup failed: ${(stderr || err.message).toString().slice(0, 300)}`));
+            else resolve();
+          });
+        }), 6 * 60 * 60 * 1000);
+        setTimeout(runBackup, 10 * 60 * 1000).unref();
+        setInterval(runBackup, 6 * 60 * 60 * 1000).unref();
+      }
+
+      // Private photos: messages unsent 30 days ago are erased with their
+      // photos, and photo files nothing refers to (uploaded, never sent) go
+      // after a day. Once a day.
+      const tidyPrivatePhotos = () => runtimeStatus.runJob('private-photos', async () => {
+        await require('./src/services/message.service').purgeUnsent();
+        await require('./src/services/privateMedia.service').sweepUnreferenced();
+      }, 24 * 60 * 60 * 1000);
+      setTimeout(tidyPrivatePhotos, 3 * 60 * 1000).unref();
+      setInterval(tidyPrivatePhotos, 24 * 60 * 60 * 1000).unref();
+      // Photos stored publicly before private photos existed move across
+      // (once; a later run finds nothing left to move).
+      setTimeout(() => runtimeStatus.runJob('private-photos-move', async () => {
+        const stats = await require('./src/services/privateMedia.service').migratePublicPhotos();
+        if (stats.moved || stats.missing) console.log('[private-photos] moved from /uploads:', stats);
+      }, 7 * 24 * 60 * 60 * 1000), 45 * 1000).unref();
 
       // Signed-in sessions whose refresh token has expired are forgotten.
       const purgeSessions = () => runtimeStatus.runJob(

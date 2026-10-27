@@ -295,7 +295,7 @@
   color: var(--t-neutral-500, #636b78);
 }
 
-/* The time, and Unsend before it on my messages of the last hour. */
+/* The time, and Unsend before it on my messages of the last 5 hours. */
 .cd-msg-foot {
   display: flex;
   align-items: baseline;
@@ -320,17 +320,6 @@
 .cd-msg-unsend:hover {
   opacity: 1;
   text-decoration: underline;
-}
-
-/* Where an unsent message was. */
-.cd-msg.is-unsent,
-.cd-msg.is-unsent.is-mine {
-  border: 1px dashed var(--t-neutral-300, #d1d5db);
-  background: transparent;
-  box-shadow: none;
-  color: var(--t-neutral-500, #636b78);
-  font-style: italic;
-  padding-bottom: 8px;
 }
 
 .cd-msg.is-mine time {

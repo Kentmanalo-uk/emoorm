@@ -35,11 +35,7 @@ const prisma = new PrismaClient({
     : ['error'],
 });
 
-// Force connection on module load
-prisma.$connect().then(() => {
-  console.log('✅ Prisma connected');
-}).catch((err) => {
-  console.error('❌ Prisma connection failed:', err);
-});
+// No connect here: the server connects after it starts listening
+// (backend/server.js), and scripts and tests connect on their first query.
 
 module.exports = prisma;

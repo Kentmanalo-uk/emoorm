@@ -694,3 +694,68 @@
   background: #fff;
   border-radius: 10px;
 }
+
+/* A report's chat (AdminReports ReportChat): who wrote, when, and what;
+   messages the sender unsent are kept for this view and marked. */
+.admin-report-chat-note {
+  margin: 0 0 10px;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13px;
+}
+
+.admin-report-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.admin-report-chat li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 85%;
+  padding: 8px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.admin-report-chat li.is-shop {
+  align-self: flex-end;
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.admin-report-chat li.is-unsent {
+  border-style: dashed;
+  border-color: var(--t-danger-300, #fca5a5);
+}
+
+.admin-report-chat-who {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 11.5px;
+}
+
+.admin-report-chat-who b {
+  color: var(--t-danger-700, #b91c1c);
+  font-weight: 600;
+}
+
+.admin-report-chat-text {
+  color: var(--t-neutral-900, #111827);
+  font-size: 13.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.admin-report-chat-photo img {
+  display: block;
+  max-width: 200px;
+  max-height: 160px;
+  border-radius: 8px;
+  object-fit: cover;
+}

@@ -12,7 +12,6 @@ import EmptyState from './EmptyState';
 import ChatAvatar from './inbox/ChatAvatar';
 import { ConversationListSkeleton } from './inbox/InboxSkeletons';
 import { foldText, formatTime } from './inbox/inboxFormat';
-import { unsentLabel } from '../lib/unsend';
 import { SellerPrivateLine, useSellerTabScroll } from './seller/SellerPage';
 import { useConversationPeek } from './peek/ConversationPeek';
 
@@ -219,11 +218,9 @@ function Chip({ on, label, onPress }) {
 // One buyer's chat (.seller-chat-card .msgr-convo-item: 16px in from the edges).
 function BuyerChatRow({ item, currentUserId, onPress, peek }) {
   const title = item.buyer?.fullName || 'Buyer';
-  const preview = item.lastMessage?.unsent
-    ? unsentLabel(item.lastMessage.senderId === currentUserId, title)
-    : item.lastMessage
-      ? item.lastMessage.senderId === currentUserId ? `You: ${item.lastMessage.body}` : item.lastMessage.body
-      : 'Start the conversation';
+  const preview = item.lastMessage
+    ? item.lastMessage.senderId === currentUserId ? `You: ${item.lastMessage.body}` : item.lastMessage.body
+    : 'Start the conversation';
   const time = formatTime(item.lastMessageAt);
   const unread = item.unreadCount || 0;
   return (

@@ -129,6 +129,16 @@ const PRIVATE_ORIGIN = /^https?:\/\/(localhost|127\.\d+\.\d+\.\d+|\[::1\]|10\.\d
 
 const isLocalNetworkOrigin = (origin) => config.nodeEnv !== 'production' && PRIVATE_ORIGIN.test(origin || '');
 
+// Switching between saved accounts (and adopting old saved sessions): a
+// person switches a handful of times; a script trying cookies does not get far.
+const sessionSwitchLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many account switches. Please wait a few minutes.' },
+});
+
 const csrfOriginGuard = (req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
 
@@ -152,6 +162,7 @@ module.exports = {
   forgotPasswordEmailLimiter,
   forgotPasswordIpLimiter,
   passwordResetLimiter,
+  sessionSwitchLimiter,
   checkoutLimiter,
   voucherValidateLimiter,
   csrfOriginGuard,

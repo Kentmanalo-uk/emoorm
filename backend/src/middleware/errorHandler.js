@@ -42,7 +42,9 @@ const errorHandler = (err, req, res, next) => {
   // again" (503 + Retry-After, which the web app retries once for reads)
   // rather than a 500 carrying Prisma's text, which names the database host.
   const dbCode = err.errorCode || err.code;
-  const dbUnavailable = ['P1001', 'P1002', 'P1008', 'P1017', 'P2024'].includes(dbCode)
+  // P2028: a transaction could not get a connection or finish in time (a busy
+  // moment at checkout).
+  const dbUnavailable = ['P1001', 'P1002', 'P1008', 'P1017', 'P2024', 'P2028'].includes(dbCode)
     || err.name === 'PrismaClientInitializationError'
     || err.name === 'PrismaClientRustPanicError';
 

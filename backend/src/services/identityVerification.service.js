@@ -256,7 +256,7 @@ const submit = async (actor, idType, images, req) => {
     ocrText = combined;
     outcome = evaluate(combined, idType, user);
   } catch (err) {
-    if (err.code === 'OCR_BUSY' || err.code === 'OCR_CANCELLED') {
+    if (err.code === 'OCR_BUSY' || err.code === 'OCR_CANCELLED' || err.code === 'OCR_TIMEOUT') {
       // The ID was never read: put the record back as it was, so this is not
       // counted as a failure and the retry is not "already in progress".
       await identityRepository.upsertForUser(userId, {

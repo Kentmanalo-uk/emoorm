@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const { feeFor } = require('../utils/courierRates');
 const crypto = require('crypto');
+const privateMedia = require('../lib/privateMedia');
 const orderRepository = require('../repositories/order.repository');
 const productRepository = require('../repositories/product.repository');
 const storeRepository = require('../repositories/store.repository');
@@ -429,13 +430,16 @@ const createOrder = async (userId, data) => {
   // For a MoorMove rider's vehicle: a product without a weight counts as 500 g.
   let riderGrams = 0;
 
+  // Every line's product in one query (not one, plus stats, per line).
+  const productsById = await productRepository.findManyByIds(items.map((i) => i.productId));
+
   for (const item of items) {
     const quantity = Number(item.quantity);
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 9999) {
       throw new ApiError('Each item quantity must be a whole number between 1 and 9999', 400);
     }
 
-    const product = await productRepository.findById(item.productId);
+    const product = productsById.get(item.productId);
 
     if (!product || product.deletedAt) {
       throw new ApiError(`Product ${item.productId} not found`, 404);
@@ -622,7 +626,7 @@ const createOrder = async (userId, data) => {
         paymentMethod,
         paymentStatus: paidUpFront ? 'PENDING_VERIFICATION' : 'PENDING',
         paymentReference: paidUpFront ? paymentReference.trim() : null,
-        paymentProofUrl: paidUpFront ? paymentProofUrl : null,
+        paymentProofUrl: paidUpFront ? privateMedia.normalize(String(paymentProofUrl).trim()) : null,
         buyerMunicipalityId: buyerMunicipalityId || buyer.municipalityId || null,
         buyerBarangay: buyerBarangay || buyer.barangay || null,
         buyerProvince: buyerProvince || buyer.province || 'Oriental Mindoro',
@@ -1008,7 +1012,7 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelR
     );
   }
   const proofFields = handOver
-    ? { fulfillmentProofUrl: String(proofUrl).trim(), fulfillmentProofAt: new Date() }
+    ? { fulfillmentProofUrl: privateMedia.normalize(String(proofUrl).trim()), fulfillmentProofAt: new Date() }
     : {};
 
   // Cancellation restores product stock (from whatever stage it is allowed).
@@ -1273,7 +1277,7 @@ const submitPaymentProof = async (orderId, userId, { paymentReference, paymentPr
   try {
     updated = await orderRepository.updatePaymentProof(orderId, {
       paymentReference: String(paymentReference).trim(),
-      paymentProofUrl: String(paymentProofUrl).trim(),
+      paymentProofUrl: privateMedia.normalize(String(paymentProofUrl).trim()),
     }, userId);
   } catch (err) {
     if (err.code === 'PROOF_NOT_ACCEPTED') {

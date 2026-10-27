@@ -3,7 +3,7 @@ const fs = require('fs');
 // server's memory. 70 megapixels covers phone photos up to 50 MP shots.
 const MAX_INPUT_PIXELS = 70e6;
 const path = require('path');
-const sharp = require('sharp');
+const sharp = require('../lib/sharp');
 const config = require('../config/env');
 
 /**

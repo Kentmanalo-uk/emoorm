@@ -101,10 +101,13 @@ const loginValidation = [
 /**
  * Validation rules for token refresh
  */
+// The token comes in the body (the app), or as the website's session cookie.
 const refreshTokenValidation = [
   body('refreshToken')
-    .notEmpty()
-    .withMessage('Refresh token is required'),
+    .custom((value, { req }) => {
+      if (value || require('../lib/sessionCookie').read(req)) return true;
+      throw new Error('Refresh token is required');
+    }),
 ];
 
 /**
