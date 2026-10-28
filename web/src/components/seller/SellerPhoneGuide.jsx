@@ -133,8 +133,6 @@ export default function SellerPhoneGuide({ store, setStore }) {
   // { key, closing } for the sheet on screen.
   const [shown, setShown] = useState(null);
   const open = Boolean(shown && shown.key === guideKey);
-  // Escape closes it (only the top dialog listens).
-  const trapRef = useFocusTrap(open && !shown.closing, { onClose: close });
 
   useEffect(() => {
     if (!eligible) return undefined;
@@ -148,6 +146,10 @@ export default function SellerPhoneGuide({ store, setStore }) {
     setShown({ key: guideKey, closing: true });
     setTimeout(() => setShown(null), CLOSE_MS);
   };
+  // Escape closes it (only the top dialog listens). After `close`: reading it
+  // before its line throws on every render (the seller centre on phones
+  // showed only "Something went wrong").
+  const trapRef = useFocusTrap(open && !shown.closing, { onClose: close });
 
   if (!open) return null;
   return (
