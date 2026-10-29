@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Eye, CheckCircle, XCircle, Clock, Package, Truck, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag, SlidersHorizontal } from '@phosphor-icons/react';
+import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import {
+  Eye, CheckCircle, XCircle, Clock, Package, Truck, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag, SlidersHorizontal,
+  Printer, Phone, ChatCircleDots, QrCode,
+} from '@phosphor-icons/react';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useFocusTrap from '../hooks/useFocusTrap';
+import { confirmAction } from '../lib/confirm';
+import LoadFailed from '../components/ui/LoadFailed';
+import { printPackingSlips } from '../components/orders/packingSlip';
+import { peso } from '../lib/format';
 import PhoneSheet from '../components/seller/PhoneSheet';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -69,6 +77,99 @@ const qtyLabel = (item) => (lineKind(item) === 'LIVESTOCK' ? countLabel(item) : 
 
 // How many orders a tab holds (open steps only; not All, Completed, Cancelled).
 const tabCount = (t, byStatus) => (t.key === 'all' || t.final ? 0 : sellerTabCount(t, byStatus));
+
+// Every status but Cancelled: a payment to check on an order still going.
+const OPEN_STATUSES = 'PENDING,CONFIRMED,PREPARING,TO_SHIP,READY,OUT_FOR_DELIVERY,SHIPPED,DELIVERED,READY_FOR_PICKUP,PICKED_UP,COMPLETED';
+
+// "Payment to check": a buyer sent a payment proof the shop hasn't checked.
+// Its own tab beside New on computers, a chip on phones.
+const PAYMENT_TAB = { key: 'payment', label: 'Payment to check' };
+
+// Computers: every status tab, with Payment to check after New.
+const DESKTOP_TABS = [SELLER_TABS[0], SELLER_TABS[1], PAYMENT_TAB, ...SELLER_TABS.slice(2)];
+
+// Phones: fewer, wider steps (the server's order stages), so the row of
+// chips fits and each chip is one job.
+const PHONE_TABS = [
+  { key: 'all', label: 'All' },
+  { key: 'new', label: 'To confirm' },
+  PAYMENT_TAB,
+  { key: 'to_ship', label: 'To pack' },
+  { key: 'shipping', label: 'On the way' },
+  { key: 'completed', label: 'Done', final: true },
+  { key: 'cancelled', label: 'Cancelled', final: true },
+];
+const PHONE_KEYS = new Set(PHONE_TABS.map((t) => t.key));
+
+// A computer tab as the phone step it belongs to (and back), so a link or
+// a resize lands on the matching tab.
+const DESKTOP_TO_PHONE = {
+  PENDING: 'new', CONFIRMED: 'to_ship', TO_SHIP: 'to_ship', SHIPPED: 'shipping', OUT_FOR_DELIVERY: 'shipping',
+  READY_FOR_PICKUP: 'shipping', DELIVERED: 'shipping', COMPLETED: 'completed', CANCELLED: 'cancelled',
+};
+const PHONE_TO_DESKTOP = {
+  new: 'PENDING', to_ship: 'to_ship', shipping: 'SHIPPED', completed: 'COMPLETED', cancelled: 'CANCELLED',
+};
+
+/** The tab a link names (?status=…), for this layout. */
+const tabFromLink = (value, phone) => {
+  const v = String(value || '');
+  if (v === 'payment') return 'payment';
+  if (phone) {
+    if (PHONE_KEYS.has(v)) return v;
+    return DESKTOP_TO_PHONE[sellerTabFrom(v)] || 'all';
+  }
+  // "To pack" (from the dashboard) spans Confirmed and To ship: shown as a
+  // tab of its own while it is open.
+  if (v === 'to_ship') return 'to_ship';
+  return sellerTabFrom(v);
+};
+
+/** The same tab after the layout changed between phone and computer. */
+const tabForLayout = (key, phone) => {
+  if (key === 'all' || key === 'payment') return key;
+  if (phone) return PHONE_KEYS.has(key) ? key : (DESKTOP_TO_PHONE[key] || 'all');
+  return PHONE_KEYS.has(key) ? (PHONE_TO_DESKTOP[key] || 'all') : key;
+};
+
+/** What GET /orders/store/orders is asked for a tab. */
+const tabQuery = (key) => {
+  if (key === 'all') return {};
+  if (key === 'payment') return { status: OPEN_STATUSES, paymentStatus: 'PENDING_VERIFICATION' };
+  if (PHONE_KEYS.has(key)) return { stage: key };
+  return { status: SELLER_TABS.find((t) => t.key === key)?.status || key };
+};
+
+/** When an order must be confirmed by, or null (Available today or the usual window). */
+const confirmBy = (order) => {
+  if (order?.status !== 'PENDING') return null;
+  const at = order.respondBy || (order.deadline?.kind === 'confirm' ? order.deadline.at : null);
+  return at ? new Date(at) : null;
+};
+
+// New orders that cancel on their own first, so none runs out unseen.
+const soonestFirst = (list) => [...list].sort((a, b) => {
+  const da = confirmBy(a)?.getTime() ?? Infinity;
+  const db = confirmBy(b)?.getTime() ?? Infinity;
+  return da - db;
+});
+
+const proofToCheck = (order) => order?.paymentStatus === 'PENDING_VERIFICATION' && order?.status !== 'CANCELLED';
+
+// The usual confirm window (not Available today, which has its own tag).
+const ConfirmByTag = ({ order }) => {
+  const at = !order?.respondBy && confirmBy(order);
+  if (!at) return null;
+  return (
+    <div className="so-confirm-by">
+      <TimeLeft until={at} prefix="Confirm in" className="so-today-due" />
+      <span>or it cancels</span>
+    </div>
+  );
+};
+
+// A phone number as a link that dials it.
+const telHref = (number) => `tel:${String(number || '').replace(/[^\d+]/g, '')}`;
 
 // The status words are the tabs' (lib/orderProgress statusLabel); a new order is "New".
 const STATUS_LOOK = {
@@ -219,20 +320,35 @@ const ACTION_LABELS = {
 
 export default function SellerOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const ctx = useOutletContext() || {};
+  // Phones: a few stage chips on one row; everything else in a sheet.
+  const isPhone = usePhoneLayout();
   // The buyer a seller is filing a report against, or null when the dialog is
   // closed. Reports route to the buyer's own municipal admin.
   const [reportBuyer, setReportBuyer] = useState(null);
-  const [activeTab, setActiveTab] = useState(() => {
-    return sellerTabFrom(searchParams.get('status'));
-  });
+  const [activeTab, setActiveTab] = useState(() => tabFromLink(searchParams.get('status'), isPhone));
+  // Between phone and computer the tabs differ: keep to the same step.
+  const [tabLayout, setTabLayout] = useState(isPhone);
+  if (tabLayout !== isPhone) {
+    setTabLayout(isPhone);
+    setActiveTab((key) => tabForLayout(key, isPhone));
+  }
   // Each tab's first page as it showed last time: shown at once while it is
   // asked for again.
   const [saved] = useState(() => readCache(`seller:orders:${activeTab}`));
   const [orders, setOrders] = useState(() => saved?.orders || []);
   const [isLoading, setIsLoading] = useState(() => !saved);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  // Orders per stage, for the counts on the tabs.
+  const [loadFailed, setLoadFailed] = useState(false);
+  // Orders per status (computers' tabs) and per stage (phones' tabs).
   const [stageCounts, setStageCounts] = useState({});
+  const [stages, setStages] = useState({});
+  // Payment proofs to check, from the sidebar's own count.
+  const paymentsDue = ctx.waiting?.['/seller/orders?status=payment']?.count || 0;
+  // Computers: orders ticked for a bulk step (confirm, packed, slips).
+  const [picked, setPicked] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
   // Server-side filters: order number search, created-at range and payment
   // status, all sent as query params to GET /orders/store/orders.
@@ -248,9 +364,13 @@ export default function SellerOrders() {
   const [rejectConfirm, setRejectConfirm] = useState(null); // { orderId }
   const [refundConfirm, setRefundConfirm] = useState(null); // { orderId }
   const [verifyingId, setVerifyingId] = useState(null);
-  // Phones: a few status chips on one row; everything else in a sheet.
-  const isPhone = usePhoneLayout();
   const [filterOpen, setFilterOpen] = useState(false);
+  const [openingChat, setOpeningChat] = useState(false);
+  // The order's details: a panel beside the list on computers (Escape
+  // closes it), a real dialog on phones (focus kept inside, Escape or a tap
+  // outside closes it).
+  const closeDetail = () => setSelectedOrder(null);
+  const detailRef = useFocusTrap(Boolean(selectedOrder), { onClose: closeDetail, modal: isPhone });
   // MoorMove riders: on for the site, and the step being asked (Call a rider…).
   const { enabled: ridersOn } = useMoormove();
   const [riderAsk, setRiderAsk] = useState(null); // { action, order }
@@ -269,14 +389,20 @@ export default function SellerOrders() {
     if (key === activeTab) return;
     setActiveTab(key);
     setPage(1);
+    setPicked(new Set());
   };
 
   // After a step the order is in another tab: go there with it, and pick
   // it out, so the seller sees where it went.
   const [movedId, setMovedId] = useState(null);
   const moveToTab = (orderId, status, note) => {
-    const tab = sellerTabOf(status);
-    const label = SELLER_TABS.find((t) => t.key === tab)?.label || statusOf(status).label;
+    const desktopTab = sellerTabOf(status);
+    const order = orders.find((o) => o.id === orderId);
+    // Phones: the step it is in now (a QR order waits for its payment first).
+    const tab = !isPhone ? desktopTab
+      : status === 'CONFIRMED' && isAwaitingPayment(order) ? 'all'
+        : DESKTOP_TO_PHONE[desktopTab] || 'all';
+    const label = (isPhone ? PHONE_TABS : SELLER_TABS).find((t) => t.key === tab)?.label || statusOf(status).label;
     toast.success(note ? `${note}. Moved to ${label}.` : `Moved to ${label}`);
     setMovedId(orderId);
     if (tab !== activeTab) selectTab(tab);
@@ -314,20 +440,26 @@ export default function SellerOrders() {
     } else {
       setIsLoading(true);
     }
+    setLoadFailed(false);
     try {
       const params = {
         page,
         pageSize: PAGE_SIZE,
-        status: activeTab !== 'all' ? (SELLER_TABS.find((t) => t.key === activeTab)?.status || activeTab) : undefined,
         search: debouncedSearch || undefined,
         from: from || undefined,
         to: to || undefined,
         paymentStatus: paymentFilter || undefined,
+        // The tab's own filter last: Payment to check is a payment status.
+        ...tabQuery(activeTab),
       };
       const res = await axios.get('/orders/store/orders', { params });
       // The tab counts, fresh with every load.
-      axios.get('/orders/store/stages').then((r) => setStageCounts(r.data?.byStatus || {})).catch(() => {});
-      const loaded = res.data || [];
+      axios.get('/orders/store/stages').then((r) => {
+        setStageCounts(r.data?.byStatus || {});
+        setStages(r.data || {});
+      }).catch(() => {});
+      // New orders: the ones that cancel soonest first.
+      const loaded = ['PENDING', 'new'].includes(activeTab) ? soonestFirst(res.data || []) : (res.data || []);
       setOrders(loaded);
       if (res.pagination) setPagination(res.pagination);
       if (viewKey) writeCache(viewKey, { orders: loaded, pagination: res.pagination || null });
@@ -347,11 +479,77 @@ export default function SellerOrders() {
           return next;
         }, { replace: true });
       }
-    } catch (err) {
-      toast.error(err.message || 'Failed to load orders');
+    } catch {
+      // Said on the page with Try again (not a toast over an empty list),
+      // unless the last copy of this tab is still on screen.
+      if (!kept) {
+        setOrders([]);
+        setLoadFailed(true);
+      } else {
+        toast.error("Couldn't refresh your orders. Showing the last ones loaded.");
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Message the buyer: opens (or starts) the chat with them.
+  const messageBuyer = async (buyerId) => {
+    if (!buyerId) return;
+    setOpeningChat(true);
+    try {
+      const res = await axios.post('/messages/conversations', { buyerId });
+      navigate(`/seller/messages?c=${res.data.id}`);
+    } catch (err) {
+      toast.error(err.message || 'Could not open the chat');
+    } finally {
+      setOpeningChat(false);
+    }
+  };
+
+  const printSlips = (list) => {
+    if (!printPackingSlips(list, { shopName: ctx.store?.name })) toast.error('Pick at least one order to print');
+  };
+
+  // Bulk steps on the ticked orders, one request each (the same rules as a
+  // single step: an order that moved on meanwhile is skipped and reported).
+  const pickedOrders = orders.filter((o) => picked.has(o.id));
+  const toConfirm = pickedOrders.filter((o) => o.status === 'PENDING');
+  const toPack = pickedOrders.filter((o) => ['TO_SHIP', 'READY_FOR_PICKUP'].includes(nextStep(o)) && o.status !== 'PENDING');
+  const togglePick = (id) => setPicked((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const allPicked = orders.length > 0 && orders.every((o) => picked.has(o.id));
+  const pickAll = () => setPicked(allPicked ? new Set() : new Set(orders.map((o) => o.id)));
+  const runBulk = async (list, kind) => {
+    const confirming = kind === 'confirm';
+    const n = list.length;
+    const ok = await confirmAction({
+      title: confirming ? `Confirm ${n} ${n === 1 ? 'order' : 'orders'}?` : `Mark ${n} ${n === 1 ? 'order' : 'orders'} as packed?`,
+      message: confirming
+        ? 'Each buyer is told their order is confirmed. Only confirm what you can fill.'
+        : 'Delivery orders move to To ship and pickup orders to Ready for pickup; each buyer is told.',
+      confirmLabel: confirming ? 'Confirm orders' : 'Mark packed',
+    });
+    if (!ok) return;
+    setBulkBusy(true);
+    let done = 0;
+    const failed = [];
+    for (const order of list) {
+      try {
+        await axios.put(`/orders/${order.id}/status`, { status: confirming ? 'CONFIRMED' : nextStep(order) });
+        done += 1;
+      } catch (err) {
+        failed.push(`#${order.orderNumber}: ${err.message || 'not updated'}`);
+      }
+    }
+    setBulkBusy(false);
+    setPicked(new Set());
+    if (done) toast.success(`${done} ${done === 1 ? 'order' : 'orders'} ${confirming ? 'confirmed' : 'marked packed'}`);
+    if (failed.length) toast.error(`Not updated: ${failed.slice(0, 3).join('; ')}${failed.length > 3 ? ` and ${failed.length - 3} more` : ''}`);
+    loadOrders();
   };
 
   const handleStatusChange = async (orderId, newStatus, proofUrl, extra = {}) => {
@@ -511,8 +709,8 @@ export default function SellerOrders() {
         type="search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Order number"
-        aria-label="Search your orders by order number"
+        placeholder="Order no., buyer or product"
+        aria-label="Search your orders by order number, buyer or product"
       />
       {search && (
         <button type="button" onClick={() => setSearch('')} aria-label="Clear search">
@@ -528,31 +726,46 @@ export default function SellerOrders() {
     </div>
   );
 
+  // A tab's count: payments from the sidebar's count; phones' steps from the
+  // stage counts; computers' tabs from the per-status counts.
+  const countFor = (t) => {
+    if (t.key === 'payment') return paymentsDue;
+    if (t.key === 'all' || t.final) return 0;
+    return PHONE_KEYS.has(t.key) && !SELLER_TABS.some((s) => s.key === t.key) ? (stages[t.key] || 0) : tabCount(t, stageCounts);
+  };
+  // Payment to check shows while there is one to check (or it is open).
+  const showTab = (t) => t.key !== 'payment' || paymentsDue > 0 || activeTab === 'payment';
+  // Computers: "To pack" (opened from the dashboard) shows as its own tab.
+  const desktopTabs = activeTab === 'to_ship'
+    ? [...DESKTOP_TABS.slice(0, 3), PHONE_TABS.find((t) => t.key === 'to_ship'), ...DESKTOP_TABS.slice(3)]
+    : DESKTOP_TABS;
+  const tabButton = (t, cls, onCls) => (
+    <button
+      key={t.key}
+      type="button"
+      role="tab"
+      aria-selected={activeTab === t.key}
+      className={`${cls}${activeTab === t.key ? ` ${onCls}` : ''}${t.key === 'payment' ? ' so-tab-pay' : ''}`}
+      onClick={() => selectTab(t.key)}
+    >
+      {t.label}
+      {countFor(t) > 0 && <em className="so-tab-count">{countFor(t)}</em>}
+    </button>
+  );
+
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
         <SellerPageHead
           title="Orders"
-          subtitle="Manage incoming orders from buyers"
+          subtitle="Confirm new orders, check payments, pack and hand them over."
           actions={isPhone ? searchBox : null}
         />
 
         {isPhone ? (
           <>
             <div className="scm-chips so-stage-chips" role="tablist" aria-label="Show orders">
-              {SELLER_TABS.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === t.key}
-                  className={`scm-chip${activeTab === t.key ? ' is-on' : ''}`}
-                  onClick={() => selectTab(t.key)}
-                >
-                  {t.label}
-                  {tabCount(t, stageCounts) > 0 && <em className="so-tab-count">{tabCount(t, stageCounts)}</em>}
-                </button>
-              ))}
+              {PHONE_TABS.filter(showTab).map((t) => tabButton(t, 'scm-chip', 'is-on'))}
             </div>
             {!isLoading && pagination.total > 0 && (
               <p className="som-count">{pagination.total} order{pagination.total === 1 ? '' : 's'}</p>
@@ -594,17 +807,8 @@ export default function SellerOrders() {
         ) : (
         <>
         {/* Tabs */}
-        <div className="seller-tabs">
-          {SELLER_TABS.map(t => (
-            <button
-              key={t.key}
-              className={`seller-tab ${activeTab === t.key ? 'seller-tab--active' : ''}`}
-              onClick={() => selectTab(t.key)}
-            >
-              {t.label}
-              {tabCount(t, stageCounts) > 0 && <em className="so-tab-count">{tabCount(t, stageCounts)}</em>}
-            </button>
-          ))}
+        <div className="seller-tabs" role="tablist" aria-label="Show orders">
+          {desktopTabs.filter(showTab).map((t) => tabButton(t, 'seller-tab', 'seller-tab--active'))}
         </div>
 
         {/* The list's toolbar: search, date range and payment (server-side). */}
@@ -638,19 +842,40 @@ export default function SellerOrders() {
         </>
         )}
 
+        {/* Computers: what to do with the ticked orders. */}
+        {!isPhone && picked.size > 0 && (
+          <div className="so-bulk" role="region" aria-label="Ticked orders">
+            <span><strong>{picked.size}</strong> {picked.size === 1 ? 'order' : 'orders'} ticked</span>
+            <button type="button" className="btn-seller-outline" disabled={bulkBusy || !toConfirm.length} onClick={() => runBulk(toConfirm, 'confirm')}>
+              <CheckCircle size={15} /> Confirm{toConfirm.length ? ` (${toConfirm.length})` : ''}
+            </button>
+            <button type="button" className="btn-seller-outline" disabled={bulkBusy || !toPack.length} onClick={() => runBulk(toPack, 'pack')}>
+              <Package size={15} /> Mark packed{toPack.length ? ` (${toPack.length})` : ''}
+            </button>
+            <button type="button" className="btn-seller-outline" disabled={bulkBusy} onClick={() => printSlips(pickedOrders)}>
+              <Printer size={15} /> Print slips ({pickedOrders.length})
+            </button>
+            <button type="button" className="so-bulk-clear" onClick={() => setPicked(new Set())}>Clear</button>
+            {bulkBusy && <Spinner size={16} />}
+          </div>
+        )}
+
         <div className={`orders-layout${selectedOrder ? '' : ' is-single'}`}>
           {/* Order list */}
           <div className="seller-card orders-list-card">
             {isLoading ? (
               <Skeleton.Table cols={6} rows={6} />
+            ) : loadFailed ? (
+              <LoadFailed onRetry={loadOrders} what="your orders" />
             ) : displayed.length === 0 ? (
               <div className="seller-empty is-page">
                 <EmptyArt name="orders" size={168} />
-                <strong>{hasFilters ? 'No orders match your filters' : 'No orders in this category'}</strong>
+                <strong>{hasFilters ? 'No orders match your filters' : activeTab === 'all' ? 'No orders yet' : 'No orders here right now'}</strong>
                 <p>
                   {hasFilters
-                    ? 'Try a different order number, date range or payment status.'
-                    : 'New orders from buyers will appear here.'}
+                    ? 'Try a different search, date range or payment status.'
+                    : activeTab === 'payment' ? 'Payment proofs from buyers show here for you to check.'
+                      : 'New orders from buyers will appear here.'}
                 </p>
                 {hasFilters && (
                   <button type="button" className="btn-seller-outline" onClick={clearFilters}>
@@ -663,12 +888,17 @@ export default function SellerOrders() {
               <table className="seller-table so-orders-table">
                 <thead>
                   <tr>
-                    <th style={{ width: 110 }}>Order #</th>
+                    {!isPhone && (
+                      <th className="so-col-pick">
+                        <input type="checkbox" checked={allPicked} onChange={pickAll} aria-label="Tick every order on this page" />
+                      </th>
+                    )}
+                    <th className="so-col-num">Order #</th>
                     <th>Products</th>
-                    <th style={{ width: 180 }}>Buyer</th>
-                    <th style={{ width: 110 }}>Total</th>
-                    <th style={{ width: 130 }}>Status</th>
-                    <th style={{ width: 110 }}>Action</th>
+                    <th className="so-col-buyer">Buyer</th>
+                    <th className="so-col-total">Total</th>
+                    <th className="so-col-status">Status</th>
+                    <th className="so-col-action">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -691,10 +921,21 @@ export default function SellerOrders() {
                         id={`so-row-${order.id}`}
                         className={`${selectedOrder?.id === order.id ? 'row-selected' : ''}${movedId === order.id ? ' is-moved' : ''}`.trim()}
                       >
+                        {!isPhone && (
+                          <td className="so-col-pick">
+                            <input
+                              type="checkbox"
+                              checked={picked.has(order.id)}
+                              onChange={() => togglePick(order.id)}
+                              aria-label={`Tick order #${order.orderNumber}`}
+                            />
+                          </td>
+                        )}
                         <td className="order-num">
                           <div title={`#${order.orderNumber || order.id.slice(-6).toUpperCase()}`}>#{order.orderNumber || order.id.slice(-6).toUpperCase()}</div>
                           {orderDate && <div className="so-order-date">{orderDate}</div>}
                           <TodayTag order={order} />
+                          <ConfirmByTag order={order} />
                           <CookTag order={order} />
                         </td>
                         <td>
@@ -708,7 +949,7 @@ export default function SellerOrders() {
                                       <img
                                         src={src}
                                         alt={it.product?.name || 'Product'}
-                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        onError={(e) => { e.currentTarget.hidden = true; }}
                                       />
                                     ) : (
                                       <span className="so-product-thumb-fallback">
@@ -741,7 +982,7 @@ export default function SellerOrders() {
                             </div>
                           </div>
                         </td>
-                        <td>
+                        <td className="so-col-buyer">
                           <div className="so-buyer">
                             {order.buyer?.id ? (
                               <Link to={`/u/${order.buyer.id}`} className="so-buyer-name profile-link" title="View buyer profile">
@@ -750,16 +991,20 @@ export default function SellerOrders() {
                             ) : (
                               <span className="so-buyer-name">{order.buyer?.fullName || 'Buyer'}</span>
                             )}
-                            {order.buyer?.contactNumber && (
-                              <span className="so-buyer-meta">{order.buyer.contactNumber}</span>
+                            {/* The number on the order, one tap to call. */}
+                            {order.contactNumber && (
+                              <a href={telHref(order.contactNumber)} className="so-buyer-meta so-tel" aria-label={`Call ${order.buyer?.fullName || 'the buyer'} at ${order.contactNumber}`}>
+                                {order.contactNumber}
+                              </a>
                             )}
                           </div>
                         </td>
-                        <td>₱{Number(order.total).toFixed(2)}</td>
-                        <td>
+                        <td className="so-col-total">{peso(order.total)}</td>
+                        <td className="so-col-status">
                           <span className={`seller-badge seller-badge--solid ${s.cls}`}>
                             {s.label}
                           </span>
+                          {proofToCheck(order) && <span className="so-pay-chip">Payment to check</span>}
                           {riderLine?.title && !['COMPLETED', 'CANCELLED'].includes(order.status) && (
                             <span className={`so-next so-rider-line is-${riderLine.tone}`}>{riderLine.title}</span>
                           )}
@@ -767,7 +1012,7 @@ export default function SellerOrders() {
                             <span className="so-promo-chip" title={`MoorMove promo: ${orderPromo(order).title}`}>Free delivery</span>
                           )}
                         </td>
-                        <td>
+                        <td className="so-col-action">
                           <div className="order-row-actions">
                             <button
                               className="seller-icon-btn"
@@ -779,6 +1024,19 @@ export default function SellerOrders() {
                             >
                               <Eye size={15} /><span className="so-action-label">Details</span>
                             </button>
+                            {/* A payment proof waiting: open it straight at the check. */}
+                            {proofToCheck(order) && (
+                              <button
+                                type="button"
+                                className="so-next-btn so-check-pay"
+                                onClick={() => {
+                                  setSelectedOrder(order);
+                                  setTimeout(() => document.getElementById('so-payment-check')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+                                }}
+                              >
+                                <QrCode size={14} weight="bold" /><span>Check payment</span>
+                              </button>
+                            )}
                             {riderNext && (
                               <button
                                 type="button"
@@ -832,13 +1090,23 @@ export default function SellerOrders() {
             )}
           </div>
 
+          {/* Phones: the dimmed page behind the order; a tap there closes it. */}
+          {selectedOrder && isPhone && (
+            <button type="button" className="so-sheet-scrim" aria-label="Close order details" tabIndex={-1} onClick={closeDetail} />
+          )}
+
           {/* Order detail panel */}
           {selectedOrder && (
-            <div className="seller-card order-detail-panel">
+            <div
+              ref={detailRef}
+              className="seller-card order-detail-panel"
+              {...(isPhone ? { role: 'dialog', 'aria-modal': 'true' } : { role: 'region' })}
+              aria-labelledby="so-detail-title"
+            >
               <div className="seller-card-header">
-                <h2>Order #{selectedOrder.orderNumber || selectedOrder.id.slice(-6).toUpperCase()}</h2>
-                <button className="seller-icon-btn" onClick={() => setSelectedOrder(null)}>
-                  <XCircle size={16} />
+                <h2 id="so-detail-title">Order #{selectedOrder.orderNumber || selectedOrder.id.slice(-6).toUpperCase()}</h2>
+                <button type="button" className="seller-icon-btn so-detail-close" onClick={closeDetail} aria-label="Close order details">
+                  <X size={18} weight="bold" />
                 </button>
               </div>
               <div className="order-detail-body">
@@ -904,7 +1172,33 @@ export default function SellerOrders() {
 
                 <div className="detail-row">
                   <span>Contact</span>
-                  <strong>{selectedOrder.contactNumber || '—'}</strong>
+                  <strong>
+                    {selectedOrder.contactNumber
+                      ? <a href={telHref(selectedOrder.contactNumber)} className="so-tel">{selectedOrder.contactNumber}</a>
+                      : '—'}
+                  </strong>
+                </div>
+
+                {/* Reach the buyer: chat in the app, or call the order's number. */}
+                <div className="so-contact-actions">
+                  {selectedOrder.buyer?.id && (
+                    <button
+                      type="button"
+                      className="btn-seller-outline"
+                      disabled={openingChat}
+                      onClick={() => messageBuyer(selectedOrder.buyer.id)}
+                    >
+                      <ChatCircleDots size={16} /> Message buyer
+                    </button>
+                  )}
+                  {selectedOrder.contactNumber && (
+                    <a href={telHref(selectedOrder.contactNumber)} className="btn-seller-outline">
+                      <Phone size={16} /> Call
+                    </a>
+                  )}
+                  <button type="button" className="btn-seller-outline" onClick={() => printSlips([selectedOrder])}>
+                    <Printer size={16} /> Packing slip
+                  </button>
                 </div>
 
                 <div className="detail-row">
@@ -966,7 +1260,7 @@ export default function SellerOrders() {
                 )}
 
                 {selectedOrder.paymentStatus === 'PENDING_VERIFICATION' && selectedOrder.status !== 'CANCELLED' && (
-                  <div className="so-payment-review">
+                  <div className="so-payment-review" id="so-payment-check">
                     <p>The buyer says they paid. Check the reference number and screenshot below against your GCash or bank records, then confirm the payment.</p>
                     <div className="so-payment-actions">
                       <button
@@ -1132,37 +1426,41 @@ export default function SellerOrders() {
                   )}
                 </div>
 
-                {/* Action buttons */}
-                {nextStep(selectedOrder) && (
-                  <div className="detail-actions">
-                    <button
-                      className={`detail-action-btn ${ACTION_LABELS[nextStep(selectedOrder)]?.cls || ''}`}
-                      disabled={updatingId === selectedOrder.id}
-                      onClick={() => requestStatusChange(selectedOrder.id, nextStep(selectedOrder))}
-                    >
-                      {ACTION_LABELS[nextStep(selectedOrder)]?.label || nextStep(selectedOrder)}
-                    </button>
-                  </div>
-                )}
-                {canCancel(selectedOrder) && (
-                  <button type="button" className="so-cancel-link" onClick={() => requestStatusChange(selectedOrder.id, 'CANCELLED')}>
-                    Cancel this order
-                  </button>
-                )}
+                {/* The next step: at the foot of the panel, kept in view on
+                    phones while the details scroll. */}
+                <div className="so-detail-foot">
+                  {nextStep(selectedOrder) && (
+                    <div className="detail-actions">
+                      <button
+                        type="button"
+                        className={`detail-action-btn ${ACTION_LABELS[nextStep(selectedOrder)]?.cls || ''}`}
+                        disabled={updatingId === selectedOrder.id}
+                        onClick={() => requestStatusChange(selectedOrder.id, nextStep(selectedOrder))}
+                      >
+                        {ACTION_LABELS[nextStep(selectedOrder)]?.label || nextStep(selectedOrder)}
+                      </button>
+                    </div>
+                  )}
 
-                {/* Receipt link */}
-                {['COMPLETED', 'DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(selectedOrder.status) && (
-                  <div className="detail-actions">
-                    <Link
-                      to={`/orders/${selectedOrder.id}/receipt`}
-                      className="detail-action-btn action-complete"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <FileText size={14} style={{ marginRight: 6 }} /> View Receipt
-                    </Link>
-                  </div>
-                )}
+                  {/* Receipt link */}
+                  {['COMPLETED', 'DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(selectedOrder.status) && (
+                    <div className="detail-actions">
+                      <Link
+                        to={`/orders/${selectedOrder.id}/receipt`}
+                        className="detail-action-btn action-complete"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <FileText size={14} className="so-receipt-icon" /> View receipt
+                      </Link>
+                    </div>
+                  )}
+                  {canCancel(selectedOrder) && (
+                    <button type="button" className="so-cancel-link" onClick={() => requestStatusChange(selectedOrder.id, 'CANCELLED')}>
+                      Cancel this order
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1191,8 +1489,9 @@ export default function SellerOrders() {
       <ConfirmDialog
         open={!!cancelConfirm}
         title="Cancel this order?"
-        message="The buyer will be notified and any reserved stock will be restored to your inventory. This cannot be undone."
-        confirmLabel="Cancel Order"
+        message="The buyer is told, and the stock goes back into your shop. This can't be undone."
+        confirmLabel="Cancel order"
+        cancelLabel="Keep order"
         danger
         loading={updatingId === cancelConfirm?.orderId}
         onConfirm={confirmCancelOrder}
@@ -1215,7 +1514,8 @@ export default function SellerOrders() {
         open={!!rejectConfirm}
         title="Reject this payment?"
         message="Only reject if the payment did not arrive or the proof is invalid. The buyer will be asked to upload a new proof. The order and its stock are kept."
-        confirmLabel="Reject Payment"
+        confirmLabel="Reject payment"
+        cancelLabel="Keep checking"
         danger
         loading={verifyingId === rejectConfirm?.orderId}
         onConfirm={() => handlePaymentDecision(rejectConfirm.orderId, 'FAILED')}
@@ -1225,8 +1525,9 @@ export default function SellerOrders() {
       <ConfirmDialog
         open={!!refundConfirm}
         title="Mark this order as refunded?"
-        message="Only confirm once the buyer has actually received the money back. This records the refund on the order and cannot be undone."
-        confirmLabel="Mark Refunded"
+        message={`Only confirm once the buyer has received ${selectedOrder?.id === refundConfirm?.orderId && Number(selectedOrder?.refundDue) > 0 ? peso(refundAmount(selectedOrder)) : 'their money'} back. This records the refund on the order and can't be undone.`}
+        confirmLabel="Mark refunded"
+        cancelLabel="Not yet"
         loading={verifyingId === refundConfirm?.orderId}
         onConfirm={() => handlePaymentDecision(refundConfirm.orderId, 'REFUNDED')}
         onCancel={() => setRefundConfirm(null)}

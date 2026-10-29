@@ -77,7 +77,13 @@ const updateMunicipality = asyncHandler(async (req, res) => {
   successResponse(res, municipality, 'Municipality updated successfully');
 });
 
+/** Per town: orders in the last 30 days and admins (super admin). */
+const adminStats = asyncHandler(async (req, res) => {
+  successResponse(res, await municipalityService.adminStats(), 'Municipality stats retrieved');
+});
+
 module.exports = {
+  adminStats,
   getAllMunicipalities,
   getMunicipalityById,
   getMunicipalityByCode,

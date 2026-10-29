@@ -12,6 +12,18 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * Handles HTTP requests for report operations
  */
 
+const TYPES = new Set(['PRODUCT', 'SELLER', 'BUYER']);
+// OPEN = PENDING and UNDER_REVIEW together (the admins' queue and its badge).
+const STATUSES = new Set(['OPEN', 'PENDING', 'UNDER_REVIEW', 'RESOLVED', 'DISMISSED']);
+
+// Filters the list understands; anything else is dropped, so a stray value
+// never reaches the database as an unknown status.
+const listFilters = ({ type, status }) => {
+  const t = String(type || '').toUpperCase();
+  const s = String(status || '').toUpperCase();
+  return { type: TYPES.has(t) ? t : undefined, status: STATUSES.has(s) ? s : undefined };
+};
+
 /**
  * Create report
  * @route POST /api/reports
@@ -52,8 +64,7 @@ const getAllReports = asyncHandler(async (req, res) => {
   const options = {
     page: Math.max(1, parseInt(page, 10) || 1),
     pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
-    type,
-    status,
+    ...listFilters({ type, status }),
     municipalityId: scopedMunicipalityId,
   };
 
@@ -84,7 +95,7 @@ const getMyReports = asyncHandler(async (req, res) => {
   const options = {
     page: Math.max(1, parseInt(page, 10) || 1),
     pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
-    status,
+    status: listFilters({ status }).status,
   };
 
   const result = await reportService.getMyReports(req.user.id, options);

@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SquaresFour as LayoutGrid, Users, Package, Flag, ChartPie as PieChart,
-  CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
-  EnvelopeSimple, FileText, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
+  CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
+  EnvelopeSimple, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
   Star, ArrowCounterClockwise, List, X, ChatCircleDots,
-  House, Receipt, UserCircle, SquaresFour, Truck, DeviceMobile, UsersThree,
+  House, Receipt, UserCircle, SquaresFour, Truck, DeviceMobile, UsersThree, PaperPlaneTilt,
+  IdentificationBadge, MapPin, UserGear, ClockCounterClockwise,
 } from '@phosphor-icons/react';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
@@ -99,21 +100,6 @@ export default function AdminLayout({ children }) {
     document.documentElement.classList.toggle('admin-phone', isPhone);
     return () => document.documentElement.classList.remove('admin-phone');
   }, [isPhone]);
-  const [reviewsOpen, setReviewsOpen] = useState(
-    location.pathname.startsWith('/admin/sellers') ||
-    location.pathname.startsWith('/admin/all-sellers') ||
-    location.pathname.startsWith('/admin/buyers') ||
-    location.pathname.startsWith('/admin/products') ||
-    location.pathname.startsWith('/admin/orders') ||
-    location.pathname.startsWith('/admin/reports') ||
-    location.pathname.startsWith('/admin/reviews') ||
-    location.pathname.startsWith('/admin/returns')
-  );
-  const [systemOpen, setSystemOpen] = useState(
-    location.pathname.startsWith('/admin/users') ||
-    location.pathname.startsWith('/admin/categories') ||
-    location.pathname.startsWith('/admin/municipalities')
-  );
   // The shell's counts live in the shared query cache (useAdminShellData), so
   // the next page shows them at once instead of blanking every badge while it
   // asks for all of them again. A municipal admin's profile is read there too,
@@ -256,71 +242,58 @@ export default function AdminLayout({ children }) {
               <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
 
-            {isSuperAdmin ? (
-              <>
-                <button
-                  type="button"
-                  className={`ac-nav-item ac-nav-group ${reviewsOpen && !collapsed ? 'is-open' : ''}`}
-                  onClick={() => collapsed ? navigate('/admin/sellers') : setReviewsOpen((v) => !v)}
-                  aria-expanded={reviewsOpen && !collapsed}
-                  title="Marketplace"
-                >
-                  <Flag size={17} weight="fill" />
-                  <span>Marketplace</span>
-                  <ChevronDown size={15} className="ac-nav-chevron" />
-                </button>
-                <div className={`ac-subnav-wrap${reviewsOpen ? ' is-open' : ''}`}>
-                  <div className="ac-subnav">
-                    <NavLink to="/admin/sellers" className={subNavCls}>Seller Applications{badge('/admin/sellers')}</NavLink>
-                    <NavLink to="/admin/all-sellers" className={subNavCls}>All Sellers</NavLink>
-                    <NavLink to="/admin/buyers" className={subNavCls}>All Buyers</NavLink>
-                    <NavLink to="/admin/products" className={subNavCls}>Products{badge('/admin/products')}</NavLink>
-                    <NavLink to="/admin/orders" className={subNavCls}>Orders{badge('/admin/orders')}</NavLink>
-                    <NavLink to="/admin/reviews" className={subNavCls}>Reviews</NavLink>
-                    <NavLink to="/admin/returns" className={subNavCls}>Returns{badge('/admin/returns')}</NavLink>
-                    <NavLink to="/admin/reports" className={subNavCls}>Reports{badge('/admin/reports')}</NavLink>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <NavLink to="/admin/sellers" className={navCls} title="Seller Applications">
-                  <Flag size={17} weight="fill" /> <span>Seller Applications</span>{badge('/admin/sellers')}
-                </NavLink>
-                <NavLink to="/admin/all-sellers" className={navCls} title="Sellers">
-                  <StoreIcon size={17} weight="fill" /> <span>Sellers</span>
-                </NavLink>
-                <NavLink to="/admin/buyers" className={navCls} title="Buyers">
-                  <Users size={17} weight="fill" /> <span>Buyers</span>
-                </NavLink>
-                <NavLink to="/admin/products" className={navCls} title="Products">
-                  <Package size={17} weight="fill" /> <span>Products</span>{badge('/admin/products')}
-                </NavLink>
-                <NavLink to="/admin/orders" className={navCls} title="Orders">
-                  <FileText size={17} weight="fill" /> <span>Orders</span>{badge('/admin/orders')}
-                </NavLink>
-                <NavLink to="/admin/reviews" className={navCls} title="Reviews">
-                  <Star size={17} weight="fill" /> <span>Reviews</span>
-                </NavLink>
-                <NavLink to="/admin/returns" className={navCls} title="Returns">
-                  <ArrowCounterClockwise size={17} weight="fill" /> <span>Returns</span>{badge('/admin/returns')}
-                </NavLink>
-                <NavLink to="/admin/reports" className={navCls} title="Reports">
-                  <Flag size={17} weight="fill" /> <span>Reports</span>{badge('/admin/reports')}
-                </NavLink>
-              </>
-            )}
-
-            <NavLink to="/admin/support" className={navCls} title="Buyer Support">
-              <ChatsCircle size={17} weight="fill" /> <span>Buyer Support</span>{badge('/admin/support')}
+            {/* Work waiting on this admin, in sections; each page keeps its
+                own icon, so the collapsed rail still reaches every one. */}
+            <NavSection label="To review" />
+            <NavLink to="/admin/sellers" className={navCls} title="Seller applications">
+              <IdentificationBadge size={17} weight="fill" /> <span>Seller applications</span>{badge('/admin/sellers')}
+            </NavLink>
+            <NavLink to="/admin/products" className={navCls} title="Products">
+              <Package size={17} weight="fill" /> <span>Products</span>{badge('/admin/products')}
+            </NavLink>
+            <NavLink to="/admin/returns" className={navCls} title="Returns">
+              <ArrowCounterClockwise size={17} weight="fill" /> <span>Returns</span>{badge('/admin/returns')}
+            </NavLink>
+            <NavLink to="/admin/reports" className={navCls} title="Reports">
+              <Flag size={17} weight="fill" /> <span>Reports</span>{badge('/admin/reports')}
+            </NavLink>
+            <NavLink to="/admin/support" className={navCls} title="Support">
+              <ChatsCircle size={17} weight="fill" /> <span>Support</span>{badge('/admin/support')}
             </NavLink>
 
+            <NavSection label="People & stores" />
+            <NavLink to="/admin/all-sellers" className={navCls} title="Sellers">
+              <StoreIcon size={17} weight="fill" /> <span>Sellers</span>
+            </NavLink>
+            <NavLink to="/admin/buyers" className={navCls} title="Buyers">
+              <Users size={17} weight="fill" /> <span>Buyers</span>
+            </NavLink>
+            {isSuperAdmin && (
+              <NavLink to="/admin/users" className={navCls} title="All users">
+                <UsersThree size={17} weight="fill" /> <span>All users</span>
+              </NavLink>
+            )}
+            <NavLink to="/admin/orders" className={navCls} title="Orders">
+              <Receipt size={17} weight="fill" /> <span>Orders</span>{badge('/admin/orders')}
+            </NavLink>
+            <NavLink to="/admin/reviews" className={navCls} title="Reviews">
+              <Star size={17} weight="fill" /> <span>Reviews</span>
+            </NavLink>
+
+            <NavSection label={isSuperAdmin ? 'Messages' : 'Talk to the town'} />
             {/* Admin-to-admin messaging; announcements live here as a tab. */}
             <NavLink to="/admin/messages" className={navCls} title="Messages">
               <EnvelopeSimple size={17} weight="fill" /> <span>Messages</span>
               <NavBadge count={messageUnread} label="unread" />
             </NavLink>
-
+            {/* Emails to many people: everyone, or a town's people for a municipal admin. */}
+            <NavLink to="/admin/email" className={navCls} title="Email">
+              <PaperPlaneTilt size={17} weight="fill" /> <span>Email</span>
+            </NavLink>
+            <NavLink to="/admin/notifications" className={navCls} title="Notifications">
+              <Bell size={17} weight="fill" /> <span>Notifications</span>
+              <NavBadge count={unreadCount} label="unread" />
+            </NavLink>
             {isSuperAdmin && (
               <NavLink to="/admin/feedback" className={navCls} title="Feedback">
                 <ChatCircleDots size={17} weight="fill" /> <span>Feedback</span>
@@ -328,74 +301,47 @@ export default function AdminLayout({ children }) {
               </NavLink>
             )}
 
-            <NavLink to="/admin/notifications" className={navCls} title="Notifications">
-              <Bell size={17} weight="fill" /> <span>Notifications</span>
-              <NavBadge count={unreadCount} label="unread" />
-            </NavLink>
-
-            {isSuperAdmin && (
+            {isSuperAdmin ? (
               <>
-                {/* System group */}
-                <button
-                  type="button"
-                  className={`ac-nav-item ac-nav-group ${systemOpen && !collapsed ? 'is-open' : ''}`}
-                  onClick={() => collapsed ? navigate('/admin/users') : setSystemOpen((v) => !v)}
-                  aria-expanded={systemOpen && !collapsed}
-                  title="System"
-                >
-                  <StoreIcon size={17} weight="fill" />
-                  <span>System</span>
-                  <ChevronDown size={15} className="ac-nav-chevron" />
-                </button>
-                <div className={`ac-subnav-wrap${systemOpen ? ' is-open' : ''}`}>
-                  <div className="ac-subnav">
-                    <NavLink to="/admin/users" className={subNavCls}>
-                      All Users
-                    </NavLink>
-                    <NavLink to="/admin/categories" className={subNavCls}>
-                      Categories
-                    </NavLink>
-                    <NavLink to="/admin/municipalities" className={subNavCls}>
-                      Municipalities
-                    </NavLink>
-                    <NavLink to="/admin/junior-admins" className={subNavCls}>
-                      Municipal Admins
-                    </NavLink>
-                  </div>
-                </div>
-
+                <NavSection label="Storefront" />
                 <NavLink to="/admin/banners" className={navCls} title="Banners">
                   <ImageIcon size={17} weight="fill" /> <span>Banners</span>
                 </NavLink>
-
-                <NavLink to="/admin/couriers" className={navCls} title="Couriers">
-                  <Truck size={17} weight="fill" /> <span>Couriers</span>
-                </NavLink>
-
                 <NavLink to="/admin/vouchers" className={navCls} title="Vouchers">
                   <Ticket size={17} weight="fill" /> <span>Vouchers</span>
                 </NavLink>
+                <NavLink to="/admin/couriers" className={navCls} title="Couriers">
+                  <Truck size={17} weight="fill" /> <span>Couriers</span>
+                </NavLink>
+                <NavLink to="/admin/categories" className={navCls} title="Categories">
+                  <SquaresFour size={17} weight="fill" /> <span>Categories</span>
+                </NavLink>
 
+                <NavSection label="Platform" />
+                <NavLink to="/admin/municipalities" className={navCls} title="Municipalities">
+                  <MapPin size={17} weight="fill" /> <span>Municipalities</span>
+                </NavLink>
+                <NavLink to="/admin/junior-admins" className={navCls} title="Municipal admins">
+                  <UserGear size={17} weight="fill" /> <span>Municipal admins</span>
+                </NavLink>
                 <NavLink to="/admin/app-users" className={navCls} title="App users">
                   <DeviceMobile size={17} weight="fill" /> <span>App users</span>
                 </NavLink>
               </>
+            ) : (
+              <>
+                <NavSection label="Town office" />
+                <NavLink to="/admin/team" className={navCls} title="Admin team">
+                  <UsersThree size={17} weight="fill" /> <span>Admin team</span>{badge('/admin/team')}
+                </NavLink>
+              </>
             )}
-
-            {!isSuperAdmin && (
-              <NavLink to="/admin/team" className={navCls} title="Admin team">
-                <UsersThree size={17} weight="fill" /> <span>Admin team</span>{badge('/admin/team')}
-              </NavLink>
-            )}
-
-            <NavLink to="/admin/audit-logs" className={navCls} title="Audit Logs">
-              <FileText size={17} weight="fill" /> <span>Audit Logs</span>
-            </NavLink>
-
             <NavLink to="/admin/analytics" className={navCls} title="Analytics">
               <PieChart size={17} weight="fill" /> <span>Analytics</span>
             </NavLink>
-
+            <NavLink to="/admin/audit-logs" className={navCls} title="Audit log">
+              <ClockCounterClockwise size={17} weight="fill" /> <span>Audit log</span>
+            </NavLink>
             <NavLink to="/admin/settings" className={navCls} title="Settings">
               <SettingsIcon size={17} weight="fill" /> <span>Settings</span>
             </NavLink>
@@ -455,8 +401,9 @@ export default function AdminLayout({ children }) {
             <button
               type="button"
               className="ac-icon-btn"
-              onClick={handleLogout}
+              onClick={() => setLogoutOpen(true)}
               title="Sign out"
+              aria-label="Sign out"
             >
               <LogOut size={17} />
             </button>
@@ -569,8 +516,8 @@ function navCls({ isActive }) {
   return `ac-nav-item ${isActive ? 'ac-nav-item--active' : ''}`;
 }
 
-function subNavCls({ isActive }) {
-  return `ac-subnav-link ${isActive ? 'ac-subnav-link--active' : ''}`;
+function NavSection({ label }) {
+  return <span className="ac-nav-section" role="presentation">{label}</span>;
 }
 
 function tabCls({ isActive }) {
@@ -600,7 +547,7 @@ const PHONE_TITLES = {
   '/admin/tools': 'Tools',
   '/admin/products': 'Products',
   '/admin/orders': 'Orders',
-  '/admin/support': 'Buyer support',
+  '/admin/support': 'Support',
   '/admin/reports': 'Reports',
   '/admin/menu': 'Me',
   '/admin/notifications': 'Notifications',
@@ -608,19 +555,20 @@ const PHONE_TITLES = {
 
 const LABELS = {
   '/admin': 'Dashboard',
-  '/admin/sellers': 'Seller Applications',
-  '/admin/all-sellers': 'All Sellers',
-  '/admin/buyers': 'All Buyers',
+  '/admin/sellers': 'Seller applications',
+  '/admin/all-sellers': 'Sellers',
+  '/admin/buyers': 'Buyers',
   '/admin/products': 'Products',
-  '/admin/orders': 'Orders / Activity',
-  '/admin/reports': 'Reports / Issues',
-  '/admin/users': 'All Users',
+  '/admin/orders': 'Orders',
+  '/admin/reports': 'Reports',
+  '/admin/users': 'All users',
   '/admin/categories': 'Categories',
   '/admin/municipalities': 'Municipalities',
   '/admin/analytics': 'Analytics',
   '/admin/messages': 'Messages',
+  '/admin/email': 'Email',
   '/admin/feedback': 'Feedback',
-  '/admin/support': 'Buyer Support',
+  '/admin/support': 'Support',
   '/admin/notifications': 'Notifications',
   '/admin/reviews': 'Reviews',
   '/admin/returns': 'Returns',
@@ -629,11 +577,18 @@ const LABELS = {
   '/admin/vouchers': 'Vouchers',
   '/admin/app-users': 'App users',
   '/admin/team': 'Admin team',
-  '/admin/junior-admins': 'Municipal Admins',
-  '/admin/audit-logs': 'Audit Logs',
+  '/admin/junior-admins': 'Municipal admins',
+  '/admin/audit-logs': 'Audit log',
   '/admin/settings': 'Settings',
   '/admin/menu': 'Me',
   '/admin/tools': 'Tools',
+};
+
+const ID_PART = /^[0-9a-f]{8}-[0-9a-f-]{27,}$|^c[a-z0-9]{20,}$/i;
+const FORM_PARTS = { new: 'New', edit: 'Edit' };
+// What a list's form page makes: "New voucher", "Edit banner".
+const ONE_OF = {
+  banners: 'banner', vouchers: 'voucher', couriers: 'courier', categories: 'category', municipalities: 'municipality',
 };
 
 function buildCrumbs(pathname) {
@@ -649,7 +604,10 @@ function buildCrumbs(pathname) {
   for (let i = 0; i < parts.length; i++) {
     acc += '/' + parts[i];
     if (i === 0) continue;
-    const label = LABELS[acc] || capitalize(parts[i]);
+    // A form's own page: "New" / "Edit"; the record's id is not a crumb.
+    if (ID_PART.test(parts[i])) continue;
+    const form = FORM_PARTS[parts[i]] && `${FORM_PARTS[parts[i]]}${ONE_OF[parts[1]] ? ` ${ONE_OF[parts[1]]}` : ''}`;
+    const label = LABELS[acc] || form || capitalize(parts[i]);
     crumbs.push({ to: acc, label });
   }
   return crumbs;

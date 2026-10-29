@@ -54,7 +54,8 @@
   border-top: 0;
 }
 
-.svc-item.is-off {
+/* An ended, used-up or switched-off voucher looks faded; its buttons stay clear. */
+.svc-item.is-off > :not(.svc-actions) {
   opacity: 0.55;
 }
 
@@ -143,4 +144,52 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.svc-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.svc-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--t-neutral-600, #4b5563);
+  cursor: pointer;
+}
+
+.svc-icon:hover,
+.svc-del:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.svc-del {
+  border-radius: 50%;
+}
+
+/* Editing: the code that stays as it is. */
+.svc-fixed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.svc-fixed .svc-code {
+  flex-shrink: 0;
+}
+
+.svc-warn {
+  color: var(--t-danger-700, #b91c1c);
 }

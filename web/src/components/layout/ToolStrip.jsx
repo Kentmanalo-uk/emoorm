@@ -14,18 +14,19 @@ import { pageMenuItems } from '../../lib/pageMenus';
 const CREATE = {
   SUPER_ADMIN: [
     { key: 'announce', label: 'Announcement', to: '/admin/messages?tab=announcements' },
-    { key: 'banner', label: 'Banner', to: '/admin/banners' },
-    { key: 'voucher', label: 'Voucher', to: '/admin/vouchers' },
-    { key: 'category', label: 'Category', to: '/admin/categories' },
+    { key: 'email', label: 'Email', to: '/admin/email' },
+    { key: 'banner', label: 'Banner', to: '/admin/banners/new' },
+    { key: 'voucher', label: 'Voucher', to: '/admin/vouchers/new' },
+    { key: 'category', label: 'Category', to: '/admin/categories/new' },
   ],
   MUNICIPAL_ADMIN: [
     { key: 'announce', label: 'Announcement', to: '/admin/messages?tab=announcements' },
-    { key: 'team', label: 'Team member', to: '/admin/team' },
+    { key: 'email', label: 'Email', to: '/admin/email' },
   ],
   SELLER: [
     { key: 'product', label: 'Product', to: '/seller/products/new' },
     { key: 'package', label: 'Package', to: '/seller/products/new?type=package' },
-    { key: 'today', label: "Today's item", to: '/seller/today' },
+    { key: 'today', label: 'Available today', to: '/seller/today/new' },
     { key: 'announce', label: 'Announcement', to: '/seller/marketing' },
   ],
 };
@@ -34,10 +35,16 @@ const CREATE = {
 // public help centre: the sidebar and the top bar cover those here.
 const NOT_HERE = /^\/(admin\/(tools|menu)|seller\/menu|help)(\/|$|\?)/;
 
+// The admin's shortcuts show on the Dashboard only: on the other pages they
+// were unrelated to the page, or the page's own "New …" button again.
+const ADMIN_CREATE_ON = /^\/admin$/;
+
 export default function ToolStrip({ area, role }) {
   const { pathname } = useLocation();
   const path = pathname.replace(/\/$/, '') || '/';
-  const create = (CREATE[role] || []).filter((c) => c.to.split('?')[0] !== path);
+  const adminRole = role === 'SUPER_ADMIN' || role === 'MUNICIPAL_ADMIN';
+  const create = (adminRole && !ADMIN_CREATE_ON.test(path) ? [] : (CREATE[role] || []))
+    .filter((c) => c.to.split('?')[0] !== path);
   // A page that is also a create link shows once, on the right.
   const creates = new Set(create.map((c) => c.to));
   const related = pageMenuItems(pathname, { area, isSuperAdmin: role === 'SUPER_ADMIN', signedIn: true })

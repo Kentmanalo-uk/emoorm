@@ -1,0 +1,83 @@
+/* Municipalities (super admin). */
+
+.amun-town {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.amun-logo {
+  flex-shrink: 0;
+  cursor: default;
+}
+
+.amun-town-text {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.amun-town-text strong {
+  color: var(--t-neutral-900, #0f172a);
+  font-weight: 600;
+}
+
+/* The logo is changed with a visible button, not by guessing the picture
+   is clickable. */
+.amun-logo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--t-primary-700, #047857);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.amun-logo-btn:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.amun-code {
+  font-size: 12px;
+  color: var(--t-neutral-500, #64748b);
+}
+
+.amun-admin {
+  display: grid;
+  gap: 1px;
+  font-size: 13px;
+}
+
+.amun-admin strong {
+  font-weight: 600;
+}
+
+.amun-admin small,
+.amun-muted {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+}
+
+.amun-none {
+  color: var(--t-warning-700, #b45309);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Remove admin: a quiet outline, not a red block. */
+.amun-remove {
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.amun-input {
+  width: 100%;
+}

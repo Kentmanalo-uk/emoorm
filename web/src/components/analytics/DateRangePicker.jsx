@@ -40,12 +40,21 @@ const rangeFor = (preset) => {
 // `short` is what phones show, so all five choices fit on one row.
 const PRESETS = [
   { key: 'today', label: 'Today', short: 'Today' },
-  { key: 'week', label: 'This Week', short: 'Week' },
-  { key: 'month', label: 'This Month', short: 'Month' },
-  { key: 'year', label: 'This Year', short: 'Year' },
+  { key: 'week', label: 'This week', short: 'Week' },
+  { key: 'month', label: 'This month', short: 'Month' },
+  { key: 'year', label: 'This year', short: 'Year' },
+];
+// The admin pages: the same choices as the admin Dashboard.
+const ADMIN_PRESETS = [
+  { key: '7d', label: '7 days', short: '7d' },
+  { key: '30d', label: '30 days', short: '30d' },
+  { key: '90d', label: '90 days', short: '90d' },
+  { key: 'month', label: 'This month', short: 'Month' },
+  { key: 'year', label: 'This year', short: 'Year' },
 ];
 
-const DateRangePicker = ({ value, onChange, showCustom = true }) => {
+const DateRangePicker = ({ value, onChange, showCustom = true, presets = 'default' }) => {
+  const choices = presets === 'admin' ? ADMIN_PRESETS : PRESETS;
   const isPhone = usePhoneLayout();
   const active = value?.preset || 'month';
   const [customOpen, setCustomOpen] = useState(active === 'custom');
@@ -67,7 +76,7 @@ const DateRangePicker = ({ value, onChange, showCustom = true }) => {
   return (
     <div className="an-daterange-wrap">
       <div className="an-daterange" role="group" aria-label="Date range">
-        {PRESETS.map((p) => (
+        {choices.map((p) => (
           <button
             key={p.key}
             type="button"

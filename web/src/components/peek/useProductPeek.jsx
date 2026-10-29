@@ -14,6 +14,7 @@ import {
 import { startsFrom } from '../product/kinds/buying';
 import { peekProps, sharePeek } from './peekCore';
 import { ProductPeekCard } from './PeekCards';
+import { peso } from '../../lib/format';
 
 /*
  * A product's long-press preview: its photo, name, price, rating and shop,
@@ -28,7 +29,6 @@ import { ProductPeekCard } from './PeekCards';
  * the usual ones; `cart: false` leaves out Add to cart.
  */
 
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const outOfStock = (p) => p.stock === 0 && !isStockless(p);
 
 export default function useProductPeek() {

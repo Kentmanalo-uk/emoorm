@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react';
 import {
   Link, Navigate, useLocation, useNavigate, useOutletContext, useParams,
 } from 'react-router-dom';
-import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, Gear as Settings, MapPin } from '@phosphor-icons/react';
+import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, MapPin, PauseCircle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
 import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { resolveImg } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
+import LoadFailed from '../components/ui/LoadFailed';
+import useUnsavedChanges from '../hooks/useUnsavedChanges';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import PhoneSaveBar from '../components/seller/PhoneSaveBar';
@@ -18,6 +19,7 @@ import { pickupGap } from '../lib/pickupAddress';
 import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useMunicipalities } from '../hooks/useReferenceData';
+import { awayUntil, shortDate } from '../lib/shopHours';
 import './SellerDashboard.css';
 import './SellerStore.css';
 import { BusyLabel } from '../components/ui/Spinner';
@@ -32,7 +34,7 @@ const PH_MOBILE_REGEX = /^(09\d{9}|\+639\d{9})$/;
  * (/seller/store/<part>), saving only its own fields.
  */
 const PARTS = {
-  about: { anchor: 'shop-info', fields: ['name', 'description', 'contactNumber', 'isActive'] },
+  about: { anchor: 'shop-info', fields: ['name', 'description', 'contactNumber'] },
   branding: { anchor: 'branding', fields: ['logo', 'bannerImage', 'coverImage'] },
   location: { anchor: 'shop-location', fields: ['pickupAddress', 'latitude', 'longitude'] },
   colors: { anchor: 'theme', fields: ['primaryColor', 'secondaryColor'] },
@@ -56,6 +58,9 @@ export default function SellerStorePage() {
 }
 
 /**
+ * Pausing, going away and deleting the shop all live together in Settings
+ * ("Take a break or close"), so this page is only what buyers see.
+ *
  * Computers: the whole profile on one page, as before. Phones: its parts as
  * a list (Name & description, Logo & banner, Location, Shop colors), each on
  * its own page with Cancel and Save changes at the bottom.
@@ -80,7 +85,6 @@ function SellerStore({ part }) {
     latitude: null,
     longitude: null,
     contactNumber: '',
-    isActive: true,
     logo: '',
     coverImage: '',
     bannerImage: '',
@@ -89,7 +93,8 @@ function SellerStore({ part }) {
   });
   const [savedSnapshot, setSavedSnapshot] = useState(null);
   const [isNew, setIsNew] = useState(false);
-  const [deactivateConfirm, setDeactivateConfirm] = useState(false);
+  // The profile could not be read (offline, server busy): not a missing shop.
+  const [loadFailed, setLoadFailed] = useState(false);
   // Phones: the address as picked (town, barangay, street), once changed.
   const [pickupDraft, setPickupDraft] = useState(null);
   const { municipalities } = useMunicipalities();
@@ -99,6 +104,7 @@ function SellerStore({ part }) {
   }, []);
 
   const loadStore = async () => {
+    setLoadFailed(false);
     try {
       const res = await axios.get('/stores/my/store');
       setStore(res.data);
@@ -109,7 +115,6 @@ function SellerStore({ part }) {
         latitude: res.data.latitude ?? null,
         longitude: res.data.longitude ?? null,
         contactNumber: res.data.contactNumber || '',
-        isActive: res.data.isActive ?? true,
         logo: res.data.logo || '',
         coverImage: res.data.coverImage || '',
         bannerImage: res.data.bannerImage || '',
@@ -121,6 +126,8 @@ function SellerStore({ part }) {
     } catch (err) {
       if (err.status === 404 || (typeof err.message === 'string' && err.message.includes('404'))) {
         setIsNew(true);
+      } else {
+        setLoadFailed(true);
       }
     } finally {
       setIsLoading(false);
@@ -133,6 +140,9 @@ function SellerStore({ part }) {
   const saved = savedSnapshot ? JSON.parse(savedSnapshot) : null;
   const partDirty = scope !== 'all' && Boolean(saved)
     && PARTS[scope].fields.some((f) => JSON.stringify(form[f] ?? null) !== JSON.stringify(saved[f] ?? null));
+  // Leaving with changes not saved asks first (the phone part's own Cancel
+  // goes back on purpose).
+  useUnsavedChanges(!isNew && (scope === 'all' ? isDirty : partDirty));
 
   // Back to where the part was opened from (the list, Me, Shop setup…).
   const leave = () => {
@@ -181,11 +191,6 @@ function SellerStore({ part }) {
       toast.error(addressProblem);
       return;
     }
-    // Deactivating an existing, currently-active store hides it from all buyers — confirm first.
-    if (checksAbout && !isNew && store?.isActive && !form.isActive) {
-      setDeactivateConfirm(true);
-      return;
-    }
     await saveStore();
   };
 
@@ -220,11 +225,6 @@ function SellerStore({ part }) {
     }
   };
 
-  const confirmDeactivateAndSave = async () => {
-    setDeactivateConfirm(false);
-    await saveStore();
-  };
-
   const resetColors = () => {
     setForm((p) => ({ ...p, primaryColor: DEFAULT_PRIMARY, secondaryColor: DEFAULT_SECONDARY }));
   };
@@ -238,19 +238,6 @@ function SellerStore({ part }) {
   }
   const anchorPart = PART_OF_ANCHOR[location.hash.slice(1)];
   if (!part && isPhone && anchorPart) return <Navigate to={partPath(anchorPart)} replace />;
-
-  const deactivateDialog = (
-    <ConfirmDialog
-      open={deactivateConfirm}
-      title="Deactivate your store?"
-      message="Buyers won't see your store or any of your products while it's inactive. You can reactivate anytime from this page."
-      confirmLabel="Deactivate & Save"
-      danger
-      loading={isSaving}
-      onConfirm={confirmDeactivateAndSave}
-      onCancel={() => setDeactivateConfirm(false)}
-    />
-  );
 
   // The fields, shared by the one-page layout and the parts' pages.
   const nameField = (
@@ -327,25 +314,18 @@ function SellerStore({ part }) {
                   </div>
   );
 
-  const activeField = !isNew && (
-                    <div className="form-group form-toggle">
-                      <label className="toggle-label">
-                        <input
-                          type="checkbox"
-                          name="isActive"
-                          checked={form.isActive}
-                          onChange={handleChange}
-                        />
-                        <span className="toggle-text">
-                          Store is <strong>{form.isActive ? 'Active' : 'Inactive'}</strong>
-                          {!form.isActive && (
-                            <span className="toggle-warn">
-                              <AlertCircle size={14} /> Buyers won't see your store or products
-                            </span>
-                          )}
-                        </span>
-                      </label>
-                    </div>
+  // Paused or away: said here too, with the way back (Settings).
+  const away = store ? awayUntil(store) : null;
+  const pausedNote = !isNew && store && (store.isActive === false || away) && !store.deletionRequestedAt && (
+    <Link to="/seller/settings#shop-status" className="store-paused-note">
+      <PauseCircle size={18} weight="fill" />
+      <span>
+        {store.isActive === false
+          ? 'Your shop is hidden from buyers: you stopped selling for now.'
+          : `You are away until ${shortDate(away)}: buyers can look but not order.`}
+        <strong> Change in Settings</strong>
+      </span>
+    </Link>
   );
 
   const brandingBody = (
@@ -423,6 +403,16 @@ function SellerStore({ part }) {
       );
     }
 
+    if (loadFailed) {
+      return (
+        <div className="seller-dashboard">
+          <div className="seller-container">
+            <div className="seller-card"><LoadFailed onRetry={() => { setIsLoading(true); loadStore(); }} what="your shop profile" compact /></div>
+          </div>
+        </div>
+      );
+    }
+
     if (!part) {
       const hasLogo = Boolean(form.logo);
       const hasBanner = Boolean(form.bannerImage || form.coverImage);
@@ -431,6 +421,7 @@ function SellerStore({ part }) {
       return (
         <div className="seller-dashboard">
           <div className="seller-container">
+            {pausedNote}
             <SettingsList label="Shop profile">
               <SettingsRow
                 to={partPath('about')}
@@ -483,7 +474,6 @@ function SellerStore({ part }) {
             {nameField}
             {descriptionField}
             {contactField}
-            {activeField}
           </div>
         </div>
       ),
@@ -541,7 +531,6 @@ function SellerStore({ part }) {
           saving={isSaving}
           canSave={partDirty && !uploadingField}
         />
-        {deactivateDialog}
       </div>
     );
   }
@@ -560,13 +549,13 @@ function SellerStore({ part }) {
         />
 
         {isLoading ? (
-          <div className="seller-card">
+          <div className="seller-card store-skeleton">
             <Skeleton.Text lines={2} height={14} />
-            <div style={{ height: 12 }} />
             <Skeleton.Text lines={4} height={12} />
-            <div style={{ height: 12 }} />
             <Skeleton height={38} width={140} radius={8} />
           </div>
+        ) : loadFailed ? (
+          <div className="seller-card"><LoadFailed onRetry={() => { setIsLoading(true); loadStore(); }} what="your shop profile" compact /></div>
         ) : (
           <div className="store-settings-grid">
             <div className="store-settings-main">
@@ -584,8 +573,6 @@ function SellerStore({ part }) {
                   {mapField}
 
                   {contactField}
-
-                  {activeField}
 
                   <div className="form-actions">
                     <button type="submit" className="btn-seller-primary" disabled={isSaving}>
@@ -641,6 +628,7 @@ function SellerStore({ part }) {
             </div>
 
             <div className="store-settings-side">
+              {pausedNote}
               {/* Store slug / link */}
               {store?.slug && (
                 <div className="seller-card store-preview-card">
@@ -661,26 +649,10 @@ function SellerStore({ part }) {
                 </div>
               )}
 
-              {/* Danger zone / account-level shop controls now live on a dedicated Settings page */}
-              {!isNew && (
-                <div className="seller-card store-settings-pointer">
-                  <div className="seller-card-header">
-                    <h2><Settings size={16} /> More Shop Controls</h2>
-                  </div>
-                  <div className="store-settings-pointer-body">
-                    <p>Deleting your shop and other account-level shop settings now live on a dedicated Settings page.</p>
-                    <Link to="/seller/settings" className="btn-seller-outline">
-                      Go to Shop Settings
-                    </Link>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
       </div>
-
-      {deactivateDialog}
     </div>
   );
 }

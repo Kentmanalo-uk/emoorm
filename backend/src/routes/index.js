@@ -105,6 +105,7 @@ mount('/upload', uploadRoutes);
 mount('/analytics', analyticsRoutes);
 mount('/audit-logs', auditLogRoutes);
 mount('/announcements', announcementRoutes);
+mount('/admin-emails', require('./adminEmail.routes'));
 mount('/admin', adminRoutes);
 mount('/auth/mfa', mfaRoutes);
 mount('/auth/qr', qrLoginRoutes);

@@ -5,10 +5,14 @@ import axios from '../lib/axios';
 import AdminLayout from '../components/admin/AdminLayout';
 import KpiCard from '../components/analytics/KpiCard';
 import EmptyArt from '../components/ui/EmptyArt';
+import LoadFailed from '../components/ui/LoadFailed';
+import { AdminDate, AdminSearch, CountTag } from '../components/admin/AdminBits';
+import { roleLabel } from '../lib/labels';
 import { num, toCSV, downloadCSV } from '../components/analytics/format';
 import release from '../data/androidApp.json';
 import '../components/analytics/analytics.css';
 import '../components/admin/AdminLayout.css';
+import './AdminAppUsers.css';
 
 /*
  * Super admin: the Android app (apk/). APK downloads from the /app page,
@@ -17,7 +21,6 @@ import '../components/admin/AdminLayout.css';
  */
 
 const LATEST = release.version;
-const ROLE = { BUYER: 'Buyer', SELLER: 'Seller', MUNICIPAL_ADMIN: 'Municipal admin', SUPER_ADMIN: 'Super admin' };
 
 const newer = (a, b) => {
   const pa = String(a).split('.').map(Number);
@@ -28,18 +31,6 @@ const newer = (a, b) => {
   return false;
 };
 const isOld = (v) => newer(LATEST, v);
-
-const when = (d) => {
-  const ms = Date.now() - new Date(d).getTime();
-  const min = Math.round(ms / 60000);
-  if (min < 2) return 'just now';
-  if (min < 60) return `${min} min ago`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `${h} h ago`;
-  const days = Math.round(h / 24);
-  if (days < 31) return `${days} day${days === 1 ? '' : 's'} ago`;
-  return new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-};
 
 export default function AdminAppUsers() {
   const [data, setData] = useState(null);
@@ -69,14 +60,17 @@ export default function AdminAppUsers() {
     return (d.people || []).filter((p) => (!oldOnly || isOld(p.version))
       && (!q || [p.user?.fullName, p.user?.email, p.user?.municipality, p.device].some((s) => String(s || '').toLowerCase().includes(q))));
   }, [d.people, query, oldOnly]);
+  // Version health counts the same phones as "Used in 30 days", so the two
+  // numbers add up to it.
+  const active30 = installs.active30 || 0;
   const onLatest = versions.filter((v) => !isOld(v.version)).reduce((n, v) => n + v.active30, 0);
-  const outdated = (installs.active30 || 0) - onLatest;
+  const outdated = Math.max(0, active30 - onLatest);
 
   const exportCsv = () => {
     const headers = [
       { label: 'Name', get: (p) => p.user?.fullName || '' },
       { label: 'Email', get: (p) => p.user?.email || '' },
-      { label: 'Role', get: (p) => ROLE[p.user?.role] || p.user?.role || '' },
+      { label: 'Role', get: (p) => p.user?.role ? roleLabel(p.user.role) : '' },
       { label: 'Municipality', get: (p) => p.user?.municipality || '' },
       { label: 'App version', get: (p) => p.version },
       { label: 'Phone', get: (p) => p.device || '' },
@@ -104,16 +98,25 @@ export default function AdminAppUsers() {
           </button>
         </div>
 
-        {error && <div className="an-card" style={{ padding: 16, color: 'var(--t-danger-600, #dc2626)' }}>{error}</div>}
+        {error && !data && <div className="admin-card"><LoadFailed onRetry={load} what="the app numbers" compact /></div>}
 
-        <div className="an-kpi-grid">
-          <KpiCard loading={loading && !data} label="APK downloads" value={num(downloads.total)} hint={`${num(downloads.last30)} in the last 30 days`} />
-          <KpiCard loading={loading && !data} label="Installs" value={num(installs.total)} hint={`${num(installs.new30)} new in the last 30 days`} />
-          <KpiCard loading={loading && !data} label="Active phones" value={num(installs.active7)} hint={`Used in 7 days · ${num(installs.active30)} in 30 days`} />
-          <KpiCard loading={loading && !data} label="Signed-in people" value={num(installs.signedInPeople)} hint="Have used the app signed in" />
-          <KpiCard loading={loading && !data} label={`On ${LATEST}`} value={num(onLatest)} hint="Active phones on the latest version" />
-          <KpiCard loading={loading && !data} label="Need to update" value={num(Math.max(0, outdated))} hint="Active phones on an older version" />
-        </div>
+        <section className="aau-group" aria-labelledby="aau-reach">
+          <h2 id="aau-reach" className="aau-group-title">Reach</h2>
+          <div className="an-kpi-grid">
+            <KpiCard loading={loading && !data} label="APK downloads" value={num(downloads.total)} hint={`${num(downloads.last30)} in the last 30 days`} />
+            <KpiCard loading={loading && !data} label="Phones with the app" value={num(installs.total)} hint={`Installed, ever · ${num(installs.new30)} new in 30 days`} />
+            <KpiCard loading={loading && !data} label="Used in 30 days" value={num(active30)} hint={`Phones that opened it · ${num(installs.active7)} in the last 7 days`} />
+            <KpiCard loading={loading && !data} label="Signed-in people" value={num(installs.signedInPeople)} hint="Have used the app signed in" />
+          </div>
+        </section>
+
+        <section className="aau-group" aria-labelledby="aau-health">
+          <h2 id="aau-health" className="aau-group-title">Version health <span>of the {num(active30)} phones used in 30 days</span></h2>
+          <div className="an-kpi-grid">
+            <KpiCard loading={loading && !data} label={`On ${LATEST} (latest)`} value={num(onLatest)} hint="Up to date" />
+            <KpiCard loading={loading && !data} label="On an older version" value={num(outdated)} hint={outdated ? 'The latest is on the download page' : 'Nobody needs to update'} />
+          </div>
+        </section>
 
         <div className="admin-card">
           <div className="admin-card-header">
@@ -148,18 +151,11 @@ export default function AdminAppUsers() {
         </div>
 
         <div className="admin-card">
-          <div className="admin-card-header" style={{ flexWrap: 'wrap', gap: 10 }}>
-            <h2 className="admin-card-title">People using the app <span style={{ color: 'var(--t-neutral-500, #6b7280)', fontWeight: 400 }}>({people.length})</span></h2>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <input
-                className="admin-input"
-                style={{ minWidth: 220 }}
-                placeholder="Search name, email, town or phone…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-label="Search people using the app"
-              />
-              <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 13 }}>
+          <div className="admin-card-header">
+            <h2 className="admin-card-title">People using the app <CountTag n={people.length} /></h2>
+            <div className="admin-toolbar">
+              <AdminSearch value={query} onChange={setQuery} placeholder="Search name, email, town or phone…" label="Search people using the app" />
+              <label className="aau-check">
                 <input type="checkbox" checked={oldOnly} onChange={(e) => setOldOnly(e.target.checked)} /> Old version only
               </label>
               <button type="button" className="admin-btn admin-btn-outline" onClick={exportCsv} disabled={!people.length}>
@@ -184,21 +180,21 @@ export default function AdminAppUsers() {
                   {people.map((p) => (
                     <tr key={p.installId}>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{p.user?.fullName || '—'}</div>
-                        <div style={{ fontSize: 12, color: 'var(--t-neutral-500, #6b7280)' }}>{p.user?.email}</div>
+                        <div className="admin-user-cell-name">{p.user?.fullName || '—'}</div>
+                        <div className="admin-user-cell-email">{p.user?.email}</div>
                       </td>
-                      <td>{ROLE[p.user?.role] || p.user?.role}</td>
+                      <td>{p.user?.role ? roleLabel(p.user.role) : '—'}</td>
                       <td>{p.user?.municipality || '—'}</td>
                       <td>
                         {p.version}{' '}
                         {isOld(p.version) && <span className="admin-badge admin-badge-pending">Old</span>}
                       </td>
-                      <td style={{ fontSize: 12 }}>
+                      <td className="aau-device">
                         {p.device || 'Android phone'}
-                        {p.android && <div style={{ color: 'var(--t-neutral-500, #6b7280)' }}>Android {p.android}</div>}
+                        {p.android && <div>Android {p.android}</div>}
                       </td>
                       <td>{num(p.opens)}</td>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: 12 }} title={new Date(p.lastSeenAt).toLocaleString('en-PH')}>{when(p.lastSeenAt)}</td>
+                      <td><AdminDate value={p.lastSeenAt} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -207,7 +203,7 @@ export default function AdminAppUsers() {
           )}
         </div>
 
-        <p className="admin-page-sub" style={{ margin: '4px 2px 24px' }}>
+        <p className="admin-page-sub aau-footnote">
           Installs are counted when the app opens (any version, once the site update is live); a reinstall counts as a new install.
           A download is not an install. People appear here after they sign in inside the app.
         </p>

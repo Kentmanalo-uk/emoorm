@@ -77,3 +77,73 @@
     font-size: 22px;
   }
 }
+
+/* Kind names in their colour (was an inline style per row). */
+.anl-tone-blue { color: #3b82f6; }
+.anl-tone-amber { color: #b45309; }
+.anl-tone-green { color: #059669; }
+.anl-tone-red { color: #dc2626; }
+.anl-tone-violet { color: #7c3aed; }
+.anl-tone-slate { color: #64748b; }
+
+/* The type filter above the feed. */
+.anl-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -8px 0 14px;
+}
+
+/* A burst of the same kind folded into one line ("12 feedback notices"). */
+.anl-run {
+  list-style: none;
+}
+
+.anl-run + .anl-item,
+.anl-item + .anl-run,
+.anl-run + .anl-run {
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.anl-run-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.anl-run-head.is-unread .anl-title {
+  font-weight: 600;
+}
+
+.anl-run-head .anl-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.anl-run-caret {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.anl-run-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.anl-run > .anl-list {
+  padding-left: 12px;
+  border-left: 3px solid var(--t-neutral-100, #f1f5f9);
+}
+
+@media (max-width: 768px) {
+  .anl-types {
+    margin: 0 0 12px;
+  }
+}

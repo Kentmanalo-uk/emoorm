@@ -5,10 +5,11 @@ import AdminLayout from '../components/admin/AdminLayout';
 import useAuthStore from '../store/authStore';
 import KpiCard from '../components/analytics/KpiCard';
 import BarChart from '../components/analytics/BarChart';
-import TopList from '../components/analytics/TopList';
 import StatusDonut from '../components/analytics/StatusDonut';
 import DateRangePicker from '../components/analytics/DateRangePicker';
 import EmptyState from '../components/analytics/EmptyState';
+import Breakdowns from '../components/analytics/Breakdowns';
+import { roleLabel } from '../lib/labels';
 import { num, pctText, growthText, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
 import MunicipalAdminAnalytics from './MunicipalAdminAnalytics';
 import '../components/analytics/analytics.css';
@@ -68,7 +69,7 @@ function PlatformAnalytics() {
       <div className="an-page">
         <div className="an-page-header">
           <div>
-            <h1 className="an-page-title">Platform Analytics</h1>
+            <h1 className="an-page-title">Analytics</h1>
             <p className="an-page-sub">
               {data ? `${shortDate(data.window.from)} — ${shortDate(data.window.to)}` : 'Marketplace performance'}
             </p>
@@ -80,35 +81,34 @@ function PlatformAnalytics() {
               value={muniFilter}
               onChange={(e) => setMuniFilter(e.target.value)}
               title="Filter by municipality"
-              style={{ padding: '6px 10px' }}
             >
               <option value="">All municipalities</option>
               {municipalities.map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
             </Select>
-            <DateRangePicker value={range} onChange={setRange} />
+            <DateRangePicker value={range} onChange={setRange} presets="admin" />
             <button className="an-icon-btn" onClick={load} disabled={loading} title="Refresh">
               <RefreshCw size={13} /> Refresh
             </button>
-            <button className="an-icon-btn" onClick={exportCsv} disabled={!data} title="Export CSV">
-              <Download size={13} /> Export
+            <button className="an-icon-btn" onClick={exportCsv} disabled={!data} title="Orders and sales per day, as a spreadsheet">
+              <Download size={13} /> Export daily sales (CSV)
             </button>
           </div>
         </div>
 
-        {error && <div className="an-card" style={{ padding: 16, color: 'var(--t-danger-600, #dc2626)' }}>{error}</div>}
+        {error && <div className="an-card an-error" role="alert">{error}</div>}
 
         <div className="an-kpi-grid">
           <KpiCard loading={loading && !data} label="Sales growth" value={growthText(k.revenue?.delta)} hint="Completed sales vs the period before" />
           <KpiCard loading={loading && !data} label="Orders" value={num(k.orders?.value)} delta={k.orders?.delta} />
           <KpiCard loading={loading && !data} label="Avg. order size" value={growthText(k.avgOrderValue?.delta)} hint="Change vs the period before" />
           <KpiCard loading={loading && !data} label="Buyers (period)" value={num(k.windowBuyers?.value)} />
-          <KpiCard loading={loading && !data} label="Total Buyers" value={num(k.buyers?.value)} />
+          <KpiCard loading={loading && !data} label="All buyers" value={num(k.buyers?.value)} />
           <KpiCard loading={loading && !data} label="Sellers" value={num(k.sellers?.value)} />
-          <KpiCard loading={loading && !data} label="Municipal Admins" value={num(k.municipalAdmins?.value)} />
-          <KpiCard loading={loading && !data} label="Stores" value={num(k.activeStores?.value)} hint={`${num(k.totalStores?.value)} total`} />
-          <KpiCard loading={loading && !data} label="Live Products" value={num(k.liveProducts?.value)} hint={`${num(k.totalProducts?.value)} total`} />
+          <KpiCard loading={loading && !data} label="Municipal admins" value={num(k.municipalAdmins?.value)} />
+          <KpiCard loading={loading && !data} label="Active stores" value={num(k.activeStores?.value)} hint={Number(k.totalStores?.value) > Number(k.activeStores?.value) ? `of ${num(k.totalStores?.value)}` : undefined} />
+          <KpiCard loading={loading && !data} label="Live products" value={num(k.liveProducts?.value)} hint={Number(k.totalProducts?.value) > Number(k.liveProducts?.value) ? `of ${num(k.totalProducts?.value)}` : undefined} />
           <KpiCard loading={loading && !data} label="Refund rate" value={pctText(k.refundRate?.value)} hint="Of completed sales" />
         </div>
 
@@ -120,64 +120,18 @@ function PlatformAnalytics() {
           <BarChart data={data?.salesByDay || []} valueKey="orders" formatValue={(v) => num(v)} />
         </div>
 
-        <div className="an-grid-2">
-          <div className="an-card">
-            <div className="an-card-head">
-              <h2 className="an-card-title">Top stores</h2>
-            </div>
-            <TopList
-              items={(data?.topStores || []).map((s) => ({
-                id: s.id,
-                name: s.name,
-                image: s.logo,
-                subtitle: s.municipalityName || `${s.orders} orders`,
-                share: s.share,
-              }))}
-              renderMetric={(s) => pctText(s.share)}
-              emptyArt="stores"
-              emptyMessage="No stores with sales yet."
-            />
+        <div className="an-card">
+          <div className="an-card-head">
+            <h2 className="an-card-title">Users by role</h2>
           </div>
-
-          <div className="an-card">
-            <div className="an-card-head">
-              <h2 className="an-card-title">Order status</h2>
-            </div>
-            <StatusDonut counts={data?.ordersByStatus || {}} />
-          </div>
-        </div>
-
-        <div className="an-grid-2">
-          <div className="an-card">
-            <div className="an-card-head">
-              <h2 className="an-card-title">Top products</h2>
-            </div>
-            <TopList
-              items={(data?.topProducts || []).map((p) => ({
-                id: p.id,
-                name: p.name,
-                image: p.image,
-                subtitle: p.storeName,
-                share: p.share,
-              }))}
-              renderMetric={(p) => pctText(p.share)}
-              emptyArt="products"
-              emptyMessage="No products sold in this period."
-            />
-          </div>
-
-          <div className="an-card">
-            <div className="an-card-head">
-              <h2 className="an-card-title">Users by role</h2>
-            </div>
-            <StatusDonut
-              counts={usersByRole}
-              colors={{ BUYER: 'var(--t-info-500, #3b82f6)', SELLER: 'var(--t-primary-600, #059669)', MUNICIPAL_ADMIN: 'var(--t-violet-500, #8b5cf6)' }}
-              emptyArt="users"
-              emptyTitle="No users yet"
-              emptyMessage="Accounts by role will be charted here."
-            />
-          </div>
+          <StatusDonut
+            counts={usersByRole}
+            labels={roleLabel}
+            colors={{ BUYER: 'var(--t-info-500, #3b82f6)', SELLER: 'var(--t-primary-600, #059669)', MUNICIPAL_ADMIN: 'var(--t-violet-500, #8b5cf6)' }}
+            emptyArt="users"
+            emptyTitle="No users yet"
+            emptyMessage="Accounts by role will be charted here."
+          />
         </div>
 
         <div className="an-card">
@@ -185,14 +139,14 @@ function PlatformAnalytics() {
             <h2 className="an-card-title">Sales by municipality</h2>
             <span className="an-card-sub">Share of this period's sales</span>
           </div>
-          <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="admin-table an-table">
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Municipality</th>
-                <th style={{ textAlign: 'left', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Admin</th>
-                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Orders</th>
-                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Share</th>
-                <th style={{ textAlign: 'right', padding: '8px 16px', fontSize: 12, color: 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)' }}>Growth</th>
+                <th>Municipality</th>
+                <th>Admins</th>
+                <th className="is-num">Orders</th>
+                <th className="is-num">Share</th>
+                <th className="is-num">Growth</th>
               </tr>
             </thead>
             <tbody>
@@ -201,52 +155,18 @@ function PlatformAnalytics() {
               )}
               {(data?.salesByMunicipality || []).map((m) => (
                 <tr key={m.id}>
-                  <td style={{ padding: '10px 16px', fontSize: 13, borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{m.name}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: m.hasAdmin ? 'var(--t-primary-600, #059669)' : 'var(--t-neutral-400, #9ca3af)', borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>
-                    {m.hasAdmin ? 'Assigned' : '—'}
-                  </td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{num(m.orders)}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{pctText(m.share)}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, color: m.growth > 0 ? '#15803d' : m.growth < 0 ? '#b91c1c' : 'var(--t-neutral-500, #6b7280)', borderBottom: '1px solid var(--t-neutral-50, #f9fafb)' }}>{growthText(m.growth)}</td>
+                  <td>{m.name}</td>
+                  <td className={m.hasAdmin ? 'an-ok' : 'an-muted'}>{m.hasAdmin ? (m.admins > 1 ? `${m.admins} admins` : 'Staffed') : 'No admin yet'}</td>
+                  <td className="is-num">{num(m.orders)}</td>
+                  <td className="is-num is-strong">{pctText(m.share)}</td>
+                  <td className={`is-num is-strong${m.growth > 0 ? ' is-up' : m.growth < 0 ? ' is-down' : ''}`}>{growthText(m.growth)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        <div className="an-grid-2">
-          <div className="an-card">
-            <div className="an-card-head">
-              <h2 className="an-card-title">Pending actions</h2>
-            </div>
-            <ul className="an-toplist">
-              <li className="an-toplist-row">
-                <span className="an-toplist-body"><span className="an-toplist-name">Seller applications</span></span>
-                <span className="an-toplist-metric">{num(data?.pending?.sellers)}</span>
-              </li>
-              <li className="an-toplist-row">
-                <span className="an-toplist-body"><span className="an-toplist-name">Product approvals</span></span>
-                <span className="an-toplist-metric">{num(data?.pending?.products)}</span>
-              </li>
-              <li className="an-toplist-row">
-                <span className="an-toplist-body"><span className="an-toplist-name">Open reports</span></span>
-                <span className="an-toplist-metric">{num(data?.pending?.reports)}</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="an-card">
-            <div className="an-card-head">
-              <h2 className="an-card-title">Product status</h2>
-            </div>
-            <StatusDonut
-              counts={data?.productsByStatus || {}}
-              emptyArt="products"
-              emptyTitle="No products yet"
-              emptyMessage="Products by status will be charted here."
-            />
-          </div>
-        </div>
+        <Breakdowns data={data} />
       </div>
     </AdminLayout>
   );

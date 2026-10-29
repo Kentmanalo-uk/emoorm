@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import ShopPreview from '../components/seller/ShopPreview';
+import SellerPageHead from '../components/seller/SellerPageHead';
+import { usePhoneLayout } from '../hooks/useMobileNav';
 import {
   SHOP_TEMPLATES, findTemplate, recommendTemplate, templateInUse,
 } from '../lib/shopTemplates';
@@ -15,6 +17,8 @@ import { BusyLabel } from '../components/ui/Spinner';
  * Decorate my shop: pick a ready-made look for the shop page (a template is
  * a pair of shop colours), or go to the logo, banner and custom colours.
  * The previews use the shop's real name, logo, banner and live products.
+ * Computers get a visible title and a line on what this changes (phones
+ * show the title in the top bar).
  */
 
 /** Live products (for previews), their count, rating and followers, loaded once per page. */
@@ -54,6 +58,7 @@ const previewProps = (facts) => ({
 /** /seller/decorate */
 export default function SellerDecorate() {
   const { store } = useOutletContext() || {};
+  const isPhone = usePhoneLayout();
   const facts = useShopFacts(store?.id);
   const inUse = templateInUse(store);
   const shown = inUse || SHOP_TEMPLATES[0];
@@ -126,6 +131,12 @@ export default function SellerDecorate() {
   return (
     <div className="seller-dashboard sdc">
       <div className="seller-container sdc-body">
+        {!isPhone && (
+          <SellerPageHead
+            title="Decorate my shop"
+            subtitle="Changes how your shop page looks to buyers: its Home tab, colours, logo and banner. Your products and orders stay as they are."
+          />
+        )}
         {blocks.map((b) => (
           <section key={b.key} className="sdc-block">
             <h2 className="sdc-head">{b.title}</h2>
@@ -148,12 +159,21 @@ export default function SellerDecorate() {
 /** /seller/decorate/templates */
 export function SellerTemplates() {
   const { store } = useOutletContext() || {};
+  const isPhone = usePhoneLayout();
   const facts = useShopFacts(store?.id);
   const inUse = templateInUse(store);
   const recommended = recommendTemplate(facts.products.map((p) => p.category?.name));
 
   return (
     <div className="seller-dashboard stp">
+      {!isPhone && (
+        <div className="seller-container">
+          <SellerPageHead
+            title="Choose a template"
+            subtitle="A template sets your shop page's colours. Open one to see your shop in it before you apply it."
+          />
+        </div>
+      )}
       <div className="seller-container stp-grid">
         {SHOP_TEMPLATES.map((t) => {
           const isOn = inUse?.key === t.key;

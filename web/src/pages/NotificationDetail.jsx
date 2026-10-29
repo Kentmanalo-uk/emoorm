@@ -44,7 +44,12 @@ export default function NotificationDetail({ admin = false }) {
         }
       } catch (err) {
         if (cancelled) return;
-        setError(err?.response?.data?.message || 'This notification is no longer available.');
+        // Gone (deleted, or what it was about removed) reads differently from
+        // a page that simply did not load, which offers to try again.
+        const status = err?.status || err?.response?.status;
+        setError(status === 404
+          ? { gone: true, text: 'This notification was deleted, or what it was about no longer exists.' }
+          : { gone: false, text: err?.response?.data?.message || err?.message || 'This notification could not be loaded.' });
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -89,8 +94,8 @@ export default function NotificationDetail({ admin = false }) {
       ) : error ? (
         <div className="notif-empty">
           <Bell size={48} weight="fill" />
-          <h2>Not available</h2>
-          <p>{error}</p>
+          <h2>{error.gone ? 'No longer here' : 'Not available'}</h2>
+          <p>{error.text}</p>
           <Link className="notif-show-all-btn" to={listHref}>Back to notifications</Link>
         </div>
       ) : notification ? (

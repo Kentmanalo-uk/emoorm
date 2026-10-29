@@ -7,9 +7,8 @@ import {
 } from '../../lib/moormove';
 import RiderCard from './RiderCard';
 import RiderTrackingMap from './RiderTrackingMap';
+import { peso } from '../../lib/format';
 import './RiderDelivery.css';
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * The seller's order details, MoorMove part: the rider card while a rider

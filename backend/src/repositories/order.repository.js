@@ -401,6 +401,8 @@ const findAll = async (options = {}) => {
     // adminOrderSummary): no courier or products, and of the items only how
     // many there are.
     adminSummary = false,
+    // Admin list: payment proofs the seller has not checked for a day.
+    stalePayment = false,
   } = options;
 
   const where = {};
@@ -420,7 +422,30 @@ const findAll = async (options = {}) => {
     if (from) where.createdAt.gte = from;
     if (to) where.createdAt.lte = to;
   }
-  if (search) where.orderNumber = { contains: search };
+  // Admins look an order up by its number, the buyer's name or the shop's;
+  // a shop by its number, the buyer or a product; buyers by the number alone.
+  if (search && adminSummary) {
+    where.OR = [
+      { orderNumber: { contains: search } },
+      { buyer: { fullName: { contains: search } } },
+      { store: { name: { contains: search } } },
+    ];
+  } else if (search && storeId && !buyerId) {
+    // A shop looks an order up by its number, the buyer's name or a
+    // product on it (the name as it was sold).
+    where.OR = [
+      { orderNumber: { contains: search } },
+      { buyer: { fullName: { contains: search } } },
+      { items: { some: { productName: { contains: search } } } },
+    ];
+  } else if (search) where.orderNumber = { contains: search };
+  // Same rule as the attention queue's stalePayments (moderation.service):
+  // a proof waiting more than a day since the order last changed.
+  if (stalePayment) {
+    where.paymentStatus = 'PENDING_VERIFICATION';
+    where.updatedAt = { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) };
+    if (!where.status) where.status = { not: 'CANCELLED' };
+  }
   if (municipalityId) {
     where.store = { municipalityId };
   }
@@ -442,6 +467,8 @@ const findAll = async (options = {}) => {
             id: true,
             name: true,
             slug: true,
+            // Admins: who to message about the order.
+            ...(adminSummary ? { ownerId: true } : {}),
             // The buyer's own list: where to collect a pickup order.
             ...(forBuyer ? {
               logo: true,

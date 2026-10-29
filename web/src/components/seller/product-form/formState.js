@@ -127,7 +127,7 @@ export const toLocalInput = (value) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-export const peso = (n) => `₱${Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export { peso } from '../../../lib/format';
 export const isWhole = (v) => /^\d+$/.test(String(v).trim());
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -271,6 +271,38 @@ export const toFormState = (product) => {
     todayQty: '',
     todayPrep: '0',
     ...defaultClose(),
+  };
+};
+
+/**
+ * A new product filled in from another (My products' Duplicate): the same
+ * answers with "(copy)" after the name. How many there are starts empty, as
+ * a second listing is a different lot; the photos stay (already uploaded).
+ */
+export const copyFormState = (product) => {
+  const s = toFormState(product);
+  return {
+    ...s,
+    name: `${s.name} (copy)`.slice(0, NAME_MAX),
+    stock: '',
+    variations: s.variations.map((g) => ({ ...g, stocks: {} })),
+    // A copied Available Today item is posted from Available today, not on saving.
+    postToday: false,
+  };
+};
+
+/**
+ * A draft brought back (from this device's storage): any fields added to the
+ * form since it was saved get their blank value, and its choice groups and
+ * sizes get fresh keys, so they never clash with groups added later.
+ */
+export const restoreFormState = (saved) => {
+  const s = { ...toFormState(null), ...(saved || {}) };
+  return {
+    ...s,
+    variations: (Array.isArray(s.variations) ? s.variations : []).map((g) => ({ ...emptyGroup(), ...g, key: nextKey() })),
+    sizes: (Array.isArray(s.sizes) ? s.sizes : []).map((r) => ({ ...r, key: nextKey() })),
+    images: Array.isArray(s.images) ? s.images.filter((x) => typeof x === 'string') : [],
   };
 };
 

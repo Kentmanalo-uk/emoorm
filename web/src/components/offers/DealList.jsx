@@ -124,6 +124,10 @@ export default function DealList({ side }) {
                   {d.meetAt && ['ACCEPTED', 'CONFIRMING'].includes(d.status) && (
                     <span className="of-row-meta">{`Meetup: ${when(d.meetAt)} · ${d.meetPlace}`}</span>
                   )}
+                  {/* The shop's turn: a price left unanswered expires (7 days). */}
+                  {side === 'seller' && ['PENDING', 'COUNTERED'].includes(d.status) && d.turn === 'SELLER' && d.respondBy && (
+                    <span className="of-row-meta">{`Answer by ${when(d.respondBy)} or it expires`}</span>
+                  )}
                   <div className="of-row-actions">
                     <button type="button" className="of-btn of-btn--primary" onClick={() => navigate(chatOf(d))}>
                       <ChatCircleDots size={16} weight="fill" aria-hidden="true" />

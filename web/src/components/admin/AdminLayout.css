@@ -1701,3 +1701,23 @@
 .admin-reveal-btn,
 .admin-id-view { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
 .admin-reveal-note { margin: 0 0 8px; font-size: 12.5px; color: var(--t-neutral-500, #64748b); }
+
+/* Sidebar sections: a small heading over each group of pages (AdminLayout
+   NavSection). The collapsed rail keeps a thin rule in its place. */
+.ac-nav-section {
+  display: block;
+  margin: 14px 12px 4px;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ac-shell.is-collapsed .ac-nav-section {
+  height: 1px;
+  margin: 10px 8px;
+  overflow: hidden;
+  background: var(--t-neutral-200, #e2e8f0);
+  color: transparent;
+}

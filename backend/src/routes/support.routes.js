@@ -21,6 +21,8 @@ router.post('/cases/for-user/:userId', authenticate, authorize('SUPER_ADMIN', 'M
 router.get('/cases/:id', authenticate, supportCaseController.getOne);
 router.post('/cases/:id/messages', authenticate, supportCaseController.send);
 router.patch('/cases/:id/status', authenticate, authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'), supportCaseController.setStatus);
+// Who on the town's team handles the case ("Take this case").
+router.post('/cases/:id/assign', authenticate, authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'), supportCaseController.assign);
 router.post('/cases/:id/rating', authenticate, supportCaseController.rate);
 
 // Thin aliases for the previous `/chat/*` paths so no existing client 404s.

@@ -17,6 +17,9 @@ const { ApiError } = require('../middleware/errorHandler');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STALE_PAYMENT_MS = DAY_MS;
+// A return request the seller has not answered in this long is shown to the
+// admins as "seller slow to reply" (the seller decides it, not them).
+const SLOW_RETURN_MS = 3 * DAY_MS;
 
 // Municipal admins are always pinned to their own municipality.
 const scopeOf = (actor, requested) => (
@@ -69,8 +72,10 @@ const supportAwaiting = async (scope) => {
 const getAttentionQueue = async (actor, { municipalityId } = {}) => {
   const scope = scopeOf(actor, municipalityId);
   const staleBefore = new Date(Date.now() - STALE_PAYMENT_MS);
+  const slowBefore = new Date(Date.now() - SLOW_RETURN_MS);
+  const inTown = scope ? { store: { municipalityId: scope } } : {};
 
-  const [applications, products, reports, payments, returns, awaiting, teamUnread] = await Promise.all([
+  const [applications, products, reports, payments, disputes, slowReturns, awaiting, teamUnread] = await Promise.all([
     queueOf('user', {
       // An applicant may live in one municipality and open their shop in
       // another — the queue follows the shop, like the review itself.
@@ -86,9 +91,12 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
       // The proof arrives after the seller confirms, so the wait counts
       // from the order's last change (the proof), not from checkout.
       updatedAt: { lt: staleBefore },
-      ...(scope && { store: { municipalityId: scope } }),
+      ...inTown,
     }, 'updatedAt'),
-    queueOf('returnRequest', { status: 'REQUESTED', ...(scope && { store: { municipalityId: scope } }) }, 'createdAt'),
+    // Disputes are the only returns an admin decides, so they are the badge.
+    queueOf('returnRequest', { status: 'DISPUTED', ...inTown }, 'disputedAt'),
+    // Requests still with the seller after three days: a nudge, not a decision.
+    queueOf('returnRequest', { status: 'REQUESTED', createdAt: { lt: slowBefore }, ...inTown }, 'createdAt'),
     supportAwaiting(scope),
     // Unread messages in the admin team's chats (municipal admins).
     require('./teamChat.service').unreadRows(actor)
@@ -100,8 +108,23 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
     { key: 'pendingProducts', label: 'Products awaiting approval', link: '/admin/products', ...products },
     { key: 'openReports', label: 'Open reports', link: '/admin/reports', ...reports },
     { key: 'supportAwaiting', label: 'Support messages awaiting reply', link: '/admin/support', ...awaiting },
-    { key: 'stalePayments', label: 'Payments sellers have not checked in 24h', link: '/admin/orders', ...payments },
-    { key: 'openReturns', label: 'Return requests awaiting the seller', link: '/admin/returns', ...returns },
+    // `link` is the page (and the sidebar badge it feeds); `href`, where one
+    // is given, is the filtered view a "go there" chip should open instead.
+    {
+      key: 'stalePayments',
+      label: 'Payments sellers have not checked in 24h',
+      link: '/admin/orders',
+      href: '/admin/orders?payment=stale',
+      ...payments,
+    },
+    { key: 'openReturns', label: 'Return disputes to decide', link: '/admin/returns', ...disputes },
+    // Its own link, so it never overwrites the disputes badge on Returns.
+    {
+      key: 'slowReturns',
+      label: 'Return requests the seller has not answered in 3 days',
+      link: '/admin/returns?status=REQUESTED',
+      ...slowReturns,
+    },
     { key: 'teamChat', label: 'Unread team messages', link: '/admin/team', ...teamUnread },
   ];
 
@@ -114,17 +137,29 @@ const getAttentionQueue = async (actor, { municipalityId } = {}) => {
   });
 };
 
-const listReviews = async (actor, { page = 1, pageSize = 20, search, rating, municipalityId } = {}) => {
+const listReviews = async (actor, {
+  page = 1, pageSize = 20, search, rating, municipalityId, storeId,
+} = {}) => {
   const scope = scopeOf(actor, municipalityId);
   const where = {
     deletedAt: null,
     ...(rating && { rating: Number(rating) }),
-    product: { ...(scope && { municipalityId: scope }) },
+    // A town's reviews are those whose product AND shop are in the town: a
+    // product keeps the town it was listed in, so a shop that moved away
+    // left reviews that matched the product alone and showed up in the old
+    // town's list, where none of its pages are.
+    product: {
+      ...(scope && { municipalityId: scope }),
+      ...((scope || storeId) && {
+        store: { ...(scope && { municipalityId: scope }), ...(storeId && { id: storeId }) },
+      }),
+    },
   };
   if (search) {
     where.OR = [
       { comment: { contains: search } },
       { product: { name: { contains: search } } },
+      { product: { store: { name: { contains: search } } } },
       { user: { fullName: { contains: search } } },
     ];
   }
@@ -137,6 +172,7 @@ const listReviews = async (actor, { page = 1, pageSize = 20, search, rating, mun
           select: { id: true, name: true, slug: true, store: { select: { id: true, name: true, slug: true } } },
         },
       },
+      // The seller's answer is shown under the review (sellerReply, sellerRepliedAt).
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -146,10 +182,18 @@ const listReviews = async (actor, { page = 1, pageSize = 20, search, rating, mun
   return { items: reviews, total, page, pageSize };
 };
 
-const listReturns = async (actor, { page = 1, pageSize = 20, status, municipalityId } = {}) => {
+const RETURN_STATUSES = new Set([
+  'REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED', 'REFUNDED', 'REJECTED', 'CANCELLED', 'CLOSED', 'DISPUTED',
+]);
+
+const listReturns = async (actor, {
+  page = 1, pageSize = 20, status, municipalityId, orderId,
+} = {}) => {
   const scope = scopeOf(actor, municipalityId);
+  // An unknown status is dropped rather than handed to Prisma as a bad enum.
   const where = {
-    ...(status && { status }),
+    ...(RETURN_STATUSES.has(status) && { status }),
+    ...(orderId && { orderId: String(orderId) }),
     ...(scope && { store: { municipalityId: scope } }),
   };
   const [returns, total] = await Promise.all([
@@ -158,7 +202,8 @@ const listReturns = async (actor, { page = 1, pageSize = 20, status, municipalit
       include: {
         // The buyer by name: admins see a return's case, not their contact.
         buyer: { select: { id: true, fullName: true } },
-        store: { select: { id: true, name: true, slug: true } },
+        // The owner, so "Message seller" can open a support case with them.
+        store: { select: { id: true, name: true, slug: true, ownerId: true } },
         order: { select: { id: true, orderNumber: true, total: true } },
         items: { select: { id: true, quantity: true } },
       },
@@ -186,6 +231,8 @@ const loadScopedUser = async (actor, userId) => {
       address: true,
       province: true,
       deletedAt: true,
+      sellerApplicationStatus: true,
+      shopMunicipalityId: true,
       identityVerification: {
         select: {
           status: true,
@@ -201,10 +248,16 @@ const loadScopedUser = async (actor, userId) => {
     },
   });
   if (!user || user.deletedAt) throw new ApiError('User not found', 404);
-  if (actor.role === 'MUNICIPAL_ADMIN' && user.municipalityId !== actor.municipalityId) {
+  // A seller application is reviewed by the town its shop is in (as on the
+  // Seller applications page), so that town's admin checks the applicant's
+  // ID in person too, even when they live in another town.
+  const shopTown = user.sellerApplicationStatus && user.shopMunicipalityId;
+  if (actor.role === 'MUNICIPAL_ADMIN' && user.municipalityId !== actor.municipalityId
+    && shopTown !== actor.municipalityId) {
     throw new ApiError('You can only review users in your assigned municipality', 403);
   }
-  return user;
+  const { sellerApplicationStatus, shopMunicipalityId, ...rest } = user;
+  return rest;
 };
 
 /** Identity verification details an admin needs for an in-person check. */
@@ -379,10 +432,61 @@ const getStoreHealth = async (actor, { municipalityId, limit = 8 } = {}) => {
   return flagged.sort((a, b) => score(b) - score(a)).slice(0, Math.min(20, Number(limit) || 8));
 };
 
+/**
+ * An admin takes down a review, saying why: the reason goes in the audit log
+ * and to the person who wrote it. The town check is the review service's own
+ * (the product's town), plus the shop's, as the list above uses both.
+ */
+const removeReview = async (actor, reviewId, { reason } = {}, req = null) => {
+  const why = String(reason || '').trim();
+  if (why.length < 3) throw new ApiError('Say why the review is being removed', 400);
+  const found = await prisma.review.findUnique({
+    where: { id: reviewId },
+    select: { userId: true, deletedAt: true, product: { select: { store: { select: { municipalityId: true } } } } },
+  });
+  if (!found || found.deletedAt) throw new ApiError('Review not found', 404);
+  if (found.userId === actor.id) throw new ApiError('Remove your own review from your account instead', 400);
+  if (actor.role === 'MUNICIPAL_ADMIN' && found.product?.store?.municipalityId !== actor.municipalityId) {
+    throw new ApiError('You can only remove reviews in your assigned municipality', 403);
+  }
+  const { review } = await require('./review.service')
+    .deleteReview(reviewId, actor.id, actor.role, actor.municipalityId);
+
+  await auditLogService.record({
+    actor,
+    action: 'REMOVE_REVIEW',
+    entity: 'Review',
+    entityId: reviewId,
+    details: {
+      reason: why.slice(0, 300),
+      product: review.product?.name || null,
+      rating: review.rating,
+      writtenBy: review.user?.fullName || null,
+    },
+    municipalityId: review.product?.municipalityId,
+    req,
+  });
+
+  try {
+    await notificationService.createNotification({
+      userId: review.userId,
+      type: 'SYSTEM_ANNOUNCEMENT',
+      title: 'Your review was removed',
+      message: `Your review of "${review.product?.name || 'a product'}" was removed by an admin: ${why.slice(0, 200)}`,
+      relatedId: reviewId,
+      audience: 'BUYER',
+    });
+  } catch (err) {
+    console.error('[removeReview] notification failed:', err.message);
+  }
+  return { id: reviewId };
+};
+
 module.exports = {
   getStoreHealth,
   getAttentionQueue,
   listReviews,
+  removeReview,
   listReturns,
   getIdentityForReview,
   reviewIdentity,

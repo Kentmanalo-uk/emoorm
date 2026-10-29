@@ -54,3 +54,68 @@
     flex-shrink: 0;
   }
 }
+
+/* ── The admins list ── */
+.ja-online {
+  color: var(--t-success-700, #15803d);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ja-muted {
+  color: var(--t-neutral-500, #636b78);
+  font-size: 13px;
+}
+
+.ja-warn {
+  color: var(--t-danger-600, #dc2626);
+  font-size: 13px;
+}
+
+/* Remove is a quiet outline, not a red block on every row. */
+.ja-remove {
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-danger-700, #b91c1c);
+}
+
+/* ── Towns without a primary admin ── */
+.ja-unstaffed .admin-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ja-unstaffed .admin-card-title svg {
+  color: var(--t-warning-600, #d97706);
+}
+
+.ja-unstaffed-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0 16px 16px;
+  list-style: none;
+}
+
+.ja-unstaffed-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+}
+
+.ja-unstaffed-list span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ja-unstaffed-list small {
+  color: var(--t-neutral-500, #636b78);
+  font-size: 12px;
+}

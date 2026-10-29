@@ -897,3 +897,11 @@
   color: #78350f;
   font-weight: 500;
 }
+
+/* A Seller Center page that broke (SellerPageBoundary): inside the shell,
+   on the page background, so the sidebar and tab bar stay usable. */
+.sc-page-error {
+  min-height: 50vh;
+  padding: 32px 16px;
+  background: transparent;
+}

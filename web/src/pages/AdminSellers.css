@@ -759,3 +759,162 @@
   border-radius: 8px;
   object-fit: cover;
 }
+
+/* ── Drawers: rows of actions, small print, the ID check ── */
+.admin-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admin-detail-section > .admin-detail-actions:first-of-type:not(:only-child) {
+  margin-top: 12px;
+}
+
+.admin-detail-hint {
+  margin: 8px 0 10px;
+  font-size: 12.5px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.admin-detail-note-by {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.admin-suspended-note h4 {
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.admin-idcheck-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* The applications drawer's footer: the reject reason above the buttons. */
+.admin-detail-footer.is-decision {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.admin-detail-footer-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Counts on the applications status filter. */
+.admin-status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-status-tab.is-active {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font-weight: 500;
+}
+
+.admin-status-tab b {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.admin-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* A printable application slip (municipal office file). */
+.admin-slip-print {
+  display: none;
+}
+
+@media print {
+  body.is-printing-slip > *:not(.admin-slip-print) {
+    display: none !important;
+  }
+
+  body.is-printing-slip > .admin-slip-print {
+    display: block;
+    padding: 24px;
+    color: #000;
+    font: 12pt/1.45 system-ui, sans-serif;
+  }
+
+  .admin-slip-print h1 {
+    margin: 0 0 4px;
+    font-size: 18pt;
+  }
+
+  .admin-slip-print table {
+    width: 100%;
+    margin: 12px 0;
+    border-collapse: collapse;
+  }
+
+  .admin-slip-print th,
+  .admin-slip-print td {
+    padding: 6px 8px;
+    border: 1px solid #999;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .admin-slip-print th {
+    width: 32%;
+    background: #f2f2f2;
+  }
+
+  .admin-slip-sign {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 48px;
+  }
+
+  .admin-slip-sign span {
+    display: block;
+    padding-top: 6px;
+    border-top: 1px solid #000;
+    font-size: 10pt;
+  }
+}

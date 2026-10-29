@@ -1,0 +1,6 @@
+/* Seller: chat with buyers. The messenger draws its own panes edge to edge
+   inside the card. */
+.sc-content .seller-card.seller-chat-card {
+  padding: 0;
+  overflow: hidden;
+}

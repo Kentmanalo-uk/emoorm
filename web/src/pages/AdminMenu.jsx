@@ -77,7 +77,9 @@ function MenuBody() {
           <div className="sme-stats">
             <Link to="/admin">
               <strong>{totalWaiting}</strong>
-              <span>Waiting</span>
+              {/* Everything waiting, orders and support included (the Tools tab
+                  counts only what its tools open). */}
+              <span>All waiting</span>
             </Link>
             <Link to="/admin/messages">
               <strong>{messageUnread}</strong>
@@ -85,7 +87,7 @@ function MenuBody() {
             </Link>
             <Link to="/admin/notifications">
               <strong>{unreadCount}</strong>
-              <span>Alerts</span>
+              <span>Notifications</span>
             </Link>
           </div>
         </section>

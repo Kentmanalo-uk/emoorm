@@ -31,8 +31,8 @@ const QUANTITY_MAX = 10000;
 export const SECTIONS = ['item', 'ready', 'qty', 'when', 'get', 'note'];
 
 export const KINDS = [
-  { key: 'READY_NOW', title: 'Ready now', hint: 'Already cooked. Buyers get it right away.' },
-  { key: 'MADE_TO_ORDER', title: 'Cooked when ordered', hint: 'You cook after someone orders.' },
+  { key: 'READY_NOW', title: 'Ready now', hint: 'Ready to hand over. Buyers get it right away.' },
+  { key: 'MADE_TO_ORDER', title: 'Made when ordered', hint: 'You prepare it after someone orders.' },
   { key: 'PRE_ORDER', title: 'Pre-order', hint: 'Buyers order now, get it later (like tomorrow morning).' },
 ];
 export const kindOf = (key) => KINDS.find((k) => k.key === key) || KINDS[0];

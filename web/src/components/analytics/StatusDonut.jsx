@@ -1,3 +1,4 @@
+import { words } from '../../lib/labels';
 import EmptyState from './EmptyState';
 import './analytics.css';
 
@@ -21,6 +22,8 @@ const StatusDonut = ({
   emptyTitle = 'No orders yet',
   emptyMessage = 'Order statuses will be charted here.',
   emptyArt = 'orders',
+  // key => its words (order statuses, roles…); a code turned into a phrase otherwise.
+  labels,
 }) => {
   const entries = Object.entries(counts).filter(([, v]) => v > 0);
   const total = entries.reduce((s, [, v]) => s + v, 0);
@@ -72,7 +75,7 @@ const StatusDonut = ({
         {entries.map(([key, value]) => (
           <li key={key}>
             <span className="an-donut-swatch" style={{ background: colors[key] || 'var(--t-neutral-400, #9ca3af)' }} />
-            <span className="an-donut-key">{key.toLowerCase()}</span>
+            <span className="an-donut-key">{(labels || words)(key)}</span>
             <span className="an-donut-val">{value}</span>
           </li>
         ))}

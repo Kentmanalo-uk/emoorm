@@ -62,6 +62,8 @@ const REPORTED_BUYER_SELECT = {
 };
 
 const REPORT_INCLUDE_LIST = {
+  // A name for who decided it, never a bare id, on the list too.
+  resolvedBy: RESOLVER_SELECT,
   reporter: REPORTER_SELECT,
   reportedSeller: REPORTED_SELLER_SELECT,
   reportedBuyer: REPORTED_BUYER_SELECT,
@@ -70,7 +72,8 @@ const REPORT_INCLUDE_LIST = {
       id: true,
       name: true,
       slug: true,
-      store: { select: { id: true, name: true, slug: true } },
+      // The owner, so the report's drawer can message the seller.
+      store: { select: { id: true, name: true, slug: true, ownerId: true } },
     },
   },
   municipality: { select: { id: true, name: true, code: true } },
@@ -142,7 +145,9 @@ const findAll = async (options = {}) => {
   if (reportedSellerId) where.reportedSellerId = reportedSellerId;
   if (reportedBuyerId) where.reportedBuyerId = reportedBuyerId;
   if (type) where.type = type;
-  if (status) where.status = status;
+  // "OPEN" is the admins' queue: new and being checked.
+  if (status === 'OPEN') where.status = { in: ['PENDING', 'UNDER_REVIEW'] };
+  else if (status) where.status = status;
   if (municipalityId) where.municipalityId = municipalityId;
 
   const [reports, total] = await Promise.all([

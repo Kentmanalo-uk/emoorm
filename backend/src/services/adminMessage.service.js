@@ -63,15 +63,19 @@ const toSummary = (conversation, unreadCount) => ({
   unreadCount,
 });
 
-/** A super admin opens a thread with a municipal admin. */
+/**
+ * A super admin opens a thread with a municipal admin, or a municipal admin
+ * with the super admins ("Ask the super admin": the thread is their own,
+ * and sendMessage tells the super admins).
+ */
 const createConversation = async (actor, { adminId, subject, body } = {}) => {
-  if (actor.role !== 'SUPER_ADMIN') {
-    throw new ApiError('Only a super admin can start an admin conversation', 403);
+  if (actor.role !== 'SUPER_ADMIN' && actor.role !== 'MUNICIPAL_ADMIN') {
+    throw new ApiError('Only admins can start an admin conversation', 403);
   }
   const cleanSub = cleanSubject(subject);
   const text = cleanBody(body);
 
-  const target = await adminMessageRepository.findMunicipalAdminById(String(adminId || ''));
+  const target = await adminMessageRepository.findMunicipalAdminById(String(actor.role === 'MUNICIPAL_ADMIN' ? actor.id : (adminId || '')));
   if (!target) throw new ApiError('Pick an active municipal admin to message', 400);
 
   const conversation = await adminMessageRepository.createConversation({

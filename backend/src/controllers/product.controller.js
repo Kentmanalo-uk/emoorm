@@ -133,6 +133,7 @@ const getMyProducts = asyncHandler(async (req, res) => {
     sortOrder = 'desc',
     type,
     kind,
+    categoryId,
   } = req.query;
 
   const options = {
@@ -145,6 +146,8 @@ const getMyProducts = asyncHandler(async (req, res) => {
     sortOrder,
     type,
     kind,
+    // One category of the shop's (the seller's category filter).
+    categoryId: typeof categoryId === 'string' && categoryId ? categoryId.slice(0, 64) : undefined,
   };
 
   const result = await productService.getMyProducts(req.user.id, options);

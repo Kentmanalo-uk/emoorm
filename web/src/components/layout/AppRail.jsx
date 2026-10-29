@@ -5,18 +5,10 @@ import axios from '../../lib/axios';
 import { notificationHref } from '../../lib/notificationLink';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../../lib/googleTranslate';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import { timeAgo } from '../../lib/format';
 import './AppRail.css';
 
-const formatTime = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  const minutes = Math.round((Date.now() - date.getTime()) / 60000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-};
+const formatTime = timeAgo;
 
 /**
  * Slim right-hand rail for the Seller Center and the Admin panel: language,

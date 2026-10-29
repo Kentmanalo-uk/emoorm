@@ -1,0 +1,252 @@
+/* Platform settings cards on their modules' pages (PlatformSettings.jsx). */
+
+.ps-card {
+  margin-top: 16px;
+  padding: 0;
+  overflow: hidden;
+  scroll-margin-top: 16px;
+}
+
+.ps-card.is-target {
+  box-shadow: 0 0 0 2px var(--t-primary-600, #059669);
+}
+
+.ps-head {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.ps-head h2 {
+  margin: 0;
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ps-head p {
+  margin: 4px 0 0;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ps-row {
+  display: grid;
+  /* Label and help on the left, the control at the right edge: no empty
+     middle on a wide card. */
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 32px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.ps-row:last-of-type {
+  border-bottom: 0;
+}
+
+.ps-label {
+  display: grid;
+  gap: 3px;
+  max-width: 640px;
+}
+
+.ps-label strong {
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.ps-label span {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.ps-control {
+  justify-self: end;
+  min-width: 0;
+}
+
+.ps-number {
+  width: 200px;
+  max-width: 100%;
+}
+
+.ps-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+  background: var(--t-neutral-50, #f8fafc);
+}
+
+.ps-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ps-switch input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--t-primary-600, #059669);
+  cursor: pointer;
+}
+
+.ps-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 440px;
+}
+
+.ps-choice {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  cursor: pointer;
+}
+
+.ps-choice.is-on {
+  border-color: var(--t-primary-600, #059669);
+  box-shadow: 0 0 0 1px var(--t-primary-600, #059669);
+}
+
+.ps-choice input {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  accent-color: var(--t-primary-600, #059669);
+}
+
+.ps-choice-preview {
+  display: flex;
+  gap: 6px;
+}
+
+.ps-choice-photo,
+.ps-choice-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-500, #64748b);
+}
+
+.ps-choice-icon {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.ps-choice-text {
+  display: grid;
+  gap: 1px;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+}
+
+.ps-choice-text strong {
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* Phones: label above its control; admin cards there lose their own
+   padding (AdminLayout.css), which this card does not use anyway. */
+@media (max-width: 768px) {
+  .ps-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ps-control {
+    justify-self: stretch;
+  }
+
+  .ps-number {
+    width: 100%;
+  }
+
+  .ac-content .admin-card.ps-card {
+    padding: 0;
+  }
+}
+
+/* The on/off switch: a track and thumb, its state in words beside it. */
+.ps-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.ps-switch-track {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--t-neutral-300, #cbd5e1);
+  transition: background-color 0.15s;
+}
+
+.ps-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s;
+}
+
+.ps-switch input:checked + .ps-switch-track {
+  background: var(--t-primary-600, #059669);
+}
+
+.ps-switch input:checked + .ps-switch-track .ps-switch-thumb {
+  transform: translateX(18px);
+}
+
+.ps-switch input:focus-visible + .ps-switch-track {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 2px;
+}
+
+.ps-switch input:disabled + .ps-switch-track {
+  opacity: 0.6;
+}
+
+.ps-switch-state {
+  min-width: 26px;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ps-switch-state.is-on {
+  color: var(--t-primary-700, #047857);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-switch-track,
+  .ps-switch-thumb {
+    transition: none;
+  }
+}
+
+.ps-switch {
+  position: relative;
+}

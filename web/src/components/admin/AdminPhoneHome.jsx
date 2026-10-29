@@ -27,6 +27,7 @@ const count = (v) => new Intl.NumberFormat('en-PH').format(Number(v || 0));
 const QUEUES = [
   { link: '/admin/sellers', label: 'Applications' },
   { link: '/admin/products', label: 'Products' },
+  { link: '/admin/returns', label: 'Returns' },
   { link: '/admin/reports', label: 'Reports' },
   { link: '/admin/support', label: 'Support' },
 ];
@@ -88,7 +89,7 @@ export default function AdminPhoneHome({ attention, analytics, activity }) {
 
       <div className="sh-body">
         {attention && (top ? (
-          <Link to={top.link} className={`sh-notice is-${top.severity === 'high' ? 'red' : 'amber'}`}>
+          <Link to={top.href || top.link} className={`sh-notice is-${top.severity === 'high' ? 'red' : 'amber'}`}>
             <span className="sh-notice-icon"><WarningCircle size={22} weight="fill" /></span>
             <span className="sh-notice-text">
               <b>{top.label}</b>
@@ -106,7 +107,10 @@ export default function AdminPhoneHome({ attention, analytics, activity }) {
           </div>
         ))}
 
-        <section className="sh-card sh-numbers" aria-label="Waiting on you">
+        {/* Titled, so "0 Products" reads as nothing to approve, not no products. */}
+        <section className="sh-card ah-queues" aria-labelledby="ah-queues-title">
+          <h2 id="ah-queues-title" className="ah-queues-title">Waiting for you to review</h2>
+          <div className="sh-numbers ah-numbers">
           {QUEUES.map(({ link, label }) => {
             const value = attention ? Number(byLink[link]?.count || 0) : null;
             return (
@@ -116,6 +120,7 @@ export default function AdminPhoneHome({ attention, analytics, activity }) {
               </Link>
             );
           })}
+          </div>
         </section>
 
         <QuickToolsCard />
@@ -154,10 +159,10 @@ export default function AdminPhoneHome({ attention, analytics, activity }) {
           ) : activity.length === 0 ? (
             <p className="sdm-empty">Approvals and other admin actions will be listed here.</p>
           ) : activity.slice(0, 4).map((log) => (
-            <Link key={log.id} to="/admin/audit-logs" className="sh-row">
+            <Link key={log.id} to={log.entityId ? `/admin/audit-logs?entityId=${encodeURIComponent(log.entityId)}` : '/admin/audit-logs'} className="sh-row">
               <span className="sh-row-icon"><ClockCounterClockwise size={19} weight="fill" /></span>
               <span className="sh-row-label">{actionLabel(log.action)}</span>
-              <span className="sh-row-hint">{formatRelativeTime(log.createdAt)}</span>
+              <span className="sh-row-hint">{[log.actorName || log.user?.fullName, formatRelativeTime(log.createdAt)].filter(Boolean).join(' · ')}</span>
               <CaretRight size={16} className="sh-chev" />
             </Link>
           ))}

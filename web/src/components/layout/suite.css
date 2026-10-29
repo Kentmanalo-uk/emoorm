@@ -798,11 +798,11 @@
   }
 
   /* Orders: the number on one line (the full number on hover). */
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table th:first-child {
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table th.so-col-num {
     width: 190px !important;
   }
 
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table th:nth-child(5) {
+  .sc-shell:not(.is-phone) .sc-content .so-orders-table th.so-col-status {
     width: 150px !important;
   }
 
@@ -964,7 +964,7 @@
    Action and Buyer columns (the open order shows both), so nothing is cut off;
    the order's side panel lines its labels up with their values. */
 @media (min-width: 769px) {
-  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table :is(th, td):is(:last-child, :nth-child(3)) {
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table :is(th, td):is(:last-child, .so-col-buyer) {
     display: none;
   }
 
@@ -973,11 +973,11 @@
     padding-right: 12px;
   }
 
-  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table th:first-child {
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table th.so-col-num {
     width: 160px !important;
   }
 
-  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table th:nth-child(5) {
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table th.so-col-status {
     width: auto !important;
   }
 

@@ -6,11 +6,14 @@
 
 /* ── New dashboard (.sd-*) ─────────────────────────────────── */
 
+/* Wide screens: the column sits in the middle, not against the sidebar with
+   empty page on its right. */
 .sd {
   display: flex;
   flex-direction: column;
   gap: 16px;
   max-width: 1240px;
+  margin-inline: auto;
 }
 
 /* Header card */
@@ -853,7 +856,7 @@
 
 .seller-container {
   max-width: 1240px;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
 }
 
@@ -2411,5 +2414,342 @@
   .seller-empty.is-page {
     min-height: 320px;
     padding: 36px 16px 44px;
+  }
+}
+
+/* ── Dashboard: the one lead card (private shop, can't take orders yet,
+   setup left, ID to verify) ─────────────────────────────── */
+.sd-lead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+.sd-lead-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sd-lead-body strong {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--ss-ink, #111827);
+}
+
+.sd-lead-body p {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ss-muted, #636b78);
+}
+
+.sd-lead-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sd-lead-actions .btn-seller-outline {
+  min-height: 42px;
+  border-radius: 999px;
+}
+
+.sd-lead.is-green .sd-idv-icon {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-600, #059669);
+}
+
+.sd-lead.is-blue .sd-idv-icon {
+  background: var(--t-info-50, #eff6ff);
+  color: var(--t-info-600, #2563eb);
+}
+
+.sd-lead.is-red .sd-idv-icon {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-600, #dc2626);
+}
+
+.sd-idv.is-academy .sd-card-hide {
+  margin-left: -6px;
+}
+
+.sd-review-banner a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.sd-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 6px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sd-pad {
+  padding: 16px;
+}
+
+/* ── Needs your action: what is waiting, each opening its list ── */
+.sd-actions {
+  margin-bottom: 14px;
+  padding: 14px 18px 16px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+.sd-actions-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.sd-actions-head h2 {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--ss-ink, #111827);
+}
+
+.sd-actions-head span {
+  font-size: 13px;
+  color: var(--ss-muted, #636b78);
+}
+
+.sd-actions-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.sd-action {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  color: var(--t-neutral-600, #4b5563);
+  text-decoration: none;
+  transition: border-color .15s, background-color .15s;
+}
+
+.sd-action svg {
+  grid-row: 1 / span 2;
+  color: var(--t-neutral-400, #9ca3af);
+}
+
+.sd-action strong {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.sd-action span {
+  font-size: 12.5px;
+  line-height: 1.3;
+}
+
+.sd-action:hover {
+  border-color: var(--t-primary-300, #6ee7b7);
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.sd-action.is-due {
+  border-color: var(--t-warning-200, #fde68a);
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-800, #92400e);
+}
+
+.sd-action.is-due svg {
+  color: var(--t-warning-600, #d97706);
+}
+
+.sd-action.is-due strong {
+  color: var(--t-warning-800, #92400e);
+}
+
+.sd-action:focus-visible {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 2px;
+}
+
+/* ── Today's prep list ───────────────────────────────────── */
+.sd-prep {
+  margin-bottom: 14px;
+  padding: 14px 18px 12px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+.sd-prep.is-phone {
+  margin-bottom: 0;
+  box-shadow: none;
+}
+
+.sd-prep-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sd-prep-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--ss-ink, #111827);
+}
+
+.sd-prep.is-phone .sd-prep-head h2 {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.sd-prep-head h2 svg {
+  color: var(--t-primary-600, #059669);
+}
+
+.sd-prep-head a {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--t-primary-700, #047857);
+  text-decoration: none;
+}
+
+.sd-prep-sub {
+  margin: 2px 0 6px;
+  font-size: 12.5px;
+  color: var(--ss-muted, #636b78);
+}
+
+.sd-prep-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sd-prep-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.sd-prep-name,
+.sd-prep-qty {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--ss-ink, #111827);
+}
+
+.sd-prep-name {
+  overflow-wrap: anywhere;
+}
+
+.sd-prep-qty {
+  align-items: flex-end;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.sd-prep-qty strong {
+  font-weight: 500;
+}
+
+.sd-prep-name small,
+.sd-prep-qty small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ss-muted, #636b78);
+}
+
+.sd-prep-more {
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+  background: transparent;
+  color: var(--t-primary-700, #047857);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+/* Low stock rows open a quick restock. */
+.sd-top-item--link {
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sd-top-item--link:hover {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.sd-restock {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12.5px;
+  color: var(--t-primary-700, #047857);
+}
+
+/* Phones: Try again in the note, and the "also waiting" lines. */
+.sdm-retry {
+  margin-left: auto;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--t-primary-700, #047857);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sh-due .sh-row-icon {
+  color: var(--t-warning-600, #d97706);
+}
+
+@media (max-width: 768px) {
+  .sd-lead {
+    flex-wrap: wrap;
+  }
+
+  .sd-lead-actions {
+    width: 100%;
+    flex-wrap: wrap;
   }
 }

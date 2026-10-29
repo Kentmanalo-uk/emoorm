@@ -43,6 +43,14 @@ router.put(
   municipalityController.updateMunicipality
 );
 
+// Super admin: orders in 30 days and admins per town (Municipalities page).
+router.get(
+  '/admin/stats',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  municipalityController.adminStats
+);
+
 router.post(
   '/seed',
   authenticate,

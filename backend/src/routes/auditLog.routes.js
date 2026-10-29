@@ -10,4 +10,12 @@ router.get(
   auditLogController.getAuditLogs
 );
 
+// The people in the log, for its "By" filter.
+router.get(
+  '/actors',
+  authenticate,
+  authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'),
+  auditLogController.getActors
+);
+
 module.exports = router;

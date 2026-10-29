@@ -195,9 +195,11 @@ const startServer = async () => {
       setTimeout(reconcileProducts, 2 * 60 * 1000).unref();
       setInterval(reconcileProducts, 60 * 60 * 1000).unref();
       // Emails the provider could not take when they were sent, tried again
-      // (utils/email.js outbox).
+      // (utils/email.js outbox), and the rest of any admin's email to many
+      // (services/adminEmail.service), a little apart for the provider's
+      // rate limit (about 50 a minute).
       const flushEmails = () => runtimeStatus.runJob('email-outbox', async () => {
-        const stats = await require('./src/utils/email').flushOutbox();
+        const stats = await require('./src/utils/email').flushOutbox({ limit: 100, gapMs: 550 });
         if (stats.sent || stats.failed || stats.gaveUp) console.log('[email-outbox]', stats);
       }, 2 * 60 * 1000);
       setTimeout(flushEmails, 60 * 1000).unref();

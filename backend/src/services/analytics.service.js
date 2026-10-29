@@ -6,6 +6,7 @@ const { ApiError } = require('../middleware/errorHandler');
 const shopReadiness = require('./shopReadiness.service');
 const { funnelForStore } = require('./productView.service');
 const { riderFeeOf, shopTotalOf } = require('./moormove.view');
+const { getBreakdowns } = require('./analyticsBreakdowns');
 
 /**
  * Analytics Service
@@ -81,8 +82,12 @@ const getSellerAnalytics = async (userId, query = {}) => {
   if (!store) throw new ApiError('You do not have a store', 404);
 
   const raw = await analyticsRepository.getSellerStats(store.id, query);
-  // Product page views in the window, and how many turned into orders.
-  const funnel = await funnelForStore(store.id, raw.window.from, raw.window.to);
+  // Product page views in the window, and how many turned into orders; and
+  // the earned sales by the way buyers paid (the Earnings page's split).
+  const [funnel, paidBy] = await Promise.all([
+    funnelForStore(store.id, raw.window.from, raw.window.to),
+    analyticsRepository.earningsByPayment(store.id, raw.window),
+  ]);
   const orderStatus = toCountMap(raw.ordersByStatus, ORDER_STATUSES);
   const productStatus = toCountMap(raw.productsByStatus, PRODUCT_STATUSES);
 
@@ -138,7 +143,39 @@ const getSellerAnalytics = async (userId, query = {}) => {
     lowStock: raw.lowStock,
     views: funnel.totalViews,
     productFunnel: funnel.products,
+    earningsByPayment: earningsSplit(paidBy),
   };
+};
+
+const round2 = (n) => Math.round(Number(n || 0) * 100) / 100;
+
+/**
+ * How the period's earned sales came in, before return refunds (kpis.refunded):
+ *   cash       cash on delivery or at pickup, handed to the shop itself
+ *   riderCash  cash on delivery a MoorMove rider collected for the shop
+ *   online     GCash, QR Ph or bank transfer, straight to the shop's account
+ *              (byMethod: each of them)
+ * each { total, orders }.
+ */
+const earningsSplit = (rows = []) => {
+  const empty = () => ({ total: 0, orders: 0 });
+  const out = { cash: empty(), riderCash: empty(), online: { ...empty(), byMethod: {} } };
+  for (const row of rows) {
+    const part = row.paymentMethod === 'COD' ? (row.byRider ? out.riderCash : out.cash) : out.online;
+    part.total += row.total;
+    part.orders += row.orders;
+    if (part === out.online) {
+      const method = out.online.byMethod[row.paymentMethod] || empty();
+      method.total += row.total;
+      method.orders += row.orders;
+      out.online.byMethod[row.paymentMethod] = method;
+    }
+  }
+  out.cash.total = round2(out.cash.total);
+  out.riderCash.total = round2(out.riderCash.total);
+  out.online.total = round2(out.online.total);
+  Object.values(out.online.byMethod).forEach((m) => { m.total = round2(m.total); });
+  return out;
 };
 
 // ---------- MUNICIPALITY ----------
@@ -241,6 +278,8 @@ const getMunicipalityAnalytics = async (municipalityId, query = {}) => {
       sellerApplications: raw.recentSellers,
       pendingProducts: raw.recentProducts,
     },
+    // The Analytics page's own: growth, categories, why orders end (analyticsBreakdowns).
+    breakdowns: await getBreakdowns({ municipalityId, from: raw.window.from, to: raw.window.to }),
   };
 };
 
@@ -294,11 +333,26 @@ const getPlatformAnalytics = async (query = {}) => {
     if (!muniId) continue;
     muniPrevious.set(muniId, (muniPrevious.get(muniId) || 0) + Number(row._sum.total || 0));
   }
+  // A town is staffed when any admin of its team can act (the primary, an
+  // added admin, or a backup whose access has not ended), not only when a
+  // primary is set: the dashboard called towns with a team "No admin".
+  const teams = await prisma.user.groupBy({
+    by: ['municipalityId'],
+    where: {
+      role: 'MUNICIPAL_ADMIN',
+      isActive: true,
+      deletedAt: null,
+      OR: [{ adminAccessExpiresAt: null }, { adminAccessExpiresAt: { gt: new Date() } }],
+    },
+    _count: { _all: true },
+  });
+  const teamSize = new Map(teams.map((t) => [t.municipalityId, t._count._all]));
   const salesByMunicipality = raw.municipalities.map((m) => ({
     id: m.id,
     name: m.name,
     code: m.code,
-    hasAdmin: !!m.adminId,
+    hasAdmin: !!m.adminId || (teamSize.get(m.id) || 0) > 0,
+    admins: teamSize.get(m.id) || 0,
     revenue: muniRevenue.get(m.id)?.revenue || 0,
     previousRevenue: muniPrevious.get(m.id) || 0,
     orders: muniRevenue.get(m.id)?.orders || 0,
@@ -336,6 +390,7 @@ const getPlatformAnalytics = async (query = {}) => {
     scope: 'platform',
     window: raw.window,
     filter: { municipalityId: query.municipalityId || null },
+    breakdowns: await getBreakdowns({ municipalityId: query.municipalityId || null, from: raw.window.from, to: raw.window.to }),
     kpis: {
       revenue: kpi(revenue, previousRevenue),
       refunded: kpi(refunded, previousRefunded),

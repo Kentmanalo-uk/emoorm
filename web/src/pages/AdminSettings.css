@@ -1328,3 +1328,60 @@ textarea.st-input {
   accent-color: var(--t-primary-600);
   cursor: pointer;
 }
+
+/* App branding: where the other platform settings went. */
+.st-moved {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.st-moved li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 13.5px;
+}
+
+.st-moved a {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+}
+
+.st-moved span {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+}
+
+.st-moved span::before {
+  content: '→ ';
+}
+
+/* Municipality page: the office's address, hours, phone and email. */
+.st-office {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 12px;
+}
+
+.st-office label {
+  display: grid;
+  gap: 4px;
+}
+
+.st-office label > span {
+  color: var(--t-neutral-700, #334155);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* App branding: the logo and placeholder fit their boxes, not cut off. */
+.st-branding-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 12px;
+}

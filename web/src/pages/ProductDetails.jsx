@@ -85,8 +85,7 @@ import useProductPeek from '../components/peek/useProductPeek';
 import {
   quantityBounds, countLabel, soldOutLabel, startsFrom, pageUnit, receiveMode,
 } from '../components/product/kinds/buying';
-
-const peso =(n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+import { peso } from '../lib/format';
 
 /** A package's saving: what the items cost one by one, crossed out, and how much less it is. */
 const shortPeso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;

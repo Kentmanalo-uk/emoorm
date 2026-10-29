@@ -184,9 +184,21 @@ const update = async (id, input) => {
   return voucherRepository.update(id, data);
 };
 
+/** One platform voucher, for its edit page. */
+const getOne = async (id) => {
+  const voucher = await voucherRepository.findById(id);
+  if (!voucher) throw new ApiError('Voucher not found', 404);
+  return voucher;
+};
+
 const remove = async (id) => {
   const existing = await voucherRepository.findById(id);
   if (!existing) throw new ApiError('Voucher not found', 404);
+  // Deleting a used voucher would take its discount off the orders that used
+  // it (their redemptions go with it): it is disabled instead.
+  if (existing.timesUsed > 0) {
+    throw new ApiError(`This voucher was used ${existing.timesUsed} time${existing.timesUsed === 1 ? '' : 's'}, so it can't be deleted. Disable it instead.`, 409);
+  }
   return voucherRepository.remove(id);
 };
 
@@ -247,6 +259,7 @@ const liveForStore = async (storeId) => (await voucherRepository.findLiveForStor
 }));
 
 module.exports = {
+  getOne,
   listShop,
   createShop,
   updateShop,

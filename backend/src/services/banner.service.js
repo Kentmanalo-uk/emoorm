@@ -49,15 +49,45 @@ const sanitize = (input = {}) => {
   if (input.isActive !== undefined) {
     data.isActive = Boolean(input.isActive);
   }
+  // A schedule: shown from / until these times (empty: no limit that side).
+  for (const key of ['startsAt', 'endsAt']) {
+    if (input[key] === undefined) continue;
+    if (input[key] === null || input[key] === '') {
+      data[key] = null;
+      continue;
+    }
+    const at = new Date(input[key]);
+    if (Number.isNaN(at.getTime())) throw new ApiError(`${key === 'startsAt' ? 'Start' : 'End'} must be a date and time`, 400);
+    data[key] = at;
+  }
   return data;
 };
 
-const listActive = () => cached.bannerList({}, () => bannerRepository.findActive());
+/** The schedule as it will be saved: the end must come after the start. */
+const checkWindow = (data, existing = {}) => {
+  const startsAt = data.startsAt !== undefined ? data.startsAt : existing.startsAt;
+  const endsAt = data.endsAt !== undefined ? data.endsAt : existing.endsAt;
+  if (startsAt && endsAt && endsAt <= startsAt) throw new ApiError('The end must come after the start', 400);
+  // A new end already in the past would only ever hide the banner (an ended
+  // banner saved again with its old end is fine).
+  const sameEnd = existing.endsAt && data.endsAt && new Date(existing.endsAt).getTime() === data.endsAt.getTime();
+  if (data.endsAt && !sameEnd && data.endsAt <= new Date()) throw new ApiError('The end must be in the future', 400);
+};
+
+/** Shown now: no start or a start that has come, no end or one still ahead. */
+const inWindow = (banner, now = new Date()) => (!banner.startsAt || new Date(banner.startsAt) <= now)
+  && (!banner.endsAt || new Date(banner.endsAt) > now);
+
+// The list is cached as a whole; the schedule is applied on every read, so a
+// banner starts and ends on time without waiting for the cache.
+const listActive = async () => (await cached.bannerList({}, () => bannerRepository.findActive()))
+  .filter((banner) => inWindow(banner));
 const listAll = () => bannerRepository.findAll();
 
 const create = async (userId, input) => {
   const data = sanitize(input);
   if (!data.title || !data.imageUrl) throw new ApiError('Title and image are required', 400);
+  checkWindow(data);
   data.placement = data.placement || 'HOME_CAROUSEL';
   if (data.placement !== 'HOME_CAROUSEL') {
     const occupied = await bannerRepository.findFirstByPlacement(data.placement);
@@ -73,6 +103,7 @@ const update = async (id, input) => {
   const existing = await bannerRepository.findById(id);
   if (!existing) throw new ApiError('Banner not found', 404);
   const data = sanitize(input);
+  checkWindow(data, existing);
   if (data.placement && data.placement !== 'HOME_CAROUSEL' && data.placement !== existing.placement) {
     const occupied = await bannerRepository.findFirstByPlacement(data.placement);
     if (occupied && occupied.id !== id) {
@@ -92,4 +123,4 @@ const remove = async (id) => {
   return removed;
 };
 
-module.exports = { listActive, listAll, create, update, remove };
+module.exports = { listActive, listAll, create, update, remove, inWindow };

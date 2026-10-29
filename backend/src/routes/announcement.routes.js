@@ -11,6 +11,13 @@ router.get(
 );
 
 router.post(
+  '/preview',
+  authenticate,
+  authorize('MUNICIPAL_ADMIN', 'SUPER_ADMIN'),
+  announcementController.preview
+);
+
+router.post(
   '/',
   authenticate,
   authorize('MUNICIPAL_ADMIN', 'SUPER_ADMIN'),

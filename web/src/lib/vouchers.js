@@ -1,4 +1,4 @@
-const peso = (n) => `₱${Number(n).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+import { pesoShort as peso } from './format';
 
 /** "₱20 off orders of ₱300" / "10% off, up to ₱50". */
 export const voucherSummary = (v) => {

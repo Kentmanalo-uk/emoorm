@@ -1,5 +1,5 @@
 const prisma = require('../config/database');
-const { CATEGORY_KEYS, categoryOfType, typeWhereFor } = require('../utils/notificationCategories');
+const { CATEGORY_KEYS, categoryOfType, typeWhereFor, ADMIN_GROUPS } = require('../utils/notificationCategories');
 
 /**
  * Notification Repository
@@ -53,6 +53,7 @@ const findByUserId = async (options = {}) => {
     audience,
     search,
     category,
+    adminGroup,
   } = options;
 
   const where = {
@@ -63,6 +64,10 @@ const findByUserId = async (options = {}) => {
   // One of the inbox's groups (utils/notificationCategories).
   if (category) {
     where.type = typeWhereFor(category);
+  }
+  // One of the admin feed's groups (Notifications page's type filter).
+  if (adminGroup && ADMIN_GROUPS[adminGroup]) {
+    where.AND = [...(where.AND || []), ADMIN_GROUPS[adminGroup]];
   }
 
   if (search) {
@@ -158,12 +163,15 @@ const softDeleteNotification = async (id) => {
  * @param {String} userId - User ID
  * @returns {Promise<Object>} Delete count
  */
-const deleteAllForUser = async (userId, audience) => {
+const deleteAllForUser = async (userId, audience, { readOnly = false } = {}) => {
   return prisma.notification.updateMany({
     where: {
       userId,
       deletedAt: null,
-      ...(audience === 'BUYER' || audience === 'SELLER' ? { audience } : {}),
+      // One feed only: an admin clearing theirs must not empty a buyer feed.
+      ...(audience === 'BUYER' || audience === 'SELLER' || audience === 'ADMIN' ? { audience } : {}),
+      // "Clear read": the unread stay.
+      ...(readOnly ? { isRead: true } : {}),
     },
     data: { deletedAt: new Date() },
   });

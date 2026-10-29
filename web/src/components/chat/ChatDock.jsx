@@ -18,6 +18,7 @@ import './ChatDock.css';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import { useUnreadCounts, countChatRead, refreshChatCounts } from '../../lib/unreadCounts';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import { chatTime } from '../../lib/format';
 
 const LIST_POLL_MS = 30000;
 const THREAD_POLL_MS = 5000;
@@ -28,18 +29,11 @@ const TABS = [
   { key: 'support', label: 'Support' },
 ];
 
-const formatTime = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  return date.toDateString() === new Date().toDateString()
-    ? date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-};
+const formatTime = chatTime;
 
 const supportName = (c) => c.subject || (c.topic === 'DIRECT'
   ? `${c.municipality?.name || 'Municipal'} Admin`
   : `${c.municipality?.name || 'Municipal'} Support`);
-
 
 /** Normalizes store and support conversations into one list-item shape. */
 const toItem = (c, kind, userId) => {

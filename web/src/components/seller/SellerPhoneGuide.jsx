@@ -31,8 +31,8 @@ const PAGES = {
   },
   '/seller/today': {
     art: 'today',
-    title: "Today's menu",
-    text: 'Post fresh food or harvests with how many you have and until when. Buyers order until it ends or sells out; you confirm each order quickly.',
+    title: 'Available today',
+    text: 'Post what you have today (cooked food, a fresh catch, a harvest) with how many and until when. Buyers order until it ends or sells out; you confirm each order quickly.',
   },
   '/seller/orders': {
     art: 'orders',
@@ -67,7 +67,7 @@ const PAGES = {
   '/seller/menu': {
     art: 'menu',
     title: 'Everything about your shop',
-    text: 'Shop health, earnings, delivery and payment, help and settings, all in one list.',
+    text: 'Earnings, marketing, buyer questions and reviews, your shop profile, delivery and payment, and help, in one list.',
   },
   '/seller/store': {
     art: 'store',
@@ -106,13 +106,13 @@ const PAGES = {
   },
   '/seller/support': {
     art: 'support',
-    title: 'Your municipal admin',
+    title: 'Message the admin',
     text: 'Talk to your town\'s admin about your shop, your verification or anything you need help with.',
   },
   '/seller/settings': {
     art: 'settings',
     title: 'Shop settings',
-    text: 'Everything about how your shop runs: away mode, hours, delivery, payment and more, in one list.',
+    text: 'Switches for how your shop runs: hours, cash on delivery, away or stop selling, and more.',
   },
 };
 

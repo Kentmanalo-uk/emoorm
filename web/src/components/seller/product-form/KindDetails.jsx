@@ -92,8 +92,8 @@ function ReadyDetails({ form, set, patch, errors, editing }) {
           <CalendarCheck size={22} aria-hidden="true" />
           <div>
             <strong>You set how many and until when each day</strong>
-            <span>Post it, change how many are left, or stop orders early from Today&apos;s menu.</span>
-            <Link to="/seller/today" className="pf-today-link">Open Today&apos;s menu</Link>
+            <span>Post it, change how many are left, or stop orders early from Available today.</span>
+            <Link to="/seller/today" className="pf-today-link">Open Available today</Link>
           </div>
         </div>
       ) : (
@@ -102,7 +102,7 @@ function ReadyDetails({ form, set, patch, errors, editing }) {
             checked={form.postToday}
             onChange={(on) => set('postToday', on)}
             label="I have it today"
-            sub={form.postToday ? 'Buyers can order it as soon as you save.' : 'Post it from Today’s menu on the days you cook it.'}
+            sub={form.postToday ? 'Buyers can order it as soon as you save.' : 'Post it from Available today on the days you cook it.'}
           />
           {form.postToday && (
             <div className="pf-today">

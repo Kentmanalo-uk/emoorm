@@ -11,7 +11,8 @@ const router = express.Router();
  */
 const admins = authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN');
 
-router.post('/', authenticate, authorize('SUPER_ADMIN'), adminMessageController.create);
+// A super admin writes to a municipal admin; a municipal admin to the super admins.
+router.post('/', authenticate, admins, adminMessageController.create);
 router.get('/', authenticate, admins, adminMessageController.list);
 router.get('/unread-count', authenticate, admins, adminMessageController.unreadCount);
 router.get('/:id', authenticate, admins, adminMessageController.getOne);

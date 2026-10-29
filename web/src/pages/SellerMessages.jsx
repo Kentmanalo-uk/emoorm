@@ -5,6 +5,7 @@ import Messenger from '../components/messenger/Messenger';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import './SellerDashboard.css';
+import './SellerMessages.css';
 
 const TIP_KEY = 'emoorm-seller-chat-tip';
 
@@ -38,11 +39,11 @@ export default function SellerMessages() {
         {isPhone && showTip && (
           <div className="scm-tip" role="note">
             <ChatCircleDots size={20} weight="fill" />
-            <span>Messages from your buyers show here. Quick replies win more orders.</span>
+            <span>Messages from your buyers show here. Answer fast: a saved quick reply above the message box takes one tap.</span>
             <button type="button" onClick={hideTip} aria-label="Dismiss tip"><X size={16} weight="bold" /></button>
           </div>
         )}
-        <div className="seller-card seller-chat-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="seller-card seller-chat-card">
           <Messenger role="seller" filterChips={isPhone} />
         </div>
       </div>

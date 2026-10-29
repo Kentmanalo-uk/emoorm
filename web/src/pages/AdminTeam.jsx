@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  ArrowsClockwise as RefreshCw, CalendarBlank, ChatCircleDots, ChatsCircle, ShieldCheck, UserPlus, Warning, X,
+  ArrowsClockwise as RefreshCw, CalendarBlank, CaretDown, ChatCircleDots, ChatsCircle, ClockCounterClockwise, ShieldCheck, UserPlus, Warning, X,
 } from '@phosphor-icons/react';
 import AdminLayout from '../components/admin/AdminLayout';
 import UserAvatar from '../components/ui/UserAvatar';
 import EmptyArt from '../components/ui/EmptyArt';
+import LoadFailed from '../components/ui/LoadFailed';
+import { AdminDate } from '../components/admin/AdminBits';
+import { words } from '../lib/labels';
 import TeamChat from '../components/admin/TeamChat';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useFocusTrap from '../hooks/useFocusTrap';
@@ -194,6 +197,53 @@ function AddAdmin({ townName, onClose, onAdded }) {
   );
 }
 
+// Audit actions in plain words where the code alone reads badly.
+const ACTION_WORDS = {
+  APPROVE_SELLER: 'Approved a seller application',
+  REJECT_SELLER: 'Rejected a seller application',
+  SUSPEND_USER: 'Suspended an account',
+  ACTIVATE_USER: 'Reactivated an account',
+  IDENTITY_MANUAL_VERIFY: 'Checked an ID in person',
+  IDENTITY_MANUAL_REJECT: 'Could not verify an ID',
+  UPDATE_MUNICIPALITY_PAGE: 'Edited the town page',
+};
+
+/**
+ * An admin's last few actions (the audit log, filtered by them), opened on
+ * request, with a link to all of them on the Audit logs page.
+ */
+function RecentActivity({ member }) {
+  const [state, setState] = useState({ rows: null, failed: false });
+  const load = useCallback(() => axios.get('/audit-logs', { params: { userId: member.id, pageSize: 5 }, quiet: true })
+    .then((res) => setState({ rows: res.data || [], failed: false, total: res.pagination?.total }))
+    .catch(() => setState({ rows: null, failed: true })), [member.id]);
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div className="at-activity">
+      {state.failed ? (
+        <LoadFailed onRetry={load} what="their activity" compact />
+      ) : state.rows === null ? (
+        <p className="at-activity-quiet">Loading…</p>
+      ) : state.rows.length === 0 ? (
+        <p className="at-activity-quiet">Nothing recorded yet.</p>
+      ) : (
+        <ul>
+          {state.rows.map((log) => (
+            <li key={log.id}>
+              <span>{ACTION_WORDS[log.action] || words(log.action)}</span>
+              <AdminDate value={log.createdAt} time />
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link className="admin-link at-activity-all" to={`/admin/audit-logs?userId=${member.id}`}>
+        See all of {member.isYou ? 'your' : `${member.fullName.split(' ')[0]}'s`} activity
+      </Link>
+    </div>
+  );
+}
+
 function ExtendBackup({ member, onClose, onSaved }) {
   const [until, setUntil] = useState(isoDay(30));
   const [saving, setSaving] = useState(false);
@@ -226,12 +276,33 @@ function ExtendBackup({ member, onClose, onSaved }) {
   );
 }
 
+/** The team of one: a nudge to add a backup, in place of an empty chat. */
+function AloneCard({ canAdd, onAdd }) {
+  return (
+    <div className="at-alone-card">
+      <EmptyArt name="users" size={88} />
+      <h2>Add a backup so someone can cover for you</h2>
+      <p>
+        When you are on leave or busy, a teammate keeps seller applications, reports and buyer
+        support moving. A backup's access ends on a date you pick. Once there are two of you,
+        your team chat shows here.
+      </p>
+      {canAdd && (
+        <button type="button" className="admin-btn admin-btn-primary" onClick={onAdd}>
+          <UserPlus size={16} weight="bold" /> Add a backup
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function AdminTeam() {
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [extending, setExtending] = useState(null);
+  const [openActivity, setOpenActivity] = useState(null);
   const isPhone = usePhoneLayout();
   const meId = useAuthStore((st) => st.user?.id);
   // The chat open: ?chat=team or ?chat=<admin id> (a notification links here).
@@ -287,6 +358,11 @@ export default function AdminTeam() {
 
   const members = team?.members || [];
   const full = team && members.length >= team.max;
+  const me = members.find((m) => m.isYou);
+  // Adding an admin asks for the adder's authenticator code: say so first,
+  // rather than at the last step.
+  const needsTwoFactor = Boolean(team?.canAddAtAll && me && !me.mfaEnabled);
+  const alone = team && members.length === 1;
 
   return (
     <AdminLayout>
@@ -299,7 +375,7 @@ export default function AdminTeam() {
             </p>
           </div>
           <div className="at-head-actions">
-            {isPhone && members.length > 0 && (
+            {isPhone && members.length > 1 && (
               <button type="button" className="admin-btn admin-btn-outline at-chat-btn" onClick={() => setPhoneChats(true)} aria-label="Team chat">
                 <ChatsCircle size={17} weight="fill" />
                 {unread.total > 0 && <b className="at-badge">{unread.total > 99 ? '99+' : unread.total}</b>}
@@ -313,8 +389,8 @@ export default function AdminTeam() {
                 type="button"
                 className="admin-btn admin-btn-primary"
                 onClick={() => setAdding(true)}
-                disabled={!team.canAdd}
-                title={full ? 'The team is full. Remove someone first.' : undefined}
+                disabled={!team.canAdd || needsTwoFactor}
+                title={full ? 'The team is full. Remove someone first.' : needsTwoFactor ? 'Set up two-factor sign-in first' : undefined}
               >
                 <UserPlus size={16} weight="bold" /> Add admin
               </button>
@@ -327,14 +403,24 @@ export default function AdminTeam() {
         {team && !team.canAddAtAll && (
           <p className="at-note">As a backup admin you can see the team; permanent admins add and remove admins.</p>
         )}
+        {needsTwoFactor && (
+          <p className="at-note at-note--action">
+            <ShieldCheck size={16} weight="fill" />
+            <span>
+              Set up two-factor sign-in to add admins: adding someone hands out access, so we ask for your authenticator code.
+              {' '}<Link className="admin-link" to="/admin/settings?tab=security">Set up two-factor</Link>
+            </span>
+          </p>
+        )}
         {full && team.canAddAtAll && <p className="at-note">The team is full. Remove someone to add another admin.</p>}
-        {error && <p className="at-error">{error}</p>}
 
         {loading && !team ? (
           <div className="at-list">
             {[0, 1, 2].map((i) => <div key={i} className="at-member is-loading" />)}
           </div>
-        ) : members.length === 0 && !error ? (
+        ) : error && !team ? (
+          <LoadFailed onRetry={load} what="the team" compact />
+        ) : members.length === 0 ? (
           <div className="admin-empty"><EmptyArt name="users" size={96} /><p>No admins yet.</p></div>
         ) : (
           <ul className="at-list">
@@ -355,13 +441,23 @@ export default function AdminTeam() {
                   <span className="at-email">{m.email}</span>
                   <span className="at-status">
                     <span className={m.online ? 'at-online' : undefined}>{lastSeen(m)}</span>
-                    {!m.mfaEnabled && <span className="at-flag">Two-factor not set up</span>}
+                    {!m.mfaEnabled && (m.isYou
+                      ? <Link className="at-flag at-flag--link" to="/admin/settings?tab=security">Two-factor not set up: set it up</Link>
+                      : <span className="at-flag">Two-factor not set up</span>)}
                     {!m.isActive && <span className="at-flag at-flag--danger">Suspended</span>}
                     {m.addedBy && <span className="at-added">{`Added by ${m.addedBy.id === members.find((x) => x.isYou)?.id ? 'you' : m.addedBy.fullName}`}</span>}
                   </span>
                 </div>
-                {(!m.isYou || m.canRemove) && (
-                  <div className="at-member-actions">
+                <div className="at-member-actions">
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn-outline at-activity-btn"
+                      aria-expanded={openActivity === m.id}
+                      onClick={() => setOpenActivity((id) => (id === m.id ? null : m.id))}
+                    >
+                      <ClockCounterClockwise size={15} /> <span>Activity</span>
+                      <CaretDown size={12} className={openActivity === m.id ? 'at-caret is-open' : 'at-caret'} />
+                    </button>
                     {!m.isYou && (
                       <button type="button" className="admin-btn admin-btn-outline at-msg-btn" onClick={() => message(m.id)} aria-label={`Message ${m.fullName}`}>
                         <ChatCircleDots size={15} weight="fill" /> <span>Message</span>
@@ -378,19 +474,25 @@ export default function AdminTeam() {
                     <button type="button" className="admin-btn at-remove" onClick={() => remove(m)}>Remove</button>
                       </>
                     )}
-                  </div>
-                )}
+                </div>
+                {openActivity === m.id && <RecentActivity member={m} />}
               </li>
             ))}
           </ul>
         )}
         </div>
 
-        {!isPhone && members.length > 0 && (
+        {!isPhone && alone && (
+          <aside className="at-chat at-alone" aria-label="Cover for you">
+            <AloneCard canAdd={team.canAdd && !needsTwoFactor} onAdd={() => setAdding(true)} />
+          </aside>
+        )}
+        {!isPhone && members.length > 1 && (
           <aside className="at-chat" aria-label="Team chat">
             <TeamChat meId={meId} open={openChat} onOpen={setOpenChat} onUnread={onUnread} />
           </aside>
         )}
+        {isPhone && alone && <AloneCard canAdd={team.canAdd && !needsTwoFactor} onAdd={() => setAdding(true)} />}
         </div>
       </div>
 
@@ -405,7 +507,7 @@ export default function AdminTeam() {
         </div>,
         document.body,
       )}
-      {isPhone && !showPhoneChat && members.length > 0 && (
+      {isPhone && !showPhoneChat && members.length > 1 && (
         // Keeps the unread count fresh for the chat button.
         <div hidden><TeamChat meId={meId} open={null} onOpen={message} onUnread={onUnread} /></div>
       )}

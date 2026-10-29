@@ -331,7 +331,6 @@
 
 .an-donut-key {
   flex: 1;
-  text-transform: capitalize;
 }
 
 .an-donut-val {
@@ -1164,5 +1163,176 @@
   .an-table td:first-child,
   .an-table th:first-child {
     white-space: nowrap;
+  }
+}
+
+/* Breakdowns (Breakdowns.jsx): a name, a bar for its share, the figure. */
+.an-reasons {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 4px 16px 16px;
+  list-style: none;
+}
+
+.an-reasons li {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.an-reasons-name {
+  color: var(--t-neutral-800, #1e293b);
+  overflow-wrap: anywhere;
+}
+
+.an-reasons-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.an-reasons-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--t-primary-600, #059669);
+}
+
+.an-reasons-count {
+  min-width: 44px;
+  color: var(--t-neutral-700, #334155);
+  font-weight: 600;
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .an-reasons li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .an-reasons-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+/* Admin Analytics tables and notes. */
+.an-error {
+  padding: 16px;
+  color: var(--t-danger-600, #dc2626);
+}
+
+.an-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.an-table th {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+  text-align: left;
+}
+
+.an-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--t-neutral-50, #f9fafb);
+  font-size: 13px;
+}
+
+.an-table .is-num {
+  text-align: right;
+}
+
+.an-table .is-strong {
+  font-weight: 600;
+}
+
+.an-table .is-up {
+  color: #15803d;
+}
+
+.an-table .is-down {
+  color: #b91c1c;
+}
+
+.an-table .an-ok {
+  color: var(--t-primary-700, #047857);
+}
+
+.an-table .an-muted {
+  color: var(--t-neutral-500, #64748b);
+}
+
+/* "Print town report": only the report prints, on one plain page. */
+.an-print-report {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .an-print-report,
+  .an-print-report * {
+    visibility: visible;
+  }
+
+  .an-print-report {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    width: 100%;
+    padding: 0 8mm;
+    color: #000;
+    font-family: system-ui, sans-serif;
+    font-size: 11pt;
+  }
+
+  .an-print-report header p {
+    margin: 0;
+    color: #444;
+    font-size: 9.5pt;
+  }
+
+  .an-print-report h1 {
+    margin: 2mm 0;
+    font-size: 18pt;
+  }
+
+  .an-print-report h2 {
+    margin: 6mm 0 2mm;
+    font-size: 12pt;
+  }
+
+  .an-print-report table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .an-print-report th,
+  .an-print-report td {
+    padding: 1.6mm 0;
+    border-bottom: 0.3mm solid #ccc;
+    text-align: left;
+    font-weight: 400;
+  }
+
+  .an-print-report td {
+    text-align: right;
+    font-weight: 600;
+  }
+
+  .an-print-note {
+    margin-top: 6mm;
+    color: #555;
+    font-size: 9pt;
   }
 }

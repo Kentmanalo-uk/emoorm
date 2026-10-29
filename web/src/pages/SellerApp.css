@@ -1320,10 +1320,15 @@ a.sh-setup-row:active {
 }
 
 .smk-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
   margin: 0;
+  padding: 8px 0;
   color: var(--sa-muted);
   font-size: 14px;
   line-height: 1.5;
+  text-align: center;
 }
 
 .smk-list {

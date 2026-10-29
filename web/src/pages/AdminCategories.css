@@ -110,3 +110,86 @@
     padding: 10px 12px;
   }
 }
+
+/* The category's own page (AdminFormPage is its card). */
+.admin-cat-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Its preview: the homepage tile as icons and as images. */
+.admin-cat-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-cat-preview-tile {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 12px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-cat-preview-tile small {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.admin-cat-preview-icon,
+.admin-cat-preview-image {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--t-neutral-500, #64748b);
+}
+
+.admin-cat-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── The list ── */
+.admin-cat-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-cat-name strong {
+  color: var(--t-neutral-900, #0f172a);
+  font-weight: 600;
+}
+
+.admin-cat-desc {
+  max-width: 220px;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--t-neutral-500, #64748b);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Delete: a quiet outline; it waits until the category is empty. */
+.admin-cat-delete {
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.admin-cat-input {
+  width: 100%;
+}

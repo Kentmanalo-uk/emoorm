@@ -6,6 +6,7 @@ import { saleInfo } from '../../lib/variantPricing';
 import { SaleWas } from '../ui/SaleTag';
 import ProductImage from '../ProductImage';
 import useProductPeek from '../peek/useProductPeek';
+import { peso } from '../../lib/format';
 import './ShopHome.css';
 
 /**
@@ -150,8 +151,6 @@ function Slider({ images, preview }) {
     </div>
   );
 }
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function ProductTile({ product: p, preview, big = false, row = false, onAddToCart }) {
   const peekProduct = useProductPeek();

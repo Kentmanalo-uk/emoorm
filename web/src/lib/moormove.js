@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from './axios';
 import useAppSettings from '../hooks/useAppSettings';
+import { peso } from './format';
 
 /**
  * MoorMove riders: local riders who pick an order up at the shop's pin and
@@ -10,7 +11,6 @@ import useAppSettings from '../hooks/useAppSettings';
  */
 
 // Same as orderProgress's (kept here so that file can use this one).
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** MoorMove shown like a courier (its name and logo, as CourierMark takes them). */
 export const MOORMOVE_COURIER = { name: 'MoorMove', logoUrl: '/couriers/moormove.svg' };

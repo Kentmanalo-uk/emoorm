@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Lightning, Handshake, Tag } from '@phosphor-icons/react';
 import { saleInfo } from '../../lib/variantPricing';
+import { peso } from '../../lib/format';
 import './SaleTag.css';
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** While a sale is on: the regular price crossed out and the percent off. */
 export function SaleWas({ product, compact = false }) {

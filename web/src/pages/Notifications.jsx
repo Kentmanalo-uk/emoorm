@@ -28,6 +28,7 @@ import '../components/NotificationRows.css';
 import useNotificationPeek from '../components/peek/useNotificationPeek';
 import NotificationCategories from '../components/notifications/NotificationCategories';
 import { categoryLabel, minusOne } from '../lib/notificationCategories';
+import { timeAgo } from '../lib/format';
 
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
@@ -284,19 +285,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
     onDelete: () => handleDelete(notif.id),
   });
 
-  const formatTime = (dateStr) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now - date;
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
-  };
+  const formatTime = timeAgo;
 
   // Buyer headers: search, then ⋯ with this page's actions.
   const headerTools = (

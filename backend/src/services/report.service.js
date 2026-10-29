@@ -47,6 +47,42 @@ const isEvidencePhoto = (e) => typeof e === 'string'
 /** What the admin sees in the notification title. */
 const TYPE_LABEL = { PRODUCT: 'product', SELLER: 'seller', BUYER: 'buyer' };
 
+// The reasons in the words the admin pages use (web lib/labels.js), so a
+// notice reads "reported Mango as a counterfeit", never "COUNTERFEIT".
+const REASON_WORDS = {
+  COUNTERFEIT: 'counterfeit or fake',
+  INAPPROPRIATE_CONTENT: 'prohibited or inappropriate',
+  MISLEADING: 'misleading',
+  SPAM: 'spam',
+  FRAUD: 'fraud or a scam',
+  ABUSIVE_BEHAVIOR: 'abusive behaviour',
+  NON_PAYMENT: 'not paying for an order',
+  FAKE_ORDER: 'fake orders',
+  OTHER: 'something else',
+};
+
+/**
+ * The admins' notice for a new report, in plain words: who reported what,
+ * and why ("Ana Cruz reported Scope Test Shop for spam").
+ */
+const reportNotice = async ({ type, reason, reporterId, productId, reportedSellerId, reportedBuyerId }) => {
+  const name = async (id) => (id ? (await userRepository.findById(id))?.fullName : null);
+  let target = null;
+  if (type === 'PRODUCT' && productId) {
+    target = (await prisma.product.findUnique({ where: { id: productId }, select: { name: true } }))?.name;
+  } else if (type === 'SELLER' && reportedSellerId) {
+    target = (await storeRepository.findByOwnerId(reportedSellerId))?.name || await name(reportedSellerId);
+  } else if (type === 'BUYER') {
+    target = await name(reportedBuyerId);
+  }
+  const who = (await name(reporterId)) || 'Someone';
+  const what = target || `a ${TYPE_LABEL[type] || 'user'}`;
+  return {
+    title: `New ${TYPE_LABEL[type] || 'account'} report: ${what}`.slice(0, 190),
+    message: `${who} reported ${what} for ${REASON_WORDS[reason] || 'something else'}.`,
+  };
+};
+
 const createReport = async (userId, data) => {
   const { type, productId, reason, description, evidence } = data;
   let reportedSellerId = data.reportedSellerId || null;
@@ -163,10 +199,13 @@ const createReport = async (userId, data) => {
     municipalityId,
   });
 
+  const notice = await reportNotice({ ...target, reason }).catch(() => ({
+    title: `New ${TYPE_LABEL[type] || 'account'} report`,
+    message: `Someone reported a ${TYPE_LABEL[type] || 'user'} for ${REASON_WORDS[reason] || 'something else'}.`,
+  }));
   await notificationService.notifyMunicipalAdmins(municipalityId, {
     type: 'REPORT_SUBMITTED',
-    title: `New ${TYPE_LABEL[type] || 'account'} report`,
-    message: `A user reported: ${reason}`,
+    ...notice,
     relatedId: report.id,
   });
 

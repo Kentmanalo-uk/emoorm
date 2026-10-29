@@ -20,6 +20,7 @@ const reviews = asyncHandler(async (req, res) => {
     search: req.query.search ? String(req.query.search).trim() : undefined,
     rating: req.query.rating,
     municipalityId: req.query.municipalityId,
+    storeId: req.query.storeId ? String(req.query.storeId) : undefined,
   });
   paginatedResponse(res, result.items, result.total, result.page, result.pageSize, 'Reviews retrieved');
 });
@@ -30,8 +31,15 @@ const returns = asyncHandler(async (req, res) => {
     ...paging(req.query),
     status: req.query.status ? String(req.query.status).toUpperCase() : undefined,
     municipalityId: req.query.municipalityId,
+    orderId: req.query.orderId ? String(req.query.orderId) : undefined,
   });
   paginatedResponse(res, result.items, result.total, result.page, result.pageSize, 'Return requests retrieved');
+});
+
+/** @route POST /api/moderation/reviews/:id/remove: take a review down, with a reason */
+const removeReview = asyncHandler(async (req, res) => {
+  const result = await moderationService.removeReview(req.user, req.params.id, req.body || {}, req);
+  successResponse(res, result, 'Review removed');
 });
 
 /** @route GET /api/moderation/identity/:userId */
@@ -54,4 +62,6 @@ const storeHealth = asyncHandler(async (req, res) => {
   successResponse(res, stores, 'Store health retrieved');
 });
 
-module.exports = { attention, reviews, returns, identity, reviewIdentity, storeHealth };
+module.exports = {
+  attention, reviews, removeReview, returns, identity, reviewIdentity, storeHealth,
+};

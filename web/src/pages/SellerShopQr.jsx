@@ -116,6 +116,9 @@ export default function SellerShopQr() {
 
   const hasStore = Boolean(store);
   const canShare = Boolean(store?.slug && store?.isApproved !== false);
+  // Before approval: the posters as a sample (the QR already holds the shop's
+  // future link), with Print and Download off until buyers can open it.
+  const preview = Boolean(store?.slug) && store?.isApproved === false;
   const slug = store?.slug || '';
   const name = store?.name || 'My shop';
   const town = townOf(store);
@@ -131,7 +134,7 @@ export default function SellerShopQr() {
 
   // The QR, the E-MOORM marks, the logo and the font: once per shop.
   useEffect(() => {
-    if (!canShare) return undefined;
+    if (!canShare && !preview) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -148,7 +151,7 @@ export default function SellerShopQr() {
       }
     })();
     return () => { cancelled = true; };
-  }, [canShare, slug, logoUrl, assetKey]);
+  }, [canShare, preview, slug, logoUrl, assetKey]);
 
   // Every design, small: the previews at their on-screen size, the thumbnails smaller still.
   useEffect(() => {
@@ -199,7 +202,7 @@ export default function SellerShopQr() {
     scrollToIndex(indexOf(selected), false);
     // Only when the carousel is (re)built, not on every choice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scrollToIndex, isPhone, canShare, hasStore]);
+  }, [scrollToIndex, isPhone, canShare, preview, hasStore]);
 
   /** A swipe or a scroll: the design nearest the middle is the chosen one. */
   const onScroll = () => {
@@ -243,7 +246,7 @@ export default function SellerShopQr() {
   };
 
   const withPng = async (kind, handOver) => {
-    if (status !== 'ready' || busy || !assets.data) return;
+    if (!canShare || status !== 'ready' || busy || !assets.data) return;
     setBusy(kind);
     try {
       const blob = await posterPngFor({
@@ -281,7 +284,7 @@ export default function SellerShopQr() {
     );
   }
 
-  if (!canShare) {
+  if (!canShare && !preview) {
     return (
       <div className={isPhone ? 'sqr sqr--phone' : 'seller-dashboard'}>
         <div className={isPhone ? '' : 'seller-container'}>
@@ -300,6 +303,12 @@ export default function SellerShopQr() {
   }
 
   const wait = status === 'ready' ? '' : ' sqr-sheet--wait';
+  const printable = canShare && status === 'ready';
+  const sampleNote = preview && (
+    <p className="sqr-sample-note" role="note">
+      A sample of your poster. You can print or download it once an admin approves your shop: the QR then opens your shop.
+    </p>
+  );
 
   const carousel = (
     <div className="sqr-carousel">
@@ -393,17 +402,17 @@ export default function SellerShopQr() {
 
   if (isPhone) {
     return (
-      <div className="sqr sqr--phone">
-        <p className="sqr-lead">Pick a design, then print it where buyers can see it. A scan opens your shop.</p>
+      <div className={`sqr sqr--phone${preview ? ' sqr--sample' : ''}`}>
+        {sampleNote || <p className="sqr-lead">Pick a design, then print it where buyers can see it. A scan opens your shop.</p>}
         {carousel}
         {dots}
         {picker}
         <p className="sqr-link">{shopQrLabel(slug)}</p>
         <div className="scm-savebar" role="group" aria-label="Save or print">
-          <button type="button" className="scm-savebar-btn scm-savebar-cancel" onClick={print} disabled={status !== 'ready' || Boolean(busy)}>
+          <button type="button" className="scm-savebar-btn scm-savebar-cancel" onClick={print} disabled={!printable || Boolean(busy)}>
             <Printer size={18} /> Print
           </button>
-          <button type="button" className="scm-savebar-btn scm-savebar-save" onClick={download} disabled={status !== 'ready' || Boolean(busy)}>
+          <button type="button" className="scm-savebar-btn scm-savebar-save" onClick={download} disabled={!printable || Boolean(busy)}>
             <DownloadSimple size={18} weight="bold" /> Download PNG
           </button>
         </div>
@@ -412,22 +421,23 @@ export default function SellerShopQr() {
   }
 
   return (
-    <div className="seller-dashboard">
+    <div className={`seller-dashboard${preview ? ' sqr--sample' : ''}`}>
       <div className="seller-container">
         <SellerPageHead
           title="Shop QR"
           subtitle="A poster with your shop's QR code. Pick a design and put it at your stall or counter: a scan opens your shop."
           actions={(
             <>
-              <Button variant="outline" leftIcon={<Printer size={16} />} onClick={print} disabled={status !== 'ready'} loading={busy === 'print'}>
+              <Button variant="outline" leftIcon={<Printer size={16} />} onClick={print} disabled={!printable} loading={busy === 'print'}>
                 Print
               </Button>
-              <Button leftIcon={<DownloadSimple size={16} weight="bold" />} onClick={download} disabled={status !== 'ready'} loading={busy === 'download'}>
+              <Button leftIcon={<DownloadSimple size={16} weight="bold" />} onClick={download} disabled={!printable} loading={busy === 'download'}>
                 Download PNG
               </Button>
             </>
           )}
         />
+        {sampleNote}
         <div className="sqr-desk">
           <div className="sqr-stage">
             {carousel}

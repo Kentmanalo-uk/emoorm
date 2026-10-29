@@ -32,10 +32,12 @@ import { pollWhileVisible } from '../../lib/visiblePoll';
 import { statusLabel } from '../../lib/orderProgress';
 import { IMAGE_ACCEPT, uploadableImage } from '../../lib/uploadableImage';
 import DealCard from '../offers/DealCard';
+import QuickReplies from '../seller/QuickReplies';
 import useConversationPeek from '../peek/useConversationPeek';
 import {
   OPEN as OPEN_DEALS, dealStatus, heads, peso as dealPeso, telHref,
 } from '../offers/offerText';
+import { peso } from '../../lib/format';
 
 const POLL_INTERVAL_MS = 5000;
 // Ate Moormy's chat (buyers only): opened like a conversation, as ?c=moormy.
@@ -82,11 +84,7 @@ const dayLabel = (iso) => {
 /** Text for matching: lower case, accents dropped ("Niño" matches "nino"). */
 const foldText = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-const formatMoney = (n) =>
-  `₱${Number(n || 0).toLocaleString('en-PH', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+const formatMoney = peso;
 
 const firstImageOf = (product) => {
   const imgs = product?.images;
@@ -1147,6 +1145,16 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                     </div>
                   )}
                 </div>
+              )}
+              {/* The seller's saved answers: a tap fills the box, never sends. */}
+              {isSellerSide && (
+                <QuickReplies
+                  disabled={sending}
+                  onPick={(text) => {
+                    setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text));
+                    textareaRef.current?.focus();
+                  }}
+                />
               )}
               <div className="msgr-composer-row">
                 <button

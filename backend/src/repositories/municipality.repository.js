@@ -24,7 +24,8 @@ const findAll = async (includeInactive = false) => {
   return prisma.municipality.findMany({
     where,
     include: {
-      admin: { select: { id: true, fullName: true, email: true } },
+      // The admin by name only: these lists are public (no email address).
+      admin: { select: { id: true, fullName: true } },
       _count: { select: { users: true, stores: true } },
     },
     orderBy: { name: 'asc' },
@@ -77,7 +78,8 @@ const updateMunicipality = async (id, data) => {
     where: { id },
     data,
     include: {
-      admin: { select: { id: true, fullName: true, email: true } },
+      // The admin by name only: these lists are public (no email address).
+      admin: { select: { id: true, fullName: true } },
     },
   });
 };

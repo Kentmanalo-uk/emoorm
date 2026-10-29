@@ -1,6 +1,6 @@
 /** Shared words and numbers for livestock deals (offers talked over in chat). */
 
-export const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+export { pesoShort as peso } from '../../lib/format';
 
 export const heads = (n) => `${n} head${Number(n) === 1 ? '' : 's'}`;
 

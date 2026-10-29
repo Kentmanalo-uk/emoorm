@@ -3,6 +3,7 @@ import {
   Image as ImageIcon,
 } from '@phosphor-icons/react';
 import axios from './axios';
+import { peso } from './format';
 
 /**
  * The new-shop checklist. The API (GET /stores/my/setup) sends only facts:
@@ -13,7 +14,6 @@ import axios from './axios';
 
 export const fetchSellerSetup = () => axios.get('/stores/my/setup').then((res) => res.data);
 
-const peso = (n) => `₱${Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const joinWords = (list) => (list.length <= 1
   ? list[0] || ''

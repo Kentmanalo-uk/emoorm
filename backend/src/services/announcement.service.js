@@ -32,23 +32,14 @@ const AUDIENCE_BY_TARGET = {
 const INSERT_CHUNK = 500;
 
 /**
- * Broadcast an announcement
+ * Who an announcement reaches: the target, the town it is limited to, and
+ * the people. Shared by the count shown before sending and the send itself,
+ * so the two always agree.
  * @param {Object} actor - Acting admin (MUNICIPAL_ADMIN | SUPER_ADMIN)
- * @param {Object} data - { title, message, target, municipalityId? }
+ * @param {Object} data - { target, municipalityId? }
  */
-const broadcast = async (actor, data) => {
-  // Announcement text is rendered in three clients and a push payload, so it is
-  // stripped of markup here rather than trusted to each of them.
-  const title = cleanText((data.title || '').trim(), { maxLength: 120 });
-  const message = cleanText((data.message || '').trim(), { maxLength: 1000 });
+const audienceOf = (actor, data = {}) => {
   const target = (data.target || 'all').toLowerCase();
-
-  if (!title || title.length < 3) {
-    throw new ApiError('Title must be at least 3 characters', 400);
-  }
-  if (!message || message.length < 5) {
-    throw new ApiError('Message must be at least 5 characters', 400);
-  }
   if (!VALID_TARGETS.includes(target)) {
     throw new ApiError('Invalid target audience', 400);
   }
@@ -88,6 +79,37 @@ const broadcast = async (actor, data) => {
     // all
     where.role = { in: ['BUYER', 'SELLER'] };
   }
+  return { target, municipalityId, where };
+};
+
+/** Before sending: how many people it would reach. */
+const preview = async (actor, data) => {
+  const { target, municipalityId, where } = audienceOf(actor, data);
+  const recipients = await prisma.user.count({ where });
+  const municipality = municipalityId
+    ? await prisma.municipality.findUnique({ where: { id: municipalityId }, select: { id: true, name: true } })
+    : null;
+  return { recipients, target, municipality };
+};
+
+/**
+ * Broadcast an announcement
+ * @param {Object} actor - Acting admin (MUNICIPAL_ADMIN | SUPER_ADMIN)
+ * @param {Object} data - { title, message, target, municipalityId? }
+ */
+const broadcast = async (actor, data) => {
+  // Announcement text is rendered in three clients and a push payload, so it is
+  // stripped of markup here rather than trusted to each of them.
+  const title = cleanText((data.title || '').trim(), { maxLength: 120 });
+  const message = cleanText((data.message || '').trim(), { maxLength: 1000 });
+
+  if (!title || title.length < 3) {
+    throw new ApiError('Title must be at least 3 characters', 400);
+  }
+  if (!message || message.length < 5) {
+    throw new ApiError('Message must be at least 5 characters', 400);
+  }
+  const { target, municipalityId, where } = audienceOf(actor, data);
 
   const recipients = await prisma.user.findMany({
     where,
@@ -158,6 +180,18 @@ const listSent = async (actor, options = {}) => {
     ...(actor.role === 'MUNICIPAL_ADMIN' ? { municipalityId: actor.municipalityId } : {}),
   });
 
+  // Who sent each, by name (the log keeps the email).
+  const senderIds = [...new Set(logs.map((log) => log.userId).filter(Boolean))];
+  const names = senderIds.length
+    ? new Map((await prisma.user.findMany({ where: { id: { in: senderIds } }, select: { id: true, fullName: true } }))
+      .map((u) => [u.id, u.fullName]))
+    : new Map();
+  const townIds = [...new Set(logs.map((log) => log.details?.municipalityId).filter(Boolean))];
+  const towns = townIds.length
+    ? new Map((await prisma.municipality.findMany({ where: { id: { in: townIds } }, select: { id: true, name: true } }))
+      .map((t) => [t.id, t.name]))
+    : new Map();
+
   return {
     announcements: logs.map((log) => ({
       id: log.id,
@@ -166,7 +200,8 @@ const listSent = async (actor, options = {}) => {
       target: log.details?.target || 'all',
       recipients: log.details?.recipients ?? 0,
       municipalityId: log.details?.municipalityId || null,
-      sentBy: log.userEmail,
+      sentBy: names.get(log.userId) || log.userEmail,
+      municipalityName: towns.get(log.details?.municipalityId) || null,
       sentAt: log.createdAt,
     })),
     total,
@@ -175,4 +210,4 @@ const listSent = async (actor, options = {}) => {
   };
 };
 
-module.exports = { broadcast, listSent };
+module.exports = { broadcast, preview, listSent };

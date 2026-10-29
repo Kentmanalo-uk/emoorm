@@ -10,6 +10,7 @@ import { useSeo } from '../lib/seo';
 import './ProductDetails.css';
 import './ProductReviews.css';
 import PageMenu from '../components/layout/PageMenu';
+import { peso } from '../lib/format';
 
 const PAGE_SIZE = 10;
 const STARS = [5, 4, 3, 2, 1];
@@ -22,8 +23,6 @@ const firstImage = (images) => {
     return String(images || '').split(',')[0] || null;
   }
 };
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * Every review of one product, at /product/:slug/reviews: a rating summary,

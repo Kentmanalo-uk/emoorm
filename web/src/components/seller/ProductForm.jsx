@@ -7,7 +7,12 @@ import {
 import axios from '../../lib/axios';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import useAppSettings from '../../hooks/useAppSettings';
+import useUnsavedChanges from '../../hooks/useUnsavedChanges';
+import { timeAgo } from '../../lib/format';
 import { productKind, headsLabel, isLocalDelicacies } from '../../lib/productKinds';
+import {
+  clearDraft, draftWorthKeeping, readDraft, writeDraft,
+} from './products/productDraft';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import { BusyLabel } from '../ui/Spinner';
 import PhotoPicker from './product-form/PhotoPicker';
@@ -27,7 +32,7 @@ import {
   CHOICE_TYPES, FOOD_CHOICE_TYPES,
   toFormState, kindOptions, switchKind, kindOffers, withDrafts, pricedBy, priceSpan, buildPayload,
   checkAll, hasErrors, cardsWithErrors, draftProduct, policyModeFor, guessKind,
-  emptyGroup, mergeChoices, peso, hasChoicePhotos,
+  emptyGroup, mergeChoices, peso, hasChoicePhotos, copyFormState, restoreFormState,
 } from './product-form/formState';
 import './PhoneSaveBar.css';
 import './ProductForm.css';
@@ -95,9 +100,10 @@ const keepRecent = (key, id) => {
  * @param {Array<{key, label}>} [sellBlockers] - What the shop still needs
  *   before it can sell; while any are left, buyers see products but cannot order.
  * @param {Function} [onPatched] - (id, fields): a part saved on its own (the 3D view)
+ * @param {Object} [copyFrom] - A product to start a new one from (Duplicate)
  */
 export default function ProductForm({
-  product = null, categories = [], recentProducts = [], onCancel, onSaved, sellBlockers = [], onPatched,
+  product = null, categories = [], recentProducts = [], onCancel, onSaved, sellBlockers = [], onPatched, copyFrom = null,
 }) {
   const editing = !!product;
   const isPhone = usePhoneLayout();
@@ -112,9 +118,10 @@ export default function ProductForm({
   // ?type=today (Create a new menu item in Today's menu): Local Delicacies'
   // Cooked food chosen up front; picking another category keeps Available
   // Today food when that category allows it.
-  const presetToday = !product && todayOn && new URLSearchParams(location.search).get('type') === 'today';
+  const presetToday = !product && !copyFrom && todayOn && new URLSearchParams(location.search).get('type') === 'today';
   const foodCategory = categories.find(isLocalDelicacies) || null;
   const [initial, setInitial] = useState(() => {
+    if (!product && copyFrom) return copyFormState(copyFrom);
     const blank = toFormState(product);
     return presetToday
       ? {
@@ -146,6 +153,15 @@ export default function ProductForm({
   const [savedFood, setSavedFood] = useState(null);
   const lastSaved = useRef(null);
   const rootRef = useRef(null);
+  // A new product is kept as a draft on this device while it is typed
+  // (products/productDraft.js); a plain "Add a product" offers the last one back.
+  const draftKey = editing ? null : outlet?.store?.id || null;
+  const [offer, setOffer] = useState(() => {
+    if (editing || copyFrom || presetToday) return null;
+    const saved = readDraft(outlet?.store?.id);
+    return saved && draftWorthKeeping(saved.form) ? saved : null;
+  });
+  const pendingDraft = useRef(null);
 
   // The categories can arrive after the form opens: Cooked food from
   // Today's menu still starts in Local Delicacies (untouched forms only).
@@ -199,7 +215,7 @@ export default function ProductForm({
   }, [recentProducts, recentKey]);
 
   /* ── kind ─────────────────────────────────────────────────────── */
-  const originalKind = product ? productKind(product) : null;
+  const originalKind = product ? productKind(product) : copyFrom ? productKind(copyFrom) : null;
   const optionsFor = (category) => kindOptions(category, originalKind)
     .filter((k) => k.key !== 'READY_TO_EAT' || todayOn || originalKind === 'READY_TO_EAT');
   const category = categories.find((c) => c.id === form.categoryId) || product?.category || null;
@@ -333,6 +349,47 @@ export default function ProductForm({
 
   /* ── leaving ──────────────────────────────────────────────────── */
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
+  const finished = Boolean(savedAnimal || savedFood);
+  const keepsDraft = Boolean(draftKey) && draftWorthKeeping(form);
+  // Links away (the sidebar, tabs, menus) ask first while there are changes.
+  useUnsavedChanges(dirty && !saving && !finished, editing ? undefined : {
+    title: 'Leave this product for now?',
+    message: keepsDraft
+      ? 'It is kept as a draft on this device. Continue it the next time you add a product.'
+      : 'What you typed for this product is not saved yet.',
+  });
+
+  // The draft follows the typing (a moment after it stops), and is written
+  // at once when the form closes.
+  // Typing before answering "Continue your last product?" starts afresh
+  // (the offer steps aside and the new typing becomes the draft).
+  const showOffer = offer && !dirty;
+  useEffect(() => {
+    if (!draftKey || !dirty || finished) return undefined;
+    pendingDraft.current = { form, hasOptions };
+    const t = setTimeout(() => {
+      if (draftWorthKeeping(form)) writeDraft(draftKey, { form, hasOptions });
+      pendingDraft.current = null;
+    }, 600);
+    return () => clearTimeout(t);
+  }, [form, hasOptions, dirty, finished, draftKey]);
+  useEffect(() => () => {
+    const pending = pendingDraft.current;
+    if (draftKey && pending && draftWorthKeeping(pending.form)) writeDraft(draftKey, pending);
+  }, [draftKey]);
+
+  const continueDraft = () => {
+    const restored = restoreFormState(offer.form);
+    setForm(restored);
+    setHasOptions(Boolean(offer.hasOptions) && restored.variations.length > 0);
+    setPolicyMode(policyModeFor(restored.returnPolicy));
+    setOffer(null);
+  };
+  const startFresh = () => {
+    clearDraft(draftKey);
+    setOffer(null);
+  };
+
   // Animals saved from this form reach the list as it closes.
   const leave = () => {
     if (lastSaved.current) onSaved?.(lastSaved.current, { created: true });
@@ -367,8 +424,6 @@ export default function ProductForm({
     }
 
     const payload = buildPayload(settle(state), { kind, hasOptions, editing, product });
-    // A 3D view made before the first save goes with it (later ones save on their own).
-    if (!editing && show3d && model3d) payload.model3d = model3d;
     setSaving(true);
     try {
       const res = editing
@@ -376,6 +431,9 @@ export default function ProductForm({
         : await axios.post('/products', payload);
       const saved = res?.data || null;
       keepRecent(recentKey, state.categoryId);
+      // Saved for real: the draft has done its job.
+      pendingDraft.current = null;
+      clearDraft(draftKey);
       if (saved?.todayPostError) toast.error(saved.todayPostError, { duration: 7000 });
       if (!editing && kind === 'LIVESTOCK') {
         lastSaved.current = saved;
@@ -450,7 +508,7 @@ export default function ProductForm({
   const todayQty = kind === 'READY_TO_EAT' && !editing && !short && form.postToday ? parseInt(form.todayQty, 10) || 0 : 0;
   const ex = (short && (FOOD_EXAMPLES[kind] || FOOD_EXAMPLES.REGULAR)) || EXAMPLES[kind] || EXAMPLES.REGULAR;
   const priceWords = PRICE_WORDS[kind] || PRICE_WORDS.REGULAR;
-  const saveLabel = editing ? 'Save changes' : cooked ? 'Save to my menu' : 'Put on sale';
+  const saveLabel = editing ? 'Save changes' : cooked ? 'Save to Available today' : 'Put on sale';
   const policy = RETURN_POLICIES.find((p) => p.key === policyMode);
   const moreSummary = [
     kind === 'REGULAR' && !short && form.size.trim() && form.size.trim(),
@@ -465,9 +523,9 @@ export default function ProductForm({
       <div className="pf" ref={rootRef}>
         <section className="pf-done" aria-live="polite">
           <CheckCircle size={44} weight="fill" className="pf-done-icon" aria-hidden="true" />
-          <h2>Saved to your menu</h2>
+          <h2>Saved to Available today</h2>
           <p className="pf-done-facts">{savedFood.name} · {peso(Number(savedFood.price) || 0)}</p>
-          <p>Post it on Today&apos;s menu when you have it.</p>
+          <p>Post it in Available today when you have it.</p>
           <div className="pf-done-actions">
             <button type="button" className="pf-btn pf-btn--ghost" onClick={() => onSaved?.(savedFood, { created: true, next: 'done' })}>
               Done
@@ -579,8 +637,10 @@ export default function ProductForm({
 
   const showKindNote = !short && !!kind && !!form.categoryId && (kindOpts.length > 1 || kind !== 'REGULAR');
 
-  // 3D view: goods kept in stock (packed food too), while the feature is on.
-  const show3d = settings?.product3dEnabled === true && kind === 'REGULAR';
+  // 3D view: goods kept in stock (packed food too), while the feature is on,
+  // once the product is saved (My products' row opens it). A first listing
+  // stays short.
+  const show3d = editing && settings?.product3dEnabled === true && kind === 'REGULAR';
   const on3dChange = (next) => {
     setModel3d(next);
     if (editing) onPatched?.(product.id, { model3d: next });
@@ -651,15 +711,44 @@ export default function ProductForm({
     </div>
   );
 
+  // Who can see it, said plainly: a private shop's products are seen by no
+  // one; a live product of an open shop is seen by everyone, ready to sell or
+  // not (only ordering waits, see shopReadiness.service).
+  const shopPrivate = outlet?.store?.isApproved === false;
+  const todo = sellBlockers?.length ? ` Still to do before buyers can order: ${sellBlockers.map((b) => b.label).join(', ')}.` : '';
+  const notLive = editing && product.status !== 'APPROVED'
+    ? { PENDING: 'it is waiting for approval', HIDDEN: 'you hid it', SUSPENDED: 'an admin suspended it', ARCHIVED: 'an admin archived it' }[product.status]
+    : null;
+  const seenNote = shopPrivate
+    ? `Buyers can't see this product yet: your shop is private until the admin approves it.${todo}`
+    : notLive
+      ? `Buyers can't see this product right now: ${notLive}.${todo}`
+      : sellBlockers?.length
+        ? `${editing ? 'Buyers can see this product' : 'Once it is live, buyers can see this product'}, but can't order it until your shop is ready to sell.${todo}`
+        : null;
+
   const body = (
     <div className="pf-cards-col">
-      {sellBlockers?.length > 0 ? (
+      {showOffer && (
+        <div className="pf-draft-offer" role="status">
+          <Info size={18} aria-hidden="true" />
+          <span className="pf-draft-offer-text">
+            <strong>Continue your last product?</strong>
+            <span>
+              {String(offer.form.name || '').trim() || 'A product without a name'}
+              {offer.at ? ` · saved ${timeAgo(offer.at)}` : ''}
+            </span>
+          </span>
+          <span className="pf-draft-offer-actions">
+            <button type="button" className="pf-btn pf-btn--ghost" onClick={startFresh}>Start fresh</button>
+            <button type="button" className="pf-btn pf-btn--primary" onClick={continueDraft}>Continue</button>
+          </span>
+        </div>
+      )}
+      {seenNote ? (
         <div className="pf-note pf-note--draft">
           <Info size={18} />
-          <span>
-            Buyers can see this product, but can&apos;t order it until your shop is ready to sell.
-            {' '}Still to do: {sellBlockers.map((b) => b.label).join(', ')}.
-          </span>
+          <span>{seenNote}</span>
         </div>
       ) : editing && product.status === 'APPROVED' && (
         <div className="pf-note">
@@ -767,7 +856,7 @@ export default function ProductForm({
           <ServesField form={form} set={set} optional />
           <p className="pf-kind-note">
             <CookingPot size={17} aria-hidden="true" />
-            <span>How many you have, and when buyers can order: you set these each time you post it on Today&apos;s menu.</span>
+            <span>How many you have, and when buyers can order: you set these each time you post it in Available today.</span>
           </p>
         </Card>
       ) : packed ? (
@@ -990,8 +1079,12 @@ export default function ProductForm({
 
       <ConfirmDialog
         open={!!confirmLeave}
-        title="Leave without saving?"
-        message="What you typed for this product will be lost."
+        title={editing ? 'Leave without saving?' : 'Leave this product for now?'}
+        message={editing
+          ? 'Your changes to this product will be lost.'
+          : keepsDraft
+            ? 'It is kept as a draft on this device. Continue it the next time you add a product.'
+            : 'What you typed for this product will be lost.'}
         confirmLabel="Leave"
         cancelLabel="Keep going"
         danger

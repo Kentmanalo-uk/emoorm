@@ -9,6 +9,7 @@ router.use(authenticate, authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'));
 router.get('/attention', controller.attention);
 router.get('/store-health', controller.storeHealth);
 router.get('/reviews', controller.reviews);
+router.post('/reviews/:id/remove', controller.removeReview);
 router.get('/returns', controller.returns);
 router.get('/identity/:userId', controller.identity);
 router.post('/identity/:userId/review', controller.reviewIdentity);

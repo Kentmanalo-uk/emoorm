@@ -1,32 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import EmptyArt from '../components/ui/EmptyArt';
-import { UserPlus, X, MagnifyingGlass as Search } from '@phosphor-icons/react';
+import { UserPlus, Warning } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import { TeamSizeSettings } from '../components/admin/PlatformSettings';
+import AssignAdminDialog from '../components/admin/AssignAdminDialog';
+import { AdminDate, AdminSearch, CountTag } from '../components/admin/AdminBits';
+import { shortDate } from '../components/admin/adminFormat';
+import LoadFailed from '../components/ui/LoadFailed';
+import Skeleton from '../components/ui/Skeleton';
 import axios from '../lib/axios';
 import '../components/admin/AdminLayout.css';
+import './AdminSellers.css';
 import './AdminJuniorAdmins.css';
 import { confirmAction } from '../lib/confirm';
-import Select from '../components/ui/Select';
-import useFocusTrap from '../hooks/useFocusTrap';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const toDateInput = (date) => {
-  const d = new Date(date);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
-const formatDate = (value) => new Date(value).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+/*
+ * Municipal admins, for the super admin: who runs each town (the primary
+ * admin, others, backups until a date), whether they are around and have
+ * two-factor on, and the towns nobody runs yet.
+ */
 
 function AccessBadge({ admin }) {
   if (admin.isBackup) {
-    const expires = admin.adminAccessExpiresAt ? new Date(admin.adminAccessExpiresAt) : null;
-    if (admin.accessExpired) {
-      return <span className="admin-badge admin-badge-rejected">Expired</span>;
-    }
+    if (admin.accessExpired) return <span className="admin-badge admin-badge-rejected">Backup, ended</span>;
     return (
       <span className="admin-badge admin-badge-pending">
-        {expires ? `Backup until ${formatDate(expires)}` : 'Backup'}
+        {admin.adminAccessExpiresAt ? `Backup until ${shortDate(admin.adminAccessExpiresAt)}` : 'Backup'}
       </span>
     );
   }
@@ -34,90 +35,167 @@ function AccessBadge({ admin }) {
   return <span className="admin-badge admin-badge-neutral">Admin</span>;
 }
 
+function LastActive({ admin }) {
+  if (admin.online) return <span className="ja-online">Online now</span>;
+  if (!admin.lastActiveAt) return <span className="ja-muted">Never signed in</span>;
+  return <AdminDate value={admin.lastActiveAt} />;
+}
+
 export default function AdminJuniorAdmins() {
   const [admins, setAdmins] = useState([]);
-  const [municipalities] = useState([]);
+  const [municipalities, setMunicipalities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [search, setSearch] = useState('');
+  // null: closed; '' : any town; an id: that town chosen already.
+  const [assigning, setAssigning] = useState(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [adminsRes] = await Promise.all([
-        axios.get('/admin/junior-admins', { params: { pageSize: 100 } }),
+      const [adminsRes, townsRes] = await Promise.all([
+        axios.get('/admin/junior-admins', { params: { pageSize: 50 }, quiet: true }),
+        axios.get('/municipalities', { params: { at: Date.now() }, quiet: true }),
       ]);
       const now = Date.now();
       setAdmins((adminsRes.data || []).map((a) => ({
         ...a,
         accessExpired: Boolean(a.isBackup && a.adminAccessExpiresAt && new Date(a.adminAccessExpiresAt).getTime() <= now),
       })));
-
-    } catch (err) {
-      toast.error(err?.message || 'Failed to load');
+      setMunicipalities(townsRes.data || []);
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const handleRemove = async (id) => {
-    if (!(await confirmAction({ title: 'Remove admin role?', message: 'They become a regular buyer.', confirmLabel: 'Remove', danger: true }))) return;
+  const handleRemove = async (a) => {
+    const ok = await confirmAction({
+      title: `Remove ${a.fullName} as an admin?`,
+      message: `They lose the admin panel for ${a.municipality?.name || 'their town'} at once and go back to an ordinary account. You can assign them again later.`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await axios.delete(`/admin/junior-admins/${id}`);
-      toast.success('Admin removed');
+      await axios.delete(`/admin/junior-admins/${a.id}`);
+      toast.success(`${a.fullName} is no longer an admin`);
       load();
     } catch (err) {
-      toast.error(err?.message || 'Failed');
+      toast.error(err?.message || 'Could not remove this admin');
     }
   };
+
+  const shown = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return admins;
+    return admins.filter((a) => [a.fullName, a.email, a.municipality?.name].some((s) => String(s || '').toLowerCase().includes(q)));
+  }, [admins, search]);
+
+  // Towns with nobody (or no primary admin) to run them.
+  const staffed = useMemo(() => {
+    const live = admins.filter((a) => a.isActive && !a.accessExpired);
+    return new Set(live.map((a) => a.municipality?.id).filter(Boolean));
+  }, [admins]);
+  const unstaffed = municipalities.filter((m) => !m.admin);
 
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">Municipal Admins</h1>
-        <button
-          className="admin-btn admin-btn-primary"
-          onClick={() => setShowModal(true)}
-        >
-          <UserPlus size={15} /> Assign
+        <div>
+          <h1 className="admin-page-title">Municipal admins</h1>
+          <p className="admin-page-sub">Who runs each town. Town admins add their own teammates on their Admin team page.</p>
+        </div>
+        <button type="button" className="admin-btn admin-btn-primary" onClick={() => setAssigning('')}>
+          <UserPlus size={15} /> Assign admin
         </button>
       </div>
 
+      {!isLoading && !loadError && unstaffed.length > 0 && (
+        <div className="admin-card ja-unstaffed">
+          <div className="admin-card-header">
+            <h2 className="admin-card-title"><Warning size={16} weight="fill" /> Towns without a primary admin <CountTag n={unstaffed.length} /></h2>
+          </div>
+          <ul className="ja-unstaffed-list">
+            {unstaffed.map((m) => (
+              <li key={m.id}>
+                <span>
+                  <strong>{m.name}</strong>
+                  <small>{staffed.has(m.id) ? 'Has other admins, no primary' : 'Nobody reviews its sellers yet'}</small>
+                </span>
+                <button type="button" className="admin-btn admin-btn-gray" onClick={() => setAssigning(m.id)}>Assign</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="admin-card">
         <div className="admin-card-header">
-          <h2 className="admin-card-title">Current municipal admins</h2>
+          <h2 className="admin-card-title">Current municipal admins {admins.length > 0 && <CountTag n={admins.length} />}</h2>
+          <div className="admin-toolbar">
+            <AdminSearch value={search} onChange={setSearch} placeholder="Search name, email or town…" />
+          </div>
         </div>
         {isLoading ? (
-          <div className="admin-empty"><p>Loading…</p></div>
-        ) : admins.length === 0 ? (
-          <div className="admin-empty"><EmptyArt name="users" size={104} /><p>No municipal admins yet.</p></div>
+          <Skeleton.Table cols={6} rows={4} />
+        ) : loadError ? (
+          <LoadFailed onRetry={load} what="the admins" compact />
+        ) : shown.length === 0 ? (
+          <div className="admin-empty">
+            <EmptyArt name="users" size={104} />
+            <p>{search ? 'No admin matches that search.' : 'No municipal admins yet. Assign one to each town.'}</p>
+          </div>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
+                  <th>Admin</th>
                   <th>Municipality</th>
                   <th>Access</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th>Two-factor</th>
+                  <th>Last active</th>
+                  <th>Account</th>
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
-                {admins.map((a) => (
+                {shown.map((a) => (
                   <tr key={a.id}>
-                    <td>{a.fullName}</td>
-                    <td>{a.email}</td>
-                    <td>{a.municipality?.name || <em style={{ color: 'var(--t-danger-600, #dc2626)' }}>unassigned</em>}</td>
+                    <td>
+                      <div className="admin-user-cell">
+                        <div className="admin-avatar">{a.fullName?.[0] || '?'}</div>
+                        <div>
+                          <p className="admin-user-cell-name">{a.fullName}</p>
+                          <p className="admin-user-cell-email">{a.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{a.municipality?.name || <span className="ja-warn">No town</span>}</td>
                     <td><AccessBadge admin={a} /></td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button
-                        className="admin-btn admin-btn-danger"
-                        onClick={() => handleRemove(a.id)}
-                      >
-                        Remove
-                      </button>
+                    <td>
+                      {a.mfaEnabled
+                        ? <span className="admin-badge admin-badge-approved">On</span>
+                        : <span className="admin-badge admin-badge-pending">Not set up</span>}
+                    </td>
+                    <td><LastActive admin={a} /></td>
+                    <td>
+                      <span className={`admin-badge ${a.isActive ? 'admin-badge-approved' : 'admin-badge-rejected'}`}>
+                        {a.isActive ? 'Active' : 'Suspended'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="admin-row-actions">
+                        <Link className="admin-btn admin-btn-gray" to={`/admin/audit-logs?userId=${a.id}`}>Activity</Link>
+                        <button type="button" className="admin-btn admin-btn-gray ja-remove" onClick={() => handleRemove(a)}>
+                          Remove
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -127,199 +205,16 @@ export default function AdminJuniorAdmins() {
         )}
       </div>
 
-      {showModal && (
-        <AssignAdminModal
+      <TeamSizeSettings />
+
+      {assigning !== null && (
+        <AssignAdminDialog
           municipalities={municipalities}
-          onClose={() => setShowModal(false)}
-          onAssigned={() => { setShowModal(false); load(); }}
+          municipalityId={assigning}
+          onClose={() => setAssigning(null)}
+          onAssigned={() => { setAssigning(null); load(); }}
         />
       )}
     </AdminLayout>
-  );
-}
-
-function AssignAdminModal({ municipalities, onClose, onAssigned }) {
-  // Keyboard: focus in, Tab stays, Escape closes (hooks/useFocusTrap).
-  const trapRef = useFocusTrap(true, { onClose });
-  const [search, setSearch] = useState('');
-  const [results, setResults] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [municipalityId, setMunicipalityId] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [isBackup, setIsBackup] = useState(false);
-  const [endDate, setEndDate] = useState('');
-  const [minDate] = useState(() => toDateInput(Date.now() + DAY_MS));
-  const [maxDate] = useState(() => toDateInput(Date.now() + 90 * DAY_MS));
-
-  const doSearch = async (e) => {
-    e?.preventDefault();
-    if (!search.trim()) return;
-    setSearching(true);
-    try {
-      const res = await axios.get('/auth/users', {
-        params: { search: search.trim(), pageSize: 10 },
-      });
-      setResults(res.data || []);
-    } catch (err) {
-      toast.error(err?.message || 'Search failed');
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const submit = async () => {
-    if (!selectedUser || !municipalityId) {
-      return toast.error('Pick a user and municipality');
-    }
-    let accessExpiresAt;
-    if (isBackup) {
-      if (!endDate || endDate < minDate || endDate > maxDate) {
-        return toast.error('Pick an end date between tomorrow and 90 days from now');
-      }
-      // End of the chosen day, local time.
-      accessExpiresAt = new Date(`${endDate}T23:59:59`).toISOString();
-    }
-    setSubmitting(true);
-    try {
-      await axios.post('/admin/junior-admins', {
-        userId: selectedUser.id,
-        municipalityId,
-        ...(isBackup ? { backup: true, accessExpiresAt } : {}),
-      });
-      toast.success(isBackup
-        ? `${selectedUser.fullName} is a backup admin until ${formatDate(`${endDate}T00:00:00`)}`
-        : `${selectedUser.fullName} is now Municipal Admin`);
-      onAssigned();
-    } catch (err) {
-      toast.error(err?.message || 'Failed');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(15,23,42,.55)',
-        display: 'grid', placeItems: 'center', zIndex: 100, padding: 20,
-      }}
-    >
-      <div
-        ref={trapRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Assign Municipal Admin"
-        onClick={(e) => e.stopPropagation()}
-        style={{ background: 'var(--t-neutral-0, #fff)', width: 'min(560px, 100%)', padding: 24, maxHeight: '90vh', overflowY: 'auto' }
-}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h3 style={{ margin: 0 }}>Assign Municipal Admin</h3>
-          <button type="button" aria-label="Close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <form onSubmit={doSearch} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search users by name or email…"
-            className="admin-input"
-            style={{ flex: 1 }}
-          />
-          <button
-            type="submit"
-            className="admin-btn admin-btn-primary"
-            disabled={searching}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <Search size={14} /> {searching ? '…' : 'Search'}
-          </button>
-        </form>
-
-        {results.length > 0 && (
-          <div style={{
-            maxHeight: 200, overflowY: 'auto', border: '1px solid var(--t-neutral-200, #e5e7eb)',
-            borderRadius: 4, marginBottom: 16,
-          }}>
-            {results.map((u) => (
-              <button
-                type="button"
-                key={u.id}
-                onClick={() => { setSelectedUser(u); setResults([]); setSearch(u.fullName); }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px',
-                  background: 'none', border: 'none', borderBottom: '1px solid var(--t-neutral-100, #f3f4f6)',
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>{u.fullName}</div>
-                <div style={{ fontSize: 12, color: 'var(--t-neutral-500, #6b7280)' }}>{u.email} • {u.role}</div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {selectedUser && (
-          <div style={{ padding: 12, background: 'var(--t-neutral-50, #f9fafb)', borderRadius: 4, marginBottom: 16 }}>
-            <strong>Selected:</strong> {selectedUser.fullName} ({selectedUser.email})
-          </div>
-        )}
-
-        <label style={{ display: 'grid', gap: 6, marginBottom: 16 }}>
-          <span style={{ fontWeight: 600, fontSize: 13 }}>Assign to municipality</span>
-          <Select
-            value={municipalityId}
-            onChange={(e) => setMunicipalityId(e.target.value)}
-            className="admin-input"
-          >
-            <option value="">— Choose municipality —</option>
-            {municipalities.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </Select>
-        </label>
-
-        <div className="ja-backup">
-          <label className="ja-backup-toggle">
-            <input type="checkbox" checked={isBackup} onChange={(e) => setIsBackup(e.target.checked)} />
-            <span>Backup admin (temporary)</span>
-          </label>
-          <p className="ja-backup-help">
-            {isBackup
-              ? "A backup shares this municipality's admin access until the end date, without replacing the primary admin. Access ends automatically."
-              : 'Leave unchecked to assign the primary admin. This replaces the current primary admin of the municipality.'}
-          </p>
-          {isBackup && (
-            <label className="ja-backup-date">
-              <span>Access ends on</span>
-              <input
-                type="date"
-                className="admin-input"
-                value={endDate}
-                min={minDate}
-                max={maxDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </label>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button onClick={onClose} className="admin-btn">Cancel</button>
-          <button
-            onClick={submit}
-            disabled={!selectedUser || !municipalityId || submitting || (isBackup && !endDate)}
-            className="admin-btn admin-btn-primary"
-          >
-            {submitting ? 'Assigning…' : isBackup ? 'Assign backup' : 'Assign'}
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }

@@ -1,12 +1,20 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X, MapPin, Calendar, CreditCard, Warning } from '@phosphor-icons/react';
+import {
+  CheckCircle, XCircle, Eye, X, MapPin, Calendar, CreditCard, Printer,
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
 import MessageUserButton from '../components/admin/MessageUserButton';
+import ReasonDialog from '../components/admin/ReasonDialog';
+import IdentityCheck, { IdBadge } from '../components/admin/IdentityCheck';
+import { AdminDate, AdminPager, AdminSearch } from '../components/admin/AdminBits';
+import { idStatus, shortDate, shortDateTime } from '../components/admin/adminFormat';
 import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
+import LoadFailed from '../components/ui/LoadFailed';
 import axios from '../lib/axios';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import UserContactReveal from '../components/admin/UserContactReveal';
@@ -14,14 +22,16 @@ import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import { useRefreshAdminShell } from '../hooks/useAdminShellData';
+import useAuthStore from '../store/authStore';
 import EmptyArt from '../components/ui/EmptyArt';
 import { confirmAction } from '../lib/confirm';
-import Select from '../components/ui/Select';
+import { words } from '../lib/labels';
 import resolveImg from '../lib/media';
 
 const PAYOUT_LABELS = { GCASH: 'GCash', QRPH: 'QR Ph', MAYA: 'Maya', BANK: 'Bank', COD_ONLY: 'Cash on delivery' };
+const FULFILLMENT_LABELS = { DELIVERY: 'Delivers', PICKUP: 'Pickup only', BOTH: 'Delivery and pickup' };
 
-// Bulk approvals go three at a time: each one is a dozen queries and a new
+// Bulk decisions go three at a time: each one is a dozen queries and a new
 // shop on a database with a handful of connections, so twenty at once could
 // time out (and stall every other admin's pages meanwhile).
 const settleInBatches = async (items, run, size = 3) => {
@@ -32,11 +42,19 @@ const settleInBatches = async (items, run, size = 3) => {
   return results;
 };
 
-const STATUS_BADGE = {
-  PENDING: 'admin-badge-pending',
-  APPROVED: 'admin-badge-approved',
-  REJECTED: 'admin-badge-rejected',
+const STATUS = {
+  PENDING: { label: 'Waiting', badge: 'admin-badge-pending' },
+  APPROVED: { label: 'Approved', badge: 'admin-badge-approved' },
+  REJECTED: { label: 'Rejected', badge: 'admin-badge-rejected' },
 };
+const TABS = [
+  { key: 'PENDING', label: 'Waiting' },
+  { key: 'APPROVED', label: 'Approved' },
+  { key: 'REJECTED', label: 'Rejected' },
+  { key: '', label: 'All' },
+];
+
+const verified = (u) => idStatus(u?.identityVerification).key === 'VERIFIED';
 
 // Fetches a KYC document (ID front/back, selfie) through the authenticated
 // endpoint and renders it as an object URL. These files are no longer public
@@ -89,31 +107,89 @@ function KycPhoto({ userId, field, label }) {
   );
 }
 
+/**
+ * The application on paper, for the municipal office's file: the applicant,
+ * the shop, the ID check and the decision, with lines to sign. Printed on its
+ * own (everything else on the page is hidden while it prints).
+ */
+function ApplicationSlip({ applicant, identity, town, categories, onDone }) {
+  useEffect(() => {
+    document.body.classList.add('is-printing-slip');
+    const done = () => onDone();
+    window.addEventListener('afterprint', done);
+    // Let the slip render before the print dialog opens.
+    const timer = setTimeout(() => window.print(), 50);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('afterprint', done);
+      document.body.classList.remove('is-printing-slip');
+    };
+  }, [onDone]);
+
+  const status = STATUS[applicant.sellerApplicationStatus]?.label || words(applicant.sellerApplicationStatus);
+  const rows = [
+    ['Applicant', applicant.fullName],
+    ['Lives in', applicant.municipality?.name || '—'],
+    ['Shop name', applicant.shopName || '—'],
+    ['Shop location', [applicant.shopAddress, town].filter(Boolean).join(', ') || '—'],
+    ['Categories', categories || '—'],
+    ['Seller type', applicant.sellerBusinessType === 'REGISTERED' ? 'Registered business' : 'Individual seller'],
+    ['Permit / registration no.', applicant.sellerPermitNumber || '—'],
+    ['ID check', `${idStatus(identity).label}${identity?.verifiedAt ? `, ${shortDate(identity.verifiedAt)}` : ''}`],
+    ['Applied', shortDateTime(applicant.sellerApplicationDate) || '—'],
+    ['Status', `${status}${applicant.sellerReviewedAt ? `, ${shortDate(applicant.sellerReviewedAt)}` : ''}`],
+    ...(applicant.sellerRejectionReason ? [['Reason given', applicant.sellerRejectionReason]] : []),
+  ];
+
+  return createPortal(
+    <div className="admin-slip-print">
+      <h1>Seller application</h1>
+      <p>E-MOORM · Municipality of {town || '—'} · printed {shortDateTime(new Date())}</p>
+      <table>
+        <tbody>
+          {rows.map(([k, v]) => <tr key={k}><th>{k}</th><td>{v}</td></tr>)}
+        </tbody>
+      </table>
+      <div className="admin-slip-sign">
+        <span>Checked by (name and signature)</span>
+        <span>Date</span>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export default function AdminSellers() {
+  const actorId = useAuthStore((st) => st.user?.id);
   const [applicants, setApplicants] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('PENDING');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  const [counts, setCounts] = useState({});
   const [selected, setSelected] = useState(null); // detail panel
-  // The OCR identity result for the open applicant (from the user detail).
+  // The identity result for the open applicant (from the user detail).
   const [identity, setIdentity] = useState(null);
+  const [identityKey, setIdentityKey] = useState(0);
   useEffect(() => {
     if (!selected?.id) { setIdentity(null); return undefined; }
     let cancelled = false;
     setIdentity(null);
-    axios.get(`/auth/users/${selected.id}`)
+    axios.get(`/auth/users/${selected.id}`, { quiet: true })
       .then((res) => { if (!cancelled) setIdentity(res.data?.identity || { status: 'NOT_VERIFIED' }); })
       .catch(() => { if (!cancelled) setIdentity({ status: 'UNKNOWN' }); });
     return () => { cancelled = true; };
-  }, [selected?.id]);
+  }, [selected?.id, identityKey]);
   const [processing, setProcessing] = useState(null); // id being processed
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkRejectOpen, setBulkRejectOpen] = useState(false);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const { municipalities: municipalityList } = useMunicipalities();
   const { categories: categoryList } = useCategories();
   // A decision changes the waiting count beside Seller Applications.
@@ -138,6 +214,16 @@ export default function AdminSellers() {
     const timer = setTimeout(fetchApplicants, 300);
     return () => clearTimeout(timer);
   }, [statusFilter, search, page]);
+
+  // How many applications each status holds (the tabs' numbers).
+  const fetchCounts = () => {
+    Promise.all(['PENDING', 'APPROVED', 'REJECTED'].map((status) => axios
+      .get('/auth/users', { params: { sellerApplicationStatus: status, pageSize: 1 }, quiet: true })
+      .then((res) => [status, res.pagination?.total ?? 0])
+      .catch(() => [status, null])))
+      .then((pairs) => setCounts(Object.fromEntries(pairs)));
+  };
+  useEffect(() => { fetchCounts(); }, []);
 
   // Deep link from the "new seller application" notification:
   // /admin/sellers?id=<userId> opens that application.
@@ -168,28 +254,55 @@ export default function AdminSellers() {
       if (statusFilter) params.sellerApplicationStatus = statusFilter;
       if (search) params.search = search;
 
-      const res = await axios.get('/auth/users', { params });
+      const res = await axios.get('/auth/users', { params, quiet: true });
       if (request !== latestRequest.current) return;
       // Filter to only users who have applied (have sellerApplicationStatus set)
       const data = (res.data || []).filter((u) => u.sellerApplicationStatus);
       setApplicants(data);
+      setLoadError(false);
       if (res.pagination) setPagination(res.pagination);
     } catch {
-      if (request === latestRequest.current) toast.error('Failed to load applications');
+      if (request === latestRequest.current) setLoadError(true);
     } finally {
       if (request === latestRequest.current) setIsLoading(false);
     }
   };
 
-  const handleApprove = async (userId) => {
-    if (!(await confirmAction({ title: 'Approve this seller application?', message: 'Their shop will be created and go live.', confirmLabel: 'Approve' }))) return;
-    setProcessing(userId);
+  const decided = () => {
+    fetchApplicants();
+    fetchCounts();
+    refreshShell('attention');
+  };
+
+  const openApplication = (u, { reject = false } = {}) => {
+    setSelected(u);
+    setShowRejectInput(reject);
+    setRejectReason('');
+  };
+
+  const handleApprove = async (u, { fromRow = false } = {}) => {
+    // From a row, an applicant without a verified ID opens their application
+    // first, so the admin sees the ID section before deciding.
+    if (fromRow && !verified(u)) {
+      openApplication(u);
+      toast('Their ID is not verified yet: check the application first.');
+      return;
+    }
+    const idOk = selected?.id === u.id ? idStatus(identity).key === 'VERIFIED' : verified(u);
+    if (!(await confirmAction({
+      title: `Approve ${u.shopName || u.fullName}?`,
+      message: idOk
+        ? 'Their shop is created and goes live, and they are told.'
+        : 'Their ID is not verified. Their shop is created and goes live, and they are told; buyers see no ID badge until they verify.',
+      confirmLabel: 'Approve',
+      danger: !idOk,
+    }))) return;
+    setProcessing(u.id);
     try {
-      await axios.post(`/auth/users/${userId}/approve-seller`);
+      await axios.post(`/auth/users/${u.id}/approve-seller`);
       toast.success('Seller approved!');
       setSelected(null);
-      fetchApplicants();
-      refreshShell('attention');
+      decided();
     } catch (err) {
       toast.error(err.message || 'Failed to approve');
     } finally {
@@ -212,8 +325,7 @@ export default function AdminSellers() {
       setSelected(null);
       setShowRejectInput(false);
       setRejectReason('');
-      fetchApplicants();
-      refreshShell('attention');
+      decided();
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message || 'Failed to reject');
     } finally {
@@ -227,65 +339,86 @@ export default function AdminSellers() {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
   const toggleSelectAll = () => setSelectedIds(allPendingSelected ? [] : pendingApplicants.map((u) => u.id));
+  const chosen = pendingApplicants.filter((u) => selectedIds.includes(u.id));
+  const unverifiedChosen = chosen.filter((u) => !verified(u)).length;
 
-  const handleBulkApprove = async () => {
-    const ids = selectedIds.filter((id) => pendingApplicants.some((u) => u.id === id));
+  const runBulk = async (label, request) => {
     setBulkProcessing(true);
     try {
-      const results = await settleInBatches(ids, (id) => axios.post(`/auth/users/${id}/approve-seller`));
+      const results = await settleInBatches(chosen.map((u) => u.id), request);
       const done = results.filter((r) => r.status === 'fulfilled').length;
       const failed = results.length - done;
-      const msg = `Approve: ${done} done, ${failed} failed`;
+      const msg = `${label}: ${done} done${failed ? `, ${failed} failed` : ''}`;
       if (failed) toast.error(msg); else toast.success(msg);
       setSelectedIds([]);
       setBulkConfirmOpen(false);
-      fetchApplicants();
-      refreshShell('attention');
+      setBulkRejectOpen(false);
+      decided();
     } finally {
       setBulkProcessing(false);
     }
   };
+  const handleBulkApprove = () => runBulk('Approved', (id) => axios.post(`/auth/users/${id}/approve-seller`));
+  const handleBulkReject = (reason) => runBulk('Rejected', (id) => axios.post(`/auth/users/${id}/reject-seller`, { reason }));
+
+  const setTab = (key) => { setStatusFilter(key); setPage(1); };
+  const showStatus = !statusFilter;
+  const otherTabs = TABS.filter((t) => t.key && t.key !== statusFilter && counts[t.key]);
 
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">Seller Applications</h1>
+        <div>
+          <h1 className="admin-page-title">Seller applications</h1>
+          <p className="admin-page-sub">People asking to open a shop in your area. Check their ID before approving.</p>
+        </div>
       </div>
 
       <div className="admin-card">
         <div className="admin-card-header">
-          <h2 className="admin-card-title">Applications</h2>
+          <div className="admin-status-tabs" role="tablist" aria-label="Applications by status">
+            {TABS.map((t) => (
+              <button
+                key={t.key || 'all'}
+                type="button"
+                role="tab"
+                aria-selected={statusFilter === t.key}
+                className={`admin-status-tab${statusFilter === t.key ? ' is-active' : ''}`}
+                onClick={() => setTab(t.key)}
+              >
+                {t.label}
+                {t.key && counts[t.key] != null && <b>{counts[t.key]}</b>}
+              </button>
+            ))}
+          </div>
           <div className="admin-toolbar">
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-neutral-500, #636b78)' }} />
-              <input
-                className="admin-search-input"
-                style={{ paddingLeft: 30 }}
-                placeholder="Search by name or email…"
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              />
-            </div>
-            <Select
-              aria-label="Filter by status"
-              className="admin-select"
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            >
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="">All</option>
-            </Select>
+            <AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search by name or email…" />
           </div>
         </div>
 
         {isLoading ? (
           <Skeleton.Table cols={7} rows={6} />
+        ) : loadError ? (
+          <LoadFailed onRetry={fetchApplicants} what="the applications" compact />
         ) : applicants.length === 0 ? (
           <div className="admin-empty">
             <EmptyArt name="stores" size={104} />
-            <p>No {statusFilter.toLowerCase()} applications</p>
+            <p>
+              {search
+                ? 'No applications match that search.'
+                : statusFilter === 'PENDING'
+                  ? 'No applications waiting. New ones show here, and you get a notification.'
+                  : `No ${(STATUS[statusFilter]?.label || '').toLowerCase()} applications.`}
+            </p>
+            {!search && otherTabs.length > 0 && (
+              <div className="admin-empty-actions">
+                {otherTabs.map((t) => (
+                  <button key={t.key} type="button" className="admin-btn admin-btn-gray" onClick={() => setTab(t.key)}>
+                    See {t.label.toLowerCase()} ({counts[t.key]})
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -300,6 +433,14 @@ export default function AdminSellers() {
                 >
                   <CheckCircle size={13} /> Approve selected
                 </button>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-red"
+                  disabled={bulkProcessing}
+                  onClick={() => setBulkRejectOpen(true)}
+                >
+                  <XCircle size={13} /> Reject selected…
+                </button>
                 <button type="button" className="admin-btn admin-btn-gray" disabled={bulkProcessing} onClick={() => setSelectedIds([])}>
                   Clear
                 </button>
@@ -311,16 +452,16 @@ export default function AdminSellers() {
                   <tr>
                     <th className="admin-check-col">
                       {pendingApplicants.length > 0 && (
-                        <input type="checkbox" aria-label="Select all pending on this page" checked={allPendingSelected} onChange={toggleSelectAll} />
+                        <input type="checkbox" aria-label="Select all waiting on this page" checked={allPendingSelected} onChange={toggleSelectAll} />
                       )}
                     </th>
                     <th>Applicant</th>
                     <th>Shop Name</th>
                     <th>Shop Location</th>
-                    <th>ID Type</th>
+                    <th>ID check</th>
                     <th>Applied</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    {showStatus && <th>Status</th>}
+                    <th><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -329,8 +470,8 @@ export default function AdminSellers() {
                       key={u.id}
                       className="admin-row-clickable"
                       tabIndex={0}
-                      onClick={rowOpen(() => { setSelected(u); setShowRejectInput(false); setRejectReason(''); })}
-                      onKeyDown={rowKeyOpen(() => { setSelected(u); setShowRejectInput(false); setRejectReason(''); })}
+                      onClick={rowOpen(() => openApplication(u))}
+                      onKeyDown={rowKeyOpen(() => openApplication(u))}
                     >
                       <td className="admin-check-col">
                         {u.sellerApplicationStatus === 'PENDING' && (
@@ -351,40 +492,38 @@ export default function AdminSellers() {
                           </div>
                         </div>
                       </td>
-                      <td>{u.shopName || <span style={{ color: 'var(--t-neutral-500, #636b78)' }}>—</span>}</td>
+                      <td>{u.shopName || '—'}</td>
                       <td>{shopMunicipality(u)}</td>
-                      <td>{u.idType || '—'}</td>
+                      <td><IdBadge record={u.identityVerification} /></td>
+                      <td><AdminDate value={u.sellerApplicationDate} /></td>
+                      {showStatus && (
+                        <td>
+                          <span className={`admin-badge ${STATUS[u.sellerApplicationStatus]?.badge || ''}`}>
+                            {STATUS[u.sellerApplicationStatus]?.label || words(u.sellerApplicationStatus)}
+                          </span>
+                        </td>
+                      )}
                       <td>
-                        {u.sellerApplicationDate
-                          ? new Date(u.sellerApplicationDate).toLocaleDateString('en-PH')
-                          : '—'}
-                      </td>
-                      <td>
-                        <span className={`admin-badge ${STATUS_BADGE[u.sellerApplicationStatus] || ''}`}>
-                          {u.sellerApplicationStatus}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button
-                            className="admin-btn admin-btn-gray"
-                            onClick={() => { setSelected(u); setShowRejectInput(false); setRejectReason(''); }}
-                          >
+                        <div className="admin-row-actions">
+                          <button type="button" className="admin-btn admin-btn-gray" onClick={() => openApplication(u)}>
                             <Eye size={13} /> View
                           </button>
                           {u.sellerApplicationStatus === 'PENDING' && (
                             <>
                               <button
+                                type="button"
                                 className="admin-btn admin-btn-green"
                                 disabled={processing === u.id}
-                                onClick={() => handleApprove(u.id)}
+                                onClick={() => handleApprove(u, { fromRow: true })}
+                                title={verified(u) ? undefined : 'ID not verified: opens the application first'}
                               >
                                 <CheckCircle size={13} /> Approve
                               </button>
                               <button
+                                type="button"
                                 className="admin-btn admin-btn-red"
                                 disabled={processing === u.id}
-                                onClick={() => { setSelected(u); setShowRejectInput(true); setRejectReason(''); }}
+                                onClick={() => openApplication(u, { reject: true })}
                               >
                                 <XCircle size={13} /> Reject
                               </button>
@@ -398,13 +537,7 @@ export default function AdminSellers() {
               </table>
             </div>
 
-            {pagination.totalPages > 1 && (
-              <div className="admin-pagination">
-                <button className="admin-page-btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Prev</button>
-                <span>Page {page} of {pagination.totalPages} ({pagination.total} total)</span>
-                <button className="admin-page-btn" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>Next →</button>
-              </div>
-            )}
+            <AdminPager page={page} totalPages={pagination.totalPages} total={pagination.total} onPage={setPage} />
           </>
         )}
       </div>
@@ -414,10 +547,13 @@ export default function AdminSellers() {
         {(selected) => (
           <>
             <div className="admin-detail-header">
-              <h3>Application Details</h3>
+              <h3>{selected.shopName || 'Application'}</h3>
               <div className="admin-detail-head-actions">
+                <button type="button" className="admin-btn admin-btn-gray" onClick={() => setPrinting(true)} title="A one-page summary for the office's paper file">
+                  <Printer size={14} /> Print
+                </button>
                 <MessageUserButton userId={selected.id} role={selected.role} />
-                <button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button>
+                <button type="button" className="admin-detail-close" onClick={() => setSelected(null)} aria-label="Close"><X size={18} /></button>
               </div>
             </div>
 
@@ -429,6 +565,45 @@ export default function AdminSellers() {
                   <div><label>Full Name</label><p>{selected.fullName}</p></div>
                   <div><label><MapPin size={12} /> Municipality</label><p>{selected.municipality?.name || '—'}</p></div>
                   <UserContactReveal user={selected} />
+                </div>
+              </div>
+
+              {/* ID: where it stands, and the in-person check */}
+              <div className="admin-detail-section">
+                <h4><CreditCard size={14} /> ID check</h4>
+                <IdentityCheck
+                  userId={selected.id}
+                  identity={identity}
+                  canReview={selected.id !== actorId && !['MUNICIPAL_ADMIN', 'SUPER_ADMIN'].includes(selected.role)}
+                  onChange={() => { setIdentityKey((k) => k + 1); fetchApplicants(); }}
+                />
+                {selected.idType && idStatus(identity).key !== 'VERIFIED' && (
+                  <p className="admin-detail-hint">Submitted with the application: {words(selected.idType)}.</p>
+                )}
+                {selected.sellerApplicationStatus !== 'PENDING' && (
+                  <div className="admin-id-missing">
+                    ID documents are only shown while an application is under review. They are removed after the decision.
+                  </div>
+                )}
+                <div className="admin-id-photos">
+                  {selected.sellerApplicationStatus === 'PENDING' && [
+                    { label: 'Front', field: 'idFront', has: selected.idFrontUrl },
+                    { label: 'Back', field: 'idBack', has: selected.idBackUrl },
+                    // Legacy applications also captured a selfie; newer ones don't.
+                    { label: 'Selfie with ID', field: 'selfie', has: selected.selfieUrl },
+                    { label: 'Permit', field: 'permit', has: selected.sellerPermitUrl },
+                  ].filter(({ has }) => has).map(({ label, field }) => (
+                    <div key={label} className="admin-id-photo">
+                      <span className="admin-id-label">{label}</span>
+                      <KycPhoto userId={selected.id} field={field} label={label} />
+                    </div>
+                  ))}
+                  {identity?.status === 'VERIFIED' && !selected.idFrontUrl && !selected.idBackUrl && !selected.selfieUrl && (
+                    <div className="admin-id-missing">
+                      No documents on file — the applicant's identity was verified separately,
+                      or the photos have passed their retention period.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -452,7 +627,7 @@ export default function AdminSellers() {
                     <label>Categories</label>
                     <p>
                       {Array.isArray(selected.shopCategories) && selected.shopCategories.length > 0
-                        ? selected.shopCategories.map((id) => lookups.categories[id] || id).join(', ')
+                        ? selected.shopCategories.map((id) => lookups.categories[id] || 'Removed category').join(', ')
                         : '—'}
                     </p>
                   </div>
@@ -488,13 +663,13 @@ export default function AdminSellers() {
                       {(Array.isArray(selected.payoutMethods) && selected.payoutMethods.length
                         ? selected.payoutMethods
                         : [selected.payoutMethod].filter(Boolean)
-                      ).map((m) => PAYOUT_LABELS[m] || m).join(', ') || '—'}
+                      ).map((m) => PAYOUT_LABELS[m] || words(m)).join(', ') || '—'}
                     </p>
                   </div>
                   <div><label>Payout Account</label>
                     <p>{[selected.payoutAccountName, selected.payoutAccountNumber].filter(Boolean).join(' · ') || '—'}</p>
                   </div>
-                  <div><label>Fulfillment</label><p>{selected.fulfillmentPreference || '—'}</p></div>
+                  <div><label>Delivery</label><p>{FULFILLMENT_LABELS[selected.fulfillmentPreference] || words(selected.fulfillmentPreference) || '—'}</p></div>
                   {selected.payoutQrUrl && (
                     <div>
                       <label>{PAYOUT_LABELS[selected.payoutQrType] || 'Payment'} QR</label>
@@ -505,63 +680,10 @@ export default function AdminSellers() {
                     <label>Terms Accepted</label>
                     <p>
                       {selected.sellerTermsAcceptedAt
-                        ? `v${selected.sellerTermsVersion} on ${new Date(selected.sellerTermsAcceptedAt).toLocaleString('en-PH')}`
+                        ? `Version ${selected.sellerTermsVersion}, ${shortDateTime(selected.sellerTermsAcceptedAt)}`
                         : '—'}
                     </p>
                   </div>
-                </div>
-              </div>
-
-              {/* ID Verification */}
-              <div className="admin-detail-section">
-                <h4><CreditCard size={14} /> ID Verification</h4>
-                {identity === null ? (
-                  <p className="admin-id-check">Checking identity…</p>
-                ) : identity.status === 'VERIFIED' ? (
-                  <p className="admin-id-check is-verified">
-                    <CheckCircle size={16} weight="fill" />
-                    <span>
-                      <strong>ID verified automatically</strong>
-                      {' '}— the name on the scanned ID matched this account's name
-                      {identity.idType && identity.idType !== 'IN_PERSON' ? ` (${identity.idType.replace(/_/g, ' ')})` : ''}
-                      {identity.idType === 'IN_PERSON' ? ' (verified in person by an admin)' : ''}
-                      {identity.verifiedAt ? `, ${new Date(identity.verifiedAt).toLocaleDateString('en-PH')}` : ''}.
-                    </span>
-                  </p>
-                ) : (
-                  <p className="admin-id-check is-missing">
-                    <Warning size={16} weight="fill" />
-                    <span>
-                      <strong>ID not verified yet.</strong>
-                      {' '}Sellers verify their ID from their Seller Center after applying; you'll get a notification when they do.
-                      {selected.idType ? ` Submitted with the application: ${selected.idType}.` : ''}
-                    </span>
-                  </p>
-                )}
-                {selected.sellerApplicationStatus !== 'PENDING' && (
-                  <div className="admin-id-missing">
-                    ID documents are only shown while an application is under review. They are removed after the decision.
-                  </div>
-                )}
-                <div className="admin-id-photos">
-                  {selected.sellerApplicationStatus === 'PENDING' && [
-                    { label: 'Front', field: 'idFront', has: selected.idFrontUrl },
-                    { label: 'Back', field: 'idBack', has: selected.idBackUrl },
-                    // Legacy applications also captured a selfie; newer ones don't.
-                    { label: 'Selfie with ID', field: 'selfie', has: selected.selfieUrl },
-                    { label: 'Permit', field: 'permit', has: selected.sellerPermitUrl },
-                  ].filter(({ has }) => has).map(({ label, field }) => (
-                    <div key={label} className="admin-id-photo">
-                      <span className="admin-id-label">{label}</span>
-                      <KycPhoto userId={selected.id} field={field} label={label} />
-                    </div>
-                  ))}
-                  {identity?.status === 'VERIFIED' && !selected.idFrontUrl && !selected.idBackUrl && !selected.selfieUrl && (
-                    <div className="admin-id-missing">
-                      No documents on file — the applicant's identity was verified separately,
-                      or the photos have passed their retention period.
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -572,8 +694,8 @@ export default function AdminSellers() {
                   <ul className="admin-detail-timeline">
                     {[...selected.sellerApplicationHistory].reverse().map((entry, i) => (
                       <li key={`${entry.at}-${i}`}>
-                        <strong>{entry.action}</strong>
-                        <span>{new Date(entry.at).toLocaleString('en-PH')}</span>
+                        <strong>{words(entry.action)}</strong>
+                        <span>{shortDateTime(entry.at)}</span>
                         {entry.byName && <span>by {entry.byName}</span>}
                         {entry.reason && <p>{entry.reason}</p>}
                       </li>
@@ -584,27 +706,30 @@ export default function AdminSellers() {
             </div>
 
             {selected.sellerApplicationStatus === 'PENDING' && (
-              <div className="admin-detail-footer" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+              <div className="admin-detail-footer is-decision">
                 {showRejectInput && (
                   <textarea
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     placeholder="Reason for rejection (visible to the applicant)…"
+                    aria-label="Reason for rejection"
                     rows={3}
                     className="admin-input"
                     autoFocus
                   />
                 )}
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <div className="admin-detail-footer-buttons">
                   <button
+                    type="button"
                     className="admin-btn admin-btn-green"
                     disabled={processing === selected.id}
-                    onClick={() => handleApprove(selected.id)}
+                    onClick={() => handleApprove(selected)}
                   >
                     <CheckCircle size={15} /> Approve Seller
                   </button>
                   {!showRejectInput ? (
                     <button
+                      type="button"
                       className="admin-btn admin-btn-red"
                       disabled={processing === selected.id}
                       onClick={() => setShowRejectInput(true)}
@@ -613,6 +738,7 @@ export default function AdminSellers() {
                     </button>
                   ) : (
                     <button
+                      type="button"
                       className="admin-btn admin-btn-red"
                       disabled={processing === selected.id || !rejectReason.trim()}
                       onClick={() => handleReject(selected.id)}
@@ -627,14 +753,36 @@ export default function AdminSellers() {
         )}
       </DetailDrawer>
 
+      {printing && selected && (
+        <ApplicationSlip
+          applicant={selected}
+          identity={identity}
+          town={shopMunicipality(selected)}
+          categories={(selected.shopCategories || []).map((id) => lookups.categories[id]).filter(Boolean).join(', ')}
+          onDone={() => setPrinting(false)}
+        />
+      )}
+
       <ConfirmDialog
         open={bulkConfirmOpen}
-        title={`Approve ${selectedIds.length} seller application(s)?`}
-        message="Each applicant becomes a seller, their shop is created and goes live, and they are notified."
+        title={`Approve ${chosen.length} seller application${chosen.length === 1 ? '' : 's'}?`}
+        message={`Each applicant becomes a seller, their shop is created and goes live, and they are notified.${unverifiedChosen ? ` ${unverifiedChosen} of them ${unverifiedChosen === 1 ? 'has' : 'have'} no verified ID.` : ''}`}
         confirmLabel="Approve selected"
+        danger={unverifiedChosen > 0}
         loading={bulkProcessing}
         onConfirm={handleBulkApprove}
         onCancel={() => setBulkConfirmOpen(false)}
+      />
+      <ReasonDialog
+        open={bulkRejectOpen}
+        title={`Reject ${chosen.length} application${chosen.length === 1 ? '' : 's'}?`}
+        message="Each applicant gets this reason and can fix their application and apply again."
+        confirmLabel="Reject selected"
+        placeholder="e.g. Please upload a clearer photo of your ID"
+        required
+        loading={bulkProcessing}
+        onConfirm={handleBulkReject}
+        onCancel={() => setBulkRejectOpen(false)}
       />
     </AdminLayout>
   );

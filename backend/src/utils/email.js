@@ -199,24 +199,39 @@ const sendMail = async (message) => {
 /**
  * Try the queued emails that are due (the email-outbox job). Each is claimed
  * first, so two servers running at once (a deploy) never send one twice.
+ *
+ * Emails one person is waiting for (a retried reset link, an order) go
+ * before an admin's email to many (`broadcastId`, services/adminEmail
+ * .service), which is sent `gapMs` apart so the provider's rate limit holds.
+ * `broadcastId` given: only that one's copies.
  * @returns {Promise<{ sent: Number, failed: Number, gaveUp: Number }>}
  */
-const flushOutbox = async ({ limit = 20 } = {}) => {
+const flushOutbox = async ({ limit = 20, gapMs = 0, broadcastId } = {}) => {
   const db = outboxDb();
   const now = new Date();
   const stats = { sent: 0, failed: 0, gaveUp: 0 };
   // Given up on two weeks ago: gone.
   await db.emailOutbox.deleteMany({ where: { attempts: { gte: OUTBOX_MAX_ATTEMPTS }, createdAt: { lt: new Date(now - OUTBOX_KEEP_DAYS * 86400e3) } } });
-  const due = await db.emailOutbox.findMany({
-    where: {
-      attempts: { lt: OUTBOX_MAX_ATTEMPTS },
-      nextAttemptAt: { lte: now },
-      OR: [{ claimedUntil: null }, { claimedUntil: { lt: now } }],
-    },
-    orderBy: { nextAttemptAt: 'asc' },
-    take: limit,
+  const dueWhere = (which) => ({
+    attempts: { lt: OUTBOX_MAX_ATTEMPTS },
+    nextAttemptAt: { lte: now },
+    OR: [{ claimedUntil: null }, { claimedUntil: { lt: now } }],
+    broadcastId: which,
   });
-  for (const row of due) {
+  const personal = broadcastId ? [] : await db.emailOutbox.findMany({
+    where: dueWhere(null), orderBy: { nextAttemptAt: 'asc' }, take: limit,
+  });
+  const many = personal.length >= limit ? [] : await db.emailOutbox.findMany({
+    where: dueWhere(broadcastId || { not: null }), orderBy: { nextAttemptAt: 'asc' }, take: limit - personal.length,
+  });
+  const due = [...personal, ...many];
+  // The count on the admin's send; it may have been removed since.
+  const tally = (row, field) => (row.broadcastId
+    ? db.emailBroadcast.updateMany({ where: { id: row.broadcastId }, data: { [field]: { increment: 1 } } })
+    : null);
+  for (const [i, row] of due.entries()) {
+    // eslint-disable-next-line no-await-in-loop
+    if (gapMs && i > 0 && row.broadcastId) await new Promise((r) => setTimeout(r, gapMs));
     // eslint-disable-next-line no-await-in-loop
     const claimed = await db.emailOutbox.updateMany({
       where: { id: row.id, OR: [{ claimedUntil: null }, { claimedUntil: { lt: new Date() } }] },
@@ -228,6 +243,8 @@ const flushOutbox = async ({ limit = 20 } = {}) => {
       await deliverNow({ to: row.to, subject: row.subject, html: row.html || undefined, text: row.text || undefined });
       // eslint-disable-next-line no-await-in-loop
       await db.emailOutbox.delete({ where: { id: row.id } });
+      // eslint-disable-next-line no-await-in-loop
+      await tally(row, 'sent');
       stats.sent += 1;
     } catch (err) {
       const attempts = row.attempts + 1;
@@ -244,8 +261,15 @@ const flushOutbox = async ({ limit = 20 } = {}) => {
       });
       if (gaveUp) {
         stats.gaveUp += 1;
+        // eslint-disable-next-line no-await-in-loop
+        await tally(row, 'failed');
         console.error(`[email] gave up on an email to ${row.to} after ${attempts} tries: ${err?.message || err}`);
-      } else stats.failed += 1;
+      } else {
+        stats.failed += 1;
+        // The provider is down or limiting: the rest of an email to many
+        // would only spend their tries too. They wait for the next run.
+        if (row.broadcastId) break;
+      }
     }
   }
   return stats;
@@ -744,8 +768,40 @@ const sendOrderAcceptedEmail = async ({ buyer, store, order, items, payHours = 4
   return sendMail({ to: buyer.email, subject, html, text });
 };
 
+/* ── An admin's email to many people (services/adminEmail.service) ───── */
+
+/**
+ * One person's copy of an admin's email: their name, the admin's own words
+ * (plain text; blank lines start paragraphs), who sent it, and why it came.
+ * @returns {{ subject: String, html: String, text: String }}
+ */
+const broadcastMessage = ({ name, subject, message, sentBy }) => {
+  const paragraphs = String(message || '').replace(/\r\n/g, '\n').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const why = 'You are getting this because you have an E-MOORM account.';
+  const text = [
+    `Hi ${name || 'there'},`,
+    '',
+    ...paragraphs.flatMap((p) => [p, '']),
+    `— ${sentBy}`,
+    '',
+    `${why} ${appUrl()}`,
+  ].join('\n');
+  const html = layout(`
+    ${heading(subject)}
+    ${para(`Hi ${escapeHtml(name || 'there')},`)}
+    ${paragraphs.map((p) => para(escapeHtml(p).replace(/\n/g, '<br>'))).join('')}
+    ${para(`— ${escapeHtml(sentBy)}`)}
+    <p style="margin:24px 0 0;color:#6b7280;font-size:12px;">
+      ${why} <a href="${escapeHtml(appUrl())}" style="color:#059669;">${escapeHtml(appUrl().replace(/^https?:\/\//, ''))}</a>
+    </p>
+    ${footer}
+  `);
+  return { subject, html, text };
+};
+
 module.exports = {
   escapeHtml,
+  broadcastMessage,
   sendNewOrderEmail,
   sendOrderAcceptedEmail,
   sendMail,

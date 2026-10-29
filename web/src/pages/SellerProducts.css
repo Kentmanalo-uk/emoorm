@@ -157,8 +157,7 @@
   gap: 6px;
 }
 
-.product-stock-label,
-.product-action > span {
+.product-stock-label {
   display: none;
 }
 
@@ -1021,4 +1020,346 @@ a.pm-btn {
     flex-shrink: 0;
     color: var(--t-neutral-400, #9ca3af);
   }
+}
+
+/* ── Computers: row actions in words (Edit, Hide, View), the rest under ⋯ ── */
+@media (min-width: 769px) {
+  .products-table .product-actions {
+    align-items: center;
+    gap: 6px;
+  }
+
+  .products-table .product-action {
+    gap: 5px;
+    width: auto;
+    padding: 0 10px;
+    font-size: 12.5px;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .products-table .product-action.product-action--more {
+    width: 30px;
+    padding: 0;
+  }
+
+  /* The ⋯ menu opens over the rows below, so the card lets it out. */
+  .sc-content .seller-card.sp-list-card {
+    overflow: visible;
+  }
+}
+
+.sp-rowmenu {
+  position: relative;
+}
+
+.sp-rowmenu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 40;
+  min-width: 180px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-popover, 0 12px 30px rgba(15, 23, 42, 0.16));
+  text-align: left;
+}
+
+.sp-rowmenu-list button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sp-rowmenu-list button:hover,
+.sp-rowmenu-list button:focus-visible {
+  background: var(--t-neutral-100, #f3f4f6);
+  outline: none;
+}
+
+.sp-rowmenu-list button.is-danger {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.sp-rowmenu-list button.is-danger:hover,
+.sp-rowmenu-list button.is-danger:focus-visible {
+  background: var(--t-danger-50, #fef2f2);
+}
+
+/* ── Search, sort and category on one toolbar ── */
+.sp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+
+.sp-toolbar .products-search-form {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.sp-toolbar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sp-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 13px;
+}
+
+.sp-filter .sp-sort {
+  min-width: 170px;
+}
+
+/* "Sorted among your 100 newest products": the list API pages by 15. */
+.sp-capped {
+  margin: 0 0 10px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* ── The price, changed where it is ── */
+.sp-price {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.sp-price-value {
+  white-space: nowrap;
+}
+
+.sp-price-change,
+.sp-price-cancel,
+.sp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-primary-700, #047857);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sp-price-change:disabled {
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: not-allowed;
+}
+
+.sp-price-change:hover:not(:disabled),
+.sp-price-cancel:hover,
+.sp-link:hover {
+  text-decoration: underline;
+}
+
+.sp-price-cancel {
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.sp-price-form {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sp-price-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 6px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-500, #636b78);
+}
+
+.sp-price-input:focus-within {
+  border-color: var(--t-primary-600, #059669);
+}
+
+.sp-price-input input {
+  width: 76px;
+  min-height: 28px;
+  padding: 0;
+  border: 0 !important;
+  outline: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--t-neutral-900, #111827);
+  font: inherit;
+  font-size: 13px;
+}
+
+.sp-price-input--big {
+  display: flex;
+  min-height: 56px;
+  padding: 0 16px;
+  border-radius: 16px;
+  font-size: 22px;
+}
+
+.sp-price-input--big input {
+  flex: 1;
+  width: auto;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* ── The stock box on a row: Add / Remove / Set to, how many, the change ── */
+.sp-restock {
+  flex-wrap: wrap;
+}
+
+.sp-restock .sp-restock-mode {
+  width: 96px;
+  min-height: 30px;
+  font-size: 12.5px;
+}
+
+/* ── Stock sheet (phones' rows, and ?restock=<id> everywhere) ── */
+.sp-stock-now {
+  margin: 4px 0 14px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 14px;
+}
+
+.sp-stock-now strong {
+  color: var(--t-neutral-900, #111827);
+  font-weight: 600;
+}
+
+.sp-stock-modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.sp-stock-modes button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sp-stock-modes button.is-on {
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-primary-700, #047857);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.sp-stock-stepper {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 56px;
+  gap: 10px;
+}
+
+.sp-stock-stepper button {
+  display: grid;
+  place-items: center;
+  height: 56px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-800, #1f2937);
+  cursor: pointer;
+}
+
+.sp-stock-stepper button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sp-stock-stepper input {
+  min-width: 0;
+  height: 56px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 16px;
+  color: var(--t-neutral-900, #111827);
+  font: inherit;
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.sp-stock-quick {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 2px;
+}
+
+.sp-stock-quick button {
+  flex: 1;
+  min-height: 38px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.sp-stock-help {
+  margin: 12px 0 4px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sp-stock-help.is-warn {
+  color: var(--t-danger-600, #dc2626);
+}
+
+/* ── Delete: "Hide it instead" under the question ── */
+.sp-hide-instead {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sp-hide-instead .sp-link {
+  font-size: 13px;
+  font-weight: 600;
 }

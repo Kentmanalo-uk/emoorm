@@ -272,22 +272,33 @@ const findAllForStore = async (storeId, options = {}) => {
  * @returns {Promise<Object>} Average rating and count
  */
 const getStoreRatingStats = async (storeId) => {
-  const stats = await prisma.review.aggregate({
-    where: {
-      deletedAt: null,
-      product: { storeId },
-    },
-    _avg: {
-      rating: true,
-    },
-    _count: {
-      id: true,
-    },
-  });
+  const where = {
+    deletedAt: null,
+    product: { storeId },
+  };
+  const [stats, groups] = await Promise.all([
+    prisma.review.aggregate({
+      where,
+      _avg: {
+        rating: true,
+      },
+      _count: {
+        id: true,
+      },
+    }),
+    // How many reviews gave each star, for the seller's 5→1 bars.
+    prisma.review.groupBy({ by: ['rating'], where, _count: { _all: true } }),
+  ]);
+
+  const byRating = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  for (const g of groups) {
+    if (byRating[g.rating] !== undefined) byRating[g.rating] = g._count._all;
+  }
 
   return {
     averageRating: stats._avg.rating || 0,
     totalReviews: stats._count.id,
+    byRating,
   };
 };
 

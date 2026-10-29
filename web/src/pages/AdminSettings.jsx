@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ShieldCheck, Key as KeyRound, User, MapPin, FloppyDisk as Save, CircleNotch as Loader2,
@@ -16,23 +16,8 @@ import { IMAGE_ACCEPT } from '../lib/uploadableImage';
 import { resolveImg } from '../lib/media';
 import useAppSettings, { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS, resolveAppSettingImage } from '../hooks/useAppSettings';
 import useAuthStore from '../store/authStore';
-import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
+import useUnsavedChanges from '../hooks/useUnsavedChanges';
 import './AdminSettings.css';
-
-/**
- * What the default delivery fees add up to, for the admin to check:
- * "The starting fee covers the first 3 km. A 5 km delivery costs ₱70."
- */
-function DeliveryExample({ form }) {
-  const base = Number(form.deliveryFee);
-  const perKm = Number(form.deliveryPerKm);
-  const included = Number(form.deliveryIncludedKm);
-  const lead = 'The starting fee covers this many km by road.';
-  if (![base, perKm, included].every((n) => Number.isFinite(n) && n >= 0)) return lead;
-  const km = Math.max(5, Math.ceil(included) + 2);
-  const cost = Math.round(base + Math.max(0, km - included) * perKm);
-  return `${lead} A ${km} km delivery costs ₱${cost.toLocaleString('en-PH')}.`;
-}
 
 // Settings row: label and help on the left, controls on the right.
 function Row({ label, help, children }) {
@@ -59,7 +44,10 @@ export default function AdminSettings() {
   const [savingBranding, setSavingBranding] = useState(false);
   const appLogoInputRef = useRef(null);
   const placeholderInputRef = useRef(null);
-  const [municipalityProfile, setMunicipalityProfile] = useState({ id: '', name: '', logo: '', tagline: '', description: '', gallery: [] });
+  const [municipalityProfile, setMunicipalityProfile] = useState({
+    id: '', name: '', logo: '', tagline: '', description: '', gallery: [],
+    officeAddress: '', officeHours: '', officePhone: '', officeEmail: '',
+  });
   const [savingMunicipality, setSavingMunicipality] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const galleryInputRef = useRef(null);
@@ -98,27 +86,8 @@ export default function AdminSettings() {
     setBrandingForm({
       appLogo: currentAppSettings.appLogo,
       productPlaceholder: currentAppSettings.productPlaceholder,
-      deliveryFee: String(currentAppSettings.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee),
-      deliveryPerKm: String(Number(currentAppSettings.deliveryPerKm ?? DEFAULT_APP_SETTINGS.deliveryPerKm)),
-      deliveryIncludedKm: String(Number(currentAppSettings.deliveryIncludedKm ?? DEFAULT_APP_SETTINGS.deliveryIncludedKm)),
-      adminTeamMax: String(currentAppSettings.adminTeamMax ?? 5),
-      requireBuyerVerification: currentAppSettings.requireBuyerVerification !== false,
-      availableTodayEnabled: currentAppSettings.availableTodayEnabled !== false,
-      product3dEnabled: currentAppSettings.product3dEnabled !== false,
-      categoryStyle: currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE',
     });
-  }, [
-    currentAppSettings.appLogo,
-    currentAppSettings.productPlaceholder,
-    currentAppSettings.deliveryFee,
-    currentAppSettings.deliveryPerKm,
-    currentAppSettings.deliveryIncludedKm,
-    currentAppSettings.adminTeamMax,
-    currentAppSettings.requireBuyerVerification,
-    currentAppSettings.availableTodayEnabled,
-    currentAppSettings.product3dEnabled,
-    currentAppSettings.categoryStyle,
-  ]);
+  }, [currentAppSettings.appLogo, currentAppSettings.productPlaceholder]);
 
   useEffect(() => {
     if (!isMunicipalAdmin || !user?.municipalityId) return;
@@ -131,6 +100,10 @@ export default function AdminSettings() {
           tagline: res.data?.tagline || '',
           description: res.data?.description || '',
           gallery: Array.isArray(res.data?.gallery) ? res.data.gallery : [],
+          officeAddress: res.data?.officeAddress || '',
+          officeHours: res.data?.officeHours || '',
+          officePhone: res.data?.officePhone || '',
+          officeEmail: res.data?.officeEmail || '',
         };
         setMunicipalityProfile(loaded);
         setMunicipalitySnapshot(loaded);
@@ -145,6 +118,10 @@ export default function AdminSettings() {
         logo: municipalityProfile.logo || null,
         tagline: municipalityProfile.tagline,
         description: municipalityProfile.description,
+        officeAddress: municipalityProfile.officeAddress,
+        officeHours: municipalityProfile.officeHours,
+        officePhone: municipalityProfile.officePhone,
+        officeEmail: municipalityProfile.officeEmail,
         gallery: municipalityProfile.gallery,
       });
       setMunicipalitySnapshot(municipalityProfile);
@@ -205,54 +182,11 @@ export default function AdminSettings() {
   };
 
   const saveBranding = async () => {
-    const deliveryFee = Number(brandingForm.deliveryFee);
-    if (!Number.isFinite(deliveryFee) || deliveryFee < 0) {
-      toast.error('Delivery fee must be 0 or more');
-      return;
-    }
     // Send only what changed; the server keeps the rest.
     const changes = {};
     if (brandingForm.appLogo !== currentAppSettings.appLogo) changes.appLogo = brandingForm.appLogo;
     if (brandingForm.productPlaceholder !== currentAppSettings.productPlaceholder) {
       changes.productPlaceholder = brandingForm.productPlaceholder;
-    }
-    if (deliveryFee !== Number(currentAppSettings.deliveryFee)) changes.deliveryFee = deliveryFee;
-    // Delivery by distance: each extra km, and the km the starting fee covers.
-    const deliveryPerKm = Number(brandingForm.deliveryPerKm);
-    if (String(brandingForm.deliveryPerKm ?? '').trim() === '' || !Number.isFinite(deliveryPerKm) || deliveryPerKm < 0 || deliveryPerKm > 1000) {
-      toast.error('Each extra km must cost ₱0 to ₱1,000');
-      return;
-    }
-    const deliveryIncludedKm = Number(brandingForm.deliveryIncludedKm);
-    if (String(brandingForm.deliveryIncludedKm ?? '').trim() === '' || !Number.isFinite(deliveryIncludedKm) || deliveryIncludedKm < 0 || deliveryIncludedKm > 100) {
-      toast.error('The km included must be 0 to 100');
-      return;
-    }
-    if (deliveryPerKm !== Number(currentAppSettings.deliveryPerKm ?? DEFAULT_APP_SETTINGS.deliveryPerKm)) changes.deliveryPerKm = deliveryPerKm;
-    if (deliveryIncludedKm !== Number(currentAppSettings.deliveryIncludedKm ?? DEFAULT_APP_SETTINGS.deliveryIncludedKm)) {
-      changes.deliveryIncludedKm = deliveryIncludedKm;
-    }
-    const adminTeamMax = Number(brandingForm.adminTeamMax);
-    if (!Number.isInteger(adminTeamMax) || adminTeamMax < 1 || adminTeamMax > 20) {
-      toast.error('Admins per municipality must be a whole number from 1 to 20');
-      return;
-    }
-    if (adminTeamMax !== Number(currentAppSettings.adminTeamMax ?? 5)) changes.adminTeamMax = adminTeamMax;
-    const requireBuyerVerification = brandingForm.requireBuyerVerification !== false;
-    if (requireBuyerVerification !== (currentAppSettings.requireBuyerVerification !== false)) {
-      changes.requireBuyerVerification = requireBuyerVerification;
-    }
-    const availableTodayEnabled = brandingForm.availableTodayEnabled !== false;
-    if (availableTodayEnabled !== (currentAppSettings.availableTodayEnabled !== false)) {
-      changes.availableTodayEnabled = availableTodayEnabled;
-    }
-    const product3dEnabled = brandingForm.product3dEnabled === true;
-    if (product3dEnabled !== (currentAppSettings.product3dEnabled !== false)) {
-      changes.product3dEnabled = product3dEnabled;
-    }
-    const categoryStyle = brandingForm.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE';
-    if (categoryStyle !== (currentAppSettings.categoryStyle === 'ICON' ? 'ICON' : 'IMAGE')) {
-      changes.categoryStyle = categoryStyle;
     }
     if (Object.keys(changes).length === 0) {
       toast.success('No changes to save');
@@ -263,7 +197,7 @@ export default function AdminSettings() {
       const response = await axios.put('/app-settings', changes);
       queryClient.setQueryData(APP_SETTINGS_QUERY_KEY, { ...DEFAULT_APP_SETTINGS, ...(response.data || {}) });
       queryClient.invalidateQueries({ queryKey: APP_SETTINGS_QUERY_KEY });
-      toast.success('App settings updated');
+      toast.success('App branding updated');
     } catch (err) {
       toast.error(err.message || 'Failed to save app branding');
     } finally {
@@ -397,8 +331,10 @@ export default function AdminSettings() {
     }
   };
 
-  const municipalityDirty = Boolean(municipalitySnapshot) && ['logo', 'tagline', 'description', 'gallery']
+  const municipalityDirty = Boolean(municipalitySnapshot) && ['logo', 'tagline', 'description', 'gallery', 'officeAddress', 'officeHours', 'officePhone', 'officeEmail']
     .some((key) => JSON.stringify(municipalityProfile[key]) !== JSON.stringify(municipalitySnapshot[key]));
+
+  useUnsavedChanges(municipalityDirty);
 
   const passwordChecks = [
     { label: 'At least 8 characters', ok: pwForm.newPassword.length >= 8 },
@@ -424,7 +360,7 @@ export default function AdminSettings() {
       <header className="st-panel-head">
         <div>
           <h2>App branding</h2>
-          <p>The Emoorm logo, the image shown when a product has no photo, and checkout delivery pricing.</p>
+          <p>The Emoorm logo and the image shown when a product has no photo.</p>
         </div>
       </header>
       <div className="st-branding-grid">
@@ -451,144 +387,24 @@ export default function AdminSettings() {
         ))}
       </div>
 
-      <Row label="Default delivery fee (₱)" help="Shops deliver by distance. This is the starting fee for shops that have not set their own; it covers the first km below. Sellers set theirs in Fulfillment & Payment. Pickup orders are never charged.">
-        <input
-          className="st-input"
-          type="number"
-          min="0"
-          step="0.01"
-          inputMode="decimal"
-          value={brandingForm.deliveryFee ?? ''}
-          onChange={(e) => setBrandingForm((current) => ({ ...current, deliveryFee: e.target.value }))}
-          placeholder={String(DEFAULT_APP_SETTINGS.deliveryFee)}
-        />
-      </Row>
-
-      <Row label="Each extra km (₱)" help="Added for every km by road past the km included, for shops that have not set their own.">
-        <input
-          className="st-input"
-          type="number"
-          min="0"
-          max="1000"
-          step="0.5"
-          inputMode="decimal"
-          value={brandingForm.deliveryPerKm ?? ''}
-          onChange={(e) => setBrandingForm((current) => ({ ...current, deliveryPerKm: e.target.value }))}
-          placeholder={String(DEFAULT_APP_SETTINGS.deliveryPerKm)}
-        />
-      </Row>
-
       <Row
-        label="First km included"
-        help={<DeliveryExample form={brandingForm} />}
+        label="Other platform settings"
+        help="Each is now on the page of the part of E-MOORM it changes."
       >
-        <input
-          className="st-input"
-          type="number"
-          min="0"
-          max="100"
-          step="0.5"
-          inputMode="decimal"
-          value={brandingForm.deliveryIncludedKm ?? ''}
-          onChange={(e) => setBrandingForm((current) => ({ ...current, deliveryIncludedKm: e.target.value }))}
-          placeholder={String(DEFAULT_APP_SETTINGS.deliveryIncludedKm)}
-        />
-      </Row>
-
-      <Row label="Admins per municipality" help="The most admins a municipality's admin team may have, its primary admin included. Municipal admins add and remove their own team in Admin team.">
-        <input
-          className="st-input"
-          type="number"
-          min="1"
-          max="20"
-          step="1"
-          inputMode="numeric"
-          value={brandingForm.adminTeamMax ?? ''}
-          onChange={(e) => setBrandingForm((current) => ({ ...current, adminTeamMax: e.target.value }))}
-          placeholder="5"
-        />
-      </Row>
-
-      <Row
-        label="Buyer ID verification"
-        help={brandingForm.requireBuyerVerification !== false
-          ? 'On: buyers must verify a government ID before they can check out.'
-          : 'Off: anyone with an account can check out. Verification stays available and records are kept.'}
-      >
-        <label className="st-toggle">
-          <input
-            type="checkbox"
-            checked={brandingForm.requireBuyerVerification !== false}
-            onChange={(e) => setBrandingForm((current) => ({ ...current, requireBuyerVerification: e.target.checked }))}
-          />
-          <span>Require verification before checkout</span>
-        </label>
-      </Row>
-
-      <Row
-        label="Available Today"
-        help={brandingForm.availableTodayEnabled !== false
-          ? 'On: shops can post fresh food and produce for a limited time, and buyers see them on Home and in Available Today.'
-          : 'Off: Available Today is hidden and shops cannot post. Their posts are kept for when it is back on.'}
-      >
-        <label className="st-toggle">
-          <input
-            type="checkbox"
-            checked={brandingForm.availableTodayEnabled !== false}
-            onChange={(e) => setBrandingForm((current) => ({ ...current, availableTodayEnabled: e.target.checked }))}
-          />
-          <span>Turn on Available Today</span>
-        </label>
-      </Row>
-
-      <Row
-        label="3D views of products"
-        help={brandingForm.product3dEnabled === true
-          ? 'On: sellers can add 3D views; buyers can turn them and see them in AR.'
-          : 'Off: 3D views are hidden; saved ones are kept.'}
-      >
-        <label className="st-toggle">
-          <input
-            type="checkbox"
-            checked={brandingForm.product3dEnabled === true}
-            onChange={(e) => setBrandingForm((current) => ({ ...current, product3dEnabled: e.target.checked }))}
-          />
-          <span>Turn on 3D views</span>
-        </label>
-      </Row>
-
-      <Row
-        label="Homepage categories"
-        help="How “Shop by Category” looks on the homepage. Icons can be chosen per category in Categories; otherwise one is picked from the name."
-      >
-        <CategoryIconGradients />
-        <div className="st-choices" role="radiogroup" aria-label="Homepage categories">
+        <ul className="st-moved">
           {[
-            { value: 'IMAGE', title: 'Pictures', text: "Each category's photo" },
-            { value: 'ICON', title: 'Icons', text: 'Gradient icons, no photos' },
-          ].map(({ value, title, text }) => (
-            <label key={value} className={`st-choice${(brandingForm.categoryStyle || 'IMAGE') === value ? ' is-on' : ''}`}>
-              <input
-                type="radio"
-                name="categoryStyle"
-                value={value}
-                checked={(brandingForm.categoryStyle || 'IMAGE') === value}
-                onChange={() => setBrandingForm((current) => ({ ...current, categoryStyle: value }))}
-              />
-              <span className="st-choice-preview" aria-hidden="true">
-                {value === 'IMAGE'
-                  ? [0, 1, 2].map((i) => <span key={i} className="st-choice-photo"><ImageIcon size={16} /></span>)
-                  : ['fruit', 'vegetable', 'seafood'].map((key) => (
-                    <span key={key} className="st-choice-icon"><CategoryIcon iconKey={key} size={22} /></span>
-                  ))}
-              </span>
-              <span className="st-choice-text">
-                <strong>{title}</strong>
-                <span>{text}</span>
-              </span>
-            </label>
+            { to: '/admin/couriers#delivery-fees', what: 'Shop delivery fees', where: 'Couriers' },
+            { to: '/admin/buyers#buyer-verification', what: 'Buyer ID verification', where: 'Buyers' },
+            { to: '/admin/products#product-features', what: 'Available Today and 3D views', where: 'Products' },
+            { to: '/admin/categories#category-style', what: 'Homepage categories', where: 'Categories' },
+            { to: '/admin/junior-admins#team-size', what: 'Admins per municipality', where: 'Municipal admins' },
+          ].map(({ to, what, where }) => (
+            <li key={to}>
+              <Link to={to}>{what}</Link>
+              <span>{where}</span>
+            </li>
           ))}
-        </div>
+        </ul>
       </Row>
 
       <footer className="st-panel-foot">
@@ -655,6 +471,37 @@ export default function AdminSettings() {
           onChange={(e) => setMunicipalityProfile((p) => ({ ...p, description: e.target.value }))}
           placeholder="History, local products, festivals, places to visit…"
         />
+      </Row>
+
+      {/* Shown on the town page and in the help desk's "visit the municipal
+          hall" reply, so people know where and when to go. */}
+      <Row label="Municipal office" help="Where people can visit or call you: on the town page and in help-desk replies. Leave empty what you don't want to show.">
+        <div className="st-office">
+          <label>
+            <span>Address</span>
+            <input className="st-input" maxLength={300} value={municipalityProfile.officeAddress}
+              onChange={(e) => setMunicipalityProfile((p) => ({ ...p, officeAddress: e.target.value }))}
+              placeholder="Municipal Hall, Poblacion" />
+          </label>
+          <label>
+            <span>Office hours</span>
+            <input className="st-input" maxLength={200} value={municipalityProfile.officeHours}
+              onChange={(e) => setMunicipalityProfile((p) => ({ ...p, officeHours: e.target.value }))}
+              placeholder="Monday to Friday, 8:00 AM to 5:00 PM" />
+          </label>
+          <label>
+            <span>Phone</span>
+            <input className="st-input" type="tel" maxLength={40} value={municipalityProfile.officePhone}
+              onChange={(e) => setMunicipalityProfile((p) => ({ ...p, officePhone: e.target.value }))}
+              placeholder="(043) 123 4567" />
+          </label>
+          <label>
+            <span>Email</span>
+            <input className="st-input" type="email" maxLength={160} value={municipalityProfile.officeEmail}
+              onChange={(e) => setMunicipalityProfile((p) => ({ ...p, officeEmail: e.target.value }))}
+              placeholder="office@town.gov.ph" />
+          </label>
+        </div>
       </Row>
 
       <Row label="Gallery" help={`${municipalityProfile.gallery.length} of 12 photos. Shown on the page and gallery view.`}>

@@ -1,6 +1,4 @@
-export const peso = (v) =>
-  new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
-    .format(Number(v || 0));
+export { pesoWhole as peso } from '../../lib/format';
 
 /** A share: "18%", or "4.5%" under ten. */
 export const pctText = (v) => {

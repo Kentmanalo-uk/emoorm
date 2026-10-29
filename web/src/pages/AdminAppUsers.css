@@ -1,0 +1,38 @@
+/* App users (super admin). */
+
+.aau-group {
+  display: grid;
+  gap: 8px;
+}
+
+.aau-group-title {
+  margin: 4px 2px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.aau-group-title span {
+  margin-left: 6px;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.aau-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.aau-device {
+  font-size: 12px;
+}
+
+.aau-device div {
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.aau-footnote {
+  margin: 4px 2px 24px;
+}

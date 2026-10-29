@@ -33,4 +33,12 @@ const listSent = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { broadcast, listSent };
+/**
+ * How many people an announcement would reach, before it is sent.
+ * @route POST /api/announcements/preview
+ */
+const preview = asyncHandler(async (req, res) => {
+  successResponse(res, await announcementService.preview(req.user, req.body), 'Recipients counted');
+});
+
+module.exports = { broadcast, preview, listSent };

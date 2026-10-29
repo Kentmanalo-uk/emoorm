@@ -50,6 +50,12 @@ const setStatus = asyncHandler(async (req, res) => {
   successResponse(res, supportCase, 'Support case updated');
 });
 
+/** @route POST /api/support/cases/:id/assign — { action: 'take' | 'release' } (admins) */
+const assign = asyncHandler(async (req, res) => {
+  const supportCase = await supportCaseService.assignCase(req.user, req.params.id, req.body?.action, req);
+  successResponse(res, supportCase, req.body?.action === 'release' ? 'Case released' : 'Case taken');
+});
+
 /** @route POST /api/support/cases/:id/rating — the case owner rates a resolved case */
 const rate = asyncHandler(async (req, res) => {
   const supportCase = await supportCaseService.rateCase(req.user, req.params.id, {
@@ -99,6 +105,7 @@ module.exports = {
   getOne,
   send,
   setStatus,
+  assign,
   rate,
   openWithUser,
   openMunicipal,

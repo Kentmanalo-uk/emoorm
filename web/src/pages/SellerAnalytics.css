@@ -1,0 +1,18 @@
+/* Seller Center › Analytics: the sales chart's two switches (what to show,
+   and by day, month or year) sit side by side, wrapping on phones. */
+.san-chart-head {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.san-chart-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* A refresh that failed while older numbers stay on screen. */
+.san-stale {
+  margin-bottom: 12px;
+}

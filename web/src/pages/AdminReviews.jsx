@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Star, MagnifyingGlass as Search, Trash, ArrowSquareOut } from '@phosphor-icons/react';
+import { useSearchParams } from 'react-router-dom';
+import { Star, MagnifyingGlass as Search, Trash, ArrowSquareOut, X } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
+import ReasonDialog from '../components/admin/ReasonDialog';
 import Skeleton from '../components/ui/Skeleton';
+import LoadFailed from '../components/ui/LoadFailed';
 import axios from '../lib/axios';
 import EmptyArt from '../components/ui/EmptyArt';
+import { timeAgo } from '../lib/format';
 import '../components/admin/AdminLayout.css';
 import './AdminModeration.css';
 import Select from '../components/ui/Select';
@@ -23,16 +26,27 @@ function Stars({ rating }) {
 }
 
 export default function AdminReviews() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  // ?storeId= (from a shop's record) shows that shop's reviews only.
+  const storeId = searchParams.get('storeId') || '';
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [rating, setRating] = useState('');
   const [page, setPage] = useState(1);
   const [reloadTick, setReloadTick] = useState(0);
-  const [result, setResult] = useState({ key: null, rows: [], pagination: { total: 0, totalPages: 0 } });
+  const [result, setResult] = useState({ key: null, rows: [], pagination: { total: 0, totalPages: 0 }, failed: false });
   const [target, setTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const queryKey = `${search}|${rating}|${page}|${reloadTick}`;
+  // Search as you type: the box settles for a moment, then asks.
+  useEffect(() => {
+    const next = searchInput.trim();
+    if (next === search) return undefined;
+    const timer = setTimeout(() => { setSearch(next); setPage(1); }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
+
+  const queryKey = `${search}|${rating}|${storeId}|${page}|${reloadTick}`;
   const isLoading = result.key !== queryKey;
 
   useEffect(() => {
@@ -40,6 +54,7 @@ export default function AdminReviews() {
     const params = { page, pageSize: PAGE_SIZE };
     if (search) params.search = search;
     if (rating) params.rating = rating;
+    if (storeId) params.storeId = storeId;
     axios.get('/moderation/reviews', { params })
       .then((res) => {
         if (cancelled) return;
@@ -47,28 +62,23 @@ export default function AdminReviews() {
           key: queryKey,
           rows: res.data || [],
           pagination: res.pagination || { total: 0, totalPages: 0 },
+          failed: false,
         });
       })
-      .catch((err) => {
+      .catch(() => {
         if (cancelled) return;
-        toast.error(err.message || 'Failed to load reviews');
-        setResult({ key: queryKey, rows: [], pagination: { total: 0, totalPages: 0 } });
+        // Shown as a failed load with Retry, never as "No reviews yet".
+        setResult({ key: queryKey, rows: [], pagination: { total: 0, totalPages: 0 }, failed: true });
       });
     return () => { cancelled = true; };
-  }, [queryKey, search, rating, page]);
+  }, [queryKey, search, rating, page, storeId]);
 
-  const submitSearch = (e) => {
-    e.preventDefault();
-    setSearch(searchInput.trim());
-    setPage(1);
-  };
-
-  const confirmDelete = async () => {
+  const removeReview = async (reason) => {
     if (!target) return;
     setDeleting(true);
     try {
-      await axios.delete(`/reviews/${target.id}`);
-      toast.success('Review removed');
+      await axios.post(`/moderation/reviews/${target.id}/remove`, { reason });
+      toast.success('Review removed. The reviewer is told why.');
       setTarget(null);
       if (result.rows.length === 1 && page > 1) setPage(page - 1);
       else setReloadTick((t) => t + 1);
@@ -79,33 +89,42 @@ export default function AdminReviews() {
     }
   };
 
-  const { rows, pagination } = result;
+  const clearStore = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('storeId');
+    setSearchParams(next, { replace: true });
+    setPage(1);
+  };
+
+  const { rows, pagination, failed } = result;
+  const storeName = rows.find((r) => r.product?.store?.id === storeId)?.product?.store?.name;
 
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">Reviews</h1>
+        <div>
+          <h1 className="admin-page-title">Reviews</h1>
+          <p className="admin-page-sub">Remove reviews that break the rules; the reviewer sees your reason</p>
+        </div>
       </div>
 
       <div className="admin-card">
         <div className="admin-card-header">
           <h2 className="admin-card-title">
             Product reviews
-            {pagination.total > 0 && <span className="am-count">({pagination.total})</span>}
+            {pagination.total > 0 && <span className="am-count">({pagination.total.toLocaleString('en-PH')})</span>}
           </h2>
           <div className="admin-toolbar">
-            <form className="am-search" onSubmit={submitSearch}>
-              <Search size={15} />
+            <label className="am-search">
+              <Search size={15} aria-hidden="true" />
               <input
                 type="search"
+                aria-label="Search reviews"
                 value={searchInput}
-                onChange={(e) => {
-                  setSearchInput(e.target.value);
-                  if (!e.target.value && search) { setSearch(''); setPage(1); }
-                }}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search comment, product, store, reviewer…"
               />
-            </form>
+            </label>
             <Select
               aria-label="Filter by rating"
               className="admin-select"
@@ -120,12 +139,23 @@ export default function AdminReviews() {
           </div>
         </div>
 
+        {storeId && (
+          <div className="am-chips">
+            <span className="am-chip">
+              Store: {storeName || 'this shop'}
+              <button type="button" onClick={clearStore} aria-label="Show every shop's reviews"><X size={12} /></button>
+            </span>
+          </div>
+        )}
+
         {isLoading ? (
           <Skeleton.Table cols={6} rows={6} />
+        ) : failed ? (
+          <LoadFailed what="the reviews" onRetry={() => setReloadTick((t) => t + 1)} compact />
         ) : rows.length === 0 ? (
           <div className="admin-empty">
             <EmptyArt name="reviews" size={104} />
-            <p>{search || rating ? 'No reviews match these filters' : 'No reviews yet'}</p>
+            <p>{search || rating || storeId ? 'No reviews match these filters' : 'No reviews yet'}</p>
           </div>
         ) : (
           <>
@@ -139,7 +169,7 @@ export default function AdminReviews() {
                     <th>Store</th>
                     <th>Reviewer</th>
                     <th>Date</th>
-                    <th><span className="sr-only">Actions</span></th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -150,6 +180,9 @@ export default function AdminReviews() {
                         {r.comment
                           ? <span className="am-comment">{r.comment}</span>
                           : <em className="am-muted">No comment</em>}
+                        {r.sellerReply && (
+                          <span className="am-reply"><strong>Seller replied:</strong> {r.sellerReply}</span>
+                        )}
                       </td>
                       <td data-label="Product">
                         {r.product?.slug ? (
@@ -160,8 +193,10 @@ export default function AdminReviews() {
                       </td>
                       <td data-label="Store">{r.product?.store?.name || '—'}</td>
                       <td data-label="Reviewer">{r.user?.fullName || '—'}</td>
-                      <td data-label="Date" className="am-nowrap">
-                        {new Date(r.createdAt).toLocaleDateString('en-PH')}
+                      <td data-label="Date">
+                        <time className="am-time" dateTime={r.createdAt} title={new Date(r.createdAt).toLocaleString('en-PH')}>
+                          {timeAgo(r.createdAt)}
+                        </time>
                       </td>
                       <td className="am-actions">
                         <button type="button" className="admin-btn admin-btn-danger" onClick={() => setTarget(r)}>
@@ -176,23 +211,26 @@ export default function AdminReviews() {
 
             {pagination.totalPages > 1 && (
               <div className="admin-pagination">
-                <button className="admin-page-btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Prev</button>
+                <button type="button" className="admin-page-btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Prev</button>
                 <span>Page {page} of {pagination.totalPages}</span>
-                <button className="admin-page-btn" disabled={!pagination.hasNext && page >= pagination.totalPages} onClick={() => setPage(page + 1)}>Next →</button>
+                <button type="button" className="admin-page-btn" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>Next →</button>
               </div>
             )}
           </>
         )}
       </div>
 
-      <ConfirmDialog
+      <ReasonDialog
         open={!!target}
         title="Remove this review?"
-        message={target ? `The ${target.rating}-star review by ${target.user?.fullName || 'this user'} on "${target.product?.name || 'this product'}" will be permanently deleted and the product rating recalculated.` : ''}
+        message={target
+          ? `The ${target.rating}-star review by ${target.user?.fullName || 'this user'} on "${target.product?.name || 'this product'}" is taken down and the product's rating recalculated. ${target.user?.fullName || 'The reviewer'} is told your reason.`
+          : ''}
         confirmLabel="Remove review"
-        danger
+        placeholder="Why it is being removed, e.g. abusive words, or not about the product"
+        required
         loading={deleting}
-        onConfirm={confirmDelete}
+        onConfirm={removeReview}
         onCancel={() => !deleting && setTarget(null)}
       />
     </AdminLayout>

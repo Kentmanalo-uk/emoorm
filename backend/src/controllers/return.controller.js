@@ -43,7 +43,7 @@ const storeList = asyncHandler(async (req, res) => {
     pageSize: Math.min(50, Math.max(1, parseInt(pageSize, 10) || 20)),
     status,
   });
-  paginatedResponse(res, result.rows, result.total, result.page, result.pageSize);
+  paginatedResponse(res, result.rows, result.total, result.page, result.pageSize, undefined, { counts: result.counts });
 });
 
 const decide = asyncHandler(async (req, res) => {

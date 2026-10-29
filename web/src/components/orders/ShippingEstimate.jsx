@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Truck } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import { CourierMark } from './CourierTracking';
+import { pesoShort as peso } from '../../lib/format';
 import './ShippingEstimate.css';
 
 // The buyer's saved delivery spot (the default address with a pin, else any
@@ -24,8 +25,6 @@ const pinnedAddress = () => {
 const brgyLabel = (name) => (/^(brgy\.?|bgy\.?|barangay)\s/i.test(name) ? name : `Brgy. ${name}`);
 
 const kmText = (km) => `${Number(km).toLocaleString('en-PH', { maximumFractionDigits: 1 })} km`;
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
 /**
  * What it costs to get one of this product delivered: by the seller (its
@@ -99,8 +98,6 @@ export default function ShippingEstimate({ product, unitPrice, municipalityId, o
   const fees = [sellerFee ?? sellerFrom, ...couriers.map((c) => Number(c.fee))].filter((v) => v != null);
   const lowest = fees.length ? Math.min(...fees) : null;
   const isFrom = (!municipalityId && knownFee == null) || couriers.some((c) => c.from) || sellerFrom != null;
-
-
 
   if (compact && seller && !couriers.length) {
     return (

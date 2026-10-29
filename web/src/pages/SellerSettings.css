@@ -1,7 +1,8 @@
 /* Shop Settings: the shop's settings as grouped lists of rows, drawn with
    the Me page's rows (SellerApp.css .sme-*). Rows that open a page end in a
    chevron; on / off settings carry a switch (PushSetting.css .push-switch);
-   Away mode and Opening hours open their form under the row. */
+   Opening hours opens its form under the row. "Take a break or close"
+   sets its three choices side by side (one column on phones). */
 
 .sst-body {
   gap: 12px;
@@ -186,5 +187,113 @@
   .sc-content .settings-deletion-body .btn-seller-primary {
     justify-content: center;
     min-height: 46px;
+  }
+}
+
+/* Loading, failed or no shop yet. */
+.sst-state {
+  padding: 20px;
+  text-align: center;
+}
+
+/* Where the pages of their own are (not repeated here). */
+.sst-more {
+  margin: 0;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--sa-line);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--sa-faint);
+}
+
+.sst-more a {
+  color: var(--seller-primary, var(--t-primary-700, #047857));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Take a break or close */
+.sst-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 4px 16px 16px;
+}
+
+.sst-option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--sa-line, #e5e7eb);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.sst-option.is-on {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.sst-option-icon {
+  color: var(--sa-ink, #374151);
+}
+
+.sst-option.is-on .sst-option-icon {
+  color: #b45309;
+}
+
+.sst-option.is-danger .sst-option-icon,
+.sst-option.is-danger .sst-option-title {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.sst-option-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--sa-text, #111827);
+}
+
+.sst-option-text {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--sa-faint, #6b7280);
+}
+
+.sst-option-state {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #92400e;
+  overflow-wrap: anywhere;
+}
+
+.sst-option-action {
+  margin-top: 4px;
+}
+
+.sst-option-action button {
+  width: 100%;
+  justify-content: center;
+}
+
+.sst-option-action button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.sst-away-panel .shc-body {
+  padding: 0 16px 16px;
+}
+
+@media (max-width: 768px) {
+  .sst-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sst-option-action button {
+    min-height: 44px;
   }
 }

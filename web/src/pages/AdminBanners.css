@@ -309,3 +309,159 @@
     justify-content: center;
   }
 }
+
+/* The banner form's preview (its own page): the placement's shape. */
+.admin-banner-form-preview {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--t-neutral-200, #e2e8e4);
+  border-radius: 10px;
+}
+
+.admin-banner-form-preview > .admin-home-banner-preview-item {
+  height: 100%;
+}
+
+/* ── Where a banner stands (Live, Scheduled, Ended, Hidden) ── */
+.admin-banner-state {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.admin-banner-state.is-live {
+  background: var(--t-success-50, #f0fdf4);
+  color: var(--t-success-700, #15803d);
+}
+
+.admin-banner-state.is-scheduled {
+  background: var(--t-info-50, #eff6ff);
+  color: var(--t-info-700, #1d4ed8);
+}
+
+.admin-banner-state.is-ended {
+  background: var(--t-warning-50, #fff7ed);
+  color: var(--t-warning-800, #9a3412);
+}
+
+/* ── Carousel list ── */
+.admin-banner-title {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-banner-title span {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+}
+
+.admin-banner-title .admin-banner-link {
+  color: var(--t-primary-700, #047857);
+  overflow-wrap: anywhere;
+}
+
+.admin-banner-thumb {
+  display: block;
+  width: 100px;
+  height: 60px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.admin-banner-order,
+.admin-banner-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-banner-order span {
+  min-width: 20px;
+  text-align: center;
+}
+
+.admin-banner-delete {
+  color: var(--t-danger-600, #dc2626);
+}
+
+/* ── The form ── */
+.admin-banner-form {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-banner-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-banner-field > span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-banner-field small,
+.admin-banner-schedule small {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+}
+
+.admin-banner-field .admin-banner-warn,
+.admin-banner-schedule .admin-banner-warn {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.admin-banner-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  cursor: pointer;
+}
+
+.admin-banner-schedule {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+}
+
+.admin-banner-schedule legend {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-banner-schedule small {
+  grid-column: 1 / -1;
+}
+
+.admin-banner-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-banner-form-preview.is-home-carousel { aspect-ratio: 16 / 6; }
+.admin-banner-form-preview.is-home-sidebar-top,
+.admin-banner-form-preview.is-home-sidebar-bottom { aspect-ratio: 3 / 2; }
+.admin-banner-form-preview.is-home-popup { aspect-ratio: 4 / 5; }
+
+@media (max-width: 768px) {
+  .admin-banner-schedule {
+    grid-template-columns: 1fr;
+  }
+}

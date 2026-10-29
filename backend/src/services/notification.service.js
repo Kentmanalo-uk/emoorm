@@ -264,8 +264,8 @@ const deleteNotification = async (id, userId) => {
  * @param {String} userId - User ID
  * @returns {Promise<Object>} Delete count
  */
-const deleteAllNotifications = async (userId, audience) => {
-  return notificationRepository.deleteAllForUser(userId, audience);
+const deleteAllNotifications = async (userId, audience, options) => {
+  return notificationRepository.deleteAllForUser(userId, audience, options);
 };
 
 /**

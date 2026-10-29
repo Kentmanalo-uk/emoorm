@@ -113,6 +113,7 @@ const AdminCategories = lazy(() => import('./pages/AdminCategories'));
 const AdminMunicipalities = lazy(() => import('./pages/AdminMunicipalities'));
 const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
 const AdminMessages = lazy(() => import('./pages/AdminMessages'));
+const AdminEmail = lazy(() => import('./pages/AdminEmail'));
 const AdminFeedback = lazy(() => import('./pages/AdminFeedback'));
 const AdminBanners = lazy(() => import('./pages/AdminBanners'));
 const AdminCouriers = lazy(() => import('./pages/AdminCouriers'));
@@ -364,7 +365,7 @@ function AppRoutes() {
         {/* Admin — MUNICIPAL_ADMIN / SUPER_ADMIN only */}
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/admin/sellers" element={<AdminRoute><AdminSellers /></AdminRoute>} />
-        <Route path="/admin/all-sellers" element={<AdminRoute><AdminUsers fixedRole="SELLER" title="All Sellers" /></AdminRoute>} />
+        <Route path="/admin/all-sellers" element={<AdminRoute><AdminUsers fixedRole="SELLER" title="Sellers" /></AdminRoute>} />
         <Route path="/admin/buyers" element={<AdminRoute><AdminUsers fixedRole="BUYER" title="Buyers" /></AdminRoute>} />
         <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
         <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
@@ -372,16 +373,26 @@ function AppRoutes() {
         <Route path="/admin/support" element={<AdminRoute><AdminSupport /></AdminRoute>} />
         <Route path="/admin/users" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminUsers /></AdminRoute>} />
         <Route path="/admin/categories" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCategories /></AdminRoute>} />
+        <Route path="/admin/categories/new" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCategories /></AdminRoute>} />
+        <Route path="/admin/categories/:id/edit" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCategories /></AdminRoute>} />
         <Route path="/admin/municipalities" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminMunicipalities /></AdminRoute>} />
+        <Route path="/admin/municipalities/new" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminMunicipalities /></AdminRoute>} />
         <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
         {/* Announcements are a tab of Messages now; the old path is still
             linked from bookmarks and older notifications. */}
         <Route path="/admin/messages" element={<AdminRoute><AdminMessages /></AdminRoute>} />
+        <Route path="/admin/email" element={<AdminRoute><AdminEmail /></AdminRoute>} />
         <Route path="/admin/feedback" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminFeedback /></AdminRoute>} />
         <Route path="/admin/announcements" element={<Navigate to="/admin/messages?tab=announcements" replace />} />
         <Route path="/admin/banners" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminBanners /></AdminRoute>} />
+        <Route path="/admin/banners/new" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminBanners /></AdminRoute>} />
+        <Route path="/admin/banners/:id/edit" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminBanners /></AdminRoute>} />
         <Route path="/admin/couriers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCouriers /></AdminRoute>} />
+        <Route path="/admin/couriers/new" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCouriers /></AdminRoute>} />
+        <Route path="/admin/couriers/:id/edit" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCouriers /></AdminRoute>} />
         <Route path="/admin/vouchers" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminVouchers /></AdminRoute>} />
+        <Route path="/admin/vouchers/new" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminVouchers /></AdminRoute>} />
+        <Route path="/admin/vouchers/:id/edit" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminVouchers /></AdminRoute>} />
         <Route path="/admin/team" element={<AdminRoute roles={['MUNICIPAL_ADMIN']}><AdminTeam /></AdminRoute>} />
         <Route path="/admin/app-users" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminAppUsers /></AdminRoute>} />
         <Route path="/admin/junior-admins" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminJuniorAdmins /></AdminRoute>} />

@@ -177,6 +177,9 @@ const deleteCategory = async (id) => {
   await invalidate(TAGS.categories, TAGS.products);
 };
 
+/** Products in each category, for the admin list (not cached: it changes). */
+const productCounts = () => categoryRepository.countProductsByCategory();
+
 /**
  * Toggle category active status (Super Admin only)
  * @param {String} id - Category ID
@@ -284,5 +287,6 @@ module.exports = {
   updateCategory,
   deleteCategory,
   toggleCategoryStatus,
+  productCounts,
   seedCategories,
 };

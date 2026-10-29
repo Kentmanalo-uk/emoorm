@@ -10,10 +10,9 @@ import { resolveImg } from '../lib/media';
 import { buyLabel } from '../lib/availability';
 import './ProductOptionSheet.css';
 import useFocusTrap from '../hooks/useFocusTrap';
+import { peso } from '../lib/format';
 
 const CLOSE_MS = 220;
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * Phone bottom sheet for picking a product's options (Color, Size, Sack…)

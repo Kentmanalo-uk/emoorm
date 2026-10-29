@@ -2270,3 +2270,59 @@
     gap: 6px;
   }
 }
+
+/* "Continue your last product?": the draft kept on this device. */
+.pf-draft-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--t-primary-100, #d1fae5);
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.pf-draft-offer > svg {
+  flex-shrink: 0;
+  color: var(--pf-green-dark, #047857);
+}
+
+.pf-draft-offer-text {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pf-draft-offer-text strong {
+  font-weight: 500;
+}
+
+.pf-draft-offer-text span {
+  overflow: hidden;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pf-draft-offer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .pf-draft-offer-actions {
+    width: 100%;
+  }
+
+  .pf-draft-offer-actions .pf-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

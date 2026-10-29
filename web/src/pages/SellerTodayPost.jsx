@@ -4,9 +4,12 @@ import {
 } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  BowlFood, CookingPot, CalendarCheck, CaretLeft, Check, ForkKnife, Lock, Minus, Plus,
+  BowlFood, CookingPot, CalendarCheck, CaretLeft, Check, Basket, Lock, Minus, Plus,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
+import useUnsavedChanges from '../hooks/useUnsavedChanges';
+import { confirmAction } from '../lib/confirm';
+import LoadFailed from '../components/ui/LoadFailed';
 import { resolveImg, firstImage } from '../lib/media';
 import { isOpen, momentLabel } from '../lib/availability';
 import { saleInfo } from '../lib/variantPricing';
@@ -22,18 +25,18 @@ import {
 import DayCalendar from '../components/seller/DayCalendar';
 import Skeleton from '../components/ui/Skeleton';
 import { BusyLabel } from '../components/ui/Spinner';
+import { peso } from '../lib/format';
 import './SellerDashboard.css';
 import './SellerTodayPost.css';
 
 const KIND_ICONS = { READY_NOW: BowlFood, MADE_TO_ORDER: CookingPot, PRE_ORDER: CalendarCheck };
 const ms = (v) => new Date(v).getTime();
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** The product photo, or a plain tile. */
 function Photo({ product }) {
   const [failed, setFailed] = useState(false);
   const img = firstImage(product?.images);
-  if (!img || failed) return <span className="tpp-photo is-empty" aria-hidden="true"><ForkKnife size={22} /></span>;
+  if (!img || failed) return <span className="tpp-photo is-empty" aria-hidden="true"><Basket size={22} /></span>;
   return <img className="tpp-photo" src={resolveImg(img)} alt="" loading="lazy" onError={() => setFailed(true)} />;
 }
 
@@ -91,9 +94,9 @@ function TimeInput({ value, onChange, label }) {
 }
 
 /**
- * Post an item to Today's menu, or edit one post, on one page
+ * Post an item to Available today, or edit one post, on one page
  * (/seller/today/new, /seller/today/:id/edit; /seller/today/new?again=:id
- * fills it in from an ended post; ?product=:id picks a menu item, shown
+ * fills it in from an ended post; ?product=:id picks an item, shown
  * alone with "Change item"). Every section shows at once; a bar at the
  * bottom sums it up in one line with the main button. lib/todayPost.js holds
  * the rules, shared with the app.
@@ -118,6 +121,12 @@ export default function SellerTodayPost() {
   const [changeDay, setChangeDay] = useState(false);
   // "Change item": the whole list again, though an item is already chosen.
   const [changeItem, setChangeItem] = useState(false);
+  // The form as it opened, to tell when something was changed; and whether
+  // the items could be loaded at all (a failure is not "no items").
+  const [opened, setOpened] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,7 +134,7 @@ export default function SellerTodayPost() {
       const [prods, mode, post] = await Promise.all([
         axios.get('/products/my/products', { params: { kind: 'TODAY', pageSize: 100 } })
           .then((res) => (res.data || []).filter((p) => !['ARCHIVED', 'SUSPENDED'].includes(p.status)))
-          .catch(() => []),
+          .catch(() => null),
         axios.get('/stores/my/store').then((res) => res.data?.fulfillmentMode || 'DELIVERY').catch(() => 'BOTH'),
         id || againId
           ? axios.get('/today/mine', { params: { scope: againId ? 'ended' : undefined } })
@@ -134,25 +143,35 @@ export default function SellerTodayPost() {
           : null,
       ]);
       if (cancelled) return;
+      if (prods === null) { setLoadFailed(true); return; }
+      setLoadFailed(false);
       setProducts(prods);
       setStoreMode(mode);
       if (id) {
         if (!post || !['LIVE', 'SCHEDULED'].includes(post.status)) { setMissing(true); return; }
         setEditing(post);
-        setDraft(editDraft(post));
+        const d = editDraft(post);
+        setDraft(d);
+        setOpened(d);
       } else if (post) {
         const d = againDraft(post, { products: prods, storeMode: mode });
         setDraft(d);
+        setOpened(d);
         setOtherCook(d.prepMinutes !== '' && !COOK_PICKS.includes(Number(d.prepMinutes)));
       } else {
         // ?product=<id>: Post on a menu item picks it.
         const d = blankDraft({ products: prods, storeMode: mode });
         if (productId && prods.some((p) => p.id === productId)) d.productId = productId;
         setDraft(d);
+        setOpened(d);
       }
     })();
     return () => { cancelled = true; };
-  }, [id, againId, productId]);
+  }, [id, againId, productId, attempt]);
+
+  // Leaving with changes asks first: links (useUnsavedChanges) and the back arrow.
+  const dirty = Boolean(draft && opened) && !done && JSON.stringify(draft) !== JSON.stringify(opened);
+  useUnsavedChanges(dirty && !saving, { title: id ? 'Leave without saving?' : 'Leave without posting?', message: id ? 'Your changes to this post are not saved yet.' : 'This post is not up yet.' });
 
   // Editing, the post's own product comes first (and is the only one once buyers ordered it).
   const list = useMemo(() => {
@@ -168,11 +187,24 @@ export default function SellerTodayPost() {
     if (location.state?.fromList) navigate(-1);
     else navigate('/seller/today', { replace: true });
   };
+  const requestBack = async () => {
+    if (dirty && !saving) {
+      const leave = await confirmAction({
+        title: id ? 'Leave without saving?' : 'Leave without posting?',
+        message: id ? 'Your changes to this post are not saved yet.' : 'This post is not up yet.',
+        confirmLabel: 'Leave',
+        cancelLabel: 'Stay',
+        danger: true,
+      });
+      if (!leave) return;
+    }
+    goBack();
+  };
 
   const title = id ? 'Edit post' : 'Post an item';
   const head = (
     <div className="tpp-head">
-      <button type="button" className="tpp-back" onClick={goBack} aria-label="Back">
+      <button type="button" className="tpp-back" onClick={requestBack} aria-label="Back">
         <CaretLeft size={22} weight="bold" />
       </button>
       <h1>{title}</h1>
@@ -185,7 +217,18 @@ export default function SellerTodayPost() {
         {head}
         <div className="tpp-form">
           <p className="tpp-hint">This post has ended or was removed, so it can&apos;t be changed.</p>
-          <Link to="/seller/today" className="btn-seller-primary tpp-missing">Back to Today&apos;s menu</Link>
+          <Link to="/seller/today" className="btn-seller-primary tpp-missing">Back to Available today</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="seller-dashboard tpp">
+        {head}
+        <div className="tpp-form">
+          <LoadFailed what="your items" compact onRetry={() => { setLoadFailed(false); setAttempt((n) => n + 1); }} />
         </div>
       </div>
     );
@@ -253,6 +296,7 @@ export default function SellerTodayPost() {
         const res = await axios.post('/today/batch', batchBody(draft));
         toast.success(posted(res.data?.windows || []));
       }
+      setDone(true);
       goBack();
     } catch (err) {
       const raw = err.message || 'That did not work. Please try again.';
@@ -269,7 +313,7 @@ export default function SellerTodayPost() {
   const num = (key) => shown.indexOf(key) + 1;
 
   /* ── 1. Item ─────────────────────────────────────────────────── */
-  // An item already chosen (Post on a menu item, editing, Post again, a shop
+  // An item already chosen (Post on an item, editing, Post again, a shop
   // with one item, or one just tapped) shows alone; "Change item" opens the
   // list again, unless buyers already ordered this post.
   const chosen = list.find((p) => p.id === draft.productId);
@@ -286,7 +330,7 @@ export default function SellerTodayPost() {
       {locked && <p className="tpp-locked"><Lock size={16} weight="bold" aria-hidden="true" /> {LOCKED_NOTE}</p>}
       {list.length === 0 && (
         <p className="tpp-hint">
-          Add items to your menu first. <Link to="/seller/today?tab=menu">Go to Menu</Link>
+          Add items to Available today first. <Link to="/seller/today?tab=menu">Go to Your items</Link>
         </p>
       )}
       {list.length > 0 && showOne && (
@@ -527,7 +571,7 @@ export default function SellerTodayPost() {
         value={draft.note}
         maxLength={200}
         onChange={(e) => set({ note: e.target.value })}
-        placeholder="e.g. Best eaten warm"
+        placeholder="e.g. Picked this morning, or Best eaten warm"
         aria-label="Note for buyers"
       />
     </Section>

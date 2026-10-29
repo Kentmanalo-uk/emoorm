@@ -6,6 +6,8 @@ import {
 import axios from '../../lib/axios';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import UserAvatar from '../ui/UserAvatar';
+import LoadFailed from '../ui/LoadFailed';
+import { chatTime } from '../../lib/format';
 
 /*
  * The admin team's chats, on the Admin team page: one for everyone on the
@@ -16,13 +18,7 @@ import UserAvatar from '../ui/UserAvatar';
 
 const TEAM = 'team';
 
-const time = (d) => {
-  const at = new Date(d);
-  const today = new Date().toDateString() === at.toDateString();
-  return today
-    ? at.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
-    : at.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
-};
+const time = chatTime;
 
 function ChatAvatar({ chat }) {
   if (chat.thread === TEAM) {
@@ -33,6 +29,7 @@ function ChatAvatar({ chat }) {
 
 function Thread({ chat, meId, onBack, onRead }) {
   const [messages, setMessages] = useState(null);
+  const [failed, setFailed] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -53,13 +50,16 @@ function Thread({ chat, meId, onBack, onRead }) {
         return [...older, ...latest];
       });
       setHasMore((h) => h || res.data.hasMore);
+      setFailed(false);
       // The server marks the chat read when it hands over the latest messages.
       onReadRef.current?.(thread);
     })
-    .catch(() => {}), [thread]);
+    // Only a first load that fails is shown; a missed poll tries again.
+    .catch(() => setFailed(true)), [thread]);
 
   useEffect(() => {
     setMessages(null);
+    setFailed(false);
     setHasMore(false);
     stick.current = true;
     fetchLatest();
@@ -124,7 +124,9 @@ function Thread({ chat, meId, onBack, onRead }) {
 
       <div className="tc-messages" ref={scroller} onScroll={onScroll}>
         {hasMore && <button type="button" className="tc-earlier" onClick={loadEarlier}>Earlier messages</button>}
-        {messages === null && <p className="tc-quiet">Loading…</p>}
+        {messages === null && (failed
+          ? <LoadFailed onRetry={fetchLatest} what="this chat" compact />
+          : <p className="tc-quiet">Loading…</p>)}
         {messages?.length === 0 && (
           <p className="tc-quiet">{chat.thread === TEAM ? 'No messages yet. Say hello to the team.' : `No messages yet. Write to ${chat.title}.`}</p>
         )}
@@ -180,6 +182,7 @@ function Thread({ chat, meId, onBack, onRead }) {
  */
 export default function TeamChat({ meId, open, onOpen, onUnread }) {
   const [data, setData] = useState(null);
+  const [failed, setFailed] = useState(false);
   const onUnreadRef = useRef(onUnread);
   useEffect(() => { onUnreadRef.current = onUnread; }, [onUnread]);
   // The page's badges follow whatever this list knows, loaded or read here.
@@ -188,8 +191,8 @@ export default function TeamChat({ meId, open, onOpen, onUnread }) {
   // The list loads once on opening, then every 20 s while the page is in
   // view, and again on coming back from a chat (for its last message).
   const load = useCallback(() => axios.get('/admin-team/chats', { quiet: true })
-    .then((res) => setData(res.data))
-    .catch(() => {}), []);
+    .then((res) => { setData(res.data); setFailed(false); })
+    .catch(() => setFailed(true)), []);
   useEffect(() => {
     load();
     return pollWhileVisible(load, 20000);
@@ -221,7 +224,7 @@ export default function TeamChat({ meId, open, onOpen, onUnread }) {
         <strong>Team chat</strong>
       </div>
       {data === null ? (
-        <p className="tc-quiet">Loading…</p>
+        failed ? <LoadFailed onRetry={load} what="the team chat" compact /> : <p className="tc-quiet">Loading…</p>
       ) : (
         <ul>
           {data.chats.map((c) => (

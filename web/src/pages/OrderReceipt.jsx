@@ -13,8 +13,8 @@ import {
   etaLabel, hasPaluto, lineKind, lineNote,
 } from '../lib/orderLines';
 import { distanceNote } from '../lib/deliveryDistance';
+import { peso } from '../lib/format';
 
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateFmt = (d) => new Date(d).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 const paymentLabel = (m) => ({

@@ -1,38 +1,87 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  DownloadSimple as Download, ArrowsClockwise as RefreshCw, CaretRight,
-  Storefront, Package, Flag,
+  DownloadSimple as Download, ArrowsClockwise as RefreshCw, Printer,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import AdminLayout from '../components/admin/AdminLayout';
 import KpiCard from '../components/analytics/KpiCard';
 import BarChart from '../components/analytics/BarChart';
-import TopList from '../components/analytics/TopList';
-import StatusDonut from '../components/analytics/StatusDonut';
 import DateRangePicker from '../components/analytics/DateRangePicker';
-import { peso, num, pctText, growthText, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
+import Breakdowns from '../components/analytics/Breakdowns';
+import { num, pctText, growthText, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
+import { returnReason, words } from '../lib/labels';
 import '../components/analytics/analytics.css';
 
-const PENDING_ACTIONS = [
-  { key: 'sellers', label: 'Seller applications', icon: Storefront, link: '/admin/sellers' },
-  { key: 'products', label: 'Product approvals', icon: Package, link: '/admin/products' },
-  { key: 'reports', label: 'Open reports', icon: Flag, link: '/admin/reports' },
-];
+/*
+ * A municipal admin's Analytics: how the town's marketplace is doing over a
+ * period, and why. The work waiting (applications, products, reports) and
+ * the top stores and products are on the Dashboard, so they are not
+ * repeated here. "Print town report" prints a one-page summary of the
+ * period for the mayor or the council.
+ */
 
-function Card({ title, sub, link, children }) {
+function Card({ title, sub, children }) {
   return (
     <section className="an-card">
       <div className="an-card-head">
         <h2 className="an-card-title">{title}</h2>
         {sub && <span className="an-card-sub">{sub}</span>}
-        {link && (
-          <Link to={link} className="an-card-link">
-            View all <CaretRight size={12} weight="bold" />
-          </Link>
-        )}
       </div>
       {children}
+    </section>
+  );
+}
+
+/** The printed page: the period's figures in plain rows (only shown in print). */
+function TownReport({ data }) {
+  const k = data.kpis || {};
+  const b = data.breakdowns || {};
+  const rows = [
+    ['Completed orders', num(k.orders?.value)],
+    ['Orders placed', num(k.totalOrders?.value)],
+    ['Buyers who ordered', num(k.buyers?.value)],
+    ['New buyers', num(b.growth?.buyers)],
+    ['New shops', num(b.growth?.shops)],
+    ['Approved sellers', num(k.sellers?.value)],
+    ['Active stores', num(k.activeStores?.value)],
+    ['Suspended stores', num(k.suspendedStores?.value)],
+    ['Products on sale', num(k.liveProducts?.value)],
+    ['Sales vs the period before', growthText(k.revenue?.delta)],
+    ['Refund rate', pctText(k.refundRate?.value)],
+    ['Reports resolved', num(data.reports?.resolved)],
+    ['Reports still open', num(data.reports?.pending)],
+  ];
+  return (
+    <section className="an-print-report" aria-hidden="true">
+      <header>
+        <p>E-MOORM · Municipal report</p>
+        <h1>{data.municipality?.name || 'Municipality'}</h1>
+        <p>{shortDate(data.window.from)} – {shortDate(data.window.to)} · printed {new Date().toLocaleDateString('en-PH', { dateStyle: 'medium' })}</p>
+      </header>
+      <table>
+        <tbody>
+          {rows.map(([label, value]) => <tr key={label}><th>{label}</th><td>{value}</td></tr>)}
+        </tbody>
+      </table>
+      {b.categories?.length > 0 && (
+        <>
+          <h2>Sales by category</h2>
+          <table><tbody>{b.categories.slice(0, 8).map((c) => <tr key={c.id || 'none'}><th>{c.name}</th><td>{pctText(c.share)}</td></tr>)}</tbody></table>
+        </>
+      )}
+      {b.cancelReasons?.length > 0 && (
+        <>
+          <h2>Why orders were cancelled</h2>
+          <table><tbody>{b.cancelReasons.map((r) => <tr key={r.reason}><th>{words(r.reason)}</th><td>{num(r.count)}</td></tr>)}</tbody></table>
+        </>
+      )}
+      {b.returnReasons?.length > 0 && (
+        <>
+          <h2>Why buyers asked for returns</h2>
+          <table><tbody>{b.returnReasons.map((r) => <tr key={r.reason}><th>{returnReason(r.reason)}</th><td>{num(r.count)}</td></tr>)}</tbody></table>
+        </>
+      )}
+      <p className="an-print-note">Shares and growth are shown instead of peso amounts: shops' earnings stay private.</p>
     </section>
   );
 }
@@ -74,7 +123,6 @@ export default function MunicipalAdminAnalytics() {
 
   const k = data?.kpis || {};
   const first = loading && !data;
-  const pending = data?.pending || {};
 
   return (
     <AdminLayout>
@@ -88,27 +136,30 @@ export default function MunicipalAdminAnalytics() {
             </p>
           </div>
           <div className="an-actions">
-            <DateRangePicker value={range} onChange={setRange} />
+            <DateRangePicker value={range} onChange={setRange} presets="admin" />
             <button type="button" className="an-icon-btn" onClick={refresh} disabled={loading} title="Refresh">
               <RefreshCw size={14} weight="bold" /> Refresh
             </button>
-            <button type="button" className="an-icon-btn" onClick={exportCsv} disabled={!data?.salesByDay?.length} title="Export CSV">
-              <Download size={14} weight="bold" /> Export
+            <button type="button" className="an-icon-btn" onClick={exportCsv} disabled={!data?.salesByDay?.length} title="Orders and sales per day, as a spreadsheet">
+              <Download size={14} weight="bold" /> Export daily sales (CSV)
+            </button>
+            <button type="button" className="an-icon-btn" onClick={() => window.print()} disabled={!data} title="A one-page summary of this period for the mayor or council">
+              <Printer size={14} weight="bold" /> Print town report
             </button>
           </div>
         </div>
 
-        {error && <div className="an-card" style={{ padding: 16, color: 'var(--t-danger-700, #b91c1c)' }}>{error}</div>}
+        {error && <div className="an-card an-error" role="alert">{error}</div>}
 
         <div className="an-kpi-grid">
-          <KpiCard loading={first} label="Sales growth" value={growthText(k.revenue?.delta)} hint="Completed sales vs the period before" />
+          <KpiCard loading={first} label="Sales growth" value={growthText(k.revenue?.delta)} hint={k.revenue?.delta == null ? 'No sales in the period before to compare' : 'Completed sales vs the period before'} />
           <KpiCard loading={first} label="Completed orders" value={num(k.orders?.value)} delta={k.orders?.delta} hint={`${num(k.totalOrders?.value)} placed in total`} />
-          <KpiCard loading={first} label="Average order size" value={growthText(k.avgOrderValue?.delta)} hint="Change vs the period before" />
-          <KpiCard loading={first} label="Unique buyers" value={num(k.buyers?.value)} hint="Placed an order this period" />
+          <KpiCard loading={first} label="Average order size" value={growthText(k.avgOrderValue?.delta)} hint={k.avgOrderValue?.delta == null ? 'No orders in the period before to compare' : 'Change vs the period before'} />
+          <KpiCard loading={first} label="Buyers who ordered" value={num(k.buyers?.value)} hint="Placed an order this period" />
         </div>
         <div className="an-kpi-grid">
           <KpiCard loading={first} label="Sellers" value={num(k.sellers?.value)} />
-          <KpiCard loading={first} label="Active stores" value={num(k.activeStores?.value)} hint={`${num(k.suspendedStores?.value)} suspended`} />
+          <KpiCard loading={first} label="Active stores" value={num(k.activeStores?.value)} hint={Number(k.suspendedStores?.value) ? `${num(k.suspendedStores?.value)} suspended` : undefined} />
           <KpiCard loading={first} label="Live products" value={num(k.liveProducts?.value)} />
           <KpiCard loading={first} label="Refund rate" value={pctText(k.refundRate?.value)} hint="Of completed sales" />
         </div>
@@ -117,94 +168,9 @@ export default function MunicipalAdminAnalytics() {
           <BarChart data={data?.salesByDay || []} valueKey="orders" formatValue={(v) => num(v)} />
         </Card>
 
-        <div className="an-grid-2">
-          <Card title="Top stores">
-            <TopList
-              items={(data?.topStores || []).map((s) => ({
-                id: s.id,
-                name: s.name,
-                image: s.logo,
-                subtitle: `${num(s.orders)} orders`,
-                share: s.share,
-              }))}
-              renderMetric={(s) => pctText(s.share)}
-              emptyArt="shopping"
-              emptyTitle="No top stores yet"
-              emptyMessage="Stores with completed sales will rank here."
-            />
-          </Card>
+        <Breakdowns data={data} />
 
-          <Card title="Order status">
-            <StatusDonut counts={data?.ordersByStatus || {}} />
-          </Card>
-        </div>
-
-        <div className="an-grid-2">
-          <Card title="Top products">
-            <TopList
-              items={(data?.topProducts || []).map((p) => ({
-                id: p.id,
-                name: p.name,
-                image: p.image,
-                subtitle: `${num(p.quantity)} sold${p.storeName ? ` · ${p.storeName}` : ''}`,
-                share: p.share,
-              }))}
-              renderMetric={(p) => pctText(p.share)}
-              emptyArt="products"
-              emptyTitle="No products sold yet"
-              emptyMessage="Best-selling products will rank here."
-            />
-          </Card>
-
-          <Card title="Pending actions">
-            <ul className="an-actions-list">
-              {PENDING_ACTIONS.map(({ key, label, icon: Icon, link }) => {
-                const count = Number(pending[key] || 0);
-                return (
-                  <li key={key}>
-                    <Link to={link}>
-                      <Icon size={20} weight="fill" />
-                      <span className="an-actions-name">{label}</span>
-                      <span className={`an-actions-count${count > 0 ? ' is-busy' : ''}`}>{num(count)}</span>
-                      <CaretRight size={14} weight="bold" />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
-        </div>
-
-        <div className="an-grid-2">
-          <Card title="Recent seller applications" link="/admin/sellers">
-            <TopList
-              items={(data?.recent?.sellerApplications || []).map((s) => ({
-                id: s.id,
-                name: s.shopName || s.fullName || s.email,
-                subtitle: `${s.fullName || s.email}${s.sellerApplicationDate ? ` · ${shortDate(s.sellerApplicationDate)}` : ''}`,
-              }))}
-              renderMetric={() => ''}
-              emptyArt="launch"
-              emptyTitle="No pending applications"
-              emptyMessage="New seller applications will show up here."
-            />
-          </Card>
-
-          <Card title="Recent pending products" link="/admin/products">
-            <TopList
-              items={(data?.recent?.pendingProducts || []).map((p) => ({
-                id: p.id,
-                name: p.name,
-                image: Array.isArray(p.images) ? p.images[0] : null,
-                subtitle: [p.store?.name, p.price != null ? peso(p.price) : null].filter(Boolean).join(' · '),
-              }))}
-              renderMetric={() => ''}
-              emptyArt="calendar"
-              emptyTitle="Nothing to review"
-              emptyMessage="Products waiting for approval will show up here."
-            />
-          </Card>
-        </div>
+        {data && <TownReport data={data} />}
       </div>
     </AdminLayout>
   );

@@ -279,8 +279,13 @@ const LIST_SELECT = {
       pickupAddress: true,
       isActive: true,
       isSuspended: true,
+      isApproved: true,
     },
   },
+  // ID status for the admin lists (Verified / Pending / None), never the data.
+  identityVerification: { select: { status: true, idType: true, verifiedAt: true } },
+  // Orders the person placed as a buyer (the Buyers list).
+  _count: { select: { orders: true } },
   role: true,
   isActive: true,
   isVerified: true,
@@ -325,6 +330,13 @@ const APPLICATION_SELECT = {
   selfieUrl: true,
 };
 
+// How the admin lists can be ordered (?sort=).
+const SORTS = {
+  newest: { createdAt: 'desc' },
+  oldest: { createdAt: 'asc' },
+  name: { fullName: 'asc' },
+};
+
 /**
  * Get all users with pagination and filters
  * @param {Object} options - Query options
@@ -341,6 +353,7 @@ const findAll = async (options = {}) => {
     sellerApplicationStatus,
     includeShopMunicipality = false,
     closing = false,
+    sort = 'newest',
   } = options;
 
   const where = closing
@@ -379,7 +392,7 @@ const findAll = async (options = {}) => {
       select: { ...LIST_SELECT, ...(withApplication ? APPLICATION_SELECT : {}) },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      orderBy: { createdAt: 'desc' },
+      orderBy: SORTS[sort] || SORTS.newest,
     }),
     prisma.user.count({ where }),
   ]);

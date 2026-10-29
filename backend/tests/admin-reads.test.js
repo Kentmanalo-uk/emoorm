@@ -84,7 +84,10 @@ test('the attention queue counts each queue and finds its oldest item', async ()
   const staleAt = h.daysAgo(2);
   await h.prisma.$executeRaw`UPDATE orders SET updated_at = ${staleAt} WHERE id IN (${stale.id}, ${cancelled.id})`;
 
+  // Returns badge disputes (an admin decides those); a request is the
+  // seller's to answer, and counts apart once it is three days old.
   const returnedAt = h.daysAgo(1.5);
+  const slowSince = h.daysAgo(4);
   const returnRequest = (n, extra) => h.prisma.returnRequest.create({
     data: {
       requestNumber: `CI-RR-${h.RUN}-${n}`, orderId: stale.id, buyerId: buyer.id, storeId: store.id, reason: 'DAMAGED', requestedAmount: 100, ...extra,
@@ -92,6 +95,8 @@ test('the attention queue counts each queue and finds its oldest item', async ()
   });
   await returnRequest(1, { createdAt: returnedAt });
   await returnRequest(2, { status: 'APPROVED' });
+  await returnRequest(3, { status: 'DISPUTED', disputedAt: returnedAt });
+  await returnRequest(4, { createdAt: slowSince });
 
   // Only an open case whose last message is the person's waits on an admin.
   const waitingSince = hoursAgo(6);
@@ -107,6 +112,7 @@ test('the attention queue counts each queue and finds its oldest item', async ()
     supportAwaiting: [1, waitingSince, 'low'],
     stalePayments: [1, staleAt, 'medium'],
     openReturns: [1, returnedAt, 'medium'],
+    slowReturns: [1, slowSince, 'high'],
     teamChat: [0, null, 'none'],
   };
   for (const [who, query] of [[admin, ''], [superAdmin, `?municipalityId=${town.id}`]]) {
@@ -114,7 +120,11 @@ test('the attention queue counts each queue and finds its oldest item', async ()
     assert.equal(res.status, 200, res.body?.message);
     assert.deepEqual(res.body.data.map((item) => item.key), Object.keys(expected));
     for (const item of res.body.data) {
-      assert.deepEqual(Object.keys(item), ['key', 'label', 'link', 'count', 'oldestAt', 'severity']);
+      // stalePayments also says where its chip goes (a filtered Orders view).
+      const fields = item.key === 'stalePayments'
+        ? ['key', 'label', 'link', 'href', 'count', 'oldestAt', 'severity']
+        : ['key', 'label', 'link', 'count', 'oldestAt', 'severity'];
+      assert.deepEqual(Object.keys(item), fields);
       const [count, oldest, severity] = expected[item.key];
       assert.equal(item.count, count, item.key);
       assert.equal(item.oldestAt && new Date(item.oldestAt).getTime(), oldest && oldest.getTime(), item.key);
@@ -238,7 +248,8 @@ test('the admin order list can load each order as its summary only', async () =>
   for (const order of summary.orders) {
     assert.equal('courier' in order, false);
     assert.deepEqual(Object.keys(order.buyer).sort(), ['fullName', 'id']);
-    assert.deepEqual(Object.keys(order.store).sort(), ['id', 'name', 'slug']);
+    // The owner too: "Message seller" from the order opens a case with them.
+    assert.deepEqual(Object.keys(order.store).sort(), ['id', 'name', 'ownerId', 'slug']);
     for (const item of order.items) assert.deepEqual(Object.keys(item), ['quantity']);
   }
   const units = (result) => result.orders.map((o) => o.items.reduce((n, item) => n + item.quantity, 0));

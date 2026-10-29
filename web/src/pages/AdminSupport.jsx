@@ -37,7 +37,11 @@ export default function AdminSupport() {
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">Buyer Support</h1>
+        <div>
+          {/* Buyers and sellers both write here (sellers from "Message the admin"). */}
+          <h1 className="admin-page-title">Support</h1>
+          <p className="admin-page-sub">Buyers and sellers asking the municipal office for help</p>
+        </div>
       </div>
       <div className="as-support">
         <SupportChat

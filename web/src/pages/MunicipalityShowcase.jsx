@@ -66,6 +66,15 @@ export default function MunicipalityShowcase() {
                 <div className="municipality-feature-copy">
                   <h2>{municipality?.tagline || `${municipality?.name || 'This community'}, made local.`}</h2>
                   <p>{municipality?.description || `Discover the people, products, and small businesses that make ${municipality?.name || 'this municipality'} special.`}</p>
+                  {/* The municipal office, when the town has filled it in (Settings). */}
+                  {(municipality?.officeAddress || municipality?.officeHours || municipality?.officePhone || municipality?.officeEmail) && (
+                    <dl className="municipality-office">
+                      {municipality.officeAddress && <><dt>Municipal office</dt><dd>{municipality.officeAddress}</dd></>}
+                      {municipality.officeHours && <><dt>Open</dt><dd>{municipality.officeHours}</dd></>}
+                      {municipality.officePhone && <><dt>Phone</dt><dd><a href={`tel:${municipality.officePhone.replace(/[^0-9+]/g, '')}`}>{municipality.officePhone}</a></dd></>}
+                      {municipality.officeEmail && <><dt>Email</dt><dd><a href={`mailto:${municipality.officeEmail}`}>{municipality.officeEmail}</a></dd></>}
+                    </dl>
+                  )}
                   <div className="municipality-feature-actions">
                     <Link to={`/products?municipalityId=${id}`} className="municipality-primary-action">View all products <ArrowRight size={16} /></Link>
                     <Link to={`/stores?municipalityId=${id}`} className="municipality-secondary-action">View all stores</Link>

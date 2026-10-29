@@ -2,7 +2,7 @@ import {
   ArrowCounterClockwise, Bell, ChartLineUp, ChatCircleDots, ClipboardText, FileText, Flag, Gear, Headset, Heart,
   House, IdentificationCard, Image as ImageIcon, Images, Info, MapPin, Megaphone, Package, PaintBrush, Plus,
   Question, ShieldCheck, ShoppingBag, ShoppingCart, Sparkle, Star, Storefront, Tag, Ticket, Truck,
-  User, Users, UserGear, Wallet, Buildings, ClockCounterClockwise, Camera, Envelope,
+  User, Users, UserGear, Wallet, Buildings, ClockCounterClockwise, Camera, Envelope, PaperPlaneTilt,
 } from '@phosphor-icons/react';
 
 /**
@@ -101,8 +101,10 @@ const S = {
   products: item('s-products', ShoppingBag, 'My products', '/seller/products'),
   add: item('s-add', Plus, 'Add product', '/seller/products/new'),
   reviews: item('s-reviews', Star, 'Reviews', '/seller/reviews'),
-  analytics: item('s-analytics', ChartLineUp, 'Performance', '/seller/analytics'),
-  finance: item('s-finance', Wallet, 'Finance', '/seller/finance'),
+  analytics: item('s-analytics', ChartLineUp, 'Analytics', '/seller/analytics'),
+  finance: item('s-finance', Wallet, 'Earnings', '/seller/finance'),
+  today: item('s-today', ClipboardText, 'Available today', '/seller/today'),
+  questions: item('s-questions', Question, 'Buyer questions', '/seller/questions'),
   marketing: item('s-marketing', Megaphone, 'Marketing', '/seller/marketing'),
   decorate: item('s-decorate', PaintBrush, 'Decorate my shop', '/seller/decorate'),
   store: item('s-store', Storefront, 'Shop profile', '/seller/store'),
@@ -121,7 +123,10 @@ const SELLER_RULES = [
   [/^\/seller\/menu/, [S.settings, S.notifications, S.admin, S.help]],
   [/^\/seller\/orders/, [S.returns, S.fulfillment, S.finance, S.analytics]],
   [/^\/seller\/products\/new/, [S.products, S.fulfillment]],
-  [/^\/seller\/products/, [S.add, S.reviews, S.marketing, S.decorate]],
+  [/^\/seller\/products/, [S.add, S.today, S.reviews, S.marketing]],
+  [/^\/seller\/today/, [S.products, S.orders, S.marketing]],
+  [/^\/seller\/offers/, [S.chat, S.products, S.orders]],
+  [/^\/seller\/questions/, [S.products, S.reviews, S.chat]],
   [/^\/seller\/marketing/, [S.decorate, S.products, S.analytics]],
   [/^\/seller\/decorate/, [S.store, S.marketing, S.products]],
   [/^\/seller\/returns/, [S.orders, S.finance, S.admin]],
@@ -150,15 +155,18 @@ const A = {
   products: item('a-products', ShoppingBag, 'Products', '/admin/products'),
   reviews: item('a-reviews', Star, 'Reviews', '/admin/reviews'),
   reports: item('a-reports', Flag, 'Reports', '/admin/reports'),
-  support: item('a-support', Headset, 'Buyer support', '/admin/support'),
+  support: item('a-support', Headset, 'Support', '/admin/support'),
   messages: item('a-messages', Envelope, 'Messages', '/admin/messages'),
   announcements: item('a-announce', Megaphone, 'Announcements', '/admin/messages?tab=announcements'),
+  email: item('a-email', PaperPlaneTilt, 'Email', '/admin/email'),
   notifications: item('a-notifs', Bell, 'Notifications', '/admin/notifications'),
   analytics: item('a-analytics', ChartLineUp, 'Analytics', '/admin/analytics'),
-  audit: item('a-audit', ClockCounterClockwise, 'Audit logs', '/admin/audit-logs'),
+  audit: item('a-audit', ClockCounterClockwise, 'Audit log', '/admin/audit-logs'),
+  team: item('a-team', Users, 'Admin team', '/admin/team'),
+  appUsers: item('a-appusers', Users, 'App users', '/admin/app-users'),
   settings: item('a-settings', Gear, 'Settings', '/admin/settings'),
   applications: item('a-apps', ClipboardText, 'Seller applications', '/admin/sellers'),
-  sellers: item('a-sellers', Storefront, 'All sellers', '/admin/all-sellers'),
+  sellers: item('a-sellers', Storefront, 'Sellers', '/admin/all-sellers'),
   buyers: item('a-buyers', Users, 'Buyers', '/admin/buyers'),
   // Super admin only (filtered out for municipal admins below).
   users: item('a-users', Users, 'All users', '/admin/users'),
@@ -170,7 +178,7 @@ const A = {
   couriers: item('a-couriers', Truck, 'Couriers', '/admin/couriers'),
   vouchers: item('a-vouchers', Ticket, 'Vouchers', '/admin/vouchers'),
 };
-const SUPER_ONLY = ['/admin/users', '/admin/categories', '/admin/municipalities', '/admin/junior-admins',
+const SUPER_ONLY = ['/admin/users', '/admin/app-users', '/admin/categories', '/admin/municipalities', '/admin/junior-admins',
   '/admin/feedback', '/admin/banners', '/admin/couriers', '/admin/vouchers'];
 
 const ADMIN_RULES = [
@@ -188,9 +196,11 @@ const ADMIN_RULES = [
   [/^\/admin\/categories/, [A.products]],
   [/^\/admin\/municipalities/, [A.juniors, A.analytics]],
   [/^\/admin\/analytics/, [A.orders, A.audit]],
-  [/^\/admin\/messages/, [A.announcements, A.support, A.notifications]],
+  // Messages has an Announcements tab of its own.
+  [/^\/admin\/messages/, [A.email, A.support, A.notifications]],
+  [/^\/admin\/email/, [A.messages, A.announcements, A.support]],
   [/^\/admin\/feedback/, [A.support, A.messages]],
-  [/^\/admin\/banners/, [A.vouchers, A.settings]],
+  [/^\/admin\/banners/, [A.vouchers, A.categories]],
   [/^\/admin\/couriers/, [A.orders, A.returns]],
   [/^\/admin\/vouchers/, [A.banners, A.orders]],
   [/^\/admin\/junior-admins/, [A.municipalities, A.audit]],
@@ -199,6 +209,8 @@ const ADMIN_RULES = [
   [/^\/admin\/reviews/, [A.products, A.reports]],
   [/^\/admin\/returns/, [A.orders, A.support]],
   [/^\/admin\/settings/, [A.notifications, A.audit]],
+  [/^\/admin\/team/, [A.audit, A.support, A.settings]],
+  [/^\/admin\/app-users/, [A.analytics, A.email]],
 ];
 const ADMIN_FALLBACK = [A.home, A.tools];
 

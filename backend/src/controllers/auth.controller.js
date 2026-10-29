@@ -274,6 +274,7 @@ const getUsers = asyncHandler(async (req, res) => {
     search,
     sellerApplicationStatus,
     closing,
+    sort,
   } = req.query;
 
   // Municipal admins can only see users in their assigned municipality.
@@ -300,6 +301,10 @@ const getUsers = asyncHandler(async (req, res) => {
     includeShopMunicipality: Boolean(sellerApplicationStatus),
     // Accounts their owners closed, waiting to be erased (super admin only).
     closing: req.user?.role === 'SUPER_ADMIN' && closing === '1',
+    // newest (default), oldest or name.
+    sort: ['newest', 'oldest', 'name'].includes(sort) ? sort : 'newest',
+    // The Sellers page lists shops: live products, recent orders, ready.
+    shopStats: role === 'SELLER',
   };
 
   const result = await authService.getUsers(options);
@@ -360,6 +365,9 @@ const rejectSeller = asyncHandler(async (req, res) => {
  * @access Private (ADMIN only)
  */
 const suspendUser = asyncHandler(async (req, res) => {
+  // The reason is kept in the audit log; the person reads it when they try
+  // to sign in, and admins see it in the person's details.
+  const reason = String(req.body?.reason || '').trim().slice(0, 500);
   const user = await authService.suspendUser(req.params.id, req.user);
 
   await auditLog.record({
@@ -367,6 +375,8 @@ const suspendUser = asyncHandler(async (req, res) => {
     action: 'SUSPEND_USER',
     entity: 'User',
     entityId: req.params.id,
+    details: reason ? { reason } : null,
+    municipalityId: user.municipalityId || undefined,
     req,
   });
 

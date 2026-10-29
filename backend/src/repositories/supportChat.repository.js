@@ -29,6 +29,11 @@ const CONVERSATION_INCLUDE = {
       name: true,
       logo: true,
       admin: { select: { id: true, fullName: true } },
+      // The town office, for the admins' "visit the municipal hall" reply.
+      officeAddress: true,
+      officeHours: true,
+      officePhone: true,
+      officeEmail: true,
     },
   },
 };
@@ -104,10 +109,13 @@ const findMany = async ({
   status,
   category,
   search,
+  assignedToId,
   page = 1,
   pageSize = 20,
 } = {}) => {
   const where = {};
+  // A user id, or null for the cases nobody has taken.
+  if (assignedToId !== undefined) where.assignedToId = assignedToId;
   if (userId) where.userId = userId;
   if (municipalityId) where.municipalityId = municipalityId;
   if (status) where.status = status;
@@ -185,6 +193,26 @@ const setStatus = (conversationId, status, actorId) => prisma.supportConversatio
   },
 });
 
+/**
+ * Who on the town's team is handling a case ("Take this case"), or nobody.
+ * Only the case is written: the person is a user id, named by the caller.
+ */
+const setAssignee = (conversationId, adminId) => prisma.supportConversation.update({
+  where: { id: conversationId },
+  data: { assignedToId: adminId || null, assignedAt: adminId ? new Date() : null },
+});
+
+/** The admins handling these cases, by id: Map of id to { id, fullName }. */
+const findAssignees = async (ids) => {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return new Map();
+  const rows = await prisma.user.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, fullName: true, role: true, municipalityId: true },
+  });
+  return new Map(rows.map((u) => [u.id, u]));
+};
+
 const setRating = (conversationId, { rating, ratingComment }) => prisma.supportConversation.update({
   where: { id: conversationId },
   data: { rating, ratingComment: ratingComment || null, ratedAt: new Date() },
@@ -255,6 +283,8 @@ module.exports = {
   markRead,
   setStatus,
   setRating,
+  setAssignee,
+  findAssignees,
   countUnreadFor,
   countUnreadForMany,
   findMunicipalAdmin,

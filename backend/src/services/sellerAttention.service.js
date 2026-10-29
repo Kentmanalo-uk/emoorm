@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { stageWhere } = require('../utils/orderStages');
 
 /**
  * Seller Attention Service
@@ -12,6 +13,17 @@ const prisma = require('../config/database');
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const REVIEW_WINDOW_DAYS = 30;
+
+// The newer queues, in order: [key, label, link]. Each link is its own (the
+// orders ones open a filtered Orders tab), so a badge keyed by link never
+// adds two queues together.
+const STORE_EXTRA = [
+  ['paymentsToCheck', 'Payments to check', '/seller/orders?status=payment'],
+  ['ordersToPack', 'Orders to pack', '/seller/orders?status=to_ship'],
+  ['unansweredQuestions', 'Buyer questions to answer', '/seller/questions'],
+  ['unrepliedReviews', 'New reviews to reply to', '/seller/reviews'],
+];
 
 const oldestOf = (rows, field) => {
   const times = rows.map((row) => row[field]).filter(Boolean).map((value) => new Date(value).getTime());
@@ -59,10 +71,11 @@ const getSellerAttention = async (actor) => {
       },
       empty('lowStock', 'Products running low on stock', '/seller/products'),
       empty('priceOffers', 'Price offers to answer', '/seller/offers'),
+      ...STORE_EXTRA.map(([key, label, link]) => empty(key, label, link)),
     ];
   }
 
-  const [orders, returns, conversations, support, lowStock, offers] = await Promise.all([
+  const [orders, returns, conversations, support, lowStock, offers, payments, toPack, questions, reviews] = await Promise.all([
     prisma.order.findMany({
       where: { storeId: store.id, status: 'PENDING' },
       select: { createdAt: true },
@@ -112,6 +125,34 @@ const getSellerAttention = async (actor) => {
       where: { storeId: store.id, status: 'PENDING', respondBy: { gt: new Date() } },
       select: { createdAt: true },
     }),
+    // A buyer says they paid (GCash, QR, bank): the shop checks the proof.
+    // Since the proof came in, i.e. the order's last change.
+    prisma.order.findMany({
+      where: { storeId: store.id, paymentStatus: 'PENDING_VERIFICATION', status: { not: 'CANCELLED' } },
+      select: { updatedAt: true },
+    }),
+    // Confirmed and paid (or cash on delivery): to pack and hand over. The
+    // same orders as the Orders page's "To pack" stage.
+    prisma.order.findMany({
+      where: { storeId: store.id, AND: [stageWhere('to_ship')] },
+      select: { updatedAt: true },
+    }),
+    // Buyers' questions on product pages with no answer yet.
+    prisma.productQuestion.findMany({
+      where: { storeId: store.id, answer: null, isHidden: false },
+      select: { createdAt: true },
+    }),
+    // Reviews of the last 30 days the shop hasn't replied to: older ones
+    // are history, not a to-do, and would keep the badge up for good.
+    prisma.review.findMany({
+      where: {
+        deletedAt: null,
+        sellerReply: null,
+        product: { storeId: store.id },
+        createdAt: { gte: new Date(Date.now() - REVIEW_WINDOW_DAYS * DAY_MS) },
+      },
+      select: { createdAt: true },
+    }),
   ]);
 
   const items = [
@@ -123,6 +164,10 @@ const getSellerAttention = async (actor) => {
     // it never escalates with age the way an unanswered order does.
     { key: 'lowStock', label: 'Products running low on stock', rows: lowStock, field: null, link: '/seller/products' },
     { key: 'priceOffers', label: 'Price offers to answer', rows: offers, field: 'createdAt', link: '/seller/offers' },
+    { key: 'paymentsToCheck', label: STORE_EXTRA[0][1], rows: payments, field: 'updatedAt', link: STORE_EXTRA[0][2] },
+    { key: 'ordersToPack', label: STORE_EXTRA[1][1], rows: toPack, field: 'updatedAt', link: STORE_EXTRA[1][2] },
+    { key: 'unansweredQuestions', label: STORE_EXTRA[2][1], rows: questions, field: 'createdAt', link: STORE_EXTRA[2][2] },
+    { key: 'unrepliedReviews', label: STORE_EXTRA[3][1], rows: reviews, field: 'createdAt', link: STORE_EXTRA[3][2] },
   ];
 
   return items.map(({ rows, field, ...item }) => {

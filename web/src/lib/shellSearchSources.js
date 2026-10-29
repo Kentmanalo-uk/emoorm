@@ -1,5 +1,6 @@
 import axios from './axios';
 import { firstImage } from './media';
+import { pesoWhole as peso } from './format';
 
 /**
  * What the Seller Center and Admin top-bar search boxes actually look through.
@@ -16,12 +17,6 @@ import { firstImage } from './media';
  */
 
 const enc = encodeURIComponent;
-
-const peso = (value) => new Intl.NumberFormat('en-PH', {
-  style: 'currency',
-  currency: 'PHP',
-  maximumFractionDigits: 0,
-}).format(Number(value || 0));
 
 const PRODUCT_STATUS = {
   APPROVED: 'Live',

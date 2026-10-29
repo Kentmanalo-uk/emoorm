@@ -27,7 +27,9 @@ export const MAX_FEE = 5000;
 /** The fees offered as one tap. */
 export const QUICK_FEES = [0, 20, 30, 50];
 
-export const pesos = (n) => `₱${Number(n).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+import { pesoShort } from './format';
+
+export const pesos = pesoShort;
 export const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 
 /** A fee as a form holds it: '' (none) or the amount as text. */

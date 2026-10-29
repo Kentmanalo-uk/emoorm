@@ -54,7 +54,8 @@ const IMAGE_PATTERN = /^\/uploads\/[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif)$/i;
 const STOCK_DELTA_MAX = 100000;
 const STOCK_REASON_MAX = 120;
 const SEARCH_MAX = 100;
-const SORT_BY = new Set(['createdAt', 'price', 'name', 'orderCount', 'relevance']);
+// stock: the admin's "lowest stock first".
+const SORT_BY = new Set(['createdAt', 'price', 'name', 'stock', 'orderCount', 'relevance']);
 const PRODUCT_STATUSES = new Set(['PENDING', 'APPROVED', 'HIDDEN', 'SUSPENDED', 'ARCHIVED']);
 const ADMIN_ROLES = new Set(['SUPER_ADMIN', 'MUNICIPAL_ADMIN']);
 

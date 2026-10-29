@@ -5,11 +5,12 @@ import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Plus, Clock, Truck, CheckCircle, Package,
   TrendUp as TrendingUp, Star, ChartBar as BarChart2, Users, WarningCircle, X,
-  IdentificationCard, ArrowRight, Wallet, CaretRight, LockSimple, Bell, Receipt,
+  IdentificationCard, ArrowRight, Wallet, CaretRight, LockSimple, Bell,
   ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, PlusCircle, Check, ExclamationMark,
   Sparkle, Palette, Heart, UsersThree, LinkSimple, ChatCircleDots, CookingPot,
-  GraduationCap, BookOpen, Lightbulb,
+  GraduationCap, BookOpen, Lightbulb, ArrowClockwise, Handshake, Question, QrCode, ListChecks,
 } from '@phosphor-icons/react';
+import { countLabel } from '../lib/orderLines';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import axios from '../lib/axios';
@@ -105,6 +106,12 @@ export default function SellerDashboard() {
   const [analyticsAvailable, setAnalyticsAvailable] = useState(() => saved?.analyticsAvailable ?? true);
   const hasFollowerStats = useRef(Boolean(readCache('seller:followers')));
   const [showTour, setShowTour] = useState(false);
+  // Try again after a failed load: asks for everything once more.
+  const [reloadKey, setReloadKey] = useState(0);
+  const retryLoad = () => {
+    setLoadError(false);
+    setReloadKey((n) => n + 1);
+  };
 
   // Shown once, only after the shop exists; progress is saved on the shop.
   useEffect(() => {
@@ -127,7 +134,9 @@ export default function SellerDashboard() {
       const orders = ordersRes.status === 'fulfilled' ? (ordersRes.value.data || []) : [];
       const products = productsRes.status === 'fulfilled' ? (productsRes.value.data || []) : [];
 
-      const failed = analyticsRes.status === 'rejected' && ordersRes.status === 'rejected';
+      // Either part missing is worth saying (with Try again): a zero where a
+      // number failed to load looks like a real zero.
+      const failed = analyticsRes.status === 'rejected' || ordersRes.status === 'rejected';
       setLoadError(failed);
 
       const next = {
@@ -168,7 +177,22 @@ export default function SellerDashboard() {
       setIsLoading(false);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadKey]);
+
+  // Today's prep list: what the open orders add up to, per product.
+  const [prep, setPrep] = useState(() => readCache('seller:prep') || null);
+  useEffect(() => {
+    let cancelled = false;
+    axios.get('/orders/store/orders', { params: { status: PREP_STATUSES, pageSize: 100 } })
+      .then((res) => {
+        if (cancelled) return;
+        const next = { rows: prepRows(res.data || []), total: res.pagination?.total ?? (res.data || []).length };
+        setPrep(next);
+        writeCache('seller:prep', next);
+      })
+      .catch(() => { /* the card keeps what it showed last; the page's own error covers the rest */ });
+    return () => { cancelled = true; };
+  }, [reloadKey]);
 
   // Load follower stats once we have a store id, and refetch on cross-tab follow changes
   useEffect(() => {
@@ -204,28 +228,16 @@ export default function SellerDashboard() {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   }).format(new Date());
 
-  // Phones: the counts on Home (orders to confirm / ship, reviews to answer).
+  // What is waiting on the seller (the sidebar's badges, GET
+  // /stores/my/attention): the "Needs your action" numbers on both layouts.
   const isPhone = usePhoneLayout();
-  const [homeCounts, setHomeCounts] = useState(() => readCache('seller:home-counts') || {});
-  useEffect(() => {
-    if (!isPhone) return undefined;
-    let cancelled = false;
-    const total = (res) => res.pagination?.total ?? (res.data || []).length;
-    Promise.all([
-      axios.get('/orders/store/stages')
-        .then((res) => ['stages', res.data || {}])
-        .catch(() => ['stages', {}]),
-      axios.get('/reviews/seller/mine', { params: { unrepliedOnly: true, pageSize: 1 } })
-        .then((res) => ['reviews', total(res)])
-        .catch(() => ['reviews', 0]),
-    ]).then((entries) => {
-      if (cancelled) return;
-      const counts = Object.fromEntries(entries);
-      setHomeCounts(counts);
-      writeCache('seller:home-counts', counts);
-    });
-    return () => { cancelled = true; };
-  }, [isPhone]);
+  const waiting = ctx?.waiting || {};
+  const sellsLivestock = Boolean(store?.sellsLivestock || waiting['/seller/offers']?.count);
+  const actions = actionTiles(waiting, sellsLivestock);
+  // One card at the top, not a pile: the most pressing of private shop,
+  // can't take orders, setup left, ID to verify.
+  const lead = leadCard({ store, setup, blockers, showSetupCard, setupNext, identityMeta });
+  const showAcademy = shouldShowGuide(store, ACADEMY_CARD) || !store?.id;
 
   if (isPhone) {
     return (
@@ -233,18 +245,20 @@ export default function SellerDashboard() {
         store={store}
         user={user}
         setup={setup}
-        waiting={ctx?.waiting || {}}
+        waiting={waiting}
+        sellsLivestock={sellsLivestock}
         unreadCount={ctx?.unreadCount || 0}
         switchToPersonal={ctx?.switchToPersonal}
         isLoading={isLoading}
         loadError={loadError}
+        onRetry={retryLoad}
         analyticsAvailable={analyticsAvailable}
         stats={stats}
         salesByDay={salesByDay}
         recentSales={recentSales}
         recentOrders={recentOrders}
         lowStock={lowStock}
-        counts={homeCounts}
+        prep={prep}
         onOpenOrder={(id) => navigate(`/seller/orders?id=${id}`)}
       />
     );
@@ -265,99 +279,59 @@ export default function SellerDashboard() {
           </div>
         </div>
 
-        {/* Identity reminder: sellers verify after applying */}
-        {identityMeta && (
-          <section className={`sd-idv is-${identityMeta.tone}`} aria-label="Identity verification">
-            <span className="sd-idv-icon"><IdentificationCard size={24} weight="fill" /></span>
-            <div className="sd-idv-body">
-              <strong>
-                {identityMeta.tone === 'failed'
-                  ? "We couldn't confirm your ID"
-                  : identityMeta.tone === 'waiting' ? 'Checking your ID' : 'Verify your identity'}
-              </strong>
-              <p>
-                {identityMeta.tone === 'todo'
-                  ? 'Scan a valid ID so the admin can approve your shop faster. It takes about a minute.'
-                  : identityMeta.text}
-              </p>
-            </div>
-            {identityMeta.tone !== 'waiting' && (
-              <Link to="/seller/verification" className="sd-card-btn">
-                {identityMeta.action} <ArrowRight size={15} weight="bold" />
-              </Link>
-            )}
-          </section>
-        )}
+        {/* The one thing to finish first (SE-6: one card, not three). */}
+        {lead && <LeadCard lead={lead} onHide={lead.hideable ? () => completeGuide('setup-card', setStore) : null} />}
 
-        {/* Shop setup progress, until the shop is ready */}
-        {showSetupCard && (
-          <section className="sd-setup" aria-label="Shop setup">
-            <div className="sd-setup-body">
-              <div className="sd-setup-head">
-                <strong>{blockers.length ? "Your products aren't live yet" : 'Finish setting up your shop'}</strong>
-                {!blockers.length && (
-                  <button
-                    type="button"
-                    className="sd-card-hide"
-                    aria-label="Hide shop setup from the dashboard"
-                    title="Hide (Shop setup stays in the menu)"
-                    onClick={() => completeGuide('setup-card', setStore)}
-                  >
-                    <X size={16} weight="bold" />
-                  </button>
-                )}
-              </div>
-              <p>
-                {blockers.length
-                  ? `Buyers can see them once you finish: ${blockers.map((b) => b.label).join(', ')}.`
-                  : (
-                    <>
-                      {setup.doneCount} of {setup.total} done
-                      {setupNext ? ` · Next: ${describeStep(setupNext, { municipality: setup.municipality }).title}` : ''}
-                    </>
-                  )}
-              </p>
-              <div className="sd-setup-bar" aria-hidden="true">
-                <span style={{ width: `${Math.round((setup.doneCount / Math.max(1, setup.total)) * 100)}%` }} />
-              </div>
-            </div>
-            <div className="sd-setup-actions">
-              <Link to={setupNextTo(setup)} className="sd-card-btn">
-                Continue setup <ArrowRight size={15} weight="bold" />
-              </Link>
-            </div>
-          </section>
-        )}
-
-        {/* Pending-review banner */}
-        {store && !store.isActive && (
+        {/* The shop stopped selling (Settings › Take a break or close). */}
+        {store && store.isActive === false && store.isApproved !== false && (
           <div className="sd-review-banner">
             <Clock size={16} />
             <span>
-              Your seller application is <strong>awaiting admin approval</strong>.
-              You can add products now — they stay hidden from buyers until your store is approved.
+              You stopped selling for now: buyers can&apos;t order from your shop.{' '}
+              <Link to="/seller/settings#shop-status">Start selling again</Link>
             </span>
           </div>
         )}
 
         {loadError && (
-          <div className="sd-review-banner sd-error-banner">
+          <div className="sd-review-banner sd-error-banner" role="alert">
             <WarningCircle size={16} />
-            <span>Some dashboard data couldn't be loaded. Try refreshing the page.</span>
+            <span>Some dashboard numbers couldn&apos;t be loaded.</span>
+            <button type="button" className="sd-retry" onClick={retryLoad}>
+              <ArrowClockwise size={14} weight="bold" /> Try again
+            </button>
           </div>
         )}
 
-        {/* Seller Academy: free lessons, one click away */}
-        <section className="sd-idv is-academy" aria-label="Seller Academy">
-          <span className="sd-idv-icon"><GraduationCap size={24} weight="fill" /></span>
-          <div className="sd-idv-body">
-            <strong>Seller Academy</strong>
-            <p>Free, simple lessons: better photos, faster orders, more buyers.</p>
-          </div>
-          <Link to="/sell/academy" className="sd-card-btn">
-            Start learning <ArrowRight size={15} weight="bold" />
-          </Link>
-        </section>
+        {/* What is waiting on the seller, each opening its own list. */}
+        <ActionRow tiles={actions} />
+
+        <PrepList prep={prep} />
+
+        {/* Seller Academy: free lessons, one click away (can be hidden). */}
+        {showAcademy && (
+          <section className="sd-idv is-academy" aria-label="Seller Academy">
+            <span className="sd-idv-icon"><GraduationCap size={24} weight="fill" /></span>
+            <div className="sd-idv-body">
+              <strong>Seller Academy</strong>
+              <p>Free, simple lessons: better photos, faster orders, more buyers.</p>
+            </div>
+            <Link to="/sell/academy" className="sd-card-btn">
+              Start learning <ArrowRight size={15} weight="bold" />
+            </Link>
+            {store?.id && (
+              <button
+                type="button"
+                className="sd-card-hide"
+                aria-label="Hide Seller Academy from the dashboard"
+                title="Hide (Seller Academy stays in the sidebar)"
+                onClick={() => completeGuide(ACADEMY_CARD, setStore)}
+              >
+                <X size={16} weight="bold" />
+              </button>
+            )}
+          </section>
+        )}
 
         <div className="sd">
 
@@ -400,11 +374,11 @@ export default function SellerDashboard() {
             </div>
               <section className="sd-card sd-sales-trend">
                 <header className="sd-card-header">
-                  <h2>Sales Trend (14 days)</h2>
+                  <h2>Sales, last 14 days</h2>
                   <TrendingUp size={15} className="sd-header-icon" />
                 </header>
                 {isLoading ? (
-                  <div style={{ padding: 16 }}>
+                  <div className="sd-pad">
                     <Skeleton height={120} radius={8} />
                   </div>
                 ) : salesByDay.length === 0 ? (
@@ -436,8 +410,8 @@ export default function SellerDashboard() {
           <div className="sd-panel sd-panel-row is-2">
               <section className="sd-card sd-orders" data-tour="recent-orders">
                 <header className="sd-card-header">
-                  <h2>Recent Orders</h2>
-                  <Link to="/seller/orders" className="sd-view-all">View All</Link>
+                  <h2>Recent orders</h2>
+                  <Link to="/seller/orders" className="sd-view-all">See all</Link>
                 </header>
 
                 {isLoading ? (
@@ -531,13 +505,13 @@ export default function SellerDashboard() {
           <div className={`sd-panel sd-panel-row ${lowStock.length > 0 ? 'is-2' : 'is-1'}`}>
               <section className="sd-card sd-topprod">
                 <header className="sd-card-header">
-                  <h2>Top Products</h2>
+                  <h2>Top products</h2>
                   <TrendingUp size={15} className="sd-header-icon" />
                 </header>
                 {topProducts.length === 0 ? (
                   <div className="sd-empty sd-empty--sm">
                     <EmptyArt name="products" size={56} />
-                    <p>No products yet.</p>
+                    <p>No sales yet. Your best sellers show here.</p>
                   </div>
                 ) : (
                   <ol className="sd-top-list">
@@ -562,17 +536,21 @@ export default function SellerDashboard() {
               {lowStock.length > 0 && (
                 <section className="sd-card sd-lowstock">
                   <header className="sd-card-header">
-                    <h2>Low Stock</h2>
-                    <WarningCircle size={15} className="sd-header-icon sd-header-icon--warn" />
+                    <h2>Running low</h2>
+                    <Link to="/seller/products?stock=low" className="sd-view-all">See all</Link>
                   </header>
+                  {/* Each row opens a quick restock for that product. */}
                   <ul className="sd-top-list">
                     {lowStock.map((p) => (
-                      <li key={p.id} className="sd-top-item">
-                        <span className="sd-top-rank sd-top-rank--warn"><WarningCircle size={13} /></span>
-                        <div className="sd-top-info">
-                          <strong>{p.name}</strong>
-                          <span className="sd-top-meta">{p.stock} left in stock</span>
-                        </div>
+                      <li key={p.id}>
+                        <Link to={`/seller/products?restock=${p.id}`} className="sd-top-item sd-top-item--link" title={`Restock ${p.name}`}>
+                          <span className="sd-top-rank sd-top-rank--warn"><WarningCircle size={13} /></span>
+                          <div className="sd-top-info">
+                            <strong>{p.name}</strong>
+                            <span className="sd-top-meta">{Number(p.stock) === 0 ? 'Out of stock' : `${p.stock} left in stock`}</span>
+                          </div>
+                          <span className="sd-restock">Restock <CaretRight size={13} weight="bold" /></span>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -673,17 +651,244 @@ function DashboardTour({ steps, onFinish, onClose }) {
 
 /** Phones: the order statuses counted on Home. */
 
-/** Phones: Home's shop tools, each a filled icon in its own colour. */
+/**
+ * Phones: Home's shop tools, each a filled icon in its own colour. Orders
+ * has its own tab, so Marketing (no longer a tab) takes its place; shops
+ * that sell livestock also get Offers.
+ */
 const HOME_TOOLS = [
   { to: '/seller/products', label: 'My products', Icon: Package, tone: 'orange' },
-  { to: '/seller/orders', label: 'My orders', Icon: Receipt, tone: 'blue' },
-  { to: '/seller/analytics', label: 'Performance', Icon: BarChart2, tone: 'violet' },
-  { to: '/seller/finance', label: 'Finance', Icon: Wallet, tone: 'green' },
+  { to: '/seller/marketing', label: 'Marketing', Icon: Megaphone, tone: 'blue' },
+  { to: '/seller/analytics', label: 'Analytics', Icon: BarChart2, tone: 'violet' },
+  { to: '/seller/finance', label: 'Earnings', Icon: Wallet, tone: 'green' },
   { to: '/seller/reviews', label: 'Reviews', Icon: Star, tone: 'amber' },
   { to: '/seller/returns', label: 'Returns', Icon: ArrowCounterClockwise, tone: 'rose' },
-  { to: '/seller/today', label: "Today's menu", Icon: CookingPot, tone: 'pink' },
+  { to: '/seller/today', label: 'Available today', Icon: CookingPot, tone: 'pink' },
   { to: '/seller/products/new', label: 'Add product', Icon: PlusCircle, tone: 'teal', tour: 'add-product' },
 ];
+const OFFERS_TOOL = { to: '/seller/offers', label: 'Offers', Icon: Handshake, tone: 'teal' };
+
+const ACADEMY_CARD = 'academy-card';
+
+/**
+ * "Needs your action": what is waiting, each opening its filtered list.
+ * The counts are the sidebar's (GET /stores/my/attention), by link.
+ */
+const actionTiles = (waiting, sellsLivestock) => {
+  const count = (link) => waiting[link]?.count;
+  return [
+    { key: 'confirm', label: 'To confirm', value: count('/seller/orders'), to: '/seller/orders?status=PENDING', Icon: Clock },
+    { key: 'payments', label: 'Payments to check', value: count('/seller/orders?status=payment'), to: '/seller/orders?status=payment', Icon: QrCode },
+    { key: 'pack', label: 'To pack', value: count('/seller/orders?status=to_ship'), to: '/seller/orders?status=to_ship', Icon: Package },
+    { key: 'returns', label: 'Returns', value: count('/seller/returns'), to: '/seller/returns', Icon: ArrowCounterClockwise },
+    ...(sellsLivestock ? [{ key: 'offers', label: 'Offers', value: count('/seller/offers'), to: '/seller/offers', Icon: Handshake }] : []),
+    { key: 'questions', label: 'Questions', value: count('/seller/questions'), to: '/seller/questions', Icon: Question },
+    { key: 'reviews', label: 'Reviews to reply', value: count('/seller/reviews'), to: '/seller/reviews?filter=reply', Icon: Star },
+  ];
+};
+
+/** Computers: the "Needs your action" row; a zero is quiet, a count stands out. */
+function ActionRow({ tiles }) {
+  const due = tiles.reduce((n, t) => n + (t.value || 0), 0);
+  return (
+    <section className="sd-actions" aria-labelledby="sd-actions-title">
+      <div className="sd-actions-head">
+        <h2 id="sd-actions-title">Needs your action</h2>
+        <span>{due > 0 ? `${due} waiting` : 'All caught up'}</span>
+      </div>
+      <div className="sd-actions-row">
+        {tiles.map(({ key, label, value, to, Icon }) => (
+          <Link key={key} to={to} className={`sd-action${value > 0 ? ' is-due' : ''}`}>
+            <Icon size={18} weight={value > 0 ? 'fill' : 'regular'} />
+            <strong>{value == null ? '–' : value}</strong>
+            <span>{label}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** The orders the prep list counts: new ones and those not yet handed over. */
+const PREP_STATUSES = 'PENDING,CONFIRMED,PREPARING,TO_SHIP';
+
+/**
+ * Open orders added up per product (and choice): "Tilapia · 12 across 5
+ * orders", so the seller knows how much to prepare. A package counts as
+ * itself; new orders not yet confirmed are counted apart.
+ */
+const prepRows = (orders) => {
+  const rows = new Map();
+  for (const order of orders) {
+    for (const line of order.items || []) {
+      const choice = line.selectedVariations && typeof line.selectedVariations === 'object'
+        ? Object.values(line.selectedVariations).filter(Boolean).join(', ')
+        : '';
+      const key = `${line.productId}|${choice}`;
+      const row = rows.get(key) || {
+        key, name: line.productName || line.product?.name || 'Product', choice, line, qty: 0, unconfirmed: 0, orders: new Set(),
+      };
+      row.qty += Number(line.quantity) || 0;
+      if (order.status === 'PENDING') row.unconfirmed += Number(line.quantity) || 0;
+      row.orders.add(order.id);
+      rows.set(key, row);
+    }
+  }
+  return [...rows.values()]
+    .map(({ orders: ids, line, ...row }) => {
+      // "2 heads", "3 packages"; other kinds as "× 12".
+      const label = countLabel(line, row.qty);
+      return { ...row, orderCount: ids.size, label: /^\d+$/.test(label) ? `× ${label}` : label };
+    })
+    .sort((a, b) => b.qty - a.qty);
+};
+
+/** Today's prep list: how much of each product the open orders need. */
+function PrepList({ prep, phone = false }) {
+  const [showAll, setShowAll] = useState(false);
+  if (!prep?.rows?.length) return null;
+  const rows = showAll ? prep.rows : prep.rows.slice(0, 6);
+  return (
+    <section className={phone ? 'sh-card sd-prep is-phone' : 'sd-prep'} aria-labelledby="sd-prep-title">
+      <div className="sd-prep-head">
+        <h2 id="sd-prep-title"><ListChecks size={18} weight="fill" /> Today&apos;s prep list</h2>
+        <Link to="/seller/orders?status=to_ship">To pack <CaretRight size={13} weight="bold" /></Link>
+      </div>
+      <p className="sd-prep-sub">
+        What your open orders need, per product.
+        {prep.total > 100 ? ' Counted from your 100 newest open orders.' : ''}
+      </p>
+      <ul className="sd-prep-list">
+        {rows.map((row) => (
+          <li key={row.key}>
+            <span className="sd-prep-name">
+              {row.name}
+              {row.choice && <small>{row.choice}</small>}
+            </span>
+            <span className="sd-prep-qty">
+              <strong>{row.label}</strong>
+              <small>
+                across {row.orderCount} {row.orderCount === 1 ? 'order' : 'orders'}
+                {row.unconfirmed > 0 ? ` · ${row.unconfirmed} not confirmed yet` : ''}
+              </small>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {prep.rows.length > 6 && (
+        <button type="button" className="sd-prep-more" onClick={() => setShowAll((v) => !v)}>
+          {showAll ? 'Show fewer' : `Show all ${prep.rows.length} products`}
+        </button>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Computers: the one card at the top of the dashboard, or null. In order:
+ * the shop is private until approved; buyers can't order yet; setup is not
+ * finished (this one can be hidden); the ID still needs doing.
+ */
+const leadCard = ({ store, setup, blockers, showSetupCard, setupNext, identityMeta }) => {
+  const progress = setup ? Math.round((setup.doneCount / Math.max(1, setup.total)) * 100) : null;
+  const idTodo = identityMeta && identityMeta.tone !== 'waiting' ? { to: '/seller/verification', label: identityMeta.action } : null;
+  if (store?.isApproved === false) {
+    return {
+      tone: 'amber',
+      Icon: LockSimple,
+      title: 'Your shop is private until an admin approves it',
+      text: blockers.length
+        ? `Add products and finish ${blockers.map((b) => b.label).join(', ')} now, so buyers can order as soon as it's approved.`
+        : 'Add products and set up delivery and payment now. Buyers see your shop as soon as it is approved.',
+      progress: setup && !setup.complete ? progress : null,
+      primary: setup && !setup.complete ? { to: setupNextTo(setup), label: 'Continue setup' } : null,
+      secondary: idTodo && { ...idTodo, label: identityMeta.tone === 'failed' ? 'Send your ID again' : 'Verify your ID (faster approval)' },
+    };
+  }
+  if (blockers.length) {
+    return {
+      tone: 'amber',
+      Icon: WarningCircle,
+      title: "Buyers can't order yet",
+      text: `Buyers can see your products, but can't order until you finish: ${blockers.map((b) => b.label).join(', ')}.`,
+      progress,
+      primary: { to: setupNextTo(setup), label: 'Finish setup' },
+    };
+  }
+  if (showSetupCard) {
+    return {
+      tone: 'green',
+      Icon: ListChecks,
+      title: 'Finish setting up your shop',
+      text: `${setup.doneCount} of ${setup.total} done${setupNext ? ` · Next: ${describeStep(setupNext, { municipality: setup.municipality }).title}` : ''}`,
+      progress,
+      primary: { to: setupNextTo(setup), label: 'Continue setup' },
+      hideable: true,
+    };
+  }
+  if (identityMeta) {
+    return {
+      tone: identityMeta.tone === 'failed' ? 'red' : identityMeta.tone === 'waiting' ? 'blue' : 'amber',
+      Icon: IdentificationCard,
+      title: identityMeta.tone === 'failed'
+        ? "We couldn't confirm your ID"
+        : identityMeta.tone === 'waiting' ? 'Checking your ID' : 'Verify your identity',
+      text: identityMeta.tone === 'todo'
+        ? 'Scan a valid ID so buyers and the admin can trust your shop. It takes about a minute.'
+        : identityMeta.text,
+      primary: idTodo,
+    };
+  }
+  return null;
+};
+
+function LeadCard({ lead, onHide }) {
+  const { tone, Icon, title, text, progress, primary, secondary } = lead;
+  return (
+    <section className={`sd-lead is-${tone}`} aria-label={title}>
+      <span className="sd-idv-icon"><Icon size={24} weight="fill" /></span>
+      <div className="sd-lead-body">
+        <div className="sd-setup-head">
+          <strong>{title}</strong>
+          {onHide && (
+            <button
+              type="button"
+              className="sd-card-hide"
+              aria-label="Hide shop setup from the dashboard"
+              title="Hide (Shop setup stays in the menu)"
+              onClick={onHide}
+            >
+              <X size={16} weight="bold" />
+            </button>
+          )}
+        </div>
+        <p>{text}</p>
+        {progress != null && (
+          <div
+            className="sd-setup-bar"
+            role="progressbar"
+            aria-label="Shop setup progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+          >
+            <span style={{ width: `${progress}%` }} />
+          </div>
+        )}
+      </div>
+      {(primary || secondary) && (
+        <div className="sd-lead-actions">
+          {secondary && <Link to={secondary.to} className="btn-seller-outline">{secondary.label}</Link>}
+          {primary && (
+            <Link to={primary.to} className="sd-card-btn">
+              {primary.label} <ArrowRight size={15} weight="bold" />
+            </Link>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
 
 /** Products buyers can see (ready to sell or not: that only decides ordering). */
 const liveProducts = (stats) => stats.activeProducts;
@@ -877,9 +1082,9 @@ function HomeTips({ onShare }) {
  * grey, bare icons, round header buttons, green for actions.
  */
 function PhoneHome({
-  store, user, setup, unreadCount, switchToPersonal, waiting,
-  isLoading, loadError, analyticsAvailable, stats, salesByDay, recentSales, recentOrders, lowStock,
-  counts, onOpenOrder,
+  store, user, setup, unreadCount, switchToPersonal, waiting, sellsLivestock,
+  isLoading, loadError, onRetry, analyticsAvailable, stats, salesByDay, recentSales, recentOrders, lowStock,
+  prep, onOpenOrder,
 }) {
   const { share, shareSheet } = useShare();
   const notice = homeNotice(store, setup);
@@ -893,13 +1098,21 @@ function PhoneHome({
     text: `Shop at ${name} on Emoorm`,
     url: `${window.location.origin}/store/${store.slug}`,
   });
+  // The same counts as the sidebar's badges, each opening its list.
   const numbers = [
-    // The same counts as the Orders tabs they open.
-    { label: 'To confirm', value: counts.stages?.byStatus?.PENDING || 0, to: '/seller/orders?status=PENDING' },
-    { label: 'To ship', value: counts.stages?.byStatus?.TO_SHIP || 0, to: '/seller/orders?status=TO_SHIP' },
+    { label: 'To confirm', value: waiting['/seller/orders']?.count, to: '/seller/orders?status=PENDING' },
+    { label: 'To pack', value: waiting['/seller/orders?status=to_ship']?.count, to: '/seller/orders?status=to_ship' },
     { label: 'Returns', value: waiting['/seller/returns']?.count, to: '/seller/returns' },
-    { label: 'Reviews', value: counts.reviews, to: '/seller/reviews?filter=reply' },
+    { label: 'Reviews', value: waiting['/seller/reviews']?.count, to: '/seller/reviews?filter=reply' },
   ];
+  // Rarer, but each one holds an order or a buyer up: a line of its own
+  // when there is something.
+  const extra = [
+    { key: 'payments', n: waiting['/seller/orders?status=payment']?.count || 0, one: 'payment to check', many: 'payments to check', to: '/seller/orders?status=payment', Icon: QrCode },
+    { key: 'questions', n: waiting['/seller/questions']?.count || 0, one: 'buyer question to answer', many: 'buyer questions to answer', to: '/seller/questions', Icon: Question },
+    ...(sellsLivestock ? [{ key: 'offers', n: waiting['/seller/offers']?.count || 0, one: 'offer to answer', many: 'offers to answer', to: '/seller/offers', Icon: Handshake }] : []),
+  ].filter((x) => x.n > 0);
+  const tools = sellsLivestock ? [...HOME_TOOLS.slice(0, 7), OFFERS_TOOL, HOME_TOOLS[7]] : HOME_TOOLS;
 
   return (
     <div className="seller-dashboard sh">
@@ -940,7 +1153,12 @@ function PhoneHome({
           </Link>
         )}
 
-        {loadError && <p className="sdm-note"><WarningCircle size={15} /> Some numbers couldn't load right now.</p>}
+        {loadError && (
+          <p className="sdm-note" role="alert">
+            <WarningCircle size={15} /> Some numbers couldn&apos;t load.
+            <button type="button" className="sdm-retry" onClick={onRetry}>Try again</button>
+          </p>
+        )}
 
         <section className="sh-card sh-numbers" aria-label="Needs your action">
           {numbers.map(({ label, value, to }) => (
@@ -951,11 +1169,25 @@ function PhoneHome({
           ))}
         </section>
 
+        {extra.length > 0 && (
+          <section className="sh-card sh-list sh-due" aria-label="Also waiting">
+            {extra.map(({ key, n, one, many, to, Icon }) => (
+              <Link key={key} to={to} className="sh-row">
+                <span className="sh-row-icon"><Icon size={19} weight="fill" /></span>
+                <span className="sh-row-label">{n} {n === 1 ? one : many}</span>
+                <CaretRight size={16} className="sh-chev" />
+              </Link>
+            ))}
+          </section>
+        )}
+
+        <PrepList prep={prep} phone />
+
         <section className="sh-card">
           <div className="sh-card-head"><h2>Shop tools</h2></div>
           <ToolGradients />
           <div className="sh-tools">
-            {HOME_TOOLS.map(({ to, label, Icon, tone, tour }) => (
+            {tools.map(({ to, label, Icon, tone, tour }) => (
               <Link key={to} to={to} className="sh-tool" {...(tour ? { 'data-tour': tour } : {})}>
                 <span className={`sh-tool-icon is-${tone}`}><Icon size={30} weight="fill" /></span>
                 <span>{label}</span>
@@ -1015,12 +1247,16 @@ function PhoneHome({
 
         {lowStock.length > 0 && (
           <section className="sh-card sh-list">
-            <div className="sh-card-head"><h2>Running low</h2></div>
+            <div className="sh-card-head">
+              <h2>Running low</h2>
+              <Link to="/seller/products?stock=low">See all <CaretRight size={13} weight="bold" /></Link>
+            </div>
+            {/* Each row opens a quick restock for that product. */}
             {lowStock.map((prod) => (
-              <Link key={prod.id} to="/seller/products" className="sh-row">
+              <Link key={prod.id} to={`/seller/products?restock=${prod.id}`} className="sh-row" aria-label={`Restock ${prod.name}, ${prod.stock} left`}>
                 <span className="sh-row-icon"><WarningCircle size={19} weight="fill" /></span>
                 <span className="sh-row-label">{prod.name}</span>
-                <span className="sh-row-hint">{prod.stock} left</span>
+                <span className="sh-row-hint">{Number(prod.stock) === 0 ? 'Out of stock' : `${prod.stock} left`}</span>
                 <CaretRight size={16} className="sh-chev" />
               </Link>
             ))}

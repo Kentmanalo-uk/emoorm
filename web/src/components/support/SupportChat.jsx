@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import EmptyArt from '../ui/EmptyArt';
 import EmptyState from '../ui/EmptyState';
 import {
   ChatsCircle, PaperPlaneRight, CaretLeft, CaretDown, Lightning, IdentificationCard,
   LockSimple, LockSimpleOpen, CheckCircle, XCircle, X, CircleNotch, NotePencil, Star,
+  MagnifyingGlass, HandGrabbing, Receipt, UserCircle,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
@@ -22,6 +24,9 @@ import { BusyLabel } from '../ui/Spinner';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import Select from '../ui/Select';
 import LoadFailed from '../ui/LoadFailed';
+import { chatTime } from '../../lib/format';
+import { confirmAction } from '../../lib/confirm';
+import useAuthStore from '../../store/authStore';
 
 const THREAD_POLL_MS = 5000;
 const LIST_POLL_MS = 15000;
@@ -32,13 +37,31 @@ const TOPIC_LABELS = {
   DIRECT: 'Direct message',
 };
 
-
 const FILTERS = [
   { key: 'all', label: 'All' },
+  { key: 'open', label: 'Open' },
   { key: 'awaiting', label: 'Awaiting reply' },
+  { key: 'mine', label: 'Mine' },
   { key: 'resolved', label: 'Resolved' },
   { key: 'closed', label: 'Closed' },
 ];
+
+// The admin inbox reads this many cases at once (the API's most), so the
+// filters and their counts cover more than one screenful.
+const INBOX_PAGE = 50;
+
+// What "Visit the municipal hall" says when the town has not filled in its
+// office details yet.
+const HALL_FALLBACK = 'the municipal hall during office hours (Monday to Friday, 8:00 AM to 5:00 PM)';
+
+/** The quick reply sending the person to the town office, with its details. */
+const visitHallText = (office) => {
+  const where = office?.address ? `the municipal hall at ${office.address}` : 'the municipal hall';
+  const when = office?.hours ? ` (${office.hours})` : '';
+  const place = office?.address || office?.hours ? `${where}${when}` : HALL_FALLBACK;
+  const contact = [office?.phone && `call ${office.phone}`, office?.email && `email ${office.email}`].filter(Boolean);
+  return `We were unable to confirm your identity online. Please visit ${place} and bring a valid government-issued ID so we can verify you in person.${contact.length ? ` For questions before you come, ${contact.join(' or ')}.` : ''}`;
+};
 
 const QUICK_REPLIES = [
   {
@@ -70,20 +93,15 @@ const VERIFICATION_BADGE = {
   PENDING: 'is-pending',
 };
 
-const formatTime = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  const sameDay = date.toDateString() === new Date().toDateString();
-  return sameDay
-    ? date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-};
+const formatTime = chatTime;
 
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : '—');
 const humanize = (value) => (value ? String(value).replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) : '—');
 
-const matchesFilter = (c, filter) => {
+const matchesFilter = (c, filter, meId) => {
   if (filter === 'closed') return c.status === 'CLOSED';
+  if (filter === 'open') return (c.status || 'OPEN') === 'OPEN';
+  if (filter === 'mine') return Boolean(meId) && c.assignedTo?.id === meId;
   if (filter === 'resolved') return c.status === 'RESOLVED';
   // A case an admin has already settled is not waiting on anybody.
   if (filter === 'awaiting') return Boolean(c.awaitingReply) && (c.status || 'OPEN') === 'OPEN';
@@ -101,7 +119,7 @@ function Avatar({ src, name }) {
   );
 }
 
-function QuickReplies({ onPick, disabled }) {
+function QuickReplies({ onPick, disabled, office }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -136,17 +154,21 @@ function QuickReplies({ onPick, disabled }) {
       {open && (
         <div className="sc-quick-menu" role="menu">
           <span className="sc-quick-title">Quick replies</span>
-          {QUICK_REPLIES.map((q) => (
-            <button
-              key={q.label}
-              type="button"
-              role="menuitem"
-              onClick={() => { onPick(q.text); setOpen(false); }}
-            >
-              <strong>{q.label}</strong>
-              <small>{q.text}</small>
-            </button>
-          ))}
+          {QUICK_REPLIES.map((q) => {
+            // The town office's own address and hours when it has set them.
+            const text = q.label === 'Visit municipal hall' ? visitHallText(office) : q.text;
+            return (
+              <button
+                key={q.label}
+                type="button"
+                role="menuitem"
+                onClick={() => { onPick(text); setOpen(false); }}
+              >
+                <strong>{q.label}</strong>
+                <small>{text}</small>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -449,6 +471,7 @@ function RatingPrompt({ conversation, onRated }) {
  */
 export default function SupportChat({ mode = 'user', initialConversationId = null, initialDraft = '' }) {
   const isAdmin = mode === 'admin';
+  const meId = useAuthStore((s) => s.user?.id);
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState(initialConversationId);
   const [thread, setThread] = useState(null);
@@ -464,6 +487,10 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   const [sendError, setSendFailure] = useState(null); // { id, text }
   const [filter, setFilter] = useState('all');
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  // Admin inbox search (name, username or subject), asked of the server.
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [composeOpen, setComposeOpen] = useState(false);
   // Per-conversation override of the identity panel visibility: { id, open }.
   const [panelToggle, setPanelToggle] = useState({ id: null, open: false });
@@ -473,22 +500,34 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   const textareaRef = useRef(null);
   const listUrl = isAdmin ? '/support/inbox' : '/support/cases';
 
-  const visibleConversations = isAdmin ? conversations.filter((c) => matchesFilter(c, filter)) : conversations;
+  const visibleConversations = isAdmin ? conversations.filter((c) => matchesFilter(c, filter, meId)) : conversations;
   const filterCounts = isAdmin
-    ? Object.fromEntries(FILTERS.map((f) => [f.key, conversations.filter((c) => matchesFilter(c, f.key)).length]))
+    ? Object.fromEntries(FILTERS.map((f) => [f.key, conversations.filter((c) => matchesFilter(c, f.key, meId)).length]))
     : {};
+
+  // The search box settles for a moment before asking.
+  useEffect(() => {
+    if (!isAdmin) return undefined;
+    const next = searchInput.trim();
+    if (next === search) return undefined;
+    const timer = setTimeout(() => setSearch(next), 350);
+    return () => clearTimeout(timer);
+  }, [isAdmin, searchInput, search]);
 
   // Desktop opens the newest conversation when nothing is selected.
   const [isWide] = useState(() => window.innerWidth > 768);
   const activeId = selectedId || (isWide ? visibleConversations[0]?.id : null) || null;
 
-  const refreshList = useCallback(() => axios.get(listUrl, { quiet: true })
+  const refreshList = useCallback(() => axios.get(listUrl, {
+    quiet: true,
+    params: isAdmin ? { pageSize: INBOX_PAGE, ...(search ? { search } : {}) } : undefined,
+  })
     .then((res) => {
       setConversations(res.data || []);
       setListFailed(false);
     })
     .catch(() => setListFailed(true))
-    .finally(() => setLoadingList(false)), [listUrl]);
+    .finally(() => setLoadingList(false)), [listUrl, isAdmin, search]);
 
   useEffect(() => {
     refreshList();
@@ -546,6 +585,15 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
 
   const setConversationStatus = async (status) => {
     if (!activeId) return;
+    // Closing ends the case without asking the person to rate it.
+    if (status === 'CLOSED') {
+      const ok = await confirmAction({
+        title: 'Close without asking for a rating?',
+        message: 'The case ends here and the person is not asked how it went. They can still write again, which reopens it. To ask for a rating, choose "Resolve, ask for rating" instead.',
+        confirmLabel: 'Close case',
+      });
+      if (!ok) return;
+    }
     setTogglingStatus(true);
     try {
       const res = await axios.patch(`/support/cases/${activeId}/status`, { status });
@@ -572,6 +620,32 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
     setConversations((prev) => prev.map((c) => (c.id === activeId
       ? { ...c, rating: updated?.rating ?? c.rating, ratingComment: updated?.ratingComment ?? c.ratingComment }
       : c)));
+  };
+
+  // "Take this case" / "Release": who on the team answers it.
+  const assignCase = async (action, current) => {
+    if (!activeId) return;
+    if (action === 'take' && current?.id && current.id !== meId) {
+      const ok = await confirmAction({
+        title: `${current.fullName} is handling this case. Take it over?`,
+        message: 'You become the one answering it; it moves to your Mine list.',
+        confirmLabel: 'Take it over',
+      });
+      if (!ok) return;
+    }
+    setAssigning(true);
+    try {
+      const res = await axios.post(`/support/cases/${activeId}/assign`, { action });
+      setThread((prev) => (prev ? { ...prev, ...res.data, messages: prev.messages } : res.data));
+      setConversations((prev) => prev.map((c) => (c.id === activeId
+        ? { ...c, assignedTo: res.data.assignedTo, assignedAt: res.data.assignedAt }
+        : c)));
+      toast.success(action === 'take' ? 'You are handling this case' : 'Case released for the team');
+    } catch (err) {
+      toast.error(err.message || 'Could not change who handles the case');
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const closeCompose = useCallback(() => setComposeOpen(false), []);
@@ -615,6 +689,12 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   const isClosed = activeStatus === 'CLOSED';
   // Rating is the user's, and only once an admin has finished with the case.
   const canRate = !isAdmin && active && (activeStatus === 'RESOLVED' || activeStatus === 'CLOSED');
+  const assignee = active?.assignedTo || activeSummary?.assignedTo || null;
+  // Where the person's record and orders are, for the admin.
+  const person = isAdmin && active?.user ? active.user : null;
+  const personHref = person
+    ? `/admin/${person.role === 'SELLER' ? 'all-sellers' : 'buyers'}?search=${encodeURIComponent(person.email || person.fullName || '')}`
+    : null;
   const panelOpen = Boolean(isAdmin && active && active.user?.id && (
     panelToggle.id === activeId ? panelToggle.open : active.topic === 'IDENTITY_VERIFICATION'
   ));
@@ -634,6 +714,17 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
             <button type="button" className="sc-compose" onClick={() => setComposeOpen(true)}>
               <NotePencil size={16} weight="fill" /> New message
             </button>
+            <label className="sc-search">
+              <MagnifyingGlass size={15} aria-hidden="true" />
+              <input
+                type="search"
+                aria-label="Search conversations"
+                placeholder="Search name or subject…"
+                value={searchInput}
+                maxLength={60}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+            </label>
             <div className="sc-filters" role="tablist" aria-label="Filter conversations">
               {FILTERS.map((f) => (
                 <button
@@ -661,16 +752,24 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
             art="support"
             title={!isAdmin
               ? 'No support cases yet'
-              : filter === 'awaiting'
-                ? 'Nobody is waiting'
-                : filter === 'closed'
-                  ? 'No closed conversations'
-                  : 'No support messages yet'}
+              : search
+                ? 'No conversations match'
+                : filter === 'awaiting'
+                  ? 'Nobody is waiting'
+                  : filter === 'mine'
+                    ? 'No cases taken by you'
+                    : filter === 'closed'
+                      ? 'No closed conversations'
+                      : 'No support messages yet'}
             text={!isAdmin
               ? 'Start one and your municipal admin will pick it up.'
-              : filter === 'awaiting'
-                ? 'Every conversation has a reply.'
-                : 'Conversations with buyers and sellers show up here.'}
+              : search
+                ? 'Try another name or subject.'
+                : filter === 'awaiting'
+                  ? 'Every conversation has a reply.'
+                  : filter === 'mine'
+                    ? 'Open a case and choose "Take this case" so teammates know you have it.'
+                    : 'Conversations with buyers and sellers show up here.'}
           />
         ) : (
           visibleConversations.map((c) => (
@@ -697,7 +796,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                 <span className="sc-list-topic">{subtitleFor(c)}</span>
                 <span className="sc-list-preview">{c.lastMessage?.body || 'No messages yet'}</span>
                 {isAdmin ? (
-                  (c.status !== 'OPEN' || c.awaitingReply) && (
+                  (c.status !== 'OPEN' || c.awaitingReply || c.assignedTo) && (
                     <span className="sc-list-badges">
                       {c.status === 'CLOSED' || c.status === 'RESOLVED'
                         ? (
@@ -705,7 +804,12 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                             {STATUS_LABELS[c.status]}
                           </span>
                         )
-                        : <span className="sc-badge sc-badge-await">Awaiting reply</span>}
+                        : c.awaitingReply && <span className="sc-badge sc-badge-await">Awaiting reply</span>}
+                      {c.assignedTo && (
+                        <span className="sc-badge sc-badge-owner">
+                          {c.assignedTo.id === meId ? 'Yours' : `Handled by ${c.assignedTo.fullName}`}
+                        </span>
+                      )}
                     </span>
                   )
                 ) : (
@@ -746,22 +850,47 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                 </strong>
                 <span>
                   {isAdmin
-                    ? [active.subject, subtitleFor(active), active.user?.email]
-                      .filter(Boolean).join(' · ')
+                    ? [active.subject, subtitleFor(active)].filter(Boolean).join(' · ')
                     : `${subtitleFor(active)} · ${active.adminName || 'Waiting for a municipal admin'}`}
                 </span>
+                {isAdmin && (
+                  <span className="sc-owner-line">
+                    {assignee
+                      ? (assignee.id === meId ? 'You are handling this case' : `Handled by ${assignee.fullName}`)
+                      : 'Nobody on the team has taken this case yet'}
+                  </span>
+                )}
               </div>
               {isAdmin && (
                 <div className="sc-thread-actions">
+                  {assignee?.id === meId ? (
+                    <button type="button" className="sc-btn sc-btn-ghost" disabled={assigning} onClick={() => assignCase('release', assignee)}>
+                      <HandGrabbing size={14} /> Release
+                    </button>
+                  ) : (
+                    <button type="button" className="sc-btn sc-btn-ghost" disabled={assigning} onClick={() => assignCase('take', assignee)}>
+                      <HandGrabbing size={14} /> {assignee ? 'Take over' : 'Take this case'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`sc-btn sc-btn-ghost${panelOpen ? ' is-on' : ''}`}
                     onClick={() => setPanelToggle({ id: activeId, open: !panelOpen })}
                     aria-pressed={panelOpen}
                   >
-                    <IdentificationCard size={14} /> Verification
+                    <IdentificationCard size={14} /> Check ID
                   </button>
-                  {/* Resolved is the state that invites the buyer to rate the
+                  {person?.id && (
+                    <Link className="sc-btn sc-btn-ghost" to={`/admin/orders?buyerId=${encodeURIComponent(person.id)}`}>
+                      <Receipt size={14} /> View orders
+                    </Link>
+                  )}
+                  {personHref && (
+                    <Link className="sc-btn sc-btn-ghost" to={personHref}>
+                      <UserCircle size={14} /> View profile
+                    </Link>
+                  )}
+                  {/* Resolved is the state that invites the person to rate the
                       case; closed simply ends it without asking. */}
                   {activeStatus === 'OPEN' && (
                     <button
@@ -770,7 +899,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                       disabled={togglingStatus}
                       onClick={() => setConversationStatus('RESOLVED')}
                     >
-                      <CheckCircle size={14} /> Mark resolved
+                      <CheckCircle size={14} /> Resolve, ask for rating
                     </button>
                   )}
                   {activeStatus !== 'OPEN' && (
@@ -790,7 +919,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                       disabled={togglingStatus}
                       onClick={() => setConversationStatus('CLOSED')}
                     >
-                      <LockSimple size={14} /> Close case
+                      <LockSimple size={14} /> Close without rating
                     </button>
                   )}
                 </div>
@@ -837,7 +966,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
                   </p>
                 )}
                 <form className="sc-composer" onSubmit={send}>
-                  {isAdmin && <QuickReplies onPick={insertQuickReply} disabled={sending} />}
+                  {isAdmin && <QuickReplies onPick={insertQuickReply} disabled={sending} office={active.municipality?.office} />}
                   <textarea
                     ref={textareaRef}
                     value={draft}

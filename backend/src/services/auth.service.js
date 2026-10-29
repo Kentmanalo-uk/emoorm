@@ -24,6 +24,7 @@ const {
 } = require('../utils/jwt');
 const sessionService = require('./session.service');
 const prisma = require('../config/database');
+const shopReadiness = require('./shopReadiness.service');
 const { makeGuard } = require('../utils/attemptGuard');
 const {
   sendPasswordResetEmail,
@@ -268,7 +269,7 @@ const login = async (email, password, { ip } = {}) => {
 
   // Check if user is active
   if (!user.isActive) {
-    throw new ApiError('Account is suspended. Please contact support.', 403);
+    throw new ApiError(await suspendedMessage(user.id), 403);
   }
 
   // Admin accounts must clear a second factor before a full session is
@@ -1068,7 +1069,38 @@ const getUserById = async (userId, actor) => {
     ? { status: record.status, idType: record.idType, verifiedAt: record.verifiedAt, reviewedById: record.reviewedById }
     : { status: 'NOT_VERIFIED' };
 
-  return { ...adminUserView(user), identity };
+  // Why the account is suspended, and by whom (the last suspension logged).
+  const suspension = user.isActive ? null : await lastSuspension(userId);
+
+  return { ...adminUserView(user), identity, suspension };
+};
+
+/**
+ * The last time an admin suspended this account: the reason they gave (the
+ * person sees it when they try to sign in), when, and who.
+ * @param {String} userId
+ * @returns {Promise<{reason: String|null, at: Date, byName: String|null}|null>}
+ */
+const lastSuspension = async (userId) => {
+  const log = await prisma.auditLog.findFirst({
+    where: { entity: 'User', entityId: userId, action: 'SUSPEND_USER' },
+    orderBy: { createdAt: 'desc' },
+    select: { userId: true, details: true, createdAt: true },
+  }).catch(() => null);
+  if (!log) return null;
+  const by = log.userId
+    ? await prisma.user.findUnique({ where: { id: log.userId }, select: { fullName: true } }).catch(() => null)
+    : null;
+  const reason = typeof log.details?.reason === 'string' && log.details.reason.trim() ? log.details.reason.trim() : null;
+  return { reason, at: log.createdAt, byName: by?.fullName || null };
+};
+
+/** What a suspended person reads when they try to sign in. */
+const suspendedMessage = async (userId) => {
+  const suspension = await lastSuspension(userId);
+  if (!suspension?.reason) return 'Account is suspended. Please contact support.';
+  const reason = /[.!?]$/.test(suspension.reason) ? suspension.reason : `${suspension.reason}.`;
+  return `Account is suspended. Reason: ${reason} Please contact support.`;
 };
 
 /* ── People as admins see them ──────────────────────────────────────── */
@@ -1189,7 +1221,42 @@ const getKycPhoto = async (targetUserId, field, requester) => {
 const getUsers = async (options) => {
   // Admin route only: every row masked (adminUserView).
   const result = await userRepository.findAll(options);
-  return { ...result, users: result.users.map(adminUserView) };
+  const users = result.users.map(adminUserView);
+  return { ...result, users: options.shopStats ? await withShopStats(users) : users };
+};
+
+/**
+ * The Sellers list as a list of shops: each row's live products, orders in
+ * the last 30 days (not counting cancelled ones) and whether the shop is
+ * ready to sell, in three queries for the whole page.
+ */
+const withShopStats = async (users) => {
+  const storeIds = users.map((u) => u.store?.id).filter(Boolean);
+  if (storeIds.length === 0) return users;
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [live, recent, ready] = await Promise.all([
+    prisma.product.groupBy({
+      by: ['storeId'],
+      where: { storeId: { in: storeIds }, status: 'APPROVED', deletedAt: null, store: shopReadiness.VISIBLE_STORE },
+      _count: { _all: true },
+    }),
+    prisma.order.groupBy({
+      by: ['storeId'],
+      where: { storeId: { in: storeIds }, createdAt: { gte: since }, status: { not: 'CANCELLED' } },
+      _count: { _all: true },
+    }),
+    shopReadiness.readyIds(storeIds),
+  ]);
+  const liveBy = Object.fromEntries(live.map((r) => [r.storeId, r._count._all]));
+  const recentBy = Object.fromEntries(recent.map((r) => [r.storeId, r._count._all]));
+  return users.map((u) => (u.store?.id ? {
+    ...u,
+    shopStats: {
+      liveProducts: liveBy[u.store.id] || 0,
+      orders30d: recentBy[u.store.id] || 0,
+      readyToSell: ready.has(u.store.id),
+    },
+  } : u));
 };
 
 /**
@@ -1526,7 +1593,7 @@ const loginWithGoogleProfile = async (profile) => {
         throw new ApiError('Account has been deleted', 403);
       }
       if (!byEmail.isActive) {
-        throw new ApiError('Account is suspended. Please contact support.', 403);
+        throw new ApiError(await suspendedMessage(byEmail.id), 403);
       }
       // Google has just proved who owns this email. If the account's email
       // was never confirmed, whoever chose its password may not be that
@@ -1567,7 +1634,7 @@ const loginWithGoogleProfile = async (profile) => {
     throw new ApiError('Account has been deleted', 403);
   }
   if (!user.isActive) {
-    throw new ApiError('Account is suspended. Please contact support.', 403);
+    throw new ApiError(await suspendedMessage(user.id), 403);
   }
 
   // Admin accounts still need MFA — mirror the password login response shape.

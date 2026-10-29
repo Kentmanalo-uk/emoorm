@@ -5,9 +5,8 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import {
   faultLabel, feeToAdd, orderPromo, parcelBackLine, promoSellerLine, redeliveryLine,
 } from '../../lib/moormove';
+import { peso } from '../../lib/format';
 import './RiderDelivery.css';
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const CANCEL_REASONS = [
   "I'll deliver it myself",

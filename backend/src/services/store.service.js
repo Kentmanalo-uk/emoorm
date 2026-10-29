@@ -338,7 +338,14 @@ const getMyStore = async (userId) => {
     throw new ApiError('You do not have a store yet', 404);
   }
 
-  return attachDeletionInfo(store);
+  // Price offers are for livestock: the Seller Center shows Offers to shops
+  // that list animals, or that still have offers from when they did.
+  const [animals, offers] = await Promise.all([
+    prisma.product.count({ where: { storeId: store.id, deletedAt: null, productType: 'LIVESTOCK' } }),
+    prisma.priceOffer.count({ where: { storeId: store.id } }),
+  ]);
+
+  return { ...attachDeletionInfo(store), sellsLivestock: animals + offers > 0 };
 };
 
 const GUIDE_KEY = /^[a-z0-9/_-]{1,80}$/;

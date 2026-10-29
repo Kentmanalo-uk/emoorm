@@ -29,6 +29,8 @@ import './SellerFulfillment.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import PhoneSaveBar from '../components/seller/PhoneSaveBar';
+import useUnsavedChanges from '../hooks/useUnsavedChanges';
+import LoadFailed from '../components/ui/LoadFailed';
 import PickupAddressField from '../components/seller/PickupAddressField';
 import { pickupGap } from '../lib/pickupAddress';
 import StoreLocationMap from '../components/maps/StoreLocationMap';
@@ -171,6 +173,10 @@ function SellerFulfillment({ part }) {
     courierIds: prev.courierIds.includes(id) ? prev.courierIds.filter((x) => x !== id) : [...prev.courierIds, id],
   }));
   const [loading, setLoading] = useState(true);
+  // The settings could not be read: say so, rather than show (and let the
+  // seller save) an empty form.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -223,13 +229,14 @@ function SellerFulfillment({ part }) {
         });
         setRiders(s.moormoveEnabled !== false);
         setQrOn(Boolean(s.paymentQrImage));
-      } catch (err) {
-        toast.error(err.message || 'Failed to load store');
+        setLoadFailed(false);
+      } catch {
+        setLoadFailed(true);
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [reloadKey]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -307,8 +314,10 @@ function SellerFulfillment({ part }) {
   const pickupPinned = validPin(form.latitude, form.longitude);
   const [pinError, setPinError] = useState('');
 
-  // A part's own settings, to tell whether its page changed anything.
-  const partState = (p) => JSON.stringify(
+  // A part's own settings, to tell whether its page changed anything; 'all'
+  // is the one-page layout on computers (how buyers get orders, pickup and
+  // payment; Delivery has its own page).
+  const partState = (p) => (p === 'all' ? JSON.stringify(['method', 'pickup', 'payment'].map((x) => partState(x))) : JSON.stringify(
     p === 'method' ? [form.fulfillmentMode]
       : p === 'pickup' ? [form.pickupAddress.trim(), form.pickupInstructions.trim(), form.latitude, form.longitude]
         : p === 'payment' ? [form.acceptsCod, qrOn, ...(qrOn ? [
@@ -317,14 +326,18 @@ function SellerFulfillment({ part }) {
         ] : [])]
           : [shipping.selfDelivery, [...shipping.courierIds].sort(), ridersOn ? riders : null,
             !showPickup ? [form.latitude, form.longitude] : null],
-  );
-  const partReady = !loading && (part !== 'delivery' || shippingLoaded);
+  ));
+  const scopeKey = part || 'all';
+  const partReady = !loading && !loadFailed && (part !== 'delivery' || shippingLoaded);
   const [baseline, setBaseline] = useState(null);
   useEffect(() => {
-    if (part && partReady && baseline === null) setBaseline(partState(part));
+    if (partReady && baseline === null) setBaseline(partState(scopeKey));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [part, partReady, baseline]);
-  const dirty = baseline !== null && partState(part) !== baseline;
+  }, [scopeKey, partReady, baseline]);
+  const dirty = baseline !== null && partState(scopeKey) !== baseline;
+  // Leaving with changes not saved asks first (links, the sidebar, closing
+  // the tab); Cancel and Save leave on purpose.
+  useUnsavedChanges(dirty);
 
   // Back to where the part was opened from (the list, Me, Shop setup…).
   const leave = () => {
@@ -425,6 +438,8 @@ function SellerFulfillment({ part }) {
       layoutCtx?.refreshSetup?.();
       if (scope === 'all') {
         toast.success('Settings saved');
+        // What is saved now is the new starting point: Save turns off again.
+        setBaseline(partState('all'));
         return;
       }
       // A new way to hand orders over may need its part set up next.
@@ -467,11 +482,26 @@ function SellerFulfillment({ part }) {
         <div className="seller-container">
           <SellerPageHead
             className="sf-head"
-            title="Fulfillment & Payment"
-            subtitle="Configure how buyers receive and pay for their orders."
+            title="Delivery & payment"
+            subtitle="How buyers get their orders and pay for them."
           />
           <div className="seller-card">
             <div className="sf-body sf-loading">Loading store settings…</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="seller-dashboard">
+        <div className="seller-container">
+          {!isPhone && (
+            <SellerPageHead className="sf-head" title="Delivery & payment" subtitle="How buyers get their orders and pay for them." />
+          )}
+          <div className="seller-card">
+            <LoadFailed onRetry={() => { setLoading(true); setReloadKey((k) => k + 1); }} what="your delivery and payment settings" compact />
           </div>
         </div>
       </div>
@@ -483,7 +513,7 @@ function SellerFulfillment({ part }) {
         <div className="seller-card" id="method">
           <div className="seller-card-header">
             <h2>
-              <Truck size={16} /> Fulfillment Method
+              <Truck size={16} /> How buyers get their orders
             </h2>
           </div>
           <div className="sf-body">
@@ -1135,7 +1165,7 @@ function SellerFulfillment({ part }) {
     return (
       <div className="seller-dashboard dp-page">
         <div className="seller-container dp-container">
-          <Link to="/seller/fulfillment" className="dp-back"><ArrowLeft size={16} /> Fulfillment &amp; Payment</Link>
+          <Link to="/seller/fulfillment" className="dp-back"><ArrowLeft size={16} /> Delivery &amp; payment</Link>
           <SellerPageHead
             className="sf-head"
             title="Delivery"
@@ -1211,17 +1241,8 @@ function SellerFulfillment({ part }) {
       <div className="seller-container">
         <SellerPageHead
           className="sf-head"
-          title="Fulfillment & Payment"
-          subtitle="Configure how buyers receive and pay for their orders."
-          actions={(
-            <button
-              className="btn-seller-primary"
-              onClick={() => saveSettings()}
-              disabled={saving}
-            >
-              {saving ? <BusyLabel>Saving…</BusyLabel> : <><Save size={16} /> Save Changes</>}
-            </button>
-          )}
+          title="Delivery & payment"
+          subtitle="How buyers get their orders and pay for them."
         />
 
         {methodCard}
@@ -1229,13 +1250,11 @@ function SellerFulfillment({ part }) {
         {showDeliveryAreas && deliverySummaryCard}
         {paymentCard}
 
-        <div className="sf-footer-actions">
-          <button
-            className="btn-seller-primary"
-            onClick={() => saveSettings()}
-            disabled={saving}
-          >
-            {saving ? <BusyLabel>Saving…</BusyLabel> : <><Save size={16} /> Save Changes</>}
+        {/* One Save for the whole page, kept in view, on only when something changed. */}
+        <div className="dp-savebar" role="group" aria-label="Save changes">
+          <span className="dp-savebar-note">{dirty ? 'You have changes that are not saved yet.' : 'All changes saved.'}</span>
+          <button type="button" className="btn-seller-primary" onClick={() => saveSettings()} disabled={saving || !dirty}>
+            {saving ? <BusyLabel>Saving…</BusyLabel> : <><Save size={16} /> Save changes</>}
           </button>
         </div>
       </div>

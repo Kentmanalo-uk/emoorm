@@ -6,9 +6,8 @@ import { saleInfo } from '../../lib/variantPricing';
 import { windowState, shortLeft, isEndingSoon } from '../../lib/availability';
 import TodayTag from './TodayTag';
 import useProductPeek from '../peek/useProductPeek';
+import { peso } from '../../lib/format';
 import './TodayCard.css';
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * One Available Today listing (an item from GET /today), as a product card:

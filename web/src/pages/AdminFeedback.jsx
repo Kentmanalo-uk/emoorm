@@ -9,6 +9,10 @@ import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
 import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
+import LoadFailed from '../components/ui/LoadFailed';
+import { AdminDate, AdminPager } from '../components/admin/AdminBits';
+import { shortDateTime } from '../components/admin/adminFormat';
+import { roleLabel } from '../lib/labels';
 import EmptyArt from '../components/ui/EmptyArt';
 import UserAvatar from '../components/ui/UserAvatar';
 import axios from '../lib/axios';
@@ -41,12 +45,7 @@ const CATEGORY_LABEL = {
   OTHER: 'Other',
 };
 
-const ROLE_LABEL = {
-  BUYER: 'Buyer',
-  SELLER: 'Seller',
-  MUNICIPAL_ADMIN: 'Municipal admin',
-  SUPER_ADMIN: 'Super admin',
-};
+const STATUS_LABEL = { NEW: 'New', REVIEWED: 'Reviewed', ARCHIVED: 'Archived' };
 
 const STATUS_TABS = [
   { key: 'NEW', label: 'New' },
@@ -55,7 +54,7 @@ const STATUS_TABS = [
   { key: '', label: 'All' },
 ];
 
-const dateTime = (value) => (value ? new Date(value).toLocaleString('en-PH') : '—');
+const dateTime = (value) => shortDateTime(value) || '—';
 
 const Stars = ({ value }) => {
   if (!value) return <span className="afb-norating">No rating</span>;
@@ -72,6 +71,7 @@ export default function AdminFeedback() {
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   // Raised by whatever changes the query, lowered by the fetch itself. Keeping
   // it out of the fetch keeps that effect free of synchronous state updates.
   const startLoading = () => setIsLoading(true);
@@ -112,12 +112,13 @@ export default function AdminFeedback() {
         if (categoryFilter) params.category = categoryFilter;
         if (debounced) params.search = debounced;
 
-        const res = await axios.get('/feedback', { params });
+        const res = await axios.get('/feedback', { params, quiet: true });
         if (cancelled) return;
         setRows(res.data || []);
+        setLoadError(false);
         if (res.pagination) setPagination(res.pagination);
       } catch {
-        if (!cancelled) toast.error('Failed to load feedback');
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -131,20 +132,26 @@ export default function AdminFeedback() {
       .catch(() => { /* the strip just stays hidden */ });
   }, [rows.length]);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   // Deep link from the super admin's notification: /admin/feedback?id=<id>.
   const openedId = useRef(null);
+  // ?id= of feedback that no longer exists: said on the page, with a way back.
+  const [linkMissing, setLinkMissing] = useState(false);
+  const clearLink = () => {
+    setLinkMissing(false);
+    openedId.current = null;
+    setSearchParams((prev) => { const next = new URLSearchParams(prev); next.delete('id'); return next; }, { replace: true });
+  };
   useEffect(() => {
     const targetId = searchParams.get('id');
     if (!targetId || openedId.current === targetId) return;
     openedId.current = targetId;
     const listed = rows.find((r) => r.id === targetId);
-    Promise.resolve(listed || axios.get(`/feedback/${targetId}`).then((res) => res.data))
+    Promise.resolve(listed || axios.get(`/feedback/${targetId}`, { quiet: true }).then((res) => res.data))
       .then((item) => setSelected(item))
       .catch((err) => {
-        toast.error(err?.status === 404
-          ? 'That feedback no longer exists.'
-          : 'Could not load that feedback. Please try again.');
+        if (err?.status === 404) setLinkMissing(true);
+        else toast.error('Could not load that feedback. Please try again.');
         console.error('[AdminFeedback] deep link failed', err?.status, err?.message);
       });
   }, [rows, searchParams]);
@@ -155,7 +162,7 @@ export default function AdminFeedback() {
       const body = { status };
       if (notes.trim()) body.adminNotes = notes.trim();
       const res = await axios.patch(`/feedback/${id}`, body);
-      toast.success(`Marked as ${status.toLowerCase()}`);
+      toast.success(`Marked as ${(STATUS_LABEL[status] || status).toLowerCase()}`);
       setRows((prev) => prev.map((r) => (r.id === id ? res.data : r)));
       if (selected?.id === id) setSelected(res.data);
       setNotes('');
@@ -180,11 +187,11 @@ export default function AdminFeedback() {
       const all = await fetchAllPages('/feedback', params);
       downloadCsv('feedback', [
         { header: 'Submitted', value: (r) => csvDate(r.createdAt) },
-        { header: 'Status', value: (r) => r.status },
+        { header: 'Status', value: (r) => STATUS_LABEL[r.status] || r.status },
         { header: 'Category', value: (r) => CATEGORY_LABEL[r.category] || r.category },
         { header: 'Rating', value: (r) => r.rating ?? '' },
         { header: 'From', value: (r) => r.user?.fullName || 'Deleted account' },
-        { header: 'Role', value: (r) => ROLE_LABEL[r.role] || r.role || '' },
+        { header: 'Role', value: (r) => roleLabel(r.role) || '' },
         { header: 'Municipality', value: (r) => r.municipality?.name || '' },
         { header: 'Page', value: (r) => r.page || '' },
         { header: 'Message', value: (r) => r.message || '' },
@@ -205,12 +212,22 @@ export default function AdminFeedback() {
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Feedback</h1>
-          <p className="admin-page-subtitle">
+          <p className="admin-page-sub">
             What people are telling us about E-MOORM itself. Order and account
-            problems go to <Link to="/admin/support" className="admin-link">Buyer Support</Link> instead.
+            problems go to <Link to="/admin/support" className="admin-link">Support</Link> instead.
           </p>
         </div>
       </div>
+
+      {linkMissing && (
+        <div className="admin-card">
+          <div className="admin-empty">
+            <EmptyArt name="search" size={96} />
+            <p>This feedback isn&apos;t here any more. It may have been deleted.</p>
+            <button type="button" className="admin-btn admin-btn-gray" onClick={clearLink}>Back to all feedback</button>
+          </div>
+        </div>
+      )}
 
       {summary && (
         <div className="afb-summary">
@@ -288,6 +305,8 @@ export default function AdminFeedback() {
 
         {isLoading ? (
           <Skeleton.Table cols={5} rows={6} />
+        ) : loadError ? (
+          <LoadFailed onRetry={() => { startLoading(); setReloadKey((k) => k + 1); }} what="the feedback" compact />
         ) : rows.length === 0 ? (
           <div className="admin-empty">
             <EmptyArt name="feedback" size={104} />
@@ -329,7 +348,7 @@ export default function AdminFeedback() {
                           <div>
                             <strong>{r.user?.fullName || 'Deleted account'}</strong>
                             <span className="afb-person-meta">
-                              {[ROLE_LABEL[r.role] || r.role, r.municipality?.name].filter(Boolean).join(' · ') || '—'}
+                              {[roleLabel(r.role), r.municipality?.name].filter(Boolean).join(' · ') || '—'}
                             </span>
                           </div>
                         </div>
@@ -337,9 +356,9 @@ export default function AdminFeedback() {
                       <td className="afb-excerpt">{r.message}</td>
                       <td>{CATEGORY_LABEL[r.category] || r.category}</td>
                       <td><Stars value={r.rating} /></td>
-                      <td className="afb-when">{dateTime(r.createdAt)}</td>
+                      <td className="afb-when"><AdminDate value={r.createdAt} /></td>
                       <td>
-                        <span className={`admin-badge ${STATUS_BADGE[r.status] || ''}`}>{r.status}</span>
+                        <span className={`admin-badge ${STATUS_BADGE[r.status] || ''}`}>{STATUS_LABEL[r.status] || r.status}</span>
                       </td>
                       <td>
                         <button className="admin-btn admin-btn-gray" onClick={() => setSelected(r)}>
@@ -352,25 +371,7 @@ export default function AdminFeedback() {
               </table>
             </div>
 
-            {pagination.totalPages > 1 && (
-              <div className="admin-pagination">
-                <button
-                  className="admin-btn admin-btn-gray"
-                  disabled={page <= 1}
-                  onClick={() => { startLoading(); setPage((p) => p - 1); }}
-                >
-                  Previous
-                </button>
-                <span>Page {page} of {pagination.totalPages}</span>
-                <button
-                  className="admin-btn admin-btn-gray"
-                  disabled={page >= pagination.totalPages}
-                  onClick={() => { startLoading(); setPage((p) => p + 1); }}
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            <AdminPager page={page} totalPages={pagination.totalPages} total={pagination.total} onPage={(n) => { startLoading(); setPage(n); }} />
           </>
         )}
       </div>
@@ -380,7 +381,7 @@ export default function AdminFeedback() {
           <>
             <div className="admin-detail-header">
               <h3>Feedback</h3>
-              <button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button>
+              <button type="button" className="admin-detail-close" onClick={() => setSelected(null)} aria-label="Close"><X size={18} /></button>
             </div>
 
             <div className="admin-detail-body">
@@ -397,7 +398,7 @@ export default function AdminFeedback() {
                   <div><label>Received</label><p>{dateTime(item.createdAt)}</p></div>
                   <div>
                     <label>Status</label>
-                    <p><span className={`admin-badge ${STATUS_BADGE[item.status] || ''}`}>{item.status}</span></p>
+                    <p><span className={`admin-badge ${STATUS_BADGE[item.status] || ''}`}>{STATUS_LABEL[item.status] || item.status}</span></p>
                   </div>
                   <div className="admin-detail-full">
                     <label>Sent from</label>
@@ -411,7 +412,7 @@ export default function AdminFeedback() {
                 <div className="admin-detail-grid">
                   <div><label>Name</label><p>{item.user?.fullName || 'Deleted account'}</p></div>
                   <div><label>Username</label><p>{item.user?.username ? `@${item.user.username}` : '—'}</p></div>
-                  <div><label>Role</label><p>{ROLE_LABEL[item.role] || item.role || '—'}</p></div>
+                  <div><label>Role</label><p>{roleLabel(item.role) || '—'}</p></div>
                   <div><label>Municipality</label><p>{item.municipality?.name || '—'}</p></div>
                   <div className="admin-detail-full">
                     <label>Email</label>
@@ -437,7 +438,7 @@ export default function AdminFeedback() {
                     {item.adminNotes && (
                       <div className="admin-detail-full">
                         <label>Notes</label>
-                        <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{item.adminNotes}</p>
+                        <p className="afb-notes-text">{item.adminNotes}</p>
                       </div>
                     )}
                     <div><label>Reviewed by</label><p>{item.reviewedBy?.fullName || '—'}</p></div>

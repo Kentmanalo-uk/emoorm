@@ -147,6 +147,8 @@ const getAllOrders = asyncHandler(async (req, res) => {
     municipalityId: scopedMunicipalityId,
     buyerId,
     storeId,
+    // ?payment=stale: the attention queue's "payments not checked in 24h".
+    stalePayment: req.query.payment === 'stale',
   };
 
   const result = await orderService.getAllOrders(options);

@@ -192,7 +192,15 @@ const getForActor = async (id, actor) => {
 
 const listForBuyer = (buyerId, opts) => returnRepository.findByBuyer({ buyerId, ...opts });
 
-const listForStore = (storeId, opts) => returnRepository.findByStore({ storeId, ...opts });
+// With the count in every status, so the seller's tabs show totals for the
+// whole shop, not only the page on screen.
+const listForStore = async (storeId, opts) => {
+  const [result, counts] = await Promise.all([
+    returnRepository.findByStore({ storeId, ...opts }),
+    returnRepository.countByStatusForStore(storeId),
+  ]);
+  return { ...result, counts };
+};
 
 const decide = async (id, seller, payload) => {
   const request = await returnRepository.findById(id);

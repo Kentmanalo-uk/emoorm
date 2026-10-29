@@ -3,20 +3,28 @@ import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Package, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
-  Storefront as Store, Tag, Archive, ArrowCounterClockwise,
+  Storefront as Store, Tag, Archive, ArrowCounterClockwise, SlidersHorizontal,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import { ProductFeatureSettings } from '../components/admin/PlatformSettings';
+import useAuthStore from '../store/authStore';
 import DetailDrawer from '../components/admin/DetailDrawer';
 import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
 import Skeleton from '../components/ui/Skeleton';
+import LoadFailed from '../components/ui/LoadFailed';
 import axios from '../lib/axios';
 import ReasonDialog from '../components/admin/ReasonDialog';
 import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
-import { useRefreshAdminShell } from '../hooks/useAdminShellData';
+import { useAdminAttention, useRefreshAdminShell } from '../hooks/useAdminShellData';
+import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
+import { productStatus } from '../lib/labels';
+import { confirmAction } from '../lib/confirm';
+import { peso } from '../lib/format';
 import '../components/admin/AdminLayout.css';
 import './AdminSellers.css';
+import './AdminModeration.css';
 import Select from '../components/ui/Select';
 
 // Bulk actions go three at a time: each one is several queries and a
@@ -38,16 +46,49 @@ const STATUS_BADGE = {
   ARCHIVED: 'admin-badge-dismissed',
 };
 
+const STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED', 'HIDDEN', 'ARCHIVED'];
+
+// What the list can be ordered by (the API's sort fields). Stock is not one
+// of them, so "lowest stock" is not offered.
+const SORTS = {
+  newest: { label: 'Newest first', sortBy: 'createdAt', sortOrder: 'desc' },
+  oldest: { label: 'Oldest first', sortBy: 'createdAt', sortOrder: 'asc' },
+  priceLow: { label: 'Price: low to high', sortBy: 'price', sortOrder: 'asc' },
+  priceHigh: { label: 'Price: high to low', sortBy: 'price', sortOrder: 'desc' },
+  name: { label: 'Name A–Z', sortBy: 'name', sortOrder: 'asc' },
+  bestSelling: { label: 'Best-selling', sortBy: 'orderCount', sortOrder: 'desc' },
+  stockLow: { label: 'Lowest stock first', sortBy: 'stock', sortOrder: 'asc' },
+};
+
+function StatusBadge({ status }) {
+  return <span className={`admin-badge ${STATUS_BADGE[status] || ''}`}>{productStatus(status)}</span>;
+}
+
+function StockCell({ stock }) {
+  if (Number(stock) > 0) return <>{Number(stock).toLocaleString('en-PH')}</>;
+  return <span className="admin-badge am-badge-out">Out of stock</span>;
+}
+
 export default function AdminProducts() {
-  const [searchParams] = useSearchParams();
+  const isSuperAdmin = useAuthStore((s) => s.user?.role === 'SUPER_ADMIN');
+  const [searchParams, setSearchParams] = useSearchParams();
   const storeId = searchParams.get('storeId') || '';
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   // Seeded from ?search= so a top-bar search result opens filtered. The
   // status filter starts open in that case: a searched-for product may well
-  // be pending or suspended, and the usual APPROVED default would hide it.
+  // be pending or suspended, and the usual default would hide it.
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [statusFilter, setStatusFilter] = useState(searchParams.get('search') ? '' : 'APPROVED');
+  // null until chosen: the page then opens on "Waiting for approval" when
+  // anything waits (the work), otherwise on Approved.
+  const [chosenStatus, setChosenStatus] = useState(() => {
+    if (searchParams.get('status')) return searchParams.get('status');
+    return searchParams.get('search') ? '' : null;
+  });
+  const [categoryId, setCategoryId] = useState('');
+  const [municipalityId, setMunicipalityId] = useState('');
+  const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [selected, setSelected] = useState(null);
@@ -55,22 +96,19 @@ export default function AdminProducts() {
   const [reasonAction, setReasonAction] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [featuresOpen, setFeaturesOpen] = useState(false);
   // A decision changes the waiting count beside Products.
   const refreshShell = useRefreshAdminShell();
+  const attention = useAdminAttention();
+  const { categories } = useCategories({ activeOnly: false });
+  const { municipalities } = useMunicipalities({ enabled: isSuperAdmin });
 
-  // Typing waits for a pause (300 ms) before asking, so a name is one request
-  // rather than one per letter; a filter or page change asks at once.
+  const pendingWaiting = Number((attention.data || []).find((i) => i.key === 'pendingProducts')?.count || 0);
+  const attentionKnown = attention.isFetched || attention.isError;
+  const statusFilter = chosenStatus ?? (attentionKnown ? (pendingWaiting > 0 ? 'PENDING' : 'APPROVED') : null);
+  const setStatusFilter = (value) => setChosenStatus(value);
+  // The search the list last asked for, to tell typing from other changes.
   const lastSearch = useRef(search);
-  useEffect(() => {
-    const typed = search !== lastSearch.current;
-    lastSearch.current = search;
-    if (!typed) {
-      fetchProducts();
-      return undefined;
-    }
-    const timer = setTimeout(fetchProducts, 300);
-    return () => clearTimeout(timer);
-  }, [statusFilter, search, page, storeId]);
 
   // Follows ?search= when it changes, so a second search from the top bar
   // re-filters instead of leaving the first term in place. Only a change to
@@ -83,9 +121,20 @@ export default function AdminProducts() {
     // A finished search, not typing: it loads at once.
     lastSearch.current = urlSearch;
     setSearch(urlSearch);
-    setStatusFilter(urlSearch ? '' : 'APPROVED');
+    setChosenStatus(urlSearch ? '' : null);
     setPage(1);
   }, [urlSearch]);
+
+  // Deep link from a notification: /admin/products?id=<productId>.
+  const openedId = useRef(null);
+  useEffect(() => {
+    const targetId = searchParams.get('id');
+    if (!targetId || openedId.current === targetId) return;
+    openedId.current = targetId;
+    axios.get(`/products/${targetId}`)
+      .then((res) => setSelected(res.data))
+      .catch((err) => toast.error(err?.status === 404 ? 'That product no longer exists.' : 'Could not open that product.'));
+  }, [searchParams]);
 
   // Only the newest request fills the table: one overtaken by a later search,
   // filter or page (and answering late) is dropped.
@@ -95,20 +144,46 @@ export default function AdminProducts() {
     setIsLoading(true);
     setSelectedIds([]);
     try {
-      const params = { pageSize: 20, page };
+      const { sortBy, sortOrder } = SORTS[sort] || SORTS.newest;
+      const params = { pageSize: 20, page, sortBy, sortOrder };
       if (statusFilter) params.status = statusFilter;
       if (search) params.search = search;
       if (storeId) params.storeId = storeId;
+      if (categoryId) params.categoryId = categoryId;
+      // Ignored by the API for a municipal admin (always their own town).
+      if (isSuperAdmin && municipalityId) params.municipalityId = municipalityId;
 
       const res = await axios.get('/products', { params });
       if (request !== latestRequest.current) return;
       setProducts(res.data || []);
+      setLoadFailed(false);
       if (res.pagination) setPagination(res.pagination);
     } catch {
-      if (request === latestRequest.current) toast.error('Failed to load products');
+      if (request === latestRequest.current) setLoadFailed(true);
     } finally {
       if (request === latestRequest.current) setIsLoading(false);
     }
+  };
+
+  // Typing waits for a pause (300 ms) before asking, so a name is one request
+  // rather than one per letter; a filter or page change asks at once.
+  useEffect(() => {
+    if (statusFilter === null) return undefined;
+    const typed = search !== lastSearch.current;
+    lastSearch.current = search;
+    if (!typed) {
+      fetchProducts();
+      return undefined;
+    }
+    const timer = setTimeout(fetchProducts, 300);
+    return () => clearTimeout(timer);
+  }, [statusFilter, search, page, storeId, categoryId, municipalityId, sort]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const clearStore = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('storeId');
+    setSearchParams(next, { replace: true });
+    setPage(1);
   };
 
   const handleApprove = async (productId) => {
@@ -126,11 +201,17 @@ export default function AdminProducts() {
     }
   };
 
-  // Undo a suspension or archive.
-  const handleRestore = async (productId) => {
-    setProcessing(productId);
+  // Undo a suspension or archive: buyers see it again at once, so it asks.
+  const handleRestore = async (product) => {
+    const ok = await confirmAction({
+      title: product.status === 'SUSPENDED' ? `Unsuspend "${product.name}"?` : `Restore "${product.name}"?`,
+      message: 'Buyers will see it in the shop again, and the seller is told.',
+      confirmLabel: product.status === 'SUSPENDED' ? 'Unsuspend' : 'Restore',
+    });
+    if (!ok) return;
+    setProcessing(product.id);
     try {
-      await axios.post(`/products/${productId}/restore`);
+      await axios.post(`/products/${product.id}/restore`);
       toast.success('Product restored — visible to buyers again');
       setSelected(null);
       fetchProducts();
@@ -199,6 +280,13 @@ export default function AdminProducts() {
 
   const handleBulkApprove = async () => {
     if (selectedPending.length === 0) return;
+    const n = selectedPending.length;
+    const ok = await confirmAction({
+      title: `Approve ${n} product${n === 1 ? '' : 's'}?`,
+      message: 'They go live in their shops at once, and each seller is told.',
+      confirmLabel: 'Approve',
+    });
+    if (!ok) return;
     setBulkProcessing(true);
     try {
       const results = await settleInBatches(selectedPending, (p) => axios.post(`/products/${p.id}/approve`));
@@ -212,54 +300,111 @@ export default function AdminProducts() {
   };
 
   const images = (p) => (Array.isArray(p?.images) ? p.images : []);
+  const storeName = products.find((p) => p.store?.id === storeId)?.store?.name;
+  const filtered = Boolean(search || categoryId || municipalityId || storeId);
 
   return (
     <AdminLayout>
       <div className="admin-page-header">
-        <h1 className="admin-page-title">Products</h1>
+        <div>
+          <h1 className="admin-page-title">Products</h1>
+          <p className="admin-page-sub">Approve new listings and act on ones that break the rules</p>
+        </div>
+        {isSuperAdmin && (
+          <button
+            type="button"
+            className="admin-btn admin-btn-gray"
+            aria-expanded={featuresOpen}
+            aria-controls="product-features"
+            onClick={() => setFeaturesOpen((v) => !v)}
+          >
+            <SlidersHorizontal size={14} /> {featuresOpen ? 'Hide product features' : 'Product features'}
+          </button>
+        )}
       </div>
+
+      {/* Platform-wide switches for selling (super admin). Behind a header
+          button so the product queue stays first, and near the top when open. */}
+      {isSuperAdmin && featuresOpen && <ProductFeatureSettings />}
 
       <div className="admin-card">
         <div className="admin-card-header">
           <h2 className="admin-card-title">
             Products
-            {pagination.total > 0 && (
-              <span style={{ fontWeight: 400, color: 'var(--t-neutral-500, #64748b)', fontSize: 14, marginLeft: 8 }}>
-                ({pagination.total})
-              </span>
-            )}
+            {pagination.total > 0 && <span className="am-count">({pagination.total.toLocaleString('en-PH')})</span>}
           </h2>
           <div className="admin-toolbar">
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-neutral-500, #636b78)' }} />
+            <label className="am-search">
+              <Search size={15} aria-hidden="true" />
               <input
-                className="admin-search-input"
-                style={{ paddingLeft: 30 }}
+                type="search"
+                aria-label="Search products"
                 placeholder="Search products…"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
-            </div>
+            </label>
             <Select
               aria-label="Filter by status"
               className="admin-select"
-              value={statusFilter}
+              value={statusFilter ?? ''}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             >
-              <option value="APPROVED">Approved</option>
-              <option value="PENDING">Pending</option>
-              <option value="SUSPENDED">Suspended</option>
-              <option value="">All</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{productStatus(s)}</option>)}
+              <option value="">All statuses</option>
+            </Select>
+            <Select
+              aria-label="Filter by category"
+              className="admin-select"
+              value={categoryId}
+              onChange={(e) => { setCategoryId(e.target.value); setPage(1); }}
+            >
+              <option value="">All categories</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+            {isSuperAdmin && (
+              <Select
+                aria-label="Filter by municipality"
+                className="admin-select"
+                value={municipalityId}
+                onChange={(e) => { setMunicipalityId(e.target.value); setPage(1); }}
+              >
+                <option value="">All municipalities</option>
+                {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </Select>
+            )}
+            <Select
+              aria-label="Sort by"
+              className="admin-select"
+              value={sort}
+              onChange={(e) => { setSort(e.target.value); setPage(1); }}
+            >
+              {Object.entries(SORTS).map(([key, s]) => <option key={key} value={key}>{s.label}</option>)}
             </Select>
           </div>
         </div>
 
-        {isLoading ? (
+        {storeId && (
+          <div className="am-chips">
+            <span className="am-chip">
+              Store: {storeName || 'this shop'}
+              <button type="button" onClick={clearStore} aria-label="Show every shop's products"><X size={12} /></button>
+            </span>
+          </div>
+        )}
+
+        {isLoading || statusFilter === null ? (
           <Skeleton.Table cols={6} rows={6} />
+        ) : loadFailed ? (
+          <LoadFailed what="the products" onRetry={fetchProducts} compact />
         ) : products.length === 0 ? (
           <div className="admin-empty">
             <EmptyArt name="products" size={104} />
-            <p>No {statusFilter.toLowerCase()} products</p>
+            <p>
+              {filtered
+                ? 'No products match these filters'
+                : statusFilter ? `No products: ${productStatus(statusFilter).toLowerCase()}` : 'No products yet'}
+            </p>
           </div>
         ) : (
           <>
@@ -308,12 +453,12 @@ export default function AdminProducts() {
                     const img = images(p)[0];
                     return (
                       <tr
-                      key={p.id}
-                      className="admin-row-clickable"
-                      tabIndex={0}
-                      onClick={rowOpen(() => setSelected(p))}
-                      onKeyDown={rowKeyOpen(() => setSelected(p))}
-                    >
+                        key={p.id}
+                        className="admin-row-clickable"
+                        tabIndex={0}
+                        onClick={rowOpen(() => setSelected(p))}
+                        onKeyDown={rowKeyOpen(() => setSelected(p))}
+                      >
                         <td className="admin-check-col">
                           <input
                             type="checkbox"
@@ -332,24 +477,21 @@ export default function AdminProducts() {
                         </td>
                         <td>
                           {p.store
-                            ? <Link to={`/store/${p.store.slug}`} className="admin-link" target="_blank">
-                              {p.store.name}
-                            </Link>
+                            ? <Link to={`/store/${p.store.slug}`} className="admin-link" target="_blank">{p.store.name}</Link>
                             : '—'}
                         </td>
-                        <td>{p.category?.name || '—'}</td>
-                        <td>₱{Number(p.price).toFixed(2)}</td>
-                        <td>{p.stock}</td>
+                        <td className="am-phone-hide">{p.category?.name || '—'}</td>
+                        <td>{peso(p.price)}</td>
+                        <td><StockCell stock={p.stock} /></td>
+                        <td><StatusBadge status={p.status} /></td>
                         <td>
-                          <span className={`admin-badge ${STATUS_BADGE[p.status] || ''}`}>{p.status}</span>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 5 }}>
-                            <button className="admin-btn admin-btn-gray" onClick={() => setSelected(p)}>
+                          <div className="am-row-actions">
+                            <button type="button" className="admin-btn admin-btn-gray am-phone-hide" onClick={() => setSelected(p)}>
                               <Eye size={13} /> View
                             </button>
                             {p.status === 'PENDING' && (
                               <button
+                                type="button"
                                 className="admin-btn admin-btn-green"
                                 disabled={processing === p.id}
                                 onClick={() => handleApprove(p.id)}
@@ -359,6 +501,7 @@ export default function AdminProducts() {
                             )}
                             {(p.status === 'PENDING' || p.status === 'APPROVED') && (
                               <button
+                                type="button"
                                 className="admin-btn admin-btn-red"
                                 disabled={processing === p.id}
                                 onClick={() => handleSuspend(p.id)}
@@ -368,9 +511,10 @@ export default function AdminProducts() {
                             )}
                             {(p.status === 'SUSPENDED' || p.status === 'ARCHIVED') && (
                               <button
+                                type="button"
                                 className="admin-btn admin-btn-green"
                                 disabled={processing === p.id}
-                                onClick={() => handleRestore(p.id)}
+                                onClick={() => handleRestore(p)}
                               >
                                 <ArrowCounterClockwise size={13} /> {p.status === 'SUSPENDED' ? 'Unsuspend' : 'Restore'}
                               </button>
@@ -386,9 +530,9 @@ export default function AdminProducts() {
 
             {pagination.totalPages > 1 && (
               <div className="admin-pagination">
-                <button className="admin-page-btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Prev</button>
+                <button type="button" className="admin-page-btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Prev</button>
                 <span>Page {page} of {pagination.totalPages}</span>
-                <button className="admin-page-btn" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>Next →</button>
+                <button type="button" className="admin-page-btn" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>Next →</button>
               </div>
             )}
           </>
@@ -400,8 +544,8 @@ export default function AdminProducts() {
         {(selected) => (
           <>
             <div className="admin-detail-header">
-              <h3>Product Details</h3>
-              <button className="admin-detail-close" onClick={() => setSelected(null)}><X size={18} /></button>
+              <h3>Product details</h3>
+              <button type="button" className="admin-detail-close" onClick={() => setSelected(null)} aria-label="Close"><X size={18} /></button>
             </div>
 
             <div className="admin-detail-body">
@@ -415,22 +559,29 @@ export default function AdminProducts() {
               )}
 
               <div className="admin-detail-section">
-                <h4>Product Info</h4>
+                <h4>Product info</h4>
                 <div className="admin-detail-grid">
                   <div><label>Name</label><p>{selected.name}</p></div>
-                  <div><label>Status</label><p><span className={`admin-badge ${STATUS_BADGE[selected.status] || ''}`}>{selected.status}</span></p></div>
-                  <div><label>Price</label><p>₱{Number(selected.price).toFixed(2)}</p></div>
-                  <div><label>Stock</label><p>{selected.stock}</p></div>
-                  <div><label><Store size={12} /> Store</label><p>{selected.store?.name || '—'}</p></div>
+                  <div><label>Status</label><p><StatusBadge status={selected.status} /></p></div>
+                  <div><label>Price</label><p>{peso(selected.price)}</p></div>
+                  <div><label>Stock</label><p><StockCell stock={selected.stock} /></p></div>
+                  <div>
+                    <label><Store size={12} /> Store</label>
+                    <p>
+                      {selected.store?.slug
+                        ? <Link to={`/store/${selected.store.slug}`} className="admin-link" target="_blank">{selected.store.name}</Link>
+                        : selected.store?.name || '—'}
+                    </p>
+                  </div>
                   <div><label><Tag size={12} /> Category</label><p>{selected.category?.name || '—'}</p></div>
                   <div className="admin-detail-full">
                     <label>Description</label>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{selected.description || '—'}</p>
+                    <p className="am-desc">{selected.description || '—'}</p>
                   </div>
                   {selected.moderationNote && (
                     <div className="admin-detail-full">
-                      <label>Moderation Note</label>
-                      <p style={{ whiteSpace: 'pre-wrap' }}>{selected.moderationNote}</p>
+                      <label>Moderation note</label>
+                      <p className="am-desc">{selected.moderationNote}</p>
                     </div>
                   )}
                 </div>
@@ -441,14 +592,16 @@ export default function AdminProducts() {
               <div className="admin-detail-footer">
                 {selected.status === 'PENDING' && (
                   <button
+                    type="button"
                     className="admin-btn admin-btn-green"
                     disabled={processing === selected.id}
                     onClick={() => handleApprove(selected.id)}
                   >
-                    <CheckCircle size={15} /> Approve Product
+                    <CheckCircle size={15} /> Approve product
                   </button>
                 )}
                 <button
+                  type="button"
                   className="admin-btn admin-btn-red"
                   disabled={processing === selected.id}
                   onClick={() => handleSuspend(selected.id)}
@@ -456,6 +609,7 @@ export default function AdminProducts() {
                   <XCircle size={15} /> Suspend
                 </button>
                 <button
+                  type="button"
                   className="admin-btn admin-btn-gray"
                   disabled={processing === selected.id}
                   onClick={() => handleArchive(selected.id)}
@@ -468,9 +622,10 @@ export default function AdminProducts() {
             {(selected.status === 'SUSPENDED' || selected.status === 'ARCHIVED') && (
               <div className="admin-detail-footer">
                 <button
+                  type="button"
                   className="admin-btn admin-btn-green"
                   disabled={processing === selected.id}
-                  onClick={() => handleRestore(selected.id)}
+                  onClick={() => handleRestore(selected)}
                 >
                   <ArrowCounterClockwise size={15} />
                   {selected.status === 'SUSPENDED' ? 'Unsuspend product' : 'Restore product'}
@@ -484,7 +639,8 @@ export default function AdminProducts() {
         open={Boolean(reasonAction)}
         title={
           reasonAction?.type === 'archive' ? 'Archive product?'
-            : reasonAction?.type === 'bulk-suspend' ? `Suspend ${selectedSuspendable.length} product(s)?`
+            : reasonAction?.type === 'bulk-suspend'
+              ? `Suspend ${selectedSuspendable.length} product${selectedSuspendable.length === 1 ? '' : 's'}?`
               : 'Suspend product?'
         }
         message={

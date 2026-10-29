@@ -9,7 +9,9 @@ import { refundAmount, riderStatus } from './moormove';
 const PAY_LABEL = { COD: 'Cash on delivery', GCASH: 'GCash (QR)', QRPH: 'QR Ph', BANK_TRANSFER: 'Bank transfer' };
 export const payLabel = (method, pickup = false) => (method === 'COD' && pickup ? 'Cash on pickup' : PAY_LABEL[method] || method || '—');
 
-export const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+import { peso } from './format';
+
+export { peso };
 
 /** "Thu, Oct 3, 4:12 PM" */
 export const when = (date) => (date

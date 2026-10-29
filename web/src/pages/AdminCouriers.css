@@ -1,8 +1,8 @@
 /* Admin › Couriers */
 .ac-couriers-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 .ac-couriers-sub { margin: 4px 0 0; color: var(--t-neutral-500, #64748b); font-size: 13px; }
-.ac-courier-form { padding: 16px; margin-bottom: 16px; }
-.ac-courier-form form { display: grid; gap: 14px; max-width: 640px; }
+/* The courier form, on its own page (AdminFormPage is its card). */
+.ac-courier-form { display: grid; gap: 14px; }
 .ac-field { display: grid; gap: 6px; }
 .ac-field > span { font-weight: 600; font-size: 13px; }
 .ac-field small { color: var(--t-neutral-500, #64748b); font-size: 12px; line-height: 1.45; }
@@ -51,3 +51,12 @@
 /* A MoorMove free-delivery promo running now, under the connection line. */
 .ac-mm-dot.ac-mm-promo { margin-top: 3px; color: var(--t-primary-700, #047857); font-weight: 600; }
 .ac-mm-dot.ac-mm-promo::before { background: var(--t-primary-500, #10b981); }
+
+/* The courier page's preview: how buyers see it, and its fees. */
+.ac-courier-preview { display: flex; align-items: center; gap: 12px; }
+.ac-courier-preview > div { display: grid; gap: 2px; min-width: 0; }
+.ac-courier-preview strong { font-size: 15px; }
+.ac-courier-preview span { color: var(--t-neutral-500, #64748b); font-size: 12px; }
+.ac-preview-rates { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 13px; }
+.ac-preview-rates th, .ac-preview-rates td { padding: 6px 8px; border-bottom: 1px solid var(--t-neutral-100, #f1f5f9); text-align: left; }
+.ac-preview-rates th { color: var(--t-neutral-500, #64748b); font-size: 12px; font-weight: 600; }

@@ -92,6 +92,25 @@ const countActiveProducts = async (id) => {
 };
 
 /**
+ * Products per category, for the admin list: all of them (not deleted) and
+ * the approved ones.
+ * @returns {Promise<Object>} { [categoryId]: { products, approved } }
+ */
+const countProductsByCategory = async () => {
+  const [all, approved] = await Promise.all([
+    prisma.product.groupBy({ by: ['categoryId'], where: { deletedAt: null }, _count: { _all: true } }),
+    prisma.product.groupBy({ by: ['categoryId'], where: { deletedAt: null, status: 'APPROVED' }, _count: { _all: true } }),
+  ]);
+  const counts = {};
+  for (const row of all) counts[row.categoryId] = { products: row._count._all, approved: 0 };
+  for (const row of approved) {
+    counts[row.categoryId] = counts[row.categoryId] || { products: 0, approved: 0 };
+    counts[row.categoryId].approved = row._count._all;
+  }
+  return counts;
+};
+
+/**
  * Seed categories (for development)
  * @param {Array} categories - Array of category data
  * @returns {Promise<Number>} Count of created categories
@@ -118,5 +137,6 @@ module.exports = {
   updateCategory,
   deleteCategory,
   countActiveProducts,
+  countProductsByCategory,
   seedCategories,
 };

@@ -1,0 +1,113 @@
+/* A form's own admin page (AdminFormPage.jsx). */
+
+.afp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  color: var(--t-primary-700, #047857);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.afp-back:hover,
+.afp-back:focus-visible {
+  text-decoration: underline;
+}
+
+.afp-body {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+.afp-body > .admin-card,
+.afp-aside > .admin-card {
+  margin: 0;
+}
+
+.afp-main {
+  padding: 16px;
+}
+
+/* No side panel: the card fits its form instead of stretching empty. */
+.afp-body:not(.has-aside) .afp-main {
+  max-width: 820px;
+}
+
+.afp-aside {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.afp-panel {
+  padding: 16px;
+}
+
+.afp-panel-title {
+  margin: 0 0 10px;
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.afp-panel-note {
+  margin: 10px 0 0;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.afp-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--t-neutral-700, #334155);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.afp-facts li {
+  display: flex;
+  gap: 8px;
+}
+
+.afp-facts li > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--t-primary-600, #059669);
+}
+
+.afp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.afp-loading {
+  padding: 20px;
+  color: var(--t-neutral-500, #64748b);
+}
+
+@media (min-width: 1100px) {
+  .afp-body.has-aside {
+    grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr);
+  }
+
+  .afp-aside {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+/* Phones: admin cards run edge to edge with no padding of their own
+   (AdminLayout.css); the form's fields keep the page's side gutter. */
+.ac-content .admin-card.afp-main,
+.ac-content .admin-card.afp-panel {
+  padding: 16px var(--pa-gutter, 16px);
+}

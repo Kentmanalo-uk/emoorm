@@ -1,5 +1,5 @@
 const notificationService = require('../services/notification.service');
-const { CATEGORY_KEYS } = require('../utils/notificationCategories');
+const { CATEGORY_KEYS, ADMIN_GROUP_KEYS } = require('../utils/notificationCategories');
 const {
   successResponse,
   noContentResponse,
@@ -36,6 +36,8 @@ const getMyNotifications = asyncHandler(async (req, res) => {
     search: typeof search === 'string' && search.trim() ? search.trim().slice(0, 100) : undefined,
     // One of the inbox's groups: chats, orders, alerts or promos (anything else: all).
     category: CATEGORY_KEYS.includes(category) ? category : undefined,
+    // The admin feed's type filter: reports, applications, support, returns, feedback.
+    adminGroup: ADMIN_GROUP_KEYS.includes(req.query.adminGroup) ? req.query.adminGroup : undefined,
   };
 
   const result = await notificationService.getUserNotifications(
@@ -137,7 +139,10 @@ const deleteNotification = asyncHandler(async (req, res) => {
 const deleteAllNotifications = asyncHandler(async (req, res) => {
   // Clears one inbox (buyer or seller) when ?audience= is given; the same
   // account can have both, and clearing one must not empty the other.
-  const result = await notificationService.deleteAllNotifications(req.user.id, req.query.audience);
+  // ?readOnly=true keeps the unread ("Clear read").
+  const result = await notificationService.deleteAllNotifications(req.user.id, req.query.audience, {
+    readOnly: req.query.readOnly === 'true',
+  });
 
   successResponse(res, result, 'All notifications deleted');
 });

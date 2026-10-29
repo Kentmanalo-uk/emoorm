@@ -2,32 +2,29 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   CaretRight, Storefront, PaintBrush, Wallet, QrCode, Headset, Lifebuoy, ChatText, User, Truck,
-  IdentificationCard, Bell, Globe, Gear, ArrowsLeftRight, SignOut, ShareNetwork,
-  Heartbeat, MapPin, Question, GraduationCap,
+  IdentificationCard, Bell, Gear, ArrowsLeftRight, SignOut, ShareNetwork,
+  Heartbeat, Question, GraduationCap, Megaphone, Star, Handshake,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import { resolveImg } from '../lib/media';
-import { qrMethod } from '../lib/qrPayment';
-import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTranslate';
 import { useShare } from '../components/ShareSheet';
 import FeedbackDialog from '../components/feedback/FeedbackDialog';
 import ShopQrPop from '../components/seller/ShopQrPop';
 import './SellerDashboard.css';
 import { readCache, writeCache } from '../lib/pageCache';
 import PageMenu from '../components/layout/PageMenu';
-import Select from '../components/ui/Select';
 
 /*
  * "Me" (phone), drawn like the buyer's Profile: the shop card with its
- * numbers, how the shop is doing, View shop / Decorate, Shop QR (the
- * printable poster, once the shop is approved), then Finance,
- * Delivery & payment (each part straight to its page), Contact & help and
- * Settings as plain lists, and Log out. Setup steps live on Home ("Complete
- * your shop"), so Settings does not repeat them.
+ * numbers, how the shop is doing, View shop / Decorate, then plain lists of
+ * places to go: Money & marketing (Earnings, Marketing, Shop QR), Buyers
+ * (questions, reviews, and offers for livestock shops), Your shop (profile,
+ * delivery & payment, ID check, Shop settings), Contact & help, Account, and
+ * Log out. Me links to tasks; the switches (hours, away, cash on delivery,
+ * language…) live in Shop settings, so neither page repeats the other.
+ * Setup steps live on Home ("Complete your shop").
  */
-
-const MODE_HINTS = { DELIVERY: 'Delivery', PICKUP: 'Pickup', BOTH: 'Both' };
 
 const HEALTH = {
   EXCELLENT: { label: 'Excellent', tone: 'good' },
@@ -59,7 +56,6 @@ export default function SellerMenu() {
   // Shop health as it was last time, while it is asked for again.
   const [health, setHealth] = useState(() => readCache('seller:health') ?? null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [language, setLanguageState] = useState(() => getCurrentLanguage());
   // The shop's logo on the card: the QR card grows out of it.
   const logoRef = useRef(null);
 
@@ -88,24 +84,12 @@ export default function SellerMenu() {
   });
   const stat = (value) => (health ? value : '–');
 
-  // Delivery & payment: what is set now, and the parts still missing
-  // (the checklist says whether the delivery areas and fees are done).
-  const mode = store?.fulfillmentMode || 'DELIVERY';
-  const delivers = mode !== 'PICKUP';
-  const picksUp = mode !== 'DELIVERY';
-  const pickupSet = Boolean(String(store?.pickupAddress || '').trim());
-  const stepDone = (key) => setup?.steps?.find((step) => step.key === key)?.done;
-  const deliverySet = !setup || (stepDone('delivery-areas') !== false && stepDone('delivery-fee') !== false);
-  const fee = store?.deliveryFee == null ? null : Number(store.deliveryFee);
-  // How the shop charges for its own delivery (deliveryQuote.service).
-  const feeHint = {
-    FREE: 'Free',
-    FLAT: fee === null ? 'Same fee' : fee === 0 ? 'Free' : `₱${fee.toLocaleString('en-PH')}`,
-    PER_TOWN: 'Per town',
-    PER_BARANGAY: 'Per barangay',
-    PER_KM: 'By distance',
-  }[store?.deliveryFeeMode] || (fee === null ? 'Per place' : fee === 0 ? 'Free' : `₱${fee.toLocaleString('en-PH')}`);
-  const ways = [store?.acceptsCod !== false && 'Cash', store?.paymentQrImage && qrMethod(store.paymentQrType).label].filter(Boolean);
+  // Delivery & payment: one row, warning while something an order needs
+  // is missing (the checklist's delivery, pickup and payment steps).
+  const missing = (setup?.steps || []).filter((step) => step.neededToSell && !step.done);
+  const fulfilmentHint = missing.length ? 'Not finished' : null;
+  // Offers: only shops that sell livestock (a buyer can't make one otherwise).
+  const sellsLivestock = store?.sellsLivestock === true;
 
   return (
     <div className="seller-dashboard sme">
@@ -184,80 +168,40 @@ export default function SellerMenu() {
           <Link to="/seller/decorate"><PaintBrush size={20} weight="fill" /> Decorate my shop</Link>
         </section>
 
-        {/* A QR poster to print for the stall: once buyers can open the shop. */}
-        {canShare && (
-          <section className="sh-card sme-list">
-            <h2>Share your shop</h2>
-            <Row to="/seller/shop-qr" icon={QrCode} label="Shop QR" hint="Print for your stall" />
-          </section>
-        )}
-
         <section className="sh-card sme-list">
-          <h2>Finance</h2>
-          <Row to="/seller/finance" icon={Wallet} label="My earnings" />
+          <h2>Money &amp; marketing</h2>
+          <Row to="/seller/finance" icon={Wallet} label="Earnings" />
+          <Row to="/seller/marketing" icon={Megaphone} label="Marketing" hint="Followers & vouchers" />
+          {/* The QR poster to print for the stall (a sample until the shop is approved). */}
+          {store?.slug && <Row to="/seller/shop-qr" icon={QrCode} label="Shop QR" hint={canShare ? 'Print for your stall' : 'Sample until approved'} />}
         </section>
 
-        {/* How buyers get and pay for orders: each part opens its own page. */}
         <section className="sh-card sme-list">
-          <h2>Delivery &amp; payment</h2>
-          <Row to="/seller/fulfillment/method" icon={Truck} label="Delivery & pickup" hint={MODE_HINTS[mode] || 'Delivery'} />
-          {picksUp && (
-            <Row
-              to="/seller/fulfillment/pickup"
-              icon={Storefront}
-              label="Pickup spot"
-              hint={pickupSet ? null : 'Not set'}
-              warn={!pickupSet}
-            />
-          )}
-          {delivers && (
-            <Row
-              to="/seller/fulfillment/delivery"
-              icon={MapPin}
-              label="Delivery: couriers, areas &amp; fees"
-              hint={deliverySet ? feeHint : 'Not set'}
-              warn={!deliverySet}
-            />
-          )}
-          <Row
-            to="/seller/fulfillment/payment"
-            icon={QrCode}
-            label="Payment options"
-            hint={ways.length ? ways.join(' · ') : 'Not set'}
-            warn={!ways.length}
-          />
+          <h2>Buyers</h2>
+          <Row to="/seller/questions" icon={Question} label="Buyer questions" badge={count('/seller/questions')} />
+          <Row to="/seller/reviews" icon={Star} label="Reviews" badge={count('/seller/reviews')} />
+          {sellsLivestock && <Row to="/seller/offers" icon={Handshake} label="Offers" badge={count('/seller/offers')} />}
+        </section>
+
+        <section className="sh-card sme-list">
+          <h2>Your shop</h2>
+          <Row to="/seller/store" icon={User} label="Shop profile" />
+          <Row to="/seller/fulfillment" icon={Truck} label="Delivery & payment" hint={fulfilmentHint} warn={Boolean(fulfilmentHint)} />
+          {identity && <Row to="/seller/verification" icon={IdentificationCard} label="Verify identity" hint={identityHint} warn={!identity.done} />}
+          <Row to="/seller/settings" icon={Gear} label="Shop settings" hint="Hours, away, language" />
         </section>
 
         <section className="sh-card sme-list">
           <h2>Contact &amp; help</h2>
           <Row to="/sell/academy" icon={GraduationCap} label="Seller Academy" hint="Free lessons" />
-          <Row to="/seller/questions" icon={Question} label="Buyer questions" />
           <Row to="/seller/support" icon={Headset} label="Message the admin" badge={count('/seller/support')} />
           <Row to="/help" icon={Lifebuoy} label="Help center" />
           <Row onClick={() => setFeedbackOpen(true)} icon={ChatText} label="Send feedback" />
         </section>
 
         <section className="sh-card sme-list">
-          <h2>Settings</h2>
-          <Row to="/seller/store" icon={User} label="Shop profile" />
-          {identity && <Row to="/seller/verification" icon={IdentificationCard} label="Verify identity" hint={identityHint} />}
+          <h2>Account</h2>
           <Row to="/seller/notifications" icon={Bell} label="Notifications" badge={unreadCount} />
-          <label className="sme-row sm-lang notranslate" translate="no">
-            <span className="sme-row-icon"><Globe size={19} weight="fill" /></span>
-            <span className="sme-row-label">Language</span>
-            <Select
-              value={language}
-              onChange={(e) => {
-                setLanguageState(e.target.value);
-                setLanguage(e.target.value);
-              }}
-              aria-label="Language"
-            >
-              {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-            </Select>
-            <CaretRight size={16} className="sh-chev" />
-          </label>
-          <Row to="/seller/settings" icon={Gear} label="Shop settings" />
           <Row onClick={switchToPersonal} icon={ArrowsLeftRight} label="Switch to my buyer account" />
         </section>
 

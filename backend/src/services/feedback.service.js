@@ -1,6 +1,7 @@
 const feedbackRepository = require('../repositories/feedback.repository');
 const userRepository = require('../repositories/user.repository');
 const notificationService = require('./notification.service');
+const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -24,6 +25,16 @@ const VALID_STATUSES = ['NEW', 'REVIEWED', 'ARCHIVED'];
 
 const MESSAGE_MAX = 4000;
 const PAGE_MAX = 200;
+
+const CATEGORY_WORDS = {
+  USABILITY: 'hard to use',
+  PERFORMANCE: 'slow or laggy',
+  BUG: 'a bug',
+  FEATURE_REQUEST: 'an idea',
+  DESIGN: 'the design',
+  PRAISE: 'praise',
+  OTHER: 'something else',
+};
 
 /**
  * Leave feedback.
@@ -71,11 +82,14 @@ const submitFeedback = async (actor, data = {}) => {
   });
 
   // Non-blocking: feedback that was stored must not be lost to a failed notice.
+  // Who sent it and what about, in words: "Ana Cruz sent feedback: a bug".
+  const about = CATEGORY_WORDS[category] || 'something else';
+  const preview = message.length > 120 ? `${message.slice(0, 117)}...` : message;
   try {
     await notificationService.notifySuperAdmins({
       type: 'SYSTEM_ANNOUNCEMENT',
-      title: 'New feedback received',
-      message: message.length > 120 ? `${message.slice(0, 117)}...` : message,
+      title: `${sender?.fullName || 'Someone'} sent feedback: ${about}`.slice(0, 190),
+      message: `${rating ? `${rating}/5 · ` : ''}${preview}`,
       relatedId: feedback.id,
       target: { kind: 'admin-feedback', id: feedback.id },
     }, { excludeUserId: actor.id });
@@ -153,7 +167,23 @@ const updateFeedback = async (id, { status, adminNotes }, actor) => {
     throw new ApiError('Nothing to update', 400);
   }
 
-  return feedbackRepository.update(id, data);
+  const updated = await feedbackRepository.update(id, data);
+
+  // Every super admin got a "sent feedback" notice for it. Once it is out of
+  // the New queue those notices are done with, so they are marked read for
+  // all of them: otherwise the bell keeps counting feedback nobody has left
+  // to look at (the page opens on New, the bell counted every notice ever).
+  if (data.status && data.status !== 'NEW') {
+    try {
+      await prisma.notification.updateMany({
+        where: { relatedId: id, audience: 'ADMIN', type: 'SYSTEM_ANNOUNCEMENT', isRead: false },
+        data: { isRead: true },
+      });
+    } catch (err) {
+      console.error('[updateFeedback] could not mark its notices read:', err.message);
+    }
+  }
+  return updated;
 };
 
 module.exports = {

@@ -36,6 +36,21 @@ const typeWhereFor = (category) => {
   return { notIn: others };
 };
 
+/**
+ * The admin feed's groups (the Notifications page's type filter), as Prisma
+ * conditions. Feedback arrives as an announcement whose data says it leads
+ * to the feedback inbox.
+ */
+const FEEDBACK_NOTICE = { type: 'SYSTEM_ANNOUNCEMENT', data: { path: '$.target.kind', equals: 'admin-feedback' } };
+const ADMIN_GROUPS = {
+  reports: { type: { in: ['REPORT_SUBMITTED', 'REPORT_RESOLVED'] } },
+  applications: { type: 'SELLER_APPLICATION_SUBMITTED' },
+  support: { type: { in: ['SUPPORT_MESSAGE', 'SUPPORT_RESOLVED'] } },
+  returns: { type: { in: ['RETURN_DISPUTED', 'RETURN_DISPUTE_RESOLVED', 'RETURN_REQUESTED'] } },
+  feedback: FEEDBACK_NOTICE,
+};
+const ADMIN_GROUP_KEYS = Object.keys(ADMIN_GROUPS);
+
 module.exports = {
-  NOTIFICATION_CATEGORIES, CATEGORY_KEYS, categoryOfType, typeWhereFor,
+  NOTIFICATION_CATEGORIES, CATEGORY_KEYS, categoryOfType, typeWhereFor, ADMIN_GROUPS, ADMIN_GROUP_KEYS,
 };

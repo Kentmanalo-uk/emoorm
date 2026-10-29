@@ -413,6 +413,39 @@
   padding: 16px;
 }
 
+/* Announcements: writing on the left, what has gone on the right on a
+   computer, so the form does not sit in a narrow strip of a wide card. */
+.am-two-col {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+.am-col {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.am-two-col .admin-card {
+  margin: 0;
+}
+
+.am-two-col .am-announce-form {
+  max-width: none;
+}
+
+@media (min-width: 1100px) {
+  .am-two-col {
+    grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+  }
+
+  .am-col-side {
+    position: sticky;
+    top: 16px;
+  }
+}
+
 .am-result {
   display: flex;
   align-items: center;
@@ -448,4 +481,39 @@
   .am-back {
     display: inline-flex;
   }
+}
+
+/* Messages with no threads at all: the list says it; the empty pane stays
+   quiet on computers and is not shown on phones. */
+@media (max-width: 768px) {
+  .am-thread.is-empty {
+    display: none;
+  }
+}
+
+/* Announcements: who it goes to, and how many, before sending. */
+.am-audience {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.am-count {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font-size: 13px;
+}
+
+.am-count.is-error {
+  background: var(--t-red-50, #fef2f2);
+  color: var(--t-red-700, #b91c1c);
+}
+
+.am-more {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
 }

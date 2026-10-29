@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import {
   IdentificationBadge, Storefront, Users, Package, Receipt, Star, ArrowCounterClockwise, Flag,
-  ChatsCircle, EnvelopeSimple, Bell, ChatCircleDots, ChartPie, FileText, UsersThree, SquaresFour,
-  MapPin, UserGear, Image as ImageIcon, Ticket, CaretRight, Truck, DeviceMobile,
+  ChatsCircle, EnvelopeSimple, Bell, ChatCircleDots, ChartPie, UsersThree, SquaresFour,
+  MapPin, UserGear, Image as ImageIcon, Ticket, CaretRight, Truck, DeviceMobile, PaperPlaneTilt,
+  ClockCounterClockwise, Gear,
 } from '@phosphor-icons/react';
 import ToolGradients from '../ui/ToolGradients';
 import { useAdminShell } from './adminShell';
@@ -24,26 +25,34 @@ const TOOL = {
   reports: { to: '/admin/reports', label: 'Reports', Icon: Flag, tone: 'teal' },
   support: { to: '/admin/support', label: 'Support', Icon: ChatsCircle, tone: 'green' },
   messages: { to: '/admin/messages', label: 'Messages', Icon: EnvelopeSimple, tone: 'blue', badge: 'messages' },
-  alerts: { to: '/admin/notifications', label: 'Alerts', Icon: Bell, tone: 'amber', badge: 'notifications' },
+  email: { to: '/admin/email', label: 'Email', Icon: PaperPlaneTilt, tone: 'teal' },
+  alerts: { to: '/admin/notifications', label: 'Notifications', Icon: Bell, tone: 'amber', badge: 'notifications' },
   feedback: { to: '/admin/feedback', label: 'Feedback', Icon: ChatCircleDots, tone: 'pink', badge: 'feedback', superOnly: true },
   analytics: { to: '/admin/analytics', label: 'Analytics', Icon: ChartPie, tone: 'teal' },
-  auditLogs: { to: '/admin/audit-logs', label: 'Audit logs', Icon: FileText, tone: 'violet' },
+  auditLogs: { to: '/admin/audit-logs', label: 'Audit log', Icon: ClockCounterClockwise, tone: 'violet' },
   users: { to: '/admin/users', label: 'All users', Icon: UsersThree, tone: 'violet', superOnly: true },
   categories: { to: '/admin/categories', label: 'Categories', Icon: SquaresFour, tone: 'orange', superOnly: true },
   municipalities: { to: '/admin/municipalities', label: 'Municipalities', Icon: MapPin, tone: 'teal', superOnly: true },
-  admins: { to: '/admin/junior-admins', label: 'Mun. admins', Icon: UserGear, tone: 'blue', superOnly: true },
+  admins: { to: '/admin/junior-admins', label: 'Town admins', Icon: UserGear, tone: 'blue', superOnly: true },
   banners: { to: '/admin/banners', label: 'Banners', Icon: ImageIcon, tone: 'pink', superOnly: true },
   vouchers: { to: '/admin/vouchers', label: 'Vouchers', Icon: Ticket, tone: 'rose', superOnly: true },
   couriers: { to: '/admin/couriers', label: 'Couriers', Icon: Truck, tone: 'amber', superOnly: true },
   appUsers: { to: '/admin/app-users', label: 'App users', Icon: DeviceMobile, tone: 'green', superOnly: true },
   team: { to: '/admin/team', label: 'Admin team', Icon: UsersThree, tone: 'blue', municipalOnly: true },
+  // Settings: the town's page for a municipal admin; the platform's for the super admin.
+  settings: { to: '/admin/settings', label: 'Settings', Icon: Gear, tone: 'violet' },
+  townPage: { to: '/admin/settings?tab=municipality', label: 'Town page', Icon: MapPin, tone: 'teal', municipalOnly: true },
 };
 
 /** Every card on the Tools tab. */
 const ALL_CARDS = [
-  { title: 'Marketplace', keys: ['applications', 'sellers', 'buyers', 'products', 'orders', 'reviews', 'returns', 'reports'] },
-  { title: 'Messages & insights', keys: ['support', 'messages', 'alerts', 'feedback', 'analytics', 'auditLogs'] },
-  { title: 'System', keys: ['users', 'categories', 'municipalities', 'admins', 'banners', 'vouchers', 'couriers', 'appUsers', 'team'] },
+  { title: 'To review', keys: ['applications', 'products', 'returns', 'reports', 'support'] },
+  { title: 'People & stores', keys: ['sellers', 'buyers', 'users', 'orders', 'reviews'] },
+  { title: 'Messages', keys: ['messages', 'email', 'alerts', 'feedback'] },
+  { title: 'Storefront', keys: ['banners', 'vouchers', 'couriers', 'categories'] },
+  // The super admin's platform; a municipal admin's town office.
+  { title: 'Platform', keys: ['municipalities', 'admins', 'appUsers', 'analytics', 'auditLogs', 'settings'], superOnly: true },
+  { title: 'Town office', keys: ['team', 'townPage', 'analytics', 'auditLogs', 'settings'], municipalOnly: true },
 ];
 
 /** Home: the ones an admin opens most, per role. */
@@ -103,6 +112,7 @@ export function QuickToolsCard() {
 export function AllToolCards() {
   const { isSuperAdmin } = useAdminShell();
   const cards = ALL_CARDS
+    .filter((card) => (isSuperAdmin ? !card.municipalOnly : !card.superOnly))
     .map((card) => ({ ...card, tools: card.keys.map((key) => TOOL[key]).filter((t) => (isSuperAdmin ? !t.municipalOnly : !t.superOnly)) }))
     .filter((card) => card.tools.length > 0);
   return (

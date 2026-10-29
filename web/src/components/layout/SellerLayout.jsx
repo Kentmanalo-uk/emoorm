@@ -5,7 +5,7 @@ import {
   Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
   ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X,
   CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check, Sparkle,
-  NotePencil, Question, Handshake, GraduationCap,
+  NotePencil, Question, Handshake, GraduationCap, Receipt,
 } from '@phosphor-icons/react';
 import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
@@ -24,6 +24,7 @@ import { sellerSearchSources } from '../../lib/shellSearchSources';
 import AppLogo from '../AppLogo';
 import SellerCenterGuide from '../seller/SellerCenterGuide';
 import SetupReturnPill from '../seller/SetupReturnPill';
+import SellerPageBoundary from '../seller/SellerPageBoundary';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import AppRail from './AppRail';
 import ToolStrip from './ToolStrip';
@@ -76,6 +77,8 @@ export default function SellerLayout() {
   const [shopOpen, setShopOpen] = useState(
     location.pathname.startsWith('/seller/store')
     || location.pathname.startsWith('/seller/settings')
+    || location.pathname.startsWith('/seller/fulfillment')
+    || location.pathname.startsWith('/seller/decorate')
     || location.pathname === '/seller/shop-profile'
     || location.pathname.startsWith('/seller/shop-qr')
   );
@@ -95,6 +98,8 @@ export default function SellerLayout() {
   // skipped for them rather than left to 403.
   const { byLink: waiting } = useAttention(user?.role === 'SELLER' ? '/stores/my/attention' : null);
   const badge = (path) => <NavBadge {...(waiting[path] || {})} />;
+  // Orders: new ones to confirm and payments to check, both done from there.
+  const ordersWaiting = mergeWaiting(waiting['/seller/orders'], waiting['/seller/orders?status=payment']);
   const [accountOpen, setAccountOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   // Phone Chat header: "with Buyers ▾" menu.
@@ -234,8 +239,8 @@ export default function SellerLayout() {
 
   const crumbs = buildCrumbs(location.pathname);
 
-  // Phones work like a seller app: five tabs (Home, My products, Chat,
-  // Marketing, Me) on the bottom bar, Home and Me drawing their own shop
+  // Phones work like a seller app: five tabs (Home, My products, Orders,
+  // Chat, Me) on the bottom bar, Home and Me drawing their own shop
   // header, and every other page a back arrow with its title (and no tab bar).
   const cleanPath = location.pathname.replace(/\/$/, '') || '/seller';
   const editingProduct = cleanPath === '/seller/products' && new URLSearchParams(location.search).has('edit');
@@ -258,11 +263,12 @@ export default function SellerLayout() {
     else if (cleanPath.startsWith('/seller/products')) navigate('/seller/products');
     // Posting or editing on Today's menu: back to the menu.
     else if (cleanPath.startsWith('/seller/today/')) navigate('/seller/today');
-    else if (/^\/seller\/(orders|returns|reviews|analytics|finance)/.test(cleanPath)) navigate('/seller');
+    else if (/^\/seller\/(returns|reviews|analytics|finance|marketing)/.test(cleanPath)) navigate('/seller');
     else if (cleanPath === '/seller/assistant') navigate('/seller/messages');
     else navigate('/seller/menu');
   };
   const chatUnread = waiting['/seller/messages']?.count || 0;
+  const ordersDue = ordersWaiting.count || 0;
 
   return (
     <div className={`sc-shell ${collapsed ? 'is-collapsed' : ''}${mobileNav.open ? ' is-nav-open' : ''}${isPhone && !isTabRoot ? ' is-subpage' : ''}`}>
@@ -297,7 +303,7 @@ export default function SellerLayout() {
               <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
             <NavLink to="/seller/orders" className={navCls} title="My Orders">
-              <ShoppingBag size={17} weight="fill" /> <span>My Orders</span>{badge('/seller/orders')}
+              <ShoppingBag size={17} weight="fill" /> <span>My Orders</span><NavBadge {...ordersWaiting} />
             </NavLink>
             <NavLink to="/seller/returns" className={navCls} title="Returns & refunds">
               <ReturnsIcon size={17} weight="fill" /> <span>Returns & refunds</span>{badge('/seller/returns')}
@@ -305,8 +311,11 @@ export default function SellerLayout() {
             <NavLink to="/seller/messages" className={navCls} title="Messages">
               <MessageSquare size={17} weight="fill" /> <span>Messages</span>{badge('/seller/messages')}
             </NavLink>
-            <NavLink to="/seller/support" className={navCls} title="Admin messages">
-              <Headset size={17} weight="fill" /> <span>Admin</span>{badge('/seller/support')}
+            <NavLink to="/seller/assistant" className={navCls} title="Ate Moormy, your AI assistant">
+              <Sparkle size={17} weight="fill" /> <span>Ate Moormy</span>
+            </NavLink>
+            <NavLink to="/seller/support" className={navCls} title="Message the admin">
+              <Headset size={17} weight="fill" /> <span>Message the admin</span>{badge('/seller/support')}
             </NavLink>
 
             {/* Products group */}
@@ -330,7 +339,7 @@ export default function SellerLayout() {
                   Add New
                 </NavLink>
                 <NavLink to="/seller/today" className={subNavCls}>
-                  Today&apos;s menu
+                  Available today
                 </NavLink>
               </div>
             </div>
@@ -340,20 +349,27 @@ export default function SellerLayout() {
               <NavBadge count={unreadCount} label="unread" />
             </NavLink>
             <NavLink to="/seller/reviews" className={navCls} title="Reviews">
-              <Star size={17} weight="fill" /> <span>Reviews</span>
+              <Star size={17} weight="fill" /> <span>Reviews</span>{badge('/seller/reviews')}
             </NavLink>
             <NavLink to="/seller/questions" className={navCls} title="Buyer questions">
-              <Question size={17} weight="fill" /> <span>Questions</span>
+              <Question size={17} weight="fill" /> <span>Questions</span>{badge('/seller/questions')}
             </NavLink>
-            <NavLink to="/seller/offers" className={navCls} title="Offers">
-              <Handshake size={17} weight="fill" /> <span>Offers</span>
-              {badge('/seller/offers')}
-            </NavLink>
+            {/* Price offers are for livestock: only shops that sell animals
+                (or still have offers from when they did). */}
+            {(store?.sellsLivestock || waiting['/seller/offers']?.count > 0) && (
+              <NavLink to="/seller/offers" className={navCls} title="Offers">
+                <Handshake size={17} weight="fill" /> <span>Offers</span>
+                {badge('/seller/offers')}
+              </NavLink>
+            )}
             <NavLink to="/seller/analytics" className={navCls} title="Analytics">
               <PieChart size={17} weight="fill" /> <span>Analytics</span>
             </NavLink>
-            <NavLink to="/seller/finance" className={navCls} title="Finance">
-              <Wallet size={17} weight="fill" /> <span>Finance</span>
+            <NavLink to="/seller/finance" className={navCls} title="Earnings">
+              <Wallet size={17} weight="fill" /> <span>Earnings</span>
+            </NavLink>
+            <NavLink to="/seller/marketing" className={navCls} title="Marketing">
+              <Megaphone size={17} weight="fill" /> <span>Marketing</span>
             </NavLink>
 
             {/* Shop group */}
@@ -374,13 +390,17 @@ export default function SellerLayout() {
                   Shop Profile
                 </NavLink>
                 <NavLink to="/seller/fulfillment" className={subNavCls}>
-                  Fulfillment & Payment
+                  Delivery & payment
+                </NavLink>
+                <NavLink to="/seller/decorate" className={subNavCls}>
+                  Decorate my shop
                 </NavLink>
                 <NavLink to="/seller/settings" className={subNavCls}>
                   Settings
                 </NavLink>
-                {/* The printable QR poster: once the shop has a public address. */}
-                {store?.slug && store?.isApproved !== false && (
+                {/* The printable QR poster once the shop has a public address
+                    (a sample until the shop is approved). */}
+                {store?.slug && (
                   <NavLink to="/seller/shop-qr" className={subNavCls}>
                     Shop QR
                   </NavLink>
@@ -483,7 +503,7 @@ export default function SellerLayout() {
                       </button>
                       <button type="button" role="menuitem" onClick={() => { setChatMenuOpen(false); navigate('/seller/support'); }}>
                         <Headset size={19} weight="fill" />
-                        <span>Municipal admin</span>
+                        <span>Message the admin</span>
                         {waiting['/seller/support']?.count > 0 && <b>{waiting['/seller/support'].count}</b>}
                       </button>
                     </div>
@@ -557,10 +577,15 @@ export default function SellerLayout() {
           {/* Shown on small screens; the right rail takes over on desktop. */}
           <div className="sc-topbar-actions">
             <LanguageSwitcher variant="shell" />
-            <Link to="/seller/notifications" className="sc-icon-btn" title="Seller notifications">
+            <Link
+              to="/seller/notifications"
+              className="sc-icon-btn"
+              title="Seller notifications"
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+            >
               <Bell size={17} />
               {unreadCount > 0 && (
-                <span className="sc-icon-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                <span className="sc-icon-badge" aria-hidden="true">{unreadCount > 9 ? '9+' : unreadCount}</span>
               )}
             </Link>
             <button
@@ -568,6 +593,7 @@ export default function SellerLayout() {
               className="sc-icon-btn"
               onClick={() => setLogoutOpen(true)}
               title="Sign out"
+              aria-label="Sign out"
             >
               <LogOut size={17} />
             </button>
@@ -580,7 +606,8 @@ export default function SellerLayout() {
           {!isPhone && DESKTOP_HIDDEN_TITLES.includes(cleanPath) && (
             <h1 className="sr-only">{phoneTitle}</h1>
           )}
-          {store && store.isApproved === false && !(isPhone && ownHeader) && (
+          {/* The dashboard says this in its own lead card (one notice, not two). */}
+          {store && store.isApproved === false && !(isPhone && ownHeader) && cleanPath !== '/seller' && (
             isPhone ? (
               // Phones: one short line that opens what to finish, not a paragraph.
               <Link to={setupNextTo(setup)} className="scm-private">
@@ -598,18 +625,22 @@ export default function SellerLayout() {
               </div>
             )
           )}
-          <Outlet
-            context={{
-              store,
-              setStore,
-              setup,
-              refreshSetup,
-              unreadCount,
-              waiting,
-              requestLogout: () => setLogoutOpen(true),
-              switchToPersonal,
-            }}
-          />
+          {/* A page that breaks shows its own error here; the sidebar and
+              the tab bar stay. */}
+          <SellerPageBoundary resetKey={location.pathname}>
+            <Outlet
+              context={{
+                store,
+                setStore,
+                setup,
+                refreshSetup,
+                unreadCount,
+                waiting,
+                requestLogout: () => setLogoutOpen(true),
+                switchToPersonal,
+              }}
+            />
+          </SellerPageBoundary>
         </main>
         <SellerCenterGuide store={store} setStore={setStore} />
         <SetupReturnPill />
@@ -625,6 +656,17 @@ export default function SellerLayout() {
         <NavLink to="/seller/products" end className={tabCls}>
           {({ isActive }) => <><Package size={24} weight={isActive ? 'fill' : 'light'} /><span>My products</span></>}
         </NavLink>
+        <NavLink to="/seller/orders" className={tabCls}>
+          {({ isActive }) => (
+            <>
+              <span className="sc-tab-icon">
+                <Receipt size={24} weight={isActive ? 'fill' : 'light'} />
+                {ordersDue > 0 && <b className="sc-tab-badge" aria-label={`${ordersDue} waiting`}>{ordersDue > 9 ? '9+' : ordersDue}</b>}
+              </span>
+              <span>Orders</span>
+            </>
+          )}
+        </NavLink>
         <NavLink to="/seller/messages" className={tabCls}>
           {({ isActive }) => (
             <>
@@ -635,9 +677,6 @@ export default function SellerLayout() {
               <span>Chat</span>
             </>
           )}
-        </NavLink>
-        <NavLink to="/seller/marketing" className={tabCls}>
-          {({ isActive }) => <><Megaphone size={24} weight={isActive ? 'fill' : 'light'} /><span>Marketing</span></>}
         </NavLink>
         <NavLink to="/seller/menu" className={tabCls}>
           {({ isActive }) => <><UserIcon size={24} weight={isActive ? 'fill' : 'light'} /><span>Me</span></>}
@@ -671,16 +710,27 @@ function tabCls({ isActive }) {
   return `sc-tab${isActive ? ' is-active' : ''}`;
 }
 
+const SEVERITY_RANK = { none: 0, low: 1, medium: 2, high: 3 };
+
+/** Two attention queues as one badge: the counts added, the older wait kept. */
+function mergeWaiting(a, b) {
+  const count = (a?.count || 0) + (b?.count || 0);
+  if (!count) return { count: 0 };
+  const severity = (SEVERITY_RANK[a?.severity] || 0) >= (SEVERITY_RANK[b?.severity] || 0) ? a?.severity : b?.severity;
+  const label = [a?.count && a.label, b?.count && b.label].filter(Boolean).join(', ').toLowerCase();
+  return { count, severity, label: label || 'waiting' };
+}
+
 const LABELS = {
   '/seller': 'Dashboard',
   '/seller/orders': 'My Orders',
   '/seller/returns': 'Returns & refunds',
   '/seller/messages': 'Messages',
   '/seller/assistant': 'Ate Moormy',
-  '/seller/support': 'Admin Messages',
+  '/seller/support': 'Message the admin',
   '/seller/products': 'My Products',
   '/seller/products/new': 'Add Product',
-  '/seller/today': "Today's menu",
+  '/seller/today': 'Available today',
   '/seller/today/new': 'Post an item',
   '/seller/verification': 'Verify identity',
   '/seller/menu': 'Menu',
@@ -691,20 +741,20 @@ const LABELS = {
   '/seller/questions': 'Buyer questions',
   '/seller/offers': 'Offers',
   '/seller/analytics': 'Analytics',
-  '/seller/finance': 'Finance',
+  '/seller/finance': 'Earnings',
   '/seller/store': 'Shop Profile',
-  '/seller/fulfillment': 'Fulfillment & Payment',
+  '/seller/fulfillment': 'Delivery & payment',
   '/seller/settings': 'Settings',
   '/seller/shop-qr': 'Shop QR',
 };
 
 /** Phone: the five tabs on the bottom bar. */
-const PHONE_TABS = ['/seller', '/seller/products', '/seller/messages', '/seller/marketing', '/seller/menu'];
+const PHONE_TABS = ['/seller', '/seller/products', '/seller/orders', '/seller/messages', '/seller/menu'];
 
 /** Phone: tabs whose page draws its own shop header (Home, Me). */
 // Computers: pages with no page header of their own get a heading for
 // screen readers (phones show the title in the top bar).
-const DESKTOP_HIDDEN_TITLES = ['/seller/marketing', '/seller/decorate', '/seller/decorate/home', '/seller/decorate/templates'];
+const DESKTOP_HIDDEN_TITLES = ['/seller/decorate/home'];
 
 const PHONE_OWN_HEADER = ['/seller', '/seller/menu'];
 
@@ -713,7 +763,7 @@ const PHONE_TITLES = {
   '/seller/orders': 'My orders',
   '/seller/products': 'My products',
   '/seller/products/new': 'Add product',
-  '/seller/today': "Today's menu",
+  '/seller/today': 'Available today',
   '/seller/today/new': 'Post an item',
   '/seller/messages': 'Chat',
   '/seller/assistant': 'Ate Moormy',
@@ -723,13 +773,13 @@ const PHONE_TITLES = {
   '/seller/decorate/home': 'Shop home',
   '/seller/decorate/templates': 'Choose a template',
   '/seller/returns': 'Returns & refunds',
-  '/seller/support': 'Admin messages',
+  '/seller/support': 'Message the admin',
   '/seller/notifications': 'Notifications',
   '/seller/reviews': 'Reviews',
-  '/seller/questions': 'Questions',
+  '/seller/questions': 'Buyer questions',
   '/seller/offers': 'Offers',
   '/seller/analytics': 'Analytics',
-  '/seller/finance': 'Finance',
+  '/seller/finance': 'Earnings',
   '/seller/store': 'Shop profile',
   '/seller/store/about': 'Name & description',
   '/seller/store/branding': 'Logo & banner',

@@ -74,7 +74,7 @@ const topicForCategory = (category) =>
 const preview = (text) => (text.length > 120 ? `${text.slice(0, 117)}...` : text);
 
 /** A case as lists show it. `unreadCount` is counted by the caller, a page at a time. */
-const toSummary = (conversation, side, unreadCount) => ({
+const toSummary = (conversation, side, unreadCount, assignees = new Map()) => ({
   id: conversation.id,
   topic: conversation.topic,
   category: conversation.category,
@@ -94,7 +94,24 @@ const toSummary = (conversation, side, unreadCount) => ({
     id: conversation.municipality.id,
     name: conversation.municipality.name,
     logo: conversation.municipality.logo,
+    // Where the town office is and when it is open: only the admins' quick
+    // replies use it, so the person's own copy leaves it out.
+    ...(side === 'admin' && {
+      office: {
+        address: conversation.municipality.officeAddress || null,
+        hours: conversation.municipality.officeHours || null,
+        phone: conversation.municipality.officePhone || null,
+        email: conversation.municipality.officeEmail || null,
+      },
+    }),
   },
+  // Which teammate is handling it (admins only: the person sees the town).
+  ...(side === 'admin' && {
+    assignedTo: conversation.assignedToId
+      ? { id: conversation.assignedToId, fullName: assignees.get(conversation.assignedToId)?.fullName || 'Another admin' }
+      : null,
+    assignedAt: conversation.assignedAt || null,
+  }),
   adminName: conversation.municipality.admin?.fullName || null,
   lastMessage: conversation.messages?.[0] || null,
   // The user spoke last and the case is still open.
@@ -105,8 +122,11 @@ const toSummary = (conversation, side, unreadCount) => ({
 
 // One count query for the whole page (it used to be one per row).
 const summarise = async (rows, side) => {
-  const unread = await supportCaseRepository.countUnreadForMany(rows, side);
-  return rows.map((row) => toSummary(row, side, unread.get(row.id) || 0));
+  const [unread, assignees] = await Promise.all([
+    supportCaseRepository.countUnreadForMany(rows, side),
+    side === 'admin' ? supportCaseRepository.findAssignees(rows.map((r) => r.assignedToId)) : new Map(),
+  ]);
+  return rows.map((row) => toSummary(row, side, unread.get(row.id) || 0, assignees));
 };
 
 /** The municipality a case is filed in — the person's own. */
@@ -241,12 +261,16 @@ const listInbox = async (actor, options = {}) => {
   const category = options.category ? String(options.category).toUpperCase() : undefined;
   if (category && !CATEGORIES.has(category)) throw new ApiError('Invalid category filter', 400);
   const search = options.search ? String(options.search).trim().slice(0, MAX_SEARCH) : undefined;
+  // assigned=me (mine), none (nobody has taken it); anything else: everyone's.
+  const assigned = String(options.assigned || '').toLowerCase();
+  const assignedToId = assigned === 'me' ? actor.id : assigned === 'none' ? null : undefined;
 
   const { rows, total } = await supportCaseRepository.findMany({
     municipalityId: actor.role === 'MUNICIPAL_ADMIN' ? actor.municipalityId : undefined,
     status,
     category,
     search: search || undefined,
+    assignedToId,
     page,
     pageSize,
   });
@@ -268,9 +292,12 @@ const getCase = async (actor, conversationId) => {
   if (newest && (!readAt || newest > readAt)) {
     await supportCaseRepository.markRead(conversationId, side, newest);
   }
+  const assignees = side === 'admin'
+    ? await supportCaseRepository.findAssignees([conversation.assignedToId])
+    : new Map();
   return {
     // Opening the case reads it, so there is nothing to count.
-    ...toSummary(conversation, side, 0),
+    ...toSummary(conversation, side, 0, assignees),
     viewerSide: side,
     messageCount,
     hasMoreMessages: messageCount > messages.length,
@@ -351,6 +378,42 @@ const setStatus = async (actor, conversationId, status) => {
 };
 
 /**
+ * "Take this case" / "Release": which admin on the town's team handles a
+ * case, so two teammates don't both answer it. Only the case's town admins
+ * or a super admin may take it (assertAccess). Taking a case someone else
+ * holds is allowed (they may be away); the page asks first. Releasing is for
+ * whoever holds it, or a super admin.
+ * @param {'take'|'release'} action
+ */
+const assignCase = async (actor, conversationId, action, req = null) => {
+  const conversation = await supportCaseRepository.findById(conversationId);
+  if (assertAccess(conversation, actor) !== 'admin') {
+    throw new ApiError("Only the admins of this case's town can take it", 403);
+  }
+  const verb = String(action || '').toLowerCase();
+  if (verb !== 'take' && verb !== 'release') throw new ApiError('Action must be take or release', 400);
+  if (verb === 'release' && conversation.assignedToId
+    && conversation.assignedToId !== actor.id && actor.role !== 'SUPER_ADMIN') {
+    throw new ApiError('Only the admin handling this case can release it', 403);
+  }
+  const before = conversation.assignedToId || null;
+  const after = verb === 'take' ? actor.id : null;
+  if (before !== after) {
+    await supportCaseRepository.setAssignee(conversationId, after);
+    await require('./auditLog.service').record({
+      actor,
+      action: verb === 'take' ? 'TAKE_SUPPORT_CASE' : 'RELEASE_SUPPORT_CASE',
+      entity: 'SupportConversation',
+      entityId: conversationId,
+      details: before && verb === 'take' ? { takenOverFrom: before } : null,
+      municipalityId: conversation.municipalityId,
+      req,
+    });
+  }
+  return getCase(actor, conversationId);
+};
+
+/**
  * The person who opened a case rates it, once, after it is resolved.
  * This is what replaced the old disconnected Feedback form: the rating
  * belongs to the case that earned it.
@@ -389,6 +452,7 @@ module.exports = {
   sendMessage,
   setStatus,
   rateCase,
+  assignCase,
   openWithMunicipalAdmin,
   openWithUser,
   // Legacy aliases kept so nothing that imported the old chat service breaks.

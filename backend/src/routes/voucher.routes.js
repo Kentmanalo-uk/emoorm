@@ -17,5 +17,7 @@ router.get('/', authenticate, authorize('SUPER_ADMIN'), voucherController.listAd
 router.post('/', authenticate, authorize('SUPER_ADMIN'), voucherController.create);
 router.put('/:id', authenticate, authorize('SUPER_ADMIN'), voucherController.update);
 router.delete('/:id', authenticate, authorize('SUPER_ADMIN'), voucherController.remove);
+// One voucher, for its edit page (after /shop and /store/:storeId).
+router.get('/:id', authenticate, authorize('SUPER_ADMIN'), voucherController.getOne);
 
 module.exports = router;

@@ -3,21 +3,23 @@ import { Link } from 'react-router-dom';
 import { Money, Phone } from '@phosphor-icons/react';
 import axios from '../../lib/axios';
 import RiderActionSheet from '../orders/RiderActionSheet';
+import { peso } from '../../lib/format';
 import '../orders/RiderDelivery.css';
 
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const when = (d) => (d
   ? new Date(d).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
   : '');
 
 /**
- * Seller Finance, "Rider cash": cash-on-delivery money a MoorMove rider
+ * Seller Earnings, "Rider cash": cash-on-delivery money a MoorMove rider
  * collected from buyers and still has to bring to the shop (with Cash
  * received for each), and the cash already handed over.
  *
  * Shows while riders are on for the site, or while a rider still holds cash.
+ * `onHeld(total)`: told the held total each time it loads (the Earnings
+ * page mentions it in its split).
  */
-export default function RiderCashCard({ ridersOn }) {
+export default function RiderCashCard({ ridersOn, onHeld }) {
   const [tab, setTab] = useState('held');
   const [data, setData] = useState(null); // { heldTotal, items }
   const [held, setHeld] = useState(null); // the held total, whichever tab is open
@@ -31,9 +33,12 @@ export default function RiderCashCard({ ridersOn }) {
         if (cancelled) return;
         setData(res.data || { heldTotal: 0, items: [] });
         setHeld(Number(res.data?.heldTotal || 0));
+        onHeld?.(Number(res.data?.heldTotal || 0));
       })
       .catch(() => { if (!cancelled) setData({ heldTotal: 0, items: [], failed: true }); });
     return () => { cancelled = true; };
+    // onHeld is the page's state setter, which never changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, reload]);
 
   // Nothing to show: riders are off and no rider holds any cash.
@@ -42,7 +47,7 @@ export default function RiderCashCard({ ridersOn }) {
 
   const items = data?.items || [];
   return (
-    <div className="seller-card rider-cash" style={{ marginBottom: 16 }}>
+    <div className="seller-card rider-cash">
       <div className="seller-card-header">
         <h2><Money size={16} /> Rider cash</h2>
         <div className="rider-cash-tabs" role="tablist" aria-label="Rider cash">

@@ -29,6 +29,7 @@ import { POPULAR_SUGGESTIONS, loadRecent, saveRecent, removeRecentTerm } from '.
 import { afterSignOutPath } from '../../lib/afterSignOut';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import { useUnreadCounts, countOneRead, refreshChatCounts } from '../../lib/unreadCounts';
+import { timeAgo } from '../../lib/format';
 
 const NOTIF_TYPE = {
   ORDER_RECEIVED: { Icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New order' },
@@ -69,16 +70,6 @@ const NOTIF_TYPE = {
 
 function notifCfg(type) {
   return NOTIF_TYPE[type] || NOTIF_TYPE.DEFAULT;
-}
-
-function timeAgo(iso) {
-  if (!iso) return '';
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(iso).toLocaleDateString();
 }
 
 const PLACEHOLDER_SUGGESTIONS = [

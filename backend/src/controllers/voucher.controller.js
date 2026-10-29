@@ -21,6 +21,10 @@ const listAdmin = asyncHandler(async (req, res) => {
   successResponse(res, result, 'Vouchers retrieved');
 });
 
+const getOne = asyncHandler(async (req, res) => {
+  successResponse(res, await voucherService.getOne(req.params.id), 'Voucher retrieved');
+});
+
 const create = asyncHandler(async (req, res) => {
   const voucher = await voucherService.create(req.user.id, req.body);
   successResponse(res, voucher, 'Voucher created', 201);
@@ -55,4 +59,4 @@ const liveForStore = asyncHandler(async (req, res) => {
   successResponse(res, await voucherService.liveForStore(req.params.storeId), 'Vouchers retrieved');
 });
 
-module.exports = { validate, listAdmin, create, update, remove, listShop, createShop, updateShop, removeShop, liveForStore };
+module.exports = { getOne, validate, listAdmin, create, update, remove, listShop, createShop, updateShop, removeShop, liveForStore };

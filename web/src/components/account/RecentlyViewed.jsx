@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom';
 import ProductImage from '../ProductImage';
 import { saleInfo } from '../../lib/variantPricing';
 import { recentlyViewed, clearRecentlyViewed, onRecentChange } from '../../lib/recentlyViewed';
+import { peso } from '../../lib/format';
 import './RecentlyViewed.css';
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * Profile, under My Purchase: the products this browser's account (or

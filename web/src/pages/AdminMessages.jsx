@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import {
   ChatsCircle, Megaphone, PaperPlaneRight, PaperPlaneTilt as Send, NotePencil,
   X, CheckCircle, LockSimple, LockSimpleOpen, CaretLeft, CircleNotch,
@@ -16,6 +16,9 @@ import './AdminMessages.css';
 import { pollWhileVisible } from '../lib/visiblePoll';
 import Select from '../components/ui/Select';
 import useFocusTrap from '../hooks/useFocusTrap';
+import { chatTime } from '../lib/format';
+import { supportStatus } from '../lib/labels';
+import { confirmAction } from '../lib/confirm';
 
 const LIST_POLL_MS = 20000;
 const THREAD_POLL_MS = 6000;
@@ -27,7 +30,7 @@ const STATUS_BADGE = {
 };
 
 const TARGET_LABELS = {
-  all: 'All users',
+  all: 'Everyone',
   buyers: 'Buyers',
   sellers: 'Sellers',
   admins: 'Municipal admins',
@@ -38,34 +41,28 @@ const TABS = [
   { key: 'announcements', label: 'Announcements', icon: Megaphone },
 ];
 
-const formatTime = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  const sameDay = date.toDateString() === new Date().toDateString();
-  return sameDay
-    ? date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-};
+const formatTime = chatTime;
 
 /* ── New thread composer (super admin only) ────────────────── */
 
-function NewThreadDialog({ open, onClose, onCreated }) {
+// `toSuper`: a municipal admin writing to the super admins (no one to pick).
+function NewThreadDialog({ open, onClose, onCreated, toSuper = false }) {
   const [admins, setAdmins] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!toSuper);
   const [adminId, setAdminId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || toSuper) return undefined;
     let cancelled = false;
     axios.get('/admin/junior-admins', { params: { pageSize: 100 } })
       .then((res) => { if (!cancelled) setAdmins(res.data || []); })
       .catch((err) => { if (!cancelled) toast.error(err.message || 'Failed to load municipal admins'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [open]);
+  }, [open, toSuper]);
 
   const trapRef = useFocusTrap(open, { onClose });
 
@@ -73,14 +70,14 @@ function NewThreadDialog({ open, onClose, onCreated }) {
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!adminId) return toast.error('Pick a municipal admin');
+    if (!toSuper && !adminId) return toast.error('Pick a municipal admin');
     if (subject.trim().length < 3) return toast.error('Subject is too short');
     if (!body.trim()) return toast.error('Write a first message');
 
     setSending(true);
     try {
       const res = await axios.post('/admin-messages', {
-        adminId,
+        ...(toSuper ? {} : { adminId }),
         subject: subject.trim(),
         body: body.trim(),
       });
@@ -103,16 +100,19 @@ function NewThreadDialog({ open, onClose, onCreated }) {
         ref={trapRef}
         role="dialog"
         aria-modal="true"
-        aria-label="New message to a municipal admin"
+        aria-label={toSuper ? 'New message to the super admin' : 'New message to a municipal admin'}
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
         <div className="am-dialog-head">
-          <strong>New message</strong>
+          <strong>{toSuper ? 'Ask the super admin' : 'New message'}</strong>
           <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
         </div>
 
         <div className="am-dialog-body">
+          {toSuper ? (
+            <p className="am-hint">Goes to the super admin team. You get a notice when they answer.</p>
+          ) : (
           <label className="am-field">
             <span>Municipal admin</span>
             <Select
@@ -131,6 +131,7 @@ function NewThreadDialog({ open, onClose, onCreated }) {
               ))}
             </Select>
           </label>
+          )}
 
           <label className="am-field">
             <span>Subject</span>
@@ -283,13 +284,11 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
       <div className="admin-card am-card">
         <div className="am-grid">
           <aside className="am-list" aria-label="Message threads">
-            {isSuperAdmin && (
-              <div className="am-list-head">
-                <button type="button" className="am-compose" onClick={() => setComposeOpen(true)}>
-                  <NotePencil size={15} weight="fill" /> New message
-                </button>
-              </div>
-            )}
+            <div className="am-list-head">
+              <button type="button" className="am-compose" onClick={() => setComposeOpen(true)}>
+                <NotePencil size={15} weight="fill" /> {isSuperAdmin ? 'New message' : 'Ask the super admin'}
+              </button>
+            </div>
 
             {loadingList ? (
               <p className="am-note">Loading…</p>
@@ -298,8 +297,8 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
                 <EmptyArt name="messages" size={88} />
                 <p>
                   {isSuperAdmin
-                    ? 'No threads with municipal admins yet.'
-                    : 'The super admin has not written to you yet.'}
+                    ? 'No conversations yet. Start one with New message.'
+                    : 'No conversations with the super admin yet. Ask them anything with the button above.'}
                 </p>
               </div>
             ) : (
@@ -318,7 +317,7 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
                     <span className="am-item-subject">{t.subject || 'No subject'}</span>
                     <span className="am-item-meta">
                       {metaFor(t) && <span className="am-item-muni">{metaFor(t)}</span>}
-                      <span className={`admin-badge ${STATUS_BADGE[t.status] || ''}`}>{t.status}</span>
+                      <span className={`admin-badge ${STATUS_BADGE[t.status] || ''}`}>{supportStatus(t.status)}</span>
                     </span>
                   </span>
                   {t.unreadCount > 0 && <span className="am-unread">{t.unreadCount}</span>}
@@ -327,11 +326,13 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
             )}
           </aside>
 
-          <section className="am-thread">
+          {/* With no threads at all, the list's empty state says everything:
+              the thread pane stays quiet (and is not shown on phones). */}
+          <section className={`am-thread${!threads.length && !activeId ? ' is-empty' : ''}`}>
             {!active ? (
               <div className="am-empty am-thread-empty">
-                {!activeId && <EmptyArt name="messages" size={96} />}
-                <p>{activeId ? 'Loading messages…' : 'Select a thread'}</p>
+                {!activeId && threads.length > 0 && <EmptyArt name="messages" size={96} />}
+                <p>{activeId ? 'Loading messages…' : threads.length ? 'Pick a conversation to read it' : ''}</p>
               </div>
             ) : (
               <>
@@ -429,56 +430,102 @@ function MessagesTab({ isSuperAdmin, userId, initialThreadId }) {
         </div>
       </div>
 
-      {isSuperAdmin && (
-        <NewThreadDialog
-          open={composeOpen}
-          onClose={() => setComposeOpen(false)}
-          onCreated={handleCreated}
-        />
-      )}
+      <NewThreadDialog
+        toSuper={!isSuperAdmin}
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        onCreated={handleCreated}
+      />
     </>
   );
 }
 
 /* ── Announcements tab ─────────────────────────────────────── */
 
-function AnnouncementsTab({ isSuperAdmin }) {
+function AnnouncementsTab({ isSuperAdmin, townName }) {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [target, setTarget] = useState('all');
+  // Super admin: one town, or '' for every town.
+  const [municipalityId, setMunicipalityId] = useState('');
+  const [towns, setTowns] = useState([]);
+  const [count, setCount] = useState({ key: '', recipients: null, error: null });
   const [sending, setSending] = useState(false);
   const [lastResult, setLastResult] = useState(null);
-  const [sent, setSent] = useState([]);
-  const [loadingSent, setLoadingSent] = useState(true);
+  const [sent, setSent] = useState({ items: [], total: 0, pageSize: 10, loading: true });
   // Bumped after a broadcast to pull the list again.
   const [reloadKey, setReloadKey] = useState(0);
+  const town = townName || 'your municipality';
+
+  useEffect(() => {
+    if (!isSuperAdmin) return undefined;
+    let cancelled = false;
+    axios.get('/municipalities')
+      .then((res) => { if (!cancelled) setTowns(res.data || []); })
+      .catch(() => { /* the town choice stays "All towns" */ });
+    return () => { cancelled = true; };
+  }, [isSuperAdmin]);
+
+  // How many it would reach, asked again whenever the audience changes.
+  const audience = { target, ...(isSuperAdmin && municipalityId ? { municipalityId } : {}) };
+  const audienceKey = JSON.stringify(audience);
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      axios.post('/announcements/preview', JSON.parse(audienceKey))
+        .then((res) => { if (!cancelled) setCount({ key: audienceKey, recipients: res.data?.recipients ?? 0, error: null }); })
+        .catch((err) => { if (!cancelled) setCount({ key: audienceKey, recipients: null, error: err.message || 'Could not count the recipients' }); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [audienceKey]);
+  const counted = count.key === audienceKey ? count : null;
 
   // A broadcast fans out into per-user notifications rather than a row of its
   // own, so the audit trail is what "already sent" means here.
   useEffect(() => {
     let cancelled = false;
-    axios.get('/announcements', { params: { pageSize: 10 } })
-      .then((res) => { if (!cancelled) setSent(Array.isArray(res.data) ? res.data : []); })
-      .catch(() => { if (!cancelled) setSent([]); })
-      .finally(() => { if (!cancelled) setLoadingSent(false); });
+    axios.get('/announcements', { params: { pageSize: sent.pageSize } })
+      .then((res) => {
+        if (!cancelled) {
+          setSent((cur) => ({
+            ...cur,
+            items: Array.isArray(res.data) ? res.data : [],
+            total: res.pagination?.total ?? 0,
+            loading: false,
+          }));
+        }
+      })
+      .catch(() => { if (!cancelled) setSent((cur) => ({ ...cur, loading: false })); });
     return () => { cancelled = true; };
-  }, [reloadKey]);
+  }, [reloadKey, sent.pageSize]);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (title.trim().length < 3) return toast.error('Title too short');
-    if (message.trim().length < 5) return toast.error('Message too short');
+    if (title.trim().length < 3) return toast.error('Write a title of at least 3 characters');
+    if (message.trim().length < 5) return toast.error('Write a message of at least 5 characters');
+    const n = counted?.recipients;
+    if (n === 0) return toast.error('Nobody to send this to');
+    const where = isSuperAdmin
+      ? (municipalityId ? towns.find((t) => t.id === municipalityId)?.name || 'one town' : 'every town')
+      : town;
+    // It can't be taken back: say how many it reaches, and ask.
+    const ok = await confirmAction({
+      title: 'Send this announcement?',
+      message: `"${title.trim()}" goes to ${n == null ? 'everyone chosen' : `${n.toLocaleString('en-PH')} ${n === 1 ? 'person' : 'people'}`} in ${where}, in their notifications. It can't be taken back.`,
+      confirmLabel: 'Send announcement',
+    });
+    if (!ok) return undefined;
 
     setSending(true);
     try {
       const res = await axios.post('/announcements', {
         title: title.trim(),
         message: message.trim(),
-        target,
+        ...audience,
       });
       const payload = res.data ?? res;
       setLastResult(payload);
-      toast.success(`Delivered to ${payload.delivered} user(s)`);
+      toast.success(`Sent to ${payload.delivered} ${payload.delivered === 1 ? 'person' : 'people'}`);
       setTitle('');
       setMessage('');
       setReloadKey((k) => k + 1);
@@ -487,25 +534,27 @@ function AnnouncementsTab({ isSuperAdmin }) {
       // the API. Say so plainly and put the audience back somewhere allowed.
       if (err?.status === 403) {
         toast.error(target === 'admins'
-          ? 'Only the super admin can broadcast to municipal admins.'
+          ? 'Only the super admin can send to municipal admins.'
           : (err.message || 'You are not allowed to send this announcement.'));
         if (target === 'admins') setTarget('all');
       } else {
-        toast.error(err?.message || 'Failed to broadcast');
+        toast.error(err?.message || 'The announcement could not be sent');
       }
     } finally {
       setSending(false);
     }
+    return undefined;
   };
 
   return (
-    <>
+    <div className="am-two-col">
+      <div className="am-col">
       <div className="admin-card">
         <div className="admin-card-header">
           <h2 className="admin-card-title">New announcement</h2>
         </div>
 
-        <form onSubmit={submit} className="am-announce-form">
+        <form onSubmit={submit} className="am-announce-form" noValidate>
           <label className="am-field">
             <span>Title</span>
             <input
@@ -533,83 +582,107 @@ function AnnouncementsTab({ isSuperAdmin }) {
             <small className="am-hint">{message.length} / 1000</small>
           </label>
 
-          <label className="am-field">
-            <span>Audience</span>
-            <Select
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              className="admin-input"
-            >
-              <option value="all">All users (buyers + sellers)</option>
-              <option value="buyers">Buyers only</option>
-              <option value="sellers">Sellers only</option>
-              {isSuperAdmin && <option value="admins">Municipal admins only</option>}
-            </Select>
-            <small className="am-hint">
-              {isSuperAdmin
-                ? 'As Super Admin, this broadcasts platform-wide.'
-                : 'Broadcast is limited to your municipality.'}
-            </small>
-          </label>
+          <div className="am-audience">
+            <label className="am-field">
+              <span>Send to</span>
+              <Select
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                className="admin-input"
+              >
+                <option value="all">{isSuperAdmin ? 'Everyone (buyers and sellers)' : `Everyone in ${town}`}</option>
+                <option value="buyers">Buyers only</option>
+                <option value="sellers">Sellers only</option>
+                {isSuperAdmin && <option value="admins">Municipal admins only</option>}
+              </Select>
+            </label>
+            {isSuperAdmin && (
+              <label className="am-field">
+                <span>Town</span>
+                <Select value={municipalityId} onChange={(e) => setMunicipalityId(e.target.value)} className="admin-input">
+                  <option value="">All towns</option>
+                  {towns.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </Select>
+              </label>
+            )}
+          </div>
+          <p className={`am-count${counted?.error ? ' is-error' : ''}`} aria-live="polite">
+            {!counted ? 'Counting…'
+              : counted.error ? counted.error
+                : counted.recipients === 0 ? 'Nobody to send this to.'
+                  : <>Goes to <strong>{counted.recipients.toLocaleString('en-PH')} {counted.recipients === 1 ? 'person' : 'people'}</strong>{isSuperAdmin ? '' : ` in ${town}`}, in their notifications</>}
+          </p>
 
           <div>
             <button type="submit" disabled={sending} className="admin-btn admin-btn-primary">
-              <Send size={15} /> {sending ? 'Sending…' : 'Broadcast'}
+              <Send size={15} /> {sending ? 'Sending…' : 'Send announcement'}
             </button>
           </div>
         </form>
-      </div>
-
-      <div className="admin-card">
-        <div className="admin-card-header">
-          <h2 className="admin-card-title">Recently sent</h2>
-        </div>
-        {loadingSent ? (
-          <div className="admin-empty"><p>Loading…</p></div>
-        ) : sent.length === 0 ? (
-          <div className="admin-empty">
-            <EmptyArt name="announcements" size={104} />
-            <p>No announcements have been sent yet.</p>
-          </div>
-        ) : (
-          <ul className="admin-notif-list">
-            {sent.map((a) => (
-              <li key={a.id}>
-                <div className="admin-notif-item">
-                  <span className="admin-notif-body">
-                    <span className="admin-notif-top">
-                      <span className="admin-badge admin-badge-neutral">
-                        {TARGET_LABELS[a.target] || a.target}
-                      </span>
-                      <span className="admin-notif-time">{formatRelativeTime(a.sentAt)}</span>
-                    </span>
-                    <span className="admin-notif-title">{a.title}</span>
-                    {a.message && <span className="admin-notif-message">{a.message}</span>}
-                    <span className="admin-notif-message">
-                      Delivered to {a.recipients} recipient{a.recipients === 1 ? '' : 's'}
-                      {a.sentBy ? ` · sent by ${a.sentBy}` : ''}
-                    </span>
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
       {lastResult && (
         <div className="admin-card am-result">
           <CheckCircle size={18} color="var(--t-primary-600, #059669)" />
           <div>
-            <strong>Announcement delivered.</strong>
+            <strong>Announcement sent.</strong>
             <div className="am-hint">
-              {lastResult.delivered} recipients • target: {lastResult.target}
-              {lastResult.municipalityId ? ' • municipality-scoped' : ' • platform-wide'}
+              {lastResult.delivered} {lastResult.delivered === 1 ? 'person' : 'people'}
+              {lastResult.municipalityId ? ' in one town' : isSuperAdmin ? ' in every town' : ''}
             </div>
           </div>
         </div>
       )}
-    </>
+      </div>
+
+      <div className="admin-card am-col-side">
+        <div className="admin-card-header">
+          <h2 className="admin-card-title">Recently sent</h2>
+        </div>
+        {sent.loading ? (
+          <div className="admin-empty"><p>Loading…</p></div>
+        ) : sent.items.length === 0 ? (
+          <div className="admin-empty">
+            <EmptyArt name="announcements" size={104} />
+            <p>No announcements have been sent yet.</p>
+          </div>
+        ) : (
+          <>
+            <ul className="admin-notif-list">
+              {sent.items.map((a) => (
+                <li key={a.id}>
+                  <div className="admin-notif-item">
+                    <span className="admin-notif-body">
+                      <span className="admin-notif-top">
+                        <span className="admin-badge admin-badge-neutral">
+                          {TARGET_LABELS[a.target] || a.target}
+                          {a.municipalityName ? ` · ${a.municipalityName}` : ''}
+                        </span>
+                        <span className="admin-notif-time">{formatRelativeTime(a.sentAt)}</span>
+                      </span>
+                      <span className="admin-notif-title">{a.title}</span>
+                      {a.message && <span className="admin-notif-message">{a.message}</span>}
+                      <span className="admin-notif-message">
+                        Sent to {a.recipients} {a.recipients === 1 ? 'person' : 'people'}
+                        {a.sentBy ? <> · by <span translate="no">{a.sentBy}</span></> : null}
+                      </span>
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {sent.items.length < sent.total && (
+              <div className="am-more">
+                <button type="button" className="admin-btn admin-btn-gray" onClick={() => setSent((cur) => ({ ...cur, pageSize: cur.pageSize + 10 }))}>
+                  Show more
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+    </div>
   );
 }
 
@@ -621,6 +694,8 @@ export default function AdminMessages() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get('tab');
   const tab = TABS.some((t) => t.key === requested) ? requested : 'messages';
+  // Email was a tab here before it had a page of its own.
+  if (requested === 'email') return <Navigate to="/admin/email" replace />;
 
   const selectTab = (key) => {
     const next = new URLSearchParams(searchParams);
@@ -649,9 +724,8 @@ export default function AdminMessages() {
         ))}
       </div>
 
-      {tab === 'messages'
-        ? <MessagesTab isSuperAdmin={isSuperAdmin} userId={user?.id} initialThreadId={searchParams.get('c')} />
-        : <AnnouncementsTab isSuperAdmin={isSuperAdmin} />}
+      {tab === 'messages' && <MessagesTab isSuperAdmin={isSuperAdmin} userId={user?.id} initialThreadId={searchParams.get('c')} />}
+      {tab === 'announcements' && <AnnouncementsTab isSuperAdmin={isSuperAdmin} townName={user?.municipality?.name || ''} />}
     </AdminLayout>
   );
 }

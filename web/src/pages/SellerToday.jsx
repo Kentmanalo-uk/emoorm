@@ -4,7 +4,7 @@ import {
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  Plus, Minus, Info, ForkKnife, DotsThree, MagnifyingGlass,
+  Plus, Minus, Info, Basket, DotsThree, MagnifyingGlass,
 } from '@phosphor-icons/react';
 import axios from '../lib/axios';
 import { resolveImg, firstImage } from '../lib/media';
@@ -18,7 +18,9 @@ import { dayTitle, manilaDay } from '../lib/manilaDays';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import PhoneSheet from '../components/seller/PhoneSheet';
 import EmptyState from '../components/ui/EmptyState';
+import LoadFailed from '../components/ui/LoadFailed';
 import Skeleton from '../components/ui/Skeleton';
+import { peso } from '../lib/format';
 import './SellerDashboard.css';
 import './SellerToday.css';
 
@@ -35,7 +37,7 @@ const ADD_PICKS = [5, 10, 20];
 /** The product photo, or a plain tile when there is none or it fails to load. */
 function Thumb({ src }) {
   const [failed, setFailed] = useState(false);
-  if (!src || failed) return <span className="stw-thumb stw-thumb--empty" aria-hidden="true"><ForkKnife size={22} /></span>;
+  if (!src || failed) return <span className="stw-thumb stw-thumb--empty" aria-hidden="true"><Basket size={22} /></span>;
   return <img className="stw-thumb" src={src} alt="" loading="lazy" onError={() => setFailed(true)} />;
 }
 
@@ -92,8 +94,6 @@ function MoreMenu({ items, label }) {
   );
 }
 
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
 /**
  * A menu item's state in plain words: "Taking orders until 2:00 PM" (green),
  * "Next: Tomorrow, 10:00 AM" or "Not taking orders yet" (grey).
@@ -127,14 +127,14 @@ function AddFromProducts({
   return (
     <PhoneSheet
       open={open}
-      title={picked ? 'Add to your menu?' : 'Add from My products'}
+      title={picked ? 'Add to Available today?' : 'Add from My products'}
       className="stw-sheet stw-pick-sheet"
       onClose={onClose}
       footer={picked && (
         <>
           <button type="button" className="scm-btn scm-btn--ghost" onClick={() => setPicked(null)} disabled={busy}>Back</button>
           <button type="button" className="scm-btn" onClick={() => onAdd(picked)} disabled={busy}>
-            {busy ? <BusyLabel>Adding…</BusyLabel> : 'Add to menu'}
+            {busy ? <BusyLabel>Adding…</BusyLabel> : 'Add it'}
           </button>
         </>
       )}
@@ -149,7 +149,7 @@ function AddFromProducts({
             </span>
           </div>
           <p className="stw-hint">
-            Add {picked.name} to your menu? It will show as &lsquo;Not taking orders yet&rsquo; until you post it.
+            Add {picked.name} to your Available today items? Buyers see it as &lsquo;Not taking orders yet&rsquo; until you post it.
           </p>
         </div>
       ) : (
@@ -171,7 +171,7 @@ function AddFromProducts({
             </div>
           ) : list.length === 0 ? (
             <p className="stw-hint stw-pick-empty">
-              {query ? `No products match “${query}”.` : 'No products to add. Packages and paluto keep their own ordering.'}
+              {query ? `No products match “${query}”.` : 'No products to add. Packages, paluto and live animals keep their own way of ordering.'}
             </p>
           ) : (
             <ul className="stw-pick-list">
@@ -196,12 +196,14 @@ function AddFromProducts({
 }
 
 /**
- * Today's menu, on three tabs. Menu: the shop's Available Today items, posted
- * or not, with Post on each and "Add from My products" (an item on the menu
- * shows to buyers as "Not taking orders yet" until it is posted). Now and
- * coming up: Taking orders now and Coming up (by day). Ended. It opens on
- * Now and coming up when something is posted, else on Menu (?tab=menu|ended
- * picks one). "Post an item" and Edit open the one-page form
+ * Available today (one name everywhere; it used to be "Today's menu", but
+ * it is for anything sold fresh day by day, not only cooked food), on three
+ * tabs. Your items: the shop's Available Today items, posted or not, with
+ * Post on each and "Add from My products" (an item shows to buyers as "Not
+ * taking orders yet" until it is posted). Now and coming up: Taking orders
+ * now and Coming up (by day). Ended. It opens on Now and coming up when
+ * something is posted, else on Your items (?tab=menu|ended picks one; the
+ * API still calls the items "the menu"). "Post an item" and Edit open the one-page form
  * (SellerTodayPost.jsx). On a post: Edit and Add more (or Cancel before it
  * opens); ⋯ holds More time and Stop. An ended post can be posted again.
  */
@@ -223,15 +225,26 @@ export default function SellerToday() {
   const [pickRound, setPickRound] = useState(0);
   const first = useRef(!asked);
 
+  // A list that could not be loaded says so (with Try again), never "Nothing posted".
+  const [postsFailed, setPostsFailed] = useState(false);
+  const [itemsFailed, setItemsFailed] = useState(false);
+  const hasMenu = useRef(false);
   const load = useCallback(async (which) => {
-    let windows = [];
+    let windows;
     try {
       const res = await axios.get('/today/mine', { params: { scope: which === 'ended' ? 'ended' : undefined } });
       setData(res.data || { enabled: true, windows: [] });
+      setPostsFailed(false);
       windows = res.data?.windows || [];
-    } catch (err) {
-      toast.error(err.message || "Could not load Today's menu");
+    } catch {
+      setPostsFailed(true);
       setData({ enabled: true, windows: [] });
+      // Not knowing what is posted, stay on Now and coming up (with its Try again).
+      if (first.current) {
+        first.current = false;
+        setDecided(true);
+      }
+      return;
     }
     if (first.current) {
       first.current = false;
@@ -248,9 +261,15 @@ export default function SellerToday() {
     try {
       const res = await axios.get('/today/menu');
       setMenu(res.data || { enabled: true, items: [], choices: [] });
+      hasMenu.current = true;
+      setItemsFailed(false);
     } catch (err) {
-      toast.error(err.message || 'Could not load your menu');
-      setMenu((m) => m || { enabled: true, items: [], choices: [] });
+      // With items on screen a note is enough; with none, Your items says it couldn't load.
+      if (hasMenu.current) toast.error(err.message || 'Could not refresh your items');
+      else {
+        setItemsFailed(true);
+        setMenu({ enabled: true, items: [], choices: [] });
+      }
     }
   }, []);
   useEffect(() => { loadMenu(); }, [loadMenu]);
@@ -268,7 +287,7 @@ export default function SellerToday() {
     setAddingId(product.id);
     try {
       await axios.post('/today/menu', { productId: product.id });
-      toast.success(`${product.name} is on your menu. Post it when you have it.`);
+      toast.success(`${product.name} is in your Available today items. Post it when you have it.`);
       setPicking(false);
       await loadMenu();
     } catch (err) {
@@ -280,16 +299,16 @@ export default function SellerToday() {
 
   const removeFromMenu = async (item) => {
     const ok = await confirmAction({
-      title: `Take ${item.name} off your menu?`,
+      title: `Take ${item.name} out of Available today?`,
       message: 'It becomes a regular product with 0 in stock. Set its stock in My products to sell it there.',
-      confirmLabel: 'Remove from menu',
+      confirmLabel: 'Take it out',
       danger: true,
     });
     if (!ok) return;
     setBusyId(item.id);
     try {
       await axios.delete(`/today/menu/${item.id}`);
-      toast.success(`${item.name} is off your menu. Set its stock in My products.`);
+      toast.success(`${item.name} is out of Available today. Set its stock in My products.`);
       await loadMenu();
     } catch (err) {
       toast.error(err.message || 'That did not work. Please try again.');
@@ -452,7 +471,7 @@ export default function SellerToday() {
     );
   };
 
-  /** One item on the menu: photo, name, price, one status; Post, and ⋯ for the rest. */
+  /** One Available today item: photo, name, price, one status; Post, and ⋯ for the rest. */
   const menuRow = (item) => {
     const state = menuStatus(item);
     const busy = busyId === item.id;
@@ -479,7 +498,7 @@ export default function SellerToday() {
             label={`More for ${item.name}`}
             items={[
               { label: 'Edit item', onClick: () => navigate(`/seller/products?edit=${item.id}`, { state: { fromList: true } }) },
-              { label: 'Remove from menu', danger: true, onClick: () => removeFromMenu(item) },
+              { label: 'Take out of Available today', danger: true, onClick: () => removeFromMenu(item) },
             ]}
           />
         </div>
@@ -494,17 +513,20 @@ export default function SellerToday() {
   );
   const createLink = (
     <Link to="/seller/products/new?type=today" state={{ fromList: true }} className="stw-create">
-      Create a new menu item
+      Create a new item
     </Link>
   );
 
   const showPost = enabled && items.length > 0;
-  const tabs = [['menu', 'Menu'], ['active', 'Now and coming up'], ['ended', 'Ended']];
+  const tabs = [['menu', 'Your items'], ['active', 'Now and coming up'], ['ended', 'Ended']];
 
   return (
     <div className="seller-dashboard stw">
       <div className="seller-container">
-        <SellerPageHead title="Today's menu" />
+        <SellerPageHead
+          title="Available today"
+          subtitle="Post what you have today: cooked food, a fresh catch, today's harvest. Buyers order it until you stop."
+        />
 
         {!enabled && (
           <p className="stw-banner"><Info size={16} /> Available Today is turned off for now. Your posts are kept; buyers can&apos;t order them.</p>
@@ -531,13 +553,17 @@ export default function SellerToday() {
             <div className="stw-list" aria-busy="true">
               {[0, 1, 2].map((i) => <Skeleton key={i} height={96} radius={16} />)}
             </div>
+          ) : itemsFailed ? (
+            <div className="stw-empty">
+              <LoadFailed what="your items" compact onRetry={() => { setMenu(null); loadMenu(); }} />
+            </div>
           ) : noItems ? (
             <div className="stw-empty">
               <EmptyState
                 className="ui-empty--inset"
                 art="calendar"
-                title="No items on your menu yet"
-                text="Add food you sell. Buyers see it as 'Not taking orders yet' until you post it."
+                title="No Available today items yet"
+                text="Add what you sell fresh, day by day: cooked food, fish, vegetables, baked goods. Buyers see it as 'Not taking orders yet' until you post it."
                 actions={enabled ? [{ label: 'Add from My products', onClick: openPicker, icon: Plus }] : []}
               />
               <p className="stw-empty-link">{createLink}</p>
@@ -555,6 +581,10 @@ export default function SellerToday() {
           <div className="stw-list" aria-busy="true">
             {[0, 1].map((i) => <Skeleton key={i} height={150} radius={16} />)}
           </div>
+        ) : postsFailed ? (
+          <div className="stw-empty">
+            <LoadFailed what="your posts" compact onRetry={() => { setData(null); load(scope); }} />
+          </div>
         ) : empty ? (
           <div className="stw-empty">
             {noItems ? (
@@ -562,8 +592,8 @@ export default function SellerToday() {
                 className="ui-empty--inset"
                 art="calendar"
                 title="Nothing to post yet"
-                text="Add items to your menu first, then post them."
-                actions={[{ label: 'Go to Menu', onClick: () => pickTab('menu'), icon: Plus }]}
+                text="Add items to Your items first, then post them."
+                actions={[{ label: 'Go to Your items', onClick: () => pickTab('menu'), icon: Plus }]}
               />
             ) : (
               <EmptyState

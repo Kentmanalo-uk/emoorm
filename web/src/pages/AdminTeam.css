@@ -400,6 +400,7 @@
 
 .at-page:has(.at-chat) {
   max-width: 1240px;
+  margin-inline: auto;
 }
 
 .at-layout {
@@ -798,5 +799,111 @@
 @media (max-width: 1100px) {
   .at-layout:has(.at-chat) {
     grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+/* ── Two-factor first (before Add admin can work) ── */
+.at-note--action {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--t-warning-50, #fff7ed);
+  color: var(--t-warning-800, #9a3412);
+}
+
+.at-note--action svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.at-flag--link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── An admin's recent activity, opened under their row ── */
+.at-member {
+  flex-wrap: wrap;
+}
+
+.at-activity {
+  flex-basis: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f8fafc);
+  font-size: 13px;
+}
+
+.at-activity ul {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.at-activity li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.at-activity-quiet {
+  margin: 0 0 8px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.at-activity-all {
+  font-size: 12.5px;
+}
+
+.at-caret {
+  transition: transform 0.15s;
+}
+
+.at-caret.is-open {
+  transform: rotate(180deg);
+}
+
+/* ── A team of one: add a backup, instead of an empty chat ── */
+.at-alone {
+  display: grid;
+  place-items: center;
+}
+
+.at-alone-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-width: 360px;
+  padding: 24px;
+  text-align: center;
+}
+
+.at-alone-card h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.at-alone-card p {
+  margin: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .at-alone-card {
+    max-width: none;
+    margin-top: 12px;
+    border: 1px solid var(--t-neutral-200, #e5e7eb);
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+  }
+
+  .at-activity-btn span {
+    display: none;
   }
 }

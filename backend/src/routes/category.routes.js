@@ -29,6 +29,13 @@ router.get(
 );
 
 // Admin routes
+router.get(
+  '/admin/product-counts',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  categoryController.productCounts
+);
+
 router.post(
   '/',
   authenticate,

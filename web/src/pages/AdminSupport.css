@@ -17,3 +17,65 @@
 .as-support .sc-thread-title > span {
   white-space: normal;
 }
+
+/* Inbox search, under New message. */
+.as-support .sc-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.as-support .sc-search:focus-within {
+  border-color: var(--t-primary-600, #059669);
+}
+
+.as-support .sc-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+}
+
+/* Who on the team has the case. */
+.as-support .sc-badge-owner {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+}
+
+.as-support .sc-owner-line {
+  color: var(--t-primary-700, #047857);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Links drawn as the header's buttons (View orders, View profile). */
+.as-support a.sc-btn {
+  text-decoration: none;
+}
+
+/* Long names wrap in the header rather than pushing the actions away. */
+.as-support .sc-thread-title strong {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+
+.as-support .sc-thread-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .as-support .sc-search input {
+    min-height: 42px;
+    font-size: 15px;
+  }
+}

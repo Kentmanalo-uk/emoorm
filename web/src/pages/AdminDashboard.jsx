@@ -13,23 +13,31 @@ import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import { formatRelativeTime } from '../lib/time';
 import { actionLabel } from '../lib/auditActions';
+import { reportReason } from '../lib/labels';
 import useAuthStore from '../store/authStore';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useAdminAttention, useRefreshAdminShell } from '../hooks/useAdminShellData';
 import AdminPhoneHome from '../components/admin/AdminPhoneHome';
+import { pesoWhole as peso } from '../lib/format';
 import '../components/admin/AdminLayout.css';
 import './AdminDashboard.css';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const peso = (v) =>
-  new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
-    .format(Number(v || 0));
 // Admins see how sales move and how they divide, not the money itself.
 const share = (v) => {
   const n = Number(v || 0);
   return `${n >= 10 || n === 0 ? Math.round(n) : n.toFixed(1)}%`;
 };
+// What to do about a "Stores to check" tag (shown on hover).
+const ISSUE_HELP = {
+  NOT_READY: 'Its setup is not finished, so buyers cannot order yet: check what it is missing.',
+  NO_PRODUCTS: 'It has nothing on sale: ask the seller to list products.',
+  HIGH_CANCELLATIONS: 'Many of its orders end cancelled: ask the seller why.',
+  LOW_RATING: 'Buyers rate it low: read its reviews and talk to the seller.',
+  NO_SALES: 'No orders in 30 days: check the seller is still selling.',
+};
+
 const growth = (d) => (d == null ? '—' : `${d > 0 ? '▲' : d < 0 ? '▼' : ''}${Math.abs(d)}%`);
 const count = (v) => new Intl.NumberFormat('en-PH').format(Number(v || 0));
 const shortDate = (value) => (value
@@ -109,7 +117,8 @@ const ATTENTION_LABELS = {
   openReports: ['open report', 'open reports'],
   supportAwaiting: ['unanswered message', 'unanswered messages'],
   stalePayments: ['unverified payment', 'unverified payments'],
-  openReturns: ['pending return', 'pending returns'],
+  openReturns: ['return dispute', 'return disputes'],
+  slowReturns: ['slow return reply', 'slow return replies'],
 };
 
 /* ── Small building blocks ─────────────────────────────── */
@@ -268,7 +277,7 @@ function AttentionSummary({ items, failed, userId }) {
           {open.map((item) => {
             const [one, many] = ATTENTION_LABELS[item.key] || [item.label, item.label];
             return (
-              <Link key={item.key} to={item.link} className={`dash-chip sev-${item.severity}`}>
+              <Link key={item.key} to={item.href || item.link} className={`dash-chip sev-${item.severity}`}>
                 {item.count} {item.count === 1 ? one : many}
               </Link>
             );
@@ -325,7 +334,6 @@ export default function AdminDashboard() {
   const [busyId, setBusyId] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null); // { kind: 'seller'|'product', id, name }
 
-
   // Range-dependent analytics.
   useEffect(() => {
     let cancelled = false;
@@ -350,7 +358,7 @@ export default function AdminDashboard() {
     ];
     axios.get('/moderation/store-health', { params: { limit: 6 } }).then(...done(setHealth, []));
     axios.get('/audit-logs', { params: { pageSize: 8 } }).then(...done(setActivity, []));
-    axios.get('/reports', { params: { pageSize: 5, status: 'PENDING' } }).then(...done(setReports, []));
+    axios.get('/reports', { params: { pageSize: 5, status: 'OPEN' } }).then(...done(setReports, []));
     return () => { cancelled = true; };
   }, [refreshKey]);
 
@@ -412,9 +420,9 @@ export default function AdminDashboard() {
     : (RANGES.find((r) => r.key === rangeKey)?.title || `Last ${RANGES.find((r) => r.key === rangeKey)?.label}`);
 
   const stats = [
-    { label: 'Sales growth', value: growth(kpis.revenue?.delta), hint: 'Completed sales vs the period before' },
+    { label: 'Sales growth', value: growth(kpis.revenue?.delta), hint: kpis.revenue?.delta == null ? 'No sales in the period before to compare' : 'Completed sales vs the period before · amounts stay private' },
     { label: 'Completed orders', value: count(kpis.orders?.value), delta: kpis.orders?.delta, hint: `${count(kpis.totalOrders?.value)} orders placed` },
-    { label: 'Average order', value: growth(kpis.avgOrderValue?.delta), hint: 'Change in average order size' },
+    { label: 'Average order', value: growth(kpis.avgOrderValue?.delta), hint: kpis.avgOrderValue?.delta == null ? 'No orders in the period before to compare' : 'Change in average order size vs the period before' },
     isSuperAdmin
       ? { label: 'Active stores', value: count(kpis.activeStores?.value), hint: `${count(kpis.liveProducts?.value)} live products` }
       : { label: 'Active stores', value: count(kpis.activeStores?.value), hint: `${count(kpis.liveProducts?.value)} live products · ${count(kpis.suspendedStores?.value)} suspended` },
@@ -454,7 +462,7 @@ export default function AdminDashboard() {
       } else {
         await axios.post(`/products/${target.id}/suspend`, { reason });
       }
-      toast.success(`${target.name} ${target.kind === 'seller' ? 'rejected' : 'suspended'}`);
+      toast.success(`${target.name} rejected`);
       afterAction(target.kind, target.id);
       setRejectTarget(null);
     } catch (err) {
@@ -757,14 +765,11 @@ export default function AdminDashboard() {
                         <span>{s.fullName} · applied {shortDate(s.sellerApplicationDate)}</span>
                       </div>
                       <div className="dash-actions">
-                        <button
-                          type="button"
-                          className="dash-btn dash-btn-primary"
-                          disabled={busyId === s.id}
-                          onClick={() => approve('seller', s.id, s.shopName || s.fullName)}
-                        >
-                          Approve
-                        </button>
+                        {/* Opens the application (ID photos, permit, checks):
+                            approving straight from here skipped all of them. */}
+                        <Link className="dash-btn dash-btn-primary" to={`/admin/sellers?id=${s.id}`}>
+                          Review
+                        </Link>
                         <button
                           type="button"
                           className="dash-btn dash-btn-quiet"
@@ -809,7 +814,7 @@ export default function AdminDashboard() {
                           disabled={busyId === p.id}
                           onClick={() => setRejectTarget({ kind: 'product', id: p.id, name: p.name })}
                         >
-                          Suspend
+                          Reject
                         </button>
                       </div>
                     </li>
@@ -828,7 +833,7 @@ export default function AdminDashboard() {
             title="Top stores"
             span="half"
             meta={rangeLabel}
-            tools={analytics && topStores.length > 0 ? (
+            tools={isSuperAdmin && analytics && topStores.length > 1 ? (
               <CardToggle
                 label="Rank stores by"
                 value={topSort}
@@ -909,14 +914,14 @@ export default function AdminDashboard() {
                       <strong>{st.name}</strong>
                       <span className="dash-tags">
                         {st.issues.map((issue) => (
-                          <em key={issue.code} className={`dash-tag tag-${issue.code.toLowerCase()}`}>{issue.label}</em>
+                          <em key={issue.code} className={`dash-tag tag-${issue.code.toLowerCase()}`} title={ISSUE_HELP[issue.code] || undefined}>{issue.label}</em>
                         ))}
                       </span>
                     </div>
-                    {st.slug && (
-                      <a className="dash-btn dash-btn-quiet" href={`/store/${st.slug}`} target="_blank" rel="noopener noreferrer">
-                        View
-                      </a>
+                    {st.ownerId && (
+                      <Link className="dash-btn dash-btn-quiet" to={`/admin/all-sellers?id=${st.ownerId}`}>
+                        Check
+                      </Link>
                     )}
                   </li>
                 ))}
@@ -931,10 +936,10 @@ export default function AdminDashboard() {
               <ul className="dash-list">
                 {reports.map((r) => (
                   <li key={r.id}>
-                    <div className="dash-list-main">
-                      <strong>{r.product?.name || r.product?.store?.name || (r.type === 'SELLER' ? 'Seller report' : 'Product report')}</strong>
-                      <span>{String(r.reason || '').replace(/_/g, ' ').toLowerCase()}</span>
-                    </div>
+                    <Link className="dash-list-main dash-list-link" to={`/admin/reports?id=${r.id}`}>
+                      <strong>{r.product?.name || r.reportedSeller?.store?.name || r.reportedSeller?.fullName || r.reportedBuyer?.fullName || (r.type === 'SELLER' ? 'A seller' : r.type === 'BUYER' ? 'A buyer' : 'A product')}</strong>
+                      <span>{r.type === 'PRODUCT' ? 'Product' : r.type === 'SELLER' ? 'Seller' : 'Buyer'} · {reportReason(r.reason, r.type)}</span>
+                    </Link>
                     <span className="dash-list-side">{shortDate(r.createdAt)}</span>
                   </li>
                 ))}
@@ -953,7 +958,7 @@ export default function AdminDashboard() {
                     <div className="dash-list-main">
                       <strong>{actionLabel(log.action)}</strong>
                       <span>
-                        {log.userEmail || 'System'}
+                        {log.actorName || log.user?.fullName || log.userEmail || 'System'}
                         {log.details?.reason ? ` · “${log.details.reason}”` : ''}
                       </span>
                     </div>
@@ -968,11 +973,11 @@ export default function AdminDashboard() {
 
       <ReasonDialog
         open={!!rejectTarget}
-        title={rejectTarget?.kind === 'seller' ? `Reject ${rejectTarget?.name}?` : `Suspend ${rejectTarget?.name}?`}
+        title={`Reject ${rejectTarget?.name}?`}
         message={rejectTarget?.kind === 'seller'
           ? 'The applicant will see this reason.'
-          : 'The seller will see this reason and can fix the listing.'}
-        confirmLabel={rejectTarget?.kind === 'seller' ? 'Reject application' : 'Suspend product'}
+          : 'The product stays off the marketplace. The seller sees this reason and can fix the listing.'}
+        confirmLabel={rejectTarget?.kind === 'seller' ? 'Reject application' : 'Reject product'}
         required
         loading={busyId === rejectTarget?.id}
         onConfirm={reject}

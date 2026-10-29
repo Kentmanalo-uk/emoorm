@@ -333,7 +333,7 @@ const findBySlug = async (slug) => {
   return withStats(p);
 };
 
-const SORTABLE_COLUMNS = new Set(['createdAt', 'price', 'name']);
+const SORTABLE_COLUMNS = new Set(['createdAt', 'price', 'name', 'stock']);
 
 // Products whose stock a seller should watch (archived and suspended ones cannot sell).
 const STOCK_WATCH_STATUSES = ['APPROVED', 'PENDING', 'HIDDEN'];

@@ -779,7 +779,9 @@ const adminOrderSummary = (order) => ({
   paymentMethod: order.paymentMethod,
   fulfillmentMethod: order.fulfillmentMethod,
   buyer: order.buyer ? { id: order.buyer.id, fullName: order.buyer.fullName } : null,
-  store: order.store ? { id: order.store.id, name: order.store.name, slug: order.store.slug || null } : null,
+  store: order.store ? {
+    id: order.store.id, name: order.store.name, slug: order.store.slug || null, ownerId: order.store.ownerId || null,
+  } : null,
   itemCount: (order.items || []).reduce((n, it) => n + Number(it.quantity || 0), 0),
 });
 

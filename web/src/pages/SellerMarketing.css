@@ -1,0 +1,83 @@
+/* Seller Center › Marketing: the parts added on top of the phone layout
+   (SellerApp.css .smk-*): the "get your first followers" card, and the
+   announcement form written on the page on computers. */
+
+.smk-grow h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.smk-grow p {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--t-neutral-600, #475569);
+}
+
+.smk-grow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.smk-grow-actions :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.smk-hero .btn-seller-outline {
+  flex-shrink: 0;
+}
+
+.smk-compose .sh-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.smk-compose-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--t-neutral-500, #6b7280);
+  cursor: pointer;
+}
+
+.smk-compose-close:hover {
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.smk-compose .smk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.smk-compose textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+.smk-compose-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.smk-compose-foot button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

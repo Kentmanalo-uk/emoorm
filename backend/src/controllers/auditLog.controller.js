@@ -52,7 +52,8 @@ const getAuditLogs = asyncHandler(async (req, res) => {
   // get neither the IP nor the browser; the super admin, the network part
   // of the IP and the browser's name.
   const isSuper = req.user.role === 'SUPER_ADMIN';
-  const logs = result.logs.map(({ ipAddress, userAgent, ...log }) => (isSuper
+  const named = await auditLogService.describe(result.logs);
+  const logs = named.map(({ ipAddress, userAgent, ...log }) => (isSuper
     ? { ...log, ipAddress: maskIp(ipAddress), userAgent: briefAgent(userAgent) }
     : log));
 
@@ -66,6 +67,17 @@ const getAuditLogs = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * GET /audit-logs/actors: who appears in the log, for its "By" filter.
+ * A municipal admin gets only the people with entries for their town.
+ */
+const getActors = asyncHandler(async (req, res) => {
+  const people = await auditLogService.listActors({
+    municipalityId: req.user.role === 'MUNICIPAL_ADMIN' ? req.user.municipalityId : (req.query.municipalityId || undefined),
+  });
+  res.json({ success: true, message: 'Audit log people retrieved', data: people });
+});
+
 /** "Mozilla/5.0 (Linux; Android 14…) … Chrome/131…" → "Chrome on Android" */
 function briefAgent(ua) {
   const text = String(ua || '');
@@ -77,4 +89,4 @@ function briefAgent(ua) {
   return os ? `${browser} on ${os}` : browser;
 }
 
-module.exports = { getAuditLogs };
+module.exports = { getAuditLogs, getActors };

@@ -12,7 +12,7 @@ export default function SellerOffers() {
   return (
     <div className="seller-dashboard">
       <div className="seller-container of-page">
-        <SellerPageHead title="Offers" subtitle="Buyers' offers on your livestock. Talk each one over in chat, meet, then mark it as done." />
+        <SellerPageHead title="Offers" subtitle="Answer each offer in its chat within 7 days, or it expires." />
         <DealList side="seller" />
       </div>
     </div>

@@ -226,3 +226,8 @@
   .afb-search input { width: 100%; }
   .afb-actions .admin-btn { flex: 1 1 auto; justify-content: center; }
 }
+
+.afb-notes-text {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}

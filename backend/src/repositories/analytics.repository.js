@@ -287,6 +287,33 @@ const getSellerStats = async (storeId, window) => {
   };
 };
 
+/**
+ * A shop's earned sales in a window (the same orders as its revenue: EARNED,
+ * riders' and failed trips' fees taken out), per way the buyer paid, for
+ * the seller's Earnings page. One row per payment method, and per whether a
+ * MoorMove rider delivered it (the rider collects cash on delivery for the
+ * shop): [{ paymentMethod, byRider, total, orders }].
+ */
+const earningsByPayment = async (storeId, { from, to }) => {
+  const rows = await prisma.order.groupBy({
+    by: ['paymentMethod', 'deliveryPartner'],
+    where: { storeId, createdAt: { gte: from, lte: to }, ...EARNED },
+    _sum: { total: true, deliveryFee: true, failedTripFees: true },
+    _count: { _all: true },
+  });
+  return rows.map((r) => {
+    const byRider = r.deliveryPartner === RIDER_DELIVERED.deliveryPartner;
+    return {
+      paymentMethod: r.paymentMethod,
+      byRider,
+      total: Number(r._sum.total || 0)
+        - (byRider ? Number(r._sum.deliveryFee || 0) : 0)
+        - Number(r._sum.failedTripFees || 0),
+      orders: r._count._all,
+    };
+  });
+};
+
 // ---------- MUNICIPALITY ----------
 const getMunicipalityStats = async (municipalityId, window) => {
   const w = resolveWindow(window);
@@ -552,6 +579,7 @@ const getPlatformStats = async (window, filterMunicipalityId = null) => {
 module.exports = {
   resolveWindow,
   getSellerStats,
+  earningsByPayment,
   getSellerDayDetails,
   getMunicipalityStats,
   getPlatformStats,

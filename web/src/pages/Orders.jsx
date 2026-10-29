@@ -43,6 +43,7 @@ import { qrMethod, formatAccountNumber } from '../lib/qrPayment';
 import { isTouchPhone } from '../lib/device';
 import { readCache, writeCache } from '../lib/pageCache';
 import { distanceNote } from '../lib/deliveryDistance';
+import { peso } from '../lib/format';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 
@@ -65,8 +66,6 @@ const payActionLabel = (order) => {
   if (order.paymentStatus === 'FAILED') return 'Pay again / resubmit proof';
   return 'Replace payment proof';
 };
-
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const canConfirmReceipt = (order) => ['DELIVERED', 'PICKED_UP', 'SHIPPED'].includes(order.status);
 

@@ -88,6 +88,15 @@ const toggleCategoryStatus = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Products per category (the admin list's Products column)
+ * @route GET /api/categories/admin/product-counts
+ * @access Private (Super Admin only)
+ */
+const productCounts = asyncHandler(async (req, res) => {
+  successResponse(res, await categoryService.productCounts(), 'Category product counts retrieved');
+});
+
+/**
  * Seed categories (Development only)
  * @route POST /api/categories/seed
  * @access Private (Super Admin only)
@@ -106,5 +115,6 @@ module.exports = {
   updateCategory,
   deleteCategory,
   toggleCategoryStatus,
+  productCounts,
   seedCategories,
 };

@@ -20,6 +20,7 @@ import useFocusTrap from '../hooks/useFocusTrap';
 import './SellerDashboard.css';
 import './SellerShopHome.css';
 import Select from '../components/ui/Select';
+import { peso } from '../lib/format';
 
 /*
  * Decorate my shop → Shop home: the seller builds the Home tab of their shop
@@ -28,7 +29,6 @@ import Select from '../components/ui/Select';
  */
 
 const KIND_ICON = { banner: ImageSquare, spotlight: Star, gallery: Images, message: ChatText };
-const peso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // Small drawings of each style (60 × 40), so a seller sees the layout before picking it.
 const THUMBS = {

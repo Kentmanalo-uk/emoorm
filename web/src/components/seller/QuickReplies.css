@@ -1,0 +1,184 @@
+/* Saved quick replies above the seller's chat box. */
+.qr {
+  position: relative;
+  min-width: 0;
+}
+
+.qr-row {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.qr-row::-webkit-scrollbar {
+  display: none;
+}
+
+.qr-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  max-width: 240px;
+  padding: 6px 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--t-neutral-700, #374151);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.qr-chip:hover:not(:disabled) {
+  border-color: var(--t-primary-400, #34d399);
+  color: var(--t-primary-700, #047857);
+}
+
+.qr-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.qr-chip--edit {
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.qr-chip--edit.is-on {
+  border-color: var(--t-primary-600, #059669);
+  color: var(--t-primary-700, #047857);
+}
+
+/* Managing the list: a small panel just above the chips. */
+.qr-edit {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: var(--elev-popover, 0 8px 24px rgba(15, 23, 42, 0.12));
+}
+
+.qr-edit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.qr-edit-head strong {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.qr-done,
+.qr-add button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-primary-600, #059669);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t-neutral-0, #fff);
+  cursor: pointer;
+}
+
+.qr-add button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.qr-edit-list {
+  display: grid;
+  gap: 4px;
+  max-height: 180px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.qr-edit-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px 6px 10px;
+  border-radius: 8px;
+  background: var(--t-neutral-50, #f9fafb);
+  font-size: 13px;
+}
+
+.qr-edit-list li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.qr-edit-list li button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--t-neutral-500, #6b7280);
+  cursor: pointer;
+}
+
+.qr-edit-list li button:hover {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.qr-edit-list .qr-edit-empty,
+.qr-edit-empty {
+  margin: 0;
+  background: none;
+  font-size: 12.5px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.qr-add {
+  display: flex;
+  gap: 6px;
+}
+
+.qr-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.qr-add input:focus {
+  border-color: var(--t-primary-600, #059669);
+  outline: none;
+}
+
+@media (max-width: 768px) {
+  .qr-chip {
+    min-height: 36px;
+  }
+
+  /* 16px keeps iOS from zooming into the field. */
+  .qr-add input {
+    font-size: 16px;
+  }
+}

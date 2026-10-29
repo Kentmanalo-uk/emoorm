@@ -1,0 +1,238 @@
+/* The admin's Email page (AdminEmail.jsx). Shared fields and dialog: AdminMessages.css. */
+
+.ae-audience {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.ae-audience-hint,
+.ae-note {
+  margin-top: -8px;
+}
+
+.ae-note {
+  text-align: left;
+}
+
+.ae-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font-size: 13px;
+}
+
+.ae-count.is-error {
+  background: var(--t-red-50, #fef2f2);
+  color: var(--t-red-700, #b91c1c);
+}
+
+.ae-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.ae-search {
+  position: relative;
+  display: block;
+}
+
+.ae-search svg {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  transform: translateY(-50%);
+  color: var(--t-neutral-500, #64748b);
+  pointer-events: none;
+}
+
+/* Beats the admin themes' own input padding (AdminDesktop.css). */
+.ae-picker .ae-search input.ae-search-input.admin-input {
+  width: 100%;
+  padding-left: 34px;
+}
+
+.ae-results {
+  display: grid;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 10px;
+}
+
+.ae-results > p {
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.ae-result {
+  display: grid;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--t-neutral-100, #f1f5f9);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ae-result:last-child {
+  border-bottom: 0;
+}
+
+.ae-result:hover:not(:disabled),
+.ae-result:focus-visible {
+  background: var(--t-neutral-50, #f8fafc);
+}
+
+.ae-result:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.ae-result-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ae-result-meta,
+.ae-result-note {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+}
+
+.ae-result-note {
+  font-weight: 600;
+}
+
+.ae-error {
+  color: var(--t-red-700, #b91c1c);
+  font-size: 13px;
+}
+
+.ae-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ae-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 10px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+  font-size: 13px;
+}
+
+.ae-chip button {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--t-neutral-600, #475569);
+  cursor: pointer;
+}
+
+.ae-chip button:hover,
+.ae-chip button:focus-visible {
+  background: var(--t-neutral-200, #e2e8f0);
+}
+
+.ae-confirm-text {
+  margin: 0;
+  color: var(--t-neutral-800, #1e293b);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ae-sent-message {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ae-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--t-neutral-600, #475569);
+  font-size: 12px;
+}
+
+.ae-ok {
+  color: var(--t-primary-600, #059669);
+}
+
+.ae-failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--t-red-700, #b91c1c);
+}
+
+/* Computers: writing on the left, what has gone on the right, so the page
+   uses its width; phones and narrow windows stack them. */
+.ae-layout {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+.ae-layout > .admin-card {
+  margin: 0;
+}
+
+.ae-form {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+@media (min-width: 1100px) {
+  .ae-layout {
+    grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+  }
+
+  .ae-sent {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+.ae-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Preview: the email itself, at a phone-ish reading width. */
+.ae-preview-dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-width: none;
+}
+
+.ae-preview-frame {
+  width: 100%;
+  height: min(60vh, 560px);
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 10px;
+  background: #fff;
+}

@@ -1,0 +1,170 @@
+/* A form in a dialog over an admin page (AdminDialog.jsx). */
+
+.adg-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(15 23 42 / 0.55);
+}
+
+.adg-dialog {
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 22px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.25);
+}
+
+.adg-dialog.is-wide {
+  width: min(600px, 100%);
+}
+
+.adg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.adg-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.adg-close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--t-neutral-600, #4b5563);
+  cursor: pointer;
+}
+
+.adg-close:hover {
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.adg-form {
+  display: grid;
+  gap: 14px;
+}
+
+.adg-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.adg-field > span {
+  font-weight: 600;
+  color: var(--t-neutral-800, #1f2937);
+}
+
+.adg-field small {
+  color: var(--t-neutral-500, #636b78);
+  font-size: 12px;
+}
+
+.adg-row {
+  display: flex;
+  gap: 8px;
+}
+
+.adg-row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.adg-results {
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  list-style: none;
+}
+
+.adg-result {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 48px;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--t-neutral-100, #f3f4f6);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.adg-result:hover:not(:disabled),
+.adg-result:focus-visible {
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.adg-result:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.adg-result strong {
+  font-size: 14px;
+}
+
+.adg-result span {
+  font-size: 12px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.adg-result .adg-refusal {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.adg-picked {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--t-success-50, #f0fdf4);
+  font-size: 13px;
+}
+
+.adg-quiet {
+  margin: 0;
+  font-size: 13px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.adg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .adg-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .adg-dialog,
+  .adg-dialog.is-wide {
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .adg-actions > * {
+    flex: 1;
+  }
+}

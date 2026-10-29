@@ -89,9 +89,17 @@ const findByBuyer = ({ buyerId, status, page = 1, pageSize = 20 }) => {
   ]).then(([rows, total]) => ({ rows, total, page, pageSize }));
 };
 
+const RETURN_STATUSES = new Set(['REQUESTED', 'APPROVED', 'AWAITING_SHIPMENT', 'RECEIVED', 'REFUNDED', 'REJECTED', 'CANCELLED', 'CLOSED', 'DISPUTED']);
+
 const findByStore = ({ storeId, status, page = 1, pageSize = 20 }) => {
   const where = { storeId };
-  if (status) where.status = status;
+  // One status, or several ("APPROVED,RECEIVED": the seller's To refund tab).
+  // Anything else is ignored rather than sent to the database.
+  if (status) {
+    const list = String(status).split(',').map((s) => s.trim().toUpperCase()).filter((s) => RETURN_STATUSES.has(s));
+    if (list.length === 1) where.status = list[0];
+    else if (list.length > 1) where.status = { in: list };
+  }
   return Promise.all([
     prisma.returnRequest.findMany({
       where,
@@ -102,6 +110,12 @@ const findByStore = ({ storeId, status, page = 1, pageSize = 20 }) => {
     }),
     prisma.returnRequest.count({ where }),
   ]).then(([rows, total]) => ({ rows, total, page, pageSize }));
+};
+
+/** How many of a shop's return requests are in each status (the seller's tabs). */
+const countByStatusForStore = async (storeId) => {
+  const groups = await prisma.returnRequest.groupBy({ by: ['status'], where: { storeId }, _count: { _all: true } });
+  return Object.fromEntries(groups.map((g) => [g.status, g._count._all]));
 };
 
 /**
@@ -251,6 +265,7 @@ module.exports = {
   findById,
   findByBuyer,
   findByStore,
+  countByStatusForStore,
   getUsedQuantitiesForOrder,
   updateRequest,
   sumRefundedForOrder,

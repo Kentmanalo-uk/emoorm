@@ -1,0 +1,135 @@
+/* Shared admin list pieces (AdminBits.jsx). */
+
+.adb-date {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--t-neutral-700, #374151);
+}
+
+.adb-date.is-empty {
+  color: var(--t-neutral-500, #636b78);
+}
+
+.adb-date-ago {
+  font-size: 11.5px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+/* ── On/off switch ── */
+.adb-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--t-neutral-600, #4b5563);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.adb-switch:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.adb-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--t-neutral-300, #d1d5db);
+  transition: background 0.15s;
+}
+
+.adb-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.25);
+  transition: transform 0.15s;
+}
+
+.adb-switch.is-on .adb-switch-track {
+  background: var(--t-primary-600, #059669);
+}
+
+.adb-switch.is-on.is-warn .adb-switch-track {
+  background: var(--t-warning-600, #d97706);
+}
+
+.adb-switch.is-on .adb-switch-knob {
+  transform: translateX(16px);
+}
+
+.adb-switch.is-on .adb-switch-text {
+  color: var(--t-neutral-900, #0f172a);
+  font-weight: 500;
+}
+
+.adb-switch:focus-visible {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ── Search box with its magnifier ── */
+.adb-search {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.adb-search > svg {
+  position: absolute;
+  left: 11px;
+  color: var(--t-neutral-500, #636b78);
+  pointer-events: none;
+}
+
+.adb-search > .admin-search-input {
+  padding-left: 32px;
+}
+
+.adb-count {
+  margin-left: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--t-neutral-500, #64748b);
+}
+
+/* A short line under a card's title or above a list. */
+.adb-note {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+/* Columns or bits a phone card leaves out (constant or secondary). */
+@media (max-width: 768px) {
+  .ac-shell.is-phone .ac-content .admin-hide-phone {
+    display: none !important;
+  }
+
+  .adb-search,
+  .adb-search > .admin-search-input {
+    width: 100%;
+  }
+}
+
+/* Beats the admin theme's own input padding (AdminDesktop.css), so the
+   icon never sits on the text. */
+.ac-shell .ac-content .adb-search > .admin-search-input {
+  padding-left: 34px;
+}

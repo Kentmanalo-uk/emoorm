@@ -11,12 +11,15 @@ import { resolveImg } from '../../lib/media';
 import { activeSalePrice } from '../../lib/variantPricing';
 import { PACKAGE_KINDS, packageItemsLabel, productKind } from '../../lib/productKinds';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
+import useUnsavedChanges from '../../hooks/useUnsavedChanges';
 import ConfirmDialog from '../ui/ConfirmDialog';
+import LoadFailed from '../ui/LoadFailed';
 import { BusyLabel } from '../ui/Spinner';
 import './PhoneSaveBar.css';
 import './ProductForm.css';
 import './PackageForm.css';
 import Select from '../ui/Select';
+import { pesoShort as peso } from '../../lib/format';
 
 /*
  * Create or edit a package: some of the shop's own products sold together at
@@ -67,10 +70,6 @@ const aheadText = (hours) => {
 };
 
 /** ₱2,500 or ₱12.50. */
-const peso = (n) => {
-  const v = Math.round((Number(n) || 0) * 100) / 100;
-  return `₱${v.toLocaleString('en-PH', { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 })}`;
-};
 
 const priceOf = (p) => activeSalePrice(p) ?? (Number(p?.price) || 0);
 const firstImage = (p) => (Array.isArray(p?.images) ? p.images.find(Boolean) : null) || null;
@@ -99,19 +98,28 @@ const toFormState = (product) => {
   };
 };
 
+// A new package filled in from another (My products' Duplicate): the same
+// items and answers, "(copy)" after the name, how many to sell left to fill.
+const copyState = (product) => {
+  const s = toFormState(product);
+  return { ...s, name: `${s.name} (copy)`.slice(0, NAME_MAX), stock: '' };
+};
+
 /**
  * @param {Object} [product] - The package being edited (with packageItems)
  * @param {Object} [store] - The seller's shop (its fulfillmentMode)
  * @param {Array<{key, label}>} [sellBlockers] - What the shop still needs
  *   before buyers can order
  */
-export default function PackageForm({ product = null, store = null, onCancel, onSaved, sellBlockers = [] }) {
+export default function PackageForm({
+  product = null, copyFrom = null, store = null, onCancel, onSaved, sellBlockers = [],
+}) {
   const editing = !!product;
   const isPhone = usePhoneLayout();
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
-  const [initial] = useState(() => toFormState(product));
+  const [initial] = useState(() => (!product && copyFrom ? copyState(copyFrom) : toFormState(product)));
   const [form, setForm] = useState(initial);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -129,6 +137,9 @@ export default function PackageForm({ product = null, store = null, onCancel, on
   const [shopTotal, setShopTotal] = useState(0);
   const [query, setQuery] = useState('');
   const [found, setFound] = useState(null);
+  // Couldn't load them: says so with Try again, not "add products first".
+  const [productsFailed, setProductsFailed] = useState(false);
+  const [productsTry, setProductsTry] = useState(0);
   useEffect(() => {
     let live = true;
     axios.get('/products/my/products', { params: { pageSize: 100 } })
@@ -137,13 +148,13 @@ export default function PackageForm({ product = null, store = null, onCancel, on
         setShopProducts(res.data || []);
         setShopTotal(res.pagination?.total || 0);
       })
-      .catch((err) => {
+      .catch(() => {
         if (!live) return;
         setShopProducts([]);
-        toast.error(err.message || 'Could not load your products');
+        setProductsFailed(true);
       });
     return () => { live = false; };
-  }, []);
+  }, [productsTry]);
 
   const searching = shopTotal > 100 ? query.trim() : '';
   useEffect(() => {
@@ -329,6 +340,8 @@ export default function PackageForm({ product = null, store = null, onCancel, on
   };
 
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
+  // Links away (the sidebar, tabs, menus) ask first while there are changes.
+  useUnsavedChanges(dirty && !saving, { message: 'What you entered for this package is not saved yet.' });
   const requestCancel = () => {
     if (dirty && !saving) setConfirmLeave(true);
     else onCancel?.();
@@ -475,6 +488,8 @@ export default function PackageForm({ product = null, store = null, onCancel, on
                 <ul className="pkf-picks" aria-busy="true">
                   {[0, 1, 2].map((i) => <li key={i} className="pkf-pick pkf-pick--loading" />)}
                 </ul>
+              ) : productsFailed ? (
+                <LoadFailed what="your products" compact onRetry={() => { setShopProducts(null); setProductsFailed(false); setProductsTry((n) => n + 1); }} />
               ) : choices.length === 0 ? (
                 query ? (
                   <p className="pkf-empty">No products match &ldquo;{query}&rdquo;.</p>
