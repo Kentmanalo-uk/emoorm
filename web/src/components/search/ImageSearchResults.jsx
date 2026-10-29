@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Camera, CaretDown, CaretUp, MapPin, ShoppingCart, SlidersHorizontal, Star,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import ProductImage from '../ProductImage';
 import EmptyState from '../ui/EmptyState';
 import { SaleWas } from '../ui/SaleTag';

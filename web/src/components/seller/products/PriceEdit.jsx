@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { PencilSimple } from '@phosphor-icons/react';
+import { PencilSimple } from '../../../lib/icons';
 import PhoneSheet from '../PhoneSheet';
 import { BusyLabel } from '../../ui/Spinner';
 import { peso } from '../../../lib/format';

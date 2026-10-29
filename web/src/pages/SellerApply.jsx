@@ -4,7 +4,7 @@ import {
   ArrowLeft, ArrowRight, CheckCircle, Storefront as Store, Warning, Check, Money,
   IdentificationCard, Camera, X, FileText, User, MapPin, Wallet, Briefcase,
   Buildings, Sparkle,
-} from "@phosphor-icons/react";
+} from "../lib/icons";
 import toast from "react-hot-toast";
 import axios from "../lib/axios";
 import useAuthStore from "../store/authStore";

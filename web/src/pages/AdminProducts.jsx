@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import {
   Package, MagnifyingGlass as Search, CheckCircle, XCircle, Eye, X,
   Storefront as Store, Tag, Archive, ArrowCounterClockwise, SlidersHorizontal,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import { ProductFeatureSettings } from '../components/admin/PlatformSettings';

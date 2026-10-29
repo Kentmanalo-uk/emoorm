@@ -4,7 +4,7 @@ import {
   CaretRight, Storefront, PaintBrush, Wallet, QrCode, Headset, Lifebuoy, ChatText, User, Truck,
   IdentificationCard, Bell, Gear, ArrowsLeftRight, SignOut, ShareNetwork,
   Heartbeat, Question, GraduationCap, Megaphone, Star, Handshake,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import { resolveImg } from '../lib/media';

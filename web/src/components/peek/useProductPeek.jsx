@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowSquareOut, HandCoins, Heart, ShareNetwork, ShoppingCart, SlidersHorizontal, Storefront,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
 import useWishlistStore from '../../store/wishlistStore';

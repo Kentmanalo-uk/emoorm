@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Star, Storefront } from '@phosphor-icons/react';
+import { Star, Storefront } from '../../lib/icons';
 import UserAvatar from '../ui/UserAvatar';
 import { resolveImg } from '../../lib/media';
 

@@ -3,7 +3,7 @@ import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   Megaphone, Tag, ShareNetwork, PaintBrush, Users, LockSimple, Package, QrCode, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';

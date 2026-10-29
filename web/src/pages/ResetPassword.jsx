@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeSlash as EyeOff, Check, CheckCircle } from '@phosphor-icons/react';
+import { Eye, EyeSlash as EyeOff, Check, CheckCircle } from '../lib/icons';
 import axios from '../lib/axios';
 import AppLogo from '../components/AppLogo';
 import AuthSheetBar from '../components/AuthSheetBar';

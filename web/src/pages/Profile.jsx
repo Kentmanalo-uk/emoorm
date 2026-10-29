@@ -7,7 +7,7 @@ import {
   ShoppingBag, Truck, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Question, EnvelopeSimple,
   Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut, Handshake,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import LanguageRow from '../components/account/LanguageRow';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';

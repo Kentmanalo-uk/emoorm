@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowSquareOut, Checks, Storefront } from '@phosphor-icons/react';
+import { ArrowSquareOut, Checks, Storefront } from '../../lib/icons';
 import { peekProps } from './peekCore';
 import { ConversationPeekCard } from './PeekCards';
 

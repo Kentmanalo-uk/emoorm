@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import {
   CaretLeft, CaretRight, MagnifyingGlass, ShareNetwork, ShoppingCart, DotsThree,
   Storefront, Star, MapPin, SquaresFour, Package,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 
 /** The phone width the preview is drawn at; it is then scaled to its box. */

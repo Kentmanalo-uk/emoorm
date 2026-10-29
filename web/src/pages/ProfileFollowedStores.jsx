@@ -3,7 +3,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { Link } from 'react-router-dom';
 import {
   MagnifyingGlass as Search, Bell, BellSlash as BellOff, UserMinus, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import {
   listMyFollowing,

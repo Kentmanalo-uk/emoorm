@@ -9,7 +9,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Eye, ChatText as MessageSquare, ArrowCounterClockwise as RotateCcw, Star, X,
   UploadSimple as Upload, CheckCircle, QrCode, Copy,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import ReviewModal from '../components/ReviewModal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';

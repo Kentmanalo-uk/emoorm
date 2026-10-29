@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, X } from '@phosphor-icons/react';
+import { ArrowLeft, X } from '../../lib/icons';
 import { clearSetupReturn, useSetupReturn } from '../../lib/setupReturn';
 import './SetupReturnPill.css';
 

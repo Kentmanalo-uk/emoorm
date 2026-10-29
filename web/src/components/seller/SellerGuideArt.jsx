@@ -4,7 +4,7 @@ import {
   Megaphone, PaintBrush, UserCircle, Storefront, Truck, ChartLineUp, Wallet, Star, Question,
   Bell, Headset, GearSix, CookingPot, IdentificationCard, Briefcase, Image as ImageIcon, NotePencil,
   MapPin, QrCode, RocketLaunch, Confetti,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import './SellerGuideArt.css';
 
 /**

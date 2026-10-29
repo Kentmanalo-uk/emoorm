@@ -31,7 +31,7 @@ import {
   AirplaneTilt,
   Ticket,
   Copy,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import LoadFailed from '../components/ui/LoadFailed';

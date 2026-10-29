@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChatCircleDots, Sparkle, X } from '@phosphor-icons/react';
+import { ChatCircleDots, Sparkle, X } from '../lib/icons';
 import Messenger from '../components/messenger/Messenger';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import { usePhoneLayout } from '../hooks/useMobileNav';

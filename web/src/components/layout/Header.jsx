@@ -6,7 +6,7 @@ import {
   ShoppingBag, CheckCircle, Package, XCircle, Star, WarningCircle as AlertCircle, Info,
   Clock, TrendUp as TrendingUp, ChatCircleDots, ArrowCounterClockwise, Megaphone, Tag, Question, Scales,
   Handshake,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import useAuthStore from '../../store/authStore';
 import FeedbackDialog from '../feedback/FeedbackDialog';
 import useCartStore from '../../store/cartStore';

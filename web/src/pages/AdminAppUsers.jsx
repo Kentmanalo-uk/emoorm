@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowsClockwise as RefreshCw, DownloadSimple as Download } from '@phosphor-icons/react';
+import { ArrowsClockwise as RefreshCw, DownloadSimple as Download } from '../lib/icons';
 import axios from '../lib/axios';
 import AdminLayout from '../components/admin/AdminLayout';
 import KpiCard from '../components/analytics/KpiCard';

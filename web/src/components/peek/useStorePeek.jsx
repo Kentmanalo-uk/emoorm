@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowSquareOut, ChatCircleText, ShareNetwork, UserPlus,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import useAuthStore from '../../store/authStore';
 import { followStore, getFollowStatus } from '../../lib/follow';
 import { peekProps, sharePeek } from './peekCore';

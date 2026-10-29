@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { EnvelopeSimple } from '@phosphor-icons/react';
+import { EnvelopeSimple } from '../lib/icons';
 import axios from '../lib/axios';
 import AppLogo from '../components/AppLogo';
 import AuthSheetBar from '../components/AuthSheetBar';

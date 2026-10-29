@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { X } from '@phosphor-icons/react';
+import { X } from '../../lib/icons';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import useFocusTrap from '../../hooks/useFocusTrap';
 

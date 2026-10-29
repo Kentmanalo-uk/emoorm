@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import {
   Eye, X, CheckCircle, ChatText as MessageSquare, DotsThree, Prohibit, ChatCircleDots,
   DownloadSimple, UserCircle, Storefront, Paperclip, ShoppingBag, WarningCircle,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import { downloadCsv, fetchAllPages, csvDate } from '../lib/csv';
 import AdminLayout from '../components/admin/AdminLayout';

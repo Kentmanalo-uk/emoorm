@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ChatCircleDots, Phone } from '@phosphor-icons/react';
+import { ChatCircleDots, Phone } from '../../lib/icons';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import UserAvatar from '../ui/UserAvatar';

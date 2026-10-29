@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowsClockwise, Camera, UploadSimple } from '@phosphor-icons/react';
+import { ArrowsClockwise, Camera, UploadSimple } from '../../lib/icons';
 import useCamera, { hasCamera } from './useCamera';
 import { ScanFrame } from './ImageScanner';
 import './ImageSearchPicker.css';

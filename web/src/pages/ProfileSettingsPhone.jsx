@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import {
   UserCircle, EnvelopeSimple, Phone, House, MapPin, ShieldCheck, LockKey, CalendarBlank,
   SignOut, Camera, CircleNotch as Loader2, Database, UsersThree, CaretRight,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import { useMunicipalities } from '../hooks/useReferenceData';

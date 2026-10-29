@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { X, Star, PaperPlaneTilt } from '@phosphor-icons/react';
+import { X, Star, PaperPlaneTilt } from '../../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import useAuthStore from '../../store/authStore';

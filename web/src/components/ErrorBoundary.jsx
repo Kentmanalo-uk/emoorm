@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { ArrowClockwise, House } from '@phosphor-icons/react';
+import { ArrowClockwise, House } from '../lib/icons';
 import { reloadForNewVersion, STALE_CODE } from '../lib/reloadForUpdate';
 import '../pages/NotFound.css';
 

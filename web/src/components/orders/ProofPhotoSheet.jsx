@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Camera, ImageSquare, ArrowClockwise, CircleNotch, Truck, Storefront, CheckCircle, WarningCircle,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import { uploadPrivateImage } from '../../lib/upload';
 import { IMAGE_ACCEPT } from '../../lib/uploadableImage';
 import { useSheetPresence } from '../../hooks/useSheetMotion';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowCircleUp, X } from '@phosphor-icons/react';
+import { ArrowCircleUp, X } from '../lib/icons';
 import { appUpdateAvailable, release } from '../lib/appRelease';
 import './AppUpdateBar.css';
 

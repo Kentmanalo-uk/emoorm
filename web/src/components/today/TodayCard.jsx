@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Clock, Star, MapPin } from '@phosphor-icons/react';
+import { Clock, Star, MapPin } from '../../lib/icons';
 import ProductImage from '../ProductImage';
 import { SaleWas } from '../ui/SaleTag';
 import { saleInfo } from '../../lib/variantPricing';

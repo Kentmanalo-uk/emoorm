@@ -1125,12 +1125,12 @@
    grey tile (ToolGradients; the solid colour is the fallback), and the
    unread dot follows the title. */
 @media (max-width: 768px) {
-  .notif-picture.ntp--icon.is-grad-green svg { fill: url(#sh-grad-green) #10b981; }
-  .notif-picture.ntp--icon.is-grad-blue svg { fill: url(#sh-grad-blue) #3b82f6; }
-  .notif-picture.ntp--icon.is-grad-orange svg { fill: url(#sh-grad-orange) #f97316; }
-  .notif-picture.ntp--icon.is-grad-rose svg { fill: url(#sh-grad-rose) #f43f5e; }
-  .notif-picture.ntp--icon.is-grad-amber svg { fill: url(#sh-grad-amber) #f59e0b; }
-  .notif-picture.ntp--icon.is-grad-slate svg { fill: url(#sh-grad-slate) #64748b; }
+  .notif-picture.ntp--icon.is-grad-green svg:not([data-variant="outline"]) { fill: url(#sh-grad-green) #10b981; }
+  .notif-picture.ntp--icon.is-grad-blue svg:not([data-variant="outline"]) { fill: url(#sh-grad-blue) #3b82f6; }
+  .notif-picture.ntp--icon.is-grad-orange svg:not([data-variant="outline"]) { fill: url(#sh-grad-orange) #f97316; }
+  .notif-picture.ntp--icon.is-grad-rose svg:not([data-variant="outline"]) { fill: url(#sh-grad-rose) #f43f5e; }
+  .notif-picture.ntp--icon.is-grad-amber svg:not([data-variant="outline"]) { fill: url(#sh-grad-amber) #f59e0b; }
+  .notif-picture.ntp--icon.is-grad-slate svg:not([data-variant="outline"]) { fill: url(#sh-grad-slate) #64748b; }
 
   .notif-picture.ntp--icon svg {
     width: 24px;

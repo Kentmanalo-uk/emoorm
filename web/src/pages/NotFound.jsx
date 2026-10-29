@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, House, MagnifyingGlass } from '@phosphor-icons/react';
+import { ArrowLeft, House, MagnifyingGlass } from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import AppLogo from '../components/AppLogo';
 import useSeo from '../lib/seo';

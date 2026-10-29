@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import {
   Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store, ShoppingBag, Truck,
   CaretRight as ChevronRight, Star, Question, MapPin, ArrowCounterClockwise, Lifebuoy,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from './layout/Layout';
 import PageMenu from './layout/PageMenu';
 import GradientUserIcon from './ui/GradientUserIcon';

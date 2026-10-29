@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, MapPin, Star } from '@phosphor-icons/react';
+import { ArrowRight, MapPin, Star } from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';

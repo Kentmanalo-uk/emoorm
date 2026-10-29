@@ -1,6 +1,6 @@
 import {
   Motorcycle, Truck, Money, Package,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import {
   AT_SHOP, awaitingPayment, canWaiveFee, failedTripSellerLine, faultLabel, isRiderOrder, orderPromo, promoSellerLine,
   riderCashHeld, riderOpen, riderHasParcel, riderReturning, unpaidFeeStatus,

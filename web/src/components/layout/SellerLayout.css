@@ -160,22 +160,22 @@
 }
 
 /* Solid filled icons (no outline) */
-.sc-nav-item>svg:not(.sc-nav-chevron) {
+.sc-nav-item>svg:not(.sc-nav-chevron):not(.ikion) {
   stroke: none;
 }
 
-.sc-nav-item>svg:not(.sc-nav-chevron) path,
-.sc-nav-item>svg:not(.sc-nav-chevron) rect,
-.sc-nav-item>svg:not(.sc-nav-chevron) circle,
-.sc-nav-item>svg:not(.sc-nav-chevron) polygon,
-.sc-nav-item>svg:not(.sc-nav-chevron) ellipse {
+.sc-nav-item>svg:not(.sc-nav-chevron):not(.ikion) path,
+.sc-nav-item>svg:not(.sc-nav-chevron):not(.ikion) rect,
+.sc-nav-item>svg:not(.sc-nav-chevron):not(.ikion) circle,
+.sc-nav-item>svg:not(.sc-nav-chevron):not(.ikion) polygon,
+.sc-nav-item>svg:not(.sc-nav-chevron):not(.ikion) ellipse {
   fill: currentColor;
   stroke: none;
 }
 
 /* Line/polyline shapes have no fill area — keep them stroked so the icon still shows */
-.sc-nav-item>svg:not(.sc-nav-chevron) line,
-.sc-nav-item>svg:not(.sc-nav-chevron) polyline {
+.sc-nav-item>svg:not(.sc-nav-chevron):not(.ikion) line,
+.sc-nav-item>svg:not(.sc-nav-chevron):not(.ikion) polyline {
   stroke: currentColor;
   stroke-width: 2.25;
   fill: none;
@@ -505,7 +505,7 @@
   width: 0;
 }
 
-.sc-shell.is-collapsed .sc-nav-item>svg:not(.sc-nav-chevron) {
+.sc-shell.is-collapsed .sc-nav-item>svg:not(.sc-nav-chevron):not(.ikion) {
   margin: 0 auto;
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Palette, FloppyDisk, ArrowCounterClockwise, ArrowUUpLeft, CircleNotch,
   Check, Warning, Eye, EyeSlash, Sun, Moon, Star, Package, CaretRight,
-} from '@phosphor-icons/react';
+} from '../../../lib/icons';
 import toast from 'react-hot-toast';
 import EmptyArt from '../../ui/EmptyArt';
 import useTheme from '../../../hooks/useTheme';

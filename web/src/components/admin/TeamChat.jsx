@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import toast from 'react-hot-toast';
 import {
   CaretLeft, ChatsCircle, PaperPlaneRight, UsersThree,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import axios from '../../lib/axios';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import UserAvatar from '../ui/UserAvatar';

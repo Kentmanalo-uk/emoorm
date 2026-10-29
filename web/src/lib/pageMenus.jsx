@@ -3,7 +3,7 @@ import {
   House, IdentificationCard, Image as ImageIcon, Images, Info, MapPin, Megaphone, Package, PaintBrush, Plus,
   Question, ShieldCheck, ShoppingBag, ShoppingCart, Sparkle, Star, Storefront, Tag, Ticket, Truck,
   User, Users, UserGear, Wallet, Buildings, ClockCounterClockwise, Camera, Envelope, PaperPlaneTilt,
-} from '@phosphor-icons/react';
+} from './icons';
 
 /**
  * Phones: what the ⋯ menu at the right end of each page header offers, page

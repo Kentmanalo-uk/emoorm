@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { WifiSlash } from '@phosphor-icons/react';
+import { WifiSlash } from '../../lib/icons';
 import './OfflineBanner.css';
 
 /** While the device is offline: pages already seen still open, from the copy kept then. */

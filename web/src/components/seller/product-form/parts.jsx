@@ -1,4 +1,4 @@
-import { CheckCircle, Minus, Plus } from '@phosphor-icons/react';
+import { CheckCircle, Minus, Plus } from '../../../lib/icons';
 
 /*
  * Small building blocks the product form's parts share: a card, a field

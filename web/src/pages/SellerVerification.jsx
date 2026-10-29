@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { ArrowRight, LockSimple } from '@phosphor-icons/react';
+import { ArrowRight, LockSimple } from '../lib/icons';
 import IdentityVerifier from '../components/identity/IdentityVerifier';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import './SellerDashboard.css';

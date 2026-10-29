@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { DownloadSimple, X } from '@phosphor-icons/react';
+import { DownloadSimple, X } from '../lib/icons';
 import toast from 'react-hot-toast';
 import EmptyArt from '../components/ui/EmptyArt';
 import AdminLayout from '../components/admin/AdminLayout';
@@ -228,8 +228,14 @@ export default function AdminAuditLogs() {
               {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </Select>
           )}
-          <input aria-label="From date" type="date" value={filters.from} max={filters.to || undefined} onChange={setFilter('from')} className="admin-input" />
-          <input aria-label="To date" type="date" value={filters.to} min={filters.from || undefined} onChange={setFilter('to')} className="admin-input" />
+          <label className="admin-date-field">
+            <span>From</span>
+            <input aria-label="From date" type="date" value={filters.from} max={filters.to || undefined} onChange={setFilter('from')} className="admin-input" />
+          </label>
+          <label className="admin-date-field">
+            <span>To</span>
+            <input aria-label="To date" type="date" value={filters.to} min={filters.from || undefined} onChange={setFilter('to')} className="admin-input" />
+          </label>
         </div>
         {(userId || entityId) && (
           <div className="am-chips">

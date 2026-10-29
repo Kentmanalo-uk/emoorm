@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EmptyArt from '../components/ui/EmptyArt';
-import { UserPlus, Warning } from '@phosphor-icons/react';
+import { UserPlus, Warning } from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import { TeamSizeSettings } from '../components/admin/PlatformSettings';

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { PencilSimple, Plus, X, Check } from '@phosphor-icons/react';
+import { PencilSimple, Plus, X, Check } from '../../lib/icons';
 import useAuthStore from '../../store/authStore';
 import './QuickReplies.css';
 

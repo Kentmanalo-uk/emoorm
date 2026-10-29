@@ -6,7 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
   ArrowSquareOut, CaretDown, CaretLeft, CaretRight, CheckCircle, CornersIn, CornersOut, DownloadSimple, Export, Pause, Play, PlusSquare,
   ShareNetwork, ShieldCheck, SpeakerHigh, SpeakerSlash, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChatCircleDots } from '@phosphor-icons/react';
+import { ChatCircleDots } from '../../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 

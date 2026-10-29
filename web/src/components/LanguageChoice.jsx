@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Translate, CaretRight } from '@phosphor-icons/react';
+import { Translate, CaretRight } from '../lib/icons';
 import { chooseFirstLanguage } from '../lib/languageIntro';
 import useFocusTrap from '../hooks/useFocusTrap';
 import './LanguageChoice.css';

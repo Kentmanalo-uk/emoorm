@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X } from '@phosphor-icons/react';
+import { X } from '../../lib/icons';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import { peso, num } from './format';

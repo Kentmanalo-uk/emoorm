@@ -3,7 +3,7 @@ import useSeo from '../lib/seo';
 import {
   Storefront, ShieldCheck, Truck, IdentificationCard, ChatsCircle, ArrowCounterClockwise,
   MapPin, Translate, GraduationCap, Lifebuoy, ArrowRight,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import AppLogo from '../components/AppLogo';
 import './About.css';

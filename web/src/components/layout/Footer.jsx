@@ -7,7 +7,7 @@ import { useMunicipalities, useCategories } from '../../hooks/useReferenceData';
 import { queryKeys, policy } from '../../lib/queryKeys';
 import AppLogo from '../AppLogo';
 import './Footer.css';
-import { EnvelopeSimple, FacebookLogo, InstagramLogo } from '@phosphor-icons/react';
+import { EnvelopeSimple, FacebookLogo, InstagramLogo } from '../../lib/icons';
 import {
   SUPPORT_EMAIL, FACEBOOK_URL, INSTAGRAM_URL, INSTAGRAM_HANDLE, GMAIL,
 } from '../../lib/contact';

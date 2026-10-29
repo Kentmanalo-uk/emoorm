@@ -7,7 +7,7 @@ import {
   Star, ArrowCounterClockwise, List, X, ChatCircleDots,
   House, Receipt, UserCircle, SquaresFour, Truck, DeviceMobile, UsersThree, PaperPlaneTilt,
   IdentificationBadge, MapPin, UserGear, ClockCounterClockwise,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import useSidebarCollapse from '../../hooks/useSidebarCollapse';

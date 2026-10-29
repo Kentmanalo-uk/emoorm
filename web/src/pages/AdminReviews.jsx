@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Star, MagnifyingGlass as Search, Trash, ArrowSquareOut, X } from '@phosphor-icons/react';
+import { Star, MagnifyingGlass as Search, Trash, ArrowSquareOut, X } from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import ReasonDialog from '../components/admin/ReasonDialog';

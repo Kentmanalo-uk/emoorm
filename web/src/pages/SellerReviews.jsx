@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import EmptyState from '../components/ui/EmptyState';
 import LoadFailed from '../components/ui/LoadFailed';
-import { Star, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2 } from '@phosphor-icons/react';
+import { Star, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2 } from '../lib/icons';
 import toast from 'react-hot-toast';
 import { Link, useSearchParams } from 'react-router-dom';
 import axios from '../lib/axios';

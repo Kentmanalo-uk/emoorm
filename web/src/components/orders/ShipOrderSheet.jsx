@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Truck, Barcode, X, CircleNotch } from '@phosphor-icons/react';
+import { Truck, Barcode, X, CircleNotch } from '../../lib/icons';
 import toast from 'react-hot-toast';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import useFocusTrap from '../../hooks/useFocusTrap';

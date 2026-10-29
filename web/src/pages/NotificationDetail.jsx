@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Bell, Info } from '@phosphor-icons/react';
+import { ArrowLeft, Bell, Info } from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import AdminLayout from '../components/admin/AdminLayout';
 import axios from '../lib/axios';

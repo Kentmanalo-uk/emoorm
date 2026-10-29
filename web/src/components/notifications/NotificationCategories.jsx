@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import {
   BellRinging, ChatCircleDots, ClipboardText, Megaphone,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import { NOTIFICATION_CATEGORIES } from '../../lib/notificationCategories';
 import './NotificationCategories.css';
 

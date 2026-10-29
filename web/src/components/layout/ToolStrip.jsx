@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Plus } from '@phosphor-icons/react';
+import { Plus } from '../../lib/icons';
 import { pageMenuItems } from '../../lib/pageMenus';
 
 /*

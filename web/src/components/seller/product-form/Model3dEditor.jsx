@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CaretDown } from '@phosphor-icons/react';
+import { CaretDown } from '../../../lib/icons';
 import Model3dFromPhotos from './Model3dFromPhotos';
 import Model3dFromVideo from './Model3dFromVideo';
 import SimpleShapeEditor from './Model3dSimple';

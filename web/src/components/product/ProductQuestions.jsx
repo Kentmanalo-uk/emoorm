@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Question, Storefront } from '@phosphor-icons/react';
+import { Question, Storefront } from '../../lib/icons';
 import axios from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
 import './ProductQuestions.css';

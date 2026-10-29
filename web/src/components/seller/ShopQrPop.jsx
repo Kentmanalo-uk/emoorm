@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Printer, QrCode, X } from '@phosphor-icons/react';
+import { Printer, QrCode, X } from '../../lib/icons';
 import { logoHole, qrMatrix, shopQrLabel, shopQrUrl } from '../../lib/shopQrPoster';
 import { resolveImg } from '../../lib/media';
 import useFocusTrap from '../../hooks/useFocusTrap';

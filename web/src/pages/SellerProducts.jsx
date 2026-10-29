@@ -8,7 +8,7 @@ import {
   Package, Plus, PencilSimple as Edit2, Trash as Trash2, Eye, ArrowSquareOut,
   MagnifyingGlass as Search, WarningCircle as AlertCircle, CheckCircle, Clock, X, CircleNotch as Loader2,
   EyeSlash as EyeOff, Archive, DotsThree, SlidersHorizontal, Check, Prohibit, CaretRight, Cube, Copy, Tag,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import PhoneSheet from '../components/seller/PhoneSheet';
 import toast from 'react-hot-toast';

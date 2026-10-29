@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import {
   CaretRight, AirplaneTilt, Clock, Moped, Money, Globe, Trash, PauseCircle, PlayCircle,
   ArrowCounterClockwise as RotateCcw,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import axios from '../lib/axios';
 import EmptyArt from '../components/ui/EmptyArt';
 import Skeleton from '../components/ui/Skeleton';

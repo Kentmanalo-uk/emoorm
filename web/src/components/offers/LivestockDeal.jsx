@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Handshake, ChatCircleDots, Storefront, ChatCircle,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import axios from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
 import { PriceSheet } from './DealSheets';

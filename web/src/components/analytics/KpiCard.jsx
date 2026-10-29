@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown } from '@phosphor-icons/react';
+import { ArrowUp, ArrowDown } from '../../lib/icons';
 import './analytics.css';
 
 const KpiCard = ({ label, value, delta = null, hint = null, prefix = '', suffix = '', loading = false }) => {

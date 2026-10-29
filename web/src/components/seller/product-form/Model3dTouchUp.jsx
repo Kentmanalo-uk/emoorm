@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowCounterClockwise, BoundingBox, CircleNotch, Eraser, HandTap, MinusCircle, PaintBrush, PlusCircle, X,
-} from '@phosphor-icons/react';
+} from '../../../lib/icons';
 import useFocusTrap from '../../../hooks/useFocusTrap';
 
 /*

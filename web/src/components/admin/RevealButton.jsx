@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Eye } from '@phosphor-icons/react';
+import { Eye } from '../../lib/icons';
 import axios from '../../lib/axios';
 import ReasonDialog from './ReasonDialog';
 

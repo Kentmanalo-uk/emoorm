@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, ArrowSquareOut } from '@phosphor-icons/react';
+import { Copy, Check, ArrowSquareOut } from '../../lib/icons';
 import toast from 'react-hot-toast';
 import { resolveImg } from '../../lib/media';
 import { trackingLink } from '../../lib/tracking';

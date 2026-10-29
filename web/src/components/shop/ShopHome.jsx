@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, ShoppingCart, Quotes, Storefront } from '@phosphor-icons/react';
+import { Star, ShoppingCart, Quotes, Storefront } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import { saleInfo } from '../../lib/variantPricing';
 import { SaleWas } from '../ui/SaleTag';

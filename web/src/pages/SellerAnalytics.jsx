@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { DownloadSimple as Download, ArrowsClockwise as RefreshCw } from '@phosphor-icons/react';
+import { DownloadSimple as Download, ArrowsClockwise as RefreshCw } from '../lib/icons';
 import axios from '../lib/axios';
 import KpiCard from '../components/analytics/KpiCard';
 import BarChart from '../components/analytics/BarChart';

@@ -5,7 +5,7 @@ import {
   CheckCircle, XCircle, Star, WarningCircle as AlertCircle, Info, ChatCircleDots,
   MagnifyingGlass, X, Storefront, Tag, Question, Scales,
   Handshake, CaretRight,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';

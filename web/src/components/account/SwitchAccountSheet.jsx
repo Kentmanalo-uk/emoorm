@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   CheckCircle, CircleNotch, Info, Plus, X,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import useAuthStore from '../../store/authStore';
 import {
   forgetAccount, loadSavedAccounts, setCurrentAside, switchToAccount, useSavedAccounts,

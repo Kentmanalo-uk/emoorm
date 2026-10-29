@@ -1667,6 +1667,6 @@
   overflow: hidden;
 }
 
-.pf-m-purchase-icon svg {
+.pf-m-purchase-icon svg:not([data-variant="outline"]) {
   fill: url(#sh-grad-green) var(--t-primary-600, #047857);
 }

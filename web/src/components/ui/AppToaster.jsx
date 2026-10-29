@@ -7,7 +7,7 @@ import {
   Package, Prohibit, Receipt, ShoppingCart, SpinnerGap, Star, Storefront, Tag, Ticket, UserCircle,
   UserPlus, WarningCircle, X, Question, Scales,
   Handshake,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import NotificationPicture from '../NotificationPicture';
 import { playSound } from '../../lib/uiSound';
 import './AppToaster.css';

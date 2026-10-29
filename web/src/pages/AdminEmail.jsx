@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle, CircleNotch, EnvelopeSimple, Eye, MagnifyingGlass, PaperPlaneRight, WarningCircle, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Select from '../components/ui/Select';

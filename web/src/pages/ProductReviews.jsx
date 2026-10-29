@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { CaretLeft, CircleNotch, Star } from '@phosphor-icons/react';
+import { CaretLeft, CircleNotch, Star } from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import ReviewItem, { Stars } from '../components/reviews/ReviewItem';
 import EmptyArt from '../components/ui/EmptyArt';

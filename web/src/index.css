@@ -586,6 +586,18 @@ img {
   .municipalities-empty, .discover-stores-empty
 ) > svg:not(.keep-color) {
   color: var(--t-primary-200, #a7f3d0);
+}
+
+/* Filled ones take the colour as their fill too (an outline icon's strokes
+   already follow the colour; a fill would turn them into blobs). */
+:is(
+  .address-empty, .admin-empty, .cart-empty, .cart-search-empty, .empty-state,
+  .msgr-list-empty, .msgr-messages-empty, .msgr-thread-empty,
+  .notif-dropdown-empty, .notif-empty, .products-empty, .sc-empty,
+  .sd-empty, .seller-empty, .seller-return-empty, .sf-empty, .shop-empty,
+  .stores-empty, .wishlist-empty, .an-empty, .returns-empty, .pdp-empty,
+  .municipalities-empty, .discover-stores-empty
+) > svg:not(.keep-color):not([data-variant="outline"]) {
   fill: var(--t-primary-200, #a7f3d0);
 }
 

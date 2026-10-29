@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CaretRight } from '@phosphor-icons/react';
+import { CaretRight } from '../../../lib/icons';
 import ProductImage from '../../ProductImage';
 import { parseImages } from '../../../lib/media';
 import {

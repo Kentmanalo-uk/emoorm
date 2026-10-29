@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Link, Navigate, useLocation, useNavigate, useOutletContext, useParams,
 } from 'react-router-dom';
-import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, MapPin, PauseCircle } from '@phosphor-icons/react';
+import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, MapPin, PauseCircle } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';

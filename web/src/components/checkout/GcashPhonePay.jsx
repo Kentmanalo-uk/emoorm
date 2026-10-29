@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Copy, Check, ArrowSquareOut, QrCode } from '@phosphor-icons/react';
+import { Copy, Check, ArrowSquareOut, QrCode } from '../../lib/icons';
 import { formatAccountNumber } from '../../lib/qrPayment';
 import { isAndroid } from '../../lib/device';
 import './GcashPhonePay.css';

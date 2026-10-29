@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Eye, X, ArrowSquareOut, ChatCircleDots } from '@phosphor-icons/react';
+import { Eye, X, ArrowSquareOut, ChatCircleDots } from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';

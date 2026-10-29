@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle, WarningCircle } from '@phosphor-icons/react';
+import { CheckCircle, WarningCircle } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import AppLogo from '../components/AppLogo';

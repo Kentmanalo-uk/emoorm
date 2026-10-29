@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import {
   Clock, Heart, Moped, Receipt, TrendUp, Wallet,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import AppLogo from '../AppLogo';
 import './AuthHero.css';
 

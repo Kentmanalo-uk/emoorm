@@ -338,6 +338,10 @@
     font-size: var(--ad-fs-control);
   }
 
+  .ac-shell .ac-content .as-support .sc-search {
+    margin: 0 16px 12px;
+  }
+
   /* Filters: wrapping pill chips that fit the 300px list (the underline
      tabs were 314px wide and scrolled the list sideways). */
   .ac-shell .ac-content .as-support .sc-filters {

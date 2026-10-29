@@ -4,7 +4,7 @@ import {
   ChatsCircle, EnvelopeSimple, Bell, ChatCircleDots, ChartPie, UsersThree, SquaresFour,
   MapPin, UserGear, Image as ImageIcon, Ticket, CaretRight, Truck, DeviceMobile, PaperPlaneTilt,
   ClockCounterClockwise, Gear,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import ToolGradients from '../ui/ToolGradients';
 import { useAdminShell } from './adminShell';
 

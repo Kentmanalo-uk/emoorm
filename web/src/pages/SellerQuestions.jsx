@@ -3,7 +3,7 @@ import EmptyState from '../components/ui/EmptyState';
 import LoadFailed from '../components/ui/LoadFailed';
 import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Question, EyeSlash } from '@phosphor-icons/react';
+import { Question, EyeSlash } from '../lib/icons';
 import axios from '../lib/axios';
 import { resolveImg, firstImage } from '../lib/media';
 import { confirmAction } from '../lib/confirm';

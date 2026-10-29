@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Minus, Plus, Truck } from '@phosphor-icons/react';
+import { X, Minus, Plus, Truck } from '../lib/icons';
 import ProductImage from './ProductImage';
 import { BusyLabel } from './ui/Spinner';
 import {

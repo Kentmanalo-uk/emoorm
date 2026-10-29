@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CircleNotch, Cube } from '@phosphor-icons/react';
+import { CircleNotch, Cube } from '../../lib/icons';
 import './ModelViewer.css';
 
 /*

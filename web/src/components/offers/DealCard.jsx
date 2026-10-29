@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Phone, Handshake, CalendarCheck, MapPin, CheckCircle, Receipt,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import { confirmAction } from '../../lib/confirm';

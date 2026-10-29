@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, UploadSimple } from '@phosphor-icons/react';
+import { ArrowLeft, Minus, Plus, UploadSimple } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { IMAGE_ACCEPT, uploadableImage } from '../lib/uploadableImage';

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Star, PencilSimple as Pencil, Trash, Storefront, ChatCircleText } from '@phosphor-icons/react';
+import { Star, PencilSimple as Pencil, Trash, Storefront, ChatCircleText } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';

@@ -9,7 +9,7 @@ import {
   Star, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Minus, Plus, Package, Truck, Info, CalendarCheck,
   CaretRight as ChevronRightSm, ChatCircle as MessageCircle, Money, QrCode, Flag,
   MagnifyingGlass, ShoppingCart, ShoppingCartSimple, CaretDown, Clock,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import LoadFailed from '../components/ui/LoadFailed';

@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ShieldCheck, Key as KeyRound, User, MapPin, FloppyDisk as Save, CircleNotch as Loader2,
   ArrowsClockwise as RefreshCcw, Copy, Image as ImageIcon, UploadSimple, Plus, X, ArrowSquareOut, Palette, PaintBrushBroad, CheckCircle,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import ThemePanel from '../components/admin/theme/ThemePanel';

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { X } from '@phosphor-icons/react';
+import { X } from '../../lib/icons';
 import { useLocation } from 'react-router-dom';
 import { completeGuide, shouldShowGuide } from '../../lib/sellerGuides';
 import { usePhoneLayout } from '../../hooks/useMobileNav';

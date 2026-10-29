@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CaretDown, Check } from '@phosphor-icons/react';
+import { CaretDown, Check } from '../../../lib/icons';
 import { CATEGORY_ICONS, categoryIconKey } from '../../../lib/categoryIcons';
 import { suggestCategories } from './formState';
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight } from '../../lib/icons';
 import { MONTH_NAMES, WEEKDAYS, addDays, shortDay } from '../../lib/manilaDays';
 import './DayCalendar.css';
 

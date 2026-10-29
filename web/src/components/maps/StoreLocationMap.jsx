@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
-import { MapPin, NavigationArrow, Storefront, X } from '@phosphor-icons/react';
+import { MapPin, NavigationArrow, Storefront, X } from '../../lib/icons';
 import toast from 'react-hot-toast';
 import Spinner from '../ui/Spinner';
 import { resolveImg } from '../../lib/media';

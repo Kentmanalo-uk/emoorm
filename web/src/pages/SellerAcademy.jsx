@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, BookOpen, CaretRight, Check, CheckCircle, Clock, DeviceMobile, GraduationCap,
   Lightbulb, PlayCircle, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import PhoneFrame from '../components/ui/PhoneFrame';
 import useSeo from '../lib/seo';

@@ -5,7 +5,7 @@ import {
 import toast from 'react-hot-toast';
 import {
   BowlFood, CookingPot, CalendarCheck, CaretLeft, Check, Basket, Lock, Minus, Plus,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import axios from '../lib/axios';
 import useUnsavedChanges from '../hooks/useUnsavedChanges';
 import { confirmAction } from '../lib/confirm';

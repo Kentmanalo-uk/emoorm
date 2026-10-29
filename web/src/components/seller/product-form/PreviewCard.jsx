@@ -1,4 +1,4 @@
-import { Image as ImageIcon } from '@phosphor-icons/react';
+import { Image as ImageIcon } from '../../../lib/icons';
 import { resolveImg } from '../../../lib/media';
 import { kindFacts, priceUnit } from '../../../lib/productKinds';
 import { peso } from './formState';

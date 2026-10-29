@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { BellRinging } from '@phosphor-icons/react';
+import { BellRinging } from '../../lib/icons';
 import { pushState, turnPushOn, turnPushOff } from '../../lib/push';
 import './PushSetting.css';
 

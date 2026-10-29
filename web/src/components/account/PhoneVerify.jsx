@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { SealCheck, ChatCircleText } from '@phosphor-icons/react';
+import { SealCheck, ChatCircleText } from '../../lib/icons';
 import axios from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
 import './PhoneVerify.css';

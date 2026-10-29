@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Warning } from '@phosphor-icons/react';
+import { Warning } from '../../lib/icons';
 import axios from '../../lib/axios';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import '../ui/ConfirmDialog.css';

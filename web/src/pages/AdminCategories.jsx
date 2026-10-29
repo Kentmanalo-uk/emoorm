@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Plus, PencilSimple as Pencil, Trash as Trash2, X, Check, UploadSimple as Upload, Image as ImageIcon, CircleNotch as Loader2, Basket, CookingPot, Cow } from '@phosphor-icons/react';
+import { Plus, PencilSimple as Pencil, Trash as Trash2, X, Check, UploadSimple as Upload, Image as ImageIcon, CircleNotch as Loader2, Basket, CookingPot, Cow } from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import { CategoryStyleSettings } from '../components/admin/PlatformSettings';

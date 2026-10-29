@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MagnifyingGlass } from '@phosphor-icons/react';
+import { MagnifyingGlass } from '../../lib/icons';
 import { timeAgo } from '../../lib/format';
 import { shortDate, shortDateTime } from './adminFormat';
 import './AdminBits.css';

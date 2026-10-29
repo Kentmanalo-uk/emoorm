@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X } from '@phosphor-icons/react';
+import { X } from '../../lib/icons';
 import useAuthStore from '../../store/authStore';
 import WeightWaveText from '../ui/WeightWaveText';
 import './StartSellingSticker.css';

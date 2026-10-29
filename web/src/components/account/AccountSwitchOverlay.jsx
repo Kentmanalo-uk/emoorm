@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Storefront } from '@phosphor-icons/react';
+import { Storefront } from '../../lib/icons';
 import axios from '../../lib/axios';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
 import useAuthStore from '../../store/authStore';

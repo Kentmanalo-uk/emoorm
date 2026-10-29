@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { DownloadSimple, Trash, CircleNotch as Loader2, WarningCircle } from '@phosphor-icons/react';
+import { DownloadSimple, Trash, CircleNotch as Loader2, WarningCircle } from '../../lib/icons';
 import axios from '../../lib/axios';
 import { downloadBlob } from '../../lib/csv';
 import useAuthStore from '../../store/authStore';

@@ -1,4 +1,4 @@
-import { ArrowSquareOut, Checks, Trash } from '@phosphor-icons/react';
+import { ArrowSquareOut, Checks, Trash } from '../../lib/icons';
 import { peekProps } from './peekCore';
 import { NotificationPeekCard } from './PeekCards';
 

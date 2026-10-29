@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Camera, CircleNotch, Cube, Trash, X,
-} from '@phosphor-icons/react';
+} from '../../../lib/icons';
 import axios from '../../../lib/axios';
 import { resolveImg } from '../../../lib/media';
 import { uploadImage, uploadModel3d } from '../../../lib/upload';

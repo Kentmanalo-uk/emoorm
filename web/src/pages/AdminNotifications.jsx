@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Checks, Storefront, Flag, CheckCircle, ChatCircleDots, WarningCircle, Megaphone,
   ChatTeardropText, Scales, Bell, Trash, CaretRight, CaretDown, Broom,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import NotificationPicture from '../components/NotificationPicture';

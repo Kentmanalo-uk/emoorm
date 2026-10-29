@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Plus, Minus, Info, Basket, DotsThree, MagnifyingGlass,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import axios from '../lib/axios';
 import { resolveImg, firstImage } from '../lib/media';
 import { confirmAction } from '../lib/confirm';

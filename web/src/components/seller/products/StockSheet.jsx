@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Minus, Plus } from '@phosphor-icons/react';
+import { Minus, Plus } from '../../../lib/icons';
 import PhoneSheet from '../PhoneSheet';
 import { BusyLabel } from '../../ui/Spinner';
 import {

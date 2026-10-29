@@ -325,6 +325,9 @@
 /* ── Where a banner stands (Live, Scheduled, Ended, Hidden) ── */
 .admin-banner-state {
   display: inline-block;
+  /* Its own width, also inside the side banners' grid (stretched there). */
+  justify-self: start;
+  width: fit-content;
   margin-top: 4px;
   padding: 2px 8px;
   border-radius: 999px;

@@ -3,7 +3,7 @@ import {
   User, MapPin, Star, Package, Heart, Storefront as Store,
   ChatText as MessageSquare, Bell, Gear as Settings,
   ArrowCounterClockwise as ReturnsIcon, ShieldCheck, Lifebuoy, Flag, Handshake,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import Layout from './Layout';
 import '../../pages/Profile.css';
 

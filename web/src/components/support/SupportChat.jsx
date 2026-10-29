@@ -6,7 +6,7 @@ import {
   ChatsCircle, PaperPlaneRight, CaretLeft, CaretDown, Lightning, IdentificationCard,
   LockSimple, LockSimpleOpen, CheckCircle, XCircle, X, CircleNotch, NotePencil, Star,
   MagnifyingGlass, HandGrabbing, Receipt, UserCircle,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';

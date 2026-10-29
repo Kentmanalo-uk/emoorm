@@ -17,7 +17,7 @@ import {
   Bell, CheckCircle, HandHeart, MapPin, Money, QrCode, Moped, Receipt,
   ArrowsClockwise, Ticket, ShareNetwork, SealCheck, ChartLineUp,
   Eye, ArrowsOutSimple, Basket, Cow, Gift, Headset, Robot, Key, UserPlus, ImageSquare,
-} from '@phosphor-icons/react';
+} from './icons';
 
 export const STAGES = [
   { key: 'start', title: 'Get started', text: 'Open your free shop and get it ready.' },

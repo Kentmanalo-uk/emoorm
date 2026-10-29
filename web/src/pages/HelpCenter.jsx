@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import useSeo from '../lib/seo';
-import { Lifebuoy, PaperPlaneRight, CircleNotch, EnvelopeSimple, FacebookLogo, InstagramLogo } from '@phosphor-icons/react';
+import { Lifebuoy, PaperPlaneRight, CircleNotch, EnvelopeSimple, FacebookLogo, InstagramLogo } from '../lib/icons';
 import {
   SUPPORT_EMAIL, FACEBOOK_URL, INSTAGRAM_URL, INSTAGRAM_HANDLE, GMAIL,
 } from '../lib/contact';

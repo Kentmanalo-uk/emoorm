@@ -1,4 +1,4 @@
-import { ArrowClockwise } from '@phosphor-icons/react';
+import { ArrowClockwise } from '../../lib/icons';
 import EmptyState from './EmptyState';
 
 /**

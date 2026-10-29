@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Translate, Bell, SignOut, Check, BellSlash, WarningCircle } from '@phosphor-icons/react';
+import { Translate, Bell, SignOut, Check, BellSlash, WarningCircle } from '../../lib/icons';
 import axios from '../../lib/axios';
 import { notificationHref } from '../../lib/notificationLink';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../../lib/googleTranslate';

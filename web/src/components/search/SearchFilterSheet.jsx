@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, X } from '@phosphor-icons/react';
+import { Check, X } from '../../lib/icons';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import './SearchFilterSheet.css';

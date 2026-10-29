@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Check, Plus, PencilSimple as Pencil, Trash as Trash2, Star, Sparkle, Info, WarningCircle } from '@phosphor-icons/react';
+import { MapPin, Check, Plus, PencilSimple as Pencil, Trash as Trash2, Star, Sparkle, Info, WarningCircle } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';

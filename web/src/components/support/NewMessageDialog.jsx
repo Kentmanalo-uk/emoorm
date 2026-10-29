@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MagnifyingGlass, X, CircleNotch, UserCircle } from '@phosphor-icons/react';
+import { MagnifyingGlass, X, CircleNotch, UserCircle } from '../../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';

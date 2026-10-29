@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleNotch, FloppyDisk, Image as ImageIcon } from '@phosphor-icons/react';
+import { CircleNotch, FloppyDisk, Image as ImageIcon } from '../../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import { confirmAction } from '../../lib/confirm';

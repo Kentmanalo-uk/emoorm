@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowClockwise, CaretRight, NotePencil, PaperPlaneRight,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import axios from '../lib/axios';
 import ReplyText from '../components/moormy/ReplyText';
 import MoormyFace from '../components/moormy/MoormyFace';

@@ -3,7 +3,7 @@ import {
 } from 'react';
 import {
   Check, DotsThree, Gift, MagnifyingGlass, MapPin, Path, Plus, Tag, Warning,
-} from '@phosphor-icons/react';
+} from '../../../lib/icons';
 import {
   MAX_FEE, QUICK_FEES, brgyKey, brgyLabel, distanceFeeAt, distanceProblems, distanceRate, feeLabel,
   fillMissingFees, isWhole, parseFee, pesos, placeTitle, plural, putAllTowns, putPlace, removePlace, setAllFees,

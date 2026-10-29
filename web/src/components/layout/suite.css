@@ -182,7 +182,7 @@
    an SVG definition the rail renders once (AppRail.jsx), referenced here by
    id. Computers only, like everything in this sheet. */
 @media (min-width: 769px) {
-  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn > svg :is(path, circle, rect, line, polyline, polygon) {
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn > svg:not([data-variant="outline"]) :is(path, circle, rect, line, polyline, polygon):not([fill="none"]) {
     fill: url(#sr-icon-pink);
   }
 
@@ -195,7 +195,7 @@
   }
 
   /* The language button keeps its blue, light to full, the same way. */
-  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn--lang > svg :is(path, circle, rect, line, polyline, polygon) {
+  :is(.ac-shell, .sc-shell):not(.is-phone) .sr-rail .sr-btn--lang > svg:not([data-variant="outline"]) :is(path, circle, rect, line, polyline, polygon):not([fill="none"]) {
     fill: url(#sr-icon-blue);
   }
 

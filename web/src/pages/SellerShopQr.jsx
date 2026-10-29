@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   CaretLeft, CaretRight, Check, DownloadSimple, Printer, Ruler, Storefront, PencilSimpleLine,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import { resolveImg } from '../lib/media';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import {

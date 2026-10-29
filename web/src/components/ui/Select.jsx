@@ -2,7 +2,7 @@ import {
   Children, isValidElement, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { CaretDown, Check } from '@phosphor-icons/react';
+import { CaretDown, Check } from '../../lib/icons';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import useFocusTrap from '../../hooks/useFocusTrap';

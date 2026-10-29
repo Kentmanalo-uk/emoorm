@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Money, Phone } from '@phosphor-icons/react';
+import { Money, Phone } from '../../lib/icons';
 import axios from '../../lib/axios';
 import RiderActionSheet from '../orders/RiderActionSheet';
 import { peso } from '../../lib/format';

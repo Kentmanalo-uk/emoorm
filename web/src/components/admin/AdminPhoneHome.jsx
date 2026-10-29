@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
   Bell, EnvelopeSimple, CaretRight, CheckCircle, WarningCircle, ClockCounterClockwise,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import AppLogo from '../AppLogo';
 import Skeleton from '../ui/Skeleton';
 import { resolveImg } from '../../lib/media';

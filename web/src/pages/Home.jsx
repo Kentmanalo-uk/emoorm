@@ -2,7 +2,7 @@ import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { productKind } from '../lib/productKinds';
 import useSeo from '../lib/seo';
-import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, MapTrifold, ShoppingCart, Star, Storefront, X } from '@phosphor-icons/react';
+import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, MapTrifold, ShoppingCart, Star, Storefront, X } from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';

@@ -1,4 +1,4 @@
-import { Check } from '@phosphor-icons/react';
+import { Check } from '../../lib/icons';
 import './ChoiceCard.css';
 
 /**

@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import EmptyArt from '../components/ui/EmptyArt';
 import { useQuery } from '@tanstack/react-query';
-import { Storefront, Package, CheckCircle, Clock } from '@phosphor-icons/react';
+import { Storefront, Package, CheckCircle, Clock } from '../lib/icons';
 import axios from '../lib/axios';
 import './ProfileReports.css';
 

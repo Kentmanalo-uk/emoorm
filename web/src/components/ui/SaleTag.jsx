@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Lightning, Handshake, Tag } from '@phosphor-icons/react';
+import { Lightning, Handshake, Tag } from '../../lib/icons';
 import { saleInfo } from '../../lib/variantPricing';
 import { peso } from '../../lib/format';
 import './SaleTag.css';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Clock, Package, Scales } from '@phosphor-icons/react';
+import { ArrowLeft, CheckCircle, Clock, Package, Scales } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import './Returns.css';

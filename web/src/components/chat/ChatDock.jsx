@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   ChatCircleDots, X, CaretLeft, PaperPlaneRight, ArrowSquareOut, ChatsCircle, CircleNotch, Storefront,
   Headset, ArrowUUpLeft,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import axios from '../../lib/axios';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import {

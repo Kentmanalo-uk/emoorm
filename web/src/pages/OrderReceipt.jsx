@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Printer, CaretLeft as ChevronLeft } from '@phosphor-icons/react';
+import { Printer, CaretLeft as ChevronLeft } from '../lib/icons';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import './OrderReceipt.css';

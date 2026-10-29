@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import EmptyArt from '../components/ui/EmptyArt';
-import { Plus, PencilSimple as Edit3, Trash, UploadSimple as Upload, ArrowUp, ArrowDown } from '@phosphor-icons/react';
+import { Plus, PencilSimple as Edit3, Trash, UploadSimple as Upload, ArrowUp, ArrowDown } from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import AdminFormPage, { AdminFormLoading, AdminFormMissing } from '../components/admin/AdminFormPage';
@@ -141,7 +141,9 @@ export default function AdminBanners() {
     const placement = new URLSearchParams(search).get('placement');
     const carouselCount = banners.filter((b) => (b.placement || 'HOME_CAROUSEL') === 'HOME_CAROUSEL').length;
     let page;
-    if (id && loading && !editing) page = <AdminFormLoading backTo={BASE} backLabel="Banners" />;
+    // A new banner waits for the list too: its position follows the banners
+    // already there, and a form opened earlier would count as changed.
+    if (loading && !editing) page = <AdminFormLoading backTo={BASE} backLabel="Banners" />;
     else if (id && !editing) page = <AdminFormMissing backTo={BASE} backLabel="Banners" what="banner" />;
     else {
       page = (

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ShieldCheck, UserMinus as UserX, UserCheck, X, Eye, DownloadSimple, Storefront, Trash, IdentificationCard,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import { BuyerVerificationSettings } from '../components/admin/PlatformSettings';

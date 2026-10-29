@@ -4,7 +4,7 @@ import L from 'leaflet';
 import { MapContainer, Marker, Polyline, TileLayer } from 'react-leaflet';
 import {
   CaretDown, CaretLeft, Check, CrosshairSimple, Minus, NavigationArrow, Package, Path, Plus, Storefront, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';

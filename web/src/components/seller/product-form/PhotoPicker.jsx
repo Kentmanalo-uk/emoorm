@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Camera, X, CircleNotch, Plus } from '@phosphor-icons/react';
+import { Camera, X, CircleNotch, Plus } from '../../../lib/icons';
 import { uploadImage } from '../../../lib/upload';
 import { IMAGE_ACCEPT } from '../../../lib/uploadableImage';
 import { resolveImg } from '../../../lib/media';

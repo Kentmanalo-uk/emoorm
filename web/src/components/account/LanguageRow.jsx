@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CaretRight as ChevronRight, Translate } from '@phosphor-icons/react';
+import { CaretRight as ChevronRight, Translate } from '../../lib/icons';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../../lib/googleTranslate';
 
 // Phones: the language switch (computers have it in the topbar), in the

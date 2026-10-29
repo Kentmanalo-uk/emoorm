@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   CircleNotch, MapPin, Package, Star, Storefront,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import axios from '../../lib/axios';
 import { parseImages, resolveImg } from '../../lib/media';
 import { saleInfo } from '../../lib/variantPricing';

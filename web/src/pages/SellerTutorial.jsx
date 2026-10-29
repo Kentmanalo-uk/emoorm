@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Play, Pause, ArrowCounterClockwise, SkipBack, SkipForward, SpeakerHigh, SpeakerSlash, CornersOut, CornersIn, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import TIMELINE from '../components/tutorial/timeline.json';
 import { SCENES, PRELOAD } from '../components/tutorial/registry';
 import useSeo from '../lib/seo';

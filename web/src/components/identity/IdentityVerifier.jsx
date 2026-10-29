@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, ShieldWarning, IdentificationCard, Camera, UploadSimple,
   CircleNotch, XCircle, ArrowClockwise, LockSimple, ChatsCircle, X, WarningCircle,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../../lib/axios';
 import { fetchIdentityStatus, submitIdentityVerification } from '../../lib/identity';

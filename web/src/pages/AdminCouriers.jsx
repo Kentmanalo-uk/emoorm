@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, PencilSimple, Trash, UploadSimple, ArrowSquareOut } from '@phosphor-icons/react';
+import { Plus, PencilSimple, Trash, UploadSimple, ArrowSquareOut } from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import { DeliveryFeesSettings } from '../components/admin/PlatformSettings';
@@ -146,7 +146,9 @@ export default function AdminCouriers() {
     const editing = id ? couriers.find((c) => c.id === id) : null;
     const next = couriers.reduce((n, c) => Math.max(n, Number(c.sortOrder || 0)), 0) + 1;
     let content;
-    if (id && loading && !editing) content = <AdminFormLoading backTo={BASE} backLabel="Couriers" />;
+    // A new courier waits for the list too: its place in lists follows the
+    // couriers already there, and a form opened earlier would count as changed.
+    if (loading && !editing) content = <AdminFormLoading backTo={BASE} backLabel="Couriers" />;
     else if (id && !editing) content = <AdminFormMissing backTo={BASE} backLabel="Couriers" what="courier" />;
     else {
       content = (

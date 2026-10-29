@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { X, Star, Image as ImageIcon, Video, Trash as Trash2 } from '@phosphor-icons/react';
+import { X, Star, Image as ImageIcon, Video, Trash as Trash2 } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';

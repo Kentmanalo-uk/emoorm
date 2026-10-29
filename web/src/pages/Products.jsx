@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, ShoppingCart, Star, WarningCircle,
   CaretLeft, MagnifyingGlass, CaretUp, MapPin,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import useCartStore from '../store/cartStore';

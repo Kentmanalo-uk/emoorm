@@ -4,7 +4,7 @@ import { MapContainer, Marker, Polyline, TileLayer, useMap } from 'react-leaflet
 import {
   ArrowLeft, ArrowRight, ArrowUp, ArrowUpLeft, ArrowUpRight, ArrowUUpLeft, ArrowsClockwise,
   CaretDown, Clock, Crosshair, FlagCheckered, ListBullets, MapPin, NavigationArrow, Path,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import 'leaflet/dist/leaflet.css';
 import './PickupRoute.css';

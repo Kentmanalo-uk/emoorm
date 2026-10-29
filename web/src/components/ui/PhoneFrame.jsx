@@ -1,4 +1,4 @@
-import { BatteryFull, CellSignalFull, WifiHigh } from '@phosphor-icons/react';
+import { BatteryFull, CellSignalFull, WifiHigh } from '../../lib/icons';
 import './PhoneFrame.css';
 
 /**

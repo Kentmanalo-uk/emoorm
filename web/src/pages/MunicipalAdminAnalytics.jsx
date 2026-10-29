@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   DownloadSimple as Download, ArrowsClockwise as RefreshCw, Printer,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import axios from '../lib/axios';
 import AdminLayout from '../components/admin/AdminLayout';
 import KpiCard from '../components/analytics/KpiCard';

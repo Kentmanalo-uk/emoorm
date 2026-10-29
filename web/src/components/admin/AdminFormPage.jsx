@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CaretLeft } from '@phosphor-icons/react';
+import { CaretLeft } from '../../lib/icons';
 import EmptyArt from '../ui/EmptyArt';
 import './AdminFormPage.css';
 

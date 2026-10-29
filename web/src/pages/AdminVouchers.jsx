@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import EmptyArt from '../components/ui/EmptyArt';
 import {
   Plus, PencilSimple as Edit3, Trash, Ticket, CalendarBlank, UsersThree, CheckCircle, Prohibit, Shuffle,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import AdminFormPage, { AdminFormLoading, AdminFormMissing } from '../components/admin/AdminFormPage';

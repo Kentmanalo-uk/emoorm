@@ -6,7 +6,7 @@ import {
   ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X,
   CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check, Sparkle,
   NotePencil, Question, Handshake, GraduationCap, Receipt,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
 import { fetchSellerSetup, setupNextTo } from '../../lib/sellerSetup';

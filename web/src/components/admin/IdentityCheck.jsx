@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { CheckCircle, IdentificationCard, Warning, XCircle } from '@phosphor-icons/react';
+import { CheckCircle, IdentificationCard, Warning, XCircle } from '../../lib/icons';
 import axios from '../../lib/axios';
 import ReasonDialog from './ReasonDialog';
 import { idStatus, shortDate } from './adminFormat';

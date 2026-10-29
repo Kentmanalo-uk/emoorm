@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   CaretLeft, ClockCounterClockwise, Eye, EyeSlash, MagnifyingGlass, SquaresFour, Trash, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import ImageSearchModal from '../components/layout/ImageSearchModal';

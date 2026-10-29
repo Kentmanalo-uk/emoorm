@@ -3,7 +3,7 @@ import { Link, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   SealCheck, MapPin, CalendarBlank, ChatCircle, PencilSimple as Pencil,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';

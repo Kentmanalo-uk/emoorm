@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PaperPlaneTilt } from '@phosphor-icons/react';
+import { PaperPlaneTilt } from '../../lib/icons';
 import { hasTriedMoormy, useMoormyChat } from '../../lib/moormyChat';
 import MoormyAvatar from './MoormyAvatar';
 import { chatTime } from '../../lib/format';

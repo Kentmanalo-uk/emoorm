@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Ticket, Plus, Trash, PencilSimple, ShareNetwork } from '@phosphor-icons/react';
+import { Ticket, Plus, Trash, PencilSimple, ShareNetwork } from '../../lib/icons';
 import axios from '../../lib/axios';
 import PhoneSheet from './PhoneSheet';
 import Skeleton from '../ui/Skeleton';

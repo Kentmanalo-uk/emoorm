@@ -6,7 +6,7 @@ import {
   Package, PushPin as Pin, ArrowsClockwise as RefreshCw, CircleNotch as Loader2,
   MagnifyingGlass, CaretLeft, Tag as TagIcon, Image as ImageIcon,
   Check, Checks, X, Flag, EnvelopeOpen, Funnel, Phone, Handshake, ArrowUUpLeft,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import {
   canUnsend, unsendMessage as requestUnsend, withoutMessage,

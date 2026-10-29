@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { X } from '@phosphor-icons/react';
+import { X } from '../../lib/icons';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import { isBottomNavTab } from '../../lib/navTabs';
 import { usePwaInstall } from '../../lib/pwaInstall';

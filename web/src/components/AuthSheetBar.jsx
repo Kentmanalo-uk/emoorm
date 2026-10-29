@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { X } from '@phosphor-icons/react';
+import { X } from '../lib/icons';
 
 const CLOSE_MS = 260;
 const DISMISS_PX = 110;

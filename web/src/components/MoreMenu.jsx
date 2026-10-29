@@ -1,6 +1,6 @@
 import { cloneElement, isValidElement, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DotsThree } from '@phosphor-icons/react';
+import { DotsThree } from '../lib/icons';
 import './MoreMenu.css';
 
 // As long as the panel's shrink-back in MoreMenu.css: it stays mounted till then.

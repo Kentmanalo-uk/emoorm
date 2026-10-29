@@ -598,23 +598,50 @@
   /* Returns' own cards: a cell with two or three lines (a request and its
      order, the amounts) keeps them together on the right, under each other,
      instead of spreading them across the row. */
-  .ac-content .am-table td[data-label] {
+  .ac-content .am-table td[data-label]:not(.am-actions):has(> * + *) {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-columns: fit-content(45%) minmax(0, 1fr);
     column-gap: 12px;
     row-gap: 2px;
     justify-items: end;
   }
 
-  .ac-content .am-table td[data-label]::before {
+  .ac-content .am-table td[data-label]:not(.am-actions):has(> * + *)::before {
     grid-column: 1;
-    grid-row: 1 / span 6;
+    grid-row: 1;
+    max-width: none;
     justify-self: start;
   }
 
-  .ac-content .am-table td[data-label] > * {
+  .ac-content .am-table td[data-label]:not(.am-actions):has(> * + *) > * {
     grid-column: 2;
     max-width: 100%;
+  }
+
+  /* Labels as on the other admin cards: regular weight, never squeezed. */
+  .ac-content .am-table td[data-label]::before {
+    max-width: 45%;
+    font-size: 12.5px;
+    font-weight: 400;
+  }
+
+  /* The buttons: the card's action row, without an "Actions" label, and a
+     quiet outline for removing instead of a solid red block on every card. */
+  .ac-content .am-table td.am-actions {
+    justify-content: flex-start;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+  }
+
+  .ac-content .am-table td.am-actions::before {
+    content: none;
+  }
+
+  .ac-content .am-table td.am-actions .admin-btn-danger {
+    border: 1px solid var(--t-red-200, #fecaca);
+    background: transparent;
+    color: var(--t-red-700, #b91c1c);
   }
 
   .am-details {

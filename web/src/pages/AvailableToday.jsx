@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   MagnifyingGlass, Truck, ShoppingBag, SlidersHorizontal, CaretDown, Check, X, MapPin, SquaresFour, ArrowsDownUp,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import TodayCard from '../components/today/TodayCard';
 import EmptyState from '../components/ui/EmptyState';

@@ -1,7 +1,7 @@
 import {
   PaperPlaneTilt, Storefront, Truck, MapPin, HandCoins, QrCode, Package, IdentificationCard, SealCheck,
   Image as ImageIcon,
-} from '@phosphor-icons/react';
+} from './icons';
 import axios from './axios';
 import { peso } from './format';
 

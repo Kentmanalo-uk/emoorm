@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Plus, Check, UserGear as UserCog, Camera, MapPin, Image as ImageIcon, CheckCircle, PencilSimple,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import AdminFormPage from '../components/admin/AdminFormPage';

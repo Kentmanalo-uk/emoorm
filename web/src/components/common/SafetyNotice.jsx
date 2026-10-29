@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShieldWarning, CaretDown } from '@phosphor-icons/react';
+import { ShieldWarning, CaretDown } from '../../lib/icons';
 import { SAFETY_SUMMARY, SAFETY_TIPS } from '../../lib/safetyNotice';
 import './SafetyNotice.css';
 

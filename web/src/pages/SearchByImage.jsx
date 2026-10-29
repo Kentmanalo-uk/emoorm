@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowsClockwise, Camera, Images, Lightning, LightningSlash, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useCamera from '../components/search/useCamera';

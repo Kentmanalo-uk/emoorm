@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DotsThree } from '@phosphor-icons/react';
+import { DotsThree } from '../../../lib/icons';
 
 /**
  * Computers: ⋯ on a My products row, holding the actions used less often

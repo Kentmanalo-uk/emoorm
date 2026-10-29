@@ -8,7 +8,7 @@ import {
   MagnifyingGlass, Flag, ChatTeardropText, SquaresFour, ShoppingCart, UserPlus, Megaphone,
   ImageSquare, UploadSimple, Ticket, Percent, Headset, Images, Camera, Key, DeviceMobile, Handshake,
   WifiSlash, ArrowClockwise,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import './EmptyArt.css';
 
 /**

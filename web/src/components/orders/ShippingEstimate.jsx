@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Truck } from '@phosphor-icons/react';
+import { Truck } from '../../lib/icons';
 import axios from '../../lib/axios';
 import { CourierMark } from './CourierTracking';
 import { pesoShort as peso } from '../../lib/format';

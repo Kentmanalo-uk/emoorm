@@ -3,7 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import {
   ChatsCircle, Megaphone, PaperPlaneRight, PaperPlaneTilt as Send, NotePencil,
   X, CheckCircle, LockSimple, LockSimpleOpen, CaretLeft, CircleNotch,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import EmptyArt from '../components/ui/EmptyArt';

@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import {
   ArrowUp, ArrowDown, Trash, Plus, CaretDown, ImageSquare, Star, Images, ChatText,
   UploadSimple, X, Eye, Check, MagnifyingGlass, Sparkle, ArrowSquareOut,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';

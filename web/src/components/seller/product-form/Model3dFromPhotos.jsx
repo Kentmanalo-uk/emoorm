@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   ArrowArcLeft, ArrowArcRight, Camera, Check, CircleNotch, Cube, HandTap, PaintBrush, Trash, Warning, X,
-} from '@phosphor-icons/react';
+} from '../../../lib/icons';
 import axios from '../../../lib/axios';
 import { resolveImg } from '../../../lib/media';
 import { uploadImage, uploadModel3d } from '../../../lib/upload';

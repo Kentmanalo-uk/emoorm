@@ -3,7 +3,7 @@ import { useNavigate, useLocation, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   CircleNotch, Info, ArrowLeft, Check, CheckCircle, CaretDown, Package, Plus, CookingPot, ForkKnife, CalendarPlus, Cube,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import axios from '../../lib/axios';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import useAppSettings from '../../hooks/useAppSettings';

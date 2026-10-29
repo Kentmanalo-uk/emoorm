@@ -5,7 +5,7 @@ import {
   ArrowRight, Star, List as Menu, X, CaretDown as ChevronDown,
   Storefront, Users, Truck, ChatCircleDots, ChartLineUp, SealCheck,
   IdentificationCard, Camera, Package,  Plus, Minus, Money, House, PlayCircle, GraduationCap,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import useAuthStore from '../store/authStore';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useAccountSwitchStore from '../store/accountSwitchStore';

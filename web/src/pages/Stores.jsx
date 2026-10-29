@@ -4,7 +4,7 @@ import LoadFailed from '../components/ui/LoadFailed';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MagnifyingGlass as Search, MapPin, Package, CaretLeft as ChevronLeft, CaretRight as ChevronRight, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';

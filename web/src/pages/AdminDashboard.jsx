@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   CheckCircle, WarningCircle, BellRinging, CaretRight, ArrowUp, ArrowDown, ArrowClockwise,
   X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import ReasonDialog from '../components/admin/ReasonDialog';

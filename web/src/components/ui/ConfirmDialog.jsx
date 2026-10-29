@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { Warning as AlertTriangle, Question as HelpCircle, CircleNotch as Loader2 } from '@phosphor-icons/react';
+import { Warning as AlertTriangle, Question as HelpCircle, CircleNotch as Loader2 } from '../../lib/icons';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import './ConfirmDialog.css';
 import useFocusTrap from '../../hooks/useFocusTrap';

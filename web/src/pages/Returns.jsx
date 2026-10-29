@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link } from 'react-router-dom';
-import { CaretRight } from '@phosphor-icons/react';
+import { CaretRight } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import ProductImage from '../components/ProductImage';

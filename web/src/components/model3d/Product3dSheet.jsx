@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from '@phosphor-icons/react';
+import { X } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import ModelViewer from './ModelViewer';
 import useFocusTrap from '../../hooks/useFocusTrap';

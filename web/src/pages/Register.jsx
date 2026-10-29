@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeSlash as EyeOff, Storefront } from '@phosphor-icons/react';
+import { Eye, EyeSlash as EyeOff, Storefront } from '../lib/icons';
 import { useGoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';

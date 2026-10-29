@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MagnifyingGlass, CircleNotch, X, Package, Storefront, User, Receipt, ClockCounterClockwise, DotsThreeVertical, PushPin, PushPinSlash } from '@phosphor-icons/react';
+import { MagnifyingGlass, CircleNotch, X, Package, Storefront, User, Receipt, ClockCounterClockwise, DotsThreeVertical, PushPin, PushPinSlash } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import {

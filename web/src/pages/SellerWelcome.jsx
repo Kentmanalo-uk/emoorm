@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, ArrowRight, Check, CheckCircle, Clock, UploadSimple, Truck, Storefront, HandCoins, MapPin, Plus,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
 import { IMAGE_ACCEPT } from '../lib/uploadableImage';

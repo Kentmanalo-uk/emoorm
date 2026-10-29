@@ -1,6 +1,6 @@
 import {
   MapPin, Storefront, Money, QrCode, ArrowSquareOut, Phone,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import {
   orderStage, orderSteps, handOver, payLabel, peso, when,
 } from '../../lib/orderProgress';

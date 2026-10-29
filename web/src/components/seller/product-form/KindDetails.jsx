@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Plus, X, CalendarCheck } from '@phosphor-icons/react';
+import { Plus, X, CalendarCheck } from '../../../lib/icons';
 import { ANIMALS, AGE_UNITS, SEXES, WEEKDAYS } from '../../../lib/productKinds';
 import {
   Field, FieldError, OptionalHead, Chips, Switch, MoneyInput, Stepper,

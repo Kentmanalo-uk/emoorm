@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Eye, X, DownloadSimple, LockSimple, MagnifyingGlass as Search, ChatCircleDots, ArrowCounterClockwise,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import DetailDrawer from '../components/admin/DetailDrawer';
@@ -243,8 +243,16 @@ export default function AdminOrders() {
                 {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
               </Select>
             )}
-            <input aria-label="Placed from" type="date" className="admin-input" value={from} max={to || undefined} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
-            <input aria-label="Placed until" type="date" className="admin-input" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+            <div className="admin-date-range">
+              <label className="admin-date-field">
+                <span>From</span>
+                <input aria-label="Placed from" type="date" className="admin-input" value={from} max={to || undefined} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+              </label>
+              <label className="admin-date-field">
+                <span>To</span>
+                <input aria-label="Placed until" type="date" className="admin-input" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+              </label>
+            </div>
           </div>
         </div>
 

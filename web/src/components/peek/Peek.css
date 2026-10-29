@@ -144,15 +144,15 @@
   height: 24px;
 }
 
-.peek-action-icon.is-blue svg { fill: url(#peek-tint-blue); }
-.peek-action-icon.is-green svg { fill: url(#peek-tint-green); }
-.peek-action-icon.is-teal svg { fill: url(#peek-tint-teal); }
-.peek-action-icon.is-pink svg { fill: url(#peek-tint-pink); }
-.peek-action-icon.is-amber svg { fill: url(#peek-tint-amber); }
-.peek-action-icon.is-violet svg { fill: url(#peek-tint-violet); }
-.peek-action-icon.is-sky svg { fill: url(#peek-tint-sky); }
-.peek-action-icon.is-indigo svg { fill: url(#peek-tint-indigo); }
-.peek-action-icon.is-red svg { fill: url(#peek-tint-red); }
+.peek-action-icon.is-blue svg:not([data-variant="outline"]) { fill: url(#peek-tint-blue); }
+.peek-action-icon.is-green svg:not([data-variant="outline"]) { fill: url(#peek-tint-green); }
+.peek-action-icon.is-teal svg:not([data-variant="outline"]) { fill: url(#peek-tint-teal); }
+.peek-action-icon.is-pink svg:not([data-variant="outline"]) { fill: url(#peek-tint-pink); }
+.peek-action-icon.is-amber svg:not([data-variant="outline"]) { fill: url(#peek-tint-amber); }
+.peek-action-icon.is-violet svg:not([data-variant="outline"]) { fill: url(#peek-tint-violet); }
+.peek-action-icon.is-sky svg:not([data-variant="outline"]) { fill: url(#peek-tint-sky); }
+.peek-action-icon.is-indigo svg:not([data-variant="outline"]) { fill: url(#peek-tint-indigo); }
+.peek-action-icon.is-red svg:not([data-variant="outline"]) { fill: url(#peek-tint-red); }
 
 .peek-tints {
   position: absolute;

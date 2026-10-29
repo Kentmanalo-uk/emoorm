@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowsClockwise as RefreshCw, CalendarBlank, CaretDown, ChatCircleDots, ChatsCircle, ClockCounterClockwise, ShieldCheck, UserPlus, Warning, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import AdminLayout from '../components/admin/AdminLayout';
 import UserAvatar from '../components/ui/UserAvatar';
 import EmptyArt from '../components/ui/EmptyArt';

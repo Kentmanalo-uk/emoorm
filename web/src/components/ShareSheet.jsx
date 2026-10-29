@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FacebookLogo, MessengerLogo, WhatsappLogo, TelegramLogo, XLogo,
   EnvelopeSimple, ChatText, ChatCircleDots, LinkSimple, Check, X,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import { isTouchPhone } from '../lib/device';
 import './ShareSheet.css';
 import useFocusTrap from '../hooks/useFocusTrap';

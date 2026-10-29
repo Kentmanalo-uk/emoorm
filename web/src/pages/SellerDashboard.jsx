@@ -9,7 +9,7 @@ import {
   ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, PlusCircle, Check, ExclamationMark,
   Sparkle, Palette, Heart, UsersThree, LinkSimple, ChatCircleDots, CookingPot,
   GraduationCap, BookOpen, Lightbulb, ArrowClockwise, Handshake, Question, QrCode, ListChecks,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import { countLabel } from '../lib/orderLines';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';

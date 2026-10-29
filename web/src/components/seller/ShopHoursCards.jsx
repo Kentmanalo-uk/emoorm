@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { AirplaneTilt, CircleNotch as Loader2 } from '@phosphor-icons/react';
+import { AirplaneTilt, CircleNotch as Loader2 } from '../../lib/icons';
 import axios from '../../lib/axios';
 import { DAYS, shortDate } from '../../lib/shopHours';
 import './ShopHoursCards.css';

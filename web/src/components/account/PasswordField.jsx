@@ -1,4 +1,4 @@
-import { Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
+import { Eye, EyeSlash as EyeOff } from '../../lib/icons';
 
 /** A password input with a show/hide eye, in the Settings page's style (ps-*). */
 export default function PasswordField({ label, value, visible, onToggle, onChange, help }) {

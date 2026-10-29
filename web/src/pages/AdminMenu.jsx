@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   CaretRight, User, Key, ShieldCheck, PaintBrush, Palette, Buildings, Bell, Globe, Gear, SignOut,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import AdminLayout from '../components/admin/AdminLayout';
 import { useAdminShell } from '../components/admin/adminShell';
 import UserAvatar from '../components/ui/UserAvatar';

@@ -1,7 +1,7 @@
 import {
   OrangeSlice, Carrot, Cow, Fish, Shrimp, Jar, Basket, Cookie, Sun, Coffee, ForkKnife,
   Grains, Egg, Plant, Flower, TShirt, Bread, Pepper, Drop, Gift, Armchair, Tractor, Storefront,
-} from '@phosphor-icons/react';
+} from './icons';
 
 /**
  * Icons for the homepage's icon style of "Shop by Category". Each has a

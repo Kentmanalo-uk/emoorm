@@ -1,4 +1,4 @@
-import { Translate } from '@phosphor-icons/react';
+import { Translate } from '../lib/icons';
 import { getCurrentLanguage } from '../lib/googleTranslate';
 import './LanguageTip.css';
 

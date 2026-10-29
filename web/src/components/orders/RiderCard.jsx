@@ -1,6 +1,6 @@
 import {
   Bicycle, ChatText, Motorcycle, Phone,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import { orderPromo, riderStatus, vehicleLabel } from '../../lib/moormove';
 import './RiderDelivery.css';
 

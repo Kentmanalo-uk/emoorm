@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Minus, Plus, X, Calculator, Scales, TrendUp, Info,
-} from '@phosphor-icons/react';
+} from '../../lib/icons';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import { usePhoneLayout } from '../../hooks/useMobileNav';

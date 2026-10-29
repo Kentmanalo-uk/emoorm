@@ -16,7 +16,7 @@ import {
   Warning,
   ArrowLeft,
   PencilSimple,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';

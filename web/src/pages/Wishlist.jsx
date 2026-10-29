@@ -1,7 +1,7 @@
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate } from 'react-router-dom';
 import { productKind } from '../lib/productKinds';
-import { ShoppingCart, Trash as Trash2, Package } from '@phosphor-icons/react';
+import { ShoppingCart, Trash as Trash2, Package } from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import { resolveImg } from '../lib/media';

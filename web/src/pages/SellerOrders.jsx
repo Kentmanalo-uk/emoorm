@@ -3,7 +3,7 @@ import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-rout
 import {
   Eye, CheckCircle, XCircle, Clock, Package, Truck, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag, SlidersHorizontal,
   Printer, Phone, ChatCircleDots, QrCode,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useFocusTrap from '../hooks/useFocusTrap';
 import { confirmAction } from '../lib/confirm';

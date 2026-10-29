@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CaretLeft } from '@phosphor-icons/react';
+import { CaretLeft } from '../../lib/icons';
 import Header from './Header';
 import Footer from './Footer';
 import PageMenu from './PageMenu';

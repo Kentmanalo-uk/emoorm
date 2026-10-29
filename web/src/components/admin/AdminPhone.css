@@ -233,10 +233,13 @@
   /* A cell with more than one thing in it (a request and its order, two
      amounts, a reporter's name and email): the label on the left, all of
      the cell stacked on the right, instead of each piece spread across the
-     row as its own column. The title cell and the buttons row keep theirs. */
-  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:not(:first-child):not([colspan]):not(:has(> input[type="checkbox"])) {
+     row as its own column. The title cell and the buttons row keep theirs.
+     Only cells with two or more pieces: one-piece cells stay a plain
+     label-and-value row. The label's 45% is of the card (fit-content), not
+     of its own column, which squeezed it to a letter or two a line. */
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:not(:first-child):not([colspan]):not(td:first-child:has(> input[type="checkbox"]) + td):not(:last-child:has(button, .admin-btn)):has(> * + *) {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-columns: fit-content(45%) minmax(0, 1fr);
     grid-auto-flow: row;
     column-gap: 12px;
     row-gap: 2px;
@@ -244,13 +247,14 @@
     justify-items: end;
   }
 
-  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:not(:first-child):not([colspan])::before {
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:not(:first-child):not([colspan]):not(td:first-child:has(> input[type="checkbox"]) + td):has(> * + *)::before {
     grid-column: 1;
-    grid-row: 1 / span 12;
+    grid-row: 1;
+    max-width: none;
     justify-self: start;
   }
 
-  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:not(:first-child):not([colspan]) > * {
+  .ac-shell.is-phone .ac-content table:not(.am-table):has(> thead) > tbody > tr > td:not(:first-child):not([colspan]):not(td:first-child:has(> input[type="checkbox"]) + td):has(> * + *) > * {
     grid-column: 2;
     max-width: 100%;
   }

@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowsClockwise, Checks, EnvelopeOpen, Funnel, Heart, MagnifyingGlass, Storefront,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import Layout from './layout/Layout';
 import MoreMenu from './MoreMenu';
 import ProfileGuest from './ProfileGuest';

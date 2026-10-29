@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from '@phosphor-icons/react';
+import { ArrowRight } from '../../lib/icons';
 import axios from '../../lib/axios';
 import useAuthStore from '../../store/authStore';
 import { isOpen } from '../../lib/availability';

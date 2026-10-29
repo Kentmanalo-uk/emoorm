@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
-import { Check, CaretRight, ImageSquare, Star, ChatText } from '@phosphor-icons/react';
+import { Check, CaretRight, ImageSquare, Star, ChatText } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';

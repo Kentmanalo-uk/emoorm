@@ -15,7 +15,7 @@ import {
   NotePencil,
   ClockCountdown,
   Gift,
-} from '@phosphor-icons/react';
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
