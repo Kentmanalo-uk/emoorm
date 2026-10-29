@@ -548,6 +548,9 @@ model SupportConversation {
   lastMessageAt   DateTime?                 @map("last_message_at")
   userLastReadAt  DateTime?                 @map("user_last_read_at")
   adminLastReadAt DateTime?                 @map("admin_last_read_at")
+  /// The admin on the town's team handling the case ("Take this case").
+  assignedToId    String?                   @map("assigned_to_id")
+  assignedAt      DateTime?                 @map("assigned_at")
   createdAt       DateTime                  @default(now()) @map("created_at")
   updatedAt       DateTime                  @updatedAt @map("updated_at")
   messages        SupportMessage[]
@@ -702,6 +705,12 @@ model Municipality {
   description String? @db.Text
   gallery   Json?
   isActive  Boolean  @default(true) @map("is_active")
+
+  // The municipal office people can visit or call (town page, help desk).
+  officeAddress String? @db.VarChar(300) @map("office_address")
+  officeHours   String? @db.VarChar(200) @map("office_hours")
+  officePhone   String? @db.VarChar(40) @map("office_phone")
+  officeEmail   String? @db.VarChar(160) @map("office_email")
 
   // Admin Assignment
   adminId   String?  @unique @map("admin_id")
@@ -1782,6 +1791,10 @@ model Banner {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  /// Shown only from / until these times (none: always while active).
+  startsAt    DateTime? @map("starts_at")
+  endsAt      DateTime? @map("ends_at")
+
   @@index([placement, isActive, sortOrder])
   @@map("banners")
 }
@@ -2078,9 +2091,37 @@ model EmailOutbox {
   /// Taken by a sender until then, so two servers never send it twice.
   claimedUntil  DateTime? @map("claimed_until")
   createdAt     DateTime  @default(now()) @map("created_at")
+  /// An admin's email to many people (EmailBroadcast): one row per person.
+  broadcastId   String?   @db.VarChar(36) @map("broadcast_id")
 
   @@index([nextAttemptAt])
+  @@index([broadcastId])
   @@map("email_outbox")
+}
+
+/// An email an admin sent to many people at once (services/adminEmail.service):
+/// a super admin to anyone, a municipal admin to people of their own town.
+/// Each person's copy waits in email_outbox until it is sent.
+model EmailBroadcast {
+  id             String   @id @default(uuid())
+  senderId       String?  @map("sender_id")
+  senderEmail    String?  @map("sender_email")
+  senderRole     UserRole @map("sender_role")
+  /// The town it went to; null when a super admin sent it platform-wide.
+  municipalityId String?  @map("municipality_id")
+  /// all | buyers | sellers | municipal_admins | selected
+  audience       String   @db.VarChar(20)
+  subject        String   @db.VarChar(150)
+  message        String   @db.Text
+  recipients     Int
+  sent           Int      @default(0)
+  failed         Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([municipalityId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([createdAt])
+  @@map("email_broadcasts")
 }
 
 /// Short-lived security counters that must survive a restart
